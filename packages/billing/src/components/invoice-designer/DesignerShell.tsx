@@ -1523,29 +1523,33 @@ type DesignerBreadcrumbsProps = {
   onSelect: (nodeId: string | null) => void;
 };
 
+const computeBreadcrumbNodes = (nodes: DesignerNode[], selectedNodeId: string | null): DesignerNode[] => {
+  if (!selectedNodeId) return [];
+  const nodeMap = new Map(nodes.map((node) => [node.id, node]));
+  const parentById = new Map<string, string | null>();
+  nodes.forEach((node) => {
+    node.childIds.forEach((childId) => {
+      if (!parentById.has(childId)) {
+        parentById.set(childId, node.id);
+      }
+    });
+  });
+  const path: DesignerNode[] = [];
+  let currentId: string | null = selectedNodeId;
+  while (currentId) {
+    const current = nodeMap.get(currentId);
+    if (!current) break;
+    if (current.type !== 'document') {
+      path.push(current);
+    }
+    currentId = parentById.get(currentId) ?? null;
+  }
+  return path.reverse();
+};
+
 const DesignerBreadcrumbs: React.FC<DesignerBreadcrumbsProps> = ({ nodes, selectedNodeId, onSelect }) => {
   const breadcrumbs = React.useMemo(() => {
-    if (!selectedNodeId) return [];
-    const nodeMap = new Map(nodes.map((node) => [node.id, node]));
-    const parentById = new Map<string, string | null>();
-    nodes.forEach((node) => {
-      node.childIds.forEach((childId) => {
-        if (!parentById.has(childId)) {
-          parentById.set(childId, node.id);
-        }
-      });
-    });
-    const path: DesignerNode[] = [];
-    let currentId: string | null = selectedNodeId;
-    while (currentId) {
-      const current = nodeMap.get(currentId);
-      if (!current) break;
-      if (current.type !== 'document') {
-        path.push(current);
-      }
-      currentId = parentById.get(currentId) ?? null;
-    }
-    return path.reverse();
+    return computeBreadcrumbNodes(nodes, selectedNodeId);
   }, [nodes, selectedNodeId]);
 
   if (breadcrumbs.length === 0) {
@@ -1593,6 +1597,7 @@ export const __designerShellTestUtils = {
   wasSizeConstrainedFromDraft,
   getSectionFitNoopMessage,
   shouldPromoteParentToCanvasForManualPosition,
+  computeBreadcrumbNodes,
 };
 
 const createLocalId = () =>

@@ -200,6 +200,8 @@ This plan intentionally continues the simplification arc:
   - Verifies `addNodeFromPalette` pulls `layout/metadata/size` defaults from the component schema and attaches the new node id into the parent `children` array.
 - 2026-02-13: Added outline rendering integration test in `packages/billing/src/components/invoice-designer/palette/OutlineView.integration.test.tsx`:
   - Verifies outline order matches `childIds` ordering and selection state drives highlight styling.
+- 2026-02-13: Added breadcrumbs hierarchy integration coverage in `packages/billing/src/components/invoice-designer/DesignerShell.breadcrumbs.test.ts`:
+  - Validates breadcrumb path is derived from `childIds` (children-only hierarchy) and does not depend on persisted `parentId`.
 - 2026-02-13: Persisted workspace snapshots now omit runtime geometry/editor-only props:
   - `packages/billing/src/components/invoice-designer/state/designerStore.ts` `exportWorkspace()` sanitizes `node.props` to drop `position`, `size`, `baseSize`, and `layoutPresetId` (new saves are unified-only).
   - Updated `packages/billing/src/actions/invoicePreviewPdfParity.integration.test.ts` workspace fixture to use `{ rootId, nodesById }` (no `nodes` / `constraints`).
