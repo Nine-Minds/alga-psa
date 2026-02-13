@@ -95,7 +95,7 @@
   {
     "id": "T012",
     "description": "Workspace export: exported workspace contains only canonical node shape (`props`, `children`) and omits legacy duplicates.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F007",
       "F008"
