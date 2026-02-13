@@ -19,7 +19,7 @@
   { "id": "F023", "description": "Implement server action to return Tactical connection status summary (counts of mapped orgs/devices/active alerts).", "implemented": true, "prdRefs": ["Functional Requirements"] },
 
   { "id": "F030", "description": "Create Tactical API client wrapper with base URL normalization and shared request helpers.", "implemented": true, "prdRefs": ["Data / API / Integrations"] },
-  { "id": "F031", "description": "Implement Tactical API key auth mode in the API client (`X-API-KEY`).", "implemented": false, "prdRefs": ["Data / API / Integrations"] },
+  { "id": "F031", "description": "Implement Tactical API key auth mode in the API client (`X-API-KEY`).", "implemented": true, "prdRefs": ["Data / API / Integrations"] },
   { "id": "F032", "description": "Implement Tactical Knox auth mode: checkcreds -> login (TOTP-aware), persist token + expiry, and attach `Authorization: Token ...` header.", "implemented": false, "prdRefs": ["Goals", "Data / API / Integrations"] },
   { "id": "F033", "description": "Implement Knox re-auth on 401 for username/password mode (best-effort retry once per request).", "implemented": false, "prdRefs": ["Non-functional Requirements"] },
   { "id": "F034", "description": "Implement beta pagination helpers (PageNumberPagination with `page_size` up to 1000).", "implemented": false, "prdRefs": ["Non-functional Requirements"] },
