@@ -301,7 +301,11 @@ describe('Invoice Model', () => {
         template_id: 'template-123',
         name: 'Test Template',
         version: 1,
-        assemblyScriptSource: '',
+        templateAst: {
+          kind: 'invoice-template-ast',
+          version: 1,
+          layout: { id: 'root', type: 'document', children: [] },
+        },
       };
 
       await expect(Invoice.saveTemplate(knex, '', template)).rejects.toThrow(

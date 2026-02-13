@@ -2,6 +2,8 @@ import { z } from 'zod';
 import type { InvoiceTemplateAst } from '@alga-psa/types';
 import { INVOICE_TEMPLATE_AST_VERSION } from '@alga-psa/types';
 
+const valueFormatSchema = z.enum(['text', 'number', 'currency', 'date']);
+
 const styleDeclarationSchema = z.object({
   display: z.string().optional(),
   width: z.string().optional(),
@@ -241,6 +243,7 @@ type NodeInput =
       binding: z.infer<typeof bindingRefSchema>;
       label?: string;
       emptyValue?: string;
+      format?: z.infer<typeof valueFormatSchema>;
     }
   | {
       id: string;
@@ -264,6 +267,7 @@ type NodeInput =
         id: string;
         header?: string;
         value: ValueExpressionInput;
+        format?: z.infer<typeof valueFormatSchema>;
         style?: z.infer<typeof nodeStyleRefSchema>;
       }>;
       emptyStateText?: string;
@@ -281,6 +285,7 @@ type NodeInput =
         id: string;
         header?: string;
         value: ValueExpressionInput;
+        format?: z.infer<typeof valueFormatSchema>;
         style?: z.infer<typeof nodeStyleRefSchema>;
       }>;
       emptyStateText?: string;
@@ -294,6 +299,7 @@ type NodeInput =
         id: string;
         label: string;
         value: ValueExpressionInput;
+        format?: z.infer<typeof valueFormatSchema>;
         emphasize?: boolean;
       }>;
     };
@@ -333,6 +339,7 @@ const nodeSchema: z.ZodType<NodeInput> = z.lazy(() =>
       binding: bindingRefSchema,
       label: z.string().optional(),
       emptyValue: z.string().optional(),
+      format: valueFormatSchema.optional(),
     }).strict(),
     z.object({
       id: z.string().min(1),
@@ -356,6 +363,7 @@ const nodeSchema: z.ZodType<NodeInput> = z.lazy(() =>
         id: z.string().min(1),
         header: z.string().optional(),
         value: valueExpressionSchema,
+        format: valueFormatSchema.optional(),
         style: nodeStyleRefSchema.optional(),
       }).strict()).min(1),
       emptyStateText: z.string().optional(),
@@ -373,6 +381,7 @@ const nodeSchema: z.ZodType<NodeInput> = z.lazy(() =>
         id: z.string().min(1),
         header: z.string().optional(),
         value: valueExpressionSchema,
+        format: valueFormatSchema.optional(),
         style: nodeStyleRefSchema.optional(),
       }).strict()).min(1),
       emptyStateText: z.string().optional(),
@@ -386,6 +395,7 @@ const nodeSchema: z.ZodType<NodeInput> = z.lazy(() =>
         id: z.string().min(1),
         label: z.string().min(1),
         value: valueExpressionSchema,
+        format: valueFormatSchema.optional(),
         emphasize: z.boolean().optional(),
       }).strict()).min(1),
     }).strict(),

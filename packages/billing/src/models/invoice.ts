@@ -503,8 +503,9 @@ const Invoice = {
         'version',
         'standard_invoice_template_code',
         'templateAst',
-        'assemblyScriptSource',
-        'sha'
+        'is_default',
+        'created_at',
+        'updated_at'
       )
       .orderBy('name');
 
@@ -536,7 +537,6 @@ const Invoice = {
           'version',
           'is_default',
           'templateAst',
-          'assemblyScriptSource',
           'created_at',
           'updated_at'
         ),
@@ -598,13 +598,35 @@ const Invoice = {
     const templateWithDefaults = {
       ...template,
       version: template.version || 1,
-      tenant
+      tenant,
     };
 
+    // Avoid passing UI-only / computed fields (or any unknown keys) straight into a DB insert.
+    const insertRecord: Record<string, unknown> = {
+      tenant,
+      template_id: (templateWithDefaults as any).template_id,
+      name: (templateWithDefaults as any).name,
+      version: (templateWithDefaults as any).version,
+      is_default: (templateWithDefaults as any).is_default ?? false,
+    };
+
+    if ((templateWithDefaults as any).templateAst !== undefined) {
+      insertRecord.templateAst = (templateWithDefaults as any).templateAst;
+    }
+
+    const updateRecord: Record<string, unknown> = {
+      name: insertRecord.name,
+      version: insertRecord.version,
+      is_default: insertRecord.is_default,
+    };
+    if (Object.prototype.hasOwnProperty.call(insertRecord, 'templateAst')) {
+      updateRecord.templateAst = insertRecord.templateAst;
+    }
+
     const [savedTemplate] = await knexOrTrx('invoice_templates')
-      .insert(templateWithDefaults)
+      .insert(insertRecord)
       .onConflict(['tenant', 'template_id'])
-      .merge(['name', 'version', 'templateAst', 'assemblyScriptSource', 'wasmBinary', 'is_default'])
+      .merge(updateRecord)
       .returning('*');
 
     return savedTemplate;

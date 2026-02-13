@@ -1,6 +1,6 @@
 import { DateValue, ISO8601String } from '@alga-psa/types';
 import { TenantEntity } from './index';
-import { WasmInvoiceViewModel as RendererInvoiceViewModel, WasmInvoiceViewModel } from '../lib/invoice-renderer/types'; // Import the correct ViewModel
+import type { WasmInvoiceViewModel as RendererInvoiceViewModel, WasmInvoiceViewModel } from '@alga-psa/types';
 import type { InvoiceTemplateAst } from '@alga-psa/types';
 
 // Tax source types for external tax delegation
@@ -148,9 +148,7 @@ export interface IInvoiceTemplate extends TenantEntity {
   template_id: string;
   name: string;
   version: number;
-  assemblyScriptSource?: string;
   templateAst?: InvoiceTemplateAst | null;
-  wasmBinary?: Buffer;
   isStandard?: boolean;
   isClone?: boolean;
   is_default?: boolean; // Legacy flag retained for compatibility
@@ -160,8 +158,6 @@ export interface IInvoiceTemplate extends TenantEntity {
   selectValue?: string;
   created_at?: ISO8601String; // Added timestamp
   updated_at?: ISO8601String; // Added timestamp
-  parsed?: ParsedTemplate; // Added for backward compatibility with tests
-  dsl?: string; // Added for backward compatibility with tests
 }
 
 export interface GlobalCalculation {

@@ -63,24 +63,6 @@ export * from './usage.interfaces';
 export * from './validation.interfaces';
 export * from './workItem.interfaces';
 
-// Tax interfaces: selectively exported to avoid collisions with billing.interfaces' ITaxRate.
-export type {
-  IClientTaxSettings,
-  ITaxComponent,
-  ICompositeTaxMapping,
-  ITaxRateThreshold,
-  ITaxHoliday,
-  ITaxCalculationResult,
-  ITaxRegion,
-  IClientTaxRateAssociation,
-  TaxSource,
-  ITenantTaxSettings,
-  IClientTaxSourceSettings,
-  IExternalTaxImport,
-  IExternalTaxImportResult,
-  ITaxRate as ITaxRateDetails,
-} from './tax.interfaces';
-
 // Email interfaces are intentionally not exported here to avoid name collisions with outbound email types.
 export * from './emailProvider.interface';
 

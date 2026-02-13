@@ -49,6 +49,24 @@ export type { InboundTicketDefaults, TicketFieldOptions } from './lib/email';
 // Interface definitions (migrated from server/src/interfaces and shared/interfaces).
 export * from './interfaces';
 
+// Tax interfaces are exported from their source module (not from interfaces/index.ts) to avoid barrel collisions.
+export type {
+  IClientTaxSettings,
+  ITaxComponent,
+  ICompositeTaxMapping,
+  ITaxRateThreshold,
+  ITaxHoliday,
+  ITaxCalculationResult,
+  ITaxRegion,
+  IClientTaxRateAssociation,
+  TaxSource,
+  ITenantTaxSettings,
+  IClientTaxSourceSettings,
+  IExternalTaxImport,
+  IExternalTaxImportResult,
+  ITaxRate as ITaxRateDetails,
+} from './interfaces/tax.interfaces';
+
 // Inbound email types - exported with explicit naming to avoid conflicts with outbound email types above.
 export type {
   EmailProviderConfig as InboundEmailProviderConfig,

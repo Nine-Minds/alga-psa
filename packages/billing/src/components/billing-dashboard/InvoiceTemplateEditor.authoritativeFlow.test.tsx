@@ -131,7 +131,11 @@ describe('InvoiceTemplateEditor authoritative preview flow', () => {
     getInvoiceTemplateMock.mockResolvedValue({
       template_id: 'tpl-flow',
       name: 'Template Flow',
-      assemblyScriptSource: '// existing source',
+      templateAst: {
+        kind: 'invoice-template-ast',
+        version: 1,
+        layout: { id: 'root', type: 'document', children: [] },
+      },
       isStandard: false,
     });
 
@@ -229,7 +233,6 @@ describe('InvoiceTemplateEditor authoritative preview flow', () => {
       version: 1,
     });
     expect(JSON.stringify(payload.templateAst)).toContain('field-flow');
-    expect(payload.assemblyScriptSource).toContain('ALGA_INVOICE_DESIGNER_STATE_V1');
   });
 
   it('updates authoritative preview when switching to existing invoice data', async () => {

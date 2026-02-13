@@ -19,6 +19,8 @@ export interface InvoiceTemplateAstMetadata {
   currencyCode?: string;
 }
 
+export type InvoiceTemplateValueFormat = 'text' | 'number' | 'currency' | 'date';
+
 export type InvoiceTemplateNodeType =
   | 'document'
   | 'section'
@@ -66,6 +68,7 @@ export interface InvoiceTemplateFieldNode extends InvoiceTemplateNodeBase {
   binding: InvoiceTemplateBindingRef;
   label?: string;
   emptyValue?: string;
+  format?: InvoiceTemplateValueFormat;
   children?: never;
 }
 
@@ -85,6 +88,7 @@ export interface InvoiceTemplateTableColumn {
   id: string;
   header?: string;
   value: InvoiceTemplateValueExpression;
+  format?: InvoiceTemplateValueFormat;
   style?: InvoiceTemplateNodeStyleRef;
 }
 
@@ -122,6 +126,7 @@ export interface InvoiceTemplateTotalsRow {
   id: string;
   label: string;
   value: InvoiceTemplateValueExpression;
+  format?: InvoiceTemplateValueFormat;
   emphasize?: boolean;
 }
 

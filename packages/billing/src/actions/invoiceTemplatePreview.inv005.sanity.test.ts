@@ -346,7 +346,7 @@ describe('invoiceTemplatePreview INV-005 runtime sanity', () => {
     expect(actionResult.render.html).toContain('625000');
     expect(actionResult.render.html).toContain('750000');
 
-    const targetedContainmentMismatches = actionResult.verification.mismatches.filter((mismatch) =>
+    const targetedContainmentMismatches = actionResult.verification.mismatches.filter((mismatch: any) =>
       (mismatch.constraintId.startsWith('064f66bb-') ||
         mismatch.constraintId.startsWith('a6b2e44c-') ||
         mismatch.constraintId.startsWith('721c625b-')) &&

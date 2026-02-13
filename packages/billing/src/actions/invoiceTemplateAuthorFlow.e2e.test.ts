@@ -20,7 +20,9 @@ vi.mock('@alga-psa/billing/models/invoice', () => ({
         ...template,
         tenant,
       };
-      const index = storedTemplates.findIndex((candidate) => candidate.template_id === saved.template_id);
+      const index = storedTemplates.findIndex(
+        (candidate) => (candidate as any).template_id === (saved as any).template_id
+      );
       if (index >= 0) {
         storedTemplates[index] = saved;
       } else {
@@ -167,7 +169,6 @@ describe('invoice template AST author flow e2e', () => {
         name: 'E2E Flow Template',
         version: 1,
         is_default: false,
-        assemblyScriptSource: previewResult.generatedSource,
         templateAst,
       }
     );

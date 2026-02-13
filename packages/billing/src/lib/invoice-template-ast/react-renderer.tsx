@@ -2,8 +2,10 @@ import React from 'react';
 import type {
   InvoiceTemplateAst,
   InvoiceTemplateNode,
+  InvoiceTemplateNodeStyleRef,
   InvoiceTemplateStyleDeclaration,
   InvoiceTemplateValueExpression,
+  InvoiceTemplateValueFormat,
 } from '@alga-psa/types';
 import type { InvoiceTemplateEvaluationResult } from './evaluator';
 
@@ -13,8 +15,18 @@ type RenderScope = {
   row?: UnknownRecord;
 };
 
+type RenderContext = {
+  locale: string;
+  currencyCode: string;
+};
+
 const isRecord = (value: unknown): value is UnknownRecord =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
+
+const joinClassNames = (...values: Array<string | null | undefined | false>): string =>
+  values.filter(Boolean).join(' ');
+
+const sanitizeCssIdentifier = (value: string): string => value.replace(/[^a-zA-Z0-9_-]/g, '-');
 
 const getPathValue = (target: unknown, path: string): unknown => {
   if (!path) {
@@ -34,8 +46,7 @@ const getPathValue = (target: unknown, path: string): unknown => {
   }, target);
 };
 
-const toCssValue = (value: string | number): string =>
-  typeof value === 'number' ? String(value) : value;
+const toCssValue = (value: string | number): string => (typeof value === 'number' ? String(value) : value);
 
 const styleDeclarationToCss = (declaration: InvoiceTemplateStyleDeclaration): string =>
   Object.entries(declaration)
@@ -54,7 +65,104 @@ const styleDeclarationToReactStyle = (
   return declaration as React.CSSProperties;
 };
 
+const resolveStyleRef = (
+  styleRef?: InvoiceTemplateNodeStyleRef
+): { className: string | null; style?: React.CSSProperties } => {
+  if (!styleRef) {
+    return { className: null, style: undefined };
+  }
+  const className =
+    styleRef.tokenIds && styleRef.tokenIds.length > 0
+      ? styleRef.tokenIds.map((tokenId) => `ast-${tokenId}`).join(' ')
+      : null;
+  return { className, style: styleDeclarationToReactStyle(styleRef.inline) };
+};
+
+const formatValue = (value: unknown, format: InvoiceTemplateValueFormat | undefined, ctx: RenderContext): string => {
+  if (value === null || value === undefined) {
+    return '';
+  }
+
+  const normalizedFormat: InvoiceTemplateValueFormat = format ?? 'text';
+
+  if (normalizedFormat === 'date') {
+    const parsed = new Date(String(value));
+    if (Number.isNaN(parsed.getTime())) {
+      return String(value);
+    }
+    return parsed.toLocaleDateString(ctx.locale);
+  }
+
+  if (normalizedFormat === 'currency') {
+    const numeric = typeof value === 'number' ? value : Number(String(value));
+    if (!Number.isFinite(numeric)) {
+      return String(value);
+    }
+    try {
+      return new Intl.NumberFormat(ctx.locale, {
+        style: 'currency',
+        currency: ctx.currencyCode || 'USD',
+      }).format(numeric / 100);
+    } catch {
+      return `$${(numeric / 100).toFixed(2)}`;
+    }
+  }
+
+  if (normalizedFormat === 'number') {
+    const numeric = typeof value === 'number' ? value : Number(String(value));
+    return Number.isFinite(numeric) ? String(numeric) : String(value);
+  }
+
+  return String(value);
+};
+
 const buildAstCss = (ast: InvoiceTemplateAst): string => {
+  const baseCss = `
+.invoice-template-root {
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.35;
+  color: #111827;
+}
+
+.invoice-template-root section { margin: 0 0 16px; }
+.invoice-template-root h2 { margin: 0 0 8px; font-size: 18px; font-weight: 700; }
+.invoice-template-root p { margin: 0; }
+
+.invoice-template-root table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 8px 0 16px;
+}
+.invoice-template-root thead th {
+  border-bottom: 1px solid #e5e7eb;
+  font-weight: 600;
+  text-align: left;
+  padding: 6px 8px;
+}
+.invoice-template-root tbody td {
+  padding: 6px 8px;
+  vertical-align: top;
+}
+.invoice-template-root tbody tr + tr td { border-top: 1px solid #f3f4f6; }
+
+.invoice-template-root .ast-node-type-field {
+  display: flex;
+  gap: 6px;
+}
+
+.invoice-template-root .ast-node-type-totals > .ast-totals-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 2px 0;
+}
+.invoice-template-root .ast-totals-value {
+  text-align: right;
+  white-space: nowrap;
+}
+`.trim();
+
   const classRules = Object.entries(ast.styles?.classes ?? {})
     .map(([className, declaration]) => `.ast-${className} { ${styleDeclarationToCss(declaration)} }`)
     .join('\n');
@@ -64,7 +172,7 @@ const buildAstCss = (ast: InvoiceTemplateAst): string => {
     .join(' ');
 
   const rootRule = tokenRules.length > 0 ? `.invoice-template-root { ${tokenRules} }\n` : '';
-  return `${rootRule}${classRules}`.trim();
+  return `${baseCss}\n${rootRule}${classRules}`.trim();
 };
 
 const resolveExpressionValue = (
@@ -111,10 +219,7 @@ const resolveExpressionValue = (
   }
 };
 
-const resolveCollection = (
-  bindingId: string,
-  evaluation: InvoiceTemplateEvaluationResult
-): UnknownRecord[] => {
+const resolveCollection = (bindingId: string, evaluation: InvoiceTemplateEvaluationResult): UnknownRecord[] => {
   const value = evaluation.bindings[bindingId];
   if (!Array.isArray(value)) {
     return [];
@@ -122,41 +227,47 @@ const resolveCollection = (
   return value.filter(isRecord);
 };
 
-const resolveClassNames = (node: InvoiceTemplateNode): string =>
-  (node.style?.tokenIds ?? []).map((tokenId) => `ast-${tokenId}`).join(' ');
-
 const renderNode = (
   node: InvoiceTemplateNode,
   evaluation: InvoiceTemplateEvaluationResult,
-  scope: RenderScope
+  scope: RenderScope,
+  ctx: RenderContext
 ): React.ReactNode => {
-  const className = resolveClassNames(node);
-  const style = styleDeclarationToReactStyle(node.style?.inline);
+  const nodeTypeClass = `ast-node ast-node-type-${sanitizeCssIdentifier(node.type)}`;
+  const { className: styleClassName, style } = resolveStyleRef(node.style);
+  const elementClassName = joinClassNames(nodeTypeClass, styleClassName);
 
   switch (node.type) {
     case 'document':
       return (
-        <div key={node.id} id={node.id} className={className || undefined} style={style}>
-          {node.children.map((child) => renderNode(child, evaluation, scope))}
+        <div key={node.id} id={node.id} className={elementClassName || undefined} style={style}>
+          {node.children.map((child) => renderNode(child, evaluation, scope, ctx))}
         </div>
       );
     case 'section':
       return (
-        <section key={node.id} id={node.id} className={className || undefined} style={style}>
+        <section key={node.id} id={node.id} className={elementClassName || undefined} style={style}>
           {node.title ? <h2>{node.title}</h2> : null}
-          {node.children.map((child) => renderNode(child, evaluation, scope))}
+          {node.children.map((child) => renderNode(child, evaluation, scope, ctx))}
         </section>
       );
-    case 'stack':
+    case 'stack': {
+      const defaultStackStyle: React.CSSProperties = {
+        display: 'flex',
+        flexDirection: node.direction === 'row' ? 'row' : 'column',
+        gap: '8px',
+      };
+      const mergedStyle: React.CSSProperties = { ...defaultStackStyle, ...(style ?? {}) };
       return (
-        <div key={node.id} id={node.id} className={className || undefined} style={style}>
-          {node.children.map((child) => renderNode(child, evaluation, scope))}
+        <div key={node.id} id={node.id} className={elementClassName || undefined} style={mergedStyle}>
+          {node.children.map((child) => renderNode(child, evaluation, scope, ctx))}
         </div>
       );
+    }
     case 'text': {
       const content = resolveExpressionValue(node.content, evaluation, scope);
       return (
-        <p key={node.id} id={node.id} className={className || undefined} style={style}>
+        <p key={node.id} id={node.id} className={elementClassName || undefined} style={style}>
           {String(content ?? '')}
         </p>
       );
@@ -164,9 +275,9 @@ const renderNode = (
     case 'field': {
       const value = evaluation.bindings[node.binding.bindingId];
       return (
-        <div key={node.id} id={node.id} className={className || undefined} style={style}>
+        <div key={node.id} id={node.id} className={elementClassName || undefined} style={style}>
           {node.label ? <span>{node.label}: </span> : null}
-          <span>{String(value ?? node.emptyValue ?? '')}</span>
+          <span>{formatValue(value ?? node.emptyValue ?? '', node.format, ctx)}</span>
         </div>
       );
     }
@@ -177,7 +288,7 @@ const renderNode = (
         <img
           key={node.id}
           id={node.id}
-          className={className || undefined}
+          className={elementClassName || undefined}
           style={style}
           src={String(src ?? '')}
           alt={String(alt ?? '')}
@@ -185,16 +296,26 @@ const renderNode = (
       );
     }
     case 'divider':
-      return <hr key={node.id} id={node.id} className={className || undefined} style={style} />;
+      return <hr key={node.id} id={node.id} className={elementClassName || undefined} style={style} />;
     case 'table': {
       const rows = resolveCollection(node.sourceBinding.bindingId, evaluation);
       return (
-        <table key={node.id} id={node.id} className={className || undefined} style={style}>
+        <table key={node.id} id={node.id} className={elementClassName || undefined} style={style}>
           <thead>
             <tr>
-              {node.columns.map((column) => (
-                <th key={column.id}>{column.header ?? column.id}</th>
-              ))}
+              {node.columns.map((column) => {
+                const { className: colClassName, style: colStyle } = resolveStyleRef(column.style);
+                const alignRight = column.format === 'currency' || column.format === 'number';
+                return (
+                  <th
+                    key={column.id}
+                    className={colClassName || undefined}
+                    style={{ ...(colStyle ?? {}), ...(alignRight ? { textAlign: 'right' } : {}) }}
+                  >
+                    {column.header ?? column.id}
+                  </th>
+                );
+              })}
             </tr>
           </thead>
           <tbody>
@@ -206,10 +327,18 @@ const renderNode = (
               rows.map((row, index) => (
                 <tr key={`${node.id}-row-${index}`}>
                   {node.columns.map((column) => {
-                    const value = resolveExpressionValue(column.value, evaluation, {
-                      row,
-                    });
-                    return <td key={column.id}>{String(value ?? '')}</td>;
+                    const value = resolveExpressionValue(column.value, evaluation, { row });
+                    const { className: colClassName, style: colStyle } = resolveStyleRef(column.style);
+                    const alignRight = column.format === 'currency' || column.format === 'number';
+                    return (
+                      <td
+                        key={column.id}
+                        className={colClassName || undefined}
+                        style={{ ...(colStyle ?? {}), ...(alignRight ? { textAlign: 'right' } : {}) }}
+                      >
+                        {formatValue(value ?? '', column.format, ctx)}
+                      </td>
+                    );
                   })}
                 </tr>
               ))
@@ -221,12 +350,22 @@ const renderNode = (
     case 'dynamic-table': {
       const rows = resolveCollection(node.repeat.sourceBinding.bindingId, evaluation);
       return (
-        <table key={node.id} id={node.id} className={className || undefined} style={style}>
+        <table key={node.id} id={node.id} className={elementClassName || undefined} style={style}>
           <thead>
             <tr>
-              {node.columns.map((column) => (
-                <th key={column.id}>{column.header ?? column.id}</th>
-              ))}
+              {node.columns.map((column) => {
+                const { className: colClassName, style: colStyle } = resolveStyleRef(column.style);
+                const alignRight = column.format === 'currency' || column.format === 'number';
+                return (
+                  <th
+                    key={column.id}
+                    className={colClassName || undefined}
+                    style={{ ...(colStyle ?? {}), ...(alignRight ? { textAlign: 'right' } : {}) }}
+                  >
+                    {column.header ?? column.id}
+                  </th>
+                );
+              })}
             </tr>
           </thead>
           <tbody>
@@ -238,10 +377,18 @@ const renderNode = (
               rows.map((row, index) => (
                 <tr key={`${node.id}-row-${index}`}>
                   {node.columns.map((column) => {
-                    const value = resolveExpressionValue(column.value, evaluation, {
-                      row,
-                    });
-                    return <td key={column.id}>{String(value ?? '')}</td>;
+                    const value = resolveExpressionValue(column.value, evaluation, { row });
+                    const { className: colClassName, style: colStyle } = resolveStyleRef(column.style);
+                    const alignRight = column.format === 'currency' || column.format === 'number';
+                    return (
+                      <td
+                        key={column.id}
+                        className={colClassName || undefined}
+                        style={{ ...(colStyle ?? {}), ...(alignRight ? { textAlign: 'right' } : {}) }}
+                      >
+                        {formatValue(value ?? '', column.format, ctx)}
+                      </td>
+                    );
                   })}
                 </tr>
               ))
@@ -254,13 +401,16 @@ const renderNode = (
       const totalsBindingKey = `${node.sourceBinding.bindingId}.totals`;
       const totals = (evaluation.bindings[totalsBindingKey] ?? evaluation.totals) as Record<string, number>;
       return (
-        <div key={node.id} id={node.id} className={className || undefined} style={style}>
-          {node.rows.map((row) => (
-            <div key={row.id} style={row.emphasize ? { fontWeight: 700 } : undefined}>
-              <span>{row.label}</span>
-              <span>{String(totals[row.id] ?? resolveExpressionValue(row.value, evaluation, scope) ?? '')}</span>
-            </div>
-          ))}
+        <div key={node.id} id={node.id} className={elementClassName || undefined} style={style}>
+          {node.rows.map((row) => {
+            const raw = totals[row.id] ?? resolveExpressionValue(row.value, evaluation, scope) ?? '';
+            return (
+              <div key={row.id} className="ast-totals-row" style={row.emphasize ? { fontWeight: 700 } : undefined}>
+                <span className="ast-totals-label">{row.label}</span>
+                <span className="ast-totals-value">{formatValue(raw, row.format, ctx)}</span>
+              </div>
+            );
+          })}
         </div>
       );
     }
@@ -274,9 +424,15 @@ export interface InvoiceTemplateReactRendererProps {
   evaluation: InvoiceTemplateEvaluationResult;
 }
 
-export const InvoiceTemplateAstRenderer: React.FC<InvoiceTemplateReactRendererProps> = ({ ast, evaluation }) => (
-  <div className="invoice-template-root">{renderNode(ast.layout, evaluation, {})}</div>
-);
+export const InvoiceTemplateAstRenderer: React.FC<InvoiceTemplateReactRendererProps> = ({ ast, evaluation }) => {
+  const invoiceRecord = isRecord(evaluation.bindings.invoice) ? evaluation.bindings.invoice : {};
+  const currencyCode = String(
+    (invoiceRecord as Record<string, unknown>).currencyCode ?? ast.metadata?.currencyCode ?? 'USD'
+  );
+  const locale = String(ast.metadata?.locale ?? 'en-US');
+
+  return <div className="invoice-template-root">{renderNode(ast.layout, evaluation, {}, { currencyCode, locale })}</div>;
+};
 
 export interface InvoiceTemplateRenderOutput {
   html: string;
@@ -295,3 +451,4 @@ export const renderEvaluatedInvoiceTemplateAst = async (
     css: buildAstCss(ast),
   };
 };
+

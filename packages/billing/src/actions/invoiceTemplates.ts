@@ -13,9 +13,11 @@ import {
     IInvoiceAnnotation,
     InvoiceTemplateSource
 } from '@alga-psa/types';
+import type { InvoiceTemplateAst, WasmInvoiceViewModel, RenderOutput } from '@alga-psa/types';
 import { v4 as uuidv4 } from 'uuid';
 import { withAuth } from '@alga-psa/auth';
-import { getStandardInvoiceTemplateAstByCode } from '../lib/invoice-template-ast/standardTemplates';
+import { evaluateInvoiceTemplateAst } from '../lib/invoice-template-ast/evaluator';
+import { renderEvaluatedInvoiceTemplateAst } from '../lib/invoice-template-ast/react-renderer';
 
 export const getInvoiceTemplate = withAuth(async (
     user,
@@ -33,8 +35,7 @@ export const getInvoiceTemplate = withAuth(async (
           'is_default',
           'templateAst',
           'created_at',
-          'updated_at',
-          'assemblyScriptSource'
+          'updated_at'
         )
         .where({
           template_id: templateId,
@@ -73,12 +74,10 @@ export const getInvoiceTemplates = withAuth(async (
 ): Promise<IInvoiceTemplate[]> => {
     const { knex } = await createTenantKnex();
     return withTransaction(knex, async (trx: Knex.Transaction) => {
-        // Assuming Invoice model has a static method getAllTemplates that now fetches
-        // assemblyScriptSource and wasmPath instead of dsl.
-        // It should return all standard templates and the templates for the current tenant.
+        // Returns all standard templates and tenant-specific templates.
         const templates: IInvoiceTemplate[] = await Invoice.getAllTemplates(trx, tenant);
 
-        // No parsing needed here anymore as we are moving away from DSL
+        // No parsing needed; runtime rendering consumes templateAst.
         return templates;
     });
 });
@@ -172,12 +171,11 @@ export const saveInvoiceTemplate = withAuth(async (
     user,
     { tenant },
     template: Omit<IInvoiceTemplate, 'tenant'> & { isClone?: boolean }
-): Promise<{ success: boolean; template?: IInvoiceTemplate }> => {
+): Promise<{ success: boolean; template?: IInvoiceTemplate; error?: string }> => {
     const { knex } = await createTenantKnex();
 
-    // Drop legacy Wasm payloads from clients; runtime rendering uses templateAst.
-    if ('wasmBinary' in template) {
-        delete (template as any).wasmBinary;
+    if (!(template as any)?.templateAst) {
+        return { success: false, error: 'Template AST is required.' };
     }
 
     console.log('saveInvoiceTemplate called with template:', {
@@ -185,7 +183,6 @@ export const saveInvoiceTemplate = withAuth(async (
         name: template.name,
         isClone: template.isClone,
         hasTemplateAst: 'templateAst' in template && Boolean((template as any).templateAst),
-        hasAssemblyScriptSource: 'assemblyScriptSource' in template,
     });
 
     // When cloning, create a new template object with a new template_id
@@ -219,12 +216,9 @@ export const saveInvoiceTemplate = withAuth(async (
         name: templateToSaveWithoutFlags.name,
         version: templateToSaveWithoutFlags.version,
         hasTemplateAst: Boolean((templateToSaveWithoutFlags as any).templateAst),
-        hasAssemblyScriptSource: 'assemblyScriptSource' in templateToSaveWithoutFlags,
-        assemblyScriptSourceLength: templateToSaveWithoutFlags.assemblyScriptSource ? templateToSaveWithoutFlags.assemblyScriptSource.length : 0
     });
 
     // Canonical AST templates are the only runtime path; persist metadata directly.
-    // Legacy source columns can still be carried temporarily as compatibility data.
     try {
         const savedTemplate = await Invoice.saveTemplate(knex, tenant, templateToSaveWithoutFlags);
 
@@ -233,13 +227,12 @@ export const saveInvoiceTemplate = withAuth(async (
             name: savedTemplate.name,
             version: savedTemplate.version,
             hasTemplateAst: Boolean((savedTemplate as any).templateAst),
-            hasAssemblyScriptSource: 'assemblyScriptSource' in savedTemplate,
         });
 
         return { success: true, template: savedTemplate as IInvoiceTemplate };
     } catch (saveError: any) {
         console.error('Error saving template metadata:', saveError);
-        return { success: false };
+        return { success: false, error: saveError?.message || String(saveError) };
     }
 });
 
@@ -297,74 +290,7 @@ export async function getInvoiceAnnotations(invoiceId: string): Promise<IInvoice
     // return knex('invoice_annotations').where({ invoice_id: invoiceId, tenant }); // Example query
     return [];
 }
-// Define the structure for the input metadata (excluding source and wasm binary)
-type CompileTemplateMetadata = Omit<IInvoiceTemplate, 'tenant' | 'template_id' | 'assemblyScriptSource' | 'wasmBinary' | 'isStandard'> & {
-    template_id?: string; // Allow optional template_id for updates
-};
-
-// Define the structure for the successful response
-type CompileSuccessResponse = {
-    success: true;
-    template: IInvoiceTemplate;
-};
-
-// Define the structure for the error response
-type CompileErrorResponse = {
-    success: false;
-    error: string;
-    details?: string; // Optional field for compiler output or other details
-};
-
-export const compileAndSaveTemplate = withAuth(async (
-    user,
-    { tenant },
-    metadata: CompileTemplateMetadata,
-    assemblyScriptSource: string
-): Promise<CompileSuccessResponse | CompileErrorResponse> => {
-    const { knex } = await createTenantKnex();
-    try {
-        const templateId = metadata.template_id || uuidv4();
-        const templateData: Omit<IInvoiceTemplate, 'tenant'> = {
-            ...metadata,
-            template_id: templateId,
-            assemblyScriptSource,
-            is_default: metadata.is_default === true ? true : false,
-        };
-
-        const savedTemplate = await Invoice.saveTemplate(knex, tenant, templateData);
-
-        if (templateData.is_default) {
-            await setDefaultTemplate({
-                templateSource: 'custom',
-                templateId,
-            });
-        }
-
-        return {
-            success: true,
-            template: savedTemplate as IInvoiceTemplate,
-        };
-    } catch (error: any) {
-        return {
-            success: false,
-            error: 'Failed to save template.',
-            details: error.message || String(error),
-        };
-    }
-});
-
-export const getCompiledWasm = withAuth(async (
-    user,
-    { tenant },
-    templateId: string
-): Promise<Buffer> => {
-    throw new Error('getCompiledWasm is no longer supported. Invoice templates render from templateAst.');
-});
 // --- Server-Side Rendering Action ---
-
-import { evaluateInvoiceTemplateAst } from '../lib/invoice-template-ast/evaluator';
-import { renderEvaluatedInvoiceTemplateAst } from '../lib/invoice-template-ast/react-renderer';
-import type { InvoiceTemplateAst, WasmInvoiceViewModel, RenderOutput } from '@alga-psa/types';
 
 /**
  * Renders an invoice template entirely on the server-side.
@@ -552,60 +478,3 @@ export const deleteInvoiceTemplate = withAuth(async (
         };
     }
 });
-
-import crypto from 'crypto';
-
-type CompileStandardSuccessResponse = {
-    success: true;
-    sha: string;
-};
-
-type CompileStandardErrorResponse = {
-    success: false;
-    error: string;
-    details?: string;
-};
-
-/**
- * Persists canonical AST + source hash for standard templates.
- * Runtime rendering consumes templateAst; no Wasm compilation is performed.
- */
-export async function compileStandardTemplate(
-    standard_invoice_template_code: string,
-    assemblyScriptSource: string,
-    knex: Knex
-): Promise<CompileStandardSuccessResponse | CompileStandardErrorResponse> {
-    try {
-        const currentSha = crypto.createHash('sha256').update(assemblyScriptSource).digest('hex');
-        const updatePayload = {
-            assemblyScriptSource,
-            templateAst: getStandardInvoiceTemplateAstByCode(standard_invoice_template_code) ?? null,
-            sha: currentSha,
-            updated_at: knex.fn.now(),
-        };
-
-        const updatedCount = await withTransaction(knex, async (trx: Knex.Transaction) => {
-          return await trx('standard_invoice_templates')
-            .where({ standard_invoice_template_code: standard_invoice_template_code })
-            .update(updatePayload);
-        });
-
-        if (updatedCount === 0) {
-            return {
-                success: false,
-                error: `Standard template code '${standard_invoice_template_code}' not found in database for update.`,
-            };
-        }
-
-        return {
-            success: true,
-            sha: currentSha,
-        };
-    } catch (error: any) {
-        return {
-            success: false,
-            error: 'An unexpected error occurred while updating the standard template.',
-            details: error.message || String(error),
-        };
-    }
-}

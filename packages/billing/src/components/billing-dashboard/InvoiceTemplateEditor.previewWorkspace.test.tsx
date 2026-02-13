@@ -5,7 +5,6 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-libra
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import InvoiceTemplateEditor from './InvoiceTemplateEditor';
 import { useInvoiceDesignerStore } from '../invoice-designer/state/designerStore';
-import * as persistenceUtils from '../invoice-designer/utils/persistence';
 import type { DesignerWorkspaceSnapshot } from '../invoice-designer/state/designerStore';
 import { exportWorkspaceToInvoiceTemplateAst } from '../invoice-designer/ast/workspaceAst';
 
@@ -166,8 +165,6 @@ const installLocalStorageMock = () => {
 describe('InvoiceTemplateEditor preview workspace integration', () => {
   beforeEach(() => {
     installLocalStorageMock();
-    Object.defineProperty(window, 'atob', { value: undefined, configurable: true });
-    Object.defineProperty(window, 'btoa', { value: undefined, configurable: true });
     searchParamsState = new URLSearchParams();
     featureFlagState.enabled = true;
     featureFlagState.loading = false;
@@ -180,7 +177,11 @@ describe('InvoiceTemplateEditor preview workspace integration', () => {
     getInvoiceTemplateMock.mockResolvedValue({
       template_id: 'tpl-1',
       name: 'Template A',
-      assemblyScriptSource: '// template source',
+      templateAst: {
+        kind: 'invoice-template-ast',
+        version: 1,
+        layout: { id: 'root', type: 'document', children: [] },
+      },
       isStandard: false,
     });
   });
@@ -203,39 +204,20 @@ describe('InvoiceTemplateEditor preview workspace integration', () => {
     expect(screen.getByTestId('designer-visual-workspace-tab').textContent).toBe('preview');
   });
 
-  it('hydrates workspace from source-embedded designer state', async () => {
-    const workspace = createWorkspaceWithField('embedded-field');
-    const extractSpy = vi
-      .spyOn(persistenceUtils, 'extractInvoiceDesignerStateFromSource')
-      .mockReturnValue({ version: 1, workspace } as any);
-    getInvoiceTemplateMock.mockResolvedValueOnce({
-      template_id: 'tpl-embedded',
-      name: 'Template Embedded',
-      assemblyScriptSource: '// source',
-      isStandard: false,
-    });
-
-    render(<InvoiceTemplateEditor templateId="tpl-embedded" />);
-
-    await waitFor(() => {
-      expect(useInvoiceDesignerStore.getState().nodes.some((node) => node.id === 'embedded-field')).toBe(true);
-    });
-    extractSpy.mockRestore();
-  });
-
-  it('hydrates workspace from localStorage fallback when source has no embedded state', async () => {
+  it('hydrates workspace from localStorage fallback', async () => {
     const workspace = createWorkspaceWithField('local-field');
     const storage = globalThis.localStorage as Storage | undefined;
     if (storage && typeof storage.setItem === 'function') {
-      storage.setItem(
-        persistenceUtils.getInvoiceDesignerLocalStorageKey('tpl-local'),
-        JSON.stringify({ version: 1, workspace })
-      );
+      storage.setItem(`alga.invoiceDesigner.workspace.${'tpl-local'}`, JSON.stringify(workspace));
     }
     getInvoiceTemplateMock.mockResolvedValueOnce({
       template_id: 'tpl-local',
       name: 'Template Local',
-      assemblyScriptSource: '// plain source',
+      templateAst: {
+        kind: 'invoice-template-ast',
+        version: 1,
+        layout: { id: 'root', type: 'document', children: [] },
+      },
       isStandard: false,
     });
 
@@ -252,7 +234,6 @@ describe('InvoiceTemplateEditor preview workspace integration', () => {
     getInvoiceTemplateMock.mockResolvedValueOnce({
       template_id: 'tpl-ast',
       name: 'Template AST',
-      assemblyScriptSource: '',
       templateAst: astPayload,
       isStandard: false,
     });
@@ -281,8 +262,6 @@ describe('InvoiceTemplateEditor preview workspace integration', () => {
       kind: 'invoice-template-ast',
       version: 1,
     });
-    expect(typeof payload.assemblyScriptSource).toBe('string');
-    expect(payload.assemblyScriptSource).toContain('ALGA_INVOICE_DESIGNER_STATE_V1');
   });
 
   it('does not trigger save writes from preview interactions alone', async () => {
@@ -319,7 +298,6 @@ describe('InvoiceTemplateEditor preview workspace integration', () => {
       kind: 'invoice-template-ast',
       version: 1,
     });
-    expect(payload.assemblyScriptSource).not.toContain('// manually edited source should be ignored');
   });
 
   it('enables visual designer in local QA via forceInvoiceDesigner=1 when feature flag is off', async () => {

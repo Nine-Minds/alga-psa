@@ -229,9 +229,7 @@ const invoiceTemplateSchema = z.object({
   template_id: uuidSchema,
   name: z.string().min(1).max(100),
   version: z.number().min(1).default(1),
-  assemblyScriptSource: z.string().optional(),
   templateAst: z.record(z.string(), z.unknown()).nullable().optional(),
-  wasmBinary: z.instanceof(Buffer).optional(),
   isStandard: z.boolean().default(false),
   isClone: z.boolean().default(false),
   is_default: z.boolean().default(false)

@@ -21,6 +21,5 @@ describe('IInvoiceTemplate AST contract', () => {
     };
 
     expect(template.templateAst?.kind).toBe('invoice-template-ast');
-    expect(template.assemblyScriptSource).toBeUndefined();
   });
 });

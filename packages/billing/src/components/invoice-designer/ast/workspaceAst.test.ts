@@ -83,7 +83,7 @@ describe('exportWorkspaceToInvoiceTemplateAst', () => {
     const ast = exportWorkspaceToInvoiceTemplateAst(workspace);
     const json = exportWorkspaceToInvoiceTemplateAstJson(workspace);
 
-    const pageSection = ast.layout.children.find((child) => child.type === 'section');
+    const pageSection = ast.layout.children?.find((child) => child.type === 'section');
     expect(pageSection).toBeTruthy();
     if (!pageSection || pageSection.type !== 'section') {
       return;

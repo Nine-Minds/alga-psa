@@ -6,30 +6,23 @@ const readRepoFile = (relativePath: string) =>
   fs.readFileSync(path.resolve(process.cwd(), relativePath), 'utf8');
 
 describe('invoice template save/runtime wasm removal wiring', () => {
-  it('saveInvoiceTemplate path does not invoke compileAndSaveTemplate for AST templates', () => {
+  it('does not expose legacy compile/wasm actions', () => {
     const actionsSource = readRepoFile('packages/billing/src/actions/invoiceTemplates.ts');
-    const saveBlock = actionsSource.slice(
-      actionsSource.indexOf('export const saveInvoiceTemplate'),
-      actionsSource.indexOf('export const compileAndSaveTemplate')
-    );
 
-    expect(saveBlock).not.toContain('compileAndSaveTemplate(');
-    expect(saveBlock).toContain('persist metadata directly');
+    expect(actionsSource).not.toContain('compileAndSaveTemplate');
+    expect(actionsSource).not.toContain('getCompiledWasm');
+    expect(actionsSource).not.toContain('compileStandardTemplate');
   });
 
-  it('template persistence does not write or require wasmBinary for runtime rendering', () => {
+  it('template persistence does not write or require legacy wasm/source fields', () => {
     const actionsSource = readRepoFile('packages/billing/src/actions/invoiceTemplates.ts');
     const saveBlock = actionsSource.slice(
       actionsSource.indexOf('export const saveInvoiceTemplate'),
-      actionsSource.indexOf('export const compileAndSaveTemplate')
-    );
-    const standardCompileBlock = actionsSource.slice(
-      actionsSource.indexOf('export async function compileStandardTemplate')
+      actionsSource.indexOf('// --- Custom Fields, Conditional Rules, Annotations ---')
     );
 
-    expect(saveBlock).toContain("if ('wasmBinary' in template)");
-    expect(saveBlock).toContain('delete (template as any).wasmBinary');
-    expect(standardCompileBlock).not.toContain('wasmBinary');
-    expect(actionsSource).toContain('getCompiledWasm is no longer supported');
+    expect(saveBlock).not.toContain('wasmBinary');
+    expect(saveBlock).not.toContain('assemblyScriptSource');
+    expect(saveBlock).toContain('templateAst');
   });
 });
