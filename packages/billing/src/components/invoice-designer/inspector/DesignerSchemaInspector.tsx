@@ -9,6 +9,7 @@ import type {
   DesignerInspectorVisibleWhen,
 } from '../schema/inspectorSchema';
 import { TableEditorWidget } from './widgets/TableEditorWidget';
+import { normalizeCssColor, normalizeCssLength, normalizeNumber, normalizeString } from './normalizers';
 
 const isPlainObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -32,26 +33,6 @@ const splitDotPath = (path: string): string[] => path.split('.').map((segment) =
 type Props = {
   node: DesignerNode;
   nodesById: Map<string, DesignerNode>;
-};
-
-const normalizeCssLength = (raw: string): string | undefined => {
-  const trimmed = raw.trim();
-  if (trimmed.length === 0) return undefined;
-  // Convenience: allow entering "12" and treat it as px.
-  if (/^[+-]?\d+(\.\d+)?$/.test(trimmed)) {
-    return `${trimmed}px`;
-  }
-  return trimmed;
-};
-
-const normalizeCssColor = (raw: string): string | undefined => {
-  const trimmed = raw.trim();
-  return trimmed.length === 0 ? undefined : trimmed;
-};
-
-const normalizeString = (raw: string): string | undefined => {
-  const trimmed = raw.trim();
-  return trimmed.length === 0 ? undefined : raw;
 };
 
 export const DesignerSchemaInspector: React.FC<Props> = ({ node, nodesById }) => {
@@ -160,24 +141,10 @@ export const DesignerSchemaInspector: React.FC<Props> = ({ node, nodesById }) =>
             value={valueAsString}
             placeholder={field.placeholder}
             onChange={(event) => {
-              const trimmed = event.target.value.trim();
-              if (trimmed.length === 0) {
-                applyNormalized(field.path, undefined, false);
-                return;
-              }
-              const parsed = Number(trimmed);
-              if (!Number.isFinite(parsed)) return;
-              applyNormalized(field.path, parsed, false);
+              applyNormalized(field.path, normalizeNumber(event.target.value), false);
             }}
             onBlur={(event) => {
-              const trimmed = event.target.value.trim();
-              if (trimmed.length === 0) {
-                applyNormalized(field.path, undefined, true);
-                return;
-              }
-              const parsed = Number(trimmed);
-              if (!Number.isFinite(parsed)) return;
-              applyNormalized(field.path, parsed, true);
+              applyNormalized(field.path, normalizeNumber(event.target.value), true);
             }}
           />
         </div>

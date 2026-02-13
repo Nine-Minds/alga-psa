@@ -234,3 +234,6 @@ This plan intentionally continues the simplification arc:
 - 2026-02-13: Added schema-driven inspector integration coverage:
   - Added `packages/billing/src/components/invoice-designer/inspector/DesignerSchemaInspector.integration.test.tsx` to assert the inspector renders fields from schema and writes unified `props.*` via generic patch operations.
   - Testing gotcha: our shared `<Input>` doesn’t reliably forward `id` to the native `<input>`, so tests query controls by placeholder rather than label association.
+- 2026-02-13: Extracted Inspector input normalizers and added unit coverage:
+  - Added `packages/billing/src/components/invoice-designer/inspector/normalizers.ts` (+ `normalizeString`, `normalizeCssLength`, `normalizeCssColor`, `normalizeNumber`) and wired `DesignerSchemaInspector` to use them.
+  - Added `packages/billing/src/components/invoice-designer/inspector/normalizers.test.ts` to validate canonicalization behavior (for example unitless CSS lengths become `px`, empty strings unset).
