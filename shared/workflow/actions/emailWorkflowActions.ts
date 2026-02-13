@@ -186,6 +186,58 @@ export async function findUniqueClientIdByContactEmailDomain(
 }
 
 /**
+ * Read a client's configured "primary_contact_id" (stored in clients.properties)
+ * and validate it's a currently-active contact belonging to the client.
+ *
+ * Returns null when:
+ * - client doesn't exist
+ * - properties.primary_contact_id is unset/invalid
+ * - the referenced contact doesn't exist, doesn't belong to the client, or is inactive
+ */
+export async function findValidClientPrimaryContactId(
+  clientId: string,
+  tenant: string
+): Promise<string | null> {
+  if (!clientId) return null;
+
+  const { withAdminTransaction } = await import('@alga-psa/db');
+
+  return withAdminTransaction(async (trx: Knex.Transaction) => {
+    const clientRow = await trx('clients')
+      .select('properties')
+      .where({ tenant, client_id: clientId })
+      .first();
+
+    if (!clientRow) {
+      return null;
+    }
+
+    const properties = (clientRow as any)?.properties;
+    const primaryContactId =
+      properties && typeof properties === 'object'
+        ? (properties as any).primary_contact_id
+        : undefined;
+
+    if (typeof primaryContactId !== 'string' || !primaryContactId) {
+      return null;
+    }
+
+    const contactRow = await trx('contacts')
+      .select('contact_name_id')
+      .where({
+        tenant,
+        client_id: clientId,
+        contact_name_id: primaryContactId,
+        is_inactive: false,
+      })
+      .first();
+
+    const validatedId = (contactRow as any)?.contact_name_id;
+    return typeof validatedId === 'string' && validatedId ? validatedId : null;
+  });
+}
+
+/**
  * Create or find contact by email and client
  */
 export async function createOrFindContact(

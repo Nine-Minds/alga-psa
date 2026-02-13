@@ -17,7 +17,7 @@
   {
     "id": "F004",
     "description": "Resolve default contact ID safely (exists, belongs to client, active) when applying domain fallback",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F005",
