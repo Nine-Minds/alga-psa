@@ -94,4 +94,33 @@ describe('designerStore legacy path normalization', () => {
     expect((node.props as any).name).toBe('Renamed');
     expect(node.name).toBe('Renamed');
   });
+
+  it('unsetNodeProp removes canonical props keys without leaving undefined sentinels', () => {
+    const store = useInvoiceDesignerStore.getState();
+    const pageId = store.nodes.find((node) => node.type === 'page')?.id;
+    expect(pageId).toBeTruthy();
+    if (!pageId) return;
+
+    store.addNodeFromPalette('section', { x: 40, y: 40 }, { parentId: pageId });
+    const sectionId = useInvoiceDesignerStore.getState().selectedNodeId;
+    expect(sectionId).toBeTruthy();
+    if (!sectionId) return;
+
+    store.addNodeFromPalette('field', { x: 60, y: 60 }, { parentId: sectionId });
+    const nodeId = useInvoiceDesignerStore.getState().selectedNodeId;
+    expect(nodeId).toBeTruthy();
+    if (!nodeId) return;
+
+    store.setNodeProp(nodeId, 'props.metadata.bindingKey', 'invoice.invoiceNumber', true);
+    store.unsetNodeProp(nodeId, 'props.metadata.bindingKey', true);
+
+    const node = useInvoiceDesignerStore.getState().nodesById[nodeId];
+    expect(node).toBeTruthy();
+    if (!node) return;
+
+    const props = node.props as any;
+    expect(props.metadata).toBeTruthy();
+    expect(Object.prototype.hasOwnProperty.call(props.metadata, 'bindingKey')).toBe(false);
+    expect(JSON.stringify(props)).not.toContain('undefined');
+  });
 });

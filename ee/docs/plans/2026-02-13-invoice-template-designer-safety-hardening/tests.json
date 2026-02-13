@@ -86,7 +86,7 @@
   {
     "id": "T011",
     "description": "Designer store: `unsetNodeProp` removes canonical `props.*` keys (and does not leave `undefined` sentinel values).",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F006",
       "F007"
