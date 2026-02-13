@@ -8,7 +8,7 @@ describe('designerStore (flow drag-drop state updates)', () => {
     useInvoiceDesignerStore.getState().resetWorkspace();
   });
 
-  it('reorders within the same container deterministically (parent.childIds)', () => {
+  it('reorders within the same container deterministically (parent.children)', () => {
     const nodes: DesignerNode[] = [
       {
         id: 'doc-1',
@@ -86,7 +86,7 @@ describe('designerStore (flow drag-drop state updates)', () => {
     store.moveNode('text-3', 'section-1', 1);
 
     const section = useInvoiceDesignerStore.getState().nodes.find((n) => n.id === 'section-1');
-    expect(section?.childIds).toEqual(['text-1', 'text-3', 'text-2']);
+    expect(section?.children).toEqual(['text-1', 'text-3', 'text-2']);
   });
 
   it('moves a node across containers and inserts at the requested index', () => {
@@ -183,8 +183,8 @@ describe('designerStore (flow drag-drop state updates)', () => {
     const text2 = nextNodes.find((n) => n.id === 'text-2');
 
     expect(text2?.parentId).toBe('section-b');
-    expect(sectionA?.childIds).toEqual(['text-1']);
-    expect(sectionB?.childIds).toEqual(['text-3', 'text-2']);
+    expect(sectionA?.children).toEqual(['text-1']);
+    expect(sectionB?.children).toEqual(['text-3', 'text-2']);
   });
 
   it('allows nesting into eligible containers and rejects ineligible nesting', () => {
@@ -270,8 +270,8 @@ describe('designerStore (flow drag-drop state updates)', () => {
     const section = nextNodes.find((n) => n.id === 'section-1');
     const text1 = nextNodes.find((n) => n.id === 'text-1');
     expect(text1?.parentId).toBe('container-1');
-    expect(container?.childIds).toEqual(['text-1']);
-    expect(section?.childIds).toEqual(['container-1', 'text-2']);
+    expect(container?.children).toEqual(['text-1']);
+    expect(section?.children).toEqual(['container-1', 'text-2']);
 
     // Ineligible: text -> text (should be rejected, no change).
     store.moveNode('text-2', 'text-1', 0);
@@ -354,7 +354,7 @@ describe('designerStore (flow drag-drop state updates)', () => {
     const containerA = nextNodes.find((n) => n.id === 'container-a');
     const section = nextNodes.find((n) => n.id === 'section-1');
     expect(containerA?.parentId).toBe('section-1');
-    expect(section?.childIds).toEqual(['container-a']);
+    expect(section?.children).toEqual(['container-a']);
   });
 
   it('does not mutate state for invalid drops (ineligible parent)', () => {
@@ -512,7 +512,7 @@ describe('designerStore (flow drag-drop state updates)', () => {
     // Simulate inserting "a" at index 2 (drop after "b"). This should become ["b","a","c"] after adjustment.
     store.moveNode('a', 'section-1', 2);
     const section = useInvoiceDesignerStore.getState().nodes.find((n) => n.id === 'section-1');
-    expect(section?.childIds).toEqual(['b', 'a', 'c']);
+    expect(section?.children).toEqual(['b', 'a', 'c']);
   });
 
   it('does not write coordinate-based layout during drag-drop moves (positions remain unchanged)', () => {

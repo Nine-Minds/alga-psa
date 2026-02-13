@@ -128,14 +128,14 @@ export const insertChild = (
   const child = nodesById.get(childId);
   if (!parent || !child) return nodes;
 
-  if (parent.childIds.includes(childId)) return nodes;
+  if (parent.children.includes(childId)) return nodes;
 
   const nextNodes = nodes.map((node) => {
     if (node.id === parentId) {
-      const nextChildIds = node.childIds.slice();
-      const clampedIndex = Math.max(0, Math.min(index, nextChildIds.length));
-      nextChildIds.splice(clampedIndex, 0, childId);
-      return { ...node, childIds: nextChildIds, children: nextChildIds };
+      const nextChildren = node.children.slice();
+      const clampedIndex = Math.max(0, Math.min(index, nextChildren.length));
+      nextChildren.splice(clampedIndex, 0, childId);
+      return { ...node, children: nextChildren };
     }
     if (node.id === childId) {
       return { ...node, parentId };
@@ -151,12 +151,12 @@ export const removeChild = (nodes: DesignerNode[], parentId: string, childId: st
   const parent = nodesById.get(parentId);
   const child = nodesById.get(childId);
   if (!parent || !child) return nodes;
-  if (!parent.childIds.includes(childId)) return nodes;
+  if (!parent.children.includes(childId)) return nodes;
 
   return nodes.map((node) => {
     if (node.id === parentId) {
-      const nextChildIds = node.childIds.filter((id) => id !== childId);
-      return { ...node, childIds: nextChildIds, children: nextChildIds };
+      const nextChildren = node.children.filter((id) => id !== childId);
+      return { ...node, children: nextChildren };
     }
     if (node.id === childId && node.parentId === parentId) {
       return { ...node, parentId: null };
@@ -171,7 +171,7 @@ const collectDescendants = (nodesById: Map<string, DesignerNode>, rootId: string
     if (visited.has(id)) return;
     visited.add(id);
     const node = nodesById.get(id);
-    (node?.children ?? node?.childIds ?? []).forEach(dfs);
+    (node?.children ?? []).forEach(dfs);
   };
   dfs(rootId);
   return visited;
@@ -193,7 +193,7 @@ export const moveNode = (
 
   const prevParentId = node.parentId;
   const prevParent = prevParentId ? nodesById.get(prevParentId) ?? null : null;
-  const prevIndex = prevParent ? prevParent.childIds.indexOf(nodeId) : -1;
+  const prevIndex = prevParent ? prevParent.children.indexOf(nodeId) : -1;
   const adjustedIndex =
     prevParentId === nextParentId && prevIndex !== -1 && prevIndex < nextIndex ? Math.max(0, nextIndex - 1) : nextIndex;
 

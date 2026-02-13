@@ -358,7 +358,7 @@ const snapshotWorkspaceNodesById = (
         id: node.id,
         type: node.type,
         props: sanitizePersistedNodeProps(node.props),
-        children: Array.isArray(node.children) ? node.children.slice() : (node.childIds ?? []).slice(),
+        children: node.children.slice(),
       },
     ])
   );
@@ -683,7 +683,6 @@ const createPageNode = (parentId: string, index = 1): DesignerNode =>
 const createInitialNodes = (): DesignerNode[] => {
   const documentNode = createDocumentNode();
   const pageNode = createPageNode(documentNode.id);
-  documentNode.childIds = [pageNode.id];
   documentNode.children = [pageNode.id];
   return [documentNode, pageNode];
 };
@@ -691,16 +690,16 @@ const createInitialNodes = (): DesignerNode[] => {
 const attachChildAtIndex = (nodes: DesignerNode[], parentId: string, childId: string, index?: number) =>
   nodes.map((node) => {
     if (node.id !== parentId) return node;
-    if (node.childIds.includes(childId)) {
+    if (node.children.includes(childId)) {
       return node;
     }
-    const next = [...node.childIds];
+    const next = [...node.children];
     if (typeof index === 'number' && index >= 0 && index <= next.length) {
       next.splice(index, 0, childId);
     } else {
       next.push(childId);
     }
-    return { ...node, childIds: next, children: next };
+    return { ...node, children: next };
   });
 
 const detachChild = (nodes: DesignerNode[], parentId: string | null, childId: string) =>
@@ -709,7 +708,6 @@ const detachChild = (nodes: DesignerNode[], parentId: string | null, childId: st
         node.id === parentId
           ? {
               ...node,
-              childIds: node.childIds.filter((id) => id !== childId),
               children: node.children.filter((id) => id !== childId),
             }
           : node
@@ -722,7 +720,7 @@ const collectDescendants = (nodes: DesignerNode[], rootId: string): Set<string> 
   const dfs = (id: string) => {
     toRemove.add(id);
     const node = map.get(id);
-    (node?.children ?? node?.childIds ?? []).forEach(dfs);
+    (node?.children ?? []).forEach(dfs);
   };
   dfs(rootId);
   return toRemove;
@@ -743,6 +741,7 @@ const snapshotNodes = (nodes: DesignerNode[]): DesignerNode[] =>
     const derivedMetadata = isPlainObject(props.metadata) ? (props.metadata as Record<string, unknown>) : node.metadata;
     const derivedLayout = isPlainObject(props.layout) ? (props.layout as DesignerContainerLayout) : node.layout;
     const derivedStyle = isPlainObject(props.style) ? (props.style as DesignerNodeStyle) : node.style;
+    const children = [...(node.children ?? node.childIds ?? [])];
 
     return {
       ...node,
@@ -754,8 +753,8 @@ const snapshotNodes = (nodes: DesignerNode[]): DesignerNode[] =>
       position: { ...node.position },
       size: { ...node.size },
       baseSize: node.baseSize ? { ...node.baseSize } : undefined,
-      children: [...(node.children ?? node.childIds ?? [])],
-      childIds: [...node.childIds],
+      children,
+      childIds: children.slice(),
       allowedChildren: [...node.allowedChildren],
     };
   });
@@ -933,7 +932,7 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
       setWithIndex((state) => {
         const appendedNodes = [...state.nodes, node];
         const parent = state.nodesById[resolvedParentId];
-        const insertIndex = parent ? parent.childIds.length : 0;
+        const insertIndex = parent ? parent.children.length : 0;
         const withParentLink = patchInsertChild(appendedNodes, resolvedParentId, node.id, insertIndex);
         const { history, historyIndex } = appendHistory(state, withParentLink);
         return {

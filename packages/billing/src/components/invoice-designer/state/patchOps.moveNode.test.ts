@@ -39,7 +39,7 @@ describe('patchOps.moveNode', () => {
     const nodes = [parent, a, b, c];
     const next = moveNode(nodes, 'b', 'p', 3);
 
-    expect(next.find((n) => n.id === 'p')?.childIds).toEqual(['a', 'c', 'b']);
+    expect(next.find((n) => n.id === 'p')?.children).toEqual(['a', 'c', 'b']);
     expect(next.find((n) => n.id === 'b')?.parentId).toBe('p');
   });
 
@@ -52,8 +52,8 @@ describe('patchOps.moveNode', () => {
     const nodes = [p1, p2, a, x];
     const next = moveNode(nodes, 'a', 'p2', 0);
 
-    expect(next.find((n) => n.id === 'p1')?.childIds).toEqual([]);
-    expect(next.find((n) => n.id === 'p2')?.childIds).toEqual(['a', 'x']);
+    expect(next.find((n) => n.id === 'p1')?.children).toEqual([]);
+    expect(next.find((n) => n.id === 'p2')?.children).toEqual(['a', 'x']);
     expect(next.find((n) => n.id === 'a')?.parentId).toBe('p2');
   });
 
@@ -67,4 +67,3 @@ describe('patchOps.moveNode', () => {
     expect(next).toBe(nodes);
   });
 });
-

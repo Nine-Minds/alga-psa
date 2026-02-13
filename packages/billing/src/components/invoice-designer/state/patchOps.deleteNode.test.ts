@@ -41,8 +41,6 @@ describe('patchOps.deleteNode', () => {
 
     const nextIds = next.map((n) => n.id).sort();
     expect(nextIds).toEqual(['b', 'p']);
-    expect(next.find((n) => n.id === 'p')?.childIds).toEqual(['b']);
     expect(next.find((n) => n.id === 'p')?.children).toEqual(['b']);
   });
 });
-

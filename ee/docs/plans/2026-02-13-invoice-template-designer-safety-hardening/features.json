@@ -44,7 +44,7 @@
   {
     "id": "F008",
     "description": "Make `node.children` the single source of truth for hierarchy (remove reliance on `childIds` and stop writing it during mutations).",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Functional Requirements > 3"]
   },
   {

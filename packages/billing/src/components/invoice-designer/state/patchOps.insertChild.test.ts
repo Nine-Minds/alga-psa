@@ -43,7 +43,6 @@ describe('patchOps.insertChild', () => {
     const nextParent = next.find((n) => n.id === 'p');
     const nextChild = next.find((n) => n.id === 'c');
 
-    expect(nextParent?.childIds).toEqual(['a', 'c', 'b']);
     expect(nextParent?.children).toEqual(['a', 'c', 'b']);
     expect(nextChild?.parentId).toBe('p');
   });
@@ -63,7 +62,6 @@ describe('patchOps.insertChild', () => {
     const nodes = [parent, childA, childB, childC];
     const next = insertChild(nodes, 'p', 'c', 999);
 
-    expect(next.find((n) => n.id === 'p')?.childIds).toEqual(['a', 'b', 'c']);
+    expect(next.find((n) => n.id === 'p')?.children).toEqual(['a', 'b', 'c']);
   });
 });
-
