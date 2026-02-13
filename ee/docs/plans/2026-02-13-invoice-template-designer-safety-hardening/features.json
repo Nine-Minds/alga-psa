@@ -1,0 +1,86 @@
+[
+  {
+    "id": "F001",
+    "description": "Add `.gitignore` rules to ignore local env backup files (e.g. `server/.env.local.bak*`).",
+    "implemented": false,
+    "prdRefs": ["Requirements > Functional Requirements > 1"]
+  },
+  {
+    "id": "F002",
+    "description": "Add a guard (test or CI check) that fails if known env-backup patterns are tracked by git.",
+    "implemented": false,
+    "prdRefs": ["Requirements > Functional Requirements > 1"]
+  },
+  {
+    "id": "F003",
+    "description": "Harden patch path parsing to reject reserved keys (`__proto__`, `prototype`, `constructor`) for all patch operations.",
+    "implemented": false,
+    "prdRefs": ["Requirements > Functional Requirements > 2"]
+  },
+  {
+    "id": "F004",
+    "description": "Ensure `setNodeProp` and `unsetNodeProp` perform no mutation when a patch path is rejected (safe no-op).",
+    "implemented": false,
+    "prdRefs": ["Requirements > Functional Requirements > 2"]
+  },
+  {
+    "id": "F005",
+    "description": "Add developer-visible feedback when a patch is rejected (console warning and/or surfaced diagnostic).",
+    "implemented": false,
+    "prdRefs": ["Observability"]
+  },
+  {
+    "id": "F006",
+    "description": "Normalize all supported patch paths to canonical `props.*` targets (accept legacy paths but write only canonical state).",
+    "implemented": false,
+    "prdRefs": ["Requirements > Functional Requirements > 3"]
+  },
+  {
+    "id": "F007",
+    "description": "Make `node.props` the single source of truth for name/layout/style/metadata (stop separately mutating legacy top-level fields during cutover).",
+    "implemented": false,
+    "prdRefs": ["Requirements > Functional Requirements > 3"]
+  },
+  {
+    "id": "F008",
+    "description": "Make `node.children` the single source of truth for hierarchy (remove reliance on `childIds` and stop writing it during mutations).",
+    "implemented": false,
+    "prdRefs": ["Requirements > Functional Requirements > 3"]
+  },
+  {
+    "id": "F009",
+    "description": "Update UI call sites to read node properties via canonical `props` helpers (e.g. `getNodeName`, `getNodeMetadata`) instead of legacy fields.",
+    "implemented": false,
+    "prdRefs": ["Requirements > Functional Requirements > 3"]
+  },
+  {
+    "id": "F010",
+    "description": "Define and implement leaf array `unset` semantics as splice-removal (no `undefined` holes).",
+    "implemented": false,
+    "prdRefs": ["Requirements > Non-functional Requirements > 2"]
+  },
+  {
+    "id": "F011",
+    "description": "Ensure undo/redo restores the exact committed canonical JSON state (no `undefined`/`null` conversion surprises).",
+    "implemented": false,
+    "prdRefs": ["Requirements > Functional Requirements > 4"]
+  },
+  {
+    "id": "F012",
+    "description": "Ensure continuous interactions use `commit=false` for interim updates and do not spam history snapshots.",
+    "implemented": false,
+    "prdRefs": ["Requirements > Non-functional Requirements > 4"]
+  },
+  {
+    "id": "F013",
+    "description": "Validate invoice template AST style identifiers (style class keys, token ids, and styleRef tokenIds) against a safe CSS identifier rule.",
+    "implemented": false,
+    "prdRefs": ["Requirements > Functional Requirements > 5"]
+  },
+  {
+    "id": "F014",
+    "description": "Ensure the invoice template AST renderer does not emit malformed CSS selectors/variables for style identifiers (defense-in-depth).",
+    "implemented": false,
+    "prdRefs": ["Requirements > Functional Requirements > 5"]
+  }
+]
