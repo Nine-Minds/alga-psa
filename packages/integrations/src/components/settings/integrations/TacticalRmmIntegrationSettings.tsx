@@ -11,6 +11,7 @@ import { Eye, EyeOff, RefreshCw, Save, Unlink } from 'lucide-react';
 import { useToast } from '@alga-psa/ui/hooks/use-toast';
 import {
   disconnectTacticalRmmIntegration,
+  getTacticalRmmConnectionSummary,
   getTacticalRmmSettings,
   saveTacticalRmmConfiguration,
   testTacticalRmmConnection,
@@ -49,12 +50,17 @@ export function TacticalRmmIntegrationSettings() {
 
   const [totpRequired, setTotpRequired] = React.useState(false);
 
+  const [connectionSummary, setConnectionSummary] = React.useState<Awaited<ReturnType<typeof getTacticalRmmConnectionSummary>>['summary'] | null>(null);
+
   const load = React.useCallback(async () => {
     setLoading(true);
     setError(null);
     setSuccess(null);
     try {
-      const res = await getTacticalRmmSettings();
+      const [res, summaryRes] = await Promise.all([
+        getTacticalRmmSettings(),
+        getTacticalRmmConnectionSummary(),
+      ]);
       if (!res.success) {
         setError(res.error || 'Failed to load Tactical RMM settings');
         return;
@@ -63,6 +69,7 @@ export function TacticalRmmIntegrationSettings() {
       setInstanceUrl(res.config?.instanceUrl || '');
       setAuthMode(res.config?.authMode || 'api_key');
       setCredentialsStatus(res.credentials || null);
+      setConnectionSummary(summaryRes.success ? (summaryRes.summary || null) : null);
 
       if (res.credentials?.username) setUsername(res.credentials.username);
     } finally {
@@ -182,6 +189,60 @@ export function TacticalRmmIntegrationSettings() {
         )}
 
         <div className="space-y-6">
+          <div className="rounded-md border bg-muted/30 p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="space-y-1">
+                <div className="text-sm font-medium">
+                  {connectionSummary?.isActive ? 'Connected' : 'Disconnected'}
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  {connectionSummary?.instanceUrl ? connectionSummary.instanceUrl : 'Instance URL not set'}
+                  {connectionSummary?.authMode ? ` • Auth: ${connectionSummary.authMode === 'api_key' ? 'API key' : 'Knox'}` : null}
+                </div>
+              </div>
+              <Button
+                id="tacticalrmm-refresh-status"
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={load}
+                disabled={loading || saving || testing || disconnecting}
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+                Refresh
+              </Button>
+            </div>
+
+            {connectionSummary && (
+              <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 text-xs">
+                <div className="rounded border bg-background p-2">
+                  <div className="text-muted-foreground">Mapped Orgs</div>
+                  <div className="text-sm font-semibold">{connectionSummary.counts.mappedOrganizations}</div>
+                </div>
+                <div className="rounded border bg-background p-2">
+                  <div className="text-muted-foreground">Synced Devices</div>
+                  <div className="text-sm font-semibold">{connectionSummary.counts.syncedDevices}</div>
+                </div>
+                <div className="rounded border bg-background p-2">
+                  <div className="text-muted-foreground">Active Alerts</div>
+                  <div className="text-sm font-semibold">{connectionSummary.counts.activeAlerts}</div>
+                </div>
+                <div className="rounded border bg-background p-2">
+                  <div className="text-muted-foreground">Last Sync</div>
+                  <div className="text-sm font-semibold">
+                    {connectionSummary.lastSyncAt ? new Date(connectionSummary.lastSyncAt).toLocaleString() : 'Never'}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {connectionSummary?.syncError && (
+              <div className="mt-3 text-xs text-destructive">
+                Last error: {connectionSummary.syncError}
+              </div>
+            )}
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="tacticalrmm-instance-url">Instance URL</Label>
             <Input

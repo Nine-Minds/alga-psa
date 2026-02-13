@@ -103,6 +103,7 @@ export {
   saveTacticalRmmConfiguration,
   testTacticalRmmConnection,
   disconnectTacticalRmmIntegration,
+  getTacticalRmmConnectionSummary,
   type TacticalRmmAuthMode,
 } from './integrations/tacticalRmmActions';
 export {

@@ -157,6 +157,121 @@ export const getTacticalRmmSettings = withAuth(async (user, { tenant }): Promise
   }
 });
 
+export const getTacticalRmmConnectionSummary = withAuth(async (
+  user,
+  { tenant }
+): Promise<{
+  success: boolean;
+  error?: string;
+  summary?: {
+    isActive: boolean;
+    instanceUrl?: string;
+    authMode: TacticalRmmAuthMode;
+    connectedAt?: string | null;
+    lastSyncAt?: string | null;
+    syncError?: string | null;
+    counts: {
+      mappedOrganizations: number;
+      syncedDevices: number;
+      activeAlerts: number;
+      byAgentStatus: Record<string, number>;
+    };
+  };
+}> => {
+  const permitted = await hasPermission(user as any, 'system_settings', 'read');
+  if (!permitted) return { success: false, error: 'Forbidden' };
+
+  try {
+    const { knex } = await createTenantKnex();
+    const integration = await knex('rmm_integrations')
+      .where({ tenant, provider: PROVIDER })
+      .first([
+        'integration_id',
+        'instance_url',
+        'is_active',
+        'connected_at',
+        'last_sync_at',
+        'sync_error',
+        'settings',
+      ]);
+
+    const secretProvider = await getSecretProviderInstance();
+    const instanceUrlSecret = await secretProvider.getTenantSecret(tenant, TACTICAL_INSTANCE_URL_SECRET);
+
+    const authMode = (integration?.settings?.auth_mode as TacticalRmmAuthMode) || 'api_key';
+    const instanceUrl = (integration?.instance_url as string | undefined) || instanceUrlSecret || undefined;
+
+    if (!integration?.integration_id) {
+      return {
+        success: true,
+        summary: {
+          isActive: false,
+          instanceUrl,
+          authMode,
+          connectedAt: null,
+          lastSyncAt: null,
+          syncError: null,
+          counts: { mappedOrganizations: 0, syncedDevices: 0, activeAlerts: 0, byAgentStatus: {} },
+        },
+      };
+    }
+
+    const integrationId = integration.integration_id as string;
+
+    const [
+      mappedOrganizationsRow,
+      syncedDevicesRow,
+      activeAlertsRow,
+      statusRows,
+    ] = await Promise.all([
+      knex('rmm_organization_mappings')
+        .where({ tenant, integration_id: integrationId })
+        .count<{ count: string }[]>('* as count')
+        .first(),
+      knex('assets')
+        .where({ tenant, rmm_provider: PROVIDER })
+        .whereNotNull('rmm_device_id')
+        .count<{ count: string }[]>('* as count')
+        .first(),
+      knex('rmm_alerts')
+        .where({ tenant, integration_id: integrationId, status: 'active' })
+        .count<{ count: string }[]>('* as count')
+        .first(),
+      knex('assets')
+        .where({ tenant, rmm_provider: PROVIDER })
+        .select('agent_status')
+        .count<{ agent_status: string | null; count: string }[]>('* as count')
+        .groupBy('agent_status'),
+    ]);
+
+    const byAgentStatus: Record<string, number> = {};
+    for (const row of statusRows || []) {
+      const key = row.agent_status || 'unknown';
+      byAgentStatus[key] = Number(row.count || 0);
+    }
+
+    return {
+      success: true,
+      summary: {
+        isActive: Boolean(integration.is_active),
+        instanceUrl,
+        authMode,
+        connectedAt: integration.connected_at ?? null,
+        lastSyncAt: integration.last_sync_at ?? null,
+        syncError: integration.sync_error ?? null,
+        counts: {
+          mappedOrganizations: Number((mappedOrganizationsRow as any)?.count || 0),
+          syncedDevices: Number((syncedDevicesRow as any)?.count || 0),
+          activeAlerts: Number((activeAlertsRow as any)?.count || 0),
+          byAgentStatus,
+        },
+      },
+    };
+  } catch (err) {
+    return { success: false, error: axiosErrorToMessage(err) };
+  }
+});
+
 export const saveTacticalRmmConfiguration = withAuth(async (
   user,
   { tenant },
