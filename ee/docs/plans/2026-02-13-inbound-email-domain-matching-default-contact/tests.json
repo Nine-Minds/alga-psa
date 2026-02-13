@@ -32,7 +32,7 @@
   {
     "id": "T006",
     "description": "Integration: inbound email new-ticket path uses domain fallback to set ticket.client_id when sender has no exact contact match but domain uniquely maps to one client",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F005", "F006"]
   },
   {
