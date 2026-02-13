@@ -208,6 +208,8 @@ This plan intentionally continues the simplification arc:
   - Uses `loadWorkspace({ rootId, nodesById })` to validate `moveNode(...)` reorders `children` for flow (flex) containers in the unified snapshot format.
 - 2026-02-13: Added drag-drop reparent integration test in `packages/billing/src/components/invoice-designer/state/designerStore.dragDropMoveAcross.integration.test.ts`:
   - Validates moving across containers updates only the unified `children` arrays in the exported workspace snapshot and rejects invalid parent targets via schema nesting rules.
+- 2026-02-13: Added resize-to-DOM integration test in `packages/billing/src/components/invoice-designer/canvas/DesignCanvas.resizeProps.integration.test.tsx`:
+  - Simulates resize writes via `store.setNodeProp('style.width'/'style.height', ...)` and verifies the rendered canvas node element updates its inline sizing.
 - 2026-02-13: Persisted workspace snapshots now omit runtime geometry/editor-only props:
   - `packages/billing/src/components/invoice-designer/state/designerStore.ts` `exportWorkspace()` sanitizes `node.props` to drop `position`, `size`, `baseSize`, and `layoutPresetId` (new saves are unified-only).
   - Updated `packages/billing/src/actions/invoicePreviewPdfParity.integration.test.ts` workspace fixture to use `{ rootId, nodesById }` (no `nodes` / `constraints`).

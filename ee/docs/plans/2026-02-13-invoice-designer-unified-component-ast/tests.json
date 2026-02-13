@@ -14,7 +14,7 @@
   { "id": "T013", "featureIds": ["F010"], "description": "Integration: canvas rendering reads layout/style props from unified node props and produces expected DOM styles.", "implemented": true },
   { "id": "T014", "featureIds": ["F011"], "description": "E2E/integration: drag-drop reorder within a flex container updates children order via moveNode.", "implemented": true },
   { "id": "T015", "featureIds": ["F011"], "description": "E2E/integration: drag-drop move across containers updates the unified tree only (no legacy fields) and respects schema nesting rules.", "implemented": true },
-  { "id": "T016", "featureIds": ["F012"], "description": "Integration: resizing a supported node writes sizing props via setNodeProp (style.width/style.height or flexBasis) and the DOM updates.", "implemented": false },
+  { "id": "T016", "featureIds": ["F012"], "description": "Integration: resizing a supported node writes sizing props via setNodeProp (style.width/style.height or flexBasis) and the DOM updates.", "implemented": true },
   { "id": "T017", "featureIds": ["F013", "F014"], "description": "Integration: Inspector renders controls for a selected node from schema and updates the tree via generic patch operations.", "implemented": false },
   { "id": "T018", "featureIds": ["F014"], "description": "Unit: Inspector normalizers convert input strings into canonical forms (for example css-length normalization) before writing props.", "implemented": false },
   { "id": "T019", "featureIds": ["F015"], "description": "Integration: table columns editor updates metadata.columns via schema widget and updates are reflected in preview/canvas representation.", "implemented": false },
