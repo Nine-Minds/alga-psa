@@ -69,7 +69,7 @@
   {
     "id": "T009",
     "description": "Designer store: canonical paths like `props.metadata.bindingKey` continue to work and update `props` immutably.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F006"
     ]
