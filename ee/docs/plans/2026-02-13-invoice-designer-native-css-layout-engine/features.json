@@ -4,7 +4,7 @@
   { "id": "F003", "description": "Implement container layout modes: flex column and flex row.", "implemented": true },
   { "id": "F004", "description": "Implement container spacing controls: gap, padding, border (as exposed by the designer UI).", "implemented": true },
   { "id": "F005", "description": "Implement alignment controls for flex containers: justify-content and align-items.", "implemented": true },
-  { "id": "F006", "description": "Implement item sizing controls: width/height and min/max constraints using CSS values.", "implemented": false },
+  { "id": "F006", "description": "Implement item sizing controls: width/height and min/max constraints using CSS values.", "implemented": true },
   { "id": "F007", "description": "Implement flex item controls: grow/shrink/basis for nodes inside flex containers (where meaningful).", "implemented": false },
   { "id": "F008", "description": "Implement grid container mode using CSS grid (template columns/rows + gap + auto-flow).", "implemented": false },
   { "id": "F009", "description": "Replace custom drop-parent resolution with @dnd-kit/core (sensors + collision detection + sortable).", "implemented": false },

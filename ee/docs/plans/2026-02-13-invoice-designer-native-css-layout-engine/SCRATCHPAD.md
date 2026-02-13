@@ -76,6 +76,11 @@ Goal: remove bespoke geometry math in the invoice designer and rely on native br
     - `packages/billing/src/components/invoice-designer/utils/cssLayout.ts`
     - `packages/billing/src/components/invoice-designer/canvas/DesignCanvas.tsx`
 
+- 2026-02-13: `F006` Item sizing controls (CSS width/height/min/max)
+  - Added "Sizing (CSS)" inspector panel that edits `node.style` sizing strings (`width`, `height`, `minWidth`, `minHeight`, `maxWidth`, `maxHeight`):
+    - `packages/billing/src/components/invoice-designer/DesignerShell.tsx`
+  - Canvas already applies these values via `resolveNodeBoxStyle(node.style)` (no geometry math).
+
 ## Remaining Design Choices
 
 - Collision strategy and snapping thresholds are intentionally selected to minimize custom geometry logic:

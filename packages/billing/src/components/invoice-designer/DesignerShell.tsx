@@ -286,6 +286,7 @@ export const DesignerShell: React.FC = () => {
   const updateNodeName = useInvoiceDesignerStore((state) => state.updateNodeName);
   const updateNodeMetadata = useInvoiceDesignerStore((state) => state.updateNodeMetadata);
   const updateNodeLayout = useInvoiceDesignerStore((state) => state.updateNodeLayout);
+  const updateNodeStyle = useInvoiceDesignerStore((state) => state.updateNodeStyle);
   const toggleSnap = useInvoiceDesignerStore((state) => state.toggleSnap);
   const snapToGrid = useInvoiceDesignerStore((state) => state.snapToGrid);
   const toggleGuides = useInvoiceDesignerStore((state) => state.toggleGuides);
@@ -1837,6 +1838,12 @@ export const DesignerShell: React.FC = () => {
     });
   }, [runSectionFitAction, selectedMediaParentSection]);
 
+  const normalizeCssValue = (raw: string): string | undefined => {
+    // Allow advanced CSS values like `calc(100% - 2rem)`; only normalize empty/whitespace.
+    const trimmed = raw.trim();
+    return trimmed.length === 0 ? undefined : raw;
+  };
+
   return (
     <div className="flex flex-col h-full border border-slate-200 rounded-lg overflow-hidden">
       <DesignerToolbar
@@ -1982,12 +1989,95 @@ export const DesignerShell: React.FC = () => {
 	                  <div className="text-slate-500 text-[11px]">{selectedPreset.label}</div>
 	                  <p className="text-[11px] text-slate-500">{selectedPreset.description}</p>
 	                </div>
-	              )}
-	              {renderLayoutInspector()}
-	              {selectedNode.type === 'section' && (
-	                <div className="space-y-1">
-	                  <Button
-                    id="designer-fit-section-to-contents"
+		              )}
+		              {renderLayoutInspector()}
+                  <div className="rounded border border-slate-200 bg-white px-3 py-2 space-y-2">
+                    <p className="text-xs font-semibold text-slate-700">Sizing (CSS)</p>
+                    <div className="grid grid-cols-2 gap-2 text-xs text-slate-600">
+                      <div>
+                        <label htmlFor="designer-style-width" className="text-[10px] text-slate-500 block mb-1">
+                          width
+                        </label>
+                        <Input
+                          id="designer-style-width"
+                          value={selectedNode.style?.width ?? ''}
+                          placeholder="auto | 320px | 50% | 10rem"
+                          onChange={(event) =>
+                            updateNodeStyle(selectedNode.id, { width: normalizeCssValue(event.target.value) })
+                          }
+                        />
+                      </div>
+                      <div>
+                        <label htmlFor="designer-style-height" className="text-[10px] text-slate-500 block mb-1">
+                          height
+                        </label>
+                        <Input
+                          id="designer-style-height"
+                          value={selectedNode.style?.height ?? ''}
+                          placeholder="auto | 180px | 12rem"
+                          onChange={(event) =>
+                            updateNodeStyle(selectedNode.id, { height: normalizeCssValue(event.target.value) })
+                          }
+                        />
+                      </div>
+                      <div>
+                        <label htmlFor="designer-style-min-width" className="text-[10px] text-slate-500 block mb-1">
+                          min-width
+                        </label>
+                        <Input
+                          id="designer-style-min-width"
+                          value={selectedNode.style?.minWidth ?? ''}
+                          placeholder="0 | 200px"
+                          onChange={(event) =>
+                            updateNodeStyle(selectedNode.id, { minWidth: normalizeCssValue(event.target.value) })
+                          }
+                        />
+                      </div>
+                      <div>
+                        <label htmlFor="designer-style-min-height" className="text-[10px] text-slate-500 block mb-1">
+                          min-height
+                        </label>
+                        <Input
+                          id="designer-style-min-height"
+                          value={selectedNode.style?.minHeight ?? ''}
+                          placeholder="0 | 120px"
+                          onChange={(event) =>
+                            updateNodeStyle(selectedNode.id, { minHeight: normalizeCssValue(event.target.value) })
+                          }
+                        />
+                      </div>
+                      <div>
+                        <label htmlFor="designer-style-max-width" className="text-[10px] text-slate-500 block mb-1">
+                          max-width
+                        </label>
+                        <Input
+                          id="designer-style-max-width"
+                          value={selectedNode.style?.maxWidth ?? ''}
+                          placeholder="none | 600px"
+                          onChange={(event) =>
+                            updateNodeStyle(selectedNode.id, { maxWidth: normalizeCssValue(event.target.value) })
+                          }
+                        />
+                      </div>
+                      <div>
+                        <label htmlFor="designer-style-max-height" className="text-[10px] text-slate-500 block mb-1">
+                          max-height
+                        </label>
+                        <Input
+                          id="designer-style-max-height"
+                          value={selectedNode.style?.maxHeight ?? ''}
+                          placeholder="none | 400px"
+                          onChange={(event) =>
+                            updateNodeStyle(selectedNode.id, { maxHeight: normalizeCssValue(event.target.value) })
+                          }
+                        />
+                      </div>
+                    </div>
+                  </div>
+		              {selectedNode.type === 'section' && (
+		                <div className="space-y-1">
+		                  <Button
+	                    id="designer-fit-section-to-contents"
                     variant="outline"
                     onClick={fitSelectedSectionToContents}
                   >
