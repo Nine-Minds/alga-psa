@@ -108,6 +108,8 @@ export {
   syncTacticalRmmDevices,
   listTacticalRmmOrganizationMappings,
   updateTacticalRmmOrganizationMapping,
+  getTacticalRmmWebhookInfo,
+  TACTICAL_WEBHOOK_HEADER_NAME,
   type TacticalRmmAuthMode,
 } from './integrations/tacticalRmmActions';
 export {

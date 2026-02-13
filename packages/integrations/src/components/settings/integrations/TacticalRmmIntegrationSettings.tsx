@@ -9,12 +9,14 @@ import { Label } from '@alga-psa/ui/components/Label';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { Switch } from '@alga-psa/ui/components/Switch';
+import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { Eye, EyeOff, RefreshCw, Save, Unlink } from 'lucide-react';
 import { useToast } from '@alga-psa/ui/hooks/use-toast';
 import {
   disconnectTacticalRmmIntegration,
   getTacticalRmmConnectionSummary,
   getTacticalRmmSettings,
+  getTacticalRmmWebhookInfo,
   listTacticalRmmOrganizationMappings,
   saveTacticalRmmConfiguration,
   syncTacticalRmmOrganizations,
@@ -66,6 +68,8 @@ export function TacticalRmmIntegrationSettings() {
   const [clientsLoading, setClientsLoading] = React.useState(false);
   const [clientFilterState, setClientFilterState] = React.useState<'all' | 'active' | 'inactive'>('active');
   const [clientTypeFilter, setClientTypeFilter] = React.useState<'all' | 'company' | 'individual'>('all');
+  const [webhookInfo, setWebhookInfo] = React.useState<Awaited<ReturnType<typeof getTacticalRmmWebhookInfo>>['webhook'] | null>(null);
+  const [showWebhookSecret, setShowWebhookSecret] = React.useState(false);
 
   const load = React.useCallback(async () => {
     setLoading(true);
@@ -108,6 +112,16 @@ export function TacticalRmmIntegrationSettings() {
   React.useEffect(() => {
     void loadOrgMappings();
   }, [loadOrgMappings]);
+
+  const loadWebhookInfo = React.useCallback(async () => {
+    const res = await getTacticalRmmWebhookInfo();
+    if (!res.success) return;
+    setWebhookInfo(res.webhook || null);
+  }, []);
+
+  React.useEffect(() => {
+    void loadWebhookInfo();
+  }, [loadWebhookInfo]);
 
   React.useEffect(() => {
     const run = async () => {
@@ -471,6 +485,95 @@ export function TacticalRmmIntegrationSettings() {
                 {syncingDevices ? 'Syncing...' : 'Sync Devices'}
               </Button>
             </div>
+          </div>
+
+          <div className="rounded-md border bg-background p-4 space-y-3">
+            <div className="flex items-start justify-between gap-3">
+              <div className="space-y-1">
+                <div className="text-sm font-medium">Webhooks (Alerts)</div>
+                <div className="text-xs text-muted-foreground">
+                  Configure a Tactical alert action webhook using the shared secret header below.
+                </div>
+              </div>
+              <Button
+                id="tacticalrmm-refresh-webhook-info"
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={loadWebhookInfo}
+                disabled={loading || saving || testing || disconnecting}
+              >
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Refresh
+              </Button>
+            </div>
+
+            {webhookInfo ? (
+              <div className="space-y-3">
+                <div className="space-y-1">
+                  <Label htmlFor="tacticalrmm-webhook-url">Webhook URL</Label>
+                  <div className="flex items-center gap-2">
+                    <Input id="tacticalrmm-webhook-url" value={webhookInfo.url} readOnly />
+                    <Button
+                      id="tacticalrmm-copy-webhook-url"
+                      type="button"
+                      variant="outline"
+                      onClick={async () => {
+                        await navigator.clipboard.writeText(webhookInfo.url);
+                        toast({ title: 'Copied', description: 'Webhook URL copied to clipboard.' });
+                      }}
+                    >
+                      Copy
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <Label htmlFor="tacticalrmm-webhook-header-name">Header Name</Label>
+                  <Input id="tacticalrmm-webhook-header-name" value={webhookInfo.headerName} readOnly />
+                </div>
+
+                <div className="space-y-1">
+                  <Label htmlFor="tacticalrmm-webhook-secret">Header Secret</Label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      id="tacticalrmm-webhook-secret"
+                      type={showWebhookSecret ? 'text' : 'password'}
+                      value={webhookInfo.secret}
+                      readOnly
+                    />
+                    <Button
+                      id="tacticalrmm-toggle-webhook-secret"
+                      type="button"
+                      variant="outline"
+                      onClick={() => setShowWebhookSecret((s) => !s)}
+                    >
+                      {showWebhookSecret ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </Button>
+                    <Button
+                      id="tacticalrmm-copy-webhook-secret"
+                      type="button"
+                      variant="outline"
+                      onClick={async () => {
+                        await navigator.clipboard.writeText(webhookInfo.secret);
+                        toast({ title: 'Copied', description: 'Webhook secret copied to clipboard.' });
+                      }}
+                    >
+                      Copy
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <Label htmlFor="tacticalrmm-webhook-payload-template">Payload Template</Label>
+                  <TextArea id="tacticalrmm-webhook-payload-template" value={webhookInfo.payloadTemplate} readOnly rows={10} />
+                </div>
+              </div>
+            ) : (
+              <div className="text-sm text-muted-foreground">
+                Webhook information unavailable. (Requires settings read permission.)
+              </div>
+            )}
           </div>
 
           <div className="space-y-2">

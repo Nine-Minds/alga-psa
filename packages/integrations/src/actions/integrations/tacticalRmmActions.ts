@@ -1,6 +1,7 @@
 'use server';
 
 import axios, { AxiosError } from 'axios';
+import { randomBytes } from 'crypto';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
@@ -8,6 +9,7 @@ import { createTenantKnex } from '@alga-psa/db';
 import { createAsset } from '@alga-psa/assets/actions/assetActions';
 import { TacticalRmmClient, normalizeTacticalBaseUrl } from '../../lib/rmm/tacticalrmm/tacticalApiClient';
 import { computeTacticalAgentStatus } from '../../lib/rmm/tacticalrmm/agentStatus';
+import { getWebhookBaseUrl } from '../../utils/email/webhookHelpers';
 
 const PROVIDER = 'tacticalrmm' as const;
 
@@ -16,8 +18,10 @@ const TACTICAL_API_KEY_SECRET = 'tacticalrmm_api_key';
 const TACTICAL_KNOX_USERNAME_SECRET = 'tacticalrmm_username';
 const TACTICAL_KNOX_PASSWORD_SECRET = 'tacticalrmm_password';
 const TACTICAL_KNOX_TOKEN_SECRET = 'tacticalrmm_knox_token';
+const TACTICAL_WEBHOOK_SECRET = 'tacticalrmm_webhook_secret';
 
 export type TacticalRmmAuthMode = 'api_key' | 'knox';
+export const TACTICAL_WEBHOOK_HEADER_NAME = 'X-Alga-Webhook-Secret';
 
 function maskSecret(value: string): string {
   if (!value) return '';
@@ -851,6 +855,59 @@ export const updateTacticalRmmOrganizationMapping = withAuth(async (
       .update({ ...patch, updated_at: knex.fn.now() });
 
     return { success: true };
+  } catch (err) {
+    return { success: false, error: axiosErrorToMessage(err) };
+  }
+});
+
+export const getTacticalRmmWebhookInfo = withAuth(async (
+  user,
+  { tenant }
+): Promise<{
+  success: boolean;
+  error?: string;
+  webhook?: {
+    url: string;
+    headerName: string;
+    secret: string;
+    payloadTemplate: string;
+  };
+}> => {
+  const permitted = await hasPermission(user as any, 'system_settings', 'read');
+  if (!permitted) return { success: false, error: 'Forbidden' };
+
+  try {
+    const secretProvider = await getSecretProviderInstance();
+    let secret = await secretProvider.getTenantSecret(tenant, TACTICAL_WEBHOOK_SECRET);
+    if (!secret) {
+      secret = randomBytes(24).toString('hex');
+      await secretProvider.setTenantSecret(tenant, TACTICAL_WEBHOOK_SECRET, secret);
+    }
+
+    const baseUrl = getWebhookBaseUrl();
+    const cleanBaseUrl = baseUrl.replace(/\/$/, '');
+    const url = `${cleanBaseUrl}/api/webhooks/tacticalrmm?tenant=${encodeURIComponent(tenant)}`;
+
+    const payloadTemplate = JSON.stringify({
+      agent_id: '<TACTICAL_AGENT_ID>',
+      alert_id: '<ALERT_ID_OPTIONAL>',
+      event: 'trigger|resolve',
+      severity: 'critical|major|moderate|minor|none',
+      message: '<ALERT_MESSAGE>',
+      alert_time: '<ISO_TIMESTAMP>',
+      client_id: '<TACTICAL_CLIENT_ID_OPTIONAL>',
+      site_id: '<TACTICAL_SITE_ID_OPTIONAL>',
+    }, null, 2);
+
+    return {
+      success: true,
+      webhook: {
+        url,
+        headerName: TACTICAL_WEBHOOK_HEADER_NAME,
+        secret,
+        payloadTemplate,
+      },
+    };
   } catch (err) {
     return { success: false, error: axiosErrorToMessage(err) };
   }
