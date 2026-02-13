@@ -206,3 +206,5 @@ This plan intentionally continues the simplification arc:
 - 2026-02-13: Added deterministic unified-tree traversal helper and tests:
   - `packages/billing/src/components/invoice-designer/state/designerAst.ts` now exports `traverseDesignerAstNodeIds`.
   - Added `packages/billing/src/components/invoice-designer/state/designerAst.test.ts`.
+- 2026-02-13: Added patch ops unit coverage:
+  - Added `packages/billing/src/components/invoice-designer/state/patchOps.setNodeProp.test.ts` to validate immutable deep dot-path updates.
