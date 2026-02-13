@@ -24,6 +24,7 @@ import AccountingIntegrationsSetup from './AccountingIntegrationsSetup';
 import { EmailProviderConfiguration } from '@alga-psa/integrations/components';
 import { CalendarIntegrationsSettings } from '@alga-psa/integrations/components';
 import { GoogleIntegrationSettings } from './GoogleIntegrationSettings';
+import TacticalRmmIntegrationSettings from './TacticalRmmIntegrationSettings';
 import dynamic from 'next/dynamic';
 import Spinner from '@alga-psa/ui/components/Spinner';
 
@@ -122,6 +123,12 @@ const IntegrationsSettingsPage: React.FC = () => {
       description: 'Connect remote monitoring and management tools',
       icon: Monitor,
       integrations: [
+        {
+          id: 'tacticalrmm',
+          name: 'Tactical RMM',
+          description: 'Sync devices and ingest alerts from Tactical RMM',
+          component: TacticalRmmIntegrationSettings,
+        },
         ...(isEEAvailable ? [{
           id: 'ninjaone',
           name: 'NinjaOne',

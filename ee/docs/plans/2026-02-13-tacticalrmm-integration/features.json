@@ -3,7 +3,7 @@
   { "id": "F002", "description": "Update UI provider display helpers (e.g., status badge/indicator) to show a friendly name for `tacticalrmm`.", "implemented": true, "prdRefs": ["Goals", "UX / UI Notes"] },
   { "id": "F003", "description": "Support a third agent status value `overdue` end-to-end (types, filters, badges) for Tactical’s computed status.", "implemented": true, "prdRefs": ["Goals", "Functional Requirements"] },
 
-  { "id": "F010", "description": "Add Tactical RMM entry to Integrations Settings -> RMM tab (CE + EE, not enterprise-gated).", "implemented": false, "prdRefs": ["Goals", "UX / UI Notes"] },
+  { "id": "F010", "description": "Add Tactical RMM entry to Integrations Settings -> RMM tab (CE + EE, not enterprise-gated).", "implemented": true, "prdRefs": ["Goals", "UX / UI Notes"] },
   { "id": "F011", "description": "Create Tactical RMM settings panel UI with: instance URL input, auth mode selector, credential form, save/test/connect, and disconnect.", "implemented": false, "prdRefs": ["Users and Primary Flows", "UX / UI Notes"] },
   { "id": "F012", "description": "Display Tactical connection status panel (connected, last sync, counts, last error).", "implemented": false, "prdRefs": ["Functional Requirements"] },
   { "id": "F013", "description": "Add UI for syncing Tactical Clients (organizations) and show results (processed/created/updated/failed).", "implemented": false, "prdRefs": ["Functional Requirements"] },
