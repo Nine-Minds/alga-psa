@@ -56,7 +56,7 @@
   {
     "id": "T010",
     "description": "Integration: when domain fallback selects a different client than inbound defaults, defaults.location_id is not applied (location_id is null)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F007"]
   },
   {
