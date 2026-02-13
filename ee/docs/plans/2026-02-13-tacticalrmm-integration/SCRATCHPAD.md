@@ -98,3 +98,4 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-02-13) F080: Published event-bus events for Tactical sync and webhook flows (RMM_SYNC_STARTED/COMPLETED, RMM_WEBHOOK_RECEIVED) on a best-effort basis.
 - (2026-02-13) T001: Added a types package typecheck test ensuring `RmmProvider` accepts `tacticalrmm`.
 - (2026-02-13) T002: Fixed `@alga-psa/assets` unit test runner (migrated `@nx/vite:test` -> `@nx/vitest:test` with `packages/assets/vitest.config.ts`) and added a unit test asserting `tacticalrmm` renders as `Tactical RMM` via `getRmmProviderDisplayName`.
+- (2026-02-13) T003: Added typecheck coverage for `RmmAgentStatus` including `overdue` in `@alga-psa/types`, and refactored the asset dashboard agent-status filter options into `packages/assets/src/lib/rmmAgentStatusOptions.ts` with a unit test ensuring `overdue` is present.

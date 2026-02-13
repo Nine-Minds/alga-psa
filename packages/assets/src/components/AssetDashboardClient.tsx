@@ -25,6 +25,7 @@ import { QuickAddAsset } from './QuickAddAsset';
 import { AssetCommandPalette } from './AssetCommandPalette';
 import { AssetDetailDrawerClient } from './AssetDetailDrawerClient';
 import { RmmStatusIndicator } from './RmmStatusIndicator';
+import { RMM_AGENT_STATUS_OPTIONS } from '../lib/rmmAgentStatusOptions';
 import {
   ASSET_DRAWER_TABS,
   type AssetDrawerTab,
@@ -67,12 +68,7 @@ type ColumnKey =
 
 const STATUS_OPTIONS: string[] = ['active', 'inactive', 'maintenance'];
 const TYPE_OPTIONS: string[] = ['workstation', 'server', 'network_device', 'mobile_device', 'printer'];
-const AGENT_STATUS_OPTIONS: { value: string; label: string }[] = [
-  { value: 'online', label: 'Online' },
-  { value: 'offline', label: 'Offline' },
-  { value: 'overdue', label: 'Overdue' },
-  { value: 'unknown', label: 'Unknown' },
-];
+const AGENT_STATUS_OPTIONS = RMM_AGENT_STATUS_OPTIONS;
 const RMM_MANAGED_OPTIONS: { value: string; label: string }[] = [
   { value: 'managed', label: 'RMM Managed' },
   { value: 'unmanaged', label: 'Not Managed' },
