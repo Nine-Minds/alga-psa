@@ -213,5 +213,22 @@ describe('Tactical software inventory ingest (bulk)', () => {
     expect(state.software_catalog.length).toBeGreaterThan(0);
     expect(state.asset_software.length).toBeGreaterThan(0);
   });
-});
 
+  it('associates ingested software to the correct asset via Tactical agent_id mappings', async () => {
+    const { ingestTacticalRmmSoftwareInventory } = await import(
+      '@alga-psa/integrations/actions/integrations/tacticalRmmActions'
+    );
+
+    const res = await ingestTacticalRmmSoftwareInventory({ user_id: 'u1' } as any, { tenant: 'tenant_1' });
+    expect(res.success).toBe(true);
+
+    // Only mapped agent a1 should produce catalog + asset software rows.
+    expect(state.asset_software).toHaveLength(2);
+    expect(new Set(state.asset_software.map((r) => r.asset_id))).toEqual(new Set(['asset_1']));
+
+    const names = new Set(state.software_catalog.map((r) => r.name));
+    expect(names.has('App One')).toBe(true);
+    expect(names.has('App Two')).toBe(true);
+    expect(names.has('Unmapped App')).toBe(false);
+  });
+});
