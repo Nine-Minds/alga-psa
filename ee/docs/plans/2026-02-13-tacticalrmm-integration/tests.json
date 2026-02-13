@@ -49,7 +49,7 @@
   { "id": "T082", "description": "Integration: Bulk software ingestion is idempotent (re-running does not create duplicate software catalog entries).", "implemented": true, "featureIds": ["F071"] },
 
   { "id": "T090", "description": "Integration: Tactical sync actions publish expected event-bus events (webhook received, sync started/completed/failed) where implemented.", "implemented": true, "featureIds": ["F080"] },
-  { "id": "T091", "description": "E2E: Tactical webhook config UI shows header name `X-Alga-Webhook-Secret` and renders a payload template containing `agent_id`.", "implemented": false, "featureIds": ["F016", "F062"] },
+  { "id": "T091", "description": "E2E: Tactical webhook config UI shows header name `X-Alga-Webhook-Secret` and renders a payload template containing `agent_id`.", "implemented": true, "featureIds": ["F016", "F062"] },
   { "id": "T092", "description": "Integration: Webhook endpoint returns 200 for unknown/unmapped agent_id but still records the alert (asset association may be null).", "implemented": true, "featureIds": ["F063"] },
   { "id": "T093", "description": "Integration: Device sync handles large fleets by paging beta endpoints without exceeding request timeouts (smoke test with mocked pagination).", "implemented": true, "featureIds": ["F034", "F050"] },
   { "id": "T094", "description": "Integration: Tactical client sync tolerates client list being non-paginated and still upserts correctly.", "implemented": true, "featureIds": ["F040"] }

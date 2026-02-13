@@ -65,6 +65,8 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - `server/src/test/unit/tacticalrmm/tacticalApiClient.pagination.test.ts`
 - (2026-02-13) T093: Added paging smoke test for Tactical device sync verifying multi-page beta responses are iterated (sites + agents) and all agents across pages are processed. File:
   - `server/src/test/unit/tacticalrmm/tacticalDeviceSync.paginationSmoke.test.ts`
+- (2026-02-13) T091: Added Playwright E2E coverage for the Tactical webhook config UI showing header name and payload template (must include `agent_id`). File:
+  - `server/src/test/e2e/integrations-tactical-webhook-config.playwright.test.ts`
 
 ## Open Questions
 
