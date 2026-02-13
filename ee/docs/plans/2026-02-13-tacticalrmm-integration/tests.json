@@ -16,7 +16,7 @@
   { "id": "T023", "description": "Integration: `rmm_integrations` row is created once per tenant+provider and updated on subsequent saves.", "implemented": true, "featureIds": ["F022"] },
   { "id": "T024", "description": "Integration: Connection status summary returns correct counts for mapped orgs/devices/active alerts.", "implemented": true, "featureIds": ["F023"] },
 
-  { "id": "T030", "description": "Unit: Base URL normalization produces correct API root for inputs with/without trailing slashes and with/without /api segments.", "implemented": false, "featureIds": ["F030"] },
+  { "id": "T030", "description": "Unit: Base URL normalization produces correct API root for inputs with/without trailing slashes and with/without /api segments.", "implemented": true, "featureIds": ["F030"] },
   { "id": "T031", "description": "Unit: Beta pagination helper iterates pages until `next` is null and honors `page_size=1000` cap.", "implemented": false, "featureIds": ["F034"] },
   { "id": "T032", "description": "Unit: Knox flow: checkcreds returns `{totp:true}` triggers login with twofactor; `{totp:false}` still proceeds to login for normal token.", "implemented": false, "featureIds": ["F032"] },
   { "id": "T033", "description": "Unit: Knox 401 retry occurs at most once per request to avoid infinite loops.", "implemented": false, "featureIds": ["F033"] },
