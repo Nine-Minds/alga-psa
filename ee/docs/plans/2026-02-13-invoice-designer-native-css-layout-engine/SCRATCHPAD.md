@@ -159,6 +159,12 @@ Goal: remove bespoke geometry math in the invoice designer and rely on native br
   - `packages/billing/src/components/invoice-designer/utils/layout.ts` now contains only lightweight helpers (e.g. `resolveFlexPadding`) and type exports; alignment/geometry helpers were removed from this module.
   - Legacy drag-move guide/preview logic in `DesignerShell` was pared back (no coordinate-based preview updates).
 
+- 2026-02-13: `F019` Persist CSS-like layout props in AST import/export
+  - AST export writes CSS-like sizing, flex/grid container props, and media props (`aspectRatio`, `objectFit`) into `style.inline`:
+    - `packages/billing/src/components/invoice-designer/ast/workspaceAst.ts`
+  - AST import now hydrates `DesignerNode.style` and `DesignerNode.layout` from `style.inline` (with safe defaults for containers) so export -> import roundtrips CSS semantics.
+  - Import mapping now treats top-level AST `section` nodes as designer `page` nodes (avoids a duplicate designer-only page wrapper).
+
 ## Remaining Design Choices
 
 - Collision strategy and snapping thresholds are intentionally selected to minimize custom geometry logic:

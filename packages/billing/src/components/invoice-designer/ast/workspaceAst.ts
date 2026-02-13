@@ -1,6 +1,11 @@
 import type { InvoiceTemplateAst, InvoiceTemplateNode, InvoiceTemplateTableColumn } from '@alga-psa/types';
 import { INVOICE_TEMPLATE_AST_VERSION } from '@alga-psa/types';
-import type { DesignerNode, DesignerWorkspaceSnapshot } from '../state/designerStore';
+import type {
+  DesignerContainerLayout,
+  DesignerNode,
+  DesignerNodeStyle,
+  DesignerWorkspaceSnapshot,
+} from '../state/designerStore';
 import { DOCUMENT_NODE_ID } from '../state/designerStore';
 import { getAllowedChildrenForType } from '../state/hierarchy';
 import { getDefinition } from '../constants/componentCatalog';
@@ -87,12 +92,174 @@ const resolveNodeTextContent = (node: DesignerNode): string => {
   );
 };
 
-const createNodeStyle = (node: DesignerNode) => ({
-  inline: {
-    width: `${Math.max(1, Math.round(node.size.width))}px`,
-    height: `${Math.max(1, Math.round(node.size.height))}px`,
-  },
-});
+const createNodeStyle = (node: DesignerNode) => {
+  const inline: Record<string, unknown> = {};
+  const style = node.style ?? {};
+  const layout = node.layout;
+
+  inline.width = style.width ?? `${Math.max(1, Math.round(node.size.width))}px`;
+  inline.height = style.height ?? `${Math.max(1, Math.round(node.size.height))}px`;
+
+  if (style.minWidth) inline.minWidth = style.minWidth;
+  if (style.minHeight) inline.minHeight = style.minHeight;
+  if (style.maxWidth) inline.maxWidth = style.maxWidth;
+  if (style.maxHeight) inline.maxHeight = style.maxHeight;
+
+  if (typeof style.flexGrow === 'number') inline.flexGrow = style.flexGrow;
+  if (typeof style.flexShrink === 'number') inline.flexShrink = style.flexShrink;
+  if (style.flexBasis) inline.flexBasis = style.flexBasis;
+
+  if (style.aspectRatio) inline.aspectRatio = style.aspectRatio;
+  if (style.objectFit) inline.objectFit = style.objectFit;
+
+  if (layout) {
+    inline.display = layout.display;
+    if (layout.gap) inline.gap = layout.gap;
+    if (layout.padding) inline.padding = layout.padding;
+
+    if (layout.display === 'flex') {
+      if (layout.flexDirection) inline.flexDirection = layout.flexDirection;
+      if (layout.justifyContent) inline.justifyContent = layout.justifyContent;
+      if (layout.alignItems) inline.alignItems = layout.alignItems;
+    }
+
+    if (layout.display === 'grid') {
+      if (layout.gridTemplateColumns) inline.gridTemplateColumns = layout.gridTemplateColumns;
+      if (layout.gridTemplateRows) inline.gridTemplateRows = layout.gridTemplateRows;
+      if (layout.gridAutoFlow) inline.gridAutoFlow = layout.gridAutoFlow;
+    }
+  }
+
+  return { inline };
+};
+
+const coerceCssLength = (value: unknown): string | undefined => {
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : undefined;
+  }
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return `${value}px`;
+  }
+  return undefined;
+};
+
+const coerceNumber = (value: unknown): number | undefined => {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value;
+  }
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed.length) return undefined;
+    const numeric = Number.parseFloat(trimmed);
+    return Number.isFinite(numeric) ? numeric : undefined;
+  }
+  return undefined;
+};
+
+const coerceObjectFit = (value: unknown): DesignerNodeStyle['objectFit'] | undefined => {
+  if (value === 'contain' || value === 'cover' || value === 'fill' || value === 'none' || value === 'scale-down') {
+    return value;
+  }
+  return undefined;
+};
+
+const coerceJustifyContent = (value: unknown): DesignerContainerLayout['justifyContent'] | undefined => {
+  if (
+    value === 'flex-start' ||
+    value === 'center' ||
+    value === 'flex-end' ||
+    value === 'space-between' ||
+    value === 'space-around' ||
+    value === 'space-evenly'
+  ) {
+    return value;
+  }
+  return undefined;
+};
+
+const coerceAlignItems = (value: unknown): DesignerContainerLayout['alignItems'] | undefined => {
+  if (value === 'flex-start' || value === 'center' || value === 'flex-end' || value === 'stretch') {
+    return value;
+  }
+  return undefined;
+};
+
+const coerceGridAutoFlow = (value: unknown): DesignerContainerLayout['gridAutoFlow'] | undefined => {
+  if (value === 'row' || value === 'column' || value === 'dense' || value === 'row dense' || value === 'column dense') {
+    return value;
+  }
+  return undefined;
+};
+
+const coerceContainerLayoutFromInlineStyle = (
+  inline: Record<string, unknown> | undefined
+): DesignerContainerLayout | undefined => {
+  if (!inline) return undefined;
+  const display = inline.display === 'flex' || inline.display === 'grid' ? inline.display : undefined;
+  if (!display) return undefined;
+
+  const gap = coerceCssLength(inline.gap);
+  const padding = coerceCssLength(inline.padding);
+
+  if (display === 'flex') {
+    const flexDirection = inline.flexDirection === 'row' || inline.flexDirection === 'column' ? inline.flexDirection : undefined;
+    const justifyContent = coerceJustifyContent(inline.justifyContent);
+    const alignItems = coerceAlignItems(inline.alignItems);
+    return {
+      display,
+      flexDirection,
+      justifyContent,
+      alignItems,
+      gap,
+      padding,
+    };
+  }
+
+  const gridAutoFlow = coerceGridAutoFlow(inline.gridAutoFlow);
+  return {
+    display,
+    gridTemplateColumns: coerceCssLength(inline.gridTemplateColumns),
+    gridTemplateRows: coerceCssLength(inline.gridTemplateRows),
+    gridAutoFlow,
+    gap,
+    padding,
+  };
+};
+
+const coerceNodeStyleFromInlineStyle = (inline: Record<string, unknown> | undefined): DesignerNodeStyle | undefined => {
+  if (!inline) return undefined;
+
+  const style: DesignerNodeStyle = {};
+
+  const width = coerceCssLength(inline.width);
+  const height = coerceCssLength(inline.height);
+  const minWidth = coerceCssLength(inline.minWidth);
+  const minHeight = coerceCssLength(inline.minHeight);
+  const maxWidth = coerceCssLength(inline.maxWidth);
+  const maxHeight = coerceCssLength(inline.maxHeight);
+
+  if (width) style.width = width;
+  if (height) style.height = height;
+  if (minWidth) style.minWidth = minWidth;
+  if (minHeight) style.minHeight = minHeight;
+  if (maxWidth) style.maxWidth = maxWidth;
+  if (maxHeight) style.maxHeight = maxHeight;
+
+  const flexGrow = coerceNumber(inline.flexGrow);
+  const flexShrink = coerceNumber(inline.flexShrink);
+  const flexBasis = coerceCssLength(inline.flexBasis);
+  if (typeof flexGrow === 'number') style.flexGrow = flexGrow;
+  if (typeof flexShrink === 'number') style.flexShrink = flexShrink;
+  if (flexBasis) style.flexBasis = flexBasis;
+
+  const aspectRatio = coerceCssLength(inline.aspectRatio);
+  if (aspectRatio) style.aspectRatio = aspectRatio;
+  const objectFit = coerceObjectFit(inline.objectFit);
+  if (objectFit) style.objectFit = objectFit;
+
+  return Object.keys(style).length > 0 ? style : undefined;
+};
 
 const mapTableColumns = (node: DesignerNode): InvoiceTemplateTableColumn[] => {
   const metadata = isRecord(node.metadata) ? node.metadata : {};
@@ -151,16 +318,21 @@ const mapDesignerNodeToAstNode = (
         type: 'document',
         children,
       };
-    case 'page':
-    case 'section':
-    case 'column':
-    case 'container':
-      return {
-        ...createBaseNode(node),
-        type: 'section',
-        title: node.type === 'section' ? node.name : undefined,
-        children,
-      };
+	    case 'page':
+	    case 'section':
+	    case 'column':
+	      return {
+	        ...createBaseNode(node),
+	        type: 'section',
+	        title: node.type === 'section' ? node.name : undefined,
+	        children,
+	      };
+	    case 'container':
+	      return {
+	        ...createBaseNode(node),
+	        type: 'stack',
+	        children,
+	      };
     case 'text':
     case 'label':
       return {
@@ -342,29 +514,73 @@ const buildDesignerNode = (
   node: InvoiceTemplateNode,
   designerType: DesignerNode['type'],
   parentId: string,
-  index: number
+  index: number,
+  depth: number
 ): DesignerNode => {
   const def = getDefinition(designerType);
   const size = parseSizeFromStyle(node);
+  const inline = isRecord(node.style?.inline) ? (node.style?.inline as Record<string, unknown>) : undefined;
+  const styleFromInline = coerceNodeStyleFromInlineStyle(inline);
+  const layoutFromInline = coerceContainerLayoutFromInlineStyle(inline);
+
+  const isFixedFrame = designerType === 'document' || designerType === 'page';
+  const defaultContainerLayout: DesignerContainerLayout | undefined =
+    designerType === 'page'
+      ? {
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '32px',
+          padding: '40px',
+          justifyContent: 'flex-start',
+          alignItems: 'stretch',
+        }
+      : designerType === 'document'
+        ? {
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '0px',
+            padding: '0px',
+            justifyContent: 'flex-start',
+            alignItems: 'stretch',
+          }
+        : designerType === 'section' || designerType === 'container'
+          ? {
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '16px',
+              padding: '16px',
+              justifyContent: 'flex-start',
+              alignItems: 'stretch',
+            }
+          : undefined;
+
   return {
     id: node.id,
     type: designerType,
     name: node.id,
-    position: { x: 24, y: 24 + index * (size.height + 12) },
+    position: isFixedFrame
+      ? { x: 0, y: 0 }
+      : depth <= 1
+        ? { x: 0, y: 0 }
+        : { x: 24, y: 24 + index * (size.height + 12) },
     size: {
       width: Number.isFinite(size.width) ? size.width : def?.defaultSize.width ?? 220,
       height: Number.isFinite(size.height) ? size.height : def?.defaultSize.height ?? 56,
     },
     baseSize: undefined,
     canRotate: false,
-    allowResize: true,
+    allowResize: !isFixedFrame,
     rotation: 0,
     metadata: { ...(def?.defaultMetadata ?? {}) },
     layoutPresetId: undefined,
     parentId,
     childIds: [],
     allowedChildren: getAllowedChildrenForType(designerType),
-    layout: undefined,
+    layout:
+      designerType === 'document' || designerType === 'page' || designerType === 'section' || designerType === 'container'
+        ? layoutFromInline ?? defaultContainerLayout
+        : undefined,
+    style: styleFromInline,
   };
 };
 
@@ -373,7 +589,8 @@ const importAstNode = (
   parentId: string,
   nodes: DesignerNode[],
   ast: InvoiceTemplateAst,
-  depthIndex: number
+  depthIndex: number,
+  depth: number
 ) => {
   const typeMap: Partial<Record<InvoiceTemplateNode['type'], DesignerNode['type']>> = {
     section: 'section',
@@ -387,12 +604,12 @@ const importAstNode = (
     totals: 'totals',
   };
 
-  const designerType = typeMap[node.type];
+  const designerType = node.type === 'section' && depth === 0 ? 'page' : typeMap[node.type];
   if (!designerType) {
     return;
   }
 
-  const nextNode = buildDesignerNode(node, designerType, parentId, depthIndex);
+  const nextNode = buildDesignerNode(node, designerType, parentId, depthIndex, depth);
 
   if (node.type === 'text') {
     if (node.content.type === 'literal') {
@@ -435,7 +652,7 @@ const importAstNode = (
 
   const childNodes = node.type === 'section' || node.type === 'stack' ? node.children : [];
   childNodes.forEach((child, index) => {
-    importAstNode(child, nextNode.id, nodes, ast, index);
+    importAstNode(child, nextNode.id, nodes, ast, index, depth + 1);
     nextNode.childIds.push(child.id);
   });
 };
@@ -443,6 +660,11 @@ const importAstNode = (
 export const importInvoiceTemplateAstToWorkspace = (
   ast: InvoiceTemplateAst
 ): DesignerWorkspaceSnapshot => {
+  const astDocument = ast.layout.type === 'document' ? ast.layout : null;
+  const documentInline = astDocument && isRecord(astDocument.style?.inline)
+    ? (astDocument.style?.inline as Record<string, unknown>)
+    : undefined;
+
   const documentNode: DesignerNode = {
     id: DOCUMENT_NODE_ID,
     type: 'document',
@@ -456,55 +678,29 @@ export const importInvoiceTemplateAstToWorkspace = (
     metadata: {},
     layoutPresetId: undefined,
     parentId: null,
-    childIds: ['designer-page-imported'],
-    allowedChildren: getAllowedChildrenForType('document'),
-    layout: {
-      mode: 'flex',
-      direction: 'column',
-      gap: 0,
-      padding: 0,
-      justify: 'start',
-      align: 'stretch',
-      sizing: 'fixed',
-    },
-  };
-
-  const pageNode: DesignerNode = {
-    id: 'designer-page-imported',
-    type: 'page',
-    name: 'Page 1',
-    position: { x: 0, y: 0 },
-    size: { width: DESIGNER_CANVAS_BOUNDS.width, height: DESIGNER_CANVAS_BOUNDS.height },
-    baseSize: { width: DESIGNER_CANVAS_BOUNDS.width, height: DESIGNER_CANVAS_BOUNDS.height },
-    canRotate: false,
-    allowResize: false,
-    rotation: 0,
-    metadata: {},
-    layoutPresetId: undefined,
-    parentId: DOCUMENT_NODE_ID,
     childIds: [],
-    allowedChildren: getAllowedChildrenForType('page'),
-    layout: {
-      mode: 'flex',
-      direction: 'column',
-      gap: 32,
-      padding: 40,
-      justify: 'start',
-      align: 'stretch',
-      sizing: 'hug',
-    },
+    allowedChildren: getAllowedChildrenForType('document'),
+    layout:
+      coerceContainerLayoutFromInlineStyle(documentInline) ?? {
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '0px',
+        padding: '0px',
+        justifyContent: 'flex-start',
+        alignItems: 'stretch',
+      },
+    style: coerceNodeStyleFromInlineStyle(documentInline),
   };
 
-  const nodes: DesignerNode[] = [documentNode, pageNode];
+  const nodes: DesignerNode[] = [documentNode];
   const rootChildren = ast.layout.type === 'document' ? ast.layout.children : [ast.layout];
   rootChildren.forEach((child, index) => {
-    importAstNode(child, pageNode.id, nodes, ast, index);
-    pageNode.childIds.push(child.id);
+    importAstNode(child, documentNode.id, nodes, ast, index, 0);
+    documentNode.childIds.push(child.id);
   });
 
   return {
     nodes,
-    constraints: [],
     snapToGrid: true,
     gridSize: 8,
     showGuides: true,
