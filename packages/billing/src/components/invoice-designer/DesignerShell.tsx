@@ -1006,6 +1006,76 @@ export const DesignerShell: React.FC = () => {
     );
   };
 
+  const renderFlexItemInspector = () => {
+    if (!selectedNode) return null;
+    if (!selectedNode.parentId) return null;
+    const parent = nodesById.get(selectedNode.parentId) ?? null;
+    if (!parent || parent.layout?.display !== 'flex') {
+      return null;
+    }
+
+    const parseNumber = (value: unknown): string => {
+      if (typeof value === 'number' && Number.isFinite(value)) return String(value);
+      return '';
+    };
+
+    const normalizeNumber = (raw: string): number | undefined => {
+      const trimmed = raw.trim();
+      if (trimmed.length === 0) return undefined;
+      const parsed = Number(trimmed);
+      return Number.isFinite(parsed) ? parsed : undefined;
+    };
+
+    return (
+      <div className="rounded border border-slate-200 bg-white px-3 py-2 space-y-2">
+        <p className="text-xs font-semibold text-slate-700">Flex Item</p>
+        <div className="grid grid-cols-2 gap-2 text-xs text-slate-600">
+          <div>
+            <label htmlFor="designer-style-flex-grow" className="text-[10px] text-slate-500 block mb-1">
+              flex-grow
+            </label>
+            <Input
+              id="designer-style-flex-grow"
+              type="number"
+              value={parseNumber(selectedNode.style?.flexGrow)}
+              placeholder="0"
+              onChange={(event) =>
+                updateNodeStyle(selectedNode.id, { flexGrow: normalizeNumber(event.target.value) })
+              }
+            />
+          </div>
+          <div>
+            <label htmlFor="designer-style-flex-shrink" className="text-[10px] text-slate-500 block mb-1">
+              flex-shrink
+            </label>
+            <Input
+              id="designer-style-flex-shrink"
+              type="number"
+              value={parseNumber(selectedNode.style?.flexShrink)}
+              placeholder="1"
+              onChange={(event) =>
+                updateNodeStyle(selectedNode.id, { flexShrink: normalizeNumber(event.target.value) })
+              }
+            />
+          </div>
+          <div className="col-span-2">
+            <label htmlFor="designer-style-flex-basis" className="text-[10px] text-slate-500 block mb-1">
+              flex-basis
+            </label>
+            <Input
+              id="designer-style-flex-basis"
+              value={selectedNode.style?.flexBasis ?? ''}
+              placeholder="auto | 240px | 50%"
+              onChange={(event) =>
+                updateNodeStyle(selectedNode.id, { flexBasis: normalizeCssValue(event.target.value) })
+              }
+            />
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const renderMetadataInspector = () => {
     if (!selectedNode) {
       return null;
@@ -2072,12 +2142,13 @@ export const DesignerShell: React.FC = () => {
                           }
                         />
                       </div>
-                    </div>
-                  </div>
-		              {selectedNode.type === 'section' && (
-		                <div className="space-y-1">
-		                  <Button
-	                    id="designer-fit-section-to-contents"
+	                    </div>
+	                  </div>
+                {renderFlexItemInspector()}
+			              {selectedNode.type === 'section' && (
+			                <div className="space-y-1">
+			                  <Button
+		                    id="designer-fit-section-to-contents"
                     variant="outline"
                     onClick={fitSelectedSectionToContents}
                   >

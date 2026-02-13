@@ -81,6 +81,11 @@ Goal: remove bespoke geometry math in the invoice designer and rely on native br
     - `packages/billing/src/components/invoice-designer/DesignerShell.tsx`
   - Canvas already applies these values via `resolveNodeBoxStyle(node.style)` (no geometry math).
 
+- 2026-02-13: `F007` Flex item controls (grow/shrink/basis)
+  - Added "Flex Item" inspector panel shown when the selected node is inside a `display:flex` parent; edits `flexGrow`, `flexShrink`, and `flexBasis` on `node.style`:
+    - `packages/billing/src/components/invoice-designer/DesignerShell.tsx`
+  - Canvas already applies these values via `resolveNodeBoxStyle(node.style)`.
+
 ## Remaining Design Choices
 
 - Collision strategy and snapping thresholds are intentionally selected to minimize custom geometry logic:
