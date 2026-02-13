@@ -251,6 +251,7 @@ Goal: remove bespoke geometry math in the invoice designer and rely on native br
   - `cd server && npx vitest run ../packages/billing/src/components/invoice-designer/utils/dndCollision.test.ts`
   - `cd server && npx vitest run ../packages/billing/src/components/invoice-designer/state/designerStore.flowDnd.test.ts`
   - `cd server && npx vitest run ../packages/billing/src/components/invoice-designer/utils/dropIndicator.test.ts`
+  - `cd server && npx vitest run ../packages/billing/src/components/invoice-designer/canvas/DesignCanvas.mediaAspect.integration.test.tsx`
 
 ## Repo/Test Gotchas (Discovered 2026-02-13)
 
