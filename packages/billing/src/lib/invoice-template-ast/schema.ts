@@ -2,6 +2,14 @@ import { z } from 'zod';
 import type { InvoiceTemplateAst } from '@alga-psa/types';
 import { INVOICE_TEMPLATE_AST_VERSION } from '@alga-psa/types';
 
+// Conservative allowlist for any identifier we emit into CSS selectors or custom property names.
+// Note: these are embedded into selectors with a prefix (`.ast-...`) and custom properties with `--...`.
+const CSS_SAFE_IDENTIFIER_REGEX = /^[a-zA-Z0-9_-]+$/;
+const cssIdentifierSchema = z
+  .string()
+  .min(1)
+  .regex(CSS_SAFE_IDENTIFIER_REGEX, { message: 'Invalid CSS identifier.' });
+
 const valueFormatSchema = z.enum(['text', 'number', 'currency', 'date']);
 
 const styleDeclarationSchema = z.object({
@@ -38,7 +46,7 @@ const styleDeclarationSchema = z.object({
 }).strict();
 
 const nodeStyleRefSchema = z.object({
-  tokenIds: z.array(z.string()).optional(),
+  tokenIds: z.array(cssIdentifierSchema).optional(),
   inline: styleDeclarationSchema.optional(),
 }).strict();
 
@@ -421,11 +429,11 @@ export const invoiceTemplateAstSchema = z.object({
     currencyCode: z.string().optional(),
   }).strict().optional(),
   styles: z.object({
-    tokens: z.record(z.string(), z.object({
-      id: z.string().min(1),
+    tokens: z.record(cssIdentifierSchema, z.object({
+      id: cssIdentifierSchema,
       value: z.union([z.string(), z.number()]),
     }).strict()).optional(),
-    classes: z.record(z.string(), styleDeclarationSchema).optional(),
+    classes: z.record(cssIdentifierSchema, styleDeclarationSchema).optional(),
   }).strict().optional(),
   bindings: z.object({
     values: z.record(z.string(), valueBindingSchema).optional(),

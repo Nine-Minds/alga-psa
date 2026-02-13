@@ -58,6 +58,8 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-02-13) Invoice template AST renderer emits CSS selectors/vars based on unvalidated identifiers:
   - `packages/billing/src/lib/invoice-template-ast/react-renderer.tsx`
   - `packages/billing/src/lib/invoice-template-ast/schema.ts`
+- (2026-02-13) Invoice template AST schema now validates style identifiers (class keys, token ids, styleRef tokenIds) against a strict safe identifier regex and rejects invalid inputs.
+  - `packages/billing/src/lib/invoice-template-ast/schema.ts`
 
 ## Commands / Runbooks
 

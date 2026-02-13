@@ -74,7 +74,7 @@
   {
     "id": "F013",
     "description": "Validate invoice template AST style identifiers (style class keys, token ids, and styleRef tokenIds) against a safe CSS identifier rule.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Functional Requirements > 5"]
   },
   {
