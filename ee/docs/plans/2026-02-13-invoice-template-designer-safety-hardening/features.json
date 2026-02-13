@@ -2,7 +2,7 @@
   {
     "id": "F001",
     "description": "Add `.gitignore` rules to ignore local env backup files (e.g. `server/.env.local.bak*`).",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Functional Requirements > 1"]
   },
   {

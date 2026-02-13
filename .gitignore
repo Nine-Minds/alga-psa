@@ -56,6 +56,12 @@ dist/
 .env.production.local
 .env.development
 .env.image
+
+# Env backup files (common sources of accidental credential leaks)
+**/.env*.bak*
+server/.env.local.bak*
+ee/server/.env.local.bak*
+
 ee/server/.env
 ee/server/.playwright-client-portal-credentials.json
 server/.env
