@@ -117,3 +117,7 @@ This plan intentionally continues the simplification arc:
   - Implemented `packages/billing/src/components/invoice-designer/inspector/widgets/TableEditorWidget.tsx` and wired it into the schema via a `widget` inspector field (`table-editor`).
   - `packages/billing/src/components/invoice-designer/schema/componentSchema.ts` now attaches the table editor widget to both `table` and `dynamic-table` schemas.
   - Removed the hardcoded table/dynamic-table inspector block from `packages/billing/src/components/invoice-designer/DesignerShell.tsx` (tables now render their metadata editor via schema widget).
+- 2026-02-13: Updated designer <-> invoice-template AST mapping to prefer unified props + children:
+  - `packages/billing/src/components/invoice-designer/ast/workspaceAst.ts` now reads `name/layout/style/metadata` via `packages/billing/src/components/invoice-designer/utils/nodeProps.ts` helpers and traverses `children` (fallback to `childIds` for legacy nodes).
+  - Import now materializes `props` and `children` on generated nodes and keeps them in sync with legacy fields during cutover.
+  - Updated `packages/billing/src/components/invoice-designer/ast/workspaceAst.test.ts` fixtures to set `props` + `children` so export/import exercises the unified tree.

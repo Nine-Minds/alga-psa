@@ -10,6 +10,7 @@ import { DOCUMENT_NODE_ID } from '../state/designerStore';
 import { getAllowedChildrenForType } from '../state/hierarchy';
 import { getDefinition } from '../constants/componentCatalog';
 import { DESIGNER_CANVAS_BOUNDS } from '../constants/layout';
+import { getNodeLayout, getNodeMetadata, getNodeName, getNodeStyle } from '../utils/nodeProps';
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -47,7 +48,7 @@ const normalizeInvoiceBindingPath = (bindingKey: string): string => {
 };
 
 const resolveFieldBindingPath = (node: DesignerNode): string => {
-  const metadata = isRecord(node.metadata) ? node.metadata : {};
+  const metadata = getNodeMetadata(node);
   const fromMetadata =
     asTrimmedString(metadata.bindingKey) ||
     asTrimmedString(metadata.binding) ||
@@ -72,7 +73,7 @@ const resolveFieldBindingPath = (node: DesignerNode): string => {
 };
 
 const resolveCollectionPath = (node: DesignerNode): string => {
-  const metadata = isRecord(node.metadata) ? node.metadata : {};
+  const metadata = getNodeMetadata(node);
   const rawPath =
     asTrimmedString(metadata.collectionBindingKey) ||
     asTrimmedString(metadata.collectionPath) ||
@@ -83,19 +84,19 @@ const resolveCollectionPath = (node: DesignerNode): string => {
 };
 
 const resolveNodeTextContent = (node: DesignerNode): string => {
-  const metadata = isRecord(node.metadata) ? node.metadata : {};
+  const metadata = getNodeMetadata(node);
   return (
     asTrimmedString(metadata.text) ||
     asTrimmedString(metadata.label) ||
     asTrimmedString(metadata.content) ||
-    node.name
+    getNodeName(node)
   );
 };
 
 const createNodeStyle = (node: DesignerNode) => {
   const inline: Record<string, unknown> = {};
-  const style = node.style ?? {};
-  const layout = node.layout;
+  const style = getNodeStyle(node) ?? {};
+  const layout = getNodeLayout(node);
 
   inline.width = style.width ?? `${Math.max(1, Math.round(node.size.width))}px`;
   inline.height = style.height ?? `${Math.max(1, Math.round(node.size.height))}px`;
@@ -262,7 +263,7 @@ const coerceNodeStyleFromInlineStyle = (inline: Record<string, unknown> | undefi
 };
 
 const mapTableColumns = (node: DesignerNode): InvoiceTemplateTableColumn[] => {
-  const metadata = isRecord(node.metadata) ? node.metadata : {};
+  const metadata = getNodeMetadata(node);
   const columns = Array.isArray(metadata.columns) ? metadata.columns : [];
 
   const mappedColumns = columns
@@ -299,13 +300,16 @@ const createBaseNode = (node: DesignerNode): Pick<InvoiceTemplateNode, 'id' | 's
   style: createNodeStyle(node),
 });
 
+const getDesignerChildIds = (node: DesignerNode): string[] =>
+  Array.isArray((node as { children?: unknown }).children) ? (node as { children: string[] }).children : node.childIds;
+
 const mapDesignerNodeToAstNode = (
   node: DesignerNode,
   nodesById: Map<string, DesignerNode>,
   registerValueBinding: (path: string) => string,
   registerCollectionBinding: (path: string) => string
 ): InvoiceTemplateNode | null => {
-  const children = node.childIds
+  const children = getDesignerChildIds(node)
     .map((childId) => nodesById.get(childId))
     .filter((child): child is DesignerNode => Boolean(child))
     .map((child) => mapDesignerNodeToAstNode(child, nodesById, registerValueBinding, registerCollectionBinding))
@@ -324,7 +328,7 @@ const mapDesignerNodeToAstNode = (
 	      return {
 	        ...createBaseNode(node),
 	        type: 'section',
-	        title: node.type === 'section' ? node.name : undefined,
+	        title: node.type === 'section' ? getNodeName(node) : undefined,
 	        children,
 	      };
 	    case 'container':
@@ -389,13 +393,13 @@ const mapDesignerNodeToAstNode = (
     case 'image':
     case 'logo':
     case 'qr': {
-      const metadata = isRecord(node.metadata) ? node.metadata : {};
+      const metadata = getNodeMetadata(node);
       const src = asTrimmedString(metadata.src) || asTrimmedString(metadata.url) || '';
       return {
         ...createBaseNode(node),
         type: 'image',
         src: { type: 'literal', value: src },
-        alt: { type: 'literal', value: node.name },
+        alt: { type: 'literal', value: getNodeName(node) },
       };
     }
     case 'signature':
@@ -522,6 +526,7 @@ const buildDesignerNode = (
   const inline = isRecord(node.style?.inline) ? (node.style?.inline as Record<string, unknown>) : undefined;
   const styleFromInline = coerceNodeStyleFromInlineStyle(inline);
   const layoutFromInline = coerceContainerLayoutFromInlineStyle(inline);
+  const baseMetadata = { ...(def?.defaultMetadata ?? {}) };
 
   const isFixedFrame = designerType === 'document' || designerType === 'page';
   const defaultContainerLayout: DesignerContainerLayout | undefined =
@@ -554,10 +559,21 @@ const buildDesignerNode = (
             }
           : undefined;
 
+  const resolvedLayout =
+    designerType === 'document' || designerType === 'page' || designerType === 'section' || designerType === 'container'
+      ? layoutFromInline ?? defaultContainerLayout
+      : undefined;
+
   return {
     id: node.id,
     type: designerType,
     name: node.id,
+    props: {
+      name: node.id,
+      metadata: baseMetadata,
+      layout: resolvedLayout,
+      style: styleFromInline,
+    },
     position: isFixedFrame
       ? { x: 0, y: 0 }
       : depth <= 1
@@ -571,15 +587,13 @@ const buildDesignerNode = (
     canRotate: false,
     allowResize: !isFixedFrame,
     rotation: 0,
-    metadata: { ...(def?.defaultMetadata ?? {}) },
+    metadata: baseMetadata,
     layoutPresetId: undefined,
     parentId,
+    children: [],
     childIds: [],
     allowedChildren: getAllowedChildrenForType(designerType),
-    layout:
-      designerType === 'document' || designerType === 'page' || designerType === 'section' || designerType === 'container'
-        ? layoutFromInline ?? defaultContainerLayout
-        : undefined,
+    layout: resolvedLayout,
     style: styleFromInline,
   };
 };
@@ -620,6 +634,11 @@ const importAstNode = (
         text: String(node.content.value ?? ''),
       };
       nextNode.name = String(node.content.value ?? nextNode.name);
+      nextNode.props = {
+        ...nextNode.props,
+        name: nextNode.name,
+        metadata: nextNode.metadata ?? {},
+      };
     }
   } else if (node.type === 'field') {
     const bindingPath =
@@ -630,9 +649,18 @@ const importAstNode = (
       ...(nextNode.metadata ?? {}),
       bindingKey: denormalizeBindingPath(bindingPath),
     };
+    nextNode.props = {
+      ...nextNode.props,
+      metadata: nextNode.metadata ?? {},
+    };
     if (node.label) {
       nextNode.name = node.label;
       nextNode.metadata.label = node.label;
+      nextNode.props = {
+        ...nextNode.props,
+        name: nextNode.name,
+        metadata: nextNode.metadata ?? {},
+      };
     }
   } else if (node.type === 'dynamic-table' || node.type === 'table') {
     const collectionPath =
@@ -648,6 +676,10 @@ const importAstNode = (
         key: column.value.type === 'path' ? `item.${column.value.path}` : column.id,
       })),
     };
+    nextNode.props = {
+      ...nextNode.props,
+      metadata: nextNode.metadata ?? {},
+    };
   }
 
   nodes.push(nextNode);
@@ -656,6 +688,7 @@ const importAstNode = (
   childNodes.forEach((child, index) => {
     importAstNode(child, nextNode.id, nodes, ast, index, depth + 1);
     nextNode.childIds.push(child.id);
+    nextNode.children.push(child.id);
   });
 };
 
@@ -671,6 +704,20 @@ export const importInvoiceTemplateAstToWorkspace = (
     id: DOCUMENT_NODE_ID,
     type: 'document',
     name: 'Document',
+    props: {
+      name: 'Document',
+      metadata: {},
+      layout:
+        coerceContainerLayoutFromInlineStyle(documentInline) ?? {
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '0px',
+          padding: '0px',
+          justifyContent: 'flex-start',
+          alignItems: 'stretch',
+        },
+      style: coerceNodeStyleFromInlineStyle(documentInline),
+    },
     position: { x: 0, y: 0 },
     size: { width: DESIGNER_CANVAS_BOUNDS.width, height: DESIGNER_CANVAS_BOUNDS.height },
     baseSize: { width: DESIGNER_CANVAS_BOUNDS.width, height: DESIGNER_CANVAS_BOUNDS.height },
@@ -680,6 +727,7 @@ export const importInvoiceTemplateAstToWorkspace = (
     metadata: {},
     layoutPresetId: undefined,
     parentId: null,
+    children: [],
     childIds: [],
     allowedChildren: getAllowedChildrenForType('document'),
     layout:
@@ -699,6 +747,19 @@ export const importInvoiceTemplateAstToWorkspace = (
     id: 'page-root',
     type: 'page',
     name: 'Page 1',
+    props: {
+      name: 'Page 1',
+      metadata: {},
+      layout: {
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '32px',
+        padding: '40px', // Page margins
+        justifyContent: 'flex-start',
+        alignItems: 'stretch',
+      },
+      style: undefined,
+    },
     position: { x: 0, y: 0 },
     size: { width: DESIGNER_CANVAS_BOUNDS.width, height: DESIGNER_CANVAS_BOUNDS.height },
     baseSize: { width: DESIGNER_CANVAS_BOUNDS.width, height: DESIGNER_CANVAS_BOUNDS.height },
@@ -708,6 +769,7 @@ export const importInvoiceTemplateAstToWorkspace = (
     metadata: {},
     layoutPresetId: undefined,
     parentId: documentNode.id,
+    children: [],
     childIds: [],
     allowedChildren: getAllowedChildrenForType('page'),
     layout: {
@@ -722,12 +784,15 @@ export const importInvoiceTemplateAstToWorkspace = (
   };
 
   documentNode.childIds = [pageNode.id];
+  documentNode.children = [pageNode.id];
+  pageNode.children = [];
 
   const nodes: DesignerNode[] = [documentNode, pageNode];
   const rootChildren = ast.layout.type === 'document' ? ast.layout.children : [ast.layout];
   rootChildren.forEach((child, index) => {
     importAstNode(child, pageNode.id, nodes, ast, index, 0);
     pageNode.childIds.push(child.id);
+    pageNode.children.push(child.id);
   });
 
   return {

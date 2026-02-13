@@ -21,6 +21,7 @@ const createWorkspaceWithFieldAndDynamicTable = (): DesignerWorkspaceSnapshot =>
       ? {
           ...node,
           childIds: [...node.childIds, fieldId, tableId],
+          children: [...node.children, fieldId, tableId],
         }
       : node
   );
@@ -32,13 +33,21 @@ const createWorkspaceWithFieldAndDynamicTable = (): DesignerWorkspaceSnapshot =>
         id: fieldId,
         type: 'field',
         name: 'Invoice Number',
+        props: {
+          name: 'Invoice Number',
+          metadata: { bindingKey: 'invoice.number', format: 'text' },
+          layout: undefined,
+          style: undefined,
+        },
         position: { x: 24, y: 24 },
         size: { width: 220, height: 48 },
+        baseSize: { width: 220, height: 48 },
         canRotate: false,
         allowResize: true,
         rotation: 0,
         metadata: { bindingKey: 'invoice.number', format: 'text' },
         parentId: pageNode.id,
+        children: [],
         childIds: [],
         allowedChildren: [],
       },
@@ -46,8 +55,21 @@ const createWorkspaceWithFieldAndDynamicTable = (): DesignerWorkspaceSnapshot =>
         id: tableId,
         type: 'dynamic-table',
         name: 'Line Items',
+        props: {
+          name: 'Line Items',
+          metadata: {
+            collectionBindingKey: 'items',
+            columns: [
+              { id: 'col-desc', header: 'Description', key: 'item.description' },
+              { id: 'col-total', header: 'Amount', key: 'item.total' },
+            ],
+          },
+          layout: undefined,
+          style: undefined,
+        },
         position: { x: 24, y: 96 },
         size: { width: 520, height: 220 },
+        baseSize: { width: 520, height: 220 },
         canRotate: false,
         allowResize: true,
         rotation: 0,
@@ -59,6 +81,7 @@ const createWorkspaceWithFieldAndDynamicTable = (): DesignerWorkspaceSnapshot =>
           ],
         },
         parentId: pageNode.id,
+        children: [],
         childIds: [],
         allowedChildren: [],
       },
@@ -125,6 +148,17 @@ describe('exportWorkspaceToInvoiceTemplateAst', () => {
       node.id === pageNode.id
         ? {
             ...node,
+            props: {
+              ...node.props,
+              layout: {
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '20px',
+                padding: '24px',
+                justifyContent: 'space-between',
+                alignItems: 'stretch',
+              },
+            },
             layout: {
               display: 'flex',
               flexDirection: 'column',
@@ -134,6 +168,7 @@ describe('exportWorkspaceToInvoiceTemplateAst', () => {
               alignItems: 'stretch',
             },
             childIds: [...node.childIds, containerId],
+            children: [...node.children, containerId],
           }
         : node
     );
@@ -142,13 +177,28 @@ describe('exportWorkspaceToInvoiceTemplateAst', () => {
       id: containerId,
       type: 'container',
       name: 'Grid Container',
+      props: {
+        name: 'Grid Container',
+        metadata: {},
+        layout: {
+          display: 'grid',
+          gridTemplateColumns: '1fr 2fr',
+          gridTemplateRows: 'auto',
+          gridAutoFlow: 'row dense',
+          gap: '12px',
+          padding: '10px',
+        },
+        style: undefined,
+      },
       position: { x: 24, y: 24 },
       size: { width: 600, height: 240 },
+      baseSize: { width: 600, height: 240 },
       canRotate: false,
       allowResize: true,
       rotation: 0,
       metadata: {},
       parentId: pageNode.id,
+      children: [imageId],
       childIds: [imageId],
       allowedChildren: ['image'],
       layout: {
@@ -165,13 +215,26 @@ describe('exportWorkspaceToInvoiceTemplateAst', () => {
       id: imageId,
       type: 'image',
       name: 'Image',
+      props: {
+        name: 'Image',
+        metadata: { src: 'https://example.com/test.png' },
+        layout: undefined,
+        style: {
+          width: '320px',
+          height: '180px',
+          aspectRatio: '16 / 9',
+          objectFit: 'contain',
+        },
+      },
       position: { x: 0, y: 0 },
       size: { width: 320, height: 180 },
+      baseSize: { width: 320, height: 180 },
       canRotate: false,
       allowResize: true,
       rotation: 0,
       metadata: { src: 'https://example.com/test.png' },
       parentId: containerId,
+      children: [],
       childIds: [],
       allowedChildren: [],
       style: {
