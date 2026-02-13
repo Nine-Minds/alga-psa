@@ -24,7 +24,7 @@ import { DesignCanvas } from './canvas/DesignCanvas';
 import { DesignerToolbar } from './toolbar/DesignerToolbar';
 import type { DesignerComponentType, DesignerNode, Point, Size } from './state/designerStore';
 import { getAbsolutePosition, useInvoiceDesignerStore } from './state/designerStore';
-import { AlignmentGuide, calculateGuides, clampPositionToParent, resolveFlexPadding } from './utils/layout';
+import { AlignmentGuide, resolveFlexPadding } from './utils/layout';
 import { getDefinition } from './constants/componentCatalog';
 import { getPresetById } from './constants/presets';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -133,45 +133,6 @@ const isDropTargetMeta = (value: unknown): value is DropTargetMeta =>
   typeof (value as { nodeType?: unknown }).nodeType === 'string' &&
   'allowedChildren' in value &&
   Array.isArray((value as { allowedChildren?: unknown }).allowedChildren);
-
-const createRestrictToParentBoundsModifier = (nodes: DesignerNode[]): Modifier => ({ active, transform }) => {
-  if (!active || !transform) {
-    return transform;
-  }
-  const data = active.data?.current;
-  if (!isNodeDragData(data)) {
-    return transform;
-  }
-  if (data.layoutKind === 'flow') {
-    return transform;
-  }
-  const node = nodes.find((candidate) => candidate.id === data.nodeId);
-  if (!node) {
-    return transform;
-  }
-  const boundedPosition = clampPositionToParent(node, nodes, {
-    x: node.position.x + transform.x,
-    y: node.position.y + transform.y,
-  });
-  return {
-    ...transform,
-    x: boundedPosition.x - node.position.x,
-    y: boundedPosition.y - node.position.y,
-  };
-};
-
-const buildDescendantPositionMap = (rootId: string, allNodes: DesignerNode[]) => {
-  const positions = new Map<string, Point>();
-  const nodesById = new Map(allNodes.map((node) => [node.id, node]));
-  const walk = (id: string) => {
-    const node = nodesById.get(id);
-    if (!node) return;
-    positions.set(id, { ...node.position });
-    node.childIds.forEach((childId) => walk(childId));
-  };
-  walk(rootId);
-  return positions;
-};
 
 const getPracticalMinimumSizeForType = (type: DesignerComponentType): { width: number; height: number } => {
   switch (type) {
@@ -343,34 +304,19 @@ export const DesignerShell: React.FC = () => {
   }, [nodes, selectedNode]);
   const nodesById = useMemo(() => new Map(nodes.map((node) => [node.id, node] as const)), [nodes]);
 
-  useDesignerShortcuts();
-
-  const [activeDrag, setActiveDrag] = useState<ActiveDragState>(null);
-  const [guides, setGuides] = useState<AlignmentGuide[]>([]);
-  const [previewPositions, setPreviewPositions] = useState<Record<string, Point>>({});
-  const [dropIndicator, setDropIndicator] = useState<DropIndicator>(null);
-  const [dropFeedback, setDropFeedback] = useState<DropFeedback | null>(null);
-  const [forcedDropTarget, setForcedDropTarget] = useState<string | 'canvas' | null>(null);
-  const pointerRef = useRef<{ x: number; y: number } | null>(null);
-  const dropFeedbackTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  
-  // Fail-safe: Clear guides when no drag is active
-  React.useEffect(() => {
-    if (!activeDrag && guides.length > 0) {
-      setGuides([]);
-    }
-  }, [activeDrag, guides.length]);
-
-  const dragSessionRef = useRef<{
-    nodeId: string;
-    origin: Point;
-    originalPositions: Map<string, Point>;
-    lastDelta: Point;
-  } | null>(null);
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 5,
+	  useDesignerShortcuts();
+	
+	  const [activeDrag, setActiveDrag] = useState<ActiveDragState>(null);
+	  const [dropIndicator, setDropIndicator] = useState<DropIndicator>(null);
+	  const [dropFeedback, setDropFeedback] = useState<DropFeedback | null>(null);
+	  const [forcedDropTarget, setForcedDropTarget] = useState<string | 'canvas' | null>(null);
+	  const pointerRef = useRef<{ x: number; y: number } | null>(null);
+	  const dropFeedbackTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+	  
+	  const sensors = useSensors(
+	    useSensor(PointerSensor, {
+	      activationConstraint: {
+	        distance: 5,
       },
     }),
     useSensor(KeyboardSensor)
@@ -454,25 +400,10 @@ export const DesignerShell: React.FC = () => {
     return createSnapModifier(pixelGrid);
   }, [snapToGrid, gridSize, canvasScale]);
 
-  const restrictToParentBoundsModifier = useMemo<Modifier>(
-    () => createRestrictToParentBoundsModifier(nodes),
-    [nodes]
-  );
-
   const modifiers = useMemo<Modifier[]>(() => {
-    const base: Modifier[] = [restrictToParentBoundsModifier, restrictToWindowEdges];
+    const base: Modifier[] = [restrictToWindowEdges];
     return snapModifier ? [...base, snapModifier] : base;
-  }, [restrictToParentBoundsModifier, snapModifier]);
-
-  const renderedNodes = useMemo(() => {
-    if (!previewPositions || Object.keys(previewPositions).length === 0) {
-      return nodes;
-    }
-    return nodes.map((node) => {
-      const override = previewPositions[node.id];
-      return override ? { ...node, position: override } : node;
-    });
-  }, [nodes, previewPositions]);
+  }, [snapModifier]);
 
   const resolvePageForDrop = useCallback((nodesForDrop: DesignerNode[], startNodeId?: string): DesignerNode | null => {
     const nodesById = new Map(nodesForDrop.map((node) => [node.id, node]));
@@ -747,9 +678,6 @@ export const DesignerShell: React.FC = () => {
   );
 
   const cleanupDragState = useCallback(() => {
-    dragSessionRef.current = null;
-    setPreviewPositions({});
-    setGuides([]);
     setActiveDrag(null);
     setDropIndicator(null);
     updatePointerLocation(null);
@@ -1590,59 +1518,9 @@ export const DesignerShell: React.FC = () => {
     }
   };
 
-  const handleDragMove = (event: DragMoveEvent) => {
-    if (!dragSessionRef.current || activeDrag?.kind !== 'node') {
-      return;
-    }
-    const session = dragSessionRef.current;
-    const { nodeId, origin } = session;
-    const nextPosition = {
-      x: origin.x + event.delta.x,
-      y: origin.y + event.delta.y,
-    };
-    const activeNode = nodes.find((node) => node.id === nodeId);
-    if (!activeNode) return;
-    const boundedPosition = clampPositionToParent(activeNode, nodes, nextPosition);
-    const delta = {
-      x: boundedPosition.x - origin.x,
-      y: boundedPosition.y - origin.y,
-    };
-    if (delta.x !== session.lastDelta.x || delta.y !== session.lastDelta.y) {
-      const nextPreview: Record<string, Point> = {};
-      session.originalPositions.forEach((point, id) => {
-        nextPreview[id] = {
-          x: point.x + delta.x,
-          y: point.y + delta.y,
-        };
-      });
-      setPreviewPositions(nextPreview);
-      session.lastDelta = delta;
-    }
-    if (showGuides) {
-      const projectedPosition = {
-        x: origin.x + session.lastDelta.x,
-        y: origin.y + session.lastDelta.y,
-      };
-      const ghostNode = {
-        ...activeNode,
-        position: projectedPosition,
-      };
-      const guideNodes = nodes.map((node) => {
-        if (session.originalPositions.has(node.id)) {
-          const original = session.originalPositions.get(node.id) ?? node.position;
-          return {
-            ...node,
-            position: {
-              x: original.x + session.lastDelta.x,
-              y: original.y + session.lastDelta.y,
-            },
-          };
-        }
-        return node;
-      });
-      setGuides(calculateGuides(ghostNode, guideNodes));
-    }
-  };
+	  const handleDragMove = (event: DragMoveEvent) => {
+	    void event;
+	  };
 
   const handleDragOver = (event: DragOverEvent) => {
     const activeData = event.active.data.current;
@@ -2091,17 +1969,17 @@ export const DesignerShell: React.FC = () => {
               onInsertPreset={handleQuickInsertPreset}
             />
           </div>
-          <DesignerWorkspace
-            nodes={renderedNodes}
-            selectedNodeId={selectedNodeId}
-            activeReferenceNodeId={referenceNodeId}
-            constrainedCounterpartNodeIds={selectedCounterpartNodeIds}
-            showGuides={showGuides}
-            showRulers={showRulers}
-            gridSize={gridSize}
-            canvasScale={canvasScale}
-            snapToGrid={snapToGrid}
-	            guides={guides}
+	          <DesignerWorkspace
+	            nodes={nodes}
+	            selectedNodeId={selectedNodeId}
+	            activeReferenceNodeId={referenceNodeId}
+	            constrainedCounterpartNodeIds={selectedCounterpartNodeIds}
+	            showGuides={showGuides}
+	            showRulers={showRulers}
+	            gridSize={gridSize}
+	            canvasScale={canvasScale}
+	            snapToGrid={snapToGrid}
+	            guides={[]}
 	            isDragActive={Boolean(activeDrag)}
               dropIndicator={dropIndicator}
 	            forcedDropTarget={forcedDropTarget}

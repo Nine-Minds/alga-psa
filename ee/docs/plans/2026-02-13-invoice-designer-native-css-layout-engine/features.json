@@ -19,7 +19,7 @@
   { "id": "F016B", "description": "Implement basic snapping as discrete insertion behavior: edge snapping (before/after) for flex and deterministic cell/index snapping for grid.", "implemented": true },
   { "id": "F016C", "description": "Ensure drag-drop persists only container + insertion index (no coordinate-based layout persistence).", "implemented": true },
   { "id": "F017", "description": "Delete legacy geometry utilities: constraintSolver.ts, constraints.ts, dropParentResolution.ts, aspectRatio.ts.", "implemented": true },
-  { "id": "F018", "description": "Reduce utils/layout.ts to lightweight mapping helpers only, removing coordinate math and solver logic.", "implemented": false },
+  { "id": "F018", "description": "Reduce utils/layout.ts to lightweight mapping helpers only, removing coordinate math and solver logic.", "implemented": true },
   { "id": "F019", "description": "Update designer state serialization/export to persist CSS-like layout props as part of the workspace snapshot/AST export.", "implemented": false },
   { "id": "F020", "description": "Ensure preview rendering uses the same CSS semantics as the invoice renderer (no designer-only geometry).", "implemented": false },
   { "id": "F021", "description": "Audit and remove any runtime imports of deleted geometry modules from invoice-designer components.", "implemented": false },
