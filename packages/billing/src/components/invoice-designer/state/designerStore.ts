@@ -812,12 +812,14 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
       setWithIndex((state) => {
         const nodes = patchDeleteNode(state.nodes, nodeId);
         if (nodes === state.nodes) return state;
+        const remainingIds = new Set(nodes.map((node) => node.id));
         const { history, historyIndex } = appendHistory(state, nodes);
         return {
           nodes,
           history,
           historyIndex,
-          selectedNodeId: state.selectedNodeId === nodeId ? null : state.selectedNodeId,
+          selectedNodeId: state.selectedNodeId && remainingIds.has(state.selectedNodeId) ? state.selectedNodeId : null,
+          hoverNodeId: state.hoverNodeId && remainingIds.has(state.hoverNodeId) ? state.hoverNodeId : null,
         };
       }, false, 'designer/deleteNode');
     },
@@ -963,14 +965,17 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
     },
 
     selectNode: (id) => {
-      setWithIndex((state) => ({
-        selectedNodeId: id,
-        metrics: { ...state.metrics, totalSelections: state.metrics.totalSelections + 1 },
-      }));
+      setWithIndex((state) => {
+        const nextId = id && state.nodesById[id] ? id : null;
+        return {
+          selectedNodeId: nextId,
+          metrics: { ...state.metrics, totalSelections: state.metrics.totalSelections + 1 },
+        };
+      });
     },
 
     setHoverNode: (id) => {
-      setWithIndex({ hoverNodeId: id });
+      setWithIndex((state) => ({ hoverNodeId: id && state.nodesById[id] ? id : null }));
     },
 
     deleteSelectedNode: () => {

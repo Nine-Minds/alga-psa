@@ -92,3 +92,5 @@ This plan intentionally continues the simplification arc:
 - 2026-02-13: Outline + breadcrumbs now traverse the tree via children arrays:
   - `packages/billing/src/components/invoice-designer/palette/OutlineView.tsx` now renders from `rootId` and `nodesById`, deriving parent lookup only for expand behavior.
   - `packages/billing/src/components/invoice-designer/DesignerShell.tsx` breadcrumbs now derive parent links from `childIds` instead of relying on persisted `parentId`.
+- 2026-02-13: Selection/hover state now validates ids against `nodesById`:
+  - `packages/billing/src/components/invoice-designer/state/designerStore.ts` `selectNode`/`setHoverNode` clear invalid ids and `deleteNode` clears selection/hover if the referenced node is removed as part of a subtree delete.
