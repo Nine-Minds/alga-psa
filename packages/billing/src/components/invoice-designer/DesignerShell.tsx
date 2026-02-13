@@ -75,7 +75,8 @@ type DropFeedback = {
 };
 
 type DropIndicator =
-  | { kind: 'insert'; overNodeId: string; position: 'before' | 'after' }
+  | { kind: 'insert'; overNodeId: string; position: 'before' | 'after'; tone: 'valid' | 'invalid' }
+  | { kind: 'container'; containerId: string; tone: 'invalid' }
   | null;
 
 type InsertBlockCallout = {
@@ -1853,34 +1854,80 @@ export const DesignerShell: React.FC = () => {
     }
 
     const overData = over.data.current;
-    if (!isNodeDragData(overData)) {
+    const activeNode = nodesById.get(activeData.nodeId) ?? null;
+    if (!activeNode) {
       if (dropIndicator) {
         setDropIndicator(null);
       }
       return;
     }
 
-    const overNode = nodesById.get(overData.nodeId) ?? null;
-    if (!overNode || !overNode.parentId) {
-      if (dropIndicator) {
-        setDropIndicator(null);
+    const wouldCreateCycle = (targetParentId: string) => {
+      let current: string | null = targetParentId;
+      while (current) {
+        if (current === activeNode.id) {
+          return true;
+        }
+        current = nodesById.get(current)?.parentId ?? null;
       }
+      return false;
+    };
+
+    if (isNodeDragData(overData)) {
+      const overNode = nodesById.get(overData.nodeId) ?? null;
+      if (!overNode || !overNode.parentId) {
+        if (dropIndicator) {
+          setDropIndicator(null);
+        }
+        return;
+      }
+
+      const parent = nodesById.get(overNode.parentId) ?? null;
+      if (!parent) {
+        if (dropIndicator) {
+          setDropIndicator(null);
+        }
+        return;
+      }
+
+      const isValid =
+        canNestWithinParent(activeNode.type, parent.type) && !wouldCreateCycle(parent.id);
+      const axis = parent.layout?.display === 'flex' && parent.layout.flexDirection === 'row' ? 'x' : 'y';
+
+      const activeRect = event.active.rect.current.translated ?? event.active.rect.current.initial;
+      const overRect = over.rect;
+      if (!activeRect || !overRect) {
+        return;
+      }
+
+      const activeCenter = axis === 'x' ? activeRect.left + activeRect.width / 2 : activeRect.top + activeRect.height / 2;
+      const overCenter = axis === 'x' ? overRect.left + overRect.width / 2 : overRect.top + overRect.height / 2;
+      const position: 'before' | 'after' = activeCenter < overCenter ? 'before' : 'after';
+      setDropIndicator({
+        kind: 'insert',
+        overNodeId: overNode.id,
+        position,
+        tone: isValid ? 'valid' : 'invalid',
+      });
       return;
     }
 
-    const parent = nodesById.get(overNode.parentId) ?? null;
-    const axis = parent?.layout?.display === 'flex' && parent.layout.flexDirection === 'row' ? 'x' : 'y';
-
-    const activeRect = event.active.rect.current.translated ?? event.active.rect.current.initial;
-    const overRect = over.rect;
-    if (!activeRect || !overRect) {
+    if (isDropTargetMeta(overData)) {
+      const target = nodesById.get(overData.nodeId) ?? null;
+      if (!target) {
+        if (dropIndicator) {
+          setDropIndicator(null);
+        }
+        return;
+      }
+      const isValid = canNestWithinParent(activeNode.type, target.type) && !wouldCreateCycle(target.id);
+      setDropIndicator(isValid ? null : { kind: 'container', containerId: target.id, tone: 'invalid' });
       return;
     }
 
-    const activeCenter = axis === 'x' ? activeRect.left + activeRect.width / 2 : activeRect.top + activeRect.height / 2;
-    const overCenter = axis === 'x' ? overRect.left + overRect.width / 2 : overRect.top + overRect.height / 2;
-    const position: 'before' | 'after' = activeCenter < overCenter ? 'before' : 'after';
-    setDropIndicator({ kind: 'insert', overNodeId: overNode.id, position });
+    if (dropIndicator) {
+      setDropIndicator(null);
+    }
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -1944,7 +1991,27 @@ export const DesignerShell: React.FC = () => {
           if (!targetParentId) {
             return;
           }
+
+          const targetParent = nodesById.get(targetParentId) ?? null;
+          const wouldCreateCycle = () => {
+            let current: string | null = targetParentId;
+            while (current) {
+              if (current === activeNode.id) {
+                return true;
+              }
+              current = nodesById.get(current)?.parentId ?? null;
+            }
+            return false;
+          };
+
+          if (!targetParent || !canNestWithinParent(activeNode.type, targetParent.type) || wouldCreateCycle()) {
+            showDropFeedback('error', 'Invalid drop target.');
+            recordDropResult(false);
+            return;
+          }
+
           moveNodeToParentAtIndex(activeNode.id, targetParentId, targetIndex);
+          recordDropResult(true);
           return;
         }
 
@@ -2468,6 +2535,10 @@ const DesignerWorkspace: React.FC<DesignerWorkspaceProps> = ({
     onDragCancel,
   });
 
+  const isInvalidDrop =
+    dropIndicator?.kind === 'container' ||
+    (dropIndicator?.kind === 'insert' && dropIndicator.tone === 'invalid');
+
   return (
     <div className="flex-1 flex">
 	        <DesignCanvas
@@ -2489,17 +2560,22 @@ const DesignerWorkspace: React.FC<DesignerWorkspaceProps> = ({
 	        onNodeSelect={onNodeSelect}
 	        onResize={onResize}
 	      />
-      <DragOverlay modifiers={modifiers}>
-        {activeDrag && (
-          <div className="px-3 py-2 bg-white border rounded shadow-lg text-sm font-semibold">
-            {activeDrag.kind === 'component'
-              ? getDefinition(activeDrag.componentType)?.label ?? 'Component'
-              : activeDrag.kind === 'preset'
-                ? getPresetById(activeDrag.presetId)?.label ?? 'Preset'
-                : nodes.find((node) => node.id === activeDrag.nodeId)?.name ?? 'Component'}
-          </div>
-        )}
-      </DragOverlay>
+	      <DragOverlay modifiers={modifiers}>
+	        {activeDrag && (
+	          <div
+              className={clsx(
+                'px-3 py-2 border rounded shadow-lg text-sm font-semibold',
+                isInvalidDrop ? 'bg-red-50 border-red-200 text-red-800 cursor-not-allowed' : 'bg-white cursor-grab'
+              )}
+            >
+	            {activeDrag.kind === 'component'
+	              ? getDefinition(activeDrag.componentType)?.label ?? 'Component'
+	              : activeDrag.kind === 'preset'
+	                ? getPresetById(activeDrag.presetId)?.label ?? 'Preset'
+	                : nodes.find((node) => node.id === activeDrag.nodeId)?.name ?? 'Component'}
+	          </div>
+	        )}
+	      </DragOverlay>
     </div>
   );
 };

@@ -47,7 +47,10 @@ interface DesignCanvasProps {
 
 const GRID_COLOR = 'rgba(148, 163, 184, 0.25)';
 
-type DropIndicator = { kind: 'insert'; overNodeId: string; position: 'before' | 'after' } | null;
+type DropIndicator =
+  | { kind: 'insert'; overNodeId: string; position: 'before' | 'after'; tone: 'valid' | 'invalid' }
+  | { kind: 'container'; containerId: string; tone: 'invalid' }
+  | null;
 
 interface CanvasNodeProps {
   node: DesignerNode;
@@ -919,6 +922,10 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
           'ring-2 ring-cyan-500 shadow-[0_0_0_2px_rgba(6,182,212,0.2)]',
         ((isDragActive && isNodeDropTarget) || forcedDropTarget === node.id) &&
           'ring-2 ring-emerald-500 shadow-[0_0_0_2px_rgba(16,185,129,0.2)]',
+        isDragActive &&
+          dropIndicator?.kind === 'container' &&
+          dropIndicator.containerId === node.id &&
+          'ring-2 ring-red-500 shadow-[0_0_0_2px_rgba(239,68,68,0.25)] cursor-not-allowed',
         shouldDeemphasize && applySelectionDeemphasis && 'opacity-65',
         isDragging && 'opacity-80'
       )}
@@ -933,7 +940,10 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
       {dropIndicator?.kind === 'insert' && parentUsesFlowLayout && dropIndicator.overNodeId === node.id && (
         <div
           className={clsx(
-            'pointer-events-none absolute left-0 right-0 h-0.5 bg-emerald-500 z-20',
+            clsx(
+              'pointer-events-none absolute left-0 right-0 h-0.5 z-20',
+              dropIndicator.tone === 'invalid' ? 'bg-red-500' : 'bg-emerald-500'
+            ),
             dropIndicator.position === 'before' ? '-top-1' : '-bottom-1'
           )}
         />

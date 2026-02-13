@@ -116,6 +116,12 @@ Goal: remove bespoke geometry math in the invoice designer and rely on native br
     - `packages/billing/src/components/invoice-designer/canvas/DesignCanvas.tsx`
   - Container drop targets are still highlighted via `useDroppable().isOver` rings (DOM-measured).
 
+- 2026-02-13: `F014` Invalid drop UX
+  - Invalid drop targets now show a blocked visual state (red insertion line or red target ring) and a `not-allowed` cursor on the drag overlay; drops do not mutate state:
+    - `packages/billing/src/components/invoice-designer/DesignerShell.tsx`
+    - `packages/billing/src/components/invoice-designer/canvas/DesignCanvas.tsx`
+  - Drop end emits an error toast-style banner via existing `dropFeedback` mechanism when invalid.
+
 ## Remaining Design Choices
 
 - Collision strategy and snapping thresholds are intentionally selected to minimize custom geometry logic:

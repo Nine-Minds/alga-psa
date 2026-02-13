@@ -12,7 +12,7 @@
   { "id": "F011", "description": "Implement moving nodes across containers (drop into another container) using dnd-kit over/collision results.", "implemented": true },
   { "id": "F012", "description": "Implement nesting into eligible containers using an explicit type-based allowlist (containers vs leaves).", "implemented": true },
   { "id": "F013", "description": "Provide drop indicators derived from DOM geometry (insertion index before/after, nested target highlight).", "implemented": true },
-  { "id": "F014", "description": "Implement a clear invalid-drop UX state (blocked cursor/indicator + no state mutation).", "implemented": false },
+  { "id": "F014", "description": "Implement a clear invalid-drop UX state (blocked cursor/indicator + no state mutation).", "implemented": true },
   { "id": "F015", "description": "Implement aspect ratio for images using CSS aspect-ratio and object-fit (no JS math).", "implemented": false },
   { "id": "F016", "description": "Implement resize handles for image + container blocks (section/stack) that update pixel CSS sizing props and rely on DOM layout (no constraint solver).", "implemented": false },
   { "id": "F016A", "description": "Implement property-panel editing of sizing props as CSS strings (%/rem/auto) while drag resize remains pixel-only.", "implemented": false },
