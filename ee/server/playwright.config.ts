@@ -26,8 +26,11 @@ const dockerComposeEnvFile = fs.existsSync(path.resolve(__dirname, '.env'))
   : 'ee/server/.env.test';
 
 // Playwright runs should be self-contained and must not depend on developer filesystem secrets.
-process.env.SECRET_READ_CHAIN = process.env.SECRET_READ_CHAIN || 'env';
-process.env.SECRET_WRITE_PROVIDER = process.env.SECRET_WRITE_PROVIDER || 'env';
+// Playwright runs should be self-contained. Use an isolated filesystem-backed tenant secret store
+// (env provider is read-only and cannot persist per-tenant configuration like integrations).
+process.env.SECRET_READ_CHAIN = process.env.SECRET_READ_CHAIN || 'filesystem,env';
+process.env.SECRET_WRITE_PROVIDER = process.env.SECRET_WRITE_PROVIDER || 'filesystem';
+process.env.SECRET_FS_BASE_PATH = process.env.SECRET_FS_BASE_PATH || 'secrets-playwright';
 
 // Don't set STORAGE_LOCAL_BASE_PATH - we want to use MinIO for tests
 // const storageBasePath = path.resolve(__dirname, 'playwright-storage');
@@ -378,10 +381,10 @@ export default defineConfig({
     stderr: 'pipe',
     env: {
       ...process.env,
-      // Use env-only secrets for Playwright runs so local `../secrets/*` (e.g. redis_password) doesn't
-      // conflict with the dockerized Playwright deps (which intentionally run without auth).
-      SECRET_READ_CHAIN: 'env',
-      SECRET_WRITE_PROVIDER: 'env',
+      // Use a writable filesystem secret store for tenant secrets; keep app secrets in env.
+      SECRET_READ_CHAIN: process.env.SECRET_READ_CHAIN || 'filesystem,env',
+      SECRET_WRITE_PROVIDER: process.env.SECRET_WRITE_PROVIDER || 'filesystem',
+      SECRET_FS_BASE_PATH: process.env.SECRET_FS_BASE_PATH || 'secrets-playwright',
       NEXT_PUBLIC_EDITION: 'enterprise',
       E2E_AUTH_BYPASS: 'true',
       EE_BASE_URL: resolvedBaseUrl,

@@ -21,8 +21,8 @@ export interface AssetRelationship {
 }
 
 // RMM Provider types
-export type RmmProvider = 'ninjaone' | 'datto' | 'connectwise_automate';
-export type RmmAgentStatus = 'online' | 'offline' | 'unknown';
+export type RmmProvider = 'ninjaone' | 'tacticalrmm' | 'datto' | 'connectwise_automate';
+export type RmmAgentStatus = 'online' | 'offline' | 'overdue' | 'unknown';
 
 export interface Asset {
   asset_id: string;

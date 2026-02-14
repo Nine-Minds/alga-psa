@@ -96,6 +96,17 @@ Controls access to email log UI surfaces for outbound email auditing/debugging.
 **Behavior:**
 - When disabled: Email Logs page shows construction placeholder; navigation link and ticket section are hidden.
 
+### 7. `tactical-rmm-integration`
+Controls access to the Tactical RMM integration configuration UI.
+
+**Affected Areas:**
+- **MSP Portal:**
+  - Settings → Integrations → RMM
+
+**Behavior:**
+- When disabled (default): Tactical RMM configuration is hidden from the RMM setup screen.
+- When enabled: Tactical RMM appears as a selectable RMM provider (and its configuration UI is shown).
+
 ## Implementation Details
 
 ### User Identification

@@ -2,6 +2,7 @@ import type { Page } from '@playwright/test';
 import knex, { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { encode } from '@auth/core/jwt';
+import { getSessionCookieName } from '@alga-psa/auth/session';
 
 // Database configuration
 export function getTestDbConfig() {
@@ -32,6 +33,9 @@ export function createTestDbConnection(): Knex {
 
 // Environment setup
 export function applyTestEnvDefaults(): void {
+  // Ensure auth cookie naming matches the dev server config.
+  // If NODE_ENV is 'production', cookies become '__Secure-*' and cannot be set on http://localhost.
+  process.env.NODE_ENV = 'development';
   process.env.NEXTAUTH_SECRET = process.env.NEXTAUTH_SECRET || 'test-nextauth-secret';
   process.env.NEXTAUTH_URL = process.env.NEXTAUTH_URL || 'http://localhost:3000';
   process.env.E2E_AUTH_BYPASS = process.env.E2E_AUTH_BYPASS || 'true';
@@ -201,7 +205,8 @@ export async function setupAuthSession(
   baseUrl: string
 ): Promise<void> {
   const secret = process.env.NEXTAUTH_SECRET || 'test-nextauth-secret';
-  const cookieName = 'authjs.session-token'; // Dev mode cookie name
+  // Align with app runtime cookie naming (includes dev port suffix).
+  const cookieName = getSessionCookieName();
   const maxAge = 60 * 60 * 24; // 24 hours
   const now = Math.floor(Date.now() / 1000);
 
@@ -226,17 +231,36 @@ export async function setupAuthSession(
   });
 
   // Add session cookie
-  await page.context().addCookies([
-    {
-      name: cookieName,
-      value: token,
-      domain: 'localhost',
-      path: '/',
-      httpOnly: true,
-      secure: false,
-      sameSite: 'Lax',
-    },
-  ]);
+  const parsedBaseUrl = new URL(baseUrl);
+  parsedBaseUrl.pathname = '/';
+  parsedBaseUrl.search = '';
+  parsedBaseUrl.hash = '';
+  const cookieUrl = parsedBaseUrl.toString();
+  const context = page.context();
+  const cookie = { name: cookieName, value: token, url: cookieUrl };
+
+  try {
+    await context.addCookies([cookie]);
+  } catch (error) {
+    console.error('[Test Auth] Failed to set cookies', {
+      baseUrl,
+      cookieUrl,
+      cookieName,
+      tokenLength: typeof token === 'string' ? token.length : null,
+      cookieShape: {
+        hasName: Boolean((cookie as any).name),
+        hasValue: Boolean((cookie as any).value),
+        hasUrl: Boolean((cookie as any).url),
+        domain: (cookie as any).domain,
+        path: (cookie as any).path,
+        expires: (cookie as any).expires,
+        httpOnly: (cookie as any).httpOnly,
+        secure: (cookie as any).secure,
+        sameSite: (cookie as any).sameSite,
+      },
+    });
+    throw error;
+  }
 
   console.log('[Test Auth] Session cookie set');
 }
@@ -261,10 +285,11 @@ export async function setupClientAuthSession(
   userId: string,
   email: string,
   tenantId: string,
-  _baseUrl: string
+  baseUrl: string
 ): Promise<void> {
   const secret = process.env.NEXTAUTH_SECRET || 'test-nextauth-secret';
-  const cookieName = 'authjs.session-token'; // Dev mode cookie name
+  // Align with app runtime cookie naming (includes dev port suffix).
+  const cookieName = getSessionCookieName();
   const maxAge = 60 * 60 * 24; // 24 hours
   const now = Math.floor(Date.now() / 1000);
 
@@ -289,17 +314,36 @@ export async function setupClientAuthSession(
   });
 
   // Add session cookie
-  await page.context().addCookies([
-    {
-      name: cookieName,
-      value: token,
-      domain: 'localhost',
-      path: '/',
-      httpOnly: true,
-      secure: false,
-      sameSite: 'Lax',
-    },
-  ]);
+  const parsedBaseUrl = new URL(baseUrl);
+  parsedBaseUrl.pathname = '/';
+  parsedBaseUrl.search = '';
+  parsedBaseUrl.hash = '';
+  const cookieUrl = parsedBaseUrl.toString();
+  const context = page.context();
+  const cookie = { name: cookieName, value: token, url: cookieUrl };
+
+  try {
+    await context.addCookies([cookie]);
+  } catch (error) {
+    console.error('[Test Auth] Failed to set client cookies', {
+      baseUrl,
+      cookieUrl,
+      cookieName,
+      tokenLength: typeof token === 'string' ? token.length : null,
+      cookieShape: {
+        hasName: Boolean((cookie as any).name),
+        hasValue: Boolean((cookie as any).value),
+        hasUrl: Boolean((cookie as any).url),
+        domain: (cookie as any).domain,
+        path: (cookie as any).path,
+        expires: (cookie as any).expires,
+        httpOnly: (cookie as any).httpOnly,
+        secure: (cookie as any).secure,
+        sameSite: (cookie as any).sameSite,
+      },
+    });
+    throw error;
+  }
 
   console.log('[Test Auth] Client session cookie set');
 }

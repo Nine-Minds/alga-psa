@@ -10,9 +10,11 @@ import {
 } from 'lucide-react';
 
 export type StatusBadgeStatus = 'online' | 'offline' | 'healthy' | 'warning' | 'critical' | 'unknown' | 'secure' | 'at_risk' | 'active' | 'expiring_soon' | 'expired';
+// Note: 'overdue' is distinct from 'offline' for Tactical RMM and other providers that support it.
+export type RmmConnectivityStatus = 'online' | 'offline' | 'overdue' | 'unknown';
 
 interface StatusBadgeProps {
-  status: StatusBadgeStatus;
+  status: StatusBadgeStatus | RmmConnectivityStatus;
   provider?: string;
   size?: 'sm' | 'md' | 'lg';
   showIcon?: boolean;
@@ -20,13 +22,15 @@ interface StatusBadgeProps {
   className?: string;
 }
 
-const getStatusConfig = (status: StatusBadgeStatus) => {
+const getStatusConfig = (status: StatusBadgeStatus | RmmConnectivityStatus) => {
   switch (status) {
     case 'online':
     case 'healthy':
     case 'secure':
     case 'active':
       return { variant: 'success' as const, icon: Check, label: 'Healthy' };
+    case 'overdue':
+      return { variant: 'warning' as const, icon: AlertTriangle, label: 'Overdue' };
     case 'warning':
     case 'at_risk':
     case 'expiring_soon':
@@ -41,10 +45,11 @@ const getStatusConfig = (status: StatusBadgeStatus) => {
   }
 };
 
-const getStatusLabel = (status: StatusBadgeStatus) => {
+const getStatusLabel = (status: StatusBadgeStatus | RmmConnectivityStatus) => {
   switch (status) {
     case 'online': return 'Online';
     case 'offline': return 'Offline';
+    case 'overdue': return 'Overdue';
     case 'healthy': return 'Healthy';
     case 'warning': return 'Warning';
     case 'critical': return 'Critical';

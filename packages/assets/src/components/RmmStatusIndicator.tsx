@@ -8,30 +8,15 @@
  */
 
 import React from 'react';
-import { Wifi, WifiOff, Cloud, Monitor } from 'lucide-react';
+import { Wifi, WifiOff, Cloud, Monitor, AlertTriangle } from 'lucide-react';
 import type { Asset } from '@alga-psa/types';
+import { getRmmProviderDisplayName } from '../lib/rmmProviderDisplay';
 
 interface RmmStatusIndicatorProps {
   asset: Asset;
   showProvider?: boolean;
   size?: 'sm' | 'md' | 'lg';
   className?: string;
-}
-
-/**
- * Get display name for RMM provider
- */
-function getProviderDisplayName(provider?: string): string {
-  switch (provider) {
-    case 'ninjaone':
-      return 'NinjaOne';
-    case 'datto':
-      return 'Datto';
-    case 'connectwise_automate':
-      return 'CW Automate';
-    default:
-      return provider || 'Unknown';
-  }
 }
 
 /**
@@ -49,6 +34,7 @@ export function RmmStatusIndicator({
   }
 
   const isOnline = asset.agent_status === 'online';
+  const isOverdue = asset.agent_status === 'overdue';
   const isUnknown = asset.agent_status === 'unknown' || !asset.agent_status;
 
   const sizeClasses = {
@@ -76,7 +62,7 @@ export function RmmStatusIndicator({
         title="Agent status unknown"
       >
         <Cloud className={iconSizes[size]} />
-        {showProvider && <span>{getProviderDisplayName(asset.rmm_provider)}</span>}
+        {showProvider && <span>{getRmmProviderDisplayName(asset.rmm_provider)}</span>}
       </span>
     );
   }
@@ -84,21 +70,19 @@ export function RmmStatusIndicator({
   return (
     <span
       className={`inline-flex items-center gap-1.5 ${sizeClasses[size]} ${
-        isOnline ? 'text-emerald-600' : 'text-gray-500'
+        isOnline ? 'text-emerald-600' : isOverdue ? 'text-amber-600' : 'text-gray-500'
       } ${className}`}
-      title={`${isOnline ? 'Online' : 'Offline'}${
+      title={`${isOnline ? 'Online' : isOverdue ? 'Overdue' : 'Offline'}${
         asset.last_seen_at ? ` - Last seen: ${formatRelativeTime(asset.last_seen_at)}` : ''
       }`}
     >
-      {isOnline ? (
-        <Wifi className={iconSizes[size]} />
-      ) : (
-        <WifiOff className={iconSizes[size]} />
-      )}
+      {isOnline ? <Wifi className={iconSizes[size]} /> : null}
+      {isOverdue ? <AlertTriangle className={iconSizes[size]} /> : null}
+      {!isOnline && !isOverdue ? <WifiOff className={iconSizes[size]} /> : null}
       {showProvider ? (
-        <span>{getProviderDisplayName(asset.rmm_provider)}</span>
+        <span>{getRmmProviderDisplayName(asset.rmm_provider)}</span>
       ) : (
-        <span>{isOnline ? 'Online' : 'Offline'}</span>
+        <span>{isOnline ? 'Online' : isOverdue ? 'Overdue' : 'Offline'}</span>
       )}
     </span>
   );
@@ -122,6 +106,7 @@ export function RmmBadge({
   }
 
   const isOnline = asset.agent_status === 'online';
+  const isOverdue = asset.agent_status === 'overdue';
   const isUnknown = asset.agent_status === 'unknown' || !asset.agent_status;
 
   if (isUnknown) {
@@ -141,15 +126,17 @@ export function RmmBadge({
         className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium ${
           isOnline
             ? 'bg-emerald-500/10 text-emerald-600 ring-1 ring-emerald-500/20'
-            : 'bg-gray-500/10 text-gray-600 ring-1 ring-gray-500/20'
+            : isOverdue
+              ? 'bg-amber-500/10 text-amber-700 ring-1 ring-amber-500/20'
+              : 'bg-gray-500/10 text-gray-600 ring-1 ring-gray-500/20'
         }`}
       >
         <span
           className={`w-1.5 h-1.5 rounded-full ${
-            isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-gray-400'
+            isOnline ? 'bg-emerald-500 animate-pulse' : isOverdue ? 'bg-amber-500' : 'bg-gray-400'
           }`}
         />
-        {isOnline ? 'Online' : 'Offline'}
+        {isOnline ? 'Online' : isOverdue ? 'Overdue' : 'Offline'}
       </span>
       {showLastSeen && asset.last_seen_at && (
         <span className="text-[10px] text-gray-400 mt-0.5 text-center">

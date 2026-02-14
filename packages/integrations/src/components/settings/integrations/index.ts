@@ -3,5 +3,6 @@ export { default as CSVIntegrationSettings } from './CSVIntegrationSettings';
 export { GoogleIntegrationSettings } from './GoogleIntegrationSettings';
 export { default as IntegrationsSettingsPage } from './IntegrationsSettingsPage';
 export { default as NinjaOneComplianceDashboard } from './NinjaOneComplianceDashboard';
+export { default as RmmIntegrationsSetup } from './RmmIntegrationsSetup';
 export { default as XeroCsvClientSyncPanel } from './XeroCsvClientSyncPanel';
 export { default as XeroCsvIntegrationSettings } from './XeroCsvIntegrationSettings';
