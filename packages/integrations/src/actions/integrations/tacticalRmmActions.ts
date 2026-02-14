@@ -560,7 +560,8 @@ export const syncTacticalRmmOrganizations = withAuth(async (
 
   const errors: string[] = [];
   const actorUserId = (user as any)?.user_id as string | undefined;
-  let integrationId: string | null = null;
+  // Used for emitting failure events in the catch block.
+  let integrationId: string | undefined;
 
   try {
     const { knex } = await createTenantKnex();
@@ -572,13 +573,14 @@ export const syncTacticalRmmOrganizations = withAuth(async (
       return { success: false, error: 'Tactical RMM is not configured yet. Save settings first.' };
     }
 
-    integrationId = integration.integration_id;
+    const integrationIdForEvents = String(integration.integration_id);
+    integrationId = integrationIdForEvents;
 
     await publishRmmSyncEvent({
       eventType: 'RMM_SYNC_STARTED',
       tenantId: tenant,
       actorUserId,
-      integrationId,
+      integrationId: integrationIdForEvents,
       syncType: 'organizations',
     });
 
@@ -641,7 +643,7 @@ export const syncTacticalRmmOrganizations = withAuth(async (
       eventType: 'RMM_SYNC_COMPLETED',
       tenantId: tenant,
       actorUserId,
-      integrationId,
+      integrationId: integrationIdForEvents,
       syncType: 'organizations',
       itemsProcessed: remoteClients.length,
       itemsCreated: created,
@@ -748,7 +750,8 @@ export const syncTacticalRmmDevices = withAuth(async (
 
   const errors: string[] = [];
   const actorUserId = (user as any)?.user_id as string | undefined;
-  let integrationId: string | null = null;
+  // Used for emitting failure events in the catch block.
+  let integrationId: string | undefined;
 
   try {
     const { knex } = await createTenantKnex();
@@ -760,13 +763,14 @@ export const syncTacticalRmmDevices = withAuth(async (
       return { success: false, error: 'Tactical RMM is not configured yet. Save settings first.' };
     }
 
-    integrationId = integration.integration_id;
+    const integrationIdForEvents = String(integration.integration_id);
+    integrationId = integrationIdForEvents;
 
     await publishRmmSyncEvent({
       eventType: 'RMM_SYNC_STARTED',
       tenantId: tenant,
       actorUserId,
-      integrationId,
+      integrationId: integrationIdForEvents,
       syncType: 'devices',
     });
 
@@ -1028,7 +1032,7 @@ export const syncTacticalRmmDevices = withAuth(async (
       eventType: 'RMM_SYNC_COMPLETED',
       tenantId: tenant,
       actorUserId,
-      integrationId,
+      integrationId: integrationIdForEvents,
       syncType: 'devices',
       itemsProcessed: processed,
       itemsCreated: created,
@@ -1221,7 +1225,8 @@ export const backfillTacticalRmmAlerts = withAuth(async (
 
   const errors: string[] = [];
   const actorUserId = (user as any)?.user_id as string | undefined;
-  let integrationId: string | null = null;
+  // Used for emitting failure events in the catch block.
+  let integrationId: string | undefined;
 
   try {
     const { knex } = await createTenantKnex();
@@ -1233,13 +1238,14 @@ export const backfillTacticalRmmAlerts = withAuth(async (
       return { success: false, error: 'Tactical RMM is not configured yet. Save settings first.' };
     }
 
-    integrationId = integration.integration_id;
+    const integrationIdForEvents = String(integration.integration_id);
+    integrationId = integrationIdForEvents;
 
     await publishRmmSyncEvent({
       eventType: 'RMM_SYNC_STARTED',
       tenantId: tenant,
       actorUserId,
-      integrationId,
+      integrationId: integrationIdForEvents,
       syncType: 'alerts',
     });
 
@@ -1349,7 +1355,7 @@ export const backfillTacticalRmmAlerts = withAuth(async (
       eventType: 'RMM_SYNC_COMPLETED',
       tenantId: tenant,
       actorUserId,
-      integrationId,
+      integrationId: integrationIdForEvents,
       syncType: 'alerts',
       itemsProcessed: alerts.length,
       itemsCreated: created,
