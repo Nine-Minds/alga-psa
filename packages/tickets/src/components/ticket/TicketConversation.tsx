@@ -10,6 +10,7 @@ import { IComment, ITicket } from '@alga-psa/types';
 import { IDocument } from '@alga-psa/types';
 import { PartialBlock } from '@blocknote/core';
 import RichTextEditorSkeleton from '@alga-psa/ui/components/skeletons/RichTextEditorSkeleton';
+import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 
 // Dynamic import for TextEditor
 const TextEditor = dynamic(() => import('@alga-psa/ui/editor').then((mod) => mod.TextEditor), {
@@ -53,7 +54,7 @@ interface TicketConversationProps {
   currentComment: IComment | null;
   editorKey: number;
   onNewCommentContentChange: (content: PartialBlock[]) => void;
-  onAddNewComment: (isInternal: boolean, isResolution: boolean) => Promise<boolean>;
+  onAddNewComment: (isInternal: boolean, isResolution: boolean, closeStatusId?: string | null) => Promise<boolean>;
   onTabChange: (tab: string) => void;
   onEdit: (conversation: IComment) => void;
   onSave: (updates: Partial<IComment>) => void;
@@ -64,6 +65,7 @@ interface TicketConversationProps {
   isSubmitting?: boolean; // Flag to indicate if a submission is in progress
   overrides?: Record<string, { note?: string; updated_at?: string }>; // Optional local overrides by comment_id
   externalComments?: Array<IComment & { child_ticket_id?: string; child_ticket_number?: string; child_ticket_title?: string; child_client_name?: string }>;
+  closedStatusOptions?: { value: string; label: string }[];
 }
 
 const TicketConversation: React.FC<TicketConversationProps> = ({
@@ -89,6 +91,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   isSubmitting = false,
   overrides = {},
   externalComments = [],
+  closedStatusOptions = [],
 }) => {
   const { t } = useTranslation('clientPortal');
   // Ensure we have a stable id for interactive element ids
@@ -97,6 +100,8 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   const [reverseOrder, setReverseOrder] = useState(false);
   const [isInternalToggle, setIsInternalToggle] = useState(false);
   const [isResolutionToggle, setIsResolutionToggle] = useState(false);
+  const NO_STATUS_CHANGE = '__no_status_change__';
+  const [resolutionCloseStatusId, setResolutionCloseStatusId] = useState<string>(NO_STATUS_CHANGE);
   const [contactAvatarUrls, setContactAvatarUrls] = useState<Record<string, string | null>>({});
 
   const internalLabel = t('tickets.conversation.internal', 'Internal');
@@ -121,10 +126,15 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
         }
       } else {
         // Main App: Use toggle states for isInternal and isResolution
-        success = await onAddNewComment(isInternalToggle, isResolutionToggle);
+        const closeStatusId =
+          isResolutionToggle && resolutionCloseStatusId !== NO_STATUS_CHANGE
+            ? resolutionCloseStatusId
+            : null;
+        success = await onAddNewComment(isInternalToggle, isResolutionToggle, closeStatusId);
         if (success) {
           setIsInternalToggle(false);
           setIsResolutionToggle(false);
+          setResolutionCloseStatusId(NO_STATUS_CHANGE);
         }
       }
       
@@ -164,6 +174,13 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
       setIsResolutionToggle(activeTab === resolutionLabel);
     }
   }, [activeTab, showEditor, hideInternalTab, internalLabel, resolutionLabel]);
+
+  // Reset close-status selection when leaving resolution mode or closing the editor.
+  useEffect(() => {
+    if (!showEditor || !isResolutionToggle) {
+      setResolutionCloseStatusId(NO_STATUS_CHANGE);
+    }
+  }, [showEditor, isResolutionToggle]);
 
   // Fetch contact avatar URLs for client users
   useEffect(() => {
@@ -401,7 +418,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
               </div>
               <div className='flex-grow'>
                 {/* Toggle switches above the editor */}
-                <div className="flex items-center space-x-4 mb-2 ml-2">
+                <div className="flex flex-wrap items-center gap-4 mb-2 ml-2">
                   {!hideInternalTab && (
                     <div className="flex items-center space-x-2">
                       <Switch
@@ -424,6 +441,28 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
                       {isResolutionToggle ? t('tickets.conversation.markedAsResolution', 'Marked as Resolution') : t('tickets.conversation.markAsResolution', 'Mark as Resolution')}
                     </Label>
                   </div>
+
+                  {!hideInternalTab && isResolutionToggle && (
+                    <div className="flex items-center gap-2">
+                      <Label htmlFor={`${compId}-resolution-close-status-select`}>
+                        {t('tickets.conversation.closeStatus', 'Close status')}
+                      </Label>
+                      <CustomSelect
+                        id={`${compId}-resolution-close-status-select`}
+                        value={resolutionCloseStatusId}
+                        options={[
+                          {
+                            value: NO_STATUS_CHANGE,
+                            label: t('tickets.conversation.noStatusChange', 'Do not change status'),
+                          },
+                          ...closedStatusOptions,
+                        ]}
+                        onValueChange={setResolutionCloseStatusId}
+                        className="!w-64"
+                        disabled={closedStatusOptions.length === 0}
+                      />
+                    </div>
+                  )}
                 </div>
                 <Suspense fallback={<RichTextEditorSkeleton height="200px" title="Comment Editor" />}>
                   <TextEditor
