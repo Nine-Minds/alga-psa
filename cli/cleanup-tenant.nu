@@ -394,7 +394,7 @@ def "main cleanup" [
         "contract_template_pricing_schedules" "contract_template_services" "contract_templates"
         
         # Client details (must come before clients)
-        "client_tax_rates" "client_tax_settings"
+        "client_tax_rates" "client_tax_settings" "client_inbound_email_domains"
         "tenant_companies"
         
         # Project/task entities

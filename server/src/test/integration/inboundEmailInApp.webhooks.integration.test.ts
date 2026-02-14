@@ -620,6 +620,333 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
     });
   });
 
+  it('Domain fallback: unique domain match sets ticket client_id (no default contact configured => contact is null)', async () => {
+    const providerId = uuidv4();
+    const mailbox = `support-domain-${uuidv4().slice(0, 6)}@example.com`;
+    const { defaultsId } = await setupInboundDefaults({ providerId, mailbox });
+
+    cleanup.push(async () => {
+      await db('gmail_processed_history').where({ tenant: tenantId, provider_id: providerId }).delete();
+      await db('google_email_provider_config').where({ tenant: tenantId, email_provider_id: providerId }).delete();
+      await db('email_providers').where({ tenant: tenantId, id: providerId }).delete();
+      await db('inbound_ticket_defaults').where({ tenant: tenantId, id: defaultsId }).delete();
+    });
+
+    const domainClientId = uuidv4();
+    const domain = `acme-${uuidv4().slice(0, 6)}.com`;
+    await db('clients').insert({
+      tenant: tenantId,
+      client_id: domainClientId,
+      client_name: `Domain Client ${uuidv4().slice(0, 6)}`,
+      created_at: db.fn.now(),
+      updated_at: db.fn.now(),
+    });
+    cleanup.push(async () => {
+      await db('clients').where({ tenant: tenantId, client_id: domainClientId }).delete();
+    });
+
+    const domainMappingId = uuidv4();
+    await db('client_inbound_email_domains').insert({
+      tenant: tenantId,
+      id: domainMappingId,
+      client_id: domainClientId,
+      domain,
+      created_at: db.fn.now(),
+      updated_at: db.fn.now(),
+    });
+    cleanup.push(async () => {
+      await db('client_inbound_email_domains').where({ tenant: tenantId, id: domainMappingId }).delete();
+    });
+
+    const result = await processInboundEmailInApp({
+      tenantId,
+      providerId,
+      emailData: {
+        id: `new-email-${uuidv4()}`,
+        provider: 'google',
+        providerId,
+        tenant: tenantId,
+        receivedAt: new Date().toISOString(),
+        from: { email: `new.person@${domain}`, name: 'New Person' },
+        to: [{ email: mailbox, name: 'Support' }],
+        subject: 'Domain matched subject',
+        body: { text: 'Hello', html: undefined },
+        attachments: [],
+      } as any,
+    });
+
+    expect(result.outcome).toBe('created');
+
+    const ticket = await db('tickets')
+      .where({ tenant: tenantId, title: 'Domain matched subject' })
+      .first<any>();
+    expect(ticket).toBeDefined();
+    expect(ticket.client_id).toBe(domainClientId);
+    expect(ticket.contact_name_id ?? null).toBeNull();
+
+    cleanup.push(async () => {
+      await db('comments').where({ tenant: tenantId, ticket_id: ticket.ticket_id }).delete();
+      await db('tickets').where({ tenant: tenantId, ticket_id: ticket.ticket_id }).delete();
+    });
+  });
+
+  it("Domain fallback: applies client's default contact when configured (client.properties.primary_contact_id)", async () => {
+    const providerId = uuidv4();
+    const mailbox = `support-domain-default-${uuidv4().slice(0, 6)}@example.com`;
+    const { defaultsId } = await setupInboundDefaults({ providerId, mailbox });
+
+    cleanup.push(async () => {
+      await db('gmail_processed_history').where({ tenant: tenantId, provider_id: providerId }).delete();
+      await db('google_email_provider_config').where({ tenant: tenantId, email_provider_id: providerId }).delete();
+      await db('email_providers').where({ tenant: tenantId, id: providerId }).delete();
+      await db('inbound_ticket_defaults').where({ tenant: tenantId, id: defaultsId }).delete();
+    });
+
+    const domainClientId = uuidv4();
+    const domain = `acme-${uuidv4().slice(0, 6)}.com`;
+    const defaultContactId = uuidv4();
+    await db('clients').insert({
+      tenant: tenantId,
+      client_id: domainClientId,
+      client_name: `Domain Default Client ${uuidv4().slice(0, 6)}`,
+      properties: JSON.stringify({
+        primary_contact_id: defaultContactId,
+        primary_contact_name: 'Primary Contact',
+      }),
+      created_at: db.fn.now(),
+      updated_at: db.fn.now(),
+    });
+    cleanup.push(async () => {
+      await db('clients').where({ tenant: tenantId, client_id: domainClientId }).delete();
+    });
+
+    const domainMappingId = uuidv4();
+    await db('client_inbound_email_domains').insert({
+      tenant: tenantId,
+      id: domainMappingId,
+      client_id: domainClientId,
+      domain,
+      created_at: db.fn.now(),
+      updated_at: db.fn.now(),
+    });
+    cleanup.push(async () => {
+      await db('client_inbound_email_domains').where({ tenant: tenantId, id: domainMappingId }).delete();
+    });
+
+    await db('contacts').insert({
+      tenant: tenantId,
+      contact_name_id: defaultContactId,
+      full_name: 'Primary Contact',
+      email: `primary@${domain}`,
+      client_id: domainClientId,
+      is_inactive: false,
+      created_at: db.fn.now(),
+      updated_at: db.fn.now(),
+    });
+    cleanup.push(async () => {
+      await db('contacts').where({ tenant: tenantId, contact_name_id: defaultContactId }).delete();
+    });
+
+    const result = await processInboundEmailInApp({
+      tenantId,
+      providerId,
+      emailData: {
+        id: `new-email-${uuidv4()}`,
+        provider: 'google',
+        providerId,
+        tenant: tenantId,
+        receivedAt: new Date().toISOString(),
+        from: { email: `someoneelse@${domain}`, name: 'Someone Else' },
+        to: [{ email: mailbox, name: 'Support' }],
+        subject: 'Domain matched default contact subject',
+        body: { text: 'Hello', html: undefined },
+        attachments: [],
+      } as any,
+    });
+
+    expect(result.outcome).toBe('created');
+
+    const ticket = await db('tickets')
+      .where({ tenant: tenantId, title: 'Domain matched default contact subject' })
+      .first<any>();
+    expect(ticket).toBeDefined();
+    expect(ticket.client_id).toBe(domainClientId);
+    expect(ticket.contact_name_id).toBe(defaultContactId);
+
+    cleanup.push(async () => {
+      await db('comments').where({ tenant: tenantId, ticket_id: ticket.ticket_id }).delete();
+      await db('tickets').where({ tenant: tenantId, ticket_id: ticket.ticket_id }).delete();
+    });
+  });
+
+  it('Domain fallback: does not match by domain unless the domain is explicitly configured', async () => {
+    const providerId = uuidv4();
+    const mailbox = `support-domain-ambig-${uuidv4().slice(0, 6)}@example.com`;
+    const { defaultsId } = await setupInboundDefaults({ providerId, mailbox });
+
+    cleanup.push(async () => {
+      await db('gmail_processed_history').where({ tenant: tenantId, provider_id: providerId }).delete();
+      await db('google_email_provider_config').where({ tenant: tenantId, email_provider_id: providerId }).delete();
+      await db('email_providers').where({ tenant: tenantId, id: providerId }).delete();
+      await db('inbound_ticket_defaults').where({ tenant: tenantId, id: defaultsId }).delete();
+    });
+
+    const domain = `shared-${uuidv4().slice(0, 6)}.com`;
+    const domainClientId = uuidv4();
+
+    await db('clients').insert(
+      {
+        tenant: tenantId,
+        client_id: domainClientId,
+        client_name: `Unconfigured Domain Client ${uuidv4().slice(0, 6)}`,
+        created_at: db.fn.now(),
+        updated_at: db.fn.now(),
+      }
+    );
+    cleanup.push(async () => {
+      await db('clients').where({ tenant: tenantId, client_id: domainClientId }).delete();
+    });
+
+    // Seed a contact with the same domain to ensure the system does NOT infer domain ownership from contacts.
+    const seedContactId = uuidv4();
+    await db('contacts').insert({
+      tenant: tenantId,
+      contact_name_id: seedContactId,
+      full_name: 'Seed Contact',
+      email: `seed@${domain}`,
+      client_id: domainClientId,
+      is_inactive: false,
+      created_at: db.fn.now(),
+      updated_at: db.fn.now(),
+    });
+    cleanup.push(async () => {
+      await db('contacts').where({ tenant: tenantId, contact_name_id: seedContactId }).delete();
+    });
+
+    const result = await processInboundEmailInApp({
+      tenantId,
+      providerId,
+      emailData: {
+        id: `new-email-${uuidv4()}`,
+        provider: 'google',
+        providerId,
+        tenant: tenantId,
+        receivedAt: new Date().toISOString(),
+        from: { email: `x@${domain}`, name: 'Ambiguous Sender' },
+        to: [{ email: mailbox, name: 'Support' }],
+        subject: 'Domain ambiguous subject',
+        body: { text: 'Hello', html: undefined },
+        attachments: [],
+      } as any,
+    });
+
+    expect(result.outcome).toBe('created');
+
+    const ticket = await db('tickets')
+      .where({ tenant: tenantId, title: 'Domain ambiguous subject' })
+      .first<any>();
+    expect(ticket).toBeDefined();
+    expect(ticket.client_id).toBe(clientId);
+    expect(ticket.contact_name_id ?? null).toBeNull();
+
+    cleanup.push(async () => {
+      await db('comments').where({ tenant: tenantId, ticket_id: ticket.ticket_id }).delete();
+      await db('tickets').where({ tenant: tenantId, ticket_id: ticket.ticket_id }).delete();
+    });
+  });
+
+  it('Domain fallback: when resolved client differs from defaults, ticket location_id is null', async () => {
+    const providerId = uuidv4();
+    const mailbox = `support-domain-location-${uuidv4().slice(0, 6)}@example.com`;
+    const { defaultsId } = await setupInboundDefaults({ providerId, mailbox });
+
+    cleanup.push(async () => {
+      await db('gmail_processed_history').where({ tenant: tenantId, provider_id: providerId }).delete();
+      await db('google_email_provider_config').where({ tenant: tenantId, email_provider_id: providerId }).delete();
+      await db('email_providers').where({ tenant: tenantId, id: providerId }).delete();
+      await db('inbound_ticket_defaults').where({ tenant: tenantId, id: defaultsId }).delete();
+    });
+
+    const defaultsLocationId = uuidv4();
+    await db('client_locations').insert({
+      tenant: tenantId,
+      location_id: defaultsLocationId,
+      client_id: clientId,
+      location_name: 'Defaults Location',
+      address_line1: '1 Main St',
+      city: 'City',
+      country_code: 'US',
+      country_name: 'United States',
+      is_default: true,
+      created_at: db.fn.now(),
+      updated_at: db.fn.now(),
+    });
+    cleanup.push(async () => {
+      await db('client_locations').where({ tenant: tenantId, location_id: defaultsLocationId }).delete();
+    });
+
+    await db('inbound_ticket_defaults')
+      .where({ tenant: tenantId, id: defaultsId })
+      .update({ location_id: defaultsLocationId });
+
+    const domainClientId = uuidv4();
+    const domain = `acme-${uuidv4().slice(0, 6)}.com`;
+    await db('clients').insert({
+      tenant: tenantId,
+      client_id: domainClientId,
+      client_name: `Domain Location Client ${uuidv4().slice(0, 6)}`,
+      created_at: db.fn.now(),
+      updated_at: db.fn.now(),
+    });
+    cleanup.push(async () => {
+      await db('clients').where({ tenant: tenantId, client_id: domainClientId }).delete();
+    });
+
+    const domainMappingId = uuidv4();
+    await db('client_inbound_email_domains').insert({
+      tenant: tenantId,
+      id: domainMappingId,
+      client_id: domainClientId,
+      domain,
+      created_at: db.fn.now(),
+      updated_at: db.fn.now(),
+    });
+    cleanup.push(async () => {
+      await db('client_inbound_email_domains').where({ tenant: tenantId, id: domainMappingId }).delete();
+    });
+
+    const result = await processInboundEmailInApp({
+      tenantId,
+      providerId,
+      emailData: {
+        id: `new-email-${uuidv4()}`,
+        provider: 'google',
+        providerId,
+        tenant: tenantId,
+        receivedAt: new Date().toISOString(),
+        from: { email: `new.person@${domain}`, name: 'New Person' },
+        to: [{ email: mailbox, name: 'Support' }],
+        subject: 'Domain matched location subject',
+        body: { text: 'Hello', html: undefined },
+        attachments: [],
+      } as any,
+    });
+
+    expect(result.outcome).toBe('created');
+
+    const ticket = await db('tickets')
+      .where({ tenant: tenantId, title: 'Domain matched location subject' })
+      .first<any>();
+    expect(ticket).toBeDefined();
+    expect(ticket.client_id).toBe(domainClientId);
+    expect(ticket.location_id ?? null).toBeNull();
+
+    cleanup.push(async () => {
+      await db('comments').where({ tenant: tenantId, ticket_id: ticket.ticket_id }).delete();
+      await db('tickets').where({ tenant: tenantId, ticket_id: ticket.ticket_id }).delete();
+    });
+  });
+
   it('Unmatched sender: system follows the defined behavior without throwing', async () => {
     const providerId = uuidv4();
     const mailbox = `support-unmatched-${uuidv4().slice(0, 6)}@example.com`;

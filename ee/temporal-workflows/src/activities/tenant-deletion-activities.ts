@@ -160,6 +160,7 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
 
   // Client details (must come before clients)
   'client_tax_rates', 'client_tax_settings',
+  'client_inbound_email_domains',
   'tenant_companies',
 
   // Project/task entities
