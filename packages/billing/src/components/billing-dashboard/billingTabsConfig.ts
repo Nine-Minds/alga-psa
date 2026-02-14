@@ -2,6 +2,7 @@ import {
   FileText,
   FilePlus,
   FileMinus,
+  FileOutput,
   Percent,
   Layers3,
   Calendar,
@@ -20,6 +21,7 @@ export interface BillingTabDefinition {
 export type BillingTabValue =
   | 'contract-templates'
   | 'client-contracts'
+  | 'accounting-exports'
   | 'contract-lines'
   | 'invoicing'
   | 'invoice-templates'
@@ -36,6 +38,12 @@ export const billingTabDefinitions: BillingTabDefinition[] = [
     label: 'Client Contracts',
     href: '/msp/billing?tab=client-contracts',
     icon: FileText
+  },
+  {
+    value: 'accounting-exports',
+    label: 'Accounting Exports',
+    href: '/msp/billing?tab=accounting-exports',
+    icon: FileOutput
   },
   {
     value: 'contract-templates',
