@@ -231,9 +231,16 @@ export async function processInboundEmailInApp(
   }
 
   const senderEmail = normalizeEmailAddress(emailData.from?.email);
-  const matchedSenderContact = senderEmail
-    ? await findContactByEmail(senderEmail, tenantId)
-    : null;
+  const resolveSenderContact = async (context: {
+    ticketId?: string;
+    defaultClientId?: string | null;
+  } = {}) => {
+    if (!senderEmail) {
+      return null;
+    }
+
+    return findContactByEmail(senderEmail, tenantId, context);
+  };
 
   const token = extractConversationToken(parsedEmail);
   if (token) {
@@ -258,6 +265,7 @@ export async function processInboundEmailInApp(
           html: parsedEmail?.sanitizedHtml ?? emailData.body?.html,
           text: parsedEmail?.sanitizedText ?? emailData.body?.text,
         });
+        const matchedSenderContact = await resolveSenderContact({ ticketId: match.ticketId });
         const commentId = await createCommentFromEmail(
           {
             ticket_id: match.ticketId,
@@ -374,6 +382,7 @@ export async function processInboundEmailInApp(
       html: parsedEmail?.sanitizedHtml ?? emailData.body?.html,
       text: parsedEmail?.sanitizedText ?? emailData.body?.text,
     });
+    const matchedSenderContact = await resolveSenderContact({ ticketId: threadedTicketId });
     const commentId = await createCommentFromEmail(
       {
         ticket_id: threadedTicketId,
@@ -449,6 +458,9 @@ export async function processInboundEmailInApp(
     return { outcome: 'skipped', reason: 'missing_defaults' };
   }
 
+  const matchedSenderContact = await resolveSenderContact({
+    defaultClientId: defaults.client_id ?? null,
+  });
   const targetClientId = matchedSenderContact?.client_id ?? defaults.client_id;
   const targetContactId = matchedSenderContact?.contact_id;
   const targetAuthorUserId = matchedSenderContact?.user_id ?? null;

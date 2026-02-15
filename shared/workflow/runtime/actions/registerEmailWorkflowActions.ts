@@ -307,7 +307,11 @@ export function registerEmailWorkflowActionsV2(): void {
     id: 'find_contact_by_email',
     version: 1,
     inputSchema: z.object({
-      email: z.string().email().describe('Email address to search for')
+      email: z.string().email().describe('Email address to search for'),
+      ticketId: z.string().optional().describe('Ticket ID context for reply-author matching'),
+      ticketClientId: z.string().nullable().optional().describe('Known ticket client ID for scoped matching'),
+      ticketContactId: z.string().nullable().optional().describe('Known ticket contact ID for direct matching'),
+      defaultClientId: z.string().nullable().optional().describe('Default client ID context for new ticket matching')
     }),
     outputSchema: z.object({
       success: z.boolean().describe('Whether a contact was found'),
@@ -319,7 +323,12 @@ export function registerEmailWorkflowActionsV2(): void {
     ui: { label: 'Find Contact by Email', category: 'Email' },
     handler: async (input, ctx) => {
       try {
-        const contact = await findContactByEmail(input.email, ctx.tenantId ?? '');
+        const contact = await findContactByEmail(input.email, ctx.tenantId ?? '', {
+          ticketId: input.ticketId,
+          ticketClientId: input.ticketClientId ?? null,
+          ticketContactId: input.ticketContactId ?? null,
+          defaultClientId: input.defaultClientId ?? null,
+        });
         return { success: !!contact, contact };
       } catch (error) {
         return { success: false, contact: null, message: error instanceof Error ? error.message : String(error) };
@@ -370,7 +379,9 @@ export function registerEmailWorkflowActionsV2(): void {
 
       let matchedClient: any = null;
       try {
-        matchedClient = await findContactByEmail(input.senderEmail, tenant);
+        matchedClient = await findContactByEmail(input.senderEmail, tenant, {
+          defaultClientId: ticketDefaults?.client_id ?? null,
+        });
       } catch (error) {
         matchedClient = null;
       }
@@ -613,7 +624,7 @@ export function registerEmailWorkflowActionsV2(): void {
       const senderEmail = input.emailData?.from?.email;
       const matchedContact =
         !input.contact_id && senderEmail
-          ? await findContactByEmail(senderEmail, tenant)
+          ? await findContactByEmail(senderEmail, tenant, { ticketId: input.ticketId })
           : null;
       const resolvedContactId = input.contact_id ?? matchedContact?.contact_id;
       const resolvedAuthorId = input.author_id ?? matchedContact?.user_id;

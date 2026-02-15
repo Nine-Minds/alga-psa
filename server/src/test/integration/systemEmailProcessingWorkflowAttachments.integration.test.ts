@@ -175,6 +175,10 @@ describe('systemEmailProcessingWorkflow: attachment processing behavior', () => 
     ).resolves.toBeUndefined();
 
     expect(actions.create_comment_from_email).toHaveBeenCalledTimes(1);
+    expect(actions.find_contact_by_email).toHaveBeenCalledWith(expect.objectContaining({
+      email: 'from@example.com',
+      ticketId: 'ticket-existing-1',
+    }));
     expect(actions.process_email_attachment).toHaveBeenCalledTimes(1);
     expect(attachmentCalls).toEqual(['r1']);
   });

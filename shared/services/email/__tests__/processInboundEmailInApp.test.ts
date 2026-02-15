@@ -144,7 +144,9 @@ describe('processInboundEmailInApp', () => {
       commentId: 'comment-1',
     });
 
-    expect(findContactByEmailMock).toHaveBeenCalledWith('client@example.com', 'tenant-1');
+    expect(findContactByEmailMock).toHaveBeenCalledWith('client@example.com', 'tenant-1', {
+      defaultClientId: 'default-client-id',
+    });
 
     expect(createTicketFromEmailMock).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -244,6 +246,9 @@ describe('processInboundEmailInApp', () => {
       commentId: 'comment-1',
     });
     expect(createTicketFromEmailMock).not.toHaveBeenCalled();
+    expect(findContactByEmailMock).toHaveBeenCalledWith('client@example.com', 'tenant-1', {
+      ticketId: 'ticket-reply-123',
+    });
     expect(createCommentFromEmailMock).toHaveBeenCalledWith(
       expect.objectContaining({
         ticket_id: 'ticket-reply-123',
@@ -301,6 +306,9 @@ describe('processInboundEmailInApp', () => {
       commentId: 'comment-1',
     });
     expect(createTicketFromEmailMock).not.toHaveBeenCalled();
+    expect(findContactByEmailMock).toHaveBeenCalledWith('client@example.com', 'tenant-1', {
+      ticketId: 'ticket-thread-123',
+    });
     expect(createCommentFromEmailMock).toHaveBeenCalledWith(
       expect.objectContaining({
         ticket_id: 'ticket-thread-123',

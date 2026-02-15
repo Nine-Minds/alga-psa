@@ -121,6 +121,9 @@ describe('processInboundEmailInApp additional authorship paths', () => {
     });
 
     expect(result.outcome).toBe('created');
+    expect(findContactByEmailMock).toHaveBeenCalledWith('sender@example.com', 'tenant-1', {
+      defaultClientId: 'default-client-id',
+    });
     expect(createTicketFromEmailMock).toHaveBeenCalledWith(
       expect.objectContaining({
         contact_id: undefined,
@@ -173,6 +176,9 @@ describe('processInboundEmailInApp additional authorship paths', () => {
       matchedBy: 'reply_token',
       ticketId: 'ticket-reply-1',
     });
+    expect(findContactByEmailMock).toHaveBeenCalledWith('sender@example.com', 'tenant-1', {
+      ticketId: 'ticket-reply-1',
+    });
     expect(createCommentFromEmailMock).toHaveBeenCalledWith(
       expect.objectContaining({
         ticket_id: 'ticket-reply-1',
@@ -205,6 +211,9 @@ describe('processInboundEmailInApp additional authorship paths', () => {
     expect(result).toMatchObject({
       outcome: 'replied',
       matchedBy: 'thread_headers',
+      ticketId: 'ticket-thread-1',
+    });
+    expect(findContactByEmailMock).toHaveBeenCalledWith('sender@example.com', 'tenant-1', {
       ticketId: 'ticket-thread-1',
     });
     expect(createCommentFromEmailMock).toHaveBeenCalledWith(

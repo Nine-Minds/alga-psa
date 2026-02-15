@@ -1396,12 +1396,23 @@ function registerEmailWorkflowActions(actionRegistry: ActionRegistry): void {
   actionRegistry.registerSimpleAction(
     'find_contact_by_email',
     'Find a contact by email address',
-    [{ name: 'email', type: 'string', required: true }],
+    [
+      { name: 'email', type: 'string', required: true },
+      { name: 'ticketId', type: 'string', required: false },
+      { name: 'ticketClientId', type: 'string', required: false },
+      { name: 'ticketContactId', type: 'string', required: false },
+      { name: 'defaultClientId', type: 'string', required: false }
+    ],
     async (params: Record<string, any>, context: ActionExecutionContext) => {
       try {
         // Import from shared workflow actions module
         const { findContactByEmail } = await import('@alga-psa/shared/workflow/actions/emailWorkflowActions');
-        const contact = await findContactByEmail(params.email, context.tenant);
+        const contact = await findContactByEmail(params.email, context.tenant, {
+          ticketId: params.ticketId,
+          ticketClientId: params.ticketClientId ?? null,
+          ticketContactId: params.ticketContactId ?? null,
+          defaultClientId: params.defaultClientId ?? null,
+        });
 
         return {
           success: !!contact,

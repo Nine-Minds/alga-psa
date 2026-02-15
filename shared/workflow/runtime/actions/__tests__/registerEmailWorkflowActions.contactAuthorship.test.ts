@@ -17,13 +17,14 @@ const createTicketFromEmailMock = vi.fn(async () => ({
   ticket_number: 'T-1',
 }));
 const createCommentFromEmailMock = vi.fn(async () => 'comment-1');
+const findContactByEmailMock = vi.fn();
 
 vi.mock('../../registries/actionRegistry', () => ({
   getActionRegistryV2: () => getActionRegistryV2Mock(),
 }));
 
 vi.mock('../../../actions/emailWorkflowActions', () => ({
-  findContactByEmail: vi.fn(),
+  findContactByEmail: (...args: any[]) => findContactByEmailMock(...args),
   findTicketByEmailThread: vi.fn(),
   findTicketByReplyToken: vi.fn(),
   resolveInboundTicketDefaults: vi.fn(),
@@ -44,6 +45,8 @@ describe('registerEmailWorkflowActionsV2 contact authorship', () => {
     getActionRegistryV2Mock.mockClear();
     createTicketFromEmailMock.mockClear();
     createCommentFromEmailMock.mockClear();
+    findContactByEmailMock.mockClear();
+    findContactByEmailMock.mockResolvedValue(null);
   });
 
   it('T020: create_comment_from_email action schema accepts contact_id in input', async () => {
@@ -131,4 +134,83 @@ describe('registerEmailWorkflowActionsV2 contact authorship', () => {
       'tenant-1'
     );
   });
+
+  it('T023: create_comment_from_parsed_email resolves sender within ticket context before writing comment', async () => {
+    findContactByEmailMock.mockResolvedValue({
+      contact_id: 'contact-ticket-1',
+      client_id: 'client-1',
+      user_id: 'client-user-1',
+      email: 'contact@example.com',
+      name: 'Contact',
+      client_name: 'Client',
+    });
+
+    const { registerEmailWorkflowActionsV2 } = await import('../registerEmailWorkflowActions');
+    registerEmailWorkflowActionsV2();
+
+    const action = registeredActions.find((entry) => entry.id === 'create_comment_from_parsed_email');
+    expect(action).toBeDefined();
+
+    await action!.handler(
+      {
+        ticketId: 'ticket-ctx-1',
+        emailData: {
+          id: 'email-1',
+          subject: 'Inbound subject',
+          body: { text: 'Inbound body' },
+          from: { email: 'contact@example.com' },
+          to: [{ email: 'support@example.com' }],
+        },
+        parsedEmail: {
+          sanitizedText: 'Inbound body',
+          sanitizedHtml: undefined,
+          confidence: 'high',
+          metadata: {},
+        },
+      },
+      { tenantId: 'tenant-1' }
+    );
+
+    expect(findContactByEmailMock).toHaveBeenCalledWith('contact@example.com', 'tenant-1', {
+      ticketId: 'ticket-ctx-1',
+    });
+    expect(createCommentFromEmailMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        ticket_id: 'ticket-ctx-1',
+        author_type: 'contact',
+        author_id: 'client-user-1',
+        contact_id: 'contact-ticket-1',
+      }),
+      'tenant-1'
+    );
+  });
+
+  it('T024: find_contact_by_email action forwards optional matching context', async () => {
+    findContactByEmailMock.mockResolvedValue(null);
+
+    const { registerEmailWorkflowActionsV2 } = await import('../registerEmailWorkflowActions');
+    registerEmailWorkflowActionsV2();
+
+    const action = registeredActions.find((entry) => entry.id === 'find_contact_by_email');
+    expect(action).toBeDefined();
+
+    await action!.handler(
+      {
+        email: 'contact@example.com',
+        ticketId: 'ticket-1',
+        ticketClientId: 'client-1',
+        ticketContactId: 'contact-1',
+        defaultClientId: 'default-client-1',
+      },
+      { tenantId: 'tenant-1' }
+    );
+
+    expect(findContactByEmailMock).toHaveBeenCalledWith('contact@example.com', 'tenant-1', {
+      ticketId: 'ticket-1',
+      ticketClientId: 'client-1',
+      ticketContactId: 'contact-1',
+      defaultClientId: 'default-client-1',
+    });
+  });
+
 });

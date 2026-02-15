@@ -31,6 +31,13 @@ export interface FindContactByEmailOutput {
   title?: string;
 }
 
+export interface FindContactByEmailContext {
+  ticketId?: string;
+  ticketClientId?: string | null;
+  ticketContactId?: string | null;
+  defaultClientId?: string | null;
+}
+
 export interface CreateOrFindContactInput {
   email: string;
   name?: string;
@@ -116,7 +123,8 @@ export interface SaveEmailClientAssociationOutput {
  */
 export async function findContactByEmail(
   email: string,
-  tenant: string
+  tenant: string,
+  context: FindContactByEmailContext = {}
 ): Promise<FindContactByEmailOutput | null> {
   const { withAdminTransaction } = await import('@alga-psa/db');
   const normalizedEmail = normalizeEmailAddress(email);
@@ -126,7 +134,7 @@ export async function findContactByEmail(
   }
 
   const contact = await withAdminTransaction(async (trx: Knex.Transaction) => {
-      return await trx('contacts')
+      const candidates = await trx('contacts')
         .select(
           'contacts.contact_name_id as contact_id',
           'contacts.full_name as name',
@@ -152,7 +160,66 @@ export async function findContactByEmail(
           'contacts.email': normalizedEmail,
           'contacts.tenant': tenant
         })
-        .first();
+        .orderBy('contacts.created_at', 'asc')
+        .orderBy('contacts.contact_name_id', 'asc');
+
+      if (!candidates.length) {
+        return null;
+      }
+
+      const normalizeCandidate = (candidate: any): FindContactByEmailOutput => ({
+        ...candidate,
+        user_id: candidate?.user_id ?? undefined,
+      });
+
+      let ticketClientId = context.ticketClientId ?? null;
+      let ticketContactId = context.ticketContactId ?? null;
+
+      if ((context.ticketId && !ticketClientId) || (context.ticketId && !ticketContactId)) {
+        const ticket = await trx('tickets')
+          .select('client_id', 'contact_name_id')
+          .where({
+            tenant,
+            ticket_id: context.ticketId,
+          })
+          .first<{ client_id?: string | null; contact_name_id?: string | null }>();
+
+        if (ticket) {
+          ticketClientId = ticketClientId ?? ticket.client_id ?? null;
+          ticketContactId = ticketContactId ?? ticket.contact_name_id ?? null;
+        }
+      }
+
+      if (ticketContactId) {
+        const directTicketContact = candidates.find((candidate: any) => candidate.contact_id === ticketContactId);
+        if (directTicketContact) {
+          return normalizeCandidate(directTicketContact);
+        }
+      }
+
+      if (ticketClientId) {
+        const inTicketClient = candidates.filter((candidate: any) => candidate.client_id === ticketClientId);
+        if (inTicketClient.length === 1) {
+          return normalizeCandidate(inTicketClient[0]);
+        }
+        return null;
+      }
+
+      if (context.defaultClientId) {
+        const inDefaultClient = candidates.filter((candidate: any) => candidate.client_id === context.defaultClientId);
+        if (inDefaultClient.length === 1) {
+          return normalizeCandidate(inDefaultClient[0]);
+        }
+        if (inDefaultClient.length > 1) {
+          return null;
+        }
+      }
+
+      if (candidates.length === 1) {
+        return normalizeCandidate(candidates[0]);
+      }
+
+      return null;
     });
 
     return contact || null;

@@ -205,9 +205,9 @@ export async function systemEmailProcessingWorkflow(context) {
   /**
    * Find exact email match in contacts
    */
-  const findExactEmailMatch = async (emailAddress, actions) => {
+  const findExactEmailMatch = async (emailAddress, actions, matchContext = {}) => {
     try {
-      const result = await actions.find_contact_by_email({ email: emailAddress });
+      const result = await actions.find_contact_by_email({ email: emailAddress, ...matchContext });
       
       if (result.success && result.contact) {
         return {
@@ -362,7 +362,7 @@ export async function systemEmailProcessingWorkflow(context) {
     if (existingTicket) {
       // This is a reply to an existing ticket - add as comment
       console.log(`Email is part of existing ticket: ${existingTicket.ticketId}`);
-      const matchedReplyClient = await findExactEmailMatch(emailData.from.email, actions);
+      const matchedReplyClient = await findExactEmailMatch(emailData.from.email, actions, { ticketId: existingTicket.ticketId });
       await handleEmailReply(emailData, existingTicket, actions, parsedEmailBody, replyMatchedBy, matchedReplyClient);
       return; // Exit workflow after handling reply
     }
