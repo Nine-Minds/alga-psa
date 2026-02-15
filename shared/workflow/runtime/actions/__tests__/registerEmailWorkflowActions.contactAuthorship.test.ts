@@ -12,24 +12,24 @@ const registerMock = vi.fn((action: RegisteredAction) => {
 });
 const getActionRegistryV2Mock = vi.fn(() => ({ register: registerMock }));
 
-const createTicketFromEmailMock = vi.fn(async () => ({
+const createTicketFromEmailMock = vi.fn(async (..._args: any[]) => ({
   ticket_id: 'ticket-1',
   ticket_number: 'T-1',
 }));
-const createCommentFromEmailMock = vi.fn(async () => 'comment-1');
-const findContactByEmailMock = vi.fn();
+const createCommentFromEmailMock = vi.fn(async (..._args: any[]) => 'comment-1');
+const findContactByEmailMock = vi.fn(async (..._args: any[]) => null);
 
 vi.mock('../../registries/actionRegistry', () => ({
   getActionRegistryV2: () => getActionRegistryV2Mock(),
 }));
 
 vi.mock('../../../actions/emailWorkflowActions', () => ({
-  findContactByEmail: (...args: any[]) => findContactByEmailMock(...args),
+  findContactByEmail: findContactByEmailMock,
   findTicketByEmailThread: vi.fn(),
   findTicketByReplyToken: vi.fn(),
   resolveInboundTicketDefaults: vi.fn(),
-  createTicketFromEmail: (...args: any[]) => createTicketFromEmailMock(...args),
-  createCommentFromEmail: (...args: any[]) => createCommentFromEmailMock(...args),
+  createTicketFromEmail: createTicketFromEmailMock,
+  createCommentFromEmail: createCommentFromEmailMock,
   processEmailAttachment: vi.fn(),
   parseEmailReplyBody: vi.fn(),
   createClientFromEmail: vi.fn(),

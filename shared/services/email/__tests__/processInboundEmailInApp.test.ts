@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { EmailMessageDetails } from '../../../interfaces/inbound-email.interfaces';
 
 const withAdminTransactionMock = vi.fn();
 const parseEmailReplyBodyMock = vi.fn();
@@ -10,7 +11,9 @@ const createTicketFromEmailMock = vi.fn();
 const createCommentFromEmailMock = vi.fn();
 const processEmailAttachmentMock = vi.fn();
 
-function buildEmailData(overrides: Partial<any> = {}) {
+function buildEmailData(
+  overrides: Partial<EmailMessageDetails> = {}
+): EmailMessageDetails {
   return {
     id: 'email-1',
     provider: 'google',
