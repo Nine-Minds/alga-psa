@@ -272,6 +272,7 @@ export const ClientPicker: React.FC<ClientPickerProps & AutomationProps> = ({
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="Search clients..."
+            autoFocus
             className="h-9"
           />
         </div>
