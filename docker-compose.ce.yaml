@@ -4,6 +4,9 @@ services:
       file: ./server/docker-compose.yaml
       service: server
     container_name: ${APP_NAME:-sebastian}_server_ce
+    # Build the CE server image from the current worktree (no GHCR dependency).
+    # This image is also reused by the `setup` one-shot container.
+    image: ${APP_NAME:-sebastian}_server_ce_local
     build:
       context: .
       dockerfile: Dockerfile.build
@@ -75,12 +78,12 @@ services:
         condition: service_completed_successfully
 
   setup:
+    # One-shot DB bootstrap (create DB/users, run migrations/seeds).
+    # Use the locally-built CE server image so this works without GHCR access.
+    image: ${APP_NAME:-sebastian}_server_ce_local
     build:
       context: .
-      dockerfile: setup/Dockerfile
-      args:
-        SERVER_IMAGE_REPO: ${ALGA_SETUP_IMAGE_REPO:-ghcr.io/nine-minds/alga-psa-ce}
-        ALGA_IMAGE_TAG: ${ALGA_IMAGE_TAG:-latest}
+      dockerfile: Dockerfile.build
     environment:
       EDITION: community
       NODE_OPTIONS: --experimental-vm-modules
@@ -114,11 +117,11 @@ services:
     volumes:
       - type: bind
         source: ./setup/config.ini
-        target: /opt/setup/config.ini
+        target: /app/setup/config.ini
         read_only: true
       - type: bind
         source: ./setup/entrypoint.sh
-        target: /opt/setup/entrypoint.sh
+        target: /app/setup/entrypoint.sh
         read_only: true
       - type: bind
         source: ./secrets/postgres_password
@@ -138,7 +141,7 @@ services:
         condition: service_started
       pgbouncer: # Added dependency on pgbouncer
         condition: service_started
-    entrypoint: ["/opt/setup/entrypoint.sh"]
+    entrypoint: ["/app/setup/entrypoint.sh"]
 
   workflow-worker:
     # Remove extends to use a custom build
