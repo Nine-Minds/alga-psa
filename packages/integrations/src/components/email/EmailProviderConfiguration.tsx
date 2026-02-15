@@ -20,7 +20,7 @@ import { EmailProviderList } from './EmailProviderList';
 import { ProviderSetupWizardDialog } from './ProviderSetupWizardDialog';
 import { InboundTicketDefaultsManager } from './admin/InboundTicketDefaultsManager';
 import { Microsoft365DiagnosticsDialog } from './admin/Microsoft365DiagnosticsDialog';
-import { DrawerProvider, useDrawer } from '@alga-psa/ui';
+import { DrawerOutlet, DrawerProvider, useDrawer } from '@alga-psa/ui';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import {
   getEmailProviders,
@@ -440,6 +440,8 @@ export function EmailProviderConfiguration(props: EmailProviderConfigurationProp
   return (
     <DrawerProvider>
       <EmailProviderConfigurationContent {...props} />
+      {/* This component owns its DrawerProvider, so it must also render an outlet. */}
+      <DrawerOutlet />
     </DrawerProvider>
   );
 }
