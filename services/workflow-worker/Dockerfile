@@ -14,6 +14,7 @@ RUN npm install -g typescript @types/node tsc-alias
 
 # Copy base configuration and root package files for workspace setup
 COPY tsconfig.base.json ./
+COPY tsconfig.json ./
 COPY package.json package-lock.json ./
 
 # Copy all workspace package.json files to set up the dependency tree
