@@ -141,6 +141,11 @@ export interface ImageElement extends LayoutElement {
  * Use camelCase for property names (e.g., backgroundColor).
  */
 export interface ElementStyle {
+  display?: string;
+  flexDirection?: string;
+  justifyContent?: string;
+  alignItems?: string;
+  gap?: string;
   // Layout & Box Model
   width?: string;
   height?: string;

@@ -26,6 +26,7 @@ import { useBranding } from '@alga-psa/tenancy/components';
 import ClientPortalDomainSettings from '@alga-psa/client-portal/domain-settings/entry';
 import SignInPagePreview from './SignInPagePreview';
 import { getPortalDomainStatusAction } from '@alga-psa/tenancy/actions';
+import { Switch } from '@alga-psa/ui/components/Switch';
 
 const ClientPortalSettings = () => {
   const [defaultLocale, setDefaultLocale] = useState<SupportedLocale>(LOCALE_CONFIG.defaultLocale as SupportedLocale);
@@ -41,6 +42,7 @@ const ClientPortalSettings = () => {
   const [tenantId, setTenantId] = useState<string>('');
   const [showPreview, setShowPreview] = useState<boolean>(false);
   const [previewMode, setPreviewMode] = useState<'dashboard' | 'signin' | null>(null);
+  const [previewTheme, setPreviewTheme] = useState<'light' | 'dark'>('light');
   const [hasCustomDomain, setHasCustomDomain] = useState<boolean>(false);
   const { refreshBranding } = useBranding();
 
@@ -432,6 +434,15 @@ const ClientPortalSettings = () => {
             {/* Preview Selection Buttons */}
             <div className="border-t pt-4">
               <h4 className="text-sm font-medium text-gray-700 mb-3">Preview</h4>
+              <div className="flex items-center gap-3 mb-3">
+                <Switch
+                  id="branding-preview-theme-toggle"
+                  checked={previewTheme === 'dark'}
+                  onCheckedChange={(checked) => setPreviewTheme(checked ? 'dark' : 'light')}
+                  label="Preview dark mode"
+                  aria-label="Branding preview theme mode"
+                />
+              </div>
               <div className="flex gap-2 mb-3">
                 <Button
                   id="preview-dashboard"
@@ -480,7 +491,7 @@ const ClientPortalSettings = () => {
 
               {/* Dashboard Preview */}
               {previewMode === 'dashboard' && (
-              <div className="border border-gray-200 rounded-lg overflow-hidden bg-gray-50">
+              <div className={`border border-gray-200 rounded-lg overflow-hidden bg-gray-50 ${previewTheme === 'dark' ? 'dark' : ''}`}>
                 {/* Mock Navigation Bar */}
                 <div className="bg-white shadow-sm border-b border-gray-200">
                   <div className="px-4 py-3 flex items-center justify-between">
@@ -615,14 +626,16 @@ const ClientPortalSettings = () => {
 
               {/* Sign-in Page Preview */}
               {previewMode === 'signin' && (
-                <SignInPagePreview
-                  branding={{
-                    logoUrl,
-                    primaryColor: primaryColor || '#8B5CF6',
-                    secondaryColor: secondaryColor || '#6366F1',
-                    clientName
-                  }}
-                />
+                <div className={previewTheme === 'dark' ? 'dark' : ''}>
+                  <SignInPagePreview
+                    branding={{
+                      logoUrl,
+                      primaryColor: primaryColor || '#8B5CF6',
+                      secondaryColor: secondaryColor || '#6366F1',
+                      clientName
+                    }}
+                  />
+                </div>
               )}
             </div>
 

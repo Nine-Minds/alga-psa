@@ -20,6 +20,8 @@ const HASH_REGEX = /^sha256:[0-9a-f]{64}$/i;
 const THEME_STYLE_ID = 'alga-ext-theme-tokens';
 const MIN_IFRAME_HEIGHT = 100;
 const MAX_IFRAME_HEIGHT = 4000;
+type ProxyMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+const ALLOWED_PROXY_METHODS = new Set<ProxyMethod>(['GET', 'POST', 'PUT', 'PATCH', 'DELETE']);
 
 export interface IframeBootstrapOptions {
   iframe: HTMLIFrameElement;
@@ -102,7 +104,8 @@ export function bootstrapIframe(opts: IframeBootstrapOptions): void {
   }
 
   // Inject theme tokens into parent document as :root CSS variables
-  injectThemeIntoParent(themeTokens);
+  const resolvedThemeTokens = resolveThemeTokens(themeTokens);
+  injectThemeIntoParent(resolvedThemeTokens);
 
   // Also send tokens via postMessage so child can fall back
   const targetOrigin = deriveTargetOrigin({ srcUrl, allowedOrigin, devWildcard });
@@ -115,7 +118,7 @@ export function bootstrapIframe(opts: IframeBootstrapOptions): void {
     request_id: requestId,
     payload: {
       session: { token: session.token, expires_at: session.expiresAt },
-      theme_tokens: themeTokens,
+      theme_tokens: resolvedThemeTokens,
       navigation: { path: initialPath || '/' },
     },
   } as const;
@@ -124,6 +127,25 @@ export function bootstrapIframe(opts: IframeBootstrapOptions): void {
   const onLoad = () => {
     try {
       postToIframe(iframe, bootstrapEnvelope, targetOrigin);
+    } catch {
+      // ignore
+    }
+  };
+
+  const sendThemeTokens = () => {
+    try {
+      const updatedTokens = resolveThemeTokens(themeTokens);
+      injectThemeIntoParent(updatedTokens);
+      postToIframe(
+        iframe,
+        {
+          alga: true,
+          version: ENVELOPE_VERSION,
+          type: 'theme_tokens',
+          payload: { theme_tokens: updatedTokens },
+        },
+        targetOrigin
+      );
     } catch {
       // ignore
     }
@@ -178,6 +200,7 @@ export function bootstrapIframe(opts: IframeBootstrapOptions): void {
         console.log('iframeBridge: received apiproxy request', {
           requestId: data.request_id,
           route: data.payload?.route,
+          method: data.payload?.method,
         });
         handleApiProxy(iframe, extensionId, data, allowedOrigin || srcUrl?.origin);
         break;
@@ -189,6 +212,14 @@ export function bootstrapIframe(opts: IframeBootstrapOptions): void {
   };
 
   window.addEventListener('message', messageHandler);
+
+  const observer = new MutationObserver(() => {
+    sendThemeTokens();
+  });
+  observer.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ['class', 'data-theme'],
+  });
 
   // Cleanup helper if needed by caller (not exported; documented usage can remove listener manually if creating multiple bootstraps)
   // Authors embedding multiple iframes should manage lifecycle and remove event listeners explicitly if detaching.
@@ -224,6 +255,29 @@ function injectThemeIntoParent(tokens: Record<string, string>): void {
     .map(([k, v]) => `${k}: ${String(v)};`)
     .join(' ');
   styleEl.textContent = `:root { ${cssVars} }`;
+}
+
+function resolveThemeTokens(tokens: Record<string, string>): Record<string, string> {
+  const root = document.documentElement;
+  const existingStyle = document.getElementById(THEME_STYLE_ID);
+
+  if (existingStyle?.parentNode) {
+    existingStyle.parentNode.removeChild(existingStyle);
+  }
+
+  Object.keys(tokens || {}).forEach((key) => {
+    root.style.removeProperty(key);
+  });
+
+  const computed = getComputedStyle(root);
+  const resolved: Record<string, string> = {};
+
+  Object.entries(tokens || {}).forEach(([key, fallback]) => {
+    const value = computed.getPropertyValue(key).trim();
+    resolved[key] = value || fallback;
+  });
+
+  return resolved;
 }
 
 function deriveTargetOrigin(params: {
@@ -265,6 +319,18 @@ function bytesToBase64(buf: ArrayBuffer): string {
   return btoa(bin);
 }
 
+function resolveProxyMethod(method: unknown): ProxyMethod {
+  if (typeof method !== 'string' || method.trim().length === 0) {
+    // Backward compatibility for older SDK payloads.
+    return 'POST';
+  }
+  const normalized = method.toUpperCase();
+  if (ALLOWED_PROXY_METHODS.has(normalized as ProxyMethod)) {
+    return normalized as ProxyMethod;
+  }
+  throw new Error(`Unsupported proxy method: ${method}`);
+}
+
 async function handleApiProxy(
   iframe: HTMLIFrameElement,
   extensionId: string,
@@ -278,6 +344,7 @@ async function handleApiProxy(
   const route = cleanRoute.startsWith('/') ? cleanRoute : `/${cleanRoute}`;
   const url = `/api/ext-proxy/${extensionId}${route}`;
   const bodyB64 = payload?.body as string | undefined;
+  const method = resolveProxyMethod(payload?.method);
 
   const response = {
     alga: true,
@@ -289,15 +356,17 @@ async function handleApiProxy(
 
   try {
     const bodyBytes = bodyB64 ? base64ToBytes(bodyB64) : undefined;
+    const hasBody = method !== 'GET' && !!bodyBytes;
     console.log('iframeBridge: forwarding apiproxy to ext-proxy', {
       url,
-      hasBody: !!bodyBytes,
+      hasBody,
+      method,
       requestId: request_id,
     });
     const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'content-type': 'application/octet-stream' },
-      body: bodyBytes ? new Blob([bodyBytes as any]) : undefined,
+      method,
+      headers: hasBody ? { 'content-type': 'application/octet-stream' } : undefined,
+      body: hasBody ? new Blob([bodyBytes as any]) : undefined,
       credentials: 'include',
     });
 

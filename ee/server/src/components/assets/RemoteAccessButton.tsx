@@ -78,7 +78,7 @@ export function RemoteAccessButton({
   };
 
   // If agent is offline, show disabled state with tooltip
-  if (asset.agent_status === 'offline') {
+  if (asset.agent_status === 'offline' || asset.agent_status === 'overdue') {
     return (
       <Button
         id="remote-access-button"
@@ -86,7 +86,7 @@ export function RemoteAccessButton({
         size={size}
         className={`gap-2 ${className}`}
         disabled
-        title="Device is offline"
+        title={asset.agent_status === 'overdue' ? 'Device is overdue' : 'Device is offline'}
       >
         <Monitor className="h-4 w-4" />
         Remote Access

@@ -170,7 +170,7 @@ const PrioritySettings = ({ onShowConflictDialog, initialPriorityType }: Priorit
           />
           <span>{value}</span>
           {'is_from_itil_standard' in record && record.is_from_itil_standard && (
-            <span className="ml-1 px-1.5 py-0.5 text-xs font-medium bg-blue-100 text-blue-800 rounded">ITIL</span>
+            <span className="ml-1 px-1.5 py-0.5 text-xs font-medium bg-blue-500/15 text-blue-600 rounded">ITIL</span>
           )}
           {'tenant' in record ? null : (
             !('is_from_itil_standard' in record && record.is_from_itil_standard) && <span className="text-xs text-gray-500 italic">(Standard)</span>

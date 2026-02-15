@@ -93,7 +93,7 @@ interface TicketDetailsProps {
     initialAvailableAgents?: IUserWithRoles[];
     initialUserMap?: Record<string, { user_id: string; first_name: string; last_name: string; email?: string, user_type: string, avatarUrl: string | null }>;
     initialContactMap?: Record<string, { contact_id: string; full_name: string; email?: string; avatarUrl: string | null }>;
-    statusOptions?: { value: string; label: string }[];
+    statusOptions?: { value: string; label: string; is_closed?: boolean; className?: string }[];
     agentOptions?: { value: string; label: string }[];
     boardOptions?: { value: string; label: string }[];
     priorityOptions?: { value: string; label: string }[];
@@ -220,6 +220,14 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const [client, setClient] = useState<IClient | null>(initialClient);
     const [contactInfo, setContactInfo] = useState<IContact | null>(initialContactInfo);
     const [createdByUser, setCreatedByUser] = useState<IUser | null>(initialCreatedByUser);
+
+    const closedStatusOptions = useMemo(
+        () =>
+            (statusOptions || [])
+                .filter((opt) => !!opt.is_closed)
+                .map(({ value, label }) => ({ value, label })),
+        [statusOptions]
+    );
     const [board, setBoard] = useState<any>(initialBoard);
     const [clients, setClients] = useState<IClient[]>(initialClients);
     const [contacts, setContacts] = useState<IContact[]>(initialContacts);
@@ -757,7 +765,11 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
 
     const [editorKey, setEditorKey] = useState(0);
 
-    const handleAddNewComment = async (isInternal: boolean, isResolution: boolean): Promise<boolean> => {
+    const handleAddNewComment = async (
+        isInternal: boolean,
+        isResolution: boolean,
+        closeStatusId: string | null = null
+    ): Promise<boolean> => {
         // Check if content is empty
         const contentStr = JSON.stringify(newCommentContent);
         const hasContent = contentStr !== JSON.stringify([{
@@ -816,6 +828,13 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                         console.error('Failed to refresh comments after add:', e);
                     }
                 }
+
+                // If this was a resolution note and a closed status was selected, close the ticket.
+                if (isResolution && closeStatusId && ticket.status_id !== closeStatusId) {
+                    // Backend clears response_state when closing; keep UI consistent.
+                    setTicket((prev: any) => ({ ...prev, response_state: null }));
+                    await handleSelectChange('status_id', closeStatusId);
+                }
                 
                 // Reset the comment input
                 setNewCommentContent([{
@@ -850,6 +869,11 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                         // Refresh comments after adding
                         const updatedComments = await findCommentsByTicketId(ticket.ticket_id);
                         setConversations(updatedComments);
+
+                        if (isResolution && closeStatusId && ticket.status_id !== closeStatusId) {
+                            setTicket((prev: any) => ({ ...prev, response_state: null }));
+                            await handleSelectChange('status_id', closeStatusId);
+                        }
                         
                         // Reset the comment input
                         setNewCommentContent([{
@@ -1609,7 +1633,7 @@ const handleClose = () => {
                         <Suspense fallback={<div id="ticket-info-skeleton" className="animate-pulse bg-gray-200 h-64 rounded-lg mb-6"></div>}>
                             <div className="mb-6">
                                 {bundle?.isBundleChild && bundle?.masterTicket ? (
-                                    <div className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-900" id="ticket-bundle-child-banner">
+                                    <div className="mb-3 rounded-lg border border-amber-200 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/30 px-4 py-2 text-sm text-amber-900 dark:text-amber-200" id="ticket-bundle-child-banner">
                                         This ticket is bundled under{' '}
                                         <a className="font-medium underline" href={`/msp/tickets/${bundle.masterTicket.ticket_id}`}>
                                             {bundle.masterTicket.ticket_number}
@@ -1802,6 +1826,7 @@ const handleClose = () => {
                                         avatarUrl: null
                                     } : session?.user}
                                     activeTab={activeTab}
+                                    closedStatusOptions={closedStatusOptions}
                                     isEditing={isEditing}
                                     currentComment={currentComment}
                                     editorKey={editorKey}

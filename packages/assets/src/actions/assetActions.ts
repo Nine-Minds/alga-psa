@@ -1024,6 +1024,21 @@ export const listAssets = withAuth(async (user, { tenant }, params: AssetQueryPa
                     .andOn('clients.tenant', '=', trx.raw('?', [tenant]));
             });
 
+        const resolveSortColumn = (sortBy?: string): string | null => {
+            if (!sortBy) return null;
+            const allowed: Record<string, string> = {
+                name: 'assets.name',
+                asset_tag: 'assets.asset_tag',
+                asset_type: 'assets.asset_type',
+                status: 'assets.status',
+                agent_status: 'assets.agent_status',
+                location: 'assets.location',
+                client_name: 'clients.client_name',
+                created_at: 'assets.created_at',
+            };
+            return allowed[sortBy] ?? null;
+        };
+
         // Apply filters
         if (validatedParams.client_id) {
             baseQuery.where('assets.client_id', validatedParams.client_id);
@@ -1039,7 +1054,8 @@ export const listAssets = withAuth(async (user, { tenant }, params: AssetQueryPa
             baseQuery.where(function() {
                 this.whereILike('assets.name', searchTerm)
                     .orWhereILike('assets.asset_tag', searchTerm)
-                    .orWhereILike('assets.serial_number', searchTerm);
+                    .orWhereILike('assets.serial_number', searchTerm)
+                    .orWhereILike('clients.client_name', searchTerm);
             });
         }
         if (validatedParams.agent_status) {
@@ -1065,12 +1081,29 @@ export const listAssets = withAuth(async (user, { tenant }, params: AssetQueryPa
         const limit = validatedParams.limit || 10;
         const offset = (page - 1) * limit;
 
+        const sortColumn = resolveSortColumn(validatedParams.sort_by);
+        const sortDirection = validatedParams.sort_direction ?? 'desc';
+
         const assets = await baseQuery
             .select(
                 'assets.*',
                 'clients.client_name'
             )
-            .orderBy('assets.created_at', 'desc')
+            .modify((query) => {
+                if (sortColumn) {
+                    if (sortColumn === 'clients.client_name') {
+                        query.orderByRaw(`lower(${sortColumn}) ${sortDirection}`);
+                    } else if (sortColumn === 'assets.name') {
+                        query.orderByRaw(`lower(${sortColumn}) ${sortDirection}`);
+                    } else {
+                        query.orderBy(sortColumn, sortDirection);
+                    }
+                    query.orderBy('assets.created_at', 'desc');
+                    return;
+                }
+
+                query.orderBy('assets.created_at', 'desc');
+            })
             .limit(limit)
             .offset(offset);
 
@@ -2055,7 +2088,9 @@ function calculateHealthStatus(asset: {
     }
 
     // Check agent status
-    if (asset.agent_status === 'offline') {
+    if (asset.agent_status === 'offline' || asset.agent_status === 'overdue') {
+        const stateLabel = asset.agent_status === 'overdue' ? 'overdue' : 'offline';
+
         // Check how long it's been offline
         if (asset.last_seen_at) {
             const lastSeen = new Date(asset.last_seen_at);
@@ -2065,16 +2100,16 @@ function calculateHealthStatus(asset: {
             if (hoursSinceLastSeen > 72) {
                 return {
                     health_status: 'critical',
-                    health_reason: `Device offline for ${Math.floor(hoursSinceLastSeen / 24)} days`,
+                    health_reason: `Device ${stateLabel} for ${Math.floor(hoursSinceLastSeen / 24)} days`,
                 };
             } else if (hoursSinceLastSeen > 24) {
                 return {
                     health_status: 'warning',
-                    health_reason: `Device offline for ${Math.floor(hoursSinceLastSeen)} hours`,
+                    health_reason: `Device ${stateLabel} for ${Math.floor(hoursSinceLastSeen)} hours`,
                 };
             }
         }
-        return { health_status: 'warning', health_reason: 'Device offline' };
+        return { health_status: 'warning', health_reason: `Device ${stateLabel}` };
     }
 
     // Agent is online - consider healthy

@@ -7,6 +7,54 @@ import { computeDomain, enqueueProvisioningWorkflow } from './runtime/provision'
 import { isKnownCapability, normalizeCapability } from './providers';
 import { upsertInstallConfigRecord } from './installConfig';
 
+export const DUPLICATE_EXTENSION_VERSION_CODE = 'EXTENSION_VERSION_ALREADY_EXISTS';
+
+export class DuplicateExtensionVersionError extends Error {
+  readonly status: number;
+  readonly code: string;
+  readonly extensionId: string;
+  readonly version: string;
+  readonly details?: unknown;
+
+  constructor(params: { extensionId: string; version: string; details?: unknown }) {
+    const { extensionId, version, details } = params;
+    super(`Version "${version}" already exists for this extension. Publish a new version and try again.`);
+    this.name = 'DuplicateExtensionVersionError';
+    this.status = 409;
+    this.code = DUPLICATE_EXTENSION_VERSION_CODE;
+    this.extensionId = extensionId;
+    this.version = version;
+    this.details = details;
+  }
+}
+
+export function isDuplicateExtensionVersionError(error: unknown): error is DuplicateExtensionVersionError {
+  return (
+    error instanceof DuplicateExtensionVersionError ||
+    (typeof error === 'object' &&
+      error !== null &&
+      (error as { code?: unknown }).code === DUPLICATE_EXTENSION_VERSION_CODE)
+  );
+}
+
+function isVersionUniqueConstraintError(error: unknown): boolean {
+  const maybe = error as { code?: unknown; constraint?: unknown; detail?: unknown; message?: unknown } | null;
+  if (!maybe || typeof maybe !== 'object') return false;
+  if (maybe.code !== '23505') return false;
+
+  const constraint = String(maybe.constraint ?? '').toLowerCase();
+  const detail = String(maybe.detail ?? '').toLowerCase();
+  const message = String(maybe.message ?? '').toLowerCase();
+
+  if (constraint.includes('extension_version') && constraint.includes('version')) {
+    return true;
+  }
+  if (detail.includes('(registry_id, version)')) {
+    return true;
+  }
+  return message.includes('extension_version') && message.includes('registry_id') && message.includes('version');
+}
+
 export type RegistryId = string;
 export type VersionId = string;
 
@@ -555,7 +603,7 @@ export async function createExtensionVersion(input: CreateExtensionVersionInput)
   // Idempotency on (extensionId, version)
   const exists = await repo.versions.findByExtensionAndVersion(extensionId, version);
   if (exists) {
-    return exists;
+    throw new DuplicateExtensionVersionError({ extensionId, version });
   }
 
   // Allow same contentHash under different versions (no uniqueness by hash)
@@ -570,7 +618,14 @@ export async function createExtensionVersion(input: CreateExtensionVersionInput)
     capabilities,
     signature,
   };
-  return repo.versions.create(createInput);
+  try {
+    return await repo.versions.create(createInput);
+  } catch (error) {
+    if (isVersionUniqueConstraintError(error)) {
+      throw new DuplicateExtensionVersionError({ extensionId, version });
+    }
+    throw error;
+  }
 }
 
 export async function getExtensionVersionByHash(contentHash: string): Promise<ExtensionVersionRecord | null> {
@@ -647,19 +702,17 @@ export async function upsertVersionFromManifest(
     reason: signature.reason,
   } as CreateExtensionVersionInput['signature'];
 
-  // Create version; enforce uniqueness on (extensionId, version). If it exists, attach new bundle if needed.
+  // Create version; enforce strict immutability on (extensionId, version).
   const repo = requireRepo();
   const existing = await repo.versions.findByExtensionAndVersion(extension.id, resolvedVersion);
   if (existing) {
-    const want = validateContentHash(contentHash);
-    if (existing.contentHash !== want) {
-      // Attach new bundle row to this version (idempotent if same content_hash already present)
-      await (repo as any).attachBundle?.(existing.id, { contentHash: `sha256:${want}` });
-      // Re-read latest mapping for this version
-      const newest = await repo.versions.findByExtensionAndVersion(extension.id, resolvedVersion);
-      return { extension, version: newest || existing, resolvedVersion: isWildcardVersion(manifest.version) ? resolvedVersion : undefined };
+    try {
+      // eslint-disable-next-line no-console
+      console.info('[registry-v2] duplicate version publish rejected', { extensionId: extension.id, version: resolvedVersion });
+    } catch {
+      // ignore logging errors
     }
-    return { extension, version: existing, resolvedVersion: isWildcardVersion(manifest.version) ? resolvedVersion : undefined };
+    throw new DuplicateExtensionVersionError({ extensionId: extension.id, version: resolvedVersion });
   }
 
   const versionRecord = await createExtensionVersion({

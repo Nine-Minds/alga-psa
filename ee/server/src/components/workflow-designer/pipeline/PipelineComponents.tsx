@@ -48,90 +48,90 @@ export const getStepTypeColor = (stepType: string): {
     case 'action.call':
       return {
         border: 'border-l-blue-500',
-        bg: 'bg-blue-50',
-        text: 'text-blue-700',
+        bg: 'bg-blue-500/10',
+        text: 'text-blue-600',
         icon: 'text-blue-500',
-        badge: 'bg-blue-100 text-blue-800'
+        badge: 'bg-blue-500/15 text-blue-600'
       };
     case 'control.if':
       return {
         border: 'border-l-amber-500',
-        bg: 'bg-amber-50',
-        text: 'text-amber-700',
+        bg: 'bg-amber-500/10',
+        text: 'text-amber-600',
         icon: 'text-amber-500',
-        badge: 'bg-amber-100 text-amber-800'
+        badge: 'bg-amber-500/15 text-amber-600'
       };
     case 'control.forEach':
       return {
         border: 'border-l-purple-500',
-        bg: 'bg-purple-50',
-        text: 'text-purple-700',
+        bg: 'bg-purple-500/10',
+        text: 'text-purple-600',
         icon: 'text-purple-500',
-        badge: 'bg-purple-100 text-purple-800'
+        badge: 'bg-purple-500/15 text-purple-600'
       };
     case 'control.tryCatch':
       return {
         border: 'border-l-orange-500',
-        bg: 'bg-orange-50',
-        text: 'text-orange-700',
+        bg: 'bg-orange-500/10',
+        text: 'text-orange-600',
         icon: 'text-orange-500',
-        badge: 'bg-orange-100 text-orange-800'
+        badge: 'bg-orange-500/15 text-orange-600'
       };
     case 'control.return':
       return {
         border: 'border-l-red-500',
-        bg: 'bg-red-50',
-        text: 'text-red-700',
+        bg: 'bg-red-500/10',
+        text: 'text-red-600',
         icon: 'text-red-500',
-        badge: 'bg-red-100 text-red-800'
+        badge: 'bg-red-500/15 text-red-600'
       };
     case 'control.callWorkflow':
       return {
         border: 'border-l-cyan-500',
-        bg: 'bg-cyan-50',
-        text: 'text-cyan-700',
+        bg: 'bg-cyan-500/10',
+        text: 'text-cyan-600',
         icon: 'text-cyan-500',
-        badge: 'bg-cyan-100 text-cyan-800'
+        badge: 'bg-cyan-500/15 text-cyan-600'
       };
     case 'state.set':
       return {
         border: 'border-l-green-500',
-        bg: 'bg-green-50',
-        text: 'text-green-700',
+        bg: 'bg-green-500/10',
+        text: 'text-green-600',
         icon: 'text-green-500',
-        badge: 'bg-green-100 text-green-800'
+        badge: 'bg-green-500/15 text-green-600'
       };
     case 'transform.assign':
       return {
         border: 'border-l-teal-500',
-        bg: 'bg-teal-50',
-        text: 'text-teal-700',
+        bg: 'bg-teal-500/10',
+        text: 'text-teal-600',
         icon: 'text-teal-500',
-        badge: 'bg-teal-100 text-teal-800'
+        badge: 'bg-teal-500/15 text-teal-600'
       };
     case 'event.wait':
       return {
         border: 'border-l-indigo-500',
-        bg: 'bg-indigo-50',
-        text: 'text-indigo-700',
+        bg: 'bg-indigo-500/10',
+        text: 'text-indigo-600',
         icon: 'text-indigo-500',
-        badge: 'bg-indigo-100 text-indigo-800'
+        badge: 'bg-indigo-500/15 text-indigo-600'
       };
     case 'human.task':
       return {
         border: 'border-l-pink-500',
-        bg: 'bg-pink-50',
-        text: 'text-pink-700',
+        bg: 'bg-pink-500/10',
+        text: 'text-pink-600',
         icon: 'text-pink-500',
-        badge: 'bg-pink-100 text-pink-800'
+        badge: 'bg-pink-500/15 text-pink-600'
       };
     default:
       return {
         border: 'border-l-gray-400',
-        bg: 'bg-gray-50',
-        text: 'text-gray-700',
+        bg: 'bg-gray-500/10',
+        text: 'text-gray-600',
         icon: 'text-gray-500',
-        badge: 'bg-gray-100 text-gray-800'
+        badge: 'bg-gray-500/15 text-gray-600'
       };
   }
 };
@@ -178,7 +178,7 @@ export const PipelineStart: React.FC<{
 }> = ({ onInsert, disabled }) => {
   return (
     <div className="flex flex-col items-center">
-      <div className="flex items-center justify-center w-8 h-8 rounded-full bg-green-100 border-2 border-green-500">
+      <div className="flex items-center justify-center w-8 h-8 rounded-full bg-green-500/15 border-2 border-green-500">
         <Play className="h-4 w-4 text-green-600 ml-0.5" />
       </div>
       <div className="text-xs text-gray-500 mt-1">Start</div>
@@ -354,11 +354,11 @@ export const BranchLabel: React.FC<{
   variant?: 'then' | 'else' | 'try' | 'catch' | 'body';
 }> = ({ label, variant = 'then' }) => {
   const colors = {
-    then: 'bg-green-100 text-green-700 border-green-200',
-    else: 'bg-gray-100 text-gray-700 border-gray-200',
-    try: 'bg-blue-100 text-blue-700 border-blue-200',
-    catch: 'bg-orange-100 text-orange-700 border-orange-200',
-    body: 'bg-purple-100 text-purple-700 border-purple-200'
+    then: 'bg-green-500/15 text-green-600 border-green-500/30',
+    else: 'bg-gray-500/15 text-gray-600 border-gray-500/30',
+    try: 'bg-blue-500/15 text-blue-600 border-blue-500/30',
+    catch: 'bg-orange-500/15 text-orange-600 border-orange-500/30',
+    body: 'bg-purple-500/15 text-purple-600 border-purple-500/30'
   };
 
   return (

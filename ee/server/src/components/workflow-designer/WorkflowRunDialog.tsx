@@ -301,7 +301,7 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
             <div className="flex flex-wrap items-center gap-2">
               <span className="font-medium text-gray-900">{entry.name}</span>
               <span className="text-[11px] text-gray-400">{entry.event_type}</span>
-              <Badge className={`text-[10px] ${isSystemEntry ? 'bg-blue-50 text-blue-600' : 'bg-emerald-50 text-emerald-600'}`}>
+              <Badge className={`text-[10px] ${isSystemEntry ? 'bg-blue-500/15 text-blue-600' : 'bg-emerald-500/15 text-emerald-600'}`}>
                 {isSystemEntry ? 'System' : 'Tenant'}
               </Badge>
             </div>
@@ -1028,7 +1028,7 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
 
             {selectedEventEntry && (
               <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500">
-                <Badge className={`text-[10px] ${selectedEventEntry.tenant ? 'bg-emerald-50 text-emerald-600' : 'bg-blue-50 text-blue-600'}`}>
+                <Badge className={`text-[10px] ${selectedEventEntry.tenant ? 'bg-emerald-500/15 text-emerald-600' : 'bg-blue-500/15 text-blue-600'}`}>
                   {selectedEventEntry.tenant ? 'Tenant event' : 'System event'}
                 </Badge>
                 <span>{selectedEventEntry.category ?? 'Uncategorized'}</span>
@@ -1172,7 +1172,7 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
           )}
 
           {concurrencyLimit && (
-            <div className="rounded border border-blue-200 bg-blue-50 p-2 text-xs text-blue-700">
+            <div className="rounded border border-blue-500/30 bg-blue-500/10 p-2 text-xs text-blue-600">
               Concurrency limit: {concurrencyLimit} run(s) at a time.
             </div>
           )}

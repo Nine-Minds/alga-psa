@@ -1,0 +1,1322 @@
+{
+  "_config": {
+    "baseUrl": "http://localhost:3000",
+    "screenshotDir": "docs/plans/2026-02-09-dark-mode/screenshots",
+    "startup": {
+      "command": "npm run dev",
+      "readyWhen": "http://localhost:3000 responds",
+      "note": "App must be running before any test. chrome-browser agent auto-logs in as test user."
+    },
+    "selectors": {
+      "sidebar": "aside[data-automation-id*='-sidebar']",
+      "header": "header",
+      "submenuTooltip": "[class*='submenu'], [class*='Submenu']",
+      "mainContent": "main.flex-1",
+      "bodyContent": "main.flex-1 > div.flex-1",
+      "card": "[class*='card'], [class*='Card'], .bg-white.rounded",
+      "input": "input[type='text'], input[type='email'], input[type='password'], textarea",
+      "select": "select, [role='combobox'], [role='listbox']",
+      "checkbox": "input[type='checkbox'], [role='checkbox']",
+      "switch": "[role='switch'], .switch",
+      "buttonPrimary": "button.bg-primary, button[class*='primary'], button.bg-\\[rgb\\(var\\(--color-primary",
+      "buttonGhost": "button[class*='ghost'], button[class*='outline'], button.border",
+      "table": "table, .rt-TableRoot, [role='grid']",
+      "tableRow": "tr, .rt-TableRow, [role='row']",
+      "dialogOverlay": "[data-radix-dialog-overlay]",
+      "dialogContent": "[data-radix-dialog-content], [data-automation-id$='-dialog']",
+      "dropdown": "[data-radix-popper-content-wrapper], [role='menu']",
+      "tooltip": "[role='tooltip']",
+      "badge": "[class*='badge'], [class*='Badge']",
+      "toast": "[class*='toast'], [class*='Toaster'], [role='status']",
+      "tabs": "[role='tablist']",
+      "tabActive": "[role='tab'][aria-selected='true'], [role='tab'][data-state='active']",
+      "themeToggle": "[data-automation-id='theme-toggle'], #theme-toggle, [aria-label*='theme'], [aria-label*='Theme']",
+      "clientPortalNav": "nav",
+      "clientPortalMain": "main.flex-1",
+      "tiptapEditor": ".tiptap, .ProseMirror, [class*='editor']",
+      "dayPicker": ".rdp, [class*='day-picker'], [class*='DayPicker']",
+      "bigCalendar": ".rbc-calendar, [class*='big-calendar']",
+      "sidebarToggle": "#sidebar-toggle-button",
+      "userMenu": "#user-menu-trigger",
+      "quickCreate": "#global-quick-create-trigger"
+    },
+    "themes": {
+      "forceDark": "() => { document.documentElement.classList.remove('light'); document.documentElement.classList.add('dark'); document.body.classList.remove('light'); document.body.classList.add('dark'); document.documentElement.setAttribute('data-theme', 'dark'); return 'dark mode forced'; }",
+      "forceLight": "() => { document.documentElement.classList.remove('dark'); document.documentElement.classList.add('light'); document.body.classList.remove('dark'); document.body.classList.add('light'); document.documentElement.setAttribute('data-theme', 'light'); return 'light mode forced'; }",
+      "note": "Use forceDark/forceLight BEFORE the ThemeToggle (F008) is implemented. After F008, click the toggle instead."
+    },
+    "helpers": {
+      "isDark": "(selector) => { const el = document.querySelector(selector); if (!el) return { pass: false, reason: 'element not found: ' + selector }; const bg = getComputedStyle(el).backgroundColor; const m = bg.match(/\\d+/g); if (!m) return { pass: false, reason: 'no rgb in: ' + bg }; const [r,g,b] = m.map(Number); const lum = (0.299*r + 0.587*g + 0.114*b) / 255; return { pass: lum < 0.3, luminance: lum, value: bg }; }",
+      "isLight": "(selector, prop) => { prop = prop || 'color'; const el = document.querySelector(selector); if (!el) return { pass: false, reason: 'element not found: ' + selector }; const val = getComputedStyle(el)[prop]; const m = val.match(/\\d+/g); if (!m) return { pass: false, reason: 'no rgb in: ' + val }; const [r,g,b] = m.map(Number); const lum = (0.299*r + 0.587*g + 0.114*b) / 255; return { pass: lum > 0.6, luminance: lum, value: val }; }",
+      "isNotWhite": "(selector) => { const el = document.querySelector(selector); if (!el) return { pass: false, reason: 'element not found: ' + selector }; const bg = getComputedStyle(el).backgroundColor; return { pass: bg !== 'rgb(255, 255, 255)' && bg !== 'rgba(0, 0, 0, 0)', value: bg }; }",
+      "isVisible": "(selector) => { const el = document.querySelector(selector); if (!el) return { pass: false, reason: 'element not found: ' + selector }; const r = el.getBoundingClientRect(); return { pass: r.width > 0 && r.height > 0, width: r.width, height: r.height }; }",
+      "contrastRatio": "(fgSelector, bgSelector) => { function luminance(r,g,b) { const a = [r,g,b].map(v => { v /= 255; return v <= 0.03928 ? v/12.92 : Math.pow((v+0.055)/1.055, 2.4); }); return 0.2126*a[0] + 0.7152*a[1] + 0.0722*a[2]; } const fg = getComputedStyle(document.querySelector(fgSelector)).color; const bg = getComputedStyle(document.querySelector(bgSelector)).backgroundColor; const [fr,fg2,fb] = fg.match(/\\d+/g).map(Number); const [br,bg2,bb] = bg.match(/\\d+/g).map(Number); const l1 = luminance(fr,fg2,fb); const l2 = luminance(br,bg2,bb); const ratio = (Math.max(l1,l2)+0.05)/(Math.min(l1,l2)+0.05); return { pass: ratio >= 4.5, ratio: Math.round(ratio*100)/100 }; }",
+      "getCssVar": "(varName) => { return getComputedStyle(document.documentElement).getPropertyValue(varName).trim(); }",
+      "hasClass": "(selector, className) => { const el = document.querySelector(selector); if (!el) return { pass: false, reason: 'element not found' }; return { pass: el.classList.contains(className), classes: Array.from(el.classList) }; }"
+    }
+  },
+  "tests": [
+    {
+      "id": "T001",
+      "description": "next-themes package is installed and importable in server workspace",
+      "implemented": false,
+      "featureIds": ["F001"],
+      "type": "code-check",
+      "steps": [
+        { "tool": "bash", "command": "cd server && node -e \"require.resolve('next-themes')\"", "expectSuccess": true }
+      ]
+    },
+    {
+      "id": "T001b",
+      "description": "Tailwind config includes darkMode: 'class'",
+      "implemented": false,
+      "featureIds": ["F001b"],
+      "type": "code-check",
+      "steps": [
+        { "tool": "grep", "file": "server/tailwind.config.ts", "pattern": "darkMode.*class", "expectMatch": true }
+      ]
+    },
+    {
+      "id": "T002",
+      "description": "Tailwind background color uses CSS variable, not hardcoded white",
+      "implemented": false,
+      "featureIds": ["F002"],
+      "type": "code-check",
+      "steps": [
+        { "tool": "grep", "file": "server/tailwind.config.ts", "pattern": "background:\\s*['\"]white['\"]", "expectMatch": false, "failMessage": "background should not be hardcoded 'white'" },
+        { "tool": "grep", "file": "server/tailwind.config.ts", "pattern": "background.*var\\(--color", "expectMatch": true }
+      ]
+    },
+    {
+      "id": "T003",
+      "description": "Tailwind card color uses CSS variable, not hardcoded white",
+      "implemented": false,
+      "featureIds": ["F002"],
+      "type": "code-check",
+      "steps": [
+        { "tool": "grep", "file": "server/tailwind.config.ts", "pattern": "card:\\s*['\"]white['\"]", "expectMatch": false },
+        { "tool": "grep", "file": "server/tailwind.config.ts", "pattern": "card.*var\\(--color", "expectMatch": true }
+      ]
+    },
+    {
+      "id": "T004",
+      "description": "Status colors (success, warning, error) have different values in .light vs .dark blocks",
+      "implemented": false,
+      "featureIds": ["F003"],
+      "type": "code-check",
+      "steps": [
+        { "tool": "grep", "file": "server/src/app/globals.css", "pattern": "--color-status-success", "expectMinMatches": 2, "note": "Should appear in both .light and .dark blocks" },
+        { "tool": "grep", "file": "server/src/app/globals.css", "pattern": "--color-status-warning", "expectMinMatches": 2 },
+        { "tool": "grep", "file": "server/src/app/globals.css", "pattern": "--color-status-error", "expectMinMatches": 2 }
+      ]
+    },
+    {
+      "id": "T005",
+      "description": "next-themes setTheme('dark') applies dark class to <html>",
+      "implemented": false,
+      "featureIds": ["F004"],
+      "type": "runtime",
+      "page": "/msp",
+      "steps": [
+        { "tool": "navigate_page", "url": "/msp" },
+        { "tool": "wait_for", "text": "Dashboard" },
+        { "tool": "evaluate_script", "function": "() => { window.__NEXT_THEME_SET && window.__NEXT_THEME_SET('dark'); return document.documentElement.classList.contains('dark'); }", "expect": true, "note": "If next-themes is wired, test via its API. Alternatively check: document.documentElement.className includes 'dark'" }
+      ]
+    },
+    {
+      "id": "T006",
+      "description": "next-themes setTheme('light') applies light class to <html>",
+      "implemented": false,
+      "featureIds": ["F004"],
+      "type": "runtime",
+      "page": "/msp",
+      "steps": [
+        { "tool": "navigate_page", "url": "/msp" },
+        { "tool": "wait_for", "text": "Dashboard" },
+        { "tool": "evaluate_script", "function": "() => { window.__NEXT_THEME_SET && window.__NEXT_THEME_SET('light'); return document.documentElement.classList.contains('light'); }", "expect": true }
+      ]
+    },
+    {
+      "id": "T007",
+      "description": "next-themes setTheme('system') reads prefers-color-scheme and applies matching class",
+      "implemented": false,
+      "featureIds": ["F004"],
+      "type": "runtime",
+      "page": "/msp",
+      "steps": [
+        { "tool": "navigate_page", "url": "/msp" },
+        { "tool": "emulate", "colorScheme": "dark" },
+        { "tool": "evaluate_script", "function": "() => { window.__NEXT_THEME_SET && window.__NEXT_THEME_SET('system'); return new Promise(r => setTimeout(() => r(document.documentElement.classList.contains('dark')), 200)); }", "expect": true },
+        { "tool": "emulate", "colorScheme": "auto" }
+      ]
+    },
+    {
+      "id": "T007b",
+      "description": "useAppTheme() syncs theme change to user_preferences DB table",
+      "implemented": false,
+      "featureIds": ["F004b"],
+      "type": "runtime",
+      "page": "/msp",
+      "steps": [
+        { "tool": "navigate_page", "url": "/msp" },
+        { "tool": "wait_for", "text": "Dashboard" },
+        { "tool": "evaluate_script", "function": "() => { window.__NEXT_THEME_SET && window.__NEXT_THEME_SET('dark'); return 'theme set to dark'; }" },
+        { "tool": "evaluate_script", "function": "async () => { await new Promise(r => setTimeout(r, 1500)); return 'waited for DB sync'; }", "note": "Wait for async DB write" },
+        { "tool": "bash", "command": "Query user_preferences table for setting_name='theme' to verify the row exists with value 'dark'", "note": "Use mcp__my-private-server__query or psql" }
+      ]
+    },
+    {
+      "id": "T008",
+      "description": "Root layout <body> does not have hardcoded className='light'",
+      "implemented": false,
+      "featureIds": ["F005"],
+      "type": "code-check",
+      "steps": [
+        { "tool": "grep", "file": "server/src/app/layout.tsx", "pattern": "className.*['\"`]light['\"`]", "expectMatch": false, "failMessage": "body should not have hardcoded 'light' class" }
+      ]
+    },
+    {
+      "id": "T009",
+      "description": "next-themes blocking script prevents flash of wrong theme on reload",
+      "implemented": false,
+      "featureIds": ["F005", "F010"],
+      "type": "runtime",
+      "page": "/msp",
+      "steps": [
+        { "tool": "navigate_page", "url": "/msp" },
+        { "tool": "wait_for", "text": "Dashboard" },
+        { "tool": "evaluate_script", "function": "() => { localStorage.setItem('theme', 'dark'); return 'localStorage set'; }" },
+        { "tool": "navigate_page", "type": "reload" },
+        { "tool": "evaluate_script", "function": "() => { const cl = document.documentElement.className; return { hasDark: cl.includes('dark'), className: cl }; }", "expect": { "hasDark": true }, "note": "After reload with localStorage='dark', the page should load with dark class immediately (no flash)" }
+      ]
+    },
+    {
+      "id": "T010",
+      "description": "Radix UI <Theme> receives appearance='dark' when dark mode is active",
+      "implemented": false,
+      "featureIds": ["F006"],
+      "type": "runtime",
+      "page": "/msp",
+      "steps": [
+        { "tool": "navigate_page", "url": "/msp" },
+        { "tool": "evaluate_script", "function": "() => { document.documentElement.classList.add('dark'); return true; }" },
+        { "tool": "evaluate_script", "function": "() => { const theme = document.querySelector('.radix-themes, [data-radix-theme]'); if (!theme) return { pass: false, reason: 'Radix Theme element not found' }; return { pass: theme.getAttribute('data-is-root-theme') !== null, appearance: theme.className }; }", "note": "Check that Radix Theme component reflects dark appearance" }
+      ]
+    },
+    {
+      "id": "T011",
+      "description": "MantineProvider receives correct color scheme in dark mode",
+      "implemented": false,
+      "featureIds": ["F007"],
+      "type": "runtime",
+      "page": "/msp",
+      "steps": [
+        { "tool": "navigate_page", "url": "/msp" },
+        { "tool": "evaluate_script", "function": "() => { document.documentElement.classList.add('dark'); return true; }" },
+        { "tool": "evaluate_script", "function": "() => { const mantine = document.querySelector('[data-mantine-color-scheme]'); if (!mantine) return { pass: true, reason: 'No Mantine elements visible — OK if Mantine is not used on this page' }; return { pass: mantine.getAttribute('data-mantine-color-scheme') === 'dark', scheme: mantine.getAttribute('data-mantine-color-scheme') }; }" }
+      ]
+    },
+    {
+      "id": "T012",
+      "description": "ThemeToggle component renders with three options: Light, Dark, System",
+      "implemented": false,
+      "featureIds": ["F008"],
+      "type": "visual",
+      "page": "/msp",
+      "steps": [
+        { "tool": "navigate_page", "url": "/msp" },
+        { "tool": "wait_for", "text": "Dashboard" },
+        { "tool": "take_snapshot", "note": "Find the theme toggle element in the a11y tree" },
+        { "tool": "click", "uid": "RESOLVE_FROM_SNAPSHOT: theme toggle button in header", "note": "Click the theme toggle to open its menu" },
+        { "tool": "take_snapshot", "note": "Verify Light, Dark, System options are visible" },
+        { "tool": "take_screenshot", "filePath": "T012-theme-toggle-options.png" }
+      ],
+      "expect": "Three options visible: Light, Dark, System"
+    },
+    {
+      "id": "T013",
+      "description": "Clicking 'Dark' in ThemeToggle switches app to dark mode immediately",
+      "implemented": false,
+      "featureIds": ["F008"],
+      "type": "visual",
+      "page": "/msp",
+      "steps": [
+        { "tool": "navigate_page", "url": "/msp" },
+        { "tool": "wait_for", "text": "Dashboard" },
+        { "tool": "take_snapshot" },
+        { "tool": "click", "uid": "RESOLVE_FROM_SNAPSHOT: theme toggle button" },
+        { "tool": "click", "uid": "RESOLVE_FROM_SNAPSHOT: 'Dark' option" },
+        { "tool": "evaluate_script", "function": "() => document.documentElement.classList.contains('dark')", "expect": true },
+        { "tool": "take_screenshot", "filePath": "T013-dark-mode-activated.png" }
+      ]
+    },
+    {
+      "id": "T014",
+      "description": "Clicking 'Light' in ThemeToggle switches app to light mode immediately",
+      "implemented": false,
+      "featureIds": ["F008"],
+      "type": "visual",
+      "page": "/msp",
+      "steps": [
+        { "tool": "navigate_page", "url": "/msp" },
+        { "tool": "evaluate_script", "function": "() => { document.documentElement.classList.add('dark'); }" },
+        { "tool": "take_snapshot" },
+        { "tool": "click", "uid": "RESOLVE_FROM_SNAPSHOT: theme toggle button" },
+        { "tool": "click", "uid": "RESOLVE_FROM_SNAPSHOT: 'Light' option" },
+        { "tool": "evaluate_script", "function": "() => document.documentElement.classList.contains('light') && !document.documentElement.classList.contains('dark')", "expect": true },
+        { "tool": "take_screenshot", "filePath": "T014-light-mode-activated.png" }
+      ]
+    },
+    {
+      "id": "T015",
+      "description": "ThemeToggle is visible in MSP header on multiple pages",
+      "implemented": false,
+      "featureIds": ["F009"],
+      "type": "visual",
+      "steps": [
+        { "tool": "navigate_page", "url": "/msp" },
+        { "tool": "evaluate_script", "function": "() => { const el = document.querySelector('[data-automation-id=\"theme-toggle\"], #theme-toggle, [aria-label*=\"theme\" i]'); return { pass: !!el, found: !!el }; }", "expect": { "pass": true } },
+        { "tool": "navigate_page", "url": "/msp/tickets" },
+        { "tool": "evaluate_script", "function": "() => { const el = document.querySelector('[data-automation-id=\"theme-toggle\"], #theme-toggle, [aria-label*=\"theme\" i]'); return { pass: !!el }; }", "expect": { "pass": true } },
+        { "tool": "navigate_page", "url": "/msp/settings" },
+        { "tool": "evaluate_script", "function": "() => { const el = document.querySelector('[data-automation-id=\"theme-toggle\"], #theme-toggle, [aria-label*=\"theme\" i]'); return { pass: !!el }; }", "expect": { "pass": true } }
+      ]
+    },
+    {
+      "id": "T015b",
+      "description": "ThemeToggle is visible in client portal navigation bar",
+      "implemented": false,
+      "featureIds": ["F009b"],
+      "type": "visual",
+      "steps": [
+        { "tool": "navigate_page", "url": "/client-portal" },
+        { "tool": "evaluate_script", "function": "() => { const el = document.querySelector('[data-automation-id=\"theme-toggle\"], #theme-toggle, [aria-label*=\"theme\" i]'); return { pass: !!el }; }", "expect": { "pass": true } },
+        { "tool": "take_screenshot", "filePath": "T015b-client-portal-toggle.png" }
+      ]
+    },
+    {
+      "id": "T016",
+      "description": "After selecting dark mode, refreshing loads dark mode without flash",
+      "implemented": false,
+      "featureIds": ["F010"],
+      "type": "runtime",
+      "steps": [
+        { "tool": "navigate_page", "url": "/msp" },
+        { "tool": "wait_for", "text": "Dashboard" },
+        { "tool": "take_snapshot" },
+        { "tool": "click", "uid": "RESOLVE_FROM_SNAPSHOT: theme toggle → Dark" },
+        { "tool": "navigate_page", "type": "reload" },
+        { "tool": "evaluate_script", "function": "() => { return { hasDark: document.documentElement.classList.contains('dark'), className: document.documentElement.className }; }", "expect": { "hasDark": true } },
+        { "tool": "take_screenshot", "filePath": "T016-dark-persisted-after-refresh.png" }
+      ]
+    },
+    {
+      "id": "T017",
+      "description": "After selecting dark mode, user_preferences DB has theme='dark' row",
+      "implemented": false,
+      "featureIds": ["F011"],
+      "type": "runtime",
+      "steps": [
+        { "tool": "navigate_page", "url": "/msp" },
+        { "tool": "take_snapshot" },
+        { "tool": "click", "uid": "RESOLVE_FROM_SNAPSHOT: theme toggle → Dark" },
+        { "tool": "evaluate_script", "function": "async () => { await new Promise(r => setTimeout(r, 2000)); return 'waited for DB sync'; }" },
+        { "tool": "sql", "query": "SELECT setting_value FROM user_preferences WHERE setting_name = 'theme' ORDER BY updated_at DESC LIMIT 1", "expect": "contains 'dark'" }
+      ]
+    },
+    {
+      "id": "T017b",
+      "description": "On new device with no localStorage, theme loaded from DB",
+      "implemented": false,
+      "featureIds": ["F012"],
+      "type": "runtime",
+      "steps": [
+        { "tool": "navigate_page", "url": "/msp" },
+        { "tool": "take_snapshot" },
+        { "tool": "click", "uid": "RESOLVE_FROM_SNAPSHOT: theme toggle → Dark" },
+        { "tool": "evaluate_script", "function": "async () => { await new Promise(r => setTimeout(r, 2000)); return 'synced'; }" },
+        { "tool": "evaluate_script", "function": "() => { localStorage.removeItem('theme'); return 'localStorage cleared'; }" },
+        { "tool": "navigate_page", "type": "reload" },
+        { "tool": "evaluate_script", "function": "async () => { await new Promise(r => setTimeout(r, 2000)); return { hasDark: document.documentElement.classList.contains('dark') }; }", "expect": { "hasDark": true }, "note": "Should load dark from DB even without localStorage" }
+      ]
+    },
+    {
+      "id": "T018",
+      "description": "System mode with OS dark preference loads dark mode",
+      "implemented": false,
+      "featureIds": ["F010"],
+      "type": "runtime",
+      "steps": [
+        { "tool": "emulate", "colorScheme": "dark" },
+        { "tool": "navigate_page", "url": "/msp" },
+        { "tool": "take_snapshot" },
+        { "tool": "click", "uid": "RESOLVE_FROM_SNAPSHOT: theme toggle → System" },
+        { "tool": "navigate_page", "type": "reload" },
+        { "tool": "evaluate_script", "function": "() => document.documentElement.classList.contains('dark')", "expect": true },
+        { "tool": "emulate", "colorScheme": "auto" }
+      ]
+    },
+    {
+      "id": "T019",
+      "description": "System mode dynamically updates when OS preference changes",
+      "implemented": false,
+      "featureIds": ["F010"],
+      "type": "runtime",
+      "steps": [
+        { "tool": "navigate_page", "url": "/msp" },
+        { "tool": "take_snapshot" },
+        { "tool": "click", "uid": "RESOLVE_FROM_SNAPSHOT: theme toggle → System" },
+        { "tool": "emulate", "colorScheme": "dark" },
+        { "tool": "evaluate_script", "function": "async () => { await new Promise(r => setTimeout(r, 500)); return document.documentElement.classList.contains('dark'); }", "expect": true },
+        { "tool": "emulate", "colorScheme": "light" },
+        { "tool": "evaluate_script", "function": "async () => { await new Promise(r => setTimeout(r, 500)); return document.documentElement.classList.contains('light'); }", "expect": true },
+        { "tool": "emulate", "colorScheme": "auto" }
+      ]
+    },
+    {
+      "id": "T020",
+      "description": "--alga-bg variable has correct dark value when .dark is active",
+      "implemented": false,
+      "featureIds": ["F013", "F014"],
+      "type": "runtime",
+      "steps": [
+        { "tool": "navigate_page", "url": "/msp" },
+        { "tool": "evaluate_script", "function": "() => { document.documentElement.classList.add('dark'); document.body.classList.add('dark'); document.documentElement.setAttribute('data-theme', 'dark'); return getComputedStyle(document.documentElement).getPropertyValue('--alga-bg').trim(); }", "expect": "non-empty string, should be a dark color value" }
+      ]
+    },
+    {
+      "id": "T021",
+      "description": "--alga-fg variable has correct dark value when .dark is active",
+      "implemented": false,
+      "featureIds": ["F013", "F014"],
+      "type": "runtime",
+      "steps": [
+        { "tool": "navigate_page", "url": "/msp" },
+        { "tool": "evaluate_script", "function": "() => { document.documentElement.classList.add('dark'); document.body.classList.add('dark'); document.documentElement.setAttribute('data-theme', 'dark'); return getComputedStyle(document.documentElement).getPropertyValue('--alga-fg').trim(); }", "expect": "non-empty string, should be a light color value" }
+      ]
+    },
+    {
+      "id": "T022",
+      "description": "--alga-border variable has correct dark value when .dark is active",
+      "implemented": false,
+      "featureIds": ["F013", "F014"],
+      "type": "runtime",
+      "steps": [
+        { "tool": "navigate_page", "url": "/msp" },
+        { "tool": "evaluate_script", "function": "() => { document.documentElement.classList.add('dark'); document.body.classList.add('dark'); document.documentElement.setAttribute('data-theme', 'dark'); return getComputedStyle(document.documentElement).getPropertyValue('--alga-border').trim(); }", "expect": "non-empty string" }
+      ]
+    },
+    {
+      "id": "T023",
+      "description": "Extension iframe receives theme tokens on light→dark switch",
+      "implemented": false,
+      "featureIds": ["F015"],
+      "type": "runtime",
+      "steps": [
+        { "tool": "navigate_page", "url": "/msp", "note": "Navigate to a page with an extension iframe if available" },
+        { "tool": "evaluate_script", "function": "() => { window.__themeMessages = []; window.addEventListener('message', e => { if (e.data && e.data.type === 'theme_tokens') window.__themeMessages.push(e.data); }); return 'listener attached'; }" },
+        { "tool": "evaluate_script", "function": "() => { document.documentElement.classList.remove('light'); document.documentElement.classList.add('dark'); document.documentElement.setAttribute('data-theme', 'dark'); return 'switched to dark'; }" },
+        { "tool": "evaluate_script", "function": "async () => { await new Promise(r => setTimeout(r, 1000)); return { received: window.__themeMessages.length > 0, messages: window.__themeMessages }; }", "expect": { "received": true } }
+      ]
+    },
+    {
+      "id": "T024",
+      "description": "Extension iframe receives theme tokens on dark→light switch",
+      "implemented": false,
+      "featureIds": ["F015"],
+      "type": "runtime",
+      "steps": [
+        { "tool": "navigate_page", "url": "/msp" },
+        { "tool": "evaluate_script", "function": "() => { document.documentElement.classList.add('dark'); document.documentElement.setAttribute('data-theme', 'dark'); window.__themeMessages = []; window.addEventListener('message', e => { if (e.data && e.data.type === 'theme_tokens') window.__themeMessages.push(e.data); }); return 'setup done'; }" },
+        { "tool": "evaluate_script", "function": "() => { document.documentElement.classList.remove('dark'); document.documentElement.classList.add('light'); document.documentElement.setAttribute('data-theme', 'light'); return 'switched to light'; }" },
+        { "tool": "evaluate_script", "function": "async () => { await new Promise(r => setTimeout(r, 1000)); return { received: window.__themeMessages.length > 0, messages: window.__themeMessages }; }", "expect": { "received": true } }
+      ]
+    },
+    {
+      "id": "T025",
+      "description": "Sidebar background is dark in dark mode, text is light",
+      "implemented": false,
+      "featureIds": ["F016"],
+      "type": "visual",
+      "page": "/msp",
+      "steps": [
+        { "tool": "navigate_page", "url": "/msp" },
+        { "tool": "wait_for", "text": "Dashboard" },
+        { "tool": "evaluate_script", "function": "() => { document.documentElement.classList.add('dark'); document.body.classList.add('dark'); document.documentElement.setAttribute('data-theme', 'dark'); return 'dark forced'; }" },
+        { "tool": "evaluate_script", "function": "() => { const el = document.querySelector(\"aside[data-automation-id*='-sidebar']\"); if (!el) return { pass: false, reason: 'sidebar not found' }; const bg = getComputedStyle(el).backgroundColor; const m = bg.match(/\\d+/g); if (!m) return { pass: false, reason: 'no rgb', raw: bg }; const [r,g,b] = m.map(Number); const lum = (0.299*r + 0.587*g + 0.114*b) / 255; return { pass: lum < 0.3, luminance: lum, backgroundColor: bg }; }", "expect": { "pass": true }, "failMessage": "Sidebar background is not dark" },
+        { "tool": "evaluate_script", "function": "() => { const el = document.querySelector(\"aside[data-automation-id*='-sidebar']\"); const color = getComputedStyle(el).color; const m = color.match(/\\d+/g); const [r,g,b] = m.map(Number); const lum = (0.299*r + 0.587*g + 0.114*b) / 255; return { pass: lum > 0.6, luminance: lum, color: color }; }", "expect": { "pass": true }, "failMessage": "Sidebar text is not light" },
+        { "tool": "take_screenshot", "filePath": "T025-sidebar-dark.png" }
+      ]
+    },
+    {
+      "id": "T026",
+      "description": "Header background is dark in dark mode, text and icons visible",
+      "implemented": false,
+      "featureIds": ["F017"],
+      "type": "visual",
+      "page": "/msp",
+      "steps": [
+        { "tool": "navigate_page", "url": "/msp" },
+        { "tool": "wait_for", "text": "Dashboard" },
+        { "tool": "evaluate_script", "function": "() => { document.documentElement.classList.add('dark'); document.body.classList.add('dark'); document.documentElement.setAttribute('data-theme', 'dark'); return 'dark forced'; }" },
+        { "tool": "evaluate_script", "function": "() => { const el = document.querySelector('header'); if (!el) return { pass: false, reason: 'header not found' }; const bg = getComputedStyle(el).backgroundColor; const m = bg.match(/\\d+/g); if (!m) return { pass: false, reason: 'no rgb', raw: bg }; const [r,g,b] = m.map(Number); const lum = (0.299*r + 0.587*g + 0.114*b) / 255; return { pass: lum < 0.3, luminance: lum, backgroundColor: bg }; }", "expect": { "pass": true }, "failMessage": "Header background is not dark" },
+        { "tool": "evaluate_script", "function": "() => { const el = document.querySelector('header'); const color = getComputedStyle(el).color; const m = color.match(/\\d+/g); const [r,g,b] = m.map(Number); const lum = (0.299*r + 0.587*g + 0.114*b) / 255; return { pass: lum > 0.6, luminance: lum, color: color }; }", "expect": { "pass": true }, "failMessage": "Header text is not light" },
+        { "tool": "take_screenshot", "filePath": "T026-header-dark.png" }
+      ]
+    },
+    {
+      "id": "T027",
+      "description": "Submenu has proper dark bg (not #D0D5DD) and light text (not #000) in dark mode",
+      "implemented": false,
+      "featureIds": ["F018"],
+      "type": "visual",
+      "page": "/msp",
+      "steps": [
+        { "tool": "navigate_page", "url": "/msp" },
+        { "tool": "wait_for", "text": "Dashboard" },
+        { "tool": "evaluate_script", "function": "() => { document.documentElement.classList.add('dark'); document.body.classList.add('dark'); document.documentElement.setAttribute('data-theme', 'dark'); return 'dark forced'; }" },
+        { "tool": "evaluate_script", "function": "() => { const submenuBg = getComputedStyle(document.documentElement).getPropertyValue('--color-submenu-bg').trim(); const submenuText = getComputedStyle(document.documentElement).getPropertyValue('--color-submenu-text').trim(); const bgIsBroken = submenuBg === '#D0D5DD' || submenuBg === '#d0d5dd'; const textIsBroken = submenuText === '#000000' || submenuText === '#000'; return { pass: !bgIsBroken && !textIsBroken, submenuBg, submenuText, bgIsBroken, textIsBroken }; }", "expect": { "pass": true }, "failMessage": "Submenu still has wrong light-gray bg or black text in dark mode" },
+        { "tool": "take_screenshot", "filePath": "T027-submenu-dark.png" }
+      ]
+    },
+    {
+      "id": "T028",
+      "description": "Main content area has dark background — no white patches",
+      "implemented": false,
+      "featureIds": ["F019"],
+      "type": "visual",
+      "page": "/msp",
+      "steps": [
+        { "tool": "navigate_page", "url": "/msp" },
+        { "tool": "wait_for", "text": "Dashboard" },
+        { "tool": "evaluate_script", "function": "() => { document.documentElement.classList.add('dark'); document.body.classList.add('dark'); document.documentElement.setAttribute('data-theme', 'dark'); return 'dark forced'; }" },
+        { "tool": "evaluate_script", "function": "() => { const el = document.querySelector('main.flex-1') || document.querySelector('main'); if (!el) return { pass: false, reason: 'main not found' }; const bg = getComputedStyle(el).backgroundColor; const m = bg.match(/\\d+/g); if (!m) return { pass: false, reason: 'no rgb', raw: bg }; const [r,g,b] = m.map(Number); return { pass: !(r > 240 && g > 240 && b > 240), backgroundColor: bg }; }", "expect": { "pass": true }, "failMessage": "Main content area is still white/near-white" },
+        { "tool": "take_screenshot", "filePath": "T028-main-content-dark.png", "fullPage": true }
+      ]
+    },
+    {
+      "id": "T029",
+      "description": "Page layout containers have dark backgrounds",
+      "implemented": false,
+      "featureIds": ["F020"],
+      "type": "visual",
+      "page": "/msp/tickets",
+      "steps": [
+        { "tool": "navigate_page", "url": "/msp/tickets" },
+        { "tool": "wait_for", "text": "Tickets" },
+        { "tool": "evaluate_script", "function": "() => { document.documentElement.classList.add('dark'); document.body.classList.add('dark'); document.documentElement.setAttribute('data-theme', 'dark'); return 'dark forced'; }" },
+        { "tool": "evaluate_script", "function": "() => { const containers = document.querySelectorAll('main div.flex-1, main div.bg-gray-100, main div.bg-white'); let whiteCount = 0; containers.forEach(el => { const bg = getComputedStyle(el).backgroundColor; if (bg === 'rgb(255, 255, 255)' || bg === 'rgb(243, 244, 246)' || bg === 'rgb(249, 250, 251)') whiteCount++; }); return { pass: whiteCount === 0, whitePatches: whiteCount, total: containers.length }; }", "expect": { "pass": true }, "failMessage": "Found white/light-gray patches in layout containers" },
+        { "tool": "take_screenshot", "filePath": "T029-layout-containers-dark.png" }
+      ]
+    },
+    {
+      "id": "T030",
+      "description": "Card components have dark backgrounds with visible borders",
+      "implemented": false,
+      "featureIds": ["F021"],
+      "type": "visual",
+      "page": "/msp",
+      "steps": [
+        { "tool": "navigate_page", "url": "/msp" },
+        { "tool": "wait_for", "text": "Dashboard" },
+        { "tool": "evaluate_script", "function": "() => { document.documentElement.classList.add('dark'); document.body.classList.add('dark'); document.documentElement.setAttribute('data-theme', 'dark'); return 'dark forced'; }" },
+        { "tool": "evaluate_script", "function": "() => { const cards = document.querySelectorAll('[class*=\"card\"], [class*=\"Card\"], .bg-white.rounded, .rounded-lg.shadow'); let issues = []; cards.forEach((el, i) => { const bg = getComputedStyle(el).backgroundColor; if (bg === 'rgb(255, 255, 255)') issues.push({ index: i, bg }); }); return { pass: issues.length === 0, issues, totalCards: cards.length }; }", "expect": { "pass": true }, "failMessage": "Some cards still have white background in dark mode" },
+        { "tool": "take_screenshot", "filePath": "T030-cards-dark.png" }
+      ]
+    },
+    {
+      "id": "T031",
+      "description": "Input fields have dark backgrounds, light text, visible borders",
+      "implemented": false,
+      "featureIds": ["F022"],
+      "type": "visual",
+      "page": "/msp/settings",
+      "steps": [
+        { "tool": "navigate_page", "url": "/msp/settings" },
+        { "tool": "wait_for", "text": "Settings" },
+        { "tool": "evaluate_script", "function": "() => { document.documentElement.classList.add('dark'); document.body.classList.add('dark'); document.documentElement.setAttribute('data-theme', 'dark'); return 'dark forced'; }" },
+        { "tool": "evaluate_script", "function": "() => { const inputs = document.querySelectorAll('input[type=\"text\"], input[type=\"email\"], textarea'); let issues = []; inputs.forEach((el, i) => { const bg = getComputedStyle(el).backgroundColor; if (bg === 'rgb(255, 255, 255)') issues.push({ index: i, type: el.type, bg }); }); return { pass: issues.length === 0, issues, totalInputs: inputs.length }; }", "expect": { "pass": true }, "failMessage": "Some inputs still have white background" },
+        { "tool": "take_screenshot", "filePath": "T031-inputs-dark.png" }
+      ]
+    },
+    {
+      "id": "T032",
+      "description": "Select dropdowns have dark backgrounds and light text",
+      "implemented": false,
+      "featureIds": ["F022"],
+      "type": "visual",
+      "page": "/msp/settings",
+      "steps": [
+        { "tool": "navigate_page", "url": "/msp/settings" },
+        { "tool": "evaluate_script", "function": "() => { document.documentElement.classList.add('dark'); document.body.classList.add('dark'); document.documentElement.setAttribute('data-theme', 'dark'); return 'dark forced'; }" },
+        { "tool": "evaluate_script", "function": "() => { const selects = document.querySelectorAll('select, [role=\"combobox\"]'); let issues = []; selects.forEach((el, i) => { const bg = getComputedStyle(el).backgroundColor; if (bg === 'rgb(255, 255, 255)') issues.push({ index: i, bg }); }); return { pass: issues.length === 0 || selects.length === 0, issues, total: selects.length }; }", "expect": { "pass": true } },
+        { "tool": "take_screenshot", "filePath": "T032-selects-dark.png" }
+      ]
+    },
+    {
+      "id": "T033",
+      "description": "Checkbox check marks visible in dark mode",
+      "implemented": false,
+      "featureIds": ["F023"],
+      "type": "visual",
+      "page": "/msp/settings",
+      "steps": [
+        { "tool": "navigate_page", "url": "/msp/settings" },
+        { "tool": "evaluate_script", "function": "() => { document.documentElement.classList.add('dark'); document.body.classList.add('dark'); document.documentElement.setAttribute('data-theme', 'dark'); return 'dark forced'; }" },
+        { "tool": "take_snapshot", "note": "Find checkbox elements and verify they are visually distinguishable" },
+        { "tool": "take_screenshot", "filePath": "T033-checkboxes-dark.png" }
+      ]
+    },
+    {
+      "id": "T034",
+      "description": "Switch thumb visible against track in dark mode",
+      "implemented": false,
+      "featureIds": ["F023"],
+      "type": "visual",
+      "page": "/msp/settings",
+      "steps": [
+        { "tool": "navigate_page", "url": "/msp/settings" },
+        { "tool": "evaluate_script", "function": "() => { document.documentElement.classList.add('dark'); document.body.classList.add('dark'); document.documentElement.setAttribute('data-theme', 'dark'); return 'dark forced'; }" },
+        { "tool": "evaluate_script", "function": "() => { const switches = document.querySelectorAll('[role=\"switch\"], .switch'); return { found: switches.length, note: 'Visually verify switch thumb contrasts with track in screenshot' }; }" },
+        { "tool": "take_screenshot", "filePath": "T034-switches-dark.png" }
+      ]
+    },
+    {
+      "id": "T035",
+      "description": "Primary button has appropriate contrast in dark mode",
+      "implemented": false,
+      "featureIds": ["F024"],
+      "type": "visual",
+      "page": "/msp",
+      "steps": [
+        { "tool": "navigate_page", "url": "/msp" },
+        { "tool": "evaluate_script", "function": "() => { document.documentElement.classList.add('dark'); document.body.classList.add('dark'); document.documentElement.setAttribute('data-theme', 'dark'); return 'dark forced'; }" },
+        { "tool": "evaluate_script", "function": "() => { const btn = document.querySelector('button[class*=\"primary\"], button[class*=\"bg-\"]'); if (!btn) return { pass: true, reason: 'no primary button found on page' }; const bg = getComputedStyle(btn).backgroundColor; const fg = getComputedStyle(btn).color; function lum(color) { const m = color.match(/\\d+/g); if (!m) return 0; const [r,g,b] = m.map(Number); const a = [r,g,b].map(v => { v /= 255; return v <= 0.03928 ? v/12.92 : Math.pow((v+0.055)/1.055, 2.4); }); return 0.2126*a[0] + 0.7152*a[1] + 0.0722*a[2]; } const l1 = lum(fg), l2 = lum(bg); const ratio = (Math.max(l1,l2)+0.05)/(Math.min(l1,l2)+0.05); return { pass: ratio >= 3, ratio: Math.round(ratio*100)/100, fg, bg }; }", "expect": { "pass": true }, "failMessage": "Primary button contrast ratio below 3:1" },
+        { "tool": "take_screenshot", "filePath": "T035-primary-button-dark.png" }
+      ]
+    },
+    {
+      "id": "T036",
+      "description": "Ghost/outline button has visible borders and text in dark mode",
+      "implemented": false,
+      "featureIds": ["F024"],
+      "type": "visual",
+      "page": "/msp",
+      "steps": [
+        { "tool": "navigate_page", "url": "/msp" },
+        { "tool": "evaluate_script", "function": "() => { document.documentElement.classList.add('dark'); document.body.classList.add('dark'); document.documentElement.setAttribute('data-theme', 'dark'); return 'dark forced'; }" },
+        { "tool": "evaluate_script", "function": "() => { const btn = document.querySelector('button[class*=\"ghost\"], button[class*=\"outline\"], button.border'); if (!btn) return { pass: true, reason: 'no ghost button found' }; const color = getComputedStyle(btn).color; const m = color.match(/\\d+/g); const [r,g,b] = m.map(Number); const lum = (0.299*r + 0.587*g + 0.114*b) / 255; return { pass: lum > 0.4, luminance: lum, color }; }", "expect": { "pass": true } },
+        { "tool": "take_screenshot", "filePath": "T036-ghost-button-dark.png" }
+      ]
+    },
+    {
+      "id": "T037",
+      "description": "Data table headers, rows, borders visible in dark mode",
+      "implemented": false,
+      "featureIds": ["F025"],
+      "type": "visual",
+      "page": "/msp/tickets",
+      "steps": [
+        { "tool": "navigate_page", "url": "/msp/tickets" },
+        { "tool": "wait_for", "text": "Tickets" },
+        { "tool": "evaluate_script", "function": "() => { document.documentElement.classList.add('dark'); document.body.classList.add('dark'); document.documentElement.setAttribute('data-theme', 'dark'); return 'dark forced'; }" },
+        { "tool": "evaluate_script", "function": "() => { const table = document.querySelector('table, .rt-TableRoot, [role=\"grid\"]'); if (!table) return { pass: true, reason: 'no table on page' }; const bg = getComputedStyle(table).backgroundColor; const whiteish = bg === 'rgb(255, 255, 255)' || bg === 'rgb(249, 250, 251)'; const rows = table.querySelectorAll('tr, .rt-TableRow, [role=\"row\"]'); let whiteRows = 0; rows.forEach(r => { const rbg = getComputedStyle(r).backgroundColor; if (rbg === 'rgb(255, 255, 255)') whiteRows++; }); return { pass: !whiteish && whiteRows === 0, tableBg: bg, whiteRows, totalRows: rows.length }; }", "expect": { "pass": true } },
+        { "tool": "take_screenshot", "filePath": "T037-data-table-dark.png" }
+      ]
+    },
+    {
+      "id": "T038",
+      "description": "Table row hover is distinguishable in dark mode (not rgba(0,0,0,0.05))",
+      "implemented": false,
+      "featureIds": ["F025", "F041", "F047"],
+      "type": "visual",
+      "page": "/msp/tickets",
+      "steps": [
+        { "tool": "navigate_page", "url": "/msp/tickets" },
+        { "tool": "wait_for", "text": "Tickets" },
+        { "tool": "evaluate_script", "function": "() => { document.documentElement.classList.add('dark'); document.body.classList.add('dark'); document.documentElement.setAttribute('data-theme', 'dark'); return 'dark forced'; }" },
+        { "tool": "take_snapshot", "note": "Find a table row to hover" },
+        { "tool": "hover", "uid": "RESOLVE_FROM_SNAPSHOT: first data table row" },
+        { "tool": "evaluate_script", "function": "() => { const row = document.querySelector('tr:hover, .rt-TableRow:hover, [role=\"row\"]:hover'); if (!row) return { pass: true, reason: 'no hovered row found' }; const bg = getComputedStyle(row).backgroundColor; return { pass: bg !== 'rgba(0, 0, 0, 0.05)', hoverBg: bg }; }", "expect": { "pass": true } },
+        { "tool": "take_screenshot", "filePath": "T038-table-hover-dark.png" }
+      ]
+    },
+    {
+      "id": "T039",
+      "description": "Modal/dialog has dark background in dark mode",
+      "implemented": false,
+      "featureIds": ["F026"],
+      "type": "visual",
+      "page": "/msp",
+      "steps": [
+        { "tool": "navigate_page", "url": "/msp" },
+        { "tool": "wait_for", "text": "Dashboard" },
+        { "tool": "evaluate_script", "function": "() => { document.documentElement.classList.add('dark'); document.body.classList.add('dark'); document.documentElement.setAttribute('data-theme', 'dark'); return 'dark forced'; }" },
+        { "tool": "take_snapshot" },
+        { "tool": "click", "uid": "RESOLVE_FROM_SNAPSHOT: any button that opens a dialog (e.g. quick-create #global-quick-create-trigger)" },
+        { "tool": "evaluate_script", "function": "async () => { await new Promise(r => setTimeout(r, 500)); const dialog = document.querySelector('[data-radix-dialog-content], [data-automation-id$=\"-dialog\"]'); if (!dialog) return { pass: false, reason: 'no dialog found' }; const bg = getComputedStyle(dialog).backgroundColor; const m = bg.match(/\\d+/g); if (!m) return { pass: false, reason: 'no rgb', raw: bg }; const [r,g,b] = m.map(Number); return { pass: !(r > 240 && g > 240 && b > 240), backgroundColor: bg }; }", "expect": { "pass": true }, "failMessage": "Dialog content still has white background" },
+        { "tool": "take_screenshot", "filePath": "T039-dialog-dark.png" }
+      ]
+    },
+    {
+      "id": "T040",
+      "description": "Dropdown menu items have dark background and light text",
+      "implemented": false,
+      "featureIds": ["F027"],
+      "type": "visual",
+      "page": "/msp",
+      "steps": [
+        { "tool": "navigate_page", "url": "/msp" },
+        { "tool": "evaluate_script", "function": "() => { document.documentElement.classList.add('dark'); document.body.classList.add('dark'); document.documentElement.setAttribute('data-theme', 'dark'); return 'dark forced'; }" },
+        { "tool": "click", "uid": "RESOLVE_FROM_SNAPSHOT: #user-menu-trigger (user avatar dropdown)" },
+        { "tool": "evaluate_script", "function": "async () => { await new Promise(r => setTimeout(r, 300)); const menu = document.querySelector('[data-radix-popper-content-wrapper], [role=\"menu\"]'); if (!menu) return { pass: false, reason: 'no dropdown found' }; const bg = getComputedStyle(menu.querySelector('[role=\"menuitem\"], div') || menu).backgroundColor; const m = bg.match(/\\d+/g); if (!m) return { pass: false, raw: bg }; const [r,g,b] = m.map(Number); return { pass: !(r > 240 && g > 240 && b > 240), backgroundColor: bg }; }", "expect": { "pass": true } },
+        { "tool": "take_screenshot", "filePath": "T040-dropdown-dark.png" }
+      ]
+    },
+    {
+      "id": "T041",
+      "description": "Tooltip has appropriate contrast in dark mode",
+      "implemented": false,
+      "featureIds": ["F028"],
+      "type": "visual",
+      "page": "/msp",
+      "steps": [
+        { "tool": "navigate_page", "url": "/msp" },
+        { "tool": "evaluate_script", "function": "() => { document.documentElement.classList.add('dark'); document.body.classList.add('dark'); document.documentElement.setAttribute('data-theme', 'dark'); return 'dark forced'; }" },
+        { "tool": "take_snapshot", "note": "Find an element with a tooltip (e.g. sidebar icon)" },
+        { "tool": "hover", "uid": "RESOLVE_FROM_SNAPSHOT: sidebar icon or any [title] element" },
+        { "tool": "evaluate_script", "function": "async () => { await new Promise(r => setTimeout(r, 500)); const tip = document.querySelector('[role=\"tooltip\"]'); if (!tip) return { pass: true, reason: 'no tooltip appeared — may need different trigger' }; const bg = getComputedStyle(tip).backgroundColor; const fg = getComputedStyle(tip).color; return { pass: true, bg, fg, note: 'Verify contrast visually in screenshot' }; }" },
+        { "tool": "take_screenshot", "filePath": "T041-tooltip-dark.png" }
+      ]
+    },
+    {
+      "id": "T042",
+      "description": "Status badges are readable in dark mode",
+      "implemented": false,
+      "featureIds": ["F029"],
+      "type": "visual",
+      "page": "/msp/tickets",
+      "steps": [
+        { "tool": "navigate_page", "url": "/msp/tickets" },
+        { "tool": "wait_for", "text": "Tickets" },
+        { "tool": "evaluate_script", "function": "() => { document.documentElement.classList.add('dark'); document.body.classList.add('dark'); document.documentElement.setAttribute('data-theme', 'dark'); return 'dark forced'; }" },
+        { "tool": "evaluate_script", "function": "() => { const badges = document.querySelectorAll('[class*=\"badge\"], [class*=\"Badge\"], [class*=\"status\"]'); return { found: badges.length, note: 'Verify badges are readable in screenshot' }; }" },
+        { "tool": "take_screenshot", "filePath": "T042-badges-dark.png" }
+      ]
+    },
+    {
+      "id": "T043",
+      "description": "Toast notifications are readable in dark mode",
+      "implemented": false,
+      "featureIds": ["F030"],
+      "type": "visual",
+      "page": "/msp",
+      "steps": [
+        { "tool": "navigate_page", "url": "/msp" },
+        { "tool": "evaluate_script", "function": "() => { document.documentElement.classList.add('dark'); document.body.classList.add('dark'); document.documentElement.setAttribute('data-theme', 'dark'); return 'dark forced'; }" },
+        { "tool": "evaluate_script", "function": "() => { try { const event = new CustomEvent('show-toast', { detail: { message: 'Test toast in dark mode', type: 'success' } }); window.dispatchEvent(event); } catch(e) {} return 'attempted to trigger toast — check screenshot'; }", "note": "Toast trigger method varies. May need to click a save button or trigger via app action." },
+        { "tool": "take_screenshot", "filePath": "T043-toast-dark.png" }
+      ]
+    },
+    {
+      "id": "T044",
+      "description": "Tab active/inactive states clear in dark mode",
+      "implemented": false,
+      "featureIds": ["F031"],
+      "type": "visual",
+      "page": "/msp/settings",
+      "steps": [
+        { "tool": "navigate_page", "url": "/msp/settings" },
+        { "tool": "wait_for", "text": "Settings" },
+        { "tool": "evaluate_script", "function": "() => { document.documentElement.classList.add('dark'); document.body.classList.add('dark'); document.documentElement.setAttribute('data-theme', 'dark'); return 'dark forced'; }" },
+        { "tool": "evaluate_script", "function": "() => { const tabs = document.querySelector('[role=\"tablist\"]'); if (!tabs) return { pass: true, reason: 'no tabs on this page' }; const active = tabs.querySelector('[aria-selected=\"true\"], [data-state=\"active\"]'); const inactive = tabs.querySelector('[aria-selected=\"false\"], [data-state=\"inactive\"]'); if (!active || !inactive) return { pass: true, reason: 'need both active and inactive tabs' }; const aBg = getComputedStyle(active).backgroundColor; const iBg = getComputedStyle(inactive).backgroundColor; return { pass: aBg !== iBg, activeBg: aBg, inactiveBg: iBg, note: 'Active tab should be visually distinct from inactive' }; }", "expect": { "pass": true } },
+        { "tool": "take_screenshot", "filePath": "T044-tabs-dark.png" }
+      ]
+    },
+    {
+      "id": "T045",
+      "description": "Ticket list page renders correctly in dark mode",
+      "implemented": false,
+      "featureIds": ["F032"],
+      "type": "visual",
+      "page": "/msp/tickets",
+      "steps": [
+        { "tool": "navigate_page", "url": "/msp/tickets" },
+        { "tool": "wait_for", "text": "Tickets" },
+        { "tool": "evaluate_script", "function": "() => { document.documentElement.classList.add('dark'); document.body.classList.add('dark'); document.documentElement.setAttribute('data-theme', 'dark'); return 'dark forced'; }" },
+        { "tool": "evaluate_script", "function": "() => { const whites = []; document.querySelectorAll('*').forEach(el => { const bg = getComputedStyle(el).backgroundColor; if (bg === 'rgb(255, 255, 255)' && el.offsetWidth > 50 && el.offsetHeight > 20) whites.push(el.tagName + '.' + el.className.split(' ').slice(0,2).join('.')); }); return { pass: whites.length < 3, whiteElements: whites.slice(0, 10), note: 'Large white elements indicate missed dark mode migration' }; }", "expect": { "pass": true } },
+        { "tool": "take_screenshot", "filePath": "T045-ticket-list-dark.png", "fullPage": true }
+      ]
+    },
+    {
+      "id": "T046",
+      "description": "Ticket detail page renders correctly in dark mode",
+      "implemented": false,
+      "featureIds": ["F032"],
+      "type": "visual",
+      "page": "/msp/tickets",
+      "steps": [
+        { "tool": "navigate_page", "url": "/msp/tickets" },
+        { "tool": "wait_for", "text": "Tickets" },
+        { "tool": "take_snapshot", "note": "Find first ticket link to click into detail" },
+        { "tool": "click", "uid": "RESOLVE_FROM_SNAPSHOT: first ticket row link" },
+        { "tool": "evaluate_script", "function": "async () => { await new Promise(r => setTimeout(r, 1000)); document.documentElement.classList.add('dark'); document.body.classList.add('dark'); document.documentElement.setAttribute('data-theme', 'dark'); return 'dark forced on detail page'; }" },
+        { "tool": "take_screenshot", "filePath": "T046-ticket-detail-dark.png", "fullPage": true }
+      ]
+    },
+    {
+      "id": "T047",
+      "description": "Project board view renders correctly in dark mode",
+      "implemented": false,
+      "featureIds": ["F033"],
+      "type": "visual",
+      "page": "/msp/projects",
+      "steps": [
+        { "tool": "navigate_page", "url": "/msp/projects" },
+        { "tool": "evaluate_script", "function": "async () => { await new Promise(r => setTimeout(r, 1000)); document.documentElement.classList.add('dark'); document.body.classList.add('dark'); document.documentElement.setAttribute('data-theme', 'dark'); return 'dark forced'; }" },
+        { "tool": "take_screenshot", "filePath": "T047-projects-dark.png", "fullPage": true }
+      ]
+    },
+    {
+      "id": "T048",
+      "description": "Billing page renders correctly in dark mode",
+      "implemented": false,
+      "featureIds": ["F034"],
+      "type": "visual",
+      "page": "/msp/billing",
+      "steps": [
+        { "tool": "navigate_page", "url": "/msp/billing" },
+        { "tool": "evaluate_script", "function": "async () => { await new Promise(r => setTimeout(r, 1000)); document.documentElement.classList.add('dark'); document.body.classList.add('dark'); document.documentElement.setAttribute('data-theme', 'dark'); return 'dark forced'; }" },
+        { "tool": "take_screenshot", "filePath": "T048-billing-dark.png", "fullPage": true }
+      ]
+    },
+    {
+      "id": "T049",
+      "description": "Calendar/scheduling view renders correctly in dark mode",
+      "implemented": false,
+      "featureIds": ["F035"],
+      "type": "visual",
+      "page": "/msp/scheduling",
+      "steps": [
+        { "tool": "navigate_page", "url": "/msp/scheduling" },
+        { "tool": "evaluate_script", "function": "async () => { await new Promise(r => setTimeout(r, 1000)); document.documentElement.classList.add('dark'); document.body.classList.add('dark'); document.documentElement.setAttribute('data-theme', 'dark'); return 'dark forced'; }" },
+        { "tool": "evaluate_script", "function": "() => { const cal = document.querySelector('.rbc-calendar, [class*=\"calendar\"]'); return { found: !!cal, note: 'Check calendar has dark background and readable labels in screenshot' }; }" },
+        { "tool": "take_screenshot", "filePath": "T049-scheduling-dark.png", "fullPage": true }
+      ]
+    },
+    {
+      "id": "T050",
+      "description": "Dashboard widgets and cards render correctly in dark mode",
+      "implemented": false,
+      "featureIds": ["F036"],
+      "type": "visual",
+      "page": "/msp",
+      "steps": [
+        { "tool": "navigate_page", "url": "/msp" },
+        { "tool": "wait_for", "text": "Dashboard" },
+        { "tool": "evaluate_script", "function": "() => { document.documentElement.classList.add('dark'); document.body.classList.add('dark'); document.documentElement.setAttribute('data-theme', 'dark'); return 'dark forced'; }" },
+        { "tool": "take_screenshot", "filePath": "T050-dashboard-dark.png", "fullPage": true }
+      ]
+    },
+    {
+      "id": "T051",
+      "description": "Document editor renders correctly in dark mode",
+      "implemented": false,
+      "featureIds": ["F037"],
+      "type": "visual",
+      "steps": [
+        { "tool": "navigate_page", "url": "/msp/tickets" },
+        { "tool": "wait_for", "text": "Tickets" },
+        { "tool": "take_snapshot", "note": "Find a ticket to open for editor access" },
+        { "tool": "click", "uid": "RESOLVE_FROM_SNAPSHOT: first ticket row" },
+        { "tool": "evaluate_script", "function": "async () => { await new Promise(r => setTimeout(r, 1500)); document.documentElement.classList.add('dark'); document.body.classList.add('dark'); document.documentElement.setAttribute('data-theme', 'dark'); return 'dark forced'; }" },
+        { "tool": "evaluate_script", "function": "() => { const editor = document.querySelector('.tiptap, .ProseMirror'); if (!editor) return { pass: true, reason: 'no editor on this page' }; const bg = getComputedStyle(editor).backgroundColor; const color = getComputedStyle(editor).color; return { pass: bg !== 'rgb(255, 255, 255)', bg, color }; }", "expect": { "pass": true } },
+        { "tool": "take_screenshot", "filePath": "T051-editor-dark.png" }
+      ]
+    },
+    {
+      "id": "T052",
+      "description": "Settings pages render correctly in dark mode",
+      "implemented": false,
+      "featureIds": ["F038"],
+      "type": "visual",
+      "page": "/msp/settings",
+      "steps": [
+        { "tool": "navigate_page", "url": "/msp/settings" },
+        { "tool": "wait_for", "text": "Settings" },
+        { "tool": "evaluate_script", "function": "() => { document.documentElement.classList.add('dark'); document.body.classList.add('dark'); document.documentElement.setAttribute('data-theme', 'dark'); return 'dark forced'; }" },
+        { "tool": "take_screenshot", "filePath": "T052-settings-dark.png", "fullPage": true }
+      ]
+    },
+    {
+      "id": "T053",
+      "description": "react-day-picker has dark background and visible day numbers",
+      "implemented": false,
+      "featureIds": ["F039"],
+      "type": "visual",
+      "steps": [
+        { "tool": "navigate_page", "url": "/msp/scheduling", "note": "Or any page with a date picker" },
+        { "tool": "evaluate_script", "function": "() => { document.documentElement.classList.add('dark'); document.body.classList.add('dark'); document.documentElement.setAttribute('data-theme', 'dark'); return 'dark forced'; }" },
+        { "tool": "take_snapshot", "note": "Find and click a date input to open the day picker" },
+        { "tool": "click", "uid": "RESOLVE_FROM_SNAPSHOT: date input or calendar icon" },
+        { "tool": "evaluate_script", "function": "async () => { await new Promise(r => setTimeout(r, 300)); const picker = document.querySelector('.rdp, [class*=\"day-picker\"], [class*=\"DayPicker\"]'); if (!picker) return { pass: false, reason: 'day picker not found' }; const bg = getComputedStyle(picker).backgroundColor; return { pass: bg !== 'rgb(255, 255, 255)', bg }; }", "expect": { "pass": true } },
+        { "tool": "take_screenshot", "filePath": "T053-day-picker-dark.png" }
+      ]
+    },
+    {
+      "id": "T054",
+      "description": "react-big-calendar has dark background and readable labels",
+      "implemented": false,
+      "featureIds": ["F040"],
+      "type": "visual",
+      "page": "/msp/scheduling",
+      "steps": [
+        { "tool": "navigate_page", "url": "/msp/scheduling" },
+        { "tool": "evaluate_script", "function": "async () => { await new Promise(r => setTimeout(r, 1000)); document.documentElement.classList.add('dark'); document.body.classList.add('dark'); document.documentElement.setAttribute('data-theme', 'dark'); return 'dark forced'; }" },
+        { "tool": "evaluate_script", "function": "() => { const cal = document.querySelector('.rbc-calendar'); if (!cal) return { pass: true, reason: 'big-calendar not found on this page' }; const bg = getComputedStyle(cal).backgroundColor; return { pass: bg !== 'rgb(255, 255, 255)', bg }; }", "expect": { "pass": true } },
+        { "tool": "take_screenshot", "filePath": "T054-big-calendar-dark.png" }
+      ]
+    },
+    {
+      "id": "T055",
+      "description": "Radix UI table borders visible in dark mode",
+      "implemented": false,
+      "featureIds": ["F041"],
+      "type": "visual",
+      "page": "/msp/tickets",
+      "steps": [
+        { "tool": "navigate_page", "url": "/msp/tickets" },
+        { "tool": "wait_for", "text": "Tickets" },
+        { "tool": "evaluate_script", "function": "() => { document.documentElement.classList.add('dark'); document.body.classList.add('dark'); document.documentElement.setAttribute('data-theme', 'dark'); return 'dark forced'; }" },
+        { "tool": "evaluate_script", "function": "() => { const table = document.querySelector('.rt-TableRoot'); if (!table) return { pass: true, reason: 'no Radix table found' }; const border = getComputedStyle(table).borderColor; return { pass: border !== 'rgb(0, 0, 0)' && border !== 'rgba(0, 0, 0, 0)', borderColor: border }; }", "expect": { "pass": true } },
+        { "tool": "take_screenshot", "filePath": "T055-radix-table-dark.png" }
+      ]
+    },
+    {
+      "id": "T056",
+      "description": "Mantine components respect dark color scheme",
+      "implemented": false,
+      "featureIds": ["F042"],
+      "type": "visual",
+      "steps": [
+        { "tool": "navigate_page", "url": "/msp" },
+        { "tool": "evaluate_script", "function": "() => { document.documentElement.classList.add('dark'); document.body.classList.add('dark'); document.documentElement.setAttribute('data-theme', 'dark'); return 'dark forced'; }" },
+        { "tool": "evaluate_script", "function": "() => { const mantine = document.querySelector('[data-mantine-color-scheme]'); if (!mantine) return { pass: true, reason: 'no Mantine elements on this page' }; return { pass: mantine.getAttribute('data-mantine-color-scheme') === 'dark', scheme: mantine.getAttribute('data-mantine-color-scheme') }; }", "expect": { "pass": true } }
+      ]
+    },
+    {
+      "id": "T057",
+      "description": "Tiptap editor has dark background and light text",
+      "implemented": false,
+      "featureIds": ["F043"],
+      "type": "visual",
+      "steps": [
+        { "tool": "navigate_page", "url": "/msp/tickets" },
+        { "tool": "take_snapshot" },
+        { "tool": "click", "uid": "RESOLVE_FROM_SNAPSHOT: first ticket row" },
+        { "tool": "evaluate_script", "function": "async () => { await new Promise(r => setTimeout(r, 1500)); document.documentElement.classList.add('dark'); document.body.classList.add('dark'); document.documentElement.setAttribute('data-theme', 'dark'); return 'dark forced'; }" },
+        { "tool": "evaluate_script", "function": "() => { const editor = document.querySelector('.tiptap, .ProseMirror'); if (!editor) return { pass: true, reason: 'no tiptap editor found' }; const bg = getComputedStyle(editor).backgroundColor; const fg = getComputedStyle(editor).color; const bgM = bg.match(/\\d+/g); const fgM = fg.match(/\\d+/g); if (!bgM || !fgM) return { pass: false, bg, fg }; const bgLum = (0.299*bgM[0] + 0.587*bgM[1] + 0.114*bgM[2]) / 255; const fgLum = (0.299*fgM[0] + 0.587*fgM[1] + 0.114*fgM[2]) / 255; return { pass: bgLum < 0.3 && fgLum > 0.6, bgLum, fgLum, bg, fg }; }", "expect": { "pass": true } },
+        { "tool": "take_screenshot", "filePath": "T057-tiptap-dark.png" }
+      ]
+    },
+    {
+      "id": "T058",
+      "description": "globals.css switch ::before uses CSS variable not hardcoded white",
+      "implemented": false,
+      "featureIds": ["F044"],
+      "type": "code-check",
+      "steps": [
+        { "tool": "grep", "file": "server/src/app/globals.css", "pattern": "switch.*::before[^}]*white", "expectMatch": false, "failMessage": "Switch ::before still uses hardcoded 'white'" }
+      ]
+    },
+    {
+      "id": "T059",
+      "description": "globals.css .switch-thumb uses CSS variable not hardcoded white",
+      "implemented": false,
+      "featureIds": ["F044"],
+      "type": "code-check",
+      "steps": [
+        { "tool": "grep", "file": "server/src/app/globals.css", "pattern": "switch-thumb[^}]*white", "expectMatch": false }
+      ]
+    },
+    {
+      "id": "T060",
+      "description": "globals.css .time-slot-working uses CSS variable not hardcoded white",
+      "implemented": false,
+      "featureIds": ["F048"],
+      "type": "code-check",
+      "steps": [
+        { "tool": "grep", "file": "server/src/app/globals.css", "pattern": "time-slot-working[^}]*white", "expectMatch": false }
+      ]
+    },
+    {
+      "id": "T061",
+      "description": "globals.css collaboration cursor uses CSS variable not #0d0d0d",
+      "implemented": false,
+      "featureIds": ["F045"],
+      "type": "code-check",
+      "steps": [
+        { "tool": "grep", "file": "server/src/app/globals.css", "pattern": "#0d0d0d", "expectMatch": false }
+      ]
+    },
+    {
+      "id": "T062",
+      "description": "Dashboard.module.css has no hardcoded hex colors",
+      "implemented": false,
+      "featureIds": ["F046"],
+      "type": "code-check",
+      "steps": [
+        { "tool": "grep", "file": "packages/ui/src/components/dashboard/Dashboard.module.css", "pattern": "#[0-9a-fA-F]{3,8}", "expectMatch": false, "failMessage": "Still has hardcoded hex colors" }
+      ]
+    },
+    {
+      "id": "T063",
+      "description": "TextEditor.module.css has no hardcoded hex colors",
+      "implemented": false,
+      "featureIds": ["F046"],
+      "type": "code-check",
+      "steps": [
+        { "tool": "grep", "file": "packages/ui/src/editor/TextEditor.module.css", "pattern": "#[0-9a-fA-F]{3,8}", "expectMatch": false }
+      ]
+    },
+    {
+      "id": "T064",
+      "description": "TicketDetails.module.css has no hardcoded hex colors",
+      "implemented": false,
+      "featureIds": ["F046"],
+      "type": "code-check",
+      "steps": [
+        { "tool": "grep", "file": "packages/tickets/src/components/ticket/TicketDetails.module.css", "pattern": "#[0-9a-fA-F]{3,8}", "expectMatch": false }
+      ]
+    },
+    {
+      "id": "T065",
+      "description": ".rt-TableRow:hover uses theme-aware color not rgba(0,0,0,0.05)",
+      "implemented": false,
+      "featureIds": ["F047"],
+      "type": "code-check",
+      "steps": [
+        { "tool": "grep", "file": "server/src/app/globals.css", "pattern": "rt-TableRow.*hover[^}]*rgba\\(0,\\s*0,\\s*0,\\s*0\\.05\\)", "expectMatch": false }
+      ]
+    },
+    {
+      "id": "T066",
+      "description": ".bg-dotted uses theme-aware gradient not hardcoded rgba",
+      "implemented": false,
+      "featureIds": ["F047"],
+      "type": "code-check",
+      "steps": [
+        { "tool": "grep", "file": "server/src/app/globals.css", "pattern": "bg-dotted[^}]*rgba\\(209,\\s*213,\\s*219", "expectMatch": false }
+      ]
+    },
+    {
+      "id": "T067",
+      "description": "Extension loading overlay gradient adapts to dark mode",
+      "implemented": false,
+      "featureIds": ["F049"],
+      "type": "visual",
+      "steps": [
+        { "tool": "navigate_page", "url": "/msp", "note": "Navigate to a page with extensions if available" },
+        { "tool": "evaluate_script", "function": "() => { document.documentElement.classList.add('dark'); document.body.classList.add('dark'); document.documentElement.setAttribute('data-theme', 'dark'); return 'dark forced'; }" },
+        { "tool": "evaluate_script", "function": "() => { const overlay = document.querySelector('[class*=\"loading-overlay\"], [class*=\"extension-loading\"]'); if (!overlay) return { pass: true, reason: 'no extension loading overlay visible (OK if no extensions loading)' }; const bg = getComputedStyle(overlay).background || getComputedStyle(overlay).backgroundColor; return { pass: !bg.includes('255, 255, 255'), bg }; }", "expect": { "pass": true } }
+      ]
+    },
+    {
+      "id": "T068",
+      "description": "No flash of white when loading any page in dark mode (hard refresh)",
+      "implemented": false,
+      "featureIds": ["F005", "F011"],
+      "type": "runtime",
+      "steps": [
+        { "tool": "navigate_page", "url": "/msp" },
+        { "tool": "wait_for", "text": "Dashboard" },
+        { "tool": "evaluate_script", "function": "() => { localStorage.setItem('theme', 'dark'); return 'set dark in localStorage'; }" },
+        { "tool": "navigate_page", "type": "reload", "ignoreCache": true },
+        { "tool": "evaluate_script", "function": "() => { const bg = getComputedStyle(document.body).backgroundColor; const cl = document.documentElement.className; return { hasDark: cl.includes('dark'), bodyBg: bg, note: 'If hasDark is true immediately after reload, no flash occurred' }; }", "expect": { "hasDark": true } },
+        { "tool": "take_screenshot", "filePath": "T068-no-flash-dark.png" }
+      ]
+    },
+    {
+      "id": "T069",
+      "description": "Theme switching is instant with no page reload",
+      "implemented": false,
+      "featureIds": ["F004", "F008"],
+      "type": "runtime",
+      "steps": [
+        { "tool": "navigate_page", "url": "/msp" },
+        { "tool": "wait_for", "text": "Dashboard" },
+        { "tool": "evaluate_script", "function": "() => { const start = performance.now(); document.documentElement.classList.remove('light'); document.documentElement.classList.add('dark'); document.body.classList.add('dark'); document.documentElement.setAttribute('data-theme', 'dark'); const elapsed = performance.now() - start; return { pass: elapsed < 100, elapsedMs: elapsed, note: 'Theme class switch should be <100ms' }; }", "expect": { "pass": true } },
+        { "tool": "evaluate_script", "function": "() => { return { reloaded: performance.navigation ? performance.navigation.type === 1 : false, note: 'Page should not have reloaded' }; }" }
+      ]
+    },
+    {
+      "id": "T070",
+      "description": "WCAG AA: Main body text meets 4.5:1 contrast in dark mode",
+      "implemented": false,
+      "featureIds": ["F019"],
+      "type": "runtime",
+      "steps": [
+        { "tool": "navigate_page", "url": "/msp" },
+        { "tool": "evaluate_script", "function": "() => { document.documentElement.classList.add('dark'); document.body.classList.add('dark'); document.documentElement.setAttribute('data-theme', 'dark'); return 'dark forced'; }" },
+        { "tool": "evaluate_script", "function": "() => { function relativeLuminance(r,g,b) { const [rs,gs,bs] = [r,g,b].map(c => { c /= 255; return c <= 0.03928 ? c/12.92 : Math.pow((c+0.055)/1.055, 2.4); }); return 0.2126*rs + 0.7152*gs + 0.0722*bs; } const mainEl = document.querySelector('main') || document.body; const fg = getComputedStyle(mainEl).color; const bg = getComputedStyle(mainEl).backgroundColor; const [fr,fg2,fb] = fg.match(/\\d+/g).map(Number); const [br,bg2,bb] = bg.match(/\\d+/g).map(Number); const l1 = relativeLuminance(fr,fg2,fb); const l2 = relativeLuminance(br,bg2,bb); const ratio = (Math.max(l1,l2)+0.05)/(Math.min(l1,l2)+0.05); return { pass: ratio >= 4.5, ratio: Math.round(ratio*100)/100, fg, bg }; }", "expect": { "pass": true }, "failMessage": "Body text contrast below WCAG AA 4.5:1" }
+      ]
+    },
+    {
+      "id": "T071",
+      "description": "WCAG AA: Secondary text meets 4.5:1 contrast in dark mode",
+      "implemented": false,
+      "featureIds": ["F019"],
+      "type": "runtime",
+      "steps": [
+        { "tool": "navigate_page", "url": "/msp" },
+        { "tool": "evaluate_script", "function": "() => { document.documentElement.classList.add('dark'); document.body.classList.add('dark'); document.documentElement.setAttribute('data-theme', 'dark'); return 'dark forced'; }" },
+        { "tool": "evaluate_script", "function": "() => { const secondary = document.querySelector('[class*=\"text-gray\"], [class*=\"text-secondary\"], [class*=\"text-muted\"]'); if (!secondary) return { pass: true, reason: 'no secondary text element found' }; function relLum(r,g,b) { const [rs,gs,bs] = [r,g,b].map(c => { c /= 255; return c <= 0.03928 ? c/12.92 : Math.pow((c+0.055)/1.055, 2.4); }); return 0.2126*rs + 0.7152*gs + 0.0722*bs; } const fg = getComputedStyle(secondary).color; const bg = getComputedStyle(secondary.closest('main') || document.body).backgroundColor; const [fr,fg2,fb] = fg.match(/\\d+/g).map(Number); const [br,bg2,bb] = bg.match(/\\d+/g).map(Number); const l1 = relLum(fr,fg2,fb); const l2 = relLum(br,bg2,bb); const ratio = (Math.max(l1,l2)+0.05)/(Math.min(l1,l2)+0.05); return { pass: ratio >= 4.5, ratio: Math.round(ratio*100)/100, fg, bg }; }", "expect": { "pass": true } }
+      ]
+    },
+    {
+      "id": "T072",
+      "description": "WCAG AA: Primary buttons meet 3:1 contrast in dark mode",
+      "implemented": false,
+      "featureIds": ["F024"],
+      "type": "runtime",
+      "steps": [
+        { "tool": "navigate_page", "url": "/msp" },
+        { "tool": "evaluate_script", "function": "() => { document.documentElement.classList.add('dark'); document.body.classList.add('dark'); document.documentElement.setAttribute('data-theme', 'dark'); return 'dark forced'; }" },
+        { "tool": "evaluate_script", "function": "() => { const btn = document.querySelector('button[class*=\"primary\"]'); if (!btn) return { pass: true, reason: 'no primary button found' }; function relLum(r,g,b) { const [rs,gs,bs] = [r,g,b].map(c => { c /= 255; return c <= 0.03928 ? c/12.92 : Math.pow((c+0.055)/1.055, 2.4); }); return 0.2126*rs + 0.7152*gs + 0.0722*bs; } const fg = getComputedStyle(btn).color; const bg = getComputedStyle(btn).backgroundColor; const [fr,fg2,fb] = fg.match(/\\d+/g).map(Number); const [br,bg2,bb] = bg.match(/\\d+/g).map(Number); const l1 = relLum(fr,fg2,fb); const l2 = relLum(br,bg2,bb); const ratio = (Math.max(l1,l2)+0.05)/(Math.min(l1,l2)+0.05); return { pass: ratio >= 3, ratio: Math.round(ratio*100)/100, fg, bg }; }", "expect": { "pass": true } }
+      ]
+    },
+    {
+      "id": "T073",
+      "description": "Focus rings visible in dark mode for interactive elements",
+      "implemented": false,
+      "featureIds": ["F022", "F024"],
+      "type": "visual",
+      "page": "/msp/settings",
+      "steps": [
+        { "tool": "navigate_page", "url": "/msp/settings" },
+        { "tool": "wait_for", "text": "Settings" },
+        { "tool": "evaluate_script", "function": "() => { document.documentElement.classList.add('dark'); document.body.classList.add('dark'); document.documentElement.setAttribute('data-theme', 'dark'); return 'dark forced'; }" },
+        { "tool": "press_key", "key": "Tab" },
+        { "tool": "press_key", "key": "Tab" },
+        { "tool": "press_key", "key": "Tab" },
+        { "tool": "evaluate_script", "function": "() => { const focused = document.activeElement; if (!focused || focused === document.body) return { pass: false, reason: 'no focused element' }; const outline = getComputedStyle(focused).outline; const boxShadow = getComputedStyle(focused).boxShadow; return { pass: outline !== 'none' || boxShadow !== 'none', outline, boxShadow, element: focused.tagName + '.' + focused.className.split(' ').slice(0,2).join('.') }; }", "expect": { "pass": true }, "failMessage": "No visible focus indicator in dark mode" },
+        { "tool": "take_screenshot", "filePath": "T073-focus-ring-dark.png" }
+      ]
+    },
+    {
+      "id": "T074",
+      "description": "Client portal layout has next-themes ThemeProvider",
+      "implemented": false,
+      "featureIds": ["F050"],
+      "type": "code-check",
+      "steps": [
+        { "tool": "grep", "file": "server/src/app/client-portal/ClientPortalLayoutClient.tsx", "pattern": "ThemeProvider|next-themes", "expectMatch": true, "failMessage": "Client portal layout missing ThemeProvider from next-themes" }
+      ]
+    },
+    {
+      "id": "T075",
+      "description": "Client portal main background is dark (not bg-gray-100) in dark mode",
+      "implemented": false,
+      "featureIds": ["F051"],
+      "type": "visual",
+      "page": "/client-portal",
+      "steps": [
+        { "tool": "navigate_page", "url": "/client-portal" },
+        { "tool": "evaluate_script", "function": "async () => { await new Promise(r => setTimeout(r, 1000)); document.documentElement.classList.add('dark'); document.body.classList.add('dark'); document.documentElement.setAttribute('data-theme', 'dark'); return 'dark forced'; }" },
+        { "tool": "evaluate_script", "function": "() => { const main = document.querySelector('main'); if (!main) return { pass: false, reason: 'no main element' }; const bg = getComputedStyle(main).backgroundColor; const isGray100 = bg === 'rgb(243, 244, 246)'; const isWhite = bg === 'rgb(255, 255, 255)'; return { pass: !isGray100 && !isWhite, backgroundColor: bg }; }", "expect": { "pass": true }, "failMessage": "Client portal still has light bg-gray-100 in dark mode" },
+        { "tool": "take_screenshot", "filePath": "T075-client-portal-dark-bg.png" }
+      ]
+    },
+    {
+      "id": "T076",
+      "description": "Client portal nav bar has dark background and light text in dark mode",
+      "implemented": false,
+      "featureIds": ["F051"],
+      "type": "visual",
+      "page": "/client-portal",
+      "steps": [
+        { "tool": "navigate_page", "url": "/client-portal" },
+        { "tool": "evaluate_script", "function": "async () => { await new Promise(r => setTimeout(r, 1000)); document.documentElement.classList.add('dark'); document.body.classList.add('dark'); document.documentElement.setAttribute('data-theme', 'dark'); return 'dark forced'; }" },
+        { "tool": "evaluate_script", "function": "() => { const nav = document.querySelector('nav'); if (!nav) return { pass: false, reason: 'no nav element' }; const bg = getComputedStyle(nav).backgroundColor; const m = bg.match(/\\d+/g); if (!m) return { pass: false, raw: bg }; const [r,g,b] = m.map(Number); const lum = (0.299*r + 0.587*g + 0.114*b) / 255; return { pass: lum < 0.3 || bg === 'rgba(0, 0, 0, 0)', luminance: lum, bg, note: 'transparent bg is OK if parent is dark' }; }", "expect": { "pass": true } },
+        { "tool": "take_screenshot", "filePath": "T076-client-portal-nav-dark.png" }
+      ]
+    },
+    {
+      "id": "T077",
+      "description": "generateBrandingStyles() emits .dark-scoped CSS block with inverted shade mapping",
+      "implemented": false,
+      "featureIds": ["F052", "F052b"],
+      "type": "code-check",
+      "steps": [
+        { "tool": "grep", "file": "packages/tenancy/src/lib/generateBrandingStyles.ts", "pattern": "\\.dark", "expectMatch": true, "failMessage": "generateBrandingStyles does not emit .dark-scoped CSS variables" }
+      ]
+    },
+    {
+      "id": "T077b",
+      "description": "BrandingProvider injects both unscoped (light) and .dark-scoped branded variables",
+      "implemented": false,
+      "featureIds": ["F052c"],
+      "type": "runtime",
+      "page": "/client-portal",
+      "steps": [
+        { "tool": "navigate_page", "url": "/client-portal" },
+        { "tool": "evaluate_script", "function": "async () => { await new Promise(r => setTimeout(r, 1000)); const style = document.querySelector('#tenant-branding-styles, #server-tenant-branding-styles'); if (!style) return { pass: false, reason: 'no branding style element found' }; const css = style.textContent || style.innerHTML; const hasDarkBlock = css.includes('.dark'); return { pass: hasDarkBlock, hasDarkBlock, cssLength: css.length }; }", "expect": { "pass": true }, "failMessage": "Branding style element does not include .dark scoped variables" }
+      ]
+    },
+    {
+      "id": "T078",
+      "description": "Client portal branded primary buttons readable on dark background (inverted shades applied)",
+      "implemented": false,
+      "featureIds": ["F052", "F052c"],
+      "type": "visual",
+      "page": "/client-portal",
+      "steps": [
+        { "tool": "navigate_page", "url": "/client-portal" },
+        { "tool": "evaluate_script", "function": "async () => { await new Promise(r => setTimeout(r, 1000)); document.documentElement.classList.add('dark'); document.body.classList.add('dark'); document.documentElement.setAttribute('data-theme', 'dark'); return 'dark forced'; }" },
+        { "tool": "evaluate_script", "function": "() => { const btn = document.querySelector('button[class*=\"primary\"], a[class*=\"primary\"]'); if (!btn) return { pass: true, reason: 'no branded button found' }; function relLum(r,g,b) { const [rs,gs,bs] = [r,g,b].map(c => { c /= 255; return c <= 0.03928 ? c/12.92 : Math.pow((c+0.055)/1.055, 2.4); }); return 0.2126*rs + 0.7152*gs + 0.0722*bs; } const fg = getComputedStyle(btn).color; const bg = getComputedStyle(btn).backgroundColor; const [fr,fg2,fb] = fg.match(/\\d+/g).map(Number); const [br,bg2,bb] = bg.match(/\\d+/g).map(Number); const ratio = (Math.max(relLum(fr,fg2,fb), relLum(br,bg2,bb))+0.05)/(Math.min(relLum(fr,fg2,fb), relLum(br,bg2,bb))+0.05); return { pass: ratio >= 3, ratio: Math.round(ratio*100)/100, fg, bg }; }", "expect": { "pass": true } },
+        { "tool": "take_screenshot", "filePath": "T078-client-branded-btn-dark.png" }
+      ]
+    },
+    {
+      "id": "T078b",
+      "description": "Client portal branded secondary elements maintain contrast in dark mode (inverted shades)",
+      "implemented": false,
+      "featureIds": ["F052", "F052c"],
+      "type": "visual",
+      "page": "/client-portal",
+      "steps": [
+        { "tool": "navigate_page", "url": "/client-portal" },
+        { "tool": "evaluate_script", "function": "async () => { await new Promise(r => setTimeout(r, 1000)); document.documentElement.classList.add('dark'); document.body.classList.add('dark'); document.documentElement.setAttribute('data-theme', 'dark'); return 'dark forced'; }" },
+        { "tool": "take_screenshot", "filePath": "T078b-client-branded-secondary-dark.png", "note": "Manually verify branded accent elements are readable with inverted shades" }
+      ]
+    },
+    {
+      "id": "T079",
+      "description": "Client portal auth pages have dark background and visible form fields",
+      "implemented": false,
+      "featureIds": ["F053"],
+      "type": "visual",
+      "page": "/auth/client-portal/signin",
+      "steps": [
+        { "tool": "navigate_page", "url": "/auth/client-portal/signin" },
+        { "tool": "evaluate_script", "function": "async () => { await new Promise(r => setTimeout(r, 1000)); document.documentElement.classList.add('dark'); document.body.classList.add('dark'); document.documentElement.setAttribute('data-theme', 'dark'); return 'dark forced'; }" },
+        { "tool": "evaluate_script", "function": "() => { const inputs = document.querySelectorAll('input'); let whiteInputs = 0; inputs.forEach(el => { if (getComputedStyle(el).backgroundColor === 'rgb(255, 255, 255)') whiteInputs++; }); return { pass: whiteInputs === 0, whiteInputs, totalInputs: inputs.length }; }", "expect": { "pass": true } },
+        { "tool": "take_screenshot", "filePath": "T079-client-auth-dark.png" }
+      ]
+    },
+    {
+      "id": "T080",
+      "description": "Client portal tickets list renders correctly in dark mode",
+      "implemented": false,
+      "featureIds": ["F054"],
+      "type": "visual",
+      "page": "/client-portal/tickets",
+      "steps": [
+        { "tool": "navigate_page", "url": "/client-portal/tickets" },
+        { "tool": "evaluate_script", "function": "async () => { await new Promise(r => setTimeout(r, 1000)); document.documentElement.classList.add('dark'); document.body.classList.add('dark'); document.documentElement.setAttribute('data-theme', 'dark'); return 'dark forced'; }" },
+        { "tool": "take_screenshot", "filePath": "T080-client-tickets-dark.png", "fullPage": true }
+      ]
+    },
+    {
+      "id": "T081",
+      "description": "Client portal billing/invoices renders correctly in dark mode",
+      "implemented": false,
+      "featureIds": ["F055"],
+      "type": "visual",
+      "page": "/client-portal/billing",
+      "steps": [
+        { "tool": "navigate_page", "url": "/client-portal/billing" },
+        { "tool": "evaluate_script", "function": "async () => { await new Promise(r => setTimeout(r, 1000)); document.documentElement.classList.add('dark'); document.body.classList.add('dark'); document.documentElement.setAttribute('data-theme', 'dark'); return 'dark forced'; }" },
+        { "tool": "take_screenshot", "filePath": "T081-client-billing-dark.png", "fullPage": true }
+      ]
+    },
+    {
+      "id": "T082",
+      "description": "Client portal approvals page renders correctly in dark mode",
+      "implemented": false,
+      "featureIds": ["F056"],
+      "type": "visual",
+      "page": "/client-portal/approvals",
+      "steps": [
+        { "tool": "navigate_page", "url": "/client-portal/approvals" },
+        { "tool": "evaluate_script", "function": "async () => { await new Promise(r => setTimeout(r, 1000)); document.documentElement.classList.add('dark'); document.body.classList.add('dark'); document.documentElement.setAttribute('data-theme', 'dark'); return 'dark forced'; }" },
+        { "tool": "take_screenshot", "filePath": "T082-client-approvals-dark.png", "fullPage": true }
+      ]
+    },
+    {
+      "id": "T083",
+      "description": "Client portal profile page renders correctly in dark mode",
+      "implemented": false,
+      "featureIds": ["F057"],
+      "type": "visual",
+      "page": "/client-portal/profile",
+      "steps": [
+        { "tool": "navigate_page", "url": "/client-portal/profile" },
+        { "tool": "evaluate_script", "function": "async () => { await new Promise(r => setTimeout(r, 1000)); document.documentElement.classList.add('dark'); document.body.classList.add('dark'); document.documentElement.setAttribute('data-theme', 'dark'); return 'dark forced'; }" },
+        { "tool": "take_screenshot", "filePath": "T083-client-profile-dark.png", "fullPage": true }
+      ]
+    },
+    {
+      "id": "T084",
+      "description": "Branding settings page has dark/light mode preview toggle",
+      "implemented": false,
+      "featureIds": ["F058"],
+      "type": "visual",
+      "page": "/msp/settings",
+      "steps": [
+        { "tool": "navigate_page", "url": "/msp/settings" },
+        { "tool": "wait_for", "text": "Settings" },
+        { "tool": "take_snapshot", "note": "Navigate to General/Branding tab and look for dark/light preview toggle" },
+        { "tool": "evaluate_script", "function": "() => { const toggle = document.querySelector('[data-automation-id*=\"branding-preview-theme\"], [aria-label*=\"preview\"][aria-label*=\"mode\"], [aria-label*=\"preview\"][aria-label*=\"theme\"]'); return { pass: !!toggle, found: !!toggle }; }", "expect": { "pass": true }, "failMessage": "No dark/light preview toggle found in branding settings" },
+        { "tool": "take_screenshot", "filePath": "T084-branding-preview-toggle.png" }
+      ]
+    },
+    {
+      "id": "T085",
+      "description": "Branding dark mode preview shows client portal with dark theme",
+      "implemented": false,
+      "featureIds": ["F058"],
+      "type": "visual",
+      "page": "/msp/settings",
+      "steps": [
+        { "tool": "navigate_page", "url": "/msp/settings" },
+        { "tool": "wait_for", "text": "Settings" },
+        { "tool": "take_snapshot", "note": "Navigate to branding tab" },
+        { "tool": "click", "uid": "RESOLVE_FROM_SNAPSHOT: dark mode preview toggle/button" },
+        { "tool": "evaluate_script", "function": "async () => { await new Promise(r => setTimeout(r, 500)); const preview = document.querySelector('[class*=\"preview\"], iframe[src*=\"client-portal\"]'); if (!preview) return { pass: false, reason: 'no preview element found' }; return { pass: true, note: 'Check screenshot for dark-themed preview' }; }", "expect": { "pass": true } },
+        { "tool": "take_screenshot", "filePath": "T085-branding-dark-preview.png" }
+      ]
+    },
+    {
+      "id": "T086",
+      "description": "Branding light mode preview shows client portal with light theme",
+      "implemented": false,
+      "featureIds": ["F058"],
+      "type": "visual",
+      "page": "/msp/settings",
+      "steps": [
+        { "tool": "navigate_page", "url": "/msp/settings" },
+        { "tool": "wait_for", "text": "Settings" },
+        { "tool": "take_snapshot" },
+        { "tool": "click", "uid": "RESOLVE_FROM_SNAPSHOT: light mode preview toggle/button" },
+        { "tool": "take_screenshot", "filePath": "T086-branding-light-preview.png" }
+      ]
+    },
+    {
+      "id": "T087",
+      "description": "Branding preview in dark mode shows tenant branded colors on dark background",
+      "implemented": false,
+      "featureIds": ["F058"],
+      "type": "visual",
+      "page": "/msp/settings",
+      "steps": [
+        { "tool": "navigate_page", "url": "/msp/settings" },
+        { "tool": "wait_for", "text": "Settings" },
+        { "tool": "take_snapshot" },
+        { "tool": "click", "uid": "RESOLVE_FROM_SNAPSHOT: dark mode preview toggle" },
+        { "tool": "evaluate_script", "function": "async () => { await new Promise(r => setTimeout(r, 500)); const preview = document.querySelector('[class*=\"preview\"], iframe[src*=\"client-portal\"]'); if (!preview) return { pass: false, reason: 'no preview' }; const brandedEl = preview.querySelector('[class*=\"primary\"], button') || preview; const bg = getComputedStyle(brandedEl).backgroundColor; return { pass: true, brandedBg: bg, note: 'Verify branded colors are visible on dark bg in screenshot' }; }", "expect": { "pass": true } },
+        { "tool": "take_screenshot", "filePath": "T087-branding-dark-branded-colors.png" }
+      ]
+    }
+  ]
+}

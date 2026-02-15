@@ -249,6 +249,8 @@ export const assetQuerySchema = z.object({
   search: z.string().optional(),
   agent_status: z.string().optional(),
   rmm_managed: z.boolean().optional(),
+  sort_by: z.string().optional(),
+  sort_direction: z.enum(['asc', 'desc']).optional(),
   include_extension_data: z.boolean().optional()
 });
 

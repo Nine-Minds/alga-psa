@@ -86,20 +86,20 @@ function getComplianceStatus(patchData: ReturnType<typeof getPatchData>): {
   color: string;
 } {
   if (!patchData) {
-    return { status: 'warning', label: 'Unknown', color: 'text-gray-500 bg-gray-100' };
+    return { status: 'warning', label: 'Unknown', color: 'text-gray-600 bg-gray-500/15' };
   }
 
   const totalPending = patchData.pendingOsPatches + patchData.pendingSoftwarePatches;
 
   if (patchData.failedPatches > 0) {
-    return { status: 'critical', label: 'Action Required', color: 'text-red-700 bg-red-100' };
+    return { status: 'critical', label: 'Action Required', color: 'text-red-600 bg-red-500/15' };
   } else if (totalPending > 10) {
-    return { status: 'warning', label: 'Updates Available', color: 'text-amber-700 bg-amber-100' };
+    return { status: 'warning', label: 'Updates Available', color: 'text-amber-600 bg-amber-500/15' };
   } else if (totalPending > 0) {
-    return { status: 'warning', label: 'Minor Updates', color: 'text-blue-700 bg-blue-100' };
+    return { status: 'warning', label: 'Minor Updates', color: 'text-blue-600 bg-blue-500/15' };
   }
 
-  return { status: 'compliant', label: 'Up to Date', color: 'text-emerald-700 bg-emerald-100' };
+  return { status: 'compliant', label: 'Up to Date', color: 'text-emerald-600 bg-emerald-500/15' };
 }
 
 /**
@@ -157,7 +157,7 @@ export function AssetPatchStatusSection({ asset, className = '' }: AssetPatchSta
             {/* OS Patches */}
             <div className="flex items-start gap-3">
               <div className={`p-2 rounded-lg ${
-                patchData.pendingOsPatches > 0 ? 'bg-amber-100' : 'bg-emerald-100'
+                patchData.pendingOsPatches > 0 ? 'bg-amber-500/15' : 'bg-emerald-500/15'
               }`}>
                 {patchData.pendingOsPatches > 0 ? (
                   <AlertCircle className="h-4 w-4 text-amber-600" />
@@ -175,7 +175,7 @@ export function AssetPatchStatusSection({ asset, className = '' }: AssetPatchSta
             {/* Software Patches */}
             <div className="flex items-start gap-3">
               <div className={`p-2 rounded-lg ${
-                patchData.pendingSoftwarePatches > 0 ? 'bg-blue-100' : 'bg-emerald-100'
+                patchData.pendingSoftwarePatches > 0 ? 'bg-blue-500/15' : 'bg-emerald-500/15'
               }`}>
                 {patchData.pendingSoftwarePatches > 0 ? (
                   <AlertCircle className="h-4 w-4 text-blue-600" />
@@ -193,7 +193,7 @@ export function AssetPatchStatusSection({ asset, className = '' }: AssetPatchSta
             {/* Failed Patches */}
             {patchData.failedPatches > 0 && (
               <div className="flex items-start gap-3">
-                <div className="p-2 rounded-lg bg-red-100">
+                <div className="p-2 rounded-lg bg-red-500/15">
                   <AlertCircle className="h-4 w-4 text-red-600" />
                 </div>
                 <div>
@@ -206,7 +206,7 @@ export function AssetPatchStatusSection({ asset, className = '' }: AssetPatchSta
 
             {/* Last Scan */}
             <div className="flex items-start gap-3">
-              <div className="p-2 rounded-lg bg-gray-100">
+              <div className="p-2 rounded-lg bg-gray-500/15">
                 <Clock className="h-4 w-4 text-gray-600" />
               </div>
               <div>
@@ -232,8 +232,8 @@ export function AssetPatchStatusSection({ asset, className = '' }: AssetPatchSta
                 </div>
                 <span className={`inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full ${
                   patchData.antivirusStatus === 'good' || patchData.antivirusStatus === 'active'
-                    ? 'bg-emerald-100 text-emerald-700'
-                    : 'bg-amber-100 text-amber-700'
+                    ? 'bg-emerald-500/15 text-emerald-600'
+                    : 'bg-amber-500/15 text-amber-600'
                 }`}>
                   {patchData.antivirusStatus || 'Unknown'}
                 </span>

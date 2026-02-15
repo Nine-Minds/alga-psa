@@ -1,0 +1,7 @@
+export const DESIGNER_CANVAS_WIDTH = 816;
+export const DESIGNER_CANVAS_HEIGHT = 1056;
+
+export const DESIGNER_CANVAS_BOUNDS = {
+  width: DESIGNER_CANVAS_WIDTH,
+  height: DESIGNER_CANVAS_HEIGHT,
+};

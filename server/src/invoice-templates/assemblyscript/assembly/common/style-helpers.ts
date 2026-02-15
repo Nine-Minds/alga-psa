@@ -3,9 +3,12 @@ import { LayoutElement, ElementStyle } from "../types";
 // Helper class for partial style definitions
 export class PartialStyle {
   width: string | null = null;
+  height: string | null = null;
   textAlign: string | null = null;
   fontWeight: string | null = null;
   marginTop: string | null = null;
+  marginLeft: string | null = null;
+  marginRight: string | null = null;
   paddingLeft: string | null = null;
   paddingRight: string | null = null;
   paddingTop: string | null = null;
@@ -20,9 +23,12 @@ export class PartialStyle {
 export function instantiateStyle(partial: PartialStyle): ElementStyle {
   const style = new ElementStyle();
   style.width = partial.width;
+  style.height = partial.height;
   style.textAlign = partial.textAlign;
   style.fontWeight = partial.fontWeight;
   style.marginTop = partial.marginTop;
+  style.marginLeft = partial.marginLeft;
+  style.marginRight = partial.marginRight;
   style.paddingLeft = partial.paddingLeft;
   style.paddingRight = partial.paddingRight;
   style.paddingTop = partial.paddingTop;

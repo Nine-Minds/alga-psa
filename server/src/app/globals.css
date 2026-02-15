@@ -109,6 +109,109 @@ body,
     margin: 0;
 }
 
+body {
+    background-color: rgb(var(--color-background));
+    color: rgb(var(--color-text-900));
+}
+
+.dark .bg-white {
+    background-color: rgb(var(--color-card)) !important;
+}
+
+.dark .bg-gray-50 {
+    background-color: rgb(var(--color-border-50)) !important;
+}
+
+.dark .bg-gray-100 {
+    background-color: rgb(var(--color-border-100)) !important;
+}
+
+.dark .bg-gray-200 {
+    background-color: rgb(var(--color-border-200)) !important;
+}
+
+.dark .hover\:bg-gray-50:hover,
+.dark .hover\:bg-slate-50:hover {
+    background-color: rgb(var(--color-border-50)) !important;
+}
+
+.dark .hover\:bg-gray-100:hover,
+.dark .hover\:bg-slate-100:hover {
+    background-color: rgb(var(--color-border-100)) !important;
+}
+
+.dark .hover\:bg-gray-200:hover,
+.dark .hover\:bg-slate-200:hover {
+    background-color: rgb(var(--color-border-200)) !important;
+}
+
+.dark .focus\:bg-gray-100:focus,
+.dark .focus\:bg-slate-100:focus {
+    background-color: rgb(var(--color-border-100)) !important;
+}
+
+.dark .text-gray-900,
+.dark .text-slate-900 {
+    color: rgb(var(--color-text-900)) !important;
+}
+
+.dark .text-gray-800,
+.dark .text-slate-800 {
+    color: rgb(var(--color-text-800)) !important;
+}
+
+.dark .text-gray-700,
+.dark .text-slate-700 {
+    color: rgb(var(--color-text-700)) !important;
+}
+
+.dark .text-gray-600,
+.dark .text-slate-600 {
+    color: rgb(var(--color-text-600)) !important;
+}
+
+.dark .text-gray-500,
+.dark .text-slate-500 {
+    color: rgb(var(--color-text-500)) !important;
+}
+
+.dark .border-gray-200,
+.dark .border-slate-200 {
+    border-color: rgb(var(--color-border-200)) !important;
+}
+
+.dark .border-gray-100,
+.dark .border-slate-100 {
+    border-color: rgb(var(--color-border-100)) !important;
+}
+
+.dark header {
+    background-color: rgb(var(--color-background)) !important;
+    border-color: rgb(var(--color-border-200)) !important;
+}
+
+.dark main {
+    background-color: rgb(var(--color-background));
+}
+
+.dark input,
+.dark textarea,
+.dark select {
+    background-color: rgb(var(--color-border-50));
+    color: rgb(var(--color-text-900));
+    border-color: rgb(var(--color-border-200));
+}
+
+.dark input::placeholder,
+.dark textarea::placeholder {
+    color: rgb(var(--color-text-500));
+}
+
+.dark input[type="checkbox"],
+.dark input[type="radio"] {
+    accent-color: rgb(var(--color-primary-500));
+}
+
 /* Add placeholder styles */
 ::placeholder,
 [data-placeholder] {
@@ -175,6 +278,8 @@ body,
 
 .dark {
     --background: 0, 0, 0;
+    --color-background: 0 0 0;
+    --color-card: 15 23 42;
 
     /* Border radius tokens */
     --radius-sm: 4px;
@@ -190,9 +295,26 @@ body,
     --badge-info-bg: 30 58 138;         /* blue-900 for dark mode */
     --badge-info-text: 191 219 254;     /* blue-200 */
     --badge-info-border: 30 64 175;     /* blue-800 */
-    --badge-warning-bg: 120 53 15;      /* amber-900 for dark mode */
-    --badge-warning-text: 253 230 138;  /* amber-200 */
-    --badge-warning-border: 146 64 14;  /* amber-800 */
+    --badge-warning-bg: 69 26 3;         /* orange-950 — less brown */
+    --badge-warning-text: 253 186 116;  /* orange-300 — warm but not yellow */
+    --badge-warning-border: 124 45 18;  /* orange-900 */
+    --badge-success-bg: 20 83 45;       /* green-900 for dark mode */
+    --badge-success-text: 134 239 172;  /* green-300 — muted */
+    --badge-success-border: 22 101 52;  /* green-800 */
+    --badge-error-bg: 127 29 29;        /* red-900 for dark mode */
+    --badge-error-text: 254 202 202;    /* red-200 */
+    --badge-error-border: 153 27 27;    /* red-800 */
+    --badge-default-bg: 30 41 59;       /* slate-800 for dark mode */
+    --badge-default-text: 203 213 225;  /* slate-300 */
+    --badge-default-border: 51 65 85;   /* slate-700 */
+
+    /* STATUS COLORS */
+    --color-status-success: 74 222 128; /* green-400 */
+    --color-status-success-foreground: 15 23 42;
+    --color-status-warning: 251 191 36; /* amber-400 */
+    --color-status-warning-foreground: 15 23 42;
+    --color-status-error: 248 113 113; /* red-400 */
+    --color-status-error-foreground: 15 23 42;
 
     /* BORDER COLOR */
     --color-border-base: 100 116 139;
@@ -219,6 +341,9 @@ body,
     --color-text-700: 226 232 240;
     --color-text-800: 241 245 249;
     --color-text-900: 248 250 252;
+
+    /* Switch */
+    --color-switch-thumb: 248 250 252;
 
     /* MAIN COLORS */
     /* Purple (#8a4dea) */
@@ -261,16 +386,23 @@ body,
     --color-destructive: 220 38 38; /* red-600 */
     --color-destructive-foreground: 254 226 226; /* red-100 */
 
+    /* TABLE ROW COLORS */
+    --color-table-row-alt: 30 33 52;              /* dark slate with purple-blue tint */
+    --color-table-hover: 32 22 46;               /* ~primary purple at 15% over dark bg */
+    --color-table-selected: 43 27 58;            /* ~primary purple at 22% over dark bg */
+    --color-table-status-approved: 10 30 20;     /* muted dark green */
+    --color-table-status-warning: 35 25 10;      /* muted dark amber */
+
     /* Sidebar Colors  */
-    --color-sidebar-bg: #1b1a1a;
+    --color-sidebar-bg: #0f172a;
     --color-sidebar-text: #f5f5f5;
-    --color-sidebar-hover: #808080;
-    --color-sidebar-icon: #909090;
+    --color-sidebar-hover: #1e293b;
+    --color-sidebar-icon: #94a3b8;
 
 
     /* SubMenu Colors  */
-    --color-submenu-bg: #D0D5DD;
-    --color-submenu-text: #000000;
+    --color-submenu-bg: #1e293b;
+    --color-submenu-text: #f5f5f5;
     --color-submenu-hover: #808080;
     --color-submenu-icon: #909090;
 
@@ -281,6 +413,8 @@ body,
 
 .light {
     --background: 255, 255, 255;
+    --color-background: 255 255 255;
+    --color-card: 255 255 255;
 
     /* Border radius tokens */
     --radius-sm: 4px;
@@ -299,6 +433,23 @@ body,
     --badge-warning-bg: 254 243 199;    /* amber-100 */
     --badge-warning-text: 146 64 14;    /* amber-800 */
     --badge-warning-border: 253 230 138; /* amber-200 */
+    --badge-success-bg: 220 252 231;    /* green-100 */
+    --badge-success-text: 22 101 52;    /* green-800 */
+    --badge-success-border: 187 247 208; /* green-200 */
+    --badge-error-bg: 254 226 226;      /* red-100 */
+    --badge-error-text: 153 27 27;      /* red-800 */
+    --badge-error-border: 254 202 202;  /* red-200 */
+    --badge-default-bg: 241 245 249;    /* slate-100 */
+    --badge-default-text: 51 65 85;     /* slate-700 */
+    --badge-default-border: 226 232 240; /* slate-200 */
+
+    /* STATUS COLORS */
+    --color-status-success: 34 197 94; /* green-500 */
+    --color-status-success-foreground: 255 255 255;
+    --color-status-warning: 245 158 11; /* amber-500 */
+    --color-status-warning-foreground: 255 255 255;
+    --color-status-error: 239 68 68; /* red-500 */
+    --color-status-error-foreground: 255 255 255;
 
     /* BORDER COLOR */
     --color-border-base: 148 163 184;
@@ -325,6 +476,16 @@ body,
     --color-text-700: 51 65 85;
     --color-text-800: 30 41 59;
     --color-text-900: 15 23 42;
+
+    /* Switch */
+    --color-switch-thumb: 255 255 255;
+
+    /* TABLE ROW COLORS */
+    --color-table-row-alt: 248 250 252;           /* slate-50, matches current */
+    --color-table-hover: 246 240 254;             /* light purple, matches current primary-50 */
+    --color-table-selected: 237 226 253;          /* primary-100 — slightly stronger purple than hover */
+    --color-table-status-approved: 240 253 244;   /* green-50 */
+    --color-table-status-warning: 255 237 213;    /* orange-100 */
 
     /* MAIN COLORS */
     /* Purple (#8a4dea) */
@@ -385,10 +546,35 @@ body,
 
 }
 
+.light,
+.dark {
+    --alga-bg: rgb(var(--color-background));
+    --alga-fg: rgb(var(--color-text-900));
+    --alga-muted: rgb(var(--color-border-50));
+    --alga-muted-fg: rgb(var(--color-text-500));
+    --alga-primary: rgb(var(--color-primary-500));
+    --alga-primary-foreground: rgb(var(--color-primary-50));
+    --alga-primary-light: rgb(var(--color-primary-200));
+    --alga-secondary: rgb(var(--color-secondary-500));
+    --alga-secondary-foreground: rgb(var(--color-secondary-50));
+    --alga-border: rgb(var(--color-border-200));
+    --alga-ring: 0 0% 0%;
+    --alga-radius: var(--radius-lg);
+    --alga-accent: rgb(var(--color-accent-500));
+    --alga-accent-foreground: rgb(var(--color-accent-50));
+    --alga-primary-soft: rgb(var(--color-primary-50));
+    --alga-primary-soft-fg: rgb(var(--color-primary-700));
+    --alga-primary-soft-hover: rgb(var(--color-primary-100));
+    --alga-primary-border: rgb(var(--color-primary-300));
+    --alga-danger: rgb(var(--color-status-error));
+    --alga-warning: rgb(var(--color-status-warning));
+    --alga-success: rgb(var(--color-status-success));
+}
+
 /* Give a remote user a caret */
 .collaboration-cursor__caret {
-    border-left: 1px solid #0d0d0d;
-    border-right: 1px solid #0d0d0d;
+    border-left: 1px solid rgb(var(--color-text-900));
+    border-right: 1px solid rgb(var(--color-text-900));
     margin-left: -1px;
     margin-right: -1px;
     pointer-events: none;
@@ -399,7 +585,7 @@ body,
 /* Render the username above the caret */
 .collaboration-cursor__label {
     border-radius: 3px 3px 3px 0;
-    color: #0d0d0d;
+    color: rgb(var(--color-text-900));
     font-size: 0.75rem;
     font-style: normal;
     font-weight: 600;
@@ -425,7 +611,7 @@ body,
 }
 
 .bg-dotted {
-    background-image: radial-gradient(circle, rgba(209, 213, 219, 0.8) 1px, transparent 1px);
+    background-image: radial-gradient(circle, rgb(var(--color-border-300) / 0.6) 1px, transparent 1px);
     background-size: 20px 20px;
 }
 
@@ -440,7 +626,7 @@ body,
 /* Table styles */
 .radix-themes {
     --table-header-bg: transparent;
-    --table-row-hover: rgba(0, 0, 0, 0.05);
+    --table-row-hover: rgb(var(--color-border-100) / 0.6);
     width: 100%;
 }
 
@@ -470,7 +656,7 @@ body,
 }
 
 .rt-TableRow:hover {
-    background-color: rgba(0, 0, 0, 0.05);
+    background-color: rgb(var(--color-border-100) / 0.6);
 }
 
 .rt-TableCell,
@@ -525,7 +711,7 @@ body,
     display: block;
     width: 21px;
     height: 21px;
-    background-color: white;
+    background-color: rgb(var(--color-switch-thumb));
     border-radius: 9999px;
     position: absolute;
     top: 2px;
@@ -577,7 +763,7 @@ body,
   display: block;
   width: 21px;
   height: 21px;
-  background-color: white;
+  background-color: rgb(var(--color-switch-thumb));
   border-radius: 9999px;
   position: absolute;
   top: 2px;
@@ -636,7 +822,7 @@ body,
 
 /* Working hours styles */
 .time-slot-working {
-  background-color: white;
+  background-color: rgb(var(--color-card));
 }
 
 .time-slot-non-working {
@@ -682,6 +868,95 @@ body,
   --rdp-accent-color: rgb(var(--color-primary-100)) !important;
   --rdp-background-color: rgb(var(--color-primary-50)) !important;
   margin: 0 !important;
+}
+
+.dark .rdp {
+  --rdp-accent-color: rgb(var(--color-primary-400)) !important;
+  --rdp-background-color: rgb(var(--color-border-50)) !important;
+  background-color: rgb(var(--color-border-50));
+  color: rgb(var(--color-text-900));
+}
+
+.dark .rdp button {
+  color: rgb(var(--color-text-700));
+}
+
+.dark .rdp .rdp-day_selected,
+.dark .rdp .rdp-day_selected:focus-visible,
+.dark .rdp .rdp-day_selected:hover {
+  background-color: rgb(var(--color-primary-500));
+  color: rgb(var(--color-text-50));
+}
+
+/* react-big-calendar dark overrides */
+.dark .rbc-calendar {
+  background-color: rgb(var(--color-background));
+  color: rgb(var(--color-text-700));
+}
+
+.dark .rbc-toolbar button {
+  background-color: transparent;
+  color: rgb(var(--color-text-700));
+  border-color: rgb(var(--color-border-200));
+}
+
+.dark .rbc-toolbar button.rbc-active,
+.dark .rbc-toolbar button:hover {
+  background-color: rgb(var(--color-border-100));
+  color: rgb(var(--color-text-900));
+}
+
+.dark .rbc-header,
+.dark .rbc-time-header-content,
+.dark .rbc-time-content,
+.dark .rbc-time-view,
+.dark .rbc-month-view,
+.dark .rbc-agenda-view {
+  border-color: rgb(var(--color-border-200));
+}
+
+.dark .rbc-off-range-bg {
+  background-color: rgb(var(--color-border-50));
+}
+
+.dark .rbc-today {
+  background-color: rgb(var(--color-primary-500) / 0.1);
+}
+
+.dark .rbc-header {
+  background-color: rgb(var(--color-card));
+}
+
+.dark .rbc-time-header {
+  background-color: rgb(var(--color-card));
+}
+
+.dark .rbc-toolbar {
+  background-color: rgb(var(--color-background));
+}
+
+.dark .rbc-timeslot-group,
+.dark .rbc-time-slot,
+.dark .rbc-day-slot .rbc-time-slot,
+.dark .rbc-time-column,
+.dark .rbc-time-content,
+.dark .rbc-time-content > * + * > *,
+.dark .rbc-time-view,
+.dark .rbc-allday-cell,
+.dark .rbc-time-header.rbc-overflowing,
+.dark .rbc-time-header-content {
+  border-color: rgb(var(--color-border-100)) !important;
+}
+
+.dark .rbc-day-slot::after {
+  background: rgb(var(--color-border-100)) !important;
+}
+
+/* Tiptap / ProseMirror dark background */
+.dark .tiptap,
+.dark .ProseMirror {
+  background-color: rgb(var(--color-border-50));
+  color: rgb(var(--color-text-900));
 }
 
 .rdp-button:focus:not([disabled]) {

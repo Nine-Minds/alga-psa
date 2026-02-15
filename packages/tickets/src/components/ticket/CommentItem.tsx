@@ -268,7 +268,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
 
 
   return (
-    <div {...withDataAutomationId({ id: commentId })} className="rounded-lg p-2 mb-2 shadow-sm border border-gray-200 hover:border-gray-300 bg-white">
+    <div {...withDataAutomationId({ id: commentId })} className="rounded-lg p-2 mb-2 shadow-sm border border-gray-200 dark:border-[rgb(var(--color-border-200))] hover:border-gray-300 dark:hover:border-[rgb(var(--color-border-300))] bg-white dark:bg-[rgb(var(--color-card))]">
       <div className="flex items-start mb-1">
         <div className="mr-2">
           {/* Conditionally render UserAvatar or ContactAvatar */}
@@ -310,7 +310,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
           <div className="flex justify-between items-start">
             <div>
               <div className="flex items-center gap-2">
-                <p {...withDataAutomationId({ id: `${commentId}-author-name` })} className="font-semibold text-gray-800">
+                <p {...withDataAutomationId({ id: `${commentId}-author-name` })} className="font-semibold text-gray-800 dark:text-[rgb(var(--color-text-900))]">
                   {getAuthorName()}
                 </p>
                 {conversation.is_internal && (
@@ -339,13 +339,16 @@ const CommentItem: React.FC<CommentItemProps> = ({
               </div>
               <div className="flex flex-col">
                 {authorEmail && (
-                  <p {...withDataAutomationId({ id: `${commentId}-author-email` })} className="text-sm text-gray-600">
+                  <p
+                    {...withDataAutomationId({ id: `${commentId}-author-email` })}
+                    className="text-sm text-gray-600 dark:text-[rgb(var(--color-text-400))]"
+                  >
                     <a href={`mailto:${authorEmail}`} className="hover:text-indigo-600">
                       {authorEmail}
                     </a>
                   </p>
                 )}
-                <p {...withDataAutomationId({ id: `${commentId}-timestamp` })} className="text-xs text-gray-500">
+                <p {...withDataAutomationId({ id: `${commentId}-timestamp` })} className="text-xs text-gray-500 dark:text-[rgb(var(--color-text-300))]">
                   {conversation.created_at && (
                     <span>
                       {new Date(conversation.created_at).toLocaleString()}

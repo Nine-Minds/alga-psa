@@ -345,11 +345,11 @@ export function Dialog({
           aria-modal="true"
           aria-label={title || 'Dialog'}
           tabIndex={-1}
-          className={`relative bg-background rounded-lg shadow-lg w-full ${className || 'max-w-3xl'} max-h-[90%] flex flex-col outline-none focus-within:ring-2 focus-within:ring-primary-100 focus-within:ring-offset-2`}
+          className={`relative bg-[rgb(var(--color-card))] rounded-lg shadow-lg border border-[rgb(var(--color-border-200))] w-full ${className || 'max-w-3xl'} max-h-[90%] flex flex-col focus:outline-none focus-within:ring-2 focus-within:ring-primary-100 focus-within:ring-offset-2 focus-within:ring-offset-[rgb(var(--color-card))]`}
         >
           {/* Title bar */}
           {title ? (
-            <div className="px-6 pt-6 pb-4 border-b border-gray-100 rounded-t-lg">
+            <div className="px-6 pt-6 pb-4 border-b border-[rgb(var(--color-border-100))] rounded-t-lg">
               <h2 className="text-xl font-semibold select-none">{title}</h2>
             </div>
           ) : (
@@ -409,7 +409,7 @@ export function Dialog({
           ref={dialogRef}
           {...withDataAutomationId(updateDialog)}
           {...(!hasDescription ? { 'aria-describedby': undefined } : {})}
-          className={`fixed top-1/2 left-1/2 bg-background rounded-lg shadow-lg w-full ${className || 'max-w-3xl'} z-50 max-h-[90vh] flex flex-col outline-none focus-within:ring-2 focus-within:ring-primary-100 focus-within:ring-offset-2`}
+          className={`fixed top-1/2 left-1/2 bg-[rgb(var(--color-card))] rounded-lg shadow-lg border border-[rgb(var(--color-border-200))] w-full ${className || 'max-w-3xl'} z-50 focus-within:ring-2 focus-within:ring-primary-100 focus-within:ring-offset-2 focus-within:ring-offset-[rgb(var(--color-card))] max-h-[90vh] flex flex-col`}
           style={dialogStyle}
           onKeyDown={(e) => {
             // Handle Escape key manually when focus trap is disabled
@@ -445,7 +445,7 @@ export function Dialog({
           {/* Drag handle area - always present for consistent dragging */}
           <div
             data-drag-handle
-            className={`${draggable ? 'cursor-move hover:bg-muted' : ''} ${title ? 'px-6 pt-6 pb-4' : 'p-2'} ${title ? 'border-b border-gray-100' : ''} rounded-t-lg transition-colors`}
+            className={`${draggable ? 'cursor-move hover:bg-muted' : ''} ${title ? 'px-6 pt-6 pb-4' : 'p-2'} ${title ? 'border-b border-[rgb(var(--color-border-100))]' : ''} rounded-t-lg transition-colors`}
             onMouseDown={handleMouseDown}
           >
             {title ? (

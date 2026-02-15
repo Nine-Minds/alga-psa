@@ -2,7 +2,6 @@
 
 import { withAuth } from '@alga-psa/auth';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
-import { hasPermission } from '@alga-psa/auth/rbac';
 import { createTenantKnex, runWithTenant } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { generateGoogleCalendarAuthUrl, generateMicrosoftCalendarAuthUrl, generateCalendarNonce, encodeCalendarState } from '../utils/calendar/oauthHelpers';
@@ -14,7 +13,24 @@ import { MicrosoftCalendarAdapter } from '../services/calendar/providers/Microso
 import { CalendarSyncService } from '../services/calendar/CalendarSyncService';
 import { CalendarWebhookMaintenanceService } from '../services/calendar/CalendarWebhookMaintenanceService';
 import type { CalendarProviderConfig, CalendarSyncStatus, CalendarConflictResolution } from '@alga-psa/types';
-import type { IScheduleEntry } from '@alga-psa/types';
+
+function isClientPortalUser(user: any): boolean {
+  return user?.user_type === 'client';
+}
+
+async function getOwnedCalendarProviderOrNull(params: {
+  tenant: string;
+  userId: string;
+  calendarProviderId: string;
+  includeSecrets?: boolean;
+}): Promise<CalendarProviderConfig | null> {
+  const { tenant, userId, calendarProviderId, includeSecrets } = params;
+  const providerService = new CalendarProviderService();
+  const provider = await providerService.getProvider(calendarProviderId, tenant, { includeSecrets: includeSecrets ?? false });
+  if (!provider) return null;
+  if (provider.user_id !== userId) return null;
+  return provider;
+}
 
 /**
  * Initiate OAuth flow for calendar provider
@@ -30,26 +46,20 @@ export const initiateCalendarOAuth = withAuth(async (
   }
 ): Promise<{ success: true; authUrl: string; state: string } | { success: false; error: string }> => {
   try {
-    // RBAC: validate permission
-    const isUpdate = !!params.calendarProviderId;
-    const resource = 'system_settings';
-    const action = isUpdate ? 'update' : 'create';
-    const permitted = await hasPermission(user as any, resource, action);
-    if (!permitted) {
-      return { success: false, error: 'Forbidden: insufficient permissions' };
+    // Calendar integrations are user-owned. Any MSP user may initiate OAuth for their own provider.
+    if (isClientPortalUser(user)) {
+      return { success: false, error: 'Forbidden: calendar integrations are not available in the client portal' };
     }
 
     // If calendarProviderId is specified, ensure it belongs to the caller's tenant
     if (params.calendarProviderId) {
-      const { knex } = await createTenantKnex();
-      const exists = await withTransaction(knex, async (trx) => {
-        return await trx('calendar_providers')
-          .where({ id: params.calendarProviderId, tenant })
-          .first();
+      const owned = await getOwnedCalendarProviderOrNull({
+        tenant,
+        userId: user.user_id,
+        calendarProviderId: params.calendarProviderId,
+        includeSecrets: true
       });
-      if (!exists) {
-        return { success: false, error: 'Invalid calendarProviderId for tenant' };
-      }
+      if (!owned) return { success: false, error: 'Forbidden: calendar provider not found or not owned by user' };
     }
 
     const { provider, calendarProviderId, redirectUri: requestedRedirectUri, isPopup } = params;
@@ -58,13 +68,15 @@ export const initiateCalendarOAuth = withAuth(async (
     let existingRedirectUri: string | undefined;
     let existingProviderConfig: CalendarProviderConfig['provider_config'] | undefined;
     if (calendarProviderId) {
-      const providerService = new CalendarProviderService();
-      const providerRecord = await providerService.getProvider(calendarProviderId, tenant, { includeSecrets: true });
-      if (!providerRecord) {
-        return { success: false, error: 'Invalid calendarProviderId for tenant' };
-      }
-      existingRedirectUri = providerRecord.provider_config?.redirectUri;
-      existingProviderConfig = providerRecord.provider_config;
+      const owned = await getOwnedCalendarProviderOrNull({
+        tenant,
+        userId: user.user_id,
+        calendarProviderId,
+        includeSecrets: true
+      });
+      if (!owned) return { success: false, error: 'Forbidden: calendar provider not found or not owned by user' };
+      existingRedirectUri = owned.provider_config?.redirectUri;
+      existingProviderConfig = owned.provider_config;
     }
 
     let clientId: string | null = null;
@@ -208,9 +220,8 @@ export const createCalendarProvider = withAuth(async (
   provider?: CalendarProviderConfig;
   error?: string;
 }> => {
-  const permitted = await hasPermission(user as any, 'system_settings', 'create');
-  if (!permitted) {
-    return { success: false, error: 'Forbidden: insufficient permissions' };
+  if (isClientPortalUser(user)) {
+    return { success: false, error: 'Forbidden: calendar integrations are not available in the client portal' };
   }
 
   try {
@@ -275,7 +286,7 @@ export const createCalendarProvider = withAuth(async (
         if (existing) {
           return { success: true, provider: existing };
         }
-      } catch (secondaryError) {
+      } catch {
         // fall through to default error handling
       }
     }
@@ -303,10 +314,12 @@ export const updateCalendarProvider = withAuth(async (
   error?: string;
 }> => {
   try {
-    const permitted = await hasPermission(user as any, 'system_settings', 'update');
-    if (!permitted) {
-      return { success: false, error: 'Forbidden: insufficient permissions' };
+    if (isClientPortalUser(user)) {
+      return { success: false, error: 'Forbidden: calendar integrations are not available in the client portal' };
     }
+
+    const owned = await getOwnedCalendarProviderOrNull({ tenant, userId: user.user_id, calendarProviderId });
+    if (!owned) return { success: false, error: 'Forbidden: calendar provider not found or not owned by user' };
 
     const providerService = new CalendarProviderService();
     const provider = await providerService.updateProvider(calendarProviderId, tenant, params);
@@ -329,10 +342,12 @@ export const deleteCalendarProvider = withAuth(async (
   error?: string;
 }> => {
   try {
-    const permitted = await hasPermission(user as any, 'system_settings', 'delete');
-    if (!permitted) {
-      return { success: false, error: 'Forbidden: insufficient permissions' };
+    if (isClientPortalUser(user)) {
+      return { success: false, error: 'Forbidden: calendar integrations are not available in the client portal' };
     }
+
+    const owned = await getOwnedCalendarProviderOrNull({ tenant, userId: user.user_id, calendarProviderId });
+    if (!owned) return { success: false, error: 'Forbidden: calendar provider not found or not owned by user' };
 
     const providerService = new CalendarProviderService();
     await providerService.deleteProvider(calendarProviderId, tenant);
@@ -347,8 +362,8 @@ export const deleteCalendarProvider = withAuth(async (
  * Sync schedule entry to external calendar
  */
 export const syncScheduleEntryToCalendar = withAuth(async (
-  _user,
-  _ctx,
+  user,
+  { tenant },
   entryId: string,
   calendarProviderId: string
 ): Promise<{
@@ -356,6 +371,13 @@ export const syncScheduleEntryToCalendar = withAuth(async (
   error?: string;
 }> => {
   try {
+    if (isClientPortalUser(user)) {
+      return { success: false, error: 'Forbidden: calendar integrations are not available in the client portal' };
+    }
+
+    const owned = await getOwnedCalendarProviderOrNull({ tenant, userId: user.user_id, calendarProviderId });
+    if (!owned) return { success: false, error: 'Forbidden: calendar provider not found or not owned by user' };
+
     const syncService = new CalendarSyncService();
     const result = await syncService.syncScheduleEntryToExternal(entryId, calendarProviderId);
 
@@ -369,8 +391,8 @@ export const syncScheduleEntryToCalendar = withAuth(async (
  * Sync external calendar event to schedule entry
  */
 export const syncExternalEventToSchedule = withAuth(async (
-  _user,
-  _ctx,
+  user,
+  { tenant },
   externalEventId: string,
   calendarProviderId: string
 ): Promise<{
@@ -378,6 +400,13 @@ export const syncExternalEventToSchedule = withAuth(async (
   error?: string;
 }> => {
   try {
+    if (isClientPortalUser(user)) {
+      return { success: false, error: 'Forbidden: calendar integrations are not available in the client portal' };
+    }
+
+    const owned = await getOwnedCalendarProviderOrNull({ tenant, userId: user.user_id, calendarProviderId });
+    if (!owned) return { success: false, error: 'Forbidden: calendar provider not found or not owned by user' };
+
     const syncService = new CalendarSyncService();
     const result = await syncService.syncExternalEventToSchedule(externalEventId, calendarProviderId);
 
@@ -391,14 +420,33 @@ export const syncExternalEventToSchedule = withAuth(async (
  * Resolve calendar sync conflict
  */
 export const resolveCalendarConflict = withAuth(async (
-  _user,
-  _ctx,
+  user,
+  { tenant },
   resolution: CalendarConflictResolution
 ): Promise<{
   success: boolean;
   error?: string;
 }> => {
   try {
+    if (isClientPortalUser(user)) {
+      return { success: false, error: 'Forbidden: calendar integrations are not available in the client portal' };
+    }
+
+    // Ensure the mapping being resolved belongs to one of the caller's providers.
+    const { knex } = await createTenantKnex();
+    const mapping = await withTransaction(knex, async (trx) => {
+      return await trx('calendar_event_mappings as cem')
+        .join('calendar_providers as cp', function (this: any) {
+          this.on('cp.id', '=', 'cem.calendar_provider_id')
+            .andOn('cp.tenant', '=', 'cem.tenant');
+        })
+        .where('cem.tenant', tenant)
+        .andWhere('cem.id', resolution.mappingId)
+        .andWhere('cp.user_id', user.user_id)
+        .first(['cem.id']);
+    });
+    if (!mapping) return { success: false, error: 'Forbidden: mapping not found or not owned by user' };
+
     const syncService = new CalendarSyncService();
     const result = await syncService.resolveConflict(
       resolution.mappingId,
@@ -416,7 +464,7 @@ export const resolveCalendarConflict = withAuth(async (
  * Get sync status for a schedule entry
  */
 export const getScheduleEntrySyncStatus = withAuth(async (
-  _user,
+  user,
   { tenant },
   entryId: string
 ): Promise<{
@@ -425,14 +473,23 @@ export const getScheduleEntrySyncStatus = withAuth(async (
   error?: string;
 }> => {
   try {
+    if (isClientPortalUser(user)) {
+      return { success: false, error: 'Forbidden: calendar integrations are not available in the client portal' };
+    }
+
     const { knex } = await createTenantKnex();
 
-    // Get all mappings for this entry
+    // Get mappings for this entry, scoped to the caller's providers.
     const mappings = await withTransaction(knex, async (trx) => {
-      return await trx('calendar_event_mappings')
-        .where('schedule_entry_id', entryId)
-        .andWhere('tenant', tenant)
-        .select('*');
+      return await trx('calendar_event_mappings as cem')
+        .join('calendar_providers as cp', function (this: any) {
+          this.on('cp.id', '=', 'cem.calendar_provider_id')
+            .andOn('cp.tenant', '=', 'cem.tenant');
+        })
+        .where('cem.schedule_entry_id', entryId)
+        .andWhere('cem.tenant', tenant)
+        .andWhere('cp.user_id', user.user_id)
+        .select('cem.*');
     });
 
     // Get providers for each mapping
@@ -483,9 +540,8 @@ export const syncCalendarProvider = withAuth(async (
   error?: string;
 }> => {
   try {
-    const permitted = await hasPermission(user as any, 'system_settings', 'update');
-    if (!permitted) {
-      return { success: false, error: 'Forbidden: insufficient permissions' };
+    if (isClientPortalUser(user)) {
+      return { success: false, error: 'Forbidden: calendar integrations are not available in the client portal' };
     }
 
     const providerService = new CalendarProviderService();
@@ -493,6 +549,10 @@ export const syncCalendarProvider = withAuth(async (
 
     if (!provider) {
       return { success: false, error: 'Calendar provider not found' };
+    }
+
+    if (provider.user_id !== user.user_id) {
+      return { success: false, error: 'Forbidden: calendar provider not found or not owned by user' };
     }
 
     // Capture user context for background processing
@@ -658,12 +718,8 @@ export const retryMicrosoftCalendarSubscriptionRenewal = withAuth(async (
   providerId: string
 ): Promise<{ success: boolean; message?: string; error?: string }> => {
   try {
-    // RBAC: validate permission
-    const resource = 'system_settings';
-    const action = 'update';
-    const permitted = await hasPermission(user as any, resource, action);
-    if (!permitted) {
-      return { success: false, error: 'Forbidden: insufficient permissions' };
+    if (isClientPortalUser(user)) {
+      return { success: false, error: 'Forbidden: calendar integrations are not available in the client portal' };
     }
 
     // Verify provider belongs to user's tenant
@@ -674,6 +730,10 @@ export const retryMicrosoftCalendarSubscriptionRenewal = withAuth(async (
 
     if (!provider) {
       return { success: false, error: 'Provider not found or access denied' };
+    }
+
+    if (provider.user_id !== user.user_id) {
+      return { success: false, error: 'Forbidden: calendar provider not found or not owned by user' };
     }
 
     if (provider.provider_type !== 'microsoft') {

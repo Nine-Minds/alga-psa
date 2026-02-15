@@ -8,3 +8,4 @@ export * from './useIsCompactEvent';
 export * from './useResponsiveColumns';
 export * from './useTicketTimeTracking';
 export * from './useTruncationDetection';
+export * from './useAppTheme';

@@ -1,0 +1,80 @@
+[
+  {
+    "id": "T001",
+    "description": "Unit: sender email normalization extracts the correct domain (display-name formats, uppercase emails)",
+    "implemented": false,
+    "featureIds": ["F001"]
+  },
+  {
+    "id": "T002",
+    "description": "DB: domain uniqueness is enforced (attempting to assign the same domain to two different clients fails with a uniqueness error)",
+    "implemented": false,
+    "featureIds": ["F002"]
+  },
+  {
+    "id": "T003",
+    "description": "API: adding a domain that already belongs to another client returns a clear error (and identifies the owning client when possible)",
+    "implemented": false,
+    "featureIds": ["F003", "F005"]
+  },
+  {
+    "id": "T004",
+    "description": "API: listing/removing inbound email domains is tenant-scoped and restricted to users with client update permission",
+    "implemented": false,
+    "featureIds": ["F003"]
+  },
+  {
+    "id": "T005",
+    "description": "Integration: inbound email new-ticket path uses exact contact match when sender email matches an existing contact (baseline behavior)",
+    "implemented": false,
+    "featureIds": ["F006", "F007"]
+  },
+  {
+    "id": "T006",
+    "description": "Integration: inbound email does NOT domain-match when the sender domain is not explicitly configured (falls back to inbound defaults client_id)",
+    "implemented": false,
+    "featureIds": ["F006"]
+  },
+  {
+    "id": "T007",
+    "description": "Integration: inbound email domain-match sets ticket.client_id when sender has no exact contact match and sender domain is configured for a client",
+    "implemented": false,
+    "featureIds": ["F006", "F007"]
+  },
+  {
+    "id": "T008",
+    "description": "Integration: on configured domain match, ticket.contact_name_id is set to the client's validated default contact when configured",
+    "implemented": false,
+    "featureIds": ["F009", "F010"]
+  },
+  {
+    "id": "T009",
+    "description": "Integration: on configured domain match with no valid default contact, ticket.contact_name_id remains null",
+    "implemented": false,
+    "featureIds": ["F010"]
+  },
+  {
+    "id": "T010",
+    "description": "Integration: when configured domain match selects a different client than inbound defaults, defaults.location_id is not applied (location_id is null)",
+    "implemented": false,
+    "featureIds": ["F008"]
+  },
+  {
+    "id": "T011",
+    "description": "Integration: workflow action `resolve_inbound_ticket_context` returns targetClientId/targetContactId consistent with explicit-domain in-app logic",
+    "implemented": false,
+    "featureIds": ["F006"]
+  },
+  {
+    "id": "T012",
+    "description": "UI: client details screen can add/remove inbound email domains and shows validation errors for duplicates",
+    "implemented": false,
+    "featureIds": ["F004", "F005"]
+  },
+  {
+    "id": "T013",
+    "description": "UI: client details screen can set/clear default contact and persists it to client.properties.primary_contact_id",
+    "implemented": false,
+    "featureIds": ["F009"]
+  }
+]

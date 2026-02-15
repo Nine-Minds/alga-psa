@@ -137,8 +137,8 @@ export default function FolderSelectorModal({
           key={folder}
           type="button"
           onClick={() => setSelectedFolder(folder)}
-          className={`block w-full text-left px-3 py-2 text-sm rounded hover:bg-gray-100 ${
-            selectedFolder === folder ? 'bg-purple-50 text-purple-700 font-medium border-l-2 border-purple-500' : 'text-gray-700'
+          className={`block w-full text-left px-3 py-2 text-sm rounded hover:bg-gray-100 dark:hover:bg-[rgb(var(--color-border-100))] ${
+            selectedFolder === folder ? 'bg-purple-50 dark:bg-[rgb(var(--color-border-100))] text-purple-700 dark:text-[rgb(var(--color-primary-300))] font-medium border-l-2 border-purple-500 dark:border-[rgb(var(--color-primary-500))]' : 'text-gray-700 dark:text-[rgb(var(--color-text-400))]'
           }`}
           style={{ paddingLeft: `${(depth + 1) * 12 + 12}px` }}
         >
@@ -162,9 +162,9 @@ export default function FolderSelectorModal({
 
         {/* New Folder Creation Section */}
         {showNewFolderInput ? (
-          <div className="border border-purple-200 rounded-md p-4 bg-purple-50 space-y-3">
+          <div className="border border-purple-200 dark:border-[rgb(var(--color-border-200))] rounded-md p-4 bg-purple-50 dark:bg-[rgb(var(--color-border-50))] space-y-3">
             <div className="flex items-center justify-between">
-              <h4 className="text-sm font-medium text-gray-900 flex items-center gap-2">
+              <h4 className="text-sm font-medium text-gray-900 dark:text-[rgb(var(--color-text-900))] flex items-center gap-2">
                 <FolderPlus className="w-4 h-4 text-purple-600" />
                 {t('documents.folderSelector.createTitle', 'Create New Folder')}
               </h4>
@@ -252,7 +252,7 @@ export default function FolderSelectorModal({
           </div>
         )}
 
-        <div className="flex-1 overflow-y-auto border border-gray-200 rounded-md p-2 space-y-1">
+        <div className="flex-1 overflow-y-auto border border-gray-200 dark:border-[rgb(var(--color-border-200))] rounded-md p-2 space-y-1">
           {loading ? (
             <div className="text-center py-8 text-gray-500">
               {t('documents.folderSelector.loading', 'Loading folders...')}
@@ -263,8 +263,8 @@ export default function FolderSelectorModal({
               <button
                 type="button"
                 onClick={() => setSelectedFolder(null)}
-                className={`block w-full text-left px-3 py-2 text-sm rounded hover:bg-gray-100 ${
-                  selectedFolder === null ? 'bg-purple-50 text-purple-700 font-medium border-l-2 border-purple-500' : 'text-gray-700'
+                className={`block w-full text-left px-3 py-2 text-sm rounded hover:bg-gray-100 dark:hover:bg-[rgb(var(--color-border-100))] ${
+                  selectedFolder === null ? 'bg-purple-50 dark:bg-[rgb(var(--color-border-100))] text-purple-700 dark:text-[rgb(var(--color-primary-300))] font-medium border-l-2 border-purple-500 dark:border-[rgb(var(--color-primary-500))]' : 'text-gray-700 dark:text-[rgb(var(--color-text-400))]'
                 }`}
               >
                 <div className="flex items-center gap-2">

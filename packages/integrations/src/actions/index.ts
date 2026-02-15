@@ -99,6 +99,25 @@ export {
   resetGoogleProvidersToDisconnected
 } from './integrations/googleActions';
 export {
+  getTacticalRmmSettings,
+  saveTacticalRmmConfiguration,
+  testTacticalRmmConnection,
+  disconnectTacticalRmmIntegration,
+  getTacticalRmmConnectionSummary,
+  syncTacticalRmmOrganizations,
+  syncTacticalRmmDevices,
+  listTacticalRmmOrganizationMappings,
+  updateTacticalRmmOrganizationMapping,
+  getTacticalRmmWebhookInfo,
+  backfillTacticalRmmAlerts,
+  ingestTacticalRmmSoftwareInventory,
+  syncTacticalRmmSingleAgent,
+} from './integrations/tacticalRmmActions';
+export {
+  TACTICAL_WEBHOOK_HEADER_NAME,
+  type TacticalRmmAuthMode,
+} from '../lib/rmm/tacticalrmm/shared';
+export {
   getXeroConnectionStatus,
   getXeroIntegrationStatus,
   disconnectXero,

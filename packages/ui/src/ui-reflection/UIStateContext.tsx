@@ -2,11 +2,70 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
-import { PageState, UIComponent, DatePickerComponent } from './types';
-import { create } from 'jsondiffpatch';
+import { PageState, UIComponent } from './types';
 
-// Create a jsondiffpatch instance
-const jsondiffpatch = create();
+function deepEqualWithCycles(a: unknown, b: unknown, seen = new WeakMap<object, object>()): boolean {
+  if (Object.is(a, b)) {
+    return true;
+  }
+
+  if (a instanceof Date && b instanceof Date) {
+    return a.getTime() === b.getTime();
+  }
+
+  if (
+    typeof a !== 'object' || a === null ||
+    typeof b !== 'object' || b === null
+  ) {
+    return false;
+  }
+
+  const left = a as Record<string, unknown>;
+  const right = b as Record<string, unknown>;
+
+  const seenMatch = seen.get(left);
+  if (seenMatch) {
+    return seenMatch === right;
+  }
+  seen.set(left, right);
+
+  if (Array.isArray(left) || Array.isArray(right)) {
+    if (!Array.isArray(left) || !Array.isArray(right)) {
+      return false;
+    }
+
+    if (left.length !== right.length) {
+      return false;
+    }
+
+    for (let i = 0; i < left.length; i++) {
+      if (!deepEqualWithCycles(left[i], right[i], seen)) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  const leftKeys = Object.keys(left);
+  const rightKeys = Object.keys(right);
+
+  if (leftKeys.length !== rightKeys.length) {
+    return false;
+  }
+
+  for (const key of leftKeys) {
+    if (!Object.prototype.hasOwnProperty.call(right, key)) {
+      return false;
+    }
+
+    if (!deepEqualWithCycles(left[key], right[key], seen)) {
+      return false;
+    }
+  }
+
+  return true;
+}
 
 /**
  * Context value interface containing the page state and methods to manipulate it
@@ -334,10 +393,7 @@ export function UIStateProvider({ children, initialPageState }: {
       components: newRoot
     };
 
-    // use jsondiffpatch to compare the current state with the next state
-    // and only update if there are changes
-    const patch = jsondiffpatch.diff(pageState, nextState);
-    if (!patch) {
+    if (deepEqualWithCycles(pageState, nextState)) {
       console.log(`⚪ [UI-STATE] No changes detected for ${component.id}, skipping state update`);
       return;
     }

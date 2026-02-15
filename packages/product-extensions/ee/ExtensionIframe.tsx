@@ -21,8 +21,9 @@ function extractThemeVariables(): Record<string, string> {
   const computed = getComputedStyle(root);
 
   // Helper to get RGB variable and convert to hex
+  // Handles both space-separated (e.g. "255 255 255") and comma-separated (e.g. "0, 0, 0") values
   const rgbToHex = (rgb: string): string => {
-    const parts = rgb.trim().split(/\s+/).map(Number);
+    const parts = rgb.trim().split(/[\s,]+/).map(Number);
     if (parts.length !== 3 || parts.some(isNaN)) return rgb;
     return '#' + parts.map(n => n.toString(16).padStart(2, '0')).join('');
   };
@@ -55,16 +56,23 @@ function extractThemeVariables(): Record<string, string> {
 
     // Text colors
     '--alga-fg': rgbToHex(getVar('--color-text-900')),
+    '--alga-fg-muted': rgbToHex(getVar('--color-text-500')),
     '--alga-muted-fg': rgbToHex(getVar('--color-text-500')),
+    '--alga-fg-light': rgbToHex(getVar('--color-text-400')),
 
     // Border colors
     '--alga-border': rgbToHex(getVar('--color-border-200')),
     '--alga-border-light': rgbToHex(getVar('--color-border-100')),
 
     // Backgrounds
-    '--alga-bg': rgbToHex(getVar('--background') || '255 255 255'),
-    '--alga-card-bg': rgbToHex(getVar('--color-border-50')),
+    '--alga-bg': rgbToHex(getVar('--color-background') || getVar('--background') || '255 255 255'),
+    '--alga-card-bg': rgbToHex(getVar('--color-card') || getVar('--color-border-50')),
     '--alga-muted': rgbToHex(getVar('--color-border-100')),
+
+    // Table row colors
+    '--alga-row-even': rgbToHex(getVar('--color-border-50') || '249 250 251'),
+    '--alga-row-odd': rgbToHex(getVar('--color-background') || getVar('--background') || '255 255 255'),
+    '--alga-row-hover': rgbToHex(getVar('--color-primary-50') || '239 246 255'),
 
     // Soft variants (for outline/ghost/soft/dashed button hovers)
     '--alga-primary-soft': rgbToHex(getVar('--color-primary-50')),
@@ -140,8 +148,20 @@ export default function ExtensionIframe({ domain, extensionId, contentHash }: Pr
 
     const cleanupBridge = bootstrapIframe({ iframe, allowedOrigin, extensionId });
 
+    // Re-send theme when the host theme changes (e.g. dark mode toggle)
+    const observer = new MutationObserver((mutations) => {
+      for (const m of mutations) {
+        if (m.type === 'attributes' && (m.attributeName === 'class' || m.attributeName === 'style')) {
+          sendTheme();
+          break;
+        }
+      }
+    });
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class', 'style'] });
+
     return () => {
       window.removeEventListener('message', handleMessage);
+      observer.disconnect();
       cleanupBridge();
     };
   }, [src, domain, extensionId]);

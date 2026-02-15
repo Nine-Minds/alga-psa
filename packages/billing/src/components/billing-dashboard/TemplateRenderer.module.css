@@ -1,18 +1,18 @@
 .gridSection {
   margin-bottom: 20px;
-  border: 1px solid #ccc;
+  border: 1px solid rgb(var(--color-border-300));
   padding: 10px;
 }
 
 .listInvoiceItems {
   margin-top: 20px;
   margin-bottom: 20px;
-  border-top: 1px solid #eee;
+  border-top: 1px solid rgb(var(--color-border-100));
 }
 
 .listInvoiceItems > div {
   padding: 5px 0;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid rgb(var(--color-border-100));
 }
 
 .invoiceTemplate {
@@ -44,5 +44,5 @@
   grid-column: 1 / -1;
   font-weight: bold;
   padding: 8px 0;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid rgb(var(--color-border-100));
 }

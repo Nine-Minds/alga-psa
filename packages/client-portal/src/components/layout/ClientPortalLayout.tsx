@@ -23,7 +23,8 @@ import { getTenantSlugForTenant } from '@alga-psa/tenancy/actions';
 import { ClientExtensionsMenu } from '@alga-psa/client-portal/components';
 import { NotificationBell } from '@alga-psa/notifications/components';
 import { ActivityDrawerProvider } from '@alga-psa/workflows/components';
-import { DrawerProvider } from '@alga-psa/ui';
+import { DrawerProvider, DrawerOutlet } from '@alga-psa/ui';
+import { ThemeToggle } from '@alga-psa/ui/components/ThemeToggle';
 
 interface ClientPortalLayoutProps {
   children: ReactNode;
@@ -80,7 +81,7 @@ export default function ClientPortalLayout({ children }: ClientPortalLayoutProps
   return (
     <DrawerProvider>
       <ActivityDrawerProvider>
-        <div className="min-h-screen bg-gray-100 flex flex-col">
+        <div className="min-h-screen bg-background flex flex-col">
         {/* Navigation Bar */}
         <nav className="bg-transparent shadow-[0_5px_10px_rgba(0,0,0,0.1)]">
         <div className="w-full px-6">
@@ -172,6 +173,7 @@ export default function ClientPortalLayout({ children }: ClientPortalLayoutProps
             {/* Right side - Notifications and Profile */}
             <div className="flex items-center gap-2">
               <NotificationBell />
+              <ThemeToggle />
               <div className="flex items-center">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -223,6 +225,7 @@ export default function ClientPortalLayout({ children }: ClientPortalLayoutProps
             {children}
           </main>
         </div>
+        <DrawerOutlet />
       </ActivityDrawerProvider>
     </DrawerProvider>
   );

@@ -162,7 +162,11 @@ export function TicketDetails({
   const handleNewCommentContentChange = (content: PartialBlock[]) => {
     setNewCommentContent(content);
   };
-  const handleAddNewComment = async (isInternal: boolean, isResolution: boolean): Promise<boolean> => {
+  const handleAddNewComment = async (
+    isInternal: boolean,
+    isResolution: boolean,
+    _closeStatusId: string | null = null
+  ): Promise<boolean> => {
     const contentStr = JSON.stringify(newCommentContent);
     const hasContent = contentStr !== JSON.stringify([{
       type: "paragraph",

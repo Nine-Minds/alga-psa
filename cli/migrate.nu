@@ -1,9 +1,57 @@
 # Manage database migrations
+def --env load-migration-env [project_root: string] {
+    let server_dir = ($project_root | path join "server")
+    let env_files = [
+        ($server_dir | path join ".env")
+        ($server_dir | path join ".env.local")
+    ]
+
+    mut loaded_files = []
+    for env_file in $env_files {
+        if ($env_file | path exists) {
+            let env_vars = (open $env_file
+                | lines
+                | each { |line| $line | str trim }
+                | where { |line| not ($line | str starts-with '#') and ($line | str length) > 0 and ($line | str contains '=') }
+                | split column "=" -n 2
+                | rename key value
+                | update key { |it| $it.key | str trim }
+                | update value { |it|
+                    if ($it.value | is-empty) {
+                        ""
+                    } else {
+                        let raw_value = ($it.value | str trim)
+                        let is_quoted = (($raw_value | str starts-with '"') or ($raw_value | str starts-with "'"))
+                        let normalized = ($raw_value | str trim -c '"' | str trim -c "'")
+                        if $is_quoted {
+                            $normalized
+                        } else {
+                            $normalized | str replace -r '\s+#.*$' ''
+                        }
+                    }
+                }
+                | reduce -f {} { |item, acc| $acc | upsert $item.key $item.value })
+
+            if (($env_vars | columns | length) > 0) {
+                load-env $env_vars
+            }
+            $loaded_files = ($loaded_files | append ($env_file | path basename))
+        }
+    }
+
+    if (($loaded_files | length) > 0) {
+        print $"($env.ALGA_COLOR_CYAN)Loaded migration env from ($loaded_files | str join ', '); server/.env.local overrides server/.env.($env.ALGA_COLOR_RESET)"
+    } else {
+        print $"($env.ALGA_COLOR_YELLOW)No server env files found (expected server/.env and optionally server/.env.local). Using current shell env only.($env.ALGA_COLOR_RESET)"
+    }
+}
+
 export def run-migrate [
     action: string # The migration action to perform: up, latest, down, or status
     --ee           # Run combined CE + EE migrations (latest, down, status)
 ] {
     let project_root = find-project-root
+    load-migration-env $project_root
 
     if $ee {
         if not ($action in ["latest", "down", "status"]) {

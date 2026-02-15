@@ -6,11 +6,11 @@
  */
 
 // Provider types
-export type RmmProvider = 'ninjaone' | 'datto' | 'connectwise_automate';
+export type RmmProvider = 'ninjaone' | 'tacticalrmm' | 'datto' | 'connectwise_automate';
 export type RmmSyncStatus = 'pending' | 'syncing' | 'completed' | 'error';
 export type RmmAlertSeverity = 'critical' | 'major' | 'moderate' | 'minor' | 'none';
 export type RmmAlertStatus = 'active' | 'acknowledged' | 'resolved' | 'auto_resolved';
-export type RmmAgentStatus = 'online' | 'offline' | 'unknown';
+export type RmmAgentStatus = 'online' | 'offline' | 'overdue' | 'unknown';
 
 // Core RMM Integration
 export interface RmmIntegration {

@@ -11,6 +11,52 @@ const featureFlagsDisabled =
   typeof process.env.NEXT_PUBLIC_DISABLE_FEATURE_FLAGS === 'string' &&
   FEATURE_FLAG_DISABLE_VALUES.has(process.env.NEXT_PUBLIC_DISABLE_FEATURE_FLAGS.toLowerCase());
 
+const FEATURE_FLAG_TRUE_VALUES = new Set(['true', '1', 'yes', 'on']);
+const FEATURE_FLAG_FALSE_VALUES = new Set(['false', '0', 'no', 'off']);
+
+function parseForcedFeatureFlags(raw: string | undefined): Record<string, boolean | string> {
+  if (typeof raw !== 'string' || raw.trim().length === 0) return {};
+
+  // Format: "flag-a:true,flag-b:false,flag-c:variant"
+  const out: Record<string, boolean | string> = {};
+  for (const part of raw.split(',')) {
+    const trimmed = part.trim();
+    if (trimmed.length === 0) continue;
+
+    const idx = trimmed.indexOf(':');
+    if (idx <= 0) continue;
+
+    const key = trimmed.slice(0, idx).trim();
+    const valueRaw = trimmed.slice(idx + 1).trim();
+    if (!key) continue;
+
+    const lower = valueRaw.toLowerCase();
+    if (FEATURE_FLAG_TRUE_VALUES.has(lower)) {
+      out[key] = true;
+    } else if (FEATURE_FLAG_FALSE_VALUES.has(lower)) {
+      out[key] = false;
+    } else {
+      out[key] = valueRaw;
+    }
+  }
+  return out;
+}
+
+const forcedFeatureFlags = parseForcedFeatureFlags(process.env.NEXT_PUBLIC_FORCE_FEATURE_FLAGS);
+
+function getForcedFlagValue(flagKey: string): boolean | string | undefined {
+  return Object.prototype.hasOwnProperty.call(forcedFeatureFlags, flagKey) ? forcedFeatureFlags[flagKey] : undefined;
+}
+
+function coerceForcedBoolean(flagKey: string, value: boolean | string): boolean {
+  if (typeof value === 'boolean') return value;
+  const lower = value.toLowerCase();
+  if (FEATURE_FLAG_TRUE_VALUES.has(lower)) return true;
+  if (FEATURE_FLAG_FALSE_VALUES.has(lower)) return false;
+  console.warn(`[FeatureFlag] Forced flag value for ${flagKey} is not boolean-like (${value}); treating as enabled`);
+  return true;
+}
+
 interface FeatureFlagOptions {
   userId?: string;
   properties?: Record<string, any>;
@@ -24,8 +70,10 @@ export function useFeatureFlag(
 ): { enabled: boolean; loading: boolean; error: Error | null } {
   const { data: session } = useSession();
   const posthog = usePostHog();
+  const forcedValue = getForcedFlagValue(flagKey);
   const [enabled, setEnabled] = useState<boolean>(() => {
     if (featureFlagsDisabled) return true;
+    if (forcedValue !== undefined) return coerceForcedBoolean(flagKey, forcedValue);
     return typeof options.defaultValue === 'boolean' ? options.defaultValue : false;
   });
   const [loading, setLoading] = useState(!featureFlagsDisabled);
@@ -34,6 +82,13 @@ export function useFeatureFlag(
   useEffect(() => {
     if (featureFlagsDisabled) {
       setEnabled(true);
+      setLoading(false);
+      setError(null);
+      return;
+    }
+
+    if (forcedValue !== undefined) {
+      setEnabled(coerceForcedBoolean(flagKey, forcedValue));
       setLoading(false);
       setError(null);
       return;
@@ -94,7 +149,7 @@ export function useFeatureFlag(
     }
 
     return () => clearTimeout(timeoutId);
-  }, [posthog, flagKey, session?.user?.id, session?.user?.tenant, options.userId, options.pollInterval]);
+  }, [posthog, flagKey, session?.user?.id, session?.user?.tenant, options.userId, options.pollInterval, forcedValue]);
 
   return { enabled, loading, error };
 }
@@ -105,8 +160,13 @@ export function useFeatureFlagVariant(
 ): { variant: string | null; loading: boolean; error: Error | null } {
   const { data: session } = useSession();
   const posthog = usePostHog();
+  const forcedValue = getForcedFlagValue(flagKey);
   const [variant, setVariant] = useState<string | null>(
-    typeof options.defaultValue === 'string' ? options.defaultValue : null
+    forcedValue !== undefined
+      ? String(forcedValue)
+      : typeof options.defaultValue === 'string'
+        ? options.defaultValue
+        : null
   );
   const [loading, setLoading] = useState(!featureFlagsDisabled);
   const [error, setError] = useState<Error | null>(null);
@@ -114,6 +174,13 @@ export function useFeatureFlagVariant(
   useEffect(() => {
     if (featureFlagsDisabled) {
       setVariant(typeof options.defaultValue === 'string' ? options.defaultValue : null);
+      setLoading(false);
+      setError(null);
+      return;
+    }
+
+    if (forcedValue !== undefined) {
+      setVariant(String(forcedValue));
       setLoading(false);
       setError(null);
       return;
@@ -150,7 +217,7 @@ export function useFeatureFlagVariant(
       const interval = setInterval(checkVariant, options.pollInterval);
       return () => clearInterval(interval);
     }
-  }, [posthog, flagKey, session?.user?.id, options.userId, options.pollInterval, options.defaultValue]);
+  }, [posthog, flagKey, session?.user?.id, options.userId, options.pollInterval, options.defaultValue, forcedValue]);
 
   return { variant, loading, error };
 }
@@ -168,6 +235,13 @@ export function useFeatureFlags(): {
   useEffect(() => {
     if (featureFlagsDisabled) {
       setFlags({});
+      setLoading(false);
+      setError(null);
+      return;
+    }
+
+    if (Object.keys(forcedFeatureFlags).length > 0) {
+      setFlags(forcedFeatureFlags);
       setLoading(false);
       setError(null);
       return;
@@ -195,4 +269,3 @@ export function useFeatureFlags(): {
 
   return { flags, loading, error };
 }
-

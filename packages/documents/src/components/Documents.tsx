@@ -821,7 +821,7 @@ const Documents = ({
       <ReflectionContainer id={id} label="Documents">
         <div className="flex flex-col h-[calc(100vh-200px)]">
           {/* Header with Actions */}
-          <div className="border-b border-gray-200 p-4 flex items-center justify-between">
+          <div className="border-b border-gray-200 dark:border-[rgb(var(--color-border-200))] p-4 flex items-center justify-between">
             <div className="flex items-center gap-2">
 
               {/* New Document Button */}
@@ -870,7 +870,7 @@ const Documents = ({
           <div className="flex flex-1 overflow-hidden">
             {/* Collapsed Folders Button */}
             {isFoldersPaneCollapsed && (
-              <div className="flex-shrink-0 border-r border-gray-200 flex items-start p-2">
+              <div className="flex-shrink-0 border-r border-gray-200 dark:border-[rgb(var(--color-border-200))] flex items-start p-2">
                 <button
                   onClick={() => setIsFoldersPaneCollapsed(false)}
                   className="p-1 hover:bg-gray-100 rounded"
@@ -883,7 +883,7 @@ const Documents = ({
 
             {/* Folder Navigation Sidebar */}
             {!isFoldersPaneCollapsed && (
-              <div className="w-64 flex-shrink-0 border-r border-gray-200">
+              <div className="w-64 flex-shrink-0 border-r border-gray-200 dark:border-[rgb(var(--color-border-200))]">
                 <FolderTreeView
                   key={folderTreeKey}
                   selectedFolder={currentFolder}
@@ -901,7 +901,7 @@ const Documents = ({
             <div className="flex-1 flex flex-col overflow-hidden">
 
             {showUpload && (
-              <div ref={uploadFormRef} className="m-4 p-4 border border-gray-200 rounded-md bg-white">
+              <div ref={uploadFormRef} className="m-4 p-4 border border-gray-200 dark:border-[rgb(var(--color-border-200))] rounded-md bg-white dark:bg-[rgb(var(--color-card))]">
                 <DocumentUpload
                   id={`${id}-upload`}
                   userId={userId}
@@ -1029,7 +1029,7 @@ const Documents = ({
 
             {/* Pagination */}
             {documentsToDisplay.length > 0 && totalPages > 1 && (
-              <div className="border-t border-gray-200 p-4">
+              <div className="border-t border-gray-200 dark:border-[rgb(var(--color-border-200))] p-4">
                 <DocumentsPagination
                   id={`${id}-pagination`}
                   currentPage={currentPage}
@@ -1338,7 +1338,7 @@ const Documents = ({
         </div>
 
         {showUpload && (
-          <div ref={uploadFormRef} className="mb-4 p-4 border border-gray-200 rounded-md bg-white">
+          <div ref={uploadFormRef} className="mb-4 p-4 border border-gray-200 dark:border-[rgb(var(--color-border-200))] rounded-md bg-white dark:bg-[rgb(var(--color-card))]">
             <DocumentUpload
               id={`${id}-upload`}
               userId={userId}

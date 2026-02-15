@@ -105,7 +105,7 @@ export default function JobHistoryTable({ initialData = [] }: JobHistoryTablePro
         columns={columns}
         onRowClick={handleRowClick}
         id="job-history-table"
-        rowClassName={() => "hover:bg-[rgb(var(--color-primary-50))] cursor-pointer"}
+        rowClassName={() => "cursor-pointer"}
         pagination={true}
         currentPage={currentPage}
         onPageChange={setCurrentPage}

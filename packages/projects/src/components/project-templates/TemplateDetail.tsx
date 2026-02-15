@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTheme } from 'next-themes';
+import { darkenColor } from '@alga-psa/ui/lib/colorUtils';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card } from '@alga-psa/ui/components/Card';
 import { ArrowLeft, Circle, Trash, FileText, MoreVertical, Rocket } from 'lucide-react';
@@ -24,6 +26,8 @@ interface TemplateDetailProps {
 
 export default function TemplateDetail({ template, onTemplateUpdated }: TemplateDetailProps) {
   const router = useRouter();
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === 'dark';
   const [isDeleting, setIsDeleting] = useState(false);
   const [showApplyDialog, setShowApplyDialog] = useState(false);
   const [selectedPhase, setSelectedPhase] = useState<IProjectTemplatePhase | null>(
@@ -64,9 +68,9 @@ export default function TemplateDetail({ template, onTemplateUpdated }: Template
   const renderPhaseContent = () => {
     if (!selectedPhase) {
       return (
-        <div className="flex items-center justify-center h-64 bg-gray-100 rounded-lg">
+        <div className="flex items-center justify-center h-64 bg-gray-100 dark:bg-[rgb(var(--color-border-100))] rounded-lg">
           <div className="text-center">
-            <p className="text-xl text-gray-600">
+            <p className="text-xl text-gray-600 dark:text-gray-400">
               Please select a phase to view the template details.
             </p>
           </div>
@@ -87,9 +91,9 @@ export default function TemplateDetail({ template, onTemplateUpdated }: Template
             <div>
               <h2 className="text-xl font-bold mb-1">Phase: {selectedPhase.phase_name}</h2>
               {selectedPhase.description && (
-                <p className="text-sm text-gray-600">{selectedPhase.description}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">{selectedPhase.description}</p>
               )}
-              <div className="text-sm text-gray-500 mt-1">
+              <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                 {selectedPhase.duration_days && `Duration: ${selectedPhase.duration_days} days`}
                 {selectedPhase.start_offset_days > 0 && ` • Start: +${selectedPhase.start_offset_days} days`}
               </div>
@@ -100,7 +104,7 @@ export default function TemplateDetail({ template, onTemplateUpdated }: Template
         {/* Kanban Board */}
         <div className={styles.kanbanWrapper}>
           {statusMappings.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
+            <div className="text-center py-8 text-gray-500 dark:text-gray-400">
               No status columns defined
             </div>
           ) : (
@@ -123,15 +127,15 @@ export default function TemplateDetail({ template, onTemplateUpdated }: Template
                     <div
                       key={statusMapping.template_status_mapping_id}
                       className={`${styles.kanbanColumn} rounded-lg transition-all duration-200`}
-                      style={{ backgroundColor: lightenColor(statusColor, 0.85) }}
+                      style={{ backgroundColor: isDark ? darkenColor(statusColor, 0.75) : lightenColor(statusColor, 0.85) }}
                     >
                       {/* Status Column Header */}
                       <div className="font-bold text-sm p-3 rounded-t-lg flex items-center justify-between relative">
                         <div
                           className="flex rounded-[20px] border-2 shadow-sm items-center ps-3 py-3 pe-4"
                           style={{
-                            backgroundColor: lightenColor(statusColor, 0.70),
-                            borderColor: lightenColor(statusColor, 0.40)
+                            backgroundColor: isDark ? darkenColor(statusColor, 0.60) : lightenColor(statusColor, 0.70),
+                            borderColor: isDark ? darkenColor(statusColor, 0.40) : lightenColor(statusColor, 0.40)
                           }}
                         >
                           <Circle className="w-4 h-4 mr-2" fill={statusColor} stroke={statusColor} />
@@ -186,7 +190,7 @@ export default function TemplateDetail({ template, onTemplateUpdated }: Template
                 Back
               </Button>
               <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2 px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm font-medium">
+                <div className="flex items-center gap-2 px-3 py-1 bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300 rounded-full text-sm font-medium">
                   <FileText className="h-4 w-4" />
                   Template
                 </div>
@@ -231,10 +235,10 @@ export default function TemplateDetail({ template, onTemplateUpdated }: Template
             {/* Phases List - Left Side */}
             <div className={styles.phasesList}>
               <Card className="p-4">
-                <h3 className="text-sm font-semibold text-gray-700 mb-3">Project Phases</h3>
+                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Project Phases</h3>
                 <div className="space-y-1">
                   {phases.length === 0 ? (
-                    <div className="text-sm text-gray-500">No phases defined</div>
+                    <div className="text-sm text-gray-500 dark:text-gray-400">No phases defined</div>
                   ) : (
                     phases.map((phase) => (
                       <button
@@ -242,8 +246,8 @@ export default function TemplateDetail({ template, onTemplateUpdated }: Template
                         onClick={() => setSelectedPhase(phase)}
                         className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${
                           selectedPhase?.template_phase_id === phase.template_phase_id
-                            ? 'bg-purple-100 text-purple-900 font-medium'
-                            : 'hover:bg-gray-100 text-gray-700'
+                            ? 'bg-purple-50 dark:bg-purple-950 text-purple-900 dark:text-purple-200 font-medium'
+                            : 'hover:bg-gray-50 dark:hover:bg-[rgb(var(--color-border-100))] text-gray-700 dark:text-gray-300'
                         }`}
                       >
                         <div className="text-sm font-medium">{phase.phase_name}</div>
@@ -273,14 +277,14 @@ export default function TemplateDetail({ template, onTemplateUpdated }: Template
 // Task Card Component
 function TaskCard({ task }: { task: IProjectTemplateTask }) {
   return (
-    <div className="bg-white border rounded-lg p-3 shadow-sm hover:shadow-md transition-shadow">
+    <div className="bg-white dark:bg-[rgb(var(--color-card))] border border-gray-200 dark:border-[rgb(var(--color-border-200))] rounded-lg p-3 shadow-sm hover:shadow-md transition-shadow">
       <div className="font-medium text-sm mb-1">{task.task_name}</div>
       {task.description && (
-        <div className="text-xs text-gray-600 mb-2">{task.description}</div>
+        <div className="text-xs text-gray-600 dark:text-gray-400 mb-2">{task.description}</div>
       )}
-      <div className="flex items-center justify-between text-xs text-gray-500">
+      <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
         {task.estimated_hours && (
-          <span className="bg-gray-100 px-2 py-1 rounded">
+          <span className="bg-gray-100 dark:bg-[rgb(var(--color-border-100))] px-2 py-1 rounded">
             {Number(task.estimated_hours) / 60}h
           </span>
         )}

@@ -117,6 +117,7 @@ const _middleware = auth((request) => {
       '/api/accounting/exports/',
       '/api/webhooks/stripe',
       '/api/webhooks/ninjaone',
+      '/api/webhooks/tacticalrmm',
       '/api/ext/',  // Extension API routes handle their own auth
       '/api/ext-proxy/',
       '/api/ext-debug/',  // Extension debug stream uses session auth

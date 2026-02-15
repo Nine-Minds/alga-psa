@@ -120,7 +120,7 @@ export default function ProjectInfo({
           <BackNav href="/msp/projects">← Back to Projects</BackNav>
 
           {/* Project number */}
-          <span className="text-sm font-medium text-gray-600">
+          <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
             {currentProject.project_number}
           </span>
 
@@ -167,23 +167,23 @@ export default function ProjectInfo({
       
       {/* Project description */}
       {currentProject.description && (
-        <p className="text-sm text-gray-600">{currentProject.description}</p>
+        <p className="text-sm text-gray-600 dark:text-gray-400">{currentProject.description}</p>
       )}
 
       {/* Second line: Project metadata */}
       <div className="flex items-center space-x-8">
         {/* Client Section */}
         <div className="flex items-center space-x-2">
-          <h5 className="font-bold text-gray-800">Client:</h5>
-          <p className="text-base text-gray-800">
+          <h5 className="font-bold text-gray-800 dark:text-gray-200">Client:</h5>
+          <p className="text-base text-gray-800 dark:text-gray-200">
             {currentProject.client_name || 'N/A'}
           </p>
         </div>
 
         {/* Contact Section */}
         <div className="flex items-center space-x-2">
-          <h5 className="font-bold text-gray-800">Contact:</h5>
-          <p className="text-base text-gray-800">
+          <h5 className="font-bold text-gray-800 dark:text-gray-200">Contact:</h5>
+          <p className="text-base text-gray-800 dark:text-gray-200">
             {contact?.full_name || 'N/A'}
           </p>
         </div>
@@ -191,9 +191,9 @@ export default function ProjectInfo({
         {/* Project Budget Section - takes remaining space */}
         {projectMetrics && (
           <div className="flex items-center space-x-2 flex-1">
-            <h5 className="font-bold text-gray-800">Budget:</h5>
+            <h5 className="font-bold text-gray-800 dark:text-gray-200">Budget:</h5>
             <div className="flex items-center space-x-3 flex-1">
-              <span className="text-base text-gray-800 whitespace-nowrap">
+              <span className="text-base text-gray-800 dark:text-gray-200 whitespace-nowrap">
                 {projectMetrics.spentHours.toFixed(1)} of {projectMetrics.budgetedHours.toFixed(1)} hours
               </span>
               <div className="flex-1">

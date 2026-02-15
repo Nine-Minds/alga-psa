@@ -522,8 +522,8 @@ export const TaskCard: React.FC<TaskCardProps> = ({
               <div className={`flex items-center gap-1 px-2 py-1 rounded ${
                 taskDependencies.predecessors.some(d => d.dependency_type === 'blocks' || d.dependency_type === 'blocked_by') ||
                 taskDependencies.successors.some(d => d.dependency_type === 'blocks' || d.dependency_type === 'blocked_by')
-                  ? 'bg-red-50 text-red-500'
-                  : 'bg-blue-50 text-blue-500'
+                  ? 'bg-red-50 dark:bg-red-500/15 text-red-500'
+                  : 'bg-blue-50 dark:bg-blue-500/15 text-blue-500'
               }`}>
                 {taskDependencies.predecessors.some(d => d.dependency_type === 'blocks' || d.dependency_type === 'blocked_by') ||
                  taskDependencies.successors.some(d => d.dependency_type === 'blocks' || d.dependency_type === 'blocked_by')

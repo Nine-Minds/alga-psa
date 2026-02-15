@@ -15,7 +15,8 @@ export const AgentScheduleDrawerStyles: React.FC = () => {
       }
       
       /* Hide the technician sidebar if it exists */
-      .w-64.flex-shrink-0.bg-white {
+      .w-64.flex-shrink-0.bg-white,
+      .w-64.flex-shrink-0.bg-\\[rgb\\(var\\(--color-card\\)\\)\\] {
         display: none !important;
       }
       
@@ -76,15 +77,15 @@ export const AgentScheduleDrawerStyles: React.FC = () => {
         position: sticky !important;
         top: 0 !important;
         z-index: 10 !important;
-        background-color: white !important;
+        background-color: rgb(var(--color-card)) !important;
       }
-      
+
       /* Keep the toolbar fixed */
       .rbc-toolbar {
         position: sticky !important;
         top: 0 !important;
         z-index: 20 !important;
-        background-color: white !important;
+        background-color: rgb(var(--color-card)) !important;
         padding: 10px 0 !important;
       }
     `}</style>

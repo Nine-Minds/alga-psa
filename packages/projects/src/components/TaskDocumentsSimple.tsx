@@ -1,6 +1,7 @@
 'use client'
 
-import React, { useEffect, useState, useRef, useCallback } from 'react';
+import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { Paperclip, Plus, Link, FileText, File, Image, Download, X, ChevronRight, ChevronDown, Eye, FileVideo } from 'lucide-react';
 import type { IDocument } from '@alga-psa/types';
 import { 
@@ -25,6 +26,7 @@ import { downloadDocumentInBrowser } from '@alga-psa/documents/actions';
 import { downloadDocument } from '@alga-psa/documents/lib/documentUtils';
 import { toast } from 'react-hot-toast';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
+import { useRegisterUnsavedChanges } from '@alga-psa/ui/context';
 import FolderSelectorModal from '@alga-psa/documents/components/FolderSelectorModal';
 
 const DEFAULT_BLOCKS: PartialBlock[] = [{
@@ -113,6 +115,9 @@ export default function TaskDocumentsSimple({
   const [documentToDelete, setDocumentToDelete] = useState<IDocument | null>(null);
   const [isExpanded, setIsExpanded] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
+
+  // Unsaved changes confirmation
+  const [showUnsavedChangesDialog, setShowUnsavedChangesDialog] = useState(false);
 
   // Preview modal for images/videos/PDFs
   const [showPreviewModal, setShowPreviewModal] = useState(false);
@@ -403,15 +408,32 @@ export default function TaskDocumentsSimple({
     setHasContentChanged(true);
   };
 
-  const handleCloseDrawer = () => {
+  // Track unsaved document changes
+  const hasUnsavedDocumentChanges = useMemo(() => {
+    if (!isDrawerOpen) return false;
+    if (isCreatingNew) {
+      return hasContentChanged || newDocumentName.trim() !== '';
+    }
+    if (isEditMode && selectedDocument) {
+      return hasContentChanged || documentName !== selectedDocument.document_name;
+    }
+    return false;
+  }, [isDrawerOpen, isCreatingNew, hasContentChanged, newDocumentName, isEditMode, selectedDocument, documentName]);
+
+  // Register with UnsavedChangesContext for navigation protection
+  useRegisterUnsavedChanges('task-document-editor', hasUnsavedDocumentChanges);
+
+  // Execute the actual drawer close (after confirmation or when no unsaved changes)
+  const executeDrawerClose = useCallback(() => {
+    setShowUnsavedChangesDialog(false);
     // Mark as closing to hide the editor
     setIsClosing(true);
-    
+
     // Clear editor ref first to prevent cleanup issues
     if (editorRef.current) {
       editorRef.current = null;
     }
-    
+
     // Small delay to allow editor cleanup
     setTimeout(() => {
       setIsDrawerOpen(false);
@@ -424,7 +446,16 @@ export default function TaskDocumentsSimple({
       setNewDocumentName('');
       setIsClosing(false);
     }, 100);
-  };
+  }, []);
+
+  // Handle drawer close with unsaved changes check
+  const handleCloseDrawer = useCallback(() => {
+    if (hasUnsavedDocumentChanges) {
+      setShowUnsavedChangesDialog(true);
+    } else {
+      executeDrawerClose();
+    }
+  }, [hasUnsavedDocumentChanges, executeDrawerClose]);
 
   const handleDownload = async (e: React.MouseEvent, document: IDocument) => {
     e.stopPropagation();
@@ -946,6 +977,23 @@ export default function TaskDocumentsSimple({
         confirmLabel="Remove from Task"
         cancelLabel="Cancel"
       />
+
+      {/* Unsaved Changes Confirmation Dialog - portaled to body so it renders above
+          the drawer (z-60) and task edit dialog (z-50) */}
+      {showUnsavedChangesDialog && createPortal(
+        <div style={{ position: 'relative', zIndex: 70 }}>
+          <ConfirmationDialog
+            isOpen={showUnsavedChangesDialog}
+            onClose={() => setShowUnsavedChangesDialog(false)}
+            onConfirm={executeDrawerClose}
+            title="Unsaved Changes"
+            message="Are you sure you want to cancel? Any unsaved changes will be lost."
+            confirmLabel="Discard changes"
+            cancelLabel="Continue editing"
+          />
+        </div>,
+        document.body
+      )}
     </>
   );
 }

@@ -92,6 +92,7 @@ export * from './SwitchWithLabel';
 export * from './Table';
 export * from './Tabs';
 export * from './TextArea';
+export * from './ThemeToggle';
 export * from './TimePicker';
 export * from './TimezonePicker';
 export { default as TimezonePicker } from './TimezonePicker';

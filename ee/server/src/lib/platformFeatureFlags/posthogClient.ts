@@ -105,14 +105,16 @@ export class PostHogFeatureFlagService {
   }
 
   async deleteFlag(id: number): Promise<void> {
+    // PostHog uses soft-delete via PATCH, not HTTP DELETE
     await posthogFetch<void>(`/feature_flags/${id}/`, {
-      method: 'DELETE',
+      method: 'PATCH',
+      body: JSON.stringify({ deleted: true }),
     });
   }
 
   /**
    * Add a tenant ID to a flag's release conditions.
-   * Finds or creates a group that filters on the `tenant_id` property
+   * Finds or creates a group that filters on the `tenant` property
    * and adds the tenant to its value array.
    */
   async addTenantToFlag(flagId: number, tenantId: string): Promise<PostHogFeatureFlag> {
@@ -121,11 +123,11 @@ export class PostHogFeatureFlagService {
 
     // Find existing tenant group
     let tenantGroup = filters.groups.find(g =>
-      g.properties.some(p => p.key === 'tenant_id' && p.operator === 'exact')
+      g.properties.some(p => p.key === 'tenant' && p.operator === 'exact')
     );
 
     if (tenantGroup) {
-      const prop = tenantGroup.properties.find(p => p.key === 'tenant_id' && p.operator === 'exact');
+      const prop = tenantGroup.properties.find(p => p.key === 'tenant' && p.operator === 'exact');
       if (prop && !prop.value.includes(tenantId)) {
         prop.value = [...prop.value, tenantId];
       }
@@ -133,7 +135,7 @@ export class PostHogFeatureFlagService {
       // Create a new group for tenant targeting
       filters.groups.push({
         properties: [{
-          key: 'tenant_id',
+          key: 'tenant',
           value: [tenantId],
           operator: 'exact',
           type: 'person',
@@ -155,16 +157,16 @@ export class PostHogFeatureFlagService {
 
     for (const group of filters.groups) {
       for (const prop of group.properties) {
-        if (prop.key === 'tenant_id' && prop.operator === 'exact') {
+        if (prop.key === 'tenant' && prop.operator === 'exact') {
           prop.value = prop.value.filter((v: string) => v !== tenantId);
         }
       }
     }
 
-    // Remove empty tenant groups (groups where tenant_id property has no values)
+    // Remove empty tenant groups (groups where tenant property has no values)
     filters.groups = filters.groups.filter(g => {
-      const tenantProp = g.properties.find(p => p.key === 'tenant_id' && p.operator === 'exact');
-      // Keep group if it has no tenant_id property OR if tenant_id still has values
+      const tenantProp = g.properties.find(p => p.key === 'tenant' && p.operator === 'exact');
+      // Keep group if it has no tenant property OR if tenant_id still has values
       return !tenantProp || tenantProp.value.length > 0;
     });
 

@@ -1,12 +1,12 @@
 .dashboardContainer {
   padding: 20px;
-  background-color: #ecf0f1;
+  background-color: rgb(var(--color-border-50));
   overflow-y: auto;
 }
 
 .dashboardContainer h1 {
   margin-bottom: 20px;
-  color: #2c3e50;
+  color: rgb(var(--color-text-900));
 }
 
 .metrics {
@@ -16,7 +16,7 @@
 }
 
 .metricBox {
-  background-color: white;
+  background-color: rgb(var(--color-card));
   border-radius: 5px;
   padding: 20px;
   width: 30%;
@@ -25,17 +25,17 @@
 
 .metricBox h3 {
   margin-top: 0;
-  color: #34495e;
+  color: rgb(var(--color-text-700));
 }
 
 .metricBox p {
   font-size: 24px;
   font-weight: bold;
-  color: #2980b9;
+  color: rgb(var(--color-secondary-600));
 }
 
 .activityFeed, .quickActions {
-  background-color: white;
+  background-color: rgb(var(--color-card));
   border-radius: 5px;
   padding: 20px;
   margin-bottom: 20px;
@@ -44,7 +44,7 @@
 
 .activityFeed h2, .quickActions h2 {
   margin-top: 0;
-  color: #34495e;
+  color: rgb(var(--color-text-700));
 }
 
 .activityFeed ul {
@@ -58,8 +58,8 @@
 .quickActions button {
   margin-right: 10px;
   padding: 10px 15px;
-  background-color: #3498db;
-  color: white;
+  background-color: rgb(var(--color-secondary-500));
+  color: rgb(var(--color-text-50));
   border: none;
   border-radius: 5px;
   cursor: pointer;
@@ -67,7 +67,7 @@
 }
 
 .quickActions button:hover {
-  background-color: #2980b9;
+  background-color: rgb(var(--color-secondary-600));
 }
 
 @media (max-width: 768px) {

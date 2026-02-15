@@ -21,6 +21,7 @@ import {
   Cloud,
 } from 'lucide-react';
 import AccountingIntegrationsSetup from './AccountingIntegrationsSetup';
+import RmmIntegrationsSetup from './RmmIntegrationsSetup';
 import { EmailProviderConfiguration } from '@alga-psa/integrations/components';
 import { CalendarIntegrationsSettings } from '@alga-psa/integrations/components';
 import { GoogleIntegrationSettings } from './GoogleIntegrationSettings';
@@ -38,24 +39,6 @@ const StripeConnectionSettings = dynamic(
           <div className="flex flex-col items-center justify-center gap-2">
             <Spinner size="md" />
             <span className="text-sm text-muted-foreground">Loading payment settings...</span>
-          </div>
-        </CardContent>
-      </Card>
-    ),
-    ssr: false,
-  }
-);
-
-// Dynamic import for NinjaOne (EE feature)
-const NinjaOneIntegrationSettings = dynamic(
-  () => import('@enterprise/components/settings/integrations/NinjaOneIntegrationSettings'),
-  {
-    loading: () => (
-      <Card>
-        <CardContent className="py-8">
-          <div className="flex flex-col items-center justify-center gap-2">
-            <Spinner size="md" />
-            <span className="text-sm text-muted-foreground">Loading NinjaOne integration settings...</span>
           </div>
         </CardContent>
       </Card>
@@ -122,13 +105,12 @@ const IntegrationsSettingsPage: React.FC = () => {
       description: 'Connect remote monitoring and management tools',
       icon: Monitor,
       integrations: [
-        ...(isEEAvailable ? [{
-          id: 'ninjaone',
-          name: 'NinjaOne',
-          description: 'Sync devices, receive alerts, and enable remote access',
-          component: NinjaOneIntegrationSettings,
-          isEE: true,
-        }] : []),
+        {
+          id: 'rmm-setup',
+          name: 'RMM Integrations',
+          description: 'Select and configure your RMM provider',
+          component: RmmIntegrationsSetup,
+        }
       ],
     },
     {

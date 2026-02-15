@@ -44,7 +44,7 @@ export default function DocumentListView({
   }
 
   return (
-    <div className="border border-gray-200 rounded-lg overflow-hidden">
+    <div className="border border-gray-200 dark:border-[rgb(var(--color-border-200))] rounded-lg overflow-hidden">
       <Table>
         <TableHeader>
           <TableRow>
@@ -92,7 +92,7 @@ export default function DocumentListView({
                     <img
                       src={`/api/documents/${doc.document_id}/thumbnail`}
                       alt={doc.document_name}
-                      className="w-8 h-8 object-cover rounded border border-gray-200"
+                      className="w-8 h-8 object-cover rounded border border-gray-200 dark:border-[rgb(var(--color-border-200))]"
                       onError={(e) => {
                         // Fallback to icon if thumbnail fails to load
                         e.currentTarget.style.display = 'none';

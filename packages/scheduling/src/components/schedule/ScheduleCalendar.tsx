@@ -938,8 +938,8 @@ const ScheduleCalendar: React.FC = (): React.ReactElement | null => {
         
         {/* Calendar container */}
         <div className="flex-grow relative" ref={calendarRef}>
-          {isLoading && <div className="absolute inset-0 bg-white bg-opacity-50 flex items-center justify-center z-10">Loading...</div>}
-          {error && <div className="absolute inset-0 bg-red-100 text-red-700 flex items-center justify-center z-10 p-4">{error}</div>}
+          {isLoading && <div className="absolute inset-0 bg-[rgb(var(--color-card))] bg-opacity-50 flex items-center justify-center z-10">Loading...</div>}
+          {error && <div className="absolute inset-0 bg-red-500/10 text-red-600 flex items-center justify-center z-10 p-4">{error}</div>}
           {/* Create a date object for 8 AM to auto-scroll to working hours */}
           {(() => {
             const scrollToTime = new Date();

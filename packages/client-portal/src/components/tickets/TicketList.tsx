@@ -627,7 +627,7 @@ export function TicketList() {
             onPageChange={setCurrentPage}
             pageSize={pageSize}
             onItemsPerPageChange={handlePageSizeChange}
-            rowClassName={() => "hover:bg-gray-50"}
+            rowClassName={() => ""}
           />
         </div>
         </div>

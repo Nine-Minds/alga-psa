@@ -302,7 +302,7 @@ export default function AppointmentsPage() {
                 onPageChange={setCurrentPage}
                 pageSize={pageSize}
                 onItemsPerPageChange={setPageSize}
-                rowClassName={() => "hover:bg-gray-50"}
+                rowClassName={() => ""}
               />
             )}
           </div>

@@ -226,6 +226,98 @@ export async function findContactByEmail(
 }
 
 /**
+ * Find a client_id for an explicitly configured inbound email domain.
+ *
+ * Returns null when:
+ * - the domain is blank/invalid
+ * - no mapping exists for the domain in the tenant
+ */
+export async function findClientIdByInboundEmailDomain(
+  domain: string,
+  tenant: string
+): Promise<string | null> {
+  const normalizedDomain = (domain ?? '').trim().toLowerCase();
+  if (!normalizedDomain) {
+    return null;
+  }
+
+  const { withAdminTransaction } = await import('@alga-psa/db');
+
+  return withAdminTransaction(async (trx: Knex.Transaction) => {
+    try {
+      const row = await trx('client_inbound_email_domains')
+        .select('client_id')
+        .where('tenant', tenant)
+        .andWhereRaw('lower(domain) = ?', [normalizedDomain])
+        .first();
+
+      const clientId = (row as any)?.client_id;
+      return typeof clientId === 'string' && clientId ? clientId : null;
+    } catch (error: any) {
+      // Best-effort safety: if the mapping table isn't present in a given environment,
+      // do not break inbound email processing; treat as "no match".
+      const message = error?.message ? String(error.message) : '';
+      if (message.includes('client_inbound_email_domains') || message.includes('does not exist')) {
+        return null;
+      }
+      throw error;
+    }
+  });
+}
+
+/**
+ * Read a client's configured "primary_contact_id" (stored in clients.properties)
+ * and validate it's a currently-active contact belonging to the client.
+ *
+ * Returns null when:
+ * - client doesn't exist
+ * - properties.primary_contact_id is unset/invalid
+ * - the referenced contact doesn't exist, doesn't belong to the client, or is inactive
+ */
+export async function findValidClientPrimaryContactId(
+  clientId: string,
+  tenant: string
+): Promise<string | null> {
+  if (!clientId) return null;
+
+  const { withAdminTransaction } = await import('@alga-psa/db');
+
+  return withAdminTransaction(async (trx: Knex.Transaction) => {
+    const clientRow = await trx('clients')
+      .select('properties')
+      .where({ tenant, client_id: clientId })
+      .first();
+
+    if (!clientRow) {
+      return null;
+    }
+
+    const properties = (clientRow as any)?.properties;
+    const primaryContactId =
+      properties && typeof properties === 'object'
+        ? (properties as any).primary_contact_id
+        : undefined;
+
+    if (typeof primaryContactId !== 'string' || !primaryContactId) {
+      return null;
+    }
+
+    const contactRow = await trx('contacts')
+      .select('contact_name_id')
+      .where({
+        tenant,
+        client_id: clientId,
+        contact_name_id: primaryContactId,
+        is_inactive: false,
+      })
+      .first();
+
+    const validatedId = (contactRow as any)?.contact_name_id;
+    return typeof validatedId === 'string' && validatedId ? validatedId : null;
+  });
+}
+
+/**
  * Create or find contact by email and client
  */
 export async function createOrFindContact(

@@ -166,19 +166,19 @@ const getEventIcon = (entry: WorkflowEventCatalogEntryV2) => {
   const type = entry.event_type.toLowerCase();
   const category = (entry.category ?? '').toLowerCase();
 
-  if (type.startsWith('email.') || category.includes('email')) return { Icon: Mail, cls: 'bg-blue-50 text-blue-700' };
-  if (type.startsWith('ticket.') || category.includes('ticket')) return { Icon: Ticket, cls: 'bg-indigo-50 text-indigo-700' };
-  if (type.startsWith('comment.') || category.includes('comment')) return { Icon: MessageSquare, cls: 'bg-sky-50 text-sky-700' };
-  if (type.startsWith('invoice.') || type.startsWith('billing.') || category.includes('billing')) return { Icon: CreditCard, cls: 'bg-emerald-50 text-emerald-700' };
-  if (type.startsWith('client.') || type.startsWith('contact.') || category.includes('client') || category.includes('contact')) return { Icon: Users, cls: 'bg-amber-50 text-amber-800' };
-  if (type.startsWith('project.') || category.includes('project')) return { Icon: Briefcase, cls: 'bg-purple-50 text-purple-700' };
-  if (type.startsWith('schedule.') || type.startsWith('calendar.') || category.includes('calendar')) return { Icon: Calendar, cls: 'bg-teal-50 text-teal-700' };
-  if (type.startsWith('user.') || category.includes('user')) return { Icon: User, cls: 'bg-gray-100 text-gray-700' };
-  if (type.startsWith('system.') || category.includes('system')) return { Icon: Server, cls: 'bg-gray-100 text-gray-700' };
-  if (type.startsWith('sla.') || category.includes('sla') || type.includes('breach')) return { Icon: Clock, cls: 'bg-yellow-50 text-yellow-800' };
-  if (type.includes('error') || category.includes('error') || type.includes('exception')) return { Icon: AlertTriangle, cls: 'bg-red-50 text-red-700' };
+  if (type.startsWith('email.') || category.includes('email')) return { Icon: Mail, cls: 'bg-blue-500/10 text-blue-600' };
+  if (type.startsWith('ticket.') || category.includes('ticket')) return { Icon: Ticket, cls: 'bg-indigo-500/10 text-indigo-600' };
+  if (type.startsWith('comment.') || category.includes('comment')) return { Icon: MessageSquare, cls: 'bg-sky-500/10 text-sky-600' };
+  if (type.startsWith('invoice.') || type.startsWith('billing.') || category.includes('billing')) return { Icon: CreditCard, cls: 'bg-emerald-500/10 text-emerald-600' };
+  if (type.startsWith('client.') || type.startsWith('contact.') || category.includes('client') || category.includes('contact')) return { Icon: Users, cls: 'bg-amber-500/10 text-amber-600' };
+  if (type.startsWith('project.') || category.includes('project')) return { Icon: Briefcase, cls: 'bg-purple-500/10 text-purple-600' };
+  if (type.startsWith('schedule.') || type.startsWith('calendar.') || category.includes('calendar')) return { Icon: Calendar, cls: 'bg-teal-500/10 text-teal-600' };
+  if (type.startsWith('user.') || category.includes('user')) return { Icon: User, cls: 'bg-gray-500/10 text-gray-600' };
+  if (type.startsWith('system.') || category.includes('system')) return { Icon: Server, cls: 'bg-gray-500/10 text-gray-600' };
+  if (type.startsWith('sla.') || category.includes('sla') || type.includes('breach')) return { Icon: Clock, cls: 'bg-yellow-500/10 text-yellow-600' };
+  if (type.includes('error') || category.includes('error') || type.includes('exception')) return { Icon: AlertTriangle, cls: 'bg-red-500/10 text-red-600' };
 
-  return { Icon: Zap, cls: 'bg-purple-50 text-purple-700' };
+  return { Icon: Zap, cls: 'bg-purple-500/10 text-purple-600' };
 };
 
 const syntaxHighlightJson = (text: string) => {
@@ -376,8 +376,8 @@ const SchemaForm: React.FC<{
     const header = (
       <div className="flex items-center gap-2">
         <div className="text-xs font-medium text-gray-800">{label}</div>
-        {required && <Badge className="text-[10px] bg-red-50 text-red-700 border-red-200">required</Badge>}
-        {type && <Badge className="text-[10px] bg-gray-100 text-gray-700 border-gray-200">{String(type)}</Badge>}
+        {required && <Badge className="text-[10px] bg-red-500/15 text-red-600 border-red-500/30">required</Badge>}
+        {type && <Badge className="text-[10px] bg-gray-500/15 text-gray-600 border-gray-500/30">{String(type)}</Badge>}
       </div>
     );
 
@@ -503,28 +503,28 @@ const SchemaForm: React.FC<{
 const EventStatusBadge: React.FC<{ status: string }> = ({ status }) => {
   const s = status.toLowerCase();
   const cls =
-    s === 'active' ? 'bg-green-50 text-green-700 border-green-200'
-      : s === 'beta' ? 'bg-yellow-50 text-yellow-800 border-yellow-200'
-        : s === 'draft' ? 'bg-gray-100 text-gray-700 border-gray-200'
-          : 'bg-red-50 text-red-700 border-red-200';
+    s === 'active' ? 'bg-green-500/15 text-green-600 border-green-500/30'
+      : s === 'beta' ? 'bg-yellow-500/15 text-yellow-600 border-yellow-500/30'
+        : s === 'draft' ? 'bg-gray-500/15 text-gray-600 border-gray-500/30'
+          : 'bg-red-500/15 text-red-600 border-red-500/30';
   const label = s.charAt(0).toUpperCase() + s.slice(1);
   return <Badge className={`${cls} text-[10px]`}>{label}</Badge>;
 };
 
 const SourceBadge: React.FC<{ source: 'system' | 'tenant' }> = ({ source }) => (
-  <Badge className={`text-[10px] ${source === 'system' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'}`}>
+  <Badge className={`text-[10px] ${source === 'system' ? 'bg-blue-500/15 text-blue-600 border-blue-500/30' : 'bg-emerald-500/15 text-emerald-600 border-emerald-500/30'}`}>
     {source === 'system' ? 'System' : 'Tenant'}
   </Badge>
 );
 
 const SchemaBadge: React.FC<{ status: WorkflowEventCatalogEntryV2['payload_schema_ref_status'] }> = ({ status }) => {
   if (status === 'missing') {
-    return <Badge className="text-[10px] bg-gray-100 text-gray-600 border-gray-200">No schema</Badge>;
+    return <Badge className="text-[10px] bg-gray-500/15 text-gray-600 border-gray-500/30">No schema</Badge>;
   }
   if (status === 'unknown') {
-    return <Badge className="text-[10px] bg-red-50 text-red-700 border-red-200">Unknown schema</Badge>;
+    return <Badge className="text-[10px] bg-red-500/15 text-red-600 border-red-500/30">Unknown schema</Badge>;
   }
-  return <Badge className="text-[10px] bg-sky-50 text-sky-700 border-sky-200">Schema</Badge>;
+  return <Badge className="text-[10px] bg-sky-500/15 text-sky-600 border-sky-500/30">Schema</Badge>;
 };
 
 const MiniMetric: React.FC<{ label: string; value: string }> = ({ label, value }) => (

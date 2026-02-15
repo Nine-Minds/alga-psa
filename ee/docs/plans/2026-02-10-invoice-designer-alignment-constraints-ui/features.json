@@ -1,0 +1,224 @@
+[
+  {
+    "id": "F001",
+    "description": "Add a dedicated Constraints inspector section for eligible nodes in `DesignerShell`",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "Introduce reference-node UI state in `DesignerShell` for two-node constraint authoring",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "Implement `Set As Reference` and `Clear Reference` controls with visible reference status",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "Add guardrails that disable constraint actions when reference/target selection is invalid",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "Wire `align-left` action from inspector controls to `addConstraint` store action",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "Wire `align-top` action from inspector controls to `addConstraint` store action",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "Wire `match-width` action from inspector controls to `addConstraint` store action",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "Wire `match-height` action from inspector controls to `addConstraint` store action",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "Normalize pair-constraint keying to prevent duplicate constraints for same relation and node pair",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "Block unsupported pair-constraint combinations (self-reference, cross-parent pairs, document/page nodes, missing nodes)",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "Apply default pair-constraint strength policy (`strong`) for newly-authored constraints",
+    "implemented": true,
+    "prdRefs": [
+      "Summary",
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "Render a list of constraints involving the selected node in inspector",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "Support removing listed constraints directly from inspector",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "Display counterpart node names and relation labels for each constraint row",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "Unify existing aspect-ratio lock controls into the constraints section without behavior regression",
+    "implemented": true,
+    "prdRefs": [
+      "Goals",
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "Add canvas visual treatment for active reference node",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "Add canvas visual treatment for constrained counterpart nodes in selected-node context",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F018",
+    "description": "Improve constraint conflict messaging in inspector using `constraintError` with recovery guidance",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F019",
+    "description": "Ensure pair-constraint add/remove operations participate correctly in undo/redo history",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements",
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F020",
+    "description": "Ensure workspace export/import continues to serialize and rehydrate pair constraints authored via UI",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F021",
+    "description": "Add keyboard-operable controls for reference and pair-constraint actions",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F022",
+    "description": "Add stable automation IDs for constraints section controls, list rows, and action buttons",
+    "implemented": true,
+    "prdRefs": [
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F023",
+    "description": "Prevent regressions in preset insertion and fit-to-contents workflows when pair constraints are present",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements",
+      "Non-goals"
+    ]
+  },
+  {
+    "id": "F024",
+    "description": "Implement an end-to-end designer flow for authoring, persisting, and editing pair constraints",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F025",
+    "description": "Enable jump-to-counterpart behavior from each constraint row to select/focus the related node",
+    "implemented": true,
+    "prdRefs": [
+      "Summary",
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F026",
+    "description": "Auto-prune dangling constraints when a referenced node is deleted",
+    "implemented": true,
+    "prdRefs": [
+      "Summary",
+      "Functional Requirements"
+    ]
+  }
+]
