@@ -129,7 +129,7 @@ export async function systemEmailProcessingWorkflow(context) {
   /**
    * Handle email reply to existing ticket
    */
-  const handleEmailReply = async (emailData, existingTicket, actions, parsedBody, replyMatchedBy) => {
+  const handleEmailReply = async (emailData, existingTicket, actions, parsedBody, replyMatchedBy, matchedClient = null) => {
     const commentContent = parsedBody.sanitizedHtml || parsedBody.sanitizedText || emailData.body.html || emailData.body.text;
     
     // Convert HTML to BlockNote blocks
@@ -168,6 +168,8 @@ export async function systemEmailProcessingWorkflow(context) {
       // Looking at blocknoteUtils, it tries to parse JSON.
       source: 'email',
       author_type: 'contact', // Reply from the client
+      author_id: matchedClient?.userId || undefined,
+      contact_id: matchedClient?.contactId || undefined,
       inboundReplyEvent: {
         messageId: emailData.id,
         threadId: emailData.threadId || emailData.id,
@@ -203,16 +205,17 @@ export async function systemEmailProcessingWorkflow(context) {
   /**
    * Find exact email match in contacts
    */
-  const findExactEmailMatch = async (emailAddress, actions) => {
+  const findExactEmailMatch = async (emailAddress, actions, matchContext = {}) => {
     try {
-      const result = await actions.find_contact_by_email({ email: emailAddress });
+      const result = await actions.find_contact_by_email({ email: emailAddress, ...matchContext });
       
       if (result.success && result.contact) {
         return {
           contactId: result.contact.contact_id,
           contactName: result.contact.name,
           clientId: result.contact.client_id,
-          clientName: result.contact.client_name
+          clientName: result.contact.client_name,
+          userId: result.contact.user_id || null
         };
       }
       
@@ -359,7 +362,8 @@ export async function systemEmailProcessingWorkflow(context) {
     if (existingTicket) {
       // This is a reply to an existing ticket - add as comment
       console.log(`Email is part of existing ticket: ${existingTicket.ticketId}`);
-      await handleEmailReply(emailData, existingTicket, actions, parsedEmailBody, replyMatchedBy);
+      const matchedReplyClient = await findExactEmailMatch(emailData.from.email, actions, { ticketId: existingTicket.ticketId });
+      await handleEmailReply(emailData, existingTicket, actions, parsedEmailBody, replyMatchedBy, matchedReplyClient);
       return; // Exit workflow after handling reply
     }
     
@@ -484,7 +488,9 @@ export async function systemEmailProcessingWorkflow(context) {
       ticket_id: ticketResult.ticket_id,
       content: initialBlockContent,
       source: 'email',
-      author_type: 'internal',
+      author_type: finalContactId ? 'contact' : 'system',
+      author_id: matchedClient?.userId || undefined,
+      contact_id: finalContactId || undefined,
       metadata: parsedEmailBody.metadata
     });
     

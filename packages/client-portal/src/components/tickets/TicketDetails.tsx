@@ -619,6 +619,7 @@ export function TicketDetails({
                 conversations={ticket.conversations}
                 documents={ticket.documents || []}
                 userMap={ticket.userMap || {}}
+                contactMap={ticket.contactMap || {}}
                 currentUser={currentUser}
                 activeTab={activeTab === 'Internal' ? t('tickets.messages.comments', 'Comments') : activeTab}
                 hideInternalTab={true}

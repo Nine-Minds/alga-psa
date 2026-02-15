@@ -41,13 +41,15 @@ import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomat
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { getContactAvatarUrlAction, getUserContactId, searchUsersForMentions } from '@alga-psa/users/actions';
 import { createTenantKnex } from '@alga-psa/db';
+import type { CommentContactAuthor, CommentUserAuthor } from '../../lib/commentAuthorResolution';
 
 interface TicketConversationProps {
   id?: string;
   ticket: ITicket;
   conversations: IComment[];
   documents: IDocument[];
-  userMap: Record<string, { first_name: string; last_name: string; user_id: string; email?: string; user_type: string; avatarUrl: string | null }>;
+  userMap: Record<string, CommentUserAuthor>;
+  contactMap: Record<string, CommentContactAuthor>;
   currentUser: { id: string; name?: string | null; email?: string | null; avatarUrl?: string | null } | null | undefined;
   activeTab: string;
   isEditing: boolean;
@@ -74,6 +76,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   conversations,
   documents,
   userMap,
+  contactMap,
   currentUser,
   activeTab,
   isEditing,
@@ -235,14 +238,6 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
     } catch {}
   }, [conversations]);
 
-  const getAuthorInfo = (conversation: IComment) => {
-    if (conversation.user_id) {
-      // The userMap should already have the updated avatar URLs from the useEffect above
-      return userMap[conversation.user_id] || null;
-    }
-    return null;
-  };
-
   const renderComments = (comments: IComment[]): React.JSX.Element[] => {
     // Use the sorted comments based on the reverseOrder state
     const commentsToRender = reverseOrder ? [...comments].reverse() : comments;
@@ -264,12 +259,12 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
         key={itemKey}
         id={`${id}-comment-${mergedConversation.comment_id}`}
         conversation={mergedConversation}
-        user={getAuthorInfo(conversation)}
         currentUserId={currentUser?.id}
         isEditing={isEditing && currentComment?.comment_id === mergedConversation.comment_id}
         currentComment={currentComment}
         ticketId={ticket.ticket_id || ''}
         userMap={userMap}
+        contactMap={contactMap}
         onContentChange={onContentChange}
         onSave={onSave}
         onClose={onClose}
@@ -305,12 +300,12 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
                 key={key}
                 id={`${compId}-external-comment-${conversation.comment_id}`}
                 conversation={conversation}
-                user={getAuthorInfo(conversation)}
                 currentUserId={null}
                 isEditing={false}
                 currentComment={null}
                 ticketId={ticket.ticket_id || ''}
                 userMap={userMap}
+                contactMap={contactMap}
                 onContentChange={() => {}}
                 onSave={() => {}}
                 onClose={() => {}}

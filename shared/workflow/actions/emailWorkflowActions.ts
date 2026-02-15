@@ -25,9 +25,17 @@ export interface FindContactByEmailOutput {
   name: string;
   email: string;
   client_id: string;
+  user_id?: string;
   client_name: string;
   phone?: string;
   title?: string;
+}
+
+export interface FindContactByEmailContext {
+  ticketId?: string;
+  ticketClientId?: string | null;
+  ticketContactId?: string | null;
+  defaultClientId?: string | null;
 }
 
 export interface CreateOrFindContactInput {
@@ -115,7 +123,8 @@ export interface SaveEmailClientAssociationOutput {
  */
 export async function findContactByEmail(
   email: string,
-  tenant: string
+  tenant: string,
+  context: FindContactByEmailContext = {}
 ): Promise<FindContactByEmailOutput | null> {
   const { withAdminTransaction } = await import('@alga-psa/db');
   const normalizedEmail = normalizeEmailAddress(email);
@@ -125,12 +134,20 @@ export async function findContactByEmail(
   }
 
   const contact = await withAdminTransaction(async (trx: Knex.Transaction) => {
-      return await trx('contacts')
+      const candidates = await trx('contacts')
         .select(
           'contacts.contact_name_id as contact_id',
           'contacts.full_name as name',
           'contacts.email',
           'contacts.client_id',
+          trx('users')
+            .select('users.user_id')
+            .whereRaw('users.contact_id = contacts.contact_name_id')
+            .andWhere('users.tenant', tenant)
+            .andWhere('users.user_type', 'client')
+            .orderBy('users.created_at', 'asc')
+            .limit(1)
+            .as('user_id'),
           'clients.client_name',
           'contacts.phone_number as phone',
           'contacts.role as title'
@@ -143,7 +160,66 @@ export async function findContactByEmail(
           'contacts.email': normalizedEmail,
           'contacts.tenant': tenant
         })
-        .first();
+        .orderBy('contacts.created_at', 'asc')
+        .orderBy('contacts.contact_name_id', 'asc');
+
+      if (!candidates.length) {
+        return null;
+      }
+
+      const normalizeCandidate = (candidate: any): FindContactByEmailOutput => ({
+        ...candidate,
+        user_id: candidate?.user_id ?? undefined,
+      });
+
+      let ticketClientId = context.ticketClientId ?? null;
+      let ticketContactId = context.ticketContactId ?? null;
+
+      if ((context.ticketId && !ticketClientId) || (context.ticketId && !ticketContactId)) {
+        const ticket = await trx('tickets')
+          .select('client_id', 'contact_name_id')
+          .where({
+            tenant,
+            ticket_id: context.ticketId,
+          })
+          .first<{ client_id?: string | null; contact_name_id?: string | null }>();
+
+        if (ticket) {
+          ticketClientId = ticketClientId ?? ticket.client_id ?? null;
+          ticketContactId = ticketContactId ?? ticket.contact_name_id ?? null;
+        }
+      }
+
+      if (ticketContactId) {
+        const directTicketContact = candidates.find((candidate: any) => candidate.contact_id === ticketContactId);
+        if (directTicketContact) {
+          return normalizeCandidate(directTicketContact);
+        }
+      }
+
+      if (ticketClientId) {
+        const inTicketClient = candidates.filter((candidate: any) => candidate.client_id === ticketClientId);
+        if (inTicketClient.length === 1) {
+          return normalizeCandidate(inTicketClient[0]);
+        }
+        return null;
+      }
+
+      if (context.defaultClientId) {
+        const inDefaultClient = candidates.filter((candidate: any) => candidate.client_id === context.defaultClientId);
+        if (inDefaultClient.length === 1) {
+          return normalizeCandidate(inDefaultClient[0]);
+        }
+        if (inDefaultClient.length > 1) {
+          return null;
+        }
+      }
+
+      if (candidates.length === 1) {
+        return normalizeCandidate(candidates[0]);
+      }
+
+      return null;
     });
 
     return contact || null;
@@ -798,6 +874,7 @@ export async function createCommentFromEmail(
     source?: string;
     author_type?: string;
     author_id?: string;
+    contact_id?: string;
     metadata?: any;
     inboundReplyEvent?: {
       messageId: string;
@@ -851,6 +928,7 @@ export async function createCommentFromEmail(
         is_resolution: false,
         author_type: ticketModelAuthorType,
         author_id: commentData.author_id,
+        contact_id: commentData.contact_id,
         metadata: buildInboundEmailCommentMetadata(
           commentData.metadata,
           commentData.inboundReplyEvent

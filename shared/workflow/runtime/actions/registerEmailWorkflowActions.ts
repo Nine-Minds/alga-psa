@@ -28,6 +28,7 @@ const contactOutputSchema = z.object({
   name: z.string().describe('Full name of the contact'),
   email: z.string().email().describe('Email address of the contact'),
   client_id: z.string().describe('ID of the associated client'),
+  user_id: z.string().optional().describe('Associated client user ID for the contact'),
   client_name: z.string().optional().describe('Name of the associated client'),
   phone: z.string().optional().describe('Phone number'),
   title: z.string().optional().describe('Job title or role')
@@ -309,7 +310,11 @@ export function registerEmailWorkflowActionsV2(): void {
     id: 'find_contact_by_email',
     version: 1,
     inputSchema: z.object({
-      email: z.string().email().describe('Email address to search for')
+      email: z.string().email().describe('Email address to search for'),
+      ticketId: z.string().optional().describe('Ticket ID context for reply-author matching'),
+      ticketClientId: z.string().nullable().optional().describe('Known ticket client ID for scoped matching'),
+      ticketContactId: z.string().nullable().optional().describe('Known ticket contact ID for direct matching'),
+      defaultClientId: z.string().nullable().optional().describe('Default client ID context for new ticket matching')
     }),
     outputSchema: z.object({
       success: z.boolean().describe('Whether a contact was found'),
@@ -321,7 +326,12 @@ export function registerEmailWorkflowActionsV2(): void {
     ui: { label: 'Find Contact by Email', category: 'Email' },
     handler: async (input, ctx) => {
       try {
-        const contact = await findContactByEmail(input.email, ctx.tenantId ?? '');
+        const contact = await findContactByEmail(input.email, ctx.tenantId ?? '', {
+          ticketId: input.ticketId,
+          ticketClientId: input.ticketClientId ?? null,
+          ticketContactId: input.ticketContactId ?? null,
+          defaultClientId: input.defaultClientId ?? null,
+        });
         return { success: !!contact, contact };
       } catch (error) {
         return { success: false, contact: null, message: error instanceof Error ? error.message : String(error) };
@@ -358,6 +368,7 @@ export function registerEmailWorkflowActionsV2(): void {
       matchedClient: contactOutputSchema.nullable().optional().describe('Matched contact for sender email'),
       targetClientId: z.string().nullable().describe('Resolved target client ID'),
       targetContactId: z.string().nullable().describe('Resolved target contact ID'),
+      targetAuthorUserId: z.string().nullable().optional().describe('Resolved client user ID for comment authorship'),
       targetLocationId: z.string().nullable().describe('Resolved target location ID')
     }),
     sideEffectful: false,
@@ -371,7 +382,9 @@ export function registerEmailWorkflowActionsV2(): void {
 
       let matchedClient: any = null;
       try {
-        matchedClient = await findContactByEmail(input.senderEmail, tenant);
+        matchedClient = await findContactByEmail(input.senderEmail, tenant, {
+          defaultClientId: ticketDefaults?.client_id ?? null,
+        });
       } catch (error) {
         matchedClient = null;
       }
@@ -382,12 +395,14 @@ export function registerEmailWorkflowActionsV2(): void {
           matchedClient,
           targetClientId: null,
           targetContactId: null,
+          targetAuthorUserId: null,
           targetLocationId: null
         };
       }
 
       let targetClientId = matchedClient?.client_id ?? ticketDefaults.client_id ?? null;
       let targetContactId = matchedClient?.contact_id ?? null;
+      const targetAuthorUserId = matchedClient?.user_id ?? null;
 
       // Domain fallback: if no exact contact match, match a client via explicitly configured inbound domains.
       if (!matchedClient?.contact_id) {
@@ -415,6 +430,7 @@ export function registerEmailWorkflowActionsV2(): void {
         matchedClient,
         targetClientId,
         targetContactId,
+        targetAuthorUserId,
         targetLocationId
       };
     }
@@ -484,6 +500,7 @@ export function registerEmailWorkflowActionsV2(): void {
       ticketDefaults: inboundTicketDefaultsSchema.describe('Resolved ticket defaults'),
       targetClientId: z.string().nullable().describe('Resolved client ID'),
       targetContactId: z.string().nullable().describe('Resolved contact ID'),
+      targetAuthorUserId: z.string().nullable().optional().describe('Resolved client user ID for comment authorship'),
       targetLocationId: z.string().nullable().describe('Resolved location ID')
     }),
     outputSchema: z.object({
@@ -528,7 +545,9 @@ export function registerEmailWorkflowActionsV2(): void {
         content: commentPayload.content,
         format: commentPayload.format,
         source: 'email',
-        author_type: 'internal',
+        author_type: input.targetContactId ? 'contact' : 'system',
+        author_id: input.targetAuthorUserId ?? undefined,
+        contact_id: input.targetContactId ?? undefined,
         metadata: commentPayload.metadata
       }, tenant);
 
@@ -550,6 +569,7 @@ export function registerEmailWorkflowActionsV2(): void {
       source: z.string().optional().describe('Source of the comment (e.g., "email")'),
       author_type: z.enum(['contact', 'internal', 'system']).optional().describe('Type of author'),
       author_id: z.string().optional().describe('Author user/contact ID'),
+      contact_id: z.string().optional().describe('Author contact ID'),
       inboundReplyEvent: z.object({
         messageId: z.string().min(1).describe('Inbound email message ID'),
         threadId: z.string().optional().describe('Email thread ID (provider conversation id)'),
@@ -583,6 +603,7 @@ export function registerEmailWorkflowActionsV2(): void {
         source: input.source,
         author_type: input.author_type,
         author_id: input.author_id,
+        contact_id: input.contact_id,
         // Cast to match createCommentFromEmail's expected type - zod validation ensures fields are present when object exists
         inboundReplyEvent: input.inboundReplyEvent as {
           messageId: string;
@@ -608,6 +629,8 @@ export function registerEmailWorkflowActionsV2(): void {
       emailData: emailDataSchema.describe('Inbound email data'),
       parsedEmail: parsedEmailSchema.describe('Parsed email body result'),
       author_type: z.enum(['contact', 'internal', 'system']).optional().describe('Type of author'),
+      author_id: z.string().optional().describe('Resolved author user ID'),
+      contact_id: z.string().optional().describe('Resolved author contact ID'),
       source: z.string().optional().describe('Source of the comment (e.g., "email")')
     }),
     outputSchema: z.object({
@@ -619,12 +642,23 @@ export function registerEmailWorkflowActionsV2(): void {
     handler: async (input, ctx) => {
       const tenant = ctx.tenantId ?? '';
       const commentPayload = buildCommentPayload(input.parsedEmail, input.emailData);
+      const senderEmail = input.emailData?.from?.email;
+      const matchedContact =
+        !input.contact_id && senderEmail
+          ? await findContactByEmail(senderEmail, tenant, { ticketId: input.ticketId })
+          : null;
+      const resolvedContactId = input.contact_id ?? matchedContact?.contact_id;
+      const resolvedAuthorId = input.author_id ?? matchedContact?.user_id;
+      const resolvedAuthorType = input.author_type ?? (resolvedContactId ? 'contact' : 'system');
+
       const commentId = await createCommentFromEmail({
         ticket_id: input.ticketId,
         content: commentPayload.content,
         format: commentPayload.format,
         source: input.source ?? 'email',
-        author_type: input.author_type ?? 'system',
+        author_type: resolvedAuthorType,
+        author_id: resolvedAuthorId,
+        contact_id: resolvedContactId,
         metadata: commentPayload.metadata
       }, tenant);
       return { comment_id: commentId };

@@ -147,6 +147,7 @@
                   "ticketDefaults": { "$expr": "vars.ticketContext.ticketDefaults" },
                   "targetClientId": { "$expr": "vars.ticketContext.targetClientId" },
                   "targetContactId": { "$expr": "vars.ticketContext.targetContactId" },
+                  "targetAuthorUserId": { "$expr": "vars.ticketContext.targetAuthorUserId" },
                   "targetLocationId": { "$expr": "vars.ticketContext.targetLocationId" }
                 },
                 "idempotencyKey": { "$expr": "payload.providerId & ':' & payload.emailData.id" },

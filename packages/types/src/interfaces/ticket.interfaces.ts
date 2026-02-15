@@ -165,4 +165,10 @@ export interface ITicketWithDetails extends ITicket {
     user_type: string;
     avatarUrl: string | null;
   }>;
+  contactMap?: Record<string, {
+    contact_id: string;
+    full_name: string;
+    email?: string;
+    avatarUrl: string | null;
+  }>;
 }

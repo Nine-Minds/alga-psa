@@ -4,6 +4,7 @@ import { systemEmailProcessingWorkflow } from '@shared/workflow/workflows/system
 
 function createWorkflowHarness(overrides?: {
   findTicketByEmailThreadResult?: any;
+  findContactByEmailResult?: any;
   processEmailAttachmentImpl?: (...args: any[]) => any;
   eventPayload?: any;
 }) {
@@ -23,15 +24,18 @@ function createWorkflowHarness(overrides?: {
     })),
     convert_html_to_blocks: vi.fn(async () => ({ success: true, blocks: [] })),
     find_ticket_by_email_thread: vi.fn(async () => overrides?.findTicketByEmailThreadResult ?? ({ success: true, ticket: null })),
-    find_contact_by_email: vi.fn(async () => ({
-      success: true,
-      contact: {
-        contact_id: 'contact-1',
-        name: 'Contact',
-        client_id: 'client-1',
-        client_name: 'Client',
-      },
-    })),
+    find_contact_by_email: vi.fn(async () => (
+      overrides?.findContactByEmailResult ?? {
+        success: true,
+        contact: {
+          contact_id: 'contact-1',
+          user_id: 'client-user-1',
+          name: 'Contact',
+          client_id: 'client-1',
+          client_name: 'Client',
+        },
+      }
+    )),
     resolve_inbound_ticket_defaults: vi.fn(async () => ({
       board_id: 'board-1',
       status_id: 'status-1',
@@ -50,6 +54,10 @@ function createWorkflowHarness(overrides?: {
     create_comment_from_email: vi.fn(async () => ({
       success: true,
       comment_id: 'comment-1',
+    })),
+    createTaskAndWaitForResult: vi.fn(async () => ({
+      success: false,
+      resolutionData: null,
     })),
     process_email_attachment: vi.fn(async (...args: any[]) => {
       if (overrides?.processEmailAttachmentImpl) {
@@ -121,6 +129,10 @@ describe('systemEmailProcessingWorkflow: attachment processing behavior', () => 
 
     expect(actions.create_ticket_from_email).toHaveBeenCalledTimes(1);
     expect(actions.create_comment_from_email).toHaveBeenCalledTimes(1);
+    expect(actions.create_comment_from_email).toHaveBeenCalledWith(expect.objectContaining({
+      author_type: 'contact',
+      author_id: 'client-user-1',
+    }));
     expect(actions.process_email_attachment).toHaveBeenCalledTimes(2);
     expect(states).toContain('EMAIL_PROCESSED');
   });
@@ -163,7 +175,53 @@ describe('systemEmailProcessingWorkflow: attachment processing behavior', () => 
     ).resolves.toBeUndefined();
 
     expect(actions.create_comment_from_email).toHaveBeenCalledTimes(1);
+    expect(actions.find_contact_by_email).toHaveBeenCalledWith(expect.objectContaining({
+      email: 'from@example.com',
+      ticketId: 'ticket-existing-1',
+    }));
     expect(actions.process_email_attachment).toHaveBeenCalledTimes(1);
     expect(attachmentCalls).toEqual(['r1']);
+  });
+
+  it('new ticket flow without matched contact creates initial comment as system author (internal flow)', async () => {
+    const { context, actions, states } = createWorkflowHarness({
+      findContactByEmailResult: { success: false, contact: null },
+      findTicketByEmailThreadResult: { success: true, ticket: null },
+      eventPayload: {
+        tenantId: 'tenant-1',
+        providerId: 'provider-1',
+        emailData: {
+          id: 'msg-internal-1',
+          subject: 'Internal automation email',
+          from: { email: 'ops-automation@example.com', name: 'Ops Automation' },
+          to: [{ email: 'support@example.com', name: 'Support' }],
+          body: { text: 'Automated signal', html: undefined },
+          receivedAt: new Date().toISOString(),
+          attachments: [],
+          threadId: 'thread-internal-1',
+          inReplyTo: null,
+          references: [],
+          providerId: 'provider-1',
+          tenant: 'tenant-1',
+        },
+      },
+    });
+
+    await expect(
+      systemEmailProcessingWorkflow({
+        ...context,
+      })
+    ).resolves.toBeUndefined();
+
+    expect(actions.create_ticket_from_email).toHaveBeenCalledTimes(1);
+    expect(actions.create_ticket_from_email).toHaveBeenCalledWith(expect.objectContaining({
+      contact_id: null,
+    }));
+
+    expect(actions.create_comment_from_email).toHaveBeenCalledTimes(1);
+    const createCommentInput = actions.create_comment_from_email.mock.calls[0]?.[0];
+    expect(createCommentInput.author_type).toBe('system');
+    expect(createCommentInput.author_id).toBeUndefined();
+    expect(states).toContain('EMAIL_PROCESSED');
   });
 });
