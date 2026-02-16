@@ -50,7 +50,7 @@
   {
     "id": "T009",
     "description": "After Stage 3: re-export shim in documents/lib/blocknoteUtils still resolves",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F008"]
   },
   {

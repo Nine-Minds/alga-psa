@@ -44,7 +44,7 @@
   {
     "id": "F008",
     "description": "Stage 3: Replace documents blocknoteUtils.ts with re-export shim from core",
-    "implemented": false,
+    "implemented": true,
     "stage": 3
   },
   {
