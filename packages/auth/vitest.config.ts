@@ -12,11 +12,12 @@ export default defineConfig({
     alias: {
       '@alga-psa/client-portal': path.resolve(__dirname, '../client-portal/src'),
       '@alga-psa/documents': path.resolve(__dirname, '../documents/src'),
+      '@alga-psa/media': path.resolve(__dirname, '../media/src'),
       '@alga-psa/event-bus': path.resolve(__dirname, '../event-bus/src'),
       '@alga-psa/notifications': path.resolve(__dirname, '../notifications/src'),
       '@alga-psa/ui': path.resolve(__dirname, '../ui/src'),
       '@alga-psa/users': path.resolve(__dirname, '../users/src'),
-      '@alga-psa/documents/lib/avatarUtils': path.resolve(__dirname, '../documents/src/lib/avatarUtils.ts'),
+      '@alga-psa/media/lib/avatarUtils': path.resolve(__dirname, '../media/src/lib/avatarUtils.ts'),
       '@alga-psa/documents/actions/documentActions': path.resolve(__dirname, '../documents/src/actions/documentActions.ts'),
       '@alga-psa/client-portal/models/PortalDomainModel': path.resolve(
         __dirname,

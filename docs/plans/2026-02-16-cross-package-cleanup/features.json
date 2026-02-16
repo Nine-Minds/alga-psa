@@ -68,7 +68,7 @@
   {
     "id": "F012",
     "description": "Stage 4: Redirect all entity image/avatar callers from @alga-psa/documents to @alga-psa/media (~10 files)",
-    "implemented": false,
+    "implemented": true,
     "stage": 4
   },
   {

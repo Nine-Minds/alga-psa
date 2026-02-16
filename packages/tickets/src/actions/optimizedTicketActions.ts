@@ -25,7 +25,7 @@ import { publishEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishe
 import { getEventBus } from '@alga-psa/event-bus';
 import { convertBlockNoteToMarkdown } from '@alga-psa/core/lib/blocknoteUtils';
 import { getImageUrl } from '@alga-psa/documents/actions/documentActions';
-import { getClientLogoUrl, getUserAvatarUrl, getClientLogoUrlsBatch } from '@alga-psa/documents/lib/avatarUtils';
+import { getClientLogoUrl, getUserAvatarUrl, getClientLogoUrlsBatch } from '@alga-psa/media';
 import {
   ticketFormSchema,
   ticketSchema,

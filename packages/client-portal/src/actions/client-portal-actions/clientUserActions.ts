@@ -6,7 +6,7 @@ import { Knex } from 'knex';
 import { hashPassword } from '@alga-psa/core/encryption';
 import { revalidatePath } from 'next/cache';
 // Note: getUserClientId removed - was unused and caused nested withAuth issues
-import { uploadEntityImage, deleteEntityImage } from '@alga-psa/documents';
+import { uploadEntityImage, deleteEntityImage } from '@alga-psa/media';
 import { hasPermission, withAuth, type AuthContext } from '@alga-psa/auth';
 import { getRoles, assignRoleToUser, removeRoleFromUser, getUserRoles } from '@alga-psa/auth/actions';
 import {

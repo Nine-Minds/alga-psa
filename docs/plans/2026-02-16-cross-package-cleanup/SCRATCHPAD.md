@@ -82,3 +82,7 @@
 - (2026-02-16) Stage 4: Removed documents/lib/entityImageService and related export re-exports.
 
 - (2026-02-16) Stage 4 test: confirmed no @alga-psa/documents/lib/entityImageService imports remain.
+
+- (2026-02-16) Stage 4: Redirected avatar/image utilities and entity image actions to @alga-psa/media across clients, client-portal, projects, tickets, tenancy, tags, and dynamic imports.
+
+- (2026-02-16) Stage 4 test: verified upload/delete entity image imports now come from @alga-psa/media; no remaining @alga-psa/documents/lib/avatarUtils imports.
