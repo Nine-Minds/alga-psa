@@ -202,14 +202,22 @@ body {
     border-color: rgb(var(--color-border-200));
 }
 
+.dark input[type="checkbox"],
+.dark input[type="radio"] {
+    color-scheme: dark;
+    accent-color: rgb(var(--color-primary-500));
+}
+
+/* Make Radix Theme wrapper transparent inside portaled surfaces (drawers,
+   dialogs) so the parent's background shows through consistently */
+.dark [role="dialog"] > .radix-themes,
+.dark [role="dialog"] .radix-themes {
+    background-color: transparent !important;
+}
+
 .dark input::placeholder,
 .dark textarea::placeholder {
     color: rgb(var(--color-text-500));
-}
-
-.dark input[type="checkbox"],
-.dark input[type="radio"] {
-    accent-color: rgb(var(--color-primary-500));
 }
 
 /* Add placeholder styles */
@@ -952,10 +960,42 @@ body {
   background: rgb(var(--color-border-100)) !important;
 }
 
-/* Tiptap / ProseMirror dark background */
+/* Paper-feel background for text editors (light + dark) */
+.editor-paper {
+  background-color: #faf8f4;
+  box-shadow: inset 0 2px 4px rgb(0 0 0 / 0.03), inset 0 0 0 1px rgb(0 0 0 / 0.04);
+}
+
+.dark .editor-paper {
+  background:
+    radial-gradient(ellipse 80% 60% at 15% 85%, rgb(45 30 70 / 0.25) 0%, transparent 50%),
+    radial-gradient(ellipse 60% 50% at 85% 20%, rgb(20 50 65 / 0.2) 0%, transparent 50%),
+    rgb(var(--color-border-100));
+  box-shadow: inset 0 2px 6px rgb(0 0 0 / 0.3), inset 0 0 0 1px rgb(255 255 255 / 0.06);
+}
+
+/* Override BlockNote theme so parent background shows through (light + dark) */
+.bn-container,
+.bn-container[data-color-scheme="light"],
+.bn-container[data-color-scheme="dark"] {
+  --bn-colors-editor-background: transparent !important;
+  background-color: transparent !important;
+  background: transparent !important;
+}
+
+.bn-editor,
+.bn-container .bn-editor,
+.tiptap,
+.ProseMirror,
+[class*="bnEditor"] {
+  background-color: transparent !important;
+  background: transparent !important;
+}
+
+/* Tiptap / ProseMirror dark text color */
 .dark .tiptap,
 .dark .ProseMirror {
-  background-color: rgb(var(--color-border-50));
+  background-color: transparent;
   color: rgb(var(--color-text-900));
 }
 

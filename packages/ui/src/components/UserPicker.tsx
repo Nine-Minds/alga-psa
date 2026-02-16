@@ -352,9 +352,9 @@ const UserPicker = ({
       onMouseDown={(e) => e.stopPropagation()}
       onClick={(e) => e.stopPropagation()}
     >
-      <div className="bg-white rounded-md shadow-lg border border-gray-200 overflow-hidden w-full">
+      <div className="bg-white dark:bg-[rgb(var(--color-card))] rounded-md shadow-lg border border-gray-200 dark:border-[rgb(var(--color-border-200))] overflow-hidden w-full">
         {/* Search Input */}
-        <div className="p-2 border-b border-gray-200">
+        <div className="p-2 border-b border-gray-200 dark:border-[rgb(var(--color-border-200))]">
           <div className="relative">
             <Input
               ref={searchInputRef}

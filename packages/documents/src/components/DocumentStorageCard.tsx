@@ -60,14 +60,14 @@ function VideoPreviewComponent({ fileId, mimeType, fileName, onClick }: VideoPre
         // Show fallback for unsupported formats
         return (
             <div 
-                className="max-w-full h-48 rounded-md border border-[rgb(var(--color-border-200))] cursor-pointer transition-all hover:border-[rgb(var(--color-border-300))] bg-gray-50 flex flex-col items-center justify-center group"
+                className="max-w-full h-48 rounded-md border border-[rgb(var(--color-border-200))] cursor-pointer transition-all hover:border-[rgb(var(--color-border-300))] bg-gray-50 dark:bg-[rgb(var(--color-border-50))] flex flex-col items-center justify-center group"
                 onClick={onClick}
             >
-                <Video className="w-12 h-12 text-gray-400 mb-2" />
-                <p className="text-sm text-gray-600 text-center px-4">
+                <Video className="w-12 h-12 text-gray-400 dark:text-[rgb(var(--color-text-400))] mb-2" />
+                <p className="text-sm text-gray-600 dark:text-[rgb(var(--color-text-600))] text-center px-4">
                     {fileName}
                 </p>
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-gray-500 dark:text-[rgb(var(--color-text-500))] mt-1">
                     {mimeType}
                 </p>
                 <div className="mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -141,7 +141,7 @@ function VideoModalComponent({ fileId, documentId, mimeType, fileName }: VideoMo
     if (videoError) {
         return (
             <div className="text-center p-8">
-                <Video className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                <Video className="w-16 h-16 text-gray-400 dark:text-[rgb(var(--color-text-400))] mx-auto mb-4" />
                 <p className="text-[rgb(var(--color-text-700))] mb-2 font-medium">
                     {fileName}
                 </p>
@@ -196,7 +196,7 @@ function VideoModalComponent({ fileId, documentId, mimeType, fileName }: VideoMo
                 {t('documents.videoTagUnsupported', 'Your browser does not support the video tag.')}
             </video>
             <div className="text-center mt-4">
-                <p className="text-sm text-gray-600 mb-2">
+                <p className="text-sm text-gray-600 dark:text-[rgb(var(--color-text-500))] mb-2">
                     {t('documents.videoPlaybackIssue', 'Having trouble playing the video?')}
                 </p>
                 <Button
@@ -578,8 +578,8 @@ function DocumentStorageCardComponent({
 
                     {/* Preview Content */}
                     {!isInView ? (
-                        <div className="mt-4 flex justify-center h-48 items-center bg-gray-50 rounded">
-                            <span className="text-sm text-gray-400">Loading...</span>
+                        <div className="mt-4 flex justify-center h-48 items-center bg-gray-50 dark:bg-[rgb(var(--color-border-50))] rounded">
+                            <span className="text-sm text-gray-400 dark:text-[rgb(var(--color-text-400))]">Loading...</span>
                         </div>
                     ) : isLoading ? (
                         <div className="mt-4 flex justify-center">
@@ -606,12 +606,15 @@ function DocumentStorageCardComponent({
                                     const isPreviewableInModal = document.mime_type?.startsWith('image/') ||
                                                                   document.mime_type?.startsWith('video/') ||
                                                                   document.mime_type === 'application/pdf';
+                                    // Invert non-photo previews in dark mode so white backgrounds become dark
+                                    const isPhoto = document.mime_type?.startsWith('image/') || document.mime_type?.startsWith('video/');
+                                    const invertClass = isPhoto ? '' : 'dark:invert dark:hue-rotate-180';
                                     return (
                                         <div className="relative group">
                                             <img
                                                 src={previewContent.previewImage}
                                                 alt={document.document_name}
-                                                className={`max-w-full h-auto rounded-md border border-[rgb(var(--color-border-200))] ${isPreviewableInModal ? 'cursor-pointer transition-opacity group-hover:opacity-75' : ''}`}
+                                                className={`max-w-full h-auto rounded-md border border-[rgb(var(--color-border-200))] ${invertClass} ${isPreviewableInModal ? 'cursor-pointer transition-opacity group-hover:opacity-75' : ''}`}
                                                 style={{ maxHeight: '200px', objectFit: 'contain' }}
                                                 onClick={isPreviewableInModal ? handleFullSizeView : undefined}
                                                 role={isPreviewableInModal ? "button" : undefined}

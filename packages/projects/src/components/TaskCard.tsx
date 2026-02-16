@@ -457,7 +457,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
                 </div>
               }
             >
-              <div className={`flex items-center gap-1 cursor-help ${allCompleted ? 'bg-green-50 text-green-600' : 'text-gray-500'} px-2 py-1 rounded`}>
+              <div className={`flex items-center gap-1 cursor-help ${allCompleted ? 'bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400' : 'text-gray-500 dark:text-[rgb(var(--color-text-400))]'} px-2 py-1 rounded`}>
                 {allCompleted ? (
                   <CheckSquare className="w-3 h-3" />
                 ) : (

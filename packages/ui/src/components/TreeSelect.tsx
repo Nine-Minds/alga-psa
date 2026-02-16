@@ -61,7 +61,7 @@ function TreeSelect<T extends string>({
   selectedClassName = 'bg-gray-50',
   hoverClassName = 'hover:bg-gray-50',
   triggerClassName = 'hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-primary-500))] focus:border-transparent',
-  contentClassName = 'bg-white rounded-md shadow-lg border border-gray-200',
+  contentClassName = 'bg-white dark:bg-[rgb(var(--color-card))] rounded-md shadow-lg border border-gray-200 dark:border-[rgb(var(--color-border-200))]',
   multiSelect = false,
   showExclude = false,
   showReset = false,

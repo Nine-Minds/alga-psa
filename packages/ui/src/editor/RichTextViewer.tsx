@@ -164,7 +164,7 @@ function RichTextViewerInternal({
 
   return (
     <div className={`w-full min-w-0 ${className} ${styles.forceTextBreak}`}>
-      <div className="w-full bg-white dark:bg-transparent rounded-lg overflow-auto min-w-0">
+      <div className="w-full rounded-lg overflow-auto min-w-0">
         <BlockNoteView
           key={shouldRemount ? contentKey : 'stable'}
           editor={editor}
