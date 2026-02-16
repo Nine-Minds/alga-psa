@@ -22,6 +22,11 @@ export interface ListOptions {
   filters?: Record<string, any>;
   sort?: string;
   order?: 'asc' | 'desc';
+  /**
+   * Optional field selection for list endpoints (comma-separated via `?fields=...`).
+   * Services may ignore this if not supported.
+   */
+  fields?: string[];
 }
 
 export interface BaseService {

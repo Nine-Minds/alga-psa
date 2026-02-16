@@ -1,0 +1,178 @@
+import { useEffect, useRef, useState } from "react";
+import { Platform, View } from "react-native";
+import type { NativeStackScreenProps } from "@react-navigation/native-stack";
+import * as Application from "expo-application";
+import type { RootStackParamList } from "../navigation/types";
+import { ErrorState, LoadingState } from "../ui/states";
+import { PrimaryButton } from "../ui/components/PrimaryButton";
+import { logger } from "../logging/logger";
+import { clearPendingMobileAuth, clearReceivedOtt, getPendingMobileAuth, storeReceivedOtt } from "../auth/mobileAuth";
+import { getAppConfig } from "../config/appConfig";
+import { createApiClient } from "../api";
+import { exchangeOttWithRetry } from "../api/mobileAuth";
+import { useAuth } from "../auth/AuthContext";
+import { getStableDeviceId } from "../device/clientMetadata";
+import { analytics } from "../analytics/analytics";
+import { MobileAnalyticsEvents } from "../analytics/events";
+import { getTicketStats } from "../api/tickets";
+
+type Props = NativeStackScreenProps<RootStackParamList, "AuthCallback">;
+
+function mapAuthCallbackError(code: string): string {
+  const normalized = code.trim().toLowerCase();
+  switch (normalized) {
+    case "invalid_redirect":
+      return "Sign-in is misconfigured for this app. Please contact your administrator and try again.";
+    case "rate_limited":
+      return "Too many sign-in attempts. Please wait a moment and try again.";
+    case "client_not_allowed":
+      return "Client portal users can’t sign in to the mobile app. Please use an internal account.";
+    case "mobile_disabled":
+      return "Mobile sign-in is disabled for this server.";
+    case "host_not_allowlisted":
+      return "This server domain is not allowed for mobile sign-in.";
+    default:
+      return code;
+  }
+}
+
+export function AuthCallbackScreen({ navigation, route }: Props) {
+  const [error, setError] = useState<string | null>(null);
+  const { setSession } = useAuth();
+  const exchangeInFlight = useRef(false);
+
+  useEffect(() => {
+    let canceled = false;
+    const abortController = new AbortController();
+
+    const run = async () => {
+      if (exchangeInFlight.current) return;
+      exchangeInFlight.current = true;
+      try {
+        const ott = route.params?.ott;
+        const state = route.params?.state;
+        const callbackError = route.params?.error;
+
+        if (callbackError) {
+          analytics.trackEvent(MobileAnalyticsEvents.authCallbackFailed, { reason: callbackError });
+          setError(mapAuthCallbackError(callbackError));
+          return;
+        }
+
+        if (!ott || !state) {
+          analytics.trackEvent(MobileAnalyticsEvents.authCallbackFailed, { reason: "missing_params" });
+          setError("Missing required sign-in parameters.");
+          return;
+        }
+
+        const pending = await getPendingMobileAuth();
+        if (!pending || pending.state !== state) {
+          analytics.trackEvent(MobileAnalyticsEvents.authCallbackFailed, { reason: "state_mismatch" });
+          setError("This sign-in link is not valid for the current session. Please try again.");
+          return;
+        }
+
+        await storeReceivedOtt(ott, state);
+
+        const config = getAppConfig();
+        if (!config.ok) {
+          setError(config.error);
+          return;
+        }
+
+        const client = createApiClient({
+          baseUrl: config.baseUrl,
+          getUserAgentTag: () => `mobile/${Platform.OS}`,
+        });
+
+        const deviceId = await getStableDeviceId();
+
+        const device = {
+          platform: Platform.OS,
+          appVersion: Application.nativeApplicationVersion ?? undefined,
+          buildVersion: Application.nativeBuildVersion ?? undefined,
+          deviceId,
+        };
+
+        const exchanged = await exchangeOttWithRetry(
+          client,
+          { ott, state, device },
+          { maxAttempts: 3, baseDelayMs: 250, maxDelayMs: 2_000 },
+          abortController.signal,
+        );
+        if (!exchanged.ok) {
+          analytics.trackEvent(MobileAnalyticsEvents.authExchangeFailed, {
+            errorKind: exchanged.error.kind,
+            status: exchanged.status ?? null,
+          });
+          setError(exchanged.error.message);
+          return;
+        }
+
+        analytics.trackEvent(MobileAnalyticsEvents.authExchangeSucceeded, {
+          expiresInSec: exchanged.data.expiresInSec,
+        });
+
+        // Detect users who can authenticate but lack basic ticket permissions.
+        const ticketCheckClient = createApiClient({
+          baseUrl: config.baseUrl,
+          getUserAgentTag: () => `mobile/${Platform.OS}`,
+        });
+        const ticketCheck = await getTicketStats(ticketCheckClient, { apiKey: exchanged.data.accessToken });
+        if (!ticketCheck.ok && ticketCheck.error.kind === "permission") {
+          analytics.trackEvent(MobileAnalyticsEvents.authExchangeFailed, {
+            errorKind: "permission",
+            status: ticketCheck.status ?? null,
+          });
+          await Promise.allSettled([clearPendingMobileAuth(), clearReceivedOtt()]);
+          setError("Your account does not have permission to view tickets. Please contact your administrator.");
+          return;
+        }
+
+        const expiresAtMs = Date.now() + exchanged.data.expiresInSec * 1000;
+        setSession({
+          accessToken: exchanged.data.accessToken,
+          refreshToken: exchanged.data.refreshToken,
+          expiresAtMs,
+          tenantId: exchanged.data.tenantId,
+          user: exchanged.data.user,
+        });
+        await clearPendingMobileAuth();
+        await clearReceivedOtt();
+
+        if (!canceled) navigation.reset({ index: 0, routes: [{ name: "Tabs" }] });
+      } catch (e) {
+        logger.error("Failed to handle auth callback", { error: e });
+        if (!canceled) setError("Failed to complete sign-in. Please try again.");
+      } finally {
+        exchangeInFlight.current = false;
+      }
+    };
+
+    void run();
+    return () => {
+      canceled = true;
+      abortController.abort();
+    };
+  }, [navigation, route.params?.error, route.params?.ott, route.params?.state]);
+
+  if (error) {
+    return (
+      <ErrorState
+        title="Sign-in failed"
+        description={error}
+        action={
+          <PrimaryButton onPress={() => navigation.reset({ index: 0, routes: [{ name: "SignIn" }] })}>
+            Back to sign-in
+          </PrimaryButton>
+        }
+      />
+    );
+  }
+
+  return (
+    <View style={{ flex: 1 }}>
+      <LoadingState message="Completing sign-in…" />
+    </View>
+  );
+}

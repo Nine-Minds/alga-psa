@@ -259,10 +259,49 @@ export class ApiTicketController extends ApiBaseController {
             throw new ForbiddenError('Permission denied: Cannot read ticket');
           }
 
+          const searchParams = req.nextUrl.searchParams;
+          const limitRaw = searchParams.get('limit');
+          const offsetRaw = searchParams.get('offset');
+          const orderRaw = searchParams.get('order');
+
+          let limit: number | undefined;
+          let offset: number | undefined;
+          let order: 'asc' | 'desc' | undefined;
+
+          if (limitRaw !== null) {
+            const n = Number(limitRaw);
+            if (!Number.isInteger(n) || n <= 0 || n > 200) {
+              throw new ValidationError('Validation failed', [
+                { path: ['limit'], message: 'limit must be an integer between 1 and 200' }
+              ]);
+            }
+            limit = n;
+          }
+
+          if (offsetRaw !== null) {
+            const n = Number(offsetRaw);
+            if (!Number.isInteger(n) || n < 0) {
+              throw new ValidationError('Validation failed', [
+                { path: ['offset'], message: 'offset must be an integer >= 0' }
+              ]);
+            }
+            offset = n;
+          }
+
+          if (orderRaw !== null) {
+            if (orderRaw !== 'asc' && orderRaw !== 'desc') {
+              throw new ValidationError('Validation failed', [
+                { path: ['order'], message: "order must be 'asc' or 'desc'" }
+              ]);
+            }
+            order = orderRaw;
+          }
+
           const ticketId = await this.extractIdFromPath(apiRequest);
           const comments = await this.ticketService.getTicketComments(
             ticketId, 
-            apiRequest.context!
+            apiRequest.context!,
+            { limit, offset, order }
           );
 
           return createSuccessResponse(comments);

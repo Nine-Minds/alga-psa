@@ -1,0 +1,75 @@
+name: Mobile distribute (TestFlight / Play Internal)
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Distribution target"
+        required: true
+        type: choice
+        options:
+          - testflight
+          - playInternal
+
+jobs:
+  distribute:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: mobile/package-lock.json
+
+      - name: Install dependencies
+        working-directory: mobile
+        run: npm ci --include=dev
+
+      - name: Setup Expo / EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: EAS build (wait)
+        working-directory: mobile
+        env:
+          TARGET: ${{ inputs.target }}
+        run: |
+          set -euo pipefail
+          case "$TARGET" in
+            testflight)
+              npx eas-cli build --platform ios --profile testflight --non-interactive --wait
+              ;;
+            playInternal)
+              npx eas-cli build --platform android --profile playInternal --non-interactive --wait
+              ;;
+            *)
+              echo "Unknown target: $TARGET"
+              exit 1
+              ;;
+          esac
+
+      - name: EAS submit (latest)
+        working-directory: mobile
+        env:
+          TARGET: ${{ inputs.target }}
+        run: |
+          set -euo pipefail
+          case "$TARGET" in
+            testflight)
+              npx eas-cli submit --platform ios --profile testflight --latest --non-interactive
+              ;;
+            playInternal)
+              npx eas-cli submit --platform android --profile playInternal --latest --non-interactive
+              ;;
+            *)
+              echo "Unknown target: $TARGET"
+              exit 1
+              ;;
+          esac
+
