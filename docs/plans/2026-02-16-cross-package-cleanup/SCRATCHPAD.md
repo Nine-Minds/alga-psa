@@ -78,3 +78,7 @@
 - (2026-02-16) Stage 4: Added batch avatar helpers in media/avatarUtils using Promise.allSettled for parallel URL resolution.
 
 - (2026-02-16) Stage 4 test: added media avatarUtils batch vitest asserting parallel URL resolution; test passes.
+
+- (2026-02-16) Stage 4: Removed documents/lib/entityImageService and related export re-exports.
+
+- (2026-02-16) Stage 4 test: confirmed no @alga-psa/documents/lib/entityImageService imports remain.

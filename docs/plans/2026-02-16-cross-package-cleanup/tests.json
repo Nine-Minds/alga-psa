@@ -80,7 +80,7 @@
   {
     "id": "T014",
     "description": "After Stage 4: no imports from @alga-psa/documents/lib/entityImageService remain in codebase",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F011"]
   },
   {
