@@ -80,7 +80,7 @@
   {
     "id": "F014",
     "description": "Stage 5: Add ALLOWED_PAIRS for integrations->clients (4) and integrations->scheduling (1) with justification comments",
-    "implemented": false,
+    "implemented": true,
     "stage": 5
   },
   {

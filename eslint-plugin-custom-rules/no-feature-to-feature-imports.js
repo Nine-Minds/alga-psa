@@ -12,6 +12,13 @@ const VERTICAL_PACKAGES = new Set([
   // 'client-portal' is a composition layer (not a vertical feature package).
 ]);
 
+const ALLOWED_PAIRS = new Set([
+  // integrations -> clients: data-access (findContactByEmailAddress, getAllClients) until horizontal interfaces exist.
+  'integrations->clients',
+  // integrations -> scheduling: CalendarSyncService reads scheduling data; to be extracted later.
+  'integrations->scheduling',
+]);
+
 function getSourcePackage(filename) {
   if (!filename || filename === '<input>' || filename === '<text>') return null;
   const match = filename.match(/[\\/](?:packages)[\\/](?<pkg>[^\\/]+)[\\/]/);
@@ -54,6 +61,7 @@ export default {
 
         if (!VERTICAL_PACKAGES.has(targetPkg)) return;
         if (targetPkg === sourcePkg) return;
+        if (ALLOWED_PAIRS.has(`${sourcePkg}->${targetPkg}`)) return;
 
         context.report({
           node: node.source,

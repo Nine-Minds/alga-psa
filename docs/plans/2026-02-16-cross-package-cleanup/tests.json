@@ -98,7 +98,7 @@
   {
     "id": "T017",
     "description": "After Stage 5: integrations->clients and integrations->scheduling pairs are no longer flagged",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F014"]
   },
   {

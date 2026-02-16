@@ -88,3 +88,9 @@
 - (2026-02-16) Stage 4 test: verified upload/delete entity image imports now come from @alga-psa/media; no remaining @alga-psa/documents/lib/avatarUtils imports.
 
 - (2026-02-16) Stage 4: Added @alga-psa/media dependencies to client-portal, clients, projects, tenancy, tickets; replaced documents dependency in tags.
+
+- (2026-02-16) Stage 4 build: `NODE_OPTIONS=--max-old-space-size=8192 npm run build` timed out after 240s (Next.js build with warnings, no completion).
+
+- (2026-02-16) Stage 5: Added ALLOWED_PAIRS for integrations->clients and integrations->scheduling in no-feature-to-feature rule with rationale comments.
+
+- (2026-02-16) Stage 5 test: eslint no longer flags integrations->clients or integrations->scheduling violations.
