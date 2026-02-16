@@ -26,7 +26,7 @@
   {
     "id": "F005",
     "description": "Stage 3: Fix broken HTML escaping in codeBlock handler (.replace no-ops -> proper &amp; &lt; &gt;)",
-    "implemented": false,
+    "implemented": true,
     "stage": 3
   },
   {

@@ -682,9 +682,9 @@ export function convertBlockNoteToHTML(blocks: any): string {
           const language = (block.props as any)?.language || '';
           const codeText = (block.content as any[])
               .map(item => item.text || '')
-              .join('\n')
-              .replace(/&/g, '&').replace(/</g, '<').replace(/>/g, '>');
-          content = `<code class="language-${language}">${codeText}</code>`;
+              .join('\n');
+          const escapedCodeText = escapeHtml(codeText);
+          content = `<code class="language-${language}">${escapedCodeText}</code>`;
           output.push(`<pre${styleAttribute}>${content}</pre>`);
           break;
         default:

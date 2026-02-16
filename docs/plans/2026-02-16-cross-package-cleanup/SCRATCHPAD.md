@@ -53,3 +53,7 @@
 - (2026-02-16) Stage 2 build: `npm run build` failed (Next.js build OOM in node) after assemblyscript step; need rerun with more memory later.
 
 - (2026-02-16) Stage 3: Copied blocknoteUtils to core, added export map entry and @blocknote/core dependency.
+
+- (2026-02-16) Stage 3: Fixed codeBlock HTML escaping in core blocknoteUtils (escapeHtml for code content).
+
+- (2026-02-16) Stage 3 test: added core blocknoteUtils vitest for codeBlock escaping; `npx vitest run packages/core/src/lib/blocknoteUtils.test.ts` passes.

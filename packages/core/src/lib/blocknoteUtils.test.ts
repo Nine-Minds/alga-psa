@@ -1,0 +1,22 @@
+import { describe, expect, it } from 'vitest';
+
+import { convertBlockNoteToHTML } from './blocknoteUtils';
+
+describe('blocknoteUtils convertBlockNoteToHTML', () => {
+  it('escapes codeBlock content for HTML output', () => {
+    const blocks = [
+      {
+        type: 'codeBlock',
+        props: { language: 'ts' },
+        content: [
+          { type: 'text', text: 'if (a < b && b > c) return a & b;' },
+        ],
+      },
+    ];
+
+    const html = convertBlockNoteToHTML(blocks);
+    expect(html).toContain('&lt;');
+    expect(html).toContain('&gt;');
+    expect(html).toContain('&amp;');
+  });
+});

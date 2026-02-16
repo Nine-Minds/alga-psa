@@ -26,7 +26,7 @@
   {
     "id": "T005",
     "description": "After Stage 3: convertBlockNoteToHTML correctly escapes & < > in codeBlock content",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F005"]
   },
   {
