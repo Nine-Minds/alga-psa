@@ -1,3 +1,8 @@
+/**
+ * @deprecated Use templates/email/surveys/surveyTicketClosed.cjs instead.
+ * Kept for backward compatibility with migration 20251111120001.
+ */
+
 const SURVEY_TEMPLATE_NAME = 'SURVEY_TICKET_CLOSED';
 const SURVEY_SUBTYPE_NAME = 'survey-ticket-closed';
 const SURVEY_CATEGORY_NAME = 'Surveys';
