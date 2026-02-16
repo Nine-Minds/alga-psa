@@ -36,7 +36,7 @@ describe("secureStorage (web fallback)", () => {
 
   it("returns null when stored JSON is invalid", async () => {
     const localStorageMock = {
-      getItem: vi.fn((_k: string) => "{not-json"),
+      getItem: vi.fn(() => "{not-json"),
       setItem: vi.fn(),
       removeItem: vi.fn(),
     };
@@ -46,4 +46,3 @@ describe("secureStorage (web fallback)", () => {
     expect(await mod.getSecureJson("bad")).toBeNull();
   });
 });
-

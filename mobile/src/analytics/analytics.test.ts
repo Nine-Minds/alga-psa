@@ -24,7 +24,7 @@ describe("analytics", () => {
     analytics.trackEvent(MobileAnalyticsEvents.appStartupReady, { durationMs: 123, signedIn: true });
     expect(spy).toHaveBeenCalledTimes(1);
 
-    const [_msg, meta] = spy.mock.calls[0] ?? [];
+    const [, meta] = spy.mock.calls[0] ?? [];
     expect(meta).toMatchObject({
       name: MobileAnalyticsEvents.appStartupReady,
       properties: {
@@ -37,4 +37,3 @@ describe("analytics", () => {
     spy.mockRestore();
   });
 });
-

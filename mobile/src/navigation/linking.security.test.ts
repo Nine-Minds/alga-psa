@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 vi.mock("expo-linking", () => {
   return {
-    createURL: (_path: string) => "exp://test/",
+    createURL: () => "exp://test/",
     parse: (rawUrl: string) => {
       const u = new URL(rawUrl);
       return {
@@ -35,4 +35,3 @@ describe("deep link hardening", () => {
     await expect(linking.getInitialURL?.()).resolves.toBe("alga://signin");
   });
 });
-
