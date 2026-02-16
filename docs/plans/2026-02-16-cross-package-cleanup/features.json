@@ -74,7 +74,7 @@
   {
     "id": "F013",
     "description": "Stage 4: Add @alga-psa/media dependency to package.json of client-portal, clients, projects, tenancy, tickets; replace in tags",
-    "implemented": false,
+    "implemented": true,
     "stage": 4
   },
   {

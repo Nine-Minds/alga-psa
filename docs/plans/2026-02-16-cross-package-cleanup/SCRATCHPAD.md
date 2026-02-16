@@ -86,3 +86,5 @@
 - (2026-02-16) Stage 4: Redirected avatar/image utilities and entity image actions to @alga-psa/media across clients, client-portal, projects, tickets, tenancy, tags, and dynamic imports.
 
 - (2026-02-16) Stage 4 test: verified upload/delete entity image imports now come from @alga-psa/media; no remaining @alga-psa/documents/lib/avatarUtils imports.
+
+- (2026-02-16) Stage 4: Added @alga-psa/media dependencies to client-portal, clients, projects, tenancy, tickets; replaced documents dependency in tags.
