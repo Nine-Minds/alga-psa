@@ -81,3 +81,100 @@ export async function getClientLogoUrl(clientId: string, tenant: string): Promis
   return getEntityImageUrl('client', clientId, tenant);
 }
 
+export async function getEntityImageUrlsBatch(
+  entityType: EntityType,
+  entityIds: string[],
+  tenant: string
+): Promise<Map<string, string | null>> {
+  const result = new Map<string, string | null>();
+
+  entityIds.forEach((id) => result.set(id, null));
+  if (entityIds.length === 0) {
+    return result;
+  }
+
+  try {
+    const { knex } = await createTenantKnex(tenant);
+
+    const associations = await knex('document_associations')
+      .select('entity_id', 'document_id')
+      .whereIn('entity_id', entityIds)
+      .andWhere({
+        entity_type: entityType,
+        is_entity_logo: true,
+        tenant
+      });
+
+    if (associations.length === 0) {
+      return result;
+    }
+
+    const documentIds = associations.map((association) => association.document_id);
+    const documents = await knex('documents')
+      .select('document_id', 'file_id', 'updated_at')
+      .whereIn('document_id', documentIds)
+      .andWhere({ tenant });
+
+    const docToFileMap = new Map(
+      documents.map((doc) => [doc.document_id, { file_id: doc.file_id, updated_at: doc.updated_at }])
+    );
+    const entityToDocMap = new Map(
+      associations.map((association) => [association.entity_id, association.document_id])
+    );
+
+    const urlPromises = Array.from(entityToDocMap.entries()).map(async ([entityId, documentId]) => {
+      const docInfo = docToFileMap.get(documentId);
+      if (!docInfo?.file_id) {
+        return { entityId, url: null };
+      }
+
+      const imageUrl = await getImageUrlInternalAsync(docInfo.file_id);
+      if (!imageUrl) {
+        return { entityId, url: null };
+      }
+
+      const timestamp = docInfo.updated_at ? new Date(docInfo.updated_at).getTime() : 0;
+      const urlWithTimestamp = `${imageUrl}${imageUrl.includes('?') ? '&' : '?'}t=${timestamp}`;
+      return { entityId, url: urlWithTimestamp };
+    });
+
+    const settled = await Promise.allSettled(urlPromises);
+    settled.forEach((item) => {
+      if (item.status === 'fulfilled') {
+        if (item.value.url) {
+          result.set(item.value.entityId, item.value.url);
+        }
+        return;
+      }
+
+      if (process.env.NODE_ENV === 'development') {
+        console.error(`[getEntityImageUrlsBatch] Failed to get image URL for ${entityType}:`, item.reason);
+      }
+    });
+
+    return result;
+  } catch (error) {
+    console.error(`[getEntityImageUrlsBatch] Failed to retrieve image URLs for ${entityType}:`, {
+      operation: 'getEntityImageUrlsBatch',
+      entityType,
+      entityCount: entityIds.length,
+      tenant,
+      errorMessage: error instanceof Error ? error.message : 'Unknown error'
+    });
+    return result;
+  }
+}
+
+export async function getClientLogoUrlsBatch(
+  clientIds: string[],
+  tenant: string
+): Promise<Map<string, string | null>> {
+  return getEntityImageUrlsBatch('client', clientIds, tenant);
+}
+
+export async function getContactAvatarUrlsBatch(
+  contactIds: string[],
+  tenant: string
+): Promise<Map<string, string | null>> {
+  return getEntityImageUrlsBatch('contact', contactIds, tenant);
+}

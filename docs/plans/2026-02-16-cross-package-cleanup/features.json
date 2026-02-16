@@ -56,7 +56,7 @@
   {
     "id": "F010",
     "description": "Stage 4: Add batch avatar functions to media/avatarUtils with Promise.allSettled for parallel URL resolution",
-    "implemented": false,
+    "implemented": true,
     "stage": 4
   },
   {

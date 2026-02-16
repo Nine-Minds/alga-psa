@@ -68,7 +68,7 @@
   {
     "id": "T012",
     "description": "After Stage 4: getEntityImageUrlsBatch resolves URLs in parallel (not sequential)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F010"]
   },
   {

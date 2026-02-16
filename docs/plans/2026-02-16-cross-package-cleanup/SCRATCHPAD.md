@@ -74,3 +74,7 @@
 
 - (2026-02-16) Stage 3 test: verified only remaining @alga-psa/documents/lib/blocknoteUtils import is the re-export test; all callers now use core path.
 - (2026-02-16) Stage 3 test: `npx vitest run packages/client-portal/src/actions/client-portal-actions/client-tickets.responseSource.test.ts` failed due to missing table "tickets" in test setup (pre-existing); needs follow-up before marking T011.
+
+- (2026-02-16) Stage 4: Added batch avatar helpers in media/avatarUtils using Promise.allSettled for parallel URL resolution.
+
+- (2026-02-16) Stage 4 test: added media avatarUtils batch vitest asserting parallel URL resolution; test passes.
