@@ -1,0 +1,218 @@
+[
+  {
+    "id": "T001",
+    "description": "After Stage 1: npm run lint runs against packages/ and reports violations",
+    "implemented": true,
+    "featureIds": ["F001"]
+  },
+  {
+    "id": "T002",
+    "description": "After Stage 2: client-portal imports no longer flagged as violations",
+    "implemented": false,
+    "featureIds": ["F002"]
+  },
+  {
+    "id": "T003",
+    "description": "After Stage 2: documents imports no longer flagged as violations",
+    "implemented": false,
+    "featureIds": ["F003"]
+  },
+  {
+    "id": "T004",
+    "description": "After Stage 2: npm run build passes",
+    "implemented": false,
+    "featureIds": ["F002", "F003"]
+  },
+  {
+    "id": "T005",
+    "description": "After Stage 3: convertBlockNoteToHTML correctly escapes & < > in codeBlock content",
+    "implemented": false,
+    "featureIds": ["F005"]
+  },
+  {
+    "id": "T006",
+    "description": "After Stage 3: convertBlockNoteToHTML correctly escapes & < > in default case string content",
+    "implemented": false,
+    "featureIds": ["F006"]
+  },
+  {
+    "id": "T007",
+    "description": "After Stage 3: codeBlock language prop with special chars is sanitized (no attribute injection)",
+    "implemented": false,
+    "featureIds": ["F007"]
+  },
+  {
+    "id": "T008",
+    "description": "After Stage 3: import from @alga-psa/core/lib/blocknoteUtils works in all callers",
+    "implemented": false,
+    "featureIds": ["F004", "F009"]
+  },
+  {
+    "id": "T009",
+    "description": "After Stage 3: re-export shim in documents/lib/blocknoteUtils still resolves",
+    "implemented": false,
+    "featureIds": ["F008"]
+  },
+  {
+    "id": "T010",
+    "description": "After Stage 3: npm run build passes",
+    "implemented": false,
+    "featureIds": ["F004", "F005", "F006", "F007", "F008", "F009"]
+  },
+  {
+    "id": "T011",
+    "description": "After Stage 3: client-tickets.responseSource.test.ts passes with updated mock path",
+    "implemented": false,
+    "featureIds": ["F009"]
+  },
+  {
+    "id": "T012",
+    "description": "After Stage 4: getEntityImageUrlsBatch resolves URLs in parallel (not sequential)",
+    "implemented": false,
+    "featureIds": ["F010"]
+  },
+  {
+    "id": "T013",
+    "description": "After Stage 4: import { uploadEntityImage, deleteEntityImage } from @alga-psa/media works",
+    "implemented": false,
+    "featureIds": ["F012"]
+  },
+  {
+    "id": "T014",
+    "description": "After Stage 4: no imports from @alga-psa/documents/lib/entityImageService remain in codebase",
+    "implemented": false,
+    "featureIds": ["F011"]
+  },
+  {
+    "id": "T015",
+    "description": "After Stage 4: no imports from @alga-psa/documents/lib/avatarUtils remain in packages/",
+    "implemented": false,
+    "featureIds": ["F012"]
+  },
+  {
+    "id": "T016",
+    "description": "After Stage 4: npm run build passes",
+    "implemented": false,
+    "featureIds": ["F010", "F011", "F012", "F013"]
+  },
+  {
+    "id": "T017",
+    "description": "After Stage 5: integrations->clients and integrations->scheduling pairs are no longer flagged",
+    "implemented": false,
+    "featureIds": ["F014"]
+  },
+  {
+    "id": "T018",
+    "description": "After Stage 5: npm run build passes",
+    "implemented": false,
+    "featureIds": ["F014"]
+  },
+  {
+    "id": "T019",
+    "description": "After Stage 6: PrioritySelect importable from @alga-psa/ui",
+    "implemented": false,
+    "featureIds": ["F015"]
+  },
+  {
+    "id": "T020",
+    "description": "After Stage 6: CategoryPicker importable from @alga-psa/ui",
+    "implemented": false,
+    "featureIds": ["F015"]
+  },
+  {
+    "id": "T021",
+    "description": "After Stage 6: getAllBoards importable from @alga-psa/core or @alga-psa/db",
+    "implemented": false,
+    "featureIds": ["F016"]
+  },
+  {
+    "id": "T022",
+    "description": "After Stage 6: surveys and integrations no longer import from @alga-psa/tickets for pickers",
+    "implemented": false,
+    "featureIds": ["F017"]
+  },
+  {
+    "id": "T023",
+    "description": "After Stage 6: npm run build passes",
+    "implemented": false,
+    "featureIds": ["F015", "F016", "F017"]
+  },
+  {
+    "id": "T024",
+    "description": "After Stage 7: billing no longer imports from integrations (adapters moved)",
+    "implemented": false,
+    "featureIds": ["F018"]
+  },
+  {
+    "id": "T025",
+    "description": "After Stage 7: tickets no longer imports from billing (TicketMaterialsCard moved)",
+    "implemented": false,
+    "featureIds": ["F019"]
+  },
+  {
+    "id": "T026",
+    "description": "After Stage 7: projects no longer imports from billing (ProjectMaterialsDrawer moved)",
+    "implemented": false,
+    "featureIds": ["F020"]
+  },
+  {
+    "id": "T027",
+    "description": "After Stage 7: npm run build passes",
+    "implemented": false,
+    "featureIds": ["F018", "F019", "F020", "F021", "F022"]
+  },
+  {
+    "id": "T028",
+    "description": "After Stage 8a: clients package has 0 cross-package violations",
+    "implemented": false,
+    "featureIds": ["F023", "F024"]
+  },
+  {
+    "id": "T029",
+    "description": "After Stage 8a: server page.tsx files resolve msp-composition/clients imports",
+    "implemented": false,
+    "featureIds": ["F024"]
+  },
+  {
+    "id": "T030",
+    "description": "After Stage 8b: scheduling package has 0 cross-package violations",
+    "implemented": false,
+    "featureIds": ["F025", "F026"]
+  },
+  {
+    "id": "T031",
+    "description": "After Stage 8c: workflows package has 0 cross-package violations",
+    "implemented": false,
+    "featureIds": ["F027", "F028"]
+  },
+  {
+    "id": "T032",
+    "description": "After Stage 8d: projects package has 0 cross-package violations (except documents which is reclassified)",
+    "implemented": false,
+    "featureIds": ["F029", "F030"]
+  },
+  {
+    "id": "T033",
+    "description": "After Stage 8: npm run build passes",
+    "implemented": false,
+    "featureIds": ["F023", "F025", "F027", "F029", "F031"]
+  },
+  {
+    "id": "T034",
+    "description": "After Stage 9: npm run lint reports <=5 no-feature-to-feature violations total",
+    "implemented": false,
+    "featureIds": ["F032"]
+  },
+  {
+    "id": "T035",
+    "description": "After Stage 9: npm run build passes",
+    "implemented": false,
+    "featureIds": ["F033"]
+  },
+  {
+    "id": "T036",
+    "description": "After Stage 9: npx vitest run passes",
+    "implemented": false,
+    "featureIds": ["F034"]
+  }
+]

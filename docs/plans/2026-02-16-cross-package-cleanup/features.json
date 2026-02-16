@@ -1,0 +1,212 @@
+[
+  {
+    "id": "F001",
+    "description": "Stage 1: Expand npm run lint glob to include packages/ directory",
+    "implemented": true,
+    "stage": 1
+  },
+  {
+    "id": "F002",
+    "description": "Stage 2: Remove client-portal from VERTICAL_PACKAGES (composition layer exemption, -39 violations)",
+    "implemented": false,
+    "stage": 2
+  },
+  {
+    "id": "F003",
+    "description": "Stage 2: Remove documents from VERTICAL_PACKAGES (L2 infrastructure reclassification, -38 violations)",
+    "implemented": false,
+    "stage": 2
+  },
+  {
+    "id": "F004",
+    "description": "Stage 3: Copy blocknoteUtils.ts from documents to core, add @blocknote/core dep + export map entry",
+    "implemented": false,
+    "stage": 3
+  },
+  {
+    "id": "F005",
+    "description": "Stage 3: Fix broken HTML escaping in codeBlock handler (.replace no-ops -> proper &amp; &lt; &gt;)",
+    "implemented": false,
+    "stage": 3
+  },
+  {
+    "id": "F006",
+    "description": "Stage 3: Fix broken HTML escaping in default case handler",
+    "implemented": false,
+    "stage": 3
+  },
+  {
+    "id": "F007",
+    "description": "Stage 3: Sanitize language prop in codeBlock to prevent attribute injection",
+    "implemented": false,
+    "stage": 3
+  },
+  {
+    "id": "F008",
+    "description": "Stage 3: Replace documents blocknoteUtils.ts with re-export shim from core",
+    "implemented": false,
+    "stage": 3
+  },
+  {
+    "id": "F009",
+    "description": "Stage 3: Redirect all blocknoteUtils callers to @alga-psa/core/lib/blocknoteUtils (~7 files + test mocks)",
+    "implemented": false,
+    "stage": 3
+  },
+  {
+    "id": "F010",
+    "description": "Stage 4: Add batch avatar functions to media/avatarUtils with Promise.allSettled for parallel URL resolution",
+    "implemented": false,
+    "stage": 4
+  },
+  {
+    "id": "F011",
+    "description": "Stage 4: Delete documents/lib/entityImageService.ts duplicate, remove export map entry, update documents/index.ts",
+    "implemented": false,
+    "stage": 4
+  },
+  {
+    "id": "F012",
+    "description": "Stage 4: Redirect all entity image/avatar callers from @alga-psa/documents to @alga-psa/media (~10 files)",
+    "implemented": false,
+    "stage": 4
+  },
+  {
+    "id": "F013",
+    "description": "Stage 4: Add @alga-psa/media dependency to package.json of client-portal, clients, projects, tenancy, tickets; replace in tags",
+    "implemented": false,
+    "stage": 4
+  },
+  {
+    "id": "F014",
+    "description": "Stage 5: Add ALLOWED_PAIRS for integrations->clients (4) and integrations->scheduling (1) with justification comments",
+    "implemented": false,
+    "stage": 5
+  },
+  {
+    "id": "F015",
+    "description": "Stage 6: Move PrioritySelect, CategoryPicker from tickets to @alga-psa/ui",
+    "implemented": false,
+    "stage": 6
+  },
+  {
+    "id": "F016",
+    "description": "Stage 6: Move getAllBoards to @alga-psa/core/actions or @alga-psa/db/actions",
+    "implemented": false,
+    "stage": 6
+  },
+  {
+    "id": "F017",
+    "description": "Stage 6: Update integrations + surveys callers to import pickers from new locations",
+    "implemented": false,
+    "stage": 6
+  },
+  {
+    "id": "F018",
+    "description": "Stage 7: Move company sync adapters from billing to integrations package (2 violations)",
+    "implemented": false,
+    "stage": 7
+  },
+  {
+    "id": "F019",
+    "description": "Stage 7: Move TicketMaterialsCard to msp-composition/tickets (1 violation)",
+    "implemented": false,
+    "stage": 7
+  },
+  {
+    "id": "F020",
+    "description": "Stage 7: Move ProjectMaterialsDrawer + test to msp-composition/projects (2 violations)",
+    "implemented": false,
+    "stage": 7
+  },
+  {
+    "id": "F021",
+    "description": "Stage 7: Move TacticalRMM components to msp-composition/integrations (2 violations)",
+    "implemented": false,
+    "stage": 7
+  },
+  {
+    "id": "F022",
+    "description": "Stage 7: Move InboundTicketDefaultsForm to msp-composition/integrations if still violating after picker moves",
+    "implemented": false,
+    "stage": 7
+  },
+  {
+    "id": "F023",
+    "description": "Stage 8a: Move ClientTickets, ContactTickets, ClientAssets, ClientDetails, InteractionDetails to msp-composition/clients (~26 violations)",
+    "implemented": false,
+    "stage": 8
+  },
+  {
+    "id": "F024",
+    "description": "Stage 8a: Update server page.tsx files to import from @alga-psa/msp-composition/clients",
+    "implemented": false,
+    "stage": 8
+  },
+  {
+    "id": "F025",
+    "description": "Stage 8b: Move WorkItemDetailsDrawer, WorkItemDrawer, WorkItemPicker, AppointmentRequestsPanel, TechnicianDispatchDashboard, TimeEntryEditForm, TimeEntryProvider to msp-composition/scheduling (~18 violations)",
+    "implemented": false,
+    "stage": 8
+  },
+  {
+    "id": "F026",
+    "description": "Stage 8b: Update server page.tsx files to import from @alga-psa/msp-composition/scheduling",
+    "implemented": false,
+    "stage": 8
+  },
+  {
+    "id": "F027",
+    "description": "Stage 8c: Move ActivityDetailViewerDrawer, ProjectsSection, TicketsSection to msp-composition/workflows (~9 violations)",
+    "implemented": false,
+    "stage": 8
+  },
+  {
+    "id": "F028",
+    "description": "Stage 8c: Update server page.tsx files to import from @alga-psa/msp-composition/workflows",
+    "implemented": false,
+    "stage": 8
+  },
+  {
+    "id": "F029",
+    "description": "Stage 8d: Move Projects, ProjectQuickAdd, ProjectDetailsEdit to msp-composition/projects (~5 violations)",
+    "implemented": false,
+    "stage": 8
+  },
+  {
+    "id": "F030",
+    "description": "Stage 8d: Update server page.tsx files to import from @alga-psa/msp-composition/projects",
+    "implemented": false,
+    "stage": 8
+  },
+  {
+    "id": "F031",
+    "description": "Stage 8: Add all required dependencies to msp-composition package.json",
+    "implemented": false,
+    "stage": 8
+  },
+  {
+    "id": "F032",
+    "description": "Stage 9: Final lint verification — <=5 no-feature-to-feature violations remaining",
+    "implemented": false,
+    "stage": 9
+  },
+  {
+    "id": "F033",
+    "description": "Stage 9: Final build verification — npm run build passes",
+    "implemented": false,
+    "stage": 9
+  },
+  {
+    "id": "F034",
+    "description": "Stage 9: Final test verification — npx vitest run passes",
+    "implemented": false,
+    "stage": 9
+  },
+  {
+    "id": "F035",
+    "description": "Stage 9: Clean up dead code from moves and update stale_code_cleanup_plan.md",
+    "implemented": false,
+    "stage": 9
+  }
+]
