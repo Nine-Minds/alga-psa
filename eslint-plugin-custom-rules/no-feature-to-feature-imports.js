@@ -5,7 +5,7 @@ const VERTICAL_PACKAGES = new Set([
   'tickets',
   'scheduling',
   'workflows',
-  'documents',
+  // 'documents' is L2 shared infrastructure used across vertical packages.
   'assets',
   'surveys',
   'integrations',

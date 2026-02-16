@@ -47,3 +47,7 @@
 - (2026-02-16) Stage 2: Removed client-portal from VERTICAL_PACKAGES with composition-layer rationale comment.
 
 - (2026-02-16) Stage 2 test: `npx eslint packages` shows no client-portal feature-to-feature violations.
+
+- (2026-02-16) Stage 2: Removed documents from VERTICAL_PACKAGES with shared-infrastructure rationale comment.
+
+- (2026-02-16) Stage 2 build: `npm run build` failed (Next.js build OOM in node) after assemblyscript step; need rerun with more memory later.

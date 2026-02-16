@@ -14,7 +14,7 @@
   {
     "id": "T003",
     "description": "After Stage 2: documents imports no longer flagged as violations",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F003"]
   },
   {

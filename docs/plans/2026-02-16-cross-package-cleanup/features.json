@@ -14,7 +14,7 @@
   {
     "id": "F003",
     "description": "Stage 2: Remove documents from VERTICAL_PACKAGES (L2 infrastructure reclassification, -38 violations)",
-    "implemented": false,
+    "implemented": true,
     "stage": 2
   },
   {
