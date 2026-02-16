@@ -103,7 +103,7 @@ describe('validateDeletion', () => {
     expect(result.dependencies[0].label).toBe('tickets');
   });
 
-  it('T012: does not double-pluralize labels ending in s', async () => {
+  it('T012: pluralizes labels ending in s correctly', async () => {
     const { trx } = makeTrx(2);
     const config: EntityDeletionConfig = {
       entityType: 'status',
@@ -114,7 +114,7 @@ describe('validateDeletion', () => {
 
     const result = await validateDeletion(trx, config, 'status-1', 'tenant-1');
 
-    expect(result.dependencies[0].label).toBe('status');
+    expect(result.dependencies[0].label).toBe('statuses');
   });
 
   it('T013: block message includes all dependency labels joined with commas', async () => {

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import type { DeletionValidationResult, IContact } from '@alga-psa/types';
 import type { IClient } from '@alga-psa/types';
 import { ITag } from '@alga-psa/types';

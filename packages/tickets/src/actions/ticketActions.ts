@@ -1165,18 +1165,25 @@ async function performTicketDelete(
     throw new Error('Ticket not found');
   }
 
+  // Clean up child records that are owned by the ticket
   await trx('comments')
-    .where({
-      ticket_id: ticketId,
-      tenant: tenant
-    })
+    .where({ ticket_id: ticketId, tenant })
+    .delete();
+
+  await trx('ticket_resources')
+    .where({ ticket_id: ticketId, tenant })
+    .delete();
+
+  await trx('project_ticket_links')
+    .where({ ticket_id: ticketId, tenant })
+    .delete();
+
+  await trx('email_reply_tokens')
+    .where({ ticket_id: ticketId, tenant })
     .delete();
 
   await trx('tickets')
-    .where({
-      ticket_id: ticketId,
-      tenant: tenant
-    })
+    .where({ ticket_id: ticketId, tenant })
     .delete();
 
   await publishEvent({

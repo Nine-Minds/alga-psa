@@ -9,7 +9,7 @@ const countDocumentAssociations = (entityType: string) => {
         entity_id: options.entityId,
         entity_type: entityType
       })
-      .count<{ count: string }>('1 as count')
+      .count<{ count: string }>('* as count')
       .first();
 
     return Number(result?.count ?? 0);
@@ -26,7 +26,7 @@ const countPortalUsers = async (
       contact_id: options.entityId,
       user_type: 'client'
     })
-    .count<{ count: string }>('1 as count')
+    .count<{ count: string }>('* as count')
     .first();
 
   return Number(result?.count ?? 0);
@@ -42,7 +42,7 @@ const countTimeEntryBilling = async (
       entry_id: options.entityId,
       invoiced: true
     })
-    .count<{ count: string }>('1 as count')
+    .count<{ count: string }>('* as count')
     .first();
 
   return Number(result?.count ?? 0);
@@ -79,7 +79,7 @@ const countStatusUsage = (
         tenant: options.tenant,
         [foreignKey]: options.entityId
       })
-      .count<{ count: string }>('1 as count')
+      .count<{ count: string }>('* as count')
       .first();
 
     return Number(result?.count ?? 0);
@@ -112,7 +112,9 @@ export const DELETION_CONFIGS: Record<string, EntityDeletionConfig> = {
       { type: 'interaction', table: 'interactions', foreignKey: 'client_id', label: 'interaction' },
       { type: 'asset', table: 'assets', foreignKey: 'client_id', label: 'asset' },
       { type: 'usage', table: 'usage_tracking', foreignKey: 'client_id', label: 'usage record' },
-      { type: 'bucket_usage', table: 'bucket_usage', foreignKey: 'client_id', label: 'bucket usage record' }
+      { type: 'bucket_usage', table: 'bucket_usage', foreignKey: 'client_id', label: 'bucket usage record' },
+      { type: 'survey_invitation', table: 'survey_invitations', foreignKey: 'client_id', label: 'survey invitation' },
+      { type: 'survey_response', table: 'survey_responses', foreignKey: 'client_id', label: 'survey response' }
     ]
   },
   contact: {
@@ -134,7 +136,9 @@ export const DELETION_CONFIGS: Record<string, EntityDeletionConfig> = {
         table: 'users',
         label: 'portal user account',
         countQuery: countPortalUsers
-      }
+      },
+      { type: 'survey_invitation', table: 'survey_invitations', foreignKey: 'contact_id', label: 'survey invitation' },
+      { type: 'survey_response', table: 'survey_responses', foreignKey: 'contact_id', label: 'survey response' }
     ]
   },
   ticket: {
@@ -142,14 +146,30 @@ export const DELETION_CONFIGS: Record<string, EntityDeletionConfig> = {
     supportsInactive: false,
     supportsArchive: true,
     tagEntityType: 'ticket',
-    dependencies: []
+    dependencies: [
+      {
+        type: 'time_entry',
+        table: 'time_entries',
+        label: 'time entry',
+        countQuery: async (trx, options) => {
+          const result = await trx('time_entries')
+            .where({ tenant: options.tenant, work_item_id: options.entityId, work_item_type: 'ticket' })
+            .count<{ count: string }>('* as count')
+            .first();
+          return Number(result?.count ?? 0);
+        }
+      },
+      { type: 'interaction', table: 'interactions', foreignKey: 'ticket_id', label: 'interaction' }
+    ]
   },
   project: {
     entityType: 'project',
     supportsInactive: false,
     supportsArchive: true,
     tagEntityType: 'project',
-    dependencies: []
+    dependencies: [
+      { type: 'interaction', table: 'interactions', foreignKey: 'project_id', label: 'interaction' }
+    ]
   },
   category: {
     entityType: 'category',
@@ -158,6 +178,7 @@ export const DELETION_CONFIGS: Record<string, EntityDeletionConfig> = {
     dependencies: [
       { type: 'subcategory', table: 'categories', foreignKey: 'parent_category', label: 'subcategory' },
       { type: 'ticket', table: 'tickets', foreignKey: 'category_id', label: 'ticket' },
+      { type: 'ticket_subcategory', table: 'tickets', foreignKey: 'subcategory_id', label: 'ticket (as subcategory)' },
       { type: 'service', table: 'service_catalog', foreignKey: 'category_id', label: 'service' }
     ]
   },
@@ -214,13 +235,25 @@ export const DELETION_CONFIGS: Record<string, EntityDeletionConfig> = {
     dependencies: [
       { type: 'ticket', table: 'tickets', foreignKey: 'assigned_to', label: 'assigned ticket' },
       { type: 'time_entry', table: 'time_entries', foreignKey: 'user_id', label: 'time entry' },
+      { type: 'time_sheet', table: 'time_sheets', foreignKey: 'user_id', label: 'time sheet' },
+      { type: 'comment', table: 'comments', foreignKey: 'user_id', label: 'comment' },
+      { type: 'interaction', table: 'interactions', foreignKey: 'user_id', label: 'interaction' },
+      { type: 'project_task', table: 'project_tasks', foreignKey: 'assigned_to', label: 'assigned project task' },
+      { type: 'resource', table: 'resources', foreignKey: 'user_id', label: 'resource record' },
       {
         type: 'schedule_assignee',
         table: 'schedule_entry_assignees',
         foreignKey: 'user_id',
         label: 'schedule assignment'
       },
-      { type: 'team_member', table: 'team_members', foreignKey: 'user_id', label: 'team membership' }
+      { type: 'team_member', table: 'team_members', foreignKey: 'user_id', label: 'team membership' },
+      { type: 'team_manager', table: 'teams', foreignKey: 'manager_id', label: 'managed team' },
+      { type: 'board_manager', table: 'boards', foreignKey: 'manager_user_id', label: 'managed board' },
+      { type: 'board_default_assignee', table: 'boards', foreignKey: 'default_assigned_to', label: 'board default assignment' },
+      { type: 'ticket_resource', table: 'ticket_resources', foreignKey: 'assigned_to', label: 'ticket resource assignment' },
+      { type: 'task_resource', table: 'task_resources', foreignKey: 'assigned_to', label: 'task resource assignment' },
+      { type: 'invoice_annotation', table: 'invoice_annotations', foreignKey: 'user_id', label: 'invoice annotation' },
+      { type: 'job', table: 'jobs', foreignKey: 'user_id', label: 'job' }
     ]
   },
   contract_line: {
@@ -246,12 +279,18 @@ export const DELETION_CONFIGS: Record<string, EntityDeletionConfig> = {
     dependencies: [
       { type: 'time_entry', table: 'time_entries', foreignKey: 'service_id', label: 'time entry' },
       { type: 'bucket_usage', table: 'bucket_usage', foreignKey: 'service_catalog_id', label: 'bucket usage record' },
+      { type: 'usage', table: 'usage_tracking', foreignKey: 'service_id', label: 'usage record' },
       {
         type: 'contract_line_service',
         table: 'contract_line_services',
         foreignKey: 'service_id',
         label: 'contract line configuration'
-      }
+      },
+      { type: 'contract_template_line_default', table: 'contract_template_line_defaults', foreignKey: 'service_id', label: 'contract template default' },
+      { type: 'contract_template_line_service', table: 'contract_template_line_services', foreignKey: 'service_id', label: 'contract template service' },
+      { type: 'invoice_charge', table: 'invoice_charges', foreignKey: 'service_id', label: 'invoice charge' },
+      { type: 'invoice_charge_target', table: 'invoice_charges', foreignKey: 'applies_to_service_id', label: 'invoice charge target' },
+      { type: 'invoice_charge_detail', table: 'invoice_charge_details', foreignKey: 'service_id', label: 'invoice charge detail' }
     ]
   },
   tax_rate: {
@@ -332,7 +371,8 @@ export const DELETION_CONFIGS: Record<string, EntityDeletionConfig> = {
         table: 'time_entries',
         label: 'billing record',
         countQuery: countTimeEntryBilling
-      }
+      },
+      { type: 'invoice_time_entry', table: 'invoice_time_entries', foreignKey: 'entry_id', label: 'invoice line item' }
     ]
   },
   priority: {
@@ -340,7 +380,8 @@ export const DELETION_CONFIGS: Record<string, EntityDeletionConfig> = {
     supportsInactive: false,
     supportsArchive: false,
     dependencies: [
-      { type: 'ticket', table: 'tickets', foreignKey: 'priority_id', label: 'ticket' }
+      { type: 'ticket', table: 'tickets', foreignKey: 'priority_id', label: 'ticket' },
+      { type: 'board_default', table: 'boards', foreignKey: 'default_priority_id', label: 'board default priority' }
     ]
   },
   board: {

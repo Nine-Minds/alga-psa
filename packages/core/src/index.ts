@@ -34,7 +34,6 @@ export * from './lib/csvParser';
 
 // Validation utilities
 export * from './lib/validation';
-export * from './lib/useDeletionValidation';
 
 // Constants
 export * from './constants/currency';

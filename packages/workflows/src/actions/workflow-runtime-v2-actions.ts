@@ -1362,6 +1362,11 @@ export const deleteWorkflowDefinitionAction = withAuth(async (
       await trx('workflow_runs').whereIn('run_id', runIds).del();
     }
 
+    // Clean up child records owned by the workflow
+    await trx('workflow_registration_versions')
+      .where({ registration_id: parsed.workflowId })
+      .del();
+
     await trx('workflow_definition_versions')
       .where({ workflow_id: parsed.workflowId })
       .del();

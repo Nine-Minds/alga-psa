@@ -767,6 +767,12 @@ export const deleteAsset = withAuth(async (
             await trx('tenant_external_entity_mappings')
                 .where({ tenant: tenantId, alga_entity_type: 'asset', alga_entity_id: asset_id })
                 .delete();
+            await trx('external_entity_mappings')
+                .where({ tenant: tenantId, asset_id })
+                .delete();
+            await trx('import_job_items')
+                .where({ tenant: tenantId, asset_id })
+                .delete();
 
             await trx('assets')
                 .where({ tenant: tenantId, asset_id })

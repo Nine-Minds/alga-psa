@@ -671,6 +671,14 @@ export const deleteScheduleEntry = withAuth(async (
     }
 
     const result = await deleteEntityWithValidation('schedule_entry', masterEntryId, async (trx, tenantId) => {
+      // Clean up schedule conflicts referencing this entry
+      await trx('schedule_conflicts')
+        .where({ tenant: tenantId })
+        .where(function() {
+          this.where('entry_id_1', masterEntryId).orWhere('entry_id_2', masterEntryId);
+        })
+        .del();
+
       const success = await ScheduleEntry.delete(trx, tenantId, entry_id, deleteType);
       if (!success) {
         throw new Error('Schedule entry not found');

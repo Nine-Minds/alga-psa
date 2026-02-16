@@ -125,6 +125,10 @@ export const deleteContact = withAuth(async (
     }
 
     const result = await deleteEntityWithValidation('contact', contactId, async (trx, tenantId) => {
+      // Clean up child records owned by the contact
+      await trx('comments').where({ contact_id: contactId, tenant: tenantId }).delete();
+      await trx('portal_invitations').where({ contact_id: contactId, tenant: tenantId }).delete();
+
       const contactRecord = await trx('contacts')
         .where({ contact_name_id: contactId, tenant: tenantId })
         .select('notes_document_id')

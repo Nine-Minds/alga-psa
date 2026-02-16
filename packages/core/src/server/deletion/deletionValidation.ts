@@ -12,15 +12,21 @@ function pluralizeLabel(label: string, count: number): string {
     return label;
   }
 
-  if (label.toLowerCase().endsWith('s')) {
-    return label;
+  const lower = label.toLowerCase();
+
+  if (lower.endsWith('s') || lower.endsWith('x') || lower.endsWith('sh') || lower.endsWith('ch')) {
+    return `${label}es`;
+  }
+
+  if (lower.endsWith('y') && !/[aeiou]y$/i.test(label)) {
+    return `${label.slice(0, -1)}ies`;
   }
 
   return `${label}s`;
 }
 
 function formatLabelWithCount(label: string, count: number): string {
-  return `${count} ${pluralizeLabel(label, count)}`;
+  return `${count} ${label}`;
 }
 
 function buildViewUrl(template: string, entityId: string): string {
@@ -71,7 +77,7 @@ async function countDependency(
   const result = await trx(config.table)
     .where({ tenant })
     .andWhere(config.foreignKey, entityId)
-    .count<{ count: string }>('1 as count')
+    .count<{ count: string }>('* as count')
     .first();
 
   return Number(result?.count ?? 0);
@@ -123,7 +129,7 @@ export async function validateDeletion(
   return {
     canDelete: false,
     code: 'DEPENDENCIES_EXIST',
-    message: `Cannot delete because ${dependencyLabels} exist.`,
+    message: `This ${config.entityType.replace(/_/g, ' ')} has associated records that must be removed or reassigned first: ${dependencyLabels}.`,
     dependencies,
     alternatives: buildAlternatives(config)
   };

@@ -1,3 +1,5 @@
+'use client';
+
 import { useCallback, useState } from 'react';
 import type { DeletionValidationResult } from '@alga-psa/types';
 import { preCheckDeletion } from '../server/deletion/deletionActions';

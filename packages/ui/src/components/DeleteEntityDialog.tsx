@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useMemo } from 'react';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from './Dialog';
+import { Dialog, DialogContent, DialogFooter } from './Dialog';
 import { Button } from './Button';
 import Spinner from './Spinner';
 import type { DeletionAlternative, DeletionDependency, DeletionValidationResult } from '@alga-psa/types';
@@ -102,9 +102,6 @@ export const DeleteEntityDialog = ({
       {...withDataAutomationId({ id: id || 'delete-entity-dialog' })}
     >
       <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-        </DialogHeader>
         {dialogBody}
         <DialogFooter>
           <div className="mt-4 flex flex-wrap justify-end gap-2">

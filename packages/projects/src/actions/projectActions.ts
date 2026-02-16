@@ -785,6 +785,10 @@ export const deleteProject = withAuth(async (
                 }
             }
 
+            // Clean up child records owned by the project
+            await trx('project_ticket_links').where({ project_id: projectId, tenant: tenantId }).delete();
+            await trx('email_reply_tokens').where({ project_id: projectId, tenant: tenantId }).delete();
+
             await ProjectModel.delete(trx, tenantId, projectId);
         });
 

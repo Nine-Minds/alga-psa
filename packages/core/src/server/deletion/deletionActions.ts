@@ -72,7 +72,7 @@ export async function preCheckDeletion(
     return buildPermissionDenied(`You don't have permission to delete ${entityType} records.`);
   }
 
-  const { knex, tenant } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex(user.tenant);
   if (!tenant) {
     return {
       canDelete: false,
@@ -107,7 +107,7 @@ export async function deleteEntityWithValidation(
     return buildPermissionDenied(`You don't have permission to delete ${entityType} records.`);
   }
 
-  const { knex, tenant } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex(user.tenant);
   if (!tenant) {
     return {
       canDelete: false,
@@ -145,6 +145,8 @@ export async function validateBulkDeletion(
   code?: DeletionBlockCode;
   message?: string;
 }> {
+  const user = await getCurrentUser();
+
   const config = getDeletionConfig(entityType);
   if (!config) {
     return {
@@ -156,7 +158,7 @@ export async function validateBulkDeletion(
     };
   }
 
-  const { knex, tenant } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex(user?.tenant);
   if (!tenant) {
     return {
       canDeleteAll: false,

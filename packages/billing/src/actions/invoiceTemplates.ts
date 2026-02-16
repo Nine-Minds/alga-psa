@@ -894,6 +894,11 @@ export const deleteInvoiceTemplate = withAuth(async (
                 })
                 .del();
 
+            // Clean up child records owned by the template
+            await trx('template_sections')
+                .where({ template_id: templateId, tenant })
+                .del();
+
             const deletedCount = await trx('invoice_templates')
                 .where({
                     template_id: templateId,
