@@ -32,7 +32,7 @@
   {
     "id": "F006",
     "description": "Stage 3: Fix broken HTML escaping in default case handler",
-    "implemented": false,
+    "implemented": true,
     "stage": 3
   },
   {

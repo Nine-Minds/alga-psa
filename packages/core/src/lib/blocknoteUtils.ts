@@ -695,7 +695,7 @@ export function convertBlockNoteToHTML(blocks: any): string {
              content = extractStyledTextToHTML(anyBlock.content as any[]);
              output.push(`<div${styleAttribute}>${content}</div>`);
           } else if (anyBlock?.content && typeof anyBlock.content === 'string') {
-             const escapedContent = anyBlock.content.replace(/&/g, '&').replace(/</g, '<').replace(/>/g, '>');
+             const escapedContent = escapeHtml(anyBlock.content);
              output.push(`<div${styleAttribute}>${escapedContent}</div>`);
           } else {
              output.push(`<!-- Unsupported block type: ${String(anyBlock?.type)} -->`);

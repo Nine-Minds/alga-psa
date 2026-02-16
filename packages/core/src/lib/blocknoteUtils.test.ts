@@ -19,4 +19,19 @@ describe('blocknoteUtils convertBlockNoteToHTML', () => {
     expect(html).toContain('&gt;');
     expect(html).toContain('&amp;');
   });
+
+  it('escapes default-case string content for HTML output', () => {
+    const blocks = [
+      {
+        type: 'unknownBlock',
+        content: 'a < b && b > c & "quote"',
+      },
+    ];
+
+    const html = convertBlockNoteToHTML(blocks);
+    expect(html).toContain('&lt;');
+    expect(html).toContain('&gt;');
+    expect(html).toContain('&amp;');
+    expect(html).toContain('&quot;');
+  });
 });

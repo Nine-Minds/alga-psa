@@ -32,7 +32,7 @@
   {
     "id": "T006",
     "description": "After Stage 3: convertBlockNoteToHTML correctly escapes & < > in default case string content",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F006"]
   },
   {
