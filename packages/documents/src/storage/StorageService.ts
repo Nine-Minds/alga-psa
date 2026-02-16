@@ -125,30 +125,42 @@ export class StorageService {
          ['user_avatar', 'contact_avatar', 'client_logo'].includes(options.metadata.context));
 
       if (isEntityImage) {
-        const detectedType = await fileTypeFromBuffer(new Uint8Array(fileBuffer));
-        const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+        // SVGs are text/XML-based so fileTypeFromBuffer cannot detect them.
+        // Check extension and content to identify SVGs.
+        const isSvg = originalName.toLowerCase().endsWith('.svg') ||
+          options.mime_type === 'image/svg+xml';
 
-        if (!detectedType || !allowedMimeTypes.includes(detectedType.mime)) {
-          throw new Error('Invalid file format. Only JPEG, PNG, GIF, WebP are allowed for avatars/logos.');
+        if (isSvg) {
+          // SVGs are vector and don't need raster processing — store as-is
+          processedBuffer = fileBuffer;
+          processedMimeType = 'image/svg+xml';
+          processedFileSize = fileBuffer.length;
+        } else {
+          const detectedType = await fileTypeFromBuffer(new Uint8Array(fileBuffer));
+          const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+
+          if (!detectedType || !allowedMimeTypes.includes(detectedType.mime)) {
+            throw new Error('Invalid file format. Only JPEG, PNG, GIF, WebP, SVG are allowed for avatars/logos.');
+          }
+
+          if (options.mime_type && detectedType.mime !== options.mime_type) {
+              console.warn(`Provided MIME type (${options.mime_type}) differs from detected type (${detectedType.mime}). Using detected type.`);
+          }
+
+          const sharp = await loadSharp();
+          processedBuffer = await sharp(fileBuffer)
+            .resize(256, 256, {
+              fit: 'cover',
+              withoutEnlargement: true,
+            })
+            .webp({ quality: 85 })
+            .toBuffer();
+
+          processedMimeType = 'image/webp';
+          processedFileSize = processedBuffer.length;
+
+          processedOriginalName = changeFileExtension(originalName, 'webp');
         }
-
-        if (options.mime_type && detectedType.mime !== options.mime_type) {
-            console.warn(`Provided MIME type (${options.mime_type}) differs from detected type (${detectedType.mime}). Using detected type.`);
-        }
-
-        const sharp = await loadSharp();
-        processedBuffer = await sharp(fileBuffer)
-          .resize(256, 256, {
-            fit: 'cover',
-            withoutEnlargement: true,
-          })
-          .webp({ quality: 85 })
-          .toBuffer();
-
-        processedMimeType = 'image/webp';
-        processedFileSize = processedBuffer.length;
-
-        processedOriginalName = changeFileExtension(originalName, 'webp');
       }
       // --- End Image Processing Logic ---
 
