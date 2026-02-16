@@ -164,7 +164,7 @@ export function EditableServiceTypeSelect({
 
         <Select.Portal>
           <Select.Content
-            className="bg-white rounded-md shadow-lg border border-gray-200 z-50"
+            className="bg-white dark:bg-[rgb(var(--color-card))] rounded-md shadow-lg border border-gray-200 dark:border-[rgb(var(--color-border-200))] z-50"
             position="popper"
             sideOffset={5}
           >

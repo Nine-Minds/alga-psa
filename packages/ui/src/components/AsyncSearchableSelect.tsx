@@ -214,8 +214,8 @@ export function AsyncSearchableSelect({
       ref={contentRef}
       className={cn(
         dropdownMode === 'overlay'
-          ? 'bg-white rounded-md shadow-lg border border-gray-200 overflow-hidden'
-          : 'rounded-md border border-gray-200 bg-white shadow-md overflow-hidden'
+          ? 'bg-white dark:bg-[rgb(var(--color-card))] rounded-md shadow-lg border border-gray-200 dark:border-[rgb(var(--color-border-200))] overflow-hidden'
+          : 'rounded-md border border-gray-200 dark:border-[rgb(var(--color-border-200))] bg-white dark:bg-[rgb(var(--color-card))] shadow-md overflow-hidden'
       )}
       onMouseDown={(e) => e.stopPropagation()}
     >

@@ -272,7 +272,7 @@ export const ContactPicker = ({
           {isOpen && typeof document !== 'undefined' && createPortal(
             <div
               ref={dropdownContentRef}
-              className="fixed z-[9999] overflow-hidden bg-white rounded-md shadow-lg border border-gray-200 pointer-events-auto"
+              className="fixed z-[9999] overflow-hidden bg-white dark:bg-[rgb(var(--color-card))] rounded-md shadow-lg border border-gray-200 dark:border-[rgb(var(--color-border-200))] pointer-events-auto"
               style={{
                 top: `${dropdownCoords.top}px`,
                 left: `${dropdownCoords.left}px`,

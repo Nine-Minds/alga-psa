@@ -215,8 +215,8 @@ export function SearchableSelect({
       ref={contentRef}
       className={cn(
         dropdownMode === 'overlay'
-          ? 'bg-background dark:bg-[rgb(var(--color-card))] rounded-md shadow-lg border border-border overflow-hidden'
-          : 'rounded-md border border-border bg-background dark:bg-[rgb(var(--color-card))] shadow-md overflow-hidden'
+          ? 'bg-background dark:bg-[rgb(var(--color-card))] rounded-md shadow-lg border border-border dark:border-[rgb(var(--color-border-200))] overflow-hidden'
+          : 'rounded-md border border-border dark:border-[rgb(var(--color-border-200))] bg-background dark:bg-[rgb(var(--color-card))] shadow-md overflow-hidden'
       )}
       onMouseDown={(e) => e.stopPropagation()}
     >
