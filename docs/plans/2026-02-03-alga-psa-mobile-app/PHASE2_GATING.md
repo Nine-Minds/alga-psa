@@ -9,7 +9,7 @@ Phase 2 modules (push notifications, self-hosted onboarding, etc.) are **non-goa
 
 ## Implementation
 
-See `mobile/src/features/phase2.ts`:
+See `ee/mobile/src/features/phase2.ts`:
 
 - `phase2Features.notifications`
 - `phase2Features.selfHostedBaseUrl`

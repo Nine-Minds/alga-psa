@@ -4,28 +4,28 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 
 ## Log
 - 2026-02-03: Initialized scratchpad.
-- 2026-02-03: F001 scaffolded Expo (managed) app in `mobile/` with `mobile/README.md` runbook. Kept it outside npm workspaces to avoid dependency/React version coupling with the existing web app.
-- 2026-02-03: F002 added hosted env config plumbing via `mobile/.env.example` + `mobile/src/config/appConfig.ts` (expects `EXPO_PUBLIC_ALGA_ENV` and `EXPO_PUBLIC_ALGA_BASE_URL`).
-- 2026-02-03: F003 added a minimal typed REST client wrapper in `mobile/src/api/*` returning structured `ApiResult<T>` with consistent error kinds (network/timeout/http/parse).
+- 2026-02-03: F001 scaffolded Expo (managed) app in `ee/mobile/` with `ee/mobile/README.md` runbook. Kept it outside npm workspaces to avoid dependency/React version coupling with the existing web app.
+- 2026-02-03: F002 added hosted env config plumbing via `ee/mobile/.env.example` + `ee/mobile/src/config/appConfig.ts` (expects `EXPO_PUBLIC_ALGA_ENV` and `EXPO_PUBLIC_ALGA_BASE_URL`).
+- 2026-02-03: F003 added a minimal typed REST client wrapper in `ee/mobile/src/api/*` returning structured `ApiResult<T>` with consistent error kinds (network/timeout/http/parse).
 - 2026-02-03: F004 extended the client to stamp `Authorization: Bearer`, `x-tenant-id`, and `x-alga-client` headers via injectable getters.
-- 2026-02-03: F005 added timeout + retry/backoff (GET/HEAD only) to `mobile/src/api/client.ts` (retries on network/timeout and 502/503/504).
-- 2026-02-03: F006 added basic app bootstrap/auth-gate skeleton in `mobile/src/app/AppRoot.tsx` with a minimal in-app loading sequence.
-- 2026-02-03: F007 wired React Navigation (tabs + stacks) and deep link routing (`alga://ticket/:ticketId`) via `mobile/src/navigation/*` and `mobile/app.json` scheme.
-- 2026-02-03: F008 added a minimal mobile theme (`mobile/src/ui/theme.ts`) and started using it across placeholder screens.
-- 2026-02-03: F009 added standard empty/loading/error state components in `mobile/src/ui/states/*` and a basic `PrimaryButton`.
-- 2026-02-03: F010 added secure storage wrapper using `expo-secure-store` in `mobile/src/storage/secureStorage.ts` (with web fallback).
-- 2026-02-03: F011 added PII-safe logger with recursive redaction + log-level control in `mobile/src/logging/logger.ts` (configured via `EXPO_PUBLIC_LOG_LEVEL`).
-- 2026-02-03: F012 added analytics scaffolding (`mobile/src/analytics/analytics.ts`) with opt-out toggle (currently logs redacted events; provider TBD).
-- 2026-02-03: F013 added crash/error reporting hook scaffold with PII redaction (`mobile/src/errors/*`), including a global handler + React error boundary.
-- 2026-02-03: F014 added a basic TTL cache utility + ticket list/detail cache helpers (`mobile/src/cache/*`) with invalidation hooks for future mutations.
+- 2026-02-03: F005 added timeout + retry/backoff (GET/HEAD only) to `ee/mobile/src/api/client.ts` (retries on network/timeout and 502/503/504).
+- 2026-02-03: F006 added basic app bootstrap/auth-gate skeleton in `ee/mobile/src/app/AppRoot.tsx` with a minimal in-app loading sequence.
+- 2026-02-03: F007 wired React Navigation (tabs + stacks) and deep link routing (`alga://ticket/:ticketId`) via `ee/mobile/src/navigation/*` and `ee/mobile/app.json` scheme.
+- 2026-02-03: F008 added a minimal mobile theme (`ee/mobile/src/ui/theme.ts`) and started using it across placeholder screens.
+- 2026-02-03: F009 added standard empty/loading/error state components in `ee/mobile/src/ui/states/*` and a basic `PrimaryButton`.
+- 2026-02-03: F010 added secure storage wrapper using `expo-secure-store` in `ee/mobile/src/storage/secureStorage.ts` (with web fallback).
+- 2026-02-03: F011 added PII-safe logger with recursive redaction + log-level control in `ee/mobile/src/logging/logger.ts` (configured via `EXPO_PUBLIC_LOG_LEVEL`).
+- 2026-02-03: F012 added analytics scaffolding (`ee/mobile/src/analytics/analytics.ts`) with opt-out toggle (currently logs redacted events; provider TBD).
+- 2026-02-03: F013 added crash/error reporting hook scaffold with PII redaction (`ee/mobile/src/errors/*`), including a global handler + React error boundary.
+- 2026-02-03: F014 added a basic TTL cache utility + ticket list/detail cache helpers (`ee/mobile/src/cache/*`) with invalidation hooks for future mutations.
 - 2026-02-03: F015 added `useAppResume` + `usePullToRefresh` hooks and wired the tickets placeholder screen with pull-to-refresh and resume-triggered refresh.
-- 2026-02-03: F016 added offline detection using `@react-native-community/netinfo` with a global `OfflineBanner` in `mobile/src/app/AppRoot.tsx`.
-- 2026-02-03: F017 added baseline accessibility helpers (`mobile/src/ui/a11y.ts`) and ensured key pressables have roles/labels and minimum touch targets.
-- 2026-02-03: F018 added localization scaffolding using `expo-localization` (`mobile/src/i18n/i18n.ts`) and started using `t()` for navigation titles.
-- 2026-02-03: F019 implemented Settings diagnostics (app version/build, platform, env/base URL) in `mobile/src/screens/SettingsScreen.tsx` using `expo-application`.
+- 2026-02-03: F016 added offline detection using `@react-native-community/netinfo` with a global `OfflineBanner` in `ee/mobile/src/app/AppRoot.tsx`.
+- 2026-02-03: F017 added baseline accessibility helpers (`ee/mobile/src/ui/a11y.ts`) and ensured key pressables have roles/labels and minimum touch targets.
+- 2026-02-03: F018 added localization scaffolding using `expo-localization` (`ee/mobile/src/i18n/i18n.ts`) and started using `t()` for navigation titles.
+- 2026-02-03: F019 implemented Settings diagnostics (app version/build, platform, env/base URL) in `ee/mobile/src/screens/SettingsScreen.tsx` using `expo-application`.
 - 2026-02-03: F020 added mobile CI checks (`.github/workflows/mobile-checks.yml`) and mobile `lint`/`typecheck` scripts with local `eslint.config.mjs`.
-- 2026-02-03: F021 added mobile unit test harness (Vitest) + CI job (`mobile-tests`) and a first config unit test (`mobile/src/config/appConfig.test.ts`).
-- 2026-02-03: F022 expanded `mobile/README.md` with env/deep-link/quality-check and a draft build/release runbook.
+- 2026-02-03: F021 added mobile unit test harness (Vitest) + CI job (`mobile-tests`) and a first config unit test (`ee/mobile/src/config/appConfig.test.ts`).
+- 2026-02-03: F022 expanded `ee/mobile/README.md` with env/deep-link/quality-check and a draft build/release runbook.
 - 2026-02-03: F023 implemented Sign In screen CTA to open the system browser to hosted web login (`/auth/signin`) using configured `EXPO_PUBLIC_ALGA_BASE_URL`.
 - 2026-02-03: F024 added deep link auth callback handler screen (`AuthCallback`) that validates `state` against locally stored pending auth state and captures `ott` for later exchange.
 - 2026-02-03: F025 wired OTT exchange call (`POST /api/v1/mobile/auth/exchange`) and creates an in-memory mobile session on success, routing users into the signed-in app.
@@ -94,12 +94,12 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: F088 added a persisted “Hide sensitive notifications” toggle (future-facing) stored in secure storage and exposed in Settings alongside biometric lock.
 - 2026-02-03: F089 optimized `TicketsListScreen` list rendering (memoized row, stable callbacks, tuned FlatList virtualization props) to reduce re-renders while typing/searching.
 - 2026-02-03: F090 added `?fields=` support for `GET /api/v1/tickets` and a `fields=mobile_list` preset to return a slim ticket list payload; mobile list now requests `fields=mobile_list`.
-- 2026-02-03: F091 centralized locale-aware date/time formatting in `mobile/src/ui/formatters/dateTime.ts` (including safe handling of `YYYY-MM-DD` date-only strings) and used it in ticket list + detail.
+- 2026-02-03: F091 centralized locale-aware date/time formatting in `ee/mobile/src/ui/formatters/dateTime.ts` (including safe handling of `YYYY-MM-DD` date-only strings) and used it in ticket list + detail.
 - 2026-02-03: F092 documented mobile privacy review checklist + PII inventory in `docs/plans/2026-02-03-alga-psa-mobile-app/PRIVACY_REVIEW.md`.
 - 2026-02-03: F093 added basic observability via `analytics.trackEvent` for auth funnel events (sign-in/OTT exchange/refresh/logout) and API request failures (method + normalized path + status + error kind).
-- 2026-02-03: F094 added EAS build/submit profiles (`mobile/eas.json`) and a GitHub Actions workflow for TestFlight/Play internal distribution (`.github/workflows/mobile-distribute.yml`); set bundle/package ids in `mobile/app.json`.
-- 2026-02-03: F095 documented signing/versioning/release notes process in `docs/plans/2026-02-03-alga-psa-mobile-app/RELEASE_PROCESS.md` and set initial iOS/Android build numbers in `mobile/app.json`.
-- 2026-02-03: F096 generated branded app icon/splash/adaptive icon assets (script: `mobile/scripts/generate-assets.mjs`) and updated `mobile/assets/*`.
+- 2026-02-03: F094 added EAS build/submit profiles (`ee/mobile/eas.json`) and a GitHub Actions workflow for TestFlight/Play internal distribution (`.github/workflows/mobile-distribute.yml`); set bundle/package ids in `ee/mobile/app.json`.
+- 2026-02-03: F095 documented signing/versioning/release notes process in `docs/plans/2026-02-03-alga-psa-mobile-app/RELEASE_PROCESS.md` and set initial iOS/Android build numbers in `ee/mobile/app.json`.
+- 2026-02-03: F096 generated branded app icon/splash/adaptive icon assets (script: `ee/mobile/scripts/generate-assets.mjs`) and updated `ee/mobile/assets/*`.
 - 2026-02-03: F097 documented rollout checklist + rollback plan in `docs/plans/2026-02-03-alga-psa-mobile-app/ROLLOUT_PLAN.md`.
 - 2026-02-03: F098 implemented `/auth/mobile/handoff` as a route handler that issues a short-lived OTT for signed-in internal users and redirects back to the app deep link with `ott` + `state`.
 - 2026-02-03: F099 added persisted OTT storage via `mobile_auth_otts` (hashed token, tenant/user binding, expiry, single-use via `used_at`).
@@ -129,9 +129,9 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: F123 added explicit “No access” UX for 403/permission errors on the Tickets list screen (and already on ticket detail), avoiding confusing generic error messaging when a user lacks ticket permissions.
 - 2026-02-03: F124 added cancellation for superseded ticket list/search requests using `AbortController` + `signal`; added a distinct `canceled` API error kind so canceled requests don’t show as timeouts/errors.
 - 2026-02-03: F125 added in-flight GET request deduplication in the mobile API client (no AbortSignal case) to avoid duplicate concurrent fetches; added unit tests and a Vitest setup shim for RN’s `__DEV__`.
-- 2026-02-03: F126 added per-request `x-correlation-id` header (stable across retries) via `mobile/src/telemetry/correlation.ts` and unit tests to ensure it’s applied on every request.
+- 2026-02-03: F126 added per-request `x-correlation-id` header (stable across retries) via `ee/mobile/src/telemetry/correlation.ts` and unit tests to ensure it’s applied on every request.
 - 2026-02-03: F127 hardened deep link handling by filtering initial/subscribed URLs to known prefixes and known safe paths (`signin`, `auth/callback`, `tickets`, `settings`, `ticket/:uuid`), ignoring unexpected hosts/paths.
-- 2026-02-03: F128 centralized hosted web URL construction in `mobile/src/urls/hostedUrls.ts` (ticket + legal URLs) and added unit tests; replaced ad-hoc `new URL()` usage in ticket detail/settings.
+- 2026-02-03: F128 centralized hosted web URL construction in `ee/mobile/src/urls/hostedUrls.ts` (ticket + legal URLs) and added unit tests; replaced ad-hoc `new URL()` usage in ticket detail/settings.
 - 2026-02-03: F129 added a clipboard helper that redacts sensitive values by default (`Bearer` tokens/JWTs/labels like *token*), with opt-out for explicit sensitive copy; updated ticket detail copy actions to use it and added unit tests.
 - 2026-02-03: F130 enabled navigation state persistence/restoration (last tab + last opened ticket) per-user via secure storage, using `NavigationContainer` `initialState` + debounced `onStateChange`.
 - 2026-02-03: F131 documented a perf/memory profiling checklist and guardrails for large lists in `docs/plans/2026-02-03-alga-psa-mobile-app/PERF_MEMORY_CHECKLIST.md`.
@@ -209,34 +209,34 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: F202 server ticket status update endpoint validates `status_id` (must exist) and returns the updated ticket record (used by mobile to refresh header/list badges).
 - 2026-02-03: F203 server ticket assignment update supports setting `assigned_to` directly (including assign-to-self) via authenticated API key without additional user lookup endpoints.
 - 2026-02-03: F204 server time entry create now validates `work_item_type=ticket` requires `work_item_id`, enforces `ticket:read` permission, and rejects non-existent tickets to prevent attaching time entries to unauthorized/invalid tickets.
-- 2026-02-03: F205 created a versioned mobile analytics event catalog (`mobile/src/analytics/events.ts`) and documented the current schema (`docs/plans/2026-02-03-alga-psa-mobile-app/ANALYTICS_EVENTS.md`); all tracked events now include `schema_version`.
-- 2026-02-03: F206 hardened crash/error reporting payloads to omit request/response bodies by default (`mobile/src/errors/errorReporting.ts`) and added a unit test ensuring body-like fields are replaced with `[omitted]`.
-- 2026-02-03: F207 extended log/error redaction to cover ticket subjects/titles and comment bodies (`title`, `subject`, `comment_text`, `event_text`) and added a unit test to prevent regressions (`mobile/src/logging/logger.redaction.test.ts`).
-- 2026-02-03: T001 added a mobile scaffold smoke test to ensure the Expo app stays runnable/configured (`mobile/src/repoScaffold.test.ts`).
-- 2026-02-03: T002 marked environment config as covered by existing unit tests around config parsing/validation (`mobile/src/config/appConfig.test.ts`).
-- 2026-02-03: T003 added API client error-mapping unit tests to validate consistent `ApiError.kind` mapping from HTTP status + server error shape (`mobile/src/api/client.errors.test.ts`).
-- 2026-02-03: T004 added unit tests for request header middleware (Authorization/tenant/client tagging + correlation id) (`mobile/src/api/client.headers.test.ts`).
-- 2026-02-03: T005 added a unit test covering request timeout behavior (returns `timeout` kind) in addition to existing retry coverage (`mobile/src/api/client.timeout.test.ts`, `mobile/src/api/client.retry.test.ts`).
-- 2026-02-03: T006 extracted key bootstrapping timing/expiry logic into pure helpers and covered with unit tests (`mobile/src/app/bootstrapUtils.ts`, `mobile/src/app/bootstrapUtils.test.ts`).
-- 2026-02-03: T007 added a unit test verifying React Navigation deep link config includes `alga://` and ticket detail route (`mobile/src/navigation/linking.test.ts`).
-- 2026-02-03: T008 added unit tests for the mobile theme primitives (colors/spacing/typography) to prevent accidental regressions (`mobile/src/ui/theme.test.ts`).
-- 2026-02-03: T009 added a lightweight unit test to ensure the standard UI state components are present/exported (`mobile/src/ui/states/states.test.ts`).
-- 2026-02-03: T010 added unit tests for the secure storage abstraction (web fallback behavior + JSON helpers) using module mocks for `react-native` and `expo-secure-store` (`mobile/src/storage/secureStorage.test.ts`).
-- 2026-02-03: T011 marked logger redaction coverage as tested via the existing unit test that verifies secret + ticket/comment redaction (`mobile/src/logging/logger.redaction.test.ts`).
-- 2026-02-03: T012 added analytics unit tests (disabled vs enabled) and verified `schema_version` is included on emitted events (`mobile/src/analytics/analytics.test.ts`).
-- 2026-02-03: T013 marked crash/error reporting redaction as covered by the existing unit test that omits request/response bodies (`mobile/src/errors/errorReporting.test.ts`).
-- 2026-02-03: T014 added unit tests for the shared TTL cache used by ticket list/detail caching (`mobile/src/cache/ttlCache.test.ts`).
-- 2026-02-03: T015 added unit tests for the app-resume transition logic used by resume-triggered refresh (`mobile/src/hooks/appStateTransitions.ts`, `mobile/src/hooks/appStateTransitions.test.ts`).
-- 2026-02-03: T016 added a shared offline detection helper (with unit tests) and used it in the app root + ticket screens (`mobile/src/network/isOffline.ts`, `mobile/src/network/isOffline.test.ts`).
+- 2026-02-03: F205 created a versioned mobile analytics event catalog (`ee/mobile/src/analytics/events.ts`) and documented the current schema (`docs/plans/2026-02-03-alga-psa-mobile-app/ANALYTICS_EVENTS.md`); all tracked events now include `schema_version`.
+- 2026-02-03: F206 hardened crash/error reporting payloads to omit request/response bodies by default (`ee/mobile/src/errors/errorReporting.ts`) and added a unit test ensuring body-like fields are replaced with `[omitted]`.
+- 2026-02-03: F207 extended log/error redaction to cover ticket subjects/titles and comment bodies (`title`, `subject`, `comment_text`, `event_text`) and added a unit test to prevent regressions (`ee/mobile/src/logging/logger.redaction.test.ts`).
+- 2026-02-03: T001 added a mobile scaffold smoke test to ensure the Expo app stays runnable/configured (`ee/mobile/src/repoScaffold.test.ts`).
+- 2026-02-03: T002 marked environment config as covered by existing unit tests around config parsing/validation (`ee/mobile/src/config/appConfig.test.ts`).
+- 2026-02-03: T003 added API client error-mapping unit tests to validate consistent `ApiError.kind` mapping from HTTP status + server error shape (`ee/mobile/src/api/client.errors.test.ts`).
+- 2026-02-03: T004 added unit tests for request header middleware (Authorization/tenant/client tagging + correlation id) (`ee/mobile/src/api/client.headers.test.ts`).
+- 2026-02-03: T005 added a unit test covering request timeout behavior (returns `timeout` kind) in addition to existing retry coverage (`ee/mobile/src/api/client.timeout.test.ts`, `ee/mobile/src/api/client.retry.test.ts`).
+- 2026-02-03: T006 extracted key bootstrapping timing/expiry logic into pure helpers and covered with unit tests (`ee/mobile/src/app/bootstrapUtils.ts`, `ee/mobile/src/app/bootstrapUtils.test.ts`).
+- 2026-02-03: T007 added a unit test verifying React Navigation deep link config includes `alga://` and ticket detail route (`ee/mobile/src/navigation/linking.test.ts`).
+- 2026-02-03: T008 added unit tests for the mobile theme primitives (colors/spacing/typography) to prevent accidental regressions (`ee/mobile/src/ui/theme.test.ts`).
+- 2026-02-03: T009 added a lightweight unit test to ensure the standard UI state components are present/exported (`ee/mobile/src/ui/states/states.test.ts`).
+- 2026-02-03: T010 added unit tests for the secure storage abstraction (web fallback behavior + JSON helpers) using module mocks for `react-native` and `expo-secure-store` (`ee/mobile/src/storage/secureStorage.test.ts`).
+- 2026-02-03: T011 marked logger redaction coverage as tested via the existing unit test that verifies secret + ticket/comment redaction (`ee/mobile/src/logging/logger.redaction.test.ts`).
+- 2026-02-03: T012 added analytics unit tests (disabled vs enabled) and verified `schema_version` is included on emitted events (`ee/mobile/src/analytics/analytics.test.ts`).
+- 2026-02-03: T013 marked crash/error reporting redaction as covered by the existing unit test that omits request/response bodies (`ee/mobile/src/errors/errorReporting.test.ts`).
+- 2026-02-03: T014 added unit tests for the shared TTL cache used by ticket list/detail caching (`ee/mobile/src/cache/ttlCache.test.ts`).
+- 2026-02-03: T015 added unit tests for the app-resume transition logic used by resume-triggered refresh (`ee/mobile/src/hooks/appStateTransitions.ts`, `ee/mobile/src/hooks/appStateTransitions.test.ts`).
+- 2026-02-03: T016 added a shared offline detection helper (with unit tests) and used it in the app root + ticket screens (`ee/mobile/src/network/isOffline.ts`, `ee/mobile/src/network/isOffline.test.ts`).
 - 2026-02-03: T017 marked accessibility baseline as covered by the pre-release a11y audit checklist (touch targets/labels/reading order) (`docs/plans/2026-02-03-alga-psa-mobile-app/A11Y_AUDIT.md`).
-- 2026-02-03: T018 added a unit test for i18n key lookup and fallback behavior using a mock locale (`mobile/src/i18n/i18n.test.ts`).
-- 2026-02-03: T019 added a unit test for Settings diagnostics formatting (version/build string) via a small extracted helper (`mobile/src/screens/settingsDiagnostics.ts`, `mobile/src/screens/settingsDiagnostics.test.ts`).
+- 2026-02-03: T018 added a unit test for i18n key lookup and fallback behavior using a mock locale (`ee/mobile/src/i18n/i18n.test.ts`).
+- 2026-02-03: T019 added a unit test for Settings diagnostics formatting (version/build string) via a small extracted helper (`ee/mobile/src/screens/settingsDiagnostics.ts`, `ee/mobile/src/screens/settingsDiagnostics.test.ts`).
 - 2026-02-03: T020 marked the mobile lint/typecheck CI job as covered via the existing workflow (`.github/workflows/mobile-checks.yml`).
 - 2026-02-03: T021 marked the mobile unit test CI job as covered via the existing workflow (`.github/workflows/mobile-checks.yml`).
-- 2026-02-03: T022 marked mobile dev/build/release documentation as covered (`mobile/README.md`, `docs/plans/2026-02-03-alga-psa-mobile-app/RELEASE_PROCESS.md`, `docs/plans/2026-02-03-alga-psa-mobile-app/ROLLOUT_PLAN.md`).
+- 2026-02-03: T022 marked mobile dev/build/release documentation as covered (`ee/mobile/README.md`, `docs/plans/2026-02-03-alga-psa-mobile-app/RELEASE_PROCESS.md`, `docs/plans/2026-02-03-alga-psa-mobile-app/ROLLOUT_PLAN.md`).
 - 2026-02-03: T023 marked E2E sign-in (system browser) as covered by the internal beta smoke checklist (`docs/plans/2026-02-03-alga-psa-mobile-app/INTERNAL_BETA_RUNBOOK.md`).
 - 2026-02-03: Added missing feature placeholders `F208`–`F219` because `tests.json` referenced them but they were absent from `features.json` (keeps plan artifacts consistent; will implement next).
-- 2026-02-03: F208 added a success telemetry event for API requests (`api.request.succeeded`) including normalized path + duration to support latency measurement; updated catalog docs and added a unit test (`mobile/src/api/client.ts`, `mobile/src/api/client.telemetry.test.ts`, `docs/plans/2026-02-03-alga-psa-mobile-app/ANALYTICS_EVENTS.md`).
+- 2026-02-03: F208 added a success telemetry event for API requests (`api.request.succeeded`) including normalized path + duration to support latency measurement; updated catalog docs and added a unit test (`ee/mobile/src/api/client.ts`, `ee/mobile/src/api/client.telemetry.test.ts`, `docs/plans/2026-02-03-alga-psa-mobile-app/ANALYTICS_EVENTS.md`).
 - 2026-02-03: F209 defined initial mobile SLO targets for ticketing/auth endpoints and measurement guidance (`docs/plans/2026-02-03-alga-psa-mobile-app/SLOS.md`).
 - 2026-02-03: F210 added a pre-release accessibility audit checklist and recorded an initial pass for MVP screens (`docs/plans/2026-02-03-alga-psa-mobile-app/A11Y_AUDIT.md`).
 - 2026-02-03: F211 added a pre-release security review checklist and recorded an initial pass for MVP auth/ticket flows (`docs/plans/2026-02-03-alga-psa-mobile-app/SECURITY_REVIEW.md`).
@@ -247,7 +247,7 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: F216 documented an internal beta distribution runbook (CI + local fallback + smoke checklist) (`docs/plans/2026-02-03-alga-psa-mobile-app/INTERNAL_BETA_RUNBOOK.md`).
 - 2026-02-03: F217 documented an auth support escalation runbook (common failure modes + data to collect) (`docs/plans/2026-02-03-alga-psa-mobile-app/AUTH_SUPPORT_RUNBOOK.md`).
 - 2026-02-03: F218 documented the minimum OS support policy (tied to Expo SDK version) (`docs/plans/2026-02-03-alga-psa-mobile-app/OS_SUPPORT_POLICY.md`).
-- 2026-02-03: F219 added dev-only Phase 2 feature gating (production hard-disabled) and documented the toggles (`mobile/src/features/phase2.ts`, `docs/plans/2026-02-03-alga-psa-mobile-app/PHASE2_GATING.md`).
+- 2026-02-03: F219 added dev-only Phase 2 feature gating (production hard-disabled) and documented the toggles (`ee/mobile/src/features/phase2.ts`, `docs/plans/2026-02-03-alga-psa-mobile-app/PHASE2_GATING.md`).
 - 2026-02-03: T024 marked as covered by the internal beta smoke checklist (docs/plans/2026-02-03-alga-psa-mobile-app/INTERNAL_BETA_RUNBOOK.md).
 - 2026-02-03: T025 marked as covered by the internal beta smoke checklist (docs/plans/2026-02-03-alga-psa-mobile-app/INTERNAL_BETA_RUNBOOK.md).
 - 2026-02-03: T026 marked as covered by the internal beta smoke checklist (docs/plans/2026-02-03-alga-psa-mobile-app/INTERNAL_BETA_RUNBOOK.md).
@@ -316,12 +316,12 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: T088 marked as covered by the manual QA checklist (docs/plans/2026-02-03-alga-psa-mobile-app/MANUAL_QA_CHECKLIST.md).
 - 2026-02-03: T089 marked perf optimizations as covered by existing implementation and perf checklist (docs/plans/2026-02-03-alga-psa-mobile-app/PERF_MEMORY_CHECKLIST.md).
 - 2026-02-03: T090 marked slim DTO/field selection as covered (mobile requests fields=mobile_list; contract documented in docs/plans/2026-02-03-alga-psa-mobile-app/API_CONTRACT.md).
-- 2026-02-03: T091 added unit tests for locale-aware date/time formatting (mobile/src/ui/formatters/dateTime.test.ts).
+- 2026-02-03: T091 added unit tests for locale-aware date/time formatting (ee/mobile/src/ui/formatters/dateTime.test.ts).
 - 2026-02-03: T092 marked privacy review/PII inventory as covered (docs/plans/2026-02-03-alga-psa-mobile-app/PRIVACY_REVIEW.md).
 - 2026-02-03: T093 marked observability events as covered (analytics event catalog + api request success/failure telemetry).
 - 2026-02-03: T094 marked as covered: release pipelines exist (.github/workflows/mobile-distribute.yml) and runbook/docs are present (RELEASE_PROCESS.md, INTERNAL_BETA_RUNBOOK.md).
 - 2026-02-03: T095 marked as covered: signing/versioning/release process documented (RELEASE_PROCESS.md).
-- 2026-02-03: T096 marked as covered: icon/splash assets tracked under mobile/assets/ with generation script mobile/scripts/generate-assets.mjs.
+- 2026-02-03: T096 marked as covered: icon/splash assets tracked under ee/mobile/assets/ with generation script ee/mobile/scripts/generate-assets.mjs.
 - 2026-02-03: T097 marked as covered: rollout checklist + rollback plan documented (ROLLOUT_PLAN.md).
 - 2026-02-03: T098 marked as covered: server implements /auth/mobile/handoff OTT issuance (server routes) and mobile uses it.
 - 2026-02-03: T099 marked as covered: server persists OTTs with expiry/single-use (mobile_auth_otts table + migration).
@@ -346,16 +346,16 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: T118 marked as deferred per Phase 2 non-goals (docs/plans/2026-02-03-alga-psa-mobile-app/DEFERRED_PHASE2.md).
 - 2026-02-03: T119 marked as deferred per Phase 2 non-goals (docs/plans/2026-02-03-alga-psa-mobile-app/DEFERRED_PHASE2.md).
 - 2026-02-03: T120 marked as deferred per Phase 2 non-goals (docs/plans/2026-02-03-alga-psa-mobile-app/DEFERRED_PHASE2.md).
-- 2026-02-03: T121 marked API error mapping as covered by unit tests (mobile/src/api/client.errors.test.ts).
-- 2026-02-03: T122 added a unit test covering the global 401 retry behavior via `onAuthError` (mobile/src/api/client.authRetry401.test.ts).
-- 2026-02-03: T123 marked 403/no-access UX as covered by manual QA checklist and 403 error mapping tests (MANUAL_QA_CHECKLIST.md, mobile/src/api/client.errors.test.ts).
-- 2026-02-03: T124 added a unit test to ensure aborted requests return a `canceled` API error kind (mobile/src/api/client.cancel.test.ts).
-- 2026-02-03: T125 marked request deduplication as covered by unit tests (mobile/src/api/client.dedupe.test.ts).
-- 2026-02-03: T126 marked correlation id header as covered by unit tests (mobile/src/api/client.correlation.test.ts).
-- 2026-02-03: T127 added unit tests covering deep link allowlist filtering (known paths allowed, unexpected paths rejected) (`mobile/src/navigation/linking.security.test.ts`).
-- 2026-02-03: T128 marked hosted URL builder as covered by unit tests (mobile/src/urls/hostedUrls.test.ts).
-- 2026-02-03: T129 marked clipboard redaction helper as covered by unit tests (mobile/src/clipboard/clipboard.test.ts).
-- 2026-02-03: T130 added unit tests for determining the active route name used by navigation state persistence (`mobile/src/navigation/activeRoute.ts`, `mobile/src/navigation/activeRoute.test.ts`).
+- 2026-02-03: T121 marked API error mapping as covered by unit tests (ee/mobile/src/api/client.errors.test.ts).
+- 2026-02-03: T122 added a unit test covering the global 401 retry behavior via `onAuthError` (ee/mobile/src/api/client.authRetry401.test.ts).
+- 2026-02-03: T123 marked 403/no-access UX as covered by manual QA checklist and 403 error mapping tests (MANUAL_QA_CHECKLIST.md, ee/mobile/src/api/client.errors.test.ts).
+- 2026-02-03: T124 added a unit test to ensure aborted requests return a `canceled` API error kind (ee/mobile/src/api/client.cancel.test.ts).
+- 2026-02-03: T125 marked request deduplication as covered by unit tests (ee/mobile/src/api/client.dedupe.test.ts).
+- 2026-02-03: T126 marked correlation id header as covered by unit tests (ee/mobile/src/api/client.correlation.test.ts).
+- 2026-02-03: T127 added unit tests covering deep link allowlist filtering (known paths allowed, unexpected paths rejected) (`ee/mobile/src/navigation/linking.security.test.ts`).
+- 2026-02-03: T128 marked hosted URL builder as covered by unit tests (ee/mobile/src/urls/hostedUrls.test.ts).
+- 2026-02-03: T129 marked clipboard redaction helper as covered by unit tests (ee/mobile/src/clipboard/clipboard.test.ts).
+- 2026-02-03: T130 added unit tests for determining the active route name used by navigation state persistence (`ee/mobile/src/navigation/activeRoute.ts`, `ee/mobile/src/navigation/activeRoute.test.ts`).
 - 2026-02-03: T131 marked memory/perf guardrails as covered by checklist docs (docs/plans/2026-02-03-alga-psa-mobile-app/PERF_MEMORY_CHECKLIST.md).
 - 2026-02-03: T132 marked startup perf budget/measurement as covered (STARTUP_PERF_BUDGET.md + app.startup.ready event).
 - 2026-02-03: T133 marked as covered by the manual QA checklist (docs/plans/2026-02-03-alga-psa-mobile-app/MANUAL_QA_CHECKLIST.md).
@@ -430,10 +430,10 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: T202 marked as covered: Ticket status update validates status_id and returns updated ticket summary.
 - 2026-02-03: T203 marked as covered: Ticket assignment update supports assign-to-self without extra lookup.
 - 2026-02-03: T204 marked as covered: Time entry create validates ticket association + permissions (server enforcement).
-- 2026-02-03: T205 marked as covered: Analytics catalog is versioned and documented (docs/plans/2026-02-03-alga-psa-mobile-app/ANALYTICS_EVENTS.md, mobile/src/analytics/events.ts).
-- 2026-02-03: T206 marked as covered: Crash/error reporting omits request/response bodies by default (mobile/src/errors/errorReporting.ts + unit test mobile/src/errors/errorReporting.test.ts).
-- 2026-02-03: T207 marked as covered: Logger redaction covers ticket subjects/comment bodies (mobile/src/logging/logger.redaction.test.ts).
-- 2026-02-03: T208 marked as covered: API latency telemetry event implemented and tested (mobile/src/api/client.ts, mobile/src/api/client.telemetry.test.ts).
+- 2026-02-03: T205 marked as covered: Analytics catalog is versioned and documented (docs/plans/2026-02-03-alga-psa-mobile-app/ANALYTICS_EVENTS.md, ee/mobile/src/analytics/events.ts).
+- 2026-02-03: T206 marked as covered: Crash/error reporting omits request/response bodies by default (ee/mobile/src/errors/errorReporting.ts + unit test ee/mobile/src/errors/errorReporting.test.ts).
+- 2026-02-03: T207 marked as covered: Logger redaction covers ticket subjects/comment bodies (ee/mobile/src/logging/logger.redaction.test.ts).
+- 2026-02-03: T208 marked as covered: API latency telemetry event implemented and tested (ee/mobile/src/api/client.ts, ee/mobile/src/api/client.telemetry.test.ts).
 - 2026-02-03: T209 marked as covered: SLOs defined for key endpoints (docs/plans/2026-02-03-alga-psa-mobile-app/SLOS.md).
 - 2026-02-03: T210 marked as covered: Accessibility audit checklist recorded (docs/plans/2026-02-03-alga-psa-mobile-app/A11Y_AUDIT.md).
 - 2026-02-03: T211 marked as covered: Security review checklist recorded (docs/plans/2026-02-03-alga-psa-mobile-app/SECURITY_REVIEW.md).
@@ -444,7 +444,7 @@ Rolling notes for implementing `docs/plans/2026-02-03-alga-psa-mobile-app`.
 - 2026-02-03: T216 marked as covered: Internal beta distribution runbook documented (docs/plans/2026-02-03-alga-psa-mobile-app/INTERNAL_BETA_RUNBOOK.md).
 - 2026-02-03: T217 marked as covered: Auth support escalation runbook documented (docs/plans/2026-02-03-alga-psa-mobile-app/AUTH_SUPPORT_RUNBOOK.md).
 - 2026-02-03: T218 marked as covered: Minimum OS support policy documented (docs/plans/2026-02-03-alga-psa-mobile-app/OS_SUPPORT_POLICY.md).
-- 2026-02-03: T219 marked as covered: Phase 2 modules are hard-disabled in production builds (docs/plans/2026-02-03-alga-psa-mobile-app/PHASE2_GATING.md, mobile/src/features/phase2.test.ts).
+- 2026-02-03: T219 marked as covered: Phase 2 modules are hard-disabled in production builds (docs/plans/2026-02-03-alga-psa-mobile-app/PHASE2_GATING.md, ee/mobile/src/features/phase2.test.ts).
 - 2026-02-03: T220 marked as covered: Auth handoff → OTT exchange → Tickets list validated via MANUAL_QA_CHECKLIST.md and INTERNAL_BETA_RUNBOOK.md smoke steps.
 - 2026-02-03: T221 marked as covered: Open ticket → add INTERNAL comment validated via MANUAL_QA_CHECKLIST.md.
 - 2026-02-03: T222 marked as covered: Open ticket → add PUBLIC comment validated via MANUAL_QA_CHECKLIST.md.

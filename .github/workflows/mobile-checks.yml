@@ -22,18 +22,18 @@ jobs:
         with:
           node-version: "20"
           cache: "npm"
-          cache-dependency-path: mobile/package-lock.json
+          cache-dependency-path: ee/mobile/package-lock.json
 
       - name: Install dependencies
-        working-directory: mobile
+        working-directory: ee/mobile
         run: npm ci --include=dev
 
       - name: Lint
-        working-directory: mobile
+        working-directory: ee/mobile
         run: npm run lint
 
       - name: Typecheck
-        working-directory: mobile
+        working-directory: ee/mobile
         run: npm run typecheck
 
   mobile-tests:
@@ -49,14 +49,14 @@ jobs:
         with:
           node-version: "20"
           cache: "npm"
-          cache-dependency-path: mobile/package-lock.json
+          cache-dependency-path: ee/mobile/package-lock.json
 
       - name: Install dependencies
-        working-directory: mobile
+        working-directory: ee/mobile
         run: npm ci --include=dev
 
       - name: Test
-        working-directory: mobile
+        working-directory: ee/mobile
         run: npm run test
 
   mobile-audit:
@@ -72,14 +72,14 @@ jobs:
         with:
           node-version: "20"
           cache: "npm"
-          cache-dependency-path: mobile/package-lock.json
+          cache-dependency-path: ee/mobile/package-lock.json
 
       - name: Install dependencies
-        working-directory: mobile
+        working-directory: ee/mobile
         run: npm ci --include=dev
 
       - name: Generate npm audit report
-        working-directory: mobile
+        working-directory: ee/mobile
         run: |
           npm audit --omit=dev --json > npm-audit.json || true
 
@@ -87,7 +87,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: mobile-npm-audit
-          path: mobile/npm-audit.json
+          path: ee/mobile/npm-audit.json
 
   mobile-repro:
     name: Mobile reproducibility checks
@@ -102,15 +102,15 @@ jobs:
         with:
           node-version: "20"
           cache: "npm"
-          cache-dependency-path: mobile/package-lock.json
+          cache-dependency-path: ee/mobile/package-lock.json
 
       - name: Install dependencies (npm ci)
-        working-directory: mobile
+        working-directory: ee/mobile
         run: npm ci --include=dev
 
       - name: Ensure lockfile is unchanged
-        run: git diff --exit-code -- mobile/package-lock.json
+        run: git diff --exit-code -- ee/mobile/package-lock.json
 
       - name: Verify Expo config resolves
-        working-directory: mobile
+        working-directory: ee/mobile
         run: npx expo config --type public --json > /tmp/expo-config.json

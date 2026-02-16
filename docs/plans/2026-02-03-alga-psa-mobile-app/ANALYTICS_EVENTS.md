@@ -1,6 +1,6 @@
 # Mobile Analytics Events Catalog
 
-Schema version: `1.0.0` (see `mobile/src/analytics/events.ts`)
+Schema version: `1.0.0` (see `ee/mobile/src/analytics/events.ts`)
 
 Notes:
 - Event names are stable identifiers and must not be repurposed.

@@ -1,6 +1,6 @@
 # Mobile App Privacy Review Checklist + PII Inventory
 
-Scope: `docs/plans/2026-02-03-alga-psa-mobile-app` (Ticketing MVP + SSO), always-connected React Native app in `mobile/`.
+Scope: `docs/plans/2026-02-03-alga-psa-mobile-app` (Ticketing MVP + SSO), always-connected React Native app in `ee/mobile/`.
 
 Last updated: 2026-02-03
 

@@ -12,14 +12,14 @@ This is the first-party Alga PSA mobile app scaffold (iOS + Android) built with 
 ## Install
 
 ```bash
-cd mobile
+cd ee/mobile
 npm ci
 ```
 
 Create a local env file:
 
 ```bash
-cd mobile
+cd ee/mobile
 cp .env.example .env
 ```
 
@@ -31,7 +31,7 @@ cp .env.example .env
 ## Run
 
 ```bash
-cd mobile
+cd ee/mobile
 npm run start
 ```
 
@@ -42,7 +42,7 @@ Then choose a target:
 Or run directly:
 
 ```bash
-cd mobile
+cd ee/mobile
 npm run ios
 npm run android
 ```
@@ -55,7 +55,7 @@ npm run android
 ## Quality checks
 
 ```bash
-cd mobile
+cd ee/mobile
 npm run lint
 npm run typecheck
 npm run test
@@ -82,5 +82,5 @@ Required repo secrets:
 
 Notes:
 
-- `mobile/app.json` defines the bundle identifiers/package names used by EAS builds.
-- `mobile/eas.json` includes placeholder submit configuration (e.g. `ascAppId`); replace with real values before using `eas submit`.
+- `ee/mobile/app.json` defines the bundle identifiers/package names used by EAS builds.
+- `ee/mobile/eas.json` includes placeholder submit configuration (e.g. `ascAppId`); replace with real values before using `eas submit`.

@@ -1,6 +1,6 @@
 # Mobile Release Process (Signing, Versioning, Release Notes)
 
-Scope: Ticketing MVP + SSO (`mobile/` Expo app) for hosted Alga PSA environments.
+Scope: Ticketing MVP + SSO (`ee/mobile/` Expo app) for hosted Alga PSA environments.
 
 Last updated: 2026-02-03
 
@@ -8,21 +8,21 @@ Last updated: 2026-02-03
 
 ### iOS (TestFlight / App Store)
 
-- Builds are produced via EAS (`mobile/eas.json`).
+- Builds are produced via EAS (`ee/mobile/eas.json`).
 - Signing credentials are managed by EAS using App Store Connect (recommended).
-- App must exist in App Store Connect and use the same bundle id as `mobile/app.json` (`expo.ios.bundleIdentifier`).
+- App must exist in App Store Connect and use the same bundle id as `ee/mobile/app.json` (`expo.ios.bundleIdentifier`).
 
 ### Android (Play Internal / Play Store)
 
-- Builds are produced via EAS (`mobile/eas.json`).
+- Builds are produced via EAS (`ee/mobile/eas.json`).
 - Keystore is managed by EAS (recommended).
-- App must exist in Google Play Console and use the same package name as `mobile/app.json` (`expo.android.package`).
+- App must exist in Google Play Console and use the same package name as `ee/mobile/app.json` (`expo.android.package`).
 
 ## Versioning
 
 ### Human version
 
-- Update `mobile/app.json`:
+- Update `ee/mobile/app.json`:
   - `expo.version` (e.g. `1.0.0` → `1.0.1`)
 
 ### Build numbers
@@ -50,5 +50,5 @@ Recommendation: bump both build numbers on every CI distribution run, even when 
   - `EXPO_TOKEN`
 - Before first run:
   - Create the Expo project and run `eas build:configure` locally once to bootstrap config/credentials.
-  - Replace placeholders in `mobile/eas.json` submit profiles (e.g. `ascAppId`) and/or configure EAS submit credentials.
+  - Replace placeholders in `ee/mobile/eas.json` submit profiles (e.g. `ascAppId`) and/or configure EAS submit credentials.
 

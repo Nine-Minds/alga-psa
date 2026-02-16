@@ -46,10 +46,9 @@ export function getAppConfig(): AppConfig {
       ok: false,
       env,
       error:
-        "Missing EXPO_PUBLIC_ALGA_BASE_URL. Copy mobile/.env.example to mobile/.env and set the hosted base URL.",
+        "Missing EXPO_PUBLIC_ALGA_BASE_URL. Copy ee/mobile/.env.example to ee/mobile/.env and set the hosted base URL.",
     };
   }
 
   return { ok: true, env, baseUrl };
 }
-

@@ -23,10 +23,10 @@ jobs:
         with:
           node-version: "20"
           cache: "npm"
-          cache-dependency-path: mobile/package-lock.json
+          cache-dependency-path: ee/mobile/package-lock.json
 
       - name: Install dependencies
-        working-directory: mobile
+        working-directory: ee/mobile
         run: npm ci --include=dev
 
       - name: Setup Expo / EAS
@@ -36,7 +36,7 @@ jobs:
           token: ${{ secrets.EXPO_TOKEN }}
 
       - name: EAS build (wait)
-        working-directory: mobile
+        working-directory: ee/mobile
         env:
           TARGET: ${{ inputs.target }}
         run: |
@@ -55,7 +55,7 @@ jobs:
           esac
 
       - name: EAS submit (latest)
-        working-directory: mobile
+        working-directory: ee/mobile
         env:
           TARGET: ${{ inputs.target }}
         run: |
@@ -72,4 +72,3 @@ jobs:
               exit 1
               ;;
           esac
-

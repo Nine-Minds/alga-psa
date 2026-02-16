@@ -5,7 +5,7 @@ Audience: Engineering / Release owners
 
 ## Preconditions
 
-- Mobile app configured (`mobile/app.json`, `mobile/eas.json`).
+- Mobile app configured (`ee/mobile/app.json`, `ee/mobile/eas.json`).
 - Expo/EAS access:
   - Repository secret: `EXPO_TOKEN` (for CI distribution)
   - Correct Apple/Google store credentials configured in EAS (outside this repo)
@@ -22,7 +22,7 @@ Workflow: `.github/workflows/mobile-distribute.yml`
 
 ## Manual fallback (local)
 
-From `mobile/`:
+From `ee/mobile/`:
 
 1) `npm ci`
 2) `npx eas login`

@@ -1,6 +1,6 @@
 # Mobile Rollout Checklist + Rollback Plan
 
-Scope: Ticketing MVP + SSO (hosted only), `mobile/` + supporting server endpoints.
+Scope: Ticketing MVP + SSO (hosted only), `ee/mobile/` + supporting server endpoints.
 
 Last updated: 2026-02-03
 
@@ -19,9 +19,9 @@ Last updated: 2026-02-03
 
 ### Distribution
 
-- [ ] iOS: App Store Connect app created and bundle id matches `mobile/app.json`.
+- [ ] iOS: App Store Connect app created and bundle id matches `ee/mobile/app.json`.
 - [ ] iOS: TestFlight internal group configured.
-- [ ] Android: Play Console app created and package name matches `mobile/app.json`.
+- [ ] Android: Play Console app created and package name matches `ee/mobile/app.json`.
 - [ ] Android: Internal testing track configured.
 - [ ] CI secrets configured (`EXPO_TOKEN`, plus any EAS submit credentials).
 - [ ] Run `.github/workflows/mobile-distribute.yml`:

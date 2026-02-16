@@ -2,7 +2,7 @@
 
 Last updated: 2026-02-03
 
-This document describes the REST API surface used by the React Native mobile app (`mobile/`) for the Ticketing MVP.
+This document describes the REST API surface used by the React Native mobile app (`ee/mobile/`) for the Ticketing MVP.
 
 ## Authentication (mobile)
 
