@@ -7,7 +7,7 @@ import { Label } from '@alga-psa/ui/components/Label';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
-import { Mail, Shield, User, Info } from 'lucide-react';
+import { Mail, Shield, User, Info, RefreshCw } from 'lucide-react';
 import type { IContact } from '@alga-psa/types';
 import {
   updateContactPortalAdminStatus,
@@ -58,11 +58,17 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
   const [userRoles, setUserRoles] = useState<UserRole[]>([]);
   const [invitationHistory, setInvitationHistory] = useState<InvitationHistoryItem[]>([]);
   const [resendingInvitationId, setResendingInvitationId] = useState<string | null>(null);
+  const [isRefreshingInvitationHistory, setIsRefreshingInvitationHistory] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
     loadData();
   }, [contact.contact_name_id]);
+
+  const loadInvitationHistory = async () => {
+    const invitations = await getPortalInvitations(contact.contact_name_id);
+    setInvitationHistory(invitations);
+  };
 
   const loadData = async () => {
     setIsLoading(true);
@@ -83,8 +89,7 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
       setClientRoles(clientPortalRoles);
 
       // Load invitation history
-      const invitations = await getPortalInvitations(contact.contact_name_id);
-      setInvitationHistory(invitations);
+      await loadInvitationHistory();
     } catch (error) {
       console.error('Error loading portal tab data:', error);
       toast({
@@ -94,6 +99,22 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleRefreshInvitationHistory = async () => {
+    setIsRefreshingInvitationHistory(true);
+    try {
+      await loadInvitationHistory();
+    } catch (error) {
+      console.error('Error refreshing invitation history:', error);
+      toast({
+        title: "Error",
+        description: "Failed to refresh invitation history",
+        variant: "destructive"
+      });
+    } finally {
+      setIsRefreshingInvitationHistory(false);
     }
   };
 
@@ -542,16 +563,29 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
           )}
 
           {/* Invitation History */}
-          {invitationHistory.length > 0 && (
-            <div className="border-t pt-6">
-              <div className="space-y-4">
+          <div className="border-t pt-6">
+            <div className="space-y-4">
+              <div className="flex items-start justify-between gap-3">
                 <div>
                   <h4 className="text-sm font-medium">Invitation History</h4>
                   <p className="text-sm text-muted-foreground">
                     Recent portal invitations sent to this contact
                   </p>
                 </div>
+                <Button
+                  id="refresh-invitation-history-button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleRefreshInvitationHistory}
+                  disabled={isRefreshingInvitationHistory}
+                  className="flex items-center gap-2"
+                >
+                  <RefreshCw className={`h-4 w-4 ${isRefreshingInvitationHistory ? 'animate-spin' : ''}`} />
+                  {isRefreshingInvitationHistory ? 'Refreshing...' : 'Refresh'}
+                </Button>
+              </div>
 
+              {invitationHistory.length > 0 ? (
                 <div className="space-y-2">
                   {invitationHistory.map((invitation) => (
                     <div key={invitation.invitation_id} className="flex items-center justify-between p-3 border rounded-lg">
@@ -603,9 +637,13 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
                     </div>
                   ))}
                 </div>
-              </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  No portal invitations have been sent to this contact yet.
+                </p>
+              )}
             </div>
-          )}
+          </div>
         </CardContent>
       </Card>
     </div>

@@ -25,8 +25,13 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@alga-psa/auth": "*",
     "@alga-psa/core": "*",
-    "@alga-psa/db": "*"
+    "@alga-psa/db": "*",
+    "@alga-psa/email": "*",
+    "@alga-psa/tenancy": "*",
+    "@alga-psa/types": "*",
+    "@alga-psa/users": "*"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
