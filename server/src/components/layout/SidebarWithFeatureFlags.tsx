@@ -17,8 +17,6 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
   const navigationFlag = useFeatureFlag('ui-navigation-v2', { defaultValue: true });
   const useNavigationSections =
     typeof navigationFlag === 'boolean' ? navigationFlag : navigationFlag?.enabled ?? false;
-  const emailLogsFlag = useFeatureFlag('email-logs', { defaultValue: false });
-  const emailLogsEnabled = typeof emailLogsFlag === 'boolean' ? emailLogsFlag : emailLogsFlag?.enabled ?? false;
   const [userPermissions, setUserPermissions] = useState<string[]>([]);
 
   useEffect(() => {
@@ -63,12 +61,6 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
       ...section,
       items: section.items.map((item) => {
         if (item.name !== 'Automation Hub') {
-          if (item.name === 'System Monitor' && item.subItems && !emailLogsEnabled) {
-            return {
-              ...item,
-              subItems: item.subItems.filter((subItem) => subItem.name !== 'Email Logs'),
-            };
-          }
           return item;
         }
 
@@ -83,7 +75,7 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
         };
       })
     }));
-  }, [canWorkflowAdmin, useNavigationSections, emailLogsEnabled]);
+  }, [canWorkflowAdmin, useNavigationSections]);
 
   return (
     <Sidebar
