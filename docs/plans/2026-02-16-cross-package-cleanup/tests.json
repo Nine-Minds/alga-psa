@@ -44,7 +44,7 @@
   {
     "id": "T008",
     "description": "After Stage 3: import from @alga-psa/core/lib/blocknoteUtils works in all callers",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F004", "F009"]
   },
   {

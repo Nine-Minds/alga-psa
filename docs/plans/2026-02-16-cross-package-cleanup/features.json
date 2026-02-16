@@ -50,7 +50,7 @@
   {
     "id": "F009",
     "description": "Stage 3: Redirect all blocknoteUtils callers to @alga-psa/core/lib/blocknoteUtils (~7 files + test mocks)",
-    "implemented": false,
+    "implemented": true,
     "stage": 3
   },
   {

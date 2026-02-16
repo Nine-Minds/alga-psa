@@ -19,7 +19,7 @@ vi.mock('@alga-psa/db', () => ({
   createTenantKnex: vi.fn(),
 }));
 
-vi.mock('@alga-psa/documents/lib/blocknoteUtils', () => ({
+vi.mock('@alga-psa/core/lib/blocknoteUtils', () => ({
   convertBlockNoteToMarkdown: vi.fn(),
 }));
 

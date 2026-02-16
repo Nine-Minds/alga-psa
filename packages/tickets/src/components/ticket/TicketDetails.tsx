@@ -54,7 +54,7 @@ import { ReflectionContainer } from "@alga-psa/ui/ui-reflection/ReflectionContai
 import { PartialBlock, StyledText } from '@blocknote/core';
 import { useFeatureFlag, useTicketTimeTracking } from "@alga-psa/ui/hooks";
 import { IntervalTrackingService } from "@alga-psa/ui/services";
-import { convertBlockNoteToMarkdown } from "@alga-psa/documents/lib/blocknoteUtils";
+import { convertBlockNoteToMarkdown } from "@alga-psa/core/lib/blocknoteUtils";
 import BackNav from '@alga-psa/ui/components/BackNav';
 import { ResponseStateBadge } from '../ResponseStateBadge';
 import TicketOriginBadge from '../TicketOriginBadge';

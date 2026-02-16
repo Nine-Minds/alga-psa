@@ -7,7 +7,7 @@ import { IUser } from '@alga-psa/types';
 import { z } from 'zod';
 import { Knex } from 'knex';
 import { hasPermission, withAuth } from '@alga-psa/auth';
-import { convertBlockNoteToMarkdown } from '@alga-psa/documents/lib/blocknoteUtils';
+import { convertBlockNoteToMarkdown } from '@alga-psa/core/lib/blocknoteUtils';
 import { TicketModel, CreateTicketInput } from '@shared/models/ticketModel';
 import { ServerEventPublisher } from '@alga-psa/event-bus';
 import { ServerAnalyticsTracker } from '@alga-psa/analytics';

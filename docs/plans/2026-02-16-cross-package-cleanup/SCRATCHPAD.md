@@ -69,3 +69,8 @@
 - (2026-02-16) Stage 3: Replaced documents blocknoteUtils with re-export shim from core.
 
 - (2026-02-16) Stage 3 test: added documents blocknoteUtils re-export vitest; added vitest alias for @alga-psa/core/lib/blocknoteUtils to resolve shim.
+
+- (2026-02-16) Stage 3: Updated blocknoteUtils imports to @alga-psa/core for documents, tickets, projects, client-portal callers and mocks.
+
+- (2026-02-16) Stage 3 test: verified only remaining @alga-psa/documents/lib/blocknoteUtils import is the re-export test; all callers now use core path.
+- (2026-02-16) Stage 3 test: `npx vitest run packages/client-portal/src/actions/client-portal-actions/client-tickets.responseSource.test.ts` failed due to missing table "tickets" in test setup (pre-existing); needs follow-up before marking T011.
