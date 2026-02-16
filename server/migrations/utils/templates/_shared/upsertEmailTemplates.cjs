@@ -42,11 +42,6 @@ async function upsertEmailTemplate(knex, templateDef, options = {}) {
     updated_at: now,
   }));
 
-  // Debug: log sizes for portal-invitation
-  if (templateName === 'portal-invitation') {
-    rows.forEach(r => console.log(`  [debug] INSERT ${r.name} ${r.language_code} html=${r.html_content.length} text=${r.text_content.length}`));
-  }
-
   await knex('system_email_templates')
     .insert(rows)
     .onConflict(['name', 'language_code'])
