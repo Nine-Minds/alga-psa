@@ -51,3 +51,5 @@
 - (2026-02-16) Stage 2: Removed documents from VERTICAL_PACKAGES with shared-infrastructure rationale comment.
 
 - (2026-02-16) Stage 2 build: `npm run build` failed (Next.js build OOM in node) after assemblyscript step; need rerun with more memory later.
+
+- (2026-02-16) Stage 3: Copied blocknoteUtils to core, added export map entry and @blocknote/core dependency.

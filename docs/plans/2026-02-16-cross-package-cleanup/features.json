@@ -20,7 +20,7 @@
   {
     "id": "F004",
     "description": "Stage 3: Copy blocknoteUtils.ts from documents to core, add @blocknote/core dep + export map entry",
-    "implemented": false,
+    "implemented": true,
     "stage": 3
   },
   {
