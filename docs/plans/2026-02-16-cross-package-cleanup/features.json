@@ -8,7 +8,7 @@
   {
     "id": "F002",
     "description": "Stage 2: Remove client-portal from VERTICAL_PACKAGES (composition layer exemption, -39 violations)",
-    "implemented": false,
+    "implemented": true,
     "stage": 2
   },
   {

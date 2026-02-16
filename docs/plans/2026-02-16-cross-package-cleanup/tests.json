@@ -8,7 +8,7 @@
   {
     "id": "T002",
     "description": "After Stage 2: client-portal imports no longer flagged as violations",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F002"]
   },
   {

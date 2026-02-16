@@ -43,3 +43,7 @@
 - (2026-02-16) Stage 1: Expanded npm run lint to include packages/ in root package.json.
 
 - (2026-02-16) Stage 1 test: ran `npm run lint`; lint now covers packages/ and reports existing violations (expected).
+
+- (2026-02-16) Stage 2: Removed client-portal from VERTICAL_PACKAGES with composition-layer rationale comment.
+
+- (2026-02-16) Stage 2 test: `npx eslint packages` shows no client-portal feature-to-feature violations.

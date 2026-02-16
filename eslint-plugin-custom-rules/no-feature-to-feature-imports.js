@@ -9,7 +9,7 @@ const VERTICAL_PACKAGES = new Set([
   'assets',
   'surveys',
   'integrations',
-  'client-portal',
+  // 'client-portal' is a composition layer (not a vertical feature package).
 ]);
 
 function getSourcePackage(filename) {
@@ -64,4 +64,3 @@ export default {
     };
   },
 };
-
