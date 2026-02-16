@@ -86,19 +86,19 @@
   {
     "id": "F015",
     "description": "Stage 6: Move PrioritySelect, CategoryPicker from tickets to @alga-psa/ui",
-    "implemented": false,
+    "implemented": true,
     "stage": 6
   },
   {
     "id": "F016",
     "description": "Stage 6: Move getAllBoards to @alga-psa/core/actions or @alga-psa/db/actions",
-    "implemented": false,
+    "implemented": true,
     "stage": 6
   },
   {
     "id": "F017",
     "description": "Stage 6: Update integrations + surveys callers to import pickers from new locations",
-    "implemented": false,
+    "implemented": true,
     "stage": 6
   },
   {

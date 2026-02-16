@@ -21,6 +21,11 @@
       "import": "./dist/components/*.mjs",
       "require": "./dist/components/*.js"
     },
+    "./components/tickets/*": {
+      "types": "./src/components/tickets/*.tsx",
+      "import": "./dist/components/tickets/*.mjs",
+      "require": "./dist/components/tickets/*.js"
+    },
     "./ui-reflection": {
       "types": "./src/ui-reflection/index.ts",
       "import": "./dist/ui-reflection/index.mjs",

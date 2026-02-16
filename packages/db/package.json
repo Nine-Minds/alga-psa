@@ -41,6 +41,14 @@
     "./connection": {
       "import": "./dist/lib/connection.js",
       "types": "./src/lib/connection.ts"
+    },
+    "./actions": {
+      "import": "./dist/actions/index.js",
+      "types": "./src/actions/index.ts"
+    },
+    "./actions/*": {
+      "import": "./dist/actions/*.js",
+      "types": "./src/actions/*.ts"
     }
   },
   "scripts": {
@@ -51,6 +59,7 @@
   },
   "dependencies": {
     "@alga-psa/core": "file:../core",
+    "@alga-psa/types": "*",
     "dotenv": "^16.4.5",
     "knex": "^3.1.0",
     "pg": "^8.16.0",

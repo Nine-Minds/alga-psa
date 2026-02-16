@@ -110,25 +110,25 @@
   {
     "id": "T019",
     "description": "After Stage 6: PrioritySelect importable from @alga-psa/ui",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F015"]
   },
   {
     "id": "T020",
     "description": "After Stage 6: CategoryPicker importable from @alga-psa/ui",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F015"]
   },
   {
     "id": "T021",
     "description": "After Stage 6: getAllBoards importable from @alga-psa/core or @alga-psa/db",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F016"]
   },
   {
     "id": "T022",
     "description": "After Stage 6: surveys and integrations no longer import from @alga-psa/tickets for pickers",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F017"]
   },
   {

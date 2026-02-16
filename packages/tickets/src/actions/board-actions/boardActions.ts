@@ -4,6 +4,7 @@ import { IBoard } from '@alga-psa/types';
 import Board from '../../models/board';
 import { createTenantKnex } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
+import { getAllBoards as getAllBoardsForTenant } from '@alga-psa/db/actions';
 import { Knex } from 'knex';
 import { ItilStandardsService } from '../../services/itilStandardsService';
 import { withAuth } from '@alga-psa/auth';
@@ -30,20 +31,7 @@ export const findBoardById = withAuth(async (_user, { tenant }, id: string): Pro
 });
 
 export const getAllBoards = withAuth(async (_user, { tenant }, includeAll: boolean = true): Promise<IBoard[]> => {
-  const { knex: db } = await createTenantKnex();
-  try {
-    return await withTransaction(db, async (trx: Knex.Transaction) => {
-      const boards = await trx('boards')
-        .where({ tenant })
-        .where(includeAll ? {} : { is_inactive: false })
-        .orderBy('display_order', 'asc')
-        .orderBy('board_name', 'asc');
-      return boards;
-    });
-  } catch (error) {
-    console.error('Failed to fetch boards:', error);
-    return [];
-  }
+  return getAllBoardsForTenant(tenant, includeAll);
 });
 
 export const createBoard = withAuth(async (user, { tenant }, boardData: Omit<IBoard, 'board_id' | 'tenant'>): Promise<IBoard> => {

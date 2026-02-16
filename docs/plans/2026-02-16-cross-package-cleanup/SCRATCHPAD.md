@@ -94,3 +94,11 @@
 - (2026-02-16) Stage 5: Added ALLOWED_PAIRS for integrations->clients and integrations->scheduling in no-feature-to-feature rule with rationale comments.
 
 - (2026-02-16) Stage 5 test: eslint no longer flags integrations->clients or integrations->scheduling violations.
+
+- (2026-02-16) Stage 6: Moved CategoryPicker and PrioritySelect to ui components/tickets with tickets re-export shims; ui components index exports added.
+
+- (2026-02-16) Stage 6: Added @alga-psa/db/actions getAllBoards and wired tickets getAllBoards wrapper to call it; surveys/integrations now import from db actions.
+
+- (2026-02-16) Stage 6: Updated integrations/surveys picker imports to @alga-psa/ui/components.
+
+- (2026-02-16) Stage 6 tests: added ui picker export test and db getAllBoards export test; verified integrations/surveys no longer import pickers from tickets.

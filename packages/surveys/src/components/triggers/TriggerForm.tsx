@@ -11,7 +11,7 @@ import { Badge } from '@alga-psa/ui/components/Badge';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { X } from 'lucide-react';
 import { BoardPicker } from '@alga-psa/ui/components/settings/general/BoardPicker';
-import { PrioritySelect } from '@alga-psa/tickets/components/PrioritySelect';
+import { PrioritySelect } from '@alga-psa/ui/components';
 import type { SurveyTemplate, SurveyTrigger } from '@alga-psa/surveys/actions/surveyActions';
 import {
   createSurveyTrigger,

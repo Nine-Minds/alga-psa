@@ -17,11 +17,10 @@ import type { InboundTicketDefaults, TicketFieldOptions } from '@alga-psa/types'
 // Dedicated pickers used elsewhere in the app
 import { BoardPicker } from '@alga-psa/ui/components/settings/general/BoardPicker';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
-import CategoryPicker from '@alga-psa/tickets/components/CategoryPicker';
-import { PrioritySelect } from '@alga-psa/tickets/components/PrioritySelect';
+import { CategoryPicker, PrioritySelect } from '@alga-psa/ui/components';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 // Loaders to hydrate pickers with full data
-import { getAllBoards } from '@alga-psa/tickets/actions';
+import { getAllBoards } from '@alga-psa/db/actions';
 import { getAllClients } from '@alga-psa/clients/actions';
 import { getAllPriorities } from '@alga-psa/reference-data/actions';
 import { getAllUsersBasic, getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';

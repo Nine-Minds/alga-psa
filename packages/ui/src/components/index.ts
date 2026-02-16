@@ -143,5 +143,8 @@ export { default as RichTextViewerWidget } from './widgets/RichTextViewerWidget'
 export * from './tags';
 export * from './dashboard';
 export * from './common';
+export * from './tickets/CategoryPicker';
+export { default as CategoryPicker } from './tickets/CategoryPicker';
+export * from './tickets/PrioritySelect';
 export * from './tickets/ResponseStateBadge';
 export { default as ResponseStateBadge } from './tickets/ResponseStateBadge';

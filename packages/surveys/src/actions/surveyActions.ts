@@ -7,7 +7,7 @@ import { z } from 'zod';
 import { createTenantKnex, runWithTenant } from '@alga-psa/db';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import type { IBoard, IPriority, IStatus, IUserWithRoles } from '@alga-psa/types';
-import { getAllBoards } from '@alga-psa/tickets/actions';
+import { getAllBoards } from '@alga-psa/db/actions';
 import { getTicketStatuses } from '@alga-psa/reference-data/actions';
 import { getAllPriorities } from '@alga-psa/reference-data/actions';
 
