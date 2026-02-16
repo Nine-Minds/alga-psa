@@ -490,6 +490,7 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
             id={`${id}-start-time-${index}`}
             value={timeInputs[`start-${index}`] || (entry?.start_time ? formatTimeForInput(parseISO(entry.start_time)) : '')}
             onChange={(value) => handleTimeChange('start', value)}
+            allowManualInput
             disabled={!isEditable}
             className="mt-1"
           />
@@ -503,6 +504,7 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
             id={`${id}-end-time-${index}`}
             value={timeInputs[`end-${index}`] || (entry?.end_time ? formatTimeForInput(parseISO(entry.end_time)) : '')}
             onChange={(value) => handleTimeChange('end', value)}
+            allowManualInput
             disabled={!isEditable}
             className="mt-1"
           />

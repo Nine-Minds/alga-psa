@@ -56,11 +56,16 @@ export const getContractRevenueReport = withAuth(async (user, { tenant }): Promi
     const { knex } = await createTenantKnex();
 
     const today = new Date();
-    const yearStart = new Date(today.getFullYear(), 0, 1);
+    // Use a UTC boundary so we don't accidentally exclude invoices at 00:00Z on Jan 1 due to local tz offset.
+    const yearStart = new Date(Date.UTC(today.getUTCFullYear(), 0, 1, 0, 0, 0, 0));
+    const excludedInvoiceStatuses = ['draft', 'Draft', 'cancelled', 'Cancelled', 'canceled', 'Canceled'];
 
     // First get aggregated invoice data by client to avoid cartesian product
     const invoicesByClient = await knex('invoices')
       .where({ tenant })
+      // Status values are not fully normalized across tenants (some store Title Case like "Unpaid").
+      // Exclude drafts/cancelled rather than whitelisting a brittle list.
+      .whereNotIn('status', excludedInvoiceStatuses)
       .whereRaw('invoice_date >= ?', [yearStart.toISOString()])
       .select('client_id')
       .select(knex.raw('SUM(total_amount) as total_billed_ytd'))
@@ -69,7 +74,9 @@ export const getContractRevenueReport = withAuth(async (user, { tenant }): Promi
     // Create a map for quick lookup
     const invoiceMap = new Map<string, number>();
     for (const inv of invoicesByClient) {
-      invoiceMap.set(inv.client_id, inv.total_billed_ytd || 0);
+      // Postgres returns BIGINT aggregates as strings; if we don't coerce here we can
+      // accidentally concatenate strings later (e.g. in summary reduce), producing absurd values.
+      invoiceMap.set(inv.client_id, Number(inv.total_billed_ytd ?? 0) || 0);
     }
 
     // Query to get contract data (without invoices to avoid join issues)
@@ -147,9 +154,9 @@ export const getContractRevenueReport = withAuth(async (user, { tenant }): Promi
     // Add monthly recurring to aggregated data
     for (const contractLine of contractLines) {
       const keys = Array.from(aggregatedMap.keys()).filter(k => k.startsWith(contractLine.contract_id));
-      // Convert dollars to cents: rate is stored as decimal(10,2) in dollars
-      const rateInDollars = contractLine.custom_rate || 0;
-      const rateInCents = Math.round(rateInDollars * 100);
+      // Rates across billing are represented in minor units (cents). `custom_rate` is stored
+      // on `contract_lines` as a numeric/decimal in the DB, but the value itself is cents.
+      const rateInCents = Math.round(Number(contractLine.custom_rate) || 0);
       for (const key of keys) {
         const item = aggregatedMap.get(key)!;
         item.monthly_recurring += rateInCents;
@@ -304,15 +311,19 @@ export const getProfitabilityReport = withAuth(async (user, { tenant }): Promise
   try {
     const { knex } = await createTenantKnex();
 
-    const yearStart = new Date(new Date().getFullYear(), 0, 1);
+    const today = new Date();
+    const yearStart = new Date(Date.UTC(today.getUTCFullYear(), 0, 1, 0, 0, 0, 0));
+    const excludedInvoiceStatuses = ['draft', 'Draft', 'cancelled', 'Cancelled', 'canceled', 'Canceled'];
 
     // Get total revenue for the year using SQL aggregation to avoid duplication
     const revenueResult = await knex('invoices')
       .where({ tenant })
+      .whereNotIn('status', excludedInvoiceStatuses)
       .whereRaw('invoice_date >= ?', [yearStart.toISOString()])
-      .select(knex.raw('SUM(total_amount) as total_revenue')) as { total_revenue: number }[];
+      .select(knex.raw('SUM(total_amount) as total_revenue')) as Array<{ total_revenue: string | number | null }>;
 
-    const totalRevenue = (revenueResult[0]?.total_revenue as number) || 0;
+    // SUM(bigint) comes back as a string from pg; coerce to number for consistent math/formatting.
+    const totalRevenue = Number(revenueResult[0]?.total_revenue ?? 0) || 0;
 
     // Get time entries and cost data for the year - simplified approach
     const timeEntries = await knex('time_entries as te')
@@ -369,7 +380,18 @@ export const getContractReportSummary = withAuth(async (user, { tenant }): Promi
     const revenueData = await getContractRevenueReport();
 
     const totalMRR = revenueData.reduce((sum, item) => sum + item.monthly_recurring, 0);
-    const totalYTD = revenueData.reduce((sum, item) => sum + item.total_billed_ytd, 0);
+    // Compute YTD directly from invoices to avoid:
+    // - BIGINT string concatenation bugs when summing in JS
+    // - accidental double-counting when a client's invoices appear across multiple contract rows
+    const today = new Date();
+    const yearStart = new Date(Date.UTC(today.getUTCFullYear(), 0, 1, 0, 0, 0, 0));
+    const excludedInvoiceStatuses = ['draft', 'Draft', 'cancelled', 'Cancelled', 'canceled', 'Canceled'];
+    const ytdResult = await knex('invoices')
+      .where({ tenant })
+      .whereNotIn('status', excludedInvoiceStatuses)
+      .whereRaw('invoice_date >= ?', [yearStart.toISOString()])
+      .select(knex.raw('SUM(total_amount) as total_ytd')) as Array<{ total_ytd: string | number | null }>;
+    const totalYTD = Number(ytdResult[0]?.total_ytd ?? 0) || 0;
 
     // Count active contracts
     const activeContracts = await knex('contracts')

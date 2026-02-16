@@ -77,6 +77,41 @@ export const createBoard = withAuth(async (user, { tenant }, boardData: Omit<IBo
         }
       }
 
+      // If no explicit default_priority_id provided, choose one based on priority_type.
+      // This keeps "Quick Add" stable even when priority ordering changes.
+      const desiredPriorityType = boardData.priority_type || 'custom';
+      let defaultPriorityId = (boardData.default_priority_id || null) as string | null;
+      if (!defaultPriorityId) {
+        const row = await trx('priorities')
+          .select('priority_id')
+          .where({ tenant, item_type: 'ticket' })
+          .where(function() {
+            if (desiredPriorityType === 'itil') {
+              this.where('is_from_itil_standard', true);
+            } else {
+              this.where(function() {
+                this.whereNull('is_from_itil_standard').orWhere('is_from_itil_standard', false);
+              });
+            }
+          })
+          .orderByRaw(
+            desiredPriorityType === 'itil'
+              ? "CASE WHEN itil_priority_level = 3 THEN 0 ELSE 1 END, order_number ASC, priority_name ASC"
+              : "order_number ASC, priority_name ASC"
+          )
+          .first();
+        defaultPriorityId = row?.priority_id || null;
+      }
+      if (!defaultPriorityId) {
+        const row = await trx('priorities')
+          .select('priority_id')
+          .where({ tenant, item_type: 'ticket' })
+          .orderBy('order_number', 'asc')
+          .orderBy('priority_name', 'asc')
+          .first();
+        defaultPriorityId = row?.priority_id || null;
+      }
+
       const [newBoard] = await trx('boards')
         .insert({
           board_name: boardData.board_name,
@@ -89,6 +124,7 @@ export const createBoard = withAuth(async (user, { tenant }, boardData: Omit<IBo
           display_itil_impact: boardData.display_itil_impact || false,
           display_itil_urgency: boardData.display_itil_urgency || false,
           default_assigned_to: boardData.default_assigned_to || null,
+          default_priority_id: defaultPriorityId,
           tenant
         })
         .returning('*');
@@ -346,6 +382,10 @@ export const updateBoard = withAuth(async (user, { tenant }, boardId: string, bo
       const sanitizedData = { ...boardData };
       if ('default_assigned_to' in sanitizedData) {
         sanitizedData.default_assigned_to = sanitizedData.default_assigned_to || null;
+      }
+      if ('default_priority_id' in sanitizedData) {
+        const v = sanitizedData.default_priority_id as unknown;
+        sanitizedData.default_priority_id = (typeof v === 'string' && v.length > 0) ? v : null;
       }
 
       const [updatedBoard] = await trx('boards')

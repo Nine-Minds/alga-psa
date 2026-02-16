@@ -4,7 +4,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Plus, MoreVertical, HelpCircle } from "lucide-react";
-import { IBoard, CategoryType, PriorityType } from '@alga-psa/types';
+import { IBoard, CategoryType, PriorityType, IPriority, IUser, ColumnDefinition } from '@alga-psa/types';
 import {
   getAllBoards,
   createBoard,
@@ -12,19 +12,19 @@ import {
   deleteBoard
 } from '@alga-psa/tickets/actions';
 import { getAvailableReferenceData, importReferenceData, checkImportConflicts, ImportConflict } from '@alga-psa/reference-data/actions';
+import { getAllPriorities } from '@alga-psa/reference-data/actions';
 import { getAllUsers, getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
-import { IUser } from '@alga-psa/types';
 import { toast } from 'react-hot-toast';
 import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Label } from '@alga-psa/ui/components/Label';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
-import { ColumnDefinition } from '@alga-psa/types';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Switch } from '@alga-psa/ui/components/Switch';
+import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -35,6 +35,7 @@ import {
 const BoardsSettings: React.FC = () => {
   const [boards, setBoards] = useState<IBoard[]>([]);
   const [users, setUsers] = useState<IUser[]>([]);
+  const [priorities, setPriorities] = useState<IPriority[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [deleteDialog, setDeleteDialog] = useState<{
     isOpen: boolean;
@@ -75,7 +76,8 @@ const BoardsSettings: React.FC = () => {
     category_type: 'custom' as CategoryType,
     priority_type: 'custom' as PriorityType,
     is_itil_compliant: false,
-    default_assigned_to: ''
+    default_assigned_to: '',
+    default_priority_id: ''
   });
   
   // State for Import Dialog
@@ -92,7 +94,25 @@ const BoardsSettings: React.FC = () => {
   useEffect(() => {
     fetchBoards();
     fetchUsers();
+    fetchPriorities();
   }, []);
+
+  // Prevent saving a mismatched default priority when toggling ITIL compliance on new boards.
+  useEffect(() => {
+    if (editingBoard) return;
+    if (!formData.default_priority_id) return;
+    const match = priorities.find(p => p.priority_id === formData.default_priority_id);
+    if (!match) {
+      setFormData(prev => ({ ...prev, default_priority_id: '' }));
+      return;
+    }
+
+    const effectivePriorityType: PriorityType = formData.is_itil_compliant ? 'itil' : 'custom';
+    const isItil = !!match.is_from_itil_standard;
+    if ((effectivePriorityType === 'itil' && !isItil) || (effectivePriorityType !== 'itil' && isItil)) {
+      setFormData(prev => ({ ...prev, default_priority_id: '' }));
+    }
+  }, [editingBoard, formData.default_priority_id, formData.is_itil_compliant, priorities]);
 
   const fetchBoards = async () => {
     try {
@@ -114,6 +134,16 @@ const BoardsSettings: React.FC = () => {
     }
   };
 
+  const fetchPriorities = async () => {
+    try {
+      const allPriorities = await getAllPriorities('ticket');
+      setPriorities(allPriorities || []);
+    } catch (error) {
+      console.error('Error fetching priorities:', error);
+      setPriorities([]);
+    }
+  };
+
   const startEditing = (board: IBoard) => {
     setEditingBoard(board);
     setFormData({
@@ -124,7 +154,8 @@ const BoardsSettings: React.FC = () => {
       category_type: board.category_type || 'custom',
       priority_type: board.priority_type || 'custom',
       is_itil_compliant: board.category_type === 'itil' && board.priority_type === 'itil',
-      default_assigned_to: board.default_assigned_to || ''
+      default_assigned_to: board.default_assigned_to || '',
+      default_priority_id: board.default_priority_id || ''
     });
     setShowAddEditDialog(true);
     setError(null);
@@ -210,7 +241,8 @@ const BoardsSettings: React.FC = () => {
           is_inactive: formData.is_inactive,
           category_type: categoryType,
           priority_type: priorityType,
-          default_assigned_to: formData.default_assigned_to || null
+          default_assigned_to: formData.default_assigned_to || null,
+          default_priority_id: formData.default_priority_id || null
         });
         toast.success('Board updated successfully');
       } else {
@@ -221,14 +253,15 @@ const BoardsSettings: React.FC = () => {
           is_inactive: formData.is_inactive,
           category_type: categoryType,
           priority_type: priorityType,
-          default_assigned_to: formData.default_assigned_to || null
+          default_assigned_to: formData.default_assigned_to || null,
+          default_priority_id: formData.default_priority_id || null
         });
         toast.success('Board created successfully');
       }
 
       setShowAddEditDialog(false);
       setEditingBoard(null);
-      setFormData({ board_name: '', description: '', display_order: 0, is_inactive: false, category_type: 'custom', priority_type: 'custom', is_itil_compliant: false, default_assigned_to: '' });
+      setFormData({ board_name: '', description: '', display_order: 0, is_inactive: false, category_type: 'custom', priority_type: 'custom', is_itil_compliant: false, default_assigned_to: '', default_priority_id: '' });
       await fetchBoards();
     } catch (error) {
       console.error('Error saving board:', error);
@@ -386,11 +419,6 @@ const BoardsSettings: React.FC = () => {
             }}
             className="data-[state=checked]:bg-primary-500"
           />
-          {value && (
-            <span className="text-xs text-gray-500">
-              Default for client portal
-            </span>
-          )}
         </div>
       ),
     },
@@ -408,6 +436,18 @@ const BoardsSettings: React.FC = () => {
       },
     },
     {
+      title: 'Default Priority',
+      dataIndex: 'default_priority_id',
+      render: (value: string | null) => {
+        if (!value) return <span className="text-gray-400">-</span>;
+        const pr = priorities.find(p => p.priority_id === value);
+        if (!pr) return <span className="text-gray-400 italic">Unknown</span>;
+        return (
+          <span className="text-gray-700">{pr.priority_name}</span>
+        );
+      },
+    },
+    {
       title: 'Order',
       dataIndex: 'display_order',
       render: (value: number) => (
@@ -419,7 +459,7 @@ const BoardsSettings: React.FC = () => {
       dataIndex: 'category_type',
       render: (_, record: IBoard) => (
         record.category_type === 'itil' && record.priority_type === 'itil' ? (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-500/15 text-blue-600">
             ITIL
           </span>
         ) : (
@@ -491,7 +531,7 @@ const BoardsSettings: React.FC = () => {
             id="add-board-button"
             onClick={() => {
               setEditingBoard(null);
-              setFormData({ board_name: '', description: '', display_order: 0, is_inactive: false, category_type: 'custom', priority_type: 'custom', is_itil_compliant: false, default_assigned_to: '' });
+              setFormData({ board_name: '', description: '', display_order: 0, is_inactive: false, category_type: 'custom', priority_type: 'custom', is_itil_compliant: false, default_assigned_to: '', default_priority_id: '' });
               setShowAddEditDialog(true);
             }} 
             className="bg-primary-500 text-white hover:bg-primary-600"
@@ -545,7 +585,7 @@ const BoardsSettings: React.FC = () => {
           deleteDialog.blockingError ? (
             <div className="space-y-4">
               <p className="text-gray-700">Unable to delete this board.</p>
-              <div className="bg-amber-50 border border-amber-200 rounded-md p-4">
+              <div className="bg-amber-500/10 border border-amber-500/30 rounded-md p-4">
                 <p className="text-amber-800">{deleteDialog.blockingError.message}</p>
                 {deleteDialog.blockingError.counts && Object.keys(deleteDialog.blockingError.counts).length > 0 && (
                   <ul className="list-disc list-inside mt-2 text-amber-700">
@@ -596,7 +636,7 @@ const BoardsSettings: React.FC = () => {
         onClose={() => {
           setShowAddEditDialog(false);
           setEditingBoard(null);
-          setFormData({ board_name: '', description: '', display_order: 0, is_inactive: false, category_type: 'custom', priority_type: 'custom', is_itil_compliant: false, default_assigned_to: '' });
+          setFormData({ board_name: '', description: '', display_order: 0, is_inactive: false, category_type: 'custom', priority_type: 'custom', is_itil_compliant: false, default_assigned_to: '', default_priority_id: '' });
           setError(null);
         }}
         title={editingBoard ? "Edit Board" : "Add Board"}
@@ -665,6 +705,40 @@ const BoardsSettings: React.FC = () => {
               </p>
             </div>
 
+            <div>
+              <Label htmlFor="default-priority-select">Default Priority</Label>
+              <CustomSelect
+                id="default-priority-select"
+                label=""
+                value={formData.default_priority_id}
+                onValueChange={(value) => setFormData({ ...formData, default_priority_id: value })}
+                options={((): SelectOption[] => {
+                  const effectivePriorityType: PriorityType = editingBoard
+                    ? formData.priority_type
+                    : (formData.is_itil_compliant ? 'itil' : 'custom');
+
+                  const allowed = priorities.filter(p => {
+                    if (p.item_type !== 'ticket') return false;
+                    const isItil = !!p.is_from_itil_standard;
+                    return effectivePriorityType === 'itil' ? isItil : !isItil;
+                  });
+
+                  return [
+                    { value: '', label: 'None (use system default)' },
+                    ...allowed
+                      .slice()
+                      .sort((a, b) => (a.order_number - b.order_number) || a.priority_name.localeCompare(b.priority_name))
+                      .map(p => ({ value: p.priority_id, label: p.priority_name }))
+                  ];
+                })()}
+                placeholder="Select default priority"
+                data-automation-id="board-default-priority-select"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Used to preselect the Priority field when adding a ticket for this board (for example in Quick Add).
+              </p>
+            </div>
+
             {/* ITIL Configuration - Only show for new boards */}
             {!editingBoard && (
               <div className="border-t pt-4 space-y-4">
@@ -700,7 +774,7 @@ const BoardsSettings: React.FC = () => {
             onClick={() => {
               setShowAddEditDialog(false);
               setEditingBoard(null);
-              setFormData({ board_name: '', description: '', display_order: 0, is_inactive: false, category_type: 'custom', priority_type: 'custom', is_itil_compliant: false, default_assigned_to: '' });
+              setFormData({ board_name: '', description: '', display_order: 0, is_inactive: false, category_type: 'custom', priority_type: 'custom', is_itil_compliant: false, default_assigned_to: '', default_priority_id: '' });
               setError(null);
             }}
           >
@@ -1043,57 +1117,57 @@ const BoardsSettings: React.FC = () => {
             <div>
               <h3 className="text-lg font-semibold text-gray-800 mb-4">ITIL Priority Matrix (Impact × Urgency)</h3>
               <div className="overflow-x-auto">
-                <table className="min-w-full text-xs border border-gray-200">
+                <table className="min-w-full text-xs border border-gray-500/30">
                   <thead>
                     <tr>
-                      <th className="px-3 py-2 text-left text-gray-600 border-b border-r bg-gray-50"></th>
-                      <th className="px-3 py-2 text-center text-gray-600 border-b bg-gray-50">High<br/>Urgency (1)</th>
-                      <th className="px-3 py-2 text-center text-gray-600 border-b bg-gray-50">Medium-High<br/>Urgency (2)</th>
-                      <th className="px-3 py-2 text-center text-gray-600 border-b bg-gray-50">Medium<br/>Urgency (3)</th>
-                      <th className="px-3 py-2 text-center text-gray-600 border-b bg-gray-50">Medium-Low<br/>Urgency (4)</th>
-                      <th className="px-3 py-2 text-center text-gray-600 border-b bg-gray-50">Low<br/>Urgency (5)</th>
+                      <th className="px-3 py-2 text-left text-gray-600 border-b border-r bg-gray-500/10"></th>
+                      <th className="px-3 py-2 text-center text-gray-600 border-b bg-gray-500/10">High<br/>Urgency (1)</th>
+                      <th className="px-3 py-2 text-center text-gray-600 border-b bg-gray-500/10">Medium-High<br/>Urgency (2)</th>
+                      <th className="px-3 py-2 text-center text-gray-600 border-b bg-gray-500/10">Medium<br/>Urgency (3)</th>
+                      <th className="px-3 py-2 text-center text-gray-600 border-b bg-gray-500/10">Medium-Low<br/>Urgency (4)</th>
+                      <th className="px-3 py-2 text-center text-gray-600 border-b bg-gray-500/10">Low<br/>Urgency (5)</th>
                     </tr>
                   </thead>
                   <tbody>
                     <tr>
-                      <td className="px-3 py-2 text-gray-600 border-r font-medium bg-gray-50">High Impact (1)</td>
-                      <td className="px-3 py-2 text-center bg-red-100 text-red-800 font-semibold border">Critical (1)</td>
-                      <td className="px-3 py-2 text-center bg-orange-100 text-orange-800 font-semibold border">High (2)</td>
-                      <td className="px-3 py-2 text-center bg-orange-100 text-orange-800 font-semibold border">High (2)</td>
-                      <td className="px-3 py-2 text-center bg-yellow-100 text-yellow-800 font-semibold border">Medium (3)</td>
-                      <td className="px-3 py-2 text-center bg-yellow-100 text-yellow-800 font-semibold border">Medium (3)</td>
+                      <td className="px-3 py-2 text-gray-600 border-r font-medium bg-gray-500/10">High Impact (1)</td>
+                      <td className="px-3 py-2 text-center bg-red-500/15 text-red-600 font-semibold border border-red-500/20">Critical (1)</td>
+                      <td className="px-3 py-2 text-center bg-orange-500/15 text-orange-600 font-semibold border border-orange-500/20">High (2)</td>
+                      <td className="px-3 py-2 text-center bg-orange-500/15 text-orange-600 font-semibold border border-orange-500/20">High (2)</td>
+                      <td className="px-3 py-2 text-center bg-yellow-500/15 text-yellow-600 font-semibold border border-yellow-500/20">Medium (3)</td>
+                      <td className="px-3 py-2 text-center bg-yellow-500/15 text-yellow-600 font-semibold border border-yellow-500/20">Medium (3)</td>
                     </tr>
                     <tr>
-                      <td className="px-3 py-2 text-gray-600 border-r font-medium bg-gray-50">Medium-High Impact (2)</td>
-                      <td className="px-3 py-2 text-center bg-orange-100 text-orange-800 font-semibold border">High (2)</td>
-                      <td className="px-3 py-2 text-center bg-orange-100 text-orange-800 font-semibold border">High (2)</td>
-                      <td className="px-3 py-2 text-center bg-yellow-100 text-yellow-800 font-semibold border">Medium (3)</td>
-                      <td className="px-3 py-2 text-center bg-yellow-100 text-yellow-800 font-semibold border">Medium (3)</td>
-                      <td className="px-3 py-2 text-center bg-blue-100 text-blue-800 font-semibold border">Low (4)</td>
+                      <td className="px-3 py-2 text-gray-600 border-r font-medium bg-gray-500/10">Medium-High Impact (2)</td>
+                      <td className="px-3 py-2 text-center bg-orange-500/15 text-orange-600 font-semibold border border-orange-500/20">High (2)</td>
+                      <td className="px-3 py-2 text-center bg-orange-500/15 text-orange-600 font-semibold border border-orange-500/20">High (2)</td>
+                      <td className="px-3 py-2 text-center bg-yellow-500/15 text-yellow-600 font-semibold border border-yellow-500/20">Medium (3)</td>
+                      <td className="px-3 py-2 text-center bg-yellow-500/15 text-yellow-600 font-semibold border border-yellow-500/20">Medium (3)</td>
+                      <td className="px-3 py-2 text-center bg-blue-500/15 text-blue-600 font-semibold border border-blue-500/20">Low (4)</td>
                     </tr>
                     <tr>
-                      <td className="px-3 py-2 text-gray-600 border-r font-medium bg-gray-50">Medium Impact (3)</td>
-                      <td className="px-3 py-2 text-center bg-orange-100 text-orange-800 font-semibold border">High (2)</td>
-                      <td className="px-3 py-2 text-center bg-yellow-100 text-yellow-800 font-semibold border">Medium (3)</td>
-                      <td className="px-3 py-2 text-center bg-yellow-100 text-yellow-800 font-semibold border">Medium (3)</td>
-                      <td className="px-3 py-2 text-center bg-blue-100 text-blue-800 font-semibold border">Low (4)</td>
-                      <td className="px-3 py-2 text-center bg-blue-100 text-blue-800 font-semibold border">Low (4)</td>
+                      <td className="px-3 py-2 text-gray-600 border-r font-medium bg-gray-500/10">Medium Impact (3)</td>
+                      <td className="px-3 py-2 text-center bg-orange-500/15 text-orange-600 font-semibold border border-orange-500/20">High (2)</td>
+                      <td className="px-3 py-2 text-center bg-yellow-500/15 text-yellow-600 font-semibold border border-yellow-500/20">Medium (3)</td>
+                      <td className="px-3 py-2 text-center bg-yellow-500/15 text-yellow-600 font-semibold border border-yellow-500/20">Medium (3)</td>
+                      <td className="px-3 py-2 text-center bg-blue-500/15 text-blue-600 font-semibold border border-blue-500/20">Low (4)</td>
+                      <td className="px-3 py-2 text-center bg-blue-500/15 text-blue-600 font-semibold border border-blue-500/20">Low (4)</td>
                     </tr>
                     <tr>
-                      <td className="px-3 py-2 text-gray-600 border-r font-medium bg-gray-50">Medium-Low Impact (4)</td>
-                      <td className="px-3 py-2 text-center bg-yellow-100 text-yellow-800 font-semibold border">Medium (3)</td>
-                      <td className="px-3 py-2 text-center bg-yellow-100 text-yellow-800 font-semibold border">Medium (3)</td>
-                      <td className="px-3 py-2 text-center bg-blue-100 text-blue-800 font-semibold border">Low (4)</td>
-                      <td className="px-3 py-2 text-center bg-blue-100 text-blue-800 font-semibold border">Low (4)</td>
-                      <td className="px-3 py-2 text-center bg-gray-100 text-gray-800 font-semibold border">Planning (5)</td>
+                      <td className="px-3 py-2 text-gray-600 border-r font-medium bg-gray-500/10">Medium-Low Impact (4)</td>
+                      <td className="px-3 py-2 text-center bg-yellow-500/15 text-yellow-600 font-semibold border border-yellow-500/20">Medium (3)</td>
+                      <td className="px-3 py-2 text-center bg-yellow-500/15 text-yellow-600 font-semibold border border-yellow-500/20">Medium (3)</td>
+                      <td className="px-3 py-2 text-center bg-blue-500/15 text-blue-600 font-semibold border border-blue-500/20">Low (4)</td>
+                      <td className="px-3 py-2 text-center bg-blue-500/15 text-blue-600 font-semibold border border-blue-500/20">Low (4)</td>
+                      <td className="px-3 py-2 text-center bg-gray-500/15 text-gray-600 font-semibold border border-gray-500/20">Planning (5)</td>
                     </tr>
                     <tr>
-                      <td className="px-3 py-2 text-gray-600 border-r font-medium bg-gray-50">Low Impact (5)</td>
-                      <td className="px-3 py-2 text-center bg-yellow-100 text-yellow-800 font-semibold border">Medium (3)</td>
-                      <td className="px-3 py-2 text-center bg-blue-100 text-blue-800 font-semibold border">Low (4)</td>
-                      <td className="px-3 py-2 text-center bg-blue-100 text-blue-800 font-semibold border">Low (4)</td>
-                      <td className="px-3 py-2 text-center bg-gray-100 text-gray-800 font-semibold border">Planning (5)</td>
-                      <td className="px-3 py-2 text-center bg-gray-100 text-gray-800 font-semibold border">Planning (5)</td>
+                      <td className="px-3 py-2 text-gray-600 border-r font-medium bg-gray-500/10">Low Impact (5)</td>
+                      <td className="px-3 py-2 text-center bg-yellow-500/15 text-yellow-600 font-semibold border border-yellow-500/20">Medium (3)</td>
+                      <td className="px-3 py-2 text-center bg-blue-500/15 text-blue-600 font-semibold border border-blue-500/20">Low (4)</td>
+                      <td className="px-3 py-2 text-center bg-blue-500/15 text-blue-600 font-semibold border border-blue-500/20">Low (4)</td>
+                      <td className="px-3 py-2 text-center bg-gray-500/15 text-gray-600 font-semibold border border-gray-500/20">Planning (5)</td>
+                      <td className="px-3 py-2 text-center bg-gray-500/15 text-gray-600 font-semibold border border-gray-500/20">Planning (5)</td>
                     </tr>
                   </tbody>
                 </table>

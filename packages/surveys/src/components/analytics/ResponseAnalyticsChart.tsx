@@ -37,6 +37,12 @@ export default function ResponseAnalyticsChart({ data }: ResponseAnalyticsChartP
             <YAxis yAxisId="rating" stroke="currentColor" domain={[0, 10]} allowDecimals={false} />
             <YAxis yAxisId="rate" orientation="right" stroke="currentColor" domain={[0, 100]} />
             <Tooltip
+              contentStyle={{
+                backgroundColor: 'rgb(var(--color-card))',
+                borderColor: 'rgb(var(--color-border-200))',
+                borderRadius: '0.5rem',
+                color: 'rgb(var(--color-text-900))',
+              }}
               formatter={(value: number, name: string) => {
                 if (name === 'averageRating') {
                   return [`${value.toFixed(1)} ★`, 'Average Rating'];

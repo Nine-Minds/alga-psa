@@ -6,19 +6,15 @@ This guide helps troubleshoot common issues with the UI Automation and Reflectio
 
 ## Quick Diagnostic Tools
 
-### 1. UI State Dump Tool
+### 1. Browser Console UI State Inspection
 
-Use the built-in UI state dump tool to inspect current component registration:
+Inspect current component registration directly in the browser console via `window.__UI_STATE__`:
 
-```bash
-# From the ai-automation directory
-cd tools/ai-automation
-node ./dump-ui-state.js
-
-# Options:
-node ./dump-ui-state.js --json        # JSON output
-node ./dump-ui-state.js --count       # Component count only
-node ./dump-ui-state.js --components-only  # Components without tree structure
+```javascript
+// In the browser console:
+window.__UI_STATE__                          // Full UI state object
+JSON.stringify(window.__UI_STATE__, null, 2) // Pretty-printed JSON output
+Object.keys(window.__UI_STATE__).length      // Component count
 ```
 
 ### 2. Claude Code Slash Command
@@ -102,8 +98,8 @@ TypeError: useAutomationIdAndRegister is not a function
 
 ```tsx
 // Correct imports
-import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
-import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
+import { useAutomationIdAndRegister } from 'packages/ui/src/ui-reflection/useAutomationIdAndRegister';
+import { ReflectionContainer } from 'packages/ui/src/ui-reflection/ReflectionContainer';
 ```
 
 #### C. Missing ReflectionContainer Wrapper
@@ -134,7 +130,7 @@ function PageComponent() {
 ### Issue 2: Automation Server Connection Problems
 
 **Symptoms:**
-- `dump-ui-state.js` returns connection errors
+- `window.__UI_STATE__` returns undefined or empty
 - WebSocket connection failures in browser console
 - UI state not updating in real-time
 
@@ -292,15 +288,17 @@ Follow consistent naming patterns:
 **Solution:** Implement the override ID pattern in form components:
 
 ```tsx
-// Enhanced useAutomationIdAndRegister with override support
+// Enhanced useAutomationIdAndRegister with actions support
 export function useAutomationIdAndRegister<T extends UIComponent>(
-  component: Omit<T, 'id'> & { id?: string },
-  shouldRegister: boolean = true,
-  overrideId?: string  // Third parameter for override ID
+  component: Omit<T, 'id' | 'actions'> & { id?: string },
+  actionsOrShouldRegister: ActionConfig | boolean = [],
+  overrideId?: string
 ): {
   automationIdProps: { id: string; 'data-automation-id': string };
   updateMetadata: (partial: Partial<T>) => void;
+  updateActions: (newActions: ActionConfig) => void;
 }
+// Where ActionConfig = ComponentAction[] | (() => ComponentAction[])
 
 // In form components (Input, CustomSelect, TextArea):
 const { automationIdProps } = useAutomationIdAndRegister<FormFieldComponent>({
@@ -521,17 +519,18 @@ const { automationIdProps } = useAutomationIdAndRegister({
 ```tsx
 // Correct parameter order
 useAutomationIdAndRegister<T>(
-  component: Omit<T, 'id'> & { id?: string },
-  shouldRegister: boolean = true,
+  component: Omit<T, 'id' | 'actions'> & { id?: string },
+  actionsOrShouldRegister: ActionConfig | boolean = [],
   overrideId?: string
 )
+// Where ActionConfig = ComponentAction[] | (() => ComponentAction[])
 
-// Common mistake: Missing shouldRegister parameter
+// Common mistake: Missing actionsOrShouldRegister parameter
 // WRONG:
 const { automationIdProps } = useAutomationIdAndRegister({
   type: 'formField',
   fieldType: 'textField'
-}, dataAutomationId);  // Missing shouldRegister parameter
+}, dataAutomationId);  // Missing actionsOrShouldRegister parameter
 
 // CORRECT:
 const { automationIdProps } = useAutomationIdAndRegister({
@@ -746,7 +745,7 @@ When troubleshooting UI automation issues, verify:
 If issues persist:
 
 1. **Collect Debug Information:**
-   - UI state dump output (`node ./dump-ui-state.js`)
+   - UI state dump output (`window.__UI_STATE__` in browser console)
    - Browser console logs
    - Automation server logs
    - Component registration errors

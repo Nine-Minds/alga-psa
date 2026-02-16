@@ -38,8 +38,17 @@ interface TicketDetailsContainerProps {
         avatarUrl: string | null;
       }
     >;
+    contactMap?: Record<
+      string,
+      {
+        contact_id: string;
+        full_name: string;
+        email?: string;
+        avatarUrl: string | null;
+      }
+    >;
     options: {
-      status: { value: string; label: string }[];
+      status: { value: string; label: string; is_closed?: boolean }[];
       agent: { value: string; label: string }[];
       board: { value: string; label: string }[];
       priority: { value: string; label: string }[];
@@ -234,6 +243,7 @@ export default function TicketDetailsContainer({
             initialAdditionalAgents={ticketData.additionalAgents}
             initialAvailableAgents={ticketData.availableAgents}
             initialUserMap={ticketData.userMap}
+            initialContactMap={ticketData.contactMap || {}}
             statusOptions={ticketData.options.status}
             agentOptions={ticketData.options.agent}
             boardOptions={ticketData.options.board}

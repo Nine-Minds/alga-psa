@@ -424,7 +424,7 @@ export function RequestAppointmentModal({
       return (
         <div className="flex items-center justify-center py-12">
           <Spinner size="sm" />
-          <span className="ml-3 text-gray-600">{t('common.loading')}</span>
+          <span className="ml-3 text-[rgb(var(--color-text-600))]">{t('common.loading')}</span>
         </div>
       );
     }
@@ -433,8 +433,8 @@ export function RequestAppointmentModal({
       return (
         <div className="flex flex-col items-center justify-center py-12">
           <CheckCircle2 className="h-16 w-16 text-green-500 mb-4" />
-          <p className="text-lg font-medium text-gray-900 mb-2">{successMessage}</p>
-          <p className="text-sm text-gray-600">
+          <p className="text-lg font-medium text-[rgb(var(--color-text-900))] mb-2">{successMessage}</p>
+          <p className="text-sm text-[rgb(var(--color-text-600))]">
             {isEditMode
               ? t('appointments.messages.updateSuccessDetail')
               : t('appointments.messages.requestSuccessDetail')
@@ -449,10 +449,10 @@ export function RequestAppointmentModal({
         return (
           <div className="space-y-6">
             <div>
-              <h3 className="text-lg font-medium text-gray-900 mb-4">
+              <h3 className="text-lg font-medium text-[rgb(var(--color-text-900))] mb-4">
                 {t('appointments.step1.title')}
               </h3>
-              <p className="text-sm text-gray-600 mb-4">
+              <p className="text-sm text-[rgb(var(--color-text-600))] mb-4">
                 {t('appointments.step1.description')}
               </p>
 
@@ -486,7 +486,7 @@ export function RequestAppointmentModal({
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-2">
                 {t('appointments.step1.ticketLabel')}
               </label>
 
@@ -497,7 +497,7 @@ export function RequestAppointmentModal({
                   placeholder={t('appointments.step1.searchTickets') || 'Search tickets...'}
                   value={ticketSearchQuery}
                   onChange={(e) => setTicketSearchQuery(e.target.value)}
-                  className="w-full px-3 py-2 mb-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-primary-500))] focus:border-transparent"
+                  className="w-full px-3 py-2 mb-2 border border-[rgb(var(--color-border-300))] rounded-md text-sm bg-[rgb(var(--color-card))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-primary-500))] focus:border-transparent"
                 />
               )}
 
@@ -515,7 +515,7 @@ export function RequestAppointmentModal({
                 </p>
               )}
 
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-[rgb(var(--color-text-500))] mt-1">
                 {t('appointments.step1.ticketHint')}
               </p>
             </div>
@@ -526,10 +526,10 @@ export function RequestAppointmentModal({
         return (
           <div className="space-y-6">
             <div>
-              <h3 className="text-lg font-medium text-gray-900 mb-4">
+              <h3 className="text-lg font-medium text-[rgb(var(--color-text-900))] mb-4">
                 {t('appointments.step2.title')}
               </h3>
-              <p className="text-sm text-gray-600 mb-4">
+              <p className="text-sm text-[rgb(var(--color-text-600))] mb-4">
                 {t('appointments.step2.description')}
               </p>
 
@@ -547,8 +547,8 @@ export function RequestAppointmentModal({
               </div>
 
               {selectedDate && (
-                <div className="mt-4 p-3 bg-green-50 rounded-lg border border-green-200">
-                  <div className="flex items-center gap-2 text-green-800">
+                <div className="mt-4 p-3 bg-success/10 rounded-lg border border-success/30">
+                  <div className="flex items-center gap-2 text-[rgb(var(--color-text-800))]">
                     <CalendarIcon className="h-4 w-4" />
                     <span className="font-medium">
                       {t('appointments.step2.selectedDate')}: {format(selectedDate, 'MMMM d, yyyy')}
@@ -564,16 +564,16 @@ export function RequestAppointmentModal({
         return (
           <div className="space-y-6">
             <div>
-              <h3 className="text-lg font-medium text-gray-900 mb-4">
+              <h3 className="text-lg font-medium text-[rgb(var(--color-text-900))] mb-4">
                 {t('appointments.step3.title')}
               </h3>
-              <p className="text-sm text-gray-600 mb-4">
+              <p className="text-sm text-[rgb(var(--color-text-600))] mb-4">
                 {t('appointments.step3.description')}
               </p>
 
               {selectedDate && (
-                <div className="mb-4 p-3 bg-gray-50 rounded-lg">
-                  <div className="flex items-center gap-2 text-gray-700">
+                <div className="mb-4 p-3 bg-[rgb(var(--color-border-50))] rounded-lg">
+                  <div className="flex items-center gap-2 text-[rgb(var(--color-text-700))]">
                     <CalendarIcon className="h-4 w-4" />
                     <span className="font-medium">{format(selectedDate, 'EEEE, MMMM d, yyyy')}</span>
                   </div>
@@ -581,12 +581,12 @@ export function RequestAppointmentModal({
               )}
 
               <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-3">
+                <label className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-3">
                   {t('appointments.step3.selectTime')} <span className="text-red-500">*</span>
                 </label>
                 {timeSlots.length === 0 ? (
-                  <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg text-center text-gray-600">
-                    <Clock className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                  <div className="p-4 bg-[rgb(var(--color-border-50))] border border-[rgb(var(--color-border-200))] rounded-lg text-center text-[rgb(var(--color-text-600))]">
+                    <Clock className="h-8 w-8 text-[rgb(var(--color-text-400))] mx-auto mb-2" />
                     <p className="text-sm">{t('appointments.step3.noTimeSlotsAvailable') || 'No time slots available for this date'}</p>
                   </div>
                 ) : (
@@ -607,8 +607,8 @@ export function RequestAppointmentModal({
                           ${selectedTime === slot.time
                             ? 'border-[rgb(var(--color-primary-500))] bg-[rgb(var(--color-primary-50))] text-[rgb(var(--color-primary-700))]'
                             : slot.available
-                              ? 'border-gray-200 hover:border-[rgb(var(--color-primary-300))] hover:bg-[rgb(var(--color-primary-50))]'
-                              : 'border-gray-100 bg-gray-50 text-gray-400 cursor-not-allowed'
+                              ? 'border-[rgb(var(--color-border-200))] hover:border-[rgb(var(--color-primary-300))] hover:bg-[rgb(var(--color-primary-50))]'
+                              : 'border-[rgb(var(--color-border-100))] bg-[rgb(var(--color-border-50))] text-[rgb(var(--color-text-400))] cursor-not-allowed'
                           }
                         `}
                       >
@@ -634,7 +634,7 @@ export function RequestAppointmentModal({
                   placeholder={t('appointments.step3.selectTechnician')}
                   label={t('appointments.step3.technicianLabel')}
                 />
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-[rgb(var(--color-text-500))] mt-1">
                   {t('appointments.step3.technicianHint')}
                 </p>
               </div>
@@ -646,10 +646,10 @@ export function RequestAppointmentModal({
         return (
           <div className="space-y-6">
             <div>
-              <h3 className="text-lg font-medium text-gray-900 mb-4">
+              <h3 className="text-lg font-medium text-[rgb(var(--color-text-900))] mb-4">
                 {t('appointments.step4.title')}
               </h3>
-              <p className="text-sm text-gray-600 mb-4">
+              <p className="text-sm text-[rgb(var(--color-text-600))] mb-4">
                 {t('appointments.step4.description')}
               </p>
 
@@ -664,32 +664,32 @@ export function RequestAppointmentModal({
                 />
               </div>
 
-              <div className="bg-gray-50 rounded-lg p-6 border border-gray-200">
-                <h4 className="font-semibold text-gray-900 mb-4">
+              <div className="bg-[rgb(var(--color-border-50))] rounded-lg p-6 border border-[rgb(var(--color-border-200))]">
+                <h4 className="font-semibold text-[rgb(var(--color-text-900))] mb-4">
                   {t('appointments.step4.summaryTitle')}
                 </h4>
 
                 <div className="space-y-3">
                   <div className="flex items-start gap-3">
-                    <FileText className="h-5 w-5 text-gray-500 mt-0.5" />
+                    <FileText className="h-5 w-5 text-[rgb(var(--color-text-500))] mt-0.5" />
                     <div>
-                      <div className="text-sm font-medium text-gray-700">
+                      <div className="text-sm font-medium text-[rgb(var(--color-text-700))]">
                         {t('appointments.step4.service')}
                       </div>
-                      <div className="text-sm text-gray-900">{selectedService?.service_name}</div>
+                      <div className="text-sm text-[rgb(var(--color-text-900))]">{selectedService?.service_name}</div>
                     </div>
                   </div>
 
                   <div className="flex items-start gap-3">
-                    <CalendarIcon className="h-5 w-5 text-gray-500 mt-0.5" />
+                    <CalendarIcon className="h-5 w-5 text-[rgb(var(--color-text-500))] mt-0.5" />
                     <div>
-                      <div className="text-sm font-medium text-gray-700">
+                      <div className="text-sm font-medium text-[rgb(var(--color-text-700))]">
                         {t('appointments.step4.dateTime')}
                       </div>
-                      <div className="text-sm text-gray-900">
+                      <div className="text-sm text-[rgb(var(--color-text-900))]">
                         {selectedDate && format(selectedDate, 'EEEE, MMMM d, yyyy')} {t('appointments.step4.at')} {selectedTime}
                       </div>
-                      <div className="text-xs text-gray-600">
+                      <div className="text-xs text-[rgb(var(--color-text-600))]">
                         {t('appointments.step4.duration')}: {selectedTimeSlot?.duration} {t('appointments.step3.minutes')}
                       </div>
                     </div>
@@ -697,24 +697,24 @@ export function RequestAppointmentModal({
 
                   {selectedTechnician && (
                     <div className="flex items-start gap-3">
-                      <User className="h-5 w-5 text-gray-500 mt-0.5" />
+                      <User className="h-5 w-5 text-[rgb(var(--color-text-500))] mt-0.5" />
                       <div>
-                        <div className="text-sm font-medium text-gray-700">
+                        <div className="text-sm font-medium text-[rgb(var(--color-text-700))]">
                           {t('appointments.step4.technician')}
                         </div>
-                        <div className="text-sm text-gray-900">{selectedTechnician.full_name}</div>
+                        <div className="text-sm text-[rgb(var(--color-text-900))]">{selectedTechnician.full_name}</div>
                       </div>
                     </div>
                   )}
 
                   {selectedTicket && (
                     <div className="flex items-start gap-3">
-                      <FileText className="h-5 w-5 text-gray-500 mt-0.5" />
+                      <FileText className="h-5 w-5 text-[rgb(var(--color-text-500))] mt-0.5" />
                       <div>
-                        <div className="text-sm font-medium text-gray-700">
+                        <div className="text-sm font-medium text-[rgb(var(--color-text-700))]">
                           {t('appointments.step4.linkedTicket')}
                         </div>
-                        <div className="text-sm text-gray-900">
+                        <div className="text-sm text-[rgb(var(--color-text-900))]">
                           {selectedTicket.ticket_number} - {selectedTicket.title}
                         </div>
                       </div>
@@ -747,9 +747,9 @@ export function RequestAppointmentModal({
     >
       <DialogContent>
         {error && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md flex items-start space-x-2">
+          <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-md flex items-start space-x-2">
             <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
-            <span className="text-red-700 text-sm">{error}</span>
+            <span className="text-red-600 text-sm">{error}</span>
           </div>
         )}
 

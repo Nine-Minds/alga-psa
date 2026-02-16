@@ -92,7 +92,8 @@ interface TicketDetailsProps {
     initialAdditionalAgents?: ITicketResource[];
     initialAvailableAgents?: IUserWithRoles[];
     initialUserMap?: Record<string, { user_id: string; first_name: string; last_name: string; email?: string, user_type: string, avatarUrl: string | null }>;
-    statusOptions?: { value: string; label: string }[];
+    initialContactMap?: Record<string, { contact_id: string; full_name: string; email?: string; avatarUrl: string | null }>;
+    statusOptions?: { value: string; label: string; is_closed?: boolean; className?: string }[];
     agentOptions?: { value: string; label: string }[];
     boardOptions?: { value: string; label: string }[];
     priorityOptions?: { value: string; label: string }[];
@@ -168,6 +169,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     initialAdditionalAgents = [],
     initialAvailableAgents = [],
     initialUserMap = {},
+    initialContactMap = {},
     statusOptions = [],
     agentOptions = [],
     boardOptions = [],
@@ -218,6 +220,14 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const [client, setClient] = useState<IClient | null>(initialClient);
     const [contactInfo, setContactInfo] = useState<IContact | null>(initialContactInfo);
     const [createdByUser, setCreatedByUser] = useState<IUser | null>(initialCreatedByUser);
+
+    const closedStatusOptions = useMemo(
+        () =>
+            (statusOptions || [])
+                .filter((opt) => !!opt.is_closed)
+                .map(({ value, label }) => ({ value, label })),
+        [statusOptions]
+    );
     const [board, setBoard] = useState<any>(initialBoard);
     const [clients, setClients] = useState<IClient[]>(initialClients);
     const [contacts, setContacts] = useState<IContact[]>(initialContacts);
@@ -254,6 +264,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
 
     // Use pre-fetched options directly
     const [userMap, setUserMap] = useState<Record<string, { user_id: string; first_name: string; last_name: string; email?: string, user_type: string, avatarUrl: string | null }>>(initialUserMap);
+    const [contactMap] = useState<Record<string, { contact_id: string; full_name: string; email?: string; avatarUrl: string | null }>>(initialContactMap);
 
     const [availableAgents, setAvailableAgents] = useState<IUserWithRoles[]>(initialAvailableAgents);
     const [additionalAgents, setAdditionalAgents] = useState<ITicketResource[]>(initialAdditionalAgents);
@@ -754,7 +765,11 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
 
     const [editorKey, setEditorKey] = useState(0);
 
-    const handleAddNewComment = async (isInternal: boolean, isResolution: boolean): Promise<boolean> => {
+    const handleAddNewComment = async (
+        isInternal: boolean,
+        isResolution: boolean,
+        closeStatusId: string | null = null
+    ): Promise<boolean> => {
         // Check if content is empty
         const contentStr = JSON.stringify(newCommentContent);
         const hasContent = contentStr !== JSON.stringify([{
@@ -813,6 +828,13 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                         console.error('Failed to refresh comments after add:', e);
                     }
                 }
+
+                // If this was a resolution note and a closed status was selected, close the ticket.
+                if (isResolution && closeStatusId && ticket.status_id !== closeStatusId) {
+                    // Backend clears response_state when closing; keep UI consistent.
+                    setTicket((prev: any) => ({ ...prev, response_state: null }));
+                    await handleSelectChange('status_id', closeStatusId);
+                }
                 
                 // Reset the comment input
                 setNewCommentContent([{
@@ -847,6 +869,11 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                         // Refresh comments after adding
                         const updatedComments = await findCommentsByTicketId(ticket.ticket_id);
                         setConversations(updatedComments);
+
+                        if (isResolution && closeStatusId && ticket.status_id !== closeStatusId) {
+                            setTicket((prev: any) => ({ ...prev, response_state: null }));
+                            await handleSelectChange('status_id', closeStatusId);
+                        }
                         
                         // Reset the comment input
                         setNewCommentContent([{
@@ -1791,6 +1818,7 @@ const handleClose = () => {
                                     conversations={conversations}
                                     documents={documents}
                                     userMap={userMap}
+                                    contactMap={contactMap}
                                     currentUser={currentUser ? {
                                         id: currentUser.user_id,
                                         name: `${currentUser.first_name} ${currentUser.last_name}`,
@@ -1798,6 +1826,7 @@ const handleClose = () => {
                                         avatarUrl: null
                                     } : session?.user}
                                     activeTab={activeTab}
+                                    closedStatusOptions={closedStatusOptions}
                                     isEditing={isEditing}
                                     currentComment={currentComment}
                                     editorKey={editorKey}

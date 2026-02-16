@@ -45,7 +45,7 @@ export function EmailProviderSelector({
         {/* Google Gmail Card */}
         <Card 
           id="google-provider-selector-card"
-          className="cursor-pointer transition-all duration-200 hover:shadow-lg hover:-translate-y-1 border-2 hover:border-green-200 bg-gradient-to-br from-white to-green-50"
+          className="cursor-pointer transition-all duration-200 hover:shadow-lg hover:-translate-y-1 border-2 hover:border-green-200 bg-gradient-to-br from-[rgb(var(--color-card))] to-green-500/10"
           onClick={() => handleProviderClick('google')}
         >
           <CardHeader className="text-center pb-4">
@@ -59,13 +59,13 @@ export function EmailProviderSelector({
                 </div>
               </div>
             </div>
-            <CardTitle className="text-xl font-bold text-gray-800">Gmail</CardTitle>
-            <CardDescription className="text-base text-gray-600">
+            <CardTitle className="text-xl font-bold text-[rgb(var(--color-text-800))]">Gmail</CardTitle>
+            <CardDescription className="text-base text-[rgb(var(--color-text-600))]">
               Google Workspace / Gmail Integration
             </CardDescription>
           </CardHeader>
           <CardContent className="text-center space-y-4">
-            <div className="text-sm text-gray-600 space-y-2">
+            <div className="text-sm text-[rgb(var(--color-text-600))] space-y-2">
               <p>✓ Gmail and Google Workspace accounts</p>
               <p>✓ Label-based email filtering</p>
               <p>✓ Real-time email processing</p>
@@ -87,7 +87,7 @@ export function EmailProviderSelector({
         {/* Microsoft 365 Card */}
         <Card 
           id="microsoft-provider-selector-card"
-          className="cursor-pointer transition-all duration-200 hover:shadow-lg hover:-translate-y-1 border-2 hover:border-blue-200 bg-gradient-to-br from-white to-blue-50"
+          className="cursor-pointer transition-all duration-200 hover:shadow-lg hover:-translate-y-1 border-2 hover:border-blue-200 bg-gradient-to-br from-[rgb(var(--color-card))] to-blue-500/10"
           onClick={() => handleProviderClick('microsoft')}
         >
           <CardHeader className="text-center pb-4">
@@ -99,13 +99,13 @@ export function EmailProviderSelector({
                 </div>
               </div>
             </div>
-            <CardTitle className="text-xl font-bold text-gray-800">Microsoft 365</CardTitle>
-            <CardDescription className="text-base text-gray-600">
+            <CardTitle className="text-xl font-bold text-[rgb(var(--color-text-800))]">Microsoft 365</CardTitle>
+            <CardDescription className="text-base text-[rgb(var(--color-text-600))]">
               Microsoft 365 / Outlook Integration
             </CardDescription>
           </CardHeader>
           <CardContent className="text-center space-y-4">
-            <div className="text-sm text-gray-600 space-y-2">
+            <div className="text-sm text-[rgb(var(--color-text-600))] space-y-2">
               <p>✓ Microsoft 365 and Outlook accounts</p>
               <p>✓ Folder-based email filtering</p>
               <p>✓ Real-time email processing</p>
@@ -127,7 +127,7 @@ export function EmailProviderSelector({
         {/* IMAP Card */}
         <Card
           id="imap-provider-selector-card"
-          className="cursor-pointer transition-all duration-200 hover:shadow-lg hover:-translate-y-1 border-2 hover:border-indigo-200 bg-gradient-to-br from-white to-indigo-50"
+          className="cursor-pointer transition-all duration-200 hover:shadow-lg hover:-translate-y-1 border-2 hover:border-indigo-200 bg-gradient-to-br from-[rgb(var(--color-card))] to-indigo-500/10"
           onClick={() => handleProviderClick('imap')}
         >
           <CardHeader className="text-center pb-4">
@@ -138,13 +138,13 @@ export function EmailProviderSelector({
                 </div>
               </div>
             </div>
-            <CardTitle className="text-xl font-bold text-gray-800">IMAP</CardTitle>
-            <CardDescription className="text-base text-gray-600">
+            <CardTitle className="text-xl font-bold text-[rgb(var(--color-text-800))]">IMAP</CardTitle>
+            <CardDescription className="text-base text-[rgb(var(--color-text-600))]">
               Custom IMAP Server Integration
             </CardDescription>
           </CardHeader>
           <CardContent className="text-center space-y-4">
-            <div className="text-sm text-gray-600 space-y-2">
+            <div className="text-sm text-[rgb(var(--color-text-600))] space-y-2">
               <p>✓ Any IMAP-compliant mailbox</p>
               <p>✓ Folder-based email filtering</p>
               <p>✓ OAuth2 or password authentication</p>

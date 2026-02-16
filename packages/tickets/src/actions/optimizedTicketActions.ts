@@ -416,10 +416,37 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
       return acc;
     }, {} as Record<string, { user_id: string; first_name: string; last_name: string; email?: string, user_type: string, avatarUrl: string | null }>);
 
+    const commentContactIds = Array.from(
+      new Set(
+        (comments as Array<{ contact_id?: string | null }>)
+          .map((comment) => comment.contact_id)
+          .filter((contactId): contactId is string => Boolean(contactId))
+      )
+    );
+
+    const commentContacts = commentContactIds.length > 0
+      ? await trx('contacts')
+        .select('contact_name_id', 'full_name', 'email')
+        .whereIn('contact_name_id', commentContactIds)
+        .andWhere({ tenant })
+      : [];
+
+    const contactMap = commentContacts.reduce((acc, contact) => {
+      acc[contact.contact_name_id] = {
+        contact_id: contact.contact_name_id,
+        full_name: contact.full_name || '',
+        email: contact.email || undefined,
+        avatarUrl: null as string | null,
+      };
+      return acc;
+    }, {} as Record<string, { contact_id: string; full_name: string; email?: string; avatarUrl: string | null }>);
+
     // Format options for dropdowns
-    const statusOptions = statuses.map((status) => ({
+    // Include `is_closed` so UI can reliably derive "closed status" subsets.
+    const statusOptions = statuses.map((status: any) => ({
       value: status.status_id,
-      label: status.name || ""
+      label: status.name || "",
+      is_closed: !!status.is_closed,
     }));
 
     const agentOptions = users.map((agent) => ({
@@ -650,6 +677,7 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
       additionalAgents: resources,
       availableAgents: users,
       userMap,
+      contactMap,
       options: {
         status: statusOptions,
         agent: agentOptions,

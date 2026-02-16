@@ -162,7 +162,11 @@ export function TicketDetails({
   const handleNewCommentContentChange = (content: PartialBlock[]) => {
     setNewCommentContent(content);
   };
-  const handleAddNewComment = async (isInternal: boolean, isResolution: boolean): Promise<boolean> => {
+  const handleAddNewComment = async (
+    isInternal: boolean,
+    isResolution: boolean,
+    _closeStatusId: string | null = null
+  ): Promise<boolean> => {
     const contentStr = JSON.stringify(newCommentContent);
     const hasContent = contentStr !== JSON.stringify([{
       type: "paragraph",
@@ -615,6 +619,7 @@ export function TicketDetails({
                 conversations={ticket.conversations}
                 documents={ticket.documents || []}
                 userMap={ticket.userMap || {}}
+                contactMap={ticket.contactMap || {}}
                 currentUser={currentUser}
                 activeTab={activeTab === 'Internal' ? t('tickets.messages.comments', 'Comments') : activeTab}
                 hideInternalTab={true}

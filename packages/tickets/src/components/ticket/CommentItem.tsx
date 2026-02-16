@@ -16,22 +16,19 @@ import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { searchUsersForMentions } from '@alga-psa/users/actions';
 import { getCommentResponseSource } from '../../lib/responseSource';
+import type { CommentContactAuthor, CommentUserAuthor } from '../../lib/commentAuthorResolution';
+import { resolveCommentAuthor } from '../../lib/commentAuthorResolution';
 import ResponseSourceBadge from '../ResponseSourceBadge';
 
 interface CommentItemProps {
   id?: string;
   conversation: IComment;
-  user: {
-    first_name: string;
-    last_name: string;
-    user_id: string;
-    email?: string;
-  } | null;
   currentUserId?: string | null;
   isEditing: boolean;
   currentComment: IComment | null;
   ticketId: string;
-  userMap: Record<string, { first_name: string; last_name: string; user_id: string; email?: string; user_type: string; avatarUrl: string | null }>;
+  userMap: Record<string, CommentUserAuthor>;
+  contactMap: Record<string, CommentContactAuthor>;
   onContentChange: (content: PartialBlock[]) => void;
   onSave: (updates: Partial<IComment>) => void;
   onClose: () => void;
@@ -43,12 +40,12 @@ interface CommentItemProps {
 const CommentItem: React.FC<CommentItemProps> = ({
   id,
   conversation,
-  user,
   currentUserId,
   isEditing,
   currentComment,
   ticketId,
   userMap,
+  contactMap,
   onContentChange,
   onSave,
   onClose,
@@ -101,24 +98,33 @@ const CommentItem: React.FC<CommentItemProps> = ({
     [conversation.comment_id, currentComment?.comment_id, id]
   );
 
+  const resolvedAuthor = useMemo(
+    () =>
+      resolveCommentAuthor(conversation, {
+        userMap,
+        contactMap,
+      }),
+    [conversation, userMap, contactMap]
+  );
+
   const getAuthorName = () => {
     if (conversation.is_system_generated) return 'Bundled update';
-    if (!conversation.user_id) return 'Unknown User';
-    const commentUser = userMap[conversation.user_id];
-    if (!commentUser) return 'Unknown User';
-    return `${commentUser.first_name} ${commentUser.last_name}${commentUser.user_type === 'client' ? ' (Client)' : ''}`;
+    if (resolvedAuthor.source === 'user') {
+      return `${resolvedAuthor.displayName}${resolvedAuthor.userType === 'client' ? ' (Client)' : ''}`;
+    }
+    return resolvedAuthor.displayName;
   };
 
   const getAuthorEmail = () => {
-    if (!conversation.user_id) return null;
-    const commentUser = userMap[conversation.user_id];
-    return commentUser?.email;
+    if (conversation.is_system_generated) return null;
+    return resolvedAuthor.email ?? null;
   };
 
   const commentSource = useMemo(
     () => getCommentResponseSource(conversation),
     [conversation]
   );
+  const authorEmail = getAuthorEmail();
 
   // Only allow users to edit their own comments
   const canEdit = useMemo(() => {
@@ -211,10 +217,6 @@ const CommentItem: React.FC<CommentItemProps> = ({
     isInternalToggle,
     isResolutionToggle
   ]);
-
-  const authorFirstName = conversation.user_id ? userMap[conversation.user_id]?.first_name || '' : '';
-  const authorLastName = conversation.user_id ? userMap[conversation.user_id]?.last_name || '' : '';
-
   // Reset editor content and toggles when entering edit mode - always use conversation values (persisted)
   // NOTE: Do NOT depend on currentComment values - that would reload unsaved edits after cancel.
   // We intentionally only use conversation values (the persisted values from the database).
@@ -270,30 +272,36 @@ const CommentItem: React.FC<CommentItemProps> = ({
       <div className="flex items-start mb-1">
         <div className="mr-2">
           {/* Conditionally render UserAvatar or ContactAvatar */}
-          {conversation.user_id && userMap[conversation.user_id] ? (
-            userMap[conversation.user_id].user_type === 'internal' ? (
-              <UserAvatar
-                {...withDataAutomationId({ id: `${commentId}-avatar` })}
-                userId={conversation.user_id || ''}
-                userName={`${authorFirstName} ${authorLastName}`}
-                avatarUrl={userMap[conversation.user_id]?.avatarUrl || null}
-                size="md"
-              />
-            ) : (
-              <ContactAvatar
-                {...withDataAutomationId({ id: `${commentId}-avatar` })}
-                contactId={conversation.user_id || ''}
-                contactName={`${authorFirstName} ${authorLastName}`}
-                avatarUrl={userMap[conversation.user_id]?.avatarUrl || null}
-                size="md"
-              />
-            )
-          ) : (
+          {conversation.is_system_generated || resolvedAuthor.source === 'unknown' ? (
             <UserAvatar
               {...withDataAutomationId({ id: `${commentId}-avatar` })}
               userId=""
               userName="Unknown User"
               avatarUrl={null}
+              size="md"
+            />
+          ) : resolvedAuthor.source === 'contact' ? (
+            <ContactAvatar
+              {...withDataAutomationId({ id: `${commentId}-avatar` })}
+              contactId={resolvedAuthor.contactId || conversation.contact_id || ''}
+              contactName={resolvedAuthor.displayName}
+              avatarUrl={resolvedAuthor.avatarUrl}
+              size="md"
+            />
+          ) : resolvedAuthor.avatarKind === 'contact' ? (
+            <ContactAvatar
+              {...withDataAutomationId({ id: `${commentId}-avatar` })}
+              contactId={conversation.contact_id || resolvedAuthor.userId || ''}
+              contactName={resolvedAuthor.displayName}
+              avatarUrl={resolvedAuthor.avatarUrl}
+              size="md"
+            />
+          ) : (
+            <UserAvatar
+              {...withDataAutomationId({ id: `${commentId}-avatar` })}
+              userId={resolvedAuthor.userId || ''}
+              userName={resolvedAuthor.displayName}
+              avatarUrl={resolvedAuthor.avatarUrl}
               size="md"
             />
           )}
@@ -330,10 +338,13 @@ const CommentItem: React.FC<CommentItemProps> = ({
                 )}
               </div>
               <div className="flex flex-col">
-                {getAuthorEmail() && (
-                  <p {...withDataAutomationId({ id: `${commentId}-author-email` })} className="text-sm text-gray-600 dark:text-[rgb(var(--color-text-400))]">
-                    <a href={`mailto:${getAuthorEmail()}`} className="hover:text-indigo-600">
-                      {getAuthorEmail()}
+                {authorEmail && (
+                  <p
+                    {...withDataAutomationId({ id: `${commentId}-author-email` })}
+                    className="text-sm text-gray-600 dark:text-[rgb(var(--color-text-400))]"
+                  >
+                    <a href={`mailto:${authorEmail}`} className="hover:text-indigo-600">
+                      {authorEmail}
                     </a>
                   </p>
                 )}

@@ -258,11 +258,11 @@ export default function ManagerApprovalDashboard({ currentUser }: ManagerApprova
           }
         ]}
         onRowClick={(row: ITimeSheetApprovalView) => handleViewTimeSheet(row)}
-        rowClassName={(row: ITimeSheetApprovalView) => 
+        rowClassName={(row: ITimeSheetApprovalView) =>
           row.approval_status === 'APPROVED'
-            ? 'bg-green-50'
+            ? 'bg-table-status-approved'
             : row.approval_status === 'CHANGES_REQUESTED'
-              ? 'bg-orange-100'
+              ? 'bg-table-status-warning'
               : ''
         }
         pagination={false}

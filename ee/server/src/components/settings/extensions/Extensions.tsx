@@ -386,7 +386,7 @@ function ExtensionsTable({
               based on the authenticated session in /api/ext-debug/stream. */}
           <Link
             href={`/msp/extensions/${extension.id}/debug`}
-            className="inline-flex items-center justify-center px-3 py-1 border border-violet-200 text-violet-700 bg-violet-50 hover:bg-violet-100 hover:border-violet-300 text-[10px] font-medium transition-colors"
+            className="inline-flex items-center justify-center px-3 py-1 border border-violet-500/30 text-violet-600 bg-violet-500/10 hover:bg-violet-500/20 hover:border-violet-500/40 text-[10px] font-medium transition-colors"
             data-automation-id={`extension-debug-${extension.id}`}
           >
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />

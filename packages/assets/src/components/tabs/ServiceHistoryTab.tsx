@@ -73,7 +73,7 @@ export const ServiceHistoryTab: React.FC<ServiceHistoryTabProps> = ({ asset }) =
   }, [openDrawer]);
 
   if (isLoading) {
-    return <Card className="h-64 animate-pulse bg-gray-50" />;
+    return <Card className="h-64 animate-pulse bg-[rgb(var(--color-border-50))]" />;
   }
 
   return (
@@ -113,9 +113,9 @@ export const ServiceHistoryTab: React.FC<ServiceHistoryTabProps> = ({ asset }) =
                       >
                         #{ticket.ticket_id.substring(0, 8)}
                       </TableCell>
-                      <TableCell className="text-gray-900">{ticket.title}</TableCell>
+                      <TableCell className="text-[rgb(var(--color-text-900))]">{ticket.title}</TableCell>
                       <TableCell>
-                        <Badge variant="secondary" className="bg-gray-100 text-gray-700 border-gray-200">
+                        <Badge variant="secondary" className="bg-[rgb(var(--color-border-100))] text-[rgb(var(--color-text-700))] border-[rgb(var(--color-border-200))]">
                           {ticket.status_name}
                         </Badge>
                       </TableCell>
@@ -123,18 +123,18 @@ export const ServiceHistoryTab: React.FC<ServiceHistoryTabProps> = ({ asset }) =
                         {ticket.priority_name && (
                           <div className="flex items-center gap-1.5">
                             <div className="w-2 h-2 rounded-full bg-primary-500" />
-                            <span className="text-xs font-medium text-gray-700">{ticket.priority_name}</span>
+                            <span className="text-xs font-medium text-[rgb(var(--color-text-700))]">{ticket.priority_name}</span>
                           </div>
                         )}
                       </TableCell>
-                      <TableCell className="text-gray-500">
+                      <TableCell className="text-[rgb(var(--color-text-500))]">
                         {formatDateTime(new Date(ticket.linked_at), Intl.DateTimeFormat().resolvedOptions().timeZone)}
                       </TableCell>
                     </TableRow>
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={5} className="h-24 text-center text-gray-400">
+                    <TableCell colSpan={5} className="h-24 text-center text-[rgb(var(--color-text-400))]">
                       No tickets linked to this asset.
                     </TableCell>
                   </TableRow>

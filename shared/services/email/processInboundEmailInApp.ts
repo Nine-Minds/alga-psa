@@ -1,6 +1,6 @@
 import type { EmailMessageDetails } from '../../interfaces/inbound-email.interfaces';
 import { convertHtmlToBlockNote, convertMarkdownToBlocks } from '../../lib/utils/contentConversion';
-import { normalizeEmailAddress } from '../../lib/email/addressUtils';
+import { extractEmailDomain, normalizeEmailAddress } from '../../lib/email/addressUtils';
 
 export interface ProcessInboundEmailInAppInput {
   tenantId: string;
@@ -211,6 +211,8 @@ export async function processInboundEmailInApp(
     findTicketByEmailThread,
     resolveInboundTicketDefaults,
     findContactByEmail,
+    findClientIdByInboundEmailDomain,
+    findValidClientPrimaryContactId,
     createTicketFromEmail,
     createCommentFromEmail,
   } = await import('../../workflow/actions/emailWorkflowActions');
@@ -229,6 +231,18 @@ export async function processInboundEmailInApp(
       error: error instanceof Error ? error.message : String(error),
     });
   }
+
+  const senderEmail = normalizeEmailAddress(emailData.from?.email);
+  const resolveSenderContact = async (context: {
+    ticketId?: string;
+    defaultClientId?: string | null;
+  } = {}) => {
+    if (!senderEmail) {
+      return null;
+    }
+
+    return findContactByEmail(senderEmail, tenantId, context);
+  };
 
   const token = extractConversationToken(parsedEmail);
   if (token) {
@@ -253,12 +267,15 @@ export async function processInboundEmailInApp(
           html: parsedEmail?.sanitizedHtml ?? emailData.body?.html,
           text: parsedEmail?.sanitizedText ?? emailData.body?.text,
         });
+        const matchedSenderContact = await resolveSenderContact({ ticketId: match.ticketId });
         const commentId = await createCommentFromEmail(
           {
             ticket_id: match.ticketId,
             content: JSON.stringify(blocks),
             source: 'email',
             author_type: 'contact',
+            author_id: matchedSenderContact?.user_id,
+            contact_id: matchedSenderContact?.contact_id,
             metadata: {
               email: {
                 messageId: emailData.id,
@@ -367,12 +384,15 @@ export async function processInboundEmailInApp(
       html: parsedEmail?.sanitizedHtml ?? emailData.body?.html,
       text: parsedEmail?.sanitizedText ?? emailData.body?.text,
     });
+    const matchedSenderContact = await resolveSenderContact({ ticketId: threadedTicketId });
     const commentId = await createCommentFromEmail(
       {
         ticket_id: threadedTicketId,
         content: JSON.stringify(blocks),
         source: 'email',
         author_type: 'contact',
+        author_id: matchedSenderContact?.user_id,
+        contact_id: matchedSenderContact?.contact_id,
         metadata: {
           email: {
             messageId: emailData.id,
@@ -440,13 +460,28 @@ export async function processInboundEmailInApp(
     return { outcome: 'skipped', reason: 'missing_defaults' };
   }
 
-  const senderEmail = normalizeEmailAddress(emailData.from?.email);
-  const matchedContact = senderEmail
-    ? await findContactByEmail(senderEmail, tenantId)
-    : null;
+  const matchedSenderContact = await resolveSenderContact({
+    defaultClientId: defaults.client_id ?? null,
+  });
+  let targetClientId = matchedSenderContact?.client_id ?? defaults.client_id;
+  let targetContactId = matchedSenderContact?.contact_id;
 
-  const targetClientId = matchedContact?.client_id ?? defaults.client_id;
-  const targetContactId = matchedContact?.contact_id;
+  // Domain fallback: if no exact contact match, try to match a client from explicitly configured inbound domains.
+  if (!matchedSenderContact && senderEmail) {
+    const senderDomain = extractEmailDomain(senderEmail);
+    if (senderDomain) {
+      const domainMatchedClientId = await findClientIdByInboundEmailDomain(senderDomain, tenantId);
+      if (domainMatchedClientId) {
+        targetClientId = domainMatchedClientId;
+        targetContactId =
+          (await findValidClientPrimaryContactId(domainMatchedClientId, tenantId)) ?? undefined;
+      }
+    }
+  }
+
+  // Only treat the email as authored by a contact when we have an exact sender email match.
+  const commentAuthorContactId = matchedSenderContact?.contact_id;
+  const commentAuthorUserId = matchedSenderContact?.user_id ?? null;
 
   // New-ticket idempotency: ticket could have been created in another parallel process.
   const existingTicketAfterDefaults = await findExistingEmailTicket({
@@ -479,7 +514,8 @@ export async function processInboundEmailInApp(
       priority_id: defaults.priority_id,
       category_id: defaults.category_id,
       subcategory_id: defaults.subcategory_id,
-      location_id: defaults.location_id,
+      // Avoid cross-client location_id mismatch when we infer a different client than the defaults.
+      location_id: targetClientId === defaults.client_id ? defaults.location_id : null,
       entered_by: defaults.entered_by,
       email_metadata: {
         messageId: emailData.id,
@@ -498,7 +534,9 @@ export async function processInboundEmailInApp(
       ticket_id: ticketResult.ticket_id,
       content: JSON.stringify(blocks),
       source: 'email',
-      author_type: targetContactId ? 'contact' : 'system',
+      author_type: commentAuthorContactId ? 'contact' : 'system',
+      author_id: commentAuthorUserId ?? undefined,
+      contact_id: commentAuthorContactId ?? undefined,
       metadata: {
         email: {
           messageId: emailData.id,
@@ -518,7 +556,7 @@ export async function processInboundEmailInApp(
           heuristics: parsedEmail?.appliedHeuristics,
           warnings: parsedEmail?.warnings,
         },
-        unmatchedSender: !targetContactId,
+        unmatchedSender: !commentAuthorContactId,
       },
     },
     tenantId

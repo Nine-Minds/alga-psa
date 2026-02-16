@@ -14,6 +14,7 @@ RUN npm install -g typescript @types/node tsc-alias
 
 # Copy base configuration and root package files for workspace setup
 COPY tsconfig.base.json ./
+COPY tsconfig.json ./
 COPY package.json package-lock.json ./
 
 # Copy all workspace package.json files to set up the dependency tree
@@ -22,8 +23,10 @@ COPY services/workflow-worker/package.json ./services/workflow-worker/
 COPY server/package.json ./server/
 COPY packages/core/package.json ./packages/core/
 COPY packages/db/package.json ./packages/db/
+COPY packages/event-bus/package.json ./packages/event-bus/
 COPY packages/event-schemas/package.json ./packages/event-schemas/
 COPY packages/media/package.json ./packages/media/
+COPY packages/portal-shared/package.json ./packages/portal-shared/
 COPY packages/types/package.json ./packages/types/
 COPY packages/ui/package.json ./packages/ui/
 
@@ -35,8 +38,10 @@ RUN npm config set legacy-peer-deps true && PUPPETEER_SKIP_DOWNLOAD=true npm ins
   --workspace=server \
   --workspace=@alga-psa/core \
   --workspace=@alga-psa/db \
+  --workspace=@alga-psa/event-bus \
   --workspace=@alga-psa/event-schemas \
   --workspace=@alga-psa/media \
+  --workspace=@alga-psa/portal-shared \
   --workspace=@alga-psa/types \
   --workspace=@alga-psa/ui
 
@@ -47,6 +52,10 @@ COPY packages/ ./packages/
 
 # Build event schemas (required by workflow streams runtime)
 WORKDIR /app/packages/event-schemas
+RUN npm run build
+
+# Build event bus (required by shared)
+WORKDIR /app/packages/event-bus
 RUN npm run build
 
 # Build shared workspace first (server is only referenced for type imports)

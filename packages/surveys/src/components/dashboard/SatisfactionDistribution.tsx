@@ -20,14 +20,14 @@ export default function SatisfactionDistribution({ distribution }: SatisfactionD
     <Card className="col-span-1 flex flex-col border-border-200 shadow-sm hover:shadow-md transition-shadow duration-200">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
         <CardTitle className="text-base font-semibold text-text-900">Satisfaction Distribution</CardTitle>
-        <div className="rounded-lg bg-emerald-50 p-2 shadow-sm">
+        <div className="rounded-lg bg-emerald-500/10 p-2 shadow-sm">
           <Gauge className="h-4 w-4 text-emerald-500" />
         </div>
       </CardHeader>
       <CardContent className="mt-2 flex-1">
         {distribution.length === 0 ? (
           <div className="flex h-48 flex-col items-center justify-center gap-3 rounded-lg bg-gradient-to-br from-emerald-50/30 to-transparent p-6">
-            <div className="rounded-full bg-emerald-100 p-3">
+            <div className="rounded-full bg-emerald-500/15 p-3">
               <Gauge className="h-6 w-6 text-emerald-500" />
             </div>
             <p className="text-center text-sm font-medium text-text-600">
@@ -58,6 +58,12 @@ export default function SatisfactionDistribution({ distribution }: SatisfactionD
                 />
                 <Tooltip
                   cursor={{ fill: 'rgba(79, 70, 229, 0.05)' }}
+                  contentStyle={{
+                    backgroundColor: 'rgb(var(--color-card))',
+                    borderColor: 'rgb(var(--color-border-200))',
+                    borderRadius: '0.5rem',
+                    color: 'rgb(var(--color-text-900))',
+                  }}
                   formatter={(value: number, name: string, payload) => {
                     if (name === 'percentage') {
                       return [percentFormatter.format(value / 100), 'Percent'];

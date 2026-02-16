@@ -10,6 +10,7 @@ export interface IBoard extends TenantEntity {
   is_default?: boolean;
   description?: string;
   display_order?: number;
+  default_priority_id?: string | null;
 
   // Category type configuration
   category_type?: CategoryType;

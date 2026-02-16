@@ -175,13 +175,17 @@ export const ticketCommentResponseSchema = z.object({
   comment_text: z.string(),
   is_internal: z.boolean(),
   time_spent: z.number().nullable(),
-  created_by: uuidSchema,
+  created_by: uuidSchema.nullable(),
   created_at: z.string().datetime(),
   updated_at: z.string().datetime().nullable(),
   tenant: uuidSchema,
+  contact_id: uuidSchema.nullable().optional(),
   
   // Joined fields
-  created_by_name: z.string().optional()
+  created_by_name: z.string().nullable().optional(),
+  author_contact_id: uuidSchema.nullable().optional(),
+  author_contact_name: z.string().nullable().optional(),
+  author_contact_email: z.string().nullable().optional()
 });
 
 // Ticket bulk operations schemas

@@ -10,9 +10,11 @@ import {
 } from 'lucide-react';
 
 export type StatusBadgeStatus = 'online' | 'offline' | 'healthy' | 'warning' | 'critical' | 'unknown' | 'secure' | 'at_risk' | 'active' | 'expiring_soon' | 'expired';
+// Note: 'overdue' is distinct from 'offline' for Tactical RMM and other providers that support it.
+export type RmmConnectivityStatus = 'online' | 'offline' | 'overdue' | 'unknown';
 
 interface StatusBadgeProps {
-  status: StatusBadgeStatus;
+  status: StatusBadgeStatus | RmmConnectivityStatus;
   provider?: string;
   size?: 'sm' | 'md' | 'lg';
   showIcon?: boolean;
@@ -20,31 +22,34 @@ interface StatusBadgeProps {
   className?: string;
 }
 
-const getStatusConfig = (status: StatusBadgeStatus) => {
+const getStatusConfig = (status: StatusBadgeStatus | RmmConnectivityStatus) => {
   switch (status) {
     case 'online':
     case 'healthy':
     case 'secure':
     case 'active':
-      return { variant: 'success' as const, icon: Check, label: 'Healthy', colorClass: 'bg-emerald-100 text-emerald-700 border-emerald-200' };
+      return { variant: 'success' as const, icon: Check, label: 'Healthy' };
+    case 'overdue':
+      return { variant: 'warning' as const, icon: AlertTriangle, label: 'Overdue' };
     case 'warning':
     case 'at_risk':
     case 'expiring_soon':
-      return { variant: 'warning' as const, icon: AlertTriangle, label: 'Warning', colorClass: 'bg-amber-100 text-amber-700 border-amber-200' };
+      return { variant: 'warning' as const, icon: AlertTriangle, label: 'Warning' };
     case 'critical':
     case 'expired':
     case 'offline':
-      return { variant: 'error' as const, icon: X, label: 'Critical', colorClass: 'bg-red-100 text-red-700 border-red-200' };
+      return { variant: 'error' as const, icon: X, label: 'Critical' };
     case 'unknown':
     default:
-      return { variant: 'default' as const, icon: HelpCircle, label: 'Unknown', colorClass: 'bg-gray-100 text-gray-700 border-gray-200' };
+      return { variant: 'default-muted' as const, icon: HelpCircle, label: 'Unknown' };
   }
 };
 
-const getStatusLabel = (status: StatusBadgeStatus) => {
+const getStatusLabel = (status: StatusBadgeStatus | RmmConnectivityStatus) => {
   switch (status) {
     case 'online': return 'Online';
     case 'offline': return 'Offline';
+    case 'overdue': return 'Overdue';
     case 'healthy': return 'Healthy';
     case 'warning': return 'Warning';
     case 'critical': return 'Critical';
@@ -71,10 +76,10 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
   const Icon = config.icon;
 
   const content = (
-    <Badge 
+    <Badge
+      variant={config.variant}
       className={cn(
         'gap-1.5 py-1 px-3',
-        config.colorClass,
         size === 'sm' && 'text-[10px] px-2 py-0.5',
         size === 'lg' && 'text-sm px-4 py-1.5',
         className

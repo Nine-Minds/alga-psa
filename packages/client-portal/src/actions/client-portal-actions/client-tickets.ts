@@ -365,6 +365,31 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
       }
     }), {} as Record<string, { user_id: string; first_name: string; last_name: string; email?: string, user_type: string, avatarUrl: string | null }>);
 
+    const commentContactIds = Array.from(
+      new Set(
+        (result.conversations as Array<{ contact_id?: string | null }>)
+          .map((comment) => comment.contact_id)
+          .filter((contactId): contactId is string => Boolean(contactId))
+      )
+    );
+
+    const commentContacts = commentContactIds.length > 0
+      ? await db('contacts')
+        .select('contact_name_id', 'full_name', 'email')
+        .whereIn('contact_name_id', commentContactIds)
+        .andWhere({ tenant })
+      : [];
+
+    const contactMap = commentContacts.reduce((acc, contactRecord) => ({
+      ...acc,
+      [contactRecord.contact_name_id]: {
+        contact_id: contactRecord.contact_name_id,
+        full_name: contactRecord.full_name || '',
+        email: contactRecord.email || undefined,
+        avatarUrl: null as string | null,
+      }
+    }), {} as Record<string, { contact_id: string; full_name: string; email?: string; avatarUrl: string | null }>);
+
     const { entered_by_user_type, ...ticketWithoutCreatorType } = result.ticket as any;
 
     return {
@@ -375,7 +400,8 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
       closed_at: result.ticket.closed_at instanceof Date ? result.ticket.closed_at.toISOString() : result.ticket.closed_at,
       conversations: result.conversations,
       documents: result.documents,
-      userMap
+      userMap,
+      contactMap
     };
   } catch (error) {
     console.error('Failed to fetch ticket details:', error);

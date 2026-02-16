@@ -146,12 +146,29 @@ const Contract = {
           .pluck('config_id');
 
         if (configIds.length > 0) {
+          // Child tables reference contract_line_service_configuration via (tenant, config_id).
+          // Citus disallows cascading actions on distributed foreign keys; handle deletes explicitly.
+          await knexOrTrx('contract_line_service_rate_tiers')
+            .where({ tenant })
+            .whereIn('config_id', configIds)
+            .delete();
+
+          await knexOrTrx('contract_line_service_fixed_config')
+            .where({ tenant })
+            .whereIn('config_id', configIds)
+            .delete();
+
           await knexOrTrx('contract_line_service_bucket_config')
             .where({ tenant })
             .whereIn('config_id', configIds)
             .delete();
 
           await knexOrTrx('contract_line_service_hourly_config')
+            .where({ tenant })
+            .whereIn('config_id', configIds)
+            .delete();
+
+          await knexOrTrx('contract_line_service_hourly_configs')
             .where({ tenant })
             .whereIn('config_id', configIds)
             .delete();

@@ -31,15 +31,15 @@ export function NotificationItem({ notification, onClick }: NotificationItemProp
   const getCategoryColor = () => {
     switch (notification.category) {
       case 'tickets':
-        return 'bg-blue-100 text-blue-700';
+        return 'bg-blue-500/10 text-blue-600';
       case 'projects':
-        return 'bg-purple-100 text-purple-700';
+        return 'bg-purple-500/10 text-purple-600';
       case 'invoices':
-        return 'bg-green-100 text-green-700';
+        return 'bg-green-500/10 text-green-600';
       case 'system':
-        return 'bg-gray-100 text-gray-700';
+        return 'bg-[rgb(var(--color-border-100))] text-[rgb(var(--color-text-700))]';
       default:
-        return 'bg-gray-100 text-gray-700';
+        return 'bg-[rgb(var(--color-border-100))] text-[rgb(var(--color-text-700))]';
     }
   };
 
@@ -48,7 +48,7 @@ export function NotificationItem({ notification, onClick }: NotificationItemProp
     return (
       <div className="flex items-center gap-1.5">
         <div
-          className="w-3 h-3 rounded-full border border-gray-300 flex-shrink-0"
+          className="w-3 h-3 rounded-full border border-[rgb(var(--color-border-300))] flex-shrink-0"
           style={{ backgroundColor: color || '#6B7280' }}
         />
         <span className="font-medium">{name}</span>
@@ -111,7 +111,7 @@ export function NotificationItem({ notification, onClick }: NotificationItemProp
 
       if (!data) {
         return (
-          <p className="text-sm text-gray-600 mb-2 line-clamp-2">
+          <p className="text-sm text-[rgb(var(--color-text-600))] mb-2 line-clamp-2">
             {notification.message}
           </p>
         );
@@ -126,9 +126,9 @@ export function NotificationItem({ notification, onClick }: NotificationItemProp
             {/* Status change */}
             {changes.status && (
               <div className="flex items-center gap-2 text-sm">
-                <span className="text-gray-600">Status:</span>
-                <span className="font-medium text-gray-900">{changes.status.old}</span>
-                <ArrowRight className="w-4 h-4 text-gray-400" />
+                <span className="text-[rgb(var(--color-text-600))]">Status:</span>
+                <span className="font-medium text-[rgb(var(--color-text-900))]">{changes.status.old}</span>
+                <ArrowRight className="w-4 h-4 text-[rgb(var(--color-text-400))]" />
                 <span className="font-medium text-blue-600">{changes.status.new}</span>
               </div>
             )}
@@ -136,9 +136,9 @@ export function NotificationItem({ notification, onClick }: NotificationItemProp
             {/* Priority change */}
             {changes.priority && (
               <div className="flex items-center gap-2 text-sm">
-                <span className="text-gray-600">Priority:</span>
+                <span className="text-[rgb(var(--color-text-600))]">Priority:</span>
                 {renderPriority(changes.priority.old, changes.priority.oldColor)}
-                <ArrowRight className="w-4 h-4 text-gray-400" />
+                <ArrowRight className="w-4 h-4 text-[rgb(var(--color-text-400))]" />
                 {renderPriority(changes.priority.new, changes.priority.newColor)}
               </div>
             )}
@@ -146,16 +146,16 @@ export function NotificationItem({ notification, onClick }: NotificationItemProp
             {/* Assignment change */}
             {changes.assigned_to && (
               <div className="flex items-center gap-2 text-sm">
-                <span className="text-gray-600">Assigned:</span>
-                <span className="font-medium text-gray-900">{changes.assigned_to.old}</span>
-                <ArrowRight className="w-4 h-4 text-gray-400" />
+                <span className="text-[rgb(var(--color-text-600))]">Assigned:</span>
+                <span className="font-medium text-[rgb(var(--color-text-900))]">{changes.assigned_to.old}</span>
+                <ArrowRight className="w-4 h-4 text-[rgb(var(--color-text-400))]" />
                 <span className="font-medium text-blue-600">{changes.assigned_to.new}</span>
               </div>
             )}
 
             {/* Performed by info */}
             {data.performedByName && (
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-[rgb(var(--color-text-500))] mt-1">
                 by {data.performedByName}
               </p>
             )}
@@ -167,15 +167,15 @@ export function NotificationItem({ notification, onClick }: NotificationItemProp
       if (data.priority && notification.title.includes('Assigned')) {
         return (
           <div className="space-y-1 mb-2">
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-[rgb(var(--color-text-600))]">
               {notification.message}
             </p>
             <div className="flex items-center gap-2 text-sm">
-              <span className="text-gray-600">Priority:</span>
+              <span className="text-[rgb(var(--color-text-600))]">Priority:</span>
               {renderPriority(data.priority, data.priorityColor)}
             </div>
             {data.performedByName && (
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-[rgb(var(--color-text-500))] mt-1">
                 by {data.performedByName}
               </p>
             )}
@@ -185,14 +185,14 @@ export function NotificationItem({ notification, onClick }: NotificationItemProp
 
       // Default: show the message
       return (
-        <p className="text-sm text-gray-600 mb-2 line-clamp-2">
+        <p className="text-sm text-[rgb(var(--color-text-600))] mb-2 line-clamp-2">
           {notification.message}
         </p>
       );
     } catch (error) {
       // Fallback to basic message display
       return (
-        <p className="text-sm text-gray-600 mb-2 line-clamp-2">
+        <p className="text-sm text-[rgb(var(--color-text-600))] mb-2 line-clamp-2">
           {notification.message}
         </p>
       );
@@ -202,8 +202,8 @@ export function NotificationItem({ notification, onClick }: NotificationItemProp
   return (
     <button
       onClick={onClick}
-      className={`w-full text-left px-4 py-3 hover:bg-gray-50 transition-colors ${
-        isUnread ? 'bg-blue-50/50' : ''
+      className={`w-full text-left px-4 py-3 hover:bg-[rgb(var(--color-border-50))] transition-colors ${
+        isUnread ? 'bg-blue-500/5' : ''
       }`}
     >
       <div className="flex gap-3">
@@ -216,7 +216,7 @@ export function NotificationItem({ notification, onClick }: NotificationItemProp
         <div className="flex-1 min-w-0">
           {/* Title and timestamp */}
           <div className="flex items-start justify-between gap-2 mb-1">
-            <h4 className={`text-sm font-medium text-gray-900 ${isUnread ? 'font-semibold' : ''}`}>
+            <h4 className={`text-sm font-medium text-[rgb(var(--color-text-900))] ${isUnread ? 'font-semibold' : ''}`}>
               {notification.title}
             </h4>
             {isUnread && (
@@ -230,9 +230,9 @@ export function NotificationItem({ notification, onClick }: NotificationItemProp
           {/* Comment preview (if available) */}
           {hasCommentPreview && (
             <div className={`mt-2 pl-3 border-l-2 ${
-              isInternalComment ? 'border-yellow-400 bg-yellow-50/50' : 'border-blue-300 bg-blue-50/50'
+              isInternalComment ? 'border-yellow-400 bg-yellow-500/5' : 'border-blue-300 bg-blue-500/5'
             } py-1.5 px-3 rounded-r`}>
-              <p className="text-xs text-gray-700 line-clamp-2">
+              <p className="text-xs text-[rgb(var(--color-text-700))] line-clamp-2">
                 {commentText}
               </p>
               {isInternalComment && (
@@ -247,7 +247,7 @@ export function NotificationItem({ notification, onClick }: NotificationItemProp
           )}
 
           {/* Footer */}
-          <div className="flex items-center gap-2 text-xs text-gray-500 mt-2">
+          <div className="flex items-center gap-2 text-xs text-[rgb(var(--color-text-500))] mt-2">
             {/* Category badge */}
             {notification.category && (
               <span className={`px-2 py-0.5 rounded-full font-medium ${getCategoryColor()}`}>

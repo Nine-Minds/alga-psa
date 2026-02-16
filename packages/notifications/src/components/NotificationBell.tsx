@@ -37,24 +37,24 @@ function NotificationBellInner({ tenant, userId, className = '' }: { tenant: str
       <DropdownMenu.Trigger asChild>
         <button
           id="notification-bell"
-          className={`relative p-2 text-gray-600 hover:text-main-800 transition-colors ${className}`}
+          className={`relative p-2 text-[rgb(var(--color-text-500))] hover:text-[rgb(var(--color-text-800))] transition-colors ${className}`}
           aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ''}`}
         >
           <Bell className="w-5 h-5" />
           {unreadCount > 0 && (
-            <span className="absolute -top-0.5 -right-0.5 flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-semibold text-white bg-red-500 rounded-full border-2 border-white">
+            <span className="absolute -top-0.5 -right-0.5 flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-semibold text-white bg-red-500 rounded-full border-2 border-[rgb(var(--color-card))]">
               {unreadCount > 99 ? '99+' : unreadCount}
             </span>
           )}
           {!isConnected && (
-            <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 bg-yellow-500 rounded-full border border-white" title="Reconnecting..." />
+            <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 bg-yellow-500 rounded-full border border-[rgb(var(--color-card))]" title="Reconnecting..." />
           )}
         </button>
       </DropdownMenu.Trigger>
 
       <DropdownMenu.Portal>
         <DropdownMenu.Content
-          className="w-[420px] bg-white rounded-lg shadow-lg border border-gray-200 z-50"
+          className="w-[420px] bg-[rgb(var(--color-card))] rounded-lg shadow-lg border border-[rgb(var(--color-border-200))] z-50"
           sideOffset={8}
           align="end"
         >

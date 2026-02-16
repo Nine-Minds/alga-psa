@@ -94,6 +94,7 @@ export const createCommentSchema = z.object({
   is_resolution: z.boolean().optional(),
   author_type: z.enum(['internal', 'contact', 'system']).optional(),
   author_id: z.string().uuid('Author ID must be a valid UUID').optional(),
+  contact_id: z.string().uuid('Contact ID must be a valid UUID').optional(),
   metadata: z.record(z.unknown()).optional()
 });
 
@@ -187,6 +188,7 @@ export interface CreateCommentValidationInput {
   is_resolution?: boolean;
   author_type?: 'internal' | 'contact' | 'system';
   author_id?: string;
+  contact_id?: string;
 }
 
 export interface CreateTicketOutput {
@@ -209,6 +211,7 @@ export interface CreateCommentInput {
   is_resolution?: boolean;
   author_type?: 'internal' | 'contact' | 'system';
   author_id?: string;
+  contact_id?: string;
   metadata?: Record<string, any>;
 }
 
@@ -1043,6 +1046,19 @@ export class TicketModel {
       throw new Error('Ticket not found or does not belong to tenant');
     }
 
+    if (validatedData.contact_id) {
+      const contact = await trx('contacts')
+        .where({
+          tenant,
+          contact_name_id: validatedData.contact_id,
+        })
+        .first();
+
+      if (!contact) {
+        throw new Error('Contact not found or does not belong to tenant');
+      }
+    }
+
     const commentId = uuidv4();
     const now = new Date();
 
@@ -1069,12 +1085,24 @@ export class TicketModel {
       is_resolution: validatedData.is_resolution || false,
       author_type: dbAuthorType as any,
       user_id: validatedData.author_id || null,
+      contact_id: validatedData.contact_id || null,
       metadata: validatedData.metadata ? JSON.stringify(validatedData.metadata) : null,
       created_at: now,
       updated_at: now
     };
 
     await trx('comments').insert(baseCommentData);
+
+    if (!validatedData.is_internal && validatedData.author_type === 'contact') {
+      await trx('tickets')
+        .where({
+          ticket_id: validatedData.ticket_id,
+          tenant,
+        })
+        .update({
+          response_state: 'awaiting_internal',
+        });
+    }
 
     // Publish comment event if publisher provided
     if (eventPublisher) {

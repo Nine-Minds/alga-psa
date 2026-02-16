@@ -123,6 +123,12 @@ const config: Config = {
           hover: 'var(--color-submenu-hover)',
           icon: 'var(--color-submenu-icon)',
         },
+        // Table row colors
+        'table-row-alt': 'rgb(var(--color-table-row-alt) / <alpha-value>)',
+        'table-hover': 'rgb(var(--color-table-hover) / <alpha-value>)',
+        'table-selected': 'rgb(var(--color-table-selected) / <alpha-value>)',
+        'table-status-approved': 'rgb(var(--color-table-status-approved) / <alpha-value>)',
+        'table-status-warning': 'rgb(var(--color-table-status-warning) / <alpha-value>)',
         // Add destructive colors based on assumed CSS variables
         destructive: 'rgb(var(--color-destructive) / <alpha-value>)',
         'destructive-foreground': 'rgb(var(--color-destructive-foreground) / <alpha-value>)',

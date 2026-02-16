@@ -92,10 +92,10 @@ const DocumentCard: React.FC<DocumentCardProps> = ({
     return (
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-3">
-          <FileText className="w-5 h-5 text-gray-500" />
+          <FileText className="w-5 h-5 text-[rgb(var(--color-text-500))]" />
           <div>
-            <h3 className="text-sm font-medium text-gray-900">{document.document_name}</h3>
-            <p className="text-sm text-gray-500">
+            <h3 className="text-sm font-medium text-[rgb(var(--color-text-900))]">{document.document_name}</h3>
+            <p className="text-sm text-[rgb(var(--color-text-500))]">
               {document.entered_at ? new Date(document.entered_at).toLocaleDateString() : 'No date'}
             </p>
           </div>
@@ -118,7 +118,7 @@ const DocumentCard: React.FC<DocumentCardProps> = ({
               data-automation-id={`${id}-disassociate-btn`}
               onClick={onDisassociate}
               variant="ghost"
-              className="text-gray-600 hover:text-gray-800"
+              className="text-[rgb(var(--color-text-600))] hover:text-[rgb(var(--color-text-800))]"
             >
               <Link2 className="w-4 h-4" />
             </Button>
@@ -132,7 +132,7 @@ const DocumentCard: React.FC<DocumentCardProps> = ({
     <ReflectionContainer id={id} label="Document Card">
       <Card
         data-automation-id={`${id}-container`}
-        className={`p-4 ${onClick && !isEditing ? 'cursor-pointer hover:bg-gray-50' : ''}`}
+        className={`p-4 ${onClick && !isEditing ? 'cursor-pointer hover:bg-[rgb(var(--color-border-50))]' : ''}`}
         onClick={!isEditing && onClick ? onClick : undefined}
       >
         {renderContent()}

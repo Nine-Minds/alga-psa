@@ -41,6 +41,11 @@ export default defineConfig({
     timeout: 120000,
     env: {
       ...process.env,
+      // Playwright runs need a writable tenant secret store (env provider is read-only).
+      // Keep app secrets in env while writing tenant secrets to an isolated filesystem directory.
+      SECRET_READ_CHAIN: process.env.SECRET_READ_CHAIN || 'filesystem,env',
+      SECRET_WRITE_PROVIDER: process.env.SECRET_WRITE_PROVIDER || 'filesystem',
+      SECRET_FS_BASE_PATH: process.env.SECRET_FS_BASE_PATH || 'secrets-playwright',
       // Database configuration
       DB_TYPE: 'postgres',
       DB_HOST: process.env.DB_HOST || 'localhost',
@@ -59,6 +64,8 @@ export default defineConfig({
       APP_ENV: 'test',
       NODE_ENV: 'development',
       PORT: PORT,
+      // Keep Tactical RMM UI visible in Playwright runs even when PostHog is not configured.
+      NEXT_PUBLIC_FORCE_FEATURE_FLAGS: process.env.NEXT_PUBLIC_FORCE_FEATURE_FLAGS || 'tactical-rmm-integration:true',
     },
   },
 });

@@ -25,6 +25,7 @@ import { QuickAddAsset } from './QuickAddAsset';
 import { AssetCommandPalette } from './AssetCommandPalette';
 import { AssetDetailDrawerClient } from './AssetDetailDrawerClient';
 import { RmmStatusIndicator } from './RmmStatusIndicator';
+import { RMM_AGENT_STATUS_OPTIONS } from '../lib/rmmAgentStatusOptions';
 import {
   ASSET_DRAWER_TABS,
   type AssetDrawerTab,
@@ -67,11 +68,7 @@ type ColumnKey =
 
 const STATUS_OPTIONS: string[] = ['active', 'inactive', 'maintenance'];
 const TYPE_OPTIONS: string[] = ['workstation', 'server', 'network_device', 'mobile_device', 'printer'];
-const AGENT_STATUS_OPTIONS: { value: string; label: string }[] = [
-  { value: 'online', label: 'Online' },
-  { value: 'offline', label: 'Offline' },
-  { value: 'unknown', label: 'Unknown' },
-];
+const AGENT_STATUS_OPTIONS = RMM_AGENT_STATUS_OPTIONS;
 const RMM_MANAGED_OPTIONS: { value: string; label: string }[] = [
   { value: 'managed', label: 'RMM Managed' },
   { value: 'unmanaged', label: 'Not Managed' },
@@ -90,9 +87,14 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
   const [pageSize, setPageSize] = useState(initialAssets.limit || 10);
   const [currentPage, setCurrentPage] = useState(initialAssets.page || 1);
   const [maintenanceSummaries, setMaintenanceSummaries] = useState<Record<string, ClientMaintenanceSummary>>({});
-  const [loading, setLoading] = useState(false);
+  const [assetsLoading, setAssetsLoading] = useState(false);
+  const [maintenanceLoading, setMaintenanceLoading] = useState(false);
+  const loading = assetsLoading || maintenanceLoading;
 
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+  const [sortBy, setSortBy] = useState<string>('created_at');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [statusFilters, setStatusFilters] = useState<string[]>([]);
   const [typeFilters, setTypeFilters] = useState<string[]>([]);
   const [clientFilters, setClientFilters] = useState<string[]>([]);
@@ -121,6 +123,13 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
   const [drawerLoading, setDrawerLoading] = useState(false);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const lastRequestIdRef = useRef<number>(0);
+  const lastAssetsRequestIdRef = useRef<number>(0);
+  const lastAssetsQueryKeyRef = useRef<string>('');
+  const [refreshCounter, setRefreshCounter] = useState(0);
+
+  const refreshAssets = useCallback(() => {
+    setRefreshCounter((prev) => prev + 1);
+  }, []);
 
   const loadDrawerData = useCallback(async (assetId: string, tab: AssetDrawerTab) => {
     const requestId = lastRequestIdRef.current + 1;
@@ -174,6 +183,15 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
 
     void fetchClients();
   }, []);
+
+  useEffect(() => {
+    const trimmed = searchTerm.trim();
+    const handle = window.setTimeout(() => {
+      setDebouncedSearchTerm(trimmed);
+    }, 250);
+
+    return () => window.clearTimeout(handle);
+  }, [searchTerm]);
 
   const openDrawerForAsset = useCallback((asset: Asset, tab?: AssetDrawerTab) => {
     const nextTab = tab ?? ASSET_DRAWER_TABS.OVERVIEW;
@@ -255,7 +273,7 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
 
   useEffect(() => {
     async function loadMaintenanceSummaries() {
-      setLoading(true);
+      setMaintenanceLoading(true);
       try {
         const clientIds = Object.keys(assetsByClient);
         if (clientIds.length === 0) {
@@ -267,7 +285,7 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
       } catch (error) {
         console.error('Error loading maintenance summaries:', error);
       }
-      setLoading(false);
+      setMaintenanceLoading(false);
     }
 
     void loadMaintenanceSummaries();
@@ -324,47 +342,99 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
     });
   }, [assets, isAllSelected]);
 
-  
-  const fetchAssets = useCallback(async () => {
-    setLoading(true);
-    try {
-      const response = await listAssets({
-        page: currentPage,
-        limit: pageSize,
-        search: searchTerm || undefined,
-        status: statusFilters.length > 0 ? statusFilters[0] as any : undefined,
-        asset_type: typeFilters.length > 0 ? typeFilters[0] as any : undefined,
-        client_id: clientFilters.length > 0 ? clientFilters[0] : undefined,
-        agent_status: agentStatusFilters.length > 0 ? agentStatusFilters[0] as any : undefined,
-        rmm_managed: rmmManagedFilter.length > 0 ? rmmManagedFilter.includes('managed') : undefined,
-      });
-      setAssets(response.assets);
-      setTotalAssets(response.total);
-    } catch (error) {
-      console.error('Error fetching assets:', error);
-    } finally {
-      setLoading(false);
+  const handleTableSortChange = useCallback((columnId: string, direction: 'asc' | 'desc') => {
+    if (columnId === sortBy && direction === sortDirection) {
+      return;
     }
-  }, [currentPage, pageSize, searchTerm, statusFilters, typeFilters, clientFilters, agentStatusFilters, rmmManagedFilter]);
+    setSortBy(columnId);
+    setSortDirection(direction);
+  }, [sortBy, sortDirection]);
+
+  const assetsQueryKey = useMemo(() => {
+    return JSON.stringify({
+      search: debouncedSearchTerm,
+      status: statusFilters,
+      type: typeFilters,
+      client: clientFilters,
+      agentStatus: agentStatusFilters,
+      rmmManaged: rmmManagedFilter,
+      pageSize,
+      sortBy,
+      sortDirection,
+    });
+  }, [agentStatusFilters, clientFilters, debouncedSearchTerm, pageSize, rmmManagedFilter, sortBy, sortDirection, statusFilters, typeFilters]);
 
   useEffect(() => {
-    fetchAssets();
-  }, [fetchAssets]);
-
-  // Reset to first page when filters change
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm, statusFilters, typeFilters, clientFilters, agentStatusFilters, rmmManagedFilter]);
-
-const handleAssetAdded = async () => {
-    try {
-      const response = await listAssets({});
-      setAssets(response.assets);
-    } catch (error) {
-      console.error('Error reloading assets:', error);
+    const queryChanged = assetsQueryKey !== lastAssetsQueryKeyRef.current;
+    if (queryChanged) {
+      lastAssetsQueryKeyRef.current = assetsQueryKey;
+      if (currentPage !== 1) {
+        setCurrentPage(1);
+        return;
+      }
     }
-    // No-op: local state already refreshed
-  };
+
+    const requestId = lastAssetsRequestIdRef.current + 1;
+    lastAssetsRequestIdRef.current = requestId;
+
+    setAssetsLoading(true);
+    (async () => {
+      try {
+        const rmmManaged =
+          rmmManagedFilter.length === 0
+            ? undefined
+            : rmmManagedFilter.includes('managed') && rmmManagedFilter.includes('unmanaged')
+              ? undefined
+              : rmmManagedFilter.includes('managed');
+
+        const response = await listAssets({
+          page: currentPage,
+          limit: pageSize,
+          search: debouncedSearchTerm || undefined,
+          status: statusFilters.length > 0 ? (statusFilters[0] as any) : undefined,
+          asset_type: typeFilters.length > 0 ? (typeFilters[0] as any) : undefined,
+          client_id: clientFilters.length > 0 ? clientFilters[0] : undefined,
+          agent_status: agentStatusFilters.length > 0 ? (agentStatusFilters[0] as any) : undefined,
+          rmm_managed: rmmManaged,
+          sort_by: sortBy,
+          sort_direction: sortDirection,
+        });
+
+        if (lastAssetsRequestIdRef.current !== requestId) {
+          return;
+        }
+
+        setAssets(response.assets);
+        setTotalAssets(response.total);
+      } catch (error) {
+        if (lastAssetsRequestIdRef.current !== requestId) {
+          return;
+        }
+        console.error('Error fetching assets:', error);
+      } finally {
+        if (lastAssetsRequestIdRef.current === requestId) {
+          setAssetsLoading(false);
+        }
+      }
+    })();
+  }, [
+    agentStatusFilters,
+    assetsQueryKey,
+    currentPage,
+    clientFilters,
+    debouncedSearchTerm,
+    pageSize,
+    rmmManagedFilter,
+    sortBy,
+    sortDirection,
+    statusFilters,
+    typeFilters,
+    refreshCounter,
+  ]);
+
+  const handleAssetAdded = useCallback(() => {
+    refreshAssets();
+  }, [refreshAssets]);
 
   const toggleFilterValue = (values: string[], value: string, setter: (next: string[]) => void) => {
     setter(values.includes(value) ? values.filter(v => v !== value) : [...values, value]);
@@ -448,6 +518,7 @@ const handleAssetAdded = async () => {
           containerClassName="m-0 flex items-center justify-center"
         />
       ),
+      sortable: false,
       render: (_: unknown, record: Asset) => (
         <Checkbox
           id={`asset-select-${record.asset_id}`}
@@ -516,6 +587,7 @@ const handleAssetAdded = async () => {
     details: {
       dataIndex: 'details',
       title: 'Details',
+      sortable: false,
       render: (_: unknown, record: Asset) => (
         <span className="text-sm text-gray-600">{renderAssetDetails(record)}</span>
       )
@@ -529,15 +601,15 @@ const handleAssetAdded = async () => {
           <span
             className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${
               status === 'active'
-                ? 'bg-emerald-100 text-emerald-700 ring-1 ring-emerald-600/20'
+                ? 'bg-[rgb(var(--badge-success-bg))] text-[rgb(var(--badge-success-text))] ring-1 ring-[rgb(var(--badge-success-border))]'
                 : status === 'inactive'
-                ? 'bg-gray-100 text-gray-700 ring-1 ring-gray-600/20'
-                : 'bg-amber-100 text-amber-700 ring-1 ring-amber-600/20'
+                ? 'bg-[rgb(var(--badge-default-bg))] text-[rgb(var(--badge-default-text))] ring-1 ring-[rgb(var(--badge-default-border))]'
+                : 'bg-[rgb(var(--badge-warning-bg))] text-[rgb(var(--badge-warning-text))] ring-1 ring-[rgb(var(--badge-warning-border))]'
             }`}
           >
             <span
               className={`w-1.5 h-1.5 rounded-full mr-1.5 ${
-                status === 'active' ? 'bg-emerald-500' : status === 'inactive' ? 'bg-gray-500' : 'bg-amber-500'
+                status === 'active' ? 'bg-[rgb(var(--badge-success-text))]' : status === 'inactive' ? 'bg-[rgb(var(--badge-default-text))]' : 'bg-[rgb(var(--badge-warning-text))]'
               }`}
             ></span>
             {status.charAt(0).toUpperCase() + status.slice(1)}
@@ -575,6 +647,7 @@ const handleAssetAdded = async () => {
     actions: {
       dataIndex: 'actions',
       title: 'Actions',
+      sortable: false,
       render: (_: unknown, record: Asset) => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -1013,6 +1086,10 @@ const handleAssetAdded = async () => {
               onPageChange={setCurrentPage}
               onItemsPerPageChange={setPageSize}
               onRowClick={(asset) => openAssetRecordPage(asset.asset_id)}
+              manualSorting={true}
+              sortBy={sortBy}
+              sortDirection={sortDirection}
+              onSortChange={handleTableSortChange}
             />
           </Card>
       </div>

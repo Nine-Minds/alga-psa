@@ -41,7 +41,7 @@ export default function ResponseMetrics({ metrics }: ResponseMetricsProps) {
         value: integerFormatter.format(metrics.totalResponses),
         icon: CheckCircle2,
         tone: 'text-emerald-600',
-        background: 'bg-emerald-50',
+        background: 'bg-emerald-500/10',
       },
       {
         key: 'responseRate',
