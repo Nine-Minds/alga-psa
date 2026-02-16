@@ -45,13 +45,7 @@ async function upsertEmailTemplate(knex, templateDef, options = {}) {
   await knex('system_email_templates')
     .insert(rows)
     .onConflict(['name', 'language_code'])
-    .merge({
-      subject: knex.raw('excluded.subject'),
-      html_content: knex.raw('excluded.html_content'),
-      text_content: knex.raw('excluded.text_content'),
-      notification_subtype_id: knex.raw('excluded.notification_subtype_id'),
-      updated_at: now,
-    });
+    .merge(['subject', 'html_content', 'text_content', 'notification_subtype_id', 'updated_at']);
 }
 
 /**
