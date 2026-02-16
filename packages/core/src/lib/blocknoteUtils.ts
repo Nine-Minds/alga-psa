@@ -679,7 +679,10 @@ export function convertBlockNoteToHTML(blocks: any): string {
           break;
         case 'codeBlock':
           flushListBuffer();
-          const language = (block.props as any)?.language || '';
+          const rawLanguage = (block.props as any)?.language || '';
+          const language = typeof rawLanguage === 'string'
+            ? rawLanguage.replace(/[^a-zA-Z0-9_-]/g, '')
+            : '';
           const codeText = (block.content as any[])
               .map(item => item.text || '')
               .join('\n');

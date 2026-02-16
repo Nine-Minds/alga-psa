@@ -38,7 +38,7 @@
   {
     "id": "T007",
     "description": "After Stage 3: codeBlock language prop with special chars is sanitized (no attribute injection)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F007"]
   },
   {

@@ -61,3 +61,7 @@
 - (2026-02-16) Stage 3: Fixed default-case HTML escaping in core blocknoteUtils (escapeHtml for string content).
 
 - (2026-02-16) Stage 3 test: extended blocknoteUtils vitest for default-case escaping; test run passes.
+
+- (2026-02-16) Stage 3: Sanitized codeBlock language prop to alnum/_/- before HTML class injection.
+
+- (2026-02-16) Stage 3 test: added blocknoteUtils language sanitization test; vitest run passes.

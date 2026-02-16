@@ -34,4 +34,18 @@ describe('blocknoteUtils convertBlockNoteToHTML', () => {
     expect(html).toContain('&amp;');
     expect(html).toContain('&quot;');
   });
+
+  it('sanitizes codeBlock language to avoid attribute injection', () => {
+    const blocks = [
+      {
+        type: 'codeBlock',
+        props: { language: 'ts" onmouseover="alert(1)' },
+        content: [{ type: 'text', text: 'const ok = true;' }],
+      },
+    ];
+
+    const html = convertBlockNoteToHTML(blocks);
+    expect(html).toContain('class="language-tsonmouseoveralert1"');
+    expect(html).not.toContain('" onmouseover="');
+  });
 });

@@ -38,7 +38,7 @@
   {
     "id": "F007",
     "description": "Stage 3: Sanitize language prop in codeBlock to prevent attribute injection",
-    "implemented": false,
+    "implemented": true,
     "stage": 3
   },
   {
