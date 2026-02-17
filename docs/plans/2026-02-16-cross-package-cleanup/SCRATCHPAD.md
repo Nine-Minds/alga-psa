@@ -138,3 +138,5 @@
 - (2026-02-17) Stage 8c: moved ActivityDetailViewerDrawer, ProjectsSection, TicketsSection into `packages/msp-composition/src/workflows` with workflows shims; updated msp-composition exports/deps and import paths.
 
 - (2026-02-17) Stage 8c: no server page.tsx imports for workflows components found; no import updates required.
+
+- (2026-02-17) Stage 8d: moved Projects, ProjectQuickAdd, ProjectDetailsEdit into `packages/msp-composition/src/projects` with project shims; updated msp-composition exports and import paths.

@@ -170,7 +170,7 @@
   {
     "id": "F029",
     "description": "Stage 8d: Move Projects, ProjectQuickAdd, ProjectDetailsEdit to msp-composition/projects (~5 violations)",
-    "implemented": false,
+    "implemented": true,
     "stage": 8
   },
   {
