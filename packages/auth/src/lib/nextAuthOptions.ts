@@ -142,7 +142,6 @@ async function computeVanityRedirect({
     token?: Record<string, unknown> | null;
 }): Promise<string | null> {
     if (!token) {
-        console.log('[computeVanityRedirect] missing token', { url, baseUrl });
         return null;
     }
 
@@ -1553,7 +1552,6 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
                 return url;
             }
 
-            console.log('[redirect]');
             const vanityUrl = await computeVanityRedirect({ url, baseUrl, token: null });
             // if the url doesn't include the host, add it
             if (url.startsWith('/')) {
@@ -2264,7 +2262,6 @@ export const options: NextAuthConfig = {
                 return url;
             }
 
-            console.log('[redirect] in callbacks');
             const vanityUrl = await computeVanityRedirect({ url, baseUrl, token: null });
             return vanityUrl ?? url;
         },
