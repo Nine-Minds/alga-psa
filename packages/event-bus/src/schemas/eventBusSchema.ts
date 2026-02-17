@@ -52,6 +52,14 @@ export const EventTypeEnum = z.enum([
   'APPOINTMENT_REQUEST_APPROVED',
   'APPOINTMENT_REQUEST_DECLINED',
   'APPOINTMENT_REQUEST_CANCELLED',
+  'SURVEY_INVITATION_SENT',
+  'SURVEY_RESPONSE_SUBMITTED',
+  'SURVEY_NEGATIVE_RESPONSE',
+  'SURVEY_SENT',
+  'SURVEY_RESPONSE_RECEIVED',
+  'SURVEY_REMINDER_SENT',
+  'SURVEY_EXPIRED',
+  'CSAT_ALERT_TRIGGERED',
   'RMM_DEVICE_CREATED',
   'RMM_DEVICE_UPDATED',
   'RMM_DEVICE_DELETED',
@@ -405,6 +413,17 @@ export const AppointmentRequestEventPayloadSchema = BasePayloadSchema.extend({
   userId: z.string().uuid().optional(),
 });
 
+// Survey/CSAT event payload schemas.
+// Keep validation permissive while requiring tenant context so workflow/domain payloads can evolve.
+export const SurveyInvitationSentPayloadSchema = BasePayloadSchema.extend({});
+export const SurveyResponseSubmittedPayloadSchema = BasePayloadSchema.extend({});
+export const SurveyNegativeResponsePayloadSchema = BasePayloadSchema.extend({});
+export const SurveySentPayloadSchema = BasePayloadSchema.extend({});
+export const SurveyResponseReceivedPayloadSchema = BasePayloadSchema.extend({});
+export const SurveyReminderSentPayloadSchema = BasePayloadSchema.extend({});
+export const SurveyExpiredPayloadSchema = BasePayloadSchema.extend({});
+export const CsatAlertTriggeredPayloadSchema = BasePayloadSchema.extend({});
+
 // Message sent event payload schema
 export const MessageSentPayloadSchema = BasePayloadSchema.extend({
   messageId: z.string().uuid().optional(),
@@ -528,6 +547,14 @@ export const EventPayloadSchemas = {
   APPOINTMENT_REQUEST_APPROVED: AppointmentRequestEventPayloadSchema,
   APPOINTMENT_REQUEST_DECLINED: AppointmentRequestEventPayloadSchema,
   APPOINTMENT_REQUEST_CANCELLED: AppointmentRequestEventPayloadSchema,
+  SURVEY_INVITATION_SENT: SurveyInvitationSentPayloadSchema,
+  SURVEY_RESPONSE_SUBMITTED: SurveyResponseSubmittedPayloadSchema,
+  SURVEY_NEGATIVE_RESPONSE: SurveyNegativeResponsePayloadSchema,
+  SURVEY_SENT: SurveySentPayloadSchema,
+  SURVEY_RESPONSE_RECEIVED: SurveyResponseReceivedPayloadSchema,
+  SURVEY_REMINDER_SENT: SurveyReminderSentPayloadSchema,
+  SURVEY_EXPIRED: SurveyExpiredPayloadSchema,
+  CSAT_ALERT_TRIGGERED: CsatAlertTriggeredPayloadSchema,
   RMM_DEVICE_CREATED: RmmDeviceEventPayloadSchema,
   RMM_DEVICE_UPDATED: RmmDeviceEventPayloadSchema,
   RMM_DEVICE_DELETED: RmmDeviceEventPayloadSchema,
