@@ -122,6 +122,68 @@ describe('deletion configs', () => {
     expect(scheduleDep?.table).toBe('schedule_entries');
     expect(scheduleDep?.countQuery).toBeDefined();
   });
+
+  it('ticket config includes ticket_material blocker', () => {
+    const dep = DELETION_CONFIGS.ticket.dependencies.find((d) => d.type === 'ticket_material');
+    expect(dep).toBeDefined();
+    expect(dep?.table).toBe('ticket_materials');
+    expect(dep?.foreignKey).toBe('ticket_id');
+  });
+
+  it('project config includes project_material blocker', () => {
+    const dep = DELETION_CONFIGS.project.dependencies.find((d) => d.type === 'project_material');
+    expect(dep).toBeDefined();
+    expect(dep?.table).toBe('project_materials');
+    expect(dep?.foreignKey).toBe('project_id');
+  });
+
+  it('client config includes material blockers', () => {
+    const deps = Object.fromEntries(DELETION_CONFIGS.client.dependencies.map((d) => [d.type, d]));
+    expect(deps.ticket_material.foreignKey).toBe('client_id');
+    expect(deps.project_material.foreignKey).toBe('client_id');
+  });
+
+  it('service config includes material blockers', () => {
+    const deps = Object.fromEntries(DELETION_CONFIGS.service.dependencies.map((d) => [d.type, d]));
+    expect(deps.ticket_material.foreignKey).toBe('service_id');
+    expect(deps.project_material.foreignKey).toBe('service_id');
+  });
+
+  it('asset_association blocker uses polymorphic countQuery per entity', async () => {
+    for (const [entityType, entityKey] of [['client', 'client'], ['contact', 'contact'], ['ticket', 'ticket'], ['project', 'project']] as const) {
+      const dep = DELETION_CONFIGS[entityKey].dependencies.find((d) => d.type === 'asset_association');
+      expect(dep, `${entityKey} should have asset_association dep`).toBeDefined();
+      expect(dep?.table).toBe('asset_associations');
+      expect(dep?.countQuery).toBeDefined();
+
+      const { trx, builder } = makeTrx();
+      await dep?.countQuery?.(trx, { tenant: 't', entityId: 'id-1' });
+      expect(trx).toHaveBeenCalledWith('asset_associations');
+      expect(builder.where).toHaveBeenCalledWith({
+        tenant: 't',
+        entity_id: 'id-1',
+        entity_type: entityType
+      });
+    }
+  });
+
+  it('ticket_entity_link blocker on project and asset', async () => {
+    for (const [entityType, entityKey] of [['project', 'project'], ['asset', 'asset']] as const) {
+      const dep = DELETION_CONFIGS[entityKey].dependencies.find((d) => d.type === 'ticket_entity_link');
+      expect(dep, `${entityKey} should have ticket_entity_link dep`).toBeDefined();
+      expect(dep?.table).toBe('ticket_entity_links');
+      expect(dep?.countQuery).toBeDefined();
+
+      const { trx, builder } = makeTrx();
+      await dep?.countQuery?.(trx, { tenant: 't', entityId: 'id-1' });
+      expect(trx).toHaveBeenCalledWith('ticket_entity_links');
+      expect(builder.where).toHaveBeenCalledWith({
+        tenant: 't',
+        entity_id: 'id-1',
+        entity_type: entityType
+      });
+    }
+  });
 });
 
 describe('getDeletionConfig', () => {

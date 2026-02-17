@@ -63,6 +63,36 @@ const getStatusType = async (
   return status?.status_type ?? null;
 };
 
+const countAssetAssociations = (entityType: string) => {
+  return async (trx: Knex | Knex.Transaction, options: { tenant: string; entityId: string }) => {
+    const result = await trx('asset_associations')
+      .where({
+        tenant: options.tenant,
+        entity_id: options.entityId,
+        entity_type: entityType
+      })
+      .count<{ count: string }>('* as count')
+      .first();
+
+    return Number(result?.count ?? 0);
+  };
+};
+
+const countTicketEntityLinks = (entityType: string) => {
+  return async (trx: Knex | Knex.Transaction, options: { tenant: string; entityId: string }) => {
+    const result = await trx('ticket_entity_links')
+      .where({
+        tenant: options.tenant,
+        entity_id: options.entityId,
+        entity_type: entityType
+      })
+      .count<{ count: string }>('* as count')
+      .first();
+
+    return Number(result?.count ?? 0);
+  };
+};
+
 const countStatusUsage = (
   statusType: string,
   table: string,
@@ -114,7 +144,15 @@ export const DELETION_CONFIGS: Record<string, EntityDeletionConfig> = {
       { type: 'usage', table: 'usage_tracking', foreignKey: 'client_id', label: 'usage record' },
       { type: 'bucket_usage', table: 'bucket_usage', foreignKey: 'client_id', label: 'bucket usage record' },
       { type: 'survey_invitation', table: 'survey_invitations', foreignKey: 'client_id', label: 'survey invitation' },
-      { type: 'survey_response', table: 'survey_responses', foreignKey: 'client_id', label: 'survey response' }
+      { type: 'survey_response', table: 'survey_responses', foreignKey: 'client_id', label: 'survey response' },
+      { type: 'ticket_material', table: 'ticket_materials', foreignKey: 'client_id', label: 'ticket material' },
+      { type: 'project_material', table: 'project_materials', foreignKey: 'client_id', label: 'project material' },
+      {
+        type: 'asset_association',
+        table: 'asset_associations',
+        label: 'asset association',
+        countQuery: countAssetAssociations('client')
+      }
     ]
   },
   contact: {
@@ -138,7 +176,13 @@ export const DELETION_CONFIGS: Record<string, EntityDeletionConfig> = {
         countQuery: countPortalUsers
       },
       { type: 'survey_invitation', table: 'survey_invitations', foreignKey: 'contact_id', label: 'survey invitation' },
-      { type: 'survey_response', table: 'survey_responses', foreignKey: 'contact_id', label: 'survey response' }
+      { type: 'survey_response', table: 'survey_responses', foreignKey: 'contact_id', label: 'survey response' },
+      {
+        type: 'asset_association',
+        table: 'asset_associations',
+        label: 'asset association',
+        countQuery: countAssetAssociations('contact')
+      }
     ]
   },
   ticket: {
@@ -171,7 +215,14 @@ export const DELETION_CONFIGS: Record<string, EntityDeletionConfig> = {
           return Number(result?.count ?? 0);
         }
       },
-      { type: 'interaction', table: 'interactions', foreignKey: 'ticket_id', label: 'interaction' }
+      { type: 'interaction', table: 'interactions', foreignKey: 'ticket_id', label: 'interaction' },
+      { type: 'ticket_material', table: 'ticket_materials', foreignKey: 'ticket_id', label: 'material' },
+      {
+        type: 'asset_association',
+        table: 'asset_associations',
+        label: 'asset association',
+        countQuery: countAssetAssociations('ticket')
+      }
     ]
   },
   project: {
@@ -201,6 +252,19 @@ export const DELETION_CONFIGS: Record<string, EntityDeletionConfig> = {
             .first();
           return Number(result?.count ?? 0);
         }
+      },
+      { type: 'project_material', table: 'project_materials', foreignKey: 'project_id', label: 'material' },
+      {
+        type: 'asset_association',
+        table: 'asset_associations',
+        label: 'asset association',
+        countQuery: countAssetAssociations('project')
+      },
+      {
+        type: 'ticket_entity_link',
+        table: 'ticket_entity_links',
+        label: 'ticket link',
+        countQuery: countTicketEntityLinks('project')
       }
     ]
   },
@@ -323,7 +387,9 @@ export const DELETION_CONFIGS: Record<string, EntityDeletionConfig> = {
       { type: 'contract_template_line_service', table: 'contract_template_line_services', foreignKey: 'service_id', label: 'contract template service' },
       { type: 'invoice_charge', table: 'invoice_charges', foreignKey: 'service_id', label: 'invoice charge' },
       { type: 'invoice_charge_target', table: 'invoice_charges', foreignKey: 'applies_to_service_id', label: 'invoice charge target' },
-      { type: 'invoice_charge_detail', table: 'invoice_charge_details', foreignKey: 'service_id', label: 'invoice charge detail' }
+      { type: 'invoice_charge_detail', table: 'invoice_charge_details', foreignKey: 'service_id', label: 'invoice charge detail' },
+      { type: 'ticket_material', table: 'ticket_materials', foreignKey: 'service_id', label: 'ticket material' },
+      { type: 'project_material', table: 'project_materials', foreignKey: 'service_id', label: 'project material' }
     ]
   },
   tax_rate: {
@@ -346,6 +412,12 @@ export const DELETION_CONFIGS: Record<string, EntityDeletionConfig> = {
         table: 'asset_maintenance_schedules',
         foreignKey: 'asset_id',
         label: 'maintenance schedule'
+      },
+      {
+        type: 'ticket_entity_link',
+        table: 'ticket_entity_links',
+        label: 'ticket link',
+        countQuery: countTicketEntityLinks('asset')
       }
     ]
   },

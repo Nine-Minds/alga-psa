@@ -388,6 +388,8 @@ describe('message formatting', () => {
     expect(result.message).toContain('time entry');
     expect(result.message).toContain('schedule entry');
     expect(result.message).toContain('interaction');
+    expect(result.message).toContain('material');
+    expect(result.message).toContain('asset association');
   });
 
   it('pluralizes labels for counts > 1', async () => {
