@@ -34,6 +34,14 @@
       "import": "./src/clients/*.tsx",
       "types": "./src/clients/*.tsx"
     },
+    "./workflows": {
+      "import": "./src/workflows/index.ts",
+      "types": "./src/workflows/index.ts"
+    },
+    "./workflows/*": {
+      "import": "./src/workflows/*.tsx",
+      "types": "./src/workflows/*.tsx"
+    },
     "./tickets": {
       "import": "./src/tickets/index.ts",
       "types": "./src/tickets/index.ts"
@@ -60,6 +68,7 @@
     "@alga-psa/documents": "*",
     "@alga-psa/event-bus": "*",
     "@alga-psa/integrations": "*",
+    "@alga-psa/notifications": "*",
     "@alga-psa/projects": "*",
     "@alga-psa/reference-data": "*",
     "@alga-psa/scheduling": "*",
@@ -70,6 +79,7 @@
     "@alga-psa/ui": "*",
     "@alga-psa/users": "*",
     "@alga-psa/validation": "*",
+    "@alga-psa/workflows": "*",
     "axios": "^1.7.4"
   }
 }

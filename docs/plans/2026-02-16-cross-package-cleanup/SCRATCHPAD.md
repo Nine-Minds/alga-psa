@@ -134,3 +134,5 @@
 - (2026-02-17) Stage 8b: moved WorkItemDetailsDrawer, WorkItemDrawer, WorkItemPicker, AppointmentRequestsPanel, TechnicianDispatchDashboard, TimeEntryEditForm, TimeEntryProvider into `packages/msp-composition/src/scheduling` with re-export shims in scheduling; updated imports and scheduling index.
 
 - (2026-02-17) Stage 8b: updated technician dispatch server page import to `@alga-psa/msp-composition/scheduling`.
+
+- (2026-02-17) Stage 8c: moved ActivityDetailViewerDrawer, ProjectsSection, TicketsSection into `packages/msp-composition/src/workflows` with workflows shims; updated msp-composition exports/deps and import paths.

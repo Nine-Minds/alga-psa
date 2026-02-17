@@ -158,7 +158,7 @@
   {
     "id": "F027",
     "description": "Stage 8c: Move ActivityDetailViewerDrawer, ProjectsSection, TicketsSection to msp-composition/workflows (~9 violations)",
-    "implemented": false,
+    "implemented": true,
     "stage": 8
   },
   {
