@@ -13,8 +13,10 @@ import {
   projectTaskToActivity,
   timeEntryToActivity,
   workflowTaskToActivity,
+  type IScheduleEntry,
+  type IRecurrencePattern,
 } from '@alga-psa/types';
-import ScheduleEntry from '@alga-psa/scheduling/models/scheduleEntry';
+import { Frequency, RRule, Weekday } from 'rrule';
 import { withAuth } from '@alga-psa/auth';
 import { ISO8601String } from '@alga-psa/types';
 import { IWorkflowExecution } from '@alga-psa/shared/workflow/persistence/workflowInterfaces';
@@ -72,6 +74,307 @@ const cache = {
 function toPlainDate(isoString: string): string {
   const date = new Date(isoString);
   return date.toISOString().split('T')[0];
+}
+
+function applyTimeToDate(date: Date, time: Date): Date {
+  try {
+    const result = new Date(date);
+    result.setHours(time.getHours(), time.getMinutes(), time.getSeconds(), time.getMilliseconds());
+    return result;
+  } catch (error) {
+    console.error('[applyTimeToDate] Error applying time:', error);
+    return date;
+  }
+}
+
+function generateOccurrences(entry: IScheduleEntry, start: Date, end: Date): Date[] {
+  try {
+    if (!entry.recurrence_pattern) {
+      return [new Date(entry.scheduled_start)];
+    }
+    const pattern = entry.recurrence_pattern as IRecurrencePattern;
+
+    const dtstart = new Date(pattern.startDate);
+    if (isNaN(dtstart.getTime())) {
+      console.error('[generateOccurrences] Invalid start date:', pattern.startDate);
+      return [new Date(entry.scheduled_start)];
+    }
+    dtstart.setHours(0, 0, 0, 0);
+
+    let until: Date | undefined;
+    if (pattern.endDate) {
+      until = new Date(pattern.endDate);
+      if (isNaN(until.getTime())) {
+        console.error('[generateOccurrences] Invalid end date:', pattern.endDate);
+        return [new Date(entry.scheduled_start)];
+      }
+      until.setHours(23, 59, 59, 999);
+    }
+
+    const freqKey = pattern.frequency.toUpperCase() as keyof typeof RRule;
+    if (!(freqKey in RRule)) {
+      console.error('[generateOccurrences] Invalid frequency:', pattern.frequency);
+      return [new Date(entry.scheduled_start)];
+    }
+    const rrule = new RRule({
+      freq: RRule[freqKey] as Frequency,
+      interval: pattern.interval,
+      dtstart,
+      until,
+      byweekday: pattern.daysOfWeek?.map((day): Weekday => {
+        const days = 'MO TU WE TH FR SA SU'.split(' ');
+        if (day < 0 || day >= days.length) {
+          console.error('[generateOccurrences] Invalid day of week:', day);
+          return RRule.MO;
+        }
+        return RRule[days[day] as keyof typeof RRule] as Weekday;
+      }),
+      bymonthday: pattern.dayOfMonth,
+      bymonth: pattern.monthOfYear,
+      count: pattern.count,
+    });
+
+    const rangeStart = new Date(start);
+    if (isNaN(rangeStart.getTime())) {
+      console.error('[generateOccurrences] Invalid range start date:', start);
+      return [new Date(entry.scheduled_start)];
+    }
+    rangeStart.setHours(0, 0, 0, 0);
+    rangeStart.setSeconds(rangeStart.getSeconds() - 1);
+
+    const rangeEnd = new Date(end);
+    if (isNaN(rangeEnd.getTime())) {
+      console.error('[generateOccurrences] Invalid range end date:', end);
+      return [new Date(entry.scheduled_start)];
+    }
+    rangeEnd.setHours(23, 59, 59, 999);
+
+    const baseOccurrences = rrule.between(rangeStart, rangeEnd);
+
+    const originalTime = new Date(entry.scheduled_start);
+    if (isNaN(originalTime.getTime())) {
+      console.error('[generateOccurrences] Invalid scheduled start time:', entry.scheduled_start);
+      return baseOccurrences;
+    }
+
+    const masterStartDate = new Date(entry.scheduled_start);
+    const occurrencesWithTime = baseOccurrences
+      .filter((date): boolean => {
+        const dateStr = date.toISOString().split('T')[0];
+        const masterStr = masterStartDate.toISOString().split('T')[0];
+        return dateStr !== masterStr;
+      })
+      .map((date): Date => applyTimeToDate(date, originalTime));
+
+    if (pattern.exceptions && Array.isArray(pattern.exceptions)) {
+      try {
+        const validExceptions = pattern.exceptions
+          .map((d): Date | null => {
+            try {
+              const date = d instanceof Date ? d : new Date(d);
+              if (isNaN(date.getTime())) {
+                return null;
+              }
+              return date;
+            } catch {
+              return null;
+            }
+          })
+          .filter((d): d is Date => d !== null);
+
+        const exceptionDates = validExceptions.map((d): string => d.toISOString().split('T')[0]);
+
+        return occurrencesWithTime.filter((date: Date): boolean => {
+          const dateStr = date.toISOString().split('T')[0];
+          return !exceptionDates.includes(dateStr);
+        });
+      } catch (error) {
+        console.error('[generateOccurrences] Error processing exceptions:', error);
+        return occurrencesWithTime;
+      }
+    }
+
+    return occurrencesWithTime;
+  } catch (error) {
+    console.error('[generateOccurrences] Unexpected error:', error);
+    return [new Date(entry.scheduled_start)];
+  }
+}
+
+async function getAssignedUserIds(
+  knexOrTrx: Knex | Knex.Transaction,
+  tenant: string,
+  entryIds: (string | undefined)[]
+): Promise<Record<string, string[]>> {
+  if (!tenant) {
+    throw new Error('Tenant context is required for getting schedule entry assignees');
+  }
+
+  const validEntryIds = entryIds.filter((id): id is string => id !== undefined);
+  if (validEntryIds.length === 0) {
+    return {};
+  }
+
+  const assignments = await knexOrTrx('schedule_entry_assignees')
+    .where('schedule_entry_assignees.tenant', tenant)
+    .whereIn('entry_id', validEntryIds)
+    .join('users', function () {
+      this.on('schedule_entry_assignees.user_id', '=', 'users.user_id')
+        .andOn('schedule_entry_assignees.tenant', '=', 'users.tenant');
+    })
+    .select('entry_id', 'schedule_entry_assignees.user_id');
+
+  return assignments.reduce(
+    (acc: Record<string, string[]>, curr: { entry_id: string; user_id: string }) => {
+      if (!acc[curr.entry_id]) {
+        acc[curr.entry_id] = [];
+      }
+      acc[curr.entry_id].push(curr.user_id);
+      return acc;
+    },
+    {}
+  );
+}
+
+async function getRecurringEntriesWithAssignments(
+  knexOrTrx: Knex | Knex.Transaction,
+  tenant: string,
+  entries: IScheduleEntry[],
+  start: Date,
+  end: Date
+): Promise<IScheduleEntry[]> {
+  const result: IScheduleEntry[] = [];
+  const entryIds = entries.map((e): string => e.entry_id);
+  const assignedUserIds = await getAssignedUserIds(knexOrTrx, tenant, entryIds);
+
+  for (const entry of entries) {
+    if (!entry.recurrence_pattern) continue;
+
+    try {
+      if (typeof entry.recurrence_pattern === 'string') {
+        const pattern = JSON.parse(entry.recurrence_pattern) as IRecurrencePattern;
+        if (!pattern || Object.keys(pattern).length === 0) continue;
+
+        pattern.startDate = new Date(pattern.startDate);
+        pattern.startDate.setHours(0, 0, 0, 0);
+
+        if (pattern.endDate) {
+          pattern.endDate = new Date(pattern.endDate);
+          if (pattern.endDate < start) continue;
+        }
+        if (pattern.exceptions) {
+          pattern.exceptions = (pattern.exceptions || []).map((d): Date => new Date(d));
+        }
+        entry.recurrence_pattern = pattern;
+      }
+
+      const effectiveEnd =
+        entry.recurrence_pattern.endDate && entry.recurrence_pattern.endDate < end
+          ? entry.recurrence_pattern.endDate
+          : end;
+      const occurrences = generateOccurrences(entry, start, effectiveEnd);
+
+      const duration =
+        new Date(entry.scheduled_end).getTime() - new Date(entry.scheduled_start).getTime();
+      const virtualEntries = occurrences
+        .filter((occurrence) => {
+          const utcDate = new Date(occurrence);
+          utcDate.setUTCHours(0, 0, 0, 0);
+          return !entry.recurrence_pattern?.exceptions?.some((ex) => {
+            const exDate = new Date(ex);
+            exDate.setUTCHours(0, 0, 0, 0);
+            return exDate.getTime() === utcDate.getTime();
+          });
+        })
+        .map(
+          (occurrence): IScheduleEntry => ({
+            ...entry,
+            entry_id: `${entry.entry_id}_${occurrence.getTime()}`,
+            scheduled_start: occurrence,
+            scheduled_end: new Date(occurrence.getTime() + duration),
+            is_recurring: true,
+            original_entry_id: entry.entry_id,
+            assigned_user_ids: assignedUserIds[entry.entry_id] || [],
+          })
+        );
+
+      result.push(...virtualEntries);
+    } catch (error) {
+      console.error('Error processing recurring entry:', error);
+      continue;
+    }
+  }
+
+  return result;
+}
+
+async function getRecurringEntriesInRange(
+  knexOrTrx: Knex | Knex.Transaction,
+  tenant: string,
+  start: Date,
+  end: Date
+): Promise<IScheduleEntry[]> {
+  if (!tenant) {
+    throw new Error('Tenant context is required for getting recurring entries');
+  }
+
+  const masterEntries = await knexOrTrx('schedule_entries')
+    .where('schedule_entries.tenant', tenant)
+    .where('is_recurring', true)
+    .whereNotNull('recurrence_pattern')
+    .whereNull('original_entry_id')
+    .where('scheduled_start', '<=', end)
+    .andWhere(function () {
+      this.where('scheduled_end', '>=', start)
+        .orWhereRaw("(recurrence_pattern->>'endDate')::date >= ?", [start])
+        .orWhereRaw("(recurrence_pattern->>'endDate') IS NULL");
+    })
+    .select('*') as unknown as IScheduleEntry[];
+
+  if (masterEntries.length === 0) return [];
+
+  return getRecurringEntriesWithAssignments(knexOrTrx, tenant, masterEntries, start, end);
+}
+
+async function getScheduleEntriesForRange(
+  knexOrTrx: Knex | Knex.Transaction,
+  tenant: string,
+  start: Date,
+  end: Date
+): Promise<IScheduleEntry[]> {
+  if (!tenant) {
+    throw new Error('Tenant context is required for getting schedule entries');
+  }
+
+  const regularEntries = (await knexOrTrx('schedule_entries')
+    .where('schedule_entries.tenant', tenant)
+    .whereNull('original_entry_id')
+    .andWhere(function () {
+      this.where('is_recurring', false).orWhereNull('is_recurring');
+    })
+    .andWhere(function () {
+      this.whereBetween('scheduled_start', [start, end]).orWhereBetween('scheduled_end', [
+        start,
+        end,
+      ]);
+    })
+    .select('*')
+    .orderBy('scheduled_start', 'asc')) as unknown as IScheduleEntry[];
+
+  const virtualEntries = await getRecurringEntriesInRange(knexOrTrx, tenant, start, end);
+
+  const allEntries = [...regularEntries, ...virtualEntries];
+  if (allEntries.length === 0) return allEntries;
+
+  const entryIds = regularEntries.map((e): string => e.entry_id);
+  const assignedUserIds = await getAssignedUserIds(knexOrTrx, tenant, entryIds);
+
+  return allEntries.map(
+    (entry): IScheduleEntry => ({
+      ...entry,
+      assigned_user_ids: entry.assigned_user_ids || assignedUserIds[entry.entry_id] || [],
+    })
+  );
 }
 
 /**
@@ -185,7 +488,7 @@ export async function fetchScheduleActivities(
     if (!tenant) {
       throw new Error("Tenant is required");
     }
-    const entries = await ScheduleEntry.getAll(knex, tenant, start, end);
+    const entries = await getScheduleEntriesForRange(knex, tenant, start, end);
     
     // Filter entries assigned to the user
     let userEntries = entries.filter(entry =>
