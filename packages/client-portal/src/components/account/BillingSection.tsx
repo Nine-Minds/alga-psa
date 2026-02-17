@@ -37,8 +37,12 @@ export default function BillingSection() {
   const { t: tAccount } = useTranslation('client-portal');
   const { t: tBilling } = useTranslation('features/billing');
   const { t: tCommon } = useTranslation('common');
-  const tAccountBilling = (key: string, options?: Record<string, any>) =>
-    tAccount(`account.billing.${key}`, options);
+  const tAccountBilling = (key: string, options?: Record<string, any> | string): string => {
+    if (typeof options === 'string') {
+      return tAccount(`account.billing.${key}`, { defaultValue: options });
+    }
+    return tAccount(`account.billing.${key}`, options) as string;
+  };
   const [billingCycles, setBillingCycles] = useState<BillingCycle[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);

@@ -96,11 +96,11 @@ const Documents = ({
 }: DocumentsProps): React.JSX.Element => {
   const { t } = useTranslation(namespace);
   const documentKeyPrefix = namespace === 'common' ? 'documents.' : '';
-  const tDoc = (key: string, options?: Record<string, any> | string) => {
+  const tDoc = (key: string, options?: Record<string, any> | string): string => {
     if (typeof options === 'string') {
-      return t(`${documentKeyPrefix}${key}`, { defaultValue: options });
+      return t(`${documentKeyPrefix}${key}`, { defaultValue: options }) as string;
     }
-    return t(`${documentKeyPrefix}${key}`, options);
+    return t(`${documentKeyPrefix}${key}`, options) as string;
   };
   const router = useRouter();
   const searchParams = useSearchParams();

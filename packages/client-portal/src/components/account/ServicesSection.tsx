@@ -18,8 +18,12 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 export default function ServicesSection() {
   const { t: tAccount } = useTranslation('client-portal');
   const { t: tCommon } = useTranslation('common');
-  const tAccountServices = (key: string, options?: Record<string, any>) =>
-    tAccount(`account.services.${key}`, options);
+  const tAccountServices = (key: string, options?: Record<string, any> | string): string => {
+    if (typeof options === 'string') {
+      return tAccount(`account.services.${key}`, { defaultValue: options });
+    }
+    return tAccount(`account.services.${key}`, options) as string;
+  };
   const [services, setServices] = useState<Service[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');

@@ -31,11 +31,11 @@ export default function FolderSelectorModal({
   const { t } = useTranslation(namespace);
   const { t: tCommon } = useTranslation('common');
   const documentKeyPrefix = namespace === 'common' ? 'documents.' : '';
-  const tDoc = (key: string, options?: Record<string, any> | string) => {
+  const tDoc = (key: string, options?: Record<string, any> | string): string => {
     if (typeof options === 'string') {
-      return t(`${documentKeyPrefix}${key}`, { defaultValue: options });
+      return t(`${documentKeyPrefix}${key}`, { defaultValue: options }) as string;
     }
-    return t(`${documentKeyPrefix}${key}`, options);
+    return t(`${documentKeyPrefix}${key}`, options) as string;
   };
   const title = titleProp ?? tDoc('folderSelector.defaultTitle', 'Select Destination Folder');
   const description = descriptionProp ?? tDoc('folderSelector.defaultDescription', 'Choose where to save this document');
