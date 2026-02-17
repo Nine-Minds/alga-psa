@@ -201,7 +201,7 @@ describe('DeleteEntityDialog', () => {
       />
     );
 
-    expect(getByRole('button', { name: /cancel/i })).toBeDisabled();
+    expect((getByRole('button', { name: /cancel/i }) as HTMLButtonElement).disabled).toBe(true);
   });
 
   it('T056: calls onAlternativeAction with action type string', () => {

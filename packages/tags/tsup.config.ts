@@ -6,6 +6,7 @@ export default defineConfig({
     'actions/index': 'src/actions/index.ts',
     'components/index': 'src/components/index.ts',
     'context/index': 'src/context/index.ts',
+    'lib/tagCleanup': 'src/lib/tagCleanup.ts',
   },
   format: ['esm', 'cjs'],
   dts: true,
