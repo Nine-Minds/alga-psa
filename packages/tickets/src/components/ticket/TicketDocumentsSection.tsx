@@ -25,7 +25,7 @@ const TicketDocumentsSection: React.FC<TicketDocumentsSectionProps> = ({
   onDocumentCreated
 }) => {
   const router = useRouter();
-  const { t } = useTranslation('clientPortal');
+  const { t } = useTranslation('features/documents');
   const { data: session } = useSession();
   const userId = session?.user?.id || '';
 
@@ -83,7 +83,7 @@ const TicketDocumentsSection: React.FC<TicketDocumentsSectionProps> = ({
       <div {...withDataAutomationId({ id })} className={`${styles['card']}`}>
         <div className="p-6">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-bold">{t('tickets.documents.title', 'Documents')}</h2>
+            <h2 className="text-xl font-bold">{t('title', 'Documents')}</h2>
           </div>
           <Documents
             id={`${id}-documents`}
@@ -94,7 +94,7 @@ const TicketDocumentsSection: React.FC<TicketDocumentsSectionProps> = ({
             isLoading={isLoading}
             onDocumentCreated={handleDocumentCreated}
             uploadFormRef={uploadFormRef}
-            namespace="clientPortal"
+            namespace="features/documents"
           />
         </div>
       </div>

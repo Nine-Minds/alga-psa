@@ -96,7 +96,7 @@ export default function ClientTaskListView({
   loading = false,
   taskDependencies
 }: ClientTaskListViewProps) {
-  const { t, i18n } = useTranslation('clientPortal');
+  const { t, i18n } = useTranslation('features/projects');
   const dateLocale = getDateFnsLocale(i18n.language);
   const [expandedPhases, setExpandedPhases] = useState<Set<string>>(
     new Set(phases.map(p => p.phase_id))
@@ -268,8 +268,8 @@ export default function ClientTaskListView({
     return (
       <div className="text-center py-8 text-gray-500">
         {showTasks
-          ? t('projects.tasks.noTasks', 'No tasks to display')
-          : t('projects.phases.noPhases', 'No phases to display')}
+          ? t('tasks.noTasks', 'No tasks to display')
+          : t('phases.noPhases', 'No phases to display')}
       </div>
     );
   }
@@ -284,7 +284,7 @@ export default function ClientTaskListView({
         <Alert variant="info" className="rounded-none border-x-0 border-t-0">
           <AlertDescription className="flex items-center text-sm">
             <Zap className="h-4 w-4 mr-1" />
-            {hiddenColumnCount} {t('projects.columnsHidden', 'column(s) hidden due to limited space. Resize browser to see more.')}
+            {hiddenColumnCount} {t('columnsHidden', 'column(s) hidden due to limited space. Resize browser to see more.')}
           </AlertDescription>
         </Alert>
       )}
@@ -301,42 +301,42 @@ export default function ClientTaskListView({
               <th className="px-3 py-3" />
               {shouldShowColumn('task_name') && (
                 <th className="px-3 py-3 text-left text-xs font-medium text-gray-500">
-                  {t('projects.tasks.taskName')}
+                  {t('tasks.taskName')}
                 </th>
               )}
               {shouldShowColumn('dependencies') && (
                 <th className="px-3 py-3 text-left text-xs font-medium text-gray-500">
-                  {t('projects.tasks.dependencies')}
+                  {t('tasks.dependencies')}
                 </th>
               )}
               {shouldShowColumn('checklist_progress') && (
                 <th className="px-3 py-3 text-left text-xs font-medium text-gray-500">
-                  {t('projects.tasks.checklist')}
+                  {t('tasks.checklist')}
                 </th>
               )}
               {shouldShowColumn('assigned_to') && (
                 <th className="px-3 py-3 text-left text-xs font-medium text-gray-500">
-                  {t('projects.tasks.assignee')}
+                  {t('tasks.assignee')}
                 </th>
               )}
               {shouldShowColumn('estimated_hours') && (
                 <th className="px-3 py-3 text-left text-xs font-medium text-gray-500">
-                  {t('projects.tasks.estHours')}
+                  {t('tasks.estHours')}
                 </th>
               )}
               {shouldShowColumn('actual_hours') && (
                 <th className="px-3 py-3 text-left text-xs font-medium text-gray-500">
-                  {t('projects.tasks.hoursLogged')}
+                  {t('tasks.hoursLogged')}
                 </th>
               )}
               {shouldShowColumn('due_date') && (
                 <th className="px-3 py-3 text-left text-xs font-medium text-gray-500">
-                  {t('projects.tasks.dueDate')}
+                  {t('tasks.dueDate')}
                 </th>
               )}
               {shouldShowColumn('document_uploads') && (
                 <th className="px-3 py-3 text-left text-xs font-medium text-gray-500">
-                  {t('projects.tasks.attachments')}
+                  {t('tasks.attachments')}
                 </th>
               )}
             </tr>
@@ -372,7 +372,7 @@ export default function ClientTaskListView({
                             <span className="text-base font-semibold text-gray-900">{phase.phase_name}</span>
                             {showTasks && (
                               <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-700">
-                                {totalTasks} {totalTasks === 1 ? t('projects.task', 'task') : t('projects.tasks.title', 'tasks').toLowerCase()}
+                                {totalTasks} {totalTasks === 1 ? t('task', 'task') : t('tasks.title', 'tasks').toLowerCase()}
                               </span>
                             )}
                           </div>
@@ -388,13 +388,13 @@ export default function ClientTaskListView({
                               {phase.start_date && (
                                 <span className="flex items-center gap-1">
                                   <Calendar className="w-3.5 h-3.5" />
-                                  {t('projects.startDate', 'Start')}: {format(new Date(phase.start_date), 'PP', { locale: dateLocale })}
+                                  {t('startDate', 'Start')}: {format(new Date(phase.start_date), 'PP', { locale: dateLocale })}
                                 </span>
                               )}
                               {phase.end_date && (
                                 <span className="flex items-center gap-1">
                                   <Calendar className="w-3.5 h-3.5" />
-                                  {t('projects.endDate', 'End')}: {format(new Date(phase.end_date), 'PP', { locale: dateLocale })}
+                                  {t('endDate', 'End')}: {format(new Date(phase.end_date), 'PP', { locale: dateLocale })}
                                 </span>
                               )}
                             </div>
@@ -410,7 +410,7 @@ export default function ClientTaskListView({
                                 {phase.completion_percentage}%
                               </span>
                               <div className="text-xs text-gray-500">
-                                {t('projects.phases.completion', 'Complete')}
+                                {t('phases.completion', 'Complete')}
                               </div>
                             </div>
                           </div>
@@ -485,7 +485,7 @@ export default function ClientTaskListView({
                                         <div className="flex items-center gap-2">
                                           <span className="font-medium text-gray-900">{task.task_name}</span>
                                           {visibleFields.includes('priority') && task.priority_name && (
-                                            <Tooltip content={`${t('projects.tasks.priorityLevel', 'Priority level')}: ${task.priority_name}`}>
+                                            <Tooltip content={`${t('tasks.priorityLevel', 'Priority level')}: ${task.priority_name}`}>
                                               <div
                                                 className="w-2.5 h-2.5 rounded-full shrink-0"
                                                 style={{ backgroundColor: task.priority_color || '#6B7280' }}
@@ -517,7 +517,7 @@ export default function ClientTaskListView({
                                               <div className="text-xs space-y-2">
                                                 {deps.predecessors.length > 0 && (
                                                   <div>
-                                                    <div className="font-medium text-gray-300 mb-1">{t('projects.dependencies.dependsOn', 'Depends on')}:</div>
+                                                    <div className="font-medium text-gray-300 mb-1">{t('dependencies.dependsOn', 'Depends on')}:</div>
                                                     {deps.predecessors.map((d, i) => {
                                                       const isBlocking = d.dependency_type === 'blocks' || d.dependency_type === 'blocked_by';
                                                       return (
@@ -525,7 +525,7 @@ export default function ClientTaskListView({
                                                           <span className={isBlocking ? 'text-orange-400' : 'text-blue-400'}>
                                                             {isBlocking ? <Ban className="h-3 w-3" /> : <GitBranch className="h-3 w-3" />}
                                                           </span>
-                                                          <span>{d.predecessor_task?.task_name || t('projects.dependencies.unknownTask', 'Unknown task')}</span>
+                                                          <span>{d.predecessor_task?.task_name || t('dependencies.unknownTask', 'Unknown task')}</span>
                                                         </div>
                                                       );
                                                     })}
@@ -533,7 +533,7 @@ export default function ClientTaskListView({
                                                 )}
                                                 {deps.successors.length > 0 && (
                                                   <div>
-                                                    <div className="font-medium text-gray-300 mb-1">{t('projects.dependencies.blocks', 'Blocks')}:</div>
+                                                    <div className="font-medium text-gray-300 mb-1">{t('dependencies.blocks', 'Blocks')}:</div>
                                                     {deps.successors.map((d, i) => {
                                                       const isBlocking = d.dependency_type === 'blocks' || d.dependency_type === 'blocked_by';
                                                       return (
@@ -541,7 +541,7 @@ export default function ClientTaskListView({
                                                           <span className={isBlocking ? 'text-red-400' : 'text-blue-400'}>
                                                             {isBlocking ? <Ban className="h-3 w-3" /> : <GitBranch className="h-3 w-3" />}
                                                           </span>
-                                                          <span>{d.successor_task?.task_name || t('projects.dependencies.unknownTask', 'Unknown task')}</span>
+                                                          <span>{d.successor_task?.task_name || t('dependencies.unknownTask', 'Unknown task')}</span>
                                                         </div>
                                                       );
                                                     })}
@@ -568,7 +568,7 @@ export default function ClientTaskListView({
                                           content={
                                             task.checklist_items && task.checklist_items.length > 0 ? (
                                               <div className="text-xs space-y-1 max-w-xs">
-                                                <div className="font-medium text-gray-300 mb-1">{t('projects.tasks.checklistItems', 'Checklist Items')}:</div>
+                                                <div className="font-medium text-gray-300 mb-1">{t('tasks.checklistItems', 'Checklist Items')}:</div>
                                                 {task.checklist_items.map((item: { item_name: string; completed: boolean }, i: number) => (
                                                   <div key={i} className="flex items-center gap-1.5">
                                                     <CheckSquare className={`h-3 w-3 ${item.completed ? 'text-green-400' : 'text-gray-400'}`} />
@@ -577,7 +577,7 @@ export default function ClientTaskListView({
                                                 ))}
                                               </div>
                                             ) : (
-                                              <span>{task.checklist_completed ?? 0} {t('projects.tasks.of', 'of')} {task.checklist_total} {t('projects.tasks.complete', 'complete')}</span>
+                                              <span>{task.checklist_completed ?? 0} {t('tasks.of', 'of')} {task.checklist_total} {t('tasks.complete', 'complete')}</span>
                                             )
                                           }
                                         >
@@ -606,14 +606,14 @@ export default function ClientTaskListView({
                                         )}
                                         <span className="truncate">
                                           {task.assigned_to_name || (
-                                            <span className="text-gray-400">{t('projects.tasks.unassigned', 'Unassigned')}</span>
+                                            <span className="text-gray-400">{t('tasks.unassigned', 'Unassigned')}</span>
                                           )}
                                         </span>
                                         {task.additional_agents && task.additional_agents.length > 0 && (
                                           <Tooltip
                                             content={
                                               <div className="text-xs space-y-1.5">
-                                                <div className="font-medium text-gray-300 mb-1">{t('projects.tasks.additionalAgents', 'Additional Agents')}:</div>
+                                                <div className="font-medium text-gray-300 mb-1">{t('tasks.additionalAgents', 'Additional Agents')}:</div>
                                                 {task.additional_agents.map((agent, i) => (
                                                   <div key={i} className="flex items-center gap-2">
                                                     <UserAvatar
@@ -687,7 +687,7 @@ export default function ClientTaskListView({
               {/* Empty state for phase */}
               {showTasks && isPhaseExpanded && totalTasks === 0 && (
                 <div className="py-4 text-center text-sm text-gray-400 bg-gray-50">
-                  {t('projects.tasks.noTasks', 'No tasks in this phase')}
+                  {t('tasks.noTasks', 'No tasks in this phase')}
                 </div>
               )}
             </div>

@@ -18,7 +18,9 @@ import { hasPermission } from '@alga-psa/auth/rbac';
 import { withTransaction } from '@alga-psa/db';
 import { createTenantKnex } from '@alga-psa/db';
 import { Knex } from 'knex';
+import { deleteEntityWithValidation } from '@alga-psa/core';
 import { deleteEntityTags } from '@alga-psa/tags/lib/tagCleanup';
+import type { DeletionValidationResult } from '@alga-psa/types';
 import {
   ticketSchema,
   ticketUpdateSchema,
@@ -1143,7 +1145,7 @@ export const addTicketComment = withAuth(async (user, { tenant }, ticketId: stri
   }
 });
 
-async function deleteTicketTransactional(
+async function performTicketDelete(
   trx: Knex.Transaction,
   ticketId: string,
   tenant: string,
@@ -1164,20 +1166,27 @@ async function deleteTicketTransactional(
     throw new Error('Ticket not found');
   }
 
-  await trx('comments')
-    .where({
-      ticket_id: ticketId,
-      tenant: tenant
-    })
-    .delete();
-
   await deleteEntityTags(trx, ticketId, 'ticket');
 
+  // Clean up child records that are owned by the ticket
+  await trx('comments')
+    .where({ ticket_id: ticketId, tenant })
+    .delete();
+
+  await trx('ticket_resources')
+    .where({ ticket_id: ticketId, tenant })
+    .delete();
+
+  await trx('project_ticket_links')
+    .where({ ticket_id: ticketId, tenant })
+    .delete();
+
+  await trx('email_reply_tokens')
+    .where({ ticket_id: ticketId, tenant })
+    .delete();
+
   await trx('tickets')
-    .where({
-      ticket_id: ticketId,
-      tenant: tenant
-    })
+    .where({ ticket_id: ticketId, tenant })
     .delete();
 
   await publishEvent({
@@ -1197,43 +1206,36 @@ async function deleteTicketTransactional(
   }, user.user_id);
 }
 
-function normalizeTicketDeleteError(error: unknown): { raw: string; userFacing: string } {
-  const baseMessage = error instanceof Error ? error.message : String(error);
-
-  if (baseMessage && baseMessage.includes('ticket_resources_tenant_ticket_id_assigned_to_foreign')) {
-    const friendlyMessage = 'This ticket cannot be deleted because it has associated resources or tasks. Please remove them first.';
-    return {
-      raw: `VALIDATION_ERROR: ${friendlyMessage}`,
-      userFacing: friendlyMessage,
-    };
-  }
-
-  if (baseMessage && baseMessage.startsWith('VALIDATION_ERROR:')) {
-    return {
-      raw: baseMessage,
-      userFacing: baseMessage.replace('VALIDATION_ERROR: ', ''),
-    };
-  }
-
-  return {
-    raw: baseMessage || 'Failed to delete ticket',
-    userFacing: baseMessage || 'Failed to delete ticket',
-  };
-}
-
-export const deleteTicket = withAuth(async (user, { tenant }, ticketId: string): Promise<void> => {
+export const deleteTicket = withAuth(async (
+  user,
+  { tenant },
+  ticketId: string
+): Promise<DeletionValidationResult & { success: boolean; deleted?: boolean }> => {
   try {
-    const {knex: db} = await createTenantKnex();
-
-    await withTransaction(db, async (trx: Knex.Transaction) => {
-      await deleteTicketTransactional(trx, ticketId, tenant, user);
+    const { knex } = await createTenantKnex();
+    const result = await deleteEntityWithValidation('ticket', ticketId, knex, tenant, async (trx, tenantId) => {
+      await performTicketDelete(trx, ticketId, tenantId, user);
     });
 
-    revalidatePath('/msp/tickets');
+    if (result.deleted) {
+      revalidatePath('/msp/tickets');
+    }
+
+    return {
+      ...result,
+      success: result.deleted === true,
+      deleted: result.deleted
+    };
   } catch (error: unknown) {
     console.error('Failed to delete ticket:', error);
-    const { raw } = normalizeTicketDeleteError(error);
-    throw new Error(raw);
+    return {
+      success: false,
+      canDelete: false,
+      code: 'VALIDATION_FAILED',
+      message: error instanceof Error ? error.message : 'Failed to delete ticket',
+      dependencies: [],
+      alternatives: []
+    };
   }
 });
 
@@ -1247,21 +1249,30 @@ export const deleteTickets = withAuth(async (user, { tenant }, ticketIds: string
     return { deletedIds: [], failed: [] };
   }
 
-  const { knex: db } = await createTenantKnex();
-
   const deletedIds: string[] = [];
   const failed: Array<{ ticketId: string; message: string }> = [];
+  const { knex: ticketKnex } = await createTenantKnex();
 
   for (const ticketId of uniqueIds) {
     try {
-      await withTransaction(db, async (trx: Knex.Transaction) => {
-        await deleteTicketTransactional(trx, ticketId, tenant, user);
+      const result = await deleteEntityWithValidation('ticket', ticketId, ticketKnex, tenant, async (trx, tenantId) => {
+        await performTicketDelete(trx, ticketId, tenantId, user);
       });
-      deletedIds.push(ticketId);
+
+      if (result.deleted) {
+        deletedIds.push(ticketId);
+      } else {
+        failed.push({
+          ticketId,
+          message: result.message || 'Ticket could not be deleted'
+        });
+      }
     } catch (error: unknown) {
       console.error(`Failed to delete ticket ${ticketId}:`, error);
-      const { userFacing } = normalizeTicketDeleteError(error);
-      failed.push({ ticketId, message: userFacing });
+      failed.push({
+        ticketId,
+        message: error instanceof Error ? error.message : 'Failed to delete ticket'
+      });
     }
   }
 

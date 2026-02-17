@@ -31,6 +31,11 @@ import { toast } from 'react-hot-toast';
 import { validateContactName, validateEmailAddress, validatePhoneNumber } from '@alga-psa/validation';
 import { CalendarIntegrationsSettings } from '@alga-psa/integrations/components';
 import SettingsTabSkeleton from '@alga-psa/ui/components/skeletons/SettingsTabSkeleton';
+import { LanguagePreference } from '@alga-psa/ui/components/LanguagePreference';
+import { useFeatureFlag } from '@alga-psa/ui/hooks';
+import { getUserLocaleAction, updateUserLocaleAction } from '@alga-psa/users/actions';
+import { getInheritedLocaleAction } from '@alga-psa/tenancy/actions';
+import type { SupportedLocale } from '@alga-psa/ui/lib/i18n/config';
 
 // Dynamic import for EE SSO wrapper component
 const ConnectSsoWrapper = dynamic(
@@ -69,6 +74,11 @@ export default function UserProfile({ userId }: UserProfileProps) {
   const [countries, setCountries] = useState<ICountry[]>([]);
   const [countryCode, setCountryCode] = useState('US');
   const [notificationView, setNotificationView] = useState<NotificationView>('internal');
+  const { enabled: isMspI18nEnabled } = useFeatureFlag('msp-i18n-enabled', { defaultValue: false });
+  const [language, setLanguage] = useState<SupportedLocale | null>(null);
+  const [currentEffectiveLocale, setCurrentEffectiveLocale] = useState<SupportedLocale | undefined>(undefined);
+  const [inheritedSource, setInheritedSource] = useState<'client' | 'tenant' | 'system'>('system');
+  const [isLocaleLoading, setIsLocaleLoading] = useState(false);
   
   // Determine initial tab from URL or default to "Profile"
   const initialTab = useMemo(() => {
@@ -153,6 +163,36 @@ export default function UserProfile({ userId }: UserProfileProps) {
 
     init();
   }, [userId]);
+
+  useEffect(() => {
+    if (!isMspI18nEnabled) {
+      return;
+    }
+
+    let mounted = true;
+    const loadLocale = async () => {
+      setIsLocaleLoading(true);
+      try {
+        const userLocale = await getUserLocaleAction();
+        const inherited = await getInheritedLocaleAction();
+        if (!mounted) return;
+        setLanguage(userLocale);
+        setCurrentEffectiveLocale(inherited.locale);
+        setInheritedSource(inherited.source);
+      } catch (err) {
+        console.error('Error loading locale preferences:', err);
+      } finally {
+        if (mounted) {
+          setIsLocaleLoading(false);
+        }
+      }
+    };
+
+    loadLocale();
+    return () => {
+      mounted = false;
+    };
+  }, [isMspI18nEnabled]);
 
   const handleSave = async () => {
     if (!user) {
@@ -405,6 +445,25 @@ export default function UserProfile({ userId }: UserProfileProps) {
                 onValueChange={setTimezone}
               />
             </div>
+            {isMspI18nEnabled && (
+              <div className="pt-4 border-t border-gray-200">
+                <LanguagePreference
+                  value={language}
+                  currentEffectiveLocale={currentEffectiveLocale}
+                  inheritedSource={inheritedSource}
+                  onChange={async (locale) => {
+                    setLanguage(locale);
+                    if (locale === null) {
+                      await updateUserLocaleAction(null);
+                    } else {
+                      await updateUserLocaleAction(locale);
+                    }
+                  }}
+                  showNoneOption={true}
+                  loading={isLocaleLoading}
+                />
+              </div>
+            )}
           </CardContent>
         </Card>
       ),

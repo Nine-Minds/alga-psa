@@ -99,12 +99,12 @@ const DocumentPreview = ({ document, className }: DocumentPreviewProps): React.J
             <div className={`h-48 bg-[rgb(var(--color-border-100))] rounded-md overflow-hidden ${className}`}>
                 {preview.previewImage ? (
                     <div className="relative w-full h-full">
-                        {/* Preview image */}
+                        {/* Preview image — invert in dark mode so white PDF pages become dark */}
                         <Image
                             src={preview.previewImage}
                             alt={`Preview of ${document.document_name}`}
                             fill
-                            className="object-contain"
+                            className="object-contain dark:invert dark:hue-rotate-180"
                         />
                         {/* Page count overlay */}
                         <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white text-sm p-2 text-center">

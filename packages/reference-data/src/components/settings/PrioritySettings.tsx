@@ -1,13 +1,13 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Plus, MoreVertical, Palette } from "lucide-react";
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import ColorPicker from '@alga-psa/ui/components/ColorPicker';
-import { getAllPriorities, createPriority, deletePriority, updatePriority } from '@alga-psa/reference-data/actions';
+import { getAllPriorities, createPriority, deletePriority, updatePriority, validatePriorityDeletion } from '@alga-psa/reference-data/actions';
 import { importReferenceData, getAvailableReferenceData, checkImportConflicts, type ImportConflict } from '@alga-psa/reference-data/actions';
-import type { IPriority, IStandardPriority } from '@alga-psa/types';
+import type { IPriority, IStandardPriority, DeletionValidationResult } from '@alga-psa/types';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import type { ColumnDefinition } from '@alga-psa/types';
 import { toast } from 'react-hot-toast';
@@ -20,7 +20,7 @@ import {
 import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
-import { DeleteConfirmationDialog } from '@alga-psa/ui/components/settings/dialogs/DeleteConfirmationDialog';
+import { DeleteEntityDialog } from '@alga-psa/ui';
 
 interface PrioritySettingsProps {
   onShowConflictDialog?: (conflicts: ImportConflict[], type: 'priorities' | 'statuses', resolutions: Record<string, any>) => void;
@@ -44,8 +44,10 @@ const PrioritySettings = ({ onShowConflictDialog, initialPriorityType }: Priorit
   const [priorityColor, setPriorityColor] = useState('#6B7280');
   
   // Delete dialog state
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [priorityToDelete, setPriorityToDelete] = useState<IPriority | null>(null);
+  const [deleteValidation, setDeleteValidation] = useState<DeletionValidationResult | null>(null);
+  const [isDeleteValidating, setIsDeleteValidating] = useState(false);
+  const [isDeleteProcessing, setIsDeleteProcessing] = useState(false);
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -81,11 +83,37 @@ const PrioritySettings = ({ onShowConflictDialog, initialPriorityType }: Priorit
     }
   };
 
+  const resetDeleteState = () => {
+    setPriorityToDelete(null);
+    setDeleteValidation(null);
+    setIsDeleteValidating(false);
+    setIsDeleteProcessing(false);
+  };
+
+  const runDeleteValidation = useCallback(async (priorityId: string) => {
+    setIsDeleteValidating(true);
+    try {
+      const result = await validatePriorityDeletion(priorityId);
+      setDeleteValidation(result);
+    } catch (error) {
+      console.error('Error validating priority deletion:', error);
+      setDeleteValidation({
+        canDelete: false,
+        code: 'VALIDATION_FAILED',
+        message: 'Failed to validate deletion. Please try again.',
+        dependencies: [],
+        alternatives: []
+      });
+    } finally {
+      setIsDeleteValidating(false);
+    }
+  }, []);
+
   const handleDeletePriorityRequest = (priorityId: string): void => {
     const priority = priorities.find(p => p.priority_id === priorityId);
     if (priority && 'tenant' in priority) {
       setPriorityToDelete(priority as IPriority);
-      setShowDeleteDialog(true);
+      void runDeleteValidation(priorityId);
     }
   };
 
@@ -93,20 +121,27 @@ const PrioritySettings = ({ onShowConflictDialog, initialPriorityType }: Priorit
     if (!priorityToDelete) return;
 
     try {
-      await deletePriority(priorityToDelete.priority_id);
+      setIsDeleteProcessing(true);
+      const result = await deletePriority(priorityToDelete.priority_id);
+      if (!result.success) {
+        setDeleteValidation(result);
+        return;
+      }
+
       setPriorities(priorities.filter(p => p.priority_id !== priorityToDelete.priority_id));
       toast.success('Priority deleted successfully');
+      resetDeleteState();
     } catch (error) {
       console.error('Error deleting priority:', error);
-      const message = error instanceof Error ? error.message : 'Failed to delete priority';
-      if (message.toLowerCase().includes('in use') || message.toLowerCase().includes('referenced') || message.toLowerCase().includes('foreign key')) {
-        toast.error(`Cannot delete "${priorityToDelete.priority_name}" because it is currently in use.`);
-      } else {
-        toast.error(message);
-      }
+      setDeleteValidation({
+        canDelete: false,
+        code: 'VALIDATION_FAILED',
+        message: error instanceof Error ? error.message : 'Failed to delete priority',
+        dependencies: [],
+        alternatives: []
+      });
     } finally {
-      setShowDeleteDialog(false);
-      setPriorityToDelete(null);
+      setIsDeleteProcessing(false);
     }
   };
 
@@ -588,16 +623,15 @@ const PrioritySettings = ({ onShowConflictDialog, initialPriorityType }: Priorit
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation Dialog */}
-      <DeleteConfirmationDialog
-        isOpen={showDeleteDialog}
-        onClose={() => {
-          setShowDeleteDialog(false);
-          setPriorityToDelete(null);
-        }}
-        itemName={priorityToDelete?.priority_name || ''}
-        itemType="Priority"
-        onConfirm={confirmDeletePriority}
+      <DeleteEntityDialog
+        id="delete-priority-dialog"
+        isOpen={Boolean(priorityToDelete)}
+        onClose={resetDeleteState}
+        onConfirmDelete={confirmDeletePriority}
+        entityName={priorityToDelete?.priority_name || 'this priority'}
+        validationResult={deleteValidation}
+        isValidating={isDeleteValidating}
+        isDeleting={isDeleteProcessing}
       />
     </div>
   );

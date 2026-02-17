@@ -4,9 +4,10 @@
 
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
-import { IInteractionType, ISystemInteractionType } from '@alga-psa/types';
+import { IInteractionType, ISystemInteractionType, DeletionValidationResult } from '@alga-psa/types';
 import { createTenantKnex } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
+import { deleteEntityWithValidation } from '@alga-psa/core';
 
 export const getAllInteractionTypes = withAuth(async (user, { tenant }): Promise<IInteractionType[]> => {
   try {
@@ -142,34 +143,16 @@ export const updateInteractionType = withAuth(async (
   }
 });
 
-export const deleteInteractionType = withAuth(async (_user, { tenant }, typeId: string): Promise<void> => {
+export const deleteInteractionType = withAuth(async (
+  _user,
+  { tenant },
+  typeId: string
+): Promise<DeletionValidationResult & { deleted?: boolean }> => {
   try {
-    const { knex: db } = await createTenantKnex();
-
-    await withTransaction(db, async (trx: Knex.Transaction) => {
-      // Check if the type exists
-      const typeToDelete = await trx('interaction_types')
-        .where({ type_id: typeId, tenant: tenant })
-        .first();
-
-      if (!typeToDelete) {
-        throw new Error('Interaction type not found or not authorized');
-      }
-
-      // Check for existing records
-      const existingRecords = await trx('interactions')
-        .where({
-          type_id: typeId,
-          tenant: tenant
-        })
-        .first();
-
-      if (existingRecords) {
-        throw new Error('Cannot delete interaction type: records exist that use this type');
-      }
-
+    const { knex } = await createTenantKnex();
+    return await deleteEntityWithValidation('interaction_type', typeId, knex, tenant, async (trx, tenantId) => {
       const deletedCount = await trx('interaction_types')
-        .where({ type_id: typeId, tenant: tenant })
+        .where({ type_id: typeId, tenant: tenantId })
         .delete();
 
       if (deletedCount === 0) {
@@ -178,7 +161,7 @@ export const deleteInteractionType = withAuth(async (_user, { tenant }, typeId: 
     });
   } catch (error) {
     console.error('Error deleting interaction type:', error);
-    throw error; // Throw the original error to preserve the message
+    throw error;
   }
 });
 

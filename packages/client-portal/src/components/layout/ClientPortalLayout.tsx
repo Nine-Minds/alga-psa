@@ -37,7 +37,7 @@ export default function ClientPortalLayout({ children }: ClientPortalLayoutProps
   const [hasUserManagementAccess, setHasUserManagementAccess] = useState(false);
   const [hasAccountAccess, setHasAccountAccess] = useState(false);
   const router = useRouter();
-  const { t } = useTranslation('clientPortal');
+  const { t } = useTranslation('client-portal');
   const { branding } = useBranding();
 
   // Use SWR hook for contact avatar - automatically updates when invalidated

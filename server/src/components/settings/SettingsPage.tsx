@@ -11,6 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@alga
 import GeneralSettings from './general/GeneralSettings';
 import UserManagement from './general/UserManagement';
 import ClientPortalSettings from './general/ClientPortalSettings';
+import MspLanguageSettings from './general/MspLanguageSettings';
 import SettingsTabSkeleton from '@alga-psa/ui/components/skeletons/SettingsTabSkeleton';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { UnsavedChangesProvider } from "@alga-psa/ui";
@@ -46,6 +47,7 @@ import Link from 'next/link';
 // Removed import: import { getCurrentUser } from '@alga-psa/users/actions';
 import { ProjectSettings } from '@alga-psa/projects/components';
 import { SecretsManagement } from './secrets';
+import { useFeatureFlag } from '@alga-psa/ui/hooks';
 
 // Wrapper component with UnsavedChangesProvider
 type SettingsPageProps = {
@@ -70,6 +72,7 @@ const SettingsPageContent = ({ initialTabParam }: SettingsPageProps): React.JSX.
   // Extensions are conditionally available based on edition
   // The webpack alias will resolve to either the EE component or empty component
   const isEEAvailable = process.env.NEXT_PUBLIC_EDITION === 'enterprise';
+  const { enabled: isMspI18nEnabled } = useFeatureFlag('msp-i18n-enabled', { defaultValue: false });
 
   // Extensions dynamic imports moved to ExtensionManagement shared component
 
@@ -80,6 +83,7 @@ const SettingsPageContent = ({ initialTabParam }: SettingsPageProps): React.JSX.
     'client-portal': 'Client Portal',
     users: 'Users',
     teams: 'Teams',
+    ...(isMspI18nEnabled && { language: 'Language' }),
     ticketing: 'Ticketing',
     projects: 'Projects',
     interactions: 'Interactions',
@@ -91,7 +95,7 @@ const SettingsPageContent = ({ initialTabParam }: SettingsPageProps): React.JSX.
     email: 'Email',
     integrations: 'Integrations',
     ...(isEEAvailable && { extensions: 'Extensions' }) // Only add if EE is available
-  }), [isEEAvailable]);
+  }), [isEEAvailable, isMspI18nEnabled]);
 
   const initialTabLabel = useMemo(() => {
     const mappedLabel = tabParam
@@ -172,6 +176,11 @@ const SettingsPageContent = ({ initialTabParam }: SettingsPageProps): React.JSX.
         </Card>
       ),
     },
+    ...(isMspI18nEnabled ? [{
+      label: "Language",
+      icon: Globe,
+      content: <MspLanguageSettings />,
+    }] : []),
     {
       label: "Ticketing",
       icon: MessageSquare,

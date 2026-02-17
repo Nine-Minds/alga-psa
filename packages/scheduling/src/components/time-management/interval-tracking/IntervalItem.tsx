@@ -2,6 +2,7 @@ import React from 'react';
 import { TicketInterval } from '@alga-psa/types';
 import { formatDuration } from './utils';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
+import { Badge } from '@alga-psa/ui/components/Badge';
 
 interface IntervalItemProps {
   interval: TicketInterval;
@@ -33,7 +34,7 @@ export function IntervalItem({
   
   return (
     <div 
-      className={`border rounded p-2 flex items-center ${isSelected ? 'bg-blue-50 border-blue-300' : ''}`}
+      className={`border rounded p-2 flex items-center ${isSelected ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-300 dark:border-blue-700' : ''}`}
       id={`interval-item-${interval.id}`}
     >
       <Checkbox
@@ -53,17 +54,13 @@ export function IntervalItem({
           </span>
         </div>
         
-        <div className="text-sm text-gray-500 flex items-center">
+        <div className="text-sm text-gray-500 dark:text-[rgb(var(--color-text-400))] flex items-center">
           <span>{startDate}</span>
           {interval.autoClosed && (
-            <span className="ml-2 text-amber-600 text-xs bg-amber-50 px-1.5 py-0.5 rounded">
-              Auto-closed
-            </span>
+            <Badge variant="warning" size="sm" className="ml-2">Auto-closed</Badge>
           )}
           {!interval.endTime && (
-            <span className="ml-2 text-green-600 text-xs bg-green-50 px-1.5 py-0.5 rounded">
-              Active
-            </span>
+            <Badge variant="success" size="sm" className="ml-2">Active</Badge>
           )}
         </div>
       </div>

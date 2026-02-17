@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback, useMemo, Suspense } from 'react';
-import type { IDocument } from '@alga-psa/types';
+import type { DeletionValidationResult, IDocument } from '@alga-psa/types';
 import { IContact } from '@alga-psa/types';
 import type { IClient } from '@alga-psa/types';
 import { ITag } from '@alga-psa/types';
@@ -24,6 +24,7 @@ import {
   deleteClientLogo,
   getClientById,
   deleteClient,
+  validateClientDeletion,
   reactivateClientContacts,
   deactivateClientContacts,
   markClientInactiveWithContacts,
@@ -33,6 +34,7 @@ import {
   removeClientInboundEmailDomain,
 } from '@alga-psa/clients/actions';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
+import { DeleteEntityDialog } from '@alga-psa/ui';
 import CustomTabs from '@alga-psa/ui/components/CustomTabs';
 import { QuickAddTicket } from '@alga-psa/tickets/components/QuickAddTicket';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -70,7 +72,6 @@ import { ClientLanguagePreference } from '@alga-psa/clients/components/clients/C
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import ClientSurveySummaryCard from '@alga-psa/surveys/components/ClientSurveySummaryCard';
 import type { SurveyClientSatisfactionSummary } from '@alga-psa/types';
-import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 
 
 const SwitchDetailItem: React.FC<{
@@ -208,19 +209,9 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [isDeletingLogo, setIsDeletingLogo] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
-  const [showDeactivateOption, setShowDeactivateOption] = useState(false);
-  const [deleteDependencies, setDeleteDependencies] = useState<{
-    contacts?: number;
-    tickets?: number;
-    projects?: number;
-    invoices?: number;
-    documents?: number;
-    interactions?: number;
-    assets?: number;
-    service_usage?: number;
-    bucket_usage?: number;
-  } | null>(null);
+  const [deleteValidation, setDeleteValidation] = useState<DeletionValidationResult | null>(null);
+  const [isDeleteValidating, setIsDeleteValidating] = useState(false);
+  const [isDeleteProcessing, setIsDeleteProcessing] = useState(false);
   const [isReactivateDialogOpen, setIsReactivateDialogOpen] = useState(false);
   const [inactiveContactsToReactivate, setInactiveContactsToReactivate] = useState<IContact[]>([]);
   const [isDeactivateDialogOpen, setIsDeactivateDialogOpen] = useState(false);
@@ -249,30 +240,43 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   const drawer = useDrawer();
 
 
+  const runDeleteValidation = useCallback(async () => {
+    setIsDeleteValidating(true);
+    try {
+      const result = await validateClientDeletion(editedClient.client_id);
+      setDeleteValidation(result);
+    } catch (error: any) {
+      console.error('Failed to validate client deletion:', error);
+      setDeleteValidation({
+        canDelete: false,
+        code: 'VALIDATION_FAILED',
+        message: 'Failed to validate deletion. Please try again.',
+        dependencies: [],
+        alternatives: []
+      });
+    } finally {
+      setIsDeleteValidating(false);
+    }
+  }, [editedClient.client_id]);
+
   const handleDeleteClient = () => {
-    setDeleteError(null);
-    setShowDeactivateOption(false);
     setIsDeleteDialogOpen(true);
+    void runDeleteValidation();
   };
 
   const confirmDelete = async () => {
+    setIsDeleteProcessing(true);
     try {
       const result = await deleteClient(editedClient.client_id);
 
       if (!result.success) {
-        if ('code' in result && result.code === 'COMPANY_HAS_DEPENDENCIES') {
-          handleDependencyError(result);
-          setShowDeactivateOption(true);
-          return;
-        }
-        throw new Error(result.message || 'Failed to delete client');
+        setDeleteValidation(result);
+        return;
       }
 
-      setIsDeleteDialogOpen(false);
-
+      resetDeleteState();
       toast.success("Client has been deleted successfully.");
 
-      // Navigate back or close drawer depending on context
       if (isInDrawer) {
         drawer.closeDrawer();
       } else {
@@ -280,9 +284,22 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       }
     } catch (error: any) {
       console.error('Failed to delete client:', error);
-      const errorMessage = error.message || 'Failed to delete client. Please try again.';
-      // Only set the error in state - dialog already displays it, avoid duplicate toast
-      setDeleteError(errorMessage);
+      toast.error(error.message || 'Failed to delete client. Please try again.');
+    } finally {
+      setIsDeleteProcessing(false);
+    }
+  };
+
+  const handleDeleteAlternativeAction = async (action: string) => {
+    if (action !== 'deactivate') {
+      return;
+    }
+
+    setIsDeleteProcessing(true);
+    try {
+      await handleMarkClientInactiveAll();
+    } finally {
+      setIsDeleteProcessing(false);
     }
   };
 
@@ -467,27 +484,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
 
   const resetDeleteState = () => {
     setIsDeleteDialogOpen(false);
-    setDeleteError(null);
-    setShowDeactivateOption(false);
-    setDeleteDependencies(null);
-  };
-
-  // Helper function to handle dependency errors (copied from main Clients page)
-  const handleDependencyError = (result: any) => {
-    // Use counts from the result which contains: contact, ticket, project, invoice, etc.
-    // Only include counts that are > 0
-    const counts = result.counts || {};
-    setDeleteDependencies({
-      contacts: counts['contact'] > 0 ? counts['contact'] : undefined,
-      tickets: counts['ticket'] > 0 ? counts['ticket'] : undefined,
-      projects: counts['project'] > 0 ? counts['project'] : undefined,
-      invoices: counts['invoice'] > 0 ? counts['invoice'] : undefined,
-      documents: counts['document'] > 0 ? counts['document'] : undefined,
-      interactions: counts['interaction'] > 0 ? counts['interaction'] : undefined,
-      assets: counts['asset'] > 0 ? counts['asset'] : undefined,
-      service_usage: counts['service_usage'] > 0 ? counts['service_usage'] : undefined,
-      bucket_usage: counts['bucket_usage'] > 0 ? counts['bucket_usage'] : undefined,
-    });
+    setDeleteValidation(null);
   };
 
   // 1. Implement refreshClientData function
@@ -1441,109 +1438,16 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
         </Dialog>
 
         {/* Delete Confirmation Dialog */}
-        <ConfirmationDialog
+        <DeleteEntityDialog
           id="delete-client-dialog"
           isOpen={isDeleteDialogOpen}
           onClose={resetDeleteState}
-          onConfirm={editedClient.is_inactive && showDeactivateOption ? resetDeleteState : showDeactivateOption ? handleMarkClientInactiveAll : confirmDelete}
-          title="Delete Client"
-          message={
-            editedClient.is_inactive && showDeactivateOption && deleteDependencies ? (
-              <div className="space-y-4">
-                <div className="bg-amber-50 border border-amber-200 rounded-md p-4">
-                  <p className="text-amber-800">
-                    <span className="font-semibold">Note:</span> This client is already marked as inactive.
-                  </p>
-                </div>
-                <p className="text-gray-700">Unable to delete this client due to the following associated records:</p>
-                <ul className="list-disc list-inside space-y-1 text-gray-700">
-                  {deleteDependencies.contacts && deleteDependencies.contacts > 0 && (
-                    <li>{deleteDependencies.contacts} contact{deleteDependencies.contacts !== 1 ? 's' : ''}</li>
-                  )}
-                  {deleteDependencies.tickets && deleteDependencies.tickets > 0 && (
-                    <li>{deleteDependencies.tickets} ticket{deleteDependencies.tickets !== 1 ? 's' : ''}</li>
-                  )}
-                  {deleteDependencies.projects && deleteDependencies.projects > 0 && (
-                    <li>{deleteDependencies.projects} project{deleteDependencies.projects !== 1 ? 's' : ''}</li>
-                  )}
-                  {deleteDependencies.invoices && deleteDependencies.invoices > 0 && (
-                    <li>{deleteDependencies.invoices} invoice{deleteDependencies.invoices !== 1 ? 's' : ''}</li>
-                  )}
-                  {deleteDependencies.documents && deleteDependencies.documents > 0 && (
-                    <li>{deleteDependencies.documents} document{deleteDependencies.documents !== 1 ? 's' : ''}</li>
-                  )}
-                  {deleteDependencies.interactions && deleteDependencies.interactions > 0 && (
-                    <li>{deleteDependencies.interactions} interaction{deleteDependencies.interactions !== 1 ? 's' : ''}</li>
-                  )}
-                  {deleteDependencies.assets && deleteDependencies.assets > 0 && (
-                    <li>{deleteDependencies.assets} asset{deleteDependencies.assets !== 1 ? 's' : ''}</li>
-                  )}
-                  {deleteDependencies.service_usage && deleteDependencies.service_usage > 0 && (
-                    <li>{deleteDependencies.service_usage} service usage record{deleteDependencies.service_usage !== 1 ? 's' : ''}</li>
-                  )}
-                  {deleteDependencies.bucket_usage && deleteDependencies.bucket_usage > 0 && (
-                    <li>{deleteDependencies.bucket_usage} bucket usage record{deleteDependencies.bucket_usage !== 1 ? 's' : ''}</li>
-                  )}
-                </ul>
-                <p className="text-gray-700">Please remove or reassign these items before deleting the client.</p>
-              </div>
-            ) : showDeactivateOption && deleteDependencies ? (
-              <div className="space-y-4">
-                <p className="text-gray-700">Unable to delete this client.</p>
-                <div>
-                  <p className="text-gray-700 mb-2">This client has the following associated records:</p>
-                  <ul className="list-disc list-inside space-y-1 text-gray-700">
-                    {deleteDependencies.contacts && deleteDependencies.contacts > 0 && (
-                      <li>{deleteDependencies.contacts} contact{deleteDependencies.contacts !== 1 ? 's' : ''}</li>
-                    )}
-                    {deleteDependencies.tickets && deleteDependencies.tickets > 0 && (
-                      <li>{deleteDependencies.tickets} ticket{deleteDependencies.tickets !== 1 ? 's' : ''}</li>
-                    )}
-                    {deleteDependencies.projects && deleteDependencies.projects > 0 && (
-                      <li>{deleteDependencies.projects} project{deleteDependencies.projects !== 1 ? 's' : ''}</li>
-                    )}
-                    {deleteDependencies.invoices && deleteDependencies.invoices > 0 && (
-                      <li>{deleteDependencies.invoices} invoice{deleteDependencies.invoices !== 1 ? 's' : ''}</li>
-                    )}
-                    {deleteDependencies.documents && deleteDependencies.documents > 0 && (
-                      <li>{deleteDependencies.documents} document{deleteDependencies.documents !== 1 ? 's' : ''}</li>
-                    )}
-                    {deleteDependencies.interactions && deleteDependencies.interactions > 0 && (
-                      <li>{deleteDependencies.interactions} interaction{deleteDependencies.interactions !== 1 ? 's' : ''}</li>
-                    )}
-                    {deleteDependencies.assets && deleteDependencies.assets > 0 && (
-                      <li>{deleteDependencies.assets} asset{deleteDependencies.assets !== 1 ? 's' : ''}</li>
-                    )}
-                    {deleteDependencies.service_usage && deleteDependencies.service_usage > 0 && (
-                      <li>{deleteDependencies.service_usage} service usage record{deleteDependencies.service_usage !== 1 ? 's' : ''}</li>
-                    )}
-                    {deleteDependencies.bucket_usage && deleteDependencies.bucket_usage > 0 && (
-                      <li>{deleteDependencies.bucket_usage} bucket usage record{deleteDependencies.bucket_usage !== 1 ? 's' : ''}</li>
-                    )}
-                  </ul>
-                </div>
-                <Alert variant="info">
-                  <AlertDescription>
-                    <strong>Alternative Option:</strong> You can mark this client as inactive instead. Inactive clients are hidden from most views but retain all their data and can be marked as active later.
-                    {deleteDependencies.contacts && deleteDependencies.contacts > 0 && (
-                      <p className="mt-2">
-                        Would you like to also deactivate the {deleteDependencies.contacts} associated contact{deleteDependencies.contacts !== 1 ? 's' : ''}?
-                      </p>
-                    )}
-                  </AlertDescription>
-                </Alert>
-              </div>
-            ) : deleteError ? (
-              deleteError
-            ) : (
-              "Are you sure you want to delete this client? This action cannot be undone."
-            )
-          }
-          confirmLabel={editedClient.is_inactive && showDeactivateOption ? "Close" : showDeactivateOption ? (deleteDependencies?.contacts && deleteDependencies.contacts > 0 ? "Client & Contacts" : "Mark as Inactive") : "Delete"}
-          cancelLabel="Cancel"
-          onCancel={showDeactivateOption && deleteDependencies?.contacts && deleteDependencies.contacts > 0 ? handleMarkClientInactiveOnly : undefined}
-          thirdButtonLabel={showDeactivateOption && deleteDependencies?.contacts && deleteDependencies.contacts > 0 ? "Client Only" : undefined}
-          isConfirming={false}
+          onConfirmDelete={confirmDelete}
+          onAlternativeAction={handleDeleteAlternativeAction}
+          entityName={editedClient.client_name}
+          validationResult={deleteValidation}
+          isValidating={isDeleteValidating}
+          isDeleting={isDeleteProcessing}
         />
 
         {/* Deactivate Confirmation Dialog */}

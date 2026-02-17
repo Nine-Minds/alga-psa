@@ -6,10 +6,11 @@ import { z } from 'zod';
 
 import { createTenantKnex, runWithTenant } from '@alga-psa/db';
 import { withAuth, hasPermission } from '@alga-psa/auth';
-import type { IBoard, IPriority, IStatus, IUserWithRoles } from '@alga-psa/types';
-import { getAllBoards } from '@alga-psa/db/actions';
+import type { IBoard, IPriority, IStatus, IUserWithRoles, DeletionValidationResult } from '@alga-psa/types';
+import { getAllBoards } from '@alga-psa/tickets/actions';
 import { getTicketStatuses } from '@alga-psa/reference-data/actions';
 import { getAllPriorities } from '@alga-psa/reference-data/actions';
+import { deleteEntityWithValidation } from '@alga-psa/core';
 
 const SURVEY_TEMPLATE_TABLE = 'survey_templates';
 const SURVEY_TRIGGER_TABLE = 'survey_triggers';
@@ -214,15 +215,38 @@ export const updateSurveyTemplate = withAuth(async (_user, { tenant }, templateI
   return mapTemplateRow(updated);
 });
 
-export const deleteSurveyTemplate = withAuth(async (_user, { tenant }, templateId: string): Promise<void> => {
-  const { knex } = await createTenantKnex();
+export const deleteSurveyTemplate = withAuth(async (
+  _user,
+  { tenant },
+  templateId: string
+): Promise<DeletionValidationResult & { success: boolean; deleted?: boolean }> => {
+  try {
+    const { knex } = await createTenantKnex();
+    const result = await deleteEntityWithValidation('survey_template', templateId, knex, tenant, async (trx, tenantId) => {
+      const deleted = await trx(SURVEY_TEMPLATE_TABLE)
+        .where({ tenant: tenantId, template_id: templateId })
+        .del();
 
-  const deleted = await knex(SURVEY_TEMPLATE_TABLE)
-    .where({ tenant, template_id: templateId })
-    .del();
+      if (deleted === 0) {
+        throw new Error('Survey template not found');
+      }
+    });
 
-  if (deleted === 0) {
-    throw new Error('Survey template not found');
+    return {
+      ...result,
+      success: result.deleted === true,
+      deleted: result.deleted
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to delete survey template';
+    return {
+      success: false,
+      canDelete: false,
+      code: 'VALIDATION_FAILED',
+      message,
+      dependencies: [],
+      alternatives: []
+    };
   }
 });
 
@@ -498,8 +522,8 @@ const getProjectStatusesForSurveys = withAuth(async (user, { tenant }): Promise<
     }
 
     return (await trx('statuses')
-      .where({ tenant, item_type: 'project' })
-      .orderBy('display_order', 'asc')
+      .where({ tenant, status_type: 'project' })
+      .orderBy('order_number', 'asc')
       .orderBy('name', 'asc')) as unknown as IStatus[];
   });
 });

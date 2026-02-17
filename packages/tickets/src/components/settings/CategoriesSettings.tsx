@@ -3,12 +3,13 @@
 import { useEffect, useState } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Plus, MoreVertical, CornerDownRight } from "lucide-react";
-import type { ITicketCategory } from '@alga-psa/types';
+import type { ITicketCategory, DeletionValidationResult } from '@alga-psa/types';
 import {
   getAllCategories,
   createCategory,
   updateCategory,
-  deleteCategory
+  deleteCategory,
+  validateCategoryDeletion
 } from '@alga-psa/tickets/actions';
 import { getAllBoards } from '@alga-psa/tickets/actions';
 import type { IBoard } from '@alga-psa/types';
@@ -20,7 +21,7 @@ import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Label } from '@alga-psa/ui/components/Label';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import type { ColumnDefinition } from '@alga-psa/types';
-import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
+import { DeleteEntityDialog } from '@alga-psa/ui';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import {
   DropdownMenu,
@@ -33,22 +34,14 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 const CategoriesSettings = (): React.JSX.Element => {
   const [categories, setCategories] = useState<ITicketCategory[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [deleteDialog, setDeleteDialog] = useState<{
-    isOpen: boolean;
-    categoryId: string;
-    categoryName: string;
-    confirmForce?: boolean;
-    message?: string;
-    blockingError?: {
-      code: string;
-      message: string;
-      counts?: Record<string, number>;
-    };
-  }>({
+  const [deleteDialog, setDeleteDialog] = useState({
     isOpen: false,
     categoryId: '',
     categoryName: ''
   });
+  const [deleteValidation, setDeleteValidation] = useState<DeletionValidationResult | null>(null);
+  const [isDeleteValidating, setIsDeleteValidating] = useState(false);
+  const [isDeleteProcessing, setIsDeleteProcessing] = useState(false);
   
   // State for Add/Edit Dialog
   const [showAddEditDialog, setShowAddEditDialog] = useState(false);
@@ -132,53 +125,62 @@ const CategoriesSettings = (): React.JSX.Element => {
     setError(null);
   };
 
+  const resetDeleteDialog = () => {
+    setDeleteDialog({ isOpen: false, categoryId: '', categoryName: '' });
+    setDeleteValidation(null);
+    setIsDeleteValidating(false);
+    setIsDeleteProcessing(false);
+  };
+
+  const openDeleteDialog = async (category: ITicketCategory) => {
+    setDeleteDialog({
+      isOpen: true,
+      categoryId: category.category_id,
+      categoryName: category.category_name
+    });
+    setIsDeleteValidating(true);
+    try {
+      const validation = await validateCategoryDeletion(category.category_id);
+      setDeleteValidation(validation);
+    } catch (error) {
+      console.error('Error validating category deletion:', error);
+      setDeleteValidation({
+        canDelete: false,
+        code: 'VALIDATION_FAILED',
+        message: error instanceof Error ? error.message : 'Failed to validate category deletion.',
+        dependencies: [],
+        alternatives: []
+      });
+    } finally {
+      setIsDeleteValidating(false);
+    }
+  };
+
   const handleDeleteCategory = async (force = false) => {
+    setIsDeleteProcessing(true);
     try {
       const result = await deleteCategory(deleteDialog.categoryId, force);
 
-      if (result.success) {
+      if (result.deleted || result.success) {
         toast.success(result.message || 'Category deleted successfully');
-        setDeleteDialog({ isOpen: false, categoryId: '', categoryName: '' });
+        resetDeleteDialog();
         await fetchCategories();
         return;
       }
 
-      // Handle different error codes
-      switch (result.code) {
-        case 'CATEGORY_HAS_SUBCATEGORIES':
-          // Show confirmation dialog to force delete subcategories
-          setDeleteDialog({
-            ...deleteDialog,
-            confirmForce: true,
-            message: result.message,
-            blockingError: undefined
-          });
-          break;
-        case 'CATEGORY_HAS_TICKETS':
-        case 'ITIL_CATEGORY_PROTECTED':
-          // Blocking errors - show in dialog, not toast
-          setDeleteDialog({
-            ...deleteDialog,
-            blockingError: {
-              code: result.code || 'UNKNOWN',
-              message: result.message || 'Cannot delete category',
-              counts: result.counts
-            }
-          });
-          break;
-        case 'NOT_FOUND':
-        case 'NO_TENANT':
-        case 'UNAUTHORIZED':
-        default:
-          // Fatal errors - show toast and close dialog
-          toast.error(result.message || 'Failed to delete category');
-          setDeleteDialog({ isOpen: false, categoryId: '', categoryName: '' });
-          break;
-      }
+      setDeleteValidation(result);
     } catch (error) {
       console.error('Error deleting category:', error);
       toast.error(error instanceof Error ? error.message : 'Failed to delete category');
-      setDeleteDialog({ isOpen: false, categoryId: '', categoryName: '' });
+      resetDeleteDialog();
+    } finally {
+      setIsDeleteProcessing(false);
+    }
+  };
+
+  const handleDeleteAlternativeAction = async (action: string) => {
+    if (action === 'force_delete') {
+      await handleDeleteCategory(true);
     }
   };
 
@@ -391,11 +393,7 @@ const CategoriesSettings = (): React.JSX.Element => {
             </DropdownMenuItem>
             <DropdownMenuItem
               id={`delete-category-${value}-button`}
-              onClick={() => setDeleteDialog({
-                isOpen: true,
-                categoryId: value,
-                categoryName: record.category_name
-              })}
+              onClick={() => openDeleteDialog(record)}
               className="text-red-600"
             >
               Delete
@@ -474,56 +472,16 @@ const CategoriesSettings = (): React.JSX.Element => {
         </div>
       </div>
 
-      <ConfirmationDialog
+      <DeleteEntityDialog
+        id="delete-category-dialog"
         isOpen={deleteDialog.isOpen}
-        onClose={() => setDeleteDialog({ isOpen: false, categoryId: '', categoryName: '' })}
-        onConfirm={() => {
-          if (deleteDialog.blockingError) {
-            // Just close the dialog when there's a blocking error
-            setDeleteDialog({ isOpen: false, categoryId: '', categoryName: '' });
-          } else {
-            handleDeleteCategory(deleteDialog.confirmForce || false);
-          }
-        }}
-        title={
-          deleteDialog.blockingError
-            ? "Cannot Delete Category"
-            : deleteDialog.confirmForce
-              ? "Delete Category and Subcategories"
-              : "Delete Category"
-        }
-        message={
-          deleteDialog.blockingError ? (
-            <div className="space-y-4">
-              <p className="text-gray-700">Unable to delete this category.</p>
-              <div className="bg-amber-50 border border-amber-200 rounded-md p-4">
-                <p className="text-amber-800">{deleteDialog.blockingError.message}</p>
-                {deleteDialog.blockingError.counts && Object.keys(deleteDialog.blockingError.counts).length > 0 && (
-                  <ul className="list-disc list-inside mt-2 text-amber-700">
-                    {Object.entries(deleteDialog.blockingError.counts).map(([key, count]) => {
-                      const label = key.replace(/_/g, ' ');
-                      // Don't add 's' if label already ends in 's' or for count of 1
-                      const pluralLabel = count === 1
-                        ? label.replace(/s$/, '') // Remove trailing 's' for singular
-                        : label.endsWith('s') ? label : label + 's';
-                      return <li key={key}>{count} {pluralLabel}</li>;
-                    })}
-                  </ul>
-                )}
-              </div>
-              <p className="text-gray-600 text-sm">
-                {deleteDialog.blockingError.code === 'CATEGORY_HAS_TICKETS'
-                  ? 'Please reassign or delete the tickets before deleting this category.'
-                  : deleteDialog.blockingError.code === 'ITIL_CATEGORY_PROTECTED'
-                    ? 'Delete the ITIL boards first to remove ITIL categories.'
-                    : 'Please resolve the above issues before deleting this category.'}
-              </p>
-            </div>
-          ) : deleteDialog.confirmForce
-            ? `${deleteDialog.message} This will permanently delete the category and all its subcategories.`
-            : `Are you sure you want to delete "${deleteDialog.categoryName}"? This action cannot be undone.`
-        }
-        confirmLabel={deleteDialog.blockingError ? "Close" : deleteDialog.confirmForce ? "Delete All" : "Delete"}
+        onClose={resetDeleteDialog}
+        onConfirmDelete={() => handleDeleteCategory(false)}
+        onAlternativeAction={handleDeleteAlternativeAction}
+        entityName={deleteDialog.categoryName || 'category'}
+        validationResult={deleteValidation}
+        isValidating={isDeleteValidating}
+        isDeleting={isDeleteProcessing}
       />
 
       {/* Add/Edit Dialog */}

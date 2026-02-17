@@ -9,10 +9,10 @@ import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { ExternalLink, Check, X } from 'lucide-react';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
-import { useDrawer } from "@alga-psa/ui";
+import { useDrawer, DeleteEntityDialog } from "@alga-psa/ui";
 import { format, isWeekend, addYears } from 'date-fns';
 import { formatInTimeZone } from 'date-fns-tz';
-import { IScheduleEntry, IRecurrencePattern, IEditScope } from '@alga-psa/types';
+import { IScheduleEntry, IRecurrencePattern, IEditScope, DeletionValidationResult } from '@alga-psa/types';
 import { AddWorkItemDialog } from '@alga-psa/scheduling/components/time-management/time-entry/time-sheet/AddWorkItemDialog';
 import { IWorkItem, IExtendedWorkItem } from '@alga-psa/types';
 import { getWorkItemById } from '@alga-psa/scheduling/actions';
@@ -23,6 +23,7 @@ import SelectedWorkItem from '@alga-psa/scheduling/components/time-management/ti
 import { DateTimePicker } from '@alga-psa/ui/components/DateTimePicker';
 import { IUser } from '@shared/interfaces/user.interfaces';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
+import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
 import {
   approveAppointmentRequest as approveRequest,
   declineAppointmentRequest as declineRequest,
@@ -44,7 +45,7 @@ interface EntryPopupProps {
   };
   onClose: () => void;
   onSave: (entryData: Omit<IScheduleEntry, 'tenant'> & { updateType?: string }) => void;
-  onDelete?: (entryId: string, deleteType?: IEditScope) => void;
+  onDelete?: (entryId: string, deleteType?: IEditScope) => Promise<DeletionValidationResult & { success: boolean; deleted?: boolean; error?: string; isPrivateError?: boolean }>;
   canAssignMultipleAgents: boolean;
   users: IUser[];
   currentUserId: string;
@@ -409,15 +410,75 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
 
   const [showRecurrenceDialog, setShowRecurrenceDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [deleteValidation, setDeleteValidation] = useState<DeletionValidationResult | null>(null);
+  const [isDeleteValidating, setIsDeleteValidating] = useState(false);
+  const [isDeleteProcessing, setIsDeleteProcessing] = useState(false);
+  const [pendingDeleteScope, setPendingDeleteScope] = useState<IEditScope | undefined>(undefined);
   const [pendingUpdateData, setPendingUpdateData] = useState<Omit<IScheduleEntry, 'tenant'>>();
 
-  const handleDeleteConfirm = (selected?: string) => {
-    if (event && onDelete) {
-      const deleteType = event.is_recurring ? (selected as IEditScope) : undefined;
-      onDelete(event.entry_id, deleteType);
+  useEffect(() => {
+    if (!isDeleteDialogOpen || !event) {
+      return;
     }
+
+    const runValidation = async () => {
+      setIsDeleteValidating(true);
+      try {
+        const result = await preCheckDeletion('schedule_entry', event.entry_id);
+        setDeleteValidation(result);
+      } catch (error) {
+        console.error('Failed to validate schedule entry deletion:', error);
+        setDeleteValidation({
+          canDelete: false,
+          code: 'VALIDATION_FAILED',
+          message: 'Failed to validate deletion. Please try again.',
+          dependencies: [],
+          alternatives: []
+        });
+      } finally {
+        setIsDeleteValidating(false);
+      }
+    };
+
+    void runValidation();
+  }, [event, isDeleteDialogOpen]);
+
+  const resetDeleteState = () => {
     setShowDeleteDialog(false);
-    onClose();
+    setIsDeleteDialogOpen(false);
+    setDeleteValidation(null);
+    setIsDeleteValidating(false);
+    setIsDeleteProcessing(false);
+    setPendingDeleteScope(undefined);
+  };
+
+  const handleDeleteConfirm = (selected?: string) => {
+    if (event) {
+      setPendingDeleteScope(event.is_recurring ? (selected as IEditScope) : undefined);
+      setShowDeleteDialog(false);
+      setIsDeleteDialogOpen(true);
+    }
+  };
+
+  const handleDeleteDialogConfirm = async () => {
+    if (!event || !onDelete) {
+      resetDeleteState();
+      onClose();
+      return;
+    }
+    setIsDeleteProcessing(true);
+    try {
+      const result = await onDelete(event.entry_id, pendingDeleteScope);
+      if (result.success) {
+        resetDeleteState();
+        onClose();
+      } else {
+        setDeleteValidation(result);
+      }
+    } finally {
+      setIsDeleteProcessing(false);
+    }
   };
 
   const clearErrorIfSubmitted = () => {
@@ -622,7 +683,15 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
           {event && onDelete && !viewOnly && (!event.is_private || isCurrentUserSoleAssignee) && (
             <Button
               id="delete-entry-btn"
-              onClick={() => setShowDeleteDialog(true)}
+              onClick={() => {
+                setDeleteValidation(null);
+                setPendingDeleteScope(undefined);
+                if (event.is_recurring) {
+                  setShowDeleteDialog(true);
+                  return;
+                }
+                setIsDeleteDialogOpen(true);
+              }}
               type="button"
               variant="destructive"
               size="sm"
@@ -1157,15 +1226,24 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
         onConfirm={handleDeleteConfirm}
         onClose={() => setShowDeleteDialog(false)}
         title="Delete Schedule Entry"
-        message={event?.is_recurring 
-          ? "Select which events to delete:"
-          : "Are you sure you want to delete this schedule entry? This action cannot be undone."}
-        options={event?.is_recurring ? [
+        message="Select which events to delete:"
+        options={[
           { value: IEditScope.SINGLE, label: 'Only this event' },
           { value: IEditScope.FUTURE, label: 'This and future events' },
           { value: IEditScope.ALL, label: 'All events' }
-        ] : undefined}
-        confirmLabel="Delete"
+        ]}
+        confirmLabel="Continue"
+      />
+
+      <DeleteEntityDialog
+        id={event ? `delete-entry-${event.entry_id}` : 'delete-entry-dialog'}
+        isOpen={isDeleteDialogOpen}
+        onClose={resetDeleteState}
+        onConfirmDelete={handleDeleteDialogConfirm}
+        entityName={event?.title || 'this schedule entry'}
+        validationResult={deleteValidation}
+        isValidating={isDeleteValidating}
+        isDeleting={isDeleteProcessing}
       />
 
       <ConfirmationDialog

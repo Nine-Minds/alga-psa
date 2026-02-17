@@ -20,7 +20,8 @@ interface ClientAddTicketProps {
 }
 
 export function ClientAddTicket({ open, onOpenChange, onTicketAdded }: ClientAddTicketProps) {
-  const { t } = useTranslation('clientPortal');
+  const { t } = useTranslation('features/tickets');
+  const { t: tCommon } = useTranslation('common');
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -74,9 +75,9 @@ export function ClientAddTicket({ open, onOpenChange, onTicketAdded }: ClientAdd
 
   const validateForm = () => {
     const validationErrors: string[] = [];
-    if (!title.trim()) validationErrors.push(t('tickets.create.errors.titleRequired'));
-    if (!description.trim()) validationErrors.push(t('tickets.create.errors.descriptionRequired'));
-    if (!priorityId) validationErrors.push(t('tickets.create.errors.priorityRequired'));
+    if (!title.trim()) validationErrors.push(t('create.errors.titleRequired'));
+    if (!description.trim()) validationErrors.push(t('create.errors.descriptionRequired'));
+    if (!priorityId) validationErrors.push(t('create.errors.priorityRequired'));
     return validationErrors;
   };
 
@@ -103,15 +104,15 @@ export function ClientAddTicket({ open, onOpenChange, onTicketAdded }: ClientAdd
     } catch (error) {
       console.error('Error creating ticket:', error);
       // Map backend error messages to translation keys
-      let errorMessage = t('tickets.create.errors.createFailed');
+      let errorMessage = t('create.errors.createFailed');
       if (error instanceof Error) {
         const errorMap: Record<string, string> = {
-          'Failed to create ticket': t('tickets.messages.failedToCreateTicket'),
-          'Contact not associated with a client': t('tickets.messages.contactNotAssociatedWithClient'),
-          'User not associated with a contact': t('tickets.messages.userNotAssociatedWithContact'),
-          'Not authenticated': t('tickets.messages.notAuthenticated'),
-          'User ID not found in session': t('tickets.messages.userNotFound'),
-          'Tenant not found in session. Please log out and log back in.': t('tickets.messages.tenantNotFound'),
+          'Failed to create ticket': t('messages.failedToCreateTicket'),
+          'Contact not associated with a client': t('messages.contactNotAssociatedWithClient'),
+          'User not associated with a contact': t('messages.userNotAssociatedWithContact'),
+          'Not authenticated': t('messages.notAuthenticated'),
+          'User ID not found in session': t('messages.userNotFound'),
+          'Tenant not found in session. Please log out and log back in.': t('messages.tenantNotFound'),
         };
         errorMessage = errorMap[error.message] || error.message;
       }
@@ -134,7 +135,7 @@ export function ClientAddTicket({ open, onOpenChange, onTicketAdded }: ClientAdd
     <Dialog 
       isOpen={open} 
       onClose={handleClose} 
-      title={t('tickets.create.title')}
+      title={t('create.title')}
     >
       <DialogContent className="max-w-2xl">
         {isLoading ? (
@@ -158,7 +159,7 @@ export function ClientAddTicket({ open, onOpenChange, onTicketAdded }: ClientAdd
                   setTitle(e.target.value);
                   clearErrorIfSubmitted();
                 }}
-                placeholder={t('tickets.create.titlePlaceholder')}
+                placeholder={t('create.titlePlaceholder')}
               />
               
               <TextArea
@@ -168,7 +169,7 @@ export function ClientAddTicket({ open, onOpenChange, onTicketAdded }: ClientAdd
                   setDescription(e.target.value);
                   clearErrorIfSubmitted();
                 }}
-                placeholder={t('tickets.create.descriptionPlaceholder')}
+                placeholder={t('create.descriptionPlaceholder')}
               />
 
               <div className="relative z-10">
@@ -180,7 +181,7 @@ export function ClientAddTicket({ open, onOpenChange, onTicketAdded }: ClientAdd
                     clearErrorIfSubmitted();
                   }}
                   options={memoizedPriorityOptions}
-                  placeholder={t('tickets.create.priorityPlaceholder')}
+                  placeholder={t('create.priorityPlaceholder')}
                 />
               </div>
 
@@ -191,7 +192,7 @@ export function ClientAddTicket({ open, onOpenChange, onTicketAdded }: ClientAdd
                   variant="outline"
                   onClick={handleClose}
                 >
-                  {t('common.cancel')}
+                  {tCommon('common.cancel')}
                 </Button>
                 <Button
                   id="submit-ticket-button"
@@ -199,7 +200,7 @@ export function ClientAddTicket({ open, onOpenChange, onTicketAdded }: ClientAdd
                   variant="default"
                   disabled={isSubmitting}
                 >
-                  {isSubmitting ? t('tickets.create.submitting') : t('tickets.create.submit')}
+                  {isSubmitting ? t('create.submitting') : t('create.submit')}
                 </Button>
               </DialogFooter>
             </form>

@@ -1,7 +1,7 @@
 'use server'
 
 import { withTransaction } from '@alga-psa/db';
-import { ITaxRate, IService } from '@alga-psa/types';
+import { ITaxRate, DeletionValidationResult } from '@alga-psa/types';
 import { TaxService } from '../services/taxService';
 import { v4 as uuid4 } from 'uuid';
 import { createTenantKnex } from '@alga-psa/db';
@@ -9,13 +9,11 @@ import { Knex } from 'knex';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { getAnalyticsAsync } from '../lib/authHelpers';
+import { deleteEntityWithValidation } from '@alga-psa/core';
 
 
 
-export type DeleteTaxRateResult = {
-  deleted: boolean;
-  affectedServices?: Pick<IService, 'service_id' | 'service_name'>[];
-};
+export type DeleteTaxRateResult = DeletionValidationResult & { success: boolean; deleted?: boolean };
 
 export const getTaxRates = withAuth(async (user, { tenant }): Promise<ITaxRate[]> => {
   try {
@@ -133,61 +131,15 @@ export const updateTaxRate = withAuth(async (user, { tenant }, taxRateData: ITax
   }
 });
 
-export const deleteTaxRate = withAuth(async (user, { tenant }, taxRateId: string): Promise<DeleteTaxRateResult> => {
+export const deleteTaxRate = withAuth(async (_user, { tenant }, taxRateId: string): Promise<DeleteTaxRateResult> => {
   try {
-    // Need both read and delete permissions since we're checking for affected services and potentially deleting
-    if (!hasPermission(user, 'billing', 'read')) {
-      throw new Error('Permission denied: Cannot read tax rate information');
-    }
-
-    if (!hasPermission(user, 'billing', 'delete')) {
-      throw new Error('Permission denied: Cannot delete tax rates');
-    }
-
-    const { knex: db } = await createTenantKnex();
-    return withTransaction(db, async (trx: Knex.Transaction) => {
-
-      const affectedServices = await trx('service_catalog')
-        .where({ tenant, tax_rate_id: taxRateId })
-        .select('service_id', 'service_name');
-
-      if (affectedServices.length > 0) {
-        return { deleted: false, affectedServices };
-      } else {
-        const deletedCount = await trx('tax_rates')
-          .where({
-            tax_rate_id: taxRateId,
-            tenant
-          })
-          .del();
-
-        if (deletedCount === 0) {
-          throw new Error('Tax rate not found or already deleted.');
-        }
-        return { deleted: true };
-      }
-    });
-  } catch (error: any) {
-    console.error('Error processing tax rate deletion:', error);
-    if (error.message.includes('Tax rate not found')) {
-      throw error;
-    }
-    throw new Error('Failed to process tax rate deletion request.');
-  }
-});
-
-export const confirmDeleteTaxRate = withAuth(async (user, { tenant }, taxRateId: string): Promise<void> => {
-  try {
-    // Need delete permission for tax rates and update permission for services
-    if (!hasPermission(user, 'billing', 'delete')) {
-      throw new Error('Permission denied: Cannot delete tax rates');
-    }
-
-    const { knex: db } = await createTenantKnex();
-    return withTransaction(db, async (trx: Knex.Transaction) => {
-      await trx('service_catalog')
-        .where({ tenant, tax_rate_id: taxRateId })
-        .update({ tax_rate_id: null });
+    const { knex } = await createTenantKnex();
+    const result = await deleteEntityWithValidation('tax_rate', taxRateId, knex, tenant, async (trx, tenantId) => {
+      // Clean up child records owned by the tax rate
+      await trx('composite_tax_mappings').where({ composite_tax_id: taxRateId, tenant }).del();
+      await trx('tax_components').where({ tax_rate_id: taxRateId, tenant }).del();
+      await trx('tax_holidays').where({ tax_rate_id: taxRateId, tenant }).del();
+      await trx('tax_rate_thresholds').where({ tax_rate_id: taxRateId, tenant }).del();
 
       const deletedCount = await trx('tax_rates')
         .where({
@@ -197,11 +149,28 @@ export const confirmDeleteTaxRate = withAuth(async (user, { tenant }, taxRateId:
         .del();
 
       if (deletedCount === 0) {
-        throw new Error('Tax rate not found during confirmed deletion.');
+        throw new Error('Tax rate not found or already deleted.');
       }
     });
+
+    return {
+      ...result,
+      success: result.deleted === true,
+      deleted: result.deleted
+    };
   } catch (error: any) {
-    console.error('Error confirming tax rate deletion:', error);
-    throw new Error(error.message || 'Failed to confirm tax rate deletion.');
+    console.error('Error processing tax rate deletion:', error);
+    return {
+      success: false,
+      canDelete: false,
+      code: 'VALIDATION_FAILED',
+      message: error?.message || 'Failed to process tax rate deletion request.',
+      dependencies: [],
+      alternatives: []
+    };
   }
+});
+
+export const confirmDeleteTaxRate = withAuth(async (_user, _ctx, taxRateId: string): Promise<DeleteTaxRateResult> => {
+  return deleteTaxRate(taxRateId);
 });

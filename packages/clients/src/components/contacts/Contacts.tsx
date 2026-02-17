@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { IContact } from '@alga-psa/types';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import type { DeletionValidationResult, IContact } from '@alga-psa/types';
 import type { IClient } from '@alga-psa/types';
 import { ITag } from '@alga-psa/types';
 import type { IDocument } from '@alga-psa/types';
@@ -22,10 +22,11 @@ import { TagFilter } from '@alga-psa/ui/components';
 import { TagManager } from '@alga-psa/tags/components';
 import { useTagPermissions } from '@alga-psa/tags/hooks';
 import { getUniqueTagTexts } from '@alga-psa/ui';
-import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
+import { DeleteEntityDialog } from '@alga-psa/ui';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { getCurrentUserAsync } from '../../lib/usersHelpers';
 import { getDocumentsByEntity } from '@alga-psa/documents/actions/documentActions';
+import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import ContactAvatar from '@alga-psa/ui/components/ContactAvatar';
 import { useRouter } from 'next/navigation';
@@ -86,14 +87,9 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
   const [tagsVersion, setTagsVersion] = useState(0); // Used to force re-render when tags are fetched
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [contactToDelete, setContactToDelete] = useState<IContact | null>(null);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
-  const [showDeactivateOption, setShowDeactivateOption] = useState(false);
-  const [deleteDependencies, setDeleteDependencies] = useState<{
-    tickets?: number;
-    interactions?: number;
-    documents?: number;
-    projects?: number;
-  } | null>(null);
+  const [deleteValidation, setDeleteValidation] = useState<DeletionValidationResult | null>(null);
+  const [isDeleteValidating, setIsDeleteValidating] = useState(false);
+  const [isDeleteProcessing, setIsDeleteProcessing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshKey, setRefreshKey] = useState(0);
   const [changesSavedInDrawer, setChangesSavedInDrawer] = useState(false);
@@ -396,17 +392,35 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
     }
   };
 
+  const runDeleteValidation = useCallback(async (contactId: string) => {
+    setIsDeleteValidating(true);
+    try {
+      const result = await preCheckDeletion('contact', contactId);
+      setDeleteValidation(result);
+    } catch (error) {
+      console.error('Failed to validate contact deletion:', error);
+      setDeleteValidation({
+        canDelete: false,
+        code: 'VALIDATION_FAILED',
+        message: 'Failed to validate deletion. Please try again.',
+        dependencies: [],
+        alternatives: []
+      });
+    } finally {
+      setIsDeleteValidating(false);
+    }
+  }, []);
+
   const handleDeleteContact = (contact: IContact) => {
     setContactToDelete(contact);
-    setDeleteError(null);
-    setShowDeactivateOption(false);
-    setDeleteDependencies(null);
     setIsDeleteDialogOpen(true);
+    void runDeleteValidation(contact.contact_name_id);
   };
 
   const confirmDelete = async () => {
     if (!contactToDelete) return;
 
+    setIsDeleteProcessing(true);
     try {
       const result = await deleteContact(contactToDelete.contact_name_id);
 
@@ -415,36 +429,29 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
           prevContacts.filter(c => c.contact_name_id !== contactToDelete.contact_name_id)
         );
 
-        setIsDeleteDialogOpen(false);
-        setContactToDelete(null);
-        setDeleteError(null);
-        setShowDeactivateOption(false);
-        setDeleteDependencies(null);
+        resetDeleteState();
         toast.success(`${contactToDelete.full_name} has been deleted successfully.`);
       } else {
-        // Handle dependency errors - show structured display
-        // Only include counts that are > 0
-        if (result.code === 'CONTACT_HAS_DEPENDENCIES' && result.counts) {
-          const counts = result.counts as Record<string, number>;
-          setDeleteDependencies({
-            tickets: counts['ticket'] > 0 ? counts['ticket'] : undefined,
-            interactions: counts['interaction'] > 0 ? counts['interaction'] : undefined,
-            documents: counts['document'] > 0 ? counts['document'] : undefined,
-            projects: counts['project'] > 0 ? counts['project'] : undefined,
-          });
-          setShowDeactivateOption(true);
-        } else {
-          setDeleteError(result.message || 'Failed to delete contact. Please try again.');
-        }
-        return;
+        setDeleteValidation(result);
       }
     } catch (err) {
       console.error('Error deleting contact:', err);
-      if (err instanceof Error) {
-        setDeleteError(err.message || 'Failed to delete contact. Please try again.');
-      } else {
-        setDeleteError('Failed to delete contact. Please try again.');
-      }
+      toast.error('Failed to delete contact. Please try again.');
+    } finally {
+      setIsDeleteProcessing(false);
+    }
+  };
+
+  const handleDeleteAlternativeAction = async (action: string) => {
+    if (action !== 'deactivate') {
+      return;
+    }
+
+    setIsDeleteProcessing(true);
+    try {
+      await handleMarkContactInactive();
+    } finally {
+      setIsDeleteProcessing(false);
     }
   };
 
@@ -466,17 +473,14 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
         )
       );
 
-      setIsDeleteDialogOpen(false);
-      setContactToDelete(null);
-      setShowDeactivateOption(false);
-      setDeleteDependencies(null);
+      resetDeleteState();
       toast.success(`${contactToDelete.full_name} has been marked as inactive successfully.`);
     } catch (error: any) {
       console.error('Error marking contact as inactive:', error);
       if (error.message?.toLowerCase().includes('permission denied')) {
-        setDeleteError('Permission denied. Please contact your administrator if you need additional access.');
+        toast.error('Permission denied. Please contact your administrator if you need additional access.');
       } else {
-        setDeleteError('An error occurred while marking the contact as inactive. Please try again.');
+        toast.error('An error occurred while marking the contact as inactive. Please try again.');
       }
     }
   };
@@ -484,9 +488,7 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
   const resetDeleteState = () => {
     setIsDeleteDialogOpen(false);
     setContactToDelete(null);
-    setDeleteError(null);
-    setShowDeactivateOption(false);
-    setDeleteDependencies(null);
+    setDeleteValidation(null);
   };
 
   const handleExportToCSV = async () => {
@@ -856,71 +858,16 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
         />
 
         {/* ConfirmationDialog for Delete */}
-        <ConfirmationDialog
+        <DeleteEntityDialog
           id="delete-contact-dialog"
           isOpen={isDeleteDialogOpen}
           onClose={resetDeleteState}
-          onConfirm={contactToDelete?.is_inactive && showDeactivateOption ? resetDeleteState : showDeactivateOption ? handleMarkContactInactive : confirmDelete}
-          title="Delete Contact"
-          message={
-            contactToDelete?.is_inactive && showDeactivateOption && deleteDependencies ? (
-              <div className="space-y-4">
-                <div className="bg-amber-50 border border-amber-200 rounded-md p-4">
-                  <p className="text-amber-800">
-                    <span className="font-semibold">Note:</span> This contact is already marked as inactive.
-                  </p>
-                </div>
-                <p className="text-gray-700">Unable to delete this contact due to the following associated records:</p>
-                <div>
-                  <ul className="list-disc list-inside space-y-1 text-gray-700">
-                    {deleteDependencies.tickets && deleteDependencies.tickets > 0 && (
-                      <li>{deleteDependencies.tickets} active ticket{deleteDependencies.tickets !== 1 ? 's' : ''}</li>
-                    )}
-                    {deleteDependencies.interactions && deleteDependencies.interactions > 0 && (
-                      <li>{deleteDependencies.interactions} interaction{deleteDependencies.interactions !== 1 ? 's' : ''}</li>
-                    )}
-                    {deleteDependencies.documents && deleteDependencies.documents > 0 && (
-                      <li>{deleteDependencies.documents} document{deleteDependencies.documents !== 1 ? 's' : ''}</li>
-                    )}
-                    {deleteDependencies.projects && deleteDependencies.projects > 0 && (
-                      <li>{deleteDependencies.projects} active project{deleteDependencies.projects !== 1 ? 's' : ''}</li>
-                    )}
-                  </ul>
-                </div>
-                <p className="text-gray-700">Please remove or reassign these items before the contact can be deleted.</p>
-              </div>
-            ) : showDeactivateOption && deleteDependencies ? (
-              <div className="space-y-4">
-                <p className="text-gray-700">Unable to delete this contact.</p>
-                <div>
-                  <p className="text-gray-700 mb-2">This contact has the following associated records:</p>
-                  <ul className="list-disc list-inside space-y-1 text-gray-700">
-                    {deleteDependencies.tickets && deleteDependencies.tickets > 0 && (
-                      <li>{deleteDependencies.tickets} active ticket{deleteDependencies.tickets !== 1 ? 's' : ''}</li>
-                    )}
-                    {deleteDependencies.interactions && deleteDependencies.interactions > 0 && (
-                      <li>{deleteDependencies.interactions} interaction{deleteDependencies.interactions !== 1 ? 's' : ''}</li>
-                    )}
-                    {deleteDependencies.documents && deleteDependencies.documents > 0 && (
-                      <li>{deleteDependencies.documents} document{deleteDependencies.documents !== 1 ? 's' : ''}</li>
-                    )}
-                    {deleteDependencies.projects && deleteDependencies.projects > 0 && (
-                      <li>{deleteDependencies.projects} active project{deleteDependencies.projects !== 1 ? 's' : ''}</li>
-                    )}
-                  </ul>
-                </div>
-                <p className="text-gray-700">Please remove or reassign these items before deleting the contact.</p>
-                <div className="bg-blue-50 border border-blue-200 rounded-md p-4">
-                  <p className="text-blue-800">
-                    <span className="font-semibold">Alternative Option:</span> You can mark this contact as inactive instead. Inactive contacts are hidden from most views but retain all their data and can be marked as active later.
-                  </p>
-                </div>
-              </div>
-            ) : deleteError ? deleteError : "Are you sure you want to delete this contact? This action cannot be undone."
-          }
-          confirmLabel={contactToDelete?.is_inactive && showDeactivateOption ? "Close" : showDeactivateOption ? "Mark as Inactive" : "Delete"}
-          cancelLabel="Cancel"
-          isConfirming={false}
+          onConfirmDelete={confirmDelete}
+          onAlternativeAction={handleDeleteAlternativeAction}
+          entityName={contactToDelete?.full_name || 'this contact'}
+          validationResult={deleteValidation}
+          isValidating={isDeleteValidating}
+          isDeleting={isDeleteProcessing}
         />
       </div>
   );

@@ -1,8 +1,9 @@
 'use server'
 
-import type { IClient, IClientWithLocation } from '@alga-psa/types';
+import type { DeletionValidationResult, IClient, IClientWithLocation } from '@alga-psa/types';
 import { createTenantKnex } from '@alga-psa/db';
-import { unparseCSV, isEnterprise } from '@alga-psa/core';
+import { deleteEntityWithValidation, unparseCSV, isEnterprise } from '@alga-psa/core';
+import { preCheckDeletion } from '@alga-psa/auth';
 import { createDefaultTaxSettingsAsync } from '../lib/billingHelpers';
 import { revalidatePath } from 'next/cache';
 import { withAuth } from '@alga-psa/auth';
@@ -11,8 +12,8 @@ import { getClientLogoUrlAsync, getClientLogoUrlsBatchAsync } from '../lib/docum
 import { uploadEntityImage, deleteEntityImage } from '@alga-psa/media';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
-import { deleteEntityTags } from '@alga-psa/tags/lib/tagCleanup';
 import { createTag } from '@alga-psa/tags/actions';
+import { deleteEntityTags } from '@alga-psa/tags/lib/tagCleanup';
 import { ClientModel } from '@alga-psa/shared/models/clientModel';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import {
@@ -814,14 +815,68 @@ export const getAllClients = withAuth(async (user, { tenant }, includeInactive: 
   return clientsWithLogos as IClient[];
 });
 
-export const deleteClient = withAuth(async (user, { tenant }, clientId: string): Promise<{
+export const validateClientDeletion = withAuth(async (
+  user,
+  { tenant },
+  clientId: string
+): Promise<DeletionValidationResult> => {
+  if (!await hasPermissionAsync(user, 'client', 'delete')) {
+    return {
+      canDelete: false,
+      code: 'PERMISSION_DENIED',
+      message: 'Permission denied: Cannot delete clients.',
+      dependencies: [],
+      alternatives: []
+    };
+  }
+
+  const { knex: db } = await createTenantKnex();
+
+  const client = await withTransaction(db, async (trx: Knex.Transaction) => {
+    return await trx('clients')
+      .where({ client_id: clientId, tenant })
+      .first();
+  });
+
+  if (!client) {
+    return {
+      canDelete: false,
+      code: 'NOT_FOUND',
+      message: 'Client not found.',
+      dependencies: [],
+      alternatives: []
+    };
+  }
+
+  const isDefaultClient = await withTransaction(db, async (trx: Knex.Transaction) => {
+    const tenantClient = await trx('tenant_companies')
+      .where({
+        client_id: clientId,
+        tenant,
+        is_default: true
+      })
+      .first();
+    return !!tenantClient;
+  });
+
+  if (isDefaultClient) {
+    return {
+      canDelete: false,
+      code: 'IS_DEFAULT',
+      message: 'Cannot delete the default client. Please set another client as default in General Settings first.',
+      dependencies: [],
+      alternatives: []
+    };
+  }
+
+  return preCheckDeletion('client', clientId);
+});
+
+export const deleteClient = withAuth(async (user, { tenant }, clientId: string): Promise<DeletionValidationResult & {
   success: boolean;
-  code?: string;
-  message?: string;
-  dependencies?: string[];
+  deleted?: boolean;
   counts?: Record<string, number>;
 }> => {
-  // Check permission for client deletion
   if (!await hasPermissionAsync(user, 'client', 'delete')) {
     throw new Error('Permission denied: Cannot delete clients');
   }
@@ -829,7 +884,6 @@ export const deleteClient = withAuth(async (user, { tenant }, clientId: string):
   try {
     const { knex: db } = await createTenantKnex();
 
-    // First verify the client exists and belongs to this tenant
     const client = await withTransaction(db, async (trx: Knex.Transaction) => {
       return await trx('clients')
         .where({ client_id: clientId, tenant })
@@ -839,11 +893,14 @@ export const deleteClient = withAuth(async (user, { tenant }, clientId: string):
     if (!client) {
       return {
         success: false,
-        message: 'Client not found'
+        canDelete: false,
+        code: 'NOT_FOUND',
+        message: 'Client not found.',
+        dependencies: [],
+        alternatives: []
       };
     }
 
-    // Check if this is the tenant's default client
     const isDefaultClient = await withTransaction(db, async (trx: Knex.Transaction) => {
       const tenantClient = await trx('tenant_companies')
         .where({
@@ -858,186 +915,43 @@ export const deleteClient = withAuth(async (user, { tenant }, clientId: string):
     if (isDefaultClient) {
       return {
         success: false,
-        code: 'DEFAULT_COMPANY_PROTECTED',
-        message: 'Cannot delete the default client. Please set another client as default in General Settings first.'
+        canDelete: false,
+        code: 'IS_DEFAULT',
+        message: 'Cannot delete the default client. Please set another client as default in General Settings first.',
+        dependencies: [],
+        alternatives: []
       };
     }
 
-    console.log('Checking dependencies for client:', clientId, 'tenant:', tenant);
+    const result = await deleteEntityWithValidation('client', clientId, db, tenant, async (trx, tenantId) => {
+      await deleteEntityTags(trx, clientId, 'client');
 
-    // Check for dependencies within a single transaction
-    const dependencies: string[] = [];
-    const counts: Record<string, number> = {};
-
-    await withTransaction(db, async (trx: Knex.Transaction) => {
-      // Check for contacts
-      const contactCount = await trx('contacts')
-        .where({ client_id: clientId, tenant })
-        .count('contact_name_id as count')
-        .first();
-      console.log('Contact count result:', contactCount);
-      if (contactCount && Number(contactCount.count) > 0) {
-        dependencies.push('contact');
-        counts['contact'] = Number(contactCount.count);
-      }
-
-      // Check for open tickets - join with statuses to check is_closed flag
-      const ticketCount = await trx('tickets')
-        .leftJoin('statuses', function() {
-          this.on('tickets.status_id', '=', 'statuses.status_id')
-              .andOn('tickets.tenant', '=', 'statuses.tenant');
-        })
-        .where({ 'tickets.client_id': clientId, 'tickets.tenant': tenant })
-        .andWhere(function() {
-          this.where('statuses.is_closed', false).orWhereNull('statuses.is_closed');
-        })
-        .count('tickets.ticket_id as count')
-        .first();
-      console.log('Ticket count result:', ticketCount);
-      if (ticketCount && Number(ticketCount.count) > 0) {
-        dependencies.push('ticket');
-        counts['ticket'] = Number(ticketCount.count);
-      }
-
-      // Check for projects
-      const projectCount = await trx('projects')
-        .where({ client_id: clientId, tenant })
-        .count('project_id as count')
-        .first();
-      console.log('Project count result:', projectCount);
-      if (projectCount && Number(projectCount.count) > 0) {
-        dependencies.push('project');
-        counts['project'] = Number(projectCount.count);
-      }
-
-      // Check for documents using document_associations table
-      const documentCount = await trx('document_associations')
-        .where({
-          entity_id: clientId,
-          entity_type: 'client',
-          tenant
-        })
-        .count('document_id as count')
-        .first();
-      console.log('Document count result:', documentCount);
-      if (documentCount && Number(documentCount.count) > 0) {
-        dependencies.push('document');
-        counts['document'] = Number(documentCount.count);
-      }
-
-      // Check for invoices
-      const invoiceCount = await trx('invoices')
-        .where({ client_id: clientId, tenant })
-        .count('invoice_id as count')
-        .first();
-      console.log('Invoice count result:', invoiceCount);
-      if (invoiceCount && Number(invoiceCount.count) > 0) {
-        dependencies.push('invoice');
-        counts['invoice'] = Number(invoiceCount.count);
-      }
-
-      // Check for interactions
-      const interactionCount = await trx('interactions')
-        .where({ client_id: clientId, tenant })
-        .count('interaction_id as count')
-        .first();
-      console.log('Interaction count result:', interactionCount);
-      if (interactionCount && Number(interactionCount.count) > 0) {
-        dependencies.push('interaction');
-        counts['interaction'] = Number(interactionCount.count);
-      }
-
-      // Check for assets/devices
-      const assetCount = await trx('assets')
-        .where({ client_id: clientId, tenant })
-        .count('asset_id as count')
-        .first();
-      console.log('Asset count result:', assetCount);
-      if (assetCount && Number(assetCount.count) > 0) {
-        dependencies.push('asset');
-        counts['asset'] = Number(assetCount.count);
-      }
-
-      // Check for service usage
-      const usageCount = await trx('usage_tracking')
-        .where({ client_id: clientId, tenant })
-        .count('usage_id as count')
-        .first();
-      console.log('Usage count result:', usageCount);
-      if (usageCount && Number(usageCount.count) > 0) {
-        dependencies.push('service_usage');
-        counts['service_usage'] = Number(usageCount.count);
-      }
-
-      // Check for bucket usage
-      const bucketUsageCount = await trx('bucket_usage')
-        .where({ client_id: clientId, tenant })
-        .count('usage_id as count')
-        .first();
-      console.log('Bucket usage count result:', bucketUsageCount);
-      if (bucketUsageCount && Number(bucketUsageCount.count) > 0) {
-        dependencies.push('bucket_usage');
-        counts['bucket_usage'] = Number(bucketUsageCount.count);
-      }
-    });
-
-    // Note: Locations/addresses and tax settings will be deleted automatically with the client
-
-    // If there are dependencies, return error with details
-    if (dependencies.length > 0) {
-      const readableTypes: Record<string, string> = {
-        'contact': 'contacts',
-        'ticket': 'tickets',
-        'project': 'projects',
-        'document': 'documents',
-        'invoice': 'invoices',
-        'interaction': 'interactions',
-        'asset': 'assets',
-        'service_usage': 'service usage records',
-        'bucket_usage': 'bucket usage records'
-      };
-
-      return {
-        success: false,
-        code: 'COMPANY_HAS_DEPENDENCIES',
-        message: 'Cannot delete client with active business records. Consider marking as inactive instead to preserve data integrity.',
-        dependencies: dependencies.map((dep: string): string => readableTypes[dep] || dep),
-        counts
-      };
-    }
-
-    // If no dependencies, proceed with deletion (client and associated tax settings)
-    const result = await withTransaction(db, async (trx: Knex.Transaction) => {
-      // First delete client tax settings to avoid foreign key constraint violations
       const deletedTaxSettings = await trx('client_tax_settings')
-        .where({ client_id: clientId, tenant })
+        .where({ client_id: clientId, tenant: tenantId })
         .delete();
 
       if (deletedTaxSettings > 0) {
         console.log(`Deleted ${deletedTaxSettings} client tax settings records`);
       }
 
-      // Delete client tax rate associations to avoid foreign key constraint violations
       const deletedTaxRates = await trx('client_tax_rates')
-        .where({ client_id: clientId, tenant })
+        .where({ client_id: clientId, tenant: tenantId })
         .delete();
 
       if (deletedTaxRates > 0) {
         console.log(`Deleted ${deletedTaxRates} client tax rate records`);
       }
 
-      // Delete client contracts (empty contracts - clients with invoices are blocked earlier)
       const deletedContracts = await trx('client_contracts')
-        .where({ client_id: clientId, tenant })
+        .where({ client_id: clientId, tenant: tenantId })
         .delete();
 
       if (deletedContracts > 0) {
         console.log(`Deleted ${deletedContracts} client contract records`);
       }
 
-      // Delete billing-related settings
       const deletedBillingCycles = await trx('client_billing_cycles')
-        .where({ client_id: clientId, tenant })
+        .where({ client_id: clientId, tenant: tenantId })
         .delete();
 
       if (deletedBillingCycles > 0) {
@@ -1045,17 +959,16 @@ export const deleteClient = withAuth(async (user, { tenant }, clientId: string):
       }
 
       const deletedBillingSettings = await trx('client_billing_settings')
-        .where({ client_id: clientId, tenant })
+        .where({ client_id: clientId, tenant: tenantId })
         .delete();
 
       if (deletedBillingSettings > 0) {
         console.log(`Deleted ${deletedBillingSettings} client billing settings records`);
       }
 
-      // Delete payment customer records (Stripe/payment provider associations) - EE only
       if (isEnterprise) {
         const deletedPaymentCustomers = await trx('client_payment_customers')
-          .where({ client_id: clientId, tenant })
+          .where({ client_id: clientId, tenant: tenantId })
           .delete();
 
         if (deletedPaymentCustomers > 0) {
@@ -1063,61 +976,64 @@ export const deleteClient = withAuth(async (user, { tenant }, clientId: string):
         }
       }
 
-      // Clean up client locations (addresses don't block deletion per PSA best practices)
       const deletedLocations = await trx('client_locations')
-        .where({ client_id: clientId, tenant })
+        .where({ client_id: clientId, tenant: tenantId })
         .delete();
 
       if (deletedLocations > 0) {
         console.log(`Deleted ${deletedLocations} client location records`);
       }
 
-      // Clean up notes document if it exists
       const clientRecord = await trx('clients')
-        .where({ client_id: clientId, tenant })
+        .where({ client_id: clientId, tenant: tenantId })
         .select('notes_document_id')
         .first();
 
       if (clientRecord?.notes_document_id) {
         console.log(`Cleaning up notes document: ${clientRecord.notes_document_id}`);
 
-        // Delete block content first (due to FK)
         await trx('document_block_content')
-          .where({ tenant, document_id: clientRecord.notes_document_id })
+          .where({ tenant: tenantId, document_id: clientRecord.notes_document_id })
           .delete();
 
-        // Delete document associations
         await trx('document_associations')
-          .where({ tenant, document_id: clientRecord.notes_document_id })
+          .where({ tenant: tenantId, document_id: clientRecord.notes_document_id })
           .delete();
 
-        // Delete the document
         await trx('documents')
-          .where({ tenant, document_id: clientRecord.notes_document_id })
+          .where({ tenant: tenantId, document_id: clientRecord.notes_document_id })
           .delete();
       }
 
-      // Clean up any tags associated with this client
-      await deleteEntityTags(trx, clientId, 'client');
-
-      // Finally delete the client record itself
       const deleted = await trx('clients')
-        .where({ client_id: clientId, tenant })
+        .where({ client_id: clientId, tenant: tenantId })
         .delete();
 
       if (!deleted || deleted === 0) {
         throw new Error('Client record not found or could not be deleted');
       }
-
-      return { success: true };
     });
 
-    return result;
+    const counts = result.dependencies.reduce<Record<string, number>>((acc, dependency) => {
+      acc[dependency.type] = dependency.count;
+      return acc;
+    }, {});
+
+    return {
+      ...result,
+      deleted: result.deleted,
+      success: result.deleted === true,
+      counts
+    };
   } catch (error) {
     console.error('Error deleting client:', error);
     return {
       success: false,
-      message: error instanceof Error ? error.message : 'Failed to delete client'
+      canDelete: false,
+      code: 'VALIDATION_FAILED',
+      message: error instanceof Error ? error.message : 'Failed to delete client',
+      dependencies: [],
+      alternatives: []
     };
   }
 });

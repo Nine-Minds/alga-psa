@@ -4,7 +4,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import UserList from './UserList';
-import { getAllUsers, addUser, getUserWithRoles, deleteUser, getMSPRoles, getClientPortalRoles } from '@alga-psa/users/actions';
+import { getAllUsers, addUser, getUserWithRoles, getMSPRoles, getClientPortalRoles } from '@alga-psa/users/actions';
 import { getAllClients } from '@alga-psa/clients/actions';
 import { addContact, getContactsByClient, getAllContacts, getContactsEligibleForInvitation } from '@alga-psa/clients/actions';
 import { sendPortalInvitation, createClientPortalUser } from '@alga-psa/client-portal/actions';
@@ -477,16 +477,9 @@ const fetchContacts = async (): Promise<void> => {
     }
   };
 
-  const handleDeleteUser = async (userId: string) => {
-    try {
-      await deleteUser(userId);
-      setUsers(users.filter(user => user.user_id !== userId));
-      // Refresh license usage after deleting a user
-      fetchLicenseUsage();
-    } catch (error) {
-      console.error('Error deleting user:', error);
-      setError('Failed to delete user');
-    }
+  const handleDeleteSuccess = () => {
+    fetchUsers();
+    fetchLicenseUsage();
   };
 
   const handlePortalTypeChange = (type: 'msp' | 'client') => {
@@ -874,7 +867,7 @@ const fetchContacts = async (): Promise<void> => {
           <UserList 
             users={filteredUsers} 
             onUpdate={fetchUsers} 
-            onDeleteUser={handleDeleteUser} 
+            onDeleteSuccess={handleDeleteSuccess}
             selectedClientId={portalType === 'client' ? selectedClientId : null}
           />
         )}

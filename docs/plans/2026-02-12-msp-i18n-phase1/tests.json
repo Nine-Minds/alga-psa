@@ -1,0 +1,479 @@
+[
+  {
+    "id": "T001",
+    "description": "msp-i18n-enabled flag exists in DEFAULT_BOOLEAN_FLAGS with default value false",
+    "implemented": true,
+    "featureIds": [
+      "F001"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "With flag OFF: standard MSP layout does NOT call getHierarchicalLocaleAction (no locale fetch overhead)",
+    "implemented": true,
+    "featureIds": [
+      "F002"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "With flag ON: standard MSP layout calls getHierarchicalLocaleAction and passes locale to MspLayoutClient",
+    "implemented": true,
+    "featureIds": [
+      "F002",
+      "F003"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "With flag OFF: standard MspLayoutClient renders children without I18nWrapper (zero behavior change)",
+    "implemented": true,
+    "featureIds": [
+      "F004"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "With flag ON: standard MspLayoutClient wraps children in I18nWrapper with portal='msp'",
+    "implemented": true,
+    "featureIds": [
+      "F003"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "With flag OFF: EE MSP layout does NOT call getHierarchicalLocaleAction",
+    "implemented": true,
+    "featureIds": [
+      "F005"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "With flag ON: EE MSP layout calls getHierarchicalLocaleAction and passes locale to MspLayoutClient",
+    "implemented": true,
+    "featureIds": [
+      "F005",
+      "F006"
+    ]
+  },
+  {
+    "id": "T008",
+    "description": "With flag ON: EE MspLayoutClient wraps children in I18nWrapper with portal='msp'",
+    "implemented": true,
+    "featureIds": [
+      "F006"
+    ]
+  },
+  {
+    "id": "T009",
+    "description": "With flag ON: useTranslation() works inside MSP page components (no 'must be used within I18nProvider' error)",
+    "implemented": true,
+    "featureIds": [
+      "F003",
+      "F006"
+    ]
+  },
+  {
+    "id": "T010",
+    "description": "MSP onboarding flow still works when flag is ON (I18nWrapper does not break redirect logic)",
+    "implemented": true,
+    "featureIds": [
+      "F003"
+    ]
+  },
+  {
+    "id": "T011",
+    "description": "features/tickets.json exists for all 7 languages (en, fr, es, de, nl, it, pl) with flattened keys",
+    "implemented": true,
+    "featureIds": [
+      "F007"
+    ]
+  },
+  {
+    "id": "T012",
+    "description": "features/projects.json exists for all 7 languages with flattened keys",
+    "implemented": true,
+    "featureIds": [
+      "F008"
+    ]
+  },
+  {
+    "id": "T013",
+    "description": "features/billing.json exists for all 7 languages with flattened keys",
+    "implemented": true,
+    "featureIds": [
+      "F009"
+    ]
+  },
+  {
+    "id": "T014",
+    "description": "features/documents.json exists for all 7 languages with flattened keys",
+    "implemented": true,
+    "featureIds": [
+      "F010"
+    ]
+  },
+  {
+    "id": "T015",
+    "description": "features/appointments.json exists for all 7 languages with flattened keys",
+    "implemented": true,
+    "featureIds": [
+      "F011"
+    ]
+  },
+  {
+    "id": "T016",
+    "description": "Feature namespace files contain flattened keys (no wrapping top-level key like 'tickets')",
+    "implemented": true,
+    "featureIds": [
+      "F007",
+      "F008",
+      "F009",
+      "F010",
+      "F011"
+    ]
+  },
+  {
+    "id": "T017",
+    "description": "useTranslation('features/tickets') loads features/tickets.json via http-backend loadPath",
+    "implemented": true,
+    "featureIds": [
+      "F007"
+    ]
+  },
+  {
+    "id": "T018",
+    "description": "client-portal/core.json exists for all 7 languages with nav, dashboard, common, pagination, time keys",
+    "implemented": true,
+    "featureIds": [
+      "F012"
+    ]
+  },
+  {
+    "id": "T019",
+    "description": "client-portal/auth.json exists for all 7 languages with auth and account keys",
+    "implemented": true,
+    "featureIds": [
+      "F013"
+    ]
+  },
+  {
+    "id": "T020",
+    "description": "client-portal/profile.json exists for all 7 languages with profile, clientSettings, notifications keys",
+    "implemented": true,
+    "featureIds": [
+      "F014"
+    ]
+  },
+  {
+    "id": "T021",
+    "description": "All client portal components using tickets.* keys migrated to useTranslation('features/tickets')",
+    "implemented": true,
+    "featureIds": [
+      "F015"
+    ]
+  },
+  {
+    "id": "T022",
+    "description": "All client portal components using projects.* keys migrated to useTranslation('features/projects')",
+    "implemented": true,
+    "featureIds": [
+      "F016"
+    ]
+  },
+  {
+    "id": "T023",
+    "description": "All client portal components using billing.* keys migrated to useTranslation('features/billing')",
+    "implemented": true,
+    "featureIds": [
+      "F017"
+    ]
+  },
+  {
+    "id": "T024",
+    "description": "All client portal components using documents.* keys migrated to useTranslation('features/documents')",
+    "implemented": true,
+    "featureIds": [
+      "F018"
+    ]
+  },
+  {
+    "id": "T025",
+    "description": "All client portal components using appointments.* keys migrated to useTranslation('features/appointments')",
+    "implemented": true,
+    "featureIds": [
+      "F019"
+    ]
+  },
+  {
+    "id": "T026",
+    "description": "All client portal components using nav/dashboard/common/pagination/time keys migrated to useTranslation('client-portal/core')",
+    "implemented": true,
+    "featureIds": [
+      "F020"
+    ]
+  },
+  {
+    "id": "T027",
+    "description": "All client portal components using auth/account keys migrated to useTranslation('client-portal/auth')",
+    "implemented": true,
+    "featureIds": [
+      "F021"
+    ]
+  },
+  {
+    "id": "T028",
+    "description": "All client portal components using profile/clientSettings/notifications keys migrated to useTranslation('client-portal/profile')",
+    "implemented": true,
+    "featureIds": [
+      "F022"
+    ]
+  },
+  {
+    "id": "T029",
+    "description": "Client portal continues working after full migration (no regressions \u2014 same translations, new namespace paths)",
+    "implemented": true,
+    "featureIds": [
+      "F015",
+      "F016",
+      "F017",
+      "F018",
+      "F019",
+      "F020",
+      "F021",
+      "F022"
+    ]
+  },
+  {
+    "id": "T030",
+    "description": "clientPortal.json removed or emptied after all components migrated \u2014 no duplication of keys",
+    "implemented": true,
+    "featureIds": [
+      "F023"
+    ]
+  },
+  {
+    "id": "T031",
+    "description": "msp/core.json exists for English with nav, sidebar, header, and settings keys",
+    "implemented": true,
+    "featureIds": [
+      "F024"
+    ]
+  },
+  {
+    "id": "T032",
+    "description": "msp/core.json nav items match navigation entries in menuConfig.ts",
+    "implemented": true,
+    "featureIds": [
+      "F024"
+    ]
+  },
+  {
+    "id": "T033",
+    "description": "msp/core.json exists for all 6 non-English languages with translated content",
+    "implemented": true,
+    "featureIds": [
+      "F025"
+    ]
+  },
+  {
+    "id": "T034",
+    "description": "useTranslation('msp/core') returns correct English translations when flag is ON",
+    "implemented": true,
+    "featureIds": [
+      "F024"
+    ]
+  },
+  {
+    "id": "T035",
+    "description": "With flag OFF: no language preference section visible in UserProfile (/msp/profile)",
+    "implemented": true,
+    "featureIds": [
+      "F026"
+    ]
+  },
+  {
+    "id": "T036",
+    "description": "With flag ON: LanguagePreference selector appears in UserProfile component",
+    "implemented": true,
+    "featureIds": [
+      "F026",
+      "F027"
+    ]
+  },
+  {
+    "id": "T037",
+    "description": "Language selector shows all 7 supported languages plus 'Not set' option (fallback to org default)",
+    "implemented": true,
+    "featureIds": [
+      "F027"
+    ]
+  },
+  {
+    "id": "T038",
+    "description": "Selecting a language in Profile updates user_preferences table (setting_name='locale')",
+    "implemented": true,
+    "featureIds": [
+      "F026"
+    ]
+  },
+  {
+    "id": "T039",
+    "description": "Selecting a language in Profile updates the locale cookie",
+    "implemented": true,
+    "featureIds": [
+      "F026"
+    ]
+  },
+  {
+    "id": "T040",
+    "description": "After selecting a language and reloading, the selected language persists",
+    "implemented": true,
+    "featureIds": [
+      "F026",
+      "F027"
+    ]
+  },
+  {
+    "id": "T041",
+    "description": "Selecting 'Not set' clears user preference and falls back to org/system default",
+    "implemented": true,
+    "featureIds": [
+      "F027"
+    ]
+  },
+  {
+    "id": "T042",
+    "description": "With flag OFF: no Language section visible in Settings > General > Organization & Access",
+    "implemented": true,
+    "featureIds": [
+      "F029"
+    ]
+  },
+  {
+    "id": "T043",
+    "description": "With flag ON: MspLanguageSettings section appears in Settings > General > Organization & Access after Teams",
+    "implemented": true,
+    "featureIds": [
+      "F028",
+      "F029"
+    ]
+  },
+  {
+    "id": "T044",
+    "description": "MspLanguageSettings shows default language dropdown with all 7 languages",
+    "implemented": true,
+    "featureIds": [
+      "F028"
+    ]
+  },
+  {
+    "id": "T045",
+    "description": "MspLanguageSettings shows enabled languages checkboxes",
+    "implemented": true,
+    "featureIds": [
+      "F028"
+    ]
+  },
+  {
+    "id": "T046",
+    "description": "Changing default language persists to tenant_settings (mspPortal.defaultLocale)",
+    "implemented": true,
+    "featureIds": [
+      "F030"
+    ]
+  },
+  {
+    "id": "T047",
+    "description": "Changing enabled languages persists to tenant_settings (mspPortal.enabledLocales)",
+    "implemented": true,
+    "featureIds": [
+      "F030"
+    ]
+  },
+  {
+    "id": "T048",
+    "description": "getTenantMspLocaleSettings server action reads mspPortal locale settings from tenant_settings",
+    "implemented": true,
+    "featureIds": [
+      "F031"
+    ]
+  },
+  {
+    "id": "T049",
+    "description": "updateTenantMspLocaleSettings server action writes mspPortal locale settings to tenant_settings",
+    "implemented": true,
+    "featureIds": [
+      "F031"
+    ]
+  },
+  {
+    "id": "T050",
+    "description": "Locale resolution for internal users: user preference takes priority over org default",
+    "implemented": true,
+    "featureIds": [
+      "F032"
+    ]
+  },
+  {
+    "id": "T051",
+    "description": "Locale resolution for internal users: org default takes priority over system default when no user preference set",
+    "implemented": true,
+    "featureIds": [
+      "F032"
+    ]
+  },
+  {
+    "id": "T052",
+    "description": "Locale resolution for internal users: falls back to system default when no user or org preference",
+    "implemented": true,
+    "featureIds": [
+      "F032"
+    ]
+  },
+  {
+    "id": "T053",
+    "description": "All new JSON namespace files pass JSON syntax validation (no parse errors)",
+    "implemented": true,
+    "featureIds": [
+      "F033"
+    ]
+  },
+  {
+    "id": "T054",
+    "description": "No duplicate keys exist in any new JSON namespace file",
+    "implemented": true,
+    "featureIds": [
+      "F033"
+    ]
+  },
+  {
+    "id": "T055",
+    "description": "Feature namespace key counts match across all 7 languages (same structure per namespace)",
+    "implemented": true,
+    "featureIds": [
+      "F033"
+    ]
+  },
+  {
+    "id": "T056",
+    "description": "npm run build succeeds with no TypeScript errors after all changes",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F003",
+      "F006",
+      "F015",
+      "F016",
+      "F017",
+      "F018",
+      "F019",
+      "F020",
+      "F021",
+      "F022",
+      "F026",
+      "F028"
+    ]
+  }
+]

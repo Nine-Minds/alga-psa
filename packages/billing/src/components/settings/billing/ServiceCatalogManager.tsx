@@ -5,14 +5,15 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
-import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
+import { DeleteEntityDialog } from '@alga-psa/ui';
 // Import new action and types
 import { getServices, updateService, deleteService, getServiceTypesForSelection, PaginatedServicesResponse, createServiceTypeInline, updateServiceTypeInline, deleteServiceTypeInline, setServicePrices } from '@alga-psa/billing/actions';
 import { CURRENCY_OPTIONS, getCurrencySymbol } from '@alga-psa/core/constants/currency';
+import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
 import { getServiceCategories } from '@alga-psa/billing/actions';
 // Import action to get tax rates
 import { getTaxRates } from '@alga-psa/billing/actions';
-import { IService, IServiceCategory, IServiceType, IServicePrice } from '@alga-psa/types'; // Added IServiceType, IServicePrice
+import { IService, IServiceCategory, IServiceType, IServicePrice, DeletionValidationResult } from '@alga-psa/types'; // Added IServiceType, IServicePrice
 // Import ITaxRate interface
 import { ITaxRate } from '@alga-psa/types'; // Corrected import path if needed
 import { Card, CardContent, CardHeader } from '@alga-psa/ui/components/Card';
@@ -61,6 +62,9 @@ const ServiceCatalogManager: React.FC = () => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [serviceToDelete, setServiceToDelete] = useState<string | null>(null);
+  const [deleteValidation, setDeleteValidation] = useState<DeletionValidationResult | null>(null);
+  const [isDeleteValidating, setIsDeleteValidating] = useState(false);
+  const [isDeleteProcessing, setIsDeleteProcessing] = useState(false);
   // Using Service Type filter instead of categories
   const [selectedServiceType, setSelectedServiceType] = useState<string>('all');
   const [selectedBillingMethod, setSelectedBillingMethod] = useState<string>('all');
@@ -86,6 +90,12 @@ const ServiceCatalogManager: React.FC = () => {
   // Track when page changes are from user interaction vs. programmatic updates
   const [userChangedPage, setUserChangedPage] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const serviceToDeleteName = useMemo(() => {
+    if (!serviceToDelete) {
+      return 'this service';
+    }
+    return services.find((service) => service.service_id === serviceToDelete)?.service_name || 'this service';
+  }, [serviceToDelete, services]);
   
   // Add effect to refetch data when page changes from user interaction
   useEffect(() => {
@@ -271,12 +281,40 @@ const ServiceCatalogManager: React.FC = () => {
     }
   };
 
+  const resetDeleteState = () => {
+    setIsDeleteDialogOpen(false);
+    setServiceToDelete(null);
+    setDeleteValidation(null);
+    setIsDeleteValidating(false);
+    setIsDeleteProcessing(false);
+  };
+
+  const runDeleteValidation = useCallback(async (serviceId: string) => {
+    setIsDeleteValidating(true);
+    try {
+      const result = await preCheckDeletion('service', serviceId);
+      setDeleteValidation(result);
+    } catch (error) {
+      console.error('Failed to validate service deletion:', error);
+      setDeleteValidation({
+        canDelete: false,
+        code: 'VALIDATION_FAILED',
+        message: 'Failed to validate deletion. Please try again.',
+        dependencies: [],
+        alternatives: []
+      });
+    } finally {
+      setIsDeleteValidating(false);
+    }
+  }, []);
+
   const handleDeleteService = async (serviceId: string) => {
     // Store the current page before opening the dialog
     const currentPageBeforeDialog = currentPage;
     
     setServiceToDelete(serviceId);
     setIsDeleteDialogOpen(true);
+    void runDeleteValidation(serviceId);
     
     // Ensure the current page is preserved
     setCurrentPage(currentPageBeforeDialog);
@@ -290,12 +328,14 @@ const ServiceCatalogManager: React.FC = () => {
     console.log(`Deleting service from page: ${pageBeforeDelete}`);
 
     try {
-      // First close the dialog to avoid UI jumps
-      setIsDeleteDialogOpen(false);
-      setServiceToDelete(null);
-      
-      // Then delete the service
-      await deleteService(serviceToDelete);
+      setIsDeleteProcessing(true);
+
+      const result = await deleteService(serviceToDelete);
+
+      if (!result.success) {
+        setDeleteValidation(result);
+        return;
+      }
       
       // Fetch services with page preservation
       await fetchServices(true);
@@ -307,11 +347,32 @@ const ServiceCatalogManager: React.FC = () => {
       }, 50);
       
       setError(null);
+      resetDeleteState();
     } catch (error) {
       console.error('Error deleting service:', error);
       setError('Failed to delete service');
-      setIsDeleteDialogOpen(false);
-      setServiceToDelete(null);
+      resetDeleteState();
+    } finally {
+      setIsDeleteProcessing(false);
+    }
+  };
+
+  const handleDeleteAlternativeAction = async (action: string) => {
+    if (action !== 'deactivate' || !serviceToDelete) {
+      return;
+    }
+
+    setIsDeleteProcessing(true);
+    try {
+      await updateService(serviceToDelete, { is_active: false });
+      await fetchServices(true);
+      setError(null);
+      resetDeleteState();
+    } catch (error) {
+      console.error('Error deactivating service:', error);
+      setError('Failed to deactivate service');
+    } finally {
+      setIsDeleteProcessing(false);
     }
   };
  
@@ -913,14 +974,16 @@ const ServiceCatalogManager: React.FC = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      <ConfirmationDialog
+      <DeleteEntityDialog
+        id="delete-service-dialog"
         isOpen={isDeleteDialogOpen}
-        onClose={() => setIsDeleteDialogOpen(false)}
-        onConfirm={confirmDeleteService}
-        title="Delete Service"
-        message="Are you sure you want to delete this service? This action cannot be undone."
-        confirmLabel="Delete"
-        cancelLabel="Cancel"
+        onClose={resetDeleteState}
+        onConfirmDelete={confirmDeleteService}
+        onAlternativeAction={handleDeleteAlternativeAction}
+        entityName={serviceToDeleteName}
+        validationResult={deleteValidation}
+        isValidating={isDeleteValidating}
+        isDeleting={isDeleteProcessing}
       />
     </>
   );

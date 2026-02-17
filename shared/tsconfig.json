@@ -23,6 +23,8 @@
       "@ee": ["../packages/ee/src"],
       "@ee/*": ["../packages/ee/src/*"],
       "@alga-psa/auth/sso/entry": ["../packages/auth/src/components/SsoProviderButtons.tsx"],
+      "@alga-psa/tags": ["../packages/tags/src"],
+      "@alga-psa/tags/*": ["../packages/tags/src/*"],
       "next-auth": ["../node_modules/next-auth"],
       "next-auth/*": ["../node_modules/next-auth/*"]
     }

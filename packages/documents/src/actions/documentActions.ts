@@ -23,7 +23,8 @@ import {
     DocumentInput,
     PaginatedDocumentsResponse,
     IFolderNode,
-    IFolderStats
+    IFolderStats,
+    DeletionValidationResult
 } from '@alga-psa/types';
 import type { IDocumentAssociation, IDocumentAssociationInput, DocumentAssociationEntityType } from '@alga-psa/types';
 import { v4 as uuidv4 } from 'uuid';
@@ -31,6 +32,8 @@ import { deleteFile } from './file-actions/fileActions';
 import { NextResponse } from 'next/server';
 import { deleteDocumentContent } from './documentContentActions';
 import { deleteBlockContent } from './documentBlockContentActions';
+import { deleteEntityWithValidation } from '@alga-psa/core';
+import { deleteEntityTags } from '@alga-psa/tags/lib/tagCleanup';
 import { DocumentHandlerRegistry } from '@alga-psa/documents/handlers/DocumentHandlerRegistry';
 import { getEntityTypesForUser } from '../lib/documentPermissionUtils';
 import { generateDocumentPreviews } from '../lib/documentPreviewGenerator';
@@ -127,68 +130,61 @@ export const updateDocument = withAuth(async (user, { tenant }, documentId: stri
 });
 
 // Delete document
-export const deleteDocument = withAuth(async (user, { tenant }, documentId: string, userId: string) => {
+export const deleteDocument = withAuth(async (
+  user,
+  { tenant },
+  documentId: string,
+  userId: string
+): Promise<DeletionValidationResult & { success: boolean; deleted?: boolean }> => {
+  let detachedAssociations: Array<{
+    associationId: string;
+    documentId: string;
+    entityId: string;
+    entityType: string;
+  }> = [];
+  let deletedDocument: any | null = null;
+
   try {
-    // Check permission for document deletion
-    if (!await hasPermission(user, 'document', 'delete')) {
-      throw new Error('Permission denied: Cannot delete documents');
-    }
-
     const { knex } = await createTenantKnex();
-
-    let detachedAssociations: Array<{
-      associationId: string;
-      documentId: string;
-      entityId: string;
-      entityType: string;
-    }> = [];
-
-    // Use a single transaction for all database operations
-    const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      // Get the document first to get the file_id
+    const result = await deleteEntityWithValidation('document', documentId, knex, tenant, async (trx, tenantId) => {
       const document = await trx('documents')
-        .where({ document_id: documentId, tenant })
+        .where({ document_id: documentId, tenant: tenantId })
         .first();
       if (!document) {
         throw new Error('Document not found');
       }
 
-      // First, update any clients that reference this document as notes_document_id
-      // We need to do this manually because of the composite foreign key constraint
+      await deleteEntityTags(trx, documentId, 'document');
+
       await trx('clients')
         .where({
           notes_document_id: documentId,
-          tenant
+          tenant: tenantId
         })
         .update({
           notes_document_id: null
         });
 
-      // Update any assets that reference this document as notes_document_id
-      // Citus doesn't support ON DELETE SET NULL when distribution key is in FK
       await trx('assets')
         .where({
           notes_document_id: documentId,
-          tenant
+          tenant: tenantId
         })
         .update({
           notes_document_id: null
         });
 
-      // Update any contacts that reference this document as notes_document_id
-      // Citus doesn't support ON DELETE SET NULL when distribution key is in FK
       await trx('contacts')
         .where({
           notes_document_id: documentId,
-          tenant
+          tenant: tenantId
         })
         .update({
           notes_document_id: null
         });
 
-      // Delete all associations (capture them for workflow events)
       const existingAssociations = await trx('document_associations')
-        .where({ document_id: document.document_id, tenant })
+        .where({ document_id: document.document_id, tenant: tenantId })
         .select('association_id', 'document_id', 'entity_id', 'entity_type');
 
       detachedAssociations = existingAssociations.map((row: any) => ({
@@ -199,12 +195,17 @@ export const deleteDocument = withAuth(async (user, { tenant }, documentId: stri
       }));
 
       await DocumentAssociation.deleteByDocument(trx, document.document_id);
-
-      // Delete the document record
-      await trx('documents').where({ document_id: documentId, tenant }).delete();
-
-      return document;
+      await trx('documents').where({ document_id: documentId, tenant: tenantId }).delete();
+      deletedDocument = document;
     });
+
+    if (!result.deleted || !deletedDocument) {
+      return {
+        ...result,
+        success: result.deleted === true,
+        deleted: result.deleted
+      };
+    }
 
     if (detachedAssociations.length > 0) {
       const occurredAt = new Date().toISOString();
@@ -235,25 +236,20 @@ export const deleteDocument = withAuth(async (user, { tenant }, documentId: stri
       );
     }
 
-    // Delete all associated files from storage (outside transaction)
     const filesToDelete: string[] = [];
 
-    // Add main file if it exists
-    if (result.file_id) {
-      filesToDelete.push(result.file_id);
+    if (deletedDocument.file_id) {
+      filesToDelete.push(deletedDocument.file_id);
     }
 
-    // Add thumbnail file if it exists
-    if (result.thumbnail_file_id) {
-      filesToDelete.push(result.thumbnail_file_id);
+    if (deletedDocument.thumbnail_file_id) {
+      filesToDelete.push(deletedDocument.thumbnail_file_id);
     }
 
-    // Add preview file if it exists
-    if (result.preview_file_id) {
-      filesToDelete.push(result.preview_file_id);
+    if (deletedDocument.preview_file_id) {
+      filesToDelete.push(deletedDocument.preview_file_id);
     }
 
-    // Delete all files
     if (filesToDelete.length > 0) {
       console.log(`[deleteDocument] Deleting ${filesToDelete.length} files for document ${documentId}`);
 
@@ -265,27 +261,35 @@ export const deleteDocument = withAuth(async (user, { tenant }, documentId: stri
           }
         } catch (error) {
           console.error(`[deleteDocument] Error deleting file ${fileId}:`, error);
-          // Don't throw - continue deleting other files
         }
       });
 
       await Promise.all(deletePromises);
 
-      // Clear preview cache if it exists
       const cache = CacheFactory.getPreviewCache(tenant);
-      await cache.delete(result.file_id);
+      await cache.delete(deletedDocument.file_id);
     }
 
-    // Delete document content and block content (outside transaction)
     await Promise.all([
       deleteDocumentContent(documentId),
       deleteBlockContent(documentId)
     ]);
 
-    return { success: true };
+    return {
+      ...result,
+      success: true,
+      deleted: true
+    };
   } catch (error) {
     console.error('Error deleting document:', error);
-    throw new Error(error instanceof Error ? error.message : "Failed to delete the document");
+    return {
+      success: false,
+      canDelete: false,
+      code: 'VALIDATION_FAILED',
+      message: error instanceof Error ? error.message : 'Failed to delete the document',
+      dependencies: [],
+      alternatives: []
+    };
   }
 });
 

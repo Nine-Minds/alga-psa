@@ -14,6 +14,7 @@ import type {
   IStandardStatus,
   IStatus,
   ITaskChecklistItem,
+  DeletionValidationResult,
   IUser,
   IUserWithRoles,
   ItemType,
@@ -33,6 +34,8 @@ import {
   buildProjectStatusChangedPayload,
   buildProjectUpdatedPayload,
 } from '@shared/workflow/streams/domainEventBuilders/projectLifecycleEventBuilders';
+import { deleteEntityWithValidation } from '@alga-psa/core';
+import { deleteEntityTags, deleteEntitiesTags } from '@alga-psa/tags/lib/tagCleanup';
 
 const extendedCreateProjectSchema = createProjectSchema.extend({
   assigned_to: z.string().nullable().optional(),
@@ -757,16 +760,55 @@ export const updateProject = withAuth(async (user, { tenant }, projectId: string
     }
 });
 
-export const deleteProject = withAuth(async (user, { tenant }, projectId: string): Promise<void> => {
+export const deleteProject = withAuth(async (
+    user,
+    { tenant },
+    projectId: string
+): Promise<DeletionValidationResult & { success: boolean; deleted?: boolean }> => {
     try {
         const { knex } = await createTenantKnex();
-        await withTransaction(knex, async (trx: Knex.Transaction) => {
+        const result = await deleteEntityWithValidation('project', projectId, knex, tenant, async (trx, tenantId) => {
             await checkPermission(user, 'project', 'delete', trx);
-            await ProjectModel.delete(trx, tenant, projectId);
+
+            await deleteEntityTags(trx, projectId, 'project');
+
+            const phaseIds = await trx('project_phases')
+                .where({ project_id: projectId, tenant: tenantId })
+                .pluck('phase_id');
+
+            if (phaseIds.length > 0) {
+                const taskIds = await trx('project_tasks')
+                    .whereIn('phase_id', phaseIds)
+                    .andWhere('tenant', tenantId)
+                    .pluck('task_id');
+
+                if (taskIds.length > 0) {
+                    await deleteEntitiesTags(trx, taskIds, 'project_task');
+                }
+            }
+
+            // Clean up child records owned by the project
+            await trx('project_ticket_links').where({ project_id: projectId, tenant: tenantId }).delete();
+            await trx('email_reply_tokens').where({ project_id: projectId, tenant: tenantId }).delete();
+
+            await ProjectModel.delete(trx, tenantId, projectId);
         });
+
+        return {
+            ...result,
+            success: result.deleted === true,
+            deleted: result.deleted
+        };
     } catch (error) {
         console.error('Error deleting project:', error);
-        throw error;
+        return {
+            success: false,
+            canDelete: false,
+            code: 'VALIDATION_FAILED',
+            message: error instanceof Error ? error.message : 'Failed to delete project',
+            dependencies: [],
+            alternatives: []
+        };
     }
 });
 

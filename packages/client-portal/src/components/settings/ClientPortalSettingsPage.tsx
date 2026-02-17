@@ -19,7 +19,8 @@ const VALID_TAB_SLUGS: TabId[] = ['account', 'client-details', 'user-management'
 const DEFAULT_TAB: TabId = 'account';
 
 export default function ClientPortalSettingsPage() {
-  const { t } = useTranslation('clientPortal');
+  const { t: tProfile } = useTranslation('client-portal');
+  const { t: tCommon } = useTranslation('common');
   const searchParams = useSearchParams();
   const tabParam = searchParams?.get('tab');
   const hydrationReadyRef = useRef(false);
@@ -29,10 +30,10 @@ export default function ClientPortalSettingsPage() {
 
   // Map URL slugs to translated labels (memoized to avoid recalculation)
   const slugToLabelMap = useMemo<Record<TabId, string>>(() => ({
-    'account': t('clientSettings.tabs.account'),
-    'client-details': t('clientSettings.tabs.clientDetails'),
-    'user-management': t('clientSettings.tabs.userManagement')
-  }), [t]);
+    'account': tProfile('clientSettings.tabs.account'),
+    'client-details': tProfile('clientSettings.tabs.clientDetails'),
+    'user-management': tProfile('clientSettings.tabs.userManagement')
+  }), [tProfile]);
 
   // Map translated labels back to URL slugs
   const labelToSlugMap = useMemo<Record<string, TabId>>(() => {
@@ -99,7 +100,7 @@ export default function ClientPortalSettingsPage() {
       <div className="flex items-center justify-center py-8">
         <LoadingIndicator
           layout="stacked"
-          text={t('common.loading')}
+          text={tCommon('common.loading')}
           spinnerProps={{ size: 'md' }}
         />
       </div>
@@ -129,9 +130,9 @@ export default function ClientPortalSettingsPage() {
     <DrawerProvider>
     <div className="container mx-auto py-6">
       <div className="mb-6">
-        <h1 className="text-2xl font-semibold">{t('clientSettings.title')}</h1>
+        <h1 className="text-2xl font-semibold">{tProfile('clientSettings.title')}</h1>
         <p className="text-gray-600">
-          {t('clientSettings.description')}
+          {tProfile('clientSettings.description')}
         </p>
       </div>
 

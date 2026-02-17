@@ -3,6 +3,7 @@
  */
 
 import logger from '@alga-psa/core/logger';
+import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import {
   IEmailProvider,
   IEmailProviderManager,
@@ -41,9 +42,10 @@ export class EmailProviderManager implements IEmailProviderManager {
     if (enabledConfig) {
       try {
         logger.debug(`[EmailProviderManager] Initializing provider: ${enabledConfig.providerId} (${enabledConfig.providerType})`);
-        
+
+        const configToInitialize = await this.resolveProviderConfig(tenantId, enabledConfig);
         const provider = await this.createProvider(enabledConfig);
-        await provider.initialize(enabledConfig.config);
+        await provider.initialize(configToInitialize);
         this.providers.set(tenantId, provider);
         this.providerCache.set(enabledConfig.providerId, provider);
         
@@ -199,6 +201,90 @@ export class EmailProviderManager implements IEmailProviderManager {
     }
     
     logger.info(`[EmailProviderManager] Updated settings for tenant: ${tenantId}`);
+  }
+
+  private async resolveProviderConfig(tenantId: string, config: EmailProviderConfig): Promise<Record<string, any>> {
+    const originalConfig = typeof config.config === 'object' && config.config !== null ? config.config : {};
+
+    if (config.providerType !== 'resend') {
+      return originalConfig;
+    }
+
+    const existingApiKey = this.normalizeSecretValue(
+      originalConfig.apiKey ?? originalConfig.api_key
+    );
+
+    if (existingApiKey) {
+      return originalConfig;
+    }
+
+    const fallbackApiKey = await this.getResendFallbackApiKey(tenantId, config.providerId);
+    if (!fallbackApiKey) {
+      return originalConfig;
+    }
+
+    return {
+      ...originalConfig,
+      apiKey: fallbackApiKey,
+    };
+  }
+
+  private async getResendFallbackApiKey(
+    tenantId: string,
+    providerId: string
+  ): Promise<string | undefined> {
+    try {
+      const secretProvider = await getSecretProviderInstance();
+      const tenantSecret =
+        this.normalizeSecretValue(await secretProvider.getTenantSecret(tenantId, 'resend_api_key')) ??
+        this.normalizeSecretValue(await secretProvider.getTenantSecret(tenantId, `resend_api_key_${providerId}`));
+
+      if (tenantSecret) {
+        logger.info(
+          `[EmailProviderManager] Using tenant-scoped Resend API key fallback for provider ${providerId} in tenant ${tenantId}`
+        );
+        return tenantSecret;
+      }
+
+      const appSecret = this.normalizeSecretValue(await secretProvider.getAppSecret('resend_api_key'));
+      if (appSecret) {
+        logger.info(
+          `[EmailProviderManager] Using app-scoped Resend API key fallback for provider ${providerId} in tenant ${tenantId}`
+        );
+        return appSecret;
+      }
+    } catch (error) {
+      logger.warn(
+        `[EmailProviderManager] Failed to read Resend API key fallback from secret provider for provider ${providerId}`,
+        {
+          tenantId,
+          error: error instanceof Error ? error.message : String(error),
+        }
+      );
+    }
+
+    const envApiKey = this.normalizeSecretValue(process.env.RESEND_API_KEY);
+    if (envApiKey) {
+      logger.info(
+        `[EmailProviderManager] Using environment Resend API key fallback for provider ${providerId} in tenant ${tenantId}`
+      );
+      return envApiKey;
+    }
+
+    return undefined;
+  }
+
+  private normalizeSecretValue(value: unknown): string | undefined {
+    if (typeof value !== 'string') {
+      return undefined;
+    }
+
+    const trimmed = value.trim();
+    if (!trimmed || trimmed === '***') {
+      return undefined;
+    }
+
+    return trimmed;
   }
 
   private async createProvider(config: EmailProviderConfig): Promise<IEmailProvider> {

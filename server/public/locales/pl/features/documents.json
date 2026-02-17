@@ -1,0 +1,189 @@
+{
+  "title": "Dokumenty",
+  "noDocuments": "Brak dołączonych dokumentów",
+  "upload": "Prześlij dokument",
+  "download": "Pobierz",
+  "remove": "Usuń",
+  "preview": "Podgląd",
+  "linkDocuments": "Powiąż dokumenty",
+  "editDocument": "Edytuj dokument",
+  "viewDocument": "Wyświetl dokument",
+  "downloadToPlay": "Pobierz do odtworzenia",
+  "delete": "Usuń",
+  "previewUnavailable": "Podgląd niedostępny",
+  "newDocument": "Nowy dokument",
+  "uploadFile": "Prześlij plik",
+  "deleteTitle": "Usuń dokument",
+  "deleteMessage": "Czy na pewno chcesz usunąć \"{{name}}\"? Tej operacji nie można cofnąć.",
+  "deleteVideoTitle": "Usuń wideo",
+  "deleteVideoMessage": "Czy na pewno chcesz usunąć wideo \"{{name}}\"? Tej operacji nie można cofnąć.",
+  "removeTitle": "Usuń dokument",
+  "removeMessage": "Czy na pewno chcesz usunąć \"{{name}}\" z tego elementu? Dokument pozostanie dostępny w bibliotece dokumentów.",
+  "removeVideoTitle": "Usuń wideo",
+  "removeVideoMessage": "Czy na pewno chcesz usunąć wideo \"{{name}}\" z tego elementu? Plik pozostanie dostępny w bibliotece dokumentów.",
+  "downloadFile": "Pobierz plik",
+  "videoUnsupported": "Format wideo ({{mimeType}}) nie jest obsługiwany przez przeglądarkę",
+  "videoTagUnsupported": "Twoja przeglądarka nie obsługuje znacznika video.",
+  "unnamed": "Bez tytułu",
+  "videoDownloadInfo": "Wideo zostanie pobrane i można je odtworzyć w domyślnym odtwarzaczu systemowym",
+  "previewUnavailableNoId": "Podgląd niedostępny (brak identyfikatora)",
+  "previewLoadFailed": "Nie udało się wczytać podglądu",
+  "videoCodecWarning": "Chrome może nie obsługiwać tego kodeka. Spróbuj pobrać lub użyj Safari/Edge.",
+  "messages": {
+    "fetchFailed": "Nie udało się pobrać dokumentów.",
+    "folderCreated": "Folder \"{{name}}\" utworzony pomyślnie",
+    "folderCreateFailed": "Nie udało się utworzyć folderu",
+    "moveDocumentsSuccess_one": "{{count}} dokument przeniesiono do {{destination}}",
+    "moveDocumentsSuccess_other": "{{count}} dokumentów przeniesiono do {{destination}}",
+    "moveDocumentsFailed": "Nie udało się przenieść dokumentów",
+    "deleteSuccess": "Dokument \"{{name}}\" usunięty pomyślnie",
+    "deleteFailed": "Nie udało się usunąć dokumentu",
+    "removeAssociationFailed": "Nie udało się usunąć powiązania dokumentu",
+    "moveDocumentSuccess": "Dokument \"{{name}}\" przeniesiony pomyślnie",
+    "moveDocumentFailed": "Nie udało się przenieść dokumentu",
+    "createFailed": "Nie udało się utworzyć dokumentu",
+    "saveFailed": "Nie udało się zapisać dokumentu",
+    "loadContentFailed": "Nie udało się wczytać treści dokumentu",
+    "downloadFailed": "Nie udało się pobrać dokumentu",
+    "bulkDeleteFailed": "Nie udało się usunąć części dokumentów",
+    "bulkDeleteSuccess_one": "{{count}} dokument usunięty pomyślnie",
+    "bulkDeleteSuccess_other": "{{count}} dokumentów usuniętych pomyślnie"
+  },
+  "validation": {
+    "nameRequired": "Nazwa dokumentu jest wymagana"
+  },
+  "bulkActions": {
+    "selected_one": "Wybrano {{count}} dokument",
+    "selected_other": "Wybrano {{count}} dokumentów",
+    "moveToFolder": "Przenieś do folderu",
+    "deleteSelected": "Usuń zaznaczone",
+    "clearSelection": "Wyczyść zaznaczenie"
+  },
+  "prompts": {
+    "confirmBulkDelete_one": "Czy na pewno chcesz usunąć {{count}} dokument?",
+    "confirmBulkDelete_other": "Czy na pewno chcesz usunąć {{count}} dokumentów?"
+  },
+  "pagination": {
+    "perPage": "{{count}} na stronę"
+  },
+  "folderSelector": {
+    "defaultTitle": "Wybierz folder docelowy",
+    "defaultDescription": "Wybierz, gdzie zapisać ten dokument",
+    "newDocumentTitle": "Wybierz folder dla nowego dokumentu",
+    "newDocumentDescription": "Wybierz, gdzie zapisać ten nowy dokument",
+    "moveTitle": "Przenieś dokument",
+    "moveDescriptionWithName": "Wybierz folder docelowy dla \"{{name}}\"",
+    "moveDescription": "Wybierz folder docelowy",
+    "bulkMoveTitle": "Przenieś zaznaczone dokumenty",
+    "bulkMoveDescription_one": "Wybierz folder docelowy dla {{count}} dokumentu",
+    "bulkMoveDescription_other": "Wybierz folder docelowy dla {{count}} dokumentów",
+    "errors": {
+      "nameRequired": "Wprowadź nazwę folderu",
+      "invalidCharacters": "Nazwa folderu nie może zawierać \"/\"",
+      "createFailed": "Nie udało się utworzyć folderu"
+    },
+    "creating": "Tworzenie...",
+    "createButton": "Utwórz folder",
+    "newFolderButton": "Nowy folder",
+    "parentLabel": "Folder nadrzędny: {{folder}}",
+    "rootLabel": "/ (Katalog główny)",
+    "namePlaceholder": "Wprowadź nazwę folderu",
+    "loading": "Ładowanie folderów...",
+    "rootOption": "Katalog główny (bez folderu)",
+    "empty": "Brak dostępnych folderów. Dokumenty zostaną zapisane w katalogu głównym."
+  },
+  "filters": {
+    "searchLabel": "Szukaj dokumentów",
+    "searchPlaceholder": "Szukaj po nazwie dokumentu...",
+    "typeLabel": "Typ dokumentu",
+    "entityTypeLabel": "Typ powiązanego obiektu",
+    "uploadedByLabel": "Dodany przez",
+    "uploadedByPlaceholder": "Wszyscy użytkownicy",
+    "updatedStartLabel": "Data aktualizacji od",
+    "updatedEndLabel": "Data aktualizacji do",
+    "startDatePlaceholder": "Wybierz datę początkową",
+    "endDatePlaceholder": "Wybierz datę końcową",
+    "sortByLabel": "Sortuj wg",
+    "clear": "Wyczyść filtry",
+    "typeOptions": {
+      "all": "Wszystkie typy dokumentów",
+      "pdf": "PDF",
+      "image": "Obrazy",
+      "text": "Dokumenty",
+      "video": "Wideo",
+      "other": "Inne"
+    },
+    "sortOptions": {
+      "updated_at": "Data",
+      "document_name": "Nazwa dokumentu",
+      "file_size": "Rozmiar pliku",
+      "created_by_full_name": "Utworzył"
+    },
+    "sortOrder": {
+      "default": {
+        "asc": "Rosnąco",
+        "desc": "Malejąco"
+      },
+      "document_name": {
+        "asc": "A-Z",
+        "desc": "Z-A"
+      },
+      "updated_at": {
+        "asc": "Najstarsze najpierw",
+        "desc": "Najnowsze najpierw"
+      },
+      "file_size": {
+        "asc": "Najmniejsze najpierw",
+        "desc": "Największe najpierw"
+      },
+      "created_by_full_name": {
+        "asc": "A-Z",
+        "desc": "Z-A"
+      }
+    }
+  },
+  "selector": {
+    "title": "Wybierz dokumenty",
+    "reflectionLabel": "Selektor dokumentów",
+    "searchPlaceholder": "Szukaj dokumentów...",
+    "foldersLabel": "Foldery",
+    "folderHint": "w folderze \"{{folder}}\"",
+    "saving": "Zapisywanie...",
+    "selectDocument": "Wybierz dokument",
+    "associateSelected": "Powiąż zaznaczone",
+    "errors": {
+      "configuration": "Błąd konfiguracji: brak informacji o obiekcie",
+      "invalidData": "Otrzymano nieprawidłowe dane dokumentu",
+      "load": "Nie udało się wczytać dokumentów",
+      "save": "Nie udało się zapisać wyboru dokumentów"
+    },
+    "configErrorTitle": "Błąd konfiguracji",
+    "configErrorMessage": "Brak wymaganej konfiguracji. Skontaktuj się z pomocą."
+  },
+  "uploadSection": {
+    "reflectionLabel": "Przesyłanie dokumentów",
+    "dragDrop": "Przeciągnij i upuść plik tutaj lub",
+    "browse": "Przeglądaj pliki",
+    "uploading": "Przesyłanie...",
+    "error": "Nie udało się przesłać dokumentu",
+    "fileError": "Nie udało się przesłać pliku"
+  },
+  "folders": {
+    "root": "Główny",
+    "loadFailed": "Nie udało się wczytać drzewa folderów",
+    "deleteConfirm": "Czy na pewno chcesz usunąć folder \"{{name}}\"? Zadziała to tylko, jeśli folder jest pusty.",
+    "deleteSuccess": "Folder \"{{name}}\" usunięty pomyślnie",
+    "deleteFailed": "Nie udało się usunąć folderu",
+    "deleteAction": "Usuń folder",
+    "loading": "Ładowanie folderów...",
+    "title": "Foldery",
+    "collapse": "Zwiń foldery",
+    "allDocuments": "Wszystkie dokumenty"
+  },
+  "folderManager": {
+    "title": "Utwórz nowy folder",
+    "nameLabel": "Nazwa folderu",
+    "namePlaceholder": "Wprowadź nazwę folderu",
+    "willCreateIn": "Zostanie utworzony w: {{folder}}"
+  }
+}

@@ -53,7 +53,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
   onDelete,
   hideInternalTab = false
 }) => {
-  const { t } = useTranslation('clientPortal');
+  const { t } = useTranslation('features/tickets');
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isInternalToggle, setIsInternalToggle] = useState(conversation.is_internal ?? false);
   const [isResolutionToggle, setIsResolutionToggle] = useState(conversation.is_resolution ?? false);
@@ -162,7 +162,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
                 onCheckedChange={setIsInternalToggle}
               />
               <Label htmlFor={`${commentId}-edit-internal-toggle`}>
-                {isInternalToggle ? t('tickets.conversation.markedAsInternal', 'Marked as Internal') : t('tickets.conversation.markAsInternal', 'Mark as Internal')}
+                {isInternalToggle ? t('conversation.markedAsInternal', 'Marked as Internal') : t('conversation.markAsInternal', 'Mark as Internal')}
               </Label>
             </div>
           )}
@@ -173,7 +173,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
               onCheckedChange={setIsResolutionToggle}
             />
             <Label htmlFor={`${commentId}-edit-resolution-toggle`}>
-              {isResolutionToggle ? t('tickets.conversation.markedAsResolution', 'Marked as Resolution') : t('tickets.conversation.markAsResolution', 'Mark as Resolution')}
+              {isResolutionToggle ? t('conversation.markedAsResolution', 'Marked as Resolution') : t('conversation.markAsResolution', 'Mark as Resolution')}
             </Label>
           </div>
         </div>
@@ -191,14 +191,14 @@ const CommentItem: React.FC<CommentItemProps> = ({
             onClick={handleSave}
             disabled={false}
           >
-            {t('tickets.conversation.save', 'Save')}
+            {t('conversation.save', 'Save')}
           </Button>
           <Button
             id={`${commentId}-cancel-btn`}
             variant="outline"
             onClick={onClose}
           >
-            {t('tickets.conversation.cancel', 'Cancel')}
+            {t('conversation.cancel', 'Cancel')}
           </Button>
         </div>
       </div>
@@ -331,8 +331,8 @@ const CommentItem: React.FC<CommentItemProps> = ({
                   <ResponseSourceBadge
                     source={commentSource}
                     labels={{
-                      clientPortal: t('tickets.responseSource.clientPortal', 'Received via Client Portal'),
-                      inboundEmail: t('tickets.responseSource.inboundEmail', 'Received via Inbound Email'),
+                      clientPortal: t('responseSource.clientPortal', 'Received via Client Portal'),
+                      inboundEmail: t('responseSource.inboundEmail', 'Received via Inbound Email'),
                     }}
                   />
                 )}
@@ -354,7 +354,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
                       {new Date(conversation.created_at).toLocaleString()}
                       {conversation.updated_at &&
                        new Date(conversation.updated_at).getTime() > new Date(conversation.created_at).getTime() &&
-                       ` (${t('tickets.conversation.edited', 'edited')})`}
+                       ` (${t('conversation.edited', 'edited')})`}
                     </span>
                   )}
                 </p>
@@ -365,8 +365,8 @@ const CommentItem: React.FC<CommentItemProps> = ({
                 <Button
                   id={`edit-comment-${conversation.comment_id}-button`}
                   variant="ghost"
+                  size="sm"
                   onClick={() => onEdit(conversation)}
-                  className="text-indigo-600 hover:text-indigo-800 font-medium p-1 rounded-full hover:bg-indigo-100 transition duration-150 ease-in-out"
                   aria-label="Edit comment"
                 >
                   <Pencil className="w-4 h-4" />
@@ -374,8 +374,8 @@ const CommentItem: React.FC<CommentItemProps> = ({
                 <Button
                   id={`delete-comment-${conversation.comment_id}-button`}
                   variant="ghost"
+                  size="sm"
                   onClick={() => setIsDeleteDialogOpen(true)}
-                  className="text-red-600 hover:text-red-800 font-medium p-1 rounded-full hover:bg-red-100 transition duration-150 ease-in-out"
                   aria-label="Delete comment"
                 >
                   <Trash className="w-4 h-4" />

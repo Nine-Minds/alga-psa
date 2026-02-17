@@ -40,7 +40,7 @@ const useDebounce = <T,>(value: T, delay: number): T => {
 };
 
 export function TicketList() {
-  const { t } = useTranslation('clientPortal');
+  const { t } = useTranslation('features/tickets');
   const searchParams = useSearchParams();
   const router = useRouter();
   const [tickets, setTickets] = useState<ITicketListItem[]>([]);
@@ -114,9 +114,9 @@ export function TicketList() {
         ]);
 
         setStatusOptions([
-          { value: 'all', label: t('tickets.filters.allStatuses') },
-          { value: 'open', label: t('tickets.filters.allOpen') },
-          { value: 'closed', label: t('tickets.filters.allClosed') },
+          { value: 'all', label: t('filters.allStatuses') },
+          { value: 'open', label: t('filters.allOpen') },
+          { value: 'closed', label: t('filters.allClosed') },
           ...statuses.map((status: { status_id: string; name: string | null; is_closed: boolean }): SelectOption => ({
             value: status.status_id!,
             label: status.name ?? "",
@@ -125,7 +125,7 @@ export function TicketList() {
         ]);
 
         setPriorityOptions([
-          { value: 'all', label: t('tickets.filters.allPriorities') },
+          { value: 'all', label: t('filters.allPriorities') },
           ...priorities.map((priority: { priority_id: string; priority_name: string }) => ({
             value: priority.priority_id,
             label: priority.priority_name
@@ -135,7 +135,7 @@ export function TicketList() {
         setCategories(categories);
       } catch (error) {
         console.error('Failed to load options:', error);
-        setError(t('tickets.messages.filtersError', 'Failed to load filter options.'));
+        setError(t('messages.filtersError', 'Failed to load filter options.'));
       }
     };
 
@@ -225,7 +225,7 @@ export function TicketList() {
       setTickets(sortedTickets);
     } catch (error) {
       console.error('Failed to load tickets:', error);
-      setError(t('tickets.messages.loadingError', 'Failed to load tickets. Please try again.'));
+      setError(t('messages.loadingError', 'Failed to load tickets. Please try again.'));
     }
     setLoading(false);
   }, [selectedStatus, selectedResponseStatus, selectedPriority, selectedCategories, excludedCategories, debouncedSearchQuery, sortField, sortDirection, t]);
@@ -257,13 +257,13 @@ export function TicketList() {
     try {
       await updateTicketStatus(ticketId, newStatus);
 
-      toast.success(t('tickets.messages.statusUpdateSuccess', 'Ticket status successfully updated to "{{status}}".', { status: newStatusLabel }));
+      toast.success(t('messages.statusUpdateSuccess', 'Ticket status successfully updated to "{{status}}".', { status: newStatusLabel }));
 
       // Refresh tickets by calling loadTickets
       loadTickets(); 
     } catch (error) {
       console.error('Failed to update ticket status:', error);
-      toast.error(t('tickets.messages.statusUpdateError', 'Failed to update ticket status.'));
+      toast.error(t('messages.statusUpdateError', 'Failed to update ticket status.'));
     } finally {
       setTicketToUpdateStatus(null);
     }
@@ -293,7 +293,7 @@ export function TicketList() {
 
   const columns: ColumnDefinition<ITicketListItem>[] = [
     {
-      title: t('tickets.fields.ticketNumber'),
+      title: t('fields.ticketNumber'),
       dataIndex: 'ticket_number',
       width: '75px',
       render: (value: string, record: ITicketListItem) => (
@@ -307,7 +307,7 @@ export function TicketList() {
       ),
     },
     {
-      title: t('tickets.fields.title'),
+      title: t('fields.title'),
       dataIndex: 'title',
       width: '25%',
       render: (value: string, record: ITicketListItem) => (
@@ -323,7 +323,7 @@ export function TicketList() {
       ),
     },
     {
-      title: t('tickets.fields.status'),
+      title: t('fields.status'),
       dataIndex: 'status_name',
       width: '20%',
       render: (value: string, record: ITicketListItem) => {
@@ -372,10 +372,10 @@ export function TicketList() {
                 isClientPortal={true}
                 size="sm"
                 labels={{
-                  awaitingClient: t('tickets.responseState.awaitingYourResponse', 'Awaiting Your Response'),
-                  awaitingInternal: t('tickets.responseState.awaitingSupportResponse', 'Awaiting Support Response'),
-                  awaitingClientTooltip: t('tickets.responseState.awaitingYourResponseTooltip', 'Support is waiting for your response'),
-                  awaitingInternalTooltip: t('tickets.responseState.awaitingSupportResponseTooltip', 'Your response has been received. Support will respond soon.'),
+                  awaitingClient: t('responseState.awaitingYourResponse', 'Awaiting Your Response'),
+                  awaitingInternal: t('responseState.awaitingSupportResponse', 'Awaiting Support Response'),
+                  awaitingClientTooltip: t('responseState.awaitingYourResponseTooltip', 'Support is waiting for your response'),
+                  awaitingInternalTooltip: t('responseState.awaitingSupportResponseTooltip', 'Your response has been received. Support will respond soon.'),
                 }}
               />
             )}
@@ -384,7 +384,7 @@ export function TicketList() {
       },
     },
     {
-      title: t('tickets.fields.priority'),
+      title: t('fields.priority'),
       dataIndex: 'priority_name',
       width: '12%',
       render: (value: string, record: ITicketListItem) => (
@@ -398,7 +398,7 @@ export function TicketList() {
       ),
     },
     {
-      title: t('tickets.fields.dueDate', 'Due Date'),
+      title: t('fields.dueDate', 'Due Date'),
       dataIndex: 'due_date',
       width: '12%',
       render: (value: string | null) => {
@@ -436,7 +436,7 @@ export function TicketList() {
       },
     },
     {
-      title: t('tickets.fields.assignedTo'),
+      title: t('fields.assignedTo'),
       dataIndex: 'assigned_to_name',
       width: '15%',
       render: (value: string | null, record: ITicketListItem) => {
@@ -480,7 +480,7 @@ export function TicketList() {
       },
     },
     {
-      title: t('tickets.fields.createdAt'),
+      title: t('fields.createdAt'),
       dataIndex: 'entered_at',
       width: '15%',
       render: (value: string | null) => (
@@ -490,7 +490,7 @@ export function TicketList() {
       ),
     },
     {
-      title: t('tickets.fields.updatedAt'),
+      title: t('fields.updatedAt'),
       dataIndex: 'updated_at',
       width: '15%',
       render: (value: string | null) => (
@@ -522,15 +522,15 @@ export function TicketList() {
       <div className="sticky top-0 z-40 bg-white rounded-t-lg p-6 border-b border-gray-100">
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">{t('tickets.title')}</h1>
-            <p className="text-gray-600">{t('tickets.subtitle')}</p>
+            <h1 className="text-2xl font-bold text-gray-900">{t('title')}</h1>
+            <p className="text-gray-600">{t('subtitle')}</p>
           </div>
           <Button
             id="create-ticket-button"
             className="bg-[rgb(var(--color-primary-500))] text-white hover:bg-[rgb(var(--color-primary-600))] px-4 py-2"
             onClick={() => setIsAddTicketOpen(true)}
           >
-            {t('tickets.createButton')}
+            {t('createButton')}
           </Button>
         </div>
         <div className="flex items-center gap-4 flex-wrap">
@@ -546,10 +546,10 @@ export function TicketList() {
 
           <CustomSelect
             options={[
-              { value: 'all', label: t('tickets.filters.allResponseStatuses', 'All Response Statuses') },
-              { value: 'awaiting_client', label: t('tickets.responseState.awaitingYourResponse', 'Awaiting Your Response') },
-              { value: 'awaiting_internal', label: t('tickets.responseState.awaitingSupportResponse', 'Awaiting Support Response') },
-              { value: 'none', label: t('tickets.responseState.none', 'No Response Pending') },
+              { value: 'all', label: t('filters.allResponseStatuses', 'All Response Statuses') },
+              { value: 'awaiting_client', label: t('responseState.awaitingYourResponse', 'Awaiting Your Response') },
+              { value: 'awaiting_internal', label: t('responseState.awaitingSupportResponse', 'Awaiting Support Response') },
+              { value: 'none', label: t('responseState.none', 'No Response Pending') },
             ]}
             value={selectedResponseStatus}
             onValueChange={(value) => {
@@ -560,7 +560,7 @@ export function TicketList() {
               setSelectedResponseStatus(nextValue);
               setCurrentPage(1);
             }}
-            placeholder={t('tickets.filters.responseStatus', 'Response Status')}
+            placeholder={t('filters.responseStatus', 'Response Status')}
           />
 
           <CustomSelect
@@ -580,7 +580,7 @@ export function TicketList() {
             selectedCategories={selectedCategories}
             excludedCategories={excludedCategories}
             onSelect={handleCategorySelect}
-            placeholder={t('tickets.filters.category')}
+            placeholder={t('filters.category')}
             multiSelect={true}
             showExclude={true}
             showReset={true}
@@ -592,7 +592,7 @@ export function TicketList() {
 
           <Input
             id="client-portal-search-tickets-input"
-            placeholder={t('tickets.filters.search')}
+            placeholder={t('filters.search')}
             value={searchQuery}
             onChange={(e) => {
               setSearchQuery(e.target.value);

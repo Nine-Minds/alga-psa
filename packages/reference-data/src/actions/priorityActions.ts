@@ -1,11 +1,13 @@
 'use server'
 
-import { IPriority } from '@alga-psa/types';
+import type { IPriority, DeletionValidationResult } from '@alga-psa/types';
 import Priority from '../models/priority';
 import { withTransaction } from '@alga-psa/db';
 import { createTenantKnex } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { Knex } from 'knex';
+import { deleteEntityWithValidation } from '@alga-psa/core';
+import { preCheckDeletion } from '@alga-psa/auth';
 
 export const getAllPriorities = withAuth(async (_user, { tenant }, itemType?: 'ticket' | 'project_task') => {
   const { knex: db } = await createTenantKnex();
@@ -61,23 +63,91 @@ export const createPriority = withAuth(async (user, { tenant }, priorityData: Om
 });
 
 
-export const deletePriority = withAuth(async (_user, { tenant }, priorityId: string) => {
+export const validatePriorityDeletion = withAuth(async (
+  _user,
+  { tenant },
+  priorityId: string
+): Promise<DeletionValidationResult> => {
   const { knex: db } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
-    try {
-      // Check if this is an ITIL standard priority (immutable)
-      const priority = await Priority.get(trx, tenant, priorityId);
-      if (priority?.is_from_itil_standard) {
-        throw new Error('ITIL standard priorities cannot be deleted');
-      }
-
-      await Priority.delete(trx, tenant, priorityId);
-      return true;
-    } catch (error) {
-      console.error(`Error deleting priority ${priorityId} for tenant ${tenant}:`, error);
-      throw new Error(error instanceof Error ? error.message : `Failed to delete priority for tenant ${tenant}`);
+    const priority = await Priority.get(trx, tenant, priorityId);
+    if (!priority) {
+      return {
+        canDelete: false,
+        code: 'NOT_FOUND',
+        message: 'Priority not found.',
+        dependencies: [],
+        alternatives: []
+      };
     }
+
+    if (priority.is_from_itil_standard) {
+      return {
+        canDelete: false,
+        code: 'VALIDATION_FAILED',
+        message: 'ITIL standard priorities cannot be deleted.',
+        dependencies: [],
+        alternatives: []
+      };
+    }
+
+    return preCheckDeletion('priority', priorityId);
   });
+});
+
+export const deletePriority = withAuth(async (
+  _user,
+  { tenant },
+  priorityId: string
+): Promise<DeletionValidationResult & { success: boolean; deleted?: boolean }> => {
+  try {
+    const { knex: db } = await createTenantKnex();
+    const priority = await withTransaction(db, async (trx: Knex.Transaction) => {
+      return Priority.get(trx, tenant, priorityId);
+    });
+
+    if (!priority) {
+      return {
+        success: false,
+        canDelete: false,
+        code: 'NOT_FOUND',
+        message: 'Priority not found.',
+        dependencies: [],
+        alternatives: []
+      };
+    }
+
+    if (priority.is_from_itil_standard) {
+      return {
+        success: false,
+        canDelete: false,
+        code: 'VALIDATION_FAILED',
+        message: 'ITIL standard priorities cannot be deleted.',
+        dependencies: [],
+        alternatives: []
+      };
+    }
+
+    const result = await deleteEntityWithValidation('priority', priorityId, db, tenant, async (trx, tenantId) => {
+      await Priority.delete(trx, tenantId, priorityId);
+    });
+
+    return {
+      ...result,
+      success: result.deleted === true,
+      deleted: result.deleted
+    };
+  } catch (error) {
+    console.error(`Error deleting priority ${priorityId} for tenant ${tenant}:`, error);
+    return {
+      success: false,
+      canDelete: false,
+      code: 'VALIDATION_FAILED',
+      message: error instanceof Error ? error.message : `Failed to delete priority for tenant ${tenant}`,
+      dependencies: [],
+      alternatives: []
+    };
+  }
 });
 
 export const updatePriority = withAuth(async (_user, { tenant }, priorityId: string, priorityData: Partial<IPriority>): Promise<IPriority> => {

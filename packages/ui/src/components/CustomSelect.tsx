@@ -235,7 +235,7 @@ const CustomSelect = ({
           <RadixSelect.Content
             className={`
               overflow-hidden bg-background dark:bg-[rgb(var(--color-card))] rounded-md shadow-lg pointer-events-auto
-              border border-border mt-1 z-[10001] min-w-[var(--radix-select-trigger-width)] max-w-full
+              border border-border dark:border-[rgb(var(--color-border-200))] mt-1 z-[10001] min-w-[var(--radix-select-trigger-width)] max-w-full
               [&[data-side=top]]:mb-2 [&[data-side=bottom]]:mt-2
               ${customStyles?.content || ''}
             `}

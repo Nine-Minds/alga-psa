@@ -757,7 +757,7 @@ export default function TaskDocumentsSimple({
         drawerVariant="document"
       >
         <div className="flex flex-col h-full">
-          <div className="flex justify-between items-center mb-4 pb-4 border-b">
+          <div className="flex justify-between items-center mb-4 pb-4 border-b border-[rgb(var(--color-border-200))]">
             <h2 className="text-lg font-semibold">
               {isCreatingNew ? 'New Document' : (isEditMode ? 'Edit Document' : 'View Document')}
             </h2>
@@ -863,7 +863,7 @@ export default function TaskDocumentsSimple({
 
           {/* Actions */}
           {(isCreatingNew || isEditMode) && (
-            <div className="flex justify-end gap-2 pt-4 border-t">
+            <div className="flex justify-end gap-2 pt-4 border-t border-[rgb(var(--color-border-200))]">
               <Button
                 id="task-document-cancel-btn"
                 onClick={() => {

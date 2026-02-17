@@ -1,12 +1,13 @@
 'use server';
 
 import User from '@alga-psa/db/models/user';
-import { IUser, IRole, IUserWithRoles, IRoleWithPermissions, IUserRole } from '@alga-psa/types';
+import { DeletionValidationResult, IUser, IRole, IUserWithRoles, IRoleWithPermissions, IUserRole } from '@alga-psa/types';
 import { revalidatePath } from 'next/cache';
 import { createTenantKnex } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
 import { withAdminTransaction, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
+import { deleteEntityWithValidation } from '@alga-psa/core';
 import { hashPassword } from '@alga-psa/core/encryption';
 import Tenant from '@alga-psa/db/models/tenant';
 import UserPreferences from '@alga-psa/db/models/userPreferences';
@@ -180,47 +181,66 @@ export const deleteUser = withAuth(async (
   user,
   { tenant },
   userId: string
-): Promise<void> => {
+): Promise<DeletionValidationResult & { success: boolean; deleted?: boolean }> => {
   try {
     const {knex: db} = await createTenantKnex();
 
-    await withTransaction(db, async (trx: Knex.Transaction) => {
+    const assignedClient = await withTransaction(db, async (trx: Knex.Transaction) => {
       if (!await hasPermission(user, 'user', 'delete', trx)) {
         throw new Error('Permission denied: Cannot delete user');
       }
 
-      const assignedClient = await trx('clients')
+      return await trx('clients')
         .where({ account_manager_id: userId, tenant: tenant || undefined })
         .first();
+    });
 
-      if (assignedClient) {
-        throw new Error('Cannot delete user: Assigned as Account Manager to one or more clients. Please reassign first.');
-      }
+    if (assignedClient) {
+      return {
+        success: false,
+        canDelete: false,
+        code: 'DEPENDENCIES_EXIST',
+        message: 'Cannot delete user: Assigned as Account Manager to one or more clients. Please reassign first.',
+        dependencies: [],
+        alternatives: []
+      };
+    }
 
-      // Set completed_by to NULL in workflow_tasks where the user is the completer
+    const result = await deleteEntityWithValidation('user', userId, db, tenant, async (trx, tenantId) => {
       await trx('workflow_tasks')
-        .where({ completed_by: userId, tenant: tenant || undefined })
+        .where({ completed_by: userId, tenant: tenantId || undefined })
         .update({ completed_by: null });
 
-      // Clear default_assigned_to on boards where this user is the default
       await trx('boards')
-        .where({ default_assigned_to: userId, tenant })
+        .where({ default_assigned_to: userId, tenant: tenantId })
         .update({ default_assigned_to: null });
 
-      // Delete user roles
-      await trx('user_roles').where({ user_id: userId, tenant: tenant || undefined }).del();
+      await trx('user_roles').where({ user_id: userId, tenant: tenantId || undefined }).del();
+      await trx('user_preferences').where({ user_id: userId, tenant: tenantId || undefined }).del();
 
-      // Delete user preferences
-      await trx('user_preferences').where({ user_id: userId, tenant: tenant || undefined }).del();
-
-      // Delete user
-      await trx('users').where({ user_id: userId, tenant: tenant || undefined }).del();
+      const deleted = await trx('users').where({ user_id: userId, tenant: tenantId || undefined }).del();
+      if (!deleted || deleted === 0) {
+        throw new Error('User record not found or could not be deleted');
+      }
     });
 
     revalidatePath('/settings');
+
+    return {
+      ...result,
+      success: result.deleted === true,
+      deleted: result.deleted
+    };
   } catch (error) {
     logger.error('Error deleting user:', error);
-    throw new Error('Failed to delete user');
+    return {
+      success: false,
+      canDelete: false,
+      code: 'VALIDATION_FAILED',
+      message: 'Failed to delete user',
+      dependencies: [],
+      alternatives: []
+    };
   }
 });
 

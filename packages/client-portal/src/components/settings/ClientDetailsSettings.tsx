@@ -55,7 +55,8 @@ const TextDetailItem: React.FC<{
 };
 
 export function ClientDetailsSettings() {
-  const { t } = useTranslation('clientPortal');
+  const { t: tProfile } = useTranslation('client-portal');
+  const { t: tCommon } = useTranslation('common');
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -83,19 +84,19 @@ export function ClientDetailsSettings() {
         );
 
         if (!hasRequiredPermissions) {
-          setError(t('clientSettings.messages.noPermission', 'You do not have permission to access client settings'));
+          setError(tProfile('clientSettings.messages.noPermission', 'You do not have permission to access client settings'));
           return;
         }
 
         const userClientId = await getUserClientId(user.user_id);
         if (!userClientId) {
-          setError(t('clientSettings.messages.clientNotFound', 'Client not found'));
+          setError(tProfile('clientSettings.messages.clientNotFound', 'Client not found'));
           return;
         }
 
         const client = await getClientById(userClientId);
         if (!client) {
-          setError(t('clientSettings.messages.failedToLoad'));
+          setError(tProfile('clientSettings.messages.failedToLoad'));
           return;
         }
 
@@ -103,7 +104,7 @@ export function ClientDetailsSettings() {
 
       } catch (error) {
         console.error('Error loading client details:', error);
-        setError(t('clientSettings.messages.detailsLoadError', 'Failed to load client details'));
+        setError(tProfile('clientSettings.messages.detailsLoadError', 'Failed to load client details'));
       }
     }
 
@@ -163,10 +164,10 @@ export function ClientDetailsSettings() {
       });
       setClientDetails(updatedClient);
       setHasUnsavedChanges(false);
-      toast.success(t('clientSettings.messages.updateSuccess'));
+      toast.success(tProfile('clientSettings.messages.updateSuccess'));
     } catch (error) {
       console.error('Failed to update client details:', error);
-      toast.error(t('clientSettings.messages.updateError', 'Failed to update client details'));
+      toast.error(tProfile('clientSettings.messages.updateError', 'Failed to update client details'));
     } finally {
       setIsLoading(false);
     }
@@ -193,7 +194,7 @@ export function ClientDetailsSettings() {
     <div className="space-y-6 bg-white p-6 rounded-lg shadow-sm">
       {/* Logo Upload Section */}
       <div className="mb-6">
-        <h3 className="text-lg font-medium mb-4">{t('clientSettings.fields.clientLogo')}</h3>
+        <h3 className="text-lg font-medium mb-4">{tProfile('clientSettings.fields.clientLogo')}</h3>
         <div className="flex items-center space-x-4">
           <EntityImageUpload
             entityType="client"
@@ -225,35 +226,35 @@ export function ClientDetailsSettings() {
         {/* Left Column - All Form Fields */}
         <div className="space-y-6">
           <TextDetailItem
-            label={t('clientSettings.fields.clientName')}
+            label={tProfile('clientSettings.fields.clientName')}
             value={clientDetails.client_name}
             onEdit={(value) => handleFieldChange('client_name', value)}
             automationId="client-name-field"
           />
 
           <TextDetailItem
-            label={t('clientSettings.fields.website')}
+            label={tProfile('clientSettings.fields.website')}
             value={clientDetails.properties?.website || clientDetails.url || ''}
             onEdit={(value) => handleFieldChange('properties.website', value)}
             automationId="website-field"
           />
 
           <TextDetailItem
-            label={t('clientSettings.fields.industry')}
+            label={tProfile('clientSettings.fields.industry')}
             value={clientDetails.properties?.industry || ''}
             onEdit={(value) => handleFieldChange('properties.industry', value)}
             automationId="industry-field"
           />
 
           <TextDetailItem
-            label={t('clientSettings.fields.company_size')}
+            label={tProfile('clientSettings.fields.company_size')}
             value={clientDetails.properties?.company_size || ''}
             onEdit={(value) => handleFieldChange('properties.company_size', value)}
             automationId="company-size-field"
           />
           
           <TextDetailItem
-            label={t('clientSettings.fields.annualRevenue')}
+            label={tProfile('clientSettings.fields.annualRevenue')}
             value={clientDetails.properties?.annual_revenue || ''}
             onEdit={(value) => handleFieldChange('properties.annual_revenue', value)}
             automationId="annual-revenue-field"
@@ -263,7 +264,7 @@ export function ClientDetailsSettings() {
         {/* Right Column - Client Locations */}
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <Text as="label" size="2" className="text-gray-700 font-medium">{t('clientSettings.fields.clientLocations')}</Text>
+            <Text as="label" size="2" className="text-gray-700 font-medium">{tProfile('clientSettings.fields.clientLocations')}</Text>
             <Button
               id="locations-button"
               size="sm"
@@ -271,7 +272,7 @@ export function ClientDetailsSettings() {
               onClick={() => setIsLocationsDialogOpen(true)}
               className="text-sm"
             >
-              {t('clientSettings.fields.manageLocations')}
+              {tProfile('clientSettings.fields.manageLocations')}
             </Button>
           </div>
           <div>
@@ -291,7 +292,7 @@ export function ClientDetailsSettings() {
           disabled={isLoading || !hasUnsavedChanges}
           className="bg-[rgb(var(--color-primary-500))] text-white hover:bg-[rgb(var(--color-primary-600))] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {isLoading ? t('common.loading') : t('clientSettings.messages.saveChanges')}
+          {isLoading ? tCommon('common.loading') : tProfile('clientSettings.messages.saveChanges')}
         </Button>
       </Flex>
 
@@ -301,7 +302,7 @@ export function ClientDetailsSettings() {
           setIsLocationsDialogOpen(false);
           setLocationsRefreshKey(prev => prev + 1);
         }}
-        title={`${t('clientSettings.fields.manageLocations')} - ${clientDetails.client_name}`}
+        title={`${tProfile('clientSettings.fields.manageLocations')} - ${clientDetails.client_name}`}
       >
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <ClientLocations

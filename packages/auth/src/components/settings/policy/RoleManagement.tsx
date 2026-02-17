@@ -2,11 +2,12 @@
 
 // Auth-owned role management UI.
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Flex, Text } from '@radix-ui/themes';
 import { Button } from '@alga-psa/ui/components/Button';
+import { DeleteEntityDialog } from '@alga-psa/ui';
 import { createRole, updateRole, deleteRole, getRoles } from '@alga-psa/auth/actions';
-import { IRole } from '@alga-psa/types';
+import { IRole, DeletionValidationResult } from '@alga-psa/types';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { ColumnDefinition } from '@alga-psa/types';
 import GenericDialog from '@alga-psa/ui/components/GenericDialog';
@@ -16,6 +17,7 @@ import { Label } from '@alga-psa/ui/components/Label';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
+import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
 
 export default function RoleManagement() {
   const [roles, setRoles] = useState<IRole[]>([]);
@@ -27,6 +29,19 @@ export default function RoleManagement() {
   });
   const [editingRole, setEditingRole] = useState<IRole | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [roleToDelete, setRoleToDelete] = useState<IRole | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [deleteValidation, setDeleteValidation] = useState<DeletionValidationResult | null>(null);
+  const [isDeleteValidating, setIsDeleteValidating] = useState(false);
+  const [isDeleteProcessing, setIsDeleteProcessing] = useState(false);
+
+  const resetDeleteState = useCallback(() => {
+    setIsDeleteDialogOpen(false);
+    setRoleToDelete(null);
+    setDeleteValidation(null);
+    setIsDeleteValidating(false);
+    setIsDeleteProcessing(false);
+  }, []);
 
   useEffect(() => {
     fetchRoles();
@@ -59,14 +74,56 @@ export default function RoleManagement() {
     }
   };
 
-  const handleDeleteRole = async (roleId: string) => {
+  const runDeleteValidation = useCallback(async (roleId: string) => {
+    setIsDeleteValidating(true);
     try {
-      await deleteRole(roleId);
-      fetchRoles();
+      const result = await preCheckDeletion('role', roleId);
+      setDeleteValidation(result);
+    } catch (error) {
+      console.error('Failed to validate role deletion:', error);
+      setDeleteValidation({
+        canDelete: false,
+        code: 'VALIDATION_FAILED',
+        message: 'Failed to validate deletion. Please try again.',
+        dependencies: [],
+        alternatives: []
+      });
+    } finally {
+      setIsDeleteValidating(false);
+    }
+  }, []);
+
+  const handleDeleteRole = (role: IRole) => {
+    setRoleToDelete(role);
+    setDeleteValidation(null);
+    setIsDeleteDialogOpen(true);
+    void runDeleteValidation(role.role_id);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!roleToDelete) {
+      return;
+    }
+    setIsDeleteProcessing(true);
+    try {
+      const result = await deleteRole(roleToDelete.role_id);
+      if (result.success) {
+        await fetchRoles();
+        resetDeleteState();
+        return;
+      }
+      setDeleteValidation(result);
     } catch (error) {
       console.error('Error deleting role:', error);
-      // Show error message to user
-      alert(error instanceof Error ? error.message : 'Failed to delete role');
+      setDeleteValidation({
+        canDelete: false,
+        code: 'VALIDATION_FAILED',
+        message: error instanceof Error ? error.message : 'Failed to delete role',
+        dependencies: [],
+        alternatives: []
+      });
+    } finally {
+      setIsDeleteProcessing(false);
     }
   };
 
@@ -105,7 +162,7 @@ export default function RoleManagement() {
             variant="destructive"
             id="delete-role-button"
             size="sm"
-            onClick={() => handleDeleteRole(roleId)}
+            onClick={() => handleDeleteRole(role)}
             disabled={isAdminRole}
           >
             Delete
@@ -246,6 +303,17 @@ export default function RoleManagement() {
           </div>
         </div>
       </GenericDialog>
+
+      <DeleteEntityDialog
+        id={roleToDelete ? `delete-role-${roleToDelete.role_id}` : 'delete-role-dialog'}
+        isOpen={isDeleteDialogOpen}
+        onClose={resetDeleteState}
+        onConfirmDelete={handleConfirmDelete}
+        entityName={roleToDelete?.role_name || 'this role'}
+        validationResult={deleteValidation}
+        isValidating={isDeleteValidating}
+        isDeleting={isDeleteProcessing}
+      />
     </>
   );
 }

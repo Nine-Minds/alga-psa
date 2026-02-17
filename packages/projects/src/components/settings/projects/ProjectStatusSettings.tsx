@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Plus, MoreVertical } from "lucide-react";
 import { getStatuses, deleteStatus, updateStatus } from '@alga-psa/reference-data/actions';
 import { importReferenceData, getAvailableReferenceData, checkImportConflicts, type ImportConflict } from '@alga-psa/reference-data/actions';
-import type { IStatus, IStandardStatus } from '@alga-psa/types';
+import type { IStatus, IStandardStatus, DeletionValidationResult } from '@alga-psa/types';
 import { getCurrentUser } from '@alga-psa/users/actions';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
@@ -20,8 +20,9 @@ import {
 import { StatusDialog } from '@alga-psa/reference-data/components';
 import { StatusImportDialog } from '@alga-psa/ui/components/settings/dialogs/StatusImportDialog';
 import { ConflictResolutionDialog } from '@alga-psa/reference-data/components';
-import { DeleteConfirmationDialog } from '@alga-psa/ui/components/settings/dialogs/DeleteConfirmationDialog';
+import { DeleteEntityDialog } from '@alga-psa/ui';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
+import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
 
 /**
  * ProjectStatusSettings - Manages project-level statuses
@@ -44,8 +45,10 @@ export function ProjectStatusSettings(): React.JSX.Element {
   const [conflictResolutions, setConflictResolutions] = useState<Record<string, { action: 'skip' | 'rename' | 'reorder', newName?: string, newOrder?: number }>>({});
 
   // Delete confirmation state
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [statusToDelete, setStatusToDelete] = useState<IStatus | null>(null);
+  const [deleteValidation, setDeleteValidation] = useState<DeletionValidationResult | null>(null);
+  const [isDeleteValidating, setIsDeleteValidating] = useState(false);
+  const [isDeleteProcessing, setIsDeleteProcessing] = useState(false);
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -105,6 +108,32 @@ export function ProjectStatusSettings(): React.JSX.Element {
     }
   };
 
+  const resetDeleteState = () => {
+    setStatusToDelete(null);
+    setDeleteValidation(null);
+    setIsDeleteValidating(false);
+    setIsDeleteProcessing(false);
+  };
+
+  const runDeleteValidation = useCallback(async (statusId: string) => {
+    setIsDeleteValidating(true);
+    try {
+      const result = await preCheckDeletion('status', statusId);
+      setDeleteValidation(result);
+    } catch (error) {
+      console.error('Failed to validate status deletion:', error);
+      setDeleteValidation({
+        canDelete: false,
+        code: 'VALIDATION_FAILED',
+        message: 'Failed to validate deletion. Please try again.',
+        dependencies: [],
+        alternatives: []
+      });
+    } finally {
+      setIsDeleteValidating(false);
+    }
+  }, []);
+
   const handleDeleteStatusRequest = (statusId: string): void => {
     const status = statuses.find(s => s.status_id === statusId);
     if (status) {
@@ -118,7 +147,7 @@ export function ProjectStatusSettings(): React.JSX.Element {
         }
       }
       setStatusToDelete(status);
-      setShowDeleteDialog(true);
+      void runDeleteValidation(statusId);
     }
   };
 
@@ -126,20 +155,28 @@ export function ProjectStatusSettings(): React.JSX.Element {
     if (!statusToDelete) return;
 
     try {
-      await deleteStatus(statusToDelete.status_id);
+      setIsDeleteProcessing(true);
+      const result = await deleteStatus(statusToDelete.status_id);
+
+      if (!result.success) {
+        setDeleteValidation(result);
+        return;
+      }
+
       setStatuses(statuses.filter(s => s.status_id !== statusToDelete.status_id));
       toast.success('Status deleted successfully');
+      resetDeleteState();
     } catch (error) {
       console.error('Error deleting status:', error);
-      const message = error instanceof Error ? error.message : 'Cannot delete status because it is currently in use';
-      if (message.toLowerCase().includes('in use') || message.toLowerCase().includes('referenced') || message.toLowerCase().includes('foreign key')) {
-        toast.error(`Cannot delete "${statusToDelete.name}" because it is currently in use.`);
-      } else {
-        toast.error(message);
-      }
+      setDeleteValidation({
+        canDelete: false,
+        code: 'VALIDATION_FAILED',
+        message: error instanceof Error ? error.message : 'Failed to delete status',
+        dependencies: [],
+        alternatives: []
+      });
     } finally {
-      setShowDeleteDialog(false);
-      setStatusToDelete(null);
+      setIsDeleteProcessing(false);
     }
   };
 
@@ -392,16 +429,15 @@ export function ProjectStatusSettings(): React.JSX.Element {
         }}
       />
 
-      {/* Delete Confirmation Dialog */}
-      <DeleteConfirmationDialog
-        isOpen={showDeleteDialog}
-        onClose={() => {
-          setShowDeleteDialog(false);
-          setStatusToDelete(null);
-        }}
-        itemName={statusToDelete?.name || ''}
-        itemType="Status"
-        onConfirm={confirmDeleteStatus}
+      <DeleteEntityDialog
+        id="delete-project-status-dialog"
+        isOpen={Boolean(statusToDelete)}
+        onClose={resetDeleteState}
+        onConfirmDelete={confirmDeleteStatus}
+        entityName={statusToDelete?.name || 'this status'}
+        validationResult={deleteValidation}
+        isValidating={isDeleteValidating}
+        isDeleting={isDeleteProcessing}
       />
     </Card>
   );

@@ -97,7 +97,7 @@ function ProgressBar({ percentage, size = 'md' }: { percentage: number; size?: '
 }
 
 export default function ProjectPhaseTasksView({ projectId, config }: ProjectPhaseTasksViewProps) {
-  const { t, i18n } = useTranslation('clientPortal');
+  const { t, i18n } = useTranslation('features/projects');
   const dateLocale = getDateFnsLocale(i18n.language);
 
   const [phases, setPhases] = useState<Phase[]>([]);
@@ -149,7 +149,7 @@ export default function ProjectPhaseTasksView({ projectId, config }: ProjectPhas
         }
       } catch (err) {
         console.error('Error fetching project data:', err);
-        setError(t('projects.messages.loadError', 'Failed to load project details'));
+        setError(t('messages.loadError', 'Failed to load project details'));
       } finally {
         setLoading(false);
       }
@@ -214,10 +214,10 @@ export default function ProjectPhaseTasksView({ projectId, config }: ProjectPhas
       <div className="bg-gray-50 rounded-lg p-6 text-center">
         <p className="text-gray-500">
           {showPhases && showTasks
-            ? t('projects.messages.noPhasesOrTasks', 'No phases or tasks to display')
+            ? t('messages.noPhasesOrTasks', 'No phases or tasks to display')
             : showPhases
-              ? t('projects.phases.noPhases', 'No phases to display')
-              : t('projects.tasks.noTasks', 'No tasks to display')}
+              ? t('phases.noPhases', 'No phases to display')
+              : t('tasks.noTasks', 'No tasks to display')}
         </p>
       </div>
     );
@@ -227,10 +227,10 @@ export default function ProjectPhaseTasksView({ projectId, config }: ProjectPhas
     <div className="space-y-4">
       <h3 className="text-lg font-semibold">
         {showPhases && showTasks
-          ? t('projects.phasesAndTasks', 'Phases & Tasks')
+          ? t('phasesAndTasks', 'Phases & Tasks')
           : showPhases
-            ? t('projects.phases.title', 'Project Phases')
-            : t('projects.tasks.title', 'Tasks')}
+            ? t('phases.title', 'Project Phases')
+            : t('tasks.title', 'Tasks')}
       </h3>
 
       <div className="space-y-3">
@@ -271,7 +271,7 @@ export default function ProjectPhaseTasksView({ projectId, config }: ProjectPhas
                           <h4 className="font-semibold text-gray-900">{phase.phase_name}</h4>
                           {showTasks && (
                             <span className="text-sm text-gray-500">
-                              ({phaseTasks.length} {phaseTasks.length === 1 ? t('projects.task', 'task') : t('projects.tasks.title', 'tasks').toLowerCase()})
+                              ({phaseTasks.length} {phaseTasks.length === 1 ? t('task', 'task') : t('tasks.title', 'tasks').toLowerCase()})
                             </span>
                           )}
                         </div>
@@ -287,13 +287,13 @@ export default function ProjectPhaseTasksView({ projectId, config }: ProjectPhas
                             {phase.start_date && (
                               <span className="flex items-center gap-1">
                                 <Calendar className="w-3.5 h-3.5" />
-                                {t('projects.startDate', 'Start')}: {format(new Date(phase.start_date), 'PP', { locale: dateLocale })}
+                                {t('startDate', 'Start')}: {format(new Date(phase.start_date), 'PP', { locale: dateLocale })}
                               </span>
                             )}
                             {phase.end_date && (
                               <span className="flex items-center gap-1">
                                 <Calendar className="w-3.5 h-3.5" />
-                                {t('projects.endDate', 'End')}: {format(new Date(phase.end_date), 'PP', { locale: dateLocale })}
+                                {t('endDate', 'End')}: {format(new Date(phase.end_date), 'PP', { locale: dateLocale })}
                               </span>
                             )}
                           </div>
@@ -308,7 +308,7 @@ export default function ProjectPhaseTasksView({ projectId, config }: ProjectPhas
                           {phase.completion_percentage}%
                         </div>
                         <div className="text-xs text-gray-500">
-                          {t('projects.phases.completion', 'Complete')}
+                          {t('phases.completion', 'Complete')}
                         </div>
                       </div>
                     )}
@@ -380,21 +380,21 @@ export default function ProjectPhaseTasksView({ projectId, config }: ProjectPhas
                           {visibleFields.includes('estimated_hours') && task.estimated_hours != null && (
                             <span className="flex items-center gap-1">
                               <Clock className="w-3.5 h-3.5 text-gray-400" />
-                              {t('projects.tasks.estimatedHours', 'Est')}: {task.estimated_hours}h
+                              {t('tasks.estimatedHours', 'Est')}: {task.estimated_hours}h
                             </span>
                           )}
 
                           {visibleFields.includes('actual_hours') && task.actual_hours != null && (
                             <span className="flex items-center gap-1">
                               <Clock className="w-3.5 h-3.5 text-gray-400" />
-                              {t('projects.fields.hoursLogged', 'Logged')}: {task.actual_hours}h
+                              {t('fields.hoursLogged', 'Logged')}: {task.actual_hours}h
                             </span>
                           )}
 
                           {/* Service */}
                           {showServices && task.service_name && (
                             <span className="text-gray-500">
-                              {t('projects.tasks.services', 'Service')}: {task.service_name}
+                              {t('tasks.services', 'Service')}: {task.service_name}
                             </span>
                           )}
 

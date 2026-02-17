@@ -23,6 +23,7 @@ import SidebarSubMenuItem from './SidebarSubMenuItem';
 import SidebarBottomMenuItem from './SidebarBottomMenuItem';
 import type { MenuItem } from '@/config/menuConfig';
 import { useUserPreference } from '@alga-psa/users/hooks';
+import { useFeatureFlag } from '@alga-psa/ui/hooks';
 
 interface SidebarProps {
   sidebarOpen: boolean;
@@ -50,6 +51,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   const searchParams = useSearchParams();
   const router = useRouter();
   const [openSubmenu, setOpenSubmenu] = useState<string | null>(null);
+  const { enabled: isMspI18nEnabled } = useFeatureFlag('msp-i18n-enabled', { defaultValue: false });
 
   // Track mode changes for transition animation
   const prevModeRef = useRef<NavMode>(mode);
@@ -204,8 +206,15 @@ const Sidebar: React.FC<SidebarProps> = ({
   };
 
   // Determine which sections to render based on mode
-  const sectionsToRender: NavigationSection[] = isSettingsMode
+  const settingsSections: NavigationSection[] = isMspI18nEnabled
     ? settingsNavigationSections
+    : settingsNavigationSections.map((section) => ({
+        ...section,
+        items: section.items.filter((item) => item.name !== 'Language')
+      })).filter((section) => section.items.length > 0);
+
+  const sectionsToRender: NavigationSection[] = isSettingsMode
+    ? settingsSections
     : isBillingMode
       ? billingNavigationSections
       : isExtensionsMode

@@ -1,8 +1,9 @@
 'use client'
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Box, Card, Heading } from '@radix-ui/themes';
 import { Button } from '@alga-psa/ui/components/Button';
+import { DeleteEntityDialog } from '@alga-psa/ui';
 import { MoreVertical, Plus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import {
@@ -19,13 +20,14 @@ import { getContractLines, getContractLineById, updateContractLine, deleteContra
 import { getContractLineServices, addServiceToContractLine, updateContractLineService, removeServiceFromContractLine } from '@alga-psa/billing/actions/contractLineServiceActions';
 // Import new action and type
 import { getServiceTypesForSelection } from '@alga-psa/billing/actions';
-import { IContractLine, IContractLineService, IService, IServiceType } from '@alga-psa/types';
+import { DeletionValidationResult, IContractLine, IContractLineService, IService, IServiceType } from '@alga-psa/types';
 import { useTenant } from '@alga-psa/ui/components/providers/TenantProvider';
 import { toast } from 'react-hot-toast';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { ColumnDefinition } from '@alga-psa/types';
 import { PLAN_TYPE_DISPLAY, BILLING_FREQUENCY_DISPLAY } from '@alga-psa/billing/constants/billing';
 import { add } from 'date-fns';
+import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
 
 interface ContractLinesProps {
   initialServices: IService[];
@@ -40,6 +42,10 @@ const ContractLines: React.FC<ContractLinesProps> = ({ initialServices }) => {
   const [availableServices, setAvailableServices] = useState<IService[]>(initialServices);
   const [error, setError] = useState<string | null>(null);
   const [editingPlan, setEditingPlan] = useState<IContractLine | null>(null);
+  const [contractLineToDelete, setContractLineToDelete] = useState<IContractLine | null>(null);
+  const [deleteValidation, setDeleteValidation] = useState<DeletionValidationResult | null>(null);
+  const [isDeleteValidating, setIsDeleteValidating] = useState(false);
+  const [isDeleteProcessing, setIsDeleteProcessing] = useState(false);
   // Add state for all service types (standard + tenant-specific)
   const [allServiceTypes, setAllServiceTypes] = useState<
     { id: string; name: string; billing_method: IServiceType['billing_method']; is_standard: boolean }[]
@@ -90,6 +96,57 @@ const ContractLines: React.FC<ContractLinesProps> = ({ initialServices }) => {
     } catch (error) {
       console.error('Error fetching contract lines:', error);
       setError('Failed to fetch contract lines');
+    }
+  };
+
+  const resetDeleteState = () => {
+    setContractLineToDelete(null);
+    setDeleteValidation(null);
+  };
+
+  const runDeleteValidation = useCallback(async (contractLineId: string) => {
+    setIsDeleteValidating(true);
+    try {
+      const result = await preCheckDeletion('contract_line', contractLineId);
+      setDeleteValidation(result);
+    } catch (error) {
+      console.error('Failed to validate contract line deletion:', error);
+      setDeleteValidation({
+        canDelete: false,
+        code: 'VALIDATION_FAILED',
+        message: 'Failed to validate deletion. Please try again.',
+        dependencies: [],
+        alternatives: []
+      });
+    } finally {
+      setIsDeleteValidating(false);
+    }
+  }, []);
+
+  const handleDeleteContractLine = (contractLine: IContractLine) => {
+    setContractLineToDelete(contractLine);
+    void runDeleteValidation(contractLine.contract_line_id!);
+  };
+
+  const confirmDelete = async () => {
+    if (!contractLineToDelete) {
+      return;
+    }
+
+    setIsDeleteProcessing(true);
+    try {
+      const result = await deleteContractLine(contractLineToDelete.contract_line_id!);
+      if (!result.success) {
+        setDeleteValidation(result);
+        return;
+      }
+      await fetchContractLines();
+      toast.success('Contract line deleted successfully');
+      resetDeleteState();
+    } catch (error) {
+      toast.error('Failed to delete contract line');
+    } finally {
+      setIsDeleteProcessing(false);
     }
   };
 
@@ -207,27 +264,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ initialServices }) => {
               className="text-red-600 focus:text-red-600"
               onClick={async (e) => {
                 e.stopPropagation();
-                try {
-                  await deleteContractLine(record.contract_line_id!);
-                  fetchContractLines();
-                  toast.success('Contract line deleted successfully');
-                } catch (error) {
-                  if (error instanceof Error) {
-                    // Display user-friendly error message using toast
-                    // Check for the specific error message for contract lines assigned to clients
-                    if (error.message === "Cannot delete contract line: It is currently assigned to one or more clients.") {
-                        toast.error(error.message);
-                    // Check for the specific error message for contract lines with associated services (from pre-check)
-                    } else if (error.message.includes('associated services')) {
-                      toast.error(error.message); // Use the exact message from the action
-                    } else {
-                      // Display other specific error messages directly
-                      toast.error(error.message);
-                    }
-                  } else {
-                    toast.error('Failed to delete contract line');
-                  }
-                }
+                handleDeleteContractLine(record);
               }}
             >
               Delete
@@ -430,6 +467,16 @@ const ContractLines: React.FC<ContractLinesProps> = ({ initialServices }) => {
           </Box>
         </Card>
       </div>
+      <DeleteEntityDialog
+        id="delete-contract-line-dialog"
+        isOpen={Boolean(contractLineToDelete)}
+        onClose={resetDeleteState}
+        onConfirmDelete={confirmDelete}
+        entityName={contractLineToDelete?.contract_line_name || 'this contract line'}
+        validationResult={deleteValidation}
+        isValidating={isDeleteValidating}
+        isDeleting={isDeleteProcessing}
+      />
     </div>
   );
 };
