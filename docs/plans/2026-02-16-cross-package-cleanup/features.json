@@ -134,7 +134,7 @@
   {
     "id": "F023",
     "description": "Stage 8a: Move ClientTickets, ContactTickets, ClientAssets, ClientDetails, InteractionDetails to msp-composition/clients (~26 violations)",
-    "implemented": false,
+    "implemented": true,
     "stage": 8
   },
   {

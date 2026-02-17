@@ -26,6 +26,14 @@
       "import": "./src/integrations/*.tsx",
       "types": "./src/integrations/*.tsx"
     },
+    "./clients": {
+      "import": "./src/clients/index.ts",
+      "types": "./src/clients/index.ts"
+    },
+    "./clients/*": {
+      "import": "./src/clients/*.tsx",
+      "types": "./src/clients/*.tsx"
+    },
     "./tickets": {
       "import": "./src/tickets/index.ts",
       "types": "./src/tickets/index.ts"
@@ -49,14 +57,18 @@
     "@alga-psa/auth": "*",
     "@alga-psa/core": "*",
     "@alga-psa/db": "*",
+    "@alga-psa/documents": "*",
     "@alga-psa/event-bus": "*",
     "@alga-psa/integrations": "*",
     "@alga-psa/projects": "*",
     "@alga-psa/scheduling": "*",
+    "@alga-psa/surveys": "*",
+    "@alga-psa/tags": "*",
     "@alga-psa/tickets": "*",
     "@alga-psa/types": "*",
     "@alga-psa/ui": "*",
     "@alga-psa/users": "*",
+    "@alga-psa/validation": "*",
     "axios": "^1.7.4"
   }
 }

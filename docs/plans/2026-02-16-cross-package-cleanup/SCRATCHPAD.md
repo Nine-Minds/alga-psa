@@ -124,3 +124,7 @@
 - (2026-02-17) Stage 7 test: `npx vitest run server/src/test/unit/tacticalrmm/tacticalRmmSettings.maskSecret.test.ts` passes after Tactical RMM move.
 
 - (2026-02-17) Stage 7: InboundTicketDefaultsForm no longer imports tickets after picker moves; no remaining integrations->tickets violations, so no move needed.
+
+- (2026-02-17) Stage 8a: moved ClientTickets, ContactTickets, ClientAssets, ClientDetails, InteractionDetails (+ schedule drawer test) into `packages/msp-composition/src/clients` with re-export shims in clients package; updated internal imports and msp-composition exports/deps.
+
+- (2026-02-17) Stage 8a test: `npx vitest run packages/msp-composition/src/clients/InteractionDetails.scheduleDrawer.test.ts` passes after move.
