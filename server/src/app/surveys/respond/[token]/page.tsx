@@ -5,8 +5,8 @@ import { getSurveyInvitationForToken } from '@alga-psa/surveys/actions/surveyRes
 import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 
 type PageParams = {
-  params: { token: string };
-  searchParams?: Record<string, string | string[] | undefined>;
+  params: Promise<{ token: string }>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 };
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -35,8 +35,10 @@ function parseInitialRating(
 }
 
 export default async function Page({ params, searchParams }: PageParams) {
-  const { token } = params;
-  const initialRating = parseInitialRating(searchParams);
+  const resolvedParams = await params;
+  const resolvedSearchParams = searchParams ? await searchParams : undefined;
+  const { token } = resolvedParams;
+  const initialRating = parseInitialRating(resolvedSearchParams);
   const { t } = await getServerTranslation();
 
   try {

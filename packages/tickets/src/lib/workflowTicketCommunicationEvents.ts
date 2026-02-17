@@ -12,7 +12,7 @@ export type TicketCommunicationMessageInput = {
   visibility: TicketMessageVisibility;
   author: TicketCommunicationAuthor;
   channel: TicketMessageChannel;
-  createdAt?: string;
+  createdAt?: string | Date;
   attachmentsCount?: number;
 };
 
@@ -54,6 +54,7 @@ export function buildTicketCommunicationWorkflowEvents(
   input: TicketCommunicationMessageInput
 ): TicketCommunicationWorkflowEvent[] {
   const events: TicketCommunicationWorkflowEvent[] = [];
+  const createdAt = normalizeOptionalTimestamp(input.createdAt);
 
   events.push({
     eventType: 'TICKET_MESSAGE_ADDED',
@@ -64,7 +65,7 @@ export function buildTicketCommunicationWorkflowEvents(
       authorId: input.author.authorId,
       authorType: input.author.authorType,
       channel: input.channel,
-      createdAt: input.createdAt,
+      createdAt,
       attachmentsCount: input.attachmentsCount,
     },
   });
@@ -75,7 +76,7 @@ export function buildTicketCommunicationWorkflowEvents(
       payload: {
         ticketId: input.ticketId,
         noteId: input.messageId,
-        createdAt: input.createdAt,
+        createdAt,
       },
     });
   }
@@ -88,7 +89,7 @@ export function buildTicketCommunicationWorkflowEvents(
         messageId: input.messageId,
         contactId: input.author.contactId,
         channel: input.channel,
-        receivedAt: input.createdAt,
+        receivedAt: createdAt,
         attachmentsCount: input.attachmentsCount,
       },
     });
@@ -97,3 +98,9 @@ export function buildTicketCommunicationWorkflowEvents(
   return events;
 }
 
+function normalizeOptionalTimestamp(value?: string | Date): string | undefined {
+  if (!value) {
+    return undefined;
+  }
+  return value instanceof Date ? value.toISOString() : value;
+}
