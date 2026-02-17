@@ -136,3 +136,5 @@
 - (2026-02-17) Stage 8b: updated technician dispatch server page import to `@alga-psa/msp-composition/scheduling`.
 
 - (2026-02-17) Stage 8c: moved ActivityDetailViewerDrawer, ProjectsSection, TicketsSection into `packages/msp-composition/src/workflows` with workflows shims; updated msp-composition exports/deps and import paths.
+
+- (2026-02-17) Stage 8c: no server page.tsx imports for workflows components found; no import updates required.

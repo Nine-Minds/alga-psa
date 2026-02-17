@@ -164,7 +164,7 @@
   {
     "id": "F028",
     "description": "Stage 8c: Update server page.tsx files to import from @alga-psa/msp-composition/workflows",
-    "implemented": false,
+    "implemented": true,
     "stage": 8
   },
   {
