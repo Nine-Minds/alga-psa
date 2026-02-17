@@ -57,6 +57,7 @@ export const ticketFilterSchema = baseFilterSchema.extend({
   location_id: uuidSchema.optional(),
   contact_name_id: uuidSchema.optional(),
   status_id: uuidSchema.optional(),
+  status_ids: arrayTransform(uuidSchema).optional(),
   category_id: uuidSchema.optional(),
   subcategory_id: uuidSchema.optional(),
   entered_by: uuidSchema.optional(),
@@ -164,7 +165,9 @@ export const ticketWithDetailsResponseSchema = ticketResponseSchema.extend({
 
 // Ticket comment schemas
 export const createTicketCommentSchema = z.object({
-  comment_text: z.string().min(1, 'Comment text is required'),
+  comment_text: z.string()
+    .min(1, 'Comment text is required')
+    .max(5000, 'Comment text is too long (max 5000 characters)'),
   is_internal: z.boolean().optional().default(false),
   time_spent: z.number().min(0).optional()
 });

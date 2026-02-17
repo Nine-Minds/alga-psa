@@ -552,6 +552,16 @@ describe('Ticket API E2E Tests', () => {
       expect(response.data.data.is_internal).toBe(true);
     });
 
+    it('should reject overly long comments', async () => {
+      const longComment = 'a'.repeat(5001);
+      const response = await env.apiClient.post(
+        `${API_BASE}/${testTicket.ticket_id}/comments`,
+        { comment_text: longComment, is_internal: true }
+      );
+      assertError(response, 400, 'VALIDATION_ERROR');
+      expect(response.data.error.message.toLowerCase()).toContain('too long');
+    });
+
     it('should list ticket comments', async () => {
       // Create multiple comments
       await createTestTicketComment(env.db, env.tenant, testTicket.ticket_id, env.userId, {
