@@ -1,4 +1,4 @@
-import Projects from '@alga-psa/projects/components/Projects';
+import Projects from '@alga-psa/msp-composition/projects/Projects';
 import { getAllClientsForProjects, getProjects } from '@alga-psa/projects/actions/projectActions';
 import type { IClient, IProject } from '@alga-psa/types';
 

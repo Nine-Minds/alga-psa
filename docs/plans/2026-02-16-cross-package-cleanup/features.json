@@ -176,7 +176,7 @@
   {
     "id": "F030",
     "description": "Stage 8d: Update server page.tsx files to import from @alga-psa/msp-composition/projects",
-    "implemented": false,
+    "implemented": true,
     "stage": 8
   },
   {
