@@ -1,5 +1,5 @@
 import React from 'react';
-import TechnicianDispatchDashboard from '@alga-psa/scheduling/components/technician-dispatch/TechnicianDispatchDashboard';
+import TechnicianDispatchDashboard from '@alga-psa/msp-composition/scheduling/TechnicianDispatchDashboard';
 
 export default function TechnicianDispatchPage() {
   return (

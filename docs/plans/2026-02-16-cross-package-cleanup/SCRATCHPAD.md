@@ -132,3 +132,5 @@
 - (2026-02-17) Stage 8a: updated server client detail page to import ClientDetails from `@alga-psa/msp-composition/clients`.
 
 - (2026-02-17) Stage 8b: moved WorkItemDetailsDrawer, WorkItemDrawer, WorkItemPicker, AppointmentRequestsPanel, TechnicianDispatchDashboard, TimeEntryEditForm, TimeEntryProvider into `packages/msp-composition/src/scheduling` with re-export shims in scheduling; updated imports and scheduling index.
+
+- (2026-02-17) Stage 8b: updated technician dispatch server page import to `@alga-psa/msp-composition/scheduling`.

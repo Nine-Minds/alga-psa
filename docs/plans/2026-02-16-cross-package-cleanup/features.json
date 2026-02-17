@@ -152,7 +152,7 @@
   {
     "id": "F026",
     "description": "Stage 8b: Update server page.tsx files to import from @alga-psa/msp-composition/scheduling",
-    "implemented": false,
+    "implemented": true,
     "stage": 8
   },
   {
