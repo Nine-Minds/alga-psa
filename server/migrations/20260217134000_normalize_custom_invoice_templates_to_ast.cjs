@@ -1,10 +1,18 @@
-import type { InvoiceTemplateAst } from '@alga-psa/types';
-import { INVOICE_TEMPLATE_AST_VERSION } from '@alga-psa/types';
+/**
+ * Normalize tenant invoice templates to canonical AST-backed records.
+ *
+ * This migration is idempotent and performs:
+ * - Backfill of missing invoice_templates.templateAst
+ * - Tenant-scope default assignment normalization to a custom template copy
+ * - Auto-healing for dangling custom assignment references
+ */
 
-const cloneAst = (ast: InvoiceTemplateAst): InvoiceTemplateAst =>
-  JSON.parse(JSON.stringify(ast)) as InvoiceTemplateAst;
+const INVOICE_TEMPLATES_TABLE = 'invoice_templates';
+const ASSIGNMENTS_TABLE = 'invoice_template_assignments';
 
-const buildSharedBindings = (): NonNullable<InvoiceTemplateAst['bindings']> => ({
+const TRANSPARENT_PIXEL_DATA_URI = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==';
+
+const buildSharedBindings = () => ({
   values: {
     invoiceNumber: { id: 'invoiceNumber', kind: 'value', path: 'invoiceNumber' },
     issueDate: { id: 'issueDate', kind: 'value', path: 'issueDate' },
@@ -29,6 +37,7 @@ const buildSharedBindings = (): NonNullable<InvoiceTemplateAst['bindings']> => (
       id: 'tenantClientLogo',
       kind: 'value',
       path: 'tenantClient.logoUrl',
+      fallback: TRANSPARENT_PIXEL_DATA_URI,
     },
     customerName: { id: 'customerName', kind: 'value', path: 'customer.name', fallback: 'Customer' },
     customerAddress: {
@@ -43,9 +52,9 @@ const buildSharedBindings = (): NonNullable<InvoiceTemplateAst['bindings']> => (
   },
 });
 
-const buildStandardDefaultAst = (templateName: string): InvoiceTemplateAst => ({
+const buildStandardDefaultAst = (templateName) => ({
   kind: 'invoice-template-ast',
-  version: INVOICE_TEMPLATE_AST_VERSION,
+  version: 1,
   metadata: {
     templateName,
   },
@@ -122,18 +131,29 @@ const buildStandardDefaultAst = (templateName: string): InvoiceTemplateAst => ({
         type: 'totals',
         sourceBinding: { bindingId: 'lineItems' },
         rows: [
-          { id: 'subtotal', label: 'Subtotal', value: { type: 'binding', bindingId: 'subtotal' }, format: 'currency' },
+          {
+            id: 'subtotal',
+            label: 'Subtotal',
+            value: { type: 'binding', bindingId: 'subtotal' },
+            format: 'currency',
+          },
           { id: 'tax', label: 'Tax', value: { type: 'binding', bindingId: 'tax' }, format: 'currency' },
-          { id: 'total', label: 'Total', value: { type: 'binding', bindingId: 'total' }, format: 'currency', emphasize: true },
+          {
+            id: 'total',
+            label: 'Total',
+            value: { type: 'binding', bindingId: 'total' },
+            format: 'currency',
+            emphasize: true,
+          },
         ],
       },
     ],
   },
 });
 
-const buildStandardDetailedAst = (): InvoiceTemplateAst => ({
+const buildStandardDetailedAst = () => ({
   kind: 'invoice-template-ast',
-  version: INVOICE_TEMPLATE_AST_VERSION,
+  version: 1,
   metadata: {
     templateName: 'Detailed Template',
   },
@@ -445,12 +465,7 @@ const buildStandardDetailedAst = (): InvoiceTemplateAst => ({
                 value: { type: 'binding', bindingId: 'subtotal' },
                 format: 'currency',
               },
-              {
-                id: 'tax',
-                label: 'Tax',
-                value: { type: 'binding', bindingId: 'tax' },
-                format: 'currency',
-              },
+              { id: 'tax', label: 'Tax', value: { type: 'binding', bindingId: 'tax' }, format: 'currency' },
               {
                 id: 'total',
                 label: 'Total',
@@ -466,17 +481,335 @@ const buildStandardDetailedAst = (): InvoiceTemplateAst => ({
   },
 });
 
-export const STANDARD_INVOICE_TEMPLATE_ASTS: Readonly<Record<string, InvoiceTemplateAst>> = {
-  'standard-default': buildStandardDefaultAst('Standard Template'),
-  'standard-detailed': buildStandardDetailedAst(),
+const STANDARD_TEMPLATE_DEFS = {
+  'standard-default': {
+    code: 'standard-default',
+    name: 'Standard Template',
+    templateAst: buildStandardDefaultAst('Standard Template'),
+  },
+  'standard-detailed': {
+    code: 'standard-detailed',
+    name: 'Detailed Template',
+    templateAst: buildStandardDetailedAst(),
+  },
 };
 
-export const getStandardInvoiceTemplateAstByCode = (
-  code: string | null | undefined
-): InvoiceTemplateAst | undefined => {
-  if (!code) {
-    return undefined;
+const STANDARD_DEFAULT_CODE = 'standard-default';
+const STANDARD_DETAILED_CODE = 'standard-detailed';
+
+const inferStandardCodeFromName = (name) => {
+  const normalized = (name || '').toLowerCase();
+  if (normalized.includes('detailed')) {
+    return STANDARD_DETAILED_CODE;
   }
-  const ast = STANDARD_INVOICE_TEMPLATE_ASTS[code];
-  return ast ? cloneAst(ast) : undefined;
+  return STANDARD_DEFAULT_CODE;
+};
+
+const getCanonicalAstJsonForCode = (code) => {
+  const resolvedCode = STANDARD_TEMPLATE_DEFS[code] ? code : STANDARD_DEFAULT_CODE;
+  return JSON.stringify(STANDARD_TEMPLATE_DEFS[resolvedCode].templateAst);
+};
+
+async function ensureTemplateAstColumn(knex) {
+  const hasTemplateAst = await knex.schema.hasColumn(INVOICE_TEMPLATES_TABLE, 'templateAst');
+  if (!hasTemplateAst) {
+    await knex.schema.alterTable(INVOICE_TEMPLATES_TABLE, (table) => {
+      table.jsonb('templateAst').nullable().comment('Canonical invoice template JSON AST payload.');
+    });
+  }
+}
+
+async function backfillMissingTemplateAst(knex) {
+  const missingRows = await knex(INVOICE_TEMPLATES_TABLE)
+    .select('tenant', 'template_id', 'name')
+    .whereNull('templateAst');
+
+  for (const row of missingRows) {
+    const inferredCode = inferStandardCodeFromName(row.name);
+    const astJson = getCanonicalAstJsonForCode(inferredCode);
+    await knex(INVOICE_TEMPLATES_TABLE)
+      .where({ tenant: row.tenant, template_id: row.template_id })
+      .update({
+        templateAst: knex.raw('?::jsonb', [astJson]),
+        updated_at: knex.fn.now(),
+      });
+  }
+}
+
+async function getCustomSignalTenants(knex) {
+  const rows = await knex
+    .select('tenant')
+    .from(function customSignalTenantUnion() {
+      this.select('tenant')
+        .from(INVOICE_TEMPLATES_TABLE)
+        .whereRaw('COALESCE(is_default, false) = false')
+        .union(function unionCustomAssignments() {
+          this.select('tenant')
+            .from(ASSIGNMENTS_TABLE)
+            .where({ template_source: 'custom' });
+        })
+        .as('custom_signal_tenants');
+    })
+    .groupBy('tenant');
+
+  return rows.map((row) => row.tenant);
+}
+
+async function getTenantTemplates(knex, tenant) {
+  const standardDefaultAst = getCanonicalAstJsonForCode(STANDARD_DEFAULT_CODE);
+  const standardDetailedAst = getCanonicalAstJsonForCode(STANDARD_DETAILED_CODE);
+
+  return knex(INVOICE_TEMPLATES_TABLE)
+    .select(
+      'template_id',
+      'name',
+      'is_default',
+      'created_at',
+      knex.raw(
+        `CASE
+           WHEN "templateAst" = ?::jsonb THEN ?
+           WHEN "templateAst" = ?::jsonb THEN ?
+           ELSE NULL
+         END AS standard_code_match`,
+        [standardDefaultAst, STANDARD_DEFAULT_CODE, standardDetailedAst, STANDARD_DETAILED_CODE]
+      )
+    )
+    .where({ tenant })
+    .orderBy('created_at', 'asc');
+}
+
+async function ensureTenantTemplateCopy(knex, tenant, standardCode) {
+  const resolvedCode = STANDARD_TEMPLATE_DEFS[standardCode] ? standardCode : STANDARD_DEFAULT_CODE;
+  const templateDef = STANDARD_TEMPLATE_DEFS[resolvedCode];
+  const astJson = JSON.stringify(templateDef.templateAst);
+  const preferredName = `${templateDef.name} (Copy)`;
+
+  let existing = await knex(INVOICE_TEMPLATES_TABLE)
+    .select('template_id')
+    .where({ tenant })
+    .whereRaw('"templateAst" = ?::jsonb', [astJson])
+    .orderBy('created_at', 'asc')
+    .first();
+
+  if (existing?.template_id) {
+    return existing.template_id;
+  }
+
+  existing = await knex(INVOICE_TEMPLATES_TABLE)
+    .select('template_id')
+    .where({ tenant, name: preferredName })
+    .first();
+
+  if (existing?.template_id) {
+    await knex(INVOICE_TEMPLATES_TABLE)
+      .where({ tenant, template_id: existing.template_id })
+      .update({
+        version: 1,
+        templateAst: knex.raw('?::jsonb', [astJson]),
+        updated_at: knex.fn.now(),
+      });
+    return existing.template_id;
+  }
+
+  const created = await knex(INVOICE_TEMPLATES_TABLE)
+    .insert({
+      tenant,
+      template_id: knex.raw('gen_random_uuid()'),
+      name: preferredName,
+      version: 1,
+      is_default: false,
+      templateAst: knex.raw('?::jsonb', [astJson]),
+      created_at: knex.fn.now(),
+      updated_at: knex.fn.now(),
+    })
+    .returning('template_id');
+
+  const first = created?.[0];
+  return first?.template_id || first;
+}
+
+function choosePreferredTemplateId(templates) {
+  if (!templates || templates.length === 0) {
+    return null;
+  }
+
+  const explicitDefault = templates.find((template) => Boolean(template.is_default));
+  if (explicitDefault?.template_id) {
+    return explicitDefault.template_id;
+  }
+
+  const standardDefaultMatch = templates.find((template) => template.standard_code_match === STANDARD_DEFAULT_CODE);
+  if (standardDefaultMatch?.template_id) {
+    return standardDefaultMatch.template_id;
+  }
+
+  const standardDetailedMatch = templates.find((template) => template.standard_code_match === STANDARD_DETAILED_CODE);
+  if (standardDetailedMatch?.template_id) {
+    return standardDetailedMatch.template_id;
+  }
+
+  return templates[0].template_id;
+}
+
+async function upsertTenantScopeCustomAssignment(knex, tenant, templateId) {
+  const tenantScopeRows = await knex(ASSIGNMENTS_TABLE)
+    .select('assignment_id')
+    .where({ tenant, scope_type: 'tenant' })
+    .whereNull('scope_id')
+    .orderBy('created_at', 'asc');
+
+  if (tenantScopeRows.length === 0) {
+    await knex(ASSIGNMENTS_TABLE).insert({
+      tenant,
+      scope_type: 'tenant',
+      scope_id: null,
+      template_source: 'custom',
+      standard_invoice_template_code: null,
+      invoice_template_id: templateId,
+      created_by: null,
+      created_at: knex.fn.now(),
+      updated_at: knex.fn.now(),
+    });
+    return;
+  }
+
+  const [primary, ...duplicates] = tenantScopeRows;
+
+  await knex(ASSIGNMENTS_TABLE)
+    .where({ assignment_id: primary.assignment_id })
+    .update({
+      template_source: 'custom',
+      standard_invoice_template_code: null,
+      invoice_template_id: templateId,
+      updated_at: knex.fn.now(),
+    });
+
+  if (duplicates.length > 0) {
+    const duplicateIds = duplicates.map((row) => row.assignment_id);
+    await knex(ASSIGNMENTS_TABLE)
+      .whereIn('assignment_id', duplicateIds)
+      .del();
+  }
+}
+
+async function healBrokenCustomAssignments(knex, tenant, fallbackTemplateId) {
+  const brokenAssignments = await knex(`${ASSIGNMENTS_TABLE} as ita`)
+    .leftJoin(`${INVOICE_TEMPLATES_TABLE} as it`, function joinTemplate() {
+      this.on('it.tenant', '=', 'ita.tenant').andOn('it.template_id', '=', 'ita.invoice_template_id');
+    })
+    .select('ita.assignment_id')
+    .where('ita.tenant', tenant)
+    .where('ita.template_source', 'custom')
+    .whereNull('it.template_id');
+
+  if (brokenAssignments.length === 0) {
+    return;
+  }
+
+  const assignmentIds = brokenAssignments.map((row) => row.assignment_id);
+  await knex(ASSIGNMENTS_TABLE)
+    .whereIn('assignment_id', assignmentIds)
+    .update({
+      invoice_template_id: fallbackTemplateId,
+      standard_invoice_template_code: null,
+      updated_at: knex.fn.now(),
+    });
+}
+
+async function normalizeTenantAssignments(knex, tenant) {
+  let templates = await getTenantTemplates(knex, tenant);
+
+  if (templates.length === 0) {
+    const defaultCopyId = await ensureTenantTemplateCopy(knex, tenant, STANDARD_DEFAULT_CODE);
+    templates = await getTenantTemplates(knex, tenant);
+    await upsertTenantScopeCustomAssignment(knex, tenant, defaultCopyId);
+  } else {
+    const tenantScopeAssignment = await knex(ASSIGNMENTS_TABLE)
+      .select(
+        'assignment_id',
+        'template_source',
+        'standard_invoice_template_code',
+        'invoice_template_id'
+      )
+      .where({ tenant, scope_type: 'tenant' })
+      .whereNull('scope_id')
+      .orderBy('created_at', 'asc')
+      .first();
+
+    const validTemplateIds = new Set(templates.map((template) => template.template_id));
+
+    if (!tenantScopeAssignment) {
+      const preferredTemplateId = choosePreferredTemplateId(templates);
+      const targetTemplateId = preferredTemplateId || (await ensureTenantTemplateCopy(knex, tenant, STANDARD_DEFAULT_CODE));
+      await upsertTenantScopeCustomAssignment(knex, tenant, targetTemplateId);
+    } else if (tenantScopeAssignment.template_source === 'standard') {
+      const standardCode = tenantScopeAssignment.standard_invoice_template_code || STANDARD_DEFAULT_CODE;
+      const copyTemplateId = await ensureTenantTemplateCopy(knex, tenant, standardCode);
+      await upsertTenantScopeCustomAssignment(knex, tenant, copyTemplateId);
+    } else {
+      let targetTemplateId = tenantScopeAssignment.invoice_template_id;
+      if (!targetTemplateId || !validTemplateIds.has(targetTemplateId)) {
+        targetTemplateId = choosePreferredTemplateId(templates);
+      }
+      if (!targetTemplateId) {
+        targetTemplateId = await ensureTenantTemplateCopy(knex, tenant, STANDARD_DEFAULT_CODE);
+      }
+      await upsertTenantScopeCustomAssignment(knex, tenant, targetTemplateId);
+    }
+  }
+
+  const tenantScopeAfter = await knex(ASSIGNMENTS_TABLE)
+    .select('invoice_template_id')
+    .where({
+      tenant,
+      scope_type: 'tenant',
+      template_source: 'custom',
+    })
+    .whereNull('scope_id')
+    .first();
+
+  let fallbackTemplateId = tenantScopeAfter?.invoice_template_id || null;
+  if (!fallbackTemplateId) {
+    fallbackTemplateId = choosePreferredTemplateId(await getTenantTemplates(knex, tenant));
+  }
+  if (!fallbackTemplateId) {
+    fallbackTemplateId = await ensureTenantTemplateCopy(knex, tenant, STANDARD_DEFAULT_CODE);
+    await upsertTenantScopeCustomAssignment(knex, tenant, fallbackTemplateId);
+  }
+
+  await healBrokenCustomAssignments(knex, tenant, fallbackTemplateId);
+
+  await knex(INVOICE_TEMPLATES_TABLE)
+    .where({ tenant })
+    .update({
+      is_default: false,
+      updated_at: knex.fn.now(),
+    });
+
+  await knex(INVOICE_TEMPLATES_TABLE)
+    .where({ tenant, template_id: fallbackTemplateId })
+    .update({
+      is_default: true,
+      updated_at: knex.fn.now(),
+    });
+}
+
+exports.up = async function up(knex) {
+  const hasTemplatesTable = await knex.schema.hasTable(INVOICE_TEMPLATES_TABLE);
+  const hasAssignmentsTable = await knex.schema.hasTable(ASSIGNMENTS_TABLE);
+  if (!hasTemplatesTable || !hasAssignmentsTable) {
+    return;
+  }
+
+  await ensureTemplateAstColumn(knex);
+  await backfillMissingTemplateAst(knex);
+
+  const customSignalTenants = await getCustomSignalTenants(knex);
+  for (const tenant of customSignalTenants) {
+    await normalizeTenantAssignments(knex, tenant);
+  }
+};
+
+exports.down = async function down() {
+  // No-op: this migration mutates live template data for canonical AST cutover.
 };

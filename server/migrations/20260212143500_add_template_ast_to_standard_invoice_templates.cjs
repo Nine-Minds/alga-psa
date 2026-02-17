@@ -1,29 +1,15 @@
-exports.up = async function up(knex) {
-  const tableName = 'standard_invoice_templates';
-  const hasTable = await knex.schema.hasTable(tableName);
-  if (!hasTable) {
-    return;
-  }
+/**
+ * No-op.
+ *
+ * This migration originally introduced standard_invoice_templates.templateAst.
+ * The final cutover migrations now ensure this column exists when needed:
+ * - 20260217133000_upsert_standard_invoice_template_asts.cjs
+ */
 
-  const hasTemplateAst = await knex.schema.hasColumn(tableName, 'templateAst');
-  if (!hasTemplateAst) {
-    await knex.schema.alterTable(tableName, (table) => {
-      table.jsonb('templateAst').nullable().comment('Canonical JSON AST for standard invoice templates.');
-    });
-  }
+exports.up = async function up() {
+  // Intentionally no-op.
 };
 
-exports.down = async function down(knex) {
-  const tableName = 'standard_invoice_templates';
-  const hasTable = await knex.schema.hasTable(tableName);
-  if (!hasTable) {
-    return;
-  }
-
-  const hasTemplateAst = await knex.schema.hasColumn(tableName, 'templateAst');
-  if (hasTemplateAst) {
-    await knex.schema.alterTable(tableName, (table) => {
-      table.dropColumn('templateAst');
-    });
-  }
+exports.down = async function down() {
+  // Intentionally no-op.
 };

@@ -1,0 +1,122 @@
+/**
+ * Enforce strict AST-only template storage.
+ *
+ * Preconditions:
+ * - All template rows have canonical templateAst
+ * - Custom assignment references are valid
+ */
+
+const INVOICE_TEMPLATES_TABLE = 'invoice_templates';
+const STANDARD_TEMPLATES_TABLE = 'standard_invoice_templates';
+const ASSIGNMENTS_TABLE = 'invoice_template_assignments';
+
+// Distributed-table ALTERs in Citus need shard-aware handling and should not run in a transaction wrapper.
+exports.config = { transaction: false };
+
+async function isColumnNullable(knex, tableName, columnName) {
+  const row = await knex('information_schema.columns')
+    .select('is_nullable')
+    .where({
+      table_schema: 'public',
+      table_name: tableName,
+      column_name: columnName,
+    })
+    .first();
+
+  return row?.is_nullable === 'YES';
+}
+
+async function setColumnNullability(knex, tableName, columnName, nullable) {
+  if (nullable) {
+    await knex.raw('ALTER TABLE ?? ALTER COLUMN ?? DROP NOT NULL', [tableName, columnName]);
+    return;
+  }
+
+  await knex.raw('ALTER TABLE ?? ALTER COLUMN ?? SET NOT NULL', [tableName, columnName]);
+}
+
+async function assertNoMissingAst(knex, tableName) {
+  const result = await knex(tableName)
+    .whereNull('templateAst')
+    .count('* as count')
+    .first();
+  const count = Number(result?.count || 0);
+  if (count > 0) {
+    throw new Error(
+      `[invoice-ast-cutover] ${tableName} has ${count} row(s) with NULL templateAst; run data normalization first.`
+    );
+  }
+}
+
+async function assertNoDanglingCustomAssignments(knex) {
+  const tenantRows = await knex(ASSIGNMENTS_TABLE)
+    .distinct('tenant')
+    .where({ template_source: 'custom' });
+
+  let danglingCount = 0;
+
+  for (const row of tenantRows) {
+    const tenant = row.tenant;
+    const templateRows = await knex(INVOICE_TEMPLATES_TABLE)
+      .select('template_id')
+      .where({ tenant });
+    const validTemplateIds = new Set(templateRows.map((template) => String(template.template_id)));
+
+    const assignmentRows = await knex(ASSIGNMENTS_TABLE)
+      .select('invoice_template_id')
+      .where({ tenant, template_source: 'custom' });
+
+    for (const assignment of assignmentRows) {
+      const assignmentTemplateId = assignment.invoice_template_id ? String(assignment.invoice_template_id) : null;
+      if (!assignmentTemplateId || !validTemplateIds.has(assignmentTemplateId)) {
+        danglingCount += 1;
+      }
+    }
+  }
+
+  if (danglingCount > 0) {
+    throw new Error(
+      `[invoice-ast-cutover] ${danglingCount} custom assignment(s) point to missing invoice_templates rows.`
+    );
+  }
+}
+
+exports.up = async function up(knex) {
+  const hasInvoiceTemplates = await knex.schema.hasTable(INVOICE_TEMPLATES_TABLE);
+  const hasStandardTemplates = await knex.schema.hasTable(STANDARD_TEMPLATES_TABLE);
+  const hasAssignments = await knex.schema.hasTable(ASSIGNMENTS_TABLE);
+
+  if (!hasInvoiceTemplates || !hasStandardTemplates) {
+    return;
+  }
+
+  await assertNoMissingAst(knex, INVOICE_TEMPLATES_TABLE);
+  await assertNoMissingAst(knex, STANDARD_TEMPLATES_TABLE);
+
+  if (hasAssignments) {
+    await assertNoDanglingCustomAssignments(knex);
+  }
+
+  const invoiceTemplateAstIsNullable = await isColumnNullable(knex, INVOICE_TEMPLATES_TABLE, 'templateAst');
+  if (invoiceTemplateAstIsNullable) {
+    await setColumnNullability(knex, INVOICE_TEMPLATES_TABLE, 'templateAst', false);
+  }
+
+  const standardTemplateAstIsNullable = await isColumnNullable(knex, STANDARD_TEMPLATES_TABLE, 'templateAst');
+  if (standardTemplateAstIsNullable) {
+    await setColumnNullability(knex, STANDARD_TEMPLATES_TABLE, 'templateAst', false);
+  }
+};
+
+exports.down = async function down(knex) {
+  const hasInvoiceTemplates = await knex.schema.hasTable(INVOICE_TEMPLATES_TABLE);
+  const hasStandardTemplates = await knex.schema.hasTable(STANDARD_TEMPLATES_TABLE);
+
+  if (hasInvoiceTemplates) {
+    await setColumnNullability(knex, INVOICE_TEMPLATES_TABLE, 'templateAst', true);
+  }
+
+  if (hasStandardTemplates) {
+    await setColumnNullability(knex, STANDARD_TEMPLATES_TABLE, 'templateAst', true);
+  }
+};

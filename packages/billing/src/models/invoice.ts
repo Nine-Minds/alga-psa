@@ -21,7 +21,6 @@ import type {
   InvoiceViewModel,
 } from '@alga-psa/types';
 import { getClientLogoUrlAsync } from '../lib/documentsHelpers';
-import { getStandardInvoiceTemplateAstByCode } from '../lib/invoice-template-ast/standardTemplates';
 
 /**
  * Invoice model with tenant-explicit methods.
@@ -202,6 +201,7 @@ const Invoice = {
       }
       return 0;
     };
+    const asTrimmedString = (value: unknown): string => (typeof value === 'string' ? value.trim() : '');
 
     const invoice = await knexOrTrx('invoices')
       .select(
@@ -221,7 +221,7 @@ const Invoice = {
       throw new Error('Invoice not found');
     }
 
-    const [invoiceChargesRaw, client, contact, logoUrl] = await Promise.all([
+    const [invoiceChargesRaw, client, contact, logoUrl, tenantClientDetails] = await Promise.all([
       Invoice.getInvoiceCharges(knexOrTrx, tenant, invoiceId),
       knexOrTrx('clients as c')
         .leftJoin('client_locations as cl', function () {
@@ -255,6 +255,37 @@ const Invoice = {
         .where({ client_id: invoice.client_id, tenant })
         .first(),
       getClientLogoUrlAsync(invoice.client_id, tenant).catch(() => null),
+      knexOrTrx('tenant_companies as tc')
+        .join('clients as c', function () {
+          this.on('tc.client_id', '=', 'c.client_id').andOn('tc.tenant', '=', 'c.tenant');
+        })
+        .leftJoin('client_locations as cl', function () {
+          this.on('c.client_id', '=', 'cl.client_id')
+            .andOn('c.tenant', '=', 'cl.tenant')
+            .andOn(function () {
+              this.on('cl.is_billing_address', '=', knexOrTrx.raw('true'))
+                .orOn('cl.is_default', '=', knexOrTrx.raw('true'));
+            });
+        })
+        .select(
+          'tc.client_id',
+          'c.client_name',
+          knexOrTrx.raw(`CONCAT_WS(', ',
+            cl.address_line1,
+            cl.address_line2,
+            cl.city,
+            cl.state_province,
+            cl.postal_code,
+            cl.country_name
+          ) as location_address`)
+        )
+        .where({
+          'tc.tenant': tenant,
+          'tc.is_default': true
+        })
+        .whereNull('tc.deleted_at')
+        .orderByRaw('cl.is_billing_address DESC NULLS LAST, cl.is_default DESC NULLS LAST')
+        .first(),
     ]);
 
     if (!client) {
@@ -270,6 +301,40 @@ const Invoice = {
       }
     } else if (client.properties && typeof client.properties === 'object') {
       clientProperties = client.properties as { logo?: string };
+    }
+
+    const resolveTenantNameFallback = async (): Promise<InvoiceViewModel['tenantClient']> => {
+      const tenantRecord = await knexOrTrx('tenants')
+        .select('client_name')
+        .where({ tenant })
+        .first();
+      const fallbackName = asTrimmedString(tenantRecord?.client_name);
+      if (fallbackName.length === 0) {
+        return null;
+      }
+      return {
+        name: fallbackName,
+        address: null,
+        logoUrl: null,
+      };
+    };
+
+    let tenantClient: InvoiceViewModel['tenantClient'] = null;
+    if (tenantClientDetails?.client_id) {
+      const tenantLogoUrl = await getClientLogoUrlAsync(tenantClientDetails.client_id, tenant).catch(() => null);
+      const tenantClientName = asTrimmedString(tenantClientDetails.client_name);
+      const tenantClientAddress = asTrimmedString(tenantClientDetails.location_address);
+
+      if (tenantClientName.length > 0 || tenantClientAddress.length > 0 || tenantLogoUrl) {
+        tenantClient = {
+          name: tenantClientName.length > 0 ? tenantClientName : null,
+          address: tenantClientAddress.length > 0 ? tenantClientAddress : null,
+          logoUrl: tenantLogoUrl || null,
+        };
+      }
+    }
+    if (!tenantClient) {
+      tenantClient = await resolveTenantNameFallback();
     }
 
     const invoiceCharges: IInvoiceCharge[] = invoiceChargesRaw.map((item) => ({
@@ -304,6 +369,7 @@ const Invoice = {
         name: contact?.full_name || '',
         address: ''
       },
+      tenantClient,
       invoice_date: invoice.invoice_date,
       due_date: invoice.due_date,
       status: invoice.status,
@@ -509,12 +575,15 @@ const Invoice = {
       )
       .orderBy('name');
 
-    return records.map((record) => ({
-      ...record,
-      templateAst:
-        record.templateAst ??
-        getStandardInvoiceTemplateAstByCode(record.standard_invoice_template_code),
-    })) as IInvoiceTemplate[];
+    const missingAst = records.filter((record) => !record.templateAst);
+    if (missingAst.length > 0) {
+      const missingCodes = missingAst
+        .map((record) => record.standard_invoice_template_code || record.template_id)
+        .join(', ');
+      throw new Error(`Standard invoice template rows missing templateAst: ${missingCodes}`);
+    }
+
+    return records as IInvoiceTemplate[];
   },
 
   /**

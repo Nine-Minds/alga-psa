@@ -33,6 +33,21 @@ const toSafeCssIdentifier = (value: string): string | null => {
   return sanitized.length > 0 ? sanitized : null;
 };
 
+const normalizeImageSrc = (value: unknown): string | null => {
+  if (typeof value !== 'string') {
+    return null;
+  }
+  const normalized = value.trim();
+  if (normalized.length === 0) {
+    return null;
+  }
+  const lower = normalized.toLowerCase();
+  if (lower === 'null' || lower === 'undefined') {
+    return null;
+  }
+  return normalized;
+};
+
 const getPathValue = (target: unknown, path: string): unknown => {
   if (!path) {
     return target;
@@ -301,7 +316,10 @@ const renderNode = (
       );
     }
     case 'image': {
-      const src = resolveExpressionValue(node.src, evaluation, scope);
+      const src = normalizeImageSrc(resolveExpressionValue(node.src, evaluation, scope));
+      if (!src) {
+        return null;
+      }
       const alt = node.alt ? resolveExpressionValue(node.alt, evaluation, scope) : '';
       return (
         <img
@@ -309,7 +327,7 @@ const renderNode = (
           id={node.id}
           className={elementClassName || undefined}
           style={style}
-          src={String(src ?? '')}
+          src={src}
           alt={String(alt ?? '')}
         />
       );

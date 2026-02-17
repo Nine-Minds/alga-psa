@@ -27,7 +27,8 @@ describe('invoice template AST persistence wiring', () => {
   it('wires standard templates to AST representations', () => {
     const modelSource = readRepoFile('packages/billing/src/models/invoice.ts');
 
-    expect(modelSource).toContain('getStandardInvoiceTemplateAstByCode');
-    expect(modelSource).toContain('templateAst:');
+    expect(modelSource).toContain("'templateAst'");
+    expect(modelSource).toContain('Standard invoice template rows missing templateAst');
+    expect(modelSource).not.toContain('getStandardInvoiceTemplateAstByCode');
   });
 });

@@ -1,21 +1,15 @@
-exports.up = async function up(knex) {
-  const tableName = 'invoice_templates';
-  const hasTemplateAst = await knex.schema.hasColumn(tableName, 'templateAst');
+/**
+ * No-op.
+ *
+ * This migration originally introduced invoice_templates.templateAst.
+ * The final cutover migrations now ensure this column exists when needed:
+ * - 20260217134000_normalize_custom_invoice_templates_to_ast.cjs
+ */
 
-  if (!hasTemplateAst) {
-    await knex.schema.alterTable(tableName, (table) => {
-      table.jsonb('templateAst').nullable().comment('Canonical invoice template JSON AST payload.');
-    });
-  }
+exports.up = async function up() {
+  // Intentionally no-op.
 };
 
-exports.down = async function down(knex) {
-  const tableName = 'invoice_templates';
-  const hasTemplateAst = await knex.schema.hasColumn(tableName, 'templateAst');
-
-  if (hasTemplateAst) {
-    await knex.schema.alterTable(tableName, (table) => {
-      table.dropColumn('templateAst');
-    });
-  }
+exports.down = async function down() {
+  // Intentionally no-op.
 };

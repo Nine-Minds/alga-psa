@@ -19,4 +19,21 @@ describe('standard invoice template AST definitions', () => {
     expect(second).toBeTruthy();
     expect(first).not.toBe(second);
   });
+
+  it('ships a richer detailed template layout with issuer/customer address blocks', () => {
+    const detailedAst = getStandardInvoiceTemplateAstByCode('standard-detailed');
+    expect(detailedAst).toBeTruthy();
+
+    expect(detailedAst?.bindings?.values).toMatchObject({
+      tenantClientLogo: { path: 'tenantClient.logoUrl' },
+      tenantClientAddress: { path: 'tenantClient.address' },
+      customerAddress: { path: 'customer.address' },
+    });
+
+    const serializedLayout = JSON.stringify(detailedAst?.layout);
+    expect(serializedLayout).toContain('"id":"issuer-logo"');
+    expect(serializedLayout).toContain('"id":"party-blocks"');
+    expect(serializedLayout).toContain('"id":"bill-to-card"');
+    expect(serializedLayout).toContain('"id":"totals-wrap"');
+  });
 });

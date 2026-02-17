@@ -1,10 +1,16 @@
-import type { InvoiceTemplateAst } from '@alga-psa/types';
-import { INVOICE_TEMPLATE_AST_VERSION } from '@alga-psa/types';
+/**
+ * Canonicalize standard invoice templates to AST payloads.
+ *
+ * This migration is idempotent:
+ * - Ensures `templateAst` exists on `standard_invoice_templates`
+ * - Upserts canonical AST for standard-default and standard-detailed by code/name
+ */
 
-const cloneAst = (ast: InvoiceTemplateAst): InvoiceTemplateAst =>
-  JSON.parse(JSON.stringify(ast)) as InvoiceTemplateAst;
+const STANDARD_TABLE = 'standard_invoice_templates';
 
-const buildSharedBindings = (): NonNullable<InvoiceTemplateAst['bindings']> => ({
+const TRANSPARENT_PIXEL_DATA_URI = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==';
+
+const buildSharedBindings = () => ({
   values: {
     invoiceNumber: { id: 'invoiceNumber', kind: 'value', path: 'invoiceNumber' },
     issueDate: { id: 'issueDate', kind: 'value', path: 'issueDate' },
@@ -29,6 +35,7 @@ const buildSharedBindings = (): NonNullable<InvoiceTemplateAst['bindings']> => (
       id: 'tenantClientLogo',
       kind: 'value',
       path: 'tenantClient.logoUrl',
+      fallback: TRANSPARENT_PIXEL_DATA_URI,
     },
     customerName: { id: 'customerName', kind: 'value', path: 'customer.name', fallback: 'Customer' },
     customerAddress: {
@@ -43,9 +50,9 @@ const buildSharedBindings = (): NonNullable<InvoiceTemplateAst['bindings']> => (
   },
 });
 
-const buildStandardDefaultAst = (templateName: string): InvoiceTemplateAst => ({
+const buildStandardDefaultAst = (templateName) => ({
   kind: 'invoice-template-ast',
-  version: INVOICE_TEMPLATE_AST_VERSION,
+  version: 1,
   metadata: {
     templateName,
   },
@@ -122,18 +129,29 @@ const buildStandardDefaultAst = (templateName: string): InvoiceTemplateAst => ({
         type: 'totals',
         sourceBinding: { bindingId: 'lineItems' },
         rows: [
-          { id: 'subtotal', label: 'Subtotal', value: { type: 'binding', bindingId: 'subtotal' }, format: 'currency' },
+          {
+            id: 'subtotal',
+            label: 'Subtotal',
+            value: { type: 'binding', bindingId: 'subtotal' },
+            format: 'currency',
+          },
           { id: 'tax', label: 'Tax', value: { type: 'binding', bindingId: 'tax' }, format: 'currency' },
-          { id: 'total', label: 'Total', value: { type: 'binding', bindingId: 'total' }, format: 'currency', emphasize: true },
+          {
+            id: 'total',
+            label: 'Total',
+            value: { type: 'binding', bindingId: 'total' },
+            format: 'currency',
+            emphasize: true,
+          },
         ],
       },
     ],
   },
 });
 
-const buildStandardDetailedAst = (): InvoiceTemplateAst => ({
+const buildStandardDetailedAst = () => ({
   kind: 'invoice-template-ast',
-  version: INVOICE_TEMPLATE_AST_VERSION,
+  version: 1,
   metadata: {
     templateName: 'Detailed Template',
   },
@@ -445,12 +463,7 @@ const buildStandardDetailedAst = (): InvoiceTemplateAst => ({
                 value: { type: 'binding', bindingId: 'subtotal' },
                 format: 'currency',
               },
-              {
-                id: 'tax',
-                label: 'Tax',
-                value: { type: 'binding', bindingId: 'tax' },
-                format: 'currency',
-              },
+              { id: 'tax', label: 'Tax', value: { type: 'binding', bindingId: 'tax' }, format: 'currency' },
               {
                 id: 'total',
                 label: 'Total',
@@ -466,17 +479,82 @@ const buildStandardDetailedAst = (): InvoiceTemplateAst => ({
   },
 });
 
-export const STANDARD_INVOICE_TEMPLATE_ASTS: Readonly<Record<string, InvoiceTemplateAst>> = {
-  'standard-default': buildStandardDefaultAst('Standard Template'),
-  'standard-detailed': buildStandardDetailedAst(),
+const STANDARD_TEMPLATES = [
+  {
+    code: 'standard-default',
+    name: 'Standard Template',
+    version: 1,
+    is_default: true,
+    templateAst: buildStandardDefaultAst('Standard Template'),
+  },
+  {
+    code: 'standard-detailed',
+    name: 'Detailed Template',
+    version: 1,
+    is_default: false,
+    templateAst: buildStandardDetailedAst(),
+  },
+];
+
+async function ensureTemplateAstColumn(knex) {
+  const hasTemplateAst = await knex.schema.hasColumn(STANDARD_TABLE, 'templateAst');
+  if (!hasTemplateAst) {
+    await knex.schema.alterTable(STANDARD_TABLE, (table) => {
+      table.jsonb('templateAst').nullable().comment('Canonical JSON AST for standard invoice templates.');
+    });
+  }
+}
+
+async function upsertStandardTemplate(knex, templateDef) {
+  const astJson = JSON.stringify(templateDef.templateAst);
+  let existing = await knex(STANDARD_TABLE)
+    .select('template_id')
+    .where({ standard_invoice_template_code: templateDef.code })
+    .first();
+
+  if (!existing) {
+    existing = await knex(STANDARD_TABLE)
+      .select('template_id')
+      .whereRaw('lower(name) = lower(?)', [templateDef.name])
+      .first();
+  }
+
+  const updatePayload = {
+    name: templateDef.name,
+    version: templateDef.version,
+    is_default: templateDef.is_default,
+    standard_invoice_template_code: templateDef.code,
+    templateAst: knex.raw('?::jsonb', [astJson]),
+    updated_at: knex.fn.now(),
+  };
+
+  if (existing?.template_id) {
+    await knex(STANDARD_TABLE)
+      .where({ template_id: existing.template_id })
+      .update(updatePayload);
+    return;
+  }
+
+  await knex(STANDARD_TABLE).insert({
+    template_id: knex.raw('gen_random_uuid()'),
+    created_at: knex.fn.now(),
+    ...updatePayload,
+  });
+}
+
+exports.up = async function up(knex) {
+  const hasTable = await knex.schema.hasTable(STANDARD_TABLE);
+  if (!hasTable) {
+    return;
+  }
+
+  await ensureTemplateAstColumn(knex);
+
+  for (const templateDef of STANDARD_TEMPLATES) {
+    await upsertStandardTemplate(knex, templateDef);
+  }
 };
 
-export const getStandardInvoiceTemplateAstByCode = (
-  code: string | null | undefined
-): InvoiceTemplateAst | undefined => {
-  if (!code) {
-    return undefined;
-  }
-  const ast = STANDARD_INVOICE_TEMPLATE_ASTS[code];
-  return ast ? cloneAst(ast) : undefined;
+exports.down = async function down() {
+  // No-op: this migration canonicalizes live template data and should not be auto-reverted.
 };

@@ -227,4 +227,53 @@ describe('renderEvaluatedInvoiceTemplateAst', () => {
     expect(rendered.css).not.toContain('--token.bad:');
     expect(rendered.html).toMatch(/class="[^"]*ast-bad-class[^"]*"/);
   });
+
+  it('omits image nodes when source resolves to null or empty-like values', async () => {
+    const ast: InvoiceTemplateAst = {
+      kind: 'invoice-template-ast',
+      version: INVOICE_TEMPLATE_AST_VERSION,
+      bindings: {
+        values: {
+          logo: {
+            id: 'logo',
+            kind: 'value',
+            path: 'tenantClient.logoUrl',
+          },
+        },
+      },
+      layout: {
+        id: 'root',
+        type: 'document',
+        children: [
+          {
+            id: 'issuer-logo',
+            type: 'image',
+            src: { type: 'binding', bindingId: 'logo' },
+            alt: { type: 'literal', value: 'Tenant logo' },
+          },
+        ],
+      },
+    };
+
+    const nullLogoEvaluation = evaluateInvoiceTemplateAst(ast, {
+      ...invoiceFixture,
+      tenantClient: { logoUrl: null },
+    });
+    const nullLogoRendered = await renderEvaluatedInvoiceTemplateAst(ast, nullLogoEvaluation);
+    expect(nullLogoRendered.html).not.toContain('<img');
+
+    const stringNullEvaluation = evaluateInvoiceTemplateAst(ast, {
+      ...invoiceFixture,
+      tenantClient: { logoUrl: 'null' },
+    });
+    const stringNullRendered = await renderEvaluatedInvoiceTemplateAst(ast, stringNullEvaluation);
+    expect(stringNullRendered.html).not.toContain('<img');
+
+    const emptyEvaluation = evaluateInvoiceTemplateAst(ast, {
+      ...invoiceFixture,
+      tenantClient: { logoUrl: '   ' },
+    });
+    const emptyRendered = await renderEvaluatedInvoiceTemplateAst(ast, emptyEvaluation);
+    expect(emptyRendered.html).not.toContain('<img');
+  });
 });

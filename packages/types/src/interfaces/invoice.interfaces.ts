@@ -386,7 +386,12 @@ export interface InvoiceViewModel {
   contact: {
     name: string;
     address: string;
-  }
+  };
+  tenantClient?: {
+    name: string | null;
+    address: string | null;
+    logoUrl: string | null;
+  } | null;
   invoice_date: DateValue;
   invoice_id: string;
   due_date: DateValue;
