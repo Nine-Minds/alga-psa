@@ -61,6 +61,7 @@
     "@alga-psa/event-bus": "*",
     "@alga-psa/integrations": "*",
     "@alga-psa/projects": "*",
+    "@alga-psa/reference-data": "*",
     "@alga-psa/scheduling": "*",
     "@alga-psa/surveys": "*",
     "@alga-psa/tags": "*",

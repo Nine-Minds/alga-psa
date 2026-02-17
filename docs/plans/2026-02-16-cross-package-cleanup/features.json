@@ -146,7 +146,7 @@
   {
     "id": "F025",
     "description": "Stage 8b: Move WorkItemDetailsDrawer, WorkItemDrawer, WorkItemPicker, AppointmentRequestsPanel, TechnicianDispatchDashboard, TimeEntryEditForm, TimeEntryProvider to msp-composition/scheduling (~18 violations)",
-    "implemented": false,
+    "implemented": true,
     "stage": 8
   },
   {

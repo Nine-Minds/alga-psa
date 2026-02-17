@@ -130,3 +130,5 @@
 - (2026-02-17) Stage 8a test: `npx vitest run packages/msp-composition/src/clients/InteractionDetails.scheduleDrawer.test.ts` passes after move.
 
 - (2026-02-17) Stage 8a: updated server client detail page to import ClientDetails from `@alga-psa/msp-composition/clients`.
+
+- (2026-02-17) Stage 8b: moved WorkItemDetailsDrawer, WorkItemDrawer, WorkItemPicker, AppointmentRequestsPanel, TechnicianDispatchDashboard, TimeEntryEditForm, TimeEntryProvider into `packages/msp-composition/src/scheduling` with re-export shims in scheduling; updated imports and scheduling index.
