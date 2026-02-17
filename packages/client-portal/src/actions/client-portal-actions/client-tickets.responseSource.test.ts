@@ -82,6 +82,14 @@ describe('addClientTicketComment response source metadata', () => {
             };
           }
 
+          if (table === 'tickets') {
+            return {
+              where: () => ({
+                update: vi.fn().mockResolvedValue(1),
+              }),
+            };
+          }
+
           throw new Error(`Unexpected table: ${table}`);
         };
 
