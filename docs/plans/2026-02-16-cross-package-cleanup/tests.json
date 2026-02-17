@@ -200,7 +200,7 @@
   {
     "id": "T034",
     "description": "After Stage 9: npm run lint reports <=5 no-feature-to-feature violations total",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F032"]
   },
   {
