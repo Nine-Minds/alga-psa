@@ -37,7 +37,7 @@ type FilterStatus = 'all' | 'pending' | 'approved' | 'declined' | 'cancelled';
 
 export default function AppointmentsPage() {
   const { t } = useTranslation('features/appointments');
-  const { t: tCore } = useTranslation('client-portal/core');
+  const { t: tCommon } = useTranslation('common');
 
   const [appointments, setAppointments] = useState<AppointmentRequest[]>([]);
   const [loading, setLoading] = useState(true);
@@ -220,7 +220,7 @@ export default function AppointmentsPage() {
     return (
       <div className="flex justify-center items-center min-h-[400px]">
         <Spinner size="sm" />
-        <span className="ml-3 text-gray-600">{tCore('common.loading')}</span>
+        <span className="ml-3 text-gray-600">{tCommon('common.loading')}</span>
       </div>
     );
   }
@@ -493,7 +493,7 @@ export default function AppointmentsPage() {
                 variant="outline"
                 onClick={() => setSelectedAppointment(null)}
               >
-                {tCore('common.close')}
+                {tCommon('common.close')}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -508,7 +508,7 @@ export default function AppointmentsPage() {
         title={t('cancel.title')}
         message={t('cancel.message')}
         confirmLabel={t('cancel.confirm')}
-        cancelLabel={tCore('common.cancel')}
+        cancelLabel={tCommon('common.cancel')}
       />
     </div>
   );

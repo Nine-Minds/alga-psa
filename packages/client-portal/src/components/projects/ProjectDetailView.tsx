@@ -71,7 +71,7 @@ const VIEW_MODE_STORAGE_KEY = 'client-portal-project-view-mode';
 
 export default function ProjectDetailView({ project }: ProjectDetailViewProps) {
   const { t, i18n } = useTranslation('features/projects');
-  const { t: tCore } = useTranslation('client-portal/core');
+  const { t: tCommon } = useTranslation('common');
   const dateLocale = getDateFnsLocale(i18n.language);
   const [metrics, setMetrics] = useState<ProjectCompletionMetrics | null>(null);
   const [loading, setLoading] = useState(true);
@@ -292,7 +292,7 @@ export default function ProjectDetailView({ project }: ProjectDetailViewProps) {
               <p className="font-medium">
                 {project.start_date
                   ? new Date(project.start_date).toLocaleDateString()
-                  : tCore('common.notSpecified', 'Not specified')}
+                  : tCommon('common.notSpecified', 'Not specified')}
               </p>
             </div>
             <div>
@@ -300,7 +300,7 @@ export default function ProjectDetailView({ project }: ProjectDetailViewProps) {
               <p className="font-medium">
                 {project.end_date
                   ? new Date(project.end_date).toLocaleDateString()
-                  : tCore('common.notSpecified', 'Not specified')}
+                  : tCommon('common.notSpecified', 'Not specified')}
               </p>
             </div>
             <div>
@@ -308,7 +308,7 @@ export default function ProjectDetailView({ project }: ProjectDetailViewProps) {
               <p className="font-medium">
                 {project.updated_at
                   ? formatDistanceToNow(new Date(project.updated_at), { addSuffix: true, locale: dateLocale })
-                  : tCore('common.unknown', 'Unknown')}
+                  : tCommon('common.unknown', 'Unknown')}
               </p>
             </div>
             <div>

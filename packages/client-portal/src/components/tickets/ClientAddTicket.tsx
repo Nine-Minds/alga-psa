@@ -21,7 +21,7 @@ interface ClientAddTicketProps {
 
 export function ClientAddTicket({ open, onOpenChange, onTicketAdded }: ClientAddTicketProps) {
   const { t } = useTranslation('features/tickets');
-  const { t: tCore } = useTranslation('client-portal/core');
+  const { t: tCommon } = useTranslation('common');
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -192,7 +192,7 @@ export function ClientAddTicket({ open, onOpenChange, onTicketAdded }: ClientAdd
                   variant="outline"
                   onClick={handleClose}
                 >
-                  {tCore('common.cancel')}
+                  {tCommon('common.cancel')}
                 </Button>
                 <Button
                   id="submit-ticket-button"

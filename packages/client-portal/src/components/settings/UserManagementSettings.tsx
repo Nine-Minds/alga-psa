@@ -35,9 +35,8 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
 
 export function UserManagementSettings() {
-  const { t: tProfile } = useTranslation('client-portal/profile');
-  const { t: tCore } = useTranslation('client-portal/core');
-  const { t: tAuth } = useTranslation('client-portal/auth');
+  const { t: tProfile } = useTranslation('client-portal');
+  const { t: tCommon } = useTranslation('common');
   const router = useRouter();
   const [users, setUsers] = useState<IUser[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -361,7 +360,7 @@ export function UserManagementSettings() {
                 className="flex items-center gap-2"
               >
                 <Pencil className="h-4 w-4" />
-                {tCore('common.edit')}
+                {tCommon('common.edit')}
               </DropdownMenuItem>
               <DropdownMenuItem
                 id={`delete-user-menu-item-${record.user_id}`}
@@ -369,7 +368,7 @@ export function UserManagementSettings() {
                 className="flex items-center gap-2 text-red-600"
               >
                 <Trash2 className="h-4 w-4" />
-                {tCore('common.delete')}
+                {tCommon('common.delete')}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -448,7 +447,7 @@ export function UserManagementSettings() {
                 />
               </div>
               <div>
-                <Label htmlFor="password">{tAuth('auth.password')}</Label>
+                <Label htmlFor="password">{tProfile('auth.password')}</Label>
                 <div className="relative">
                   <Input
                     id="password"

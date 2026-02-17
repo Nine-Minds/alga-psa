@@ -29,8 +29,8 @@ interface ClientUserDetailsProps {
 }
 
 const ClientUserDetails: React.FC<ClientUserDetailsProps> = ({ userId, onUpdate }) => {
-  const { t: tProfile } = useTranslation('client-portal/profile');
-  const { t: tCore } = useTranslation('client-portal/core');
+  const { t: tProfile } = useTranslation('client-portal');
+  const { t: tCommon } = useTranslation('common');
   const [user, setUser] = useState<IUser | null>(null);
   const [currentUser, setCurrentUser] = useState<IUserWithRoles | null>(null);
   const [firstName, setFirstName] = useState('');
@@ -210,7 +210,7 @@ const ClientUserDetails: React.FC<ClientUserDetailsProps> = ({ userId, onUpdate 
     return (
       <Card className="p-6">
         <CardContent>
-          <div className="text-sm">{tCore('common.loading')}</div>
+          <div className="text-sm">{tCommon('common.loading')}</div>
         </CardContent>
       </Card>
     );
@@ -220,7 +220,7 @@ const ClientUserDetails: React.FC<ClientUserDetailsProps> = ({ userId, onUpdate 
     return (
       <Card className="p-6">
         <CardContent>
-          <div className="text-sm text-red-500">{tCore('common.error')}: {error}</div>
+          <div className="text-sm text-red-500">{tCommon('common.error')}: {error}</div>
         </CardContent>
       </Card>
     );
@@ -437,7 +437,7 @@ const ClientUserDetails: React.FC<ClientUserDetailsProps> = ({ userId, onUpdate 
           onClick={closeDrawer}
           variant="outline"
         >
-          {tCore('common.cancel')}
+          {tCommon('common.cancel')}
         </Button>
         <Button
           id='save-changes-btn'

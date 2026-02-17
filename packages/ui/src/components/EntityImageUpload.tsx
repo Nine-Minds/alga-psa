@@ -72,8 +72,8 @@ const EntityImageUpload = ({
   linkDocumentAsAvatar,
   renderDocumentSelector,
 }: EntityImageUploadProps) => {
-  const { t } = useTranslation('client-portal/profile');
-  const { t: tCore } = useTranslation('client-portal/core');
+  const { t } = useTranslation('client-portal');
+  const { t: tCore } = useTranslation('common');
   const [isEditing, setIsEditing] = useState(false);
   const [isPendingUpload, startUploadTransition] = useTransition();
   const [isPendingDelete, startDeleteTransition] = useTransition();

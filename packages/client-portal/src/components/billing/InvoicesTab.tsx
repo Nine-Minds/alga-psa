@@ -33,7 +33,7 @@ const InvoicesTab: React.FC<InvoicesTabProps> = React.memo(({
   formatDate
 }) => {
   const { t } = useTranslation('features/billing');
-  const { t: tCore } = useTranslation('client-portal/core');
+  const { t: tCommon } = useTranslation('common');
   const router = useRouter();
   const searchParams = useSearchParams();
   
@@ -201,7 +201,7 @@ const InvoicesTab: React.FC<InvoicesTabProps> = React.memo(({
       )
     },
     {
-      title: tCore('common.actions'),
+      title: tCommon('common.actions'),
       dataIndex: 'invoice_id',
       render: (value: string, record: InvoiceViewModel) => (
         <DropdownMenu>

@@ -7,7 +7,7 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 export function SwitchToMSPButton() {
   const [isLoading, setIsLoading] = useState(false);
-  const { t } = useTranslation('client-portal/auth');
+  const { t } = useTranslation('client-portal');
 
   const handleSwitchToMSP = async () => {
     setIsLoading(true);

@@ -97,7 +97,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   closedStatusOptions = [],
 }) => {
   const { t } = useTranslation('features/tickets');
-  const { t: tCore } = useTranslation('client-portal/core');
+  const { t: tCore } = useTranslation('common');
   // Ensure we have a stable id for interactive element ids
   const compId = id || `ticket-${ticket.ticket_id || 'unknown'}-conversation`;
   const [showEditor, setShowEditor] = useState(false);

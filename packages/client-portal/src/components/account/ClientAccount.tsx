@@ -13,8 +13,8 @@ import type { IClientContractLine } from '@alga-psa/types';
 import type { InvoiceViewModel } from '@alga-psa/types';
 
 export default function ClientAccount() {
-  const { t: tProfile } = useTranslation('client-portal/profile');
-  const { t: tCore } = useTranslation('client-portal/core');
+  const { t: tProfile } = useTranslation('client-portal');
+  const { t: tCommon } = useTranslation('common');
   const { t: tBilling } = useTranslation('features/billing');
   const [isLoading, setIsLoading] = useState(true);
   const [client, setClient] = useState<IClient | null>(null);
@@ -95,7 +95,7 @@ export default function ClientAccount() {
       <div className="flex items-center justify-center py-8">
         <LoadingIndicator 
           layout="stacked" 
-          text={tCore('common.loading')}
+          text={tCommon('common.loading')}
           spinnerProps={{ size: 'md' }}
         />
       </div>
@@ -130,7 +130,7 @@ export default function ClientAccount() {
               </div>
             </div>
           ) : (
-            <div>{tCore('common.noData')}</div>
+            <div>{tCommon('common.noData')}</div>
           )}
         </CardContent>
       </Card>
@@ -154,7 +154,7 @@ export default function ClientAccount() {
               </div> */}
             </div>
           ) : (
-            <div className="text-gray-600">{tCore('common.noData')}</div>
+            <div className="text-gray-600">{tCommon('common.noData')}</div>
           )}
         </CardContent>
       </Card>

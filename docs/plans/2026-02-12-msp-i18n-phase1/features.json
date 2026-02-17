@@ -67,19 +67,19 @@
   },
   {
     "id": "F012",
-    "description": "Create client-portal/core.json for all 7 languages (nav, dashboard, common, pagination, time keys from clientPortal.json)",
+    "description": "Create client-portal.json for all 7 languages (nav, dashboard, common, pagination, time, auth, account, profile, clientSettings, notifications keys from clientPortal.json)",
     "implemented": true,
     "prdRefs": ["FR5"]
   },
   {
     "id": "F013",
-    "description": "Create client-portal/auth.json for all 7 languages (auth, account keys from clientPortal.json)",
+    "description": "Auth/account keys merged into client-portal.json (flat namespace, no separate auth file)",
     "implemented": true,
     "prdRefs": ["FR5"]
   },
   {
     "id": "F014",
-    "description": "Create client-portal/profile.json for all 7 languages (profile, clientSettings, notifications keys from clientPortal.json)",
+    "description": "Profile/clientSettings/notifications keys merged into client-portal.json (flat namespace, no separate profile file)",
     "implemented": true,
     "prdRefs": ["FR5"]
   },
@@ -115,19 +115,19 @@
   },
   {
     "id": "F020",
-    "description": "Migrate client portal components using nav/dashboard/common/pagination/time keys to useTranslation('client-portal/core')",
+    "description": "Migrate client portal components using nav/dashboard/common/pagination/time keys to useTranslation('client-portal')",
     "implemented": true,
     "prdRefs": ["FR6"]
   },
   {
     "id": "F021",
-    "description": "Migrate client portal components using auth/account keys to useTranslation('client-portal/auth')",
+    "description": "Migrate client portal components using auth/account keys to useTranslation('client-portal')",
     "implemented": true,
     "prdRefs": ["FR6"]
   },
   {
     "id": "F022",
-    "description": "Migrate client portal components using profile/clientSettings/notifications keys to useTranslation('client-portal/profile')",
+    "description": "Migrate client portal components using profile/clientSettings/notifications keys to useTranslation('client-portal')",
     "implemented": true,
     "prdRefs": ["FR6"]
   },
@@ -139,13 +139,13 @@
   },
   {
     "id": "F024",
-    "description": "Create msp/core.json for English with nav items from menuConfig.ts, sidebar labels, header actions, and settings tab names",
+    "description": "Create msp.json for English with nav items from menuConfig.ts, sidebar labels, header actions, and settings tab names",
     "implemented": true,
     "prdRefs": ["FR8"]
   },
   {
     "id": "F025",
-    "description": "Create msp/core.json for all 6 non-English languages (machine-translated placeholders)",
+    "description": "Create msp.json for all 6 non-English languages (machine-translated placeholders)",
     "implemented": true,
     "prdRefs": ["FR8"]
   },

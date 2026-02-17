@@ -19,8 +19,8 @@ const VALID_TAB_SLUGS: TabId[] = ['account', 'client-details', 'user-management'
 const DEFAULT_TAB: TabId = 'account';
 
 export default function ClientPortalSettingsPage() {
-  const { t: tProfile } = useTranslation('client-portal/profile');
-  const { t: tCore } = useTranslation('client-portal/core');
+  const { t: tProfile } = useTranslation('client-portal');
+  const { t: tCommon } = useTranslation('common');
   const searchParams = useSearchParams();
   const tabParam = searchParams?.get('tab');
   const hydrationReadyRef = useRef(false);
@@ -100,7 +100,7 @@ export default function ClientPortalSettingsPage() {
       <div className="flex items-center justify-center py-8">
         <LoadingIndicator
           layout="stacked"
-          text={tCore('common.loading')}
+          text={tCommon('common.loading')}
           spinnerProps={{ size: 'md' }}
         />
       </div>

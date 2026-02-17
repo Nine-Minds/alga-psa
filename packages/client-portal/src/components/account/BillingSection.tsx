@@ -34,9 +34,9 @@ interface ValidationErrors {
 }
 
 export default function BillingSection() {
-  const { t: tAccount } = useTranslation('client-portal/auth');
+  const { t: tAccount } = useTranslation('client-portal');
   const { t: tBilling } = useTranslation('features/billing');
-  const { t: tCore } = useTranslation('client-portal/core');
+  const { t: tCommon } = useTranslation('common');
   const tAccountBilling = (key: string, options?: Record<string, any>) =>
     tAccount(`account.billing.${key}`, options);
   const [billingCycles, setBillingCycles] = useState<BillingCycle[]>([]);
@@ -390,7 +390,7 @@ export default function BillingSection() {
                 onClick={() => setIsAddingPayment(false)}
                 disabled={isProcessing}
               >
-                {tCore('common.cancel', 'Cancel')}
+                {tCommon('common.cancel', 'Cancel')}
               </Button>
               <Button
                 id="submit-add-payment"
@@ -416,7 +416,7 @@ export default function BillingSection() {
               <th>{tBilling('invoice.date', 'Invoice Date')}</th>
               <th>{tBilling('invoice.amount', 'Amount')}</th>
               <th>{tBilling('invoice.status', 'Status')}</th>
-              <th>{tCore('common.actions', 'Actions')}</th>
+              <th>{tCommon('common.actions', 'Actions')}</th>
             </tr>
           </thead>
           <tbody>

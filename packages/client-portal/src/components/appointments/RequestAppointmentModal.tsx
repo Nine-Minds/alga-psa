@@ -75,7 +75,7 @@ export function RequestAppointmentModal({
   editingAppointment
 }: RequestAppointmentModalProps) {
   const { t } = useTranslation('features/appointments');
-  const { t: tCore } = useTranslation('client-portal/core');
+  const { t: tCommon } = useTranslation('common');
   const isEditMode = !!editingAppointment;
 
   const STEP_LABELS = useMemo(
@@ -425,7 +425,7 @@ export function RequestAppointmentModal({
       return (
         <div className="flex items-center justify-center py-12">
           <Spinner size="sm" />
-          <span className="ml-3 text-[rgb(var(--color-text-600))]">{tCore('common.loading')}</span>
+          <span className="ml-3 text-[rgb(var(--color-text-600))]">{tCommon('common.loading')}</span>
         </div>
       );
     }
@@ -778,7 +778,7 @@ export function RequestAppointmentModal({
                 onClick={handleBack}
                 disabled={isSubmitting}
               >
-                {tCore('common.back')}
+                {tCommon('common.back')}
               </Button>
             )}
 
@@ -795,7 +795,7 @@ export function RequestAppointmentModal({
                   (currentStep === 3 && !canProceedToStep4)
                 }
               >
-                {tCore('common.next')}
+                {tCommon('common.next')}
               </Button>
             ) : (
               <Button
@@ -806,7 +806,7 @@ export function RequestAppointmentModal({
                 disabled={isSubmitting || !canSubmit}
               >
                 {isSubmitting
-                  ? tCore('common.submitting')
+                  ? tCommon('common.submitting')
                   : isEditMode
                     ? t('step4.update')
                     : t('step4.submit')

@@ -50,7 +50,7 @@ export function TicketDetails({
   initialStatusOptions
 }: TicketDetailsProps) {
   const { t, i18n } = useTranslation('features/tickets');
-  const { t: tCore } = useTranslation('client-portal/core');
+  const { t: tCommon } = useTranslation('common');
   const dateLocale = getDateFnsLocale(i18n.language);
   // Use pre-fetched data from server component
   const [ticket, setTicket] = useState<ITicketWithDetails>(initialTicket);
@@ -691,8 +691,8 @@ export function TicketDetails({
           onConfirm={handleStatusChangeConfirm}
           title={t('actions.changeStatus', 'Change Status')}
           message={t('actions.confirmStatusChange', 'Are you sure you want to change the status of this ticket?')}
-          confirmLabel={tCore('common.update', 'Update')}
-          cancelLabel={tCore('common.cancel', 'Cancel')}
+          confirmLabel={tCommon('common.update', 'Update')}
+          cancelLabel={tCommon('common.cancel', 'Cancel')}
         />
       </>
     );
@@ -714,8 +714,8 @@ export function TicketDetails({
         onConfirm={handleStatusChangeConfirm}
         title={t('actions.changeStatus', 'Change Status')}
         message={t('actions.confirmStatusChange', 'Are you sure you want to change the status of this ticket?')}
-        confirmLabel={tCore('common.update', 'Update')}
-        cancelLabel={tCore('common.cancel', 'Cancel')}
+        confirmLabel={tCommon('common.update', 'Update')}
+        cancelLabel={tCommon('common.cancel', 'Cancel')}
       />
     </>
   );

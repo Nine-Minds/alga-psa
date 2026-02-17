@@ -28,7 +28,7 @@ interface AppointmentRequest {
 
 export function ClientDashboard() {
   const router = useRouter();
-  const { t } = useTranslation('client-portal/core');
+  const { t } = useTranslation('client-portal');
   const { t: tAppointments } = useTranslation('features/appointments');
   const [isTicketDialogOpen, setIsTicketDialogOpen] = useState(false);
   const [isAppointmentModalOpen, setIsAppointmentModalOpen] = useState(false);

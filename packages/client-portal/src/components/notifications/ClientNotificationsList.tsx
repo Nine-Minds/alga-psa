@@ -31,8 +31,8 @@ const TAB_KEY_TO_SLUG: Record<string, string> = {
 };
 
 export function ClientNotificationsList() {
-  const { t: tProfile } = useTranslation('client-portal/profile');
-  const { t: tCore } = useTranslation('client-portal/core');
+  const { t: tProfile } = useTranslation('client-portal');
+  const { t: tCommon } = useTranslation('common');
   const searchParams = useSearchParams();
   const tabParam = searchParams?.get('tab');
 
@@ -228,7 +228,7 @@ export function ClientNotificationsList() {
     if (loading) {
       return (
         <div className="flex justify-center items-center h-40">
-          <p className="text-gray-500">{tCore('common.loading')}</p>
+          <p className="text-gray-500">{tCommon('common.loading')}</p>
         </div>
       );
     }
@@ -303,9 +303,9 @@ export function ClientNotificationsList() {
               size="sm"
               onClick={handleRefresh}
               disabled={loading}
-              aria-label={tCore('common.refresh', 'Refresh')}
+              aria-label={tCommon('common.refresh', 'Refresh')}
             >
-              {tCore('common.refresh', 'Refresh')}
+              {tCommon('common.refresh', 'Refresh')}
             </Button>
             {isFiltersActive() ? (
               <Button
@@ -317,7 +317,7 @@ export function ClientNotificationsList() {
                 className="gap-1"
               >
                 <XCircleIcon className="h-4 w-4" />
-                {tCore('common.resetFilters', 'Reset Filters')}
+                {tCommon('common.resetFilters', 'Reset Filters')}
               </Button>
             ) : (
               <Button
@@ -326,9 +326,9 @@ export function ClientNotificationsList() {
                 size="sm"
                 onClick={() => setIsFilterDialogOpen(true)}
                 disabled={loading}
-                aria-label={tCore('common.filter', 'Filter')}
+                aria-label={tCommon('common.filter', 'Filter')}
               >
-                <Filter size={16} className="mr-1" /> {tCore('common.filter', 'Filter')}
+                <Filter size={16} className="mr-1" /> {tCommon('common.filter', 'Filter')}
               </Button>
             )}
           </div>

@@ -55,8 +55,8 @@ const TextDetailItem: React.FC<{
 };
 
 export function ClientDetailsSettings() {
-  const { t: tProfile } = useTranslation('client-portal/profile');
-  const { t: tCore } = useTranslation('client-portal/core');
+  const { t: tProfile } = useTranslation('client-portal');
+  const { t: tCommon } = useTranslation('common');
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -292,7 +292,7 @@ export function ClientDetailsSettings() {
           disabled={isLoading || !hasUnsavedChanges}
           className="bg-[rgb(var(--color-primary-500))] text-white hover:bg-[rgb(var(--color-primary-600))] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {isLoading ? tCore('common.loading') : tProfile('clientSettings.messages.saveChanges')}
+          {isLoading ? tCommon('common.loading') : tProfile('clientSettings.messages.saveChanges')}
         </Button>
       </Flex>
 

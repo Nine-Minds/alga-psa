@@ -29,7 +29,7 @@ const ContractLineDetailsDialog: React.FC<ContractLineDetailsDialogProps> = Reac
   formatDate
 }) => {
   const { t } = useTranslation('features/billing');
-  const { t: tCore } = useTranslation('client-portal/core');
+  const { t: tCommon } = useTranslation('common');
   // Loading state when contract line is null but dialog is open
   const isLoading = isOpen && !contractLine;
 
@@ -61,7 +61,7 @@ const ContractLineDetailsDialog: React.FC<ContractLineDetailsDialogProps> = Reac
             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-1 ${
               contractLine.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
             }`}>
-              {contractLine.is_active ? tCore('common.active') : tCore('common.inactive')}
+              {contractLine.is_active ? tCommon('common.active') : tCommon('common.inactive')}
             </span>
           </div>
           {contractLine.custom_rate !== undefined && (
@@ -81,7 +81,7 @@ const ContractLineDetailsDialog: React.FC<ContractLineDetailsDialogProps> = Reac
         <div className="mt-4">
           <p className="text-sm text-gray-500">
             {t('contractLine.statusDescription', {
-              status: contractLine.is_active ? tCore('common.active').toLowerCase() : tCore('common.inactive').toLowerCase(),
+              status: contractLine.is_active ? tCommon('common.active').toLowerCase() : tCommon('common.inactive').toLowerCase(),
               expiry: contractLine.end_date ? t('contractLine.expiresOn', { date: formatDate(contractLine.end_date) }) : t('contractLine.noExpiry')
             })}
           </p>
@@ -123,7 +123,7 @@ const ContractLineDetailsDialog: React.FC<ContractLineDetailsDialogProps> = Reac
       <DialogFooter>
         <Button id="close-contract-line-dialog-button" variant="outline" onClick={onClose}>
           <X className="mr-2 h-4 w-4" />
-          {tCore('common.close')}
+          {tCommon('common.close')}
         </Button>
       </DialogFooter>
     </Dialog>

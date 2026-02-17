@@ -23,9 +23,7 @@ const locales = ['en', 'fr', 'es', 'de', 'nl', 'it', 'pl'] as const;
 const featureNamespaces = ['tickets', 'projects', 'billing', 'documents', 'appointments'] as const;
 
 const clientPortalNamespaces = {
-  core: ['nav', 'dashboard', 'common', 'pagination', 'time'],
-  auth: ['auth', 'account'],
-  profile: ['profile', 'clientSettings', 'notifications'],
+  'client-portal': ['nav', 'dashboard', 'common', 'pagination', 'time', 'auth', 'account', 'profile', 'clientSettings', 'notifications'],
 } as const;
 
 function collectKeyPaths(obj: any, prefix = ''): string[] {
@@ -179,19 +177,11 @@ describe('MSP i18n Phase 1', () => {
     expect(src).toContain('/locales/{{lng}}/{{ns}}.json');
   });
 
-  it('T018-T020: client-portal namespace files exist and include required top-level keys', () => {
+  it('T018-T020: client-portal namespace file exists and includes required top-level keys', () => {
     for (const locale of locales) {
-      const core = readJson(`server/public/locales/${locale}/client-portal/core.json`);
-      const auth = readJson(`server/public/locales/${locale}/client-portal/auth.json`);
-      const profile = readJson(`server/public/locales/${locale}/client-portal/profile.json`);
-      for (const key of clientPortalNamespaces.core) {
-        expect(core).toHaveProperty(key);
-      }
-      for (const key of clientPortalNamespaces.auth) {
-        expect(auth).toHaveProperty(key);
-      }
-      for (const key of clientPortalNamespaces.profile) {
-        expect(profile).toHaveProperty(key);
+      const clientPortal = readJson(`server/public/locales/${locale}/client-portal.json`);
+      for (const key of clientPortalNamespaces['client-portal']) {
+        expect(clientPortal).toHaveProperty(key);
       }
     }
   });
@@ -244,7 +234,7 @@ describe('MSP i18n Phase 1', () => {
 
   it('T029: no legacy clientPortal namespace usage remains in client portal UI', () => {
     const portalLayout = readRepoFile('packages/client-portal/src/components/layout/ClientPortalLayout.tsx');
-    expect(portalLayout).toContain("useTranslation('client-portal/core')");
+    expect(portalLayout).toContain("useTranslation('client-portal')");
     expect(portalLayout).not.toContain('clientPortal');
   });
 
@@ -255,9 +245,9 @@ describe('MSP i18n Phase 1', () => {
     }
   });
 
-  it('T031-T033: msp/core.json exists for all locales with required sections', () => {
+  it('T031-T033: msp.json exists for all locales with required sections', () => {
     for (const locale of locales) {
-      const file = readJson(`server/public/locales/${locale}/msp/core.json`);
+      const file = readJson(`server/public/locales/${locale}/msp.json`);
       expect(file).toHaveProperty('nav');
       expect(file).toHaveProperty('sidebar');
       expect(file).toHaveProperty('settings');
@@ -265,8 +255,8 @@ describe('MSP i18n Phase 1', () => {
     }
   });
 
-  it('T032: msp/core.json nav items match menuConfig entries', () => {
-    const mspCore = readJson('server/public/locales/en/msp/core.json');
+  it('T032: msp.json nav items match menuConfig entries', () => {
+    const mspCore = readJson('server/public/locales/en/msp.json');
     const nav = mspCore.nav;
     expect(nav.home).toBe('Home');
     expect(nav.tickets).toBe('Tickets');
@@ -283,16 +273,16 @@ describe('MSP i18n Phase 1', () => {
     expect(hasLanguage).toBe(true);
   });
 
-  it('T034: msp/core translations resolve correctly for English', async () => {
-    const mspCore = readJson('server/public/locales/en/msp/core.json');
+  it('T034: msp translations resolve correctly for English', async () => {
+    const mspCore = readJson('server/public/locales/en/msp.json');
     await i18next.init({
       lng: 'en',
-      resources: { en: { 'msp/core': mspCore } },
+      resources: { en: { 'msp': mspCore } },
       interpolation: { escapeValue: false },
     });
 
-    expect(i18next.t('nav.home', { ns: 'msp/core' })).toBe('Home');
-    expect(i18next.t('header.signOut', { ns: 'msp/core' })).toBe('Sign out');
+    expect(i18next.t('nav.home', { ns: 'msp' })).toBe('Home');
+    expect(i18next.t('header.signOut', { ns: 'msp' })).toBe('Sign out');
   });
 
   it('T035-T041: MSP profile language preference is gated and uses LanguagePreference behavior', () => {
@@ -343,10 +333,8 @@ describe('MSP i18n Phase 1', () => {
       for (const ns of featureNamespaces) {
         namespacePaths.push(`server/public/locales/${locale}/features/${ns}.json`);
       }
-      namespacePaths.push(`server/public/locales/${locale}/client-portal/core.json`);
-      namespacePaths.push(`server/public/locales/${locale}/client-portal/auth.json`);
-      namespacePaths.push(`server/public/locales/${locale}/client-portal/profile.json`);
-      namespacePaths.push(`server/public/locales/${locale}/msp/core.json`);
+      namespacePaths.push(`server/public/locales/${locale}/client-portal.json`);
+      namespacePaths.push(`server/public/locales/${locale}/msp.json`);
     }
 
     for (const file of namespacePaths) {
@@ -361,16 +349,16 @@ describe('MSP i18n Phase 1', () => {
       const base = readJson(`server/public/locales/en/features/${ns}.json`);
       keySetsByNamespace[`features/${ns}`] = collectKeyPaths(base).sort();
     }
-    const coreBase = readJson('server/public/locales/en/client-portal/core.json');
-    keySetsByNamespace['client-portal/core'] = collectKeyPaths(coreBase).sort();
+    const clientPortalBase = readJson('server/public/locales/en/client-portal.json');
+    keySetsByNamespace['client-portal'] = collectKeyPaths(clientPortalBase).sort();
 
     for (const locale of locales) {
       for (const ns of featureNamespaces) {
         const current = collectKeyPaths(readJson(`server/public/locales/${locale}/features/${ns}.json`)).sort();
         expect(current).toEqual(keySetsByNamespace[`features/${ns}`]);
       }
-      const currentCore = collectKeyPaths(readJson(`server/public/locales/${locale}/client-portal/core.json`)).sort();
-      expect(currentCore).toEqual(keySetsByNamespace['client-portal/core']);
+      const currentClientPortal = collectKeyPaths(readJson(`server/public/locales/${locale}/client-portal.json`)).sort();
+      expect(currentClientPortal).toEqual(keySetsByNamespace['client-portal']);
     }
   });
 });

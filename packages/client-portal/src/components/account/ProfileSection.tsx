@@ -16,7 +16,7 @@ interface ValidationErrors {
 }
 
 export default function ProfileSection() {
-  const { t: tProfile } = useTranslation('client-portal/profile');
+  const { t: tProfile } = useTranslation('client-portal');
   const { t: tCommon } = useTranslation('common');
   const [profile, setProfile] = useState<IClientProfile>({
     name: '',

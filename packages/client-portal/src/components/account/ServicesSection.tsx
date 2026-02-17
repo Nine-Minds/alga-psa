@@ -16,8 +16,7 @@ import {
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 export default function ServicesSection() {
-  const { t: tAccount } = useTranslation('client-portal/auth');
-  const { t: tCore } = useTranslation('client-portal/core');
+  const { t: tAccount } = useTranslation('client-portal');
   const { t: tCommon } = useTranslation('common');
   const tAccountServices = (key: string, options?: Record<string, any>) =>
     tAccount(`account.services.${key}`, options);
@@ -112,7 +111,7 @@ export default function ServicesSection() {
               <th>{tAccountServices('columns.status', 'Status')}</th>
               <th>{tAccountServices('columns.currentContractLine', 'Current Contract Line')}</th>
               <th>{tAccountServices('columns.nextBilling', 'Next Billing')}</th>
-              <th>{tCore('common.actions', 'Actions')}</th>
+              <th>{tCommon('common.actions', 'Actions')}</th>
             </tr>
           </thead>
           <tbody>
@@ -245,7 +244,7 @@ export default function ServicesSection() {
                 }}
                 disabled={isProcessing}
               >
-                {tCore('common.close', 'Close')}
+                {tCommon('common.close', 'Close')}
               </Button>
             </div>
           </div>

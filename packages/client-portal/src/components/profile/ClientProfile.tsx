@@ -33,8 +33,8 @@ import { ClientNotificationsList } from '../notifications/ClientNotificationsLis
 type NotificationView = 'email' | 'internal';
 
 export function ClientProfile() {
-  const { t: tProfile } = useTranslation('client-portal/profile');
-  const { t: tCore } = useTranslation('client-portal/core');
+  const { t: tProfile } = useTranslation('client-portal');
+  const { t: tCommon } = useTranslation('common');
   const searchParams = useSearchParams();
   const [user, setUser] = useState<IUserWithRoles | null>(null);
   const [loading, setLoading] = useState(true);
@@ -156,7 +156,7 @@ export function ClientProfile() {
   };
 
   // Define tab labels (must be before early returns to maintain hook order)
-  const profileTabLabel = tCore('nav.profile');
+  const profileTabLabel = tProfile('nav.profile');
   const activityTabLabel = tProfile('profile.activity', 'Activity');
 
   // Determine the default tab based on URL parameter
@@ -171,7 +171,7 @@ export function ClientProfile() {
   if (loading) {
     return (
       <Card className="p-6">
-        <div>{tCore('common.loading')}</div>
+        <div>{tCommon('common.loading')}</div>
       </Card>
     );
   }
@@ -179,7 +179,7 @@ export function ClientProfile() {
   if (error) {
     return (
       <Card className="p-6">
-        <div className="text-red-500">{tCore('common.error')}: {error}</div>
+        <div className="text-red-500">{tCommon('common.error')}: {error}</div>
       </Card>
     );
   }

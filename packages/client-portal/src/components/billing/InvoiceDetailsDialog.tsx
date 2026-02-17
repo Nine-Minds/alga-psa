@@ -32,7 +32,7 @@ const InvoiceDetailsDialog: React.FC<InvoiceDetailsDialogProps> = React.memo(({
   const [isDownloading, setIsDownloading] = useState(false);
   const [isSendingEmail, setIsSendingEmail] = useState(false);
   const { t } = useTranslation('features/billing');
-  const { t: tCore } = useTranslation('client-portal/core');
+  const { t: tCommon } = useTranslation('common');
 
   // Fetch invoice details when dialog opens
   useEffect(() => {
@@ -142,7 +142,7 @@ const InvoiceDetailsDialog: React.FC<InvoiceDetailsDialogProps> = React.memo(({
             </div>
             <div>
               <p className="text-sm font-medium text-gray-500">{t('invoice.manualInvoice', 'Manual Invoice')}</p>
-              <p className="mt-1">{invoice.is_manual ? tCore('common.yes', 'Yes') : tCore('common.no', 'No')}</p>
+              <p className="mt-1">{invoice.is_manual ? tCommon('common.yes', 'Yes') : tCommon('common.no', 'No')}</p>
             </div>
             <div>
               <p className="text-sm font-medium text-gray-500">{t('invoice.credits', 'Credits')}</p>

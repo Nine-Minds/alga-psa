@@ -13,7 +13,7 @@
 
 ### i18next Namespace Loading
 - http-backend loadPath `/locales/{{lng}}/{{ns}}.json` naturally resolves nested paths
-- `features/tickets` → `/locales/en/features/tickets.json` — no config change needed
+- `features/tickets` -> `/locales/en/features/tickets.json` -- no config change needed
 - Namespaces load on-demand, no need to register them upfront in config
 
 ### Current State
@@ -37,7 +37,7 @@
 | Personal language preference in UserProfile (/msp/profile) | Natural place for personal settings |
 | Org language settings in Settings > General > Organization & Access after Teams | Mirrors org-level config pattern; client portal settings will be consolidated here later |
 | Default language + enabled languages for org settings | Mirrors existing ClientPortalSettings pattern |
-| Machine-translated placeholders for non-English msp/core.json | Professional translation is Phase 2+ |
+| Machine-translated placeholders for non-English msp.json | Professional translation is Phase 2+ |
 | Email template refactoring is a SEPARATE branch | Will happen before this work is finished but not part of this scope |
 
 ## Commit Strategy
@@ -46,7 +46,7 @@ Batch into ~4 meaningful commits (not one-liners):
 
 1. **Feature flag + I18nWrapper** — Flag, standard layout, EE layout
 2. **Shared feature namespaces** — Extract from clientPortal.json, create features/*.json and client-portal/*.json (35+ new files)
-3. **MSP core namespace** — Create msp/core.json for all 7 languages
+3. **MSP core namespace** -- Create msp.json for all 7 languages
 4. **Language settings UI** — Personal preference in Profile + Org settings in Settings > General
 
 ## Key File Paths
@@ -87,20 +87,18 @@ Batch into ~4 meaningful commits (not one-liners):
 - Extracted `billing` translations into `server/public/locales/*/features/billing.json`.
 - Extracted `documents` translations into `server/public/locales/*/features/documents.json`.
 - Extracted `appointments` translations into `server/public/locales/*/features/appointments.json`.
-- Added `client-portal/core.json` with nav/dashboard/common/pagination/time keys for all locales.
-- Added `client-portal/auth.json` with auth/account translations for all locales.
-- Added `client-portal/profile.json` with profile/clientSettings/notifications translations for all locales.
-- Migrated client portal tickets usage to `features/tickets` namespace and adjusted common key usage via `client-portal/core`.
-- Migrated client portal projects components to `features/projects` namespace and routed shared common strings via `client-portal/core`.
-- Migrated client portal billing components to `features/billing` namespace with shared core strings handled via `client-portal/core`.
+- Added `client-portal.json` with nav/dashboard/common/pagination/time/auth/account/profile/clientSettings/notifications keys for all locales.
+- Migrated client portal tickets usage to `features/tickets` namespace and adjusted common key usage via `common`/`client-portal`.
+- Migrated client portal projects components to `features/projects` namespace and routed shared common strings via `common`/`client-portal`.
+- Migrated client portal billing components to `features/billing` namespace with shared core strings handled via `common`/`client-portal`.
 - Migrated client portal document-related UI to `features/documents` and updated Documents components to support new key paths.
-- Migrated client portal appointments components to `features/appointments` with common strings routed via `client-portal/core`.
-- Updated client portal UI to use `client-portal/core` for nav/dashboard/common/pagination/time keys.
-- Migrated client portal auth/account strings to `client-portal/auth` namespace.
-- Migrated client portal profile/clientSettings/notifications strings to `client-portal/profile` namespace.
+- Migrated client portal appointments components to `features/appointments` with common strings routed via `common`/`client-portal`.
+- Updated client portal UI to use `client-portal` for nav/dashboard/common/pagination/time keys.
+- Migrated client portal auth/account strings to `client-portal` namespace.
+- Migrated client portal profile/clientSettings/notifications strings to `client-portal` namespace.
 - Emptied legacy `server/public/locales/*/clientPortal.json` files after migration to avoid duplicate keys.
-- Added `server/public/locales/en/msp/core.json` with MSP nav, sidebar, header, and settings tab strings.
-- Added machine-translated `msp/core.json` files for fr/es/de/nl/it/pl.
+- Added `server/public/locales/en/msp.json` with MSP nav, sidebar, header, and settings tab strings.
+- Added machine-translated `msp.json` files for fr/es/de/nl/it/pl.
 - Added MSP Profile language preference section behind `msp-i18n-enabled` flag in `UserProfile`.
 - Profile language selector uses `LanguagePreference` with `showNoneOption` for inherited defaults.
 - Added `MspLanguageSettings` component for MSP org language defaults and enabled locales.
@@ -128,23 +126,21 @@ Batch into ~4 meaningful commits (not one-liners):
 - T015: features/appointments.json exists for all 7 languages with flattened keys (covered by `server/src/test/unit/i18n/mspI18nPhase1.test.ts`).
 - T016: Feature namespace files contain flattened keys (no wrapping top-level key like 'tickets') (covered by `server/src/test/unit/i18n/mspI18nPhase1.test.ts`).
 - T017: useTranslation('features/tickets') loads features/tickets.json via http-backend loadPath (covered by `server/src/test/unit/i18n/mspI18nPhase1.test.ts`).
-- T018: client-portal/core.json exists for all 7 languages with nav, dashboard, common, pagination, time keys (covered by `server/src/test/unit/i18n/mspI18nPhase1.test.ts`).
-- T019: client-portal/auth.json exists for all 7 languages with auth and account keys (covered by `server/src/test/unit/i18n/mspI18nPhase1.test.ts`).
-- T020: client-portal/profile.json exists for all 7 languages with profile, clientSettings, notifications keys (covered by `server/src/test/unit/i18n/mspI18nPhase1.test.ts`).
+- T018-T020: client-portal.json exists for all 7 languages with nav, dashboard, common, pagination, time, auth, account, profile, clientSettings, notifications keys (covered by `server/src/test/unit/i18n/mspI18nPhase1.test.ts`).
 - T021: All client portal components using tickets.* keys migrated to useTranslation('features/tickets') (covered by `server/src/test/unit/i18n/mspI18nPhase1.test.ts`).
 - T022: All client portal components using projects.* keys migrated to useTranslation('features/projects') (covered by `server/src/test/unit/i18n/mspI18nPhase1.test.ts`).
 - T023: All client portal components using billing.* keys migrated to useTranslation('features/billing') (covered by `server/src/test/unit/i18n/mspI18nPhase1.test.ts`).
 - T024: All client portal components using documents.* keys migrated to useTranslation('features/documents') (covered by `server/src/test/unit/i18n/mspI18nPhase1.test.ts`).
 - T025: All client portal components using appointments.* keys migrated to useTranslation('features/appointments') (covered by `server/src/test/unit/i18n/mspI18nPhase1.test.ts`).
-- T026: All client portal components using nav/dashboard/common/pagination/time keys migrated to useTranslation('client-portal/core') (covered by `server/src/test/unit/i18n/mspI18nPhase1.test.ts`).
-- T027: All client portal components using auth/account keys migrated to useTranslation('client-portal/auth') (covered by `server/src/test/unit/i18n/mspI18nPhase1.test.ts`).
-- T028: All client portal components using profile/clientSettings/notifications keys migrated to useTranslation('client-portal/profile') (covered by `server/src/test/unit/i18n/mspI18nPhase1.test.ts`).
+- T026: All client portal components using nav/dashboard/common/pagination/time keys migrated to useTranslation('client-portal') (covered by `server/src/test/unit/i18n/mspI18nPhase1.test.ts`).
+- T027: All client portal components using auth/account keys migrated to useTranslation('client-portal') (covered by `server/src/test/unit/i18n/mspI18nPhase1.test.ts`).
+- T028: All client portal components using profile/clientSettings/notifications keys migrated to useTranslation('client-portal') (covered by `server/src/test/unit/i18n/mspI18nPhase1.test.ts`).
 - T029: Client portal continues working after full migration (no regressions — same translations, new namespace paths) (covered by `server/src/test/unit/i18n/mspI18nPhase1.test.ts`).
 - T030: clientPortal.json removed or emptied after all components migrated — no duplication of keys (covered by `server/src/test/unit/i18n/mspI18nPhase1.test.ts`).
-- T031: msp/core.json exists for English with nav, sidebar, header, and settings keys (covered by `server/src/test/unit/i18n/mspI18nPhase1.test.ts`).
-- T032: msp/core.json nav items match navigation entries in menuConfig.ts (covered by `server/src/test/unit/i18n/mspI18nPhase1.test.ts`).
-- T033: msp/core.json exists for all 6 non-English languages with translated content (covered by `server/src/test/unit/i18n/mspI18nPhase1.test.ts`).
-- T034: useTranslation('msp/core') returns correct English translations when flag is ON (covered by `server/src/test/unit/i18n/mspI18nPhase1.test.ts`).
+- T031: msp.json exists for English with nav, sidebar, header, and settings keys (covered by `server/src/test/unit/i18n/mspI18nPhase1.test.ts`).
+- T032: msp.json nav items match navigation entries in menuConfig.ts (covered by `server/src/test/unit/i18n/mspI18nPhase1.test.ts`).
+- T033: msp.json exists for all 6 non-English languages with translated content (covered by `server/src/test/unit/i18n/mspI18nPhase1.test.ts`).
+- T034: useTranslation('msp') returns correct English translations when flag is ON (covered by `server/src/test/unit/i18n/mspI18nPhase1.test.ts`).
 - T035: With flag OFF: no language preference section visible in UserProfile (/msp/profile) (covered by `server/src/test/unit/i18n/mspI18nPhase1.test.ts`).
 - T036: With flag ON: LanguagePreference selector appears in UserProfile component (covered by `server/src/test/unit/i18n/mspI18nPhase1.test.ts`).
 - T037: Language selector shows all 7 supported languages plus 'Not set' option (fallback to org default) (covered by `server/src/test/unit/i18n/mspI18nPhase1.test.ts`).

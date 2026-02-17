@@ -34,7 +34,7 @@ export default function TicketAppointmentRequests({
   isLoading = false
 }: TicketAppointmentRequestsProps) {
   const { t } = useTranslation('features/appointments');
-  const { t: tCore } = useTranslation('client-portal/core');
+  const { t: tCore } = useTranslation('common');
 
   const getStatusBadgeVariant = (status: string): BadgeVariant => {
     switch (status) {

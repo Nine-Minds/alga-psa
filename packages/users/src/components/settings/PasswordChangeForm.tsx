@@ -17,7 +17,7 @@ interface PasswordChangeFormProps {
 }
 
 export default function PasswordChangeForm({ onSuccess, className }: PasswordChangeFormProps) {
-  const { t } = useTranslation('client-portal/profile');
+  const { t } = useTranslation('client-portal');
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');

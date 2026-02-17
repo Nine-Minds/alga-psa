@@ -82,7 +82,7 @@ function getFileExtension(fileName: string, mimeType: string): string {
 
 export default function TaskDocumentUpload({ taskId, compact = false }: TaskDocumentUploadProps) {
   const { t, i18n } = useTranslation('features/documents');
-  const { t: tCore } = useTranslation('client-portal/core');
+  const { t: tCommon } = useTranslation('common');
   const dateLocale = getDateFnsLocale(i18n.language);
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
@@ -385,7 +385,7 @@ export default function TaskDocumentUpload({ taskId, compact = false }: TaskDocu
               onClick={() => fileInputRef.current?.click()}
               disabled={uploading}
               className="text-purple-600 hover:text-purple-700 p-1 rounded hover:bg-purple-50 transition-colors"
-              title={uploading ? tCore('common.uploading', 'Uploading...') : t('upload', 'Upload')}
+              title={uploading ? tCommon('common.uploading', 'Uploading...') : t('upload', 'Upload')}
             >
               {uploading ? (
                 <Spinner size="xs" />
@@ -514,7 +514,7 @@ export default function TaskDocumentUpload({ taskId, compact = false }: TaskDocu
               {uploading ? (
                 <>
                   <Spinner size="xs" className="mr-1" />
-                  {tCore('common.uploading', 'Uploading...')}
+                  {tCommon('common.uploading', 'Uploading...')}
                 </>
               ) : (
                 <>

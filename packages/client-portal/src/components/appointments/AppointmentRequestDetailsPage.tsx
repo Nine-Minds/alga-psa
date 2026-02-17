@@ -39,7 +39,7 @@ export function AppointmentRequestDetailsPage() {
   const router = useRouter();
   const appointmentRequestId = params?.appointmentRequestId as string;
   const { t } = useTranslation('features/appointments');
-  const { t: tCore } = useTranslation('client-portal/core');
+  const { t: tCommon } = useTranslation('common');
 
   const [appointment, setAppointment] = useState<AppointmentRequestDetails | null>(null);
   const [loading, setLoading] = useState(true);
@@ -115,7 +115,7 @@ export function AppointmentRequestDetailsPage() {
     return (
       <div className="flex justify-center items-center min-h-[400px]">
         <Spinner size="sm" />
-        <span className="ml-3 text-gray-600">{tCore('common.loading', 'Loading...')}</span>
+        <span className="ml-3 text-gray-600">{tCommon('common.loading', 'Loading...')}</span>
       </div>
     );
   }
@@ -321,7 +321,7 @@ export function AppointmentRequestDetailsPage() {
         title={t('cancel.title', 'Cancel Appointment Request')}
         message={t('cancel.message', 'Are you sure you want to cancel this appointment request? This action cannot be undone.')}
         confirmLabel={t('cancel.confirm', 'Yes, Cancel')}
-        cancelLabel={tCore('common.cancel', 'Cancel')}
+        cancelLabel={tCommon('common.cancel', 'Cancel')}
       />
     </div>
   );

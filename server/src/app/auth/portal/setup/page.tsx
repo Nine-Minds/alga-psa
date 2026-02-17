@@ -24,7 +24,7 @@ interface ContactInfo {
 }
 
 export default function PortalSetupPage() {
-  const { t } = useTranslation('client-portal/auth');
+  const { t } = useTranslation('client-portal');
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams?.get('token') || '';
