@@ -156,3 +156,7 @@
 - (2026-02-17) Stage 8a: moved asset-ticket UI components (AssetDetailHeader, CreateTicketFromAssetButton, ServiceHistoryTab) into `packages/msp-composition/src/assets` with shims; updated msp-composition exports.
 
 - (2026-02-17) Stage 9 lint: `npm run lint` still exits non-zero due to existing hook/props errors and warnings, but `rg "no-feature-to-feature"` on lint output shows 0 cross-package violations.
+
+- (2026-02-17) Stage 9 build: `NODE_OPTIONS=--max-old-space-size=8192 npm run build` failed first on missing `./BillingConfiguration` import in msp-composition ClientDetails; fixed import path.
+
+- (2026-02-17) Stage 9 build: second attempt failed in Next.js compile due to Node built-ins (`fs`, `fs/promises`, `node-vault`, `module`, `node:async_hooks`) pulled via db/knex in server SettingsPage (pre-existing).

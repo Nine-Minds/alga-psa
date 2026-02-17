@@ -17,7 +17,7 @@ import { validateCompanySize, validateAnnualRevenue, validateWebsiteUrl, validat
 import ClientContactsList from '@alga-psa/clients/components/contacts/ClientContactsList';
 import { Flex, Text, Heading } from '@radix-ui/themes';
 import { Switch } from '@alga-psa/ui/components/Switch';
-import BillingConfiguration from './BillingConfiguration';
+import BillingConfiguration from '@alga-psa/clients/components/clients/BillingConfiguration';
 import {
   updateClient,
   uploadClientLogo,
