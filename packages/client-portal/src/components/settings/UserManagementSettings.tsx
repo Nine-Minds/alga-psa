@@ -32,7 +32,7 @@ import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { ColumnDefinition } from '@alga-psa/types';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { preCheckDeletion } from '@alga-psa/core';
+import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
 
 export function UserManagementSettings() {
   const { t } = useTranslation('clientPortal');

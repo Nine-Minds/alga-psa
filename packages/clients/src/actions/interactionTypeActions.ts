@@ -149,7 +149,8 @@ export const deleteInteractionType = withAuth(async (
   typeId: string
 ): Promise<DeletionValidationResult & { deleted?: boolean }> => {
   try {
-    return await deleteEntityWithValidation('interaction_type', typeId, async (trx, tenantId) => {
+    const { knex } = await createTenantKnex();
+    return await deleteEntityWithValidation('interaction_type', typeId, knex, tenant, async (trx, tenantId) => {
       const deletedCount = await trx('interaction_types')
         .where({ type_id: typeId, tenant: tenantId })
         .delete();

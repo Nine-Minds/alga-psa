@@ -419,11 +419,12 @@ export const updateService = withAuth(async (
 
 export const deleteService = withAuth(async (
     _user,
-    _ctx,
+    { tenant },
     serviceId: string
   ): Promise<DeletionValidationResult & { success: boolean; deleted?: boolean }> => {
     try {
-        const result = await deleteEntityWithValidation('service', serviceId, async (trx) => {
+        const { knex } = await createTenantKnex();
+        const result = await deleteEntityWithValidation('service', serviceId, knex, tenant, async (trx) => {
             await Service.delete(trx, serviceId);
             safeRevalidate('/msp/billing');
             safeRevalidate('/msp/settings/billing');

@@ -42,9 +42,9 @@
       "import": "./dist/lib/i18n/config.js",
       "types": "./src/lib/i18n/config.ts"
     },
-    "./hooks": {
-      "import": "./src/lib/useDeletionValidation.ts",
-      "types": "./src/lib/useDeletionValidation.ts"
+    "./config/deletion": {
+      "import": "./src/config/deletion/index.ts",
+      "types": "./src/config/deletion/index.ts"
     }
   },
   "scripts": {

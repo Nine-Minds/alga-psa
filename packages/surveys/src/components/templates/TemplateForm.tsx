@@ -15,7 +15,7 @@ import {
 } from '@alga-psa/surveys/actions/surveyActions';
 import type { SurveyTemplate } from '@alga-psa/surveys/actions/surveyActions';
 import type { DeletionValidationResult } from '@alga-psa/types';
-import { preCheckDeletion } from '@alga-psa/core';
+import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
 import {
   getDefaultRatingLabels,
   RatingButton,

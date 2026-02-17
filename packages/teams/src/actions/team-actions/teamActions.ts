@@ -128,7 +128,7 @@ export const deleteTeam = withAuth(async (
   try {
     const { knex } = await createTenantKnex();
 
-    const result = await deleteEntityWithValidation('team', teamId, async (trx, tenantId) => {
+    const result = await deleteEntityWithValidation('team', teamId, knex, tenant, async (trx, tenantId) => {
       await Team.delete(trx, tenantId, teamId);
     });
 

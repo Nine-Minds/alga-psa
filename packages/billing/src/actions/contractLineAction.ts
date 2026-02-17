@@ -336,7 +336,7 @@ export const deleteContractLine = withAuth(async (
             };
         }
 
-        const result = await deleteEntityWithValidation('contract_line', planId, async (trx) => {
+        const result = await deleteEntityWithValidation('contract_line', planId, knex, tenant, async (trx) => {
             await ContractLine.delete(trx, planId);
         });
 

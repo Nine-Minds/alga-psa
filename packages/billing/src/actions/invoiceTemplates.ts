@@ -872,7 +872,7 @@ export const deleteInvoiceTemplate = withAuth(async (
 
     try {
         let templateWasTenantDefault = false;
-        const result = await deleteEntityWithValidation('invoice_template', templateId, async (trx) => {
+        const result = await deleteEntityWithValidation('invoice_template', templateId, knex, tenant, async (trx) => {
             const tenantAssignment = await trx('invoice_template_assignments')
                 .select('assignment_id')
                 .where({

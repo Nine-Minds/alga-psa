@@ -6,7 +6,8 @@ import { withTransaction } from '@alga-psa/db';
 import { createTenantKnex } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { Knex } from 'knex';
-import { deleteEntityWithValidation, preCheckDeletion } from '@alga-psa/core';
+import { deleteEntityWithValidation } from '@alga-psa/core';
+import { preCheckDeletion } from '@alga-psa/auth';
 
 export const getAllPriorities = withAuth(async (_user, { tenant }, itemType?: 'ticket' | 'project_task') => {
   const { knex: db } = await createTenantKnex();
@@ -127,7 +128,7 @@ export const deletePriority = withAuth(async (
       };
     }
 
-    const result = await deleteEntityWithValidation('priority', priorityId, async (trx, tenantId) => {
+    const result = await deleteEntityWithValidation('priority', priorityId, db, tenant, async (trx, tenantId) => {
       await Priority.delete(trx, tenantId, priorityId);
     });
 

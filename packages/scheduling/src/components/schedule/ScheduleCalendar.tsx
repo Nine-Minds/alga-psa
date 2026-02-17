@@ -28,7 +28,7 @@ import { getCurrentUser, getCurrentUserPermissions } from '@alga-psa/users/actio
 import { useUserPreference } from '@alga-psa/users/hooks';
 import { IUserWithRoles } from '@alga-psa/types';
 import { DeleteEntityDialog } from '@alga-psa/ui';
-import { preCheckDeletion } from '@alga-psa/core';
+import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
 import { WorkItemDrawer } from '@alga-psa/scheduling/components/time-management/time-entry/time-sheet/WorkItemDrawer';
 import { useDrawer } from "@alga-psa/ui";
 import { Trash, ChevronLeft, ChevronRight, CalendarDays as CalendarDaysIcon, Layers, Layers2 } from 'lucide-react';

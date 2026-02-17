@@ -11,7 +11,7 @@ import {
   DropdownMenuTrigger
 } from '@alga-psa/ui/components/DropdownMenu';
 import { useIsCompactEvent } from '@alga-psa/ui/hooks';
-import { preCheckDeletion } from '@alga-psa/core';
+import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
 
 interface ScheduleEventProps {
   event: Omit<IScheduleEntry, 'tenant'>;

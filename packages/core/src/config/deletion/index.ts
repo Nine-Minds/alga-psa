@@ -307,7 +307,6 @@ export const DELETION_CONFIGS: Record<string, EntityDeletionConfig> = {
     entityType: 'asset',
     supportsInactive: true,
     supportsArchive: false,
-    tagEntityType: 'asset',
     dependencies: [
       {
         type: 'maintenance_schedule',

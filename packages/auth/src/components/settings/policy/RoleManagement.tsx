@@ -17,7 +17,7 @@ import { Label } from '@alga-psa/ui/components/Label';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
-import { preCheckDeletion } from '@alga-psa/core';
+import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
 
 export default function RoleManagement() {
   const [roles, setRoles] = useState<IRole[]>([]);

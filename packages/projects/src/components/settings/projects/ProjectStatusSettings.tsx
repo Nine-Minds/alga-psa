@@ -22,7 +22,7 @@ import { StatusImportDialog } from '@alga-psa/ui/components/settings/dialogs/Sta
 import { ConflictResolutionDialog } from '@alga-psa/reference-data/components';
 import { DeleteEntityDialog } from '@alga-psa/ui';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
-import { preCheckDeletion } from '@alga-psa/core';
+import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
 
 /**
  * ProjectStatusSettings - Manages project-level statuses

@@ -28,7 +28,7 @@ import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
-import { preCheckDeletion } from '@alga-psa/core';
+import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
 import { DeadlineFilter, DeadlineFilterValue } from './DeadlineFilter';
 import { IContact } from '@alga-psa/types';
 import { IUser } from '@shared/interfaces/user.interfaces';

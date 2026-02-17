@@ -12,7 +12,7 @@ import { MoreVertical, Pen, Trash2 } from 'lucide-react';
 import ClientDetails from '@alga-psa/clients/components/clients/ClientDetails';
 
 import { getUsersClientInfo } from '@alga-psa/users/actions';
-import { preCheckDeletion } from '@alga-psa/core';
+import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
 import {
   DropdownMenu,
   DropdownMenuContent,

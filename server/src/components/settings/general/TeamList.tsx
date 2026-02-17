@@ -7,7 +7,7 @@ import { DeletionValidationResult, ITeam, IUser, IUserWithRoles } from '@alga-ps
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import { DeleteEntityDialog } from '@alga-psa/ui';
 import { Input } from '@alga-psa/ui/components/Input';
-import { preCheckDeletion } from '@alga-psa/core';
+import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
 
 interface TeamListProps {
   teams: ITeam[];

@@ -16,7 +16,8 @@ import { ITaxRegion, ITaxRate as FullTaxRate } from '@alga-psa/types';
 import { v4 as uuidv4 } from 'uuid';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { ColumnDefinition } from '@alga-psa/types';
-import { toPlainDate, parseDateSafe, preCheckDeletion } from '@alga-psa/core';
+import { toPlainDate, parseDateSafe } from '@alga-psa/core';
+import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
 import { Temporal } from '@js-temporal/polyfill';
 import { MoreVertical, Layers, Settings } from 'lucide-react';
 import {

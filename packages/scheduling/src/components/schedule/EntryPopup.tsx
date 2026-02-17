@@ -24,7 +24,7 @@ import SelectedWorkItem from '@alga-psa/scheduling/components/time-management/ti
 import { DateTimePicker } from '@alga-psa/ui/components/DateTimePicker';
 import { IUser } from '@shared/interfaces/user.interfaces';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
-import { preCheckDeletion } from '@alga-psa/core';
+import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
 import {
   approveAppointmentRequest as approveRequest,
   declineAppointmentRequest as declineRequest,

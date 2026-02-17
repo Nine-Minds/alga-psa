@@ -574,7 +574,7 @@ export const deleteCategory = withAuth(async (
     });
   }
 
-  const result = await deleteEntityWithValidation('category', categoryId, async (trx, tenantId) => {
+  const result = await deleteEntityWithValidation('category', categoryId, db, tenant, async (trx, tenantId) => {
     const deletedCount = await trx('categories')
       .where({ tenant: tenantId, category_id: categoryId })
       .delete();

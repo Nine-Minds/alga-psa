@@ -33,6 +33,7 @@ import { NextResponse } from 'next/server';
 import { deleteDocumentContent } from './documentContentActions';
 import { deleteBlockContent } from './documentBlockContentActions';
 import { deleteEntityWithValidation } from '@alga-psa/core';
+import { deleteEntityTags } from '@alga-psa/tags/lib/tagCleanup';
 import { DocumentHandlerRegistry } from '@alga-psa/documents/handlers/DocumentHandlerRegistry';
 import { getEntityTypesForUser } from '../lib/documentPermissionUtils';
 import { generateDocumentPreviews } from '../lib/documentPreviewGenerator';
@@ -144,13 +145,16 @@ export const deleteDocument = withAuth(async (
   let deletedDocument: any | null = null;
 
   try {
-    const result = await deleteEntityWithValidation('document', documentId, async (trx, tenantId) => {
+    const { knex } = await createTenantKnex();
+    const result = await deleteEntityWithValidation('document', documentId, knex, tenant, async (trx, tenantId) => {
       const document = await trx('documents')
         .where({ document_id: documentId, tenant: tenantId })
         .first();
       if (!document) {
         throw new Error('Document not found');
       }
+
+      await deleteEntityTags(trx, documentId, 'document');
 
       await trx('clients')
         .where({

@@ -20,7 +20,7 @@ import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { ColumnDefinition } from '@alga-psa/types';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { DeleteEntityDialog } from '@alga-psa/ui';
-import { preCheckDeletion } from '@alga-psa/core';
+import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
 
 const InvoiceTemplates: React.FC = () => {
   const [invoiceTemplates, setInvoiceTemplates] = useState<IInvoiceTemplate[]>([]);

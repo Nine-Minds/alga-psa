@@ -27,7 +27,7 @@ import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { ColumnDefinition } from '@alga-psa/types';
 import { PLAN_TYPE_DISPLAY, BILLING_FREQUENCY_DISPLAY } from '@alga-psa/billing/constants/billing';
 import { add } from 'date-fns';
-import { preCheckDeletion } from '@alga-psa/core';
+import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
 
 interface ContractLinesProps {
   initialServices: IService[];

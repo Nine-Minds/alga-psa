@@ -28,7 +28,7 @@ import { DeleteEntityDialog } from '@alga-psa/ui';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { getCurrentUserAsync } from '../../lib/usersHelpers';
 import { getDocumentsByEntity } from '@alga-psa/documents/actions/documentActions';
-import { preCheckDeletion } from '@alga-psa/core';
+import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import ContactAvatar from '@alga-psa/ui/components/ContactAvatar';
 import { useRouter } from 'next/navigation';

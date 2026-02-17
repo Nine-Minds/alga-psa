@@ -742,7 +742,8 @@ export const deleteAsset = withAuth(async (
     asset_id: string
 ): Promise<DeletionValidationResult & { success: boolean; deleted?: boolean }> => {
     try {
-        const result = await deleteEntityWithValidation('asset', asset_id, async (trx, tenantId) => {
+        const { knex } = await createTenantKnex();
+        const result = await deleteEntityWithValidation('asset', asset_id, knex, tenant, async (trx, tenantId) => {
             const asset = await trx('assets')
                 .where({ tenant: tenantId, asset_id })
                 .first();

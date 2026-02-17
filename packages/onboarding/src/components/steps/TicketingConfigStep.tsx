@@ -30,7 +30,7 @@ import { createStatus, createPriority } from '@alga-psa/reference-data/actions';
 import toast from 'react-hot-toast';
 import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
 import { DeleteEntityDialog } from '@alga-psa/ui';
-import { preCheckDeletion } from '@alga-psa/core';
+import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
 
 interface SectionState {
   numbering: boolean;

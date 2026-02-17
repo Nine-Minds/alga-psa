@@ -28,7 +28,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from '@alga-psa/ui/components/DropdownMenu';
-import { useDeletionValidation } from '@alga-psa/core/hooks';
+import { useDeletionValidation } from '@alga-psa/auth/hooks/useDeletionValidation';
 const InteractionTypesSettings: React.FC = () => {
   const [interactionTypes, setInteractionTypes] = useState<IInteractionType[]>([]);
   const [loading, setLoading] = useState(true);

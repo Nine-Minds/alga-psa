@@ -27,7 +27,7 @@ import {
     FolderInput
 } from 'lucide-react';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
-import { preCheckDeletion } from '@alga-psa/core';
+import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
 
 // Helper component for video previews with browser compatibility checking
 interface VideoPreviewProps {

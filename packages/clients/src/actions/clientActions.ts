@@ -2,7 +2,8 @@
 
 import type { DeletionValidationResult, IClient, IClientWithLocation } from '@alga-psa/types';
 import { createTenantKnex } from '@alga-psa/db';
-import { deleteEntityWithValidation, preCheckDeletion, unparseCSV, isEnterprise } from '@alga-psa/core';
+import { deleteEntityWithValidation, unparseCSV, isEnterprise } from '@alga-psa/core';
+import { preCheckDeletion } from '@alga-psa/auth';
 import { createDefaultTaxSettingsAsync } from '../lib/billingHelpers';
 import { revalidatePath } from 'next/cache';
 import { withAuth } from '@alga-psa/auth';
@@ -12,6 +13,7 @@ import { uploadEntityImage, deleteEntityImage } from '@alga-psa/documents';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { createTag } from '@alga-psa/tags/actions';
+import { deleteEntityTags } from '@alga-psa/tags/lib/tagCleanup';
 import { ClientModel } from '@alga-psa/shared/models/clientModel';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import {
@@ -921,7 +923,9 @@ export const deleteClient = withAuth(async (user, { tenant }, clientId: string):
       };
     }
 
-    const result = await deleteEntityWithValidation('client', clientId, async (trx, tenantId) => {
+    const result = await deleteEntityWithValidation('client', clientId, db, tenant, async (trx, tenantId) => {
+      await deleteEntityTags(trx, clientId, 'client');
+
       const deletedTaxSettings = await trx('client_tax_settings')
         .where({ client_id: clientId, tenant: tenantId })
         .delete();

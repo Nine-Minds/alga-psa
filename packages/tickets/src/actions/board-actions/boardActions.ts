@@ -295,7 +295,7 @@ export const deleteBoard = withAuth(async (
     }
 
     if (!force && !isLastItilBoard && allCategoryIds.length === 0) {
-      const result = await deleteEntityWithValidation('board', boardId, async (boardTrx, tenantId) => {
+      const result = await deleteEntityWithValidation('board', boardId, db, tenant, async (boardTrx, tenantId) => {
         const deletedCount = await boardTrx('boards')
           .where({ tenant: tenantId, board_id: boardId })
           .delete();

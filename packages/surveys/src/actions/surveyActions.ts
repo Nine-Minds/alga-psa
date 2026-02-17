@@ -217,11 +217,12 @@ export const updateSurveyTemplate = withAuth(async (_user, { tenant }, templateI
 
 export const deleteSurveyTemplate = withAuth(async (
   _user,
-  _ctx,
+  { tenant },
   templateId: string
 ): Promise<DeletionValidationResult & { success: boolean; deleted?: boolean }> => {
   try {
-    const result = await deleteEntityWithValidation('survey_template', templateId, async (trx, tenantId) => {
+    const { knex } = await createTenantKnex();
+    const result = await deleteEntityWithValidation('survey_template', templateId, knex, tenant, async (trx, tenantId) => {
       const deleted = await trx(SURVEY_TEMPLATE_TABLE)
         .where({ tenant: tenantId, template_id: templateId })
         .del();

@@ -6,7 +6,8 @@ import { createHash } from 'crypto';
 import { v4 as uuidv4 } from 'uuid';
 import { RateLimiterMemory } from 'rate-limiter-flexible';
 import { createTenantKnex } from '@alga-psa/db';
-import { deleteEntityWithValidation, preCheckDeletion } from '@alga-psa/core';
+import { deleteEntityWithValidation } from '@alga-psa/core';
+import { preCheckDeletion } from '@alga-psa/auth';
 import { withAuth, hasPermission, getCurrentUser } from '@alga-psa/auth';
 import {
   WorkflowRuntimeV2,
@@ -1291,7 +1292,7 @@ export const preCheckWorkflowDefinitionDeletion = withAuth(async (
 
 export const deleteWorkflowDefinitionAction = withAuth(async (
   user,
-  _ctx,
+  { tenant },
   input: unknown
 ): Promise<DeletionValidationResult & { success: boolean; deleted?: boolean }> => {
   const parsed = DeleteWorkflowDefinitionInput.parse(input);
@@ -1348,7 +1349,7 @@ export const deleteWorkflowDefinitionAction = withAuth(async (
     };
   }
 
-  const result = await deleteEntityWithValidation('workflow', parsed.workflowId, async (trx) => {
+  const result = await deleteEntityWithValidation('workflow', parsed.workflowId, knex, tenant, async (trx) => {
     const runIds = await trx('workflow_runs')
       .where({ workflow_id: parsed.workflowId })
       .pluck('run_id');

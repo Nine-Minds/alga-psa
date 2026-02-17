@@ -26,7 +26,7 @@ import {
   DropdownMenuTrigger,
 } from '@alga-psa/ui/components/DropdownMenu';
 import { MoreVertical, PlusIcon, RefreshCw } from 'lucide-react';
-import { preCheckDeletion } from '@alga-psa/core';
+import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
 import type { DeletionValidationResult } from '@alga-psa/types';
 
 interface TemplateListProps {

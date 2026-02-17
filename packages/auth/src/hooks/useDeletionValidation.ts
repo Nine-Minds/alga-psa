@@ -2,7 +2,7 @@
 
 import { useCallback, useState } from 'react';
 import type { DeletionValidationResult } from '@alga-psa/types';
-import { preCheckDeletion } from '../server/deletion/deletionActions';
+import { preCheckDeletion } from '../lib/preCheckDeletion';
 
 export function useDeletionValidation(entityType: string) {
   const [validationResult, setValidationResult] = useState<DeletionValidationResult | null>(null);

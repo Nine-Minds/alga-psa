@@ -72,7 +72,7 @@ export const deleteRole = withAuth(async (
       };
     }
 
-    const result = await deleteEntityWithValidation('role', roleId, async (trx, tenantId) => {
+    const result = await deleteEntityWithValidation('role', roleId, db, tenant, async (trx, tenantId) => {
       // Clean up child records owned by the role
       await trx('role_permissions').where({ role_id: roleId, tenant: tenantId }).del();
 

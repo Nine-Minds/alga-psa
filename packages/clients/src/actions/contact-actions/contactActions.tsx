@@ -7,6 +7,7 @@ import { Knex } from 'knex';
 import { deleteEntityWithValidation, unparseCSV } from '@alga-psa/core';
 import { getContactAvatarUrlsBatchAsync } from '../../lib/documentsHelpers';
 import { createTag } from '@alga-psa/tags/actions';
+import { deleteEntityTags } from '@alga-psa/tags/lib/tagCleanup';
 import { hasPermissionAsync } from '../../lib/authHelpers';
 import { ContactModel, CreateContactInput } from '@alga-psa/shared/models/contactModel';
 import { withAuth } from '@alga-psa/auth';
@@ -124,7 +125,9 @@ export const deleteContact = withAuth(async (
       };
     }
 
-    const result = await deleteEntityWithValidation('contact', contactId, async (trx, tenantId) => {
+    const result = await deleteEntityWithValidation('contact', contactId, db, tenant, async (trx, tenantId) => {
+      await deleteEntityTags(trx, contactId, 'contact');
+
       // Clean up child records owned by the contact
       await trx('comments').where({ contact_id: contactId, tenant: tenantId }).delete();
       await trx('portal_invitations').where({ contact_id: contactId, tenant: tenantId }).delete();

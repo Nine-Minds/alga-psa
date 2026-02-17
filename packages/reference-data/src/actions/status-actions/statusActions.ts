@@ -310,7 +310,8 @@ export const deleteStatus = withAuth(async (
   }
 
   try {
-    const result = await deleteEntityWithValidation('status', statusId, async (trx, tenantId) => {
+    const { knex } = await createTenantKnex();
+    const result = await deleteEntityWithValidation('status', statusId, knex, tenant, async (trx, tenantId) => {
       const deletedCount = await trx('statuses')
         .where({
           tenant: tenantId,

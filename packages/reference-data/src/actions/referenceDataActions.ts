@@ -634,7 +634,8 @@ export const deleteReferenceDataItem = withAuth(async (
             : dataType === 'boards'
               ? 'board'
               : 'interaction_type';
-      const result = await deleteEntityWithValidation(deletionEntityType, itemId, async (trx, tenantId) => {
+      const { knex } = await createTenantKnex();
+      const result = await deleteEntityWithValidation(deletionEntityType, itemId, knex, tenant, async (trx, tenantId) => {
         const deletedCount = await trx(config.targetTable)
           .where({
             [idField]: itemId,

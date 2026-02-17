@@ -670,7 +670,7 @@ export const deleteScheduleEntry = withAuth(async (
       };
     }
 
-    const result = await deleteEntityWithValidation('schedule_entry', masterEntryId, async (trx, tenantId) => {
+    const result = await deleteEntityWithValidation('schedule_entry', masterEntryId, db, tenant, async (trx, tenantId) => {
       // Clean up schedule conflicts referencing this entry
       await trx('schedule_conflicts')
         .where({ tenant: tenantId })

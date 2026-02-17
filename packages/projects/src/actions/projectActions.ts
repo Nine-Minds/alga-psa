@@ -36,7 +36,7 @@ import {
   buildProjectUpdatedPayload,
 } from '@shared/workflow/streams/domainEventBuilders/projectLifecycleEventBuilders';
 import { deleteEntityWithValidation } from '@alga-psa/core';
-import { deleteEntitiesTags } from '@alga-psa/tags/lib/tagCleanup';
+import { deleteEntityTags, deleteEntitiesTags } from '@alga-psa/tags/lib/tagCleanup';
 
 const extendedCreateProjectSchema = createProjectSchema.extend({
   assigned_to: z.string().nullable().optional(),
@@ -767,8 +767,11 @@ export const deleteProject = withAuth(async (
     projectId: string
 ): Promise<DeletionValidationResult & { success: boolean; deleted?: boolean }> => {
     try {
-        const result = await deleteEntityWithValidation('project', projectId, async (trx, tenantId) => {
+        const { knex } = await createTenantKnex();
+        const result = await deleteEntityWithValidation('project', projectId, knex, tenant, async (trx, tenantId) => {
             await checkPermission(user, 'project', 'delete', trx);
+
+            await deleteEntityTags(trx, projectId, 'project');
 
             const phaseIds = await trx('project_phases')
                 .where({ project_id: projectId, tenant: tenantId })

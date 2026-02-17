@@ -24,7 +24,7 @@ import { Card } from '@alga-psa/ui/components/Card';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { getCurrentUserAsync, getContactAvatarUrlActionAsync } from '../../lib/usersHelpers';
 import { updateContact, getContactByContactNameId, deleteContact } from '@alga-psa/clients/actions';
-import { preCheckDeletion } from '@alga-psa/core';
+import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
 import { validateEmailAddress, validatePhoneNumber, validateContactName, validateRole } from '@alga-psa/validation';
 import Documents from '@alga-psa/documents/components/Documents';
 import ContactDetailsEdit from './ContactDetailsEdit';

@@ -39,7 +39,7 @@ import Spinner from '@alga-psa/ui/components/Spinner';
 import MultiUserPicker from '@alga-psa/ui/components/MultiUserPicker';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
-import { preCheckDeletion } from '@alga-psa/core';
+import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
 import ViewDensityControl from '@alga-psa/ui/components/ViewDensityControl';
 import { useDrawer } from '@alga-psa/ui';
 import { getClientById } from '../actions/clientLookupActions';

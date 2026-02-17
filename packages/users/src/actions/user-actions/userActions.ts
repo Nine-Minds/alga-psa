@@ -206,7 +206,7 @@ export const deleteUser = withAuth(async (
       };
     }
 
-    const result = await deleteEntityWithValidation('user', userId, async (trx, tenantId) => {
+    const result = await deleteEntityWithValidation('user', userId, db, tenant, async (trx, tenantId) => {
       await trx('workflow_tasks')
         .where({ completed_by: userId, tenant: tenantId || undefined })
         .update({ completed_by: null });

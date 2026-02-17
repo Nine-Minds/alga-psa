@@ -19,6 +19,7 @@ import { withTransaction } from '@alga-psa/db';
 import { createTenantKnex } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { deleteEntityWithValidation } from '@alga-psa/core';
+import { deleteEntityTags } from '@alga-psa/tags/lib/tagCleanup';
 import type { DeletionValidationResult } from '@alga-psa/types';
 import {
   ticketSchema,
@@ -1165,6 +1166,8 @@ async function performTicketDelete(
     throw new Error('Ticket not found');
   }
 
+  await deleteEntityTags(trx, ticketId, 'ticket');
+
   // Clean up child records that are owned by the ticket
   await trx('comments')
     .where({ ticket_id: ticketId, tenant })
@@ -1209,7 +1212,8 @@ export const deleteTicket = withAuth(async (
   ticketId: string
 ): Promise<DeletionValidationResult & { success: boolean; deleted?: boolean }> => {
   try {
-    const result = await deleteEntityWithValidation('ticket', ticketId, async (trx, tenantId) => {
+    const { knex } = await createTenantKnex();
+    const result = await deleteEntityWithValidation('ticket', ticketId, knex, tenant, async (trx, tenantId) => {
       await performTicketDelete(trx, ticketId, tenantId, user);
     });
 
@@ -1247,10 +1251,11 @@ export const deleteTickets = withAuth(async (user, { tenant }, ticketIds: string
 
   const deletedIds: string[] = [];
   const failed: Array<{ ticketId: string; message: string }> = [];
+  const { knex: ticketKnex } = await createTenantKnex();
 
   for (const ticketId of uniqueIds) {
     try {
-      const result = await deleteEntityWithValidation('ticket', ticketId, async (trx, tenantId) => {
+      const result = await deleteEntityWithValidation('ticket', ticketId, ticketKnex, tenant, async (trx, tenantId) => {
         await performTicketDelete(trx, ticketId, tenantId, user);
       });
 

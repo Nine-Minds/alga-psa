@@ -8,7 +8,8 @@ import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dia
 import { DeleteEntityDialog } from '@alga-psa/ui';
 // Import new action and types
 import { getServices, updateService, deleteService, getServiceTypesForSelection, PaginatedServicesResponse, createServiceTypeInline, updateServiceTypeInline, deleteServiceTypeInline, setServicePrices } from '@alga-psa/billing/actions';
-import { CURRENCY_OPTIONS, getCurrencySymbol, preCheckDeletion } from '@alga-psa/core';
+import { CURRENCY_OPTIONS, getCurrencySymbol } from '@alga-psa/core';
+import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
 import { getServiceCategories } from '@alga-psa/billing/actions';
 // Import action to get tax rates
 import { getTaxRates } from '@alga-psa/billing/actions';

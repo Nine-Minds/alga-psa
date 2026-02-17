@@ -7,7 +7,7 @@ import { Trash2 } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { DeleteEntityDialog } from '@alga-psa/ui';
 import { deleteAsset } from '../actions/assetActions';
-import { preCheckDeletion } from '@alga-psa/core';
+import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
 import type { DeletionValidationResult } from '@alga-psa/types';
 
 type ButtonProps = ComponentProps<typeof Button>;

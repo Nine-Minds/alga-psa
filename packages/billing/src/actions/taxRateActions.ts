@@ -131,9 +131,10 @@ export const updateTaxRate = withAuth(async (user, { tenant }, taxRateData: ITax
   }
 });
 
-export const deleteTaxRate = withAuth(async (_user, _ctx, taxRateId: string): Promise<DeleteTaxRateResult> => {
+export const deleteTaxRate = withAuth(async (_user, { tenant }, taxRateId: string): Promise<DeleteTaxRateResult> => {
   try {
-    const result = await deleteEntityWithValidation('tax_rate', taxRateId, async (trx, tenant) => {
+    const { knex } = await createTenantKnex();
+    const result = await deleteEntityWithValidation('tax_rate', taxRateId, knex, tenant, async (trx, tenantId) => {
       // Clean up child records owned by the tax rate
       await trx('composite_tax_mappings').where({ composite_tax_id: taxRateId, tenant }).del();
       await trx('tax_components').where({ tax_rate_id: taxRateId, tenant }).del();
