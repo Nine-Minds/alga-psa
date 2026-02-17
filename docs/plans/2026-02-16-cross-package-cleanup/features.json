@@ -122,7 +122,7 @@
   {
     "id": "F021",
     "description": "Stage 7: Move TacticalRMM components to msp-composition/integrations (2 violations)",
-    "implemented": false,
+    "implemented": true,
     "stage": 7
   },
   {

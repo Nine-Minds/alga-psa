@@ -116,7 +116,7 @@ describe('Tactical org sync upserts rmm_organization_mappings', () => {
 
   it('creates new org rows and updates existing org rows on rerun', async () => {
     const { syncTacticalRmmOrganizations } = await import(
-      '@alga-psa/integrations/actions/integrations/tacticalRmmActions'
+      '@alga-psa/msp-composition/integrations'
     );
 
     remoteClients = [

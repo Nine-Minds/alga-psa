@@ -160,7 +160,7 @@ describe('Tactical alerts backfill', () => {
 
   it('upserts alerts without duplicating on rerun and maps agent_id to assets when possible', async () => {
     const { backfillTacticalRmmAlerts } = await import(
-      '@alga-psa/integrations/actions/integrations/tacticalRmmActions'
+      '@alga-psa/msp-composition/integrations'
     );
 
     const first = await backfillTacticalRmmAlerts({ user_id: 'u1' } as any, { tenant: 'tenant_1' });

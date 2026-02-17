@@ -88,7 +88,7 @@ describe('Tactical RMM integration row upsert', () => {
 
   it('creates one row per tenant+provider and updates it on subsequent saves', async () => {
     const { saveTacticalRmmConfiguration } = await import(
-      '@alga-psa/integrations/actions/integrations/tacticalRmmActions'
+      '@alga-psa/msp-composition/integrations'
     );
 
     const tenant = 'tenant_1';

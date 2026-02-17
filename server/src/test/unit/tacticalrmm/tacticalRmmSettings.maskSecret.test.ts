@@ -58,7 +58,7 @@ describe('Tactical RMM settings secret masking', () => {
 
   it('masks API key and Knox token with only the last 4 characters visible', async () => {
     const { getTacticalRmmSettings } = await import(
-      '@alga-psa/integrations/actions/integrations/tacticalRmmActions'
+      '@alga-psa/msp-composition/integrations'
     );
 
     const res = await getTacticalRmmSettings({} as any, { tenant: 'tenant_1' });

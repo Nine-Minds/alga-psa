@@ -95,7 +95,7 @@ describe('Tactical RMM connection summary counts', () => {
 
   it('returns mapped org/device/alert counts and status breakdown', async () => {
     const { getTacticalRmmConnectionSummary } = await import(
-      '@alga-psa/integrations/actions/integrations/tacticalRmmActions'
+      '@alga-psa/msp-composition/integrations'
     );
 
     const res = await getTacticalRmmConnectionSummary({} as any, { tenant: 'tenant_1' });

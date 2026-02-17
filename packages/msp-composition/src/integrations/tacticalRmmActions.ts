@@ -8,10 +8,14 @@ import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { createTenantKnex } from '@alga-psa/db';
 import { createAsset } from '@alga-psa/assets/actions/assetActions';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
-import { isAxiosUnauthorized, TacticalRmmClient, normalizeTacticalBaseUrl } from '../../lib/rmm/tacticalrmm/tacticalApiClient';
-import { computeTacticalAgentStatus } from '../../lib/rmm/tacticalrmm/agentStatus';
-import { getWebhookBaseUrl } from '../../utils/email/webhookHelpers';
-import { TACTICAL_WEBHOOK_HEADER_NAME, type TacticalRmmAuthMode } from '../../lib/rmm/tacticalrmm/shared';
+import {
+  isAxiosUnauthorized,
+  TacticalRmmClient,
+  normalizeTacticalBaseUrl,
+} from '@alga-psa/integrations/lib/rmm/tacticalrmm/tacticalApiClient';
+import { computeTacticalAgentStatus } from '@alga-psa/integrations/lib/rmm/tacticalrmm/agentStatus';
+import { getWebhookBaseUrl } from '@alga-psa/integrations/utils/email/webhookHelpers';
+import { TACTICAL_WEBHOOK_HEADER_NAME, type TacticalRmmAuthMode } from '@alga-psa/integrations/lib/rmm/tacticalrmm/shared';
 
 const PROVIDER = 'tacticalrmm' as const;
 

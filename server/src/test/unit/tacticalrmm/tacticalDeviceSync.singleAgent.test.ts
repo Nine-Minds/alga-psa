@@ -215,7 +215,7 @@ describe('Tactical device sync (single agent)', () => {
 
   it('updates the corresponding asset and mapping by agent_id', async () => {
     const { syncTacticalRmmSingleAgent } = await import(
-      '@alga-psa/integrations/actions/integrations/tacticalRmmActions'
+      '@alga-psa/msp-composition/integrations'
     );
 
     const res = await syncTacticalRmmSingleAgent(

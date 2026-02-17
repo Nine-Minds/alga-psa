@@ -71,7 +71,7 @@ describe('Tactical RMM connection test (Knox) TOTP payload behavior', () => {
     vi.spyOn(axios, 'get').mockResolvedValue({ data: [] } as any);
 
     const { testTacticalRmmConnection } = await import(
-      '@alga-psa/integrations/actions/integrations/tacticalRmmActions'
+      '@alga-psa/msp-composition/integrations'
     );
 
     const res = await testTacticalRmmConnection({} as any, { tenant: 'tenant_1' }, { totpCode: '123456' });
@@ -93,7 +93,7 @@ describe('Tactical RMM connection test (Knox) TOTP payload behavior', () => {
     vi.spyOn(axios, 'get').mockResolvedValue({ data: [] } as any);
 
     const { testTacticalRmmConnection } = await import(
-      '@alga-psa/integrations/actions/integrations/tacticalRmmActions'
+      '@alga-psa/msp-composition/integrations'
     );
 
     const res = await testTacticalRmmConnection({} as any, { tenant: 'tenant_1' });

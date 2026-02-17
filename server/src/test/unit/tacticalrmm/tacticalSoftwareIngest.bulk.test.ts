@@ -200,7 +200,7 @@ describe('Tactical software inventory ingest (bulk)', () => {
 
   it('ingests via GET /api/software/ without per-agent refresh calls and writes normalized software tables', async () => {
     const { ingestTacticalRmmSoftwareInventory } = await import(
-      '@alga-psa/integrations/actions/integrations/tacticalRmmActions'
+      '@alga-psa/msp-composition/integrations'
     );
 
     const res = await ingestTacticalRmmSoftwareInventory({ user_id: 'u1' } as any, { tenant: 'tenant_1' });
@@ -216,7 +216,7 @@ describe('Tactical software inventory ingest (bulk)', () => {
 
   it('associates ingested software to the correct asset via Tactical agent_id mappings', async () => {
     const { ingestTacticalRmmSoftwareInventory } = await import(
-      '@alga-psa/integrations/actions/integrations/tacticalRmmActions'
+      '@alga-psa/msp-composition/integrations'
     );
 
     const res = await ingestTacticalRmmSoftwareInventory({ user_id: 'u1' } as any, { tenant: 'tenant_1' });
@@ -234,7 +234,7 @@ describe('Tactical software inventory ingest (bulk)', () => {
 
   it('is idempotent (rerun does not duplicate software_catalog or asset_software rows)', async () => {
     const { ingestTacticalRmmSoftwareInventory } = await import(
-      '@alga-psa/integrations/actions/integrations/tacticalRmmActions'
+      '@alga-psa/msp-composition/integrations'
     );
 
     const first = await ingestTacticalRmmSoftwareInventory({ user_id: 'u1' } as any, { tenant: 'tenant_1' });

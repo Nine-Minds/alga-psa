@@ -91,7 +91,7 @@ describe('Tactical RMM connection test (Knox) re-auth on 401', () => {
     });
 
     const { testTacticalRmmConnection } = await import(
-      '@alga-psa/integrations/actions/integrations/tacticalRmmActions'
+      '@alga-psa/msp-composition/integrations'
     );
 
     const res = await testTacticalRmmConnection({} as any, { tenant: 'tenant_1' });

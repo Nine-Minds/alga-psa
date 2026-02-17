@@ -283,7 +283,7 @@ describe('Tactical device sync paging (smoke)', () => {
 
   it('pages beta endpoints and processes all agents across pages', async () => {
     const { syncTacticalRmmDevices } = await import(
-      '@alga-psa/integrations/actions/integrations/tacticalRmmActions'
+      '@alga-psa/msp-composition/integrations'
     );
 
     const res = await syncTacticalRmmDevices({ user_id: 'u1' } as any, { tenant: 'tenant_1' });

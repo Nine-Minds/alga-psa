@@ -60,7 +60,7 @@ describe('Tactical RMM connection test (API key)', () => {
     const getSpy = vi.spyOn(axios, 'get').mockRejectedValueOnce(axios401Error());
 
     const { testTacticalRmmConnection } = await import(
-      '@alga-psa/integrations/actions/integrations/tacticalRmmActions'
+      '@alga-psa/msp-composition/integrations'
     );
 
     const res = await testTacticalRmmConnection({} as any, { tenant: 'tenant_1' });

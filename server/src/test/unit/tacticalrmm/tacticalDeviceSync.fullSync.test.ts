@@ -271,7 +271,7 @@ describe('Tactical device sync (full sync)', () => {
 
   it('creates a new asset and external mapping for an unmapped agent_id', async () => {
     const { syncTacticalRmmDevices } = await import(
-      '@alga-psa/integrations/actions/integrations/tacticalRmmActions'
+      '@alga-psa/msp-composition/integrations'
     );
 
     const res = await syncTacticalRmmDevices({ user_id: 'u1' } as any, { tenant: 'tenant_1' });
@@ -338,7 +338,7 @@ describe('Tactical device sync (full sync)', () => {
     ];
 
     const { syncTacticalRmmDevices } = await import(
-      '@alga-psa/integrations/actions/integrations/tacticalRmmActions'
+      '@alga-psa/msp-composition/integrations'
     );
 
     const res = await syncTacticalRmmDevices({ user_id: 'u1' } as any, { tenant: 'tenant_1' });
@@ -383,7 +383,7 @@ describe('Tactical device sync (full sync)', () => {
     tacticalAgentsByClientId['100'] = []; // agent disappeared
 
     const { syncTacticalRmmDevices } = await import(
-      '@alga-psa/integrations/actions/integrations/tacticalRmmActions'
+      '@alga-psa/msp-composition/integrations'
     );
 
     const res = await syncTacticalRmmDevices({ user_id: 'u1' } as any, { tenant: 'tenant_1' });

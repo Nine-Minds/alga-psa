@@ -139,7 +139,7 @@ describe('Tactical event-bus publishing', () => {
     const publish = vi.mocked(publishEvent);
 
     const { syncTacticalRmmOrganizations } = await import(
-      '@alga-psa/integrations/actions/integrations/tacticalRmmActions'
+      '@alga-psa/msp-composition/integrations'
     );
 
     remoteClients = [{ id: 1, name: 'Org One' }];
@@ -157,7 +157,7 @@ describe('Tactical event-bus publishing', () => {
     const publish = vi.mocked(publishEvent);
 
     const { syncTacticalRmmOrganizations } = await import(
-      '@alga-psa/integrations/actions/integrations/tacticalRmmActions'
+      '@alga-psa/msp-composition/integrations'
     );
 
     throwOnClientList = new Error('boom');

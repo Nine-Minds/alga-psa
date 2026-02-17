@@ -116,3 +116,9 @@
 - (2026-02-16) Stage 7 test: confirmed projects package no longer imports billing after ProjectMaterialsDrawer move.
 
 - (2026-02-16) Stage 7 test: ran ProjectMaterialsDrawer test suite in msp-composition; passes with act warnings.
+
+- (2026-02-17) Stage 7: moved TacticalRmmIntegrationSettings + tacticalRmmActions into `packages/msp-composition/src/integrations/` and updated msp-composition exports/dependencies; integrations now use re-export shim for the settings component.
+
+- (2026-02-17) Stage 7: updated Tactical RMM server tests to import actions from `@alga-psa/msp-composition/integrations` and switched the settings component to use local action imports; integrations package no longer imports assets.
+
+- (2026-02-17) Stage 7 test: `npx vitest run server/src/test/unit/tacticalrmm/tacticalRmmSettings.maskSecret.test.ts` passes after Tactical RMM move.
