@@ -170,3 +170,7 @@
 - (2026-02-17) Stage 9: made survey trigger reference data loader tenant-aware to match `getAllBoards(tenant, includeAll)` signature.
 
 - (2026-02-17) Stage 9 build: `NODE_OPTIONS=--max-old-space-size=8192 npm run build` completes successfully (with existing webpack warnings for temporalio/handlebars/knex).
+
+- (2026-02-17) Stage 9: updated `.ai/stale_code_cleanup_plan.md` with Phase 3 completion summary.
+
+- (2026-02-17) Stage 9 tests: `npx vitest run` still failing (pre-existing) — examples include `packages/auth/src/lib/rbac.test.ts` missing `runWithTenant` mock export, `server/src/test/unit/timePeriodSuggester.test.ts` assertions on undefined dates, multiple integration/e2e test failures (email provider UI, inbound email processing, tactical RMM e2e, billing invoice infra).

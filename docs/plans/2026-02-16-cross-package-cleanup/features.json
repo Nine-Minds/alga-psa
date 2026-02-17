@@ -248,7 +248,7 @@
   {
     "id": "F035",
     "description": "Stage 9: Clean up dead code from moves and update stale_code_cleanup_plan.md",
-    "implemented": false,
+    "implemented": true,
     "stage": 9
   }
 ]
