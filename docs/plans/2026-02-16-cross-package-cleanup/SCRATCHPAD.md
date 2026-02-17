@@ -150,3 +150,7 @@
 - (2026-02-17) Stage 8c: removed workflows->scheduling dependency by inlining schedule entry range/recurrence logic in activity aggregation.
 
 - (2026-02-17) Stage 8d: removed unused clients import from `projects/src/actions/projectActions.ts` to clear projects->clients lint violation.
+
+- (2026-02-17) Stage 8 tests: `npx eslint "packages/{clients,scheduling,workflows,projects}/**/*.{ts,tsx}" -f unix | rg "no-feature-to-feature"` returned no matches (warnings remain, but no cross-package violations in these packages).
+
+- (2026-02-17) Stage 8a: moved asset-ticket UI components (AssetDetailHeader, CreateTicketFromAssetButton, ServiceHistoryTab) into `packages/msp-composition/src/assets` with shims; updated msp-composition exports.

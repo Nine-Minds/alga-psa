@@ -42,6 +42,14 @@
       "import": "./src/workflows/*.tsx",
       "types": "./src/workflows/*.tsx"
     },
+    "./assets": {
+      "import": "./src/assets/index.ts",
+      "types": "./src/assets/index.ts"
+    },
+    "./assets/*": {
+      "import": "./src/assets/*.tsx",
+      "types": "./src/assets/*.tsx"
+    },
     "./tickets": {
       "import": "./src/tickets/index.ts",
       "types": "./src/tickets/index.ts"
