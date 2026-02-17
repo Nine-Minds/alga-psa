@@ -164,3 +164,7 @@
 - (2026-02-17) Stage 9: added integrations server action to load inbound ticket defaults picker data, replacing client-side db action import to avoid Next.js bundling of db/knex in SettingsPage.
 
 - (2026-02-17) Stage 3 test: `npx vitest run packages/client-portal/src/actions/client-portal-actions/client-tickets.responseSource.test.ts` passes after stubbing tickets table update in mock transaction.
+
+- (2026-02-17) Stage 9: fixed build-breaking shims (AssetDetailHeader, ServiceHistoryTab, tickets CategoryPicker), resolved workflows actions export conflict by aliasing legacy submit action, and updated server accounting adapters to import company adapters from integrations services.
+
+- (2026-02-17) Stage 9: made survey trigger reference data loader tenant-aware to match `getAllBoards(tenant, includeAll)` signature.

@@ -504,9 +504,12 @@ const getProjectStatusesForSurveys = withAuth(async (user, { tenant }): Promise<
   });
 });
 
-export async function getSurveyTriggerReferenceData(): Promise<SurveyTriggerReferenceData> {
+export const getSurveyTriggerReferenceData = withAuth(async (
+  _user,
+  { tenant }
+): Promise<SurveyTriggerReferenceData> => {
   const [boards, ticketStatuses, projectStatuses, priorities] = await Promise.all([
-    getAllBoards(true).catch((error: unknown) => {
+    getAllBoards(tenant, true).catch((error: unknown) => {
       console.error('[surveyActions] Failed to load boards for trigger reference data', error);
       throw new Error('Unable to load boards.');
     }),
@@ -530,7 +533,7 @@ export async function getSurveyTriggerReferenceData(): Promise<SurveyTriggerRefe
     projectStatuses,
     priorities,
   };
-}
+});
 
 function buildTemplateInsertPayload(
   trx: Knex | Knex.Transaction,

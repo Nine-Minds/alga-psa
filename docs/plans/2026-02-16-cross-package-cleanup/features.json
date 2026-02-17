@@ -216,6 +216,18 @@
     "stage": 9
   },
   {
+    "id": "F041",
+    "description": "Stage 9: Fix build-breaking re-export shims and workflow action conflicts after moves",
+    "implemented": true,
+    "stage": 9
+  },
+  {
+    "id": "F042",
+    "description": "Stage 9: Make surveys trigger reference loader tenant-aware for getAllBoards signature",
+    "implemented": true,
+    "stage": 9
+  },
+  {
     "id": "F032",
     "description": "Stage 9: Final lint verification — <=5 no-feature-to-feature violations remaining",
     "implemented": true,

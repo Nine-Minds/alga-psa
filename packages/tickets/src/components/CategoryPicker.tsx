@@ -1,1 +1,1 @@
-export { default, CategoryPicker } from '@alga-psa/ui/components';
+export { CategoryPicker as default, CategoryPicker } from '@alga-psa/ui/components';

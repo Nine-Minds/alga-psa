@@ -17,6 +17,8 @@ import { computeTacticalAgentStatus } from '@alga-psa/integrations/lib/rmm/tacti
 import { getWebhookBaseUrl } from '@alga-psa/integrations/utils/email/webhookHelpers';
 import { TACTICAL_WEBHOOK_HEADER_NAME, type TacticalRmmAuthMode } from '@alga-psa/integrations/lib/rmm/tacticalrmm/shared';
 
+export type { TacticalRmmAuthMode };
+
 const PROVIDER = 'tacticalrmm' as const;
 
 const TACTICAL_INSTANCE_URL_SECRET = 'tacticalrmm_instance_url';

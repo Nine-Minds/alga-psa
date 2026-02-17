@@ -20,9 +20,9 @@ import {
   CompanyAccountingSyncService,
   KnexCompanyMappingRepository,
   buildNormalizedCompanyPayload,
-  QuickBooksOnlineCompanyAdapter,
   KnexInvoiceMappingRepository
 } from '@alga-psa/billing';
+import { QuickBooksOnlineCompanyAdapter } from '@alga-psa/integrations/services';
 import { QboClientService } from '@alga-psa/integrations/lib/qbo/qboClientService';
 import { QboInvoice, QboInvoiceLine, QboSalesItemLineDetail } from '@alga-psa/integrations/lib/qbo/types';
 

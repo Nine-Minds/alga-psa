@@ -26,9 +26,9 @@ import {
   CompanyAccountingSyncService,
   KnexCompanyMappingRepository,
   buildNormalizedCompanyPayload,
-  XeroCompanyAdapter,
   KnexInvoiceMappingRepository
 } from '@alga-psa/billing';
+import { XeroCompanyAdapter } from '@alga-psa/integrations/services';
 import { AppError } from '@alga-psa/core';
 
 export function buildXeroInvoiceReference(baseReference: string, poNumber?: string | null): string {

@@ -6,7 +6,11 @@
 
 export * from './workflow-actions';
 export * from './workflow-editor-actions';
-export * from './workflow-event-actions';
+export {
+  submitWorkflowEventAction as submitWorkflowEventLegacyAction,
+  type SubmitWorkflowEventOptions,
+  type SubmitWorkflowEventResult
+} from './workflow-event-actions';
 export * from './workflow-event-attachment-actions';
 export * from './workflow-runtime-actions';
 export * from './workflow-trigger-actions';
