@@ -144,3 +144,5 @@
 - (2026-02-17) Stage 8d: updated msp projects page import to `@alga-psa/msp-composition/projects`.
 
 - (2026-02-17) Stage 8: msp-composition package.json dependencies/export map updated to cover clients/scheduling/workflows/projects moves.
+
+- (2026-02-17) Stage 8a: moved ContactDetails to `packages/msp-composition/src/clients` with a shim to eliminate clients->tickets import.
