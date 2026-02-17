@@ -224,24 +224,17 @@ async function normalizeStandardTemplateAst(knex) {
   const defaultAstJson = JSON.stringify(defaultAst);
   const detailedAstJson = JSON.stringify(detailedAst);
 
-  // Normalize detailed rows first, then default all remaining rows.
-  await knex(STANDARD_TEMPLATES_TABLE)
-    .where(function detailedRows() {
-      this.where({ standard_invoice_template_code: STANDARD_DETAILED_CODE })
-        .orWhereRaw('lower(name) like ?', ['%detailed%']);
-    })
-    .update({
-      templateAst: knex.raw('?::jsonb', [detailedAstJson]),
-    });
-
-  await knex(STANDARD_TEMPLATES_TABLE)
-    .whereNot(function detailedRows() {
-      this.where({ standard_invoice_template_code: STANDARD_DETAILED_CODE })
-        .orWhereRaw('lower(name) like ?', ['%detailed%']);
-    })
-    .update({
-      templateAst: knex.raw('?::jsonb', [defaultAstJson]),
-    });
+  // Set every row explicitly to avoid NULL three-valued logic gaps in WHERE/WHERE NOT expressions.
+  await knex.raw(
+    `UPDATE ??
+     SET "templateAst" = CASE
+       WHEN lower(COALESCE("standard_invoice_template_code", '')) = ?
+         OR lower(COALESCE("name", '')) LIKE ?
+       THEN ?::jsonb
+       ELSE ?::jsonb
+     END`,
+    [STANDARD_TEMPLATES_TABLE, STANDARD_DETAILED_CODE, '%detailed%', detailedAstJson, defaultAstJson]
+  );
 }
 
 async function assertNoDanglingCustomAssignments(knex) {
