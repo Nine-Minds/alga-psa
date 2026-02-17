@@ -154,3 +154,5 @@
 - (2026-02-17) Stage 8 tests: `npx eslint "packages/{clients,scheduling,workflows,projects}/**/*.{ts,tsx}" -f unix | rg "no-feature-to-feature"` returned no matches (warnings remain, but no cross-package violations in these packages).
 
 - (2026-02-17) Stage 8a: moved asset-ticket UI components (AssetDetailHeader, CreateTicketFromAssetButton, ServiceHistoryTab) into `packages/msp-composition/src/assets` with shims; updated msp-composition exports.
+
+- (2026-02-17) Stage 9 lint: `npm run lint` still exits non-zero due to existing hook/props errors and warnings, but `rg "no-feature-to-feature"` on lint output shows 0 cross-package violations.
