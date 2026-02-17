@@ -1,9 +1,14 @@
 'use server'
 
 import { createTenantKnex } from '@alga-psa/db';
+import { getAllBoards as getAllBoardsForTenant } from '@alga-psa/db/actions';
 import { withAuth } from '@alga-psa/auth';
-import type { TicketFieldOptions } from '@alga-psa/types';
+import type { IBoard, IClient, IPriority, TicketFieldOptions } from '@alga-psa/types';
 import { hasPermission } from '@alga-psa/auth/rbac';
+import { getAllClients } from '@alga-psa/clients/actions';
+import { getAllPriorities } from '@alga-psa/reference-data/actions';
+import { getAllUsersBasic } from '@alga-psa/users/actions';
+import type { IUser } from '@shared/interfaces/user.interfaces';
 
 export const getTicketFieldOptions = withAuth(async (
   user,
@@ -136,6 +141,31 @@ export const getTicketFieldOptions = withAuth(async (
       }
     };
   }
+});
+
+export const getInboundTicketDefaultsPickerData = withAuth(async (
+  user,
+  { tenant }
+): Promise<{ boards: IBoard[]; clients: IClient[]; priorities: IPriority[]; users: IUser[] }> => {
+  const { knex } = await createTenantKnex();
+  const permitted = await hasPermission(user, 'ticket_settings', 'read', knex);
+  if (!permitted) {
+    throw new Error('Unauthorized');
+  }
+
+  const [boards, clients, priorities, users] = await Promise.all([
+    getAllBoardsForTenant(tenant, true),
+    getAllClients(true),
+    getAllPriorities('ticket'),
+    getAllUsersBasic(true, 'internal')
+  ]);
+
+  return {
+    boards: boards || [],
+    clients: clients || [],
+    priorities: (priorities as IPriority[]) || [],
+    users: users || []
+  };
 });
 
 export const getAvailableBoards = withAuth(async (

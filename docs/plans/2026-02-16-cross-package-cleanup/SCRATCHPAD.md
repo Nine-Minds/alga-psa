@@ -160,3 +160,5 @@
 - (2026-02-17) Stage 9 build: `NODE_OPTIONS=--max-old-space-size=8192 npm run build` failed first on missing `./BillingConfiguration` import in msp-composition ClientDetails; fixed import path.
 
 - (2026-02-17) Stage 9 build: second attempt failed in Next.js compile due to Node built-ins (`fs`, `fs/promises`, `node-vault`, `module`, `node:async_hooks`) pulled via db/knex in server SettingsPage (pre-existing).
+
+- (2026-02-17) Stage 9: added integrations server action to load inbound ticket defaults picker data, replacing client-side db action import to avoid Next.js bundling of db/knex in SettingsPage.

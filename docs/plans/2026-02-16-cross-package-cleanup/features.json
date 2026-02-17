@@ -210,6 +210,12 @@
     "stage": 8
   },
   {
+    "id": "F040",
+    "description": "Stage 9: Load inbound ticket defaults picker data via integrations server action to avoid client db imports",
+    "implemented": true,
+    "stage": 9
+  },
+  {
     "id": "F032",
     "description": "Stage 9: Final lint verification — <=5 no-feature-to-feature violations remaining",
     "implemented": true,

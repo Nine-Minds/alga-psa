@@ -12,18 +12,14 @@ import {
   createInboundTicketDefaults, 
   updateInboundTicketDefaults 
 } from '@alga-psa/integrations/actions';
-import { getTicketFieldOptions, getCategoriesByBoard } from '@alga-psa/integrations/actions';
+import { getTicketFieldOptions, getCategoriesByBoard, getInboundTicketDefaultsPickerData } from '@alga-psa/integrations/actions';
 import type { InboundTicketDefaults, TicketFieldOptions } from '@alga-psa/types';
 // Dedicated pickers used elsewhere in the app
 import { BoardPicker } from '@alga-psa/ui/components/settings/general/BoardPicker';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { CategoryPicker, PrioritySelect } from '@alga-psa/ui/components';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
-// Loaders to hydrate pickers with full data
-import { getAllBoards } from '@alga-psa/db/actions';
-import { getAllClients } from '@alga-psa/clients/actions';
-import { getAllPriorities } from '@alga-psa/reference-data/actions';
-import { getAllUsersBasic, getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
+import { getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
 import type { IBoard, IPriority } from '@alga-psa/types';
 import type { IClient } from '@alga-psa/types';
 import type { ITicketCategory } from '@alga-psa/types';
@@ -127,21 +123,17 @@ export function InboundTicketDefaultsForm({
   const loadFieldOptions = async () => {
     try {
       setLoadingOptions(true);
-      const data = await getTicketFieldOptions();
+      const [data, pickerData] = await Promise.all([
+        getTicketFieldOptions(),
+        getInboundTicketDefaultsPickerData()
+      ]);
       setFieldOptions(data.options);
 
       // Hydrate dedicated pickers with richer datasets
-      // Boards with full metadata for BoardPicker
-      const [allBoards, allClients, allPriorities, allUsers] = await Promise.all([
-        getAllBoards(true),
-        getAllClients(true),
-        getAllPriorities('ticket'),
-        getAllUsersBasic(true, 'internal')
-      ]);
-      setBoards(allBoards || []);
-      setClients(allClients || []);
-      setPriorities((allPriorities as IPriority[]) || []);
-      setUsersWithRoles(allUsers || []);
+      setBoards(pickerData.boards || []);
+      setClients(pickerData.clients || []);
+      setPriorities((pickerData.priorities as IPriority[]) || []);
+      setUsersWithRoles(pickerData.users || []);
     } catch (err: any) {
       setError('Failed to load field options');
     } finally {
