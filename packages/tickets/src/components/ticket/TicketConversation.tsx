@@ -323,6 +323,18 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   // Build tab content array based on hideInternalTab
   const baseTabs = [
     {
+      label: t('tickets.conversation.allComments', 'All Comments'),
+      content: (
+        <ReflectionContainer id={`${id}-all-comments`} label="All Comments">
+          {renderComments(hideInternalTab
+            // For client portal, "All Comments" should exclude internal comments (same as "Client Visible")
+            ? conversations.filter(conversation => !conversation.is_internal)
+            // For MSP portal, "All Comments" includes all comments
+            : conversations)}
+        </ReflectionContainer>
+      )
+    },
+    {
       label: t('tickets.conversation.client', 'Client'),
       content: (
         <ReflectionContainer id={`${id}-client-visible-comments`} label="Client Comments">
@@ -345,33 +357,21 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
       content: (
         <ReflectionContainer id={`${id}-resolution-comments`} label="Resolution Comments">
           <h3 className="text-lg font-medium mb-4">{t('tickets.conversation.resolutionComments', 'Resolution Comments')}</h3>
-          {renderComments(conversations.filter(conversation => 
+          {renderComments(conversations.filter(conversation =>
             conversation.is_resolution && (!hideInternalTab || !conversation.is_internal)
           ))}
         </ReflectionContainer>
       )
-    },
-    {
-      label: t('tickets.conversation.allComments', 'All Comments'),
-      content: (
-        <ReflectionContainer id={`${id}-all-comments`} label="All Comments">
-          {renderComments(hideInternalTab
-            // For client portal, "All Comments" should exclude internal comments (same as "Client Visible")
-            ? conversations.filter(conversation => !conversation.is_internal)
-            // For MSP portal, "All Comments" includes all comments
-            : conversations)}
-        </ReflectionContainer>
-      )
     }
   ];
-  
+
   // Filter and order tabs based on hideInternalTab
   let tabContent;
   if (hideInternalTab) {
-    // For client portal, only show "All Comments" (index 3) and "Resolution" (index 2) tabs
+    // For client portal, only show "All Comments" (index 0) and "Resolution" (index 3) tabs
     tabContent = [
-      baseTabs[3], // All Comments
-      baseTabs[2]  // Resolution
+      baseTabs[0], // All Comments
+      baseTabs[3]  // Resolution
     ];
   } else {
     // For MSP portal, show all tabs
@@ -492,7 +492,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
         </div>
         <CustomTabs
           tabs={tabContent}
-          defaultTab={hideInternalTab ? t('tickets.conversation.allComments', 'All Comments') : t('tickets.conversation.client', 'Client')}
+          defaultTab={t('tickets.conversation.allComments', 'All Comments')}
           tabStyles={tabStyles}
           onTabChange={onTabChange}
           extraContent={
