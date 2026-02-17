@@ -522,8 +522,8 @@ const getProjectStatusesForSurveys = withAuth(async (user, { tenant }): Promise<
     }
 
     return (await trx('statuses')
-      .where({ tenant, item_type: 'project' })
-      .orderBy('display_order', 'asc')
+      .where({ tenant, status_type: 'project' })
+      .orderBy('order_number', 'asc')
       .orderBy('name', 'asc')) as unknown as IStatus[];
   });
 });

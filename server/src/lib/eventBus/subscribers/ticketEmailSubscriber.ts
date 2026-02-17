@@ -1939,7 +1939,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
       const commentAuthor = await db('comments as cm')
         .select(
           'cm.user_id as comment_user_id',
-          'cm.contact_id as comment_contact_id',
+          'cu.contact_id as comment_contact_id',
           'cu.email as comment_user_email',
           'cc.email as comment_contact_email'
         )
@@ -1948,8 +1948,8 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
             .andOn('cm.tenant', '=', 'cu.tenant');
         })
         .leftJoin('contacts as cc', function() {
-          this.on('cm.contact_id', '=', 'cc.contact_name_id')
-            .andOn('cm.tenant', '=', 'cc.tenant');
+          this.on('cu.contact_id', '=', 'cc.contact_name_id')
+            .andOn('cu.tenant', '=', 'cc.tenant');
         })
         .where({
           'cm.tenant': tenantId,
