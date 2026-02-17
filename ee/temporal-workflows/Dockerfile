@@ -47,6 +47,7 @@ COPY ee/temporal-workflows/ /app/ee/temporal-workflows/
 # Provide source files referenced via TS path aliases
 COPY packages/ /app/packages/
 COPY package*.json /app/
+COPY .npmrc /app/
 
 WORKDIR /app/ee/temporal-workflows
 # Ensure tsc-alias is available for the build
