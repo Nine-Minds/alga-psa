@@ -102,3 +102,7 @@
 - (2026-02-16) Stage 6: Updated integrations/surveys picker imports to @alga-psa/ui/components.
 
 - (2026-02-16) Stage 6 tests: added ui picker export test and db getAllBoards export test; verified integrations/surveys no longer import pickers from tickets.
+
+- (2026-02-16) Stage 7: Moved QuickBooks/Xero company adapters from billing to integrations services/companySync and updated exports/imports to use @alga-psa/types.
+
+- (2026-02-16) Stage 7 test: confirmed billing no longer references quickBooks/xero company adapters after move.

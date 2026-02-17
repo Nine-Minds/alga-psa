@@ -140,7 +140,7 @@
   {
     "id": "T024",
     "description": "After Stage 7: billing no longer imports from integrations (adapters moved)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F018"]
   },
   {

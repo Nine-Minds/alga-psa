@@ -1,13 +1,11 @@
-import {
-  XeroClientService,
-  NormalizedCompanyPayload
-} from '@alga-psa/integrations/lib/xero/xeroClientService';
+import { XeroClientService } from '../../../lib/xero/xeroClientService';
 import { AppError } from '@alga-psa/core';
 import type {
   AccountingCompanyAdapter,
   CompanyAdapterContext,
-  ExternalCompanyRecord
-} from '../companySync.types';
+  ExternalCompanyRecord,
+  NormalizedCompanyPayload
+} from '@alga-psa/types';
 
 type XeroClientFactory = (tenantId: string, connectionId?: string | null) => Promise<XeroClientService>;
 

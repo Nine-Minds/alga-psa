@@ -57,8 +57,6 @@ export {
   CompanyAccountingSyncService,
   KnexCompanyMappingRepository,
   buildNormalizedCompanyPayload,
-  QuickBooksOnlineCompanyAdapter,
-  XeroCompanyAdapter,
 } from './services/companySync';
 export type {
   AccountingAdapterType,

@@ -104,7 +104,7 @@
   {
     "id": "F018",
     "description": "Stage 7: Move company sync adapters from billing to integrations package (2 violations)",
-    "implemented": false,
+    "implemented": true,
     "stage": 7
   },
   {
