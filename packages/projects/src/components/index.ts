@@ -4,11 +4,11 @@
  * React components for project management UI.
  */
 
-export { default as Projects } from './Projects';
+// Projects moved to @alga-psa/msp-composition/projects
 export { default as ProjectDetail } from './ProjectDetail';
 export { default as ProjectInfo } from './ProjectInfo';
 export { default as ProjectPage } from './ProjectPage';
-export { default as ProjectQuickAdd } from './ProjectQuickAdd';
+// ProjectQuickAdd moved to @alga-psa/msp-composition/projects
 export { default as TaskEdit } from './TaskEdit';
 export { default as DonutChart } from './DonutChart';
 export { default as HoursProgressBar } from './HoursProgressBar';

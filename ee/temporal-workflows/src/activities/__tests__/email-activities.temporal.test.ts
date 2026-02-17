@@ -8,7 +8,7 @@ import type { SendWelcomeEmailActivityInput } from '../../types/workflow-types';
 vi.mock('@temporalio/activity', () => ({
   Context: {
     current: () => ({
-      logger: {
+      log: {
         info: vi.fn(),
         warn: vi.fn(),
         error: vi.fn(),
@@ -32,10 +32,9 @@ describe('Email Activities - Temporal Unit Tests', () => {
   describe('Password Generation with Temporal Context', () => {
     it('should generate secure passwords with proper entropy', async () => {
       // Test password generation within Temporal test environment
-      const passwords = [];
-      for (let i = 0; i < 10; i++) {
-        passwords.push(generateTemporaryPassword(12));
-      }
+      const passwords = await Promise.all(
+        Array.from({ length: 10 }, () => generateTemporaryPassword(12))
+      );
 
       // Verify all passwords are unique (high entropy)
       const uniquePasswords = new Set(passwords);
@@ -60,8 +59,8 @@ describe('Email Activities - Temporal Unit Tests', () => {
         { length: 20, name: 'very long' },
       ];
 
-      testCases.forEach(({ length, name }) => {
-        const password = generateTemporaryPassword(length);
+      for (const { length } of testCases) {
+        const password = await generateTemporaryPassword(length);
         expect(password).toHaveLength(length);
         
         // Should still meet security requirements regardless of length
@@ -70,13 +69,17 @@ describe('Email Activities - Temporal Unit Tests', () => {
         expect(password).toMatch(/[2-9]/);
         expect(password).toMatch(/[!@#$%^&*]/);
         expect(password).not.toMatch(/[0O1lI]/);
-      });
+      }
     });
 
     it('should ensure consistent randomness across calls', async () => {
       // Generate multiple batches to ensure randomness is consistent
-      const batch1 = Array.from({ length: 5 }, () => generateTemporaryPassword(12));
-      const batch2 = Array.from({ length: 5 }, () => generateTemporaryPassword(12));
+      const batch1 = await Promise.all(
+        Array.from({ length: 5 }, () => generateTemporaryPassword(12))
+      );
+      const batch2 = await Promise.all(
+        Array.from({ length: 5 }, () => generateTemporaryPassword(12))
+      );
       
       // No passwords should be the same across batches
       batch1.forEach(password1 => {
@@ -212,7 +215,7 @@ describe('Email Activities - Temporal Unit Tests', () => {
 
     it('should handle template variable substitution', async () => {
       const timestamp = Date.now();
-      const generatedPassword = generateTemporaryPassword(12);
+      const generatedPassword = await generateTemporaryPassword(12);
       
       const input: SendWelcomeEmailActivityInput = {
         tenantId: `tenant-${timestamp}`,

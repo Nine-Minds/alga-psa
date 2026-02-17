@@ -208,6 +208,7 @@
   "devDependencies": {
     "@eslint/js": "^9.18.0",
     "@faker-js/faker": "^9.9.0",
+    "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.2.0",
     "@types/archiver": "^6.0.3",

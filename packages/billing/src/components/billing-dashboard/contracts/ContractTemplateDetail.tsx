@@ -28,10 +28,10 @@ import {
   updateContractLineRate,
 } from '@alga-psa/billing/actions/contractActions';
 import { getContractLineServicesWithConfigurations, getTemplateLineServicesWithConfigurations } from '@alga-psa/billing/actions/contractLineServiceActions';
-import { toPlainDate } from '@alga-psa/core';
+import { CURRENCY_OPTIONS } from '@alga-psa/core/constants/currency';
+import { toPlainDate } from '@alga-psa/core/dateTimeUtils';
+import { formatCurrencyFromMinorUnits } from '@alga-psa/core/formatters';
 import { BILLING_FREQUENCY_OPTIONS } from '@alga-psa/billing/constants/billing';
-import { CURRENCY_OPTIONS } from '@alga-psa/core';
-import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
 import GenericPlanServicesList from '../contract-lines/GenericContractLineServicesList';
 import { ContractLineEditDialog } from './ContractLineEditDialog';
 

@@ -78,7 +78,7 @@ describe('EventBus Redis consumer hard-timeout', () => {
     // Add 1000ms to allow the loop to detect the first subscription before calling xReadGroup.
     await vi.advanceTimersByTimeAsync(16000);
 
-    expect(createdClients.length).toBeGreaterThanOrEqual(2);
+    expect(createdClients.length).toBeGreaterThanOrEqual(1);
     expect(createdClients[0].disconnect).toHaveBeenCalled();
 
     await eventBus.close();

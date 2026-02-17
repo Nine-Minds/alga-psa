@@ -6,7 +6,7 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { ISO8601String } from '@alga-psa/types';
 import { ActivityType } from "@alga-psa/types";
-import { processTemplateVariables } from "@alga-psa/core";
+import { processTemplateVariables } from '@alga-psa/core/templateUtils';
 import { useDrawer } from "@alga-psa/ui";
 import { useActivitiesCache } from "@alga-psa/workflows/hooks/useActivitiesCache";
 import { getConsolidatedTicketData } from "@alga-psa/tickets/actions/optimizedTicketActions";
@@ -23,6 +23,7 @@ import { getTimeEntryById, saveTimeEntry } from "@alga-psa/scheduling/actions/ti
 import TicketDetails from "@alga-psa/tickets/components/ticket/TicketDetails";
 import TaskEdit from "@alga-psa/projects/components/TaskEdit";
 import EntryPopup from "@alga-psa/scheduling/components/schedule/EntryPopup";
+import { WorkItemDrawer } from "../scheduling/WorkItemDrawer";
 import { TaskForm } from "@alga-psa/workflows/components";
 import TimeEntryDialog from "@alga-psa/scheduling/components/time-management/time-entry/time-sheet/TimeEntryDialog";
 import { toast } from 'react-hot-toast';
@@ -322,6 +323,7 @@ export function ActivityDetailViewerDrawer({
                 canModifySchedule={true}
                 focusedTechnicianId={currentUser?.user_id || ''}
                 canAssignOthers={true}
+                WorkItemDrawerComponent={WorkItemDrawer}
               />
             </div>
           );

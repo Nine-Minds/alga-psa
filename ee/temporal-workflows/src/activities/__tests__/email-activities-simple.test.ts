@@ -6,6 +6,12 @@ import { MockEmailService, createEmailService, type EmailParams } from '../../se
 vi.mock('@temporalio/activity', () => ({
   Context: {
     current: () => ({
+      log: {
+        info: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(),
+        debug: vi.fn(),
+      },
       logger: {
         info: vi.fn(),
         warn: vi.fn(),
@@ -18,24 +24,24 @@ vi.mock('@temporalio/activity', () => ({
 
 describe('Email Activities - Simple Tests', () => {
   describe('generateTemporaryPassword', () => {
-    it('should generate password with default length of 12', () => {
-      const password = generateTemporaryPassword();
+    it('should generate password with default length of 12', async () => {
+      const password = await generateTemporaryPassword();
       expect(password).toHaveLength(12);
     });
 
-    it('should generate password with custom length', () => {
-      const password = generateTemporaryPassword(16);
+    it('should generate password with custom length', async () => {
+      const password = await generateTemporaryPassword(16);
       expect(password).toHaveLength(16);
     });
 
-    it('should generate different passwords each time', () => {
-      const password1 = generateTemporaryPassword();
-      const password2 = generateTemporaryPassword();
+    it('should generate different passwords each time', async () => {
+      const password1 = await generateTemporaryPassword();
+      const password2 = await generateTemporaryPassword();
       expect(password1).not.toBe(password2);
     });
 
-    it('should contain at least one character from each category', () => {
-      const password = generateTemporaryPassword(12);
+    it('should contain at least one character from each category', async () => {
+      const password = await generateTemporaryPassword(12);
       
       // Check for uppercase
       expect(password).toMatch(/[A-Z]/);
@@ -50,15 +56,15 @@ describe('Email Activities - Simple Tests', () => {
       expect(password).toMatch(/[!@#$%^&*]/);
     });
 
-    it('should not contain ambiguous characters', () => {
-      const password = generateTemporaryPassword(100); // Large sample
+    it('should not contain ambiguous characters', async () => {
+      const password = await generateTemporaryPassword(100); // Large sample
       
       // Should not contain 0, O, 1, l, I
       expect(password).not.toMatch(/[0O1lI]/);
     });
 
-    it('should handle minimum length of 4', () => {
-      const password = generateTemporaryPassword(4);
+    it('should handle minimum length of 4', async () => {
+      const password = await generateTemporaryPassword(4);
       expect(password).toHaveLength(4);
       
       // Should still have one of each type
@@ -68,11 +74,11 @@ describe('Email Activities - Simple Tests', () => {
       expect(password).toMatch(/[!@#$%^&*]/);
     });
 
-    it('should generate secure passwords with high entropy', () => {
+    it('should generate secure passwords with high entropy', async () => {
       // Generate multiple passwords and check uniqueness
       const passwords = new Set();
       for (let i = 0; i < 100; i++) {
-        passwords.add(generateTemporaryPassword(12));
+        passwords.add(await generateTemporaryPassword(12));
       }
       
       // All 100 passwords should be unique
@@ -216,8 +222,8 @@ describe('Email Activities - Simple Tests', () => {
       );
     });
 
-    it('should support email service configuration', () => {
-      const service = createEmailService({ 
+    it('should support email service configuration', async () => {
+      const service = await createEmailService({ 
         provider: 'mock',
         options: { failureRate: 0.5, delayMs: 200 }
       });
@@ -271,24 +277,24 @@ describe('Email Activities - Simple Tests', () => {
   });
 
   describe('Email Service Factory', () => {
-    it('should create mock service by default', () => {
-      const service = createEmailService();
+    it('should create mock service by default', async () => {
+      const service = await createEmailService();
       expect(service).toBeInstanceOf(MockEmailService);
     });
 
-    it('should create mock service when explicitly requested', () => {
-      const service = createEmailService({ provider: 'mock' });
+    it('should create mock service when explicitly requested', async () => {
+      const service = await createEmailService({ provider: 'mock' });
       expect(service).toBeInstanceOf(MockEmailService);
     });
 
-    it('should throw error for unknown providers', () => {
-      expect(() => {
-        createEmailService({ provider: 'unknown' as any });
-      }).toThrow('Unknown email provider: unknown');
+    it('should throw error for unknown providers', async () => {
+      await expect(createEmailService({ provider: 'unknown' as any })).rejects.toThrow(
+        'Unknown email provider: unknown'
+      );
     });
 
-    it('should pass options to mock service', () => {
-      const service = createEmailService({
+    it('should pass options to mock service', async () => {
+      const service = await createEmailService({
         provider: 'mock',
         options: { failureRate: 0.5 }
       }) as MockEmailService;

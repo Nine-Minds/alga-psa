@@ -8,7 +8,7 @@ import {
   ITimePeriodWithStatusView,
   TimeSheetStatus
 } from '@alga-psa/types';
-import { toPlainDate } from '@alga-psa/core';
+import { toPlainDate } from '@alga-psa/core/dateTimeUtils';
 import { validateData } from '@alga-psa/validation';
 import {
   submitTimeSheetParamsSchema,

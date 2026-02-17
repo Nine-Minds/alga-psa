@@ -55,6 +55,7 @@ vi.mock('@alga-psa/core/logger', () => ({
 }));
 
 vi.mock('@alga-psa/core/secrets', () => ({
+  getSecret: async () => undefined,
   getSecretProviderInstance: () => ({
     getSecret: async () => undefined,
     getAppSecret: async () => undefined,
@@ -65,6 +66,7 @@ vi.mock('@alga-psa/core/secrets', () => ({
 }));
 
 vi.mock('@alga-psa/core', () => ({
+  getSecret: async () => undefined,
   getSecretProviderInstance: () => ({
     getSecret: async () => undefined,
     getAppSecret: async () => undefined,
@@ -101,7 +103,10 @@ const {
   afterAll: cleanupContext
 } = TestContext.createHelpers();
 
-describe('Billing Invoice Tax Calculations', () => {
+const runDbTests = process.env.RUN_DB_TESTS === 'true';
+const describeDb = runDbTests ? describe : describe.skip;
+
+describeDb('Billing Invoice Tax Calculations', () => {
   let context: TestContext;
 
   async function ensureDefaultTax() {

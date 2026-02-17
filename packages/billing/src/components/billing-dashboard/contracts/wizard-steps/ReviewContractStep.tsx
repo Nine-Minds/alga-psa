@@ -16,8 +16,8 @@ import {
   FileCheck,
   Repeat,
 } from 'lucide-react';
-import { CURRENCY_OPTIONS } from '@alga-psa/core';
-import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
+import { CURRENCY_OPTIONS } from '@alga-psa/core/constants/currency';
+import { formatCurrencyFromMinorUnits } from '@alga-psa/core/formatters';
 import { parse } from 'date-fns';
 import { BILLING_FREQUENCY_OPTIONS, BILLING_FREQUENCY_DISPLAY } from '@alga-psa/billing/constants/billing';
 import { getClientByIdForBilling } from '@alga-psa/billing/actions/billingClientsActions';

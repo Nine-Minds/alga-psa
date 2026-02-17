@@ -10,7 +10,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Search, XCircle, ExternalLink } from 'lucide-react';
 import { IProject } from '@alga-psa/types';
 import { ColumnDefinition } from '@alga-psa/types';
-import { formatDateOnly } from '@alga-psa/core';
+import { formatDateOnly } from '@alga-psa/core/dateTimeUtils';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 export default function ProjectsOverviewPage() {

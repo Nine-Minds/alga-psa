@@ -11,7 +11,6 @@ import { useDrawer } from '@alga-psa/ui';
 import ContactDetailsEdit from './ContactDetailsEdit';
 import { ITag } from '@alga-psa/types';
 import type { IClient } from '@alga-psa/types';
-import ClientDetails from '../clients/ClientDetails';
 import InteractionsFeed from '../interactions/InteractionsFeed';
 import { IInteraction } from '@alga-psa/types';
 import { TagManager } from '@alga-psa/tags/components';
@@ -42,6 +41,7 @@ interface ContactDetailsViewProps {
   showDocuments?: boolean;
   showInteractions?: boolean;
   clientReadOnly?: boolean; // When true, prevents editing the client (e.g., when opened from a ticket)
+  ClientDetailsComponent?: React.ComponentType<{ id?: string; client: IClient; documents?: any[]; contacts?: any[]; isInDrawer?: boolean; quickView?: boolean }>;
 }
 
 interface TableRowProps {
@@ -79,7 +79,8 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
   quickView = false,
   showDocuments = !quickView,
   showInteractions = !quickView,
-  clientReadOnly = false
+  clientReadOnly = false,
+  ClientDetailsComponent
 }) => {
   const [contact, setContact] = useState<IContact>(initialContact);
   const [interactions, setInteractions] = useState<IInteraction[]>([]);
@@ -183,13 +184,13 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
   };
 
   const handleClientClick = async () => {
-    if (contact.client_id) {
+    if (contact.client_id && ClientDetailsComponent) {
       try {
         setError(null);
         const client = await getClientById(contact.client_id);
         if (client) {
           openDrawer(
-            <ClientDetails
+            <ClientDetailsComponent
               id={`${id}-client-details`}
               client={client}
               documents={[]}

@@ -20,8 +20,8 @@ import {
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { AlertCircle } from 'lucide-react';
 import { PricingScheduleDialog } from './PricingScheduleDialog';
-import { formatCurrency } from '@alga-psa/core';
-import { toPlainDate } from '@alga-psa/core';
+import { toPlainDate } from '@alga-psa/core/dateTimeUtils';
+import { formatCurrency } from '@alga-psa/core/formatters';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 
 interface PricingSchedulesProps {

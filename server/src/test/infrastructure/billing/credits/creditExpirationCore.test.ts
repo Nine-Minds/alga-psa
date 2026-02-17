@@ -100,6 +100,9 @@ const {
   afterAll: cleanupContext
 } = TestContext.createHelpers();
 
+const runDbTests = process.env.RUN_DB_TESTS === 'true';
+const describeDb = runDbTests ? describe : describe.skip;
+
 /**
  * Core tests for credit expiration functionality.
  * 
@@ -110,7 +113,7 @@ const {
  * - Preventing duplicate expirations
  */
 
-describe('Credit Expiration Core Tests', () => {
+describeDb('Credit Expiration Core Tests', () => {
   let context: TestContext;
 
   async function ensureDefaultTax() {

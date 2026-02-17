@@ -2,7 +2,7 @@
 /// <reference types="@testing-library/jest-dom/vitest" />
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import TaskTicketLinks from '../TaskTicketLinks';
 import { TicketIntegrationProvider, type TicketIntegrationContextType } from '../../context/TicketIntegrationContext';
 
@@ -23,9 +23,19 @@ function createMockTicketIntegration(
   };
 }
 
+const { getCurrentUserMock, getUserAvatarUrlsBatchActionMock } = vi.hoisted(() => ({
+  getCurrentUserMock: vi.fn(),
+  getUserAvatarUrlsBatchActionMock: vi.fn(),
+}));
+
+vi.mock('@alga-psa/users/actions', () => ({
+  getCurrentUser: (...args: unknown[]) => getCurrentUserMock(...args),
+  getUserAvatarUrlsBatchAction: (...args: unknown[]) => getUserAvatarUrlsBatchActionMock(...args),
+}));
+
 const getProjectMock = vi.fn();
 
-vi.mock('../actions/projectActions', () => ({
+vi.mock('../../actions/projectActions', () => ({
   getProject: (...args: unknown[]) => getProjectMock(...args)
 }));
 
@@ -38,6 +48,7 @@ describe('TaskTicketLinks prefill', () => {
 
   beforeEach(() => {
     mockCtx = createMockTicketIntegration();
+    getCurrentUserMock.mockResolvedValue({ user_id: 'user-1' });
     getProjectMock.mockResolvedValue({
       client_id: 'client-1',
       client_name: 'Acme'
@@ -82,10 +93,10 @@ describe('TaskTicketLinks prefill', () => {
     );
 
     fireEvent.click(screen.getByRole('button', { name: 'Create Ticket' }));
-    expect(getProjectMock).toHaveBeenCalledWith('project-1');
+    await waitFor(() => expect(getProjectMock).toHaveBeenCalledWith('project-1'));
   });
 
-  it('passes task prefill data to renderQuickAddTicket', () => {
+  it('passes task prefill data to renderQuickAddTicket', async () => {
     render(
       <TicketIntegrationProvider value={mockCtx}>
         <TaskTicketLinks
@@ -104,7 +115,7 @@ describe('TaskTicketLinks prefill', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Create Ticket' }));
 
-    expect(mockCtx.renderQuickAddTicket).toHaveBeenCalled();
+    await waitFor(() => expect(mockCtx.renderQuickAddTicket).toHaveBeenCalled());
     const renderProps = (mockCtx.renderQuickAddTicket as ReturnType<typeof vi.fn>).mock.calls[0][0];
     expect(renderProps.prefilledTitle).toBe('Task A');
     expect(renderProps.prefilledDescription).toBe('Desc');
@@ -112,7 +123,7 @@ describe('TaskTicketLinks prefill', () => {
     expect(renderProps.prefilledDueDate).toEqual(new Date('2026-02-05T00:00:00.000Z'));
   });
 
-  it('passes project client as prefilledClient', () => {
+  it('passes project client as prefilledClient', async () => {
     render(
       <TicketIntegrationProvider value={mockCtx}>
         <TaskTicketLinks
@@ -131,12 +142,12 @@ describe('TaskTicketLinks prefill', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Create Ticket' }));
 
-    expect(mockCtx.renderQuickAddTicket).toHaveBeenCalled();
+    await waitFor(() => expect(mockCtx.renderQuickAddTicket).toHaveBeenCalled());
     const renderProps = (mockCtx.renderQuickAddTicket as ReturnType<typeof vi.fn>).mock.calls[0][0];
     expect(renderProps.prefilledClient).toEqual({ id: 'client-1', name: 'Acme' });
   });
 
-  it('E2E: create ticket from task prefills key fields', () => {
+  it('E2E: create ticket from task prefills key fields', async () => {
     render(
       <TicketIntegrationProvider value={mockCtx}>
         <TaskTicketLinks
@@ -155,14 +166,14 @@ describe('TaskTicketLinks prefill', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Create Ticket' }));
 
-    expect(mockCtx.renderQuickAddTicket).toHaveBeenCalled();
+    await waitFor(() => expect(mockCtx.renderQuickAddTicket).toHaveBeenCalled());
     const renderProps = (mockCtx.renderQuickAddTicket as ReturnType<typeof vi.fn>).mock.calls[0][0];
     expect(renderProps.prefilledTitle).toBe('Task A');
     expect(renderProps.prefilledDescription).toBe('Desc');
     expect(renderProps.prefilledClient).toEqual({ id: 'client-1', name: 'Acme' });
   });
 
-  it('does not prefill priority in renderQuickAddTicket props', () => {
+  it('does not prefill priority in renderQuickAddTicket props', async () => {
     render(
       <TicketIntegrationProvider value={mockCtx}>
         <TaskTicketLinks
@@ -181,7 +192,7 @@ describe('TaskTicketLinks prefill', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Create Ticket' }));
 
-    expect(mockCtx.renderQuickAddTicket).toHaveBeenCalled();
+    await waitFor(() => expect(mockCtx.renderQuickAddTicket).toHaveBeenCalled());
     const renderProps = (mockCtx.renderQuickAddTicket as ReturnType<typeof vi.fn>).mock.calls[0][0];
     expect(renderProps.prefilledPriority).toBeUndefined();
   });

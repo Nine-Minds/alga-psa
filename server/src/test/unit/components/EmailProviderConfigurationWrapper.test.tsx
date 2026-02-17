@@ -8,7 +8,7 @@ import '@testing-library/jest-dom';
 import { EmailProviderConfigurationWrapper } from '@alga-psa/integrations/components';
 
 // Mock the EmailProviderConfiguration component with a factory function
-vi.mock('../../../components/EmailProviderConfiguration', () => ({
+vi.mock('@alga-psa/integrations/components/email/EmailProviderConfiguration', () => ({
   EmailProviderConfiguration: vi.fn(() => {
     return React.createElement('div', { 
       'data-testid': 'email-provider-config' 

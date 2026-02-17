@@ -4,7 +4,7 @@ import { Knex } from 'knex';
 import { Temporal } from '@js-temporal/polyfill';
 import { createTenantKnex } from '@alga-psa/db';
 import { ISO8601String } from '@alga-psa/types';
-import { toPlainDate, toISODate } from '@alga-psa/core';
+import { toPlainDate, toISODate } from '@alga-psa/core/dateTimeUtils';
 import { withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import {

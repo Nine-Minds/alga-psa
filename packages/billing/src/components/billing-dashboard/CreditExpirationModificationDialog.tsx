@@ -8,8 +8,8 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { ICreditTracking } from '@alga-psa/types';
-import { formatCurrency } from '@alga-psa/core';
-import { toPlainDate, toISODate, formatDateOnly } from '@alga-psa/core';
+import { toPlainDate, toISODate, formatDateOnly } from '@alga-psa/core/dateTimeUtils';
+import { formatCurrency } from '@alga-psa/core/formatters';
 import { Temporal } from '@js-temporal/polyfill';
 
 interface CreditExpirationModificationDialogProps {

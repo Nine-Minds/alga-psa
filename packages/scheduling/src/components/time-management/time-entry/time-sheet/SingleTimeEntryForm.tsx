@@ -1,7 +1,6 @@
 'use client';
 
-import { memo } from 'react';
-import TimeEntryEditForm from './TimeEntryEditForm';
+import React, { memo } from 'react';
 import { ITimeEntryWithNew, TimeInputs, Service } from './types';
 import { TaxRegion } from '@alga-psa/types';
 
@@ -20,6 +19,7 @@ interface SingleTimeEntryFormProps {
   onUpdateTimeInputs: (inputs: TimeInputs) => void;
   date?: Date;
   isNewEntry?: boolean;
+  TimeEntryEditFormComponent?: React.ComponentType<any>;
 }
 
 const SingleTimeEntryForm = memo(function SingleTimeEntryForm({
@@ -36,11 +36,13 @@ const SingleTimeEntryForm = memo(function SingleTimeEntryForm({
   onUpdateEntry,
   onUpdateTimeInputs,
   date,
-  isNewEntry = false
+  isNewEntry = false,
+  TimeEntryEditFormComponent
 }: SingleTimeEntryFormProps) {
+  if (!TimeEntryEditFormComponent) return null;
   return (
     <div className="space-y-4">
-      <TimeEntryEditForm
+      <TimeEntryEditFormComponent
         id={id}
         entry={entry}
         index={0}

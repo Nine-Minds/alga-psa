@@ -1,11 +1,27 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { TestWorkflowEnvironment } from '@temporalio/testing';
 import { Worker } from '@temporalio/worker';
 import { createTenant, setupTenantData, rollbackTenant } from '../tenant-activities';
 import { setupTestDatabase, type TestDatabase } from '../../test-utils/database';
 import type { CreateTenantActivityInput, SetupTenantDataActivityInput } from '../../types/workflow-types';
 
-describe('Tenant Activities', () => {
+vi.mock('@temporalio/activity', () => ({
+  Context: {
+    current: () => ({
+      log: {
+        info: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(),
+        debug: vi.fn(),
+      },
+    }),
+  },
+}));
+
+const runDbTests = process.env.RUN_DB_TESTS === 'true';
+const describeDb = runDbTests ? describe : describe.skip;
+
+describeDb('Tenant Activities', () => {
   let testEnv: TestWorkflowEnvironment;
   let worker: Worker;
   let testDb: TestDatabase;

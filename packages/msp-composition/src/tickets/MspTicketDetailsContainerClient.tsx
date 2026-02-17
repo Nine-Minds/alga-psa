@@ -3,7 +3,7 @@
 import React, { useCallback } from 'react';
 import TicketDetailsContainer from '@alga-psa/tickets/components/ticket/TicketDetailsContainer';
 import ContactDetailsView from '@alga-psa/clients/components/contacts/ContactDetailsView';
-import ClientDetails from '@alga-psa/clients/components/clients/ClientDetails';
+import ClientDetails from '../clients/ClientDetails';
 import type { IClient, IContact } from '@alga-psa/types';
 import CreateTaskFromTicketDialog from '@alga-psa/projects/components/CreateTaskFromTicketDialog';
 import LinkTicketToTaskDialog from '@alga-psa/projects/components/LinkTicketToTaskDialog';
@@ -33,6 +33,7 @@ export default function MspTicketDetailsContainerClient(props: MspTicketDetailsC
           showDocuments={false}
           showInteractions={true}
           clientReadOnly={true}
+          ClientDetailsComponent={ClientDetails}
         />
       );
     },

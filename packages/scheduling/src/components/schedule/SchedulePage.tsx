@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import ScheduleCalendar from './ScheduleCalendar';
-import AppointmentRequestsPanel from './AppointmentRequestsPanel';
 import AvailabilitySettings from './AvailabilitySettings';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Badge } from '@alga-psa/ui/components/Badge';
@@ -12,7 +11,7 @@ import { getAppointmentRequests } from '@alga-psa/scheduling/actions';
 import { getCurrentUserPermissions, getCurrentUser } from '@alga-psa/users/actions';
 import { getTeams } from '@alga-psa/teams/actions';
 
-export default function SchedulePage() {
+export default function SchedulePage({ AppointmentRequestsPanelComponent }: { AppointmentRequestsPanelComponent?: React.ComponentType<{ isOpen: boolean; onClose: () => void; onRequestProcessed?: () => void; highlightedRequestId?: string | null }> }) {
   const searchParams = useSearchParams();
   const requestIdFromUrl = searchParams?.get('requestId') ?? null;
 
@@ -102,18 +101,20 @@ export default function SchedulePage() {
         <ScheduleCalendar key={refreshKey} />
       </div>
 
-      <AppointmentRequestsPanel
-        isOpen={showRequestsPanel}
-        onClose={() => {
-          setShowRequestsPanel(false);
-          setHighlightedRequestId(null);
-        }}
-        onRequestProcessed={() => {
-          // Refresh the pending count and trigger calendar refresh
-          setRefreshKey(prev => prev + 1);
-        }}
-        highlightedRequestId={highlightedRequestId}
-      />
+      {AppointmentRequestsPanelComponent && (
+        <AppointmentRequestsPanelComponent
+          isOpen={showRequestsPanel}
+          onClose={() => {
+            setShowRequestsPanel(false);
+            setHighlightedRequestId(null);
+          }}
+          onRequestProcessed={() => {
+            // Refresh the pending count and trigger calendar refresh
+            setRefreshKey(prev => prev + 1);
+          }}
+          highlightedRequestId={highlightedRequestId}
+        />
+      )}
 
       {canConfigureAvailability && (
         <AvailabilitySettings

@@ -256,8 +256,10 @@ export function MicrosoftProviderForm({
     }
   };
 
+  const handleSubmit = form.handleSubmit(onSubmit as any, () => setHasAttemptedSubmit(true));
+
   return (
-    <form onSubmit={form.handleSubmit(onSubmit as any)} className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-6">
       {/* Error Display (moved to top for visibility) */}
       {hasAttemptedSubmit && Object.keys(form.formState.errors).length > 0 && (
         <Alert variant="destructive">

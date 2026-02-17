@@ -3,7 +3,7 @@
  */
 
 export { default as AssetDashboard } from './AssetDashboard';
-export { AssetDetailView } from './AssetDetailView';
+// AssetDetailView moved to @alga-psa/msp-composition/assets
 export { QuickAddAsset } from './QuickAddAsset';
 export { default as AssetForm } from './AssetForm';
 export { default as AssetFormClient } from './AssetFormClient';

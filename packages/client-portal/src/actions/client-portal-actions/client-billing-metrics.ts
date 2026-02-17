@@ -20,7 +20,7 @@ import {
   IContractLineServiceConfiguration,
   IContractLineServiceBucketConfig
 } from '@alga-psa/types';
-import { toPlainDate, formatDateOnly } from '@alga-psa/core';
+import { toPlainDate, formatDateOnly } from '@alga-psa/core/dateTimeUtils';
 import { withAuth } from '@alga-psa/auth';
 
 // Define the schema for the hours by service input parameters

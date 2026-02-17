@@ -6,9 +6,31 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
+let currentUser: { user_id: string; tenant: string } | null = {
+  user_id: 'user-1',
+  tenant: 'test-tenant-123',
+};
+
 // Mock the database module
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: vi.fn(),
+}));
+
+vi.mock('@alga-psa/auth', () => ({
+  withAuth: (fn: any) => async (...args: any[]) => {
+    if (!currentUser) {
+      const err = new Error('User not authenticated');
+      err.name = 'AuthenticationError';
+      throw err;
+    }
+    return fn(currentUser, { tenant: currentUser.tenant }, ...args);
+  },
+  AuthenticationError: class AuthenticationError extends Error {
+    constructor(message = 'User not authenticated') {
+      super(message);
+      this.name = 'AuthenticationError';
+    }
+  }
 }));
 
 import { createTenantKnex } from '@alga-psa/db';
@@ -21,6 +43,7 @@ const TEST_ASSET_ID = 'asset-123';
 describe('Asset Summary Actions', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    currentUser = { user_id: 'user-1', tenant: TEST_TENANT };
   });
 
   afterEach(() => {
@@ -28,7 +51,8 @@ describe('Asset Summary Actions', () => {
   });
 
   describe('getAssetSummaryMetrics', () => {
-    it('should throw error when no tenant found', async () => {
+    it('should throw error when unauthenticated', async () => {
+      currentUser = null;
       (createTenantKnex as ReturnType<typeof vi.fn>).mockResolvedValue({
         knex: vi.fn(),
         tenant: null,
@@ -36,7 +60,7 @@ describe('Asset Summary Actions', () => {
 
       await expect(
         getAssetSummaryMetrics(TEST_ASSET_ID)
-      ).rejects.toThrow('No tenant found');
+      ).rejects.toThrow('User not authenticated');
     });
 
     it('should throw error when asset not found', async () => {

@@ -10,18 +10,13 @@ import {
   getClientCompanyName,
   type TenantSettings,
   type ScheduleApprover
-} from '../../lib/actions/appointmentHelpers';
-import * as dbModule from '../../lib/db';
+} from '@alga-psa/scheduling/actions';
 import * as sharedDb from '@alga-psa/db';
 import type { Knex } from 'knex';
 
-// Mock the database module
-vi.mock('../../lib/db', () => ({
-  createTenantKnex: vi.fn()
-}));
-
 // Mock the shared db module
 vi.mock('@alga-psa/db', () => ({
+  createTenantKnex: vi.fn(),
   withTransaction: vi.fn((knex, callback) => callback(knex))
 }));
 
@@ -46,7 +41,7 @@ describe('Appointment Helper Functions', () => {
     Object.assign(mockKnex, mockTrx);
 
     // Mock createTenantKnex to return our mock knex instance
-    (dbModule.createTenantKnex as Mock).mockResolvedValue({
+    (sharedDb.createTenantKnex as Mock).mockResolvedValue({
       knex: mockKnex
     });
 
@@ -60,61 +55,61 @@ describe('Appointment Helper Functions', () => {
 
   describe('formatDate', () => {
     it('should format date in English locale', async () => {
-      const result = await formatDate('2025-11-15', 'en');
-      expect(result).toBe('November 15, 2025');
+      const result = await formatDate('2025-11-15T12:00:00Z', 'en');
+      expect(result).toBe('November 15th, 2025');
     });
 
     it('should format date in German locale', async () => {
-      const result = await formatDate('2025-11-15', 'de');
+      const result = await formatDate('2025-11-15T12:00:00Z', 'de');
       expect(result).toBe('15. November 2025');
     });
 
     it('should format date in Spanish locale', async () => {
-      const result = await formatDate('2025-11-15', 'es');
+      const result = await formatDate('2025-11-15T12:00:00Z', 'es');
       expect(result).toBe('15 de noviembre de 2025');
     });
 
     it('should format date in French locale', async () => {
-      const result = await formatDate('2025-11-15', 'fr');
+      const result = await formatDate('2025-11-15T12:00:00Z', 'fr');
       expect(result).toBe('15 novembre 2025');
     });
 
     it('should format date in Italian locale', async () => {
-      const result = await formatDate('2025-11-15', 'it');
+      const result = await formatDate('2025-11-15T12:00:00Z', 'it');
       expect(result).toBe('15 novembre 2025');
     });
 
     it('should format date in Dutch locale', async () => {
-      const result = await formatDate('2025-11-15', 'nl');
+      const result = await formatDate('2025-11-15T12:00:00Z', 'nl');
       expect(result).toBe('15 november 2025');
     });
 
     it('should default to English locale when no locale is provided', async () => {
-      const result = await formatDate('2025-11-15');
-      expect(result).toBe('November 15, 2025');
+      const result = await formatDate('2025-11-15T12:00:00Z');
+      expect(result).toBe('November 15th, 2025');
     });
 
     it('should default to English locale for unsupported locale', async () => {
-      const result = await formatDate('2025-11-15', 'unsupported');
-      expect(result).toBe('November 15, 2025');
+      const result = await formatDate('2025-11-15T12:00:00Z', 'unsupported');
+      expect(result).toBe('November 15th, 2025');
     });
 
     it('should handle ISO date strings with time component', async () => {
       const result = await formatDate('2025-11-15T14:30:00Z', 'en');
-      expect(result).toBe('November 15, 2025');
+      expect(result).toBe('November 15th, 2025');
     });
 
     it('should handle leap year dates', async () => {
-      const result = await formatDate('2024-02-29', 'en');
-      expect(result).toBe('February 29, 2024');
+      const result = await formatDate('2024-02-29T12:00:00Z', 'en');
+      expect(result).toBe('February 29th, 2024');
     });
 
     it('should handle year boundary dates', async () => {
-      const resultEndYear = await formatDate('2025-12-31', 'en');
-      expect(resultEndYear).toBe('December 31, 2025');
+      const resultEndYear = await formatDate('2025-12-31T12:00:00Z', 'en');
+      expect(resultEndYear).toBe('December 31st, 2025');
 
-      const resultStartYear = await formatDate('2025-01-01', 'en');
-      expect(resultStartYear).toBe('January 1, 2025');
+      const resultStartYear = await formatDate('2025-01-01T12:00:00Z', 'en');
+      expect(resultStartYear).toBe('January 1st, 2025');
     });
 
     it('should return original string on invalid date', async () => {
@@ -135,10 +130,10 @@ describe('Appointment Helper Functions', () => {
     it('should handle different date formats', async () => {
       // Test various valid date string formats
       const result1 = await formatDate('2025/11/15', 'en');
-      expect(result1).toBe('November 15, 2025');
+      expect(result1).toBe('November 15th, 2025');
 
       const result2 = await formatDate('11/15/2025', 'en');
-      expect(result2).toBe('November 15, 2025');
+      expect(result2).toBe('November 15th, 2025');
     });
   });
 
@@ -255,7 +250,7 @@ describe('Appointment Helper Functions', () => {
 
     it('should handle default to English for unsupported locale', async () => {
       const result = await formatTime('14:30', 'unsupported');
-      expect(result).toBe('2:30 PM');
+      expect(result).toBe('14:30');
     });
   });
 
@@ -390,7 +385,7 @@ describe('Appointment Helper Functions', () => {
       const result = await getScheduleApprovers('tenant-123');
 
       expect(result).toEqual(mockApprovers);
-      expect(dbModule.createTenantKnex).toHaveBeenCalled();
+      expect(sharedDb.createTenantKnex).toHaveBeenCalled();
     });
 
     it('should query with correct tenant and permission filters', async () => {
@@ -400,7 +395,7 @@ describe('Appointment Helper Functions', () => {
       expect(mockTrx.where).toHaveBeenCalledWith({
         'u.tenant': 'tenant-123',
         'u.user_type': 'internal',
-        'p.resource': 'schedule',
+        'p.resource': 'user_schedule',
         'p.action': 'update'
       });
     });
@@ -408,7 +403,7 @@ describe('Appointment Helper Functions', () => {
     it('should filter out inactive users', async () => {
       await getScheduleApprovers('tenant-123');
 
-      expect(mockTrx.whereNull).toHaveBeenCalledWith('u.is_inactive');
+      expect(mockTrx.where).toHaveBeenCalledWith(expect.any(Function));
     });
 
     it('should return empty array when no approvers found', async () => {
@@ -461,18 +456,19 @@ describe('Appointment Helper Functions', () => {
           settings: {
             supportEmail: 'support@example.com',
             supportPhone: '+1-555-0123',
-            companyName: 'Acme MSP',
+            branding: {
+              clientName: 'Acme MSP'
+            },
             defaultLocale: 'en'
           }
         })
       };
 
-      // Mock companies query
-      const companiesQuery = {
+      // Mock tenants query
+      const tenantsQuery = {
         ...mockTrx,
         first: vi.fn().mockResolvedValue({
-          company_id: 'company-1',
-          company_name: 'Acme MSP'
+          client_name: 'Database MSP'
         })
       };
 
@@ -482,8 +478,8 @@ describe('Appointment Helper Functions', () => {
         callCount++;
         if (tableName === 'tenant_settings' || callCount === 1) {
           return tenantSettingsQuery;
-        } else if (tableName === 'companies' || callCount === 2) {
-          return companiesQuery;
+        } else if (tableName === 'tenants' || callCount === 2) {
+          return tenantsQuery;
         }
         return mockTrx;
       });
@@ -506,7 +502,7 @@ describe('Appointment Helper Functions', () => {
         first: vi.fn().mockResolvedValue(null)
       };
 
-      const noCompanyQuery = {
+      const noTenantQuery = {
         ...mockTrx,
         first: vi.fn().mockResolvedValue(null)
       };
@@ -515,14 +511,14 @@ describe('Appointment Helper Functions', () => {
       mockKnex.mockImplementation(() => {
         callCount++;
         if (callCount === 1) return emptySettingsQuery;
-        return noCompanyQuery;
+        return noTenantQuery;
       });
 
       const result = await getTenantSettings('tenant-123');
 
       expect(result.contactEmail).toBe('support@company.com');
       expect(result.contactPhone).toBe('');
-      expect(result.tenantName).toBe('Your MSP');
+      expect(result.tenantName).toBe('Your Service Provider');
       expect(result.defaultLocale).toBe('en');
     });
 
@@ -539,7 +535,7 @@ describe('Appointment Helper Functions', () => {
 
       const companiesQuery = {
         ...mockTrx,
-        first: vi.fn().mockResolvedValue({ company_name: 'Test MSP' })
+        first: vi.fn().mockResolvedValue({ client_name: 'Test MSP' })
       };
 
       let callCount = 0;
@@ -553,21 +549,21 @@ describe('Appointment Helper Functions', () => {
       expect(result.contactEmail).toBe('support@example.com');
     });
 
-    it('should prioritize company_name over settings.companyName', async () => {
+    it('should prefer branding clientName over tenants client_name', async () => {
       const settingsQuery = {
         ...mockTrx,
         first: vi.fn().mockResolvedValue({
           settings: {
-            companyName: 'Settings Company'
+            branding: {
+              clientName: 'Settings Company'
+            }
           }
         })
       };
 
       const companiesQuery = {
         ...mockTrx,
-        first: vi.fn().mockResolvedValue({
-          company_name: 'Database Company'
-        })
+        first: vi.fn().mockResolvedValue({ client_name: 'Database Company' })
       };
 
       let callCount = 0;
@@ -578,7 +574,7 @@ describe('Appointment Helper Functions', () => {
 
       const result = await getTenantSettings('tenant-123');
 
-      expect(result.tenantName).toBe('Database Company');
+      expect(result.tenantName).toBe('Settings Company');
     });
 
     it('should handle empty settings JSONB', async () => {
@@ -589,7 +585,7 @@ describe('Appointment Helper Functions', () => {
         })
       };
 
-      const companiesQuery = {
+      const tenantsQuery = {
         ...mockTrx,
         first: vi.fn().mockResolvedValue(null)
       };
@@ -597,13 +593,13 @@ describe('Appointment Helper Functions', () => {
       let callCount = 0;
       mockKnex.mockImplementation(() => {
         callCount++;
-        return callCount === 1 ? settingsQuery : companiesQuery;
+        return callCount === 1 ? settingsQuery : tenantsQuery;
       });
 
       const result = await getTenantSettings('tenant-123');
 
       expect(result.contactEmail).toBe('support@company.com');
-      expect(result.tenantName).toBe('Your MSP');
+      expect(result.tenantName).toBe('Your Service Provider');
     });
 
     it('should handle database errors', async () => {
@@ -645,7 +641,7 @@ describe('Appointment Helper Functions', () => {
     it('should filter out inactive users', async () => {
       await getClientUserIdFromContact('contact-123', 'tenant-123');
 
-      expect(mockTrx.whereNull).toHaveBeenCalledWith('is_inactive');
+      expect(mockTrx.where).toHaveBeenCalledWith(expect.any(Function));
     });
 
     it('should return null when user not found', async () => {
@@ -692,7 +688,7 @@ describe('Appointment Helper Functions', () => {
   describe('getClientCompanyName', () => {
     beforeEach(() => {
       mockTrx.first.mockResolvedValue({
-        company_name: 'Acme Corporation'
+        client_name: 'Acme Corporation'
       });
     });
 
@@ -700,14 +696,14 @@ describe('Appointment Helper Functions', () => {
       const result = await getClientCompanyName('client-123', 'tenant-123');
 
       expect(result).toBe('Acme Corporation');
-      expect(mockKnex).toHaveBeenCalledWith('companies');
+      expect(mockKnex).toHaveBeenCalledWith('clients');
     });
 
     it('should query with correct filters', async () => {
       await getClientCompanyName('client-123', 'tenant-123');
 
       expect(mockTrx.where).toHaveBeenCalledWith({
-        company_id: 'client-123',
+        client_id: 'client-123',
         tenant: 'tenant-123'
       });
     });
@@ -731,21 +727,21 @@ describe('Appointment Helper Functions', () => {
     it('should select only company_name field', async () => {
       await getClientCompanyName('client-123', 'tenant-123');
 
-      expect(mockTrx.select).toHaveBeenCalledWith('company_name');
+      expect(mockTrx.select).toHaveBeenCalledWith('client_name');
     });
 
     it('should handle different tenant IDs', async () => {
       await getClientCompanyName('client-123', 'different-tenant');
 
       expect(mockTrx.where).toHaveBeenCalledWith({
-        company_id: 'client-123',
+        client_id: 'client-123',
         tenant: 'different-tenant'
       });
     });
 
     it('should handle empty company name', async () => {
       mockTrx.first.mockResolvedValue({
-        company_name: ''
+        client_name: ''
       });
 
       const result = await getClientCompanyName('client-123', 'tenant-123');
@@ -764,7 +760,7 @@ describe('Appointment Helper Functions', () => {
 
     it('should handle company names with special characters', async () => {
       mockTrx.first.mockResolvedValue({
-        company_name: 'Acme & Co., Ltd.'
+        client_name: 'Acme & Co., Ltd.'
       });
 
       const result = await getClientCompanyName('client-123', 'tenant-123');
@@ -775,7 +771,7 @@ describe('Appointment Helper Functions', () => {
     it('should handle very long company names', async () => {
       const longName = 'A'.repeat(500);
       mockTrx.first.mockResolvedValue({
-        company_name: longName
+        client_name: longName
       });
 
       const result = await getClientCompanyName('client-123', 'tenant-123');

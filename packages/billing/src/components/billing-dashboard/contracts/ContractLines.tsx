@@ -32,8 +32,7 @@ import { CreateCustomContractLineDialog } from './CreateCustomContractLineDialog
 import { SwitchWithLabel } from '@alga-psa/ui/components/SwitchWithLabel';
 import { BucketOverlayFields } from './BucketOverlayFields';
 import { BucketOverlayInput } from './ContractWizard';
-import { getCurrencySymbol } from '@alga-psa/core';
-
+import { getCurrencySymbol } from '@alga-psa/core/constants/currency';
 interface ContractLinesProps {
   contract: IContract;
   onContractLinesChanged?: () => void;

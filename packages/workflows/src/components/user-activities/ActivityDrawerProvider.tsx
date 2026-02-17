@@ -6,7 +6,6 @@
 import React, { createContext, useContext, useState, useCallback, ReactNode, useMemo } from 'react';
 import { Activity, ActivityType } from "@alga-psa/types";
 import { useDrawer } from "@alga-psa/ui";
-import { ActivityDetailViewerDrawer } from "./ActivityDetailViewerDrawer";
 import { useActivitiesCache } from "../../hooks/useActivitiesCache";
 
 /**
@@ -24,7 +23,7 @@ const ActivityDrawerContext = createContext<ActivityDrawerContextType | undefine
  * This component provides a method to open the drawer with a specific activity
  * and renders the ActivityDetailViewerDrawer when an activity is selected
  */
-export function ActivityDrawerProvider({ children }: { children: ReactNode }) {
+export function ActivityDrawerProvider({ children, ActivityDetailViewerDrawerComponent }: { children: ReactNode; ActivityDetailViewerDrawerComponent?: React.ComponentType<any> }) {
   const { openDrawer, closeDrawer } = useDrawer();
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
   const { invalidateCache } = useActivitiesCache();
@@ -51,17 +50,17 @@ export function ActivityDrawerProvider({ children }: { children: ReactNode }) {
   }, [closeDrawer, invalidateCache, selectedActivity]);
   
   const openActivityDrawer = useCallback((activity: Activity) => {
-    
+    if (!ActivityDetailViewerDrawerComponent) return;
     setSelectedActivity(activity);
     openDrawer(
-      <ActivityDetailViewerDrawer
+      <ActivityDetailViewerDrawerComponent
         activityType={activity.type}
         activityId={activity.id}
         onClose={handleClose}
         onActionComplete={handleActionComplete}
       />
     );
-  }, [openDrawer, handleClose, handleActionComplete]);
+  }, [openDrawer, handleClose, handleActionComplete, ActivityDetailViewerDrawerComponent]);
   
   // Memoize the context value to prevent unnecessary re-renders
   const contextValue = useMemo(() => ({

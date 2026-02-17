@@ -23,7 +23,10 @@ process.env.DB_NAME_SERVER = process.env.DB_NAME_SERVER || 'sebastian_test';
 
 const namespace = 'storage-edge-tests';
 
-describe('StorageService edge cases (infrastructure)', () => {
+const runDbTests = process.env.RUN_DB_TESTS === 'true';
+const describeDb = runDbTests ? describe : describe.skip;
+
+describeDb('StorageService edge cases (infrastructure)', () => {
   const testHelpers = TestContext.createHelpers();
   let context: TestContext;
   let service: StorageService;

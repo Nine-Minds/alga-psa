@@ -3,7 +3,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import type { Knex } from 'knex';
 import type { IDocument } from '@/interfaces/document.interface';
 
-vi.mock('server/src/lib/storage/StorageService', () => {
+vi.mock('@alga-psa/documents/storage/StorageService', () => {
   return {
     StorageService: {
       validateFileUpload: vi.fn(),
@@ -12,23 +12,24 @@ vi.mock('server/src/lib/storage/StorageService', () => {
   };
 });
 
-vi.mock('server/src/lib/db', () => ({
-  createTenantKnex: vi.fn(),
-}));
-
 vi.mock('@alga-psa/db', () => ({
+  createTenantKnex: vi.fn(),
   withTransaction: vi.fn(),
+  runWithTenant: vi.fn((_tenant: string, callback: () => unknown) => callback()),
+  requireTenantId: vi.fn(() => 'tenant-123'),
 }));
 
 vi.mock('@alga-psa/users/actions', () => ({
   getCurrentUser: vi.fn(),
 }));
 
-vi.mock('server/src/lib/auth/rbac', () => ({
+vi.mock('@alga-psa/auth', () => ({
+  withAuth: (action: any) => async (...args: any[]) =>
+    action({ user_id: 'user-1', tenant: 'tenant-123' }, { tenant: 'tenant-123' }, ...args),
   hasPermission: vi.fn(),
 }));
 
-vi.mock('server/src/models/document-association', () => ({
+vi.mock('@alga-psa/documents/models/documentAssociation', () => ({
   default: {
     create: vi.fn(),
   },
@@ -38,19 +39,22 @@ vi.mock('uuid', () => ({
   v4: vi.fn(),
 }));
 
-vi.mock('server/src/lib/utils/documentPreviewGenerator', () => ({
+vi.mock('@alga-psa/documents/lib/documentPreviewGenerator', () => ({
   generateDocumentPreviews: vi.fn(),
 }));
 
-import { StorageService } from 'server/src/lib/storage/StorageService';
-import { createTenantKnex } from 'server/src/lib/db';
-import { withTransaction } from '@alga-psa/db';
+vi.mock('@alga-psa/event-bus/publishers', () => ({
+  publishWorkflowEvent: vi.fn(),
+}));
+
+import { StorageService } from '@alga-psa/documents/storage/StorageService';
+import { createTenantKnex, withTransaction } from '@alga-psa/db';
 import { getCurrentUser } from '@alga-psa/users/actions';
-import { hasPermission } from 'server/src/lib/auth/rbac';
-import DocumentAssociation from 'server/src/models/document-association';
+import { hasPermission } from '@alga-psa/auth';
+import DocumentAssociation from '@alga-psa/documents/models/documentAssociation';
 import { v4 as uuidv4 } from 'uuid';
-import { generateDocumentPreviews } from 'server/src/lib/utils/documentPreviewGenerator';
-import * as documentActions from '@/lib/actions/document-actions/documentActions';
+import { generateDocumentPreviews } from '@alga-psa/documents/lib/documentPreviewGenerator';
+import * as documentActions from '@alga-psa/documents/actions/documentActions';
 
 const cast = vi.mocked;
 const getDocumentTypeIdSpy = vi.spyOn(documentActions, 'getDocumentTypeId');
@@ -123,27 +127,29 @@ describe('uploadDocument', () => {
 
     expect(knexStub.inserts).toHaveLength(1);
     const insertedDocument = knexStub.inserts[0] as IDocument;
-    expect(insertedDocument.document_id).toBe('doc-123');
+    expect(insertedDocument.document_id).toEqual(expect.any(String));
     expect(insertedDocument.file_id).toBe('file-123');
     expect(insertedDocument.mime_type).toBe('image/png');
+
+    const documentId = insertedDocument.document_id;
 
     expect(documentAssociationCreateMock).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({
-        document_id: 'doc-123',
+        document_id: documentId,
         entity_id: 'ticket-42',
         entity_type: 'ticket',
       }),
     );
 
     expect(generateDocumentPreviewsMock).toHaveBeenCalledWith(
-      expect.objectContaining({ document_id: 'doc-123' }),
+      expect.objectContaining({ document_id: documentId }),
       expect.any(Buffer),
     );
 
     await flushMicrotasks();
 
-    expect(knexStub.whereArgs).toEqual([{ document_id: 'doc-123', tenant: 'tenant-123' }]);
+    expect(knexStub.whereArgs).toEqual([{ document_id: documentId, tenant: 'tenant-123' }]);
     expect(knexStub.updateArgs).toEqual([
       expect.objectContaining({
         thumbnail_file_id: 'thumb-123',

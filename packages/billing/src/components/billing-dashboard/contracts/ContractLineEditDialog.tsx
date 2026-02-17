@@ -8,8 +8,7 @@ import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { AlertCircle } from 'lucide-react';
-import { getCurrencySymbol } from '@alga-psa/core';
-
+import { getCurrencySymbol } from '@alga-psa/core/constants/currency';
 interface ContractLineEditDialogProps {
   line: {
     contract_line_id: string;

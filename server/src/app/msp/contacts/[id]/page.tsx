@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation';
-import { ContactDetails } from '@alga-psa/clients';
+import ContactDetails from '@alga-psa/msp-composition/clients/ContactDetails';
 import type { IDocument } from '@alga-psa/types';
 import { getCurrentUser } from '@alga-psa/users/actions';
 import { getDocumentsByEntity } from '@alga-psa/documents/actions/documentActions';

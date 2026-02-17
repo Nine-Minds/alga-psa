@@ -16,6 +16,8 @@ import { TextEncoder as NodeTextEncoder } from 'util';
 
 let mockedTenantId = '11111111-1111-1111-1111-111111111111';
 let mockedUserId = 'mock-user-id';
+const runDbTests = process.env.RUN_DB_TESTS === 'true';
+const describeDb = runDbTests ? describe : describe.skip;
 
 process.env.DB_PORT = '5432';
 process.env.DB_HOST = process.env.DB_HOST === 'pgbouncer' ? 'localhost' : process.env.DB_HOST;
@@ -108,7 +110,7 @@ const {
  * - Supporting custom expiration dates specified during credit creation
  */
 
-describe('Credit Creation and Dates Tests', () => {
+describeDb('Credit Creation and Dates Tests', () => {
   let context: TestContext;
 
   async function ensureDefaultTax() {

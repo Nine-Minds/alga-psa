@@ -4,7 +4,7 @@ import fs from 'node:fs/promises';
 
 describe('/msp/email-logs route', () => {
   it('has a page.tsx entrypoint', async () => {
-    const filePath = path.resolve(process.cwd(), 'src/app/msp/email-logs/page.tsx');
+    const filePath = path.resolve(process.cwd(), 'server/src/app/msp/email-logs/page.tsx');
     const contents = await fs.readFile(filePath, 'utf8');
 
     expect(contents).toContain('export default');

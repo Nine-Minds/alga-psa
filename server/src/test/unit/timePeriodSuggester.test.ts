@@ -26,10 +26,12 @@ describe('TimePeriodSuggester', () => {
     it('should suggest monthly periods with no existing periods', () => {
       const settings = [createTestSettings('month', 1)];
       const existingPeriods: ITimePeriod[] = [];
-      const period = TimePeriodSuggester.suggestNewTimePeriod(settings, existingPeriods);
+      const result = TimePeriodSuggester.suggestNewTimePeriod(settings, existingPeriods);
+      expect(result.success).toBe(true);
+      const period = result.data;
 
-      expect(period.start_date).toBe(Temporal.Now.plainDateISO().toString());
-      expect(period.end_date).toBe(
+      expect(period?.start_date).toBe(Temporal.Now.plainDateISO().toString());
+      expect(period?.end_date).toBe(
         Temporal.Now.plainDateISO().add({ months: 1 }).with({ day: 1 }).toString()
       );
     });
@@ -41,28 +43,34 @@ describe('TimePeriodSuggester', () => {
         start_date: '2025-01-01',
         end_date: '2025-02-01'
       }];
-      const period = TimePeriodSuggester.suggestNewTimePeriod(settings, existingPeriods);
+      const result = TimePeriodSuggester.suggestNewTimePeriod(settings, existingPeriods);
+      expect(result.success).toBe(true);
+      const period = result.data;
 
-      expect(period.start_date).toBe('2025-02-01');
-      expect(period.end_date).toBe('2025-03-01');
+      expect(period?.start_date).toBe('2025-02-01');
+      expect(period?.end_date).toBe('2025-03-01');
     });
 
     it('should suggest weekly periods', () => {
       const settings = [createTestSettings('week', 1)];
-      const period = TimePeriodSuggester.suggestNewTimePeriod(settings);
+      const result = TimePeriodSuggester.suggestNewTimePeriod(settings);
+      expect(result.success).toBe(true);
+      const period = result.data;
 
-      expect(period.start_date).toBe(Temporal.Now.plainDateISO().toString());
-      expect(period.end_date).toBe(
+      expect(period?.start_date).toBe(Temporal.Now.plainDateISO().toString());
+      expect(period?.end_date).toBe(
         Temporal.Now.plainDateISO().add({ weeks: 1 }).toString()
       );
     });
 
     it('should suggest yearly periods', () => {
       const settings = [createTestSettings('year', 1)];
-      const period = TimePeriodSuggester.suggestNewTimePeriod(settings);
+      const result = TimePeriodSuggester.suggestNewTimePeriod(settings);
+      expect(result.success).toBe(true);
+      const period = result.data;
 
-      expect(period.start_date).toBe(Temporal.Now.plainDateISO().toString());
-      expect(period.end_date).toBe(
+      expect(period?.start_date).toBe(Temporal.Now.plainDateISO().toString());
+      expect(period?.end_date).toBe(
         Temporal.Now.plainDateISO().add({ years: 1 }).toString()
       );
     });
@@ -80,24 +88,32 @@ describe('TimePeriodSuggester', () => {
       }];
 
       // Generate first period using first setting
-      const period1 = TimePeriodSuggester.suggestNewTimePeriod(settings, existingPeriod);
-      expect(period1.start_date).toBe('2025-01-01');
-      expect(period1.end_date).toBe('2025-01-16');
+      const period1Result = TimePeriodSuggester.suggestNewTimePeriod(settings, existingPeriod);
+      expect(period1Result.success).toBe(true);
+      const period1 = period1Result.data;
+      expect(period1?.start_date).toBe('2025-01-01');
+      expect(period1?.end_date).toBe('2025-01-16');
 
       // Generate second period using second setting
-      const period2 = TimePeriodSuggester.suggestNewTimePeriod(settings, [period1]);
-      expect(period2.start_date).toBe('2025-01-16');
-      expect(period2.end_date).toBe('2025-02-01');
+      const period2Result = TimePeriodSuggester.suggestNewTimePeriod(settings, [period1 as ITimePeriod]);
+      expect(period2Result.success).toBe(true);
+      const period2 = period2Result.data;
+      expect(period2?.start_date).toBe('2025-01-16');
+      expect(period2?.end_date).toBe('2025-02-01');
 
       // Generate next month's first period
-      const period3 = TimePeriodSuggester.suggestNewTimePeriod(settings, [period1, period2]);
-      expect(period3.start_date).toBe('2025-02-01');
-      expect(period3.end_date).toBe('2025-02-16');
+      const period3Result = TimePeriodSuggester.suggestNewTimePeriod(settings, [period1 as ITimePeriod, period2 as ITimePeriod]);
+      expect(period3Result.success).toBe(true);
+      const period3 = period3Result.data;
+      expect(period3?.start_date).toBe('2025-02-01');
+      expect(period3?.end_date).toBe('2025-02-16');
 
       // Generate next month's second period
-      const period4 = TimePeriodSuggester.suggestNewTimePeriod(settings, [period1, period2, period3]);
-      expect(period4.start_date).toBe('2025-02-16');
-      expect(period4.end_date).toBe('2025-03-01');
+      const period4Result = TimePeriodSuggester.suggestNewTimePeriod(settings, [period1 as ITimePeriod, period2 as ITimePeriod, period3 as ITimePeriod]);
+      expect(period4Result.success).toBe(true);
+      const period4 = period4Result.data;
+      expect(period4?.start_date).toBe('2025-02-16');
+      expect(period4?.end_date).toBe('2025-03-01');
     });
 
     it('should handle February correctly in leap years', () => {
@@ -110,10 +126,12 @@ describe('TimePeriodSuggester', () => {
         start_date: '2024-01-16',
         end_date: '2024-02-01'
       }];
-      const period = TimePeriodSuggester.suggestNewTimePeriod(settings, existingPeriods);
+      const result = TimePeriodSuggester.suggestNewTimePeriod(settings, existingPeriods);
+      expect(result.success).toBe(true);
+      const period = result.data;
 
-      expect(period.start_date).toBe('2024-02-01');
-      expect(period.end_date).toBe('2024-02-16');
+      expect(period?.start_date).toBe('2024-02-01');
+      expect(period?.end_date).toBe('2024-02-16');
     });
 
     it('should select settings based on period start date, not current date', () => {
@@ -132,12 +150,14 @@ describe('TimePeriodSuggester', () => {
       Temporal.Now.plainDateISO = () => Temporal.PlainDate.from('2025-01-20');
 
       try {
-        const period = TimePeriodSuggester.suggestNewTimePeriod(settings, existingPeriods);
+        const result = TimePeriodSuggester.suggestNewTimePeriod(settings, existingPeriods);
+        expect(result.success).toBe(true);
+        const period = result.data;
         
         // Should use second half settings since period starts on the 16th,
         // even though current date is the 20th
-        expect(period.start_date).toBe('2025-01-15');
-        expect(period.end_date).toBe('2025-02-01');
+        expect(period?.start_date).toBe('2025-01-15');
+        expect(period?.end_date).toBe('2025-02-01');
       } finally {
         // Restore the real Now.plainDateISO
         Temporal.Now.plainDateISO = realNow;
@@ -160,13 +180,15 @@ describe('TimePeriodSuggester', () => {
       Temporal.Now.plainDateISO = () => Temporal.PlainDate.from('2025-01-13');
 
       try {
-        const period = TimePeriodSuggester.suggestNewTimePeriod(settings, existingPeriods);
+        const result = TimePeriodSuggester.suggestNewTimePeriod(settings, existingPeriods);
+        expect(result.success).toBe(true);
+        const period = result.data;
         
         // Should use second half settings (16-EOM) for the next period
         // This verifies that we're not using the current date (14th) to select settings,
         // because if we were, it would incorrectly use first half settings (1-15)
-        expect(period.start_date).toBe('2025-01-15');
-        expect(period.end_date).toBe('2025-02-01');
+        expect(period?.start_date).toBe('2025-01-15');
+        expect(period?.end_date).toBe('2025-02-01');
 
         // This test will fail because the current implementation incorrectly uses
         // the current date (14th) to select settings, which makes it choose
@@ -196,9 +218,11 @@ describe('TimePeriodSuggester', () => {
           end_date: '2024-11-30'
         }
       ];
-      const period = TimePeriodSuggester.suggestNewTimePeriod(settings, existingPeriods);
+      const result = TimePeriodSuggester.suggestNewTimePeriod(settings, existingPeriods);
+      expect(result.success).toBe(true);
+      const period = result.data;
 
-      expect(period.start_date).toBe('2025-01-14');
+      expect(period?.start_date).toBe('2025-01-14');
     });
 
     it('should suggest period starting in the future after current date', () => {
@@ -208,13 +232,15 @@ describe('TimePeriodSuggester', () => {
         {
           period_id: 'test-period-1',
           start_date: '2025-05-01',
-          end_date: futureDate
-        }
+        end_date: futureDate
+      }
       ];
-      const period = TimePeriodSuggester.suggestNewTimePeriod(settings, existingPeriods);
+      const result = TimePeriodSuggester.suggestNewTimePeriod(settings, existingPeriods);
+      expect(result.success).toBe(true);
+      const period = result.data;
 
-      expect(period.start_date).toBe(futureDate);
-      expect(period.end_date).toBe('2025-07-01');
+      expect(period?.start_date).toBe(futureDate);
+      expect(period?.end_date).toBe('2025-07-01');
     });
   });
 });

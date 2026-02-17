@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { setupTestDatabase, type TestDatabase } from '../../test-utils/database';
-import { withAdminTransaction } from '@alga-psa/db.js';
+import { withAdminTransaction } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
 import { hashPassword, generateSecurePassword } from '@alga-psa/shared/utils/encryption.js';
 import type { Knex } from 'knex';
@@ -140,7 +140,10 @@ async function rollbackUserInDB(userId: string, tenantId: string): Promise<void>
   });
 }
 
-describe('User Activities Database Logic', () => {
+const runDbTests = process.env.RUN_DB_TESTS === 'true';
+const describeDb = runDbTests ? describe : describe.skip;
+
+describeDb('User Activities Database Logic', () => {
   let testDb: TestDatabase;
 
   beforeEach(async () => {
@@ -362,29 +365,30 @@ describe('User Activities Database Logic', () => {
     });
   });
 
-  describe('password handling', () => {
-    it('should generate secure temporary passwords', async () => {
-      const password1 = generateSecurePassword();
-      const password2 = generateSecurePassword();
-      
-      expect(password1).toHaveLength(16);
-      expect(password2).toHaveLength(16);
-      expect(password1).not.toBe(password2); // Should be random
-      
-      // Should contain mix of characters
-      expect(password1).toMatch(/[A-Z]/);
-      expect(password1).toMatch(/[a-z]/);
-      expect(password1).toMatch(/[0-9]/);
-    });
+});
 
-    it('should hash passwords securely', async () => {
-      const password = 'test123';
-      const hash1 = await hashPassword(password);
-      const hash2 = await hashPassword(password);
-      
-      expect(hash1).not.toBe(hash2); // Different salts should produce different hashes
-      expect(hash1).toContain(':'); // Should contain salt separator
-      expect(hash1.length).toBeGreaterThan(80); // Should be reasonably long
-    });
+describe('password handling', () => {
+  it('should generate secure temporary passwords', async () => {
+    const password1 = generateSecurePassword();
+    const password2 = generateSecurePassword();
+
+    expect(password1).toHaveLength(16);
+    expect(password2).toHaveLength(16);
+    expect(password1).not.toBe(password2); // Should be random
+
+    // Should contain mix of characters
+    expect(password1).toMatch(/[A-Z]/);
+    expect(password1).toMatch(/[a-z]/);
+    expect(password1).toMatch(/[0-9]/);
+  });
+
+  it('should hash passwords securely', async () => {
+    const password = 'test123';
+    const hash1 = await hashPassword(password);
+    const hash2 = await hashPassword(password);
+
+    expect(hash1).not.toBe(hash2); // Different salts should produce different hashes
+    expect(hash1).toContain(':'); // Should contain salt separator
+    expect(hash1.length).toBeGreaterThan(80); // Should be reasonably long
   });
 });

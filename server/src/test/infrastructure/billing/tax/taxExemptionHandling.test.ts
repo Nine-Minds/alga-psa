@@ -60,7 +60,10 @@ const {
   afterAll: cleanupContext
 } = TestContext.createHelpers();
 
-describe('Tax Exemption Handling', () => {
+const runDbTests = process.env.RUN_DB_TESTS === 'true';
+const describeDb = runDbTests ? describe : describe.skip;
+
+describeDb('Tax Exemption Handling', () => {
   let context: TestContext;
   let taxService: TaxService;
 

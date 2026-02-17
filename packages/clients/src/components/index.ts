@@ -5,13 +5,13 @@
  */
 
 export { default as Clients } from './clients/Clients';
-export { default as ClientDetails } from './clients/ClientDetails';
+// ClientDetails moved to @alga-psa/msp-composition/clients
 
 export { default as ContactsLayout } from './contacts/ContactsLayout';
-export { default as ContactDetails } from './contacts/ContactDetails';
+// ContactDetails moved to @alga-psa/msp-composition/clients
 
 export { default as InteractionsFeed } from './interactions/InteractionsFeed';
 export { default as OverallInteractionsFeed } from './interactions/OverallInteractionsFeed';
-export { default as InteractionDetails } from './interactions/InteractionDetails';
+// InteractionDetails moved to @alga-psa/msp-composition/clients
 
 export { default as AccountManagerDashboard } from './account-manager/AccountManagerDashboard';

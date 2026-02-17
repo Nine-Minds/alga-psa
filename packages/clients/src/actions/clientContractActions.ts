@@ -9,7 +9,7 @@ import ClientContract from '../models/clientContract';
 import type { IClientContract } from '@alga-psa/types';
 import { createTenantKnex } from '@alga-psa/db';
 import { Temporal } from '@js-temporal/polyfill';
-import { toPlainDate } from '@alga-psa/core';
+import { toPlainDate } from '@alga-psa/core/dateTimeUtils';
 import { cloneTemplateContractLineAsync } from '../lib/billingHelpers';
 import { v4 as uuidv4 } from 'uuid';
 import { checkAndReactivateExpiredContract } from '@alga-psa/shared/billingClients';

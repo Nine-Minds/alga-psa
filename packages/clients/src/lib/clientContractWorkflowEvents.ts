@@ -1,7 +1,6 @@
 import type { IClientContract } from '@alga-psa/types';
 import { Temporal } from '@js-temporal/polyfill';
-import { toPlainDate } from '@alga-psa/core';
-
+import { toPlainDate } from '@alga-psa/core/dateTimeUtils';
 type ChangeRecord = Record<string, { previous: unknown; new: unknown }>;
 
 function getDateOnly(value: string | null | undefined): string | null {

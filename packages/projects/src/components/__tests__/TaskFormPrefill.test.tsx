@@ -71,6 +71,30 @@ vi.mock('@alga-psa/ui', () => ({
   useDrawer: () => ({ openDrawer: vi.fn(), closeDrawer: vi.fn() })
 }));
 
+vi.mock('@alga-psa/tags/context', () => ({
+  TagProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  useTags: () => ({
+    tags: [],
+    tagsLoaded: true,
+    isLoading: false,
+    updateTagColor: vi.fn(),
+    updateTagText: vi.fn(),
+    deleteAllTagsByText: vi.fn(),
+    addTag: vi.fn(),
+    removeTag: vi.fn(),
+    refetchTags: vi.fn(),
+    getPermissions: vi.fn().mockResolvedValue({
+      canAddExisting: true,
+      canCreateNew: true,
+      canEditColors: true,
+      canEditText: true,
+      canDelete: true,
+      canDeleteAll: true,
+    }),
+    permissions: {},
+  }),
+}));
+
 vi.mock('../TaskTicketLinks', () => ({
   __esModule: true,
   default: () => <div data-testid="task-ticket-links" />

@@ -1,4 +1,4 @@
-import { UserActivitiesDashboard } from '@alga-psa/workflows/components';
+import { MspUserActivitiesDashboard } from '@alga-psa/msp-composition/workflows';
 import { getCurrentUser } from '@alga-psa/users/actions';
 import { redirect } from 'next/navigation';
 
@@ -9,5 +9,5 @@ export default async function UserActivitiesPage() {
     redirect('/auth/msp/signin');
   }
 
-  return <UserActivitiesDashboard />;
+  return <MspUserActivitiesDashboard />;
 }

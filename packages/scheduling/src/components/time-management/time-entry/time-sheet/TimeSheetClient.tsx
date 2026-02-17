@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import type { ITimeEntry, ITimeSheetView, IUser, IUserWithRoles } from '@alga-psa/types';
 import { saveTimeEntry, fetchOrCreateTimeSheet } from '@alga-psa/scheduling/actions/timeEntryActions';
 import { fetchEligibleTimeEntrySubjects } from '@alga-psa/scheduling/actions/timeEntryDelegationActions';
@@ -16,9 +16,14 @@ interface TimeSheetClientProps {
   currentUser: IUserWithRoles;
   isManager: boolean;
   canReopenForEdits: boolean;
+  WorkItemDrawerComponent?: React.ComponentType<any>;
+  WorkItemPickerComponent?: React.ComponentType<any>;
+  TimeEntryProviderComponent?: React.ComponentType<{ children: React.ReactNode }>;
+  useTimeEntryHook?: () => any;
+  TimeEntryEditFormComponent?: React.ComponentType<any>;
 }
 
-export default function TimeSheetClient({ timeSheet: initialTimeSheet, currentUser, isManager, canReopenForEdits }: TimeSheetClientProps) {
+export default function TimeSheetClient({ timeSheet: initialTimeSheet, currentUser, isManager, canReopenForEdits, WorkItemDrawerComponent, WorkItemPickerComponent, TimeEntryProviderComponent, useTimeEntryHook, TimeEntryEditFormComponent }: TimeSheetClientProps) {
   const router = useRouter();
   const [timeSheet, setTimeSheet] = useState<ITimeSheetView>(initialTimeSheet);
   const [subjectUser, setSubjectUser] = useState<IUser | null>(null);
@@ -111,6 +116,11 @@ export default function TimeSheetClient({ timeSheet: initialTimeSheet, currentUs
         onReopenForEdits={openReopenDialog}
         onSubmitTimeSheet={handleSubmitTimeSheet}
         onBack={handleBack}
+        WorkItemDrawerComponent={WorkItemDrawerComponent}
+        WorkItemPickerComponent={WorkItemPickerComponent}
+        TimeEntryProviderComponent={TimeEntryProviderComponent}
+        useTimeEntryHook={useTimeEntryHook}
+        TimeEntryEditFormComponent={TimeEntryEditFormComponent}
       />
 
       <ConfirmationDialog

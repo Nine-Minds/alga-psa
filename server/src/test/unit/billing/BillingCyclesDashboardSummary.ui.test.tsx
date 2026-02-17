@@ -76,30 +76,28 @@ vi.mock('@alga-psa/billing/actions/contractActions', () => ({
   getContracts: vi.fn(async () => []),
 }));
 
-vi.mock('@alga-psa/clients/actions', () => ({
-  getAllClientsPaginated: vi.fn(async () => ({
+vi.mock('@alga-psa/billing/actions/billingClientsActions', () => ({
+  getAllClientsPaginatedForBilling: vi.fn(async () => ({
     clients: [{ client_id: 'client-1', client_name: 'Acme Co' }],
     totalCount: 1
   })),
-  getClientsWithBillingCycleRangePaginated: vi.fn(async () => ({
+  getClientsWithBillingCycleRangePaginatedForBilling: vi.fn(async () => ({
     clients: [{ client_id: 'client-1', client_name: 'Acme Co' }],
     totalCount: 1
   })),
-  getActiveClientContractsByClientIds: vi.fn(async () => []),
+  getActiveClientContractsByClientIdsForBilling: vi.fn(async () => ({})),
 }));
 
 describe('Billing → Billing Cycles summary view', () => {
   it('renders a link to Client → Billing and does not render schedule editing controls', async () => {
     render(<BillingCycles />);
 
-    await waitFor(() => {
-      expect(screen.getByText('View Client Billing')).toBeTruthy();
-    });
+    const viewLink = await screen.findByText('View Client Billing');
 
     expect(screen.queryByText('Edit Anchor')).toBeNull();
     expect(screen.queryByText('Create Next Cycle')).toBeNull();
 
-    const link = screen.getByText('View Client Billing').closest('a');
+    const link = viewLink.closest('a');
     expect(link?.getAttribute('href')).toBe('/msp/clients/client-1?tab=Billing');
   });
 });

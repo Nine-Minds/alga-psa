@@ -20,7 +20,7 @@ import { getContractLineServicesWithConfigurations, addServiceToContractLine, re
 import { getServices } from '@alga-psa/billing/actions';
 import { getContractLineById } from '@alga-psa/billing/actions/contractLineAction'; // Import action to get plan details
 import { getContractById } from '@alga-psa/billing/actions/contractActions';
-import { getCurrencySymbol } from '@alga-psa/core'; // Import currency helper
+import { getCurrencySymbol } from '@alga-psa/core/constants/currency'; // Import currency helper
 import { getServiceCategories } from '@alga-psa/billing/actions'; // Added import
 // Removed useTenant import as it wasn't used
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';

@@ -5,13 +5,81 @@ import ClientTaxSettings from '@alga-psa/billing/models/clientTaxSettings';
 import { describe, it, expect, vi, beforeEach, beforeAll, afterEach, afterAll, Mocked } from 'vitest';
 
 vi.mock('@alga-psa/billing/models/clientTaxSettings');
+vi.mock('@alga-psa/db', () => ({
+  createTenantKnex: vi.fn(),
+}));
+
+import { createTenantKnex } from '@alga-psa/db';
+
+type QueryResponseMap = Record<string, any>;
+
+let mockKnexResponses: QueryResponseMap = {};
+
+class FakeQuery {
+  private table: string;
+  private responses: QueryResponseMap;
+  private isFirst = false;
+
+  constructor(table: string, responses: QueryResponseMap) {
+    this.table = table;
+    this.responses = responses;
+  }
+
+  where(...args: any[]): this {
+    const maybeFn = args[0];
+    if (typeof maybeFn === 'function') {
+      maybeFn.call(this);
+    }
+    return this;
+  }
+
+  andWhere(...args: any[]): this {
+    const maybeFn = args[0];
+    if (typeof maybeFn === 'function') {
+      maybeFn.call(this);
+    }
+    return this;
+  }
+
+  whereNull(): this {
+    return this;
+  }
+
+  orWhere(): this {
+    return this;
+  }
+
+  select(): this {
+    return this;
+  }
+
+  orderBy(): this {
+    return this;
+  }
+
+  first(): Promise<any> {
+    this.isFirst = true;
+    const key = `${this.table}:first`;
+    return Promise.resolve(this.responses[key]);
+  }
+
+  then<TResult1 = any, TResult2 = never>(onfulfilled?: ((value: any) => TResult1 | PromiseLike<TResult1>) | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | null): Promise<TResult1 | TResult2> {
+    const key = `${this.table}:select`;
+    return Promise.resolve(this.responses[key]).then(onfulfilled, onrejected);
+  }
+}
+
+const mockKnex = (table: string) => new FakeQuery(table, mockKnexResponses);
 
 describe('TaxService', () => {
     let taxService: TaxService;
     const mockClientTaxSettings = ClientTaxSettings as Mocked<typeof ClientTaxSettings>;
+    const createTenantKnexMock = vi.mocked(createTenantKnex);
 
     beforeEach(() => {
-        taxService = new TaxService('test_tenant');
+        taxService = new TaxService();
+        mockKnexResponses = {};
+        createTenantKnexMock.mockResolvedValue({ knex: mockKnex as any, tenant: 'test_tenant' } as any);
         vi.clearAllMocks();
     });
 
@@ -37,8 +105,12 @@ describe('TaxService', () => {
             };
 
             mockClientTaxSettings.get.mockResolvedValue(mockTaxSettings);
-            mockClientTaxSettings.getTaxRate.mockResolvedValue(mockTaxRate);
             mockClientTaxSettings.getTaxRateThresholds.mockResolvedValue([]);
+            mockKnexResponses = {
+                'clients:first': { is_tax_exempt: false },
+                'client_tax_rates:first': { tax_rate_id: 'rate1' },
+                'tax_rates:first': mockTaxRate,
+            };
 
             const result = await taxService.calculateTax('client1', 100, '2023-06-01');
 
@@ -145,8 +217,12 @@ describe('TaxService', () => {
             ];
 
             mockClientTaxSettings.get.mockResolvedValue(mockTaxSettings);
-            mockClientTaxSettings.getTaxRate.mockResolvedValue(mockTaxRate);
             mockClientTaxSettings.getTaxRateThresholds.mockResolvedValue(mockThresholds);
+            mockKnexResponses = {
+                'clients:first': { is_tax_exempt: false },
+                'client_tax_rates:first': { tax_rate_id: 'rate1' },
+                'tax_rates:first': mockTaxRate,
+            };
 
             const result = await taxService.calculateTax('client1', 250, '2023-06-01');
 
@@ -202,9 +278,13 @@ describe('TaxService', () => {
             ];
 
             mockClientTaxSettings.get.mockResolvedValue(mockTaxSettings);
-            mockClientTaxSettings.getTaxRate.mockResolvedValue(mockTaxRate);
             mockClientTaxSettings.getCompositeTaxComponents.mockResolvedValue(mockTaxComponents);
             mockClientTaxSettings.getTaxHolidays.mockResolvedValue(mockHolidays);
+            mockKnexResponses = {
+                'clients:first': { is_tax_exempt: false },
+                'client_tax_rates:first': { tax_rate_id: 'rate1' },
+                'tax_rates:first': mockTaxRate,
+            };
 
             const result = await taxService.calculateTax('client1', 100, '2023-06-15');
 
@@ -222,6 +302,21 @@ describe('TaxService', () => {
             };
 
             mockClientTaxSettings.get.mockResolvedValue(mockTaxSettings);
+            mockKnexResponses = {
+                'clients:first': { is_tax_exempt: false },
+                'client_tax_rates:first': { tax_rate_id: 'rate1' },
+                'tax_rates:first': {
+                    tax_rate_id: 'rate1',
+                    tax_type: 'VAT',
+                    country_code: 'US',
+                    tax_percentage: 10,
+                    is_reverse_charge_applicable: false,
+                    is_composite: false,
+                    start_date: '2023-01-01',
+                    is_active: true,
+                    name: 'Standard VAT',
+                },
+            };
 
             const result = await taxService.calculateTax('client1', 100, '2023-06-01');
 
@@ -256,20 +351,11 @@ describe('TaxService', () => {
                 is_reverse_charge_applicable: false,
             };
 
-            const mockTaxRate: ITaxRate = {
-                tax_rate_id: 'rate1',
-                tax_type: 'VAT',
-                country_code: 'US',
-                tax_percentage: 10,
-                is_reverse_charge_applicable: false,
-                is_composite: false,
-                start_date: '2023-01-01',
-                is_active: true,
-                name: 'Standard VAT',
-            };
-
             mockClientTaxSettings.get.mockResolvedValue(mockTaxSettings);
-            mockClientTaxSettings.getTaxRate.mockResolvedValue(mockTaxRate);
+            mockKnexResponses = {
+                'client_tax_rates:first': { tax_rate_id: 'rate1' },
+                'tax_rates:first': { tax_type: 'VAT' },
+            };
 
             const result = await taxService.getTaxType('client1');
 

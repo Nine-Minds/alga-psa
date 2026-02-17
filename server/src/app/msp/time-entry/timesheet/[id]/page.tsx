@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 import { getCurrentUser } from "@alga-psa/users/actions";
 import { fetchTimeSheet } from '@alga-psa/scheduling/actions/timeSheetActions';
-import TimeSheetClient from '@alga-psa/scheduling/components/time-management/time-entry/time-sheet/TimeSheetClient';
+import MspTimeSheetClient from '@alga-psa/msp-composition/scheduling/MspTimeSheetClient';
 import { createTenantKnex } from '@alga-psa/db';
 import { hasPermission } from '@alga-psa/auth';
 import { assertCanActOnBehalf, isManagerOfSubject } from '@alga-psa/scheduling/actions/timeEntryDelegationAuth';
@@ -46,7 +46,7 @@ export default async function TimeSheetPage({ params }: { params: Promise<{ id: 
     }
 
     return (
-      <TimeSheetClient 
+      <MspTimeSheetClient
         timeSheet={timeSheet}
         currentUser={currentUser}
         isManager={isManager}

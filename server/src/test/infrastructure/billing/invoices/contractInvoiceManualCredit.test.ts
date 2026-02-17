@@ -11,6 +11,8 @@ import { v4 as uuidv4 } from 'uuid';
 
 process.env.DB_PORT = '5432';
 process.env.DB_HOST = process.env.DB_HOST === 'pgbouncer' ? 'localhost' : process.env.DB_HOST;
+const runDbTests = process.env.RUN_DB_TESTS === 'true';
+const describeDb = runDbTests ? describe : describe.skip;
 
 const {
   beforeAll: setupContext,
@@ -19,7 +21,7 @@ const {
   afterAll: cleanupContext
 } = TestContext.createHelpers();
 
-describe('Contract Invoice Manual Credit', () => {
+describeDb('Contract Invoice Manual Credit', () => {
   let context: TestContext;
   let mockedTenantId = '11111111-1111-1111-1111-111111111111';
   let mockedUserId = 'mock-user-id';

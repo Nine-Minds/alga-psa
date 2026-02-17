@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dia
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 // Import new action and types
 import { getServices, updateService, deleteService, getServiceTypesForSelection, PaginatedServicesResponse, createServiceTypeInline, updateServiceTypeInline, deleteServiceTypeInline, setServicePrices } from '@alga-psa/billing/actions';
-import { CURRENCY_OPTIONS, getCurrencySymbol } from '@alga-psa/core';
+import { CURRENCY_OPTIONS, getCurrencySymbol } from '@alga-psa/core/constants/currency';
 import { getServiceCategories } from '@alga-psa/billing/actions';
 // Import action to get tax rates
 import { getTaxRates } from '@alga-psa/billing/actions';

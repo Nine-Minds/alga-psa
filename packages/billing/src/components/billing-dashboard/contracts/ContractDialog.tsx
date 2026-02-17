@@ -18,7 +18,7 @@ import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { IClient } from '@alga-psa/types';
 import { createClientContractForBilling, getAllClientsForBilling } from '@alga-psa/billing/actions/billingClientsActions';
 import { BILLING_FREQUENCY_OPTIONS, CONTRACT_LINE_TYPE_DISPLAY } from '@alga-psa/billing/constants/billing';
-import { CURRENCY_OPTIONS } from '@alga-psa/core';
+import { CURRENCY_OPTIONS } from '@alga-psa/core/constants/currency';
 import { HelpCircle, Info, Plus, X, ChevronDown, ChevronUp, Search, Coins } from 'lucide-react';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';

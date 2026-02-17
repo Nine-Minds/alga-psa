@@ -28,7 +28,6 @@ import { useUsers } from '@alga-psa/users/hooks';
 import { getCurrentUser, getCurrentUserPermissions } from '@alga-psa/users/actions';
 import { useUserPreference } from '@alga-psa/users/hooks';
 import { IUserWithRoles } from '@alga-psa/types';
-import { WorkItemDrawer } from '@alga-psa/scheduling/components/time-management/time-entry/time-sheet/WorkItemDrawer';
 import { useDrawer } from "@alga-psa/ui";
 import { Trash, ChevronLeft, ChevronRight, CalendarDays as CalendarDaysIcon, Layers, Layers2 } from 'lucide-react';
 import ViewSwitcher from '@alga-psa/ui/components/ViewSwitcher';

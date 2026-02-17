@@ -19,8 +19,7 @@ import { InvoiceViewModel, DiscountType, IInvoiceCharge } from '@alga-psa/types'
 import type { JSX } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { PlusIcon, MinusCircleIcon } from 'lucide-react';
-import { formatCurrency } from '@alga-psa/core';
-
+import { formatCurrency } from '@alga-psa/core/formatters';
 // Use a constant for environment check since process.env is not available
 const IS_DEVELOPMENT = typeof window !== 'undefined' &&
   globalThis.window.location.hostname === 'localhost';

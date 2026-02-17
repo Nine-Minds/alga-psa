@@ -14,10 +14,8 @@ import toast from 'react-hot-toast';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import QuickAddContact from './QuickAddContact';
 import { useDrawer } from "@alga-psa/ui";
-import ContactDetails from './ContactDetails';
 import ContactDetailsEdit from './ContactDetailsEdit';
 import ContactsImportDialog from './ContactsImportDialog';
-import ClientDetails from '../clients/ClientDetails';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { ColumnDefinition } from '@alga-psa/types';
 import { TagFilter } from '@alga-psa/ui/components';
@@ -40,9 +38,11 @@ interface ContactsProps {
   initialContacts: IContact[];
   clientId?: string;
   preSelectedClientId?: string;
+  ContactDetailsComponent?: React.ComponentType<any>;
+  ClientDetailsComponent?: React.ComponentType<any>;
 }
 
-const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelectedClientId }) => {
+const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelectedClientId, ContactDetailsComponent, ClientDetailsComponent }) => {
   // Pre-fetch tag permissions to prevent individual API calls
   useTagPermissions(['contact']);
 
@@ -270,6 +270,7 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
   };
 
   const handleQuickView = async (contact: IContact) => {
+    if (!ContactDetailsComponent) return;
     // If this is being used within a client context (clientId prop exists),
     // maintain the drawer behavior. Otherwise, open drawer with quick view functionality.
     if (clientId) {
@@ -297,7 +298,7 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
         }
 
         openDrawer(
-          <ContactDetails
+          <ContactDetailsComponent
             contact={contact}
             clients={clients}
             documents={documents[contact.contact_name_id] || []}
@@ -357,7 +358,7 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
         }
 
         openDrawer(
-          <ContactDetails
+          <ContactDetailsComponent
             contact={contact}
             clients={clients}
             documents={documents[contact.contact_name_id] || []}
@@ -592,12 +593,16 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
           return <span className="text-gray-500">{getClientName(clientId)}</span>;
         }
 
+        if (!ClientDetailsComponent) {
+          return <span>{client.client_name}</span>;
+        }
+
         return (
           <div
             role="button"
             tabIndex={0}
             onClick={() => openDrawer(
-              <ClientDetails
+              <ClientDetailsComponent
                 client={client}
                 documents={[]}
                 contacts={[]}
@@ -609,7 +614,7 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
               if (e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault();
                 openDrawer(
-                  <ClientDetails
+                  <ClientDetailsComponent
                     client={client}
                     documents={[]}
                     contacts={[]}

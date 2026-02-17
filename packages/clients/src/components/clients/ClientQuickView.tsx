@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from 'react';
 import type { IClientWithLocation } from '@alga-psa/types';
 import { getClientById } from '@alga-psa/clients/actions';
-import ClientDetails from './ClientDetails';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { AlertCircle } from 'lucide-react';
@@ -11,9 +10,10 @@ import { AlertCircle } from 'lucide-react';
 interface ClientQuickViewProps {
   clientId: string;
   onClose?: () => void;
+  ClientDetailsComponent?: React.ComponentType<any>;
 }
 
-export const ClientQuickView: React.FC<ClientQuickViewProps> = ({ clientId, onClose }) => {
+export const ClientQuickView: React.FC<ClientQuickViewProps> = ({ clientId, onClose, ClientDetailsComponent }) => {
   const [client, setClient] = useState<IClientWithLocation | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -59,11 +59,15 @@ export const ClientQuickView: React.FC<ClientQuickViewProps> = ({ clientId, onCl
     );
   }
 
+  if (!ClientDetailsComponent) {
+    return <div>Client details not available</div>;
+  }
+
   return (
-    <ClientDetails 
-      client={client} 
-      isInDrawer={true} 
-      quickView={true} 
+    <ClientDetailsComponent
+      client={client}
+      isInDrawer={true}
+      quickView={true}
     />
   );
 };

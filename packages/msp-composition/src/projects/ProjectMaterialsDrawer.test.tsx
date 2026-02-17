@@ -6,8 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor, fireEvent, cleanup } from '@testing-library/react';
 import type { IProjectMaterial, IServicePrice } from '@alga-psa/types';
 import type { CatalogPickerItem } from '@alga-psa/billing/actions';
-import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
-
+import { formatCurrencyFromMinorUnits } from '@alga-psa/core/formatters';
 let mockMaterials: IProjectMaterial[] = [];
 let mockProducts: CatalogPickerItem[] = [];
 let mockPrices: IServicePrice[] = [];

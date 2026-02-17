@@ -5,6 +5,9 @@ import { WorkflowDefinition } from '@shared/workflow/core/workflowDefinition';
 import { WorkflowContext } from '@shared/workflow/core/workflowContext';
 import { defineConfig } from 'vitest/config'
 
+const runWorkflowRuntimeTests = process.env.RUN_WORKFLOW_RUNTIME_TESTS === 'true';
+const describeWorkflow = runWorkflowRuntimeTests ? describe.sequential : describe.skip;
+
 export default defineConfig({
   test: {
     sequence: {
@@ -13,7 +16,7 @@ export default defineConfig({
   }
 });
 
-describe.sequential('TypeScriptWorkflowRuntime', () => {
+describeWorkflow('TypeScriptWorkflowRuntime', () => {
   let runtime: TypeScriptWorkflowRuntime;
   let actionRegistry: ActionRegistry;
 

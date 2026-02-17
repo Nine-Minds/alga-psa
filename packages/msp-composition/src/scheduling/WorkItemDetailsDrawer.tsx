@@ -14,6 +14,7 @@ import { toast } from 'react-hot-toast';
 import TicketDetails from '@alga-psa/tickets/components/ticket/TicketDetails';
 import TaskEdit from '@alga-psa/projects/components/TaskEdit';
 import EntryPopup from '@alga-psa/scheduling/components/schedule/EntryPopup';
+import { WorkItemDrawer } from './WorkItemDrawer';
 import InteractionDetails from '../clients/InteractionDetails';
 import { useTenant } from '@alga-psa/ui/components/providers/TenantProvider';
 
@@ -199,6 +200,7 @@ export function WorkItemDetailsDrawer({
                                 canModifySchedule={true}
                                 focusedTechnicianId={currentUser.user_id}
                                 canAssignOthers={true}
+                                WorkItemDrawerComponent={WorkItemDrawer}
                             />
                             )}
                         </div>

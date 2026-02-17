@@ -17,7 +17,11 @@ const dbMocks = vi.hoisted(() => {
 });
 
 vi.mock('@temporalio/client', () => {
-  const Client = vi.fn(() => ({ schedule: temporalClientMocks.schedule, workflow: { start: vi.fn() } }));
+  class Client {
+    schedule = temporalClientMocks.schedule;
+    workflow = { start: vi.fn() };
+    constructor(_options?: unknown) {}
+  }
   const Connection = { connect: vi.fn(async () => ({})) };
   return { Client, Connection };
 });

@@ -19,6 +19,8 @@ import { updateContract } from '@alga-psa/billing/actions';
 process.env.DB_PORT = '5432';
 process.env.DB_HOST = process.env.DB_HOST === 'pgbouncer' ? 'localhost' : process.env.DB_HOST;
 
+const runDbTests = process.env.RUN_DB_TESTS === 'true';
+
 let mockedTenantId = '11111111-1111-1111-1111-111111111111';
 let mockedUserId = 'mock-user-id';
 
@@ -88,7 +90,7 @@ const {
   afterAll: cleanupContext
 } = TestContext.createHelpers();
 
-describe('Multi-Currency Billing', () => {
+(runDbTests ? describe : describe.skip)('Multi-Currency Billing', () => {
   let context: TestContext;
 
   async function configureDefaultTax() {

@@ -72,7 +72,7 @@ describe('CE/EE build swapping', () => {
     try {
       const alias = getWebpackAliases('ce');
 
-      expect(alias.ee).toBe(path.resolve(process.cwd(), 'server/src/empty'));
+      expect(alias.ee).toBe(path.resolve(process.cwd(), 'packages/ee/src'));
       expect(alias.eeServerSrc).toBe(path.resolve(process.cwd(), 'server/src/empty'));
 
       expect(alias.emailProvidersEntry).toBe(

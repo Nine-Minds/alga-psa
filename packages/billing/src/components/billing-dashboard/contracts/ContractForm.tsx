@@ -13,8 +13,7 @@ import { updateContract } from '@alga-psa/billing/actions/contractActions';
 import { useTenant } from '@alga-psa/ui/components/providers/TenantProvider';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { BILLING_FREQUENCY_OPTIONS } from '@alga-psa/billing/constants/billing';
-import { CURRENCY_OPTIONS } from '@alga-psa/core';
-
+import { CURRENCY_OPTIONS } from '@alga-psa/core/constants/currency';
 interface ContractFormProps {
   contract: IContract;
   onContractUpdated: () => void;

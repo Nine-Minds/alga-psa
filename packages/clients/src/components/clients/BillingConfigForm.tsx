@@ -9,8 +9,7 @@ import { FileTextIcon } from 'lucide-react';
 import { GearIcon } from '@radix-ui/react-icons';
 import { useEffect, useState } from 'react';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
-import { CURRENCY_OPTIONS } from '@alga-psa/core';
-
+import { CURRENCY_OPTIONS } from '@alga-psa/core/constants/currency';
 interface BillingConfigFormProps {
     billingConfig: {
         payment_terms: string;

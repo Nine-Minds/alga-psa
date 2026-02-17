@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useCallback, memo, useEffect } from 'react';
+import React, { useState, useRef, useCallback, memo, useEffect } from 'react';
 import { Temporal } from '@js-temporal/polyfill';
 import { formatISO, parseISO } from 'date-fns';
 import { toast } from 'react-hot-toast';
@@ -17,7 +17,6 @@ import {
   ITimeEntryWithWorkItemString 
 } from '@alga-psa/types';
 import { IExtendedWorkItem } from '@alga-psa/types';
-import { TimeEntryProvider, useTimeEntry } from './TimeEntryProvider';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import TimeEntrySkeletons from './TimeEntrySkeletons';
 import TimeEntryList from '../TimeEntryList';
@@ -40,7 +39,25 @@ interface TimeEntryDialogProps {
   timeSheetId?: string;
   onTimeEntriesUpdate?: (entries: ITimeEntryWithWorkItemString[]) => void;
   inDrawer?: boolean;
+  TimeEntryProviderComponent?: React.ComponentType<{ children: React.ReactNode }>;
+  useTimeEntryHook?: () => any;
+  TimeEntryEditFormComponent?: React.ComponentType<any>;
 }
+
+// No-op fallback when composition layer is not wired
+const noopUseTimeEntry = () => ({
+  entries: [],
+  services: [],
+  taxRegions: [],
+  timeInputs: {},
+  editingIndex: null,
+  totalDurations: {},
+  isLoading: false,
+  initializeEntries: () => {},
+  updateEntry: () => {},
+  setEditingIndex: () => {},
+  updateTimeInputs: () => {},
+});
 
 // Main dialog content component
 const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeEntryDialogProps): React.JSX.Element {
@@ -60,7 +77,10 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
     timeSheetId,
     onTimeEntriesUpdate,
     inDrawer,
+    useTimeEntryHook,
+    TimeEntryEditFormComponent,
   } = props;
+  const useHook = useTimeEntryHook || noopUseTimeEntry;
   const {
     entries,
     services,
@@ -73,7 +93,7 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
     updateEntry,
     setEditingIndex,
     updateTimeInputs,
-  } = useTimeEntry();
+  } = useHook();
 
   // Convert string dates to Temporal.PlainDate for internal use
   const timePeriod: ITimePeriod = {
@@ -391,6 +411,7 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
           onUpdateTimeInputs={updateTimeInputs}
           onAddEntry={handleAddEntry}
           date={date}
+          TimeEntryEditFormComponent={TimeEntryEditFormComponent}
         />
       ) : (
         <div className="mt-2">
@@ -408,6 +429,7 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
             onUpdateTimeInputs={updateTimeInputs}
             date={date}
             isNewEntry={!existingEntries || existingEntries.length === 0}
+            TimeEntryEditFormComponent={TimeEntryEditFormComponent}
           />
         </div>
       )}
@@ -483,11 +505,14 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
   );
 });
 
+const PassthroughProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => <>{children}</>;
+
 const TimeEntryDialog = memo(function TimeEntryDialog(props: TimeEntryDialogProps) {
+  const Provider = props.TimeEntryProviderComponent || PassthroughProvider;
   return (
-    <TimeEntryProvider>
+    <Provider>
       <TimeEntryDialogContent {...props} />
-    </TimeEntryProvider>
+    </Provider>
   );
 });
 

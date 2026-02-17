@@ -3,7 +3,7 @@
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { createTenantKnex } from '@alga-psa/db';
-import { toPlainDate } from '@alga-psa/core';
+import { toPlainDate } from '@alga-psa/core/dateTimeUtils';
 import { v4 as uuidv4 } from 'uuid';
 
 import { getActionRegistry, TransactionIsolationLevel } from '@alga-psa/shared/workflow/core';

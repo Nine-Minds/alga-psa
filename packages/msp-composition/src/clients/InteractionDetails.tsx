@@ -133,10 +133,11 @@ const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: in
         if (contact) {
           const clients = await getAllClients();
           openDrawer(
-            <ContactDetailsView 
-              initialContact={contact} 
+            <ContactDetailsView
+              initialContact={contact}
               clients={clients}
               isInDrawer={true}
+              ClientDetailsComponent={ClientDetails}
             />
           );
         } else {

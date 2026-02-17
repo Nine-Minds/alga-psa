@@ -4,3 +4,4 @@ export { default as ClientAssets } from './ClientAssets';
 export { default as ClientDetails } from './ClientDetails';
 export { default as ContactDetails } from './ContactDetails';
 export { default as InteractionDetails } from './InteractionDetails';
+export { default as MspContactsLayout } from './MspContactsLayout';

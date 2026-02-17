@@ -8,7 +8,6 @@ import { QuickAddInteraction } from './QuickAddInteraction';
 import { getInteractionsForEntity, getInteractionById } from '@alga-psa/clients/actions';
 import { getAllInteractionTypes } from '@alga-psa/clients/actions';
 import { useDrawer } from '@alga-psa/ui';
-import { InteractionDetails } from '@alga-psa/clients/components';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Input } from '@alga-psa/ui/components/Input';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
@@ -25,16 +24,23 @@ interface InteractionsFeedProps {
   clientId?: string;
   interactions: IInteraction[];
   setInteractions: React.Dispatch<React.SetStateAction<IInteraction[]>>;
+  /** Injected InteractionDetails component from msp-composition to avoid circular dependency */
+  InteractionDetailsComponent?: React.ComponentType<{
+    interaction: IInteraction;
+    onInteractionDeleted: () => void;
+    onInteractionUpdated: (interaction: IInteraction) => void;
+  }>;
 }
 
 
-const InteractionsFeed: React.FC<InteractionsFeedProps> = ({ 
+const InteractionsFeed: React.FC<InteractionsFeedProps> = ({
   id = 'interactions-feed',
-  entityId, 
-  entityType, 
-  clientId, 
-  interactions, 
-  setInteractions 
+  entityId,
+  entityType,
+  clientId,
+  interactions,
+  setInteractions,
+  InteractionDetailsComponent,
 }) => {
   const { openDrawer } = useDrawer();
   const [searchTerm, setSearchTerm] = useState<string>('');
@@ -194,9 +200,10 @@ const InteractionsFeed: React.FC<InteractionsFeedProps> = ({
   }, [setInteractions]);
 
   const handleInteractionClick = useCallback((interaction: IInteraction) => {
+    if (!InteractionDetailsComponent) return;
     openDrawer(
-      <InteractionDetails 
-        interaction={interaction} 
+      <InteractionDetailsComponent
+        interaction={interaction}
         onInteractionDeleted={() => handleInteractionDeleted(interaction.interaction_id)}
         onInteractionUpdated={handleInteractionUpdated}
       />,

@@ -39,6 +39,8 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { ExternalLink, Trash2 } from 'lucide-react';
 import BackNav from '@alga-psa/ui/components/BackNav';
 import InteractionsFeed from '@alga-psa/clients/components/interactions/InteractionsFeed';
+import InteractionDetails from './InteractionDetails';
+import ContactDetails from './ContactDetails';
 import { IInteraction } from '@alga-psa/types';
 import { useDrawer } from "@alga-psa/ui";
 import TimezonePicker from '@alga-psa/ui/components/TimezonePicker';
@@ -1169,6 +1171,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
           <ClientContactsList
             clientId={client.client_id}
             clients={[client]}
+            ContactDetailsComponent={ContactDetails}
           />
         </div>
       )
@@ -1287,6 +1290,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
             entityType="client"
             interactions={interactions}
             setInteractions={setInteractions}
+            InteractionDetailsComponent={InteractionDetails}
           />
         </div>
       )

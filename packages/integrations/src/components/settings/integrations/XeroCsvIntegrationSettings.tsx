@@ -10,7 +10,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Alert';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
-import { CURRENCY_OPTIONS } from '@alga-psa/core';
+import { CURRENCY_OPTIONS } from '@alga-psa/core/constants/currency';
 import {
   getXeroCsvSettings,
   updateXeroCsvSettings,

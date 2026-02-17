@@ -11,7 +11,7 @@ describe('EE Chat (source)', () => {
   });
 
   it('reads the streaming response via response.body.getReader()', () => {
-    expect(chatSource).toContain('response.body.getReader()');
-    expect(chatSource).toContain('await reader.read()');
+    expect(chatSource).toContain('readAssistantContentFromSse(response');
+    expect(chatSource).toContain('streamingTextRef.current');
   });
 });

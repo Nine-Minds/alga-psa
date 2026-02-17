@@ -7,7 +7,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { BucketOverlayInput, ContractWizardData } from '../ContractWizard';
 import { ServiceCatalogPicker, ServiceCatalogPickerItem } from '../ServiceCatalogPicker';
 import { Plus, X, Activity, Coins } from 'lucide-react';
-import { getCurrencySymbol } from '@alga-psa/core';
+import { getCurrencySymbol } from '@alga-psa/core/constants/currency';
 import { SwitchWithLabel } from '@alga-psa/ui/components/SwitchWithLabel';
 import { BucketOverlayFields } from '../BucketOverlayFields';
 import { BillingFrequencyOverrideSelect } from '../BillingFrequencyOverrideSelect';

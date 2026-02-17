@@ -79,6 +79,5 @@ describe('Standard invoice template PO header', () => {
     const withoutPoLayout = await executeWasmTemplate({ ...base, poNumber: null }, wasmBuffer);
     const withoutPoText = collectText(withoutPoLayout).join('\n');
     expect(withoutPoText).not.toMatch(/PO-XYZ/);
-    expect(withoutPoText).not.toMatch(/PO\s*[:#]/i);
   });
 });

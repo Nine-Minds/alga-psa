@@ -2,7 +2,7 @@
 
 import React, { useCallback } from 'react';
 import TicketingDashboardContainer from '@alga-psa/tickets/components/TicketingDashboardContainer';
-import ClientDetails from '@alga-psa/clients/components/clients/ClientDetails';
+import ClientDetails from '../clients/ClientDetails';
 import type { IClient } from '@alga-psa/types';
 
 type MspTicketsPageClientProps = Omit<

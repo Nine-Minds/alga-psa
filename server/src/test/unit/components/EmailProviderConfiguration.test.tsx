@@ -16,12 +16,28 @@ vi.mock('@alga-psa/integrations/actions', () => ({
   deleteEmailProvider: vi.fn(),
   testEmailProviderConnection: vi.fn(),
   autoWireEmailProvider: vi.fn(),
+  getInboundTicketDefaults: vi.fn().mockResolvedValue({ defaults: [] }),
 }));
 
-import * as emailProviderActions from '@alga-psa/integrations/actions';
+vi.mock('@alga-psa/integrations/actions/email-actions/emailProviderActions', () => ({
+  getEmailProviders: vi.fn(),
+  createEmailProvider: vi.fn(),
+  updateEmailProvider: vi.fn(),
+  deleteEmailProvider: vi.fn(),
+  testEmailProviderConnection: vi.fn(),
+  resyncImapProvider: vi.fn(),
+  retryMicrosoftSubscriptionRenewal: vi.fn(),
+}));
+
+vi.mock('@alga-psa/users/actions', () => ({
+  getCurrentUser: vi.fn(),
+}));
+
+import * as emailProviderActions from '@alga-psa/integrations/actions/email-actions/emailProviderActions';
+import { getCurrentUser } from '@alga-psa/users/actions';
 
 // Mock the child components
-vi.mock('../../../components/MicrosoftProviderForm', () => ({
+vi.mock('@alga-psa/integrations/email/providers/entry', () => ({
   MicrosoftProviderForm: ({ onSuccess, onCancel }: any) => (
     <div data-testid="microsoft-form">
       <button onClick={() => onSuccess({ id: '1', providerType: 'microsoft' })}>
@@ -30,9 +46,6 @@ vi.mock('../../../components/MicrosoftProviderForm', () => ({
       <button onClick={onCancel}>Cancel</button>
     </div>
   ),
-}));
-
-vi.mock('../../../components/GmailProviderForm', () => ({
   GmailProviderForm: ({ onSuccess, onCancel }: any) => (
     <div data-testid="gmail-form">
       <button onClick={() => onSuccess({ id: '2', providerType: 'google' })}>
@@ -41,9 +54,39 @@ vi.mock('../../../components/GmailProviderForm', () => ({
       <button onClick={onCancel}>Cancel</button>
     </div>
   ),
+  ImapProviderForm: ({ onSuccess, onCancel }: any) => (
+    <div data-testid="imap-form">
+      <button onClick={() => onSuccess({ id: '3', providerType: 'imap' })}>
+        Save IMAP
+      </button>
+      <button onClick={onCancel}>Cancel</button>
+    </div>
+  ),
 }));
 
-vi.mock('../../../components/EmailProviderList', () => ({
+vi.mock('@alga-psa/integrations/components/email/ProviderSetupWizardDialog', () => ({
+  ProviderSetupWizardDialog: ({ isOpen, onComplete, onClose }: any) => {
+    const [active, setActive] = React.useState<'microsoft' | 'google' | 'imap'>('microsoft');
+    if (!isOpen) return null;
+    return (
+      <div data-testid="provider-wizard">
+        <h2>Add New Email Provider</h2>
+        <button onClick={() => setActive('microsoft')}>Microsoft 365</button>
+        <button onClick={() => setActive('google')}>Gmail</button>
+        <button onClick={() => setActive('imap')}>IMAP</button>
+        {active === 'microsoft' && (
+          <button onClick={() => onComplete({ id: '1', providerType: 'microsoft' })}>Save Microsoft</button>
+        )}
+        {active === 'google' && (
+          <button onClick={() => onComplete({ id: '2', providerType: 'google' })}>Save Gmail</button>
+        )}
+        <button onClick={onClose}>Cancel</button>
+      </div>
+    );
+  },
+}));
+
+vi.mock('@alga-psa/integrations/components/email/EmailProviderList', () => ({
   EmailProviderList: ({ providers, onEdit, onDelete, onTestConnection, onRefresh }: any) => (
     <div data-testid="provider-list">
       {providers.map((provider: any) => (
@@ -90,6 +133,7 @@ describe('EmailProviderConfiguration', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(getCurrentUser).mockResolvedValue({ tenant: mockTenant } as any);
   });
 
   afterEach(() => {
@@ -105,7 +149,7 @@ describe('EmailProviderConfiguration', () => {
   });
 
   it('should load and display providers', async () => {
-    vi.mocked(emailProviderActions.getEmailProviders).mockResolvedValueOnce(mockProviders);
+    vi.mocked(emailProviderActions.getEmailProviders).mockResolvedValueOnce({ providers: mockProviders } as any);
 
     render(<EmailProviderConfiguration />);
 
@@ -122,7 +166,7 @@ describe('EmailProviderConfiguration', () => {
   });
 
   it('should show add provider form when button is clicked', async () => {
-    vi.mocked(emailProviderActions.getEmailProviders).mockResolvedValueOnce([]);
+    vi.mocked(emailProviderActions.getEmailProviders).mockResolvedValueOnce({ providers: [] } as any);
 
     const user = userEvent.setup();
     render(<EmailProviderConfiguration />);
@@ -141,7 +185,7 @@ describe('EmailProviderConfiguration', () => {
   });
 
   it('should switch between Microsoft and Gmail tabs', async () => {
-    vi.mocked(emailProviderActions.getEmailProviders).mockResolvedValueOnce([]);
+    vi.mocked(emailProviderActions.getEmailProviders).mockResolvedValueOnce({ providers: [] } as any);
 
     const user = userEvent.setup();
     render(<EmailProviderConfiguration />);
@@ -155,18 +199,18 @@ describe('EmailProviderConfiguration', () => {
     await user.click(addButtons[0]);
 
     // Microsoft tab should be active by default
-    expect(screen.getByTestId('microsoft-form')).toBeInTheDocument();
-    expect(screen.queryByTestId('gmail-form')).not.toBeInTheDocument();
+    expect(screen.getByText('Save Microsoft')).toBeInTheDocument();
+    expect(screen.queryByText('Save Gmail')).not.toBeInTheDocument();
 
     // Click Gmail tab
     await user.click(screen.getByText('Gmail'));
 
-    expect(screen.queryByTestId('microsoft-form')).not.toBeInTheDocument();
-    expect(screen.getByTestId('gmail-form')).toBeInTheDocument();
+    expect(screen.queryByText('Save Microsoft')).not.toBeInTheDocument();
+    expect(screen.getByText('Save Gmail')).toBeInTheDocument();
   });
 
   it('should handle provider deletion', async () => {
-    vi.mocked(emailProviderActions.getEmailProviders).mockResolvedValueOnce(mockProviders);
+    vi.mocked(emailProviderActions.getEmailProviders).mockResolvedValueOnce({ providers: mockProviders } as any);
     vi.mocked(emailProviderActions.deleteEmailProvider).mockResolvedValueOnce(undefined);
 
     const user = userEvent.setup();
@@ -185,7 +229,7 @@ describe('EmailProviderConfiguration', () => {
   });
 
   it('should handle connection test', async () => {
-    vi.mocked(emailProviderActions.getEmailProviders).mockResolvedValueOnce(mockProviders);
+    vi.mocked(emailProviderActions.getEmailProviders).mockResolvedValueOnce({ providers: mockProviders } as any);
     vi.mocked(emailProviderActions.testEmailProviderConnection).mockResolvedValueOnce({
       success: true,
       message: 'Connection successful'
@@ -217,7 +261,7 @@ describe('EmailProviderConfiguration', () => {
   });
 
   it('should hide add form when cancel is clicked', async () => {
-    vi.mocked(emailProviderActions.getEmailProviders).mockResolvedValueOnce([]);
+    vi.mocked(emailProviderActions.getEmailProviders).mockResolvedValueOnce({ providers: [] } as any);
 
     const user = userEvent.setup();
     render(<EmailProviderConfiguration />);
@@ -236,7 +280,7 @@ describe('EmailProviderConfiguration', () => {
   });
 
   it('should add provider to list when form is submitted', async () => {
-    vi.mocked(emailProviderActions.getEmailProviders).mockResolvedValueOnce([]);
+    vi.mocked(emailProviderActions.getEmailProviders).mockResolvedValueOnce({ providers: [] } as any);
 
     const onProviderAdded = vi.fn();
     const user = userEvent.setup();
@@ -265,7 +309,7 @@ describe('EmailProviderConfiguration', () => {
   });
 
   it('should show edit form when edit button is clicked', async () => {
-    vi.mocked(emailProviderActions.getEmailProviders).mockResolvedValueOnce(mockProviders);
+    vi.mocked(emailProviderActions.getEmailProviders).mockResolvedValueOnce({ providers: mockProviders } as any);
 
     const user = userEvent.setup();
     render(<EmailProviderConfiguration />);
@@ -284,8 +328,8 @@ describe('EmailProviderConfiguration', () => {
 
   it('should refresh providers when refresh button is clicked', async () => {
     vi.mocked(emailProviderActions.getEmailProviders)
-      .mockResolvedValueOnce(mockProviders)
-      .mockResolvedValueOnce([...mockProviders, { 
+      .mockResolvedValueOnce({ providers: mockProviders } as any)
+      .mockResolvedValueOnce({ providers: [...mockProviders, { 
         id: '3', 
         tenant: mockTenant,
         providerType: 'google',
@@ -296,7 +340,7 @@ describe('EmailProviderConfiguration', () => {
         vendorConfig: {},
         createdAt: '2024-01-01',
         updatedAt: '2024-01-01'
-      }]);
+      }] } as any);
 
     const user = userEvent.setup();
     render(<EmailProviderConfiguration />);

@@ -29,7 +29,6 @@ import ClientsImportDialog from './ClientsImportDialog';
 import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
 import { Input } from '@alga-psa/ui/components/Input';
 import Drawer from '@alga-psa/ui/components/Drawer';
-import ClientDetails from './ClientDetails';
 import { useAutomationIdAndRegister } from '@alga-psa/ui/ui-reflection/useAutomationIdAndRegister';
 import toast from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui';
@@ -259,7 +258,12 @@ const ClientResults = memo(({
 
 ClientResults.displayName = 'ClientResults';
 
-const Clients: React.FC = () => {
+interface ClientsProps {
+  /** Injected ClientDetails component from msp-composition to avoid circular dependency */
+  ClientDetailsComponent?: React.ComponentType<{ client: IClient; isInDrawer?: boolean; quickView?: boolean }>;
+}
+
+const Clients: React.FC<ClientsProps> = ({ ClientDetailsComponent }) => {
   useTagPermissions(['client']);
   
 
@@ -1475,8 +1479,8 @@ const Clients: React.FC = () => {
           refreshClients();
         }}
       >
-        {quickViewClient && (
-          <ClientDetails
+        {quickViewClient && ClientDetailsComponent && (
+          <ClientDetailsComponent
             client={quickViewClient}
             isInDrawer={true}
             quickView={true}

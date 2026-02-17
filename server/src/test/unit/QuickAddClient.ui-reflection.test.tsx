@@ -19,6 +19,7 @@ vi.mock('next/navigation', () => ({
 
 vi.mock('@alga-psa/users/actions', () => ({
   getAllUsersBasic: vi.fn().mockResolvedValue([]),
+  getUserAvatarUrlsBatchAction: vi.fn().mockResolvedValue({}),
 }));
 
 vi.mock('@alga-psa/clients/actions', () => ({
@@ -26,6 +27,10 @@ vi.mock('@alga-psa/clients/actions', () => ({
   createClientLocation: vi.fn().mockResolvedValue({}),
   createClientContact: vi.fn().mockResolvedValue({}),
   getAllCountries: vi.fn().mockResolvedValue([]),
+}));
+
+vi.mock('@alga-psa/tags/components', () => ({
+  QuickAddTagPicker: () => <div data-testid="tag-picker" />,
 }));
 
 vi.mock('react-hot-toast', () => ({

@@ -6,3 +6,5 @@ export { default as AppointmentRequestsPanel } from './AppointmentRequestsPanel'
 export { default as TechnicianDispatchDashboard } from './TechnicianDispatchDashboard';
 export { default as TimeEntryEditForm } from './TimeEntryEditForm';
 export { TimeEntryProvider, useTimeEntry } from './TimeEntryProvider';
+export { default as MspSchedulePage } from './MspSchedulePage';
+export { default as MspTimeSheetClient } from './MspTimeSheetClient';

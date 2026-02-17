@@ -1,11 +1,16 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { EmailWebhookMaintenanceService } from '../EmailWebhookMaintenanceService';
 import { getAdminConnection } from '../../../db/admin';
-import { MicrosoftGraphAdapter } from '../providers/MicrosoftGraphAdapter';
 
 // Mock dependencies
 vi.mock('../../../db/admin');
-vi.mock('../providers/MicrosoftGraphAdapter');
+const { MicrosoftGraphAdapterMock } = vi.hoisted(() => ({
+  MicrosoftGraphAdapterMock: vi.fn(),
+}));
+
+vi.mock('../providers/MicrosoftGraphAdapter', () => ({
+  MicrosoftGraphAdapter: MicrosoftGraphAdapterMock,
+}));
 vi.mock('../../../core/logger', () => ({
   default: {
     info: vi.fn(),
@@ -23,6 +28,7 @@ describe('EmailWebhookMaintenanceService', () => {
     id: 'provider-123',
     tenant: 'tenant-abc',
     provider_name: 'Test Provider',
+    provider_type: 'microsoft',
     mailbox: 'test@example.com',
     is_active: true,
     status: 'connected',
@@ -65,11 +71,13 @@ describe('EmailWebhookMaintenanceService', () => {
     (getAdminConnection as any).mockResolvedValue(mockKnex);
 
     // Setup Adapter mock
-    (MicrosoftGraphAdapter as any).mockImplementation(() => ({
+    MicrosoftGraphAdapterMock.mockImplementation(function () {
+      return {
       renewWebhookSubscription: vi.fn().mockResolvedValue(undefined),
       initializeWebhook: vi.fn().mockResolvedValue({ success: true }),
       getConfig: vi.fn().mockReturnValue({ webhook_expires_at: '2099-01-01T00:00:00.000Z' }),
-    }));
+      };
+    });
 
     service = new EmailWebhookMaintenanceService();
   });
@@ -82,8 +90,8 @@ describe('EmailWebhookMaintenanceService', () => {
     expect(mockQueryBuilder.select).toHaveBeenCalled();
 
     // Verify Adapter Usage
-    expect(MicrosoftGraphAdapter).toHaveBeenCalled();
-    const mockAdapterInstance = (MicrosoftGraphAdapter as any).mock.results[0].value;
+    expect(MicrosoftGraphAdapterMock).toHaveBeenCalled();
+    const mockAdapterInstance = (MicrosoftGraphAdapterMock as any).mock.results[0].value;
     expect(mockAdapterInstance.renewWebhookSubscription).toHaveBeenCalled();
 
     // Verify Health Update
@@ -110,7 +118,9 @@ describe('EmailWebhookMaintenanceService', () => {
       initializeWebhook: vi.fn().mockResolvedValue({ success: true }),
       getConfig: vi.fn().mockReturnValue({ webhook_expires_at: '2099-01-01T00:00:00.000Z' }),
     };
-    (MicrosoftGraphAdapter as any).mockImplementation(() => mockAdapterInstance);
+    MicrosoftGraphAdapterMock.mockImplementation(function () {
+      return mockAdapterInstance;
+    });
 
     const result = await service.renewMicrosoftWebhooks();
 
@@ -118,7 +128,9 @@ describe('EmailWebhookMaintenanceService', () => {
     expect(mockAdapterInstance.renewWebhookSubscription).toHaveBeenCalled();
 
     // Verify Recreation Attempt
-    expect(mockAdapterInstance.initializeWebhook).toHaveBeenCalledWith(mockProvider.webhook_notification_url);
+    expect(mockAdapterInstance.initializeWebhook).toHaveBeenCalledWith(
+      'https://algapsa.com/api/email/webhooks/microsoft'
+    );
 
     // Verify Result
     expect(result[0]).toMatchObject({
@@ -133,7 +145,9 @@ describe('EmailWebhookMaintenanceService', () => {
     const mockAdapterInstance = {
       renewWebhookSubscription: vi.fn().mockRejectedValue(new Error('Random API Error')),
     };
-    (MicrosoftGraphAdapter as any).mockImplementation(() => mockAdapterInstance);
+    MicrosoftGraphAdapterMock.mockImplementation(function () {
+      return mockAdapterInstance;
+    });
 
     const result = await service.renewMicrosoftWebhooks();
 

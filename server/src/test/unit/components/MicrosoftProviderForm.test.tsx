@@ -6,13 +6,16 @@ import { screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 import '@testing-library/jest-dom';
-import { MicrosoftProviderForm } from '../../../components/MicrosoftProviderForm';
+import { MicrosoftProviderForm } from '@alga-psa/integrations/components';
 import { renderWithProviders } from '../../utils/testWrapper';
 
 // Mock server actions
 vi.mock('@alga-psa/integrations/actions', () => ({
-  autoWireEmailProvider: vi.fn(),
+  createEmailProvider: vi.fn(),
   updateEmailProvider: vi.fn(),
+  upsertEmailProvider: vi.fn(),
+  initiateEmailOAuth: vi.fn(),
+  getInboundTicketDefaults: vi.fn().mockResolvedValue({ defaults: [] }),
 }));
 
 import * as emailProviderActions from '@alga-psa/integrations/actions';
@@ -22,6 +25,7 @@ describe('MicrosoftProviderForm', () => {
   const mockOnCancel = vi.fn();
 
   const defaultProps = {
+    tenant: 'test-tenant-123',
     onSuccess: mockOnSuccess,
     onCancel: mockOnCancel,
   };
@@ -68,7 +72,9 @@ describe('MicrosoftProviderForm', () => {
     await user.type(emailInput, 'invalid-email');
     
     const saveButton = screen.getByText(/add provider/i);
-    await user.click(saveButton);
+    const form = saveButton.closest('form');
+    expect(form).not.toBeNull();
+    fireEvent.submit(form!);
 
     // Check that the error message is displayed
     await waitFor(() => {
@@ -79,7 +85,7 @@ describe('MicrosoftProviderForm', () => {
     expect(emailInput).toHaveClass('border-red-500');
 
     // The form should not submit with invalid email
-    expect(emailProviderActions.autoWireEmailProvider).not.toHaveBeenCalled();
+    expect(emailProviderActions.createEmailProvider).not.toHaveBeenCalled();
   });
 
   it('should validate various invalid email formats', async () => {
@@ -103,9 +109,13 @@ describe('MicrosoftProviderForm', () => {
       const { unmount } = renderWithProviders(<MicrosoftProviderForm {...defaultProps} />);
       
       const emailInput = screen.getByPlaceholderText('support@client.com');
+      const saveButton = screen.getByText(/add provider/i);
+      const form = saveButton.closest('form');
+      expect(form).not.toBeNull();
       
       // Type invalid email to trigger validation
       await user.type(emailInput, invalidEmail);
+      fireEvent.submit(form!);
 
       // Check error message appears
       await waitFor(() => {
@@ -113,7 +123,7 @@ describe('MicrosoftProviderForm', () => {
       }, { timeout: 1000 });
 
       // Ensure form doesn't submit
-      expect(emailProviderActions.autoWireEmailProvider).not.toHaveBeenCalled();
+      expect(emailProviderActions.createEmailProvider).not.toHaveBeenCalled();
       
       // Clean up for next iteration
       unmount();
@@ -158,9 +168,13 @@ describe('MicrosoftProviderForm', () => {
     renderWithProviders(<MicrosoftProviderForm {...defaultProps} />);
 
     const emailInput = screen.getByPlaceholderText('support@client.com');
+    const saveButton = screen.getByText(/add provider/i);
+    const form = saveButton.closest('form');
+    expect(form).not.toBeNull();
     
     // Type invalid email to trigger validation
     await user.type(emailInput, 'invalid-email');
+    fireEvent.submit(form!);
     
     // Check error appears
     await waitFor(() => {
@@ -181,16 +195,23 @@ describe('MicrosoftProviderForm', () => {
     expect(emailInput).not.toHaveClass('border-red-500');
   });
 
-  it('should validate email on change', async () => {
+  it('should validate email after submit attempt', async () => {
     const user = userEvent.setup();
     renderWithProviders(<MicrosoftProviderForm {...defaultProps} />);
 
     const emailInput = screen.getByPlaceholderText('support@client.com');
+    const saveButton = screen.getByText(/add provider/i);
+    const form = saveButton.closest('form');
+    expect(form).not.toBeNull();
     
     // Type invalid email
     await user.type(emailInput, 'invalid-email');
 
-    // Check error appears on change without form submission
+    // Error should not appear before submit
+    expect(screen.queryByText('Valid email address is required')).not.toBeInTheDocument();
+
+    // Check error appears after submit attempt
+    fireEvent.submit(form!);
     await waitFor(() => {
       expect(screen.getByText('Valid email address is required')).toBeInTheDocument();
     });
@@ -198,8 +219,7 @@ describe('MicrosoftProviderForm', () => {
   });
 
   it('should accept Microsoft and custom domain emails', async () => {
-    vi.mocked(emailProviderActions.autoWireEmailProvider).mockResolvedValueOnce({
-      success: true,
+    vi.mocked(emailProviderActions.createEmailProvider).mockResolvedValueOnce({
       provider: { 
         id: '123', 
         tenant: 'test-tenant-123',
@@ -234,13 +254,12 @@ describe('MicrosoftProviderForm', () => {
     
     // Should submit successfully
     await waitFor(() => {
-      expect(emailProviderActions.autoWireEmailProvider).toHaveBeenCalled();
+      expect(emailProviderActions.createEmailProvider).toHaveBeenCalled();
     });
   });
 
   it('should submit form with valid data', async () => {
-    vi.mocked(emailProviderActions.autoWireEmailProvider).mockResolvedValueOnce({
-      success: true,
+    vi.mocked(emailProviderActions.createEmailProvider).mockResolvedValueOnce({
       provider: { 
         id: '123', 
         tenant: 'test-tenant-123',
@@ -270,18 +289,22 @@ describe('MicrosoftProviderForm', () => {
     await user.click(saveButton);
 
     await waitFor(() => {
-      expect(emailProviderActions.autoWireEmailProvider).toHaveBeenCalledWith({
+      expect(emailProviderActions.createEmailProvider).toHaveBeenCalledWith({
+        tenant: 'test-tenant-123',
         providerType: 'microsoft',
-        config: {
-          providerName: 'Test Microsoft Provider',
-          mailbox: 'test@microsoft.com',
-          tenantId: 'test-tenant-id',
-          clientId: 'test-client-id',
-          clientSecret: 'test-client-secret',
-          folderFilters: ['Inbox'],
-          autoProcessEmails: true,
-          maxEmailsPerSync: 50,
-        },
+        providerName: 'Test Microsoft Provider',
+        mailbox: 'test@microsoft.com',
+        isActive: true,
+        inboundTicketDefaultsId: undefined,
+        microsoftConfig: {
+          client_id: 'test-client-id',
+          client_secret: 'test-client-secret',
+          tenant_id: 'test-tenant-id',
+          redirect_uri: 'http://localhost:3000/api/auth/microsoft/callback',
+          auto_process_emails: true,
+          folder_filters: ['Inbox'],
+          max_emails_per_sync: 50,
+        }
       });
     });
 
@@ -292,10 +315,7 @@ describe('MicrosoftProviderForm', () => {
   });
 
   it('should handle API errors', async () => {
-    vi.mocked(emailProviderActions.autoWireEmailProvider).mockResolvedValueOnce({
-      success: false,
-      error: 'API Error'
-    });
+    vi.mocked(emailProviderActions.createEmailProvider).mockRejectedValueOnce(new Error('API Error'));
 
     const user = userEvent.setup();
     renderWithProviders(<MicrosoftProviderForm {...defaultProps} />);
@@ -334,13 +354,14 @@ describe('MicrosoftProviderForm', () => {
       mailbox: 'existing@microsoft.com',
       isActive: true,
       status: 'connected' as const,
-      vendorConfig: {
-        tenantId: 'existing-tenant-id',
-        clientId: 'existing-client-id',
-        clientSecret: '***',
-        folderFilters: ['Inbox', 'Sent Items'],
-        autoProcessEmails: false,
-        maxEmailsPerSync: 100,
+      microsoftConfig: {
+        tenant_id: 'existing-tenant-id',
+        client_id: 'existing-client-id',
+        client_secret: '***',
+        folder_filters: ['Inbox', 'Sent Items'],
+        auto_process_emails: false,
+        max_emails_per_sync: 100,
+        redirect_uri: 'http://localhost:3000/api/auth/microsoft/callback',
       },
       createdAt: '2024-01-01',
       updatedAt: '2024-01-01',
@@ -363,17 +384,6 @@ describe('MicrosoftProviderForm', () => {
     expect(enableSwitch).toBeChecked();
   });
 
-  it('should toggle auto-process emails setting', async () => {
-    const user = userEvent.setup();
-    renderWithProviders(<MicrosoftProviderForm {...defaultProps} />);
-
-    const autoProcessSwitch = screen.getByRole('switch', { name: /automatically process new emails/i });
-    expect(autoProcessSwitch).toBeChecked(); // Default is true
-
-    await user.click(autoProcessSwitch);
-    expect(autoProcessSwitch).not.toBeChecked();
-  });
-
   it('should update max emails per sync', async () => {
     const user = userEvent.setup();
     renderWithProviders(<MicrosoftProviderForm {...defaultProps} />);
@@ -387,10 +397,7 @@ describe('MicrosoftProviderForm', () => {
   });
 
   it('should show authorization code field after initial save', async () => {
-    vi.mocked(emailProviderActions.autoWireEmailProvider).mockResolvedValueOnce({
-      success: true,
-      requiresAuth: true,
-      authUrl: 'https://login.microsoftonline.com/auth',
+    vi.mocked(emailProviderActions.createEmailProvider).mockResolvedValueOnce({
       provider: { 
         id: '123', 
         tenant: 'test-tenant-123',
@@ -419,8 +426,9 @@ describe('MicrosoftProviderForm', () => {
     await user.click(saveButton);
 
     await waitFor(() => {
-      expect(emailProviderActions.autoWireEmailProvider).toHaveBeenCalled();
+      expect(emailProviderActions.createEmailProvider).toHaveBeenCalled();
     });
+    expect(mockOnSuccess).toHaveBeenCalled();
   });
 
   it('should disable submit button when form is invalid', async () => {
@@ -428,25 +436,22 @@ describe('MicrosoftProviderForm', () => {
     renderWithProviders(<MicrosoftProviderForm {...defaultProps} />);
 
     const submitButton = screen.getByText(/add provider/i);
-    
-    // Button should be disabled initially when required fields are empty
-    expect(submitButton).toBeDisabled();
+    expect(submitButton).not.toBeDisabled();
 
     // Fill in some but not all required fields
     await user.type(screen.getByPlaceholderText('e.g., Support Email'), 'Test Provider');
     await user.type(screen.getByPlaceholderText('support@client.com'), 'test@microsoft.com');
-    
-    // Button should still be disabled
-    expect(submitButton).toBeDisabled();
+    expect(submitButton).not.toBeDisabled();
 
-    // Fill in remaining required fields
-    await user.type(screen.getByPlaceholderText('xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'), 'test-client-id');
-    await user.type(screen.getByPlaceholderText('Enter client secret'), 'test-client-secret');
-    
-    // Button should be enabled when all required fields are filled
+    const form = submitButton.closest('form');
+    expect(form).not.toBeNull();
+    fireEvent.submit(form!);
     await waitFor(() => {
-      expect(submitButton).not.toBeDisabled();
+      expect(screen.getByText('Please fill in the required fields:')).toBeInTheDocument();
     });
+    expect(screen.getByText('Client ID')).toBeInTheDocument();
+    expect(screen.getByText('Client Secret')).toBeInTheDocument();
+    expect(emailProviderActions.createEmailProvider).not.toHaveBeenCalled();
   });
 
   it('should disable submit button when there are validation errors', async () => {
@@ -471,9 +476,16 @@ describe('MicrosoftProviderForm', () => {
     await user.clear(emailInput);
     await user.type(emailInput, 'invalid-email');
     
-    // Button should be disabled when there's a validation error
+    // Validation error should be shown when attempting to submit
     await waitFor(() => {
-      expect(submitButton).toBeDisabled();
+      expect(submitButton).not.toBeDisabled();
     });
+    const form = submitButton.closest('form');
+    expect(form).not.toBeNull();
+    fireEvent.submit(form!);
+    await waitFor(() => {
+      expect(screen.getByText('Valid email address is required')).toBeInTheDocument();
+    });
+    expect(emailProviderActions.createEmailProvider).not.toHaveBeenCalled();
   });
 });

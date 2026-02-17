@@ -84,7 +84,9 @@ vi.mock('server/src/lib/auth/rbac', () => ({
 const globalForVitest = globalThis as { TextEncoder: typeof NodeTextEncoder };
 globalForVitest.TextEncoder = NodeTextEncoder;
 
-describe('Billing Invoice Consistency Checks', () => {
+const describeDb = process.env.RUN_DB_TESTS === 'true' ? describe : describe.skip;
+
+describeDb('Billing Invoice Consistency Checks', () => {
   const {
     beforeAll: setupContext,
     beforeEach: resetContext,

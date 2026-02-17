@@ -11,7 +11,7 @@ import { toast } from 'react-hot-toast';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import SearchableSelect from '@alga-psa/ui/components/SearchableSelect';
-import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
+import { formatCurrencyFromMinorUnits } from '@alga-psa/core/formatters';
 import type { ITicketMaterial, IServicePrice } from '@alga-psa/types';
 import {
   listTicketMaterials,

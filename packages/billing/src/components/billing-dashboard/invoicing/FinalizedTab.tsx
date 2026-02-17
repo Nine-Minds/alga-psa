@@ -23,8 +23,8 @@ import { unfinalizeInvoice } from '@alga-psa/billing/actions/invoiceModification
 import { downloadInvoicePDF } from '@alga-psa/billing/actions/invoiceGeneration';
 import { scheduleInvoiceZipAction } from '@alga-psa/billing/actions/invoiceJobActions';
 import { SendInvoiceEmailDialog } from './SendInvoiceEmailDialog';
-import { toPlainDate } from '@alga-psa/core';
-import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
+import { toPlainDate } from '@alga-psa/core/dateTimeUtils';
+import { formatCurrencyFromMinorUnits } from '@alga-psa/core/formatters';
 import InvoicePreviewPanel from './InvoicePreviewPanel';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 

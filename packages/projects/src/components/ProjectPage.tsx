@@ -20,9 +20,11 @@ interface ProjectMetadata {
 export default function ProjectPage({
   params,
   renderMaterialsDrawer,
+  ProjectDetailsEditComponent,
 }: {
   params: Promise<{ id: string }>;
   renderMaterialsDrawer?: (args: { projectId: string; clientId?: string | null }) => React.ReactNode;
+  ProjectDetailsEditComponent?: React.ComponentType<any>;
 }) {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -134,6 +136,7 @@ export default function ProjectPage({
         allTagTexts={allTagTexts}
         onTagsChange={setProjectTags}
         renderMaterialsDrawer={renderMaterialsDrawer}
+        ProjectDetailsEditComponent={ProjectDetailsEditComponent}
       />
       <ProjectDetail
         project={projectMetadata.project}

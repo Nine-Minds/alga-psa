@@ -1,5 +1,7 @@
-import { defineConfig } from 'vitest/config';
+import { defineConfig, configDefaults } from 'vitest/config';
 import path from 'path';
+
+const runDbTests = process.env.RUN_DB_TESTS === 'true';
 
 export default defineConfig({
   test: {
@@ -25,6 +27,22 @@ export default defineConfig({
     logHeapUsage: true,
     testTimeout: 20000,
     hookTimeout: 120000,
+    exclude: [
+      ...configDefaults.exclude,
+      '**/.next/**',
+      '**/test/integration/**',
+      'ee/server/src/__tests__/integration/**',
+      'server/src/test/e2e/**',
+      'ee/server/src/__tests__/integration/**/*.playwright.test.*',
+      '**/*.integration.test.*',
+      '**/*.e2e.test.*',
+      'ee/extensions/samples/**/test/**',
+      'ee/server/extensions/samples/**/test/**',
+      'sdk/**/tests/**',
+      '**/*.playwright.test.*',
+      '**/*.playwright.spec.*',
+      ...(runDbTests ? [] : ['server/src/test/infrastructure/**']),
+    ],
     coverage: {
       enabled: true,
       provider: 'v8',
@@ -51,13 +69,17 @@ export default defineConfig({
       { find: /^@alga-psa\/core\/secrets$/, replacement: path.resolve(__dirname, '../packages/core/src/lib/secrets/index.ts') },
       { find: /^@alga-psa\/core\/events$/, replacement: path.resolve(__dirname, '../packages/core/src/lib/events/index.ts') },
       { find: /^@alga-psa\/core\/encryption$/, replacement: path.resolve(__dirname, '../packages/core/src/lib/encryption.ts') },
+      { find: /^@alga-psa\/core\/formatters$/, replacement: path.resolve(__dirname, '../packages/core/src/lib/formatters.ts') },
       { find: /^@alga-psa\/core\/lib\/blocknoteUtils$/, replacement: path.resolve(__dirname, '../packages/core/src/lib/blocknoteUtils.ts') },
+      { find: /^@alga-psa\/core\/server$/, replacement: path.resolve(__dirname, '../packages/core/src/server.ts') },
 
       { find: /^@alga-psa\/db$/, replacement: path.resolve(__dirname, '../packages/db/src/index.ts') },
       { find: /^@alga-psa\/db\/admin$/, replacement: path.resolve(__dirname, '../packages/db/src/lib/admin.ts') },
+      { find: /^@alga-psa\/db\/admin\.js$/, replacement: path.resolve(__dirname, '../packages/db/src/lib/admin.ts') },
       { find: /^@alga-psa\/db\/actions$/, replacement: path.resolve(__dirname, '../packages/db/src/actions/index.ts') },
       { find: /^@alga-psa\/db\/tenant$/, replacement: path.resolve(__dirname, '../packages/db/src/lib/tenant.ts') },
       { find: /^@alga-psa\/db\/connection$/, replacement: path.resolve(__dirname, '../packages/db/src/lib/connection.ts') },
+      { find: /^@alga-psa\/db\/models\/(.*)$/, replacement: path.resolve(__dirname, '../packages/db/src/models/$1') },
 
       { find: /^@alga-psa\/types$/, replacement: path.resolve(__dirname, '../packages/types/src/index.ts') },
       { find: /^@alga-psa\/validation$/, replacement: path.resolve(__dirname, '../packages/validation/src/index.ts') },
@@ -73,6 +95,7 @@ export default defineConfig({
       { find: /^@alga-psa\/auth\/twoFactorHelpers$/, replacement: path.resolve(__dirname, '../packages/auth/src/lib/twoFactorHelpers.ts') },
       { find: /^@alga-psa\/auth\/nextAuthOptions$/, replacement: path.resolve(__dirname, '../packages/auth/src/lib/nextAuthOptions.ts') },
       { find: /^@alga-psa\/auth\/getCurrentUser$/, replacement: path.resolve(__dirname, '../packages/auth/src/lib/getCurrentUser.ts') },
+      { find: '@alga-psa/auth/sso/entry', replacement: path.resolve(__dirname, '../packages/auth/src/components/SsoProviderButtons.tsx') },
       { find: /^@alga-psa\/analytics$/, replacement: path.resolve(__dirname, '../packages/analytics/src/index.ts') },
       { find: /^@alga-psa\/analytics\/(.*)$/, replacement: path.resolve(__dirname, '../packages/analytics/src/$1') },
       { find: /^@alga-psa\/ui$/, replacement: path.resolve(__dirname, '../packages/ui/src/index.ts') },
@@ -81,6 +104,10 @@ export default defineConfig({
       { find: /^@alga-psa\/billing\/(.*)$/, replacement: path.resolve(__dirname, '../packages/billing/src/$1') },
       { find: /^@alga-psa\/projects$/, replacement: path.resolve(__dirname, '../packages/projects/src/index.ts') },
       { find: /^@alga-psa\/projects\/(.*)$/, replacement: path.resolve(__dirname, '../packages/projects/src/$1') },
+      { find: /^@alga-psa\/clients$/, replacement: path.resolve(__dirname, '../packages/clients/src/index.ts') },
+      { find: /^@alga-psa\/clients\/(.*)$/, replacement: path.resolve(__dirname, '../packages/clients/src/$1') },
+      { find: /^@alga-psa\/reference-data$/, replacement: path.resolve(__dirname, '../packages/reference-data/src/index.ts') },
+      { find: /^@alga-psa\/reference-data\/(.*)$/, replacement: path.resolve(__dirname, '../packages/reference-data/src/$1') },
       { find: /^@alga-psa\/tickets$/, replacement: path.resolve(__dirname, '../packages/tickets/src/index.ts') },
       { find: /^@alga-psa\/tickets\/(.*)$/, replacement: path.resolve(__dirname, '../packages/tickets/src/$1') },
       { find: /^@alga-psa\/tags$/, replacement: path.resolve(__dirname, '../packages/tags/src/index.ts') },
@@ -95,7 +122,10 @@ export default defineConfig({
       { find: /^@alga-psa\/assets\/(.*)$/, replacement: path.resolve(__dirname, '../packages/assets/src/$1') },
       { find: /^@alga-psa\/surveys$/, replacement: path.resolve(__dirname, '../packages/surveys/src/index.ts') },
       { find: /^@alga-psa\/surveys\/(.*)$/, replacement: path.resolve(__dirname, '../packages/surveys/src/$1') },
+      { find: /^@alga-psa\/reporting$/, replacement: path.resolve(__dirname, '../packages/reporting/src/index.ts') },
+      { find: /^@alga-psa\/reporting\/(.*)$/, replacement: path.resolve(__dirname, '../packages/reporting/src/$1') },
       { find: /^@alga-psa\/integrations$/, replacement: path.resolve(__dirname, '../packages/integrations/src/index.ts') },
+      { find: /^@alga-psa\/integrations\/components$/, replacement: path.resolve(__dirname, '../packages/integrations/src/components/index.ts') },
       { find: /^@alga-psa\/integrations\/(.*)$/, replacement: path.resolve(__dirname, '../packages/integrations/src/$1') },
       { find: /^@alga-psa\/client-portal$/, replacement: path.resolve(__dirname, '../packages/client-portal/src/index.ts') },
       { find: /^@alga-psa\/client-portal\/(.*)$/, replacement: path.resolve(__dirname, '../packages/client-portal/src/$1') },
@@ -104,6 +134,7 @@ export default defineConfig({
       { find: /^@alga-psa\/tenancy\/(.*)$/, replacement: path.resolve(__dirname, '../packages/tenancy/src/$1') },
 
       { find: /^@alga-psa\/media$/, replacement: path.resolve(__dirname, '../packages/media/src/index.ts') },
+      { find: '@alga-psa/product-extension-actions', replacement: path.resolve(__dirname, '../packages/product-extension-actions/oss/entry.ts') },
 
       { find: /^@alga-psa\/users$/, replacement: path.resolve(__dirname, '../packages/users/src/index.ts') },
       { find: /^@alga-psa\/users\/actions$/, replacement: path.resolve(__dirname, '../packages/users/src/actions/index.ts') },
@@ -113,12 +144,17 @@ export default defineConfig({
       { find: /^@alga-psa\/event-bus\/(.*)$/, replacement: path.resolve(__dirname, '../packages/event-bus/src/$1') },
       { find: /^@alga-psa\/email$/, replacement: path.resolve(__dirname, '../packages/email/src/index.ts') },
       { find: /^@alga-psa\/email\/(.*)$/, replacement: path.resolve(__dirname, '../packages/email/src/$1') },
+      { find: /^@alga-psa\/jobs$/, replacement: path.resolve(__dirname, '../packages/jobs/src/index.ts') },
+      { find: /^@alga-psa\/jobs\/(.*)$/, replacement: path.resolve(__dirname, '../packages/jobs/src/$1') },
 
       { find: 'fs', replacement: 'node:fs' },
       { find: 'fs/promises', replacement: 'node:fs/promises' },
       { find: 'next/server', replacement: path.resolve(__dirname, './src/test/stubs/next-server.ts') },
       { find: '@product/settings-extensions/entry', replacement: path.resolve(__dirname, './src/test/stubs/product-settings-extensions-entry.ts') },
       { find: '@product/chat/entry', replacement: path.resolve(__dirname, './src/test/stubs/product-chat-entry.ts') },
+      { find: '@product/billing/entry', replacement: path.resolve(__dirname, './src/test/stubs/product-billing-entry.tsx') },
+      { find: /^@product\/billing\/entry$/, replacement: path.resolve(__dirname, '../packages/product-billing/oss/entry.ts') },
+      { find: /^@product\/billing\/(.*)$/, replacement: path.resolve(__dirname, '../packages/product-billing/$1') },
       { find: 'pdf-lib', replacement: 'empty-module' },
     ],
   },

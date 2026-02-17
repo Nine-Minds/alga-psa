@@ -7,7 +7,7 @@ import { IInvoiceCharge, InvoiceViewModel, DiscountType } from '@alga-psa/types'
 import { TaxService } from '../services/taxService';
 import { BillingEngine } from '../lib/billing/billingEngine';
 import * as invoiceService from '../services/invoiceService';
-import { toPlainDate } from '@alga-psa/core';
+import { toPlainDate } from '@alga-psa/core/dateTimeUtils';
 import { withAuth } from '@alga-psa/auth';
 import { getSession } from '@alga-psa/auth';
 import { getAnalyticsAsync } from '../lib/authHelpers';

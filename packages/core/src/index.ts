@@ -10,6 +10,13 @@ export { default as logger } from './lib/logger-universal';
 
 // Secret Provider Types only
 export type { ISecretProvider } from './lib/secrets/ISecretProvider';
+export { getSecretProviderInstance, getSecret } from './lib/secrets';
+
+// Events
+export * from './lib/events';
+
+// Encryption utilities
+export * from './lib/encryption';
 
 // Date/time utilities
 export * from './lib/dateTimeUtils';

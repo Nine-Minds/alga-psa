@@ -1,5 +1,3 @@
-import DailyRotateFile from 'winston-daily-rotate-file';
-import winston from 'winston';
 import { describe, expect, it, vi } from 'vitest';
 
 const withEnv = async (env: Record<string, string | undefined>, run: () => Promise<void>) => {
@@ -30,7 +28,7 @@ const withEnv = async (env: Record<string, string | undefined>, run: () => Promi
 };
 
 describe('logger outputs', () => {
-  it('defaults to console-only transport', async () => {
+  it('uses console methods by default', async () => {
     await withEnv(
       {
         LOG_ENABLED_FILE_LOGGING: undefined,
@@ -44,13 +42,16 @@ describe('logger outputs', () => {
       },
       async () => {
         const logger = (await import('./logger')).default as any;
-        expect(logger.transports).toHaveLength(1);
-        expect(logger.transports[0]).toBeInstanceOf(winston.transports.Console);
+        expect(logger.transports).toBeUndefined();
+        const infoSpy = vi.spyOn(console, 'info').mockImplementation(() => {});
+        logger.info('hello');
+        expect(infoSpy).toHaveBeenCalledWith('hello');
+        infoSpy.mockRestore();
       },
     );
   });
 
-  it('configures external and file transports when enabled', async () => {
+  it('ignores external transport config and still uses console', async () => {
     await withEnv(
       {
         LOG_ENABLED_FILE_LOGGING: 'true',
@@ -64,32 +65,12 @@ describe('logger outputs', () => {
       },
       async () => {
         const logger = (await import('./logger')).default as any;
-
-        const consoleTransport = logger.transports.find(
-          (t: unknown) => t instanceof winston.transports.Console,
-        );
-        expect(consoleTransport).toBeTruthy();
-
-        const httpTransport = logger.transports.find(
-          (t: unknown) => t instanceof winston.transports.Http,
-        );
-        expect(httpTransport).toBeTruthy();
-        expect((httpTransport as any).host).toBe('example.com');
-        expect((httpTransport as any).port).toBe(8080);
-        expect((httpTransport as any).path).toBe('/logs');
-        expect((httpTransport as any).level).toBe('warn');
-        expect((httpTransport as any).headers?.Authorization).toBe('Bearer token123');
-
-        const fileTransports = logger.transports.filter((t: unknown) => t instanceof DailyRotateFile);
-        expect(fileTransports).toHaveLength(2);
-
-        const filenames = fileTransports.map((t: any) => String(t.options?.filename ?? '')).sort();
-        expect(filenames).toEqual(['./logs-test/combined-%DATE%.log', './logs-test/error-%DATE%.log']);
-
-        const errorTransport = fileTransports.find((t: any) => t.options?.level === 'error');
-        expect(errorTransport).toBeTruthy();
+        expect(logger.transports).toBeUndefined();
+        const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+        logger.warn('warn');
+        expect(warnSpy).toHaveBeenCalledWith('warn');
+        warnSpy.mockRestore();
       },
     );
   });
 });
-

@@ -2,8 +2,7 @@ import { v4 as uuid4, validate as uuidValidate } from 'uuid';
 import logger from '@alga-psa/core/logger';
 import { createTenantKnex } from '@alga-psa/db';
 import type { TaxSource } from '@alga-psa/types';
-import { parseCSV } from '@alga-psa/core';
-
+import { parseCSV } from '@alga-psa/core/csvParser';
 /**
  * Fixed tracking category names - must match XeroCsvAdapter constants.
  */

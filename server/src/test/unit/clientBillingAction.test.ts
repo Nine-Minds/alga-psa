@@ -1,11 +1,24 @@
 import { describe, it, expect, afterEach, vi } from 'vitest';
 import { createClientContractLine, updateClientContractLine, getClientContractLine, getOverlappingBillings } from '@alga-psa/clients/actions/clientContractLineAction';
-import { ClientContractLine } from '@alga-psa/billing/models';
+import ClientContractLine from '@alga-psa/clients/models/clientContractLine';
 import { IClientContractLine } from 'server/src/interfaces/billing.interfaces';
 import { parseISO } from 'date-fns';
 
-vi.mock('@alga-psa/clients/models/clientContractLine');
+vi.mock('@alga-psa/clients/models/clientContractLine', () => ({
+  default: {
+    checkOverlappingBilling: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn(),
+    get: vi.fn(),
+    getByClientId: vi.fn(),
+    getById: vi.fn(),
+  },
+}));
 vi.mock('@/lib/db/db');
+vi.mock('@alga-psa/auth', () => ({
+  withAuth: (fn: any) => (...args: any[]) =>
+    fn({ user_id: 'user-1', tenant: 'tenant-1' }, { tenant: 'tenant-1' }, ...args),
+}));
 
 describe('Client Billing Actions', () => {
   afterEach(() => {
@@ -94,7 +107,7 @@ describe('Client Billing Actions', () => {
 
       const updatedContractLine: IClientContractLine = { ...existingContractLine, ...updateData };
 
-      (ClientContractLine.getById as ReturnType<typeof vi.fn>).mockResolvedValue(existingContractLine);
+      (ClientContractLine.get as ReturnType<typeof vi.fn>).mockResolvedValue(existingContractLine);
       (ClientContractLine.checkOverlappingBilling as ReturnType<typeof vi.fn>).mockResolvedValue([]);
       (ClientContractLine.update as ReturnType<typeof vi.fn>).mockResolvedValue(updatedContractLine);
 
@@ -135,7 +148,7 @@ describe('Client Billing Actions', () => {
         end_date: '2025-12-31T00:00:00Z',
       };
 
-      (ClientContractLine.getById as ReturnType<typeof vi.fn>).mockResolvedValue(existingContractLine);
+      (ClientContractLine.get as ReturnType<typeof vi.fn>).mockResolvedValue(existingContractLine);
       (ClientContractLine.checkOverlappingBilling as ReturnType<typeof vi.fn>).mockResolvedValue([overlappingContractLine]);
 
       await expect(updateClientContractLine(contractLineId, updateData)).rejects.toThrow(

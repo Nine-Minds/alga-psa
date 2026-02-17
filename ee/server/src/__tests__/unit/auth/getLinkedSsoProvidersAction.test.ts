@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { getLinkedSsoProvidersAction } from '@/lib/actions/auth/getLinkedSsoProviders';
+import { getLinkedSsoProvidersAction } from '../../../lib/actions/auth/getLinkedSsoProviders';
 
 type TableRow = Record<string, any>;
 type TableStore = Record<string, TableRow[]>;
@@ -87,12 +87,13 @@ vi.mock('@alga-psa/db/admin', () => ({
   getAdminConnection: getAdminConnectionMock,
 }));
 
-vi.mock('server/src/lib/actions/tenant-actions/tenantSlugActions', () => ({
+vi.mock('@alga-psa/db', () => ({
   getTenantIdBySlug: getTenantIdBySlugMock,
 }));
 
 vi.mock('@alga-psa/core/logger', () => ({
   default: {
+    debug: vi.fn(),
     warn: vi.fn(),
     info: vi.fn(),
   },

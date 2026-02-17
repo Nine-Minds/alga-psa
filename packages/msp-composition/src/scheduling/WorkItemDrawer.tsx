@@ -243,6 +243,7 @@ export function WorkItemDrawer({
                                 canModifySchedule={true}
                                 focusedTechnicianId={currentUser.user_id}
                                 canAssignOthers={false}
+                                WorkItemDrawerComponent={WorkItemDrawer}
                             />
                         </div>
                     );

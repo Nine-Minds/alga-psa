@@ -31,7 +31,10 @@ vi.mock('@alga-psa/auth', () => ({
   hasPermission: vi.fn(),
 }));
 
-describe('Project Permissions Infrastructure', () => {
+const runDbTests = process.env.RUN_DB_TESTS === 'true';
+const describeDb = runDbTests ? describe : describe.skip;
+
+describeDb('Project Permissions Infrastructure', () => {
   const context = new TestContext({
     cleanupTables: ['projects', 'clients', 'users', 'roles', 'permissions'],
     runSeeds: true

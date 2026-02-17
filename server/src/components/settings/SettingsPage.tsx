@@ -36,6 +36,7 @@ import { BillingSettings } from '@alga-psa/billing/components'; // Import the ne
 import NotificationsTab from './general/NotificationsTab';
 // Removed import: import IntegrationsTabLoader from './IntegrationsTabLoader';
 import { IntegrationsSettingsPage } from '@alga-psa/integrations/components';
+import { TacticalRmmIntegrationSettings } from '@alga-psa/msp-composition/integrations';
 import { useSearchParams } from 'next/navigation';
 import ImportExportSettings from '@/components/settings/import-export/ImportExportSettings';
 import ExtensionManagement from '@/components/settings/extensions/ExtensionManagement';
@@ -270,7 +271,7 @@ const SettingsPageContent = ({ initialTabParam }: SettingsPageProps): React.JSX.
       // Integrations tab with category-based organization
       label: "Integrations",
       icon: Plug,
-      content: <IntegrationsSettingsPage />,
+      content: <IntegrationsSettingsPage TacticalRmmIntegrationSettings={TacticalRmmIntegrationSettings} />,
     }
   ];
 

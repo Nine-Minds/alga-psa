@@ -8,6 +8,7 @@ export { AccountingMappingManager } from './accounting-mappings';
 export type { AccountingMappingContext, AccountingMappingModule, AccountingMappingLoadResult } from './accounting-mappings/types';
 export {
   EmailProviderConfiguration,
+  EmailProviderConfigurationWrapper,
   INBOUND_DEFAULTS_WARNING,
   providerNeedsInboundDefaults,
   InboundTicketDefaultsManager,

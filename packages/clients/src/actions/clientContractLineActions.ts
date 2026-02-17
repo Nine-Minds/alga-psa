@@ -5,7 +5,7 @@ import { createTenantKnex } from '@alga-psa/db';
 import { Knex } from 'knex';
 import type { IClientContractLine } from '@alga-psa/types';
 import { Temporal } from '@js-temporal/polyfill';
-import { toPlainDate, toISODate } from '@alga-psa/core';
+import { toPlainDate, toISODate } from '@alga-psa/core/dateTimeUtils';
 import { cloneTemplateContractLineAsync } from '../lib/billingHelpers';
 import { withAuth } from '@alga-psa/auth';
 

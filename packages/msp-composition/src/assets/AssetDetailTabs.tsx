@@ -3,12 +3,12 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import CustomTabs from '@alga-psa/ui/components/CustomTabs';
-import { ServiceHistoryTab } from './tabs/ServiceHistoryTab';
-import { SoftwareInventoryTab } from './tabs/SoftwareInventoryTab';
-import { MaintenanceSchedulesTab } from './tabs/MaintenanceSchedulesTab';
-import { RelatedAssetsTab } from './tabs/RelatedAssetsTab';
-import { DocumentsPasswordsTab } from './tabs/DocumentsPasswordsTab';
-import { AuditLogTab } from './tabs/AuditLogTab';
+import { ServiceHistoryTab } from './ServiceHistoryTab';
+import { SoftwareInventoryTab } from '@alga-psa/assets/components/tabs/SoftwareInventoryTab';
+import { MaintenanceSchedulesTab } from '@alga-psa/assets/components/tabs/MaintenanceSchedulesTab';
+import { RelatedAssetsTab } from '@alga-psa/assets/components/tabs/RelatedAssetsTab';
+import { DocumentsPasswordsTab } from '@alga-psa/assets/components/tabs/DocumentsPasswordsTab';
+import { AuditLogTab } from '@alga-psa/assets/components/tabs/AuditLogTab';
 import type { Asset } from '@alga-psa/types';
 import { History, LayoutGrid, CalendarDays, FileText, Network, Lock } from 'lucide-react';
 

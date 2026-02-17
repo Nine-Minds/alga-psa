@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
     ITimeEntry,
     ITimeSheet,
@@ -25,7 +25,6 @@ import { TimeSheetListView } from './TimeSheetListView';
 import { TimeSheetHeader, TimeSheetViewMode } from './TimeSheetHeader';
 import { TimeSheetDateNavigatorState } from './types';
 import { TimeSheetComments } from '../../approvals/TimeSheetComments';
-import { WorkItemDrawer } from './WorkItemDrawer';
 import { IntervalSection } from '../../interval-tracking/IntervalSection';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { useAutomationIdAndRegister } from '@alga-psa/ui/ui-reflection/useAutomationIdAndRegister';
@@ -50,6 +49,11 @@ interface TimeSheetProps {
     initialDate?: string;
     initialDuration?: number;
     onBack: () => void;
+    WorkItemDrawerComponent?: React.ComponentType<any>;
+    WorkItemPickerComponent?: React.ComponentType<any>;
+    TimeEntryProviderComponent?: React.ComponentType<{ children: React.ReactNode }>;
+    useTimeEntryHook?: () => any;
+    TimeEntryEditFormComponent?: React.ComponentType<any>;
 }
 
 import { Temporal } from '@js-temporal/polyfill';
@@ -86,7 +90,12 @@ export function TimeSheet({
     initialWorkItem,
     initialDate,
     initialDuration,
-    onBack
+    onBack,
+    WorkItemDrawerComponent,
+    WorkItemPickerComponent,
+    TimeEntryProviderComponent,
+    useTimeEntryHook,
+    TimeEntryEditFormComponent
 }: TimeSheetProps): React.JSX.Element {
     const [showIntervals, setShowIntervals] = useState(false);
     const [dateNavigator, setDateNavigator] = useState<TimeSheetDateNavigatorState | null>(null);
@@ -540,15 +549,16 @@ export function TimeSheet({
     }, [timeSheet.id]);
 
     const handleWorkItemClick = useCallback((workItem: IExtendedWorkItem) => {
+        if (!WorkItemDrawerComponent) return;
         openDrawer(
-            <WorkItemDrawer
+            <WorkItemDrawerComponent
                 workItem={workItem}
                 onClose={closeDrawer}
                 onTaskUpdate={handleTaskUpdate}
                 onScheduleUpdate={handleScheduleUpdate}
             />
         );
-    }, [openDrawer, closeDrawer, handleTaskUpdate, handleScheduleUpdate]);
+    }, [openDrawer, closeDrawer, handleTaskUpdate, handleScheduleUpdate, WorkItemDrawerComponent]);
 
     const dates = timeSheet.time_period ? getDatesInPeriod({
         period_id: timeSheet.time_period.period_id,
@@ -705,6 +715,9 @@ export function TimeSheet({
                     defaultStartTime={selectedCell.defaultStartTime ? parseISO(selectedCell.defaultStartTime) : undefined}
                     timeSheetId={timeSheet.id}
                     inDrawer={false}
+                    TimeEntryProviderComponent={TimeEntryProviderComponent}
+                    useTimeEntryHook={useTimeEntryHook}
+                    TimeEntryEditFormComponent={TimeEntryEditFormComponent}
                     onTimeEntriesUpdate={(entries) => {
                         const grouped = entries.reduce((acc, entry) => {
                             const key = `${entry.work_item_id}`;
@@ -738,6 +751,7 @@ export function TimeSheet({
                     onAdd={handleAddWorkItem}
                     availableWorkItems={Object.values(workItemsByType).flat()}
                     timePeriod={timeSheet.time_period}
+                    WorkItemPickerComponent={WorkItemPickerComponent}
                 />
             )}
             </div>

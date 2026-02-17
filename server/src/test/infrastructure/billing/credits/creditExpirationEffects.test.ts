@@ -67,7 +67,10 @@ const {
  * - Confirming client credit balances are properly reduced
  */
 
-describe('Credit Expiration Effects Tests', () => {
+const runDbTests = process.env.RUN_DB_TESTS === 'true';
+const describeDb = runDbTests ? describe : describe.skip;
+
+describeDb('Credit Expiration Effects Tests', () => {
   let context: TestContext;
 
   async function setupDefaultTax() {

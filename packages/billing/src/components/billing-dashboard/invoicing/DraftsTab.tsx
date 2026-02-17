@@ -21,8 +21,8 @@ import { fetchInvoicesPaginated } from '@alga-psa/billing/actions/invoiceQueries
 import { getInvoiceTemplates } from '@alga-psa/billing/actions/invoiceTemplates';
 import { finalizeInvoice, hardDeleteInvoice } from '@alga-psa/billing/actions/invoiceModification';
 import { downloadInvoicePDF } from '@alga-psa/billing/actions/invoiceGeneration';
-import { toPlainDate } from '@alga-psa/core';
-import { formatCurrency } from '@alga-psa/core';
+import { toPlainDate } from '@alga-psa/core/dateTimeUtils';
+import { formatCurrency } from '@alga-psa/core/formatters';
 import InvoicePreviewPanel from './InvoicePreviewPanel';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';

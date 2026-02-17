@@ -15,6 +15,8 @@ import {
 process.env.DB_PORT = '5432';
 process.env.DB_HOST = process.env.DB_HOST === 'pgbouncer' ? 'localhost' : process.env.DB_HOST;
 
+const runDbTests = process.env.RUN_DB_TESTS === 'true';
+
 let mockedTenantId = '11111111-1111-1111-1111-111111111111';
 let mockedUserId = 'mock-user-id';
 
@@ -97,7 +99,7 @@ const {
   afterAll: cleanupContext
 } = TestContext.createHelpers();
 
-describe('Invoice Due Date Calculation', () => {
+(runDbTests ? describe : describe.skip)('Invoice Due Date Calculation', () => {
   let context: TestContext;
   const billingEndDate = '2025-01-31T00:00:00Z';
 

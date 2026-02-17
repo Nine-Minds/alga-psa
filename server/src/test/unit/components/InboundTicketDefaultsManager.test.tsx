@@ -14,6 +14,7 @@ const {
   mockGetInboundTicketDefaults,
   mockCreateInboundTicketDefaults,
   mockGetTicketFieldOptions,
+  mockGetInboundTicketDefaultsPickerData,
   mockGetAllBoards,
   mockGetAllClients,
   mockGetAllPriorities,
@@ -22,6 +23,7 @@ const {
   mockGetInboundTicketDefaults: vi.fn(),
   mockCreateInboundTicketDefaults: vi.fn(),
   mockGetTicketFieldOptions: vi.fn(),
+  mockGetInboundTicketDefaultsPickerData: vi.fn(),
   mockGetAllBoards: vi.fn(),
   mockGetAllClients: vi.fn(),
   mockGetAllPriorities: vi.fn(),
@@ -133,6 +135,7 @@ vi.mock('@alga-psa/integrations/actions', () => ({
   updateInboundTicketDefaults: vi.fn(),
   deleteInboundTicketDefaults: vi.fn(),
   getTicketFieldOptions: mockGetTicketFieldOptions,
+  getInboundTicketDefaultsPickerData: mockGetInboundTicketDefaultsPickerData,
   getCategoriesByBoard: vi.fn().mockResolvedValue({ categories: [] }),
 }));
 
@@ -154,6 +157,7 @@ vi.mock('@alga-psa/reference-data/actions', () => ({
 vi.mock('@alga-psa/users/actions', () => ({
   __esModule: true,
   getAllUsersBasic: mockGetAllUsersBasic,
+  getUserAvatarUrlsBatchAction: vi.fn().mockResolvedValue({}),
 }));
 
 import { InboundTicketDefaultsManager } from '@alga-psa/integrations/components';
@@ -186,6 +190,12 @@ describe('InboundTicketDefaultsManager', () => {
 
     mockGetInboundTicketDefaults.mockResolvedValue({ defaults: [] });
     mockGetTicketFieldOptions.mockResolvedValue({ options: sampleFieldOptions });
+    mockGetInboundTicketDefaultsPickerData.mockResolvedValue({
+      boards: sampleBoards,
+      clients: sampleClients,
+      priorities: samplePriorities,
+      users: [],
+    });
     mockGetAllBoards.mockResolvedValue(sampleBoards);
     mockGetAllClients.mockResolvedValue(sampleClients);
     mockGetAllPriorities.mockResolvedValue(samplePriorities);

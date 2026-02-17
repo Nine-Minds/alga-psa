@@ -43,16 +43,16 @@ import {
   Layers,
   Fingerprint
 } from 'lucide-react';
-import CreateTicketFromAssetButton from './CreateTicketFromAssetButton';
 import CustomTabs from '@alga-psa/ui/components/CustomTabs';
 import DeleteAssetButton from './DeleteAssetButton';
 
 interface AssetDetailsProps {
   asset: Asset;
   maintenanceReport?: AssetMaintenanceReport | null;
+  CreateTicketFromAssetButton?: React.ComponentType<any>;
 }
 
-export default function AssetDetails({ asset, maintenanceReport: initialMaintenanceReport }: AssetDetailsProps) {
+export default function AssetDetails({ asset, maintenanceReport: initialMaintenanceReport, CreateTicketFromAssetButton }: AssetDetailsProps) {
   const updateDetails = useRegisterUIComponent({
     id: 'asset-details',
     type: 'container',
@@ -603,7 +603,7 @@ export default function AssetDetails({ asset, maintenanceReport: initialMaintena
           <Text as="p" size="2" color="gray">Asset Tag: {asset.asset_tag}</Text>
         </div>
         <Flex {...withDataAutomationId({ id: 'asset-actions' })} gap="2">
-          <CreateTicketFromAssetButton asset={asset} />
+          {CreateTicketFromAssetButton && <CreateTicketFromAssetButton asset={asset} />}
           <Link href={`/msp/assets/${asset.asset_id}/edit`}>
             <Button {...withDataAutomationId({ id: 'edit-asset-button' })} variant="outline" className="flex items-center gap-2">
               <Edit className="h-4 w-4" />

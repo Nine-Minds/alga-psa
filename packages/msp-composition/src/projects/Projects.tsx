@@ -34,7 +34,7 @@ import { IUser } from '@shared/interfaces/user.interfaces';
 import { getAllContacts } from '@alga-psa/clients/actions';
 import { getAllUsersBasic, getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
 import Drawer from '@alga-psa/ui/components/Drawer';
-import ClientDetails from '@alga-psa/clients/components/clients/ClientDetails';
+import ClientDetails from '../clients/ClientDetails';
 import { ApplyTemplateDialog } from '@alga-psa/projects/components/project-templates/ApplyTemplateDialog';
 
 interface ProjectsProps {

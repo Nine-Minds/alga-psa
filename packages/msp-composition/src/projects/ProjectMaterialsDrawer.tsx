@@ -20,8 +20,7 @@ import {
   deleteProjectMaterial,
   type CatalogPickerItem,
 } from '@alga-psa/billing/actions';
-import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
-
+import { formatCurrencyFromMinorUnits } from '@alga-psa/core/formatters';
 interface ProjectMaterialsDrawerProps {
   id?: string;
   projectId: string;

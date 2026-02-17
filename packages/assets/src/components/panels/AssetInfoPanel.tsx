@@ -4,7 +4,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { ExternalLink, Copy, Check } from 'lucide-react';
 import type { Asset } from '@alga-psa/types';
-import { formatDateOnly } from '@alga-psa/core';
+import { formatDateOnly } from '@alga-psa/core/dateTimeUtils';
 import Link from 'next/link';
 import { cn } from '@alga-psa/ui';
 import { useDrawer } from '@alga-psa/ui';

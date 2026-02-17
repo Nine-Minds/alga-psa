@@ -2,7 +2,10 @@ import { describe, it, expect } from 'vitest';
 import { Connection } from '@temporalio/client';
 import { TestWorkflowEnvironment } from '@temporalio/testing';
 
-describe('Temporal Connection Tests', () => {
+const runTemporalTests = process.env.RUN_TEMPORAL_TESTS === 'true';
+const describeTemporal = runTemporalTests ? describe : describe.skip;
+
+describeTemporal('Temporal Connection Tests', () => {
   it('should connect to temporalio/auto-setup Docker container', async () => {
     const connection = await Connection.connect({
       address: 'localhost:7233',

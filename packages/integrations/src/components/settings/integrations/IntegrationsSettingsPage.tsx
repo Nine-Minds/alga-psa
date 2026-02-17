@@ -64,7 +64,12 @@ interface IntegrationItem {
   isEE?: boolean;
 }
 
-const IntegrationsSettingsPage: React.FC = () => {
+interface IntegrationsSettingsPageProps {
+  /** Injected from msp-composition to avoid circular dependency */
+  TacticalRmmIntegrationSettings?: React.ComponentType;
+}
+
+const IntegrationsSettingsPage: React.FC<IntegrationsSettingsPageProps> = ({ TacticalRmmIntegrationSettings }) => {
   const isEEAvailable = process.env.NEXT_PUBLIC_EDITION === 'enterprise';
   const searchParams = useSearchParams();
   const categoryParam = searchParams?.get('category');
@@ -109,7 +114,7 @@ const IntegrationsSettingsPage: React.FC = () => {
           id: 'rmm-setup',
           name: 'RMM Integrations',
           description: 'Select and configure your RMM provider',
-          component: RmmIntegrationsSetup,
+          component: () => <RmmIntegrationsSetup TacticalRmmIntegrationSettings={TacticalRmmIntegrationSettings} />,
         }
       ],
     },

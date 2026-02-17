@@ -4,8 +4,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import ViewSwitcher, { ViewSwitcherOption } from '@alga-psa/ui/components/ViewSwitcher';
 import { ScheduleSection } from './ScheduleSection';
-import { TicketsSection } from './TicketsSection';
-import { ProjectsSection } from './ProjectsSection';
 import { WorkflowTasksSection } from './WorkflowTasksSection';
 import { NotificationsSection } from './NotificationsSection';
 import { ActivitiesDataTableSection } from './ActivitiesDataTableSection';
@@ -18,7 +16,13 @@ import { ActivityDrawerProvider } from './ActivityDrawerProvider';
 import { useUserPreference } from '@alga-psa/users/hooks';
 import { Card, CardHeader } from '@alga-psa/ui/components/Card';
 
-export function UserActivitiesDashboard() {
+interface UserActivitiesDashboardProps {
+  TicketsSectionComponent?: React.ComponentType<any>;
+  ProjectsSectionComponent?: React.ComponentType<any>;
+  ActivityDetailViewerDrawerComponent?: React.ComponentType<any>;
+}
+
+export function UserActivitiesDashboard({ TicketsSectionComponent, ProjectsSectionComponent, ActivityDetailViewerDrawerComponent }: UserActivitiesDashboardProps) {
   // Define view mode type
   type UserActivitiesViewMode = 'cards' | 'table';
   
@@ -133,16 +137,20 @@ export function UserActivitiesDashboard() {
       {/* Other sections in 2-column grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Tickets Section */}
-        <TicketsSection
-          limit={5}
-          onViewAll={handleViewAllTickets}
-        />
+        {TicketsSectionComponent && (
+          <TicketsSectionComponent
+            limit={5}
+            onViewAll={handleViewAllTickets}
+          />
+        )}
 
         {/* Projects Section */}
-        <ProjectsSection
-          limit={5}
-          onViewAll={handleViewAllProjects}
-        />
+        {ProjectsSectionComponent && (
+          <ProjectsSectionComponent
+            limit={5}
+            onViewAll={handleViewAllProjects}
+          />
+        )}
 
         {/* Workflow Tasks Section */}
         <WorkflowTasksSection
@@ -170,7 +178,7 @@ export function UserActivitiesDashboard() {
 
   return (
     <DrawerProvider>
-      <ActivityDrawerProvider>
+      <ActivityDrawerProvider ActivityDetailViewerDrawerComponent={ActivityDetailViewerDrawerComponent}>
         <div className="container mx-auto p-6">
           <div className="flex items-center justify-between mb-6">
             <h1 className="text-2xl font-bold">User Activities</h1>

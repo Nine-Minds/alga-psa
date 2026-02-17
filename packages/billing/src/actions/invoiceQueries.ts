@@ -10,7 +10,7 @@ import {
   IInvoiceCharge
 } from '@alga-psa/types';
 import { createTenantKnex } from '@alga-psa/db';
-import { toPlainDate } from '@alga-psa/core';
+import { toPlainDate } from '@alga-psa/core/dateTimeUtils';
 import Invoice from '@alga-psa/billing/models/invoice';
 import { getClientContractPurchaseOrderContext, getPurchaseOrderConsumedCents } from '@alga-psa/billing/services/purchaseOrderService';
 import { withAuth } from '@alga-psa/auth';

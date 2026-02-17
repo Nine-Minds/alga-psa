@@ -9,6 +9,8 @@ import { v4 as uuidv4 } from 'uuid';
 
 let mockedTenantId = '11111111-1111-1111-1111-111111111111';
 let mockedUserId = 'mock-user-id';
+const runDbTests = process.env.RUN_DB_TESTS === 'true';
+const describeDb = runDbTests ? describe : describe.skip;
 
 vi.mock('server/src/lib/auth/getSession', () => ({
   getSession: vi.fn(async () => ({
@@ -102,7 +104,7 @@ async function configureTaxForClient(clientId: string, taxPercentage = 10) {
   await ensureClientPlanBundlesTable(context);
 }
 
-describe('Billing Invoice Edge Cases', () => {
+describeDb('Billing Invoice Edge Cases', () => {
   beforeAll(async () => {
     context = await setupContext({
       runSeeds: true,

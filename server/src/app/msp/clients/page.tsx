@@ -1,5 +1,5 @@
-import { Clients } from '@alga-psa/clients';
+import MspClientsPage from '@alga-psa/msp-composition/clients/MspClientsPage';
 
 export default async function ClientsPage() {
-  return <Clients />;
+  return <MspClientsPage />;
 }

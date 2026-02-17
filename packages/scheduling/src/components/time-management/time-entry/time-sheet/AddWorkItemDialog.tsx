@@ -1,7 +1,7 @@
 'use client'
+import React from 'react';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { IWorkItem } from '@alga-psa/types';
-import { WorkItemPicker } from './WorkItemPicker';
 import { ITimePeriodView } from '@alga-psa/types';
 import { useAutomationIdAndRegister } from '@alga-psa/ui/ui-reflection/useAutomationIdAndRegister';
 import { DialogComponent } from '@alga-psa/ui/ui-reflection/types';
@@ -13,9 +13,10 @@ interface AddWorkItemDialogProps {
   onAdd: (workItem: IWorkItem) => void;
   availableWorkItems: IWorkItem[];
   timePeriod?: ITimePeriodView;
+  WorkItemPickerComponent?: React.ComponentType<any>;
 }
 
-export function AddWorkItemDialog({ isOpen, onClose, onAdd, availableWorkItems, timePeriod }: AddWorkItemDialogProps) {
+export function AddWorkItemDialog({ isOpen, onClose, onAdd, availableWorkItems, timePeriod, WorkItemPickerComponent }: AddWorkItemDialogProps) {
   const handleSelect = (workItem: IWorkItem | null) => {
     if (workItem) {
       onAdd(workItem);
@@ -56,11 +57,13 @@ export function AddWorkItemDialog({ isOpen, onClose, onAdd, availableWorkItems, 
       <DialogContent className="z-[500]">
         <div className="max-w-2xl max-h-[80vh] flex flex-col overflow-visible">
           <div className="flex-1 min-h-0 overflow-visible">
-            <WorkItemPicker 
-              onSelect={handleSelect} 
-              availableWorkItems={availableWorkItems}
-              timePeriod={timePeriod}
-            />
+            {WorkItemPickerComponent && (
+              <WorkItemPickerComponent
+                onSelect={handleSelect}
+                availableWorkItems={availableWorkItems}
+                timePeriod={timePeriod}
+              />
+            )}
           </div>
         </div>
       </DialogContent>

@@ -157,7 +157,13 @@ describe('StorageService.uploadFile workflow events', () => {
           deletedByUserId: 'a836a8b5-3df5-47b1-b49b-9a78f2b1a8a0',
           deletedAt: '2026-01-24T12:30:00.000Z',
         }),
-        ctx: expect.objectContaining({ tenantId: 'tenant-1' }),
+        ctx: expect.objectContaining({
+          actor: expect.objectContaining({
+            actorType: 'USER',
+            actorUserId: 'a836a8b5-3df5-47b1-b49b-9a78f2b1a8a0',
+          }),
+          occurredAt: '2026-01-24T12:30:00.000Z',
+        }),
       })
     );
   });

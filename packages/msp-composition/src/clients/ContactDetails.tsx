@@ -18,6 +18,7 @@ import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import CustomTabs from '@alga-psa/ui/components/CustomTabs';
 import BackNav from '@alga-psa/ui/components/BackNav';
 import InteractionsFeed from '@alga-psa/clients/components/interactions/InteractionsFeed';
+import InteractionDetails from './InteractionDetails';
 import { useDrawer } from "@alga-psa/ui";
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { Card } from '@alga-psa/ui/components/Card';
@@ -802,6 +803,7 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
             clientId={editedContact.client_id!}
             interactions={interactions}
             setInteractions={setInteractions}
+            InteractionDetailsComponent={InteractionDetails}
           />
         </div>
       )

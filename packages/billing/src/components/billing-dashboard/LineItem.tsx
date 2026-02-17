@@ -5,9 +5,8 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { DiscountType } from '@alga-psa/types';
-import { formatCurrency } from '@alga-psa/core';
-import { getCurrencySymbol } from '@alga-psa/core';
-
+import { getCurrencySymbol } from '@alga-psa/core/constants/currency';
+import { formatCurrency } from '@alga-psa/core/formatters';
 // Extend SelectOption to include rate
 export interface ServiceOption extends SelectOption {
   rate?: number; // default_rate in cents

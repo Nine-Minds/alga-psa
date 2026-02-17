@@ -91,6 +91,7 @@ vi.mock('@alga-psa/db', () => ({
     if (!currentTrx) throw new Error('No test transaction configured');
     return await fn(currentTrx);
   },
+  createTenantKnex: vi.fn(async () => ({ knex: {}, tenant: 'tenant-1' })),
 }));
 
 vi.mock('server/src/lib/auth/getSession', () => ({
@@ -99,6 +100,11 @@ vi.mock('server/src/lib/auth/getSession', () => ({
 
 vi.mock('server/src/lib/db', () => ({
   createTenantKnex: vi.fn(async () => ({ knex: {}, tenant: 'tenant-1' })),
+}));
+
+vi.mock('@alga-psa/auth', () => ({
+  withAuth: (fn: any) => (...args: any[]) =>
+    fn({ user_id: 'user-1', tenant: 'tenant-1' }, { tenant: 'tenant-1' }, ...args),
 }));
 
 const mockEnsureClientBillingSettingsRow = vi.fn(async () => undefined);

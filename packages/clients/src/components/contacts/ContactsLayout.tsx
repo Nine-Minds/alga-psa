@@ -12,12 +12,16 @@ interface ContactsLayoutProps {
   uniqueContacts: IContact[];
   users: IUser[];
   clients: IClient[];
+  ContactDetailsComponent?: React.ComponentType<any>;
+  ClientDetailsComponent?: React.ComponentType<any>;
 }
 
 export default function ContactsLayout({
   uniqueContacts,
   users,
-  clients
+  clients,
+  ContactDetailsComponent,
+  ClientDetailsComponent
 }: ContactsLayoutProps) {
   const {
     isCollapsed: isInteractionsCollapsed,
@@ -42,7 +46,7 @@ export default function ContactsLayout({
           ? 'w-full md:w-[calc(100%-60px)]'
           : 'w-full md:w-2/3'
       } mb-6 md:mb-0`}>
-        <Contacts initialContacts={uniqueContacts} />
+        <Contacts initialContacts={uniqueContacts} ContactDetailsComponent={ContactDetailsComponent} ClientDetailsComponent={ClientDetailsComponent} />
       </div>
       <div className={`${
         isInitialLoad ? '' : 'transition-all duration-300'

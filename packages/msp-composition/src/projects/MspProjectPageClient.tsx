@@ -5,6 +5,7 @@ import { TicketIntegrationProvider } from '@alga-psa/projects/context/TicketInte
 import ProjectPage from '@alga-psa/projects/components/ProjectPage';
 import { useTicketIntegrationValue } from './useTicketIntegrationValue';
 import ProjectMaterialsDrawer from './ProjectMaterialsDrawer';
+import ProjectDetailsEdit from './ProjectDetailsEdit';
 
 export default function MspProjectPageClient(props: { params: Promise<{ id: string }> }) {
   const contextValue = useTicketIntegrationValue();
@@ -16,6 +17,7 @@ export default function MspProjectPageClient(props: { params: Promise<{ id: stri
         renderMaterialsDrawer={({ projectId, clientId }) => (
           <ProjectMaterialsDrawer projectId={projectId} clientId={clientId} />
         )}
+        ProjectDetailsEditComponent={ProjectDetailsEdit}
       />
     </TicketIntegrationProvider>
   );

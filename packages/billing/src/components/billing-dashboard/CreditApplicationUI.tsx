@@ -5,10 +5,10 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from '@alga-psa/ui/components/Button';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Input } from '@alga-psa/ui/components/Input';
-import { formatCurrency } from '@alga-psa/core';
+import { formatDateOnly } from '@alga-psa/core/dateTimeUtils';
+import { formatCurrency } from '@alga-psa/core/formatters';
 import { ICreditTracking } from '@alga-psa/types';
 import CreditExpirationBadge from '@alga-psa/ui/components/CreditExpirationBadge';
-import { formatDateOnly } from '@alga-psa/core';
 import { listClientCredits, applyCreditToInvoice } from '@alga-psa/billing/actions/creditActions';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 

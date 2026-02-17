@@ -1,15 +1,14 @@
 // server/src/test/actions/billingCycleActions.test.ts
 
 import { describe, it, expect, beforeEach, vi, MockedFunction } from 'vitest';
-import { getBillingCycle, updateBillingCycle, getAllBillingCycles } from '../../lib/actions/billingCycleActions';
-import { getSession } from 'server/src/lib/auth/getSession';
+import { getBillingCycle, updateBillingCycle, getAllBillingCycles } from '@alga-psa/billing/actions';
 import { Knex } from 'knex';
-import { createTenantKnex } from 'server/src/lib/db';
+import { createTenantKnex } from '@alga-psa/db';
 
-// Mock session helper
-vi.mock('server/src/lib/auth/getSession', () => ({
-  getSession: vi.fn(),
-}));
+let currentUser: { user_id: string; tenant: string } | null = {
+  user_id: 'test-user-id',
+  tenant: 'test-tenant',
+};
 
 // Mock shared db transaction helper used within actions
 vi.mock('@alga-psa/db', () => ({
@@ -17,6 +16,7 @@ vi.mock('@alga-psa/db', () => ({
     // Execute callback immediately with the provided knex mock
     return await fn(_knex);
   },
+  createTenantKnex: vi.fn(),
 }));
 
 // Mock shared logger used by various model/action imports pulled into module graph
@@ -31,8 +31,11 @@ vi.mock('@alga-psa/core/logger', () => ({
 
 // Mock secret provider used by config/storage
 vi.mock('@alga-psa/core/secrets', () => ({
+  getSecret: async (_k: string) => undefined,
+  getAppSecret: async (_k: string) => undefined,
   getSecretProviderInstance: () => ({
     getSecret: async (_k: string) => undefined,
+    getAppSecret: async (_k: string) => undefined,
     setSecret: async (_k: string, _v: string) => {},
     getProviderName: () => 'MockSecretProvider',
     close: async () => {},
@@ -41,8 +44,11 @@ vi.mock('@alga-psa/core/secrets', () => ({
 
 // Some server actions import from '@alga-psa/core'; provide the same stub
 vi.mock('@alga-psa/core', () => ({
+  getSecret: async (_k: string) => undefined,
+  getAppSecret: async (_k: string) => undefined,
   getSecretProviderInstance: () => ({
     getSecret: async (_k: string) => undefined,
+    getAppSecret: async (_k: string) => undefined,
     setSecret: async (_k: string, _v: string) => {},
     getProviderName: () => 'MockSecretProvider',
     close: async () => {},
@@ -69,20 +75,21 @@ function createMockKnex(): Knex {
   return mockKnex;
 }
 
-// Mock the root db module
-vi.mock('server/src/lib/db', () => {
-  const mock = vi.fn().mockImplementation(async () => {
-    return { knex: createMockKnex(), tenant: 'test-tenant' };
-  });
-  return { createTenantKnex: mock };
-});
+vi.mock('@alga-psa/auth', () => ({
+  withAuth: (fn: any) => async (...args: any[]) => {
+    if (!currentUser) {
+      throw new Error('Unauthorized');
+    }
+    return fn(currentUser, { tenant: currentUser.tenant }, ...args);
+  },
+}));
 
 describe('Billing Cycle Actions', () => {
   let mockCreateTenantKnex: MockedFunction<typeof createTenantKnex>;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    (getSession as ReturnType<typeof vi.fn>).mockResolvedValue({ user: { id: 'test-user-id' } });
+    currentUser = { user_id: 'test-user-id', tenant: 'test-tenant' };
     mockCreateTenantKnex = vi.mocked(createTenantKnex);
   });
 
@@ -107,7 +114,7 @@ describe('Billing Cycle Actions', () => {
     });
 
     it('should throw an error if user is not authenticated', async () => {
-      (getSession as ReturnType<typeof vi.fn>).mockResolvedValue(null);
+      currentUser = null;
 
       await expect(getBillingCycle('client-1')).rejects.toThrow('Unauthorized');
     });
@@ -125,7 +132,7 @@ describe('Billing Cycle Actions', () => {
     });
 
     it('should throw an error if user is not authenticated', async () => {
-      (getSession as ReturnType<typeof vi.fn>).mockResolvedValue(null);
+      currentUser = null;
 
       await expect(updateBillingCycle('client-1', 'quarterly')).rejects.toThrow('Unauthorized');
     });
@@ -157,7 +164,7 @@ describe('Billing Cycle Actions', () => {
     });
 
     it('should throw an error if user is not authenticated', async () => {
-      (getSession as ReturnType<typeof vi.fn>).mockResolvedValue(null);
+      currentUser = null;
 
       await expect(getAllBillingCycles()).rejects.toThrow('Unauthorized');
     });

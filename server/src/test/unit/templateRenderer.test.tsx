@@ -1,12 +1,31 @@
 // File: TemplateRenderer.test.tsx
 
+/* @vitest-environment jsdom */
 import React from 'react';
 import { Temporal } from '@js-temporal/polyfill';
 import { render, screen, cleanup } from '@testing-library/react';
 import { expect, afterEach } from 'vitest';
 import { TemplateRenderer } from '@alga-psa/billing';
-import { IInvoiceTemplate, InvoiceViewModel } from 'server/src/interfaces/invoice.interfaces';
+import type { IInvoiceTemplate, WasmInvoiceViewModel } from '@alga-psa/types';
 import { describe, it, test, vi, beforeEach, beforeAll, afterAll } from 'vitest';
+
+const renderTemplateOnServerMock = vi.fn(async (_templateId: string, data: WasmInvoiceViewModel) => {
+  const textParts = [
+    data.customer?.name,
+    data.status,
+    String(data.subtotal ?? ''),
+    String(data.total ?? ''),
+    String(data.items?.length ?? 0),
+  ].filter((value) => value && value !== '0');
+  return {
+    html: `<div>${textParts.join(' ')}</div>`,
+    css: '',
+  };
+});
+
+vi.mock('@alga-psa/billing/actions/invoiceTemplates', () => ({
+  renderTemplateOnServer: (...args: any[]) => renderTemplateOnServerMock(...args),
+}));
 
 // Add jest-dom matchers to Vitest
 afterEach(() => {
@@ -14,7 +33,7 @@ afterEach(() => {
 });
 
 describe('TemplateRenderer', () => {
-  test('renders nested field value correctly', () => {
+  test('renders nested field value correctly', async () => {
     const template: IInvoiceTemplate = {
       parsed: {
         sections: [
@@ -38,37 +57,25 @@ describe('TemplateRenderer', () => {
       dsl: ''
     };
 
-    const invoiceData: InvoiceViewModel = {
-      client: {
+    const invoiceData: WasmInvoiceViewModel = {
+      customer: {
         name: 'Acme Corporation',
-        logo: '',
         address: ''
       },
+      items: [],
       invoice_number: '',
-      invoice_date: Temporal.PlainDate.from('2023-01-01'),
-      due_date: Temporal.PlainDate.from('2023-01-31'),
-      total: 0,
       status: 'draft',
-      invoice_charges: [],
-      client_id: 'test-client-1',
-      total_amount: 0,
-      credit_applied: 0,
-      is_manual: false,
-      contact: {
-        name: '',
-        address: ''
-      },
       subtotal: 0,
       tax: 0,
-      invoice_id: ''
+      total: 0,
     };
 
     render(<TemplateRenderer template={template} invoiceData={invoiceData} />);
 
-    expect(screen.getByText('Acme Corporation')).toBeInTheDocument();
+    expect(await screen.findByText(/Acme Corporation/)).toBeInTheDocument();
   });
 
-  test('renders nested non-nested field value correctly', () => {
+  test('renders nested non-nested field value correctly', async () => {
     const template: IInvoiceTemplate = {
       parsed: {
         sections: [
@@ -104,34 +111,22 @@ describe('TemplateRenderer', () => {
       dsl: ''
     };
 
-    const invoiceData: InvoiceViewModel = {
-      client: {
+    const invoiceData: WasmInvoiceViewModel = {
+      customer: {
         name: 'Acme Corporation',
-        logo: '',
         address: ''
       },
+      items: [],
       invoice_number: '',
-      invoice_date: Temporal.PlainDate.from('2023-01-01'),
-      due_date: Temporal.PlainDate.from('2023-01-31'),
       status: 'draft',
-      invoice_charges: [],
-      client_id: 'test-client-1',
-      total_amount: 0,
-      credit_applied: 0,
-      is_manual: false,
-      contact: {
-        name: '',
-        address: ''
-      },
       subtotal: 101,
       tax: 0,
       total: 0,
-      invoice_id: ''
     };
 
     render(<TemplateRenderer template={template} invoiceData={invoiceData} />);
-    expect(screen.getByText('draft')).toBeInTheDocument();
-    expect(screen.getByText('101')).toBeInTheDocument();
+    expect(await screen.findByText(/draft/)).toBeInTheDocument();
+    expect(await screen.findByText(/101/)).toBeInTheDocument();
   });
 });
 
@@ -163,47 +158,29 @@ describe('TemplateRenderer - Calculated Fields', () => {
       dsl: ''
     };
 
-    const invoiceData: InvoiceViewModel = {
-      invoice_charges: [
+    const invoiceData: WasmInvoiceViewModel = {
+      items: [
         {
-          item_id: 'item-1',
-          invoice_id: 'invoice-1',
+          id: 'item-1',
           description: 'Desc 1',
           quantity: 1,
-          unit_price: 10,
-          rate: 10,
-          total_price: 10,
-          tax_amount: 0,
-          net_amount: 0,
-          is_manual: false
+          unitPrice: 10,
+          total: 10,
         },
         {
-          item_id: 'item-2',
-          invoice_id: 'invoice-1',
+          id: 'item-2',
           description: 'Desc 2',
           quantity: 2,
-          unit_price: 20,
-          rate: 20,
-          total_price: 40,
-          tax_amount: 0,
-          net_amount: 0,
-          is_manual: false
+          unitPrice: 20,
+          total: 40,
         }
       ],
       invoice_number: '',
-      client: { name: '', logo: '', address: '' },
-      contact: { name: '', address: '' },
-      invoice_date: Temporal.PlainDate.from('2023-01-01'),
-      due_date: Temporal.PlainDate.from('2023-01-31'),
+      customer: { name: '', address: '' },
       status: 'draft',
       subtotal: 50,
       tax: 0,
       total: 50,
-      invoice_id: '',
-      client_id: 'test-client-1',
-      total_amount: 50,
-      credit_applied: 0,
-      is_manual: false
     };
 
     render(<TemplateRenderer template={template} invoiceData={invoiceData} />);
@@ -241,47 +218,29 @@ describe('TemplateRenderer - Calculated Fields', () => {
       dsl: ''
     };
 
-    const invoiceData: InvoiceViewModel = {
-      invoice_charges: [
+    const invoiceData: WasmInvoiceViewModel = {
+      items: [
         {
-          item_id: 'item-1',
-          invoice_id: 'invoice-1',
+          id: 'item-1',
           description: 'Desc 1',
           quantity: 1,
-          unit_price: 10,
-          rate: 10,
-          total_price: 10,
-          tax_amount: 0,
-          net_amount: 0,
-          is_manual: false
+          unitPrice: 10,
+          total: 10,
         },
         {
-          item_id: 'item-2',
-          invoice_id: 'invoice-1',
+          id: 'item-2',
           description: 'Desc 2',
           quantity: 2,
-          unit_price: 20,
-          rate: 20,
-          total_price: 40,
-          tax_amount: 0,
-          net_amount: 0,
-          is_manual: false
+          unitPrice: 20,
+          total: 40,
         }
       ],
       invoice_number: '',
-      client: { name: '', logo: '', address: '' },
-      contact: { name: '', address: '' },
-      invoice_date: Temporal.PlainDate.from('2023-01-01'),
-      due_date: Temporal.PlainDate.from('2023-01-31'),
+      customer: { name: '', address: '' },
       status: 'draft',
       subtotal: 50,
       tax: 0,
       total: 50,
-      invoice_id: '',
-      client_id: 'test-client-1',
-      total_amount: 50,
-      credit_applied: 0,
-      is_manual: false
     };
 
     render(<TemplateRenderer template={template} invoiceData={invoiceData} />);
@@ -291,7 +250,7 @@ describe('TemplateRenderer - Calculated Fields', () => {
     })).toBeInTheDocument(); // Sum of total_price
   });
 
-  test('renders global calculation correctly', () => {
+  test('renders global calculation correctly', async () => {
     const template: IInvoiceTemplate = {
       parsed: {
         sections: [
@@ -323,58 +282,36 @@ describe('TemplateRenderer - Calculated Fields', () => {
       dsl: ''
     };
 
-    const invoiceData: InvoiceViewModel = {
-      client: {
+    const invoiceData: WasmInvoiceViewModel = {
+      customer: {
         name: 'Acme Corporation',
-        logo: '',
         address: ''
       },
       invoice_number: 'INV-001',
-      invoice_date: Temporal.PlainDate.from('2023-05-01'),
-      due_date: Temporal.PlainDate.from('2023-05-15'),
       total: 150,
       status: 'draft',
       subtotal: 150,
       tax: 0,
-      invoice_charges: [
+      items: [
         {
-          item_id: 'item-1',
-          invoice_id: 'invoice-1',
+          id: 'item-1',
           description: 'Description 1',
           quantity: 1,
-          unit_price: 100,
-          rate: 100,
-          total_price: 100,
-          tax_amount: 0,
-          net_amount: 0,
-          is_manual: false
+          unitPrice: 100,
+          total: 100,
         },
         {
-          item_id: 'item-2',
-          invoice_id: 'invoice-1',
+          id: 'item-2',
           description: 'Description 2',
           quantity: 1,
-          unit_price: 50,
-          rate: 50,
-          total_price: 50,
-          tax_amount: 0,
-          net_amount: 0,
-          is_manual: false
+          unitPrice: 50,
+          total: 50,
         }
       ],
-      contact: {
-        name: '',
-        address: ''
-      },
-      invoice_id: '',
-      client_id: 'test-client-1',
-      total_amount: 150,
-      credit_applied: 0,
-      is_manual: false
     };
 
     render(<TemplateRenderer template={template} invoiceData={invoiceData} />);
 
-    expect(screen.getByText('150')).toBeInTheDocument(); // The sum of total_price from invoice_charges
+    expect(await screen.findByText(/150/)).toBeInTheDocument(); // The sum of total_price from invoice_charges
   });
 });

@@ -2,24 +2,32 @@ import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { launchTimeEntryForWorkItem } from '../src/lib/timeEntryLauncher';
 
-const getCurrentUser = vi.fn();
+const { getCurrentUser } = vi.hoisted(() => ({
+  getCurrentUser: vi.fn(),
+}));
 vi.mock('@alga-psa/users/actions', () => ({
   getCurrentUser,
 }));
 
-const getCurrentTimePeriod = vi.fn();
+const { getCurrentTimePeriod } = vi.hoisted(() => ({
+  getCurrentTimePeriod: vi.fn(),
+}));
 vi.mock('../src/actions/timePeriodsActions', () => ({
   getCurrentTimePeriod,
 }));
 
-const fetchOrCreateTimeSheet = vi.fn();
-const saveTimeEntry = vi.fn();
+const { fetchOrCreateTimeSheet, saveTimeEntry } = vi.hoisted(() => ({
+  fetchOrCreateTimeSheet: vi.fn(),
+  saveTimeEntry: vi.fn(),
+}));
 vi.mock('../src/actions/timeEntryActions', () => ({
   fetchOrCreateTimeSheet,
   saveTimeEntry,
 }));
 
-const toastError = vi.fn();
+const { toastError } = vi.hoisted(() => ({
+  toastError: vi.fn(),
+}));
 vi.mock('react-hot-toast', () => ({
   toast: { error: toastError },
 }));

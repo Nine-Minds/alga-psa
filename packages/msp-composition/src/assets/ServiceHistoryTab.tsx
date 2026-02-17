@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState, useCallback } from 'react';
 import useSWR, { useSWRConfig } from 'swr';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@alga-psa/ui/components/Table';
@@ -6,7 +8,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Ticket } from 'lucide-react';
 import { getAssetLinkedTickets } from '@alga-psa/assets/actions/assetActions';
-import { formatDateTime } from '@alga-psa/core';
+import { formatDateTime } from '@alga-psa/core/dateTimeUtils';
 import type { Asset } from '@alga-psa/types';
 import { QuickAddTicket } from '@alga-psa/tickets/components/QuickAddTicket';
 import { cn } from '@alga-psa/ui';

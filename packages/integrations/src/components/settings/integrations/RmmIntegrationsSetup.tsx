@@ -9,8 +9,6 @@ import Spinner from '@alga-psa/ui/components/Spinner';
 import { cn } from '@alga-psa/ui/lib/utils';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
 
-import TacticalRmmIntegrationSettings from './TacticalRmmIntegrationSettings';
-
 type RmmIntegrationId = 'tacticalrmm' | 'ninjaone';
 
 type RmmIntegrationOption = {
@@ -81,7 +79,12 @@ const NinjaOneIntegrationSettings = dynamic(
   }
 );
 
-export default function RmmIntegrationsSetup() {
+interface RmmIntegrationsSetupProps {
+  /** Injected from msp-composition to avoid circular dependency */
+  TacticalRmmIntegrationSettings?: React.ComponentType;
+}
+
+export default function RmmIntegrationsSetup({ TacticalRmmIntegrationSettings }: RmmIntegrationsSetupProps) {
   const isEEAvailable = process.env.NEXT_PUBLIC_EDITION === 'enterprise';
   const tacticalFlag = useFeatureFlag('tactical-rmm-integration', { defaultValue: false });
   const isTacticalEnabled = !!tacticalFlag?.enabled;
@@ -90,7 +93,7 @@ export default function RmmIntegrationsSetup() {
     () => {
       const next: RmmIntegrationOption[] = [];
 
-      if (isTacticalEnabled) {
+      if (isTacticalEnabled && TacticalRmmIntegrationSettings) {
         next.push({
           id: 'tacticalrmm',
           title: 'Tactical RMM',
@@ -136,7 +139,7 @@ export default function RmmIntegrationsSetup() {
 
   // In CE, Tactical is the only supported RMM provider UI we expose today.
   if (!isEEAvailable) {
-    if (!isTacticalEnabled) {
+    if (!isTacticalEnabled || !TacticalRmmIntegrationSettings) {
       return (
         <Card>
           <CardHeader>

@@ -3,6 +3,7 @@ import { TaxService } from '@alga-psa/billing/services/taxService';
 import { IClientTaxSettings, ITaxRate, ITaxCalculationResult, ITaxComponent, ITaxRateThreshold } from 'server/src/interfaces/tax.interfaces';
 import ClientTaxSettings from '@alga-psa/billing/models/clientTaxSettings';
 import { ISO8601String } from 'server/src/types/types.d';
+import { createTenantKnex } from '@alga-psa/db';
 
 // Set up mock for ClientTaxSettings
 vi.mock('@alga-psa/billing/models/clientTaxSettings', () => ({
@@ -14,16 +15,71 @@ vi.mock('@alga-psa/billing/models/clientTaxSettings', () => ({
     getTaxHolidays: vi.fn(),
   },
 }));
+vi.mock('@alga-psa/db', () => ({
+  createTenantKnex: vi.fn(),
+}));
 
 describe('TaxService', () => {
   let taxService: TaxService;
   const tenantId = 'test-tenant-id';
   const clientId = 'test-client-id';
   const date: ISO8601String = '2024-01-01T00:00:00Z';
+  let mockTaxRateResult: ITaxRate;
 
   beforeEach(() => {
     taxService = new TaxService();
     vi.resetAllMocks();
+    mockTaxRateResult = createMockTaxRate(15, false);
+
+    const makeBuilder = (tableName: string) => {
+      const builder: {
+        where: ReturnType<typeof vi.fn>;
+        andWhere: ReturnType<typeof vi.fn>;
+        orWhere: ReturnType<typeof vi.fn>;
+        whereNull: ReturnType<typeof vi.fn>;
+        whereNotNull: ReturnType<typeof vi.fn>;
+        whereNot: ReturnType<typeof vi.fn>;
+        select: ReturnType<typeof vi.fn>;
+        first: ReturnType<typeof vi.fn>;
+      } = {
+        where: vi.fn().mockReturnThis(),
+        andWhere: vi.fn().mockImplementation(function (arg1: unknown) {
+          if (typeof arg1 === 'function') {
+            arg1.call(builder);
+          }
+          return builder;
+        }),
+        orWhere: vi.fn().mockImplementation(function (arg1: unknown) {
+          if (typeof arg1 === 'function') {
+            arg1.call(builder);
+          }
+          return builder;
+        }),
+        whereNull: vi.fn().mockReturnThis(),
+        whereNotNull: vi.fn().mockReturnThis(),
+        whereNot: vi.fn().mockReturnThis(),
+        select: vi.fn().mockReturnThis(),
+        first: vi.fn().mockImplementation(async () => {
+          if (tableName === 'clients') {
+            return { is_tax_exempt: false };
+          }
+          if (tableName === 'client_tax_rates') {
+            return { tax_rate_id: 'test-tax-rate-id' };
+          }
+          if (tableName === 'tax_rates') {
+            return mockTaxRateResult;
+          }
+          return undefined;
+        }),
+      };
+      return builder;
+    };
+
+    const mockKnex = vi.fn((tableName: string) => makeBuilder(tableName));
+    (createTenantKnex as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+      tenant: tenantId,
+      knex: mockKnex,
+    });
   });
 
   describe('Standard Tax Application', () => {
@@ -31,9 +87,9 @@ describe('TaxService', () => {
         const netAmount = 100;
         const mockTaxSettings = createMockTaxSettings(tenantId, clientId, false);
         const mockTaxRate = createMockTaxRate(15, false);
+        mockTaxRateResult = mockTaxRate;
     
         (ClientTaxSettings.get as ReturnType<typeof vi.fn>).mockResolvedValue(mockTaxSettings);
-        (ClientTaxSettings.getTaxRate as ReturnType<typeof vi.fn>).mockResolvedValue(mockTaxRate);
         // Mock getTaxRateThresholds to return an empty array
         (ClientTaxSettings.getTaxRateThresholds as ReturnType<typeof vi.fn>).mockResolvedValue([]);
     
@@ -43,22 +99,21 @@ describe('TaxService', () => {
         expect(result.taxRate).toBe(15);
     
         expect(ClientTaxSettings.get).toHaveBeenCalledWith(clientId);
-        expect(ClientTaxSettings.getTaxRate).toHaveBeenCalledWith('test-tax-rate-id');
       });
 
       it('should correctly apply standard tax rate to multiple taxable items', async () => {
         const netAmount = 250; // Simulating multiple items: 100 + 150
         const mockTaxSettings = createMockTaxSettings(tenantId, clientId, false);
         const mockTaxRate = createMockTaxRate(15, false);
+        mockTaxRateResult = mockTaxRate;
     
         (ClientTaxSettings.get as ReturnType<typeof vi.fn>).mockResolvedValue(mockTaxSettings);
-        (ClientTaxSettings.getTaxRate as ReturnType<typeof vi.fn>).mockResolvedValue(mockTaxRate);
         // Mock getTaxRateThresholds to return an empty array
         (ClientTaxSettings.getTaxRateThresholds as ReturnType<typeof vi.fn>).mockResolvedValue([]);
     
         const result = await taxService.calculateTax(clientId, netAmount, date);
     
-        expect(result.taxAmount).toBe(37.5); // 15% of 250
+        expect(result.taxAmount).toBe(38); // 15% of 250, rounded up
         expect(result.taxRate).toBe(15);
       });
 
@@ -82,6 +137,7 @@ describe('TaxService', () => {
       const netAmount = 100;
       const mockTaxSettings = createMockTaxSettings(tenantId, clientId, false);
       const mockTaxRate = createMockTaxRate(0, true); // Composite tax
+      mockTaxRateResult = mockTaxRate;
       const mockComponents: ITaxComponent[] = [
         { tax_component_id: 'comp1', tax_rate_id: 'test-tax-rate-id', name: 'Component 1', sequence: 1, rate: 5, is_compound: false },
         { tax_component_id: 'comp2', tax_rate_id: 'test-tax-rate-id', name: 'Component 2', sequence: 2, rate: 10, is_compound: true },
@@ -108,6 +164,7 @@ describe('TaxService', () => {
       const netAmount = 1000;
       const mockTaxSettings = createMockTaxSettings(tenantId, clientId, false);
       const mockTaxRate = createMockTaxRate(0, false); // Simple tax with thresholds
+      mockTaxRateResult = mockTaxRate;
       const mockThresholds: ITaxRateThreshold[] = [
         { tax_rate_threshold_id: 'threshold1', tax_rate_id: 'test-tax-rate-id', min_amount: 0, max_amount: 500, rate: 10 },
         { tax_rate_threshold_id: 'threshold2', tax_rate_id: 'test-tax-rate-id', min_amount: 500, max_amount: undefined, rate: 20 },
@@ -130,6 +187,7 @@ describe('TaxService', () => {
     it('should correctly apply tax rates based on defined thresholds', async () => {
       const mockTaxSettings = createMockTaxSettings(tenantId, clientId, false);
       const mockTaxRate = createMockTaxRate(0, false); // Simple tax with thresholds
+      mockTaxRateResult = mockTaxRate;
       const mockThresholds: ITaxRateThreshold[] = [
         { tax_rate_threshold_id: 'threshold1', tax_rate_id: 'test-tax-rate-id', min_amount: 0, max_amount: 1000, rate: 0 },
         { tax_rate_threshold_id: 'threshold2', tax_rate_id: 'test-tax-rate-id', min_amount: 1001, max_amount: 5000, rate: 10 },
@@ -152,8 +210,8 @@ describe('TaxService', () => {
 
       // Test case 3: Above highest threshold
       const result3 = await taxService.calculateTax(clientId, 6000, date);
-      expect(result3.taxAmount).toBe(550.05); // 0% of 1000 + 10% of 39999 + 15% of 1001
-      expect(result3.taxRate).toBeCloseTo(9.17);
+      expect(result3.taxAmount).toBe(551); // 0% of 1000 + 10% of 3999 + 15% of 1001, rounded up
+      expect(result3.taxRate).toBeCloseTo(9.18, 2);
     });
   });
 });

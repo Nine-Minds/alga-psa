@@ -4,7 +4,7 @@ import { createTenantKnex } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
-import { getCurrencySymbol } from '@alga-psa/core';
+import { getCurrencySymbol } from '@alga-psa/core/constants/currency';
 import type { IUserWithRoles } from '@alga-psa/types';
 
 /**

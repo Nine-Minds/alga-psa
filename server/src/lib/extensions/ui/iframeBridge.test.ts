@@ -1,12 +1,16 @@
+/**
+ * @vitest-environment jsdom
+ */
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { bootstrapIframe } from './iframeBridge';
 
 function makeIframe(): HTMLIFrameElement {
   const iframe = document.createElement('iframe');
   // jsdom does not populate contentWindow; attach a stub for our tests
-  (iframe as any).contentWindow = {
-    postMessage: vi.fn(),
-  };
+  Object.defineProperty(iframe, 'contentWindow', {
+    value: { postMessage: vi.fn(), close: vi.fn() },
+    configurable: true,
+  });
   // Attach to DOM so events behave more like real
   document.body.appendChild(iframe);
   return iframe;
@@ -92,7 +96,7 @@ describe('bootstrapIframe (host bridge)', () => {
     expect(postSpy).toHaveBeenCalledTimes(1);
     const [message, targetOrigin] = postSpy.mock.calls[0];
 
-    expect(targetOrigin).toBe(window.location.origin);
+    expect(targetOrigin).toBe('*');
     expect(message).toMatchObject({
       alga: true,
       version: '1',

@@ -60,7 +60,10 @@ const {
   afterAll: cleanupContext
 } = TestContext.createHelpers();
 
-describe('Tax Allocation Strategy', () => {
+const runDbTests = process.env.RUN_DB_TESTS === 'true';
+const describeDb = runDbTests ? describe : describe.skip;
+
+describeDb('Tax Allocation Strategy', () => {
   let context: TestContext;
   let default_service_id: string;
 

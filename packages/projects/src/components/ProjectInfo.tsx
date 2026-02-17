@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { IClient, IProject, IUserWithRoles } from '@alga-psa/types';
 import { ITag } from '@alga-psa/types';
 import HoursProgressBar from './HoursProgressBar';
@@ -9,7 +9,6 @@ import { Edit2, Save } from 'lucide-react';
 import BackNav from '@alga-psa/ui/components/BackNav';
 import { Button } from '@alga-psa/ui/components/Button';
 import { useDrawer } from "@alga-psa/ui";
-import ProjectDetailsEdit from './ProjectDetailsEdit';
 import { TagManager } from '@alga-psa/tags/components';
 import { toast } from 'react-hot-toast';
 import CreateTemplateDialog from './project-templates/CreateTemplateDialog';
@@ -29,6 +28,7 @@ interface ProjectInfoProps {
   allTagTexts?: string[];
   onTagsChange?: (tags: ITag[]) => void;
   renderMaterialsDrawer?: (args: { projectId: string; clientId?: string | null }) => React.ReactNode;
+  ProjectDetailsEditComponent?: React.ComponentType<{ initialProject: IProject; clients: IClient[]; onSave: (updatedProject: IProject) => void; onCancel: () => void }>;
 }
 
 export default function ProjectInfo({
@@ -43,7 +43,8 @@ export default function ProjectInfo({
   projectTags = [],
   allTagTexts = [],
   onTagsChange,
-  renderMaterialsDrawer
+  renderMaterialsDrawer,
+  ProjectDetailsEditComponent
 }: ProjectInfoProps) {
   const { openDrawer, closeDrawer } = useDrawer();
 
@@ -82,8 +83,9 @@ export default function ProjectInfo({
   }, [project]);
 
   const handleEditClick = () => {
+    if (!ProjectDetailsEditComponent) return;
     openDrawer(
-      <ProjectDetailsEdit
+      <ProjectDetailsEditComponent
         initialProject={currentProject}
         clients={clients}
         onSave={(updatedProject) => {

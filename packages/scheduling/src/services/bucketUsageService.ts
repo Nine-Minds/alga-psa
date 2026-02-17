@@ -2,8 +2,7 @@ import { Temporal } from '@js-temporal/polyfill';
 import type { Knex } from 'knex';
 import type { ISO8601String } from '@alga-psa/types';
 import { createTenantKnex } from '@alga-psa/db';
-import { toISODate, toPlainDate } from '@alga-psa/core';
-
+import { toISODate, toPlainDate } from '@alga-psa/core/dateTimeUtils';
 // Define IBucketUsage locally for now, aligning with Phase 1 needs.
 // This might be replaced/merged with the main interface later.
 // Note: Phase 2 will add the rolled_over_hours column via migration.

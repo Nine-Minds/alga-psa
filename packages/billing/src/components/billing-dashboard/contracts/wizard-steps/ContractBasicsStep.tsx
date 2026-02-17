@@ -12,8 +12,8 @@ import { ContractWizardData } from '../ContractWizard';
 import { getAllClientsForBilling } from '@alga-psa/billing/actions/billingClientsActions';
 import { checkClientHasActiveContract } from '@alga-psa/billing/actions/contractActions';
 import { BILLING_FREQUENCY_OPTIONS } from '@alga-psa/billing/constants/billing';
-import { CURRENCY_OPTIONS, getCurrencySymbol } from '@alga-psa/core';
-import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
+import { CURRENCY_OPTIONS, getCurrencySymbol } from '@alga-psa/core/constants/currency';
+import { formatCurrencyFromMinorUnits } from '@alga-psa/core/formatters';
 import {
   Calendar,
   Building2,

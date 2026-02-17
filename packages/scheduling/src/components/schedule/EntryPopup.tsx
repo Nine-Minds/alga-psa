@@ -10,7 +10,6 @@ import { Switch } from '@alga-psa/ui/components/Switch';
 import { ExternalLink, Check, X } from 'lucide-react';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { useDrawer } from "@alga-psa/ui";
-import { WorkItemDrawer } from '@alga-psa/scheduling/components/time-management/time-entry/time-sheet/WorkItemDrawer';
 import { format, isWeekend, addYears } from 'date-fns';
 import { formatInTimeZone } from 'date-fns-tz';
 import { IScheduleEntry, IRecurrencePattern, IEditScope } from '@alga-psa/types';
@@ -57,6 +56,13 @@ interface EntryPopupProps {
   focusedTechnicianId: string | null;
   canAssignOthers: boolean; // Derived from user_schedule:update permission in parent
   viewOnly?: boolean;
+  /** Injected WorkItemDrawer component from msp-composition to avoid circular dependency */
+  WorkItemDrawerComponent?: React.ComponentType<{
+    workItem: IExtendedWorkItem;
+    onClose: () => void;
+    onTaskUpdate: (updated: any) => Promise<void>;
+    onScheduleUpdate: (updated: any) => Promise<void>;
+  }>;
 }
 
 const EntryPopup: React.FC<EntryPopupProps> = ({
@@ -75,7 +81,8 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
   canModifySchedule,
   focusedTechnicianId,
   canAssignOthers,
-  viewOnly = false
+  viewOnly = false,
+  WorkItemDrawerComponent,
 }) => {
   const [entryData, setEntryData] = useState<Omit<IScheduleEntry, 'tenant'>>(() => {
     if (event) {
@@ -1118,7 +1125,8 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
     canModifySchedule,
     focusedTechnicianId,
     canAssignOthers,
-    viewOnly
+    viewOnly,
+    WorkItemDrawerComponent,
   };
 
   // When already in a drawer or dialog context, don't wrap in another Dialog
@@ -1183,11 +1191,14 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
   );
 };
 
-// Component for the Open Drawer button
+// Component for the Open Drawer button — uses injected WorkItemDrawerComponent from context
 const OpenDrawerButton = ({ event }: { event: IScheduleEntry }) => {
   const { openDrawer, closeDrawer } = useDrawer();
-  // Get access to the parent component's props
   const parentProps = React.useContext(EntryPopupContext);
+  const WorkItemDrawerComp = parentProps?.WorkItemDrawerComponent;
+
+  // Hide button when no WorkItemDrawerComponent is injected
+  if (!WorkItemDrawerComp) return null;
 
   const handleOpenDrawer = () => {
     const workItem = {
@@ -1205,14 +1216,13 @@ const OpenDrawerButton = ({ event }: { event: IScheduleEntry }) => {
       is_billable: true
     } as IExtendedWorkItem;
 
-    // Close the current popup first if not in a drawer
     if (parentProps && !parentProps.isInDrawer) {
       parentProps.onClose();
     }
-    
+
     openDrawer(
       <div className="h-full">
-        <WorkItemDrawer
+        <WorkItemDrawerComp
           workItem={workItem}
           onClose={closeDrawer}
           onTaskUpdate={async () => {}}

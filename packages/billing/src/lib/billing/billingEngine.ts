@@ -29,7 +29,8 @@ import {
 import { Temporal } from '@js-temporal/polyfill';
 import type { ISO8601String, IClient } from '@alga-psa/types';
 import { getNextBillingDate } from '@alga-psa/billing/actions/billingAndTax'; // Removed getClientTaxRate
-import { toPlainDate, toISODate, getCurrencySymbol } from '@alga-psa/core';
+import { getCurrencySymbol } from '@alga-psa/core/constants/currency';
+import { toPlainDate, toISODate } from '@alga-psa/core/dateTimeUtils';
 import { getClientDefaultTaxRegionCode } from '@alga-psa/shared/billingClients';
 // Removed TaxService import as it's no longer directly used here
 // Import necessary functions from invoiceService

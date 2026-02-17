@@ -7,6 +7,17 @@ import TicketDetailsContainer from '../TicketDetailsContainer';
 
 let lastTicketDetailsProps: any = null;
 
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({
+    push: vi.fn(),
+    replace: vi.fn(),
+    refresh: vi.fn(),
+    prefetch: vi.fn(),
+  }),
+  usePathname: () => '/msp/tickets',
+  useSearchParams: () => new URLSearchParams(),
+}));
+
 vi.mock('../TicketDetails', () => ({
   __esModule: true,
   default: (props: any) => {

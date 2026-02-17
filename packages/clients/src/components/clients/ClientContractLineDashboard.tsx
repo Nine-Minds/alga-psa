@@ -8,8 +8,9 @@ import { DataTable } from '@alga-psa/ui/components/DataTable'; // Import DataTab
 import { ColumnDefinition } from '@alga-psa/types'; // Import ColumnDefinition
 import { getRecentClientInvoices, type RecentInvoice } from '@alga-psa/reporting/actions'; // Import action and type
 import { Skeleton } from '@alga-psa/ui/components/Skeleton'; // Import Skeleton for loading state
-import { formatCurrency } from '@alga-psa/core'; // Import currency formatter
-import { formatDateOnly } from '@alga-psa/core'; // Import date formatter
+import { formatDateOnly } from '@alga-psa/core/dateTimeUtils';
+import { formatCurrency } from '@alga-psa/core/formatters'; // Import currency formatter
+ // Import date formatter
 import { parseISO, subDays, format } from 'date-fns'; // Import date functions
 import {
  getHoursByServiceType, HoursByServiceResult,

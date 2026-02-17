@@ -11,8 +11,6 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { ColumnDefinition } from '@alga-psa/types';
 import ContactAvatar from '@alga-psa/ui/components/ContactAvatar';
 import { useDrawer } from "@alga-psa/ui";
-import ContactDetails from './ContactDetails';
-import ContactDetailsEdit from './ContactDetailsEdit';
 import type { IClient } from '@alga-psa/types';
 import { IDocument } from '@alga-psa/types';
 import { getDocumentsByEntity } from '@alga-psa/documents/actions/documentActions';
@@ -23,6 +21,8 @@ import { useRouter } from 'next/navigation';
 interface ClientContactsListProps {
   clientId: string;
   clients: IClient[]; // Pass clients down for ContactDetailsView
+  /** Injected ContactDetails component from msp-composition to avoid circular dependency */
+  ContactDetailsComponent?: React.ComponentType<any>;
 }
 
 // Extended contact type with id for stable DataTable keys
@@ -38,7 +38,7 @@ const addIdToContacts = (contacts: IContact[]): ContactWithId[] => {
   }));
 };
 
-const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clients }) => {
+const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clients, ContactDetailsComponent }) => {
   const [contacts, setContacts] = useState<ContactWithId[]>([]);
   const [loading, setLoading] = useState(true);
   const [documentLoading, setDocumentLoading] = useState<Record<string, boolean>>({});
@@ -97,7 +97,7 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
   };
 
   const handleQuickView = async (contact: IContact) => {
-    if (!currentUser) return;
+    if (!currentUser || !ContactDetailsComponent) return;
 
     const handleChangesSaved = () => {
       setChangesSavedInDrawer(true);
@@ -134,7 +134,7 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
       }
 
       openDrawer(
-        <ContactDetails
+        <ContactDetailsComponent
           contact={contact}
           clients={clients}
           documents={documents[contact.contact_name_id] || []}

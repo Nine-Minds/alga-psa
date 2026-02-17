@@ -1,6 +1,6 @@
 'use client';
 
-import { memo, useCallback, useEffect, useMemo, useState, useRef } from 'react';
+import React, { memo, useCallback, useEffect, useMemo, useState, useRef } from 'react';
 import { getEligibleContractLinesForUI, getClientIdForWorkItem } from '@alga-psa/scheduling/lib/contractLineDisambiguation';
 import { getClientById } from '@alga-psa/clients/actions';
 import { formatISO, parseISO, addMinutes, setHours, setMinutes, setSeconds } from 'date-fns';

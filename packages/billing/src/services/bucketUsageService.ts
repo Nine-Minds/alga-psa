@@ -2,8 +2,7 @@ import { Knex } from 'knex';
 import { Temporal } from '@js-temporal/polyfill';
 import type { ISO8601String, IClientContractLine } from '@alga-psa/types';
 import { createTenantKnex } from '@alga-psa/db'; // Assuming needed if trx doesn't carry tenant context reliably
-import { toPlainDate, toISODate } from '@alga-psa/core';
-// Import necessary interfaces - adjust paths if needed
+import { toPlainDate, toISODate } from '@alga-psa/core/dateTimeUtils';// Import necessary interfaces - adjust paths if needed
 
 // Define IBucketUsage locally for now, aligning with Phase 1 needs.
 // This might be replaced/merged with the main interface later.

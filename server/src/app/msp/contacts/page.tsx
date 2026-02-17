@@ -5,7 +5,7 @@ import type { IContact } from '@alga-psa/types';
 import type { IUser } from '@shared/interfaces/user.interfaces';
 import { getAllClients, getAllContacts } from '@alga-psa/clients/actions';
 import { getAllUsersBasic } from '@alga-psa/users/actions';
-import { ContactsLayout } from '@alga-psa/clients';
+import { MspContactsLayout } from '@alga-psa/msp-composition/clients';
 
 export default async function ContactsPage() {
   const [contacts, users, clients] = await Promise.all([
@@ -20,7 +20,7 @@ export default async function ContactsPage() {
   );
 
   return (
-    <ContactsLayout
+    <MspContactsLayout
       uniqueContacts={uniqueContacts}
       users={users}
       clients={clients}

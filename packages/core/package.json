@@ -22,6 +22,14 @@
       "import": "./dist/lib/formatters.js",
       "types": "./src/lib/formatters.ts"
     },
+    "./dateTimeUtils": {
+      "import": "./dist/lib/dateTimeUtils.js",
+      "types": "./src/lib/dateTimeUtils.ts"
+    },
+    "./constants/currency": {
+      "import": "./dist/constants/currency.js",
+      "types": "./src/constants/currency.ts"
+    },
     "./secrets": {
       "import": "./dist/lib/secrets/index.js",
       "types": "./src/lib/secrets/index.ts"
@@ -41,6 +49,14 @@
     "./i18n/config": {
       "import": "./dist/lib/i18n/config.js",
       "types": "./src/lib/i18n/config.ts"
+    },
+    "./csvParser": {
+      "import": "./dist/lib/csvParser.js",
+      "types": "./src/lib/csvParser.ts"
+    },
+    "./templateUtils": {
+      "import": "./dist/lib/templateUtils.js",
+      "types": "./src/lib/templateUtils.ts"
     },
     "./lib/blocknoteUtils": {
       "import": "./dist/lib/blocknoteUtils.js",

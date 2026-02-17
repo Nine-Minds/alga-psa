@@ -20,6 +20,8 @@ vi.mock("@alga-psa/users/actions", () => ({
 
 vi.mock("@alga-psa/auth", () => ({
   hasPermission: vi.fn(async () => true),
+  withAuth: (fn: any) => (...args: any[]) =>
+    fn({ user_id: "user-1", tenant: "test-tenant" }, { tenant: "test-tenant" }, ...args),
 }));
 
 vi.mock("@/lib/analytics/posthog", () => ({

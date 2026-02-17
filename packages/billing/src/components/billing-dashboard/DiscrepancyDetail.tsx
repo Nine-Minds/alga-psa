@@ -7,8 +7,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Button } from '@alga-psa/ui/components/Button';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import { CustomTabs, TabContent } from '@alga-psa/ui/components/CustomTabs';
-import { formatCurrency } from '@alga-psa/core';
-import { formatDateOnly, formatDateTime } from '@alga-psa/core';
+import { formatDateOnly, formatDateTime } from '@alga-psa/core/dateTimeUtils';
+import { formatCurrency } from '@alga-psa/core/formatters';
 import { parseISO } from 'date-fns';
 import { ICreditReconciliationReport, ITransaction, ICreditTracking } from '@alga-psa/types';
 import { resolveReconciliationReport } from '@alga-psa/billing/actions/creditReconciliationActions';

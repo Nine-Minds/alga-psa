@@ -13,7 +13,7 @@
 import { Knex } from 'knex';
 import logger from '@alga-psa/core/logger';
 import { createTenantKnex } from '@alga-psa/db';
-import { unparseCSV, parseCSV } from '@alga-psa/core';
+import { unparseCSV, parseCSV } from '@alga-psa/core/csvParser';
 import { withTransaction } from '@alga-psa/db';
 import type { IClient, IClientLocation } from '@alga-psa/types';
 

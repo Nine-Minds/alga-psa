@@ -60,12 +60,19 @@ vi.mock('jsonwebtoken', () => {
 vi.mock('@/utils/logger', () => {
     const mockLogger = {
         system: vi.fn(),
-        error: vi.fn()
+        error: vi.fn(),
+        debug: vi.fn()
     };
     return {
         default: mockLogger
     };
 });
+
+vi.mock('@alga-psa/core/secrets', () => ({
+    getSecretProviderInstance: vi.fn(async () => ({
+        getAppSecret: vi.fn(async () => 'test-secret')
+    }))
+}));
 
 describe('Auth Functions', () => {
     const mockUser: IUserRegister = {
@@ -91,7 +98,8 @@ describe('Auth Functions', () => {
                 username: mockUser.username,
                 email: mockUser.email,
                 password: mockUser.password,
-                clientName: mockUser.clientName
+                clientName: mockUser.clientName,
+                user_type: mockUser.user_type
             }, expect.any(String), { expiresIn: expect.any(String) });
 
             expect(token).toBe(mockToken);

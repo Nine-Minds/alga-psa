@@ -7,7 +7,9 @@ import { TaxService } from '@alga-psa/billing/services/taxService';
 import * as clientActions from '@alga-psa/clients/actions';
 
 
-vi.mock('@/lib/db/db');
+vi.mock('server/src/lib/db/db', () => ({
+  getConnection: vi.fn(),
+}));
 vi.mock('@alga-psa/db', () => ({
   withTransaction: vi.fn(async (_knex, callback) => callback(_knex)),
   withAdminTransaction: vi.fn(async (_callback, existing) => _callback(existing)),
@@ -81,7 +83,7 @@ describe('BillingEngine', () => {
       raw: vi.fn().mockReturnThis(),
     };
 
-    (billingEngine as any).knex = vi.fn((table: string) => {
+    const baseKnex = vi.fn((table: string) => {
       if (table === 'clients') {
         return buildChainableQuery({
           selectResult: [],
@@ -123,7 +125,13 @@ describe('BillingEngine', () => {
       defaultBuilder.count = vi.fn().mockResolvedValue([{ count: 0 }]);
       return defaultBuilder;
     });
-    (billingEngine as any).knex.raw = vi.fn().mockReturnValue('COALESCE(project_tasks.task_name, tickets.title) as work_item_name');
+    const materialSelectBuilder = buildChainableQuery({ selectResult: [], thenResult: [] });
+    materialSelectBuilder.from = vi.fn().mockReturnThis();
+    materialSelectBuilder.unionAll = vi.fn().mockReturnThis();
+    baseKnex.select = vi.fn().mockReturnValue(materialSelectBuilder);
+    baseKnex.raw = vi.fn().mockReturnValue('COALESCE(project_tasks.task_name, tickets.title) as work_item_name');
+    (billingEngine as any).knex = baseKnex;
+    (billingEngine as any).knex.raw = baseKnex.raw;
     vi.spyOn(billingEngine as any, 'fetchDiscounts').mockResolvedValue([]);
 
     (getConnection as any).mockReturnValue(mockQueryBuilder);
@@ -156,12 +164,14 @@ describe('BillingEngine', () => {
 
     builder.join = vi.fn().mockImplementation(() => builder);
     builder.leftJoin = vi.fn().mockImplementation(() => builder);
+    builder.from = vi.fn().mockImplementation(() => builder);
     builder.where = vi.fn().mockImplementation(handleWhere);
     builder.andWhere = vi.fn().mockImplementation(handleWhere);
     builder.orWhere = vi.fn().mockImplementation(handleWhere);
     builder.whereBetween = vi.fn().mockImplementation(() => builder);
     builder.whereNull = vi.fn().mockImplementation(() => builder);
     builder.whereNotNull = vi.fn().mockImplementation(() => builder);
+    builder.whereNot = vi.fn().mockImplementation(() => builder);
     builder.whereIn = vi.fn().mockImplementation(() => builder);
     builder.orderBy = vi.fn().mockImplementation(() => builder);
     builder.__setResolveValue = vi.fn((value: any) => {
@@ -176,6 +186,7 @@ describe('BillingEngine', () => {
       }
       return builder;
     });
+    builder.unionAll = vi.fn().mockImplementation(() => builder);
     builder.first = vi.fn().mockResolvedValue(firstResult);
     builder.raw = vi.fn().mockReturnValue('RAW');
     builder.toQuery = vi.fn().mockReturnValue('mocked-query');
@@ -232,7 +243,8 @@ describe('BillingEngine', () => {
         totalAmount: 250,
         discounts: [],
         adjustments: [],
-        finalAmount: 250
+        finalAmount: 250,
+        currency_code: 'USD'
       });
     });
 
@@ -298,6 +310,7 @@ describe('BillingEngine', () => {
         discounts: [],
         adjustments: [],
         finalAmount: 250,
+        currency_code: 'USD',
       });
     });
 
@@ -388,6 +401,7 @@ describe('BillingEngine', () => {
         discounts: mockDiscounts,
         adjustments: mockAdjustments,
         finalAmount: 85, // 100 - 10 - 5
+        currency_code: 'USD',
       });
     });
 
@@ -689,6 +703,7 @@ describe('BillingEngine', () => {
         discounts: [],
         adjustments: [],
         finalAmount: 350,
+        currency_code: 'USD',
       });
     });
   });
@@ -752,7 +767,7 @@ describe('BillingEngine', () => {
       });
 
       const mockKnex = vi.fn((tableName: string) => {
-        if (tableName.startsWith('client_contract_service_configuration')) {
+        if (tableName.startsWith('contract_line_service_configuration')) {
           return configurationBuilder;
         }
         if (tableName === 'clients') {
@@ -782,7 +797,7 @@ describe('BillingEngine', () => {
       const result = await (billingEngine as any).calculateBucketPlanCharges(
         mockClientId,
         { startDate: mockStartDate, endDate: mockEndDate },
-        { contract_line_id: 'test_contract_line_id' }
+        { contract_line_id: 'test_contract_line_id', client_contract_line_id: 'test_contract_line_id' }
       );
 
       expect(result).toMatchObject([
@@ -800,11 +815,11 @@ describe('BillingEngine', () => {
         }
       ]);
 
-      expect(mockKnex).toHaveBeenCalledWith('client_contract_service_configuration as ccsc');
+      expect(mockKnex).toHaveBeenCalledWith('contract_line_service_configuration as clsc');
       expect(mockKnex).toHaveBeenCalledWith('clients');
       expect(mockKnex).toHaveBeenCalledWith('bucket_usage');
 
-      expect(calculateTaxSpy).toHaveBeenCalledWith(mockClientId, 250, mockEndDate, 'US-CA');
+      expect(calculateTaxSpy).toHaveBeenCalledWith(mockClientId, 250, mockEndDate, 'US-CA', true, 'USD');
       calculateTaxSpy.mockRestore();
     });
 
@@ -1205,7 +1220,7 @@ describe('BillingEngine', () => {
         service_category: 'test_category',
         contract_line_name: 'Managed Support',
         contract_name: 'Acme Corp',
-        start_date: '2023-01-01T00:00:00Z',
+        start_date: '2022-11-01T00:00:00Z',
         end_date: null,
         is_active: true,
         tenant: mockTenant,
@@ -1221,14 +1236,49 @@ describe('BillingEngine', () => {
       };
 
       const scheduleQuery = createScheduleQuery({ first: mockPricingSchedule });
+      const planServicesBuilder = buildChainableQuery({
+        selectResult: [
+          {
+            service_id: 'service-1',
+            service_name: 'Managed Support',
+            default_rate: 10000,
+            tax_rate_id: null,
+            service_quantity: 1,
+            service_line_custom_rate: null,
+            configuration_quantity: 1,
+            configuration_custom_rate: null,
+            config_id: 'config-1',
+            service_base_rate: null,
+          },
+        ],
+        thenResult: [
+          {
+            service_id: 'service-1',
+            service_name: 'Managed Support',
+            default_rate: 10000,
+            tax_rate_id: null,
+            service_quantity: 1,
+            service_line_custom_rate: null,
+            configuration_quantity: 1,
+            configuration_custom_rate: null,
+            config_id: 'config-1',
+            service_base_rate: null,
+          },
+        ]
+      });
 
+      const baseKnex = (billingEngine as any).knex;
       (billingEngine as any).knex = vi.fn().mockImplementation((tableName: string) => {
         if (tableName === 'contract_pricing_schedules') {
           return scheduleQuery;
         }
+        if (tableName.startsWith('contract_line_services')) {
+          return planServicesBuilder;
+        }
 
-        return createGenericQueryBuilder();
+        return baseKnex(tableName);
       });
+      (billingEngine as any).knex.raw = baseKnex.raw;
 
       const charges = await (billingEngine as any).calculateFixedPriceCharges(
         mockClientId,
@@ -1271,7 +1321,7 @@ describe('BillingEngine', () => {
         service_category: 'test_category',
         contract_line_name: 'Managed Support',
         contract_name: 'Acme Corp',
-        start_date: '2023-01-01T00:00:00Z',
+        start_date: '2022-11-01T00:00:00Z',
         end_date: null,
         is_active: true,
         tenant: mockTenant,
@@ -1287,14 +1337,49 @@ describe('BillingEngine', () => {
       };
 
       const scheduleQuery = createScheduleQuery({ first: mockPricingSchedule });
+      const planServicesBuilder = buildChainableQuery({
+        selectResult: [
+          {
+            service_id: 'service-1',
+            service_name: 'Managed Support',
+            default_rate: 10000,
+            tax_rate_id: null,
+            service_quantity: 1,
+            service_line_custom_rate: null,
+            configuration_quantity: 1,
+            configuration_custom_rate: null,
+            config_id: 'config-1',
+            service_base_rate: null,
+          },
+        ],
+        thenResult: [
+          {
+            service_id: 'service-1',
+            service_name: 'Managed Support',
+            default_rate: 10000,
+            tax_rate_id: null,
+            service_quantity: 1,
+            service_line_custom_rate: null,
+            configuration_quantity: 1,
+            configuration_custom_rate: null,
+            config_id: 'config-1',
+            service_base_rate: null,
+          },
+        ]
+      });
 
+      const baseKnex = (billingEngine as any).knex;
       (billingEngine as any).knex = vi.fn().mockImplementation((tableName: string) => {
         if (tableName === 'contract_pricing_schedules') {
           return scheduleQuery;
         }
+        if (tableName.startsWith('contract_line_services')) {
+          return planServicesBuilder;
+        }
 
-        return createGenericQueryBuilder();
+        return baseKnex(tableName);
       });
+      (billingEngine as any).knex.raw = baseKnex.raw;
 
       const charges = await (billingEngine as any).calculateFixedPriceCharges(
         mockClientId,
@@ -1334,7 +1419,7 @@ describe('BillingEngine', () => {
         contract_id: 'test_contract_id',
         service_category: 'test_category',
         custom_rate: 12000,
-        start_date: '2023-01-01T00:00:00Z',
+        start_date: '2022-11-01T00:00:00Z',
         end_date: null,
         is_active: true,
         tenant: mockTenant
@@ -1350,13 +1435,15 @@ describe('BillingEngine', () => {
       };
 
       let pricingScheduleQueried = false;
+      const baseKnex = (billingEngine as any).knex;
       (billingEngine as any).knex = vi.fn().mockImplementation((tableName: string) => {
         if (tableName === 'contract_pricing_schedules') {
           pricingScheduleQueried = true;
           return createScheduleQuery({ first: mockPricingSchedule });
         }
-        return createGenericQueryBuilder();
+        return baseKnex(tableName);
       });
+      (billingEngine as any).knex.raw = baseKnex.raw;
 
       // Verify that the calculateFixedPriceCharges method queries for pricing schedules
       // This is an integration point we want to verify exists
@@ -1378,7 +1465,7 @@ describe('BillingEngine', () => {
         contract_id: 'test_contract_id',
         service_category: 'test_category',
         custom_rate: 12000,
-        start_date: '2023-01-01T00:00:00Z',
+        start_date: '2022-11-01T00:00:00Z',
         end_date: null,
         is_active: true,
         tenant: mockTenant
@@ -1386,13 +1473,15 @@ describe('BillingEngine', () => {
 
       // Mock pricing schedule query to return no schedule
       let pricingScheduleQueried = false;
+      const baseKnex = (billingEngine as any).knex;
       (billingEngine as any).knex = vi.fn().mockImplementation((tableName: string) => {
         if (tableName === 'contract_pricing_schedules') {
           pricingScheduleQueried = true;
           return createScheduleQuery();
         }
-        return createGenericQueryBuilder();
+        return baseKnex(tableName);
       });
+      (billingEngine as any).knex.raw = baseKnex.raw;
 
       // Call calculateFixedPriceCharges
       await (billingEngine as any).calculateFixedPriceCharges(
@@ -1413,36 +1502,32 @@ describe('BillingEngine', () => {
         contract_id: 'test_contract_id',
         service_category: 'test_category',
         custom_rate: 12000,
-        start_date: '2023-01-01T00:00:00Z',
+        start_date: '2022-11-01T00:00:00Z',
         end_date: null,
         is_active: true,
         tenant: mockTenant
       };
 
       // Mock pricing schedule query to throw an error
+      const baseKnex = (billingEngine as any).knex;
       (billingEngine as any).knex = vi.fn().mockImplementation((tableName: string) => {
         if (tableName === 'contract_pricing_schedules') {
           return createScheduleQuery({
             reject: new Error('Database connection failed')
           });
         }
-        return createGenericQueryBuilder();
+        return baseKnex(tableName);
       });
+      (billingEngine as any).knex.raw = baseKnex.raw;
 
       // The method should handle the error and not crash
       // This is testing that the pricing schedule lookup doesn't break the entire billing flow
-      try {
-        await (billingEngine as any).calculateFixedPriceCharges(
-          mockClientId,
-          { startDate: mockStartDate, endDate: mockEndDate },
-          mockClientContractLine
-        );
-        // If we get here, the error was handled gracefully
-        expect(true).toBe(true);
-      } catch (error) {
-        // If error is thrown, it should be related to database/query, not to pricing schedule integration
-        expect((error as any).message).toContain('Database connection failed');
-      }
+      const charges = await (billingEngine as any).calculateFixedPriceCharges(
+        mockClientId,
+        { startDate: mockStartDate, endDate: mockEndDate },
+        mockClientContractLine
+      );
+      expect(Array.isArray(charges)).toBe(true);
     });
 
     it('should query pricing schedules with correct date range filtering', async () => {
@@ -1453,7 +1538,7 @@ describe('BillingEngine', () => {
         contract_id: 'test_contract_id',
         service_category: 'test_category',
         custom_rate: 12000,
-        start_date: '2023-01-01T00:00:00Z',
+        start_date: '2022-11-01T00:00:00Z',
         end_date: null,
         is_active: true,
         tenant: mockTenant
@@ -1461,14 +1546,16 @@ describe('BillingEngine', () => {
 
       // Track the query parameters used
       const whereCalls: any[] = [];
+      const baseKnex = (billingEngine as any).knex;
       (billingEngine as any).knex = vi.fn().mockImplementation((tableName: string) => {
         if (tableName === 'contract_pricing_schedules') {
           return createScheduleQuery({
             onWhereCall: (args) => whereCalls.push(args)
           });
         }
-        return createGenericQueryBuilder();
+        return baseKnex(tableName);
       });
+      (billingEngine as any).knex.raw = baseKnex.raw;
 
       await (billingEngine as any).calculateFixedPriceCharges(
         mockClientId,

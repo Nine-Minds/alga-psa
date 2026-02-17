@@ -20,6 +20,8 @@ import { createClient } from '../../../../../test-utils/testDataFactory';
 
 let mockedTenantId = '11111111-1111-1111-1111-111111111111';
 let mockedUserId = 'mock-user-id';
+const runDbTests = process.env.RUN_DB_TESTS === 'true';
+const describeDb = runDbTests ? describe : describe.skip;
 
 process.env.DB_PORT = '5432';
 process.env.DB_HOST = process.env.DB_HOST === 'pgbouncer' ? 'localhost' : process.env.DB_HOST;
@@ -238,7 +240,7 @@ async function setupDefaultTax(clientId?: string) {
   await assignServiceTaxRate(context, '*', 'US-NY', { onlyUnset: true });
 }
 
-describe('Credit Application Tests', () => {
+describeDb('Credit Application Tests', () => {
   beforeAll(async () => {
     context = await setupContext({
       runSeeds: true,

@@ -12,7 +12,7 @@ import UserPicker from '@alga-psa/ui/components/UserPicker';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
 import type { IUser } from '@alga-psa/types';
 import { Upload, AlertTriangle, Check, ChevronDown, ChevronRight } from 'lucide-react';
-import { parseCSV } from '@alga-psa/core';
+import { parseCSV } from '@alga-psa/core/csvParser';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import {

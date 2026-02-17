@@ -1,9 +1,8 @@
 'use client';
 
-import { memo } from 'react';
+import React, { memo } from 'react';
 import { Plus } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
-import TimeEntryEditForm from './time-sheet/TimeEntryEditForm';
 import TimeEntryReadOnly from './time-sheet/TimeEntryReadOnly';
 import { ITimeEntryWithNew, TimeInputs, Service } from './time-sheet/types';
 import { TaxRegion } from '@alga-psa/types';
@@ -25,6 +24,7 @@ interface TimeEntryListProps {
   onUpdateTimeInputs: (inputs: TimeInputs) => void;
   onAddEntry: () => void;
   date?: Date;
+  TimeEntryEditFormComponent?: React.ComponentType<any>;
 }
 
 const TimeEntryList = memo(function TimeEntryList({
@@ -43,14 +43,15 @@ const TimeEntryList = memo(function TimeEntryList({
   onUpdateEntry,
   onUpdateTimeInputs,
   onAddEntry,
-  date
+  date,
+  TimeEntryEditFormComponent
 }: TimeEntryListProps) {
   return (
     <div className="space-y-4">
       {entries.map((entry, index): React.JSX.Element => (
         <div key={entry?.entry_id || entry?.tempId || `entry-${index}`}>
-          {editingIndex === index ? (
-            <TimeEntryEditForm
+          {editingIndex === index && TimeEntryEditFormComponent ? (
+            <TimeEntryEditFormComponent
               id={id}
               entry={entry}
               index={index}

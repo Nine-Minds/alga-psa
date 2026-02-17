@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
+import { formatCurrencyFromMinorUnits } from '@alga-psa/core/formatters';
 import type { InvoicePurchaseOrderSummary } from '@alga-psa/billing/actions/invoiceQueries';
 
 export function PurchaseOrderSummaryBanner(props: {

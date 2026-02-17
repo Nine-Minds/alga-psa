@@ -27,6 +27,7 @@ vi.mock('server/src/lib/models/UserSession', () => ({
 vi.mock('@alga-psa/auth', () => ({
   MspSignIn: MspSignInMock,
   PortalSwitchPrompt: PortalSwitchPromptMock,
+  getSession: getSessionMock,
 }));
 
 const { default: MspSignInPage } = await import('server/src/app/auth/msp/signin/page');

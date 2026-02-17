@@ -20,7 +20,7 @@ import { IContractLinePreset } from '@alga-psa/types';
 import { useTenant } from '@alga-psa/ui/components/providers/TenantProvider';
 import { Package, Clock, Activity, Plus, X, Coins } from 'lucide-react';
 import { BILLING_FREQUENCY_OPTIONS } from '@alga-psa/billing/constants/billing';
-import { getCurrencySymbol } from '@alga-psa/core';
+import { getCurrencySymbol } from '@alga-psa/core/constants/currency';
 import { getServiceById } from '@alga-psa/billing/actions';
 import { SwitchWithLabel } from '@alga-psa/ui/components/SwitchWithLabel';
 import { BucketOverlayFields } from './contracts/BucketOverlayFields';

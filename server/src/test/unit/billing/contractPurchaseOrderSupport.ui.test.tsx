@@ -11,6 +11,10 @@ import * as billingCycleActions from '@alga-psa/billing/actions/billingCycleActi
 import * as billingAndTaxActions from '@alga-psa/billing/actions/billingAndTax';
 import * as invoiceGenerationActions from '@alga-psa/billing/actions/invoiceGeneration';
 
+vi.mock('@alga-psa/billing/lib/authHelpers', () => ({
+  getCurrentUserAsync: vi.fn().mockResolvedValue({ user_id: 'user-1', tenant: 'tenant-1' }),
+}));
+
 vi.mock('@alga-psa/ui/components/DataTable', () => ({
   DataTable: ({ data, columns, id }: any) => {
     const getValue = (row: any, dataIndex: any) => {

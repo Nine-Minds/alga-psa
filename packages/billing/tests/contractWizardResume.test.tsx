@@ -9,6 +9,7 @@ import userEvent from '@testing-library/user-event';
 vi.mock('@alga-psa/ui/components/Dialog', () => ({
   Dialog: ({ isOpen, children }: { isOpen: boolean; children: React.ReactNode }) =>
     isOpen ? <div data-testid="dialog">{children}</div> : null,
+  DialogContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
 vi.mock('@alga-psa/ui/components/onboarding/WizardProgress', () => ({

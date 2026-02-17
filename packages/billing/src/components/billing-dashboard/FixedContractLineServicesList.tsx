@@ -32,7 +32,7 @@ import { AlertCircle } from 'lucide-react';
 import EditPlanServiceQuantityDialog from './contract-lines/EditContractLineServiceQuantityDialog';
 import { getContractLineById } from '@alga-psa/billing/actions/contractLineAction';
 import { getContractById } from '@alga-psa/billing/actions/contractActions';
-import { getCurrencySymbol } from '@alga-psa/core';
+import { getCurrencySymbol } from '@alga-psa/core/constants/currency';
 import { Badge } from '@alga-psa/ui/components/Badge';
 // Removed ContractLineServiceForm import as 'Configure' is removed
 

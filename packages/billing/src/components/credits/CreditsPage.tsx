@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Button } from '@alga-psa/ui/components/Button';
-import { formatCurrency } from '@alga-psa/core';
+import { formatCurrency } from '@alga-psa/core/formatters';
 import type { ColumnDefinition } from '@alga-psa/types';
 import type { ICreditExpirationSettings, ICreditTracking } from '@alga-psa/types';
 import { getCreditExpirationSettings } from '../../actions/creditExpirationSettingsActions';

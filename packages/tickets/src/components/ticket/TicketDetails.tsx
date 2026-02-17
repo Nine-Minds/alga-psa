@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useCallback, useMemo, useRef, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import { formatDistanceToNow } from 'date-fns';
-import { utcToLocal, formatDateTime, getUserTimeZone } from '@alga-psa/core';
+import { utcToLocal, formatDateTime, getUserTimeZone } from '@alga-psa/core/dateTimeUtils';
 import { getTicketingDisplaySettings } from '../../actions/ticketDisplaySettings';
 import { ConfirmationDialog } from "@alga-psa/ui/components/ConfirmationDialog";
 import {

@@ -5,7 +5,7 @@ import { createTenantKnex } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/shared/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
-import { unparseCSV } from '@alga-psa/core';
+import { unparseCSV } from '@alga-psa/core/csvParser';
 import { getAllUsersBasic } from '@alga-psa/users/actions';
 import { getAllPriorities } from '@alga-psa/reference-data/actions';
 import { getServices } from './serviceCatalogActions';

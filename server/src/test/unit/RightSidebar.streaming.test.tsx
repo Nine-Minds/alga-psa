@@ -10,6 +10,7 @@ import RightSidebar from '@ee/components/layout/RightSidebar';
 import {
   addMessageToChatAction,
   createNewChatAction,
+  getChatMessagesAction,
 } from '@ee/lib/chat-actions/chatActions';
 
 (globalThis as unknown as { React?: typeof React }).React = React;
@@ -101,6 +102,7 @@ describe('RightSidebar (streaming)', () => {
       .mocked(addMessageToChatAction)
       .mockResolvedValueOnce({ _id: 'user-message-id' })
       .mockResolvedValueOnce({ _id: 'assistant-message-id' });
+    vi.mocked(getChatMessagesAction).mockResolvedValueOnce([]);
 
     const sse = createControlledSseResponse();
     const fetchMock = vi.fn().mockResolvedValue(sse.response);
@@ -142,4 +144,3 @@ describe('RightSidebar (streaming)', () => {
     });
   });
 });
-

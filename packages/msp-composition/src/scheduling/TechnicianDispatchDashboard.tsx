@@ -26,6 +26,7 @@ import { addDays, addWeeks, addMonths, startOfDay, subDays, subWeeks, subMonths,
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { AlertCircle } from 'lucide-react';
 import EntryPopup from '@alga-psa/scheduling/components/schedule/EntryPopup';
+import { WorkItemDrawer } from './WorkItemDrawer';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import { QuickAddTicket } from '@alga-psa/tickets/components';
 import { ITicket } from '@alga-psa/types';
@@ -733,6 +734,7 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
             canAssignOthers={false}
             viewOnly={true}
             isInDrawer={true}
+            WorkItemDrawerComponent={WorkItemDrawer}
           />
         );
         return;

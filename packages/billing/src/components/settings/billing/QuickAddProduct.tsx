@@ -18,7 +18,7 @@ import {
 import { getTaxRates } from '@alga-psa/billing/actions';
 import { ITaxRate } from '@alga-psa/types';
 import { IService, IServiceCategory } from '@alga-psa/types';
-import { CURRENCY_OPTIONS, getCurrencySymbol } from '@alga-psa/core';
+import { CURRENCY_OPTIONS, getCurrencySymbol } from '@alga-psa/core/constants/currency';
 import { getServiceCategories } from '@alga-psa/billing/actions';
 
 const LICENSE_TERM_OPTIONS = [

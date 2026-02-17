@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
 import { getProjectProgress, getProjectManager } from '@alga-psa/client-portal/actions';
-import { formatDateOnly } from '@alga-psa/core';
+import { formatDateOnly } from '@alga-psa/core/dateTimeUtils';
 import { Mail } from 'lucide-react';
 
 import { IProject } from '@alga-psa/types';

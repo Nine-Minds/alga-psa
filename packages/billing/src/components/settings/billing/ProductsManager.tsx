@@ -30,7 +30,7 @@ import { QuickAddProduct } from './QuickAddProduct';
 import { getTaxRates } from '@alga-psa/billing/actions';
 import { ITaxRate } from '@alga-psa/types';
 import { IService, IServicePrice } from '@alga-psa/types';
-import { getCurrencySymbol } from '@alga-psa/core';
+import { getCurrencySymbol } from '@alga-psa/core/constants/currency';
 import { getServiceCategories } from '@alga-psa/billing/actions';
 import { IServiceCategory } from '@alga-psa/types';
 

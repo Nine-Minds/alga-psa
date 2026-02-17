@@ -4,7 +4,8 @@ import { runAuthoritativeInvoiceTemplatePreview } from './invoiceTemplatePreview
 import { mapDbInvoiceToWasmViewModel } from '../lib/adapters/invoiceAdapters';
 
 vi.mock('@alga-psa/auth', () => ({
-  withAuth: (fn: unknown) => fn,
+  withAuth: (fn: any) => (...args: any[]) =>
+    fn({ user_id: 'user-1', tenant: 'tenant-1' }, { tenant: 'tenant-1' }, ...args),
 }));
 
 const workspace: DesignerWorkspaceSnapshot = {

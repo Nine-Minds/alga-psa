@@ -40,7 +40,6 @@ describe('workflow event catalog migration coverage', () => {
 
     // Sanity check: migration computes payload_schema_ref from event_type.
     expect(migration.includes('toPayloadSchemaRef')).toBe(true);
-    expect(migration.includes('payload_schema_ref: toPayloadSchemaRef(e.event_type)')).toBe(true);
+    expect(migration.includes('const payloadSchemaRef = toPayloadSchemaRef(e.event_type)')).toBe(true);
   });
 });
-

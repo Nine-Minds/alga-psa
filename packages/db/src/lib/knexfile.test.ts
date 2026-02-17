@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 
-vi.mock('@alga-psa/core', () => ({
+vi.mock('@alga-psa/core/secrets', () => ({
   getSecret: vi.fn(async (_key: string, envVar?: string) => {
     if (!envVar) return null;
     return process.env[envVar] ?? null;
@@ -9,10 +9,11 @@ vi.mock('@alga-psa/core', () => ({
 
 describe('knexfile', () => {
   beforeEach(() => {
+    vi.resetModules();
     process.env.DB_HOST = 'db-host';
     process.env.DB_PORT = '5439';
     process.env.DB_USER_SERVER = 'app_user';
-    process.env.DB_NAME_SERVER = 'server_db';
+    process.env.DB_NAME_SERVER = 'server';
     process.env.DB_PASSWORD_SERVER = 'server_pw';
 
     process.env.DB_HOST_ADMIN = 'admin-host';
@@ -30,7 +31,7 @@ describe('knexfile', () => {
     expect(config.connection.host).toBe('db-host');
     expect(config.connection.port).toBe(5439);
     expect(config.connection.user).toBe('app_user');
-    expect(config.connection.database).toBe('server_db');
+    expect(config.connection.database).toBe('server');
     expect(config.connection.password).toBe('server_pw');
   });
 
@@ -42,8 +43,7 @@ describe('knexfile', () => {
     expect(connection.host).toBe('admin-host');
     expect(connection.port).toBe(5440);
     expect(connection.user).toBe('postgres');
-    expect(connection.database).toBe('server_db');
+    expect(connection.database).toBe('server');
     expect(connection.password).toBe('admin_pw');
   });
 });
-

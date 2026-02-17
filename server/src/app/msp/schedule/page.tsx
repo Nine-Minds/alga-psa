@@ -1,2 +1,2 @@
-export { default } from '@alga-psa/scheduling/components/schedule/SchedulePage';
+export { MspSchedulePage as default } from '@alga-psa/msp-composition/scheduling';
 

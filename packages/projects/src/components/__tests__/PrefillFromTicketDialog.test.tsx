@@ -24,11 +24,47 @@ function createMockTicketIntegration(
 }
 
 vi.mock('@alga-psa/ui/components/Dialog', () => ({
-  Dialog: ({ open, children }: any) => (open ? <div>{children}</div> : null),
+  Dialog: ({ open, isOpen, children }: any) => ((open ?? isOpen) ? <div>{children}</div> : null),
   DialogContent: ({ children }: any) => <div>{children}</div>,
   DialogHeader: ({ children }: any) => <div>{children}</div>,
   DialogTitle: ({ children }: any) => <div>{children}</div>,
   DialogFooter: ({ children }: any) => <div>{children}</div>,
+}));
+
+vi.mock('@alga-psa/reference-data/actions', () => ({
+  getTicketStatuses: vi.fn().mockResolvedValue([]),
+  getAllPriorities: vi.fn().mockResolvedValue([]),
+}));
+
+vi.mock('@alga-psa/users/actions', () => ({
+  getUserAvatarUrlsBatchAction: vi.fn().mockResolvedValue({}),
+}));
+
+vi.mock('@alga-psa/ui/components/UserPicker', () => ({
+  __esModule: true,
+  default: () => <div data-testid="user-picker" />,
+}));
+
+vi.mock('@alga-psa/ui/components/CustomSelect', () => ({
+  __esModule: true,
+  default: ({ value, onValueChange, options }: any) => (
+    <select
+      aria-label="custom-select"
+      value={value}
+      onChange={(event) => onValueChange(event.target.value)}
+    >
+      <option value="" />
+      {options.map((option: any) => (
+        <option key={option.value} value={option.value}>
+          {option.label}
+        </option>
+      ))}
+    </select>
+  ),
+}));
+
+vi.mock('@alga-psa/ui/components/settings/general/BoardPicker', () => ({
+  BoardPicker: () => <div data-testid="board-picker" />,
 }));
 
 vi.mock('../TicketSelect', () => ({
@@ -129,11 +165,15 @@ describe('PrefillFromTicketDialog', () => {
         { ticket_id: 'ticket-1', ticket_number: 'T-001', title: 'Printer issue', status_name: 'New' }
       ]),
       getConsolidatedTicketData: vi.fn().mockResolvedValue({
-        ticket_id: 'ticket-1',
-        ticket_number: 'T-001',
-        title: 'Printer issue',
-        status_name: 'New',
-        is_closed: false
+        ticket: {
+          ticket_id: 'ticket-1',
+          ticket_number: 'T-001',
+          title: 'Printer issue',
+          status_name: 'New',
+          is_closed: false
+        },
+        additionalAgents: [],
+        availableAgents: []
       }),
     });
 
@@ -161,9 +201,11 @@ describe('PrefillFromTicketDialog', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Prefill' }));
 
-    expect(onPrefill).toHaveBeenCalledWith(
-      expect.objectContaining({ shouldLink: false })
-    );
+    await waitFor(() => {
+      expect(onPrefill).toHaveBeenCalledWith(
+        expect.objectContaining({ shouldLink: false })
+      );
+    });
   });
 
   it('calls getConsolidatedTicketData for the selected ticket on confirm', async () => {
@@ -172,9 +214,13 @@ describe('PrefillFromTicketDialog', () => {
         { ticket_id: 'ticket-2', ticket_number: 'T-002', title: 'VPN issue', status_name: 'New' }
       ]),
       getConsolidatedTicketData: vi.fn().mockResolvedValue({
-        ticket_id: 'ticket-2',
-        ticket_number: 'T-002',
-        title: 'VPN issue'
+        ticket: {
+          ticket_id: 'ticket-2',
+          ticket_number: 'T-002',
+          title: 'VPN issue'
+        },
+        additionalAgents: [],
+        availableAgents: []
       }),
     });
 
@@ -206,12 +252,16 @@ describe('PrefillFromTicketDialog', () => {
         { ticket_id: 'ticket-3', ticket_number: 'T-003', title: 'WiFi outage', status_name: 'Open' }
       ]),
       getConsolidatedTicketData: vi.fn().mockResolvedValue({
-        ticket_id: 'ticket-3',
-        ticket_number: 'T-003',
-        title: 'WiFi outage',
-        description: 'AP reboot required',
-        assigned_to: 'user-9',
-        due_date: '2026-02-05T08:00:00.000Z'
+        ticket: {
+          ticket_id: 'ticket-3',
+          ticket_number: 'T-003',
+          title: 'WiFi outage',
+          description: 'AP reboot required',
+          assigned_to: 'user-9',
+          due_date: '2026-02-05T08:00:00.000Z'
+        },
+        additionalAgents: [],
+        availableAgents: []
       }),
     });
 
@@ -236,6 +286,9 @@ describe('PrefillFromTicketDialog', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Prefill' }));
 
+    await waitFor(() => {
+      expect(onPrefill).toHaveBeenCalled();
+    });
     const payload = onPrefill.mock.calls[0][0];
     expect(payload.prefillData.task_name).toBe('WiFi outage');
     expect(payload.prefillData.description).toBe('AP reboot required');

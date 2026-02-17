@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
+import { v4 as uuidv4 } from 'uuid';
 import { generateTemporaryPassword, sendWelcomeEmail } from '../email-activities';
 import { MockEmailService } from '../../services/email-service';
 import type { SendWelcomeEmailActivityInput } from '../../types/workflow-types';
@@ -19,8 +20,8 @@ vi.mock('@temporalio/activity', () => ({
 
 describe('Email Activities - Standalone Tests', () => {
   describe('Password Generation', () => {
-    it('should generate secure passwords with default length', () => {
-      const password = generateTemporaryPassword();
+    it('should generate secure passwords with default length', async () => {
+      const password = await generateTemporaryPassword();
       expect(password).toHaveLength(12);
       
       // Check for required character types
@@ -33,8 +34,8 @@ describe('Email Activities - Standalone Tests', () => {
       expect(password).not.toMatch(/[0O1lI]/);
     });
 
-    it('should generate passwords with custom length', () => {
-      const password = generateTemporaryPassword(16);
+    it('should generate passwords with custom length', async () => {
+      const password = await generateTemporaryPassword(16);
       expect(password).toHaveLength(16);
       
       // Should still meet security requirements
@@ -44,8 +45,10 @@ describe('Email Activities - Standalone Tests', () => {
       expect(password).toMatch(/[!@#$%^&*]/);
     });
 
-    it('should generate unique passwords', () => {
-      const passwords = Array.from({ length: 10 }, () => generateTemporaryPassword(12));
+    it('should generate unique passwords', async () => {
+      const passwords = await Promise.all(
+        Array.from({ length: 10 }, () => generateTemporaryPassword(12)),
+      );
       const uniquePasswords = new Set(passwords);
       expect(uniquePasswords.size).toBe(10);
     });
@@ -53,13 +56,14 @@ describe('Email Activities - Standalone Tests', () => {
 
   describe('Email Activity', () => {
     it('should send welcome email successfully', async () => {
-      const timestamp = Date.now();
+      const tenantId = uuidv4();
+      const userId = uuidv4();
       const input: SendWelcomeEmailActivityInput = {
-        tenantId: `tenant-${timestamp}`,
+        tenantId,
         tenantName: 'Test Tenant',
         adminUser: {
-          userId: `user-${timestamp}`,
-          email: `test-${timestamp}@example.com`,
+          userId,
+          email: `test-${tenantId}@example.com`,
           firstName: 'John',
           lastName: 'Doe',
         },
@@ -77,12 +81,13 @@ describe('Email Activities - Standalone Tests', () => {
     });
 
     it('should handle invalid email gracefully', async () => {
-      const timestamp = Date.now();
+      const tenantId = uuidv4();
+      const userId = uuidv4();
       const input: SendWelcomeEmailActivityInput = {
-        tenantId: `tenant-${timestamp}`,
+        tenantId,
         tenantName: 'Test Tenant',
         adminUser: {
-          userId: `user-${timestamp}`,
+          userId,
           email: 'invalid-email-format',
           firstName: 'John',
           lastName: 'Doe',
@@ -98,13 +103,14 @@ describe('Email Activities - Standalone Tests', () => {
     });
 
     it('should work with minimal required fields', async () => {
-      const timestamp = Date.now();
+      const tenantId = uuidv4();
+      const userId = uuidv4();
       const input: SendWelcomeEmailActivityInput = {
-        tenantId: `tenant-${timestamp}`,
+        tenantId,
         tenantName: 'Minimal Tenant',
         adminUser: {
-          userId: `user-${timestamp}`,
-          email: `minimal-${timestamp}@example.com`,
+          userId,
+          email: `minimal-${tenantId}@example.com`,
           firstName: 'Jane',
           lastName: 'Smith',
         },

@@ -14,8 +14,7 @@ import { ICSVColumnMapping, ICSVPreviewData, ICSVValidationResult, IContact, Map
 import { importContactsFromCSV, checkExistingEmails, generateContactCSVTemplate } from '@alga-psa/clients/actions';
 import { X, Upload, AlertTriangle, Check, Download } from 'lucide-react';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
-import { parseCSV, unparseCSV, validateCSVHeaders } from '@alga-psa/core';
-
+import { parseCSV, unparseCSV, validateCSVHeaders } from '@alga-psa/core/csvParser';
 interface ContactsImportDialogProps {
   isOpen: boolean;
   onClose: () => void;

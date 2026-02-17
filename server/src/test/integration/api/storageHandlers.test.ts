@@ -30,7 +30,10 @@ process.env.DB_NAME_SERVER = process.env.DB_NAME_SERVER || 'sebastian_test';
 
 configureStorageTestDatabase();
 
-describe('Storage Route Handlers', () => {
+const runDbTests = process.env.RUN_DB_TESTS === 'true';
+const describeDb = runDbTests ? describe : describe.skip;
+
+describeDb('Storage Route Handlers', () => {
   const testHelpers = TestContext.createHelpers();
   const origin = 'http://127.0.0.1';
 

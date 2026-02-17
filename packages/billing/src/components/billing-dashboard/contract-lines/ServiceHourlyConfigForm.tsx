@@ -6,7 +6,7 @@ import { Label } from '@alga-psa/ui/components/Label';
 import { Button } from '@alga-psa/ui/components/Button'; // Import Button
 import * as RadixTooltip from '@radix-ui/react-tooltip'; // Use Radix Tooltip directly
 import { Info, Trash2 } from 'lucide-react'; // Import Trash2
-import { getCurrencySymbol } from '@alga-psa/core';
+import { getCurrencySymbol } from '@alga-psa/core/constants/currency';
 import { IContractLineServiceHourlyConfig, IUserTypeRate } from '@alga-psa/types';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect'; // Import CustomSelect
 

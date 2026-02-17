@@ -13,7 +13,10 @@ import {
 const helpers = TestContext.createHelpers();
 const HOOK_TIMEOUT = 120_000;
 
-describe('Accounting mapping permissions', () => {
+const runDbTests = process.env.RUN_DB_TESTS === 'true';
+const describeDb = runDbTests ? describe : describe.skip;
+
+describeDb('Accounting mapping permissions', () => {
   let ctx: TestContext;
 
   beforeAll(async () => {

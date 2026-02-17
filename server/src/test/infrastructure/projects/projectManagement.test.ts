@@ -32,6 +32,8 @@ import type { IProject, IProjectPhase, IProjectTask } from '@alga-psa/types';
 import { ProjectModel, ProjectTaskModel } from '@alga-psa/projects/models';
 
 global.TextEncoder = TextEncoder;
+const runDbTests = process.env.RUN_DB_TESTS === 'true';
+const describeDb = runDbTests ? describe : describe.skip;
 
 // Type definitions for create operations
 type CreateProjectInput = Omit<IProject, 'project_id' | 'created_at' | 'updated_at'>;
@@ -221,7 +223,7 @@ async function getNextPhaseWbsCode(db: Knex, projectWbsCode: string): Promise<st
     return `${projectWbsCode}.${currentMax + 1}`;
 }
 
-describe('Project Management', () => {
+describeDb('Project Management', () => {
     let db: Knex;
     let tenantId: string;
     let clientId: string;

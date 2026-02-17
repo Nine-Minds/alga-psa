@@ -4,7 +4,7 @@ import type { IClient, IContact, ImportContactResult, ITag, MappableField } from
 import { createTenantKnex } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
-import { unparseCSV } from '@alga-psa/core';
+import { unparseCSV } from '@alga-psa/core/csvParser';
 import { getContactAvatarUrlsBatchAsync } from '../../lib/documentsHelpers';
 import { createTag } from '@alga-psa/tags/actions';
 import { hasPermissionAsync } from '../../lib/authHelpers';

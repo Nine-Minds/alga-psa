@@ -8,7 +8,7 @@ import { QuickAddAsset } from '@alga-psa/assets/components/QuickAddAsset';
 import { QuickAddTicket } from '@alga-psa/tickets/components';
 import QuickAddClient from '@alga-psa/clients/components/clients/QuickAddClient';
 import QuickAddContact from '@alga-psa/clients/components/contacts/QuickAddContact';
-import ProjectQuickAdd from '@alga-psa/projects/components/ProjectQuickAdd';
+import ProjectQuickAdd from '@alga-psa/msp-composition/projects/ProjectQuickAdd';
 import { QuickAddProduct, QuickAddService } from '@alga-psa/billing/components';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';

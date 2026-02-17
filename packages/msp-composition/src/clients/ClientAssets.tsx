@@ -22,6 +22,7 @@ import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect
 import Spinner from '@alga-psa/ui/components/Spinner';
 import { QuickAddAsset } from '@alga-psa/assets/components/QuickAddAsset';
 import { AssetDetailDrawerClient } from '@alga-psa/assets/components/AssetDetailDrawerClient';
+import { default as CreateTicketFromAssetButton } from '../assets/CreateTicketFromAssetButton';
 import {
   ASSET_DRAWER_TABS,
   type AssetDrawerTab,
@@ -516,6 +517,7 @@ const ClientAssets: React.FC<ClientAssetsProps> = ({ clientId }) => {
         isLoading={drawerLoading}
         onClose={handleDrawerClose}
         onTabChange={handleDrawerTabChange}
+        CreateTicketButton={CreateTicketFromAssetButton}
       />
     </div>
   );

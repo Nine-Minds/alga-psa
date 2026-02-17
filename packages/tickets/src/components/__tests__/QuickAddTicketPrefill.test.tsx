@@ -1,10 +1,10 @@
 /* @vitest-environment jsdom */
 /// <reference types="@testing-library/jest-dom/vitest" />
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { QuickAddTicket } from '../QuickAddTicket';
+let QuickAddTicket: typeof import('../QuickAddTicket').QuickAddTicket;
 
 const addTicketMock = vi.fn();
 const getTicketFormDataMock = vi.fn();
@@ -16,22 +16,43 @@ vi.mock('next/navigation', () => ({
   })
 }));
 
-vi.mock('../actions/ticketActions', () => ({
+vi.mock('../../actions/ticketActions', () => ({
   addTicket: (...args: unknown[]) => addTicketMock(...args)
 }));
 
-vi.mock('../actions/ticketFormActions', () => ({
+vi.mock('../../actions/ticketFormActions', () => ({
   getTicketFormData: (...args: unknown[]) => getTicketFormDataMock(...args)
+}));
+
+vi.mock('../../actions/clientLookupActions', () => ({
+  getContactsByClient: vi.fn(async () => []),
+  getClientLocations: vi.fn(async () => []),
+}));
+
+vi.mock('../../actions/ticketResourceActions', () => ({
+  addTicketResource: vi.fn(async () => ({ resource_id: 'resource-1' })),
 }));
 
 vi.mock('@alga-psa/ui/components/ClientPicker', () => ({
   __esModule: true,
-  default: ({ onSelect, selectedClientId }: any) => {
+  ClientPicker: ({ onSelect, selectedClientId }: any) => {
+    const hasSelected = useRef(false);
     useEffect(() => {
-      if (!selectedClientId) {
+      if (!selectedClientId && !hasSelected.current) {
+        hasSelected.current = true;
         onSelect('client-1');
       }
-    }, [onSelect, selectedClientId]);
+    }, [selectedClientId]);
+    return <div data-testid="client-picker" />;
+  },
+  default: ({ onSelect, selectedClientId }: any) => {
+    const hasSelected = useRef(false);
+    useEffect(() => {
+      if (!selectedClientId && !hasSelected.current) {
+        hasSelected.current = true;
+        onSelect('client-1');
+      }
+    }, [selectedClientId]);
     return <div data-testid="client-picker" />;
   }
 }));
@@ -39,9 +60,13 @@ vi.mock('@alga-psa/ui/components/ClientPicker', () => ({
 vi.mock('@alga-psa/ui/components/UserPicker', () => ({
   __esModule: true,
   default: ({ onValueChange }: any) => {
+    const hasSelected = useRef(false);
     useEffect(() => {
-      onValueChange('user-1');
-    }, [onValueChange]);
+      if (!hasSelected.current) {
+        hasSelected.current = true;
+        onValueChange('user-1');
+      }
+    }, []);
     return <div data-testid="user-picker" />;
   }
 }));
@@ -49,9 +74,13 @@ vi.mock('@alga-psa/ui/components/UserPicker', () => ({
 vi.mock('@alga-psa/ui/components/settings/general/BoardPicker', () => ({
   __esModule: true,
   BoardPicker: ({ onSelect }: any) => {
+    const hasSelected = useRef(false);
     useEffect(() => {
-      onSelect('board-1');
-    }, [onSelect]);
+      if (!hasSelected.current) {
+        hasSelected.current = true;
+        onSelect('board-1');
+      }
+    }, []);
     return <div data-testid="board-picker" />;
   }
 }));
@@ -89,6 +118,11 @@ vi.mock('@alga-psa/tags/components', () => ({
   QuickAddTagPicker: () => <div data-testid="tag-picker" />
 }));
 
+vi.mock('@alga-psa/users/actions', () => ({
+  getCurrentUser: vi.fn(async () => ({ user_id: 'user-1', tenant: 'tenant-1' })),
+  getUserAvatarUrlsBatchAction: vi.fn(async () => ({})),
+}));
+
 vi.mock('@alga-psa/ui/components/DatePicker', () => ({
   DatePicker: ({ value }: { value?: Date }) => (
     <input data-testid="due-date" value={value ? value.toISOString() : ''} readOnly />
@@ -100,7 +134,9 @@ vi.mock('@alga-psa/ui/components/TimePicker', () => ({
 }));
 
 describe('QuickAddTicket prefills', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
+    await vi.resetModules();
+    ({ QuickAddTicket } = await import('../QuickAddTicket'));
     pushMock.mockReset();
     getTicketFormDataMock.mockResolvedValue({
       users: [],

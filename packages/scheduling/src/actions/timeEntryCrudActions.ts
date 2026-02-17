@@ -22,8 +22,7 @@ import {
 import { getClientIdForWorkItem } from './timeEntryHelpers'; // Import helper
 import { computeWorkDateFields, resolveUserTimeZone } from '@alga-psa/db';
 import { assertCanActOnBehalf } from './timeEntryDelegationAuth';
-import { toPlainDate } from '@alga-psa/core';
-
+import { toPlainDate } from '@alga-psa/core/dateTimeUtils';
 function captureAnalytics(_event: string, _properties?: Record<string, any>, _userId?: string): void {
   // Intentionally no-op: avoid pulling analytics (and its tenancy/client-portal deps) into scheduling.
 }

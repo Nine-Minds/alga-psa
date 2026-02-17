@@ -2,8 +2,8 @@
 
 import React from 'react';
 import { AssetDetailHeader } from './AssetDetailHeader';
-import { AssetMetricsBanner } from './AssetMetricsBanner';
-import { AssetDashboardGrid } from './AssetDashboardGrid';
+import { AssetMetricsBanner } from '@alga-psa/assets/components/AssetMetricsBanner';
+import { AssetDashboardGrid } from '@alga-psa/assets/components/AssetDashboardGrid';
 import { AssetDetailTabs } from './AssetDetailTabs';
 import { useAssetDetail } from '@alga-psa/assets/hooks/useAssetDetail';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
@@ -15,13 +15,13 @@ interface AssetDetailViewProps {
 }
 
 export const AssetDetailView: React.FC<AssetDetailViewProps> = ({ assetId }) => {
-  const { 
-    asset, 
-    metrics, 
-    rmmData, 
-    isLoading, 
-    refreshRmmData, 
-    isRefreshing 
+  const {
+    asset,
+    metrics,
+    rmmData,
+    isLoading,
+    refreshRmmData,
+    isRefreshing
   } = useAssetDetail(assetId);
 
   if (isLoading && !asset) {
@@ -48,19 +48,19 @@ export const AssetDetailView: React.FC<AssetDetailViewProps> = ({ assetId }) => 
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <AssetDetailHeader 
-        asset={asset} 
+      <AssetDetailHeader
+        asset={asset}
         onRefresh={refreshRmmData}
         isRefreshing={isRefreshing}
       />
-      
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <AssetMetricsBanner 
-          metrics={metrics} 
-          isLoading={isLoading} 
+        <AssetMetricsBanner
+          metrics={metrics}
+          isLoading={isLoading}
         />
-        
-        <AssetDashboardGrid 
+
+        <AssetDashboardGrid
           asset={asset}
           rmmData={rmmData}
           metrics={metrics}
@@ -68,7 +68,7 @@ export const AssetDetailView: React.FC<AssetDetailViewProps> = ({ assetId }) => 
           onRefreshRmm={refreshRmmData}
           isRefreshingRmm={isRefreshing}
         />
-        
+
         <AssetDetailTabs asset={asset} />
       </div>
     </div>

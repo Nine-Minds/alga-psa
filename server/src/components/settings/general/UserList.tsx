@@ -9,7 +9,7 @@ import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import { getUserAvatarUrlAction } from '@alga-psa/users/actions';
 import { MoreVertical, Pen, Trash2 } from 'lucide-react';
 
-import ClientDetails from '@alga-psa/clients/components/clients/ClientDetails';
+import ClientDetails from '@alga-psa/msp-composition/clients/ClientDetails';
 
 import { getUsersClientInfo } from '@alga-psa/users/actions';
 import {

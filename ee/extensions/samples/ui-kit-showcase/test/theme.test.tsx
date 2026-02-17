@@ -1,3 +1,6 @@
+/**
+ * @vitest-environment jsdom
+ */
 import { describe, expect, test, vi, beforeEach } from 'vitest';
 
 describe('theme bridge (postMessage)', () => {

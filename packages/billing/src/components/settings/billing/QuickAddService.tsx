@@ -9,8 +9,7 @@ import { EditableServiceTypeSelect } from '@alga-psa/ui/components/EditableServi
 import { Switch } from '@alga-psa/ui/components/Switch'
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert'
 import { createService, type CreateServiceInput, createServiceTypeInline, updateServiceTypeInline, deleteServiceTypeInline, setServicePrices } from '@alga-psa/billing/actions'
-import { CURRENCY_OPTIONS, getCurrencySymbol } from '@alga-psa/core'
-// Import getTaxRates and ITaxRate instead
+import { CURRENCY_OPTIONS, getCurrencySymbol } from '@alga-psa/core/constants/currency';// Import getTaxRates and ITaxRate instead
 import { getTaxRates } from '@alga-psa/billing/actions'; // Removed getActiveTaxRegions
 import { ITaxRate } from '@alga-psa/types'; // Removed ITaxRegion
 // Note: getServiceCategories might be removable if categories are fully replaced by service types

@@ -40,7 +40,10 @@ vi.mock('server/src/lib/jobs/initializeJobRunner', () => ({
   initializeJobRunner: vi.fn(async () => runner),
 }));
 
-describe('Extension v2 update schedule remap – DB integration', () => {
+const runDbTests = process.env.RUN_DB_TESTS === 'true';
+const describeDb = runDbTests ? describe : describe.skip;
+
+describeDb('Extension v2 update schedule remap – DB integration', () => {
   const HOOK_TIMEOUT = 180_000;
 
   beforeAll(async () => {

@@ -10,7 +10,7 @@ import { Label } from '@alga-psa/ui/components/Label';
 import { createTimePeriod, updateTimePeriod, deleteTimePeriod } from '@alga-psa/scheduling/actions/timePeriodsActions';
 import { ITimePeriodSettings, ITimePeriodView } from '@alga-psa/types';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
-import { toPlainDate } from '@alga-psa/core';
+import { toPlainDate } from '@alga-psa/core/dateTimeUtils';
 import { TimePeriodSuggester } from '../../../lib/timePeriodSuggester';
 import { Temporal } from '@js-temporal/polyfill';
 

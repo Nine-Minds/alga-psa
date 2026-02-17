@@ -7,9 +7,31 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { Knex } from 'knex';
 
+let currentUser: { user_id: string; tenant: string } | null = {
+  user_id: 'user-1',
+  tenant: 'test-tenant-123',
+};
+
 // Mock the database module
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: vi.fn(),
+}));
+
+vi.mock('@alga-psa/auth', () => ({
+  withAuth: (fn: any) => async (...args: any[]) => {
+    if (!currentUser) {
+      const err = new Error('User not authenticated');
+      err.name = 'AuthenticationError';
+      throw err;
+    }
+    return fn(currentUser, { tenant: currentUser.tenant }, ...args);
+  },
+  AuthenticationError: class AuthenticationError extends Error {
+    constructor(message = 'User not authenticated') {
+      super(message);
+      this.name = 'AuthenticationError';
+    }
+  }
 }));
 
 import { createTenantKnex } from '@alga-psa/db';
@@ -42,6 +64,7 @@ function createMockQueryBuilder(returnData: unknown): Partial<Knex.QueryBuilder>
 describe('Software Actions', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    currentUser = { user_id: 'user-1', tenant: TEST_TENANT };
   });
 
   afterEach(() => {
@@ -49,7 +72,8 @@ describe('Software Actions', () => {
   });
 
   describe('getAssetSoftware', () => {
-    it('should throw error when no tenant found', async () => {
+    it('should throw error when unauthenticated', async () => {
+      currentUser = null;
       (createTenantKnex as ReturnType<typeof vi.fn>).mockResolvedValue({
         knex: vi.fn(),
         tenant: null,
@@ -57,7 +81,7 @@ describe('Software Actions', () => {
 
       await expect(
         getAssetSoftware({ asset_id: TEST_ASSET_ID })
-      ).rejects.toThrow('No tenant found');
+      ).rejects.toThrow('User not authenticated');
     });
 
     it('should return paginated software list', async () => {
@@ -131,7 +155,8 @@ describe('Software Actions', () => {
   });
 
   describe('getAssetSoftwareSummary', () => {
-    it('should throw error when no tenant found', async () => {
+    it('should throw error when unauthenticated', async () => {
+      currentUser = null;
       (createTenantKnex as ReturnType<typeof vi.fn>).mockResolvedValue({
         knex: vi.fn(),
         tenant: null,
@@ -139,12 +164,17 @@ describe('Software Actions', () => {
 
       await expect(
         getAssetSoftwareSummary(TEST_ASSET_ID)
-      ).rejects.toThrow('No tenant found');
+      ).rejects.toThrow('User not authenticated');
     });
 
     it('should return summary statistics', async () => {
-      const mockQueryBuilder = createMockQueryBuilder({ count: 25 });
-      const mockKnex = vi.fn().mockReturnValue(mockQueryBuilder);
+      const mockKnex = vi.fn()
+        .mockReturnValueOnce(createMockQueryBuilder({ count: 25 }))
+        .mockReturnValueOnce(createMockQueryBuilder([{ category: 'Security', count: 2 }]))
+        .mockReturnValueOnce(createMockQueryBuilder([{ software_type: 'application', count: 5 }]))
+        .mockReturnValueOnce(createMockQueryBuilder({ count: 3 }))
+        .mockReturnValueOnce(createMockQueryBuilder({ count: 4 }))
+        .mockReturnValueOnce(createMockQueryBuilder({ count: 1 }));
 
       (createTenantKnex as ReturnType<typeof vi.fn>).mockResolvedValue({
         knex: mockKnex,

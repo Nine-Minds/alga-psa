@@ -1,7 +1,7 @@
 import { getAssetDetailBundle } from '@alga-psa/assets/actions/assetActions';
 import { redirect } from 'next/navigation';
 import { getCurrentUser } from '@alga-psa/users/actions';
-import { AssetDetailView } from '@alga-psa/assets/components/AssetDetailView';
+import { AssetDetailView } from '@alga-psa/msp-composition/assets';
 import { getSession } from 'server/src/lib/auth/getSession';
 
 interface Props {

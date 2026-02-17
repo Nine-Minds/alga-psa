@@ -38,7 +38,8 @@ import ContractLines from './ContractLines';
 import ContractOverview from './ContractOverview';
 import PricingSchedules from './PricingSchedules';
 import { Temporal } from '@js-temporal/polyfill';
-import { toPlainDate, toISODate } from '@alga-psa/core';
+import { toPlainDate, toISODate } from '@alga-psa/core/dateTimeUtils';
+import { formatCurrencyFromMinorUnits } from '@alga-psa/core/formatters';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import ClientAvatar from '@alga-psa/ui/components/ClientAvatar';
 
@@ -49,7 +50,6 @@ const Documents = dynamic(
 );
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import { cn } from '@alga-psa/ui/lib/utils';
-import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
 
 const formatDate = (value?: string | Date | null): string => {
   if (!value) {

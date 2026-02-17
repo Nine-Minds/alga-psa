@@ -11,7 +11,6 @@ import Link from 'next/link';
 import { getRecentInteractions, getInteractionStatuses, getAllContacts } from '@alga-psa/clients/actions';
 import { getAllInteractionTypes } from '@alga-psa/clients/actions';
 import { useDrawer } from "@alga-psa/ui";
-import { InteractionDetails } from '@alga-psa/clients/components';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import InteractionIcon from '@alga-psa/ui/components/InteractionIcon';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
@@ -32,15 +31,22 @@ interface OverallInteractionsFeedProps {
   clients: IClient[];
   isCollapsed?: boolean;
   onToggleCollapse?: () => void;
+  /** Injected InteractionDetails component from msp-composition to avoid circular dependency */
+  InteractionDetailsComponent?: React.ComponentType<{
+    interaction: IInteraction;
+    onInteractionDeleted: () => void;
+    onInteractionUpdated: (interaction: IInteraction) => void;
+  }>;
 }
 
 
-const OverallInteractionsFeed: React.FC<OverallInteractionsFeedProps> = ({ 
-  users, 
-  contacts, 
+const OverallInteractionsFeed: React.FC<OverallInteractionsFeedProps> = ({
+  users,
+  contacts,
   clients,
   isCollapsed = false,
-  onToggleCollapse
+  onToggleCollapse,
+  InteractionDetailsComponent,
 }) => {
   const [interactions, setInteractions] = useState<IInteraction[]>([]);
   const [interactionTypes, setInteractionTypes] = useState<IInteractionType[]>([]);
@@ -238,9 +244,10 @@ const OverallInteractionsFeed: React.FC<OverallInteractionsFeedProps> = ({
   }, [setInteractions]);
 
   const handleInteractionClick = (interaction: IInteraction) => {
+    if (!InteractionDetailsComponent) return;
     openDrawer(
-      <InteractionDetails 
-        interaction={interaction} 
+      <InteractionDetailsComponent
+        interaction={interaction}
         onInteractionDeleted={() => handleInteractionDeleted(interaction.interaction_id)}
         onInteractionUpdated={handleInteractionUpdated}
       />

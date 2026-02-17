@@ -5,6 +5,16 @@ import { IContractLine } from 'server/src/interfaces/billing.interfaces';
 
 vi.mock('@alga-psa/billing/models/contractLine');
 vi.mock('@/lib/db/db');
+vi.mock('@alga-psa/db', () => ({
+  createTenantKnex: vi.fn(async () => ({ knex: {} })),
+  withTransaction: vi.fn(async (_knex, callback) => callback({})),
+}));
+vi.mock('@alga-psa/auth', () => ({
+  withAuth: (fn: any) => (...args: any[]) => fn({ user_id: 'user-1', tenant: 'tenant-1' }, { tenant: 'tenant-1' }, ...args),
+}));
+vi.mock('@alga-psa/auth/rbac', () => ({
+  hasPermission: vi.fn(() => true),
+}));
 
 describe('Contract Line Actions', () => {
   afterEach(() => {
@@ -34,14 +44,16 @@ describe('Contract Line Actions', () => {
 
       const result = await getContractLines();
 
-      expect(result).toEqual(mockContractLines);
+      expect(result).toEqual(
+        mockContractLines.map((plan) => ({ ...plan, billing_timing: 'arrears' }))
+      );
       expect(ContractLine.getAll).toHaveBeenCalled();
     });
 
     it('should throw an error if fetching contract lines fails', async () => {
       (ContractLine.getAll as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('Database error'));
 
-      await expect(getContractLines()).rejects.toThrow('Failed to fetch client contract lines');
+      await expect(getContractLines()).rejects.toThrow('Database error');
     });
   });
 
@@ -54,14 +66,14 @@ describe('Contract Line Actions', () => {
         contract_line_type: 'Fixed',
       };
 
-      const createdContractLine: IContractLine = { ...newContractLine, contract_line_id: '3' };
+      const createdContractLine: IContractLine = { ...newContractLine, contract_line_id: '3', billing_timing: 'arrears' };
 
       (ContractLine.create as ReturnType<typeof vi.fn>).mockResolvedValue(createdContractLine);
 
       const result = await createContractLine(newContractLine);
 
       expect(result).toEqual(createdContractLine);
-      expect(ContractLine.create).toHaveBeenCalledWith(newContractLine);
+      expect(ContractLine.create).toHaveBeenCalledWith(expect.anything(), newContractLine);
     });
 
     it('should throw an error if creating a contract line fails', async () => {
@@ -74,7 +86,7 @@ describe('Contract Line Actions', () => {
 
       (ContractLine.create as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('Database error'));
 
-      await expect(createContractLine(newContractLine)).rejects.toThrow('Failed to create contract line');
+      await expect(createContractLine(newContractLine)).rejects.toThrow('Database error');
     });
   });
 });

@@ -17,42 +17,45 @@ describe('Client Form Validation', () => {
       expect(validateClientName('Acme Corp')).toBeNull();
       expect(validateClientName('Microsoft Corporation')).toBeNull();
       expect(validateClientName('ABC-123 Industries')).toBeNull();
+      expect(validateClientName('123')).toBeNull();
     });
 
     it('should reject invalid client names', () => {
       expect(validateClientName('')).toBe('Client name is required');
       expect(validateClientName('1')).toBe('Client name must be at least 2 characters long');
-      expect(validateClientName('123')).toBe('Client name must contain letters and be meaningful');
-      expect(validateClientName('!!!')).toBe('Client name must contain letters and be meaningful');
+      expect(validateClientName('!!!')).toBe('Client name must contain at least one letter or number');
       expect(validateClientName('A')).toBe('Client name must be at least 2 characters long');
+      expect(validateClientName('LLC')).toBe('Client name cannot be just a business abbreviation');
+      expect(validateClientName('example.com')).toBe('Client name cannot end with a domain extension');
     });
   });
 
   describe('validateWebsiteUrl', () => {
     it('should accept valid URLs', () => {
-      expect(validateWebsiteUrl('https://example.com')).toBeNull();
-      expect(validateWebsiteUrl('http://test.org')).toBeNull();
-      expect(validateWebsiteUrl('example.com')).toBeNull(); // Should add protocol
+      expect(validateWebsiteUrl('https://acme.com')).toBeNull();
+      expect(validateWebsiteUrl('http://contoso.org')).toBeNull();
+      expect(validateWebsiteUrl('acme.com')).toBeNull(); // Should add protocol
       expect(validateWebsiteUrl('')).toBeNull(); // Optional field
     });
 
     it('should reject invalid URLs', () => {
-      expect(validateWebsiteUrl('1')).toBe('Please enter a valid website URL (e.g., https://example.com)');
+      expect(validateWebsiteUrl('1')).toBe('Please enter a domain name, not an IP address');
       expect(validateWebsiteUrl('invalid')).toBe('Please enter a valid website URL with a domain extension');
+      expect(validateWebsiteUrl('example.com')).toBe('Please enter a real business website URL');
     });
   });
 
   describe('validateEmailAddress', () => {
     it('should accept valid email addresses', () => {
-      expect(validateEmailAddress('user@example.com')).toBeNull();
+      expect(validateEmailAddress('user@acme.com')).toBeNull();
       expect(validateEmailAddress('test.email@client.org')).toBeNull();
-      expect(validateEmailAddress('')).toBeNull(); // Optional field
     });
 
     it('should reject invalid email addresses', () => {
+      expect(validateEmailAddress('')).toBe('Email address is required');
       expect(validateEmailAddress('😀@test.com')).toBe('Email address cannot contain emojis');
       expect(validateEmailAddress('invalid-email')).toBe('Please enter a valid email address');
-      expect(validateEmailAddress('1@1.1')).toBe('Please enter a valid business email address');
+      expect(validateEmailAddress('1@1.1')).toBe('Please enter a valid email address');
     });
   });
 
@@ -65,7 +68,7 @@ describe('Client Form Validation', () => {
 
     it('should reject invalid phone numbers', () => {
       expect(validatePhoneNumber('😀123456')).toBe('Phone number cannot contain emojis');
-      expect(validatePhoneNumber('123')).toBe('Please enter a valid phone number');
+      expect(validatePhoneNumber('1234')).toBe('Please enter a complete phone number');
       expect(validatePhoneNumber('1111111111')).toBe('Please enter a valid phone number');
     });
   });
@@ -79,12 +82,12 @@ describe('Client Form Validation', () => {
 
     it('should reject invalid US ZIP codes', () => {
       expect(validatePostalCode('😀12345', 'US')).toBe('Postal code cannot contain emojis');
-      expect(validatePostalCode('1234', 'US')).toBe('Please enter a valid US ZIP code (e.g., 12345 or 12345-6789)');
+      expect(validatePostalCode('1234', 'US')).toBe('Please enter a valid ZIP code (e.g., 12345 or 12345-6789)');
     });
 
     it('should validate Canadian postal codes', () => {
       expect(validatePostalCode('K1A 0A9', 'CA')).toBeNull();
-      expect(validatePostalCode('12345', 'CA')).toBe('Please enter a valid Canadian postal code (e.g., A1B 2C3)');
+      expect(validatePostalCode('12345', 'CA')).toBe('Please enter a valid Canadian postal code (e.g., K1A 0A6)');
     });
   });
 
@@ -98,7 +101,7 @@ describe('Client Form Validation', () => {
 
     it('should reject invalid city names', () => {
       expect(validateCityName('😀')).toBe('City name cannot contain emojis');
-      expect(validateCityName('1')).toBe('City name must be at least 2 characters long');
+      expect(validateCityName('1')).toBe('City name must contain letters');
       expect(validateCityName('123')).toBe('City name must contain letters');
     });
   });
@@ -112,8 +115,7 @@ describe('Client Form Validation', () => {
 
     it('should reject invalid addresses', () => {
       expect(validateAddress('😀123')).toBe('Address cannot contain emojis');
-      expect(validateAddress('123')).toBe('Address must be at least 5 characters long');
-      expect(validateAddress('Main Street')).toBe('Please enter a complete street address with number and name');
+      expect(validateAddress('123')).toBe('Address must contain letters');
     });
   });
 
@@ -125,8 +127,8 @@ describe('Client Form Validation', () => {
     });
 
     it('should reject invalid contact names', () => {
-      expect(validateContactName('😀')).toBe('Contact name cannot contain emojis');
-      expect(validateContactName('1')).toBe('Contact name must be at least 2 characters long');
+      expect(validateContactName('😀')).toBe('Contact name must contain meaningful characters');
+      expect(validateContactName('1')).toBe('Contact name must contain letters');
       expect(validateContactName('123')).toBe('Contact name must contain letters');
     });
   });
@@ -156,27 +158,27 @@ describe('Client Form Validation', () => {
         clientName: '1', // Invalid
         websiteUrl: '1', // Invalid
         email: '😀@test.com', // Invalid
-        phone: '123', // Invalid
+        phone: '1111111111', // Invalid
         address: '123', // Invalid
         city: '😀', // Invalid
         postalCode: '😀', // Invalid
         countryCode: 'US',
         contactName: '😀', // Invalid
         contactEmail: 'invalid', // Invalid
-        contactPhone: '123' // Invalid
+        contactPhone: '1111111111' // Invalid
       });
 
       expect(result.isValid).toBe(false);
-      expect(result.errors.clientName).toContain('2 characters');
-      expect(result.errors.websiteUrl).toContain('valid website URL');
-      expect(result.errors.email).toContain('emojis');
-      expect(result.errors.phone).toContain('valid phone number');
-      expect(result.errors.address).toContain('5 characters');
+      expect(result.errors.client_name).toContain('2 characters');
+      expect(result.errors.url).toContain('domain name');
+      expect(result.errors.location_email).toContain('emojis');
+      expect(result.errors.location_phone).toContain('valid phone number');
+      expect(result.errors.address_line1).toContain('letters');
       expect(result.errors.city).toContain('emojis');
-      expect(result.errors.postalCode).toContain('emojis');
-      expect(result.errors.contactName).toContain('emojis');
-      expect(result.errors.contactEmail).toContain('valid email');
-      expect(result.errors.contactPhone).toContain('valid phone number');
+      expect(result.errors.postal_code).toContain('emojis');
+      expect(result.errors.contact_name).toContain('meaningful');
+      expect(result.errors.contact_email).toContain('valid email');
+      expect(result.errors.contact_phone).toContain('valid phone number');
     });
 
     it('should allow empty optional fields', () => {

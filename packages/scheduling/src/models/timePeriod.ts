@@ -2,8 +2,7 @@ import { Temporal } from '@js-temporal/polyfill';
 import { v4 as uuidv4 } from 'uuid';
 import type { Knex } from 'knex';
 import type { ISO8601String, ITimePeriod, ITimePeriodView } from '@alga-psa/types';
-import { toPlainDate } from '@alga-psa/core';
-
+import { toPlainDate } from '@alga-psa/core/dateTimeUtils';
 // Database representation of time period
 // After migration to DATE type, pg driver may return Date objects for date columns
 interface DbTimePeriod {

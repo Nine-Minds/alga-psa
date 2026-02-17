@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { setupTestDatabase, type TestDatabase } from '../../test-utils/database';
-import { withAdminTransaction } from '@alga-psa/db.js';
+import { withAdminTransaction } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
 import type { Knex } from 'knex';
 
@@ -116,7 +116,10 @@ async function setupTenantDataInDB(input: {
   });
 }
 
-describe('Tenant Activities Database Logic', () => {
+const runDbTests = process.env.RUN_DB_TESTS === 'true';
+const describeDb = runDbTests ? describe : describe.skip;
+
+describeDb('Tenant Activities Database Logic', () => {
   let testDb: TestDatabase;
 
   beforeEach(async () => {

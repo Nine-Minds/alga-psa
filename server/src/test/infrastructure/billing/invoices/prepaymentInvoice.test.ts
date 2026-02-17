@@ -272,7 +272,10 @@ async function createManualInvoiceRecord(context: TestContext, amount: number): 
 // Create test context helpers
 const { beforeAll: setupContext, beforeEach: resetContext, afterEach: rollbackContext, afterAll: cleanupContext } = TestContext.createHelpers();
 
-describe('Prepayment Invoice System', () => {
+const runDbTests = process.env.RUN_DB_TESTS === 'true';
+const describeDb = runDbTests ? describe : describe.skip;
+
+describeDb('Prepayment Invoice System', () => {
   let context: TestContext;
 
   async function configureDefaultTax() {

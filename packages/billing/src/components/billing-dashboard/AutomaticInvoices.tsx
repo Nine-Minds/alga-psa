@@ -1,7 +1,8 @@
 'use client'
 
 import React, { useState, useEffect, useRef } from 'react';
-import { toPlainDate } from '@alga-psa/core';
+import { toPlainDate } from '@alga-psa/core/dateTimeUtils';
+import { formatCurrency } from '@alga-psa/core/formatters';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -18,7 +19,6 @@ import { getInvoicedBillingCyclesPaginated, removeBillingCycle, hardDeleteBillin
 import { getAvailableBillingPeriods, type BillingPeriodDateRange } from '@alga-psa/billing/actions/billingAndTax';
 import type { ISO8601String } from '@alga-psa/types';
 import { Dialog, DialogContent, DialogFooter, DialogDescription } from '@alga-psa/ui/components/Dialog';
-import { formatCurrency } from '@alga-psa/core';
 // Added imports for DropdownMenu
 import {
   DropdownMenu,

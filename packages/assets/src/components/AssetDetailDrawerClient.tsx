@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo } from 'react';
 import type { ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import Drawer from '@alga-psa/ui/components/Drawer';
@@ -28,7 +28,6 @@ import { useRegisterUIComponent } from '@alga-psa/ui/ui-reflection/useRegisterUI
 import type { ContainerComponent } from '@alga-psa/ui/ui-reflection/types';
 import { Clock3, Copy, FileText, Layers, Link as LinkIcon, ListChecks, Settings2, ShieldCheck } from 'lucide-react';
 import AssetDocuments from './AssetDocuments';
-import CreateTicketFromAssetButton from './CreateTicketFromAssetButton';
 import DeleteAssetButton from './DeleteAssetButton';
 import { RemoteAccessButton } from './RemoteAccessButton';
 import { AssetAlertsSection } from './AssetAlertsSection';
@@ -51,6 +50,8 @@ interface AssetDetailDrawerClientProps {
   onClose: () => void;
   onTabChange: (tab: AssetDrawerTab) => void;
   defaultBoardId?: string;
+  /** Optional CreateTicketFromAssetButton injected from msp-composition */
+  CreateTicketButton?: React.ComponentType<{ asset: Asset; defaultBoardId?: string; variant?: 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link'; size?: 'default' | 'sm' | 'lg' | 'icon' }>;
 }
 
 const TAB_ORDER: AssetDrawerTab[] = [
@@ -82,6 +83,7 @@ export function AssetDetailDrawerClient({
   onClose,
   onTabChange,
   defaultBoardId,
+  CreateTicketButton,
 }: AssetDetailDrawerClientProps) {
   const router = useRouter();
   const desiredTab = activeTab;
@@ -154,6 +156,7 @@ export function AssetDetailDrawerClient({
           statusBadge,
           onClose,
           defaultBoardId,
+          CreateTicketButton,
         });
       case ASSET_DRAWER_TABS.MAINTENANCE:
         return renderMaintenanceTab({
@@ -228,9 +231,10 @@ type OverviewTabProps = {
   statusBadge: ReactNode;
   onClose: () => void;
   defaultBoardId?: string;
+  CreateTicketButton?: React.ComponentType<{ asset: Asset; defaultBoardId?: string; variant?: 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link'; size?: 'default' | 'sm' | 'lg' | 'icon' }>;
 };
 
-function renderOverviewTab({ asset, maintenanceReport, history, router, statusBadge, onClose, defaultBoardId }: OverviewTabProps) {
+function renderOverviewTab({ asset, maintenanceReport, history, router, statusBadge, onClose, defaultBoardId, CreateTicketButton }: OverviewTabProps) {
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
@@ -251,7 +255,7 @@ function renderOverviewTab({ asset, maintenanceReport, history, router, statusBa
           {asset.rmm_provider && asset.rmm_device_id && (
             <RemoteAccessButton asset={asset} variant="default" size="sm" />
           )}
-          <CreateTicketFromAssetButton asset={asset} defaultBoardId={defaultBoardId} variant="default" size="sm" />
+          {CreateTicketButton && <CreateTicketButton asset={asset} defaultBoardId={defaultBoardId} variant="default" size="sm" />}
           <DeleteAssetButton
             assetId={asset.asset_id}
             assetName={asset.name}
