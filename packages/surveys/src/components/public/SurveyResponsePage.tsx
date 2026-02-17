@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useId, useMemo, useState } from 'react';
+import { useId, useMemo, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
@@ -21,13 +21,19 @@ type SubmissionState = 'idle' | 'submitting' | 'success' | 'error';
 
 export function SurveyResponsePage({ token, invitation, initialRating }: SurveyResponsePageProps) {
   const { t } = useTranslation('common');
-  const formInstanceId = useId();
-  const [selectedRating, setSelectedRating] = useState<number | null>(initialRating ?? null);
-  const [comment, setComment] = useState('');
-  const [status, setStatus] = useState<SubmissionState>(initialRating ? 'submitting' : 'idle');
-  const [error, setError] = useState<string | null>(null);
-
   const ratingScale = invitation.template.ratingScale;
+  const initialRatingIsValid =
+    typeof initialRating === 'number' &&
+    Number.isInteger(initialRating) &&
+    initialRating >= 1 &&
+    initialRating <= ratingScale;
+  const formInstanceId = useId();
+  const [selectedRating, setSelectedRating] = useState<number | null>(
+    initialRatingIsValid ? initialRating : null
+  );
+  const [comment, setComment] = useState('');
+  const [status, setStatus] = useState<SubmissionState>('idle');
+  const [error, setError] = useState<string | null>(null);
   const ratingOptions = useMemo(() => {
     return Array.from({ length: ratingScale }, (_, index) => {
       const rating = index + 1;
@@ -58,22 +64,6 @@ export function SurveyResponsePage({ token, invitation, initialRating }: SurveyR
       setStatus('error');
     }
   };
-
-  useEffect(() => {
-    if (
-      initialRating &&
-      Number.isInteger(initialRating) &&
-      initialRating >= 1 &&
-      initialRating <= ratingScale
-    ) {
-      void submitResponse(initialRating, '');
-      setSelectedRating(initialRating);
-    } else {
-      setStatus('idle');
-    }
-    // We intentionally run this effect only once on mount.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   const handleRatingSelect = (rating: number) => {
     if (status === 'success') {
