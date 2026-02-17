@@ -74,15 +74,16 @@ export function RequestAppointmentModal({
   onAppointmentRequested,
   editingAppointment
 }: RequestAppointmentModalProps) {
-  const { t } = useTranslation('clientPortal');
+  const { t } = useTranslation('features/appointments');
+  const { t: tCommon } = useTranslation('common');
   const isEditMode = !!editingAppointment;
 
   const STEP_LABELS = useMemo(
     () => [
-      t('appointments.steps.service'),
-      t('appointments.steps.date'),
-      t('appointments.steps.time'),
-      t('appointments.steps.confirm')
+      t('steps.service'),
+      t('steps.date'),
+      t('steps.time'),
+      t('steps.confirm')
     ],
     [t]
   );
@@ -188,11 +189,11 @@ export function RequestAppointmentModal({
         setServices(result.data.services);
         setTickets(result.data.tickets);
       } else {
-        setError(result.error || t('appointments.errors.loadServicesFailed'));
+        setError(result.error || t('errors.loadServicesFailed'));
       }
     } catch (err) {
       console.error('Error loading services:', err);
-      setError(t('appointments.errors.loadServicesFailed'));
+      setError(t('errors.loadServicesFailed'));
     } finally {
       setIsLoading(false);
     }
@@ -216,11 +217,11 @@ export function RequestAppointmentModal({
         });
         setAvailableDates(dates);
       } else {
-        setError(result.error || t('appointments.errors.loadDatesFailed'));
+        setError(result.error || t('errors.loadDatesFailed'));
       }
     } catch (err) {
       console.error('Error loading available dates:', err);
-      setError(t('appointments.errors.loadDatesFailed'));
+      setError(t('errors.loadDatesFailed'));
     } finally {
       setIsLoading(false);
     }
@@ -248,11 +249,11 @@ export function RequestAppointmentModal({
         setTimeSlots(result.data.timeSlots);
         setTechnicians(result.data.technicians);
       } else {
-        setError(result.error || t('appointments.errors.loadSlotsFailed'));
+        setError(result.error || t('errors.loadSlotsFailed'));
       }
     } catch (err) {
       console.error('Error loading time slots:', err);
-      setError(t('appointments.errors.loadSlotsFailed'));
+      setError(t('errors.loadSlotsFailed'));
     } finally {
       setIsLoading(false);
     }
@@ -326,11 +327,11 @@ export function RequestAppointmentModal({
         onOpenChange(false);
         resetForm();
       } else {
-        setError(result.error || (isEditMode ? t('appointments.errors.updateFailed') : t('appointments.errors.createFailed')));
+        setError(result.error || (isEditMode ? t('errors.updateFailed') : t('errors.createFailed')));
       }
     } catch (err) {
       console.error('Error submitting appointment request:', err);
-      setError(isEditMode ? t('appointments.errors.updateFailed') : t('appointments.errors.createFailed'));
+      setError(isEditMode ? t('errors.updateFailed') : t('errors.createFailed'));
     } finally {
       setIsSubmitting(false);
     }
@@ -399,7 +400,7 @@ export function RequestAppointmentModal({
 
   const ticketOptions = useMemo(
     () => [
-      { value: '__no_ticket__', label: t('appointments.step1.noTicket') },
+      { value: '__no_ticket__', label: t('step1.noTicket') },
       ...filteredTickets.map(ticket => ({
         value: ticket.ticket_id,
         label: `${ticket.ticket_number} - ${ticket.title}`
@@ -410,7 +411,7 @@ export function RequestAppointmentModal({
 
   const technicianOptions = useMemo(
     () => [
-      { value: '__no_preference__', label: t('appointments.step3.noPreference') },
+      { value: '__no_preference__', label: t('step3.noPreference') },
       ...technicians.map(tech => ({
         value: tech.user_id,
         label: tech.full_name
@@ -424,7 +425,7 @@ export function RequestAppointmentModal({
       return (
         <div className="flex items-center justify-center py-12">
           <Spinner size="sm" />
-          <span className="ml-3 text-[rgb(var(--color-text-600))]">{t('common.loading')}</span>
+          <span className="ml-3 text-[rgb(var(--color-text-600))]">{tCommon('common.loading')}</span>
         </div>
       );
     }
@@ -436,8 +437,8 @@ export function RequestAppointmentModal({
           <p className="text-lg font-medium text-[rgb(var(--color-text-900))] mb-2">{successMessage}</p>
           <p className="text-sm text-[rgb(var(--color-text-600))]">
             {isEditMode
-              ? t('appointments.messages.updateSuccessDetail')
-              : t('appointments.messages.requestSuccessDetail')
+              ? t('messages.updateSuccessDetail')
+              : t('messages.requestSuccessDetail')
             }
           </p>
         </div>
@@ -450,10 +451,10 @@ export function RequestAppointmentModal({
           <div className="space-y-6">
             <div>
               <h3 className="text-lg font-medium text-[rgb(var(--color-text-900))] mb-4">
-                {t('appointments.step1.title')}
+                {t('step1.title')}
               </h3>
               <p className="text-sm text-[rgb(var(--color-text-600))] mb-4">
-                {t('appointments.step1.description')}
+                {t('step1.description')}
               </p>
 
               <CustomSelect
@@ -461,8 +462,8 @@ export function RequestAppointmentModal({
                 value={selectedServiceId || undefined}
                 onValueChange={setSelectedServiceId}
                 options={serviceOptions}
-                placeholder={t('appointments.step1.selectService')}
-                label={t('appointments.step1.serviceLabel')}
+                placeholder={t('step1.selectService')}
+                label={t('step1.serviceLabel')}
               />
 
               {selectedService && (
@@ -487,14 +488,14 @@ export function RequestAppointmentModal({
 
             <div>
               <label className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-2">
-                {t('appointments.step1.ticketLabel')}
+                {t('step1.ticketLabel')}
               </label>
 
               {tickets.length > 5 && (
                 <input
                   type="text"
                   id="ticket-search-input"
-                  placeholder={t('appointments.step1.searchTickets') || 'Search tickets...'}
+                  placeholder={t('step1.searchTickets') || 'Search tickets...'}
                   value={ticketSearchQuery}
                   onChange={(e) => setTicketSearchQuery(e.target.value)}
                   className="w-full px-3 py-2 mb-2 border border-[rgb(var(--color-border-300))] rounded-md text-sm bg-[rgb(var(--color-card))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-primary-500))] focus:border-transparent"
@@ -506,17 +507,17 @@ export function RequestAppointmentModal({
                 value={linkedTicketId || undefined}
                 onValueChange={setLinkedTicketId}
                 options={ticketOptions}
-                placeholder={t('appointments.step1.selectTicket')}
+                placeholder={t('step1.selectTicket')}
               />
 
               {ticketSearchQuery && filteredTickets.length === 0 && (
                 <p className="text-xs text-red-600 mt-1">
-                  {t('appointments.step1.noTicketsFound') || 'No tickets found matching your search'}
+                  {t('step1.noTicketsFound') || 'No tickets found matching your search'}
                 </p>
               )}
 
               <p className="text-xs text-[rgb(var(--color-text-500))] mt-1">
-                {t('appointments.step1.ticketHint')}
+                {t('step1.ticketHint')}
               </p>
             </div>
           </div>
@@ -527,10 +528,10 @@ export function RequestAppointmentModal({
           <div className="space-y-6">
             <div>
               <h3 className="text-lg font-medium text-[rgb(var(--color-text-900))] mb-4">
-                {t('appointments.step2.title')}
+                {t('step2.title')}
               </h3>
               <p className="text-sm text-[rgb(var(--color-text-600))] mb-4">
-                {t('appointments.step2.description')}
+                {t('step2.description')}
               </p>
 
               <div className="flex justify-center">
@@ -551,7 +552,7 @@ export function RequestAppointmentModal({
                   <div className="flex items-center gap-2 text-[rgb(var(--color-text-800))]">
                     <CalendarIcon className="h-4 w-4" />
                     <span className="font-medium">
-                      {t('appointments.step2.selectedDate')}: {format(selectedDate, 'MMMM d, yyyy')}
+                      {t('step2.selectedDate')}: {format(selectedDate, 'MMMM d, yyyy')}
                     </span>
                   </div>
                 </div>
@@ -565,10 +566,10 @@ export function RequestAppointmentModal({
           <div className="space-y-6">
             <div>
               <h3 className="text-lg font-medium text-[rgb(var(--color-text-900))] mb-4">
-                {t('appointments.step3.title')}
+                {t('step3.title')}
               </h3>
               <p className="text-sm text-[rgb(var(--color-text-600))] mb-4">
-                {t('appointments.step3.description')}
+                {t('step3.description')}
               </p>
 
               {selectedDate && (
@@ -582,12 +583,12 @@ export function RequestAppointmentModal({
 
               <div className="mb-6">
                 <label className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-3">
-                  {t('appointments.step3.selectTime')} <span className="text-red-500">*</span>
+                  {t('step3.selectTime')} <span className="text-red-500">*</span>
                 </label>
                 {timeSlots.length === 0 ? (
                   <div className="p-4 bg-[rgb(var(--color-border-50))] border border-[rgb(var(--color-border-200))] rounded-lg text-center text-[rgb(var(--color-text-600))]">
                     <Clock className="h-8 w-8 text-[rgb(var(--color-text-400))] mx-auto mb-2" />
-                    <p className="text-sm">{t('appointments.step3.noTimeSlotsAvailable') || 'No time slots available for this date'}</p>
+                    <p className="text-sm">{t('step3.noTimeSlotsAvailable') || 'No time slots available for this date'}</p>
                   </div>
                 ) : (
                   <div className="grid grid-cols-3 gap-2">
@@ -617,7 +618,7 @@ export function RequestAppointmentModal({
                           {slot.time}
                         </div>
                         <div className="text-xs mt-1">
-                          {slot.duration} {t('appointments.step3.minutes')}
+                          {slot.duration} {t('step3.minutes')}
                         </div>
                       </button>
                     ))}
@@ -631,11 +632,11 @@ export function RequestAppointmentModal({
                   value={preferredTechnicianId || undefined}
                   onValueChange={setPreferredTechnicianId}
                   options={technicianOptions}
-                  placeholder={t('appointments.step3.selectTechnician')}
-                  label={t('appointments.step3.technicianLabel')}
+                  placeholder={t('step3.selectTechnician')}
+                  label={t('step3.technicianLabel')}
                 />
                 <p className="text-xs text-[rgb(var(--color-text-500))] mt-1">
-                  {t('appointments.step3.technicianHint')}
+                  {t('step3.technicianHint')}
                 </p>
               </div>
             </div>
@@ -647,10 +648,10 @@ export function RequestAppointmentModal({
           <div className="space-y-6">
             <div>
               <h3 className="text-lg font-medium text-[rgb(var(--color-text-900))] mb-4">
-                {t('appointments.step4.title')}
+                {t('step4.title')}
               </h3>
               <p className="text-sm text-[rgb(var(--color-text-600))] mb-4">
-                {t('appointments.step4.description')}
+                {t('step4.description')}
               </p>
 
               <div className="mb-6">
@@ -658,7 +659,7 @@ export function RequestAppointmentModal({
                   id="appointment-description"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  placeholder={t('appointments.step4.descriptionPlaceholder')}
+                  placeholder={t('step4.descriptionPlaceholder')}
                   rows={4}
                   className="w-full"
                 />
@@ -666,7 +667,7 @@ export function RequestAppointmentModal({
 
               <div className="bg-[rgb(var(--color-border-50))] rounded-lg p-6 border border-[rgb(var(--color-border-200))]">
                 <h4 className="font-semibold text-[rgb(var(--color-text-900))] mb-4">
-                  {t('appointments.step4.summaryTitle')}
+                  {t('step4.summaryTitle')}
                 </h4>
 
                 <div className="space-y-3">
@@ -674,7 +675,7 @@ export function RequestAppointmentModal({
                     <FileText className="h-5 w-5 text-[rgb(var(--color-text-500))] mt-0.5" />
                     <div>
                       <div className="text-sm font-medium text-[rgb(var(--color-text-700))]">
-                        {t('appointments.step4.service')}
+                        {t('step4.service')}
                       </div>
                       <div className="text-sm text-[rgb(var(--color-text-900))]">{selectedService?.service_name}</div>
                     </div>
@@ -684,13 +685,13 @@ export function RequestAppointmentModal({
                     <CalendarIcon className="h-5 w-5 text-[rgb(var(--color-text-500))] mt-0.5" />
                     <div>
                       <div className="text-sm font-medium text-[rgb(var(--color-text-700))]">
-                        {t('appointments.step4.dateTime')}
+                        {t('step4.dateTime')}
                       </div>
                       <div className="text-sm text-[rgb(var(--color-text-900))]">
-                        {selectedDate && format(selectedDate, 'EEEE, MMMM d, yyyy')} {t('appointments.step4.at')} {selectedTime}
+                        {selectedDate && format(selectedDate, 'EEEE, MMMM d, yyyy')} {t('step4.at')} {selectedTime}
                       </div>
                       <div className="text-xs text-[rgb(var(--color-text-600))]">
-                        {t('appointments.step4.duration')}: {selectedTimeSlot?.duration} {t('appointments.step3.minutes')}
+                        {t('step4.duration')}: {selectedTimeSlot?.duration} {t('step3.minutes')}
                       </div>
                     </div>
                   </div>
@@ -700,7 +701,7 @@ export function RequestAppointmentModal({
                       <User className="h-5 w-5 text-[rgb(var(--color-text-500))] mt-0.5" />
                       <div>
                         <div className="text-sm font-medium text-[rgb(var(--color-text-700))]">
-                          {t('appointments.step4.technician')}
+                          {t('step4.technician')}
                         </div>
                         <div className="text-sm text-[rgb(var(--color-text-900))]">{selectedTechnician.full_name}</div>
                       </div>
@@ -712,7 +713,7 @@ export function RequestAppointmentModal({
                       <FileText className="h-5 w-5 text-[rgb(var(--color-text-500))] mt-0.5" />
                       <div>
                         <div className="text-sm font-medium text-[rgb(var(--color-text-700))]">
-                          {t('appointments.step4.linkedTicket')}
+                          {t('step4.linkedTicket')}
                         </div>
                         <div className="text-sm text-[rgb(var(--color-text-900))]">
                           {selectedTicket.ticket_number} - {selectedTicket.title}
@@ -726,7 +727,7 @@ export function RequestAppointmentModal({
               <Alert variant="info" className="mt-4">
                 <AlertCircle className="h-5 w-5" />
                 <AlertDescription>
-                  {t('appointments.step4.approvalNote')}
+                  {t('step4.approvalNote')}
                 </AlertDescription>
               </Alert>
             </div>
@@ -742,7 +743,7 @@ export function RequestAppointmentModal({
     <Dialog
       isOpen={open}
       onClose={() => !isSubmitting && onOpenChange(false)}
-      title={isEditMode ? t('appointments.modal.editTitle') : t('appointments.modal.title')}
+      title={isEditMode ? t('modal.editTitle') : t('modal.title')}
       className="max-w-3xl"
     >
       <DialogContent>
@@ -777,7 +778,7 @@ export function RequestAppointmentModal({
                 onClick={handleBack}
                 disabled={isSubmitting}
               >
-                {t('common.back')}
+                {tCommon('common.back')}
               </Button>
             )}
 
@@ -794,7 +795,7 @@ export function RequestAppointmentModal({
                   (currentStep === 3 && !canProceedToStep4)
                 }
               >
-                {t('common.next')}
+                {tCommon('common.next')}
               </Button>
             ) : (
               <Button
@@ -805,10 +806,10 @@ export function RequestAppointmentModal({
                 disabled={isSubmitting || !canSubmit}
               >
                 {isSubmitting
-                  ? t('common.submitting')
+                  ? tCommon('common.submitting')
                   : isEditMode
-                    ? t('appointments.step4.update')
-                    : t('appointments.step4.submit')
+                    ? t('step4.update')
+                    : t('step4.submit')
                 }
               </Button>
             )}

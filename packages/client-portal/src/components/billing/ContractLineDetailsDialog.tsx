@@ -28,7 +28,8 @@ const ContractLineDetailsDialog: React.FC<ContractLineDetailsDialogProps> = Reac
   },
   formatDate
 }) => {
-  const { t } = useTranslation('clientPortal');
+  const { t } = useTranslation('features/billing');
+  const { t: tCommon } = useTranslation('common');
   // Loading state when contract line is null but dialog is open
   const isLoading = isOpen && !contractLine;
 
@@ -40,38 +41,38 @@ const ContractLineDetailsDialog: React.FC<ContractLineDetailsDialogProps> = Reac
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <p className="text-sm font-medium text-gray-500">{t('billing.contractLine.name')}</p>
+            <p className="text-sm font-medium text-gray-500">{t('contractLine.name')}</p>
             <p className="mt-1">{contractLine.contract_line_name}</p>
           </div>
           <div>
-            <p className="text-sm font-medium text-gray-500">{t('billing.contractLine.frequency')}</p>
-            <p className="mt-1">{t(`billing.frequency.${contractLine.billing_frequency?.toLowerCase() || 'monthly'}`, { defaultValue: contractLine.billing_frequency || 'Monthly' })}</p>
+            <p className="text-sm font-medium text-gray-500">{t('contractLine.frequency')}</p>
+            <p className="mt-1">{t(`frequency.${contractLine.billing_frequency?.toLowerCase() || 'monthly'}`, { defaultValue: contractLine.billing_frequency || 'Monthly' })}</p>
           </div>
           <div>
-            <p className="text-sm font-medium text-gray-500">{t('billing.contractLine.startDate')}</p>
+            <p className="text-sm font-medium text-gray-500">{t('contractLine.startDate')}</p>
             <p className="mt-1">{formatDate(contractLine.start_date)}</p>
           </div>
           <div>
-            <p className="text-sm font-medium text-gray-500">{t('billing.contractLine.endDate')}</p>
-            <p className="mt-1">{contractLine.end_date ? formatDate(contractLine.end_date) : t('billing.contractLine.noEndDate')}</p>
+            <p className="text-sm font-medium text-gray-500">{t('contractLine.endDate')}</p>
+            <p className="mt-1">{contractLine.end_date ? formatDate(contractLine.end_date) : t('contractLine.noEndDate')}</p>
           </div>
           <div>
-            <p className="text-sm font-medium text-gray-500">{t('billing.contractLine.status')}</p>
+            <p className="text-sm font-medium text-gray-500">{t('contractLine.status')}</p>
             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-1 ${
               contractLine.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
             }`}>
-              {contractLine.is_active ? t('common.active') : t('common.inactive')}
+              {contractLine.is_active ? tCommon('common.active') : tCommon('common.inactive')}
             </span>
           </div>
           {contractLine.custom_rate !== undefined && (
             <div>
-              <p className="text-sm font-medium text-gray-500">{t('billing.contractLine.customRate')}</p>
+              <p className="text-sm font-medium text-gray-500">{t('contractLine.customRate')}</p>
               <p className="mt-1">{formatCurrency(contractLine.custom_rate, contractLine.currency_code)}</p>
             </div>
           )}
           {(contractLine.service_category_name || contractLine.service_category) && (
             <div>
-              <p className="text-sm font-medium text-gray-500">{t('billing.contractLine.serviceCategory')}</p>
+              <p className="text-sm font-medium text-gray-500">{t('contractLine.serviceCategory')}</p>
               <p className="mt-1">{contractLine.service_category_name || contractLine.service_category}</p>
             </div>
           )}
@@ -79,9 +80,9 @@ const ContractLineDetailsDialog: React.FC<ContractLineDetailsDialogProps> = Reac
 
         <div className="mt-4">
           <p className="text-sm text-gray-500">
-            {t('billing.contractLine.statusDescription', {
-              status: contractLine.is_active ? t('common.active').toLowerCase() : t('common.inactive').toLowerCase(),
-              expiry: contractLine.end_date ? t('billing.contractLine.expiresOn', { date: formatDate(contractLine.end_date) }) : t('billing.contractLine.noExpiry')
+            {t('contractLine.statusDescription', {
+              status: contractLine.is_active ? tCommon('common.active').toLowerCase() : tCommon('common.inactive').toLowerCase(),
+              expiry: contractLine.end_date ? t('contractLine.expiresOn', { date: formatDate(contractLine.end_date) }) : t('contractLine.noExpiry')
             })}
           </p>
         </div>
@@ -111,7 +112,7 @@ const ContractLineDetailsDialog: React.FC<ContractLineDetailsDialogProps> = Reac
     <Dialog
       isOpen={isOpen}
       onClose={onClose}
-      title={t('billing.contractLine.detailsTitle')}
+      title={t('contractLine.detailsTitle')}
       data-automation-id="contract-line-details-dialog"
     >
       <DialogContent>
@@ -122,7 +123,7 @@ const ContractLineDetailsDialog: React.FC<ContractLineDetailsDialogProps> = Reac
       <DialogFooter>
         <Button id="close-contract-line-dialog-button" variant="outline" onClick={onClose}>
           <X className="mr-2 h-4 w-4" />
-          {t('common.close')}
+          {tCommon('common.close')}
         </Button>
       </DialogFooter>
     </Dialog>

@@ -106,7 +106,7 @@ function TaskCard({
   dateLocale: Locale;
   dependencies?: { predecessors: TaskDependency[]; successors: TaskDependency[] };
 }) {
-  const { t } = useTranslation('clientPortal');
+  const { t } = useTranslation('features/projects');
   const [isDescriptionExpanded, setIsDescriptionExpanded] = React.useState(false);
   const { ref: descriptionRef, isTruncated: isDescriptionTruncated } = useTruncationDetection<HTMLParagraphElement>();
   const visibleFields = config.visible_task_fields ?? ['task_name', 'due_date', 'status'];
@@ -126,7 +126,7 @@ function TaskCard({
         <div className="flex items-start gap-2 mb-2">
           <h4 className="font-semibold text-gray-900 dark:text-gray-100 text-lg flex-1">{task.task_name}</h4>
           {visibleFields.includes('priority') && task.priority_name && (
-            <Tooltip content={`${t('projects.tasks.priorityLevel', 'Priority level')}: ${task.priority_name}`}>
+            <Tooltip content={`${t('tasks.priorityLevel', 'Priority level')}: ${task.priority_name}`}>
               <div
                 className="w-3 h-3 rounded-full shrink-0 mt-1.5"
                 style={{ backgroundColor: task.priority_color || '#6B7280' }}
@@ -154,8 +154,8 @@ function TaskCard({
               className="text-xs text-purple-600 hover:text-purple-700 font-medium mt-1"
             >
               {isDescriptionExpanded
-                ? t('projects.tasks.seeLess', 'See less')
-                : t('projects.tasks.seeMore', 'See more')}
+                ? t('tasks.seeLess', 'See less')
+                : t('tasks.seeMore', 'See more')}
             </button>
           )}
         </div>
@@ -184,7 +184,7 @@ function TaskCard({
                   content={
                     task.checklist_items && task.checklist_items.length > 0 ? (
                       <div className="text-xs space-y-1 max-w-xs">
-                        <div className="font-medium text-gray-300 mb-1">{t('projects.tasks.checklistItems', 'Checklist Items')}:</div>
+                        <div className="font-medium text-gray-300 mb-1">{t('tasks.checklistItems', 'Checklist Items')}:</div>
                         {task.checklist_items.map((item, i) => (
                           <div key={i} className="flex items-center gap-1.5">
                             <CheckSquare className={`h-3 w-3 ${item.completed ? 'text-green-400' : 'text-gray-400'}`} />
@@ -193,7 +193,7 @@ function TaskCard({
                         ))}
                       </div>
                     ) : (
-                      <span>{task.checklist_completed ?? 0} {t('projects.tasks.of', 'of')} {task.checklist_total} {t('projects.tasks.complete', 'complete')}</span>
+                      <span>{task.checklist_completed ?? 0} {t('tasks.of', 'of')} {task.checklist_total} {t('tasks.complete', 'complete')}</span>
                     )
                   }
                 >
@@ -213,7 +213,7 @@ function TaskCard({
                     <div className="text-xs space-y-2">
                       {dependencies!.predecessors.length > 0 && (
                         <div>
-                          <div className="font-medium text-gray-300 mb-1">{t('projects.dependencies.dependsOn', 'Depends on')}:</div>
+                          <div className="font-medium text-gray-300 mb-1">{t('dependencies.dependsOn', 'Depends on')}:</div>
                           {dependencies!.predecessors.map((d, i) => {
                             const isBlocking = d.dependency_type === 'blocks' || d.dependency_type === 'blocked_by';
                             return (
@@ -221,7 +221,7 @@ function TaskCard({
                                 <span className={isBlocking ? 'text-orange-400' : 'text-blue-400'}>
                                   {isBlocking ? <Ban className="h-3 w-3" /> : <GitBranch className="h-3 w-3" />}
                                 </span>
-                                <span>{d.predecessor_task?.task_name || t('projects.dependencies.unknownTask', 'Unknown task')}</span>
+                                <span>{d.predecessor_task?.task_name || t('dependencies.unknownTask', 'Unknown task')}</span>
                               </div>
                             );
                           })}
@@ -229,7 +229,7 @@ function TaskCard({
                       )}
                       {dependencies!.successors.length > 0 && (
                         <div>
-                          <div className="font-medium text-gray-300 mb-1">{t('projects.dependencies.blocks', 'Blocks')}:</div>
+                          <div className="font-medium text-gray-300 mb-1">{t('dependencies.blocks', 'Blocks')}:</div>
                           {dependencies!.successors.map((d, i) => {
                             const isBlocking = d.dependency_type === 'blocks' || d.dependency_type === 'blocked_by';
                             return (
@@ -237,7 +237,7 @@ function TaskCard({
                                 <span className={isBlocking ? 'text-red-400' : 'text-blue-400'}>
                                   {isBlocking ? <Ban className="h-3 w-3" /> : <GitBranch className="h-3 w-3" />}
                                 </span>
-                                <span>{d.successor_task?.task_name || t('projects.dependencies.unknownTask', 'Unknown task')}</span>
+                                <span>{d.successor_task?.task_name || t('dependencies.unknownTask', 'Unknown task')}</span>
                               </div>
                             );
                           })}
@@ -272,7 +272,7 @@ function TaskCard({
               <Tooltip
                 content={
                   <div className="text-xs space-y-1.5">
-                    <div className="font-medium text-gray-300 mb-1">{t('projects.tasks.additionalAgents', 'Additional Agents')}:</div>
+                    <div className="font-medium text-gray-300 mb-1">{t('tasks.additionalAgents', 'Additional Agents')}:</div>
                     {task.additional_agents.map((agent, i) => (
                       <div key={i} className="flex items-center gap-2">
                         <UserAvatar
@@ -308,7 +308,7 @@ function TaskCard({
         {visibleFields.includes('estimated_hours') && task.estimated_hours != null && (
           <div className="flex items-center gap-1.5">
             <Clock className="w-3 h-3 text-[rgb(var(--color-text-400))]" />
-            <span>{t('projects.tasks.estimatedHours', 'Est')}: {(task.estimated_hours / 60).toFixed(1)}</span>
+            <span>{t('tasks.estimatedHours', 'Est')}: {(task.estimated_hours / 60).toFixed(1)}</span>
           </div>
         )}
 
@@ -316,7 +316,7 @@ function TaskCard({
         {visibleFields.includes('actual_hours') && task.actual_hours != null && (
           <div className="flex items-center gap-1.5">
             <Clock className="w-3 h-3 text-[rgb(var(--color-text-400))]" />
-            <span>{t('projects.fields.hoursLogged', 'Logged')}: {(task.actual_hours / 60).toFixed(1)}</span>
+            <span>{t('fields.hoursLogged', 'Logged')}: {(task.actual_hours / 60).toFixed(1)}</span>
           </div>
         )}
       </div>
@@ -345,7 +345,7 @@ function PhaseCard({
   showCompletion: boolean;
   dateLocale: Locale;
 }) {
-  const { t } = useTranslation('clientPortal');
+  const { t } = useTranslation('features/projects');
 
   return (
     <div
@@ -400,7 +400,7 @@ export default function ClientKanbanBoard({
   loading = false,
   taskDependencies
 }: ClientKanbanBoardProps) {
-  const { t, i18n } = useTranslation('clientPortal');
+  const { t, i18n } = useTranslation('features/projects');
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === 'dark';
   const dateLocale = getDateFnsLocale(i18n.language);
@@ -436,7 +436,7 @@ export default function ClientKanbanBoard({
   if (statuses.length === 0) {
     return (
       <div className="text-center py-8 text-[rgb(var(--color-text-500))]">
-        {t('projects.tasks.noTasks', 'No tasks to display')}
+        {t('tasks.noTasks', 'No tasks to display')}
       </div>
     );
   }
@@ -447,7 +447,7 @@ export default function ClientKanbanBoard({
       {showPhases && phases.length > 0 && (
         <div className="w-56 flex-shrink-0 space-y-2">
           <h4 className="text-xs font-medium text-[rgb(var(--color-text-500))] px-1 mb-3">
-            {t('projects.phases.title', 'Phases')}
+            {t('phases.title', 'Phases')}
           </h4>
           {phases.map((phase) => (
               <PhaseCard
@@ -509,7 +509,7 @@ export default function ClientKanbanBoard({
               <div className="px-2 pb-2 space-y-2 max-h-[calc(100vh-400px)] overflow-y-auto">
                 {statusTasks.length === 0 ? (
                   <div className="text-center py-4 text-xs text-[rgb(var(--color-text-400))]">
-                    {t('projects.tasks.noTasks', 'No tasks')}
+                    {t('tasks.noTasks', 'No tasks')}
                   </div>
                 ) : (
                   statusTasks.map((task) => (

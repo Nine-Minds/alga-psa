@@ -1,0 +1,73 @@
+{
+  "nav": {
+    "home": "Start",
+    "userActivities": "Benutzeraktivitäten",
+    "tickets": "Tickets",
+    "surveys": "Umfragen",
+    "projects": "Projekte",
+    "projectsAll": "Alle Projekte",
+    "projectsTemplates": "Vorlagen",
+    "clients": "Kunden",
+    "contacts": "Kontakte",
+    "documents": "Dokumente",
+    "assets": "Assets",
+    "timeManagement": "Zeitmanagement",
+    "timeEntry": "Zeiterfassung",
+    "approvals": "Genehmigungen",
+    "billing": "Abrechnung",
+    "schedule": "Zeitplan",
+    "technicianDispatch": "Techniker-Dispatch",
+    "automationHub": "Automatisierungs-Hub",
+    "workflows": "Workflows",
+    "runs": "Läufe",
+    "events": "Ereignisse",
+    "deadLetter": "Dead Letter",
+    "systemMonitor": "Systemmonitor",
+    "jobs": "Jobs",
+    "emailLogs": "E-Mail-Protokolle",
+    "extensions": "Erweiterungen"
+  },
+  "sidebar": {
+    "backToMain": "Zurück zur Hauptansicht",
+    "searchPlaceholder": "Suchen",
+    "settings": "Einstellungen",
+    "support": "Support"
+  },
+  "settings": {
+    "sections": {
+      "organizationAccess": "Organisation & Zugriff",
+      "workManagement": "Arbeitsverwaltung",
+      "timeBilling": "Zeit & Abrechnung",
+      "communication": "Kommunikation",
+      "dataIntegration": "Daten & Integration",
+      "experimental": "Experimentell"
+    },
+    "tabs": {
+      "general": "Allgemein",
+      "users": "Benutzer",
+      "teams": "Teams",
+      "clientPortal": "Kundenportal",
+      "ticketing": "Ticketing",
+      "projects": "Projekte",
+      "interactions": "Interaktionen",
+      "notifications": "Benachrichtigungen",
+      "timeEntry": "Zeiterfassung",
+      "billing": "Abrechnung",
+      "secrets": "Geheimnisse",
+      "importExport": "Import/Export",
+      "email": "E-Mail",
+      "integrations": "Integrationen",
+      "extensions": "Erweiterungen",
+      "experimentalFeatures": "Experimentelle Funktionen",
+      "profile": "Profil",
+      "security": "Sicherheit"
+    }
+  },
+  "header": {
+    "userFallback": "Benutzer",
+    "quickAccess": "Schnellzugriff auf Profil und Konto.",
+    "profile": "Profil",
+    "account": "Konto",
+    "signOut": "Abmelden"
+  }
+}
