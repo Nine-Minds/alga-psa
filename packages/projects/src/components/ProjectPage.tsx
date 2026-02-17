@@ -17,7 +17,13 @@ interface ProjectMetadata {
   clients: IClient[];
 }
 
-export default function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
+export default function ProjectPage({
+  params,
+  renderMaterialsDrawer,
+}: {
+  params: Promise<{ id: string }>;
+  renderMaterialsDrawer?: (args: { projectId: string; clientId?: string | null }) => React.ReactNode;
+}) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
@@ -127,6 +133,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
         projectTags={projectTags}
         allTagTexts={allTagTexts}
         onTagsChange={setProjectTags}
+        renderMaterialsDrawer={renderMaterialsDrawer}
       />
       <ProjectDetail
         project={projectMetadata.project}

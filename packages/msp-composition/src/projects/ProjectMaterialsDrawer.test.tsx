@@ -99,7 +99,7 @@ describe('ProjectMaterialsDrawer', () => {
 
     vi.mocked(actions.listProjectMaterials).mockReturnValueOnce(pending);
 
-    const ProjectMaterialsDrawer = (await import('../src/components/ProjectMaterialsDrawer')).default;
+    const ProjectMaterialsDrawer = (await import('./ProjectMaterialsDrawer')).default;
     render(<ProjectMaterialsDrawer projectId="project-1" clientId="client-1" />);
 
     expect(screen.getByText('Loading materials...')).toBeInTheDocument();
@@ -113,7 +113,7 @@ describe('ProjectMaterialsDrawer', () => {
   it('shows empty state when no materials exist (T004)', async () => {
     mockMaterials = [];
 
-    const ProjectMaterialsDrawer = (await import('../src/components/ProjectMaterialsDrawer')).default;
+    const ProjectMaterialsDrawer = (await import('./ProjectMaterialsDrawer')).default;
     render(<ProjectMaterialsDrawer projectId="project-1" clientId="client-1" />);
 
     expect(await screen.findByText('No materials added to this project.')).toBeInTheDocument();
@@ -136,7 +136,7 @@ describe('ProjectMaterialsDrawer', () => {
       } as IProjectMaterial,
     ];
 
-    const ProjectMaterialsDrawer = (await import('../src/components/ProjectMaterialsDrawer')).default;
+    const ProjectMaterialsDrawer = (await import('./ProjectMaterialsDrawer')).default;
     render(<ProjectMaterialsDrawer projectId="project-1" clientId="client-1" />);
 
     expect(await screen.findByText('Product')).toBeInTheDocument();
@@ -182,7 +182,7 @@ describe('ProjectMaterialsDrawer', () => {
       } as IProjectMaterial,
     ];
 
-    const ProjectMaterialsDrawer = (await import('../src/components/ProjectMaterialsDrawer')).default;
+    const ProjectMaterialsDrawer = (await import('./ProjectMaterialsDrawer')).default;
     render(<ProjectMaterialsDrawer projectId="project-1" clientId="client-1" />);
 
     expect(await screen.findByText('Pending')).toBeInTheDocument();
@@ -206,7 +206,7 @@ describe('ProjectMaterialsDrawer', () => {
       } as IProjectMaterial,
     ];
 
-    const ProjectMaterialsDrawer = (await import('../src/components/ProjectMaterialsDrawer')).default;
+    const ProjectMaterialsDrawer = (await import('./ProjectMaterialsDrawer')).default;
     render(<ProjectMaterialsDrawer projectId="project-1" clientId="client-1" />);
 
     expect(await screen.findByText(formatCurrencyFromMinorUnits(1234, 'en-US', 'EUR'))).toBeInTheDocument();
@@ -256,7 +256,7 @@ describe('ProjectMaterialsDrawer', () => {
       } as IProjectMaterial,
     ];
 
-    const ProjectMaterialsDrawer = (await import('../src/components/ProjectMaterialsDrawer')).default;
+    const ProjectMaterialsDrawer = (await import('./ProjectMaterialsDrawer')).default;
     render(<ProjectMaterialsDrawer projectId="project-1" clientId="client-1" />);
 
     expect(await screen.findByText('Unbilled (USD):')).toBeInTheDocument();
@@ -272,7 +272,7 @@ describe('ProjectMaterialsDrawer', () => {
     ];
 
     const actions = await import('@alga-psa/billing/actions');
-    const ProjectMaterialsDrawer = (await import('../src/components/ProjectMaterialsDrawer')).default;
+    const ProjectMaterialsDrawer = (await import('./ProjectMaterialsDrawer')).default;
     render(<ProjectMaterialsDrawer projectId="project-1" clientId="client-1" />);
 
     await screen.findByText('Materials');
@@ -296,7 +296,7 @@ describe('ProjectMaterialsDrawer', () => {
       { service_id: 'service-1', currency_code: 'EUR', rate: 900 } as IServicePrice,
     ];
 
-    const ProjectMaterialsDrawer = (await import('../src/components/ProjectMaterialsDrawer')).default;
+    const ProjectMaterialsDrawer = (await import('./ProjectMaterialsDrawer')).default;
     render(<ProjectMaterialsDrawer projectId="project-1" clientId="client-1" />);
 
     const addButton = await screen.findByRole('button', { name: 'Add' });
@@ -312,7 +312,7 @@ describe('ProjectMaterialsDrawer', () => {
   });
 
   it('defaults quantity to 1 and prevents values below 1 (T011)', async () => {
-    const ProjectMaterialsDrawer = (await import('../src/components/ProjectMaterialsDrawer')).default;
+    const ProjectMaterialsDrawer = (await import('./ProjectMaterialsDrawer')).default;
     render(<ProjectMaterialsDrawer projectId="project-1" clientId="client-1" />);
 
     const addButton = await screen.findByRole('button', { name: 'Add' });
@@ -334,7 +334,7 @@ describe('ProjectMaterialsDrawer', () => {
       { service_id: 'service-1', currency_code: 'EUR', rate: 2000 } as IServicePrice,
     ];
 
-    const ProjectMaterialsDrawer = (await import('../src/components/ProjectMaterialsDrawer')).default;
+    const ProjectMaterialsDrawer = (await import('./ProjectMaterialsDrawer')).default;
     render(<ProjectMaterialsDrawer projectId="project-1" clientId="client-1" />);
 
     const addButton = await screen.findByRole('button', { name: 'Add' });
@@ -368,7 +368,7 @@ describe('ProjectMaterialsDrawer', () => {
     ];
 
     const actions = await import('@alga-psa/billing/actions');
-    const ProjectMaterialsDrawer = (await import('../src/components/ProjectMaterialsDrawer')).default;
+    const ProjectMaterialsDrawer = (await import('./ProjectMaterialsDrawer')).default;
     render(<ProjectMaterialsDrawer projectId="project-1" clientId="client-1" />);
 
     const addButton = await screen.findByRole('button', { name: 'Add' });
@@ -410,7 +410,7 @@ describe('ProjectMaterialsDrawer', () => {
     mockPrices = [];
 
     const toast = await import('react-hot-toast');
-    const ProjectMaterialsDrawer = (await import('../src/components/ProjectMaterialsDrawer')).default;
+    const ProjectMaterialsDrawer = (await import('./ProjectMaterialsDrawer')).default;
     render(<ProjectMaterialsDrawer projectId="project-1" clientId="client-1" />);
 
     const addButton = await screen.findByRole('button', { name: 'Add' });
@@ -459,7 +459,7 @@ describe('ProjectMaterialsDrawer', () => {
       } as IProjectMaterial,
     ];
 
-    const ProjectMaterialsDrawer = (await import('../src/components/ProjectMaterialsDrawer')).default;
+    const ProjectMaterialsDrawer = (await import('./ProjectMaterialsDrawer')).default;
     const { container } = render(<ProjectMaterialsDrawer projectId="project-1" clientId="client-1" />);
 
     await screen.findByText('Widget');
@@ -490,7 +490,7 @@ describe('ProjectMaterialsDrawer', () => {
     ];
 
     const actions = await import('@alga-psa/billing/actions');
-    const ProjectMaterialsDrawer = (await import('../src/components/ProjectMaterialsDrawer')).default;
+    const ProjectMaterialsDrawer = (await import('./ProjectMaterialsDrawer')).default;
     const { container } = render(<ProjectMaterialsDrawer projectId="project-1" clientId="client-1" />);
 
     await screen.findByText('Widget');
@@ -510,7 +510,7 @@ describe('ProjectMaterialsDrawer', () => {
   });
 
   it('shows no-client warning and hides add button (T017)', async () => {
-    const ProjectMaterialsDrawer = (await import('../src/components/ProjectMaterialsDrawer')).default;
+    const ProjectMaterialsDrawer = (await import('./ProjectMaterialsDrawer')).default;
     render(<ProjectMaterialsDrawer projectId="project-1" />);
 
     expect(
@@ -536,7 +536,7 @@ describe('ProjectMaterialsDrawer', () => {
       } as IProjectMaterial,
     ];
 
-    const ProjectMaterialsDrawer = (await import('../src/components/ProjectMaterialsDrawer')).default;
+    const ProjectMaterialsDrawer = (await import('./ProjectMaterialsDrawer')).default;
     const { container } = render(<ProjectMaterialsDrawer projectId="project-1" clientId="client-1" />);
 
     expect(container.querySelector('[data-automation-id="project-materials-drawer"]')).toBeInTheDocument();

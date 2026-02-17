@@ -13,7 +13,6 @@ import ProjectDetailsEdit from './ProjectDetailsEdit';
 import { TagManager } from '@alga-psa/tags/components';
 import { toast } from 'react-hot-toast';
 import CreateTemplateDialog from './project-templates/CreateTemplateDialog';
-import ProjectMaterialsDrawer from './ProjectMaterialsDrawer';
 
 interface ProjectInfoProps {
   project: IProject;
@@ -29,6 +28,7 @@ interface ProjectInfoProps {
   projectTags?: ITag[];
   allTagTexts?: string[];
   onTagsChange?: (tags: ITag[]) => void;
+  renderMaterialsDrawer?: (args: { projectId: string; clientId?: string | null }) => React.ReactNode;
 }
 
 export default function ProjectInfo({
@@ -42,7 +42,8 @@ export default function ProjectInfo({
   onProjectUpdate,
   projectTags = [],
   allTagTexts = [],
-  onTagsChange
+  onTagsChange,
+  renderMaterialsDrawer
 }: ProjectInfoProps) {
   const { openDrawer, closeDrawer } = useDrawer();
 
@@ -100,12 +101,15 @@ export default function ProjectInfo({
   };
 
   const handleMaterialsClick = () => {
+    if (!renderMaterialsDrawer) {
+      return;
+    }
     const clientId = currentProject.client_id;
     openDrawer(
-      <ProjectMaterialsDrawer
-        projectId={currentProject.project_id}
-        clientId={clientId}
-      />,
+      renderMaterialsDrawer({
+        projectId: currentProject.project_id,
+        clientId,
+      }),
       undefined,
       undefined,
       '560px'
@@ -145,14 +149,16 @@ export default function ProjectInfo({
             <Save className="h-4 w-4 mr-2" />
             Save as Template
           </Button>
-          <Button
-            id="project-materials-button"
-            variant="outline"
-            size="sm"
-            onClick={handleMaterialsClick}
-          >
-            Materials
-          </Button>
+          {renderMaterialsDrawer ? (
+            <Button
+              id="project-materials-button"
+              variant="outline"
+              size="sm"
+              onClick={handleMaterialsClick}
+            >
+              Materials
+            </Button>
+          ) : null}
           <Button
             id="edit-project-button"
             variant="outline"

@@ -110,3 +110,9 @@
 - (2026-02-16) Stage 7: Moved TicketMaterialsCard to msp-composition and injected via renderMaterialsCard prop; tickets no longer import billing actions.
 
 - (2026-02-16) Stage 7 test: verified tickets no longer import billing actions after TicketMaterialsCard move.
+
+- (2026-02-16) Stage 7: Moved ProjectMaterialsDrawer and test to msp-composition; ProjectInfo/ProjectPage now accept renderMaterialsDrawer and msp-composition injects drawer.
+
+- (2026-02-16) Stage 7 test: confirmed projects package no longer imports billing after ProjectMaterialsDrawer move.
+
+- (2026-02-16) Stage 7 test: ran ProjectMaterialsDrawer test suite in msp-composition; passes with act warnings.

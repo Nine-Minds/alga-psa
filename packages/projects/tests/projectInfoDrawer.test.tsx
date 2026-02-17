@@ -49,10 +49,6 @@ vi.mock('@alga-psa/ui/components/Button', () => ({
   ),
 }));
 
-vi.mock('../src/components/ProjectMaterialsDrawer', () => ({
-  default: () => null,
-}));
-
 vi.mock('../src/components/HoursProgressBar', () => ({
   default: () => null,
 }));
@@ -78,6 +74,7 @@ describe('ProjectInfo materials drawer', () => {
         project={project}
         users={[]}
         clients={[]}
+        renderMaterialsDrawer={() => <div>Materials Drawer</div>}
       />
     );
 

@@ -152,7 +152,7 @@
   {
     "id": "T026",
     "description": "After Stage 7: projects no longer imports from billing (ProjectMaterialsDrawer moved)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F020"]
   },
   {

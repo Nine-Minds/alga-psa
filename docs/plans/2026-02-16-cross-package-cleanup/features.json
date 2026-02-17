@@ -116,7 +116,7 @@
   {
     "id": "F020",
     "description": "Stage 7: Move ProjectMaterialsDrawer + test to msp-composition/projects (2 violations)",
-    "implemented": false,
+    "implemented": true,
     "stage": 7
   },
   {
