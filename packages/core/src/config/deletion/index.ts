@@ -159,6 +159,18 @@ export const DELETION_CONFIGS: Record<string, EntityDeletionConfig> = {
           return Number(result?.count ?? 0);
         }
       },
+      {
+        type: 'schedule_entry',
+        table: 'schedule_entries',
+        label: 'schedule entry',
+        countQuery: async (trx, options) => {
+          const result = await trx('schedule_entries')
+            .where({ tenant: options.tenant, work_item_id: options.entityId, work_item_type: 'ticket' })
+            .count<{ count: string }>('* as count')
+            .first();
+          return Number(result?.count ?? 0);
+        }
+      },
       { type: 'interaction', table: 'interactions', foreignKey: 'ticket_id', label: 'interaction' }
     ]
   },
@@ -168,7 +180,28 @@ export const DELETION_CONFIGS: Record<string, EntityDeletionConfig> = {
     supportsArchive: true,
     tagEntityType: 'project',
     dependencies: [
-      { type: 'interaction', table: 'interactions', foreignKey: 'project_id', label: 'interaction' }
+      { type: 'interaction', table: 'interactions', foreignKey: 'project_id', label: 'interaction' },
+      {
+        type: 'schedule_entry',
+        table: 'schedule_entries',
+        label: 'schedule entry',
+        countQuery: async (trx, options) => {
+          const taskIds = await trx('project_tasks')
+            .join('project_phases', function() {
+              this.on('project_tasks.phase_id', 'project_phases.phase_id')
+                .andOn('project_tasks.tenant', 'project_phases.tenant');
+            })
+            .where({ 'project_phases.project_id': options.entityId, 'project_phases.tenant': options.tenant })
+            .pluck('project_tasks.task_id');
+          if (taskIds.length === 0) return 0;
+          const result = await trx('schedule_entries')
+            .where({ tenant: options.tenant, work_item_type: 'project_task' })
+            .whereIn('work_item_id', taskIds)
+            .count<{ count: string }>('* as count')
+            .first();
+          return Number(result?.count ?? 0);
+        }
+      }
     ]
   },
   category: {

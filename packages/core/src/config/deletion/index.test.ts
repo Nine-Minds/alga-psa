@@ -98,6 +98,30 @@ describe('deletion configs', () => {
     expect(categoryDep?.table).toBe('categories');
     expect(categoryDep?.foreignKey).toBe('board_id');
   });
+
+  it('ticket config includes schedule_entry dependency with polymorphic countQuery', async () => {
+    const scheduleDep = DELETION_CONFIGS.ticket.dependencies.find((dep) => dep.type === 'schedule_entry');
+    expect(scheduleDep).toBeDefined();
+    expect(scheduleDep?.table).toBe('schedule_entries');
+    expect(scheduleDep?.countQuery).toBeDefined();
+
+    const { trx, builder } = makeTrx();
+    await scheduleDep?.countQuery?.(trx, { tenant: 'tenant-1', entityId: 'ticket-1' });
+
+    expect(trx).toHaveBeenCalledWith('schedule_entries');
+    expect(builder.where).toHaveBeenCalledWith({
+      tenant: 'tenant-1',
+      work_item_id: 'ticket-1',
+      work_item_type: 'ticket'
+    });
+  });
+
+  it('project config includes schedule_entry dependency for project tasks', () => {
+    const scheduleDep = DELETION_CONFIGS.project.dependencies.find((dep) => dep.type === 'schedule_entry');
+    expect(scheduleDep).toBeDefined();
+    expect(scheduleDep?.table).toBe('schedule_entries');
+    expect(scheduleDep?.countQuery).toBeDefined();
+  });
 });
 
 describe('getDeletionConfig', () => {

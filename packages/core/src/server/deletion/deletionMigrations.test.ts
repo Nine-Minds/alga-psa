@@ -13,26 +13,26 @@ function makeTrx(
   defaultCount = 0,
   countsByTable?: Record<string, number>
 ) {
-  const builder = {
-    where: vi.fn().mockReturnThis(),
-    andWhere: vi.fn().mockReturnThis(),
-    orWhere: vi.fn().mockReturnThis(),
-    count: vi.fn().mockReturnThis(),
-    first: vi.fn().mockResolvedValue({ count: String(defaultCount) })
-  };
+  function makeBuilder(count: number) {
+    const b: Record<string, ReturnType<typeof vi.fn>> = {};
+    b.where = vi.fn().mockReturnValue(b);
+    b.andWhere = vi.fn().mockReturnValue(b);
+    b.orWhere = vi.fn().mockReturnValue(b);
+    b.whereIn = vi.fn().mockReturnValue(b);
+    b.count = vi.fn().mockReturnValue(b);
+    b.join = vi.fn().mockReturnValue(b);
+    b.pluck = vi.fn().mockResolvedValue([]);
+    b.first = vi.fn().mockResolvedValue({ count: String(count) });
+    return b;
+  }
+
+  const builder = makeBuilder(defaultCount);
 
   const trx = vi.fn((table: string) => {
     if (countsByTable && table in countsByTable) {
-      return {
-        ...builder,
-        where: vi.fn().mockReturnThis(),
-        andWhere: vi.fn().mockReturnThis(),
-        orWhere: vi.fn().mockReturnThis(),
-        count: vi.fn().mockReturnThis(),
-        first: vi.fn().mockResolvedValue({ count: String(countsByTable[table]) })
-      };
+      return makeBuilder(countsByTable[table]);
     }
-    return builder;
+    return makeBuilder(defaultCount);
   }) as unknown as Knex;
 
   return { trx, builder };
@@ -386,6 +386,7 @@ describe('message formatting', () => {
     );
 
     expect(result.message).toContain('time entry');
+    expect(result.message).toContain('schedule entry');
     expect(result.message).toContain('interaction');
   });
 
