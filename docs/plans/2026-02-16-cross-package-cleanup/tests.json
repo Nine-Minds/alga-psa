@@ -164,31 +164,31 @@
   {
     "id": "T028",
     "description": "After Stage 8a: clients package has 0 cross-package violations",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F023", "F024"]
   },
   {
     "id": "T029",
     "description": "After Stage 8a: server page.tsx files resolve msp-composition/clients imports",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F024"]
   },
   {
     "id": "T030",
     "description": "After Stage 8b: scheduling package has 0 cross-package violations",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F025", "F026"]
   },
   {
     "id": "T031",
     "description": "After Stage 8c: workflows package has 0 cross-package violations",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F027", "F028"]
   },
   {
     "id": "T032",
     "description": "After Stage 8d: projects package has 0 cross-package violations (except documents which is reclassified)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F029", "F030"]
   },
   {
