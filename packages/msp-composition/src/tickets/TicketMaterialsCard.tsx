@@ -21,7 +21,7 @@ import {
   getServicePrices,
   type CatalogPickerItem,
 } from '@alga-psa/billing/actions';
-import styles from './TicketDetails.module.css';
+import styles from '@alga-psa/tickets/components/ticket/TicketDetails.module.css';
 
 interface TicketMaterialsCardProps {
   id?: string;

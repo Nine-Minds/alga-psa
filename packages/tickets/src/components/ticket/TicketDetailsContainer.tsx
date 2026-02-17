@@ -63,6 +63,7 @@ interface TicketDetailsContainerProps {
   renderContactDetails?: React.ComponentProps<typeof TicketDetails>['renderContactDetails'];
   renderCreateProjectTask?: React.ComponentProps<typeof TicketDetails>['renderCreateProjectTask'];
   renderClientDetails?: React.ComponentProps<typeof TicketDetails>['renderClientDetails'];
+  renderMaterialsCard?: React.ComponentProps<typeof TicketDetails>['renderMaterialsCard'];
   renderIntervalManagement?: React.ComponentProps<typeof TicketDetails>['renderIntervalManagement'];
 }
 
@@ -73,6 +74,7 @@ export default function TicketDetailsContainer({
   renderContactDetails,
   renderCreateProjectTask,
   renderClientDetails,
+  renderMaterialsCard,
   renderIntervalManagement,
 }: TicketDetailsContainerProps) {
   const router = useRouter();
@@ -259,6 +261,7 @@ export default function TicketDetailsContainer({
             isSubmitting={isSubmitting}
           surveySummary={surveySummary}
           associatedAssets={associatedAssets}
+          renderMaterialsCard={renderMaterialsCard}
           renderContactDetails={renderContactDetails}
           renderCreateProjectTask={renderCreateProjectTask}
             renderClientDetails={renderClientDetails}

@@ -110,7 +110,7 @@
   {
     "id": "F019",
     "description": "Stage 7: Move TicketMaterialsCard to msp-composition/tickets (1 violation)",
-    "implemented": false,
+    "implemented": true,
     "stage": 7
   },
   {

@@ -120,6 +120,11 @@ interface TicketDetailsProps {
     associatedAssets?: React.ReactNode;
 
     /**
+     * Optional injected UI for materials (billing) section.
+     */
+    renderMaterialsCard?: (args: { ticketId: string; clientId?: string | null }) => React.ReactNode;
+
+    /**
      * Optional injected UI for contact quick view (e.g. @alga-psa/clients ContactDetailsView).
      * If omitted, TicketDetails falls back to a minimal drawer with a link to open the contact page.
      */
@@ -188,6 +193,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     isSubmitting = false,
     surveySummary = null,
     associatedAssets = null,
+    renderMaterialsCard,
     renderContactDetails,
     renderCreateProjectTask,
     renderClientDetails,
@@ -1910,6 +1916,7 @@ const handleClose = () => {
                                 onTagsChange={handleTagsChange}
                                 onItilFieldChange={handleItilFieldChange}
                                 surveySummary={surveySummary}
+                                renderMaterialsCard={renderMaterialsCard}
                                 renderIntervalManagement={renderIntervalManagement}
                             />
                         </Suspense>

@@ -146,7 +146,7 @@
   {
     "id": "T025",
     "description": "After Stage 7: tickets no longer imports from billing (TicketMaterialsCard moved)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F019"]
   },
   {

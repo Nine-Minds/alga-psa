@@ -106,3 +106,7 @@
 - (2026-02-16) Stage 7: Moved QuickBooks/Xero company adapters from billing to integrations services/companySync and updated exports/imports to use @alga-psa/types.
 
 - (2026-02-16) Stage 7 test: confirmed billing no longer references quickBooks/xero company adapters after move.
+
+- (2026-02-16) Stage 7: Moved TicketMaterialsCard to msp-composition and injected via renderMaterialsCard prop; tickets no longer import billing actions.
+
+- (2026-02-16) Stage 7 test: verified tickets no longer import billing actions after TicketMaterialsCard move.

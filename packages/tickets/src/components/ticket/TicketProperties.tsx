@@ -28,7 +28,6 @@ import { getUserContactId } from '@alga-psa/users/actions';
 import { utcToLocal, formatDateTime, getUserTimeZone } from '@alga-psa/core';
 import { getTicketingDisplaySettings } from '../../actions/ticketDisplaySettings';
 import type { SurveyTicketSatisfactionSummary } from '@alga-psa/types';
-import TicketMaterialsCard from './TicketMaterialsCard';
 import TicketSurveySummaryCard from './TicketSurveySummaryCard';
 import { useRegisterUnsavedChanges } from '@alga-psa/ui/context';
 
@@ -75,6 +74,7 @@ interface TicketPropertiesProps {
   onTagsChange?: (tags: ITag[]) => void;
   onItilFieldChange?: (field: string, value: any) => void;
   surveySummary?: SurveyTicketSatisfactionSummary | null;
+  renderMaterialsCard?: (args: { ticketId: string; clientId?: string | null }) => React.ReactNode;
   renderIntervalManagement?: (args: { ticketId: string; userId: string }) => React.ReactNode;
 }
 
@@ -148,6 +148,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
   onTagsChange,
   onItilFieldChange,
   surveySummary = null,
+  renderMaterialsCard,
   renderIntervalManagement,
 }) => {
   const [showContactPicker, setShowContactPicker] = useState(false);
@@ -740,12 +741,9 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
       </div>
 
 
-      {ticket.ticket_id && ticket.client_id && (
-        <TicketMaterialsCard
-          ticketId={ticket.ticket_id}
-          clientId={ticket.client_id}
-        />
-      )}
+      {renderMaterialsCard && ticket.ticket_id && ticket.client_id
+        ? renderMaterialsCard({ ticketId: ticket.ticket_id, clientId: ticket.client_id })
+        : null}
 
       {surveySummary !== undefined && (
         <TicketSurveySummaryCard summary={surveySummary} />

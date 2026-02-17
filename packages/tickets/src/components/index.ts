@@ -27,5 +27,4 @@ export { default as TicketDetails } from './ticket/TicketDetails';
 export { TicketDetailsSkeleton } from './ticket/TicketDetailsSkeleton';
 export { default as TicketDocumentsSection } from './ticket/TicketDocumentsSection';
 export { default as TicketInfo } from './ticket/TicketInfo';
-export { default as TicketMaterialsCard } from './ticket/TicketMaterialsCard';
 export { default as TicketProperties } from './ticket/TicketProperties';

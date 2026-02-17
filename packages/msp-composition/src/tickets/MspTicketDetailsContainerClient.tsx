@@ -10,6 +10,7 @@ import LinkTicketToTaskDialog from '@alga-psa/projects/components/LinkTicketToTa
 import { IntervalManagement } from '@alga-psa/scheduling/components/time-management/interval-tracking/IntervalManagement';
 import { TicketIntegrationProvider } from '@alga-psa/projects/context/TicketIntegrationContext';
 import { useTicketIntegrationValue } from '../projects/useTicketIntegrationValue';
+import TicketMaterialsCard from './TicketMaterialsCard';
 
 type MspTicketDetailsContainerClientProps = Omit<
   React.ComponentProps<typeof TicketDetailsContainer>,
@@ -62,6 +63,13 @@ export default function MspTicketDetailsContainerClient(props: MspTicketDetailsC
     []
   );
 
+  const renderMaterialsCard = useCallback(
+    ({ ticketId, clientId }: { ticketId: string; clientId?: string | null }) => (
+      <TicketMaterialsCard ticketId={ticketId} clientId={clientId} />
+    ),
+    []
+  );
+
   return (
     <TicketIntegrationProvider value={ticketIntegrationValue}>
       <TicketDetailsContainer
@@ -69,6 +77,7 @@ export default function MspTicketDetailsContainerClient(props: MspTicketDetailsC
         renderContactDetails={renderContactDetails}
         renderCreateProjectTask={renderCreateProjectTask}
         renderClientDetails={renderClientDetails}
+        renderMaterialsCard={renderMaterialsCard}
         renderIntervalManagement={renderIntervalManagement}
       />
     </TicketIntegrationProvider>
