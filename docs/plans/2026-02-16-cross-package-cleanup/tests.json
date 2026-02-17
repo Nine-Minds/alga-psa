@@ -20,7 +20,7 @@
   {
     "id": "T004",
     "description": "After Stage 2: npm run build passes",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F002", "F003"]
   },
   {
@@ -56,7 +56,7 @@
   {
     "id": "T010",
     "description": "After Stage 3: npm run build passes",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F004", "F005", "F006", "F007", "F008", "F009"]
   },
   {
@@ -92,7 +92,7 @@
   {
     "id": "T016",
     "description": "After Stage 4: npm run build passes",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F010", "F011", "F012", "F013"]
   },
   {
@@ -104,7 +104,7 @@
   {
     "id": "T018",
     "description": "After Stage 5: npm run build passes",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F014"]
   },
   {
@@ -134,7 +134,7 @@
   {
     "id": "T023",
     "description": "After Stage 6: npm run build passes",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F015", "F016", "F017"]
   },
   {
@@ -158,7 +158,7 @@
   {
     "id": "T027",
     "description": "After Stage 7: npm run build passes",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F018", "F019", "F020", "F021", "F022"]
   },
   {
@@ -194,7 +194,7 @@
   {
     "id": "T033",
     "description": "After Stage 8: npm run build passes",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F023", "F025", "F027", "F029", "F031"]
   },
   {
@@ -206,7 +206,7 @@
   {
     "id": "T035",
     "description": "After Stage 9: npm run build passes",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F033"]
   },
   {

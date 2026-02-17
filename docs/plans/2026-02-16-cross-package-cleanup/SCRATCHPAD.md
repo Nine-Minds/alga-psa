@@ -168,3 +168,5 @@
 - (2026-02-17) Stage 9: fixed build-breaking shims (AssetDetailHeader, ServiceHistoryTab, tickets CategoryPicker), resolved workflows actions export conflict by aliasing legacy submit action, and updated server accounting adapters to import company adapters from integrations services.
 
 - (2026-02-17) Stage 9: made survey trigger reference data loader tenant-aware to match `getAllBoards(tenant, includeAll)` signature.
+
+- (2026-02-17) Stage 9 build: `NODE_OPTIONS=--max-old-space-size=8192 npm run build` completes successfully (with existing webpack warnings for temporalio/handlebars/knex).
