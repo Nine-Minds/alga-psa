@@ -547,9 +547,9 @@ const Clients: React.FC = () => {
       const result = await deleteClient(clientToDelete.client_id);
       
       if (!result.success) {
-        if ('code' in result && result.code === 'COMPANY_HAS_DEPENDENCIES') {
+        if (!result.canDelete && result.dependencies.length > 0) {
           handleDependencyError(result);
-          setShowDeactivateOption(true);
+          setShowDeactivateOption(result.alternatives.length > 0);
           return;
         }
         throw new Error(result.message || 'Failed to delete client');
@@ -848,7 +848,7 @@ const Clients: React.FC = () => {
   };
 
   interface DependencyResult {
-    dependencies?: string[];
+    dependencies?: Array<{ count: number; label: string } | string>;
     counts?: Record<string, number>; // Changed from string to number to match backend
     code?: string;
     message?: string;
@@ -857,6 +857,15 @@ const Clients: React.FC = () => {
   const formatDependencyText = (result: DependencyResult): string => {
     const dependencies = result.dependencies || [];
     const counts = result.counts || {};
+
+    if (dependencies.length > 0 && typeof dependencies[0] !== 'string') {
+      return dependencies
+        .map((dep) => {
+          if (typeof dep === 'string') return dep;
+          return `${dep.count} ${dep.label}`;
+        })
+        .join(', ');
+    }
     
     // Map the base keys to their full dependency names
     const keyMap: Record<string, string> = {
@@ -881,11 +890,12 @@ const Clients: React.FC = () => {
     });
 
     return dependencies
-    .map((dep: string): string => {
+    .map((dep): string => {
+      const depStr = typeof dep === 'string' ? dep : dep.label;
       // Get the base key for this dependency
-      const baseKey = reverseKeyMap[dep];
-      const count = baseKey ? counts[baseKey] || 0 : 0;
-      return `${count} ${dep}`;
+      const baseKey = reverseKeyMap[depStr];
+      const count = baseKey ? counts[baseKey] || 0 : (typeof dep !== 'string' ? dep.count : 0);
+      return `${count} ${depStr}`;
     })
     .join(', ');
   };

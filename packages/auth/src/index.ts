@@ -52,6 +52,10 @@ export { getAuthOptions } from './lib/nextAuthOptions';
 // Current user helper
 export { getCurrentUser } from './lib/getCurrentUser';
 
+// Deletion pre-check (auth-guarded validation)
+export { preCheckDeletion } from './lib/preCheckDeletion';
+export { useDeletionValidation } from './hooks/useDeletionValidation';
+
 // Server action wrappers (boundary-layer auth + tenant context)
 export {
   withAuth,

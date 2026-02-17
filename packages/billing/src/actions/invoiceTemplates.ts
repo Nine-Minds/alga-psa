@@ -15,10 +15,12 @@ import {
     ICustomField,
     IConditionalRule,
     IInvoiceAnnotation,
-    InvoiceTemplateSource
+    InvoiceTemplateSource,
+    DeletionValidationResult
 } from '@alga-psa/types';
 import { v4 as uuidv4 } from 'uuid';
 import { withAuth } from '@alga-psa/auth';
+import { deleteEntityWithValidation } from '@alga-psa/core';
 import {
   buildAssemblyScriptCompileCommand,
   resolveAssemblyScriptProjectDir,
@@ -865,35 +867,12 @@ export const deleteInvoiceTemplate = withAuth(async (
     user,
     { tenant },
     templateId: string
-): Promise<{ success: boolean; error?: string }> => {
+): Promise<DeletionValidationResult & { success: boolean; deleted?: boolean; error?: string }> => {
     const { knex } = await createTenantKnex();
 
     try {
         let templateWasTenantDefault = false;
-
-        await knex.transaction(async (trx) => {
-            const clientUsingTemplate = await trx('clients')
-                .where({
-                    invoice_template_id: templateId,
-                    tenant
-                })
-                .first();
-
-            if (clientUsingTemplate) {
-                throw new Error('TEMPLATE_IN_USE_BY_CLIENT');
-            }
-
-            const ruleUsingTemplate = await trx('conditional_display_rules')
-                .where({
-                    template_id: templateId,
-                    tenant
-                })
-                .first();
-
-            if (ruleUsingTemplate) {
-                throw new Error('TEMPLATE_IN_USE_BY_RULE');
-            }
-
+        const result = await deleteEntityWithValidation('invoice_template', templateId, knex, tenant, async (trx) => {
             const tenantAssignment = await trx('invoice_template_assignments')
                 .select('assignment_id')
                 .where({
@@ -915,6 +894,11 @@ export const deleteInvoiceTemplate = withAuth(async (
                 })
                 .del();
 
+            // Clean up child records owned by the template
+            await trx('template_sections')
+                .where({ template_id: templateId, tenant })
+                .del();
+
             const deletedCount = await trx('invoice_templates')
                 .where({
                     template_id: templateId,
@@ -927,7 +911,7 @@ export const deleteInvoiceTemplate = withAuth(async (
             }
         });
 
-        if (templateWasTenantDefault) {
+        if (result.deleted && templateWasTenantDefault) {
             await withTransaction(knex, async (trx) => {
                 const fallbackCustom = await trx('invoice_templates')
                     .where({ tenant })
@@ -967,31 +951,21 @@ export const deleteInvoiceTemplate = withAuth(async (
         }
 
         console.log(`Successfully deleted template ${templateId} for tenant ${tenant}`);
-        return { success: true };
+        return {
+            ...result,
+            success: result.deleted === true,
+            deleted: result.deleted
+        };
     } catch (error: any) {
-        if (error instanceof Error) {
-            switch (error.message) {
-                case 'TEMPLATE_IN_USE_BY_CLIENT':
-                    return {
-                        success: false,
-                        error: 'Template is currently assigned to one or more clients and cannot be deleted.'
-                    };
-                case 'TEMPLATE_IN_USE_BY_RULE':
-                    return {
-                        success: false,
-                        error: 'Template is currently used by one or more conditional display rules and cannot be deleted.'
-                    };
-                case 'TEMPLATE_NOT_FOUND':
-                    return { success: false, error: 'Template not found or cannot be deleted.' };
-                default:
-                    break;
-            }
-        }
-
         console.error(`Error deleting invoice template ${templateId} for tenant ${tenant}:`, error);
         return {
             success: false,
-            error: `An unexpected error occurred: ${error?.message || String(error)}`,
+            canDelete: false,
+            code: 'VALIDATION_FAILED',
+            message: error?.message || 'An unexpected error occurred while deleting the template.',
+            dependencies: [],
+            alternatives: [],
+            error: error?.message || 'An unexpected error occurred while deleting the template.'
         };
     }
 });

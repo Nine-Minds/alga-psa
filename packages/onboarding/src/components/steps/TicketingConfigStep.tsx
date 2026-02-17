@@ -2,12 +2,12 @@
 
 // Onboarding step: configure ticketing defaults.
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Plus, Package, ChevronDown, ChevronUp, CheckCircle, Settings, Palette, Trash2, Star, AlertTriangle, CornerDownRight, HelpCircle } from 'lucide-react';
-import type { StepProps } from '@alga-psa/types';
+import type { StepProps, DeletionValidationResult } from '@alga-psa/types';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import ColorPicker from '@alga-psa/ui/components/ColorPicker';
@@ -15,7 +15,9 @@ import { useSession } from 'next-auth/react';
 import { 
   getAvailableReferenceData, 
   importReferenceData,
-  deleteReferenceDataItem
+  deleteReferenceDataItem,
+  deletePriority,
+  validatePriorityDeletion
 } from '@alga-psa/reference-data/actions';
 import { getTenantTicketingData } from '@alga-psa/onboarding/actions';
 import { IStandardPriority, ITicketCategory } from '@alga-psa/types';
@@ -24,10 +26,11 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { createBoard, updateBoard } from '@alga-psa/tickets/actions';
 import { createCategory } from '@alga-psa/tickets/actions';
-import { createStatus } from '@alga-psa/reference-data/actions';
-import { createPriority } from '@alga-psa/reference-data/actions';
+import { createStatus, createPriority } from '@alga-psa/reference-data/actions';
 import toast from 'react-hot-toast';
 import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
+import { DeleteEntityDialog } from '@alga-psa/ui';
+import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
 
 interface SectionState {
   numbering: boolean;
@@ -163,6 +166,22 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
   const [importedStatuses, setImportedStatuses] = useState<any[]>([]);
   const [importedCategories, setImportedCategories] = useState<string[]>([]);
   const [importedPriorities, setImportedPriorities] = useState<any[]>([]);
+  const [categoryToDelete, setCategoryToDelete] = useState<{ id: string; name: string } | null>(null);
+  const [categoryDeleteValidation, setCategoryDeleteValidation] = useState<DeletionValidationResult | null>(null);
+  const [isCategoryDeleteValidating, setIsCategoryDeleteValidating] = useState(false);
+  const [isCategoryDeleteProcessing, setIsCategoryDeleteProcessing] = useState(false);
+  const [boardToDelete, setBoardToDelete] = useState<{ id: string; name: string } | null>(null);
+  const [boardDeleteValidation, setBoardDeleteValidation] = useState<DeletionValidationResult | null>(null);
+  const [isBoardDeleteValidating, setIsBoardDeleteValidating] = useState(false);
+  const [isBoardDeleteProcessing, setIsBoardDeleteProcessing] = useState(false);
+  const [statusToDelete, setStatusToDelete] = useState<{ id: string; name: string } | null>(null);
+  const [statusDeleteValidation, setStatusDeleteValidation] = useState<DeletionValidationResult | null>(null);
+  const [isStatusDeleteValidating, setIsStatusDeleteValidating] = useState(false);
+  const [isStatusDeleteProcessing, setIsStatusDeleteProcessing] = useState(false);
+  const [priorityToDelete, setPriorityToDelete] = useState<{ id: string; name: string } | null>(null);
+  const [priorityDeleteValidation, setPriorityDeleteValidation] = useState<DeletionValidationResult | null>(null);
+  const [isPriorityDeleteValidating, setIsPriorityDeleteValidating] = useState(false);
+  const [isPriorityDeleteProcessing, setIsPriorityDeleteProcessing] = useState(false);
 
   // ITIL configuration
   const [showItilInfoModal, setShowItilInfoModal] = useState(false);
@@ -712,27 +731,70 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
   };
 
   // Remove functions for each type
-  const removeBoard = async (boardId: string) => {
+  const resetBoardDeleteState = () => {
+    setBoardToDelete(null);
+    setBoardDeleteValidation(null);
+    setIsBoardDeleteValidating(false);
+    setIsBoardDeleteProcessing(false);
+  };
+
+  const runBoardDeleteValidation = useCallback(async (boardId: string) => {
+    setIsBoardDeleteValidating(true);
     try {
-      const result = await deleteReferenceDataItem('boards', boardId);
-      if (result.success) {
-        // Remove from imported boards
-        setImportedBoards(prev => prev.filter(ch => ch.board_id !== boardId));
-        
-        // If this was the selected board, clear it
-        if (data.boardId === boardId) {
-          updateData({ boardId: undefined, boardName: '' });
-        }
-        
-        // Refresh data from server
-        loadExistingData();
-        toast.success('Board deleted successfully');
-      } else {
-        toast.error(result.error || 'Failed to delete board');
+      const result = await preCheckDeletion('board', boardId);
+      setBoardDeleteValidation(result);
+    } catch (error) {
+      console.error('Error validating board deletion:', error);
+      setBoardDeleteValidation({
+        canDelete: false,
+        code: 'VALIDATION_FAILED',
+        message: 'Failed to validate deletion. Please try again.',
+        dependencies: [],
+        alternatives: []
+      });
+    } finally {
+      setIsBoardDeleteValidating(false);
+    }
+  }, []);
+
+  const openBoardDeleteDialog = (boardId: string) => {
+    const board = importedBoards.find(ch => ch.board_id === boardId);
+    setBoardToDelete({
+      id: boardId,
+      name: board?.board_name || 'this board'
+    });
+    void runBoardDeleteValidation(boardId);
+  };
+
+  const confirmDeleteBoard = async () => {
+    if (!boardToDelete) return;
+    try {
+      setIsBoardDeleteProcessing(true);
+      const result = await deleteReferenceDataItem('boards', boardToDelete.id);
+      if (!result.success) {
+        setBoardDeleteValidation(result);
+        return;
       }
+
+      setImportedBoards(prev => prev.filter(ch => ch.board_id !== boardToDelete.id));
+      if (data.boardId === boardToDelete.id) {
+        updateData({ boardId: undefined, boardName: '' });
+      }
+
+      loadExistingData();
+      toast.success('Board deleted successfully');
+      resetBoardDeleteState();
     } catch (error) {
       console.error('Error deleting board:', error);
-      toast.error('Failed to delete board');
+      setBoardDeleteValidation({
+        canDelete: false,
+        code: 'VALIDATION_FAILED',
+        message: 'Failed to delete board.',
+        dependencies: [],
+        alternatives: []
+      });
+    } finally {
+      setIsBoardDeleteProcessing(false);
     }
   };
 
@@ -770,87 +832,216 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
     }
   };
 
-  const removeCategory = async (categoryId: string) => {
+  const resetCategoryDeleteState = () => {
+    setCategoryToDelete(null);
+    setCategoryDeleteValidation(null);
+    setIsCategoryDeleteValidating(false);
+    setIsCategoryDeleteProcessing(false);
+  };
+
+  const runCategoryDeleteValidation = useCallback(async (categoryId: string) => {
+    setIsCategoryDeleteValidating(true);
     try {
-      const result = await deleteReferenceDataItem('categories', categoryId);
-      if (result.success) {
-        // Remove from data.categories
-        updateData({ 
-          categories: data.categories.filter(cat => cat.category_id !== categoryId) 
-        });
-        
-        // Remove from imported categories tracking
-        const category = data.categories.find(cat => cat.category_id === categoryId);
-        if (category) {
-          setImportedCategories(prev => prev.filter(name => name !== category.category_name));
-        }
-        
-        // Refresh data from server
-        loadExistingData();
-        toast.success('Category deleted successfully');
-      } else {
-        toast.error(result.error || 'Failed to delete category');
+      const result = await preCheckDeletion('category', categoryId);
+      setCategoryDeleteValidation(result);
+    } catch (error) {
+      console.error('Error validating category deletion:', error);
+      setCategoryDeleteValidation({
+        canDelete: false,
+        code: 'VALIDATION_FAILED',
+        message: 'Failed to validate deletion. Please try again.',
+        dependencies: [],
+        alternatives: []
+      });
+    } finally {
+      setIsCategoryDeleteValidating(false);
+    }
+  }, []);
+
+  const openCategoryDeleteDialog = (categoryId: string) => {
+    const category = data.categories.find(cat => cat.category_id === categoryId);
+    setCategoryToDelete({
+      id: categoryId,
+      name: category?.category_name || 'this category'
+    });
+    void runCategoryDeleteValidation(categoryId);
+  };
+
+  const confirmDeleteCategory = async () => {
+    if (!categoryToDelete) return;
+    try {
+      setIsCategoryDeleteProcessing(true);
+      const result = await deleteReferenceDataItem('categories', categoryToDelete.id);
+      if (!result.success) {
+        setCategoryDeleteValidation(result);
+        return;
       }
+
+      updateData({
+        categories: data.categories.filter(cat => cat.category_id !== categoryToDelete.id)
+      });
+
+      if (categoryToDelete.name) {
+        setImportedCategories(prev => prev.filter(name => name !== categoryToDelete.name));
+      }
+
+      loadExistingData();
+      toast.success('Category deleted successfully');
+      resetCategoryDeleteState();
     } catch (error) {
       console.error('Error deleting category:', error);
-      toast.error('Failed to delete category');
+      setCategoryDeleteValidation({
+        canDelete: false,
+        code: 'VALIDATION_FAILED',
+        message: 'Failed to delete category.',
+        dependencies: [],
+        alternatives: []
+      });
+    } finally {
+      setIsCategoryDeleteProcessing(false);
     }
   };
 
-  const removeStatus = async (statusId: string) => {
+  const resetStatusDeleteState = () => {
+    setStatusToDelete(null);
+    setStatusDeleteValidation(null);
+    setIsStatusDeleteValidating(false);
+    setIsStatusDeleteProcessing(false);
+  };
+
+  const runStatusDeleteValidation = useCallback(async (statusId: string) => {
+    setIsStatusDeleteValidating(true);
     try {
-      const result = await deleteReferenceDataItem('statuses', statusId);
-      if (result.success) {
-        // Remove from imported statuses
-        setImportedStatuses(prev => prev.filter(s => s.status_id !== statusId));
-        
-        // Remove from data.statuses
-        updateData({ 
-          statuses: (data.statuses || []).filter(s => s.status_id !== statusId) 
-        });
-        
-        // Refresh data from server
-        loadExistingData();
-        toast.success('Status deleted successfully');
-      } else {
-        toast.error(result.error || 'Failed to delete status');
+      const result = await preCheckDeletion('status', statusId);
+      setStatusDeleteValidation(result);
+    } catch (error) {
+      console.error('Error validating status deletion:', error);
+      setStatusDeleteValidation({
+        canDelete: false,
+        code: 'VALIDATION_FAILED',
+        message: 'Failed to validate deletion. Please try again.',
+        dependencies: [],
+        alternatives: []
+      });
+    } finally {
+      setIsStatusDeleteValidating(false);
+    }
+  }, []);
+
+  const openStatusDeleteDialog = (statusId: string) => {
+    const status = (data.statuses || []).find(s => s.status_id === statusId);
+    setStatusToDelete({
+      id: statusId,
+      name: status?.name || 'this status'
+    });
+    void runStatusDeleteValidation(statusId);
+  };
+
+  const confirmDeleteStatus = async () => {
+    if (!statusToDelete) return;
+    try {
+      setIsStatusDeleteProcessing(true);
+      const result = await deleteReferenceDataItem('statuses', statusToDelete.id);
+      if (!result.success) {
+        setStatusDeleteValidation(result);
+        return;
       }
+
+      setImportedStatuses(prev => prev.filter(s => s.status_id !== statusToDelete.id));
+      updateData({
+        statuses: (data.statuses || []).filter(s => s.status_id !== statusToDelete.id)
+      });
+
+      loadExistingData();
+      toast.success('Status deleted successfully');
+      resetStatusDeleteState();
     } catch (error) {
       console.error('Error deleting status:', error);
-      toast.error('Failed to delete status');
+      setStatusDeleteValidation({
+        canDelete: false,
+        code: 'VALIDATION_FAILED',
+        message: 'Failed to delete status.',
+        dependencies: [],
+        alternatives: []
+      });
+    } finally {
+      setIsStatusDeleteProcessing(false);
     }
   };
 
-  const removePriority = async (priorityId: string) => {
+  const resetPriorityDeleteState = () => {
+    setPriorityToDelete(null);
+    setPriorityDeleteValidation(null);
+    setIsPriorityDeleteValidating(false);
+    setIsPriorityDeleteProcessing(false);
+  };
+
+  const runPriorityDeleteValidation = useCallback(async (priorityId: string) => {
+    setIsPriorityDeleteValidating(true);
     try {
-      const result = await deleteReferenceDataItem('priorities', priorityId);
-      if (result.success) {
-        // Find the priority to remove
-        const priorityToRemove = data.priorities.find(p => 
-          (typeof p === 'object' && p.priority_id === priorityId)
-        );
-        
-        if (priorityToRemove && typeof priorityToRemove === 'object') {
-          // Remove from imported priorities
-          setImportedPriorities(prev => prev.filter(p => p.priority_id !== priorityId));
-          
-          // Remove from data.priorities
-          updateData({ 
-            priorities: data.priorities.filter(p => 
-              !(typeof p === 'object' && p.priority_id === priorityId)
-            ) 
-          });
-        }
-        
-        // Refresh data from server
-        loadExistingData();
-        toast.success('Priority deleted successfully');
-      } else {
-        toast.error(result.error || 'Failed to delete priority');
+      const result = await validatePriorityDeletion(priorityId);
+      setPriorityDeleteValidation(result);
+    } catch (error) {
+      console.error('Error validating priority deletion:', error);
+      setPriorityDeleteValidation({
+        canDelete: false,
+        code: 'VALIDATION_FAILED',
+        message: 'Failed to validate deletion. Please try again.',
+        dependencies: [],
+        alternatives: []
+      });
+    } finally {
+      setIsPriorityDeleteValidating(false);
+    }
+  }, []);
+
+  const openPriorityDeleteDialog = (priorityId: string) => {
+    const priority = data.priorities.find(p => typeof p === 'object' && p.priority_id === priorityId);
+    const priorityName = typeof priority === 'object' ? priority.priority_name : 'this priority';
+    setPriorityToDelete({
+      id: priorityId,
+      name: priorityName
+    });
+    void runPriorityDeleteValidation(priorityId);
+  };
+
+  const confirmDeletePriority = async () => {
+    if (!priorityToDelete) return;
+    try {
+      setIsPriorityDeleteProcessing(true);
+      const result = await deletePriority(priorityToDelete.id);
+      if (!result.success) {
+        setPriorityDeleteValidation(result);
+        return;
       }
+
+      const priorityToRemove = data.priorities.find(p =>
+        (typeof p === 'object' && p.priority_id === priorityToDelete.id)
+      );
+
+      if (priorityToRemove && typeof priorityToRemove === 'object') {
+        setImportedPriorities(prev => prev.filter(p => p.priority_id !== priorityToDelete.id));
+        updateData({
+          priorities: data.priorities.filter(p =>
+            !(typeof p === 'object' && p.priority_id === priorityToDelete.id)
+          )
+        });
+      }
+
+      loadExistingData();
+      toast.success('Priority deleted successfully');
+      resetPriorityDeleteState();
     } catch (error) {
       console.error('Error deleting priority:', error);
-      toast.error('Failed to delete priority');
+      setPriorityDeleteValidation({
+        canDelete: false,
+        code: 'VALIDATION_FAILED',
+        message: 'Failed to delete priority.',
+        dependencies: [],
+        alternatives: []
+      });
+    } finally {
+      setIsPriorityDeleteProcessing(false);
     }
   };
 
@@ -1362,7 +1553,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                               type="button"
                               variant="ghost"
                               size="sm"
-                              onClick={() => removeBoard(board.board_id)}
+                              onClick={() => openBoardDeleteDialog(board.board_id)}
                               className="p-1 h-6 w-6"
                               title="Remove board"
                               disabled={board.is_default}
@@ -1828,7 +2019,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                                   type="button"
                                   variant="ghost"
                                   size="sm"
-                                  onClick={() => removeCategory(category.category_id)}
+                                  onClick={() => openCategoryDeleteDialog(category.category_id)}
                                   className="p-1 h-6 w-6"
                                   title="Remove category"
                                 >
@@ -2177,7 +2368,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                               type="button"
                               variant="ghost"
                               size="sm"
-                              onClick={() => removeStatus(status.status_id)}
+                              onClick={() => openStatusDeleteDialog(status.status_id)}
                               className="p-1 h-6 w-6"
                               title="Remove status"
                               disabled={status.is_default}
@@ -2488,7 +2679,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                                   type="button"
                                   variant="ghost"
                                   size="sm"
-                                  onClick={() => removePriority(priorityId)}
+                                  onClick={() => openPriorityDeleteDialog(priorityId)}
                                   className="p-1 h-6 w-6"
                                   title="Remove priority"
                                 >
@@ -2690,6 +2881,46 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
           </Button>
         </DialogFooter>
       </Dialog>
+      <DeleteEntityDialog
+        id="delete-board-dialog"
+        isOpen={Boolean(boardToDelete)}
+        onClose={resetBoardDeleteState}
+        onConfirmDelete={confirmDeleteBoard}
+        entityName={boardToDelete?.name || 'this board'}
+        validationResult={boardDeleteValidation}
+        isValidating={isBoardDeleteValidating}
+        isDeleting={isBoardDeleteProcessing}
+      />
+      <DeleteEntityDialog
+        id="delete-category-dialog"
+        isOpen={Boolean(categoryToDelete)}
+        onClose={resetCategoryDeleteState}
+        onConfirmDelete={confirmDeleteCategory}
+        entityName={categoryToDelete?.name || 'this category'}
+        validationResult={categoryDeleteValidation}
+        isValidating={isCategoryDeleteValidating}
+        isDeleting={isCategoryDeleteProcessing}
+      />
+      <DeleteEntityDialog
+        id="delete-status-dialog"
+        isOpen={Boolean(statusToDelete)}
+        onClose={resetStatusDeleteState}
+        onConfirmDelete={confirmDeleteStatus}
+        entityName={statusToDelete?.name || 'this status'}
+        validationResult={statusDeleteValidation}
+        isValidating={isStatusDeleteValidating}
+        isDeleting={isStatusDeleteProcessing}
+      />
+      <DeleteEntityDialog
+        id="delete-priority-dialog"
+        isOpen={Boolean(priorityToDelete)}
+        onClose={resetPriorityDeleteState}
+        onConfirmDelete={confirmDeletePriority}
+        entityName={priorityToDelete?.name || 'this priority'}
+        validationResult={priorityDeleteValidation}
+        isValidating={isPriorityDeleteValidating}
+        isDeleting={isPriorityDeleteProcessing}
+      />
     </div>
   );
 }

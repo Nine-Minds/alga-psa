@@ -73,6 +73,14 @@
     "./nextauth/edge-auth": {
       "import": "./src/nextauth/edge-auth.ts",
       "types": "./src/nextauth/edge-auth.ts"
+    },
+    "./lib/preCheckDeletion": {
+      "import": "./src/lib/preCheckDeletion.ts",
+      "types": "./src/lib/preCheckDeletion.ts"
+    },
+    "./hooks/useDeletionValidation": {
+      "import": "./src/hooks/useDeletionValidation.ts",
+      "types": "./src/hooks/useDeletionValidation.ts"
     }
   },
   "scripts": {

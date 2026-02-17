@@ -516,27 +516,27 @@ const Documents = ({
 
   const handleDelete = useCallback(async (document: IDocument) => {
     // Note: Confirmation dialog is handled by DocumentStorageCard component
-    try {
-      await deleteDocument(document.document_id, userId);
-      setDocumentsToDisplay(prev => prev.filter(d => d.document_id !== document.document_id));
-      toast.success(
-        t('documents.messages.deleteSuccess', {
-          name: document.document_name,
-          defaultValue: `Document "${document.document_name}" deleted successfully`
-        })
-      );
-      if (onDocumentCreated) {
-        await onDocumentCreated();
-      }
-    } catch (error) {
-      console.error('Error deleting document:', error);
+    const result = await deleteDocument(document.document_id, userId);
+
+    if (!result.success) {
       const errorMessage =
-        error instanceof Error && error.message
-          ? error.message
-          : t('documents.messages.deleteFailed', 'Failed to delete document');
-      toast.error(errorMessage);
+        result.message || t('documents.messages.deleteFailed', 'Failed to delete document');
       setError(errorMessage);
+      return result;
     }
+
+    setDocumentsToDisplay(prev => prev.filter(d => d.document_id !== document.document_id));
+    toast.success(
+      t('documents.messages.deleteSuccess', {
+        name: document.document_name,
+        defaultValue: `Document "${document.document_name}" deleted successfully`
+      })
+    );
+    if (onDocumentCreated) {
+      await onDocumentCreated();
+    }
+
+    return result;
   }, [userId, onDocumentCreated]);
 
   const handleDisassociate = useCallback(async (document: IDocument) => {
@@ -968,15 +968,24 @@ const Documents = ({
                               try {
                                 const deletePromises = Array.from(selectedDocumentsForMove).map(docId => {
                                   const doc = documentsToDisplay.find(d => d.document_id === docId);
-                                  return doc ? deleteDocument(docId, userId) : Promise.resolve();
+                                  return doc ? deleteDocument(docId, userId) : Promise.resolve(null);
                                 });
-                                await Promise.all(deletePromises);
-                                toast.success(
-                                  t('documents.messages.bulkDeleteSuccess', {
-                                    count,
-                                    defaultValue: `${count} document${count !== 1 ? 's' : ''} deleted successfully`
-                                  })
+                                const results = await Promise.all(deletePromises);
+                                const failed = results.filter(
+                                  (result) => result && 'success' in result && !result.success
                                 );
+                                if (failed.length > 0) {
+                                  toast.error(
+                                    t('documents.messages.bulkDeleteFailed', 'Failed to delete some documents')
+                                  );
+                                } else {
+                                  toast.success(
+                                    t('documents.messages.bulkDeleteSuccess', {
+                                      count,
+                                      defaultValue: `${count} document${count !== 1 ? 's' : ''} deleted successfully`
+                                    })
+                                  );
+                                }
                                 setSelectedDocumentsForMove(new Set());
                                 await refreshDocuments();
                               } catch (error) {

@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState, useEffect, useRef, memo } from 'react';
+import React, { useState, useEffect, useRef, memo, useCallback } from 'react';
+import { DeleteEntityDialog } from '@alga-psa/ui';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
-import type { IDocument } from '@alga-psa/types';
+import type { IDocument, DeletionValidationResult } from '@alga-psa/types';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import { getDocumentPreview } from '../actions/documentActions';
 import { getDocumentDownloadUrl, downloadDocument } from '@alga-psa/documents/lib/documentUtils';
@@ -26,6 +27,7 @@ import {
     FolderInput
 } from 'lucide-react';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
+import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
 
 // Helper component for video previews with browser compatibility checking
 interface VideoPreviewProps {
@@ -224,7 +226,7 @@ function VideoModalComponent({ fileId, documentId, mimeType, fileName }: VideoMo
 export interface DocumentStorageCardProps {
     id: string;
     document: IDocument;
-    onDelete?: (document: IDocument) => void;
+    onDelete?: (document: IDocument) => Promise<DeletionValidationResult & { success: boolean; deleted?: boolean }> | void;
     onDisassociate?: (document: IDocument) => void;
     onMove?: (document: IDocument) => void;
     hideActions?: boolean;
@@ -296,6 +298,9 @@ function DocumentStorageCardComponent({
     }>({});
     const [isLoading, setIsLoading] = useState(false);
     const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
+    const [deleteValidation, setDeleteValidation] = useState<DeletionValidationResult | null>(null);
+    const [isDeleteValidating, setIsDeleteValidating] = useState(false);
+    const [isDeleteProcessing, setIsDeleteProcessing] = useState(false);
     const [showDisassociateConfirmation, setShowDisassociateConfirmation] = useState(false);
     const [showFullSizeModal, setShowFullSizeModal] = useState(false);
     const [isInView, setIsInView] = useState(false);
@@ -304,18 +309,6 @@ function DocumentStorageCardComponent({
 
     const documentName = document.document_name || t('documents.unnamed', 'Untitled');
     const isVideoDocument = Boolean(document.mime_type && document.mime_type.startsWith('video/'));
-    const deleteTitle = isVideoDocument
-        ? t('documents.deleteVideoTitle', 'Permanently Delete Video')
-        : t('documents.deleteTitle', 'Permanently Delete Document');
-    const deleteMessage = isVideoDocument
-        ? t('documents.deleteVideoMessage', {
-            name: documentName,
-            defaultValue: `Are you sure you want to permanently delete the video "${documentName}" from the system?\n\nThis will remove the file entirely and it will no longer be available anywhere. This action cannot be undone.`
-        })
-        : t('documents.deleteMessage', {
-            name: documentName,
-            defaultValue: `Are you sure you want to permanently delete "${documentName}" from the system?\n\nThis will remove the file entirely and it will no longer be available anywhere. This action cannot be undone.`
-        });
     const removeTitle = isVideoDocument
         ? t('documents.removeVideoTitle', 'Detach Video')
         : t('documents.removeTitle', 'Detach Document');
@@ -424,22 +417,62 @@ function DocumentStorageCardComponent({
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [forceRefresh]);
 
+    const resetDeleteState = useCallback(() => {
+        setShowDeleteConfirmation(false);
+        setDeleteValidation(null);
+        setIsDeleteValidating(false);
+        setIsDeleteProcessing(false);
+    }, []);
+
+    const runDeleteValidation = useCallback(async () => {
+        setIsDeleteValidating(true);
+        try {
+            const result = await preCheckDeletion('document', document.document_id);
+            setDeleteValidation(result);
+        } catch (error) {
+            console.error('Error validating document deletion:', error);
+            setDeleteValidation({
+                canDelete: false,
+                code: 'VALIDATION_FAILED',
+                message: 'Failed to validate deletion. Please try again.',
+                dependencies: [],
+                alternatives: []
+            });
+        } finally {
+            setIsDeleteValidating(false);
+        }
+    }, [document.document_id]);
+
     const handleDelete = async () => {
         if (!onDelete) return;
         setShowDeleteConfirmation(true);
+        void runDeleteValidation();
     };
 
     const confirmDelete = async () => {
         if (!onDelete) return;
         
         try {
+            setIsDeleteProcessing(true);
             setIsLoading(true);
-            onDelete(document);
+            const result = await onDelete(document);
+            if (result && 'success' in result && !result.success) {
+                setDeleteValidation(result);
+                return;
+            }
+            resetDeleteState();
         } catch (error) {
             console.error('Error deleting document:', error);
+            setDeleteValidation({
+                canDelete: false,
+                code: 'VALIDATION_FAILED',
+                message: error instanceof Error ? error.message : 'Failed to delete document.',
+                dependencies: [],
+                alternatives: []
+            });
         } finally {
             setIsLoading(false);
-            setShowDeleteConfirmation(false);
+            setIsDeleteProcessing(false);
         }
     };
 
@@ -737,17 +770,15 @@ function DocumentStorageCardComponent({
                 )}
             </div>
         </ReflectionContainer>
-        {/* Delete Confirmation Dialog */}
-        <ConfirmationDialog
+        <DeleteEntityDialog
             id={`${id}-delete-confirmation`}
             isOpen={showDeleteConfirmation}
-            onClose={() => setShowDeleteConfirmation(false)}
-            onConfirm={confirmDelete}
-            title={deleteTitle}
-            message={deleteMessage}
-            confirmLabel={t('documents.deletePermanently', 'Delete Permanently')}
-            cancelLabel={t('common.cancel', 'Cancel')}
-            isConfirming={isLoading}
+            onClose={resetDeleteState}
+            onConfirmDelete={confirmDelete}
+            entityName={documentName}
+            validationResult={deleteValidation}
+            isValidating={isDeleteValidating}
+            isDeleting={isDeleteProcessing}
         />
 
         {/* Disassociate Confirmation Dialog */}

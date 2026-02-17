@@ -2,7 +2,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Trash, ExternalLink, MoreVertical } from 'lucide-react';
 import { IScheduleEntry } from '@alga-psa/types';
 import { getEventColors } from './utils';
-import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { 
   DropdownMenu,
@@ -37,7 +36,6 @@ const WeeklyScheduleEvent: React.FC<WeeklyScheduleEventProps> = ({
   onResizeStart,
   technicianMap = {},
 }) => {
-  const [isConfirmDeleteDialogOpen, setIsConfirmDeleteDialogOpen] = useState(false);
   const [isNarrow, setIsNarrow] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const eventRef = useRef<HTMLDivElement>(null);
@@ -116,12 +114,7 @@ const WeeklyScheduleEvent: React.FC<WeeklyScheduleEventProps> = ({
 
   const handleDeleteClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setIsConfirmDeleteDialogOpen(true);
-  };
-
-  const handleConfirmDelete = () => {
     onDeleteEvent(event);
-    setIsConfirmDeleteDialogOpen(false);
   };
 
   const handleViewDetails = (e: React.MouseEvent<Element, MouseEvent>) => {
@@ -320,20 +313,6 @@ const WeeklyScheduleEvent: React.FC<WeeklyScheduleEventProps> = ({
         )}
       </div>
 
-      {/* Confirmation Dialog for Delete */}
-      <ConfirmationDialog
-        id={`delete-schedule-${event.entry_id}`}
-        isOpen={isConfirmDeleteDialogOpen}
-        onClose={() => {
-          setIsConfirmDeleteDialogOpen(false);
-        }}
-        onConfirm={() => {
-          handleConfirmDelete();
-        }}
-        title="Confirm Deletion"
-        message="Are you sure you want to delete this entry? This action cannot be undone."
-        confirmLabel="Delete"
-      />
     </div>
   );
 };

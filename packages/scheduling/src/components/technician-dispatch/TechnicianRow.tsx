@@ -1,5 +1,5 @@
 import React from 'react';
-import { IScheduleEntry } from '@alga-psa/types';
+import { IScheduleEntry, DeletionValidationResult } from '@alga-psa/types';
 import { IUser } from '@shared/interfaces/user.interfaces';
 import TimeSlot from './TimeSlot';
 import ScheduleEvent from './ScheduleEvent';
@@ -24,7 +24,7 @@ interface TechnicianRowProps {
   onTimeSlotDragOver: (e: React.DragEvent, timeSlot: string, techId: string) => void;
   onDrop: (e: React.DragEvent, timeSlot: string, techId: string) => void;
   onEventMouseDown: (e: React.MouseEvent, event: Omit<IScheduleEntry, 'tenant'>) => void;
-  onEventDelete: (e: React.MouseEvent, eventId: string) => void;
+  onEventDelete: (eventId: string) => Promise<DeletionValidationResult & { success: boolean; deleted?: boolean; error?: string; isPrivateError?: boolean }>;
   onEventResizeStart: (e: React.MouseEvent, event: Omit<IScheduleEntry, 'tenant'>, direction: 'left' | 'right') => void;
   onEventClick: (event: Omit<IScheduleEntry, 'tenant'>) => void;
   onTechnicianClick: (technicianId: string) => void;
@@ -106,7 +106,7 @@ const TechnicianRow: React.FC<TechnicianRowProps> = ({
               onMouseDown={(e) => onEventMouseDown(e, event)}
               onMouseEnter={() => {}}  // This will be handled by parent component
               onMouseLeave={() => {}}  // This will be handled by parent component
-              onDelete={(e) => onEventDelete(e, event.entry_id)}
+              onDelete={() => onEventDelete(event.entry_id)}
               onResizeStart={(e, direction) => onEventResizeStart(e, event, direction)}
               isResizing={false} 
               onClick={() => onEventClick(event)}

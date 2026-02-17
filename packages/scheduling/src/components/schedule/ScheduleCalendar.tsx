@@ -1,7 +1,6 @@
 'use client'
 
 import React, { useState, useEffect, useCallback, useMemo, useRef, Suspense } from 'react';
-import type { MouseEvent } from 'react';
 import dynamic from 'next/dynamic';
 import { momentLocalizer, NavigateAction, View, ToolbarProps } from 'react-big-calendar';
 import moment from 'moment';
@@ -20,7 +19,7 @@ import { CalendarStyleProvider } from './CalendarStyleProvider';
 import TechnicianSidebar from './TechnicianSidebar';
 import WeeklyScheduleEvent from './WeeklyScheduleEvent';
 import { getScheduleEntries, addScheduleEntry, updateScheduleEntry, deleteScheduleEntry } from '@alga-psa/scheduling/actions';
-import { IEditScope, IScheduleEntry } from '@alga-psa/types';
+import { IEditScope, IScheduleEntry, DeletionValidationResult } from '@alga-psa/types';
 import { produce } from 'immer';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { WorkItemType, IExtendedWorkItem } from '@alga-psa/types';
@@ -28,6 +27,8 @@ import { useUsers } from '@alga-psa/users/hooks';
 import { getCurrentUser, getCurrentUserPermissions } from '@alga-psa/users/actions';
 import { useUserPreference } from '@alga-psa/users/hooks';
 import { IUserWithRoles } from '@alga-psa/types';
+import { DeleteEntityDialog } from '@alga-psa/ui';
+import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
 import { WorkItemDrawer } from '@alga-psa/scheduling/components/time-management/time-entry/time-sheet/WorkItemDrawer';
 import { useDrawer } from "@alga-psa/ui";
 import { Trash, ChevronLeft, ChevronRight, CalendarDays as CalendarDaysIcon, Layers, Layers2 } from 'lucide-react';
@@ -67,6 +68,11 @@ const ScheduleCalendar: React.FC = (): React.ReactElement | null => {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const { openDrawer, closeDrawer } = useDrawer();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [deleteValidation, setDeleteValidation] = useState<DeletionValidationResult | null>(null);
+  const [isDeleteValidating, setIsDeleteValidating] = useState(false);
+  const [isDeleteProcessing, setIsDeleteProcessing] = useState(false);
+  const [pendingDeleteScope, setPendingDeleteScope] = useState<IEditScope | undefined>(undefined);
   const [hoveredEventId, setHoveredEventId] = useState<string | null>(null);
   const [showInactiveUsers, setShowInactiveUsers] = useState<boolean>(false);
   const calendarRef = useRef<HTMLDivElement>(null);
@@ -85,18 +91,58 @@ const ScheduleCalendar: React.FC = (): React.ReactElement | null => {
     }
   }, [view, hasScrolled, events]);
 
-  const handleDeleteClick = (event: IScheduleEntry, e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleDeleteClick = (event: IScheduleEntry) => {
     setSelectedEvent(event);
-    setShowDeleteDialog(true);
+    setDeleteValidation(null);
+    setPendingDeleteScope(undefined);
+    if (event.is_recurring) {
+      setShowDeleteDialog(true);
+      return;
+    }
+    setIsDeleteDialogOpen(true);
   };
+
+  const runDeleteValidation = useCallback(async (eventId: string) => {
+    setIsDeleteValidating(true);
+    try {
+      const result = await preCheckDeletion('schedule_entry', eventId);
+      setDeleteValidation(result);
+    } catch (error) {
+      console.error('Failed to validate schedule entry deletion:', error);
+      setDeleteValidation({
+        canDelete: false,
+        code: 'VALIDATION_FAILED',
+        message: 'Failed to validate deletion. Please try again.',
+        dependencies: [],
+        alternatives: []
+      });
+    } finally {
+      setIsDeleteValidating(false);
+    }
+  }, []);
 
   const handleDeleteConfirm = (deleteType?: IEditScope) => {
     if (selectedEvent) {
-      handleDeleteEntry(selectedEvent.entry_id, deleteType);
+      setPendingDeleteScope(deleteType);
       setShowDeleteDialog(false);
-      setSelectedEvent(null);
+      setIsDeleteDialogOpen(true);
     }
+  };
+
+  useEffect(() => {
+    if (isDeleteDialogOpen && selectedEvent) {
+      void runDeleteValidation(selectedEvent.entry_id);
+    }
+  }, [isDeleteDialogOpen, runDeleteValidation, selectedEvent]);
+
+  const resetDeleteState = () => {
+    setIsDeleteDialogOpen(false);
+    setShowDeleteDialog(false);
+    setDeleteValidation(null);
+    setIsDeleteValidating(false);
+    setIsDeleteProcessing(false);
+    setPendingDeleteScope(undefined);
+    setSelectedEvent(null);
   };
 
   const workItemColors: Record<WorkItemType, string> = {
@@ -315,13 +361,43 @@ const ScheduleCalendar: React.FC = (): React.ReactElement | null => {
       const result = await deleteScheduleEntry(entryId, deleteType);
       if (result.success) {
         await fetchEvents();
+        setError(null);
       } else {
-        console.error('Failed to delete entry:', result.error);
-        alert('Failed to delete schedule entry: ' + result.error);
+        const message = result.error || result.message || 'Failed to delete schedule entry';
+        console.error('Failed to delete entry:', message);
+        setError(message);
       }
+      return result;
     } catch (error) {
       console.error('Error deleting schedule entry:', error);
-      alert('An error occurred while deleting the schedule entry');
+      const fallback: DeletionValidationResult & { success: boolean; error?: string } = {
+        success: false,
+        error: 'An error occurred while deleting the schedule entry',
+        canDelete: false,
+        code: 'VALIDATION_FAILED',
+        message: 'An error occurred while deleting the schedule entry',
+        dependencies: [],
+        alternatives: []
+      };
+      setError(fallback.error ?? fallback.message ?? 'An error occurred while deleting the schedule entry');
+      return fallback;
+    }
+  };
+
+  const handleDeleteDialogConfirm = async () => {
+    if (!selectedEvent) {
+      return;
+    }
+    setIsDeleteProcessing(true);
+    try {
+      const result = await handleDeleteEntry(selectedEvent.entry_id, pendingDeleteScope);
+      if (result.success) {
+        resetDeleteState();
+      } else {
+        setDeleteValidation(result);
+      }
+    } finally {
+      setIsDeleteProcessing(false);
     }
   };
 
@@ -893,7 +969,7 @@ const ScheduleCalendar: React.FC = (): React.ReactElement | null => {
         onSelectEvent={(event: IScheduleEntry, e: React.MouseEvent) => {
           handleSelectEvent(event as unknown as object, e as unknown as React.SyntheticEvent<HTMLElement>);
         }}
-        onDeleteEvent={(event: IScheduleEntry) => handleDeleteClick(event, new MouseEvent('click') as any)}
+        onDeleteEvent={(event: IScheduleEntry) => handleDeleteClick(event)}
         onResizeStart={handleResizeStart}
         technicianMap={technicianMap}
       />
@@ -1021,6 +1097,7 @@ const ScheduleCalendar: React.FC = (): React.ReactElement | null => {
         onClose={() => {
           setShowDeleteDialog(false);
           setSelectedEvent(null);
+          setPendingDeleteScope(undefined);
         }}
         title="Delete Schedule Entry"
         message={selectedEvent?.is_recurring
@@ -1032,6 +1109,17 @@ const ScheduleCalendar: React.FC = (): React.ReactElement | null => {
           { value: IEditScope.ALL, label: 'All events' }
         ] : undefined}
         confirmLabel="Delete"
+      />
+
+      <DeleteEntityDialog
+        id={selectedEvent ? `delete-schedule-entry-${selectedEvent.entry_id}` : 'delete-schedule-entry-dialog'}
+        isOpen={isDeleteDialogOpen}
+        onClose={resetDeleteState}
+        onConfirmDelete={handleDeleteDialogConfirm}
+        entityName={selectedEvent?.title || 'this schedule entry'}
+        validationResult={deleteValidation}
+        isValidating={isDeleteValidating}
+        isDeleting={isDeleteProcessing}
       />
     </div>
   );

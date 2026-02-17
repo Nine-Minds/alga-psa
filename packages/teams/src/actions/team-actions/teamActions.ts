@@ -1,11 +1,12 @@
 'use server'
 
 import Team from '../../models/team';
-import type { IRole, ITeam, IUser, IUserWithRoles } from '@alga-psa/types';
+import type { DeletionValidationResult, IRole, ITeam, IUser, IUserWithRoles } from '@alga-psa/types';
 import { withTransaction } from '@alga-psa/db';
 import { createTenantKnex } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withAuth } from '@alga-psa/auth';
+import { deleteEntityWithValidation } from '@alga-psa/core';
 
 async function getUsersWithRoles(
   trx: Knex | Knex.Transaction,
@@ -119,14 +120,33 @@ export const updateTeam = withAuth(async (user, { tenant }, teamId: string, team
   }
 });
 
-export const deleteTeam = withAuth(async (user, { tenant }, teamId: string): Promise<{ success: boolean }> => {
+export const deleteTeam = withAuth(async (
+  user,
+  { tenant },
+  teamId: string
+): Promise<DeletionValidationResult & { success: boolean; deleted?: boolean }> => {
   try {
     const { knex } = await createTenantKnex();
-    await Team.delete(knex, tenant, teamId);
-    return { success: true };
+
+    const result = await deleteEntityWithValidation('team', teamId, knex, tenant, async (trx, tenantId) => {
+      await Team.delete(trx, tenantId, teamId);
+    });
+
+    return {
+      ...result,
+      success: result.deleted === true,
+      deleted: result.deleted
+    };
   } catch (error) {
     console.error(error);
-    throw new Error('Failed to delete team');
+    return {
+      success: false,
+      canDelete: false,
+      code: 'VALIDATION_FAILED',
+      message: 'Failed to delete team',
+      dependencies: [],
+      alternatives: []
+    };
   }
 });
 

@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
+import { DeleteEntityDialog } from '@alga-psa/ui';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import { 
@@ -19,17 +20,19 @@ import {
   getUserRolesWithPermissions, 
   getUserClientId, 
   deleteUser,
+  updateUser,
   getClientUsersForClient
 } from '@alga-psa/users/actions';
 import { createOrFindContactByEmail } from '@alga-psa/clients/actions';
 import { createClientUser, getClientPortalRoles, getClientUserRoles } from '@alga-psa/client-portal/actions';
-import type { IUser, IPermission } from '@alga-psa/types';
+import type { DeletionValidationResult, IUser, IPermission } from '@alga-psa/types';
 import type { IRole as SharedIRole } from '@shared/interfaces/user.interfaces';
 import { useDrawer } from "@alga-psa/ui";
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { ColumnDefinition } from '@alga-psa/types';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
 
 export function UserManagementSettings() {
   const { t } = useTranslation('clientPortal');
@@ -42,6 +45,9 @@ export function UserManagementSettings() {
   const [newUser, setNewUser] = useState({ firstName: '', lastName: '', email: '', password: '', roleId: '' });
   const [clientId, setClientId] = useState<string | null>(null);
   const [userToDelete, setUserToDelete] = useState<IUser | null>(null);
+  const [deleteValidation, setDeleteValidation] = useState<DeletionValidationResult | null>(null);
+  const [isDeleteValidating, setIsDeleteValidating] = useState(false);
+  const [isDeleteProcessing, setIsDeleteProcessing] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [availableRoles, setAvailableRoles] = useState<SharedIRole[]>([]);
   const [userRoles, setUserRoles] = useState<{ [key: string]: SharedIRole[] }>({});
@@ -180,20 +186,72 @@ export function UserManagementSettings() {
     );
   };
 
+  const resetDeleteState = () => {
+    setUserToDelete(null);
+    setDeleteValidation(null);
+  };
+
+  const runDeleteValidation = useCallback(async (userId: string) => {
+    setIsDeleteValidating(true);
+    try {
+      const result = await preCheckDeletion('user', userId);
+      setDeleteValidation(result);
+    } catch (error) {
+      console.error('Error validating user deletion:', error);
+      setDeleteValidation({
+        canDelete: false,
+        code: 'VALIDATION_FAILED',
+        message: t('clientSettings.users.deleteError', 'Failed to validate user deletion'),
+        dependencies: [],
+        alternatives: []
+      });
+    } finally {
+      setIsDeleteValidating(false);
+    }
+  }, [t]);
+
   const handleDeleteClick = (user: IUser) => {
     setUserToDelete(user);
+    void runDeleteValidation(user.user_id);
   };
 
   const confirmDelete = async () => {
     if (!userToDelete) return;
 
+    setIsDeleteProcessing(true);
     try {
-      await deleteUser(userToDelete.user_id);
+      const result = await deleteUser(userToDelete.user_id);
+      if (!result.success) {
+        setDeleteValidation(result);
+        return;
+      }
       setUsers(users.filter(user => user.user_id !== userToDelete.user_id));
-      setUserToDelete(null);
+      resetDeleteState();
     } catch (error) {
       console.error('Error deleting user:', error);
       setError(t('clientSettings.users.deleteError', 'Failed to delete user'));
+    } finally {
+      setIsDeleteProcessing(false);
+    }
+  };
+
+  const handleDeleteAlternativeAction = async (action: string) => {
+    if (action !== 'deactivate' || !userToDelete) {
+      return;
+    }
+
+    setIsDeleteProcessing(true);
+    try {
+      const updatedUser = await updateUser(userToDelete.user_id, { is_inactive: true });
+      if (updatedUser) {
+        setUsers(prev => prev.map(user => user.user_id === updatedUser.user_id ? updatedUser : user));
+      }
+      resetDeleteState();
+    } catch (error) {
+      console.error('Error deactivating user:', error);
+      setError(t('clientSettings.users.deleteError', 'Failed to deactivate user'));
+    } finally {
+      setIsDeleteProcessing(false);
     }
   };
 
@@ -442,33 +500,17 @@ export function UserManagementSettings() {
       </CardContent>
 
       {/* Delete Confirmation Modal */}
-      {userToDelete && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg p-6 max-w-sm w-full">
-            <h3 className="text-lg font-semibold mb-4">Confirm Deletion</h3>
-            <p className="text-gray-600 mb-6">
-              Are you sure you want to delete {userToDelete.first_name} {userToDelete.last_name}?
-              This action cannot be undone.
-            </p>
-            <div className="flex justify-end space-x-4">
-              <Button
-                id="cancel-delete-btn"
-                variant="outline"
-                onClick={() => setUserToDelete(null)}
-              >
-                Cancel
-              </Button>
-              <Button
-                id="confirm-delete-btn"
-                variant="destructive"
-                onClick={confirmDelete}
-              >
-                Delete
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      <DeleteEntityDialog
+        id="client-portal-delete-user"
+        isOpen={Boolean(userToDelete)}
+        onClose={resetDeleteState}
+        onConfirmDelete={confirmDelete}
+        onAlternativeAction={handleDeleteAlternativeAction}
+        entityName={userToDelete ? `${userToDelete.first_name ?? ''} ${userToDelete.last_name ?? ''}`.trim() || 'this user' : 'this user'}
+        validationResult={deleteValidation}
+        isValidating={isDeleteValidating}
+        isDeleting={isDeleteProcessing}
+      />
     </Card>
   );
 }

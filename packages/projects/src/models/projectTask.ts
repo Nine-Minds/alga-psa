@@ -1,6 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
 import type { Knex } from 'knex';
-import { deleteEntityTags, deleteEntitiesTags } from '@alga-psa/tags/lib/tagCleanup';
 import type {
   IProjectTask,
   ITaskChecklistItem,
@@ -228,9 +227,6 @@ const ProjectTaskModel = {
           .where('task_id', taskId)
           .andWhere('tenant', tenant)
           .del();
-
-        // Delete task tags
-        await deleteEntityTags(trx, taskId, 'project_task');
 
         await trx<IProjectTask>('project_tasks')
           .where('task_id', taskId)
