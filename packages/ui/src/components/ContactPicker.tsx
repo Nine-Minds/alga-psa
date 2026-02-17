@@ -28,7 +28,7 @@ interface ContactPickerProps {
 }
 
 export const ContactPicker = ({
-  id = 'contact-picker',
+  id,
   contacts,
   value,
   onValueChange,
@@ -64,7 +64,7 @@ export const ContactPicker = ({
       const lowerSearchTerm = searchTerm.toLowerCase();
       results = results.filter(contact =>
         contact.full_name.toLowerCase().includes(lowerSearchTerm) ||
-        contact.email.toLowerCase().includes(lowerSearchTerm)
+        (contact.email ?? '').toLowerCase().includes(lowerSearchTerm)
       );
     }
 
@@ -163,7 +163,7 @@ export const ContactPicker = ({
 
   const mappedOptions = useMemo(() => contacts.map((opt): { value: string; label: string } => ({
     value: opt.contact_name_id,
-    label: `${opt.full_name} (${opt.email})`
+    label: opt.email ? `${opt.full_name} (${opt.email})` : opt.full_name
   })), [contacts]);
 
   const { automationIdProps: contactPickerProps, updateMetadata } = useAutomationIdAndRegister<FormFieldComponent>({
@@ -237,6 +237,7 @@ export const ContactPicker = ({
           data-automation-type={dataAutomationType}
         >
           <button
+            id={id}
             ref={buttonRef}
             type="button"
             onClick={toggleDropdown}
