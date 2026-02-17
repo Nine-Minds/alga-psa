@@ -305,6 +305,11 @@ export class FeatureFlags {
       properties.subscription_plan = context.subscriptionPlan;
     }
 
+    // Include tenant ID so PostHog can match on it (e.g. "tenant equals <uuid>")
+    if (context.tenantId) {
+      properties.tenant = context.tenantId;
+    }
+
     // Add tenant-specific properties if needed
     if (context.tenantId) {
       try {
