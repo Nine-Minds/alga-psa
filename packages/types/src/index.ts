@@ -13,6 +13,7 @@ export * from './lib/tax';
 export * from './lib/temporal';
 export * from './lib/interval-tracking';
 export * from './lib/invoice-renderer/types';
+export * from './lib/invoice-template-ast';
 export * from './lib/xeroCsvTaxImport';
 export * from './lib/companySync';
 export * from './lib/telemetry';
@@ -47,6 +48,24 @@ export type { InboundTicketDefaults, TicketFieldOptions } from './lib/email';
 
 // Interface definitions (migrated from server/src/interfaces and shared/interfaces).
 export * from './interfaces';
+
+// Tax interfaces are exported from their source module (not from interfaces/index.ts) to avoid barrel collisions.
+export type {
+  IClientTaxSettings,
+  ITaxComponent,
+  ICompositeTaxMapping,
+  ITaxRateThreshold,
+  ITaxHoliday,
+  ITaxCalculationResult,
+  ITaxRegion,
+  IClientTaxRateAssociation,
+  TaxSource,
+  ITenantTaxSettings,
+  IClientTaxSourceSettings,
+  IExternalTaxImport,
+  IExternalTaxImportResult,
+  ITaxRate as ITaxRateDetails,
+} from './interfaces/tax.interfaces';
 
 // Inbound email types - exported with explicit naming to avoid conflicts with outbound email types above.
 export type {

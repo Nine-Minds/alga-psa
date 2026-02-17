@@ -14,10 +14,10 @@ describe('previewSessionState', () => {
     expect(state.isInvoiceDetailLoading).toBe(false);
     expect(state.invoiceListError).toBeNull();
     expect(state.invoiceDetailError).toBeNull();
-    expect(state.compileStatus).toBe('idle');
+    expect(state.shapeStatus).toBe('idle');
     expect(state.renderStatus).toBe('idle');
     expect(state.verifyStatus).toBe('idle');
-    expect(state.compileError).toBeNull();
+    expect(state.shapeError).toBeNull();
     expect(state.renderError).toBeNull();
     expect(state.verifyError).toBeNull();
   });
@@ -58,6 +58,36 @@ describe('previewSessionState', () => {
     state = previewSessionReducer(state, { type: 'clear-existing-invoice' });
     expect(state.selectedInvoiceId).toBeNull();
     expect(state.selectedInvoiceData).toBeNull();
+  });
+
+  it('preserves sample selection when toggling between sample and existing sources', () => {
+    let state = createInitialPreviewSessionState();
+    const initialSampleId = state.selectedSampleId;
+    expect(initialSampleId).toBeTruthy();
+
+    state = previewSessionReducer(state, { type: 'set-source', source: 'existing' });
+    state = previewSessionReducer(state, { type: 'select-existing-invoice', invoiceId: 'inv-1' });
+    state = previewSessionReducer(state, {
+      type: 'detail-load-success',
+      payload: {
+        invoiceNumber: 'INV-EXISTING',
+        issueDate: '2026-02-01',
+        dueDate: '2026-02-15',
+        currencyCode: 'USD',
+        poNumber: null,
+        customer: { name: 'Acme', address: '123 Main' },
+        tenantClient: null,
+        items: [],
+        subtotal: 50,
+        tax: 5,
+        total: 55,
+      },
+    });
+
+    state = previewSessionReducer(state, { type: 'set-source', source: 'sample' });
+    expect(state.sourceKind).toBe('sample');
+    expect(state.selectedSampleId).toBe(initialSampleId);
+    expect(state.selectedInvoiceId).toBe('inv-1');
   });
 
   it('tracks list/detail async state transitions', () => {
@@ -119,15 +149,15 @@ describe('previewSessionState', () => {
     expect(state.selectedInvoiceData?.invoiceNumber).toBe('INV-OLD');
   });
 
-  it('tracks compile/render/verify lifecycle statuses', () => {
+  it('tracks shape/render/verify lifecycle statuses', () => {
     let state = createInitialPreviewSessionState();
 
-    state = previewSessionReducer(state, { type: 'pipeline-phase-start', phase: 'compile' });
-    expect(state.compileStatus).toBe('running');
-    expect(state.compileError).toBeNull();
+    state = previewSessionReducer(state, { type: 'pipeline-phase-start', phase: 'shape' });
+    expect(state.shapeStatus).toBe('running');
+    expect(state.shapeError).toBeNull();
 
-    state = previewSessionReducer(state, { type: 'pipeline-phase-success', phase: 'compile' });
-    expect(state.compileStatus).toBe('success');
+    state = previewSessionReducer(state, { type: 'pipeline-phase-success', phase: 'shape' });
+    expect(state.shapeStatus).toBe('success');
 
     state = previewSessionReducer(state, { type: 'pipeline-phase-start', phase: 'render' });
     state = previewSessionReducer(state, { type: 'pipeline-phase-error', phase: 'render', error: 'Render failed' });
@@ -140,10 +170,10 @@ describe('previewSessionState', () => {
     expect(state.verifyError).toBeNull();
 
     state = previewSessionReducer(state, { type: 'pipeline-reset' });
-    expect(state.compileStatus).toBe('idle');
+    expect(state.shapeStatus).toBe('idle');
     expect(state.renderStatus).toBe('idle');
     expect(state.verifyStatus).toBe('idle');
-    expect(state.compileError).toBeNull();
+    expect(state.shapeError).toBeNull();
     expect(state.renderError).toBeNull();
     expect(state.verifyError).toBeNull();
   });

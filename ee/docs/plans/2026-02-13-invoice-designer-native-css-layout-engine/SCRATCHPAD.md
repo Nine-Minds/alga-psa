@@ -1,0 +1,274 @@
+# SCRATCHPAD — Invoice Designer Native CSS Layout Engine
+
+## Context
+
+Goal: remove bespoke geometry math in the invoice designer and rely on native browser layout (CSS flex/grid + box model). Replace custom drop-parent resolution with `@dnd-kit/core` DOM-driven collision detection.
+
+## Target Deletions
+
+- `packages/billing/src/components/invoice-designer/utils/constraintSolver.ts`
+- `packages/billing/src/components/invoice-designer/utils/constraints.ts`
+- `packages/billing/src/components/invoice-designer/utils/dropParentResolution.ts`
+- `packages/billing/src/components/invoice-designer/utils/aspectRatio.ts`
+
+## Decisions
+
+- Prefer CSS-first semantics even if it means removing some legacy constraint behaviors.
+- Drag-drop should be based on DOM geometry via dnd-kit collision detection (not custom math).
+- Use CSS `aspect-ratio` for images. Avoid JS measurement loops.
+- Scope decisions (2026-02-13):
+  - Layout modes: flex + grid.
+  - Resizing: enabled via CSS sizing props.
+  - Snapping: edge + grid snapping as discrete insertion behavior.
+  - Resize writes pixel values:
+    - `updateNodeSize` rounds stored `node.size` to whole pixels and writes `node.style.width/height` as `Npx` strings (avoids float drift between size and CSS).
+
+## Detailed Decisions
+
+- Resizing:
+  - Drag handles: `image`, `section`, `stack`.
+  - No drag-resize for: `text`, `field`, `divider`, `totals`, `table`, `dynamic-table`.
+  - No table column resizing.
+  - Drag writes pixel sizing only (`px`). Non-px sizing can be entered via the property panel.
+  - Flex main-axis resize should prefer `flex-basis` updates.
+- Nesting allowlist:
+  - Containers: `document`, `section`, `stack`, `grid` (if a node/type exists).
+  - Leaves: `text`, `field`, `image`, `divider`, `totals`, `table`, `dynamic-table`.
+- Drag-drop persistence:
+  - Persist only `targetContainerId` + `insertionIndex` state changes. No coordinate-based persistence.
+- "Basic snapping" definition:
+  - Flex: snap to before/after sibling insertion indices.
+  - Grid: snap to deterministic cell/index insertion based on grid tracks, not arbitrary pixel coordinates.
+
+## Implemented
+
+- 2026-02-13: `F001` CSS-first layout model
+  - New node model fields in `packages/billing/src/components/invoice-designer/state/designerStore.ts`:
+    - `node.layout`: `display: flex|grid` + flex/grid properties in CSS semantics.
+    - `node.style`: width/height/min/max, flex item props, media props (aspectRatio/objectFit).
+  - Removed constraint-solver state from the store snapshot and APIs (constraints are no longer part of `exportWorkspace()`).
+  - Updated presets to accept legacy layout shapes while mapping them into CSS layout at insertion time:
+    - `packages/billing/src/components/invoice-designer/constants/presets.ts`
+    - `packages/billing/src/components/invoice-designer/state/designerStore.ts`
+  - Deleted the constraints inspector tests and removed constraints UI from `packages/billing/src/components/invoice-designer/DesignerShell.tsx`.
+
+- 2026-02-13: `F002` Layout/style -> DOM style mapping for canvas
+  - New mapping helpers:
+    - `packages/billing/src/components/invoice-designer/utils/cssLayout.ts`
+  - Canvas applies mapped styles:
+    - `packages/billing/src/components/invoice-designer/canvas/DesignCanvas.tsx`
+      - outer node: uses `node.style` for width/height/min/max/flex props, still absolute-positioned during cutover
+      - container child wrapper: uses `node.layout` to set `display`, flex/grid rules, `gap`, `padding`
+
+- 2026-02-13: `F003` Flex row/column container layout
+  - Children of flex/grid containers are now rendered as flow items (no absolute `top/left`), enabling native flex row/column layout:
+    - `packages/billing/src/components/invoice-designer/canvas/DesignCanvas.tsx`
+  - Child ordering uses `parent.childIds` when parent is `display:flex|grid` (stable authored order); legacy canvas containers remain position-sorted for now.
+
+- 2026-02-13: `F004` Spacing controls (gap/padding + border via existing presets)
+  - Updated Inspector layout panel to edit `gap` and `padding` (px) and flex alignment using CSS semantics:
+    - `packages/billing/src/components/invoice-designer/DesignerShell.tsx`
+  - `resolveFlexPadding` updated to support both legacy numeric padding and CSS `padding: \"Npx\"` during cutover:
+    - `packages/billing/src/components/invoice-designer/utils/layout.ts`
+
+- 2026-02-13: `F005` Flex alignment controls (justify/align)
+  - Layout inspector edits `align-items` and `justify-content` for containers and writes CSS values into `node.layout`:
+    - `packages/billing/src/components/invoice-designer/DesignerShell.tsx`
+  - Canvas applies `justifyContent`/`alignItems` via the container style mapping:
+    - `packages/billing/src/components/invoice-designer/utils/cssLayout.ts`
+    - `packages/billing/src/components/invoice-designer/canvas/DesignCanvas.tsx`
+
+- 2026-02-13: `F006` Item sizing controls (CSS width/height/min/max)
+  - Added "Sizing (CSS)" inspector panel that edits `node.style` sizing strings (`width`, `height`, `minWidth`, `minHeight`, `maxWidth`, `maxHeight`):
+    - `packages/billing/src/components/invoice-designer/DesignerShell.tsx`
+  - Canvas already applies these values via `resolveNodeBoxStyle(node.style)` (no geometry math).
+
+- 2026-02-13: `F007` Flex item controls (grow/shrink/basis)
+  - Added "Flex Item" inspector panel shown when the selected node is inside a `display:flex` parent; edits `flexGrow`, `flexShrink`, and `flexBasis` on `node.style`:
+    - `packages/billing/src/components/invoice-designer/DesignerShell.tsx`
+  - Canvas already applies these values via `resolveNodeBoxStyle(node.style)`.
+
+- 2026-02-13: `F008` Grid container mode (CSS grid)
+  - Layout inspector now supports switching a container between `display:flex` and `display:grid`.
+  - When in grid mode, inspector exposes `grid-template-columns`, `grid-template-rows`, and `grid-auto-flow` (gap/padding remain shared):
+    - `packages/billing/src/components/invoice-designer/DesignerShell.tsx`
+  - Canvas already renders grid containers via `resolveContainerLayoutStyle(node.layout)` + flow children rendering.
+
+- 2026-02-13: `F009` dnd-kit collision detection + sortable plumbing (start of DOM-driven DnD)
+  - Added dnd-kit collision detection strategy (pointer-within preferred; smallest rect under pointer approximates "deepest" target) with closest-center fallback and Always measuring:
+    - `packages/billing/src/components/invoice-designer/DesignerShell.tsx`
+  - Introduced sortable contexts for flow-layout containers (flex/grid) and `useSortable` for flow children, enabling DOM-measured ordering targets (no coordinate math for flow drags):
+    - `packages/billing/src/components/invoice-designer/canvas/DesignCanvas.tsx`
+  - Added store action to move/reparent nodes by `parentId + insertionIndex`, with allowlist enforcement and cycle prevention:
+    - `packages/billing/src/components/invoice-designer/state/designerStore.ts`
+
+- 2026-02-13: `F010` Reorder within container (sortable)
+  - Dragging a flow-layout node (inside a `display:flex|grid` parent) now reorders by updating the parent's `childIds` using dnd-kit sortable `over` resolution (no position math).
+
+- 2026-02-13: `F011` Cross-container moves (flow layout)
+  - Flow-layout nodes can be dragged into another eligible container (or onto a child within it) and are reparented by updating `parentId` + `childIds` insertion index (DOM-measured `over` target).
+
+- 2026-02-13: `F012` Nesting allowlist enforcement
+  - Reparenting via drag-drop is validated with `canNestWithinParent(childType, parentType)` and cycle prevention (no dropping into descendants):
+    - `packages/billing/src/components/invoice-designer/state/designerStore.ts`
+
+- 2026-02-13: `F013` Drop indicators (DOM-derived)
+  - Added a before/after insertion indicator line for flow-layout drags, derived from active/over DOM rect midpoints (no custom geometry solver):
+    - `packages/billing/src/components/invoice-designer/DesignerShell.tsx`
+    - `packages/billing/src/components/invoice-designer/canvas/DesignCanvas.tsx`
+  - Container drop targets are still highlighted via `useDroppable().isOver` rings (DOM-measured).
+
+- 2026-02-13: `F014` Invalid drop UX
+  - Invalid drop targets now show a blocked visual state (red insertion line or red target ring) and a `not-allowed` cursor on the drag overlay; drops do not mutate state:
+    - `packages/billing/src/components/invoice-designer/DesignerShell.tsx`
+    - `packages/billing/src/components/invoice-designer/canvas/DesignCanvas.tsx`
+  - Drop end emits an error toast-style banner via existing `dropFeedback` mechanism when invalid.
+
+- 2026-02-13: `F015` Image aspect ratio + object-fit (CSS)
+  - Media nodes (`image`, `logo`, `qr`) now render with CSS `aspect-ratio` (wrapper) and `object-fit` (img) support, with inspector controls writing `node.style.aspectRatio` and `node.style.objectFit`:
+    - `packages/billing/src/components/invoice-designer/DesignerShell.tsx`
+    - `packages/billing/src/components/invoice-designer/canvas/DesignCanvas.tsx`
+  - New media nodes default to `objectFit: contain` (and `qr` defaults to `aspectRatio: 1 / 1`) without any JS measurement loops:
+    - `packages/billing/src/components/invoice-designer/state/designerStore.ts`
+
+- 2026-02-13: `F016` Resize handles (limited types)
+  - Resize handles are now limited to `image/logo/qr` and container blocks (`section`, `container`) per PRD; resizing continues to write pixel `width/height` into `node.style` via `updateNodeSize` (no constraint solver):
+    - `packages/billing/src/components/invoice-designer/canvas/DesignCanvas.tsx`
+
+- 2026-02-13: `F016A` Property-panel sizing strings
+  - Inspector "Sizing (CSS)" panel accepts arbitrary CSS strings (`%`, `rem`, `auto`, `calc(...)`, etc.) for size/min/max while drag-resize continues to write pixel values (px):
+    - `packages/billing/src/components/invoice-designer/DesignerShell.tsx`
+    - `packages/billing/src/components/invoice-designer/state/designerStore.ts`
+
+- 2026-02-13: `F016B` Basic snapping (discrete insertion)
+  - Flex parents now resolve insertion as before/after based on DOM rect midpoint along the main axis; grid uses the sortable `over` cell/index deterministically (no pixel snapping math):
+    - `packages/billing/src/components/invoice-designer/DesignerShell.tsx`
+
+- 2026-02-13: `F016C` Drag-drop persistence (no coordinates)
+  - Dragging nodes no longer writes `position.x/y` during drop; drag-drop mutations are limited to `targetParentId + insertionIndex` updates (`parentId` + `childIds`):
+    - `packages/billing/src/components/invoice-designer/DesignerShell.tsx`
+    - `packages/billing/src/components/invoice-designer/state/designerStore.ts`
+
+- 2026-02-13: `F017` Delete legacy geometry utilities
+  - Deleted legacy solver + geometry/drop-parent modules and their tests (removed from runtime graph):
+    - `packages/billing/src/components/invoice-designer/utils/constraintSolver.ts`
+    - `packages/billing/src/components/invoice-designer/utils/constraints.ts`
+    - `packages/billing/src/components/invoice-designer/utils/dropParentResolution.ts`
+    - `packages/billing/src/components/invoice-designer/utils/aspectRatio.ts`
+  - Simplified component insertion parent resolution in the designer to no longer depend on `dropParentResolution`.
+
+- 2026-02-13: `F018` Reduce `utils/layout.ts`
+  - `packages/billing/src/components/invoice-designer/utils/layout.ts` now contains only lightweight helpers (e.g. `resolveFlexPadding`) and type exports; alignment/geometry helpers were removed from this module.
+  - Legacy drag-move guide/preview logic in `DesignerShell` was pared back (no coordinate-based preview updates).
+
+- 2026-02-13: `F019` Persist CSS-like layout props in AST import/export
+  - AST export writes CSS-like sizing, flex/grid container props, and media props (`aspectRatio`, `objectFit`) into `style.inline`:
+    - `packages/billing/src/components/invoice-designer/ast/workspaceAst.ts`
+  - AST import now hydrates `DesignerNode.style` and `DesignerNode.layout` from `style.inline` (with safe defaults for containers) so export -> import roundtrips CSS semantics.
+  - Import mapping now treats top-level AST `section` nodes as designer `page` nodes (avoids a duplicate designer-only page wrapper).
+
+- 2026-02-13: `F020` Preview uses authoritative renderer CSS semantics
+  - Preview pipeline now passes only the `DesignerWorkspaceSnapshot` fields (removed stale `constraints` plumbing that no longer exists in the store snapshot):
+    - `packages/billing/src/components/invoice-designer/DesignerVisualWorkspace.tsx`
+  - Preview iframe `srcDoc` is now a full HTML document with `html, body { margin: 0; padding: 0; }` so the renderer-scoped CSS (`.invoice-template-root { ... }`) behaves the same inside the iframe as it does in the app / PDF (avoids default iframe body margins affecting layout).
+
+- 2026-02-13: `F021` Audit imports of deleted geometry utilities
+  - Confirmed no runtime imports/references remain for deleted modules:
+    - `packages/billing/src/components/invoice-designer/utils/constraintSolver.ts`
+    - `packages/billing/src/components/invoice-designer/utils/constraints.ts`
+    - `packages/billing/src/components/invoice-designer/utils/dropParentResolution.ts`
+    - `packages/billing/src/components/invoice-designer/utils/aspectRatio.ts`
+  - Grep runbook:
+    - `rg -n "utils/(constraintSolver|constraints|dropParentResolution|aspectRatio)" -S .`
+
+## Remaining Design Choices
+
+- Collision strategy and snapping thresholds are intentionally selected to minimize custom geometry logic:
+  - Collision detection:
+    - Use `pointerWithin` first (deepest eligible droppable under cursor).
+    - Fallback to `closestCenter` if pointer is not within any droppable.
+    - Configure measuring to keep DOM rects fresh during drag.
+  - Sensors and overlay:
+    - `PointerSensor` with activation distance (e.g. 6px).
+    - `DragOverlay` to avoid layout reflow while dragging.
+  - Sorting strategies:
+    - Flex column: `verticalListSortingStrategy`
+    - Flex row: `horizontalListSortingStrategy`
+    - Grid: `rectSortingStrategy`
+  - Snapping threshold behavior:
+    - Flex uses midpoint rule on hovered rect (before/after) for insertion indicators.
+    - Grid uses sortable `over` resolution directly (deterministic cell/index).
+
+## Developer Notes (DnD + Nesting)
+
+- Collision detection (why pointer-within first):
+  - Implemented in `packages/billing/src/components/invoice-designer/DesignerShell.tsx` as `collisionDetection`.
+  - We use `pointerWithin(args)` and return the collisions sorted by smallest droppable rect area first, as a practical proxy for "deepest nested droppable under the cursor".
+  - If no droppable contains the pointer (fast drag / overlay edges), we fall back to `closestCenter(args)` so the drag never “loses” an `over` target.
+  - Measuring is configured as `MeasuringStrategy.Always` on the `DndContext` to avoid stale droppable rects in nested flex/grid layouts.
+
+- Droppable id conventions (how `over.id` maps back to a node):
+  - Container drop zones use `id: \`droppable-\${node.id}\`` in `packages/billing/src/components/invoice-designer/canvas/DesignCanvas.tsx`.
+  - Flow items use `useSortable({ id: node.id, ... })` (sortable id is the node id).
+  - When debugging: if `over.id` starts with `droppable-`, it represents “drop into this container”; otherwise it is a sortable item id representing “drop relative to this item”.
+
+- Nesting rules (authoritative allowlist):
+  - Implemented in `packages/billing/src/components/invoice-designer/state/hierarchy.ts` and enforced via `canNestWithinParent(...)`.
+  - Store actions that move/reparent nodes must validate:
+    - type allowlist (`canNestWithinParent`)
+    - cycle prevention (no dropping into descendants)
+  - When adding a new node type, update `HIERARCHY_RULES` and ensure `allowedChildren` on container nodes matches the same intent.
+
+- Where to tune UX:
+  - Activation threshold (avoid accidental drags): `PointerSensor` `activationConstraint.distance` in `packages/billing/src/components/invoice-designer/DesignerShell.tsx`.
+  - Over-target selection behavior: the `collisionDetection` callback in `packages/billing/src/components/invoice-designer/DesignerShell.tsx`.
+  - Sort strategy selection (row/column/grid): `SortableContext` `strategy` selection in `packages/billing/src/components/invoice-designer/canvas/DesignCanvas.tsx`.
+
+## Implementation Sketch (Non-binding)
+
+- Introduce a single "layout props -> style props" mapping function used by:
+  - designer canvas rendering
+  - preview rendering (if different)
+  - AST export (if relevant)
+- Add dnd-kit:
+  - sensors: pointer + keyboard (optional)
+  - sortable contexts for sibling reordering
+  - collision detection tuned for nested containers
+- Enforce nesting rules in drop handler (reject invalid parent).
+- Remove legacy util usage, then delete files.
+
+## Useful Commands
+
+- Search for legacy geometry imports:
+  - `rg -n \"constraintSolver|constraints|dropParentResolution|aspectRatio\" packages/billing/src/components/invoice-designer`
+- Run a single designer test under the server Vitest config:
+  - `cd server && npx vitest run ../packages/billing/src/components/invoice-designer/utils/cssLayout.test.ts`
+  - `cd server && npx vitest run ../packages/billing/src/components/invoice-designer/canvas/DesignCanvas.flexColumn.integration.test.tsx`
+  - `cd server && npx vitest run ../packages/billing/src/components/invoice-designer/canvas/DesignCanvas.flexRow.integration.test.tsx`
+  - `cd server && npx vitest run ../packages/billing/src/components/invoice-designer/canvas/DesignCanvas.spacing.integration.test.tsx`
+  - `cd server && npx vitest run ../packages/billing/src/components/invoice-designer/canvas/DesignCanvas.alignment.integration.test.tsx`
+  - `cd server && npx vitest run ../packages/billing/src/components/invoice-designer/canvas/DesignCanvas.sizing.integration.test.tsx`
+  - `cd server && npx vitest run ../packages/billing/src/components/invoice-designer/canvas/DesignCanvas.flexItem.integration.test.tsx`
+  - `cd server && npx vitest run ../packages/billing/src/components/invoice-designer/canvas/DesignCanvas.grid.integration.test.tsx`
+  - `cd server && npx vitest run ../packages/billing/src/components/invoice-designer/utils/dndCollision.test.ts`
+  - `cd server && npx vitest run ../packages/billing/src/components/invoice-designer/state/designerStore.flowDnd.test.ts`
+  - `cd server && npx vitest run ../packages/billing/src/components/invoice-designer/utils/dropIndicator.test.ts`
+  - `cd server && npx vitest run ../packages/billing/src/components/invoice-designer/canvas/DesignCanvas.mediaAspect.integration.test.tsx`
+
+## Repo/Test Gotchas (Discovered 2026-02-13)
+
+- Vitest + React tests were failing when `NODE_ENV=production` leaked into the test process (React test utils expect non-production builds).
+  - Fix: `server/vitest.globalSetup.js` now forces `process.env.NODE_ENV = 'test'`.
+- Package tests under `../packages/**` were not being discovered when running Vitest from `server/`.
+  - Fix: `server/vitest.config.ts` now includes `../packages/**/*.{test,spec}.*` explicitly.
+- Coverage provider version must match Vitest major version.
+  - `server/` is currently on `vitest@3.2.4`, so `@vitest/coverage-v8@3.2.4` is added to `server/package.json` to avoid resolving the repo-root `@vitest/coverage-v8@4.x`.
+- Running tests from repo root:
+  - `npm run test:local` currently shells out to a system `dotenv` binary in some environments (CLI flag mismatch).
+  - Reliable alternative: `cd server && npx vitest run <path-to-test>` (uses `server/vitest.globalSetup.js` to load `../.env.localtest`).
+
+## Notes (Renderer Schema)
+
+- Preview/renderer schema must allow the same safe CSS subset that the designer exports into `style.inline`.
+  - Added support for: `flexDirection`, grid inline props (`gridTemplateColumns`, `gridTemplateRows`, `gridAutoFlow`), and media props (`aspectRatio`, `objectFit`) in:
+    - `packages/billing/src/lib/invoice-template-ast/schema.ts`

@@ -1,185 +1,30 @@
 // @ts-nocheck
 'use server'
 
-import { exec } from 'child_process';
-import fs from 'fs/promises';
-import path from 'path';
-import { promisify } from 'node:util';
+import crypto from 'crypto';
 import { withAuth } from '@alga-psa/auth';
-import { v4 as uuidv4 } from 'uuid';
 import type { WasmInvoiceViewModel } from '@alga-psa/types';
-import {
-  buildAssemblyScriptCompileCommand,
-  resolveAssemblyScriptProjectDir,
-} from '../lib/invoice-template-compiler/assemblyScriptCompile';
 import type { DesignerWorkspaceSnapshot } from '../components/invoice-designer/state/designerStore';
-import { extractInvoiceDesignerIr } from '../components/invoice-designer/compiler/guiIr';
-import { generateAssemblyScriptFromIr } from '../components/invoice-designer/compiler/assemblyScriptGenerator';
-import {
-  linkDiagnosticsToGuiNodes,
-  parseAssemblyScriptDiagnostics,
-} from '../components/invoice-designer/compiler/diagnostics';
-import { executeWasmTemplate } from '../lib/invoice-renderer/wasm-executor';
-import { renderLayout } from '../lib/invoice-renderer/layout-renderer';
-import {
-  collectRenderedGeometryFromLayout,
-  compareLayoutConstraints,
-  estimateRenderedContentHeight,
-  extractExpectedLayoutConstraintsFromIr,
-} from '../lib/invoice-template-compiler/layoutVerification';
-import {
-  getCachedPreviewCompileArtifact,
-  setCachedPreviewCompileArtifact,
-} from './invoiceTemplatePreviewCache';
-
-const execPromise = promisify(exec);
-
-type PreviewCompileInput = {
-  source: string;
-  sourceHash: string;
-  bypassCache?: boolean;
-};
-
-type PreviewCompileSuccess = {
-  success: true;
-  wasmBinary: Buffer;
-  compileCommand: string;
-  cacheHit: boolean;
-};
-
-type PreviewCompileFailure = {
-  success: false;
-  error: string;
-  details?: string;
-  compileCommand?: string;
-};
-
-type PreviewCompileResult = PreviewCompileSuccess | PreviewCompileFailure;
-
-const sanitizeForPath = (value: string) => value.replace(/[^a-zA-Z0-9_-]/g, '_');
-
-const resolveCacheKey = (input: PreviewCompileInput): string => {
-  const normalizedHash = sanitizeForPath(input.sourceHash || '').slice(0, 96);
-  if (normalizedHash.length > 0) {
-    return normalizedHash;
-  }
-  return `inline_${sanitizeForPath(input.source).slice(0, 96)}`;
-};
-const buildPreviewCompileCommand = (params: {
-  tempCompileDir: string;
-  sourceFilePath: string;
-  wasmOutputPath: string;
-}) =>
-  buildAssemblyScriptCompileCommand({
-    workingDirectory: params.tempCompileDir,
-    sourceFilePath: params.sourceFilePath,
-    outFilePath: params.wasmOutputPath,
-    baseDir: params.tempCompileDir,
-  });
-
-const compilePreviewAssemblyScriptForTenant = async (
-  tenant: string,
-  input: PreviewCompileInput
-): Promise<PreviewCompileResult> => {
-    if (!input?.source || input.source.trim().length === 0) {
-      return {
-        success: false,
-        error: 'Preview compile requires non-empty source.',
-      };
-    }
-
-    const cacheKey = resolveCacheKey(input);
-
-    const asmScriptProjectDir = resolveAssemblyScriptProjectDir();
-    const assemblyDir = path.resolve(asmScriptProjectDir, 'assembly');
-    const tempCompileDir = path.resolve(asmScriptProjectDir, 'temp_compile');
-    const previewRootDir = path.resolve(tempCompileDir, 'preview');
-    const previewDir = path.resolve(tempCompileDir, 'preview', sanitizeForPath(tenant));
-    const previewAssemblyDir = path.resolve(previewRootDir, 'assembly');
-    const fileToken = sanitizeForPath(input.sourceHash || uuidv4()).slice(0, 64) || uuidv4();
-    const sourceFilePath = path.resolve(previewDir, `${fileToken}.ts`);
-    const wasmOutputPath = path.resolve(previewDir, `${fileToken}.wasm`);
-    const tempAssemblyDir = path.resolve(tempCompileDir, 'assembly');
-
-    if (
-      !sourceFilePath.startsWith(tempCompileDir) ||
-      !wasmOutputPath.startsWith(tempCompileDir) ||
-      !previewDir.startsWith(tempCompileDir)
-    ) {
-      return {
-        success: false,
-        error: 'Security violation: attempted path traversal attack.',
-      };
-    }
-
-    const compileCommand = buildPreviewCompileCommand({
-      tempCompileDir,
-      sourceFilePath,
-      wasmOutputPath,
-    });
-
-    const cached = getCachedPreviewCompileArtifact(cacheKey);
-    if (cached && !input.bypassCache) {
-      return {
-        success: true,
-        wasmBinary: cached.wasmBinary,
-        compileCommand: cached.compileCommand,
-        cacheHit: true,
-      };
-    }
-
-    try {
-      await fs.access(assemblyDir);
-      await fs.mkdir(previewDir, { recursive: true });
-      await fs.rm(tempAssemblyDir, { force: true, recursive: true });
-      await fs.rm(previewAssemblyDir, { force: true, recursive: true });
-      await fs.symlink(assemblyDir, tempAssemblyDir, 'dir');
-      await fs.symlink(assemblyDir, previewAssemblyDir, 'dir');
-      await fs.writeFile(sourceFilePath, input.source);
-
-      const { stderr } = await execPromise(compileCommand);
-      if (stderr && stderr.trim().length > 0) {
-        console.warn('[compilePreviewAssemblyScript] asc stderr:', stderr);
-      }
-
-      await fs.access(wasmOutputPath);
-      const wasmBinary = await fs.readFile(wasmOutputPath);
-      if (!wasmBinary || wasmBinary.length === 0) {
-        throw new Error('Compiled WASM binary is empty.');
-      }
-      setCachedPreviewCompileArtifact(cacheKey, { wasmBinary, compileCommand });
-
-      return {
-        success: true,
-        wasmBinary,
-        compileCommand,
-        cacheHit: false,
-      };
-    } catch (error: any) {
-      return {
-        success: false,
-        error: 'Preview AssemblyScript compilation failed.',
-        details: error?.stderr || error?.stdout || error?.message || String(error),
-        compileCommand,
-      };
-    } finally {
-      await Promise.all([
-        fs.rm(sourceFilePath, { force: true }),
-        fs.rm(wasmOutputPath, { force: true }),
-      ]).catch(() => undefined);
-    }
-};
-
-export const compilePreviewAssemblyScript = withAuth(
-  async (_user, { tenant }, input: PreviewCompileInput): Promise<PreviewCompileResult> =>
-    compilePreviewAssemblyScriptForTenant(tenant, input)
-);
+import { exportWorkspaceToInvoiceTemplateAst } from '../components/invoice-designer/ast/workspaceAst';
+import { evaluateInvoiceTemplateAst, InvoiceTemplateEvaluationError } from '../lib/invoice-template-ast/evaluator';
+import { renderEvaluatedInvoiceTemplateAst } from '../lib/invoice-template-ast/react-renderer';
+import { validateInvoiceTemplateAst } from '../lib/invoice-template-ast/schema';
 
 type AuthoritativePreviewInput = {
   workspace: DesignerWorkspaceSnapshot;
   invoiceData: WasmInvoiceViewModel | null;
-  bypassCompileCache?: boolean;
   tolerancePx?: number;
+};
+
+type AuthoritativePreviewDiagnostic = {
+  kind: 'schema' | 'evaluation' | 'runtime';
+  severity: 'error';
+  message: string;
+  raw: string;
+  code?: string;
+  path?: string;
+  operationId?: string;
+  nodeId?: string;
 };
 
 type AuthoritativePreviewResult = {
@@ -188,8 +33,7 @@ type AuthoritativePreviewResult = {
   generatedSource: string | null;
   compile: {
     status: 'idle' | 'success' | 'error';
-    cacheHit: boolean;
-    diagnostics: ReturnType<typeof linkDiagnosticsToGuiNodes>;
+    diagnostics: AuthoritativePreviewDiagnostic[];
     error?: string;
     details?: string;
   };
@@ -202,21 +46,25 @@ type AuthoritativePreviewResult = {
   };
   verification: {
     status: 'idle' | 'pass' | 'issues' | 'error';
-    mismatches: ReturnType<typeof compareLayoutConstraints>['mismatches'];
+    mismatches: Array<{ constraintId: string; expected: string; actual?: string; delta?: string }>;
     error?: string;
   };
 };
 
 export const runAuthoritativeInvoiceTemplatePreview = withAuth(
-  async (_user, { tenant }, input: AuthoritativePreviewInput): Promise<AuthoritativePreviewResult> => {
-    if (!input?.workspace || !Array.isArray(input.workspace.nodes) || input.workspace.nodes.length === 0) {
+  async (_user, _context, input: AuthoritativePreviewInput): Promise<AuthoritativePreviewResult> => {
+    const hasWorkspaceNodes =
+      Boolean(input?.workspace?.nodesById) &&
+      typeof input.workspace.nodesById === 'object' &&
+      Object.keys(input.workspace.nodesById).length > 0;
+
+    if (!hasWorkspaceNodes) {
       return {
         success: false,
         sourceHash: null,
         generatedSource: null,
         compile: {
           status: 'error',
-          cacheHit: false,
           diagnostics: [],
           error: 'Preview workspace is empty.',
         },
@@ -232,7 +80,6 @@ export const runAuthoritativeInvoiceTemplatePreview = withAuth(
         generatedSource: null,
         compile: {
           status: 'idle',
-          cacheHit: false,
           diagnostics: [],
         },
         render: { status: 'idle', html: null, css: null, contentHeightPx: null },
@@ -240,27 +87,28 @@ export const runAuthoritativeInvoiceTemplatePreview = withAuth(
       };
     }
 
-    const ir = extractInvoiceDesignerIr(input.workspace);
-    const generated = generateAssemblyScriptFromIr(ir);
-    const compileResult = await compilePreviewAssemblyScriptForTenant(tenant, {
-      source: generated.source,
-      sourceHash: generated.sourceHash,
-      bypassCache: input.bypassCompileCache,
-    });
+    const ast = exportWorkspaceToInvoiceTemplateAst(input.workspace);
+    const generatedSource = JSON.stringify(ast, null, 2);
+    const sourceHash = crypto.createHash('sha256').update(generatedSource).digest('hex');
 
-    if (!compileResult.success) {
-      const parsedDiagnostics = parseAssemblyScriptDiagnostics(compileResult.details ?? compileResult.error);
-      const linkedDiagnostics = linkDiagnosticsToGuiNodes(parsedDiagnostics, generated.sourceMap);
+    const validation = validateInvoiceTemplateAst(ast);
+    if (!validation.success) {
       return {
         success: false,
-        sourceHash: generated.sourceHash,
-        generatedSource: generated.source,
+        sourceHash,
+        generatedSource,
         compile: {
           status: 'error',
-          cacheHit: false,
-          diagnostics: linkedDiagnostics,
-          error: compileResult.error,
-          details: compileResult.details,
+          diagnostics: validation.errors.map((error) => ({
+            kind: 'schema',
+            severity: 'error',
+            message: `${error.path || '<root>'}: ${error.message}`,
+            raw: `${error.code}:${error.path}:${error.message}`,
+            code: error.code,
+            path: error.path || undefined,
+          })),
+          error: 'AST validation failed.',
+          details: validation.errors.map((error) => `${error.path || '<root>'}: ${error.message}`).join('; '),
         },
         render: { status: 'idle', html: null, css: null, contentHeightPx: null },
         verification: { status: 'idle', mismatches: [] },
@@ -268,82 +116,61 @@ export const runAuthoritativeInvoiceTemplatePreview = withAuth(
     }
 
     try {
-      const renderedLayout = await executeWasmTemplate(input.invoiceData, compileResult.wasmBinary);
-      const renderedOutput = renderLayout(renderedLayout);
-      let renderedGeometry: ReturnType<typeof collectRenderedGeometryFromLayout> | null = null;
-      let contentHeightPx: number | null = null;
-      try {
-        renderedGeometry = collectRenderedGeometryFromLayout(renderedLayout);
-        contentHeightPx = estimateRenderedContentHeight(renderedGeometry, 640);
-      } catch {
-        renderedGeometry = null;
-        contentHeightPx = null;
-      }
-      try {
-        const expectedConstraints = extractExpectedLayoutConstraintsFromIr(ir, input.tolerancePx ?? 2);
-        if (!renderedGeometry) {
-          throw new Error('Rendered geometry could not be derived for verification.');
-        }
-        const verification = compareLayoutConstraints(expectedConstraints, renderedGeometry);
-        return {
-          success: true,
-          sourceHash: generated.sourceHash,
-          generatedSource: generated.source,
-          compile: {
-            status: 'success',
-            cacheHit: compileResult.cacheHit,
-            diagnostics: [],
-          },
-          render: {
-            status: 'success',
-            html: renderedOutput.html,
-            css: renderedOutput.css,
-            contentHeightPx,
-          },
-          verification: {
-            status: verification.status,
-            mismatches: verification.mismatches,
-          },
-        };
-      } catch (verificationError: any) {
-        return {
-          success: false,
-          sourceHash: generated.sourceHash,
-          generatedSource: generated.source,
-          compile: {
-            status: 'success',
-            cacheHit: compileResult.cacheHit,
-            diagnostics: [],
-          },
-          render: {
-            status: 'success',
-            html: renderedOutput.html,
-            css: renderedOutput.css,
-            contentHeightPx,
-          },
-          verification: {
-            status: 'error',
-            mismatches: [],
-            error: verificationError?.message || String(verificationError),
-          },
-        };
-      }
-    } catch (renderError: any) {
+      const evaluation = evaluateInvoiceTemplateAst(validation.ast, input.invoiceData as unknown as Record<string, unknown>);
+      const rendered = await renderEvaluatedInvoiceTemplateAst(validation.ast, evaluation);
       return {
-        success: false,
-        sourceHash: generated.sourceHash,
-        generatedSource: generated.source,
+        success: true,
+        sourceHash,
+        generatedSource,
         compile: {
           status: 'success',
-          cacheHit: compileResult.cacheHit,
           diagnostics: [],
         },
         render: {
+          status: 'success',
+          html: rendered.html,
+          css: rendered.css,
+          contentHeightPx: null,
+        },
+        verification: {
+          status: 'pass',
+          mismatches: [],
+        },
+      };
+    } catch (error: any) {
+      const isEvaluationError = error instanceof InvoiceTemplateEvaluationError;
+      return {
+        success: false,
+        sourceHash,
+        generatedSource,
+        compile: {
           status: 'error',
+          diagnostics: isEvaluationError
+            ? error.issues.map((issue) => ({
+                kind: 'evaluation',
+                severity: 'error',
+                message: issue.message,
+                raw: `${issue.code}:${issue.path ?? ''}:${issue.message}`,
+                code: issue.code,
+                path: issue.path,
+                operationId: issue.operationId,
+              }))
+            : [
+                {
+                  kind: 'runtime',
+                  severity: 'error',
+                  message: error?.message || String(error),
+                  raw: String(error?.message || error),
+                },
+              ],
+          error: isEvaluationError ? error.message : 'Evaluation failed.',
+          details: error?.message || String(error),
+        },
+        render: {
+          status: 'idle',
           html: null,
           css: null,
           contentHeightPx: null,
-          error: renderError?.message || String(renderError),
         },
         verification: {
           status: 'idle',

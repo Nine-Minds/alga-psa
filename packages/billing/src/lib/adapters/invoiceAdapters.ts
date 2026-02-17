@@ -77,9 +77,9 @@ const resolveTenantClientSnapshot = (source: Record<string, unknown>): WasmInvoi
 /**
  * Maps the detailed invoice data structure fetched from the database
  * (DbInvoiceViewModel from invoice.interfaces.ts) to the InvoiceViewModel
- * required by the Wasm template renderer (WasmInvoiceViewModel from invoice-renderer/types).
+ * required by the invoice template renderer (WasmInvoiceViewModel).
  * @param dbData - The detailed invoice data from the database query.
- * @returns An InvoiceViewModel suitable for the Wasm renderer, or null if input is null.
+ * @returns An InvoiceViewModel suitable for template rendering, or null if input is null.
  */
 // Change input type to 'any' as the actual input structure seems to be WasmInvoiceViewModel based on logs
 export function mapDbInvoiceToWasmViewModel(inputData: DbInvoiceViewModel | WasmInvoiceViewModel | any): WasmInvoiceViewModel | null {

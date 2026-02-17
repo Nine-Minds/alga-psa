@@ -21,6 +21,7 @@ import type {
   InvoiceViewModel,
 } from '@alga-psa/types';
 import { getClientLogoUrlAsync } from '../lib/documentsHelpers';
+import { getStandardInvoiceTemplateAstByCode } from '../lib/invoice-template-ast/standardTemplates';
 
 /**
  * Invoice model with tenant-explicit methods.
@@ -495,16 +496,25 @@ const Invoice = {
   getStandardTemplates: async (
     knexOrTrx: Knex | Knex.Transaction
   ): Promise<IInvoiceTemplate[]> => {
-    return knexOrTrx('standard_invoice_templates')
+    const records = await knexOrTrx('standard_invoice_templates')
       .select(
         'template_id',
         'name',
         'version',
         'standard_invoice_template_code',
-        'assemblyScriptSource',
-        'sha'
+        'templateAst',
+        'is_default',
+        'created_at',
+        'updated_at'
       )
       .orderBy('name');
+
+    return records.map((record) => ({
+      ...record,
+      templateAst:
+        record.templateAst ??
+        getStandardInvoiceTemplateAstByCode(record.standard_invoice_template_code),
+    })) as IInvoiceTemplate[];
   },
 
   /**
@@ -526,7 +536,7 @@ const Invoice = {
           'name',
           'version',
           'is_default',
-          'assemblyScriptSource',
+          'templateAst',
           'created_at',
           'updated_at'
         ),
@@ -588,13 +598,35 @@ const Invoice = {
     const templateWithDefaults = {
       ...template,
       version: template.version || 1,
-      tenant
+      tenant,
     };
 
+    // Avoid passing UI-only / computed fields (or any unknown keys) straight into a DB insert.
+    const insertRecord: Record<string, unknown> = {
+      tenant,
+      template_id: (templateWithDefaults as any).template_id,
+      name: (templateWithDefaults as any).name,
+      version: (templateWithDefaults as any).version,
+      is_default: (templateWithDefaults as any).is_default ?? false,
+    };
+
+    if ((templateWithDefaults as any).templateAst !== undefined) {
+      insertRecord.templateAst = (templateWithDefaults as any).templateAst;
+    }
+
+    const updateRecord: Record<string, unknown> = {
+      name: insertRecord.name,
+      version: insertRecord.version,
+      is_default: insertRecord.is_default,
+    };
+    if (Object.prototype.hasOwnProperty.call(insertRecord, 'templateAst')) {
+      updateRecord.templateAst = insertRecord.templateAst;
+    }
+
     const [savedTemplate] = await knexOrTrx('invoice_templates')
-      .insert(templateWithDefaults)
+      .insert(insertRecord)
       .onConflict(['tenant', 'template_id'])
-      .merge(['name', 'version', 'assemblyScriptSource', 'wasmBinary', 'is_default'])
+      .merge(updateRecord)
       .returning('*');
 
     return savedTemplate;

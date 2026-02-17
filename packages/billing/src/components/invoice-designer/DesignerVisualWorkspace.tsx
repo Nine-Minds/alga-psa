@@ -77,12 +77,12 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
   onVisualWorkspaceTabChange,
 }) => {
   const nodes = useInvoiceDesignerStore((state) => state.nodes);
-  const constraints = useInvoiceDesignerStore((state) => state.constraints);
   const canvasScale = useInvoiceDesignerStore((state) => state.canvasScale);
   const showGuides = useInvoiceDesignerStore((state) => state.showGuides);
   const showRulers = useInvoiceDesignerStore((state) => state.showRulers);
   const gridSize = useInvoiceDesignerStore((state) => state.gridSize);
   const snapToGrid = useInvoiceDesignerStore((state) => state.snapToGrid);
+  const rootId = useInvoiceDesignerStore((state) => state.rootId);
 
   const [previewState, dispatch] = useReducer(previewSessionReducer, undefined, createInitialPreviewSessionState);
   const [authoritativePreview, setAuthoritativePreview] = useState<
@@ -93,7 +93,6 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
   const debouncedNodes = useDebouncedValue(nodes, 140);
   const detailRequestSequence = useRef(0);
   const previewRunSequence = useRef(0);
-  const lastManualRunNonceRef = useRef(0);
 
   const activeSampleId = previewState.selectedSampleId ?? DEFAULT_PREVIEW_SAMPLE_ID;
   const activeSample = useMemo(() => getPreviewSampleScenarioById(activeSampleId), [activeSampleId]);
@@ -119,15 +118,15 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
   }, [authoritativePreview?.render.contentHeightPx]);
   const displayStatuses = derivePreviewPipelineDisplayStatuses({
     statuses: {
-      compileStatus: previewState.compileStatus,
+      shapeStatus: previewState.shapeStatus,
       renderStatus: previewState.renderStatus,
       verifyStatus: previewState.verifyStatus,
     },
     canDisplaySuccessStates,
   });
-  const compileDiagnostics = authoritativePreview?.compile.diagnostics ?? [];
+  const shapeDiagnostics = authoritativePreview?.compile.diagnostics ?? [];
   const isPreviewRunning =
-    previewState.compileStatus === 'running' ||
+    previewState.shapeStatus === 'running' ||
     previewState.renderStatus === 'running' ||
     previewState.verifyStatus === 'running';
 
@@ -225,18 +224,21 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
     }
 
     const requestId = ++previewRunSequence.current;
-    const bypassCompileCache = manualRunNonce !== lastManualRunNonceRef.current;
-    lastManualRunNonceRef.current = manualRunNonce;
 
     dispatch({ type: 'pipeline-reset' });
-    dispatch({ type: 'pipeline-phase-start', phase: 'compile' });
+    dispatch({ type: 'pipeline-phase-start', phase: 'shape' });
     dispatch({ type: 'pipeline-phase-start', phase: 'render' });
     dispatch({ type: 'pipeline-phase-start', phase: 'verify' });
 
     runAuthoritativeInvoiceTemplatePreview({
       workspace: {
-        nodes: debouncedNodes,
-        constraints,
+        rootId,
+        nodesById: Object.fromEntries(
+          debouncedNodes.map((node) => [
+            node.id,
+            { id: node.id, type: node.type, props: node.props, children: node.children },
+          ])
+        ),
         snapToGrid,
         gridSize,
         showGuides,
@@ -244,7 +246,6 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
         canvasScale,
       },
       invoiceData: previewData,
-      bypassCompileCache,
     })
       .then((result) => {
         if (requestId !== previewRunSequence.current) {
@@ -254,9 +255,9 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
         setAuthoritativePreview(result);
 
         if (result.compile.status === 'error') {
-          dispatch({ type: 'pipeline-phase-error', phase: 'compile', error: result.compile.error ?? 'Compile failed.' });
+          dispatch({ type: 'pipeline-phase-error', phase: 'shape', error: result.compile.error ?? 'Shape failed.' });
         } else if (result.compile.status === 'success') {
-          dispatch({ type: 'pipeline-phase-success', phase: 'compile' });
+          dispatch({ type: 'pipeline-phase-success', phase: 'shape' });
         }
 
         if (result.render.status === 'error') {
@@ -281,13 +282,13 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
         }
         const message = error instanceof Error ? error.message : 'Preview pipeline failed.';
         setAuthoritativePreview(null);
-        dispatch({ type: 'pipeline-phase-error', phase: 'compile', error: message });
+        dispatch({ type: 'pipeline-phase-error', phase: 'shape', error: message });
       });
   }, [
     canvasScale,
-    constraints,
     debouncedNodes,
     gridSize,
+    rootId,
     manualRunNonce,
     previewData,
     previewState.isInvoiceDetailLoading,
@@ -512,12 +513,12 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
         >
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex flex-wrap items-center gap-2 text-xs text-slate-600">
-              <span className="font-semibold">Compile</span>
+              <span className="font-semibold">Shape</span>
               <span
                 className="rounded border border-slate-200 bg-slate-50 px-2 py-0.5 uppercase"
-                data-automation-id="invoice-designer-preview-compile-status"
+                data-automation-id="invoice-designer-preview-shape-status"
               >
-                {displayStatuses.compileStatus}
+                {displayStatuses.shapeStatus}
               </span>
               <span className="font-semibold">Render</span>
               <span
@@ -533,14 +534,6 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
               >
                 {displayStatuses.verifyStatus}
               </span>
-              {authoritativePreview?.compile.status === 'success' && canDisplaySuccessStates && (
-                <span
-                  className="rounded border border-slate-200 bg-slate-50 px-2 py-0.5"
-                  data-automation-id="invoice-designer-preview-compile-cache-hit"
-                >
-                  Cache: {authoritativePreview.compile.cacheHit ? 'Hit' : 'Miss'}
-                </span>
-              )}
             </div>
             <Button
               id="invoice-designer-preview-rerun-button"
@@ -557,28 +550,31 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
           {authoritativePreview?.compile.status === 'error' && (
             <div
               className="rounded border border-red-200 bg-red-50 px-2 py-1 text-xs text-red-700 space-y-1"
-              data-automation-id="invoice-designer-preview-compile-error"
+              data-automation-id="invoice-designer-preview-shape-error"
             >
-              <p>{authoritativePreview.compile.error ?? 'Compilation failed.'}</p>
+              <p>{authoritativePreview.compile.error ?? 'Shaping failed.'}</p>
               {authoritativePreview.compile.details && (
                 <p className="text-[11px] text-red-600">{authoritativePreview.compile.details}</p>
               )}
             </div>
           )}
 
-          {compileDiagnostics.length > 0 && (
+          {shapeDiagnostics.length > 0 && (
             <ul
               className="space-y-1 text-xs"
-              data-automation-id="invoice-designer-preview-compile-diagnostics-list"
+              data-automation-id="invoice-designer-preview-shape-diagnostics-list"
             >
-              {compileDiagnostics.map((diagnostic, index) => (
+              {shapeDiagnostics.map((diagnostic, index) => (
                 <li
                   key={`${diagnostic.raw}-${index}`}
                   className="rounded border border-amber-200 bg-amber-50 px-2 py-1 text-amber-900"
-                  data-automation-id="invoice-designer-preview-compile-diagnostic-item"
+                  data-automation-id="invoice-designer-preview-shape-diagnostic-item"
                 >
                   <span className="font-semibold uppercase">{diagnostic.severity}</span>{' '}
                   <span>{diagnostic.message}</span>
+                  {diagnostic.code && <span className="text-amber-700"> [{diagnostic.code}]</span>}
+                  {diagnostic.path && <span className="text-amber-700"> path: {diagnostic.path}</span>}
+                  {diagnostic.operationId && <span className="text-amber-700"> op: {diagnostic.operationId}</span>}
                   {diagnostic.nodeId && <span className="text-amber-700"> (node: {diagnostic.nodeId})</span>}
                 </li>
               ))}
@@ -598,7 +594,7 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
 
           {previewData && isPreviewRunning && (
             <div className="p-4 text-sm text-slate-500" data-automation-id="invoice-designer-preview-loading-state">
-              Compiling and rendering preview...
+              Shaping and rendering preview...
             </div>
           )}
 
@@ -616,7 +612,7 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
               title="Invoice Preview Output"
               className="block w-full border-0"
               style={{ height: `${previewIframeHeightPx}px` }}
-              srcDoc={`<style>${authoritativePreview.render.css ?? ''}</style>${authoritativePreview.render.html}`}
+              srcDoc={`<!doctype html><html><head><meta charset="utf-8" /><style>html,body{margin:0;padding:0;background:#fff;}</style><style>${authoritativePreview.render.css ?? ''}</style></head><body>${authoritativePreview.render.html}</body></html>`}
               data-automation-id="invoice-designer-preview-render-iframe"
             />
           )}

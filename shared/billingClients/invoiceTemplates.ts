@@ -8,9 +8,9 @@ export async function getInvoiceTemplates(
   const [tenantTemplates, standardTemplates, tenantAssignment] = await Promise.all([
     knexOrTrx('invoice_templates')
       .where({ tenant })
-      .select('template_id', 'name', 'version', 'is_default', 'assemblyScriptSource', 'created_at', 'updated_at'),
+      .select('template_id', 'name', 'version', 'is_default', 'templateAst', 'created_at', 'updated_at'),
     knexOrTrx('standard_invoice_templates')
-      .select('template_id', 'name', 'version', 'standard_invoice_template_code', 'assemblyScriptSource', 'sha')
+      .select('template_id', 'name', 'version', 'standard_invoice_template_code', 'templateAst', 'is_default', 'created_at', 'updated_at')
       .orderBy('name'),
     knexOrTrx('invoice_template_assignments')
       .select('template_source', 'standard_invoice_template_code', 'invoice_template_id')
@@ -68,4 +68,3 @@ export async function setClientTemplate(
 ): Promise<void> {
   await knexOrTrx('clients').where({ client_id: clientId, tenant }).update({ invoice_template_id: templateId });
 }
-
