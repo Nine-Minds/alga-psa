@@ -142,3 +142,5 @@
 - (2026-02-17) Stage 8d: moved Projects, ProjectQuickAdd, ProjectDetailsEdit into `packages/msp-composition/src/projects` with project shims; updated msp-composition exports and import paths.
 
 - (2026-02-17) Stage 8d: updated msp projects page import to `@alga-psa/msp-composition/projects`.
+
+- (2026-02-17) Stage 8: msp-composition package.json dependencies/export map updated to cover clients/scheduling/workflows/projects moves.

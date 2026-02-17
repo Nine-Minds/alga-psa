@@ -182,7 +182,7 @@
   {
     "id": "F031",
     "description": "Stage 8: Add all required dependencies to msp-composition package.json",
-    "implemented": false,
+    "implemented": true,
     "stage": 8
   },
   {
