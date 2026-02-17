@@ -148,3 +148,5 @@
 - (2026-02-17) Stage 8a: moved ContactDetails to `packages/msp-composition/src/clients` with a shim to eliminate clients->tickets import.
 
 - (2026-02-17) Stage 8c: removed workflows->scheduling dependency by inlining schedule entry range/recurrence logic in activity aggregation.
+
+- (2026-02-17) Stage 8d: removed unused clients import from `projects/src/actions/projectActions.ts` to clear projects->clients lint violation.

@@ -198,6 +198,12 @@
     "stage": 8
   },
   {
+    "id": "F038",
+    "description": "Stage 8d: Remove unused clients import from projectActions to eliminate projects->clients violation",
+    "implemented": true,
+    "stage": 8
+  },
+  {
     "id": "F032",
     "description": "Stage 9: Final lint verification — <=5 no-feature-to-feature violations remaining",
     "implemented": false,
