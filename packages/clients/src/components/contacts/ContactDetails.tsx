@@ -446,11 +446,14 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
       router.refresh();
     } catch (error: any) {
       console.error('Error marking contact as inactive:', error);
-      if (error.message?.toLowerCase().includes('permission denied')) {
-        setDeleteError('Permission denied. Please contact your administrator if you need additional access.');
-      } else {
-        setDeleteError('An error occurred while marking the contact as inactive. Please try again.');
-      }
+      const errorMessage = error.message?.toLowerCase().includes('permission denied')
+        ? 'Permission denied. Please contact your administrator if you need additional access.'
+        : 'An error occurred while marking the contact as inactive. Please try again.';
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive"
+      });
     }
   };
 

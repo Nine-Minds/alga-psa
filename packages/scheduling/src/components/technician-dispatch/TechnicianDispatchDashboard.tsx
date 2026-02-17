@@ -5,7 +5,7 @@ import { produce, enableMapSet } from 'immer';
 import { useSession } from 'next-auth/react';
 import { WorkItemDetailsDrawer } from './WorkItemDetailsDrawer';
 import { useDrawer } from "@alga-psa/ui";
-import { IScheduleEntry, IEditScope } from '@alga-psa/types';
+import { IScheduleEntry, IEditScope, DeletionDependency, DeletionAlternative } from '@alga-psa/types';
 import { WorkItemType, IWorkItem, IExtendedWorkItem } from '@alga-psa/types';
 import { IUser } from '@shared/interfaces/user.interfaces';
 import WorkItemListPanel from './WorkItemListPanel';
@@ -494,14 +494,14 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
     } catch (err) {
       console.error('Error deleting schedule entry:', err);
       const fallback = {
-        success: false,
+        success: false as const,
         error: 'Failed to delete schedule entry',
-        canDelete: false,
-        code: 'VALIDATION_FAILED',
+        canDelete: false as const,
+        code: 'VALIDATION_FAILED' as const,
         message: 'Failed to delete schedule entry',
-        dependencies: [],
-        alternatives: []
-      } as const;
+        dependencies: [] as DeletionDependency[],
+        alternatives: [] as DeletionAlternative[]
+      };
       setError(fallback.error);
       return fallback;
     }

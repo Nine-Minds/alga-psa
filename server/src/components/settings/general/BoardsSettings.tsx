@@ -601,7 +601,7 @@ const BoardsSettings: React.FC = () => {
       />
 
       <ConfirmationDialog
-        isOpen={deleteDialog.isOpen && (deleteDialog.confirmForce || deleteDialog.confirmCleanupItil)}
+        isOpen={deleteDialog.isOpen && !!(deleteDialog.confirmForce || deleteDialog.confirmCleanupItil)}
         onClose={() => setDeleteDialog({ isOpen: false, boardId: '', boardName: '' })}
         onConfirm={() => {
           if (deleteDialog.confirmCleanupItil) {

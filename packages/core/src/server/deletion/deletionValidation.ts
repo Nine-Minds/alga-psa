@@ -94,7 +94,6 @@ function buildDependencyResult(
     type: config.type,
     count,
     label,
-    description: config.description,
     viewUrl: config.viewUrlTemplate ? buildViewUrl(config.viewUrlTemplate, entityId) : undefined
   };
 }

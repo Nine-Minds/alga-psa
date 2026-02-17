@@ -668,36 +668,6 @@ export const deleteReferenceDataItem = withAuth(async (
         throw new Error('Item not found or access denied');
       }
 
-      // Special handling for boards - check if it has categories
-      if (dataType === 'boards') {
-        const categoryCount = await trx('categories')
-          .where({
-            board_id: itemId,
-            tenant: tenant
-          })
-          .count('* as count')
-          .first();
-
-        if (categoryCount && parseInt(categoryCount.count as string) > 0) {
-          throw new Error('Cannot delete board with existing categories. Please delete all categories first.');
-        }
-      }
-
-      // Special handling for categories - check if it has subcategories
-      if (dataType === 'categories') {
-        const subcategoryCount = await trx('categories')
-          .where({
-            parent_category: itemId,
-            tenant: tenant
-          })
-          .count('* as count')
-          .first();
-
-        if (subcategoryCount && parseInt(subcategoryCount.count as string) > 0) {
-          throw new Error('Cannot delete category with existing subcategories. Please delete all subcategories first.');
-        }
-      }
-
       // Special handling for service_types - check if it has service catalog entries
       if (dataType === 'service_types') {
         const serviceCount = await trx('service_catalog')

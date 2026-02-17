@@ -3,7 +3,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { SwitchWithLabel } from '@alga-psa/ui/components/SwitchWithLabel';
 import DailyTechnicianScheduleGrid from './DailyTechnicianScheduleGrid';
 import WeeklyTechnicianScheduleGrid from './WeeklyTechnicianScheduleGrid';
-import { IScheduleEntry } from '@alga-psa/types';
+import { IScheduleEntry, DeletionValidationResult } from '@alga-psa/types';
 import { IUser } from '@shared/interfaces/user.interfaces';
 import { DropEvent, EventDrop, WorkItemDrop } from '@alga-psa/types';
 import { View, NavigateAction } from 'react-big-calendar';
@@ -24,7 +24,7 @@ interface ScheduleViewPanelProps {
   onComparisonChange?: (technicianId: string, isSelected: boolean) => void;
   onDrop?: (dropEvent: DropEvent) => void;
   onResize?: (eventId: string, techId: string, newStart: Date, newEnd: Date) => void;
-  onDeleteEvent?: (eventId: string) => void;
+  onDeleteEvent?: (eventId: string) => Promise<DeletionValidationResult & { success: boolean; deleted?: boolean; error?: string; isPrivateError?: boolean }>;
   onEventClick: (event: Omit<IScheduleEntry, 'tenant'>) => void;
   onDropFromList?: (dropEvent: DropEvent) => void;
   onSelectSlot: (slotInfo: { start: Date; end: Date; resourceId?: string | number }) => void;

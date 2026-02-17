@@ -97,9 +97,9 @@ export const DeleteEntityDialog = ({
     <Dialog
       isOpen={isOpen}
       onClose={onClose}
-      id={id}
       title={title}
       {...withDataAutomationId({ id: id || 'delete-entity-dialog' })}
+      id={id}
     >
       <DialogContent>
         {dialogBody}

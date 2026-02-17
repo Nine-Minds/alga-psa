@@ -890,11 +890,12 @@ const Clients: React.FC = () => {
     });
 
     return dependencies
-    .map((dep: string): string => {
+    .map((dep): string => {
+      const depStr = typeof dep === 'string' ? dep : dep.label;
       // Get the base key for this dependency
-      const baseKey = reverseKeyMap[dep];
-      const count = baseKey ? counts[baseKey] || 0 : 0;
-      return `${count} ${dep}`;
+      const baseKey = reverseKeyMap[depStr];
+      const count = baseKey ? counts[baseKey] || 0 : (typeof dep !== 'string' ? dep.count : 0);
+      return `${count} ${depStr}`;
     })
     .join(', ');
   };

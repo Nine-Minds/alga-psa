@@ -1,17 +1,18 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { IUser } from '@alga-psa/types';
+import React, { useState, useEffect, useCallback } from 'react';
+import { IUser, DeletionValidationResult } from '@alga-psa/types';
 import UserDetails from './UserDetails';
-import { useDrawer } from "@alga-psa/ui";
+import { useDrawer, DeleteEntityDialog } from "@alga-psa/ui";
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
-import { getUserAvatarUrlAction } from '@alga-psa/users/actions';
+import { getUserAvatarUrlAction, deleteUser } from '@alga-psa/users/actions';
 import { MoreVertical, Pen, Trash2 } from 'lucide-react';
 
 import ClientDetails from '@alga-psa/clients/components/clients/ClientDetails';
 
 import { getUsersClientInfo } from '@alga-psa/users/actions';
+import { preCheckDeletion } from '@alga-psa/core';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -23,13 +24,17 @@ import { Button } from '@alga-psa/ui/components/Button';
 
 interface UserListProps {
   users: IUser[];
-  onDeleteUser: (userId: string) => Promise<void>;
+  onDeleteSuccess: () => void;
   onUpdate: () => void;
   selectedClientId?: string | null;
 }
 
-const UserList: React.FC<UserListProps> = ({ users, onDeleteUser, onUpdate, selectedClientId = null }) => {
+const UserList: React.FC<UserListProps> = ({ users, onDeleteSuccess, onUpdate, selectedClientId = null }) => {
   const [userToDelete, setUserToDelete] = useState<IUser | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [deleteValidation, setDeleteValidation] = useState<DeletionValidationResult | null>(null);
+  const [isDeleteValidating, setIsDeleteValidating] = useState(false);
+  const [isDeleteProcessing, setIsDeleteProcessing] = useState(false);
   const [userAvatars, setUserAvatars] = useState<Record<string, string | null>>({});
   const [userClients, setUserClients] = useState<Record<string, { client_id: string; client_name: string } | null>>({});
   const { openDrawer } = useDrawer();
@@ -43,6 +48,14 @@ const UserList: React.FC<UserListProps> = ({ users, onDeleteUser, onUpdate, sele
     setPageSize(newPageSize);
     setCurrentPage(1);
   };
+
+  const resetDeleteState = useCallback(() => {
+    setIsDeleteDialogOpen(false);
+    setUserToDelete(null);
+    setDeleteValidation(null);
+    setIsDeleteValidating(false);
+    setIsDeleteProcessing(false);
+  }, []);
 
   useEffect(() => {
     // Fetch avatar URLs for all users
@@ -118,18 +131,58 @@ const UserList: React.FC<UserListProps> = ({ users, onDeleteUser, onUpdate, sele
     return users.filter((u) => userClients[u.user_id]?.client_id === selectedClientId);
   }, [users, userClients, selectedClientId]);
 
-  const handleDeleteClick = async (user: IUser): Promise<void> => {
+  const runDeleteValidation = useCallback(async (userId: string) => {
+    setIsDeleteValidating(true);
+    try {
+      const result = await preCheckDeletion('user', userId);
+      setDeleteValidation(result);
+    } catch (error) {
+      console.error('Failed to validate user deletion:', error);
+      setDeleteValidation({
+        canDelete: false,
+        code: 'VALIDATION_FAILED',
+        message: error instanceof Error ? error.message : 'Failed to validate deletion',
+        dependencies: [],
+        alternatives: []
+      });
+    } finally {
+      setIsDeleteValidating(false);
+    }
+  }, []);
+
+  const handleDeleteClick = (user: IUser) => {
     setUserToDelete(user);
+    setDeleteValidation(null);
+    setIsDeleteDialogOpen(true);
+    void runDeleteValidation(user.user_id);
   };
 
-  const confirmDelete = async (): Promise<void> => {
-    if (userToDelete) {
-      await onDeleteUser(userToDelete.user_id);
-      setUserToDelete(null);
+  const handleConfirmDelete = async () => {
+    if (!userToDelete) return;
+    setIsDeleteProcessing(true);
+    try {
+      const result = await deleteUser(userToDelete.user_id);
+      if (result.success) {
+        onDeleteSuccess();
+        resetDeleteState();
+        return;
+      }
+      setDeleteValidation(result);
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      setDeleteValidation({
+        canDelete: false,
+        code: 'VALIDATION_FAILED',
+        message: error instanceof Error ? error.message : 'Failed to delete user',
+        dependencies: [],
+        alternatives: []
+      });
+    } finally {
+      setIsDeleteProcessing(false);
     }
   };
 
-  
+
 
   const handleEditClick = (userId: string) => {
     openDrawer(<UserDetails userId={userId} onUpdate={onUpdate} />);
@@ -311,30 +364,16 @@ const UserList: React.FC<UserListProps> = ({ users, onDeleteUser, onUpdate, sele
         onItemsPerPageChange={handlePageSizeChange}
       />
 
-      {userToDelete && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg p-6 max-w-sm w-full">
-            <h3 className="text-lg font-semibold mb-4 text-text-900">Confirm Removal</h3>
-            <p className="text-text-700 mb-6">
-              Are you sure you want to remove {userToDelete.first_name} {userToDelete.last_name}?
-            </p>
-            <div className="flex justify-end space-x-4">
-              <button
-                onClick={() => setUserToDelete(null)}
-                className="px-4 py-2 text-text-600 hover:text-text-900 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={confirmDelete}
-                className="px-4 py-2 bg-accent-500 text-white rounded hover:bg-accent-600 transition-colors"
-              >
-                Confirm
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <DeleteEntityDialog
+        id={userToDelete ? `delete-user-${userToDelete.user_id}` : 'delete-user-dialog'}
+        isOpen={isDeleteDialogOpen}
+        onClose={resetDeleteState}
+        onConfirmDelete={handleConfirmDelete}
+        entityName={userToDelete ? `${userToDelete.first_name} ${userToDelete.last_name}` : 'this user'}
+        validationResult={deleteValidation}
+        isValidating={isDeleteValidating}
+        isDeleting={isDeleteProcessing}
+      />
     </div>
   );
 };
