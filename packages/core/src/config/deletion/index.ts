@@ -345,7 +345,6 @@ export const DELETION_CONFIGS: Record<string, EntityDeletionConfig> = {
       },
       { type: 'team_member', table: 'team_members', foreignKey: 'user_id', label: 'team membership' },
       { type: 'team_manager', table: 'teams', foreignKey: 'manager_id', label: 'managed team' },
-      { type: 'board_manager', table: 'boards', foreignKey: 'manager_user_id', label: 'managed board' },
       { type: 'board_default_assignee', table: 'boards', foreignKey: 'default_assigned_to', label: 'board default assignment' },
       { type: 'ticket_resource', table: 'ticket_resources', foreignKey: 'assigned_to', label: 'ticket resource assignment' },
       { type: 'task_resource', table: 'task_resources', foreignKey: 'assigned_to', label: 'task resource assignment' },
