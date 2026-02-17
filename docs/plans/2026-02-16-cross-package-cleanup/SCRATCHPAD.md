@@ -122,3 +122,5 @@
 - (2026-02-17) Stage 7: updated Tactical RMM server tests to import actions from `@alga-psa/msp-composition/integrations` and switched the settings component to use local action imports; integrations package no longer imports assets.
 
 - (2026-02-17) Stage 7 test: `npx vitest run server/src/test/unit/tacticalrmm/tacticalRmmSettings.maskSecret.test.ts` passes after Tactical RMM move.
+
+- (2026-02-17) Stage 7: InboundTicketDefaultsForm no longer imports tickets after picker moves; no remaining integrations->tickets violations, so no move needed.

@@ -128,7 +128,7 @@
   {
     "id": "F022",
     "description": "Stage 7: Move InboundTicketDefaultsForm to msp-composition/integrations if still violating after picker moves",
-    "implemented": false,
+    "implemented": true,
     "stage": 7
   },
   {
