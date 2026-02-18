@@ -249,6 +249,14 @@ const FIELD_INSPECTOR: DesignerInspectorSchema = {
       fields: [
         {
           kind: 'string',
+          id: 'label',
+          domId: 'designer-field-label',
+          label: 'Label',
+          path: 'metadata.label',
+          placeholder: 'Invoice #',
+        },
+        {
+          kind: 'string',
           id: 'bindingKey',
           domId: 'designer-field-binding',
           label: 'Binding key',
@@ -268,9 +276,17 @@ const FIELD_INSPECTOR: DesignerInspectorSchema = {
         },
         {
           kind: 'string',
+          id: 'emptyValue',
+          domId: 'designer-field-empty-value',
+          label: 'Empty value',
+          path: 'metadata.emptyValue',
+          placeholder: '-',
+        },
+        {
+          kind: 'string',
           id: 'placeholder',
           domId: 'designer-field-placeholder',
-          label: 'Placeholder',
+          label: 'Designer placeholder',
           path: 'metadata.placeholder',
         },
         {

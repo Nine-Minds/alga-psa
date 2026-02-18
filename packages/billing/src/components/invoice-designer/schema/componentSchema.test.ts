@@ -59,4 +59,16 @@ describe('componentSchema', () => {
       }
     }
   });
+
+  it('exposes field metadata controls required by renderer parity in the inspector schema', () => {
+    const fieldSchema = getComponentSchema('field');
+    const paths = (fieldSchema.inspector?.panels ?? [])
+      .flatMap((panel) => panel.fields)
+      .flatMap((field) => ('path' in field ? [field.path] : []));
+
+    expect(paths).toContain('metadata.label');
+    expect(paths).toContain('metadata.bindingKey');
+    expect(paths).toContain('metadata.format');
+    expect(paths).toContain('metadata.emptyValue');
+  });
 });
