@@ -86,3 +86,6 @@ Must be executed in this exact order:
 - (2026-02-18) Build after Task 2d-1 failed with missing @dnd-kit/sortable in packages/billing (same as prior).
 - (2026-02-18) Task 2d-2: Updated eventBus/events imports to @alga-psa/event-schemas in surveyTriggerDispatch.integration.test.ts and ticket-response-state.integration.test.ts. Deleted server/src/lib/eventBus/events.ts.
 - (2026-02-18) Build after Task 2d-2 still fails: missing @dnd-kit/sortable in packages/billing (eventBus import errors resolved).
+- (2026-02-18) Task 2d-3: Repointed all getSession/getSessionWithRevocationCheck imports and mocks from server/src/lib/auth/getSession to @alga-psa/auth across server and EE; deleted server/src/lib/auth/getSession.ts shim.
+- (2026-02-18) Task 2d-3 follow-up: Updated ApiAccountingExportController.ts, ApiCSVAccountingController.ts, and auth-compat.ts to import getSession from @alga-psa/auth after build flagged relative imports.
+- (2026-02-18) Build after Task 2d-3 still fails: missing @dnd-kit/sortable in packages/billing.

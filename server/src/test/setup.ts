@@ -66,6 +66,6 @@ vi.mock('server/src/app/api/auth/[...nextauth]/edge-auth', () => ({
   auth: vi.fn().mockResolvedValue(null),
 }));
 
-vi.mock('server/src/lib/auth/getSession', () => ({
+vi.mock('@alga-psa/auth', () => ({
   getSession: vi.fn().mockResolvedValue(null),
 }));

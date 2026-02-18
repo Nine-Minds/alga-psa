@@ -2,12 +2,12 @@
 
 import { describe, it, expect, beforeEach, vi, MockedFunction } from 'vitest';
 import { getBillingCycle, updateBillingCycle, getAllBillingCycles } from '../../lib/actions/billingCycleActions';
-import { getSession } from 'server/src/lib/auth/getSession';
+import { getSession } from '@alga-psa/auth';
 import { Knex } from 'knex';
 import { createTenantKnex } from 'server/src/lib/db';
 
 // Mock session helper
-vi.mock('server/src/lib/auth/getSession', () => ({
+vi.mock('@alga-psa/auth', () => ({
   getSession: vi.fn(),
 }));
 

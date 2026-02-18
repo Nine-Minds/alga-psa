@@ -162,7 +162,7 @@
   {
     "id": "F021",
     "description": "Task 2d-3: Delete shim server/src/lib/auth/getSession.ts (re-exports getSession, getSessionWithRevocationCheck from @alga-psa/auth) and update all 23 callers (12 server + 11 EE) to import from @alga-psa/auth directly. NOTE: This is the largest single task. Server callers: invoiceService.ts, client-portal/layout.tsx, documents/download route, serverFeatureFlags.tsx, auth/session.ts, assets/page.tsx, assets/[asset_id]/page.tsx, time-sheet-approvals/page.tsx, billingCycleActions.test.ts, extensions/gateway/auth.ts, feature-flags/route.ts. EE callers: msp/layout.tsx, license-actions.ts, 9 tenant-management route handlers.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-07"
     ]

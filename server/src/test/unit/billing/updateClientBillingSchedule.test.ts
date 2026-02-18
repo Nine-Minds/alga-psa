@@ -93,7 +93,7 @@ vi.mock('@alga-psa/db', () => ({
   },
 }));
 
-vi.mock('server/src/lib/auth/getSession', () => ({
+vi.mock('@alga-psa/auth', () => ({
   getSession: vi.fn(async () => ({ user: { id: 'user-1' } })),
 }));
 

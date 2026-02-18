@@ -11,7 +11,7 @@ import { Knex } from 'knex';
 import type { Session } from 'next-auth';
 import { ISO8601String } from 'server/src/types/types.d';
 import { getClientDefaultTaxRegionCode } from '@alga-psa/clients/actions';
-import { getSession } from 'server/src/lib/auth/getSession';
+import { getSession } from '@alga-psa/auth';
 
 // Helper interface for tax calculation
 interface ITaxableEntity {
@@ -32,7 +32,7 @@ interface InvoiceContext {
 }
 
 export async function validateSessionAndTenant(): Promise<InvoiceContext> {
-  const { getSession } = await import('server/src/lib/auth/getSession');
+  const { getSession } = await import('@alga-psa/auth');
   const session = await getSession();
   if (!session?.user?.id) {
     throw new Error('Unauthorized');

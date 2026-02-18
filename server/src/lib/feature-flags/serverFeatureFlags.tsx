@@ -1,7 +1,7 @@
 import { featureFlags, FeatureFlagContext } from './featureFlags';
 import { cache } from 'react';
 import React from 'react';
-import { getSession } from 'server/src/lib/auth/getSession';
+import { getSession } from '@alga-psa/auth';
 
 /**
  * Server-side feature flag check with caching

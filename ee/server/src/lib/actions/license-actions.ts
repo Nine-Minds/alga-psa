@@ -1,7 +1,7 @@
 'use server';
 
 import { getLicenseUsage, type LicenseUsage } from '../license/get-license-usage';
-import { getSession } from '@/lib/auth/getSession';
+import { getSession } from '@alga-psa/auth';
 import { getStripeService } from '../stripe/StripeService';
 import { getConnection } from '@/lib/db/db';
 import logger from '@alga-psa/core/logger';

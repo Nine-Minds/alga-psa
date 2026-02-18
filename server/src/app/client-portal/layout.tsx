@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { getSession, getSessionWithRevocationCheck } from "server/src/lib/auth/getSession";
+import { getSession, getSessionWithRevocationCheck } from "@alga-psa/auth";
 import { ClientPortalLayoutClient } from "./ClientPortalLayoutClient";
 import { getTenantBrandingByTenantId } from "@alga-psa/tenancy/actions";
 import { getHierarchicalLocaleAction } from "@alga-psa/tenancy/actions";

@@ -57,7 +57,7 @@
   {
     "id": "T006",
     "description": "Task 2d-3: Grep-verify all 23 callers of auth/getSession shim (12 server + 11 EE). Verify getSession and getSessionWithRevocationCheck are exported from @alga-psa/auth. Update all 23 callers. Delete shim. npm run build passes.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F021"
     ]

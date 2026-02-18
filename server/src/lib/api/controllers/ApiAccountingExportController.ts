@@ -25,7 +25,7 @@ import {
   handleApiError
 } from '../middleware/apiMiddleware';
 import { BaseService, ListOptions } from './types';
-import { getSession } from '../../auth/getSession';
+import { getSession } from '@alga-psa/auth';
 import { findUserById } from '@alga-psa/users/actions';
 import { UnauthorizedError } from '../middleware/apiMiddleware';
 

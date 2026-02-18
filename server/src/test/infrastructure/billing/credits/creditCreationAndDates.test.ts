@@ -21,7 +21,7 @@ process.env.DB_PORT = '5432';
 process.env.DB_HOST = process.env.DB_HOST === 'pgbouncer' ? 'localhost' : process.env.DB_HOST;
 process.env.DB_NAME_SERVER = process.env.DB_NAME_SERVER || 'credit_creation_tests';
 
-vi.mock('server/src/lib/auth/getSession', () => ({
+vi.mock('@alga-psa/auth', () => ({
   getSession: vi.fn(async () => ({
     user: {
       id: mockedUserId,
@@ -156,7 +156,7 @@ describe('Credit Creation and Dates Tests', () => {
     mockedTenantId = mockContext.tenantId;
     mockedUserId = mockContext.userId;
 
-    const sessionModule = await import('server/src/lib/auth/getSession');
+    const sessionModule = await import('@alga-psa/auth');
     vi.mocked(sessionModule.getSession).mockResolvedValue({
       user: {
         id: mockedUserId,
@@ -177,7 +177,7 @@ describe('Credit Creation and Dates Tests', () => {
     mockedTenantId = mockContext.tenantId;
     mockedUserId = mockContext.userId;
 
-    const sessionModule = await import('server/src/lib/auth/getSession');
+    const sessionModule = await import('@alga-psa/auth');
     vi.mocked(sessionModule.getSession).mockResolvedValue({
       user: {
         id: mockedUserId,

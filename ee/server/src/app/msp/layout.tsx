@@ -1,5 +1,5 @@
 import { cookies } from "next/headers";
-import { getSession } from "server/src/lib/auth/getSession";
+import { getSession } from "@alga-psa/auth";
 import { getHierarchicalLocaleAction } from "@alga-psa/tenancy/actions";
 import { featureFlags } from "server/src/lib/feature-flags/featureFlags";
 import { MspLayoutClient } from "./MspLayoutClient";
