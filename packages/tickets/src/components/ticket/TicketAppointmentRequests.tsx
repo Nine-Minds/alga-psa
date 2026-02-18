@@ -4,7 +4,7 @@ import React from 'react';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Calendar, Clock, User, Loader2 } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { format, parseISO } from 'date-fns';
+import { format } from 'date-fns';
 import type { BadgeVariant } from '@alga-psa/ui/components/Badge';
 
 export interface ITicketAppointmentRequest {
@@ -50,17 +50,22 @@ export default function TicketAppointmentRequests({
     }
   };
 
-  const formatDateTime = (dateStr: string, timeStr: string): string => {
+  const formatDateTime = (dateVal: unknown, timeVal: unknown): string => {
     try {
-      const date = parseISO(dateStr);
-      const formattedDate = format(date, 'MMM d, yyyy');
-      // Format time from HH:MM to 12-hour format
-      const [hours, minutes] = timeStr.split(':');
-      const hour = parseInt(hours, 10);
-      const ampm = hour >= 12 ? 'PM' : 'AM';
-      const hour12 = hour % 12 || 12;
-      const formattedTime = `${hour12}:${minutes} ${ampm}`;
-      return `${formattedDate} ${t('step4.at')} ${formattedTime}`;
+      // Normalize PG DATE (may be JS Date object) to YYYY-MM-DD string
+      const dateStr = dateVal instanceof Date
+        ? dateVal.toISOString().split('T')[0]
+        : typeof dateVal === 'string' ? dateVal.slice(0, 10) : null;
+      // Normalize PG TIME to HH:MM string
+      const timeStr = typeof timeVal === 'string' ? timeVal.slice(0, 5) : null;
+      if (!dateStr || !timeStr) return t('ticketSection.invalidDateTime');
+
+      const dt = new Date(`${dateStr}T${timeStr}:00Z`);
+      if (isNaN(dt.getTime())) return t('ticketSection.invalidDateTime');
+      return dt.toLocaleString('en-US', {
+        month: 'short', day: 'numeric', year: 'numeric',
+        hour: '2-digit', minute: '2-digit'
+      });
     } catch {
       return t('ticketSection.invalidDateTime');
     }
@@ -131,12 +136,20 @@ export default function TicketAppointmentRequests({
                 {/* Approval info for approved */}
                 {appointment.status === 'approved' && appointment.approved_at && (
                   <div className="text-xs text-muted-foreground mt-1">
-                    {appointment.approver_first_name && (
-                      <span>
-                        {t('ticketSection.approvedBy')} {appointment.approver_first_name} {appointment.approver_last_name} {t('ticketSection.on')}{' '}
-                        {format(parseISO(appointment.approved_at), 'MMM d, yyyy')}
-                      </span>
-                    )}
+                    {appointment.approver_first_name && (() => {
+                      try {
+                        const approvedDate = new Date(appointment.approved_at!);
+                        if (isNaN(approvedDate.getTime())) return null;
+                        return (
+                          <span>
+                            {t('ticketSection.approvedBy')} {appointment.approver_first_name} {appointment.approver_last_name} {t('ticketSection.on')}{' '}
+                            {format(approvedDate, 'MMM d, yyyy')}
+                          </span>
+                        );
+                      } catch {
+                        return null;
+                      }
+                    })()}
                   </div>
                 )}
 

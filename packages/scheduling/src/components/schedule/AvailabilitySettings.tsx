@@ -840,6 +840,9 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
                 </div>
 
                 <div className="border rounded-lg overflow-hidden">
+                  <div className="px-4 py-2 bg-gray-100 text-xs text-gray-600 border-b">
+                    Times are in your local timezone ({Intl.DateTimeFormat().resolvedOptions().timeZone})
+                  </div>
                   <Table>
                     <TableHeader>
                       <TableRow>

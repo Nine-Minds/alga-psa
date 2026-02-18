@@ -1535,3 +1535,42 @@ export const getTicketById = withAuth(async (user, { tenant }, id: string): Prom
     throw new Error('Failed to fetch ticket');
   }
 });
+
+/**
+ * Get appointment requests linked to a specific ticket.
+ * Local query to avoid circular dependency with the scheduling package.
+ */
+export const getTicketAppointmentRequests = withAuth(async (
+  user,
+  { tenant },
+  ticketId: string
+): Promise<{ success: boolean; data?: any[]; error?: string }> => {
+  try {
+    const { knex: db } = await createTenantKnex();
+
+    const requests = await withTransaction(db, async (trx: Knex.Transaction) => {
+      if (!await hasPermission(user, 'ticket', 'read', trx)) {
+        throw new Error('Permission denied');
+      }
+
+      return await trx('appointment_requests as ar')
+        .leftJoin('service_catalog as sc', function () {
+          this.on('ar.service_id', 'sc.service_id')
+            .andOn('ar.tenant', 'sc.tenant');
+        })
+        .where('ar.tenant', tenant)
+        .where('ar.ticket_id', ticketId)
+        .select(
+          'ar.*',
+          'sc.service_name'
+        )
+        .orderBy('ar.created_at', 'desc');
+    });
+
+    return { success: true, data: requests };
+  } catch (error) {
+    console.error('Error fetching ticket appointment requests:', error);
+    const message = error instanceof Error ? error.message : 'Failed to fetch appointment requests';
+    return { success: false, error: message };
+  }
+});
