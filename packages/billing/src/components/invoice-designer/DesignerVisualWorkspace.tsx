@@ -156,6 +156,15 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
     canDisplaySuccessStates,
   });
   const shapeDiagnostics = authoritativePreview?.compile.diagnostics ?? [];
+  const authoritativeRenderOutput =
+    authoritativePreview?.render.status === 'success' &&
+    typeof authoritativePreview.render.html === 'string' &&
+    typeof authoritativePreview.render.css === 'string'
+      ? {
+          html: authoritativePreview.render.html,
+          css: authoritativePreview.render.css,
+        }
+      : null;
   const isPreviewRunning =
     previewState.shapeStatus === 'running' ||
     previewState.renderStatus === 'running' ||
@@ -619,12 +628,22 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
             </div>
           )}
 
-          {previewData && previewTemplate && (
+          {previewData && previewTemplate && authoritativePreview?.render.status === 'error' && (
+            <div
+              className="p-4 text-sm text-red-700 bg-red-50 border-t border-red-200"
+              data-automation-id="invoice-designer-preview-render-error"
+            >
+              {authoritativePreview.render.error ?? 'Preview rendering failed.'}
+            </div>
+          )}
+
+          {previewData && previewTemplate && authoritativeRenderOutput && (
             <div className="p-2" data-automation-id="invoice-designer-preview-render-template">
               <PaperInvoice>
                 <TemplateRenderer
                   template={previewTemplate}
                   invoiceData={previewData}
+                  renderOverride={authoritativeRenderOutput}
                 />
               </PaperInvoice>
             </div>

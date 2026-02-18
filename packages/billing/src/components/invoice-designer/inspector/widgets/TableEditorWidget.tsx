@@ -18,7 +18,7 @@ type ColumnModel = {
   key?: string;
   type?: string;
   width?: number;
-};
+} & Record<string, unknown>;
 
 type BorderPreset = 'list' | 'boxed' | 'grid' | 'none' | 'custom';
 
@@ -71,6 +71,40 @@ const COLUMN_PRESETS: ColumnPreset[] = [
   },
 ];
 
+const sanitizeJsonValue = (value: unknown): unknown => {
+  if (typeof value === 'undefined') return undefined;
+  if (typeof value === 'number') return Number.isFinite(value) ? value : undefined;
+  if (typeof value === 'function' || typeof value === 'symbol' || typeof value === 'bigint') return undefined;
+
+  if (Array.isArray(value)) {
+    return value.map((entry) => {
+      const sanitized = sanitizeJsonValue(entry);
+      return typeof sanitized === 'undefined' ? null : sanitized;
+    });
+  }
+
+  if (value && typeof value === 'object') {
+    const entries = Object.entries(value as Record<string, unknown>).flatMap(([key, entry]) => {
+      const sanitized = sanitizeJsonValue(entry);
+      return typeof sanitized === 'undefined' ? [] : ([[key, sanitized]] as const);
+    });
+    return Object.fromEntries(entries);
+  }
+
+  return value;
+};
+
+const sanitizeColumnsForPatch = (columns: ColumnModel[]): ColumnModel[] =>
+  columns
+    .map((column) => sanitizeJsonValue(column))
+    .filter(
+      (column): column is ColumnModel =>
+        typeof column === 'object' &&
+        column !== null &&
+        !Array.isArray(column) &&
+        typeof (column as { id?: unknown }).id === 'string'
+    );
+
 export const TableEditorWidget: React.FC<Props> = ({ node }) => {
   const setNodeProp = useInvoiceDesignerStore((state) => state.setNodeProp);
 
@@ -101,7 +135,7 @@ export const TableEditorWidget: React.FC<Props> = ({ node }) => {
 
   const updateColumns = useCallback(
     (next: ColumnModel[], commit: boolean) => {
-      setNodeProp(node.id, 'metadata.columns', next, commit);
+      setNodeProp(node.id, 'metadata.columns', sanitizeColumnsForPatch(next), commit);
     },
     [node.id, setNodeProp]
   );
@@ -232,199 +266,235 @@ export const TableEditorWidget: React.FC<Props> = ({ node }) => {
       ? tableHeaderFontWeight
       : 'semibold';
 
+  const panelClass = 'rounded-lg border border-slate-200 bg-white px-3 py-2.5 shadow-sm space-y-2';
+
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between text-xs font-semibold text-slate-700">
-        <span>Table Columns</span>
-        <Button id="designer-add-column" variant="outline" size="xs" onClick={handleAddColumn}>
-          Add column
-        </Button>
-      </div>
-
-      <div className="rounded border border-slate-100 bg-slate-50 px-2 py-2 space-y-2">
-        <div className="text-xs font-semibold text-slate-700">Quick Add</div>
-        <div className="flex flex-wrap gap-1">
+      {/* Header with quick-add */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <p className="text-sm font-semibold text-slate-800">Table Columns</p>
+          <Button id="designer-add-column" variant="outline" size="xs" onClick={handleAddColumn}>
+            + Column
+          </Button>
+        </div>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="text-[11px] text-slate-400 shrink-0">Quick add:</span>
           {COLUMN_PRESETS.map((preset) => (
-            <Button
+            <button
               key={preset.id}
               id={`designer-add-column-preset-${preset.id}`}
-              variant="outline"
-              size="xs"
+              type="button"
+              className="inline-flex h-6 items-center rounded-md border border-slate-200 bg-slate-50 px-2 text-[11px] font-medium text-slate-600 hover:bg-slate-100 hover:border-slate-300 transition-colors"
               onClick={() => handleAddPresetColumn(preset.id)}
             >
               {preset.label}
-            </Button>
+            </button>
           ))}
         </div>
       </div>
 
-      <div className="rounded border border-slate-100 bg-slate-50 px-2 py-2 space-y-1 text-xs text-slate-600">
-        <p className="font-semibold text-slate-700">Line Item Key Legend</p>
-        <p className="text-[11px] text-slate-500">Use <code>item.&lt;field&gt;</code> for line-item values.</p>
-        <div className="space-y-1">
-          {COLUMN_PRESETS.map((preset) => (
-            <div key={`legend-${preset.id}`} className="flex items-center justify-between gap-2">
-              <code className="text-[11px] text-slate-700">{preset.key}</code>
-              <span className="text-[11px] text-slate-500">{preset.description}</span>
+      {/* Table style */}
+      <div className={panelClass}>
+        <p className="text-xs font-semibold text-slate-700">Table Style</p>
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <label className="text-[10px] font-medium text-slate-500 block mb-0.5">Border preset</label>
+            <select
+              id="designer-table-border-preset"
+              className="h-8 w-full border border-slate-200 rounded-md px-2 text-xs bg-white"
+              value={resolvedBorderPreset}
+              onChange={(event) => applyTableBorderPreset(event.target.value as BorderPreset)}
+            >
+              <option value="list">List</option>
+              <option value="boxed">Boxed</option>
+              <option value="grid">Grid</option>
+              <option value="none">None</option>
+              <option value="custom">Custom</option>
+            </select>
+          </div>
+          <div>
+            <label className="text-[10px] font-medium text-slate-500 block mb-0.5">Header weight</label>
+            <select
+              id="designer-table-header-weight"
+              className="h-8 w-full border border-slate-200 rounded-md px-2 text-xs bg-white"
+              value={resolvedHeaderWeight}
+              onChange={(event) => setNodeProp(node.id, 'metadata.tableHeaderFontWeight', event.target.value, true)}
+            >
+              <option value="normal">Normal</option>
+              <option value="medium">Medium</option>
+              <option value="semibold">Semibold</option>
+              <option value="bold">Bold</option>
+            </select>
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+          <label className="flex items-center gap-1.5 text-[11px] text-slate-600 cursor-pointer">
+            <input
+              id="designer-table-border-outer"
+              type="checkbox"
+              className="rounded border-slate-300"
+              checked={tableBorderConfig.outer}
+              onChange={(event) => {
+                setNodeProp(node.id, 'metadata.tableBorderPreset', 'custom', false);
+                setNodeProp(node.id, 'metadata.tableOuterBorder', event.target.checked, true);
+              }}
+            />
+            Outer
+          </label>
+          <label className="flex items-center gap-1.5 text-[11px] text-slate-600 cursor-pointer">
+            <input
+              id="designer-table-border-rows"
+              type="checkbox"
+              className="rounded border-slate-300"
+              checked={tableBorderConfig.rowDividers}
+              onChange={(event) => {
+                setNodeProp(node.id, 'metadata.tableBorderPreset', 'custom', false);
+                setNodeProp(node.id, 'metadata.tableRowDividers', event.target.checked, true);
+              }}
+            />
+            Rows
+          </label>
+          <label className="flex items-center gap-1.5 text-[11px] text-slate-600 cursor-pointer">
+            <input
+              id="designer-table-border-columns"
+              type="checkbox"
+              className="rounded border-slate-300"
+              checked={tableBorderConfig.columnDividers}
+              onChange={(event) => {
+                setNodeProp(node.id, 'metadata.tableBorderPreset', 'custom', false);
+                setNodeProp(node.id, 'metadata.tableColumnDividers', event.target.checked, true);
+              }}
+            />
+            Columns
+          </label>
+        </div>
+      </div>
+
+      {/* Column list */}
+      {columns.length === 0 && (
+        <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 px-3 py-4 text-center text-xs text-slate-500">
+          No columns defined. Add at least one column.
+        </div>
+      )}
+
+      <div className="space-y-2">
+        {columns.map((column, index) => (
+          <div key={column.id} className="rounded-lg border border-slate-200 bg-white px-3 py-2.5 shadow-sm space-y-1.5">
+            <div className="flex items-center justify-between">
+              <div className="inline-flex items-center gap-1.5">
+                <span className="inline-flex h-5 w-5 items-center justify-center rounded bg-slate-100 text-[10px] font-medium text-slate-500 tabular-nums shrink-0">
+                  {index + 1}
+                </span>
+                <span className="text-[11px] font-medium text-slate-500">Column</span>
+              </div>
+              <div className="flex items-center gap-1 shrink-0">
+                <Button
+                  id={`designer-move-column-up-${column.id}`}
+                  variant="outline"
+                  size="icon"
+                  aria-label={`Move ${column.id} up`}
+                  disabled={index === 0}
+                  className="h-6 w-6 text-slate-400 hover:text-slate-600 hover:bg-slate-50"
+                  onClick={() => handleMoveColumn(column.id, -1)}
+                >
+                  ↑
+                </Button>
+                <Button
+                  id={`designer-move-column-down-${column.id}`}
+                  variant="outline"
+                  size="icon"
+                  aria-label={`Move ${column.id} down`}
+                  disabled={index === columns.length - 1}
+                  className="h-6 w-6 text-slate-400 hover:text-slate-600 hover:bg-slate-50"
+                  onClick={() => handleMoveColumn(column.id, 1)}
+                >
+                  ↓
+                </Button>
+                <Button
+                  id={`designer-remove-column-${column.id}`}
+                  variant="outline"
+                  size="icon"
+                  aria-label={`Remove ${column.id}`}
+                  className="h-6 w-6 text-slate-400 hover:text-red-500 hover:bg-red-50"
+                  onClick={() => handleRemoveColumn(column.id)}
+                >
+                  ×
+                </Button>
+              </div>
             </div>
-          ))}
-        </div>
-      </div>
-
-      <div className="rounded border border-slate-100 bg-slate-50 px-2 py-2 space-y-1 text-xs text-slate-600">
-        <p className="font-semibold text-slate-700">Borders</p>
-        <div>
-          <label className="text-xs text-slate-500 block mb-1">Preset</label>
-          <select
-            id="designer-table-border-preset"
-            className="w-full border border-slate-300 rounded-md px-2 py-1 text-sm"
-            value={resolvedBorderPreset}
-            onChange={(event) => applyTableBorderPreset(event.target.value as BorderPreset)}
-          >
-            <option value="list">List</option>
-            <option value="boxed">Boxed</option>
-            <option value="grid">Grid</option>
-            <option value="none">None</option>
-            <option value="custom">Custom</option>
-          </select>
-        </div>
-        <label className="flex items-center gap-2">
-          <input
-            id="designer-table-border-outer"
-            type="checkbox"
-            checked={tableBorderConfig.outer}
-            onChange={(event) => {
-              setNodeProp(node.id, 'metadata.tableBorderPreset', 'custom', false);
-              setNodeProp(node.id, 'metadata.tableOuterBorder', event.target.checked, true);
-            }}
-          />
-          Outer border
-        </label>
-        <label className="flex items-center gap-2">
-          <input
-            id="designer-table-border-rows"
-            type="checkbox"
-            checked={tableBorderConfig.rowDividers}
-            onChange={(event) => {
-              setNodeProp(node.id, 'metadata.tableBorderPreset', 'custom', false);
-              setNodeProp(node.id, 'metadata.tableRowDividers', event.target.checked, true);
-            }}
-          />
-          Row dividers
-        </label>
-        <label className="flex items-center gap-2">
-          <input
-            id="designer-table-border-columns"
-            type="checkbox"
-            checked={tableBorderConfig.columnDividers}
-            onChange={(event) => {
-              setNodeProp(node.id, 'metadata.tableBorderPreset', 'custom', false);
-              setNodeProp(node.id, 'metadata.tableColumnDividers', event.target.checked, true);
-            }}
-          />
-          Column dividers
-        </label>
-        <div>
-          <label className="text-xs text-slate-500 block mb-1">Header weight</label>
-          <select
-            id="designer-table-header-weight"
-            className="w-full border border-slate-300 rounded-md px-2 py-1 text-sm"
-            value={resolvedHeaderWeight}
-            onChange={(event) => setNodeProp(node.id, 'metadata.tableHeaderFontWeight', event.target.value, true)}
-          >
-            <option value="normal">Normal</option>
-            <option value="medium">Medium</option>
-            <option value="semibold">Semibold</option>
-            <option value="bold">Bold</option>
-          </select>
-        </div>
-      </div>
-
-      {columns.length === 0 && <p className="text-xs text-slate-500">No columns defined. Add at least one column.</p>}
-
-      {columns.map((column, index) => (
-        <div key={column.id} className="border border-slate-100 rounded-md p-2 space-y-2 bg-slate-50">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 flex-1">
-              <span className="text-[11px] text-slate-500 whitespace-nowrap">#{index + 1}</span>
+            <div>
+              <label className="text-[10px] font-medium text-slate-500 block mb-0.5">Header</label>
               <Input
                 id={`column-header-${column.id}`}
+                size="sm"
+                containerClassName="w-full"
                 value={column.header ?? ''}
                 onChange={(event) => updateColumn(column.id, { header: event.target.value }, false)}
                 onBlur={(event) => updateColumn(column.id, { header: event.target.value }, true)}
+                placeholder="Header label"
                 className="text-xs"
               />
             </div>
-            <div className="flex items-center gap-1">
-              <Button
-                id={`designer-move-column-up-${column.id}`}
-                variant="ghost"
-                size="icon"
-                aria-label={`Move ${column.id} up`}
-                disabled={index === 0}
-                onClick={() => handleMoveColumn(column.id, -1)}
-              >
-                ↑
-              </Button>
-              <Button
-                id={`designer-move-column-down-${column.id}`}
-                variant="ghost"
-                size="icon"
-                aria-label={`Move ${column.id} down`}
-                disabled={index === columns.length - 1}
-                onClick={() => handleMoveColumn(column.id, 1)}
-              >
-                ↓
-              </Button>
-              <Button
-                id={`designer-remove-column-${column.id}`}
-                variant="ghost"
-                size="icon"
-                aria-label={`Remove ${column.id}`}
-                onClick={() => handleRemoveColumn(column.id)}
-              >
-                ✕
-              </Button>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-2 text-xs text-slate-600">
             <div>
-              <label className="block mb-1">Binding key</label>
+              <label className="text-[10px] font-medium text-slate-500 block mb-0.5">Binding key</label>
               <Input
                 id={`column-key-${column.id}`}
+                size="sm"
+                containerClassName="w-full"
                 value={column.key ?? ''}
                 onChange={(event) => updateColumn(column.id, { key: event.target.value }, false)}
                 onBlur={(event) => updateColumn(column.id, { key: event.target.value }, true)}
-                className="text-xs"
+                placeholder="item.field"
+                className="text-xs font-mono"
               />
             </div>
-            <div>
-              <label className="block mb-1">Type</label>
-              <select
-                className="w-full border border-slate-300 rounded-md px-2 py-1 text-xs"
-                value={column.type ?? 'text'}
-                onChange={(event) => updateColumn(column.id, { type: event.target.value }, true)}
-              >
-                <option value="text">Text</option>
-                <option value="number">Number</option>
-                <option value="currency">Currency</option>
-                <option value="date">Date</option>
-              </select>
-            </div>
-            <div>
-              <label className="block mb-1">Width (px)</label>
-              <Input
-                id={`column-width-${column.id}`}
-                type="number"
-                value={typeof column.width === 'number' && Number.isFinite(column.width) ? column.width : 120}
-                onChange={(event) => updateColumn(column.id, { width: Number(event.target.value) }, false)}
-                onBlur={(event) => updateColumn(column.id, { width: Number(event.target.value) }, true)}
-                className="text-xs"
-              />
+            <div className="grid grid-cols-[minmax(0,1fr)_88px] gap-1.5">
+              <div>
+                <label className="text-[10px] font-medium text-slate-500 block mb-0.5">Type</label>
+                <select
+                  className="h-8 w-full border border-slate-200 rounded-md px-1.5 text-xs bg-white"
+                  value={column.type ?? 'text'}
+                  onChange={(event) => updateColumn(column.id, { type: event.target.value }, true)}
+                >
+                  <option value="text">Text</option>
+                  <option value="number">Number</option>
+                  <option value="currency">Currency</option>
+                  <option value="date">Date</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-[10px] font-medium text-slate-500 block mb-0.5">Width</label>
+                <Input
+                  id={`column-width-${column.id}`}
+                  size="sm"
+                  containerClassName="w-full"
+                  type="number"
+                  value={typeof column.width === 'number' && Number.isFinite(column.width) ? column.width : 120}
+                  onChange={(event) => updateColumn(column.id, { width: Number(event.target.value) }, false)}
+                  onBlur={(event) => updateColumn(column.id, { width: Number(event.target.value) }, true)}
+                  className="text-xs tabular-nums"
+                />
+              </div>
             </div>
           </div>
+        ))}
+      </div>
+
+      {/* Collapsible key reference */}
+      <details className="text-[11px]">
+        <summary className="text-slate-500 cursor-pointer select-none hover:text-slate-700 py-1">
+          Field key reference
+        </summary>
+        <div className="mt-1 space-y-0.5">
+          {COLUMN_PRESETS.map((preset) => (
+            <div key={`legend-${preset.id}`} className="flex items-center justify-between rounded px-2 py-0.5 bg-slate-50">
+              <code className="text-[11px] text-slate-600">{preset.key}</code>
+              <span className="text-[10px] text-slate-400">{preset.description}</span>
+            </div>
+          ))}
         </div>
-      ))}
+      </details>
     </div>
   );
 };

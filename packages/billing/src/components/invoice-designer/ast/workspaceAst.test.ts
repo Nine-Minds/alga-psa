@@ -103,6 +103,60 @@ describe('exportWorkspaceToInvoiceTemplateAst', () => {
     expect(page?.children.length).toBeGreaterThan(0);
   });
 
+  it('imports dynamic-table columns without undefined optional keys', () => {
+    const sourceAst = {
+      kind: 'invoice-template-ast',
+      version: 1,
+      bindings: {
+        values: {},
+        collections: {
+          lineItems: { id: 'lineItems', kind: 'collection', path: 'items' },
+        },
+      },
+      layout: {
+        id: 'root',
+        type: 'document',
+        children: [
+          {
+            id: 'line-items',
+            type: 'dynamic-table',
+            repeat: {
+              sourceBinding: { bindingId: 'lineItems' },
+              itemBinding: 'item',
+            },
+            columns: [
+              { id: 'description', header: 'Description', value: { type: 'path', path: 'description' } },
+              { id: 'quantity', header: 'Qty', value: { type: 'path', path: 'quantity' }, format: 'number' },
+            ],
+          },
+        ],
+      },
+    } as const;
+
+    const hydrated = importInvoiceTemplateAstToWorkspace(sourceAst as any);
+    const lineItems = Object.values(hydrated.nodesById).find((node) => node.id === 'line-items') as any;
+    expect(lineItems?.type).toBe('dynamic-table');
+
+    const columns = lineItems?.props?.metadata?.columns;
+    expect(Array.isArray(columns)).toBe(true);
+    expect(columns[0]).toMatchObject({
+      id: 'description',
+      header: 'Description',
+      key: 'item.description',
+      valueExpression: { type: 'path', path: 'description' },
+    });
+    expect(Object.prototype.hasOwnProperty.call(columns[0], 'type')).toBe(false);
+    expect(Object.prototype.hasOwnProperty.call(columns[0], 'format')).toBe(false);
+    expect(Object.prototype.hasOwnProperty.call(columns[0], 'style')).toBe(false);
+    expect(columns[1]).toMatchObject({
+      id: 'quantity',
+      header: 'Qty',
+      key: 'item.quantity',
+      type: 'number',
+      format: 'number',
+    });
+  });
+
   it('roundtrips CSS-like layout/style props through AST inline styles', () => {
     const base = useInvoiceDesignerStore.getState().exportWorkspace();
     const pageNode = Object.values(base.nodesById).find((node) => node.type === 'page');

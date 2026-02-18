@@ -119,7 +119,7 @@ describe('TableEditorWidget (schema widget integration)', () => {
     expect(within(initialTableRoot).getByText('Description')).toBeTruthy();
 
     // Add a column in the Inspector widget.
-    const addColumnButton = screen.getByText('Add column');
+    const addColumnButton = screen.getByText('+ Column');
     fireEvent.click(addColumnButton);
 
     // Widget writes to metadata.columns, which should now drive the canvas header.
@@ -139,11 +139,7 @@ describe('TableEditorWidget (schema widget integration)', () => {
   it('quick add presets provide guided column creation and legend hints', async () => {
     mountTableInspectorAndCanvas([]);
 
-    expect(screen.getByText('Line Item Key Legend')).toBeTruthy();
-    expect(screen.getByText('item.description')).toBeTruthy();
-    expect(screen.getByText('item.quantity')).toBeTruthy();
-    expect(screen.getByText('item.unitPrice')).toBeTruthy();
-    expect(screen.getByText('item.total')).toBeTruthy();
+    expect(screen.getByText('Field key reference')).toBeTruthy();
 
     fireEvent.click(screen.getByRole('button', { name: 'Description' }));
     fireEvent.click(screen.getByRole('button', { name: 'Amount' }));
@@ -187,6 +183,46 @@ describe('TableEditorWidget (schema widget integration)', () => {
       const updated = useInvoiceDesignerStore.getState().nodesById['table-1'];
       const columns = (updated.props as any)?.metadata?.columns;
       expect(columns.map((column: any) => column.id)).toEqual(['col-description', 'col-quantity', 'col-amount']);
+    });
+  });
+
+  it('reorders columns that include undefined optional metadata from AST imports', async () => {
+    mountTableInspectorAndCanvas([
+      {
+        id: 'description',
+        header: 'Description',
+        key: 'item.description',
+        type: undefined,
+        format: undefined,
+        style: undefined,
+      },
+      {
+        id: 'quantity',
+        header: 'Qty',
+        key: 'item.quantity',
+        type: 'number',
+        format: 'number',
+        style: { inline: { textAlign: 'right' } },
+      },
+      {
+        id: 'line-total',
+        header: 'Amount',
+        key: 'item.total',
+        type: 'currency',
+        format: 'currency',
+        style: { inline: { textAlign: 'right' } },
+      },
+    ]);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Move quantity up' }));
+
+    await waitFor(() => {
+      const updated = useInvoiceDesignerStore.getState().nodesById['table-1'];
+      const columns = (updated.props as any)?.metadata?.columns;
+      expect(columns.map((column: any) => column.id)).toEqual(['quantity', 'description', 'line-total']);
+      expect(Object.prototype.hasOwnProperty.call(columns[1], 'type')).toBe(false);
+      expect(Object.prototype.hasOwnProperty.call(columns[1], 'format')).toBe(false);
+      expect(Object.prototype.hasOwnProperty.call(columns[1], 'style')).toBe(false);
     });
   });
 });

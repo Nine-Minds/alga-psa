@@ -1282,15 +1282,24 @@ export const importInvoiceTemplateAstToWorkspace = (
                 : inputNode.sourceBinding.bindingId
             ]?.path ?? 'items';
           metadata.collectionBindingKey = denormalizeBindingPath(collectionPath);
-          metadata.columns = inputNode.columns.map((column) => ({
-            id: column.id,
-            header: column.header,
-            key: column.value.type === 'path' ? `item.${column.value.path}` : column.id,
-            valueExpression: column.value,
-            type: column.format,
-            format: column.format,
-            style: column.style ? ({ ...column.style } as Record<string, unknown>) : undefined,
-          }));
+          metadata.columns = inputNode.columns.map((column) => {
+            const mappedColumn: Record<string, unknown> = {
+              id: column.id,
+              header: column.header,
+              key: column.value.type === 'path' ? `item.${column.value.path}` : column.id,
+              valueExpression: column.value,
+            };
+
+            if (column.format) {
+              mappedColumn.type = column.format;
+              mappedColumn.format = column.format;
+            }
+            if (column.style) {
+              mappedColumn.style = { ...column.style } as Record<string, unknown>;
+            }
+
+            return mappedColumn;
+          });
           if (typeof inputNode.emptyStateText === 'string' && inputNode.emptyStateText.trim().length > 0) {
             metadata.emptyStateText = inputNode.emptyStateText.trim();
           }

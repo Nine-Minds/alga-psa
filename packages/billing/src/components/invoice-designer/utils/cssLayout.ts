@@ -48,6 +48,28 @@ export const resolveNodeBoxStyle = (nodeStyle?: DesignerNodeStyle): CSSPropertie
     // Media helpers (applies to replaced elements like <img>, but harmless on a wrapper div).
     aspectRatio: nodeStyle.aspectRatio,
     objectFit: nodeStyle.objectFit,
+
+    // Visual style helpers used by imported AST templates.
+    margin: nodeStyle.margin,
+    border: nodeStyle.border,
+    borderRadius: nodeStyle.borderRadius,
+    color: nodeStyle.color,
+    backgroundColor: nodeStyle.backgroundColor,
+    fontSize: nodeStyle.fontSize,
+    fontWeight: nodeStyle.fontWeight,
+    fontFamily: nodeStyle.fontFamily,
+    lineHeight: nodeStyle.lineHeight,
+    textAlign: nodeStyle.textAlign,
+
+    // Preserve non-container layout-like inline style declarations.
+    display: nodeStyle.display,
+    flexDirection: nodeStyle.flexDirection,
+    justifyContent: nodeStyle.justifyContent,
+    alignItems: nodeStyle.alignItems,
+    gap: nodeStyle.gap,
+    padding: nodeStyle.padding,
+    gridTemplateColumns: nodeStyle.gridTemplateColumns,
+    gridTemplateRows: nodeStyle.gridTemplateRows,
+    gridAutoFlow: nodeStyle.gridAutoFlow,
   };
 };
-

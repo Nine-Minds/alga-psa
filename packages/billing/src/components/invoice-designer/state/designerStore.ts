@@ -66,6 +66,7 @@ export type CssJustifyContent =
 export type CssAlignItems = 'flex-start' | 'center' | 'flex-end' | 'stretch';
 
 export type CssGridAutoFlow = 'row' | 'column' | 'dense' | 'row dense' | 'column dense';
+export type CssTextAlign = 'left' | 'center' | 'right' | 'justify';
 
 export interface DesignerContainerLayout {
   display: 'flex' | 'grid';
@@ -101,6 +102,30 @@ export interface DesignerNodeStyle {
   // Media
   aspectRatio?: string; // e.g. '16 / 9', '1'
   objectFit?: 'contain' | 'cover' | 'fill' | 'none' | 'scale-down';
+
+  // Visual
+  margin?: CssLength;
+  border?: string;
+  borderRadius?: CssLength;
+  color?: string;
+  backgroundColor?: string;
+  fontSize?: CssLength;
+  fontWeight?: string | number;
+  fontFamily?: string;
+  lineHeight?: string | number;
+  textAlign?: CssTextAlign;
+
+  // Non-container layout-like style declarations that can be attached directly
+  // to nodes such as fields in template AST inline styles.
+  display?: 'flex' | 'grid';
+  flexDirection?: 'row' | 'column';
+  justifyContent?: CssJustifyContent;
+  alignItems?: CssAlignItems;
+  gap?: CssLength;
+  padding?: CssLength;
+  gridTemplateColumns?: string;
+  gridTemplateRows?: string;
+  gridAutoFlow?: CssGridAutoFlow;
 }
 
 export interface DesignerNode {
