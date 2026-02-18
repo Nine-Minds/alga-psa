@@ -800,6 +800,12 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
   const resolvedWidth = resolvedBoxStyle.width;
   const resolvedHeight = resolvedBoxStyle.height;
   const isFlowPositioning = parentUsesFlowLayout;
+  const metadata = getNodeMetadata(node);
+  const astImported = metadata.__astImported === true;
+  const astHadWidth = metadata.__astHadWidth === true;
+  const astHadHeight = metadata.__astHadHeight === true;
+  const allowInferredFlowMinWidth = !astImported || astHadWidth;
+  const allowInferredFlowMinHeight = !astImported || astHadHeight;
   const nodeStyle: React.CSSProperties = {
     ...resolvedBoxStyle,
     // Keep box sizing stable when we apply padding/borders via Tailwind classes.
@@ -810,11 +816,13 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
     height: isFlowPositioning ? resolvedHeight : (resolvedHeight ?? inferredHeight),
     minWidth:
       isFlowPositioning
-        ? (resolvedBoxStyle.minWidth ?? (resolvedWidth ? undefined : inferredWidth))
+        ? (resolvedBoxStyle.minWidth ??
+          (resolvedWidth ? undefined : allowInferredFlowMinWidth ? inferredWidth : undefined))
         : resolvedBoxStyle.minWidth,
     minHeight:
       isFlowPositioning
-        ? (resolvedBoxStyle.minHeight ?? (resolvedHeight ? undefined : inferredHeight))
+        ? (resolvedBoxStyle.minHeight ??
+          (resolvedHeight ? undefined : allowInferredFlowMinHeight ? inferredHeight : undefined))
         : resolvedBoxStyle.minHeight,
     top: isFlowPositioning ? undefined : node.position.y,
     left: isFlowPositioning ? undefined : node.position.x,
@@ -824,10 +832,10 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
     zIndex: isDragging ? 40 : isSelected ? 30 : 10,
   };
   const shouldDeemphasize = shouldDeemphasizeNode(hasActiveSelection, isInSelectionContext, isDragging);
-  const metadata = getNodeMetadata(node);
   const sectionCue = node.type === 'section' ? getSectionSemanticCue(getNodeName(node)) : null;
   const isTotalsRow = isTotalsRowType(node.type);
   const isLabelNode = node.type === 'label';
+  const isTextNode = node.type === 'text';
   const isFieldNode = node.type === 'field';
   const isMediaNode = node.type === 'image' || node.type === 'logo' || node.type === 'qr';
   const labelWeightClass = FONT_WEIGHT_CLASS[
@@ -841,7 +849,7 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
       : 'border bg-blue-50/40 border-blue-200 border-dashed';
   const fieldSurfaceClasses = resolveFieldBorderClasses(fieldBorderStyle);
   const isInlineFieldLike = isFieldNode || isLabelNode;
-  const isCompactLeaf = isTotalsRow || isInlineFieldLike;
+  const isCompactLeaf = isTotalsRow || isInlineFieldLike || isTextNode;
   const isResizeHandleSupported =
     node.type === 'image' ||
     node.type === 'logo' ||
@@ -1033,6 +1041,8 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
                 ? clsx('px-1 py-0.5 flex items-center bg-transparent text-slate-700', labelWeightClass)
                 : isTotalsRow
                   ? 'p-1.5 whitespace-pre-wrap'
+                  : isTextNode
+                    ? 'px-2 py-1 whitespace-pre-wrap text-slate-700 bg-transparent'
                   : fieldSurfaceClasses,
               previewContent.singleLine && 'whitespace-nowrap overflow-hidden',
               previewContent.isPlaceholder && (isLabelNode ? 'text-slate-400 font-normal italic' : 'text-slate-400')
@@ -1155,12 +1165,19 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
   previewData = null,
 }) => {
   const artboardRef = useRef<HTMLDivElement>(null);
-  const documentNode = useMemo(() => nodes.find((node) => node.parentId === null), [nodes]);
+  const documentNode = useMemo(
+    () => nodes.find((node) => node.type === 'document') ?? nodes.find((node) => node.parentId === null),
+    [nodes]
+  );
   const defaultPageNode = useMemo(
-    () => nodes.find((node) => node.type === 'page' && node.parentId === documentNode?.id),
+    () =>
+      (documentNode
+        ? nodes.find((node) => node.type === 'page' && node.parentId === documentNode.id)
+        : undefined) ?? nodes.find((node) => node.type === 'page'),
     [nodes, documentNode?.id]
   );
-  const rootDropMeta = defaultPageNode ?? documentNode;
+  // Prefer page/document roots, but tolerate malformed parent links from imported snapshots.
+  const rootDropMeta = defaultPageNode ?? documentNode ?? nodes.find((node) => node.parentId === null);
   const { setNodeRef: setDroppableNodeRef, isOver } = useDroppable({
     id: droppableId,
     data: rootDropMeta
@@ -1305,7 +1322,7 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
     selectedNodeId,
   ]);
 
-  const rootParentId = (defaultPageNode ?? documentNode)?.id;
+  const rootParentId = rootDropMeta?.id;
   const canvasWidth = defaultPageNode?.size.width ?? DESIGNER_CANVAS_WIDTH;
   const canvasHeight = defaultPageNode?.size.height ?? DESIGNER_CANVAS_HEIGHT;
 
