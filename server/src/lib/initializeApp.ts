@@ -4,7 +4,6 @@ import { initializeScheduledJobs } from './jobs/initializeScheduledJobs';
 import { logger } from '@alga-psa/core';
 import { initializeServerWorkflows } from '@alga-psa/shared/workflow/init/serverInit';
 import { registerAccountingExportWorkflowActions } from './workflow/registerAccountingExportActions';
-import { syncStandardTemplates } from './startupTasks';
 import { validateEnv } from 'server/src/config/envConfig';
 import { validateRequiredConfiguration, validateDatabaseConnectivity, validateSecretUniqueness } from 'server/src/config/criticalEnvValidation';
 import { config } from 'dotenv';
@@ -227,14 +226,7 @@ export async function initializeApp() {
       // Continue startup - workflow system is not critical for basic functionality
     }
 
-    // Sync standard invoice templates
-    try {
-      await syncStandardTemplates();
-      logger.info('Standard invoice templates synced');
-    } catch (error) {
-      logger.error('Failed to sync standard invoice templates:', error);
-      // Continue startup - template sync is not critical for basic functionality
-    }
+    // Standard invoice templates are shipped as data (AST) and do not require compilation/sync at startup.
 
     // Register cleanup handlers
     try {

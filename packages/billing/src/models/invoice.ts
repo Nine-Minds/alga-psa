@@ -201,6 +201,7 @@ const Invoice = {
       }
       return 0;
     };
+    const asTrimmedString = (value: unknown): string => (typeof value === 'string' ? value.trim() : '');
 
     const invoice = await knexOrTrx('invoices')
       .select(
@@ -220,7 +221,7 @@ const Invoice = {
       throw new Error('Invoice not found');
     }
 
-    const [invoiceChargesRaw, client, contact, logoUrl] = await Promise.all([
+    const [invoiceChargesRaw, client, contact, logoUrl, tenantClientDetails] = await Promise.all([
       Invoice.getInvoiceCharges(knexOrTrx, tenant, invoiceId),
       knexOrTrx('clients as c')
         .leftJoin('client_locations as cl', function () {
@@ -254,6 +255,37 @@ const Invoice = {
         .where({ client_id: invoice.client_id, tenant })
         .first(),
       getClientLogoUrlAsync(invoice.client_id, tenant).catch(() => null),
+      knexOrTrx('tenant_companies as tc')
+        .join('clients as c', function () {
+          this.on('tc.client_id', '=', 'c.client_id').andOn('tc.tenant', '=', 'c.tenant');
+        })
+        .leftJoin('client_locations as cl', function () {
+          this.on('c.client_id', '=', 'cl.client_id')
+            .andOn('c.tenant', '=', 'cl.tenant')
+            .andOn(function () {
+              this.on('cl.is_billing_address', '=', knexOrTrx.raw('true'))
+                .orOn('cl.is_default', '=', knexOrTrx.raw('true'));
+            });
+        })
+        .select(
+          'tc.client_id',
+          'c.client_name',
+          knexOrTrx.raw(`CONCAT_WS(', ',
+            cl.address_line1,
+            cl.address_line2,
+            cl.city,
+            cl.state_province,
+            cl.postal_code,
+            cl.country_name
+          ) as location_address`)
+        )
+        .where({
+          'tc.tenant': tenant,
+          'tc.is_default': true
+        })
+        .whereNull('tc.deleted_at')
+        .orderByRaw('cl.is_billing_address DESC NULLS LAST, cl.is_default DESC NULLS LAST')
+        .first(),
     ]);
 
     if (!client) {
@@ -269,6 +301,40 @@ const Invoice = {
       }
     } else if (client.properties && typeof client.properties === 'object') {
       clientProperties = client.properties as { logo?: string };
+    }
+
+    const resolveTenantNameFallback = async (): Promise<InvoiceViewModel['tenantClient']> => {
+      const tenantRecord = await knexOrTrx('tenants')
+        .select('client_name')
+        .where({ tenant })
+        .first();
+      const fallbackName = asTrimmedString(tenantRecord?.client_name);
+      if (fallbackName.length === 0) {
+        return null;
+      }
+      return {
+        name: fallbackName,
+        address: null,
+        logoUrl: null,
+      };
+    };
+
+    let tenantClient: InvoiceViewModel['tenantClient'] = null;
+    if (tenantClientDetails?.client_id) {
+      const tenantLogoUrl = await getClientLogoUrlAsync(tenantClientDetails.client_id, tenant).catch(() => null);
+      const tenantClientName = asTrimmedString(tenantClientDetails.client_name);
+      const tenantClientAddress = asTrimmedString(tenantClientDetails.location_address);
+
+      if (tenantClientName.length > 0 || tenantClientAddress.length > 0 || tenantLogoUrl) {
+        tenantClient = {
+          name: tenantClientName.length > 0 ? tenantClientName : null,
+          address: tenantClientAddress.length > 0 ? tenantClientAddress : null,
+          logoUrl: tenantLogoUrl || null,
+        };
+      }
+    }
+    if (!tenantClient) {
+      tenantClient = await resolveTenantNameFallback();
     }
 
     const invoiceCharges: IInvoiceCharge[] = invoiceChargesRaw.map((item) => ({
@@ -303,6 +369,7 @@ const Invoice = {
         name: contact?.full_name || '',
         address: ''
       },
+      tenantClient,
       invoice_date: invoice.invoice_date,
       due_date: invoice.due_date,
       status: invoice.status,
@@ -495,16 +562,28 @@ const Invoice = {
   getStandardTemplates: async (
     knexOrTrx: Knex | Knex.Transaction
   ): Promise<IInvoiceTemplate[]> => {
-    return knexOrTrx('standard_invoice_templates')
+    const records = await knexOrTrx('standard_invoice_templates')
       .select(
         'template_id',
         'name',
         'version',
         'standard_invoice_template_code',
-        'assemblyScriptSource',
-        'sha'
+        'templateAst',
+        'is_default',
+        'created_at',
+        'updated_at'
       )
       .orderBy('name');
+
+    const missingAst = records.filter((record) => !record.templateAst);
+    if (missingAst.length > 0) {
+      const missingCodes = missingAst
+        .map((record) => record.standard_invoice_template_code || record.template_id)
+        .join(', ');
+      throw new Error(`Standard invoice template rows missing templateAst: ${missingCodes}`);
+    }
+
+    return records as IInvoiceTemplate[];
   },
 
   /**
@@ -526,7 +605,7 @@ const Invoice = {
           'name',
           'version',
           'is_default',
-          'assemblyScriptSource',
+          'templateAst',
           'created_at',
           'updated_at'
         ),
@@ -588,13 +667,35 @@ const Invoice = {
     const templateWithDefaults = {
       ...template,
       version: template.version || 1,
-      tenant
+      tenant,
     };
 
+    // Avoid passing UI-only / computed fields (or any unknown keys) straight into a DB insert.
+    const insertRecord: Record<string, unknown> = {
+      tenant,
+      template_id: (templateWithDefaults as any).template_id,
+      name: (templateWithDefaults as any).name,
+      version: (templateWithDefaults as any).version,
+      is_default: (templateWithDefaults as any).is_default ?? false,
+    };
+
+    if ((templateWithDefaults as any).templateAst !== undefined) {
+      insertRecord.templateAst = (templateWithDefaults as any).templateAst;
+    }
+
+    const updateRecord: Record<string, unknown> = {
+      name: insertRecord.name,
+      version: insertRecord.version,
+      is_default: insertRecord.is_default,
+    };
+    if (Object.prototype.hasOwnProperty.call(insertRecord, 'templateAst')) {
+      updateRecord.templateAst = insertRecord.templateAst;
+    }
+
     const [savedTemplate] = await knexOrTrx('invoice_templates')
-      .insert(templateWithDefaults)
+      .insert(insertRecord)
       .onConflict(['tenant', 'template_id'])
-      .merge(['name', 'version', 'assemblyScriptSource', 'wasmBinary', 'is_default'])
+      .merge(updateRecord)
       .returning('*');
 
     return savedTemplate;

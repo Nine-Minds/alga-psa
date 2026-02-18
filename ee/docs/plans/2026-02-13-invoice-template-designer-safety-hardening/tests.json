@@ -1,0 +1,235 @@
+[
+  {
+    "id": "T001",
+    "description": "Repo: `.gitignore` ignores `server/.env.local.bak*` (and related local backup patterns).",
+    "implemented": true,
+    "featureIds": [
+      "F001"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "Repo guard: fails if any tracked file matches env-backup patterns (e.g. `server/.env.local.bak.*`).",
+    "implemented": true,
+    "featureIds": [
+      "F002"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "PatchOps: `setNodeProp` rejects `__proto__` segments and cannot pollute `Object.prototype`.",
+    "implemented": true,
+    "featureIds": [
+      "F003",
+      "F004"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "PatchOps: `unsetNodeProp` rejects `prototype`/`constructor` segments and performs a safe no-op.",
+    "implemented": true,
+    "featureIds": [
+      "F003",
+      "F004"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "PatchOps: rejection is enforced for reserved keys at any depth (e.g. `props.metadata.__proto__.x`).",
+    "implemented": true,
+    "featureIds": [
+      "F003"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "PatchOps: when a path is rejected, the returned nodes/state is referentially equal to input (no partial mutation).",
+    "implemented": true,
+    "featureIds": [
+      "F004"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "PatchOps: rejected patch emits developer-visible feedback (console warn and/or diagnostic hook).",
+    "implemented": true,
+    "featureIds": [
+      "F005"
+    ]
+  },
+  {
+    "id": "T008",
+    "description": "Designer store: legacy paths like `metadata.bindingKey` normalize to canonical `props.metadata.bindingKey` and only canonical state changes.",
+    "implemented": true,
+    "featureIds": [
+      "F006",
+      "F007"
+    ]
+  },
+  {
+    "id": "T009",
+    "description": "Designer store: canonical paths like `props.metadata.bindingKey` continue to work and update `props` immutably.",
+    "implemented": true,
+    "featureIds": [
+      "F006"
+    ]
+  },
+  {
+    "id": "T010",
+    "description": "Designer store: `setNodeProp(nodeId, 'name', ...)` results in `props.name` being updated (no separate legacy `name` mutation required).",
+    "implemented": true,
+    "featureIds": [
+      "F006",
+      "F007"
+    ]
+  },
+  {
+    "id": "T011",
+    "description": "Designer store: `unsetNodeProp` removes canonical `props.*` keys (and does not leave `undefined` sentinel values).",
+    "implemented": true,
+    "featureIds": [
+      "F006",
+      "F007"
+    ]
+  },
+  {
+    "id": "T012",
+    "description": "Workspace export: exported workspace contains only canonical node shape (`props`, `children`) and omits legacy duplicates.",
+    "implemented": true,
+    "featureIds": [
+      "F007",
+      "F008"
+    ]
+  },
+  {
+    "id": "T013",
+    "description": "Workspace import: legacy workspace inputs materialize canonical `props` so UI helpers read expected values.",
+    "implemented": true,
+    "featureIds": [
+      "F007",
+      "F009"
+    ]
+  },
+  {
+    "id": "T014",
+    "description": "Hierarchy: `insertChild` updates `children` deterministically and does not rely on `childIds`.",
+    "implemented": true,
+    "featureIds": [
+      "F008"
+    ]
+  },
+  {
+    "id": "T015",
+    "description": "Hierarchy: `moveNode` preserves acyclic constraints and updates `children` ordering correctly.",
+    "implemented": true,
+    "featureIds": [
+      "F008"
+    ]
+  },
+  {
+    "id": "T016",
+    "description": "Hierarchy: `deleteNode` removes descendants based on canonical `children` traversal.",
+    "implemented": true,
+    "featureIds": [
+      "F008"
+    ]
+  },
+  {
+    "id": "T017",
+    "description": "UI: Outline/tree views display names via `props.name` (and do not depend on legacy top-level `name`).",
+    "implemented": true,
+    "featureIds": [
+      "F009"
+    ]
+  },
+  {
+    "id": "T018",
+    "description": "UI: DesignerShell selected-node header uses canonical props helpers for display (no direct legacy field reads).",
+    "implemented": true,
+    "featureIds": [
+      "F009"
+    ]
+  },
+  {
+    "id": "T019",
+    "description": "PatchOps: leaf array `unset` splices the array (length decreases, no `undefined` holes).",
+    "implemented": true,
+    "featureIds": [
+      "F010"
+    ]
+  },
+  {
+    "id": "T020",
+    "description": "PatchOps: unsetting a nested property inside an array element unsets that property without splicing the array element itself.",
+    "implemented": true,
+    "featureIds": [
+      "F010"
+    ]
+  },
+  {
+    "id": "T021",
+    "description": "Undo/redo: committed history snapshots restore the exact canonical JSON state (arrays/objects match expectation).",
+    "implemented": true,
+    "featureIds": [
+      "F011",
+      "F010"
+    ]
+  },
+  {
+    "id": "T022",
+    "description": "Undo/redo: setNodeProp and hierarchy operations (move/delete) are reversible and deterministic.",
+    "implemented": true,
+    "featureIds": [
+      "F011"
+    ]
+  },
+  {
+    "id": "T023",
+    "description": "History: `commit=false` updates do not append history entries; `commit=true` updates do append exactly one entry per commit.",
+    "implemented": true,
+    "featureIds": [
+      "F012"
+    ]
+  },
+  {
+    "id": "T024",
+    "description": "Interaction: drag/resize flows use `commit=false` during motion and `commit=true` on completion (integration-level assertion).",
+    "implemented": true,
+    "featureIds": [
+      "F012"
+    ]
+  },
+  {
+    "id": "T025",
+    "description": "Invoice template AST schema: rejects invalid `styles.classes` keys (unsafe CSS identifiers).",
+    "implemented": true,
+    "featureIds": [
+      "F013"
+    ]
+  },
+  {
+    "id": "T026",
+    "description": "Invoice template AST schema: rejects invalid token ids in `styles.tokens.*.id` and invalid `node.style.tokenIds`.",
+    "implemented": true,
+    "featureIds": [
+      "F013"
+    ]
+  },
+  {
+    "id": "T027",
+    "description": "Invoice template AST evaluation/rendering: schema validation failures surface as diagnostics and do not render malformed CSS.",
+    "implemented": true,
+    "featureIds": [
+      "F013",
+      "F014"
+    ]
+  },
+  {
+    "id": "T028",
+    "description": "Invoice template AST renderer: does not output malformed selectors/vars even if given unexpected identifiers (defense-in-depth).",
+    "implemented": true,
+    "featureIds": [
+      "F014"
+    ]
+  }
+]

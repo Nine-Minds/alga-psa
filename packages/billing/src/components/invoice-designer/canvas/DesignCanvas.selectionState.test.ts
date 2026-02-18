@@ -6,18 +6,20 @@ import { __designCanvasSelectionTestUtils } from './DesignCanvas';
 const createNode = (overrides: Partial<DesignerNode>): DesignerNode => ({
   id: overrides.id ?? 'node-' + Math.random().toString(36).slice(2, 7),
   type: overrides.type ?? 'text',
-  name: overrides.name ?? 'Node',
+  props: overrides.props ?? {
+    name: 'Node',
+    metadata: {},
+    style: { width: '100px', height: '40px' },
+  },
   position: overrides.position ?? { x: 0, y: 0 },
   size: overrides.size ?? { width: 100, height: 40 },
   baseSize: overrides.baseSize ?? overrides.size ?? { width: 100, height: 40 },
   canRotate: overrides.canRotate ?? true,
   allowResize: overrides.allowResize ?? true,
   rotation: overrides.rotation ?? 0,
-  metadata: overrides.metadata ?? {},
   layoutPresetId: overrides.layoutPresetId,
-  layout: overrides.layout,
   parentId: overrides.parentId ?? null,
-  childIds: overrides.childIds ?? [],
+  children: overrides.children ?? [],
   allowedChildren: overrides.allowedChildren ?? [],
 });
 

@@ -8,8 +8,8 @@
     "npm": ">=10.0.0"
   },
   "scripts": {
-    "dev": "cd .. && NODE_ENV=development NX_DAEMON=false npx nx next:dev server",
-    "dev:turbo": "cd .. && NODE_ENV=development npx nx next:dev server -- --turbo",
+    "dev": "cd .. && NX_LOAD_DOT_ENV_FILES=false NODE_ENV=development NX_DAEMON=false npx nx next:dev server",
+    "dev:turbo": "cd .. && NX_LOAD_DOT_ENV_FILES=false NODE_ENV=development npx nx next:dev server -- --turbo",
     "dev:express": "NODE_OPTIONS='--max-old-space-size=8192' NODE_ENV=development nodemon --watch index.ts --watch src/middleware --ext ts --exec tsx index.ts",
     "dev:ngrok": "node scripts/dev-with-ngrok-instructions.js",
     "ngrok:start": "ngrok http 3000 --subdomain=alga-psa-dev",
@@ -235,6 +235,7 @@
     "ts-command-line-args": "^2.5.1",
     "tsx": "^4.20.3",
     "typescript-eslint": "^8.19.1",
+    "@vitest/coverage-v8": "^4.0.18",
     "vitest": "^4.0.18"
   },
   "optionalDependencies": {

@@ -64,48 +64,44 @@ const seedBoundField = (bindingKey: string = 'invoice.number') => {
     const documentNode: DesignerNode = {
       id: 'doc-1',
       type: 'document',
-      name: 'Document',
+      props: { name: 'Document' },
       position: { x: 0, y: 0 },
       size: { width: 816, height: 1056 },
       canRotate: false,
       allowResize: false,
       rotation: 0,
-      metadata: {},
       parentId: null,
-      childIds: ['page-1'],
+      children: ['page-1'],
       allowedChildren: ['page'],
     };
     const pageNode: DesignerNode = {
       id: 'page-1',
       type: 'page',
-      name: 'Page 1',
+      props: { name: 'Page 1' },
       position: { x: 0, y: 0 },
       size: { width: 816, height: 1056 },
       canRotate: false,
       allowResize: false,
       rotation: 0,
-      metadata: {},
       parentId: 'doc-1',
-      childIds: ['field-1'],
+      children: ['field-1'],
       allowedChildren: ['field', 'label', 'table', 'dynamic-table', 'totals', 'subtotal', 'tax', 'discount', 'custom-total'],
     };
     const fieldNode: DesignerNode = {
       id: 'field-1',
       type: 'field',
-      name: 'Invoice Number',
+      props: { name: 'Invoice Number', metadata: { bindingKey, format: 'text' } },
       position: { x: 24, y: 24 },
       size: { width: 220, height: 48 },
       canRotate: false,
       allowResize: true,
       rotation: 0,
-      metadata: { bindingKey, format: 'text' },
       parentId: 'page-1',
-      childIds: [],
+      children: [],
       allowedChildren: [],
     };
     store.loadWorkspace({
       nodes: [documentNode, pageNode, fieldNode],
-      constraints: [],
       snapToGrid: true,
       gridSize: 8,
       showGuides: true,
@@ -149,7 +145,6 @@ describe('DesignerVisualWorkspace', () => {
       generatedSource: '// generated',
       compile: {
         status: 'success',
-        cacheHit: false,
         diagnostics: [],
       },
       render: {
@@ -210,7 +205,6 @@ describe('DesignerVisualWorkspace', () => {
       generatedSource: '// generated',
       compile: {
         status: 'success',
-        cacheHit: false,
         diagnostics: [],
       },
       render: {
@@ -239,7 +233,6 @@ describe('DesignerVisualWorkspace', () => {
       generatedSource: '// generated',
       compile: {
         status: 'success',
-        cacheHit: false,
         diagnostics: [],
       },
       render: {
@@ -409,7 +402,6 @@ describe('DesignerVisualWorkspace', () => {
       generatedSource: '// broken generated source',
       compile: {
         status: 'error',
-        cacheHit: false,
         diagnostics: [],
         error: 'Preview AssemblyScript compilation failed.',
         details: 'ERROR TS1005: ; expected',
@@ -428,7 +420,7 @@ describe('DesignerVisualWorkspace', () => {
     renderWorkspace('preview');
 
     await waitFor(() => {
-      const compileError = document.querySelector('[data-automation-id=\"invoice-designer-preview-compile-error\"]');
+      const compileError = document.querySelector('[data-automation-id=\"invoice-designer-preview-shape-error\"]');
       expect(compileError?.textContent).toContain('Preview AssemblyScript compilation failed.');
       expect(compileError?.textContent).toContain('ERROR TS1005');
     });
@@ -441,7 +433,6 @@ describe('DesignerVisualWorkspace', () => {
       generatedSource: '// generated',
       compile: {
         status: 'success',
-        cacheHit: false,
         diagnostics: [],
       },
       render: {
@@ -489,7 +480,6 @@ describe('DesignerVisualWorkspace', () => {
       generatedSource: '// generated',
       compile: {
         status: 'success',
-        cacheHit: false,
         diagnostics: [],
       },
       render: {
@@ -548,8 +538,10 @@ describe('DesignerVisualWorkspace', () => {
     const nodeId = useInvoiceDesignerStore.getState().selectedNodeId;
     expect(nodeId).toBeTruthy();
     act(() => {
-      useInvoiceDesignerStore.getState().updateNodeMetadata(nodeId!, { bindingKey: 'invoice.poNumber', format: 'text' });
-      useInvoiceDesignerStore.getState().updateNodeMetadata(nodeId!, { bindingKey: 'customer.name', format: 'text' });
+      const store = useInvoiceDesignerStore.getState();
+      store.setNodeProp(nodeId!, 'metadata.bindingKey', 'invoice.poNumber', false);
+      store.setNodeProp(nodeId!, 'metadata.format', 'text', false);
+      store.setNodeProp(nodeId!, 'metadata.bindingKey', 'customer.name', true);
     });
 
     // Debounce should delay preview refresh.
@@ -560,11 +552,11 @@ describe('DesignerVisualWorkspace', () => {
 
     expect(runAuthoritativeInvoiceTemplatePreviewMock.mock.calls.length).toBeGreaterThan(baselineCalls);
     const latestCall = runAuthoritativeInvoiceTemplatePreviewMock.mock.calls.at(-1)?.[0];
-    const updatedField = latestCall.workspace.nodes.find((node: DesignerNode) => node.id === nodeId);
-    expect(updatedField?.metadata?.bindingKey).toBe('customer.name');
+    const updatedField = latestCall.workspace.nodesById?.[nodeId!];
+    expect((updatedField?.props as any)?.metadata?.bindingKey).toBe('customer.name');
   });
 
-  it('manual rerun retriggers pipeline without workspace delta and bypasses compile cache', async () => {
+  it('manual rerun retriggers pipeline without workspace delta', async () => {
     seedBoundField('invoice.number');
     renderWorkspace('preview');
 
@@ -578,10 +570,10 @@ describe('DesignerVisualWorkspace', () => {
     );
 
     const latestCall = runAuthoritativeInvoiceTemplatePreviewMock.mock.calls.at(-1)?.[0];
-    expect(latestCall.bypassCompileCache).toBe(true);
+    expect(latestCall.workspace).toBeTruthy();
   });
 
-  it('shows loading indicator while compile/render pipeline is in flight', async () => {
+  it('shows loading indicator while shape/render pipeline is in flight', async () => {
     runAuthoritativeInvoiceTemplatePreviewMock.mockImplementationOnce(
       () => new Promise(() => undefined)
     );
@@ -592,7 +584,7 @@ describe('DesignerVisualWorkspace', () => {
     await waitFor(() => {
       expect(document.querySelector('[data-automation-id=\"invoice-designer-preview-loading-state\"]')).toBeTruthy();
       expect(
-        document.querySelector('[data-automation-id=\"invoice-designer-preview-compile-status\"]')?.textContent
+        document.querySelector('[data-automation-id=\"invoice-designer-preview-shape-status\"]')?.textContent
       ).toContain('running');
       expect(
         document.querySelector('[data-automation-id=\"invoice-designer-preview-render-status\"]')?.textContent
@@ -600,11 +592,11 @@ describe('DesignerVisualWorkspace', () => {
     });
   });
 
-  it('exposes stable automation ids for compile/render/verify status indicators', async () => {
+  it('exposes stable automation ids for shape/render/verify status indicators', async () => {
     renderWorkspace('preview');
 
     await waitFor(() => expect(runAuthoritativeInvoiceTemplatePreviewMock).toHaveBeenCalled());
-    expect(document.querySelector('[data-automation-id=\"invoice-designer-preview-compile-status\"]')).toBeTruthy();
+    expect(document.querySelector('[data-automation-id=\"invoice-designer-preview-shape-status\"]')).toBeTruthy();
     expect(document.querySelector('[data-automation-id=\"invoice-designer-preview-render-status\"]')).toBeTruthy();
     expect(document.querySelector('[data-automation-id=\"invoice-designer-preview-verify-status\"]')).toBeTruthy();
   });
@@ -614,7 +606,7 @@ describe('DesignerVisualWorkspace', () => {
     renderWorkspace('preview');
     await waitFor(() => expect(runAuthoritativeInvoiceTemplatePreviewMock).toHaveBeenCalled());
 
-    const before = useInvoiceDesignerStore.getState().exportWorkspace().nodes.map((node) => ({
+    const before = useInvoiceDesignerStore.getState().nodes.map((node) => ({
       id: node.id,
       position: node.position,
     }));
@@ -626,7 +618,7 @@ describe('DesignerVisualWorkspace', () => {
     fireEvent.mouseMove(document, { clientX: 260, clientY: 260, buttons: 1 });
     fireEvent.mouseUp(document);
 
-    const after = useInvoiceDesignerStore.getState().exportWorkspace().nodes.map((node) => ({
+    const after = useInvoiceDesignerStore.getState().nodes.map((node) => ({
       id: node.id,
       position: node.position,
     }));
@@ -638,7 +630,7 @@ describe('DesignerVisualWorkspace', () => {
     renderWorkspace('preview');
     await waitFor(() => expect(runAuthoritativeInvoiceTemplatePreviewMock).toHaveBeenCalled());
 
-    const before = useInvoiceDesignerStore.getState().exportWorkspace().nodes.map((node) => ({
+    const before = useInvoiceDesignerStore.getState().nodes.map((node) => ({
       id: node.id,
       size: node.size,
     }));
@@ -650,7 +642,7 @@ describe('DesignerVisualWorkspace', () => {
     fireEvent.mouseMove(document, { clientX: 360, clientY: 360, buttons: 1, shiftKey: true });
     fireEvent.mouseUp(document);
 
-    const after = useInvoiceDesignerStore.getState().exportWorkspace().nodes.map((node) => ({
+    const after = useInvoiceDesignerStore.getState().nodes.map((node) => ({
       id: node.id,
       size: node.size,
     }));
@@ -662,12 +654,12 @@ describe('DesignerVisualWorkspace', () => {
     renderWorkspace('preview');
     await waitFor(() => expect(runAuthoritativeInvoiceTemplatePreviewMock).toHaveBeenCalled());
 
-    const beforeIds = useInvoiceDesignerStore.getState().exportWorkspace().nodes.map((node) => node.id).sort();
+    const beforeIds = useInvoiceDesignerStore.getState().nodes.map((node) => node.id).sort();
 
     fireEvent.keyDown(window, { key: 'Delete' });
     fireEvent.keyDown(window, { key: 'Backspace' });
 
-    const afterIds = useInvoiceDesignerStore.getState().exportWorkspace().nodes.map((node) => node.id).sort();
+    const afterIds = useInvoiceDesignerStore.getState().nodes.map((node) => node.id).sort();
     expect(afterIds).toEqual(beforeIds);
   });
 
@@ -680,34 +672,31 @@ describe('DesignerVisualWorkspace', () => {
     act(() => {
       const store = useInvoiceDesignerStore.getState();
       const workspace = store.exportWorkspace();
-      const pageNode = workspace.nodes.find((node) => node.type === 'page');
+      const pageNode = Object.values(workspace.nodesById).find((node) => node.type === 'page');
       if (!pageNode) {
         return;
       }
-      const tableNode: DesignerNode = {
-        id: 'table-layout-change',
-        type: 'table',
-        name: 'Items Table',
-        position: { x: 32, y: 120 },
-        size: { width: 420, height: 180 },
-        canRotate: false,
-        allowResize: true,
-        rotation: 0,
-        metadata: {
-          columns: [{ id: 'desc', header: 'Description', key: 'item.description', type: 'text' }],
-        },
-        parentId: pageNode.id,
-        childIds: [],
-        allowedChildren: [],
-      };
 
       store.loadWorkspace({
         ...workspace,
-        nodes: workspace.nodes
-          .map((node) =>
-            node.id === pageNode.id ? { ...node, childIds: [...node.childIds, tableNode.id] } : node
-          )
-          .concat(tableNode),
+        nodesById: {
+          ...workspace.nodesById,
+          [pageNode.id]: {
+            ...workspace.nodesById[pageNode.id],
+            children: [...(workspace.nodesById[pageNode.id]?.children ?? []), 'table-layout-change'],
+          },
+          ['table-layout-change']: {
+            id: 'table-layout-change',
+            type: 'table',
+            props: {
+              name: 'Items Table',
+              metadata: {
+                columns: [{ id: 'desc', header: 'Description', key: 'item.description', type: 'text' }],
+              },
+            },
+            children: [],
+          },
+        },
       });
     });
 
@@ -716,7 +705,7 @@ describe('DesignerVisualWorkspace', () => {
     }, { timeout: 2500 });
     await waitFor(() => {
       const hasTableNodeCall = runAuthoritativeInvoiceTemplatePreviewMock.mock.calls.some((call) =>
-        call[0].workspace.nodes.some((node: DesignerNode) => node.id === 'table-layout-change')
+        Boolean(call[0].workspace.nodesById?.['table-layout-change'])
       );
       expect(hasTableNodeCall).toBe(true);
     });

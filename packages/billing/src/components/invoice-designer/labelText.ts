@@ -1,7 +1,5 @@
-type LabelTextNode = {
-  name: string;
-  metadata?: unknown;
-};
+import type { DesignerNode } from './state/designerStore';
+import { getNodeMetadata, getNodeName } from './utils/nodeProps';
 
 export type LabelTextSource = 'metadata.text' | 'metadata.label' | 'name' | 'none';
 
@@ -21,17 +19,17 @@ const asRecord = (value: unknown): Record<string, unknown> =>
 const asTrimmedString = (value: unknown): string => (typeof value === 'string' ? value.trim() : '');
 
 export const resolveLabelText = (
-  node: LabelTextNode,
+  node: DesignerNode,
   options: ResolveLabelTextOptions = {}
 ): ResolvedLabelText => {
-  const metadata = asRecord(node.metadata);
+  const metadata = asRecord(getNodeMetadata(node));
   const candidates: Array<{ source: LabelTextSource; value: string }> = [
     { source: 'metadata.text', value: asTrimmedString(metadata.text) },
     { source: 'metadata.label', value: asTrimmedString(metadata.label) },
   ];
 
   if (options.includeNameFallback !== false) {
-    candidates.push({ source: 'name', value: asTrimmedString(node.name) });
+    candidates.push({ source: 'name', value: asTrimmedString(getNodeName(node)) });
   }
 
   for (const candidate of candidates) {

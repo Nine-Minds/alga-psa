@@ -1,12 +1,31 @@
 import React, { useState } from 'react';
 import { useInvoiceDesignerStore, DesignerNode } from '../state/designerStore';
 import clsx from 'clsx';
+import { getNodeName } from '../utils/nodeProps';
 
 export const OutlineView: React.FC = () => {
-  const nodes = useInvoiceDesignerStore((state) => state.nodes);
+  const nodesById = useInvoiceDesignerStore((state) => state.nodesById);
+  const rootId = useInvoiceDesignerStore((state) => state.rootId);
   const selectedNodeId = useInvoiceDesignerStore((state) => state.selectedNodeId);
   const selectNode = useInvoiceDesignerStore((state) => state.selectNode);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+
+  const parentById = React.useMemo(() => {
+    const parentMap = new Map<string, string | null>();
+    const visit = (id: string) => {
+      const node = nodesById[id];
+      if (!node) return;
+      node.children.forEach((childId) => {
+        if (!parentMap.has(childId)) {
+          parentMap.set(childId, id);
+          visit(childId);
+        }
+      });
+    };
+    parentMap.set(rootId, null);
+    visit(rootId);
+    return parentMap;
+  }, [nodesById, rootId]);
 
   const toggleExpand = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -25,10 +44,12 @@ export const OutlineView: React.FC = () => {
   React.useEffect(() => {
     if (selectedNodeId) {
       const toExpand = new Set<string>();
-      let current = nodes.find(n => n.id === selectedNodeId);
-      while (current?.parentId) {
-        toExpand.add(current.parentId);
-        current = nodes.find(n => n.id === current?.parentId);
+      let currentId: string | null = selectedNodeId;
+      while (currentId) {
+        const parentId: string | null = parentById.get(currentId) ?? null;
+        if (!parentId) break;
+        toExpand.add(parentId);
+        currentId = parentId;
       }
       if (toExpand.size > 0) {
         setExpanded(prev => {
@@ -38,11 +59,11 @@ export const OutlineView: React.FC = () => {
         });
       }
     }
-  }, [selectedNodeId, nodes]);
+  }, [parentById, selectedNodeId]);
 
   const renderNode = (node: DesignerNode, depth: number = 0) => {
-    const children = nodes.filter((n) => n.parentId === node.id);
-    const hasChildren = children.length > 0;
+    const children = node.children.map((childId) => nodesById[childId]).filter(Boolean);
+    const hasChildren = node.children.length > 0;
     const isExpanded = expanded.has(node.id);
     const isSelected = node.id === selectedNodeId;
 
@@ -66,7 +87,7 @@ export const OutlineView: React.FC = () => {
             {hasChildren && (isExpanded ? '▼' : '▶')}
           </span>
           <span className="truncate flex-1">
-             {node.name || node.type}
+             {getNodeName(node) || node.type}
           </span>
         </div>
         {hasChildren && isExpanded && (
@@ -76,12 +97,14 @@ export const OutlineView: React.FC = () => {
     );
   };
 
-  // Find root nodes (usually just "Document" or page)
-  const rootNodes = nodes.filter((n) => !n.parentId);
+  const rootNode = nodesById[rootId];
+  if (!rootNode) {
+    return <div className="flex-1 overflow-y-auto py-2" />;
+  }
 
   return (
     <div className="flex-1 overflow-y-auto py-2">
-      {rootNodes.map((node) => renderNode(node))}
+      {renderNode(rootNode)}
     </div>
   );
 };

@@ -3,11 +3,14 @@ import type { Modifier } from '@dnd-kit/core';
 import {
   DndContext,
   DragEndEvent,
+  DragOverEvent,
   DragMoveEvent,
   DragOverlay,
   DragStartEvent,
   KeyboardSensor,
+  MeasuringStrategy,
   PointerSensor,
+  type CollisionDetection,
   useDndMonitor,
   useSensor,
   useSensors,
@@ -17,33 +20,19 @@ import { restrictToWindowEdges, createSnapModifier } from '@dnd-kit/modifiers';
 import { ComponentPalette } from './palette/ComponentPalette';
 import { DesignCanvas } from './canvas/DesignCanvas';
 import { DesignerToolbar } from './toolbar/DesignerToolbar';
-import type { DesignerComponentType, DesignerConstraint, DesignerNode, Point, Size } from './state/designerStore';
-import { getAbsolutePosition, useInvoiceDesignerStore } from './state/designerStore';
-import { AlignmentGuide, calculateGuides, clampPositionToParent, resolveFlexPadding } from './utils/layout';
+import type { DesignerComponentType, DesignerNode, Point, Size } from './state/designerStore';
+import { clampNodeSizeToPracticalMinimum, getAbsolutePosition, useInvoiceDesignerStore } from './state/designerStore';
+import { AlignmentGuide, resolveFlexPadding } from './utils/layout';
 import { getDefinition } from './constants/componentCatalog';
 import { getPresetById } from './constants/presets';
-import {
-  findNearestSectionAncestor,
-  planSelectedPathInsertion,
-  planForceSelectedInsertion,
-  resolvePreferredParentFromSelection,
-  resolveSectionParentForInsertion,
-} from './utils/dropParentResolution';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { useDesignerShortcuts } from './hooks/useDesignerShortcuts';
-import { canNestWithinParent, getAllowedParentsForType } from './state/hierarchy';
-import { supportsAspectRatioLock } from './utils/aspectRatio';
-import {
-  buildPairConstraint,
-  canNodeParticipateInPairConstraint,
-  doesConstraintInvolveNode,
-  getPairConstraintCounterpartNodeId,
-  isPairConstraint,
-  PAIR_CONSTRAINT_LABELS,
-  PAIR_CONSTRAINT_TYPES,
-  validatePairConstraintNodes,
-} from './utils/constraints';
+import { canNestWithinParent, getAllowedParentsForType } from './schema/componentSchema';
+import { invoiceDesignerCollisionDetection } from './utils/dndCollision';
+import { resolveInsertPositionFromRects } from './utils/dropIndicator';
+import { DesignerSchemaInspector } from './inspector/DesignerSchemaInspector';
+import { getNodeLayout, getNodeMetadata, getNodeName, getNodeStyle } from './utils/nodeProps';
 
 const DROPPABLE_CANVAS_ID = 'designer-canvas';
 
@@ -64,7 +53,9 @@ type PaletteDragData =
     };
 
 type NodeDragData = {
+  dragKind: 'node';
   nodeId: string;
+  layoutKind: 'absolute' | 'flow';
 };
 
 type DropTargetMeta = {
@@ -78,15 +69,14 @@ type DropFeedback = {
   message: string;
 };
 
-type InsertBlockCallout = {
-  sectionId: string;
-  message: string;
-  nextAction: string;
-};
+type DropIndicator =
+  | { kind: 'insert'; overNodeId: string; position: 'before' | 'after'; tone: 'valid' | 'invalid' }
+  | { kind: 'container'; containerId: string; tone: 'invalid' }
+  | null;
 
 type ComponentDropResolution =
-  | { ok: true; parentId: string; notice?: string; reflowAdjustments?: Array<{ nodeId: string; width: number }> }
-  | { ok: false; message: string; reason?: 'selected-section-no-room'; sectionId?: string; nextAction?: string };
+  | { ok: true; parentId: string }
+  | { ok: false; message: string };
 
 type ComponentInsertOptions = {
   dropMeta?: DropTargetMeta;
@@ -131,44 +121,20 @@ const isPaletteDragData = (value: unknown): value is PaletteDragData =>
 const isNodeDragData = (value: unknown): value is NodeDragData =>
   typeof value === 'object' &&
   value !== null &&
+  'dragKind' in value &&
+  (value as { dragKind?: unknown }).dragKind === 'node' &&
   'nodeId' in value &&
   typeof (value as { nodeId?: unknown }).nodeId === 'string';
 
-const createRestrictToParentBoundsModifier = (nodes: DesignerNode[]): Modifier => ({ active, transform }) => {
-  if (!active || !transform) {
-    return transform;
-  }
-  const data = active.data?.current;
-  if (!isNodeDragData(data)) {
-    return transform;
-  }
-  const node = nodes.find((candidate) => candidate.id === data.nodeId);
-  if (!node) {
-    return transform;
-  }
-  const boundedPosition = clampPositionToParent(node, nodes, {
-    x: node.position.x + transform.x,
-    y: node.position.y + transform.y,
-  });
-  return {
-    ...transform,
-    x: boundedPosition.x - node.position.x,
-    y: boundedPosition.y - node.position.y,
-  };
-};
-
-const buildDescendantPositionMap = (rootId: string, allNodes: DesignerNode[]) => {
-  const positions = new Map<string, Point>();
-  const nodesById = new Map(allNodes.map((node) => [node.id, node]));
-  const walk = (id: string) => {
-    const node = nodesById.get(id);
-    if (!node) return;
-    positions.set(id, { ...node.position });
-    node.childIds.forEach((childId) => walk(childId));
-  };
-  walk(rootId);
-  return positions;
-};
+const isDropTargetMeta = (value: unknown): value is DropTargetMeta =>
+  typeof value === 'object' &&
+  value !== null &&
+  'nodeId' in value &&
+  typeof (value as { nodeId?: unknown }).nodeId === 'string' &&
+  'nodeType' in value &&
+  typeof (value as { nodeType?: unknown }).nodeType === 'string' &&
+  'allowedChildren' in value &&
+  Array.isArray((value as { allowedChildren?: unknown }).allowedChildren);
 
 const getPracticalMinimumSizeForType = (type: DesignerComponentType): { width: number; height: number } => {
   switch (type) {
@@ -205,7 +171,7 @@ const getSectionFitSizeFromChildren = (
   section: DesignerNode,
   nodesById: Map<string, DesignerNode>
 ): Size | null => {
-  const sectionChildren = section.childIds
+  const sectionChildren = section.children
     .map((childId) => nodesById.get(childId))
     .filter((node): node is DesignerNode => Boolean(node));
 
@@ -213,7 +179,7 @@ const getSectionFitSizeFromChildren = (
     return null;
   }
 
-  const padding = resolveFlexPadding(section);
+  const padding = resolveFlexPadding(getNodeLayout(section));
   const furthestRight = sectionChildren.reduce((max, child) => {
     const right = Math.max(0, child.position.x) + Math.max(0, child.size.width);
     return right > max ? right : max;
@@ -253,20 +219,22 @@ const resolveNearestAncestorSection = (
   nodeId: string | null,
   nodesById: Map<string, DesignerNode>
 ): DesignerNode | null => {
-  const sectionId = findNearestSectionAncestor(nodeId, nodesById);
-  if (!sectionId) {
+  if (!nodeId) {
     return null;
   }
-  const sectionNode = nodesById.get(sectionId);
-  return sectionNode?.type === 'section' ? sectionNode : null;
+  let current: DesignerNode | null = nodesById.get(nodeId) ?? null;
+  while (current) {
+    if (current.type === 'section') {
+      return current;
+    }
+    current = current.parentId ? nodesById.get(current.parentId) ?? null : null;
+  }
+  return null;
 };
 
 const wasSizeConstrainedFromDraft = (draft: Size, resolved: Size) => !sizesAreEffectivelyEqual(draft, resolved);
 
-const getSectionFitNoopMessage = (section: DesignerNode) =>
-  section.layout?.sizing === 'fill'
-    ? 'Section is already fitted in Fill mode. Switch section sizing to Fixed to shrink dimensions.'
-    : 'Section is already fitted.';
+const getSectionFitNoopMessage = (_section: DesignerNode) => 'Section is already fitted.';
 
 const shouldPromoteParentToCanvasForManualPosition = (
   node: DesignerNode | null,
@@ -276,7 +244,7 @@ const shouldPromoteParentToCanvasForManualPosition = (
   if (!node || node.type !== 'label') {
     return false;
   }
-  if (!parent || parent.layout?.mode !== 'flex') {
+  if (!parent || getNodeLayout(parent)?.display !== 'flex') {
     return false;
   }
   if (!Number.isFinite(draft.x) || !Number.isFinite(draft.y)) {
@@ -287,16 +255,14 @@ const shouldPromoteParentToCanvasForManualPosition = (
 
 export const DesignerShell: React.FC = () => {
   const nodes = useInvoiceDesignerStore((state) => state.nodes);
-  const constraints = useInvoiceDesignerStore((state) => state.constraints);
   const selectedNodeId = useInvoiceDesignerStore((state) => state.selectedNodeId);
   const selectedNode = useMemo(() => nodes.find((node) => node.id === selectedNodeId) ?? null, [nodes, selectedNodeId]);
   const addNode = useInvoiceDesignerStore((state) => state.addNodeFromPalette);
   const insertPreset = useInvoiceDesignerStore((state) => state.insertPreset);
-  const setNodePosition = useInvoiceDesignerStore((state) => state.setNodePosition);
-  const updateNodeSize = useInvoiceDesignerStore((state) => state.updateNodeSize);
+  const moveNode = useInvoiceDesignerStore((state) => state.moveNode);
+  const setNodeProp = useInvoiceDesignerStore((state) => state.setNodeProp);
+  const unsetNodeProp = useInvoiceDesignerStore((state) => state.unsetNodeProp);
   const selectNode = useInvoiceDesignerStore((state) => state.selectNode);
-  const updateNodeName = useInvoiceDesignerStore((state) => state.updateNodeName);
-  const updateNodeMetadata = useInvoiceDesignerStore((state) => state.updateNodeMetadata);
   const toggleSnap = useInvoiceDesignerStore((state) => state.toggleSnap);
   const snapToGrid = useInvoiceDesignerStore((state) => state.snapToGrid);
   const toggleGuides = useInvoiceDesignerStore((state) => state.toggleGuides);
@@ -311,22 +277,33 @@ export const DesignerShell: React.FC = () => {
   const redo = useInvoiceDesignerStore((state) => state.redo);
   const metrics = useInvoiceDesignerStore((state) => state.metrics);
   const recordDropResult = useInvoiceDesignerStore((state) => state.recordDropResult);
-  const toggleAspectRatioLock = useInvoiceDesignerStore((state) => state.toggleAspectRatioLock);
-  const addConstraint = useInvoiceDesignerStore((state) => state.addConstraint);
-  const removeConstraint = useInvoiceDesignerStore((state) => state.removeConstraint);
-  const constraintError = useInvoiceDesignerStore((state) => state.constraintError);
-  const aspectConstraint = selectedNodeId
-    ? constraints.find(
-        (constraint): constraint is Extract<DesignerConstraint, { type: 'aspect-ratio' }> =>
-          constraint.type === 'aspect-ratio' && constraint.id === `aspect-${selectedNodeId}`
-      )
-    : undefined;
-  const clearLayoutPreset = useInvoiceDesignerStore((state) => state.clearLayoutPreset);
-  const setLayoutMode = useInvoiceDesignerStore((state) => state.setLayoutMode);
-  const [referenceNodeId, setReferenceNodeId] = useState<string | null>(null);
+
+  const resizeNode = useCallback(
+    (id: string, size: Size, commit: boolean = false) => {
+      const node = useInvoiceDesignerStore.getState().nodesById[id];
+      if (!node) return;
+
+      const clamped = clampNodeSizeToPracticalMinimum(node.type, size);
+      const rounded = {
+        width: Math.round(clamped.width),
+        height: Math.round(clamped.height),
+      };
+
+      // Batch updates without generating multiple history entries.
+      setNodeProp(id, 'size.width', rounded.width, false);
+      setNodeProp(id, 'size.height', rounded.height, false);
+      setNodeProp(id, 'baseSize.width', rounded.width, false);
+      setNodeProp(id, 'baseSize.height', rounded.height, false);
+      setNodeProp(id, 'style.width', `${rounded.width}px`, false);
+      setNodeProp(id, 'style.height', `${rounded.height}px`, commit);
+    },
+    [setNodeProp]
+  );
+
+  // Constraints were removed as part of the CSS-first layout cutover.
+  const referenceNodeId = null;
+  const selectedCounterpartNodeIds = useMemo(() => new Set<string>(), []);
   const selectedPreset = selectedNode?.layoutPresetId ? getPresetById(selectedNode.layoutPresetId) : null;
-  const canLockAspectRatio = selectedNode ? supportsAspectRatioLock(selectedNode.type) : false;
-  const canUsePairConstraints = selectedNode ? canNodeParticipateInPairConstraint(selectedNode) : false;
   const selectedMediaParentSection = useMemo(() => {
     if (!selectedNode || !['image', 'logo', 'qr'].includes(selectedNode.type)) {
       return null;
@@ -341,120 +318,26 @@ export const DesignerShell: React.FC = () => {
     return getSectionFitSizeFromChildren(selectedNode, new Map(nodes.map((node) => [node.id, node])));
   }, [nodes, selectedNode]);
   const nodesById = useMemo(() => new Map(nodes.map((node) => [node.id, node] as const)), [nodes]);
-  const referenceNode = useMemo(
-    () => (referenceNodeId ? nodesById.get(referenceNodeId) ?? null : null),
-    [nodesById, referenceNodeId]
-  );
-  const selectedNodeConstraints = useMemo(
-    () => (selectedNodeId ? constraints.filter((constraint) => doesConstraintInvolveNode(constraint, selectedNodeId)) : []),
-    [constraints, selectedNodeId]
-  );
-  const selectedNodePairConstraints = useMemo(
-    () => selectedNodeConstraints.filter((constraint): constraint is Extract<DesignerConstraint, { nodes: [string, string] }> => isPairConstraint(constraint)),
-    [selectedNodeConstraints]
-  );
-  const selectedCounterpartNodeIds = useMemo(() => {
-    if (!selectedNodeId) {
-      return new Set<string>();
-    }
-    const counterparts = new Set<string>();
-    selectedNodePairConstraints.forEach((constraint) => {
-      const counterpartId = getPairConstraintCounterpartNodeId(constraint, selectedNodeId);
-      if (counterpartId) {
-        counterparts.add(counterpartId);
-      }
-    });
-    return counterparts;
-  }, [selectedNodeId, selectedNodePairConstraints]);
-  const pairAuthoringValidation = useMemo(() => {
-    if (!selectedNodeId || !referenceNodeId) {
-      return null;
-    }
-    return validatePairConstraintNodes(nodesById, referenceNodeId, selectedNodeId);
-  }, [nodesById, referenceNodeId, selectedNodeId]);
-  const pairAuthoringBaseError = useMemo(() => {
-    if (!selectedNode) {
-      return 'Select a target node to apply constraints.';
-    }
-    if (!canUsePairConstraints) {
-      return 'Constraints are only available for editable canvas nodes.';
-    }
-    if (!referenceNodeId) {
-      return 'Set a reference node first.';
-    }
-    if (!referenceNode || !canNodeParticipateInPairConstraint(referenceNode)) {
-      return 'Reference node is not available. Set a new reference node.';
-    }
-    if (pairAuthoringValidation && pairAuthoringValidation.ok === false) {
-      return (pairAuthoringValidation as { message: string }).message;
-    }
-    return null;
-  }, [canUsePairConstraints, pairAuthoringValidation, referenceNode, referenceNodeId, selectedNode]);
-  const pairConstraintActionState = useMemo(() => {
-    return PAIR_CONSTRAINT_TYPES.reduce(
-      (acc, type) => {
-        if (pairAuthoringBaseError) {
-          acc[type] = { disabled: true, reason: pairAuthoringBaseError };
-          return acc;
-        }
-        if (!pairAuthoringValidation || !pairAuthoringValidation.ok) {
-          acc[type] = { disabled: true, reason: 'Select a valid node pair.' };
-          return acc;
-        }
-        const duplicateConstraintId = buildPairConstraint(type, pairAuthoringValidation.orderedNodeIds[0], pairAuthoringValidation.orderedNodeIds[1]).id;
-        const isDuplicate = constraints.some((constraint) => constraint.id === duplicateConstraintId);
-        if (isDuplicate) {
-          acc[type] = { disabled: true, reason: 'Constraint already exists.' };
-          return acc;
-        }
-        acc[type] = { disabled: false, reason: null };
-        return acc;
-      },
-      {} as Record<
-        (typeof PAIR_CONSTRAINT_TYPES)[number],
-        { disabled: boolean; reason: string | null }
-      >
-    );
-  }, [constraints, pairAuthoringBaseError, pairAuthoringValidation]);
 
-  useDesignerShortcuts();
-
-  const [activeDrag, setActiveDrag] = useState<ActiveDragState>(null);
-  const [guides, setGuides] = useState<AlignmentGuide[]>([]);
-  const [previewPositions, setPreviewPositions] = useState<Record<string, Point>>({});
-  const [dropFeedback, setDropFeedback] = useState<DropFeedback | null>(null);
-  const [insertBlockCallout, setInsertBlockCallout] = useState<InsertBlockCallout | null>(null);
-  const [forcedDropTarget, setForcedDropTarget] = useState<string | 'canvas' | null>(null);
-  const blockedSectionName = useMemo(() => {
-    if (!insertBlockCallout) {
-      return null;
-    }
-    return nodes.find((node) => node.id === insertBlockCallout.sectionId)?.name ?? null;
-  }, [insertBlockCallout, nodes]);
-  const pointerRef = useRef<{ x: number; y: number } | null>(null);
-  const dropFeedbackTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  
-  // Fail-safe: Clear guides when no drag is active
-  React.useEffect(() => {
-    if (!activeDrag && guides.length > 0) {
-      setGuides([]);
-    }
-  }, [activeDrag, guides.length]);
-
-  const dragSessionRef = useRef<{
-    nodeId: string;
-    origin: Point;
-    originalPositions: Map<string, Point>;
-    lastDelta: Point;
-  } | null>(null);
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 5,
+	  useDesignerShortcuts();
+	
+	  const [activeDrag, setActiveDrag] = useState<ActiveDragState>(null);
+	  const [dropIndicator, setDropIndicator] = useState<DropIndicator>(null);
+	  const [dropFeedback, setDropFeedback] = useState<DropFeedback | null>(null);
+	  const [forcedDropTarget, setForcedDropTarget] = useState<string | 'canvas' | null>(null);
+	  const pointerRef = useRef<{ x: number; y: number } | null>(null);
+	  const dropFeedbackTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+	  
+	  const sensors = useSensors(
+	    useSensor(PointerSensor, {
+	      activationConstraint: {
+	        distance: 5,
       },
     }),
     useSensor(KeyboardSensor)
   );
+
+  const collisionDetection = useCallback<CollisionDetection>(invoiceDesignerCollisionDetection, []);
 
   const [propertyDraft, setPropertyDraft] = useState(() => ({
     x: 0,
@@ -480,15 +363,6 @@ export const DesignerShell: React.FC = () => {
     }
   }, [selectedNode, selectedNodeId, selectNode]);
 
-  React.useEffect(() => {
-    if (!referenceNodeId) {
-      return;
-    }
-    if (!nodesById.has(referenceNodeId)) {
-      setReferenceNodeId(null);
-    }
-  }, [nodesById, referenceNodeId]);
-
   const updatePointerLocation = useCallback((point: { x: number; y: number } | null) => {
     pointerRef.current = point;
   }, []);
@@ -499,14 +373,6 @@ export const DesignerShell: React.FC = () => {
       dropFeedbackTimeoutRef.current = null;
     }
     setDropFeedback(null);
-  }, []);
-
-  const clearInsertBlockCallout = useCallback(() => {
-    setInsertBlockCallout(null);
-  }, []);
-
-  const showInsertBlockCallout = useCallback((callout: InsertBlockCallout) => {
-    setInsertBlockCallout(callout);
   }, []);
 
   const showDropFeedback = useCallback((tone: DropFeedback['tone'], message: string) => {
@@ -528,17 +394,6 @@ export const DesignerShell: React.FC = () => {
     };
   }, []);
 
-  React.useEffect(() => {
-    if (!insertBlockCallout) {
-      return;
-    }
-    const nodesById = new Map(nodes.map((node) => [node.id, node]));
-    const selectedSectionId = findNearestSectionAncestor(selectedNodeId, nodesById);
-    if (!selectedSectionId || selectedSectionId !== insertBlockCallout.sectionId) {
-      setInsertBlockCallout(null);
-    }
-  }, [insertBlockCallout, nodes, selectedNodeId]);
-
   const snapModifier = useMemo<Modifier | null>(() => {
     if (!snapToGrid) {
       return null;
@@ -547,25 +402,10 @@ export const DesignerShell: React.FC = () => {
     return createSnapModifier(pixelGrid);
   }, [snapToGrid, gridSize, canvasScale]);
 
-  const restrictToParentBoundsModifier = useMemo<Modifier>(
-    () => createRestrictToParentBoundsModifier(nodes),
-    [nodes]
-  );
-
   const modifiers = useMemo<Modifier[]>(() => {
-    const base: Modifier[] = [restrictToParentBoundsModifier, restrictToWindowEdges];
+    const base: Modifier[] = [restrictToWindowEdges];
     return snapModifier ? [...base, snapModifier] : base;
-  }, [restrictToParentBoundsModifier, snapModifier]);
-
-  const renderedNodes = useMemo(() => {
-    if (!previewPositions || Object.keys(previewPositions).length === 0) {
-      return nodes;
-    }
-    return nodes.map((node) => {
-      const override = previewPositions[node.id];
-      return override ? { ...node, position: override } : node;
-    });
-  }, [nodes, previewPositions]);
+  }, [snapModifier]);
 
   const resolvePageForDrop = useCallback((nodesForDrop: DesignerNode[], startNodeId?: string): DesignerNode | null => {
     const nodesById = new Map(nodesForDrop.map((node) => [node.id, node]));
@@ -585,7 +425,7 @@ export const DesignerShell: React.FC = () => {
     }
 
     return (
-      documentNode.childIds
+      documentNode.children
         .map((childId) => nodesById.get(childId))
         .find((node): node is DesignerNode => Boolean(node && node.type === 'page')) ??
       nodesForDrop.find((node) => node.type === 'page') ??
@@ -632,179 +472,52 @@ export const DesignerShell: React.FC = () => {
     (
       componentType: DesignerComponentType,
       dropMeta: DropTargetMeta | undefined,
-      dropPoint: Point,
+      _dropPoint: Point,
       options: { strictSelectionPath?: boolean; selectedNodeIdOverride?: string | null } = {}
     ): ComponentDropResolution => {
       const state = useInvoiceDesignerStore.getState();
       const nodesForDrop = state.nodes;
       const nodesById = new Map(nodesForDrop.map((node) => [node.id, node]));
       const dropNode = dropMeta?.nodeId ? nodesById.get(dropMeta.nodeId) : undefined;
+      const selectedNodeIdForResolution = options.selectedNodeIdOverride ?? state.selectedNodeId;
+
+      const resolveFromNode = (start: DesignerNode | null | undefined): string | null => {
+        let current = start ?? null;
+        while (current) {
+          if (canNestWithinParent(componentType, current.type)) {
+            return current.id;
+          }
+          current = current.parentId ? nodesById.get(current.parentId) ?? null : null;
+        }
+        return null;
+      };
+
+      const resolvedFromDrop = resolveFromNode(dropNode);
+      if (resolvedFromDrop) {
+        return { ok: true, parentId: resolvedFromDrop };
+      }
+
+      const resolvedFromSelection = selectedNodeIdForResolution
+        ? resolveFromNode(nodesById.get(selectedNodeIdForResolution))
+        : null;
+      if (resolvedFromSelection) {
+        return { ok: true, parentId: resolvedFromSelection };
+      }
+
+      const pageNode = resolvePageForDrop(nodesForDrop, dropNode?.id ?? selectedNodeIdForResolution ?? undefined);
+      if (pageNode && canNestWithinParent(componentType, pageNode.type)) {
+        return { ok: true, parentId: pageNode.id };
+      }
+
       const allowedParents = getAllowedParentsForType(componentType);
-      const componentDefinition = getDefinition(componentType);
-      const liveSelectedNodeId = options.selectedNodeIdOverride ?? state.selectedNodeId;
-      const selectedSectionId = findNearestSectionAncestor(liveSelectedNodeId, nodesById);
-
-      if (dropNode && canNestWithinParent(componentType, dropNode.type)) {
-        return { ok: true, parentId: dropNode.id };
-      }
-
-      let ancestor = dropNode;
-      while (ancestor?.parentId) {
-        const parent = nodesById.get(ancestor.parentId);
-        if (!parent) {
-          break;
-        }
-        if (canNestWithinParent(componentType, parent.type)) {
-          return { ok: true, parentId: parent.id };
-        }
-        ancestor = parent;
-      }
-
-      const pageNode = resolvePageForDrop(nodesForDrop, dropNode?.id ?? selectedSectionId ?? undefined);
-      if (componentType === 'section') {
-        if (pageNode && canNestWithinParent('section', pageNode.type)) {
-          return { ok: true, parentId: pageNode.id };
-        }
-        return { ok: false, message: 'Unable to place section here.' };
-      }
-
-      if (!dropNode && pageNode) {
-        if (options.strictSelectionPath) {
-          const selectedPathPlan = planSelectedPathInsertion({
-            selectedNodeId: liveSelectedNodeId,
-            nodesById,
-            componentType,
-            desiredSize: componentDefinition?.defaultSize,
-          });
-          if (!selectedPathPlan) {
-            return {
-              ok: false,
-              message: 'Select a parent in OUTLINE before using quick insert.',
-            };
-          }
-          if (!selectedPathPlan.ok) {
-            const failedPlan = selectedPathPlan as { message: string; sectionId?: string; nextAction?: string };
-            return {
-              ok: false,
-              message: failedPlan.message,
-              reason: 'selected-section-no-room',
-              sectionId: failedPlan.sectionId,
-              nextAction: failedPlan.nextAction,
-            };
-          }
-          return {
-            ok: true,
-            parentId: selectedPathPlan.parentId,
-            reflowAdjustments: selectedPathPlan.reflowAdjustments,
-            notice:
-              selectedPathPlan.reflowAdjustments.length > 0
-                ? 'Inserted in selected parent with local reflow.'
-                : undefined,
-          };
-        }
-
-        const forcePlan = planForceSelectedInsertion({
-          selectedNodeId: liveSelectedNodeId,
-          pageNode,
-          nodesById,
-          componentType,
-          desiredSize: componentDefinition?.defaultSize,
-        });
-        if (forcePlan) {
-          if (!forcePlan.ok) {
-            const failedPlan = forcePlan as { message: string; sectionId?: string; nextAction?: string };
-            return {
-              ok: false,
-              message: failedPlan.message,
-              reason: 'selected-section-no-room',
-              sectionId: failedPlan.sectionId,
-              nextAction: failedPlan.nextAction,
-            };
-          }
-          return {
-            ok: true,
-            parentId: forcePlan.parentId,
-            reflowAdjustments: forcePlan.reflowAdjustments,
-            notice:
-              forcePlan.reflowAdjustments.length > 0
-                ? 'Inserted in selected section with local reflow.'
-                : undefined,
-          };
-        }
-
-        const preferredParent = resolvePreferredParentFromSelection({
-          selectedNodeId: liveSelectedNodeId,
-          pageNode,
-          nodesById,
-          componentType,
-          desiredSize: componentDefinition?.defaultSize,
-        });
-        if (preferredParent) {
-          return { ok: true, parentId: preferredParent.id };
-        }
-      }
-
-      if (allowedParents.includes('section') && pageNode) {
-        const existingSection = resolveSectionParentForInsertion({
-          pageNode,
-          nodesById,
-          componentType,
-          desiredSize: componentDefinition?.defaultSize,
-          preferredSectionId: selectedSectionId,
-        });
-        if (existingSection) {
-          return { ok: true, parentId: existingSection.id };
-        }
-
-        const existingNodeIds = new Set(nodesForDrop.map((node) => node.id));
-        const sectionDefinition = getDefinition('section');
-        addNode(
-          'section',
-          dropPoint,
-          sectionDefinition
-            ? {
-                parentId: pageNode.id,
-                defaults: {
-                  size: sectionDefinition.defaultSize,
-                  layout: {
-                    mode: 'flex',
-                    direction: 'column',
-                    gap: 12,
-                    padding: 12,
-                    justify: 'start',
-                    align: 'stretch',
-                    sizing: 'fixed',
-                  },
-                },
-              }
-            : { parentId: pageNode.id }
-        );
-
-        const nodesAfterScaffold = useInvoiceDesignerStore.getState().nodes;
-        const createdSection = nodesAfterScaffold.find(
-          (node) => node.type === 'section' && node.parentId === pageNode.id && !existingNodeIds.has(node.id)
-        );
-        if (createdSection) {
-          return { ok: true, parentId: createdSection.id, notice: 'Added a section scaffold for this drop.' };
-        }
-
-        const fallbackNodesById = new Map(nodesAfterScaffold.map((node) => [node.id, node]));
-        const nextPageNode = fallbackNodesById.get(pageNode.id) ?? pageNode;
-        const fallbackSection = resolveSectionParentForInsertion({
-          pageNode: nextPageNode,
-          nodesById: fallbackNodesById,
-          componentType,
-          desiredSize: componentDefinition?.defaultSize,
-          preferredSectionId: selectedSectionId,
-        });
-        if (fallbackSection) {
-          return { ok: true, parentId: fallbackSection.id };
-        }
+      const fallback = nodesForDrop.find((node) => allowedParents.includes(node.type)) ?? null;
+      if (fallback) {
+        return { ok: true, parentId: fallback.id };
       }
 
       return { ok: false, message: 'Drop target is not compatible for this component.' };
     },
-    [addNode, resolvePageForDrop]
+    [resolvePageForDrop]
   );
 
   const getDefaultInsertionPoint = useCallback((options?: { preferSelectionAnchor?: boolean; selectionAnchorId?: string | null }): Point => {
@@ -858,52 +571,16 @@ export const DesignerShell: React.FC = () => {
         selectedNodeIdOverride: selectedNodeIdForResolution,
       });
       if (!resolution.ok) {
-        const failedResolution = resolution as Extract<ComponentDropResolution, { ok: false }>;
         recordDropResult(false);
-        showDropFeedback('error', failedResolution.message);
-        if (failedResolution.reason === 'selected-section-no-room' && failedResolution.sectionId) {
-          showInsertBlockCallout({
-            sectionId: failedResolution.sectionId,
-            message: failedResolution.message,
-            nextAction: failedResolution.nextAction ?? 'Resize the selected section or choose another section.',
-          });
-        }
+        showDropFeedback('error', 'message' in resolution ? resolution.message : 'Drop target is not compatible.');
         return false;
       }
 
-      clearInsertBlockCallout();
-
-      if (resolution.reflowAdjustments && resolution.reflowAdjustments.length > 0) {
-        const nodesById = new Map(useInvoiceDesignerStore.getState().nodes.map((node) => [node.id, node]));
-        resolution.reflowAdjustments.forEach((adjustment) => {
-          const node = nodesById.get(adjustment.nodeId);
-          if (!node) {
-            return;
-          }
-          const minimum = getPracticalMinimumSizeForType(node.type);
-          updateNodeSize(
-            adjustment.nodeId,
-            {
-              width: Math.max(minimum.width, adjustment.width),
-              height: Math.max(minimum.height, node.size.height),
-            },
-            false
-          );
-        });
-      }
-
-      const def = getDefinition(componentType);
-      const defaultMetadata = def ? buildDefaultMetadata(componentType, def.defaultMetadata) : undefined;
       const existingNodeIds = new Set(useInvoiceDesignerStore.getState().nodes.map((node) => node.id));
       addNode(
         componentType,
         dropPoint,
-        def
-          ? {
-              parentId: resolution.parentId,
-              defaults: { size: def.defaultSize, metadata: defaultMetadata },
-            }
-          : { parentId: resolution.parentId }
+        { parentId: resolution.parentId }
       );
       const inserted = useInvoiceDesignerStore
         .getState()
@@ -921,21 +598,15 @@ export const DesignerShell: React.FC = () => {
           selectNode(options.preserveSelectionId);
         }
       }
-      if (resolution.notice) {
-        showDropFeedback('info', resolution.notice);
-      }
       return true;
     },
     [
       addNode,
-      clearInsertBlockCallout,
       getDefaultInsertionPoint,
       recordDropResult,
       resolveComponentDropParent,
       selectNode,
       showDropFeedback,
-      showInsertBlockCallout,
-      updateNodeSize,
     ]
   );
 
@@ -947,8 +618,6 @@ export const DesignerShell: React.FC = () => {
         showDropFeedback('error', 'Preset definition is unavailable.');
         return false;
       }
-
-      clearInsertBlockCallout();
 
       const dropPoint = options.dropPoint ?? getDefaultInsertionPoint();
       const dropMeta = options.dropMeta;
@@ -992,602 +661,56 @@ export const DesignerShell: React.FC = () => {
         return false;
       }
       return true;
-    },
-    [
-      clearInsertBlockCallout,
-      getDefaultInsertionPoint,
-      insertPreset,
-      recordDropResult,
-      resolvePageForDrop,
+	    },
+	    [
+	      getDefaultInsertionPoint,
+	      insertPreset,
+	      recordDropResult,
+	      resolvePageForDrop,
       selectedNodeId,
       showDropFeedback,
     ]
   );
 
   const cleanupDragState = useCallback(() => {
-    dragSessionRef.current = null;
-    setPreviewPositions({});
-    setGuides([]);
     setActiveDrag(null);
+    setDropIndicator(null);
     updatePointerLocation(null);
   }, [updatePointerLocation]);
-
-  const renderLayoutInspector = () => {
-    if (!selectedNode) return null;
-    
-    // Show layout controls for containers (sections, columns, pages)
-    const isContainer = ['section', 'column', 'page', 'container'].includes(selectedNode.type);
-    // Also show sizing controls for children of flex containers
-    const parent = nodes.find(n => n.id === selectedNode.parentId);
-    const isFlexChild = parent?.layout?.mode === 'flex';
-
-    if (!isContainer && !isFlexChild) return null;
-
-    const layout = selectedNode.layout ?? {
-      mode: 'canvas',
-      direction: 'column',
-      gap: 0,
-      padding: 0,
-      justify: 'start',
-      align: 'start',
-      sizing: 'fixed'
-    };
-
-    return (
-      <div className="rounded border border-slate-200 bg-white px-3 py-2 space-y-3">
-        <p className="text-xs font-semibold text-slate-700">Layout</p>
-        
-        {isContainer && (
-          <>
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-slate-500">Mode</span>
-              <div className="flex bg-slate-100 rounded p-0.5">
-                <button
-                  className={`px-2 py-0.5 text-[10px] rounded ${layout.mode === 'canvas' ? 'bg-white shadow text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}
-                  onClick={() => setLayoutMode(selectedNode.id, 'canvas')}
-                >
-                  Canvas
-                </button>
-                <button
-                  className={`px-2 py-0.5 text-[10px] rounded ${layout.mode === 'flex' ? 'bg-white shadow text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}
-                  onClick={() => setLayoutMode(selectedNode.id, 'flex')}
-                >
-                  Stack
-                </button>
-              </div>
-            </div>
-
-            {layout.mode === 'flex' && (
-              <>
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="text-[10px] text-slate-500 block mb-1">Direction</label>
-                    <select
-                      className="w-full border border-slate-300 rounded px-1 py-1 text-xs"
-                      value={layout.direction}
-                      onChange={(e) => setLayoutMode(selectedNode.id, 'flex', { direction: e.target.value as 'row' | 'column' })}
-                    >
-                      <option value="column">Vertical ↓</option>
-                      <option value="row">Horizontal →</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="text-[10px] text-slate-500 block mb-1">Gap (px)</label>
-                    <input
-                      type="number"
-                      className="w-full border border-slate-300 rounded px-1 py-1 text-xs"
-                      value={layout.gap}
-                      onChange={(e) => setLayoutMode(selectedNode.id, 'flex', { gap: Number(e.target.value) })}
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="text-[10px] text-slate-500 block mb-1">Padding</label>
-                    <input
-                      type="number"
-                      className="w-full border border-slate-300 rounded px-1 py-1 text-xs"
-                      value={layout.padding}
-                      onChange={(e) => setLayoutMode(selectedNode.id, 'flex', { padding: Number(e.target.value) })}
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[10px] text-slate-500 block mb-1">Align Items</label>
-                    <select
-                      className="w-full border border-slate-300 rounded px-1 py-1 text-xs"
-                      value={layout.align}
-                      onChange={(e) => setLayoutMode(selectedNode.id, 'flex', { align: e.target.value as any })}
-                    >
-                      <option value="start">Start</option>
-                      <option value="center">Center</option>
-                      <option value="end">End</option>
-                      <option value="stretch">Stretch</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="text-[10px] text-slate-500 block mb-1">Justify Content</label>
-                    <select
-                      className="w-full border border-slate-300 rounded px-1 py-1 text-xs"
-                      value={layout.justify}
-                      onChange={(e) => setLayoutMode(selectedNode.id, 'flex', { justify: e.target.value as any })}
-                    >
-                      <option value="start">Start</option>
-                      <option value="center">Center</option>
-                      <option value="end">End</option>
-                      <option value="space-between">Space Between</option>
-                    </select>
-                  </div>
-                </div>
-              </>
-            )}
-          </>
-        )}
-
-        <div className="pt-2 border-t border-slate-100">
-          <label className="text-[10px] text-slate-500 block mb-1">Sizing</label>
-          <div className="flex gap-1">
-            {(['fixed', 'hug', 'fill'] as const).map((mode) => (
-              <button
-                key={mode}
-                className={`flex-1 py-1 text-[10px] border rounded ${
-                  layout.sizing === mode
-                    ? 'bg-blue-50 border-blue-200 text-blue-700 font-medium'
-                    : 'border-slate-200 text-slate-600 hover:bg-slate-50'
-                }`}
-                onClick={() => setLayoutMode(selectedNode.id, layout.mode ?? 'canvas', { sizing: mode })}
-                title={
-                  mode === 'fixed' ? 'Fixed dimensions' :
-                  mode === 'hug' ? 'Hug contents' :
-                  'Fill available space'
-                }
-              >
-                {mode.charAt(0).toUpperCase() + mode.slice(1)}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-    );
-  };
 
   const renderMetadataInspector = () => {
     if (!selectedNode) {
       return null;
     }
-    const metadata = (selectedNode.metadata ?? {}) as Record<string, any>;
-    const applyMetadata = (patch: Record<string, unknown>) => updateNodeMetadata(selectedNode.id, patch);
-
-    if (selectedNode.type === 'section') {
-      return (
-        <div className="rounded border border-slate-200 bg-white px-3 py-2 space-y-2">
-          <p className="text-xs font-semibold text-slate-700">Section Border</p>
-          <div>
-            <label className="text-xs text-slate-500 block mb-1">Border style</label>
-            <select
-              id="designer-section-border-style"
-              className="w-full border border-slate-300 rounded-md px-2 py-1 text-sm"
-              value={metadata.sectionBorderStyle ?? 'light'}
-              onChange={(event) => applyMetadata({ sectionBorderStyle: event.target.value })}
-            >
-              <option value="none">None</option>
-              <option value="light">Light</option>
-              <option value="strong">Strong</option>
-            </select>
-          </div>
-        </div>
-      );
-    }
-
-    if (selectedNode.type === 'field') {
-      return (
-        <div className="rounded border border-slate-200 bg-white px-3 py-2 space-y-2">
-          <p className="text-xs font-semibold text-slate-700">Field Binding</p>
-          <div>
-            <label className="text-xs text-slate-500 block mb-1">Binding key</label>
-            <Input
-              id="designer-field-binding"
-              value={metadata.bindingKey ?? ''}
-              onChange={(event) => applyMetadata({ bindingKey: event.target.value })}
-            />
-          </div>
-          <div>
-            <label className="text-xs text-slate-500 block mb-1">Format</label>
-            <select
-              className="w-full border border-slate-300 rounded-md px-2 py-1 text-sm"
-              value={metadata.format ?? 'text'}
-              onChange={(event) => applyMetadata({ format: event.target.value })}
-            >
-              <option value="text">Text</option>
-              <option value="number">Number</option>
-              <option value="currency">Currency</option>
-              <option value="date">Date</option>
-            </select>
-          </div>
-          <div>
-            <label className="text-xs text-slate-500 block mb-1">Placeholder</label>
-            <Input
-              id="designer-field-placeholder"
-              value={metadata.placeholder ?? ''}
-              onChange={(event) => applyMetadata({ placeholder: event.target.value })}
-            />
-          </div>
-          <div>
-            <label className="text-xs text-slate-500 block mb-1">Border style</label>
-            <select
-              id="designer-field-border-style"
-              className="w-full border border-slate-300 rounded-md px-2 py-1 text-sm"
-              value={metadata.fieldBorderStyle ?? 'underline'}
-              onChange={(event) => applyMetadata({ fieldBorderStyle: event.target.value })}
-            >
-              <option value="none">None</option>
-              <option value="underline">Underline</option>
-              <option value="box">Box</option>
-            </select>
-          </div>
-        </div>
-      );
-    }
-
-    if (selectedNode.type === 'label') {
-      return (
-        <div className="rounded border border-slate-200 bg-white px-3 py-2 space-y-2">
-          <p className="text-xs font-semibold text-slate-700">Label Text</p>
-          <Input
-            id="designer-label-text"
-            value={selectedNode.name ?? ''}
-            onChange={(event) => updateNodeName(selectedNode.id, event.target.value)}
-          />
-          <div>
-            <label className="text-xs text-slate-500 block mb-1">Weight</label>
-            <select
-              id="designer-label-weight"
-              className="w-full border border-slate-300 rounded-md px-2 py-1 text-sm"
-              value={metadata.fontWeight ?? metadata.labelFontWeight ?? 'semibold'}
-              onChange={(event) => applyMetadata({ fontWeight: event.target.value })}
-            >
-              <option value="normal">Normal</option>
-              <option value="medium">Medium</option>
-              <option value="semibold">Semibold</option>
-              <option value="bold">Bold</option>
-            </select>
-          </div>
-        </div>
-      );
-    }
-
-    if (selectedNode.type === 'table' || selectedNode.type === 'dynamic-table') {
-      const columns: Array<Record<string, any>> = Array.isArray(metadata.columns) ? metadata.columns : [];
-      const tableBorderPreset =
-        metadata.tableBorderPreset === 'list' ||
-        metadata.tableBorderPreset === 'boxed' ||
-        metadata.tableBorderPreset === 'grid' ||
-        metadata.tableBorderPreset === 'none'
-          ? metadata.tableBorderPreset
-          : 'custom';
-      const tableBorderConfig =
-        tableBorderPreset === 'list'
-          ? { outer: false, rowDividers: true, columnDividers: false }
-          : tableBorderPreset === 'boxed'
-            ? { outer: true, rowDividers: true, columnDividers: false }
-            : tableBorderPreset === 'grid'
-              ? { outer: true, rowDividers: true, columnDividers: true }
-              : tableBorderPreset === 'none'
-                ? { outer: false, rowDividers: false, columnDividers: false }
-                : {
-                    outer: metadata.tableOuterBorder !== false,
-                    rowDividers: metadata.tableRowDividers !== false,
-                    columnDividers: metadata.tableColumnDividers === true,
-                  };
-      const tableOuterBorder = tableBorderConfig.outer;
-      const tableRowDividers = tableBorderConfig.rowDividers;
-      const tableColumnDividers = tableBorderConfig.columnDividers;
-      const updateColumns = (next: Array<Record<string, any>>) => applyMetadata({ columns: next });
-      const updateColumn = (columnId: string, patch: Record<string, unknown>) => {
-        updateColumns(
-          columns.map((column) => (column.id === columnId ? { ...column, ...patch } : column))
-        );
-      };
-      const handleAddColumn = () => {
-        updateColumns([
-          ...columns,
-          {
-            id: createLocalId(),
-            header: 'New Column',
-            key: 'data.field',
-            type: 'text',
-            width: 120,
-          },
-        ]);
-      };
-      const handleRemoveColumn = (columnId: string) => {
-        updateColumns(columns.filter((column) => column.id !== columnId));
-      };
-      const applyTableBorderPreset = (preset: 'list' | 'boxed' | 'grid' | 'none' | 'custom') => {
-        if (preset === 'list') {
-          applyMetadata({
-            tableBorderPreset: 'list',
-            tableOuterBorder: false,
-            tableRowDividers: true,
-            tableColumnDividers: false,
-          });
-          return;
-        }
-        if (preset === 'boxed') {
-          applyMetadata({
-            tableBorderPreset: 'boxed',
-            tableOuterBorder: true,
-            tableRowDividers: true,
-            tableColumnDividers: false,
-          });
-          return;
-        }
-        if (preset === 'grid') {
-          applyMetadata({
-            tableBorderPreset: 'grid',
-            tableOuterBorder: true,
-            tableRowDividers: true,
-            tableColumnDividers: true,
-          });
-          return;
-        }
-        if (preset === 'none') {
-          applyMetadata({
-            tableBorderPreset: 'none',
-            tableOuterBorder: false,
-            tableRowDividers: false,
-            tableColumnDividers: false,
-          });
-          return;
-        }
-        applyMetadata({ tableBorderPreset: 'custom' });
-      };
-
-      return (
-        <div className="rounded border border-slate-200 bg-white px-3 py-2 space-y-3">
-          <div className="flex items-center justify-between text-xs font-semibold text-slate-700">
-            <span>Table Columns</span>
-            <Button id="designer-add-column" variant="outline" size="xs" onClick={handleAddColumn}>
-              Add column
-            </Button>
-          </div>
-          <div className="rounded border border-slate-100 bg-slate-50 px-2 py-2 space-y-1 text-xs text-slate-600">
-            <p className="font-semibold text-slate-700">Borders</p>
-            <div>
-              <label className="text-xs text-slate-500 block mb-1">Preset</label>
-              <select
-                id="designer-table-border-preset"
-                className="w-full border border-slate-300 rounded-md px-2 py-1 text-sm"
-                value={tableBorderPreset}
-                onChange={(event) =>
-                  applyTableBorderPreset(event.target.value as 'list' | 'boxed' | 'grid' | 'none' | 'custom')
-                }
-              >
-                <option value="list">List</option>
-                <option value="boxed">Boxed</option>
-                <option value="grid">Grid</option>
-                <option value="none">None</option>
-                <option value="custom">Custom</option>
-              </select>
-            </div>
-            <label className="flex items-center gap-2">
-              <input
-                id="designer-table-border-outer"
-                type="checkbox"
-                checked={tableOuterBorder}
-                onChange={(event) =>
-                  applyMetadata({ tableBorderPreset: 'custom', tableOuterBorder: event.target.checked })
-                }
-              />
-              Outer border
-            </label>
-            <label className="flex items-center gap-2">
-              <input
-                id="designer-table-border-rows"
-                type="checkbox"
-                checked={tableRowDividers}
-                onChange={(event) =>
-                  applyMetadata({ tableBorderPreset: 'custom', tableRowDividers: event.target.checked })
-                }
-              />
-              Row dividers
-            </label>
-            <label className="flex items-center gap-2">
-              <input
-                id="designer-table-border-columns"
-                type="checkbox"
-                checked={tableColumnDividers}
-                onChange={(event) =>
-                  applyMetadata({ tableBorderPreset: 'custom', tableColumnDividers: event.target.checked })
-                }
-              />
-              Column dividers
-            </label>
-            <div>
-              <label className="text-xs text-slate-500 block mb-1">Header weight</label>
-              <select
-                id="designer-table-header-weight"
-                className="w-full border border-slate-300 rounded-md px-2 py-1 text-sm"
-                value={metadata.tableHeaderFontWeight ?? 'semibold'}
-                onChange={(event) => applyMetadata({ tableHeaderFontWeight: event.target.value })}
-              >
-                <option value="normal">Normal</option>
-                <option value="medium">Medium</option>
-                <option value="semibold">Semibold</option>
-                <option value="bold">Bold</option>
-              </select>
-            </div>
-          </div>
-          {columns.length === 0 && (
-            <p className="text-xs text-slate-500">No columns defined. Add at least one column.</p>
-          )}
-          {columns.map((column) => (
-            <div key={column.id} className="border border-slate-100 rounded-md p-2 space-y-2 bg-slate-50">
-              <div className="flex items-center justify-between">
-                <Input
-                  id={`column-header-${column.id}`}
-                  value={column.header ?? ''}
-                  onChange={(event) => updateColumn(column.id, { header: event.target.value })}
-                  className="text-xs"
-                />
-                <Button
-                  id={`designer-remove-column-${column.id}`}
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => handleRemoveColumn(column.id)}
-                >
-                  ✕
-                </Button>
-              </div>
-              <div className="grid grid-cols-2 gap-2 text-xs text-slate-600">
-                <div>
-                  <label className="block mb-1">Binding key</label>
-                  <Input
-                    id={`column-key-${column.id}`}
-                    value={column.key ?? ''}
-                    onChange={(event) => updateColumn(column.id, { key: event.target.value })}
-                    className="text-xs"
-                  />
-                </div>
-                <div>
-                  <label className="block mb-1">Type</label>
-                  <select
-                    className="w-full border border-slate-300 rounded-md px-2 py-1 text-xs"
-                    value={column.type ?? 'text'}
-                    onChange={(event) => updateColumn(column.id, { type: event.target.value })}
-                  >
-                    <option value="text">Text</option>
-                    <option value="number">Number</option>
-                    <option value="currency">Currency</option>
-                    <option value="date">Date</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block mb-1">Width (px)</label>
-                  <Input
-                    id={`column-width-${column.id}`}
-                    type="number"
-                    value={column.width ?? 120}
-                    onChange={(event) => updateColumn(column.id, { width: Number(event.target.value) })}
-                    className="text-xs"
-                  />
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      );
-    }
-
-    if (['subtotal', 'tax', 'discount', 'custom-total'].includes(selectedNode.type)) {
-      return (
-        <div className="rounded border border-slate-200 bg-white px-3 py-2 space-y-2">
-          <p className="text-xs font-semibold text-slate-700">Totals Row</p>
-          <div>
-            <label className="text-xs text-slate-500 block mb-1">Label</label>
-            <Input
-              id="designer-total-label"
-              value={metadata.label ?? selectedNode.name ?? ''}
-              onChange={(event) => applyMetadata({ label: event.target.value })}
-            />
-          </div>
-          <div>
-            <label className="text-xs text-slate-500 block mb-1">Binding key</label>
-            <Input
-              id="designer-total-binding"
-              value={metadata.bindingKey ?? ''}
-              onChange={(event) => applyMetadata({ bindingKey: event.target.value })}
-            />
-          </div>
-          {selectedNode.type === 'custom-total' && (
-            <div>
-              <label className="text-xs text-slate-500 block mb-1">Computation notes</label>
-              <textarea
-                className="w-full border border-slate-300 rounded-md px-2 py-1 text-sm"
-                value={metadata.notes ?? ''}
-                onChange={(event) => applyMetadata({ notes: event.target.value })}
-              />
-            </div>
-          )}
-        </div>
-      );
-    }
-
-    if (selectedNode.type === 'action-button') {
-      return (
-        <div className="rounded border border-slate-200 bg-white px-3 py-2 space-y-2">
-          <p className="text-xs font-semibold text-slate-700">Button</p>
-          <div>
-            <label className="text-xs text-slate-500 block mb-1">Label</label>
-            <Input
-              id="designer-button-label"
-              value={metadata.label ?? 'Button'}
-              onChange={(event) => applyMetadata({ label: event.target.value })}
-            />
-          </div>
-          <div>
-            <label className="text-xs text-slate-500 block mb-1">Action type</label>
-            <select
-              className="w-full border border-slate-300 rounded-md px-2 py-1 text-sm"
-              value={metadata.actionType ?? 'url'}
-              onChange={(event) => applyMetadata({ actionType: event.target.value })}
-            >
-              <option value="url">URL</option>
-              <option value="mailto">Email</option>
-            </select>
-          </div>
-          <div>
-            <label className="text-xs text-slate-500 block mb-1">Action value</label>
-            <Input
-              id="designer-button-action"
-              value={metadata.actionValue ?? ''}
-              onChange={(event) => applyMetadata({ actionValue: event.target.value })}
-            />
-          </div>
-        </div>
-      );
-    }
-
-    if (selectedNode.type === 'signature') {
-      return (
-        <div className="rounded border border-slate-200 bg-white px-3 py-2 space-y-2">
-          <p className="text-xs font-semibold text-slate-700">Signature Block</p>
-          <div>
-            <label className="text-xs text-slate-500 block mb-1">Signer label</label>
-            <Input
-              id="designer-signature-label"
-              value={metadata.signerLabel ?? 'Authorized Signature'}
-              onChange={(event) => applyMetadata({ signerLabel: event.target.value })}
-            />
-          </div>
-          <label className="flex items-center gap-2 text-xs text-slate-600">
-            <input
-              type="checkbox"
-              checked={Boolean(metadata.includeDate)}
-              onChange={(event) => applyMetadata({ includeDate: event.target.checked })}
-            />
-            Include signing date
-          </label>
-        </div>
-      );
-    }
+    const metadata = getNodeMetadata(selectedNode) as Record<string, any>;
+    const applyMetadata = (patch: Record<string, unknown>, commit: boolean) => {
+      const entries = Object.entries(patch);
+      if (entries.length === 0) return;
+      entries.forEach(([key, value], index) => {
+        setNodeProp(selectedNode.id, `metadata.${key}`, value, index === entries.length - 1 ? commit : false);
+      });
+    };
 
     if (selectedNode.type === 'attachment-list') {
       const items: Array<Record<string, any>> = Array.isArray(metadata.items) ? metadata.items : [];
-      const updateItems = (next: Array<Record<string, any>>) => applyMetadata({ items: next });
-      const updateItem = (itemId: string, patch: Record<string, unknown>) => {
-        updateItems(items.map((item) => (item.id === itemId ? { ...item, ...patch } : item)));
+      const updateItems = (next: Array<Record<string, any>>, commit: boolean) => applyMetadata({ items: next }, commit);
+      const updateItem = (itemId: string, patch: Record<string, unknown>, commit: boolean) => {
+        updateItems(items.map((item) => (item.id === itemId ? { ...item, ...patch } : item)), commit);
       };
       const addItem = () => {
-        updateItems([
+        updateItems(
+          [
           ...items,
           {
             id: createLocalId(),
             label: 'Attachment',
             url: 'https://example.com',
           },
-        ]);
+          ],
+          true
+        );
       };
-      const removeItem = (itemId: string) => updateItems(items.filter((item) => item.id !== itemId));
+      const removeItem = (itemId: string) => updateItems(items.filter((item) => item.id !== itemId), true);
 
       return (
         <div className="rounded border border-slate-200 bg-white px-3 py-2 space-y-2">
@@ -1597,7 +720,8 @@ export const DesignerShell: React.FC = () => {
             <Input
               id="designer-attachments-title"
               value={metadata.title ?? 'Attachments'}
-              onChange={(event) => applyMetadata({ title: event.target.value })}
+              onChange={(event) => applyMetadata({ title: event.target.value }, false)}
+              onBlur={(event) => applyMetadata({ title: event.target.value }, true)}
             />
           </div>
           <div className="flex items-center justify-between text-xs text-slate-600">
@@ -1613,7 +737,8 @@ export const DesignerShell: React.FC = () => {
                 <Input
                   id={`attachment-label-${item.id}`}
                   value={item.label ?? ''}
-                  onChange={(event) => updateItem(item.id, { label: event.target.value })}
+                  onChange={(event) => updateItem(item.id, { label: event.target.value }, false)}
+                  onBlur={(event) => updateItem(item.id, { label: event.target.value }, true)}
                   className="text-xs"
                 />
                 <Button
@@ -1628,7 +753,8 @@ export const DesignerShell: React.FC = () => {
               <Input
                 id={`attachment-url-${item.id}`}
                 value={item.url ?? ''}
-                onChange={(event) => updateItem(item.id, { url: event.target.value })}
+                onChange={(event) => updateItem(item.id, { url: event.target.value }, false)}
+                onBlur={(event) => updateItem(item.id, { url: event.target.value }, true)}
                 className="text-xs"
               />
             </div>
@@ -1637,17 +763,27 @@ export const DesignerShell: React.FC = () => {
       );
     }
 
-    if (selectedNode.type === 'image' || selectedNode.type === 'logo' || selectedNode.type === 'qr') {
-      const fitMode = metadata.fitMode ?? metadata.fit ?? 'contain';
-      return (
-        <div className="rounded border border-slate-200 bg-white px-3 py-2 space-y-2">
-          <p className="text-xs font-semibold text-slate-700">Media</p>
-          <div>
+		    if (selectedNode.type === 'image' || selectedNode.type === 'logo' || selectedNode.type === 'qr') {
+		      const fitMode = metadata.fitMode ?? metadata.fit ?? 'contain';
+        const objectFit = getNodeStyle(selectedNode)?.objectFit ?? fitMode;
+        const applyAspectRatio = (raw: string, commit: boolean) => {
+          const normalized = normalizeCssValue(raw);
+          if (normalized === undefined) {
+            unsetNodeProp(selectedNode.id, 'style.aspectRatio', commit);
+            return;
+          }
+          setNodeProp(selectedNode.id, 'style.aspectRatio', normalized, commit);
+        };
+		      return (
+		        <div className="rounded border border-slate-200 bg-white px-3 py-2 space-y-2">
+		          <p className="text-xs font-semibold text-slate-700">Media</p>
+	          <div>
             <label className="text-xs text-slate-500 block mb-1">Source URL</label>
             <Input
               id="designer-media-src"
               value={metadata.src ?? metadata.url ?? ''}
-              onChange={(event) => applyMetadata({ src: event.target.value, url: event.target.value })}
+              onChange={(event) => applyMetadata({ src: event.target.value, url: event.target.value }, false)}
+              onBlur={(event) => applyMetadata({ src: event.target.value, url: event.target.value }, true)}
             />
           </div>
           <div>
@@ -1655,25 +791,44 @@ export const DesignerShell: React.FC = () => {
             <Input
               id="designer-media-alt"
               value={metadata.alt ?? ''}
-              onChange={(event) => applyMetadata({ alt: event.target.value })}
+              onChange={(event) => applyMetadata({ alt: event.target.value }, false)}
+              onBlur={(event) => applyMetadata({ alt: event.target.value }, true)}
             />
-          </div>
-          <div>
-            <label className="text-xs text-slate-500 block mb-1">Fit mode</label>
-            <select
-              className="w-full border border-slate-300 rounded-md px-2 py-1 text-sm"
-              value={fitMode}
-              onChange={(event) => applyMetadata({ fitMode: event.target.value, fit: event.target.value })}
-            >
-              <option value="contain">Contain</option>
-              <option value="cover">Cover</option>
-              <option value="fill">Fill</option>
-            </select>
-          </div>
-          <div className="pt-2 border-t border-slate-100 space-y-1">
-            <Button
-              id="designer-fit-parent-section-to-media"
-              variant="outline"
+	          </div>
+	          <div>
+	            <label className="text-xs text-slate-500 block mb-1">Object fit</label>
+	            <select
+	              className="w-full border border-slate-300 rounded-md px-2 py-1 text-sm"
+		              value={objectFit}
+		              onChange={(event) => {
+	                  const next = event.target.value;
+	                  setNodeProp(selectedNode.id, 'style.objectFit', next, true);
+	                  if (next === 'contain' || next === 'cover' || next === 'fill') {
+	                    applyMetadata({ fitMode: next, fit: next }, true);
+	                  }
+	                }}
+		            >
+	              <option value="contain">Contain</option>
+	              <option value="cover">Cover</option>
+	              <option value="fill">Fill</option>
+                <option value="none">None</option>
+                <option value="scale-down">Scale Down</option>
+	            </select>
+	          </div>
+            <div>
+              <label className="text-xs text-slate-500 block mb-1">Aspect ratio</label>
+	              <Input
+	                id="designer-media-aspect-ratio"
+	                value={getNodeStyle(selectedNode)?.aspectRatio ?? ''}
+	                placeholder="e.g. 16 / 9 or 1 / 1"
+	                onChange={(event) => applyAspectRatio(event.target.value, false)}
+	                onBlur={(event) => applyAspectRatio(event.target.value, true)}
+	              />
+	            </div>
+		          <div className="pt-2 border-t border-slate-100 space-y-1">
+	            <Button
+	              id="designer-fit-parent-section-to-media"
+	              variant="outline"
               onClick={fitParentSectionFromMedia}
               disabled={!selectedMediaParentSection}
             >
@@ -1681,10 +836,7 @@ export const DesignerShell: React.FC = () => {
             </Button>
             {selectedMediaParentSection ? (
               <p className="text-[11px] text-slate-500">
-                Reflows <span className="font-medium text-slate-600">{selectedMediaParentSection.name}</span> to remove extra whitespace.
-                {selectedMediaParentSection.layout?.sizing === 'fill' && (
-                  <> In Fill mode, this will switch section sizing to Fixed before fitting.</>
-                )}
+                Reflows <span className="font-medium text-slate-600">{getNodeName(selectedMediaParentSection)}</span> to remove extra whitespace.
               </p>
             ) : (
               <p className="text-[11px] text-slate-500">This media block is not inside a section.</p>
@@ -1710,69 +862,103 @@ export const DesignerShell: React.FC = () => {
     }
     if (isNodeDragData(data)) {
       setActiveDrag({ kind: 'node', nodeId: data.nodeId });
-      const node = nodes.find((candidate) => candidate.id === data.nodeId);
-      if (node) {
-        dragSessionRef.current = {
-          nodeId: data.nodeId,
-          origin: { ...node.position },
-          originalPositions: buildDescendantPositionMap(data.nodeId, nodes),
-          lastDelta: { x: 0, y: 0 },
-        };
-      }
     }
   };
 
-  const handleDragMove = (event: DragMoveEvent) => {
-    if (!dragSessionRef.current || activeDrag?.kind !== 'node') {
+	  const handleDragMove = (event: DragMoveEvent) => {
+	    void event;
+	  };
+
+  const handleDragOver = (event: DragOverEvent) => {
+    const activeData = event.active.data.current;
+    if (!isNodeDragData(activeData) || activeData.layoutKind !== 'flow') {
+      if (dropIndicator) {
+        setDropIndicator(null);
+      }
       return;
     }
-    const session = dragSessionRef.current;
-    const { nodeId, origin } = session;
-    const nextPosition = {
-      x: origin.x + event.delta.x,
-      y: origin.y + event.delta.y,
-    };
-    const activeNode = nodes.find((node) => node.id === nodeId);
-    if (!activeNode) return;
-    const boundedPosition = clampPositionToParent(activeNode, nodes, nextPosition);
-    const delta = {
-      x: boundedPosition.x - origin.x,
-      y: boundedPosition.y - origin.y,
-    };
-    if (delta.x !== session.lastDelta.x || delta.y !== session.lastDelta.y) {
-      const nextPreview: Record<string, Point> = {};
-      session.originalPositions.forEach((point, id) => {
-        nextPreview[id] = {
-          x: point.x + delta.x,
-          y: point.y + delta.y,
-        };
-      });
-      setPreviewPositions(nextPreview);
-      session.lastDelta = delta;
+
+    const over = event.over;
+    if (!over) {
+      if (dropIndicator) {
+        setDropIndicator(null);
+      }
+      return;
     }
-    if (showGuides) {
-      const projectedPosition = {
-        x: origin.x + session.lastDelta.x,
-        y: origin.y + session.lastDelta.y,
-      };
-      const ghostNode = {
-        ...activeNode,
-        position: projectedPosition,
-      };
-      const guideNodes = nodes.map((node) => {
-        if (session.originalPositions.has(node.id)) {
-          const original = session.originalPositions.get(node.id) ?? node.position;
-          return {
-            ...node,
-            position: {
-              x: original.x + session.lastDelta.x,
-              y: original.y + session.lastDelta.y,
-            },
-          };
+
+    const overData = over.data.current;
+    const activeNode = nodesById.get(activeData.nodeId) ?? null;
+    if (!activeNode) {
+      if (dropIndicator) {
+        setDropIndicator(null);
+      }
+      return;
+    }
+
+    const wouldCreateCycle = (targetParentId: string) => {
+      let current: string | null = targetParentId;
+      while (current) {
+        if (current === activeNode.id) {
+          return true;
         }
-        return node;
+        current = nodesById.get(current)?.parentId ?? null;
+      }
+      return false;
+    };
+
+    if (isNodeDragData(overData)) {
+      const overNode = nodesById.get(overData.nodeId) ?? null;
+      if (!overNode || !overNode.parentId) {
+        if (dropIndicator) {
+          setDropIndicator(null);
+        }
+        return;
+      }
+
+      const parent = nodesById.get(overNode.parentId) ?? null;
+      if (!parent) {
+        if (dropIndicator) {
+          setDropIndicator(null);
+        }
+        return;
+      }
+
+      const isValid =
+        canNestWithinParent(activeNode.type, parent.type) && !wouldCreateCycle(parent.id);
+      const parentLayout = getNodeLayout(parent);
+      const axis = parentLayout?.display === 'flex' && parentLayout.flexDirection === 'row' ? 'x' : 'y';
+
+      const activeRect = event.active.rect.current.translated ?? event.active.rect.current.initial;
+      const overRect = over.rect;
+      if (!activeRect || !overRect) {
+        return;
+      }
+
+      const position = resolveInsertPositionFromRects(activeRect, overRect, axis);
+      setDropIndicator({
+        kind: 'insert',
+        overNodeId: overNode.id,
+        position,
+        tone: isValid ? 'valid' : 'invalid',
       });
-      setGuides(calculateGuides(ghostNode, guideNodes));
+      return;
+    }
+
+    if (isDropTargetMeta(overData)) {
+      const target = nodesById.get(overData.nodeId) ?? null;
+      if (!target) {
+        if (dropIndicator) {
+          setDropIndicator(null);
+        }
+        return;
+      }
+      const isValid = canNestWithinParent(activeNode.type, target.type) && !wouldCreateCycle(target.id);
+      setDropIndicator(isValid ? null : { kind: 'container', containerId: target.id, tone: 'invalid' });
+      return;
+    }
+
+    if (dropIndicator) {
+      setDropIndicator(null);
     }
   };
 
@@ -1795,16 +981,88 @@ export const DesignerShell: React.FC = () => {
           });
         }
       }
-      if (activeDrag?.kind === 'node' && dragSessionRef.current) {
-        const session = dragSessionRef.current;
-        const activeNode = nodes.find((node) => node.id === session.nodeId);
-        if (activeNode) {
-          const desiredPosition = {
-            x: session.origin.x + session.lastDelta.x,
-            y: session.origin.y + session.lastDelta.y,
+      if (activeDrag?.kind === 'node') {
+        const activeData = event.active.data.current;
+        if (isNodeDragData(activeData)) {
+          const over = event.over;
+          if (!over) {
+            return;
+          }
+          const overData = over.data.current;
+          const activeNode = nodesById.get(activeData.nodeId) ?? null;
+          if (!activeNode) {
+            return;
+          }
+
+          let targetParentId: string | null = null;
+          let targetIndex = 0;
+
+          if (isNodeDragData(overData)) {
+            const overNode = nodesById.get(overData.nodeId) ?? null;
+            if (!overNode || !overNode.parentId) {
+              return;
+            }
+            const parent = nodesById.get(overNode.parentId) ?? null;
+            if (!parent) {
+              return;
+            }
+            targetParentId = overNode.parentId;
+            const overIndex = parent.children.indexOf(overNode.id);
+            let index = overIndex >= 0 ? overIndex : parent.children.length;
+
+            const parentLayout = getNodeLayout(parent);
+            if (parentLayout?.display === 'flex' && event.active.rect.current && over.rect) {
+              const axis = parentLayout.flexDirection === 'row' ? 'x' : 'y';
+              const activeRect = event.active.rect.current.translated ?? event.active.rect.current.initial;
+              const overRect = over.rect;
+              if (activeRect && overRect) {
+                const activeCenter =
+                  axis === 'x' ? activeRect.left + activeRect.width / 2 : activeRect.top + activeRect.height / 2;
+                const overCenter =
+                  axis === 'x' ? overRect.left + overRect.width / 2 : overRect.top + overRect.height / 2;
+                if (activeCenter >= overCenter) {
+                  index += 1;
+                }
+              }
+            }
+
+            targetIndex = index;
+          } else if (isDropTargetMeta(overData)) {
+            const parent = nodesById.get(overData.nodeId) ?? null;
+            if (!parent) {
+              return;
+            }
+            targetParentId = overData.nodeId;
+            targetIndex = parent.children.length;
+          } else {
+            return;
+          }
+
+          if (!targetParentId) {
+            return;
+          }
+
+          const targetParent = nodesById.get(targetParentId) ?? null;
+          const wouldCreateCycle = () => {
+            let current: string | null = targetParentId;
+            while (current) {
+              if (current === activeNode.id) {
+                return true;
+              }
+              current = nodesById.get(current)?.parentId ?? null;
+            }
+            return false;
           };
-          const boundedPosition = clampPositionToParent(activeNode, nodes, desiredPosition);
-          setNodePosition(session.nodeId, boundedPosition, true);
+
+          if (!targetParent || !canNestWithinParent(activeNode.type, targetParent.type) || wouldCreateCycle()) {
+            showDropFeedback('error', 'Invalid drop target.');
+            recordDropResult(false);
+            return;
+          }
+
+          moveNode(activeNode.id, targetParentId, targetIndex);
+          recordDropResult(true);
+          return;
         }
       }
     } finally {
@@ -1900,7 +1158,6 @@ export const DesignerShell: React.FC = () => {
       options?: { missingSectionMessage?: string; autoSwitchFillToFixed?: boolean }
     ) => {
       const missingSectionMessage = options?.missingSectionMessage ?? 'Select a section to fit.';
-      const autoSwitchFillToFixed = options?.autoSwitchFillToFixed ?? true;
       if (!sectionId) {
         showDropFeedback('info', missingSectionMessage);
         return;
@@ -1914,17 +1171,9 @@ export const DesignerShell: React.FC = () => {
         return;
       }
 
-      let switchedFromFill = false;
-      if (autoSwitchFillToFixed && section.layout?.mode === 'flex' && section.layout.sizing === 'fill') {
-        setLayoutMode(section.id, 'flex', { sizing: 'fixed' });
-        switchedFromFill = true;
-        state = useInvoiceDesignerStore.getState();
-        nodesById = new Map(state.nodes.map((node) => [node.id, node]));
-        const refreshed = nodesById.get(section.id);
-        if (refreshed && refreshed.type === 'section') {
-          section = refreshed;
-        }
-      }
+      // Legacy behavior used to auto-switch sizing modes before fitting.
+      // In the CSS-first model, section sizing is controlled via CSS props instead.
+      const switchedFromFill = false;
 
       const intent = getSectionFitIntent(section, nodesById);
       if (intent.status === 'no-children') {
@@ -1937,12 +1186,8 @@ export const DesignerShell: React.FC = () => {
       }
 
       const beforeSize = section.size;
-      const sectionLookupId = section.id;
-      updateNodeSize(section.id, intent.size, true);
-      const afterSection = useInvoiceDesignerStore
-        .getState()
-        .nodes
-        .find((node) => node.id === sectionLookupId);
+      resizeNode(section.id, intent.size, true);
+      const afterSection = useInvoiceDesignerStore.getState().nodes.find((node) => node.id === section.id);
       if (!afterSection || sizesAreEffectivelyEqual(beforeSize, afterSection.size)) {
         showDropFeedback('info', getSectionFitNoopMessage(section));
         return;
@@ -1954,7 +1199,7 @@ export const DesignerShell: React.FC = () => {
           : 'Section fitted to contents.'
       );
     },
-    [setLayoutMode, showDropFeedback, updateNodeSize]
+    [showDropFeedback, resizeNode]
   );
 
   const commitPropertyChanges = () => {
@@ -1964,18 +1209,10 @@ export const DesignerShell: React.FC = () => {
     const liveParentNode =
       liveSelectedNode?.parentId ? liveNodes.find((node) => node.id === liveSelectedNode.parentId) ?? null : null;
 
-    if (
-      shouldPromoteParentToCanvasForManualPosition(liveSelectedNode, liveParentNode, {
-        x: propertyDraft.x,
-        y: propertyDraft.y,
-      }) &&
-      liveParentNode
-    ) {
-      setLayoutMode(liveParentNode.id, 'canvas');
-    }
-
-    setNodePosition(selectedNodeId, { x: propertyDraft.x, y: propertyDraft.y }, true);
-    updateNodeSize(selectedNodeId, { width: propertyDraft.width, height: propertyDraft.height }, true);
+    // Avoid creating a separate history entry just for position; the resize commit will snapshot both.
+    setNodeProp(selectedNodeId, 'position.x', propertyDraft.x, false);
+    setNodeProp(selectedNodeId, 'position.y', propertyDraft.y, false);
+    resizeNode(selectedNodeId, { width: propertyDraft.width, height: propertyDraft.height }, true);
 
     const resolvedNode = useInvoiceDesignerStore.getState().nodes.find((node) => node.id === selectedNodeId);
     if (!resolvedNode) {
@@ -1987,11 +1224,7 @@ export const DesignerShell: React.FC = () => {
       height: Number.isFinite(propertyDraft.height) ? propertyDraft.height : resolvedNode.size.height,
     };
     if (wasSizeConstrainedFromDraft(draftSize, resolvedNode.size)) {
-      if (aspectConstraint) {
-        showDropFeedback('info', 'Size constrained by aspect ratio lock. Disable "Lock aspect ratio" to resize freely.');
-      } else {
-        showDropFeedback('info', 'Size constrained to valid bounds.');
-      }
+      showDropFeedback('info', 'Size constrained to valid bounds.');
     }
   };
 
@@ -2009,69 +1242,11 @@ export const DesignerShell: React.FC = () => {
     });
   }, [runSectionFitAction, selectedMediaParentSection]);
 
-  const handleSetReferenceNode = useCallback(() => {
-    if (!selectedNode) {
-      showDropFeedback('info', 'Select a node to set it as reference.');
-      return;
-    }
-    if (!canNodeParticipateInPairConstraint(selectedNode)) {
-      showDropFeedback('error', 'Only editable canvas nodes can be used as pair-constraint references.');
-      return;
-    }
-    setReferenceNodeId(selectedNode.id);
-    showDropFeedback('info', `"${selectedNode.name}" is now the active reference node.`);
-  }, [selectedNode, showDropFeedback]);
-
-  const handleClearReferenceNode = useCallback(() => {
-    setReferenceNodeId(null);
-    showDropFeedback('info', 'Reference node cleared.');
-  }, [showDropFeedback]);
-
-  const applyPairConstraint = useCallback(
-    (type: (typeof PAIR_CONSTRAINT_TYPES)[number]) => {
-      if (!selectedNodeId || !referenceNodeId) {
-        showDropFeedback('info', 'Set a reference node and select a target node.');
-        return;
-      }
-      const validation = validatePairConstraintNodes(nodesById, referenceNodeId, selectedNodeId);
-      if (!validation.ok) {
-        showDropFeedback('error', (validation as { message: string }).message);
-        return;
-      }
-      const nextConstraint = buildPairConstraint(type, validation.orderedNodeIds[0], validation.orderedNodeIds[1]);
-      const isDuplicate = constraints.some((constraint) => constraint.id === nextConstraint.id);
-      if (isDuplicate) {
-        showDropFeedback('info', 'Constraint already exists for this relation and node pair.');
-        return;
-      }
-      addConstraint(nextConstraint);
-      showDropFeedback('info', `${PAIR_CONSTRAINT_LABELS[type]} constraint applied.`);
-    },
-    [addConstraint, constraints, nodesById, referenceNodeId, selectedNodeId, showDropFeedback]
-  );
-
-  const removeListedConstraint = useCallback(
-    (constraintId: string) => {
-      removeConstraint(constraintId);
-      showDropFeedback('info', 'Constraint removed.');
-    },
-    [removeConstraint, showDropFeedback]
-  );
-
-  const jumpToConstraintCounterpart = useCallback(
-    (constraint: Extract<DesignerConstraint, { nodes: [string, string] }>) => {
-      if (!selectedNodeId) {
-        return;
-      }
-      const counterpartId = getPairConstraintCounterpartNodeId(constraint, selectedNodeId);
-      if (!counterpartId) {
-        showDropFeedback('error', 'Counterpart node could not be resolved.');
-        return;
-      }
-      selectNode(counterpartId);
-    },
-    [selectNode, selectedNodeId, showDropFeedback]
-  );
+  const normalizeCssValue = (raw: string): string | undefined => {
+    // Allow advanced CSS values like `calc(100% - 2rem)`; only normalize empty/whitespace.
+    const trimmed = raw.trim();
+    return trimmed.length === 0 ? undefined : raw;
+  };
 
   return (
     <div className="flex flex-col h-full border border-slate-200 rounded-lg overflow-hidden">
@@ -2094,7 +1269,7 @@ export const DesignerShell: React.FC = () => {
         <span className="font-semibold text-slate-700">Selected:</span>{' '}
         {selectedNode ? (
           <span data-automation-id="designer-selected-context">
-            {selectedNode.name} <span className="text-slate-500">({selectedNode.type})</span>
+            {getNodeName(selectedNode)} <span className="text-slate-500">({selectedNode.type})</span>
           </span>
         ) : (
           <>
@@ -2113,23 +1288,11 @@ export const DesignerShell: React.FC = () => {
             </span>
           </>
         )}
-      </div>
-      {insertBlockCallout && (
-        <div
-          className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-xs text-amber-800"
-          data-automation-id="designer-insert-blocked-callout"
-        >
-          <span className="font-semibold">
-            {blockedSectionName ? `${blockedSectionName}: ` : ''}
-            {insertBlockCallout.message}
-          </span>{' '}
-          <span className="text-amber-700/90">{insertBlockCallout.nextAction}</span>
-        </div>
-      )}
-      <DesignerBreadcrumbs nodes={nodes} selectedNodeId={selectedNodeId} onSelect={selectNode} />
-      {dropFeedback && (
-        <div
-          className={clsx(
+	      </div>
+	      <DesignerBreadcrumbs nodes={nodes} selectedNodeId={selectedNodeId} onSelect={selectNode} />
+	      {dropFeedback && (
+	        <div
+	          className={clsx(
             'border-b px-4 py-2 text-xs',
             dropFeedback.tone === 'error'
               ? 'border-red-200 bg-red-50 text-red-700'
@@ -2142,60 +1305,57 @@ export const DesignerShell: React.FC = () => {
           {dropFeedback.message}
         </div>
       )}
-      <DndContext sensors={sensors} modifiers={modifiers}>
-        <div className="flex flex-1 min-h-[560px] bg-white">
-          <div className="w-72">
-            <ComponentPalette
-              onInsertComponent={handleQuickInsertComponent}
+	      <DndContext
+          sensors={sensors}
+          modifiers={modifiers}
+          collisionDetection={collisionDetection}
+          measuring={{ droppable: { strategy: MeasuringStrategy.Always } }}
+        >
+	        <div className="flex flex-1 min-h-[560px] bg-white">
+	          <div className="w-72">
+	            <ComponentPalette
+	              onInsertComponent={handleQuickInsertComponent}
               onInsertPreset={handleQuickInsertPreset}
             />
           </div>
-          <DesignerWorkspace
-            nodes={renderedNodes}
-            selectedNodeId={selectedNodeId}
-            activeReferenceNodeId={referenceNodeId}
-            constrainedCounterpartNodeIds={selectedCounterpartNodeIds}
-            showGuides={showGuides}
-            showRulers={showRulers}
-            gridSize={gridSize}
-            canvasScale={canvasScale}
-            snapToGrid={snapToGrid}
-            guides={guides}
-            isDragActive={Boolean(activeDrag)}
-            forcedDropTarget={forcedDropTarget}
-            activeDrag={activeDrag}
-            modifiers={modifiers}
-            onPointerLocationChange={updatePointerLocation}
+	          <DesignerWorkspace
+	            nodes={nodes}
+	            selectedNodeId={selectedNodeId}
+	            activeReferenceNodeId={referenceNodeId}
+	            constrainedCounterpartNodeIds={selectedCounterpartNodeIds}
+	            showGuides={showGuides}
+	            showRulers={showRulers}
+	            gridSize={gridSize}
+	            canvasScale={canvasScale}
+	            snapToGrid={snapToGrid}
+	            guides={[]}
+	            isDragActive={Boolean(activeDrag)}
+              dropIndicator={dropIndicator}
+	            forcedDropTarget={forcedDropTarget}
+	            activeDrag={activeDrag}
+	            modifiers={modifiers}
+	            onPointerLocationChange={updatePointerLocation}
             onNodeSelect={selectNode}
-            onResize={updateNodeSize}
-            onDragStart={handleDragStart}
-            onDragMove={handleDragMove}
-            onDragEnd={handleDragEnd}
-            onDragCancel={handleDragCancel}
-          />
+	            onResize={resizeNode}
+	            onDragStart={handleDragStart}
+	            onDragMove={handleDragMove}
+              onDragOver={handleDragOver}
+	            onDragEnd={handleDragEnd}
+	            onDragCancel={handleDragCancel}
+	          />
           <aside className="w-72 border-l border-slate-200 bg-slate-50 p-4 space-y-4">
             <h3 className="text-sm font-semibold text-slate-800 uppercase tracking-wide">Inspector</h3>
-          {selectedNode ? (
-            <div className="space-y-3">
-              {constraintError && (
-                <div
-                  className="rounded border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700 space-y-1"
-                  data-automation-id="designer-constraint-error"
-                >
-                  <p>{constraintError}</p>
-                  <p className="text-[11px] text-red-600">
-                    Try removing a conflicting constraint or clear the reference and choose a different node pair.
-                  </p>
-                </div>
-              )}
-              <div>
-                <label htmlFor="selected-name" className="text-xs text-slate-500 block mb-1">Name</label>
-                <Input
-                  id="selected-name"
-                  value={selectedNode.name}
-                  onChange={(event) => updateNodeName(selectedNode.id, event.target.value)}
-                />
-              </div>
+		          {selectedNode ? (
+		            <div className="space-y-3">
+		              <div>
+		                <label htmlFor="selected-name" className="text-xs text-slate-500 block mb-1">Name</label>
+		                <Input
+	                  id="selected-name"
+	                  value={getNodeName(selectedNode)}
+	                  onChange={(event) => setNodeProp(selectedNode.id, 'name', event.target.value, false)}
+	                  onBlur={(event) => setNodeProp(selectedNode.id, 'name', event.target.value, true)}
+	                />
+	              </div>
               <div className="grid grid-cols-2 gap-3 text-xs text-slate-500">
                 <div>
                   <label htmlFor="prop-x" className="block mb-1">X</label>
@@ -2218,163 +1378,23 @@ export const DesignerShell: React.FC = () => {
                 <div className="rounded border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600 space-y-1">
                   <div className="flex items-center justify-between">
                     <span className="font-semibold text-slate-700">Layout Preset</span>
-                    <button
-                      type="button"
-                      className="text-blue-600 hover:underline"
-                      onClick={() => clearLayoutPreset(selectedNode.id)}
-                    >
-                      Clear
-                    </button>
-                  </div>
-                  <div className="text-slate-500 text-[11px]">{selectedPreset.label}</div>
-                  <p className="text-[11px] text-slate-500">{selectedPreset.description}</p>
-                </div>
-              )}
-              {renderLayoutInspector()}
-              <div
-                className="rounded border border-slate-200 bg-white p-3 space-y-3"
-                data-automation-id="designer-constraints-section"
-              >
-                <div className="flex items-center justify-between">
-                  <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-700">Constraints</h4>
-                  {referenceNode && (
-                    <span
-                      className="rounded border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] text-amber-800"
-                      data-automation-id="designer-constraint-reference-badge"
-                    >
-                      Ref: {referenceNode.name}
-                    </span>
-                  )}
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    id="designer-set-reference"
-                    variant="outline"
-                    onClick={handleSetReferenceNode}
-                    disabled={!canUsePairConstraints}
-                    data-automation-id="designer-constraint-set-reference"
-                  >
-                    Set As Reference
-                  </Button>
-                  <Button
-                    id="designer-clear-reference"
-                    variant="outline"
-                    onClick={handleClearReferenceNode}
-                    disabled={!referenceNodeId}
-                    data-automation-id="designer-constraint-clear-reference"
-                  >
-                    Clear Reference
-                  </Button>
-                </div>
-                {canUsePairConstraints ? (
-                  <>
-                    <div className="grid grid-cols-2 gap-2">
-                      {PAIR_CONSTRAINT_TYPES.map((type) => {
-                        const actionState = pairConstraintActionState[type];
-                        return (
-                          <Button
-                            key={type}
-                            id={`designer-constraint-action-${type}`}
-                            variant="outline"
-                            onClick={() => applyPairConstraint(type)}
-                            disabled={actionState.disabled}
-                            title={actionState.reason ?? undefined}
-                            data-automation-id={`designer-constraint-action-${type}`}
-                          >
-                            {PAIR_CONSTRAINT_LABELS[type]}
-                          </Button>
-                        );
-                      })}
-                    </div>
-                    {pairAuthoringBaseError && (
-                      <p
-                        className="text-[11px] text-slate-500"
-                        data-automation-id="designer-constraint-action-hint"
-                      >
-                        {pairAuthoringBaseError}
-                      </p>
-                    )}
-                  </>
-                ) : (
-                  <p className="text-[11px] text-slate-500" data-automation-id="designer-constraint-unsupported-message">
-                    Pair constraints are unavailable for this node type.
-                  </p>
-                )}
-                <div className="space-y-2 border-t border-slate-200 pt-2">
-                  <div className="text-xs text-slate-600">Constraints on this node</div>
-                  {selectedNodePairConstraints.length === 0 ? (
-                    <p className="text-[11px] text-slate-500" data-automation-id="designer-constraint-list-empty">
-                      No pair constraints for this node.
-                    </p>
-                  ) : (
-                    <ul className="space-y-2">
-                      {selectedNodePairConstraints.map((constraint) => {
-                        const counterpartNodeId = getPairConstraintCounterpartNodeId(constraint, selectedNode.id);
-                        const counterpartNode = counterpartNodeId ? nodesById.get(counterpartNodeId) : null;
-                        const rowAutomationId = `designer-constraint-row-${constraint.type}-${counterpartNodeId ?? 'missing'}`;
-                        return (
-                          <li
-                            key={constraint.id}
-                            className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 text-[11px] text-slate-600 space-y-1"
-                            data-automation-id={rowAutomationId}
-                          >
-                            <div className="font-medium text-slate-700">
-                              {PAIR_CONSTRAINT_LABELS[constraint.type]}
-                            </div>
-                            <div className="flex items-center justify-between gap-2">
-                              <button
-                                type="button"
-                                className="truncate text-blue-700 hover:underline"
-                                onClick={() => jumpToConstraintCounterpart(constraint)}
-                                disabled={!counterpartNodeId}
-                                data-automation-id={`${rowAutomationId}-jump`}
-                              >
-                                {counterpartNode?.name ?? counterpartNodeId ?? 'Unknown node'}
-                              </button>
-                              <button
-                                type="button"
-                                className="text-red-600 hover:underline"
-                                onClick={() => removeListedConstraint(constraint.id)}
-                                data-automation-id={`${rowAutomationId}-remove`}
-                              >
-                                Remove
-                              </button>
-                            </div>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  )}
-                </div>
-                {(canLockAspectRatio || aspectConstraint) && (
-                  <div className="space-y-2 border-t border-slate-200 pt-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-slate-500">Lock aspect ratio</span>
-                      <input
-                        type="checkbox"
-                        className="h-4 w-4 rounded border-slate-300"
-                        checked={Boolean(aspectConstraint)}
-                        onChange={() => toggleAspectRatioLock(selectedNode.id)}
-                        data-automation-id="designer-constraint-aspect-toggle"
-                      />
-                    </div>
-                    {aspectConstraint && (
-                      <p className="text-[11px] text-slate-500">
-                        Preserves width/height ratio ≈ {aspectConstraint.ratio.toFixed(2)}
-                      </p>
-                    )}
-                    {!canLockAspectRatio && aspectConstraint && (
-                      <p className="text-[11px] text-amber-700">
-                        This node type is best resized freely. Turn this off if dimensions keep snapping.
-                      </p>
-                    )}
-                  </div>
-                )}
-              </div>
-              {selectedNode.type === 'section' && (
-                <div className="space-y-1">
-                  <Button
-                    id="designer-fit-section-to-contents"
+	                    <button
+	                      type="button"
+	                      className="text-blue-600 hover:underline"
+	                      onClick={() => unsetNodeProp(selectedNode.id, 'layoutPresetId', true)}
+	                    >
+	                      Clear
+	                    </button>
+	                  </div>
+	                  <div className="text-slate-500 text-[11px]">{selectedPreset.label}</div>
+	                  <p className="text-[11px] text-slate-500">{selectedPreset.description}</p>
+	                </div>
+		              )}
+                  <DesignerSchemaInspector node={selectedNode} nodesById={nodesById} />
+			              {selectedNode.type === 'section' && (
+			                <div className="space-y-1">
+			                  <Button
+		                    id="designer-fit-section-to-contents"
                     variant="outline"
                     onClick={fitSelectedSectionToContents}
                   >
@@ -2412,6 +1432,7 @@ type DesignerWorkspaceProps = {
   snapToGrid: boolean;
   guides: AlignmentGuide[];
   isDragActive: boolean;
+  dropIndicator: DropIndicator;
   forcedDropTarget: string | 'canvas' | null;
   activeDrag: ActiveDragState;
   modifiers: Modifier[];
@@ -2420,6 +1441,7 @@ type DesignerWorkspaceProps = {
   onResize: (nodeId: string, size: { width: number; height: number }, commit?: boolean) => void;
   onDragStart: (event: DragStartEvent) => void;
   onDragMove: (event: DragMoveEvent) => void;
+  onDragOver: (event: DragOverEvent) => void;
   onDragEnd: (event: DragEndEvent) => void;
   onDragCancel: () => void;
 };
@@ -2436,6 +1458,7 @@ const DesignerWorkspace: React.FC<DesignerWorkspaceProps> = ({
   snapToGrid,
   guides,
   isDragActive,
+  dropIndicator,
   forcedDropTarget,
   activeDrag,
   modifiers,
@@ -2444,47 +1467,62 @@ const DesignerWorkspace: React.FC<DesignerWorkspaceProps> = ({
   onResize,
   onDragStart,
   onDragMove,
+  onDragOver,
   onDragEnd,
   onDragCancel,
 }) => {
   useDndMonitor({
     onDragStart,
     onDragMove,
+    onDragOver,
     onDragEnd,
     onDragCancel,
   });
 
+  const isInvalidDrop =
+    dropIndicator?.kind === 'container' ||
+    (dropIndicator?.kind === 'insert' && dropIndicator.tone === 'invalid');
+
   return (
     <div className="flex-1 flex">
-        <DesignCanvas
-          nodes={nodes}
-          selectedNodeId={selectedNodeId}
-          activeReferenceNodeId={activeReferenceNodeId}
-          constrainedCounterpartNodeIds={constrainedCounterpartNodeIds}
-          showGuides={showGuides}
-        showRulers={showRulers}
-        gridSize={gridSize}
-        canvasScale={canvasScale}
-        snapToGrid={snapToGrid}
-        guides={guides}
-        isDragActive={isDragActive}
-        forcedDropTarget={forcedDropTarget}
-        droppableId={DROPPABLE_CANVAS_ID}
-        onPointerLocationChange={onPointerLocationChange}
-        onNodeSelect={onNodeSelect}
-        onResize={onResize}
-      />
-      <DragOverlay modifiers={modifiers}>
-        {activeDrag && (
-          <div className="px-3 py-2 bg-white border rounded shadow-lg text-sm font-semibold">
-            {activeDrag.kind === 'component'
-              ? getDefinition(activeDrag.componentType)?.label ?? 'Component'
-              : activeDrag.kind === 'preset'
-                ? getPresetById(activeDrag.presetId)?.label ?? 'Preset'
-                : nodes.find((node) => node.id === activeDrag.nodeId)?.name ?? 'Component'}
-          </div>
-        )}
-      </DragOverlay>
+	        <DesignCanvas
+	          nodes={nodes}
+	          selectedNodeId={selectedNodeId}
+	          activeReferenceNodeId={activeReferenceNodeId}
+	          constrainedCounterpartNodeIds={constrainedCounterpartNodeIds}
+	          showGuides={showGuides}
+	        showRulers={showRulers}
+	        gridSize={gridSize}
+	        canvasScale={canvasScale}
+	        snapToGrid={snapToGrid}
+	        guides={guides}
+	        isDragActive={isDragActive}
+          dropIndicator={dropIndicator}
+	        forcedDropTarget={forcedDropTarget}
+	        droppableId={DROPPABLE_CANVAS_ID}
+	        onPointerLocationChange={onPointerLocationChange}
+	        onNodeSelect={onNodeSelect}
+	        onResize={onResize}
+	      />
+	      <DragOverlay modifiers={modifiers}>
+	        {activeDrag && (
+	          <div
+              className={clsx(
+                'px-3 py-2 border rounded shadow-lg text-sm font-semibold',
+                isInvalidDrop ? 'bg-red-50 border-red-200 text-red-800 cursor-not-allowed' : 'bg-white cursor-grab'
+              )}
+            >
+	            {activeDrag.kind === 'component'
+	              ? getDefinition(activeDrag.componentType)?.label ?? 'Component'
+	              : activeDrag.kind === 'preset'
+	                ? getPresetById(activeDrag.presetId)?.label ?? 'Preset'
+	                : (() => {
+                      const draggedNode = nodes.find((node) => node.id === activeDrag.nodeId);
+                      return draggedNode ? getNodeName(draggedNode) : 'Component';
+                    })()}
+	          </div>
+	        )}
+	      </DragOverlay>
     </div>
   );
 };
@@ -2495,21 +1533,33 @@ type DesignerBreadcrumbsProps = {
   onSelect: (nodeId: string | null) => void;
 };
 
+const computeBreadcrumbNodes = (nodes: DesignerNode[], selectedNodeId: string | null): DesignerNode[] => {
+  if (!selectedNodeId) return [];
+  const nodeMap = new Map(nodes.map((node) => [node.id, node]));
+  const parentById = new Map<string, string | null>();
+  nodes.forEach((node) => {
+    node.children.forEach((childId) => {
+      if (!parentById.has(childId)) {
+        parentById.set(childId, node.id);
+      }
+    });
+  });
+  const path: DesignerNode[] = [];
+  let currentId: string | null = selectedNodeId;
+  while (currentId) {
+    const current = nodeMap.get(currentId);
+    if (!current) break;
+    if (current.type !== 'document') {
+      path.push(current);
+    }
+    currentId = parentById.get(currentId) ?? null;
+  }
+  return path.reverse();
+};
+
 const DesignerBreadcrumbs: React.FC<DesignerBreadcrumbsProps> = ({ nodes, selectedNodeId, onSelect }) => {
   const breadcrumbs = React.useMemo(() => {
-    if (!selectedNodeId) return [];
-    const nodeMap = new Map(nodes.map((node) => [node.id, node]));
-    const path: DesignerNode[] = [];
-    let currentId: string | null = selectedNodeId;
-    while (currentId) {
-      const current = nodeMap.get(currentId);
-      if (!current) break;
-      if (current.type !== 'document') {
-        path.push(current);
-      }
-      currentId = current.parentId ?? null;
-    }
-    return path.reverse();
+    return computeBreadcrumbNodes(nodes, selectedNodeId);
   }, [nodes, selectedNodeId]);
 
   if (breadcrumbs.length === 0) {
@@ -2541,7 +1591,7 @@ const DesignerBreadcrumbs: React.FC<DesignerBreadcrumbsProps> = ({ nodes, select
               aria-current={isActive ? 'page' : undefined}
               disabled={isActive}
             >
-              {node.name}
+              {getNodeName(node)}
             </button>
           </React.Fragment>
         );
@@ -2557,41 +1607,8 @@ export const __designerShellTestUtils = {
   wasSizeConstrainedFromDraft,
   getSectionFitNoopMessage,
   shouldPromoteParentToCanvasForManualPosition,
+  computeBreadcrumbNodes,
 };
 
 const createLocalId = () =>
   typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : Math.random().toString(36).slice(2);
-
-const deepClone = <T,>(value: T): T => {
-  if (typeof structuredClone === 'function') {
-    return structuredClone(value);
-  }
-  return JSON.parse(JSON.stringify(value));
-};
-
-const buildDefaultMetadata = (
-  componentType: DesignerComponentType,
-  metadata?: Record<string, unknown>
-): Record<string, unknown> | undefined => {
-  if (!metadata) {
-    return undefined;
-  }
-  const clone = deepClone(metadata);
-  if (componentType === 'table' && Array.isArray((clone as { columns?: unknown }).columns)) {
-    (clone as { columns: Array<Record<string, unknown>> }).columns = (
-      (clone as { columns: Array<Record<string, unknown>> }).columns ?? []
-    ).map((column) => ({
-      ...column,
-      id: column.id ? `${column.id}-${createLocalId()}` : createLocalId(),
-    }));
-  }
-  if (componentType === 'attachment-list' && Array.isArray((clone as { items?: unknown }).items)) {
-    (clone as { items: Array<Record<string, unknown>> }).items = (
-      (clone as { items: Array<Record<string, unknown>> }).items ?? []
-    ).map((item) => ({
-      ...item,
-      id: item.id ? `${item.id}-${createLocalId()}` : createLocalId(),
-    }));
-  }
-  return clone;
-};

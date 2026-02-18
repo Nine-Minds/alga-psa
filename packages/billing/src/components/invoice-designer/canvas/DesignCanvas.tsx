@@ -1,11 +1,19 @@
 import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useDroppable, useDraggable } from '@dnd-kit/core';
+import {
+  SortableContext,
+  useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import clsx from 'clsx';
 import type { WasmInvoiceViewModel } from '@alga-psa/types';
 import { AlignmentGuide } from '../utils/layout';
 import { DesignerNode } from '../state/designerStore';
 import { DESIGNER_CANVAS_WIDTH, DESIGNER_CANVAS_HEIGHT } from '../constants/layout';
 import { resolveFieldPreviewScaffold, resolveLabelPreviewScaffold } from './previewScaffolds';
+import { resolveContainerLayoutStyle, resolveNodeBoxStyle } from '../utils/cssLayout';
+import { getNodeLayout, getNodeMetadata, getNodeName, getNodeStyle } from '../utils/nodeProps';
+import { resolveSortableStrategy } from '../utils/sortableStrategy';
 import {
   formatBoundValue,
   normalizeFieldFormat,
@@ -26,6 +34,7 @@ interface DesignCanvasProps {
   snapToGrid: boolean;
   guides: AlignmentGuide[];
   isDragActive: boolean;
+  dropIndicator?: DropIndicator;
   forcedDropTarget: string | 'canvas' | null;
   droppableId: string;
   onPointerLocationChange: (point: { x: number; y: number } | null) => void;
@@ -37,14 +46,21 @@ interface DesignCanvasProps {
 
 const GRID_COLOR = 'rgba(148, 163, 184, 0.25)';
 
+type DropIndicator =
+  | { kind: 'insert'; overNodeId: string; position: 'before' | 'after'; tone: 'valid' | 'invalid' }
+  | { kind: 'container'; containerId: string; tone: 'invalid' }
+  | null;
+
 interface CanvasNodeProps {
   node: DesignerNode;
+  parentUsesFlowLayout: boolean;
   isSelected: boolean;
   isReferenceNode: boolean;
   isConstraintCounterpart: boolean;
   isInSelectionContext: boolean;
   hasActiveSelection: boolean;
   isDragActive: boolean;
+  dropIndicator: DropIndicator;
   forcedDropTarget: string | 'canvas' | null;
   onSelect: (id: string | null) => void;
   onResize: (id: string, size: { width: number; height: number }, commit?: boolean) => void;
@@ -54,6 +70,15 @@ interface CanvasNodeProps {
   previewData: WasmInvoiceViewModel | null;
   applySelectionDeemphasis: boolean;
 }
+
+type CanvasNodeDnd = {
+  attributes: Record<string, any>;
+  listeners: Record<string, any> | undefined;
+  setNodeRef: (element: HTMLDivElement | null) => void;
+  transform: any;
+  transition?: string;
+  isDragging: boolean;
+};
 
 type SectionSemanticCue = {
   label: string;
@@ -386,16 +411,16 @@ const resolveTotalsRowPreviewModel = (
 ): TotalsRowPreviewModel => {
   if (!isTotalsRowType(node.type)) {
     return {
-      label: node.name,
+      label: getNodeName(node),
       bindingKey: 'binding',
       previewValue: '$0.00',
       isGrandTotal: false,
     };
   }
 
-  const metadata = (node.metadata ?? {}) as Record<string, unknown>;
+  const metadata = getNodeMetadata(node);
   const fallbackLabel = resolveTotalsRowLabelFallback(node.type);
-  const label = asTrimmedString(metadata.label) || asTrimmedString(node.name) || fallbackLabel;
+  const label = asTrimmedString(metadata.label) || asTrimmedString(getNodeName(node)) || fallbackLabel;
   const bindingKey = asTrimmedString(metadata.bindingKey) || resolveTotalsRowBindingFallback(node.type);
   const format = normalizeFieldFormat(metadata.format ?? 'currency');
   const boundValue = formatBoundValue(
@@ -537,7 +562,7 @@ const renderTotalsSummaryPreview = (previewData: WasmInvoiceViewModel | null): R
 };
 
 const getPreviewContent = (node: DesignerNode, previewData: WasmInvoiceViewModel | null): PreviewContentResult => {
-  const metadata = (node.metadata ?? {}) as Record<string, unknown>;
+  const metadata = getNodeMetadata(node);
   switch (node.type) {
     case 'field': {
       const bindingKey =
@@ -584,8 +609,8 @@ const getPreviewContent = (node: DesignerNode, previewData: WasmInvoiceViewModel
       };
     }
     case 'text': {
-      const text = typeof metadata.text === 'string' ? metadata.text : node.name;
-      const content = text.length > 0 ? text.slice(0, 140) : node.name;
+      const text = typeof metadata.text === 'string' ? metadata.text : getNodeName(node);
+      const content = text.length > 0 ? text.slice(0, 140) : getNodeName(node);
       
       // Check for interpolation variables {{var}}
       const parts = content.split(/(\{\{.*?\}\})/g);
@@ -675,29 +700,70 @@ const getPreviewContent = (node: DesignerNode, previewData: WasmInvoiceViewModel
       return { content: renderTotalsSummaryPreview(previewData) };
     case 'divider':
       return { content: <div className={clsx('w-full border-t my-1', INVOICE_BORDER_COLOR_CLASS)} /> };
-    case 'spacer':
-      return {
-        content: (
-          <div className="w-full h-full flex items-center justify-center text-[10px] text-slate-300 bg-slate-50/50 border border-dashed border-slate-200">
-            Spacer
-          </div>
-        ),
-      };
-    case 'container':
-      return { content: null }; // Container renders children directly
-    default:
-      return { content: `Placeholder content · ${node.size.width.toFixed(0)}×${node.size.height.toFixed(0)}` };
-  }
-};
+	    case 'spacer':
+	      return {
+	        content: (
+	          <div className="w-full h-full flex items-center justify-center text-[10px] text-slate-300 bg-slate-50/50 border border-dashed border-slate-200">
+	            Spacer
+	          </div>
+	        ),
+	      };
+	    case 'container':
+	      return { content: null }; // Container renders children directly
+      case 'image':
+      case 'logo':
+      case 'qr': {
+        const src = asTrimmedString(metadata.src) || asTrimmedString(metadata.url) || '';
+        const alt = typeof metadata.alt === 'string' ? metadata.alt : '';
+        const fallbackFit =
+          metadata.fitMode === 'contain' || metadata.fitMode === 'cover' || metadata.fitMode === 'fill'
+            ? metadata.fitMode
+            : metadata.fit === 'contain' || metadata.fit === 'cover' || metadata.fit === 'fill'
+              ? metadata.fit
+              : 'contain';
+        const objectFit = getNodeStyle(node)?.objectFit ?? fallbackFit;
 
-const CanvasNode: React.FC<CanvasNodeProps> = ({
+        if (!src) {
+          const label = node.type === 'qr' ? 'QR Code' : node.type === 'logo' ? 'Logo' : 'Image';
+          return {
+            content: (
+              <div className="w-full h-full flex items-center justify-center text-[10px] text-slate-400 bg-slate-50/50 border border-dashed border-slate-200">
+                {label}
+              </div>
+            ),
+          };
+        }
+
+        return {
+          content: (
+            <img
+              src={src}
+              alt={alt}
+              style={{
+                width: '100%',
+                height: '100%',
+                objectFit,
+                display: 'block',
+              }}
+            />
+          ),
+        };
+      }
+	    default:
+	      return { content: `Placeholder content · ${node.size.width.toFixed(0)}×${node.size.height.toFixed(0)}` };
+	  }
+	};
+
+const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
   node,
+  parentUsesFlowLayout,
   isSelected,
   isReferenceNode,
   isConstraintCounterpart,
   isInSelectionContext,
   hasActiveSelection,
   isDragActive,
+  dropIndicator,
   forcedDropTarget,
   onSelect,
   onResize,
@@ -706,14 +772,9 @@ const CanvasNode: React.FC<CanvasNodeProps> = ({
   readOnly,
   previewData,
   applySelectionDeemphasis,
+  dnd,
 }) => {
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
-    id: `node-${node.id}`,
-    disabled: readOnly,
-    data: {
-      nodeId: node.id,
-    },
-  });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = dnd;
   const isContainer = node.allowedChildren.length > 0;
   const { setNodeRef: setDropZoneRef, isOver: isNodeDropTarget } = useDroppable({
     id: `droppable-${node.id}`,
@@ -735,25 +796,40 @@ const CanvasNode: React.FC<CanvasNodeProps> = ({
     isContainer && childExtents && Number.isFinite(childExtents.maxBottom)
       ? Math.max(node.size.height, childExtents.maxBottom - node.position.y)
       : node.size.height;
-  const localPosition = {
-    x: node.position.x,
-    y: node.position.y,
-  };
+  const resolvedBoxStyle = resolveNodeBoxStyle(getNodeStyle(node));
+  const resolvedWidth = resolvedBoxStyle.width;
+  const resolvedHeight = resolvedBoxStyle.height;
+  const isFlowPositioning = parentUsesFlowLayout;
   const nodeStyle: React.CSSProperties = {
-    width: inferredWidth,
-    height: inferredHeight,
-    top: localPosition.y,
-    left: localPosition.x,
-    position: 'absolute',
-    transform: transform && !isDragging ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
+    ...resolvedBoxStyle,
+    // Keep box sizing stable when we apply padding/borders via Tailwind classes.
+    boxSizing: 'border-box',
+    // In flow layouts (flex/grid), do not force a fixed width/height from legacy node.size.
+    // Instead, treat the authored size as a minimum box size so flex/grid can stretch items naturally.
+    width: isFlowPositioning ? resolvedWidth : (resolvedWidth ?? inferredWidth),
+    height: isFlowPositioning ? resolvedHeight : (resolvedHeight ?? inferredHeight),
+    minWidth:
+      isFlowPositioning
+        ? (resolvedBoxStyle.minWidth ?? (resolvedWidth ? undefined : inferredWidth))
+        : resolvedBoxStyle.minWidth,
+    minHeight:
+      isFlowPositioning
+        ? (resolvedBoxStyle.minHeight ?? (resolvedHeight ? undefined : inferredHeight))
+        : resolvedBoxStyle.minHeight,
+    top: isFlowPositioning ? undefined : node.position.y,
+    left: isFlowPositioning ? undefined : node.position.x,
+    position: isFlowPositioning ? undefined : 'absolute',
+    transform: transform && !isDragging ? CSS.Transform.toString(transform) : undefined,
+    transition,
     zIndex: isDragging ? 40 : isSelected ? 30 : 10,
   };
   const shouldDeemphasize = shouldDeemphasizeNode(hasActiveSelection, isInSelectionContext, isDragging);
-  const metadata = (node.metadata ?? {}) as Record<string, unknown>;
-  const sectionCue = node.type === 'section' ? getSectionSemanticCue(node.name) : null;
+  const metadata = getNodeMetadata(node);
+  const sectionCue = node.type === 'section' ? getSectionSemanticCue(getNodeName(node)) : null;
   const isTotalsRow = isTotalsRowType(node.type);
   const isLabelNode = node.type === 'label';
   const isFieldNode = node.type === 'field';
+  const isMediaNode = node.type === 'image' || node.type === 'logo' || node.type === 'qr';
   const labelWeightClass = FONT_WEIGHT_CLASS[
     resolveFontWeightStyle(metadata.fontWeight ?? metadata.labelFontWeight, 'semibold')
   ];
@@ -766,6 +842,12 @@ const CanvasNode: React.FC<CanvasNodeProps> = ({
   const fieldSurfaceClasses = resolveFieldBorderClasses(fieldBorderStyle);
   const isInlineFieldLike = isFieldNode || isLabelNode;
   const isCompactLeaf = isTotalsRow || isInlineFieldLike;
+  const isResizeHandleSupported =
+    node.type === 'image' ||
+    node.type === 'logo' ||
+    node.type === 'qr' ||
+    node.type === 'section' ||
+    node.type === 'container';
 
   const combinedRef = useCallback(
     (element: HTMLDivElement | null) => {
@@ -879,7 +961,7 @@ const CanvasNode: React.FC<CanvasNodeProps> = ({
       style={nodeStyle}
       data-automation-id={`designer-canvas-node-${node.id}`}
       className={clsx(
-        'select-none transition-[opacity,box-shadow,border-color,background-color] duration-150',
+        'relative select-none transition-[opacity,box-shadow,border-color,background-color] duration-150',
         isLabelNode
           ? 'rounded-sm border border-transparent bg-transparent shadow-none'
           : [
@@ -898,6 +980,10 @@ const CanvasNode: React.FC<CanvasNodeProps> = ({
           'ring-2 ring-cyan-500 shadow-[0_0_0_2px_rgba(6,182,212,0.2)]',
         ((isDragActive && isNodeDropTarget) || forcedDropTarget === node.id) &&
           'ring-2 ring-emerald-500 shadow-[0_0_0_2px_rgba(16,185,129,0.2)]',
+        isDragActive &&
+          dropIndicator?.kind === 'container' &&
+          dropIndicator.containerId === node.id &&
+          'ring-2 ring-red-500 shadow-[0_0_0_2px_rgba(239,68,68,0.25)] cursor-not-allowed',
         shouldDeemphasize && applySelectionDeemphasis && 'opacity-65',
         isDragging && 'opacity-80'
       )}
@@ -909,18 +995,32 @@ const CanvasNode: React.FC<CanvasNodeProps> = ({
       onClick={handleNodeClick}
       {...(readOnly ? {} : attributes)}
     >
+      {dropIndicator?.kind === 'insert' && parentUsesFlowLayout && dropIndicator.overNodeId === node.id && (
+        <div
+          className={clsx(
+            clsx(
+              'pointer-events-none absolute left-0 right-0 h-0.5 z-20',
+              dropIndicator.tone === 'invalid' ? 'bg-red-500' : 'bg-emerald-500'
+            ),
+            dropIndicator.position === 'before' ? '-top-1' : '-bottom-1'
+          )}
+        />
+      )}
       {isContainer ? (
         <div className="relative w-full h-full">
           {sectionCue && <div className={clsx('absolute inset-y-0 left-0 w-1 rounded-l-md', sectionCue.accentClass)} />}
           <div className="absolute left-2 top-1 text-[10px] uppercase tracking-wide text-slate-500 pointer-events-none z-10 flex items-center gap-1.5">
-            <span>{node.name} · {node.type}</span>
+            <span>{getNodeName(node)} · {node.type}</span>
             {sectionCue && (
               <span className={clsx('rounded border px-1 py-0.5 text-[9px] font-semibold', sectionCue.chipClass)}>
                 {sectionCue.label}
               </span>
             )}
           </div>
-          <div className="relative w-full h-full">
+          <div
+            className="relative w-full h-full"
+            style={resolveContainerLayoutStyle(getNodeLayout(node))}
+          >
             {renderChildren(node.id)}
           </div>
         </div>
@@ -943,24 +1043,28 @@ const CanvasNode: React.FC<CanvasNodeProps> = ({
         ) : (
           <>
             <div className="px-2 py-1 border-b bg-slate-50 text-xs font-semibold text-slate-600 flex items-center justify-between">
-              <span className="truncate">{node.name}</span>
+              <span className="truncate">{getNodeName(node)}</span>
               <span className="text-[10px] uppercase tracking-wide text-slate-400">{node.type}</span>
             </div>
-            <div
-              className={clsx(
-                'text-[11px] text-slate-500',
-                node.type === 'divider' ? 'p-0 flex items-center justify-center h-[14px]' : 'p-2 whitespace-pre-wrap',
-                node.type === 'spacer' && 'h-full p-0',
-                previewContent.singleLine && 'whitespace-nowrap overflow-hidden',
-                previewContent.isPlaceholder && 'text-slate-400'
-              )}
-            >
+	            <div
+	              className={clsx(
+	                'text-[11px] text-slate-500',
+	                node.type === 'divider'
+	                  ? 'p-0 flex items-center justify-center h-[14px]'
+	                  : isMediaNode
+	                    ? 'p-0 h-full overflow-hidden'
+	                    : 'p-2 whitespace-pre-wrap',
+	                node.type === 'spacer' && 'h-full p-0',
+	                previewContent.singleLine && 'whitespace-nowrap overflow-hidden',
+	                previewContent.isPlaceholder && 'text-slate-400'
+	              )}
+	            >
               {previewContent.content}
             </div>
           </>
         )
       )}
-      {!readOnly && node.allowResize !== false && (
+      {!readOnly && node.allowResize !== false && isResizeHandleSupported && (
         <div
           role="button"
           tabIndex={0}
@@ -971,6 +1075,63 @@ const CanvasNode: React.FC<CanvasNodeProps> = ({
     </div>
   );
 };
+
+const FlowCanvasNode: React.FC<CanvasNodeProps> = (props) => {
+  const { node, readOnly } = props;
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: node.id,
+    disabled: readOnly,
+    data: {
+      dragKind: 'node',
+      nodeId: node.id,
+      layoutKind: 'flow',
+    },
+  });
+
+  return (
+    <CanvasNodeInner
+      {...props}
+      dnd={{
+        attributes,
+        listeners,
+        setNodeRef,
+        transform,
+        transition,
+        isDragging,
+      }}
+    />
+  );
+};
+
+const AbsoluteCanvasNode: React.FC<CanvasNodeProps> = (props) => {
+  const { node, readOnly } = props;
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: node.id,
+    disabled: readOnly,
+    data: {
+      dragKind: 'node',
+      nodeId: node.id,
+      layoutKind: 'absolute',
+    },
+  });
+
+  return (
+    <CanvasNodeInner
+      {...props}
+      dnd={{
+        attributes,
+        listeners,
+        setNodeRef,
+        transform,
+        transition: undefined,
+        isDragging,
+      }}
+    />
+  );
+};
+
+const CanvasNode: React.FC<CanvasNodeProps> = (props) =>
+  props.parentUsesFlowLayout ? <FlowCanvasNode {...props} /> : <AbsoluteCanvasNode {...props} />;
 
 export const DesignCanvas: React.FC<DesignCanvasProps> = ({
   nodes,
@@ -984,6 +1145,7 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
   snapToGrid,
   guides,
   isDragActive,
+  dropIndicator = null,
   forcedDropTarget,
   droppableId,
   onPointerLocationChange,
@@ -1022,20 +1184,45 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
     backgroundImage: `linear-gradient(to right, ${GRID_COLOR} 1px, transparent 1px), linear-gradient(to bottom, ${GRID_COLOR} 1px, transparent 1px)`,
   }), [gridSize, canvasScale]);
 
+  const nodesById = useMemo(() => new Map(nodes.map((node) => [node.id, node] as const)), [nodes]);
+
   const childrenMap = useMemo(() => {
     const map = new Map<string, DesignerNode[]>();
+    // Prefer authored order (children) when the parent uses flow layout (flex/grid).
+    nodes.forEach((parent) => {
+      const parentLayout = getNodeLayout(parent);
+      const parentUsesFlowLayout = parentLayout?.display === 'flex' || parentLayout?.display === 'grid';
+      if (!parentUsesFlowLayout) return;
+      if (!parent.children.length) return;
+
+      const ordered = parent.children
+        .map((childId) => nodesById.get(childId))
+        .filter((node): node is DesignerNode => Boolean(node));
+
+      map.set(parent.id, ordered);
+    });
+
+    // Legacy fallback: collect children by parentId and sort by canvas position.
     nodes.forEach((node) => {
       if (!node.parentId) return;
+      const parent = nodesById.get(node.parentId);
+      const parentLayout = parent ? getNodeLayout(parent) : undefined;
+      const parentUsesFlowLayout = parentLayout?.display === 'flex' || parentLayout?.display === 'grid';
+      if (parentUsesFlowLayout) return;
       if (!map.has(node.parentId)) {
         map.set(node.parentId, []);
       }
       map.get(node.parentId)!.push(node);
     });
-    map.forEach((list) => {
+    map.forEach((list, parentId) => {
+      const parent = nodesById.get(parentId);
+      const parentLayout = parent ? getNodeLayout(parent) : undefined;
+      const parentUsesFlowLayout = parentLayout?.display === 'flex' || parentLayout?.display === 'grid';
+      if (parentUsesFlowLayout) return;
       list.sort((a, b) => (a.position.y - b.position.y) || (a.position.x - b.position.x));
     });
     return map;
-  }, [nodes]);
+  }, [nodes, nodesById]);
 
   const childExtentsMap = useMemo(() => {
     const map = new Map<string, { maxRight: number; maxBottom: number }>();
@@ -1063,18 +1250,23 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
 
   const renderNodeTree = useCallback((parentId: string) => {
     const children = childrenMap.get(parentId) ?? [];
-    return children
+    const parent = nodesById.get(parentId);
+    const parentLayout = parent ? getNodeLayout(parent) : undefined;
+    const parentUsesFlowLayout = parentLayout?.display === 'flex' || parentLayout?.display === 'grid';
+    const renderedChildren = children
       .filter((node) => node.type !== 'document' && node.type !== 'page')
       .map((node) => (
         <CanvasNode
           key={`${node.id}-${(node as any)._version || 0}`}
           node={node}
+          parentUsesFlowLayout={parentUsesFlowLayout}
           isSelected={selectedNodeId === node.id}
           isReferenceNode={activeReferenceNodeId === node.id}
           isConstraintCounterpart={constrainedCounterpartNodeIds.has(node.id)}
           isInSelectionContext={selectionContextNodeIds.has(node.id)}
           hasActiveSelection={hasActiveRenderableSelection}
           isDragActive={isDragActive}
+          dropIndicator={dropIndicator}
           forcedDropTarget={forcedDropTarget}
           onSelect={onNodeSelect}
           onResize={onResize}
@@ -1085,11 +1277,23 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
           applySelectionDeemphasis={!readOnly}
         />
       ));
+    if (!readOnly && parentUsesFlowLayout) {
+      const items = children.filter((child) => child.type !== 'document' && child.type !== 'page').map((child) => child.id);
+      const strategy = resolveSortableStrategy(parentLayout);
+      return (
+        <SortableContext items={items} strategy={strategy}>
+          {renderedChildren}
+        </SortableContext>
+      );
+    }
+    return renderedChildren;
   }, [
     activeReferenceNodeId,
     childExtentsMap,
     childrenMap,
+    nodesById,
     constrainedCounterpartNodeIds,
+    dropIndicator,
     forcedDropTarget,
     hasActiveRenderableSelection,
     isDragActive,
@@ -1185,7 +1389,15 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
             className="absolute inset-0"
             style={{ transform: `scale(${canvasScale})`, transformOrigin: 'top left' }}
           >
-            {rootParentId && renderNodeTree(rootParentId)}
+            <div
+              className="absolute inset-0"
+              style={{
+                boxSizing: 'border-box',
+                ...(rootDropMeta ? resolveContainerLayoutStyle(getNodeLayout(rootDropMeta)) : {}),
+              }}
+            >
+              {rootParentId && renderNodeTree(rootParentId)}
+            </div>
             {showGuides && guides.map((guide) => (
               <div
                 key={`${guide.type}-${guide.position}`}
