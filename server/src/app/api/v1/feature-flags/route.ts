@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { featureFlags } from '../../../../lib/feature-flags/featureFlags';
 import { z } from 'zod';
-import { getSession } from 'server/src/lib/auth/getSession';
+import { getSession } from '@alga-psa/auth';
 
 // Schema for feature flag request
 const featureFlagRequestSchema = z.object({

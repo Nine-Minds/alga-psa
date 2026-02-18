@@ -8,7 +8,7 @@ import {
   TicketClosedEvent,
   TicketAssignedEvent,
   TicketCommentAddedEvent
-} from '../events';
+} from '@alga-psa/event-schemas';
 import { sendEventEmail, SendEmailParams } from '../../notifications/sendEventEmail';
 import logger from '@alga-psa/core/logger';
 import { getConnection } from '../../db/db';

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-vi.mock('server/src/lib/auth/getSession', () => ({
+vi.mock('@alga-psa/auth', () => ({
   getSession: vi.fn(async () => ({ user: { id: 'mock-user-id' } })),
 }));
 

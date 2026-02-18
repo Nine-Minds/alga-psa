@@ -1,5 +1,5 @@
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { InternalNotificationListResponse, UnreadCountResponse } from '../../../lib/models/internalNotification';
+import type { InternalNotificationListResponse, UnreadCountResponse } from '@alga-psa/notifications';
 import { createTenantKnex } from '../../../lib/db';
 import {
   broadcastNotification,

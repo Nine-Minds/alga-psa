@@ -68,7 +68,7 @@ vi.mock('server/src/lib/analytics/posthog', () => ({
 let mockSessionUserId: string | null = null;
 let mockCurrentUser: any = null;
 
-vi.mock('server/src/lib/auth/getSession', () => ({
+vi.mock('@alga-psa/auth', () => ({
   getSession: vi.fn(async () => ({
     user: mockSessionUserId ? { id: mockSessionUserId } : undefined,
   })),

@@ -2,7 +2,6 @@ import { IUser } from '@/interfaces/auth.interfaces';
 import { IDocument } from '@/interfaces/document.interface';
 import { IDocumentAssociation } from '@/interfaces/document-association.interface';
 import { hasPermission } from '@/lib/auth/rbac';
-import DocumentAssociation from '@/lib/models/document-association';
 import { createTenantKnex } from '@/lib/db';
 
 /**
@@ -38,9 +37,10 @@ export async function canAccessDocument(
   }
 
   // 2. Get all associations for this document
-  const associations = await DocumentAssociation.getByDocumentId(
-    document.document_id
-  );
+  const { knex: db, tenant } = await createTenantKnex();
+  const associations: IDocumentAssociation[] = await db('document_associations')
+    .select('*')
+    .where({ document_id: document.document_id, tenant });
 
   // 3. If no associations, allow access (tenant-level document)
   if (!associations || associations.length === 0) {

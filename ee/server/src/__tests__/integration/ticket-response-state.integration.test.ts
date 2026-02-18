@@ -628,12 +628,12 @@ describe('Ticket Response State Integration Tests', () => {
   describe('Event Publishing Tests (T054-T065, T072, T076)', () => {
     it('T054: TICKET_RESPONSE_STATE_CHANGED event type exists', async () => {
       // Import the event types
-      const { EventTypeEnum } = await import('../../../../../server/src/lib/eventBus/events');
+      const { EventTypeEnum } = await import('@alga-psa/event-schemas');
       expect(EventTypeEnum.options).toContain('TICKET_RESPONSE_STATE_CHANGED');
     });
 
     it('T055: Event schema validates required fields', async () => {
-      const { TicketResponseStateChangedPayloadSchema } = await import('../../../../../server/src/lib/eventBus/events');
+      const { TicketResponseStateChangedPayloadSchema } = await import('@alga-psa/event-schemas');
 
       // Valid payload
       const validPayload = {

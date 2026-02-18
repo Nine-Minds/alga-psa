@@ -28,7 +28,7 @@ const sendAppointmentRequestApprovedMock = vi.fn().mockResolvedValue(undefined);
 const sendAppointmentRequestDeclinedMock = vi.fn().mockResolvedValue(undefined);
 const sendEmailMock = vi.fn().mockResolvedValue(undefined);
 
-vi.mock('server/src/lib/email/system/SystemEmailService', () => ({
+vi.mock('@alga-psa/email', () => ({
   SystemEmailService: {
     getInstance: vi.fn(() => ({
       sendAppointmentRequestReceived: sendAppointmentRequestReceivedMock,

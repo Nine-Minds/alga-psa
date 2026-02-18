@@ -305,7 +305,7 @@ vi.mock('server/src/lib/auth/rbac', () => ({
   hasPermission: vi.fn(() => Promise.resolve(true))
 }));
 
-vi.mock('server/src/lib/auth/getSession', () => ({
+vi.mock('@alga-psa/auth', () => ({
   getSession: vi.fn(async () => ({
     user: {
       id: mockedUserId,

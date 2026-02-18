@@ -8,7 +8,7 @@ import {
 import { getTenantIdBySlug } from '@alga-psa/tenancy/actions';
 import { getConnection } from '@/lib/db/db';
 import { getServicesForPublicBooking } from '@/lib/services/availabilityService';
-import { SystemEmailService } from '@/lib/email/system/SystemEmailService';
+import { SystemEmailService } from '@alga-psa/email';
 import {
   getTenantSettings,
   formatDate,
