@@ -43,4 +43,4 @@ export type {
 export type {
   EmailAddress,
   EmailSendResult
-} from './BaseEmailService';
+} from '@alga-psa/email';

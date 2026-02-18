@@ -178,7 +178,7 @@
   {
     "id": "F023",
     "description": "Task 2e-2: Update server/src/test/unit/outboundEmailWorkflowEvents.test.ts to import BaseEmailService from @alga-psa/email instead of ../../lib/email/BaseEmailService. Delete server/src/lib/email/BaseEmailService.ts.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-09"
     ]

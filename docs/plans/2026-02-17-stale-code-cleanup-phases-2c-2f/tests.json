@@ -73,7 +73,7 @@
   {
     "id": "T008",
     "description": "Task 2e-2: Verify BaseEmailService is exported from @alga-psa/email. Update outboundEmailWorkflowEvents.test.ts import. Delete BaseEmailService.ts. npm run build passes.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F023"
     ]

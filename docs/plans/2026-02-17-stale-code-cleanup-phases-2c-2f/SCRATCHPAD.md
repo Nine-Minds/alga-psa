@@ -91,3 +91,5 @@ Must be executed in this exact order:
 - (2026-02-18) Build after Task 2d-3 still fails: missing @dnd-kit/sortable in packages/billing.
 - (2026-02-18) Task 2e-1: Appointment request route now imports SystemEmailService from @alga-psa/email. Updated email barrel to re-export system types from package. Updated appointment notification/request tests to mock @alga-psa/email. Deleted server/src/lib/email/system/SystemEmailService.ts and system/types.ts (removed system/ dir).
 - (2026-02-18) Build after Task 2e-1 still fails: missing @dnd-kit/sortable in packages/billing.
+- (2026-02-18) Task 2e-2: outboundEmailWorkflowEvents.test.ts now imports BaseEmailService from @alga-psa/email; email barrel re-exports EmailAddress/EmailSendResult from package. Deleted server/src/lib/email/BaseEmailService.ts.
+- (2026-02-18) Build after Task 2e-2 still fails: missing @dnd-kit/sortable in packages/billing.
