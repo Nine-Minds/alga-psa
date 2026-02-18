@@ -30,7 +30,7 @@ import {
 import { EmailProviderManager } from '@alga-psa/email';
 import { TenantEmailSettings, EmailMessage } from '@alga-psa/types';
 import { TenantEmailService } from '@alga-psa/email';
-import { StaticTemplateProcessor } from '../email/tenant/templateProcessors';
+import { StaticTemplateProcessor } from '@alga-psa/email';
 import { getConnection } from '../db/db';
 import { resolveEmailLocale } from './emailLocaleResolver';
 import { SupportedLocale } from '@alga-psa/ui/lib/i18n/config';

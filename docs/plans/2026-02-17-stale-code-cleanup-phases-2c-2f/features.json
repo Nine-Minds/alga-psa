@@ -186,7 +186,7 @@
   {
     "id": "F024",
     "description": "Task 2e-3: Update server/src/services/surveyService.ts to import DatabaseTemplateProcessor from @alga-psa/email instead of ../lib/email/tenant/templateProcessors. Update server/src/test/integration/surveyEmailTemplates.integration.test.ts similarly. Delete server/src/lib/email/tenant/templateProcessors.ts and tenant/ directory.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-10"
     ]

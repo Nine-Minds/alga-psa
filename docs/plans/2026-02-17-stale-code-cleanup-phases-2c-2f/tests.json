@@ -81,7 +81,7 @@
   {
     "id": "T009",
     "description": "Task 2e-3: Verify DatabaseTemplateProcessor is exported from @alga-psa/email (check which of the two package locations is in the barrel). Update surveyService.ts and surveyEmailTemplates test. Delete tenant/templateProcessors.ts and tenant/ dir. npm run build passes.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F024"
     ]

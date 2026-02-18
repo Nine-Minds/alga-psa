@@ -27,7 +27,7 @@ export type {
 
 // Tenant email exports
 export { TenantEmailService } from '@alga-psa/email';
-export * from './tenant/templateProcessors';
+export * from '@alga-psa/email';
 export type {
   TenantEmailParams,
   EmailSettingsValidation
@@ -38,7 +38,7 @@ export type {
   ITemplateProcessor,
   TemplateProcessorOptions,
   EmailTemplateContent
-} from './tenant/templateProcessors';
+} from '@alga-psa/email';
 
 export type {
   EmailAddress,
