@@ -1,0 +1,170 @@
+[
+  {
+    "id": "F001",
+    "description": "Task 2c-1: Delete orphaned model server/src/lib/models/role.ts (0 callers, functionality in packages/auth and packages/users)",
+    "implemented": false,
+    "prdRefs": ["FR-01"]
+  },
+  {
+    "id": "F002",
+    "description": "Task 2c-1: Delete orphaned model server/src/lib/models/standardServiceType.ts (0 callers, no package equivalent needed)",
+    "implemented": false,
+    "prdRefs": ["FR-01"]
+  },
+  {
+    "id": "F003",
+    "description": "Task 2c-1: Delete orphaned model server/src/lib/models/timeSheetComment.ts (0 callers, TimeSheetService reimplements inline)",
+    "implemented": false,
+    "prdRefs": ["FR-01"]
+  },
+  {
+    "id": "F004",
+    "description": "Task 2c-1: Delete orphaned model server/src/lib/models/session.tsx (0 callers, superseded by packages/db/src/models/UserSession.ts)",
+    "implemented": false,
+    "prdRefs": ["FR-01"]
+  },
+  {
+    "id": "F005",
+    "description": "Task 2c-1: Delete orphaned model server/src/lib/models/ticketResource.tsx (0 callers, superseded by packages/tickets/src/actions/ticketResourceActions.ts)",
+    "implemented": false,
+    "prdRefs": ["FR-01"]
+  },
+  {
+    "id": "F006",
+    "description": "Task 2c-1: Delete orphaned model server/src/lib/models/userPreferences.tsx (0 callers, superseded by packages/db/src/models/userPreferences.ts)",
+    "implemented": false,
+    "prdRefs": ["FR-01"]
+  },
+  {
+    "id": "F007",
+    "description": "Task 2c-1: Delete orphaned model server/src/lib/models/notification.ts (0 direct path imports, exact duplicate at packages/notifications/src/types/notification.ts)",
+    "implemented": false,
+    "prdRefs": ["FR-01"]
+  },
+  {
+    "id": "F008",
+    "description": "Task 2c-1: Delete empty barrel file server/src/lib/models/index.ts (contains only comments, exports nothing)",
+    "implemented": false,
+    "prdRefs": ["FR-02"]
+  },
+  {
+    "id": "F009",
+    "description": "Task 2c-2: Delete orphaned service server/src/lib/services/PasswordResetService.ts (0 callers)",
+    "implemented": false,
+    "prdRefs": ["FR-03"]
+  },
+  {
+    "id": "F010",
+    "description": "Task 2c-2: Delete orphaned service server/src/lib/services/taskTypeService.ts (0 callers)",
+    "implemented": false,
+    "prdRefs": ["FR-03"]
+  },
+  {
+    "id": "F011",
+    "description": "Task 2c-3: Delete dead email file server/src/lib/email/sendPasswordResetEmail.ts (0 direct imports, package duplicate exists)",
+    "implemented": false,
+    "prdRefs": ["FR-04"]
+  },
+  {
+    "id": "F012",
+    "description": "Task 2c-3: Delete dead email file server/src/lib/email/sendPortalInvitationEmail.ts (0 direct imports, package duplicate exists)",
+    "implemented": false,
+    "prdRefs": ["FR-04"]
+  },
+  {
+    "id": "F013",
+    "description": "Task 2c-3: Delete dead email file server/src/lib/email/sendVerificationEmail.ts (0 direct imports, package duplicate exists)",
+    "implemented": false,
+    "prdRefs": ["FR-04"]
+  },
+  {
+    "id": "F014",
+    "description": "Task 2c-3: Delete dead email file server/src/lib/email/sendCancellationFeedbackEmail.ts (0 direct imports, package duplicate exists)",
+    "implemented": false,
+    "prdRefs": ["FR-04"]
+  },
+  {
+    "id": "F015",
+    "description": "Task 2c-3: Delete dead email file server/src/lib/email/clientPortalTenantRecoveryEmail.ts (0 direct imports, package duplicate exists)",
+    "implemented": false,
+    "prdRefs": ["FR-04"]
+  },
+  {
+    "id": "F016",
+    "description": "Task 2c-3: Delete dead email file server/src/lib/email/system/SystemEmailProviderFactory.ts (0 direct imports)",
+    "implemented": false,
+    "prdRefs": ["FR-04"]
+  },
+  {
+    "id": "F017",
+    "description": "Task 2c-3: Delete dead email directory server/src/lib/email/system/templates/* (0 direct imports)",
+    "implemented": false,
+    "prdRefs": ["FR-04"]
+  },
+  {
+    "id": "F018",
+    "description": "Task 2c-3: Delete dead email file server/src/lib/email/tenant/types.ts (0 direct imports)",
+    "implemented": false,
+    "prdRefs": ["FR-04"]
+  },
+  {
+    "id": "F019",
+    "description": "Task 2d-1: Delete shim server/src/lib/user-actions/userActions.ts (pure re-export of @alga-psa/users/actions) and update all callers to import from @alga-psa/users/actions directly",
+    "implemented": false,
+    "prdRefs": ["FR-05"]
+  },
+  {
+    "id": "F020",
+    "description": "Task 2d-2: Delete shim server/src/lib/eventBus/events.ts (pure re-export of @alga-psa/event-schemas) and update all callers to import from @alga-psa/event-schemas directly",
+    "implemented": false,
+    "prdRefs": ["FR-06"]
+  },
+  {
+    "id": "F021",
+    "description": "Task 2d-3: Delete shim server/src/lib/auth/getSession.ts (re-exports getSession, getSessionWithRevocationCheck from @alga-psa/auth) and update all 23 callers (12 server + 11 EE) to import from @alga-psa/auth directly. NOTE: This is the largest single task. Server callers: invoiceService.ts, client-portal/layout.tsx, documents/download route, serverFeatureFlags.tsx, auth/session.ts, assets/page.tsx, assets/[asset_id]/page.tsx, time-sheet-approvals/page.tsx, billingCycleActions.test.ts, extensions/gateway/auth.ts, feature-flags/route.ts. EE callers: msp/layout.tsx, license-actions.ts, 9 tenant-management route handlers.",
+    "implemented": false,
+    "prdRefs": ["FR-07"]
+  },
+  {
+    "id": "F022",
+    "description": "Task 2e-1: Update server/src/app/api/public/appointment-request/route.ts to import SystemEmailService from @alga-psa/email instead of @/lib/email/system/SystemEmailService. Delete server/src/lib/email/system/SystemEmailService.ts, server/src/lib/email/system/types.ts, and system/ directory.",
+    "implemented": false,
+    "prdRefs": ["FR-08"]
+  },
+  {
+    "id": "F023",
+    "description": "Task 2e-2: Update server/src/test/unit/outboundEmailWorkflowEvents.test.ts to import BaseEmailService from @alga-psa/email instead of ../../lib/email/BaseEmailService. Delete server/src/lib/email/BaseEmailService.ts.",
+    "implemented": false,
+    "prdRefs": ["FR-09"]
+  },
+  {
+    "id": "F024",
+    "description": "Task 2e-3: Update server/src/services/surveyService.ts to import DatabaseTemplateProcessor from @alga-psa/email instead of ../lib/email/tenant/templateProcessors. Update server/src/test/integration/surveyEmailTemplates.integration.test.ts similarly. Delete server/src/lib/email/tenant/templateProcessors.ts and tenant/ directory.",
+    "implemented": false,
+    "prdRefs": ["FR-10"]
+  },
+  {
+    "id": "F025",
+    "description": "Task 2e-4: Rewrite server/src/lib/email/index.ts to be a pure re-export barrel from @alga-psa/email only. Remove all local file imports. All callers of @/lib/email must still resolve.",
+    "implemented": false,
+    "prdRefs": ["FR-11"]
+  },
+  {
+    "id": "F026",
+    "description": "Task 2f-1: Migrate all 9 callers of server/src/lib/models/internalNotification.ts to import types (InternalNotification, CreateInternalNotificationRequest, etc.) from @alga-psa/notifications instead. Delete the server model file.",
+    "implemented": false,
+    "prdRefs": ["FR-12"]
+  },
+  {
+    "id": "F027",
+    "description": "Task 2f-2: Migrate 3 callers of server/src/lib/models/document-association.tsx (EntityImageService.ts, documentPermissionUtils.ts, test file) to import DocumentAssociation from @alga-psa/documents/models/documentAssociation. Verify API compatibility. Delete server model.",
+    "implemented": false,
+    "prdRefs": ["FR-13"]
+  },
+  {
+    "id": "F028",
+    "description": "Task 2f-3: Add PortalDomainSessionToken exports (consumePortalDomainOtt, pruneExpiredPortalDomainOtts, __setPortalDomainOttConnectionFactoryForTests) to @alga-psa/auth barrel exports. Migrate 4 callers (domain-session/route.ts, route.test.ts, portalDomainSessionOtt.test.ts, prune script). Delete server/src/lib/models/PortalDomainSessionToken.ts.",
+    "implemented": false,
+    "prdRefs": ["FR-14"]
+  }
+]
