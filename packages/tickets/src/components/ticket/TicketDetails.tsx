@@ -401,8 +401,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         };
         fetchTags();
     }, [ticket.ticket_id]);
-    
-    
+
     // Add automatic interval tracking using the custom hook
     // Unique holder ID per tab for lock ownership
     const [holderId] = useState<string>(() => {
@@ -1864,6 +1863,7 @@ const handleClose = () => {
                                 }}
                             />
                         </Suspense>
+
                     </div>
                     <div className={isInDrawer ? "w-96" : "w-1/4"} id="ticket-properties-container">
                         <Suspense fallback={<div id="ticket-properties-skeleton" className="animate-pulse bg-gray-200 h-96 rounded-lg mb-6"></div>}>

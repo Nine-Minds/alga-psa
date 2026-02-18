@@ -14,6 +14,42 @@ import { Knex } from 'knex';
  */
 
 /**
+ * Convert a local time in a given IANA timezone to a UTC Date.
+ * E.g. "09:00 in America/New_York" → 14:00 UTC (during EST).
+ */
+function zonedTimeToUtc(
+  dateStr: string,
+  hour: number,
+  minute: number,
+  timezone: string
+): Date {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  // Create a UTC date using the target hour/minute
+  const targetAsUtcMs = Date.UTC(y, m - 1, d, hour, minute, 0, 0);
+  const guessDate = new Date(targetAsUtcMs);
+
+  // Determine what local time this UTC instant corresponds to in the target timezone
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: timezone,
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit',
+    hour12: false
+  }).formatToParts(guessDate);
+
+  const lY = parseInt(parts.find(p => p.type === 'year')!.value);
+  const lM = parseInt(parts.find(p => p.type === 'month')!.value);
+  const lD = parseInt(parts.find(p => p.type === 'day')!.value);
+  const lH = parseInt(parts.find(p => p.type === 'hour')!.value) % 24;
+  const lMin = parseInt(parts.find(p => p.type === 'minute')!.value);
+
+  const localAsUtcMs = Date.UTC(lY, lM - 1, lD, lH, lMin, 0, 0);
+  const offsetMs = localAsUtcMs - targetAsUtcMs;
+
+  // Subtract the offset: if TZ is UTC-5, offset is -5h, so we add 5h to get correct UTC
+  return new Date(targetAsUtcMs - offsetMs);
+}
+
+/**
  * Get available time slots for a specific date
  * @param tenantId - Tenant identifier
  * @param date - Target date in YYYY-MM-DD format
@@ -300,12 +336,10 @@ export async function getAvailableTimeSlots(
       const [startHour, startMinute] = userHours.start_time.split(':').map(Number);
       const [endHour, endMinute] = userHours.end_time.split(':').map(Number);
 
-      // Use UTC methods to ensure consistent timezone handling
-      // Parse date as UTC and set hours in UTC
-      const [year, month, day] = date.split('-').map(Number);
-      let currentSlotTime = new Date(Date.UTC(year, month - 1, day, startHour, startMinute, 0, 0));
-
-      const endTime = new Date(Date.UTC(year, month - 1, day, endHour, endMinute, 0, 0));
+      // Working hours are in local business time — convert to UTC using the provided timezone
+      const tz = userTimezone || 'UTC';
+      let currentSlotTime = zonedTimeToUtc(date, startHour, startMinute, tz);
+      const endTime = zonedTimeToUtc(date, endHour, endMinute, tz);
 
       while (currentSlotTime < endTime) {
         const slotEnd = new Date(currentSlotTime);
@@ -406,7 +440,8 @@ export async function isSlotAvailable(
   tenantId: string,
   startTime: string,
   duration: number,
-  userId?: string
+  userId?: string,
+  userTimezone?: string
 ): Promise<boolean> {
   return runWithTenant(tenantId, async () => {
     const { knex } = await createTenantKnex();
@@ -510,15 +545,14 @@ export async function isSlotAvailable(
         continue;
       }
 
-      // Check if slot is within working hours (use UTC for consistency)
+      // Check if slot is within working hours (convert local business hours to UTC)
       const [whStartHour, whStartMinute] = userHours.start_time.split(':').map(Number);
       const [whEndHour, whEndMinute] = userHours.end_time.split(':').map(Number);
 
-      const whStart = new Date(start);
-      whStart.setUTCHours(whStartHour, whStartMinute, 0, 0);
-
-      const whEnd = new Date(start);
-      whEnd.setUTCHours(whEndHour, whEndMinute, 0, 0);
+      const tz = userTimezone || 'UTC';
+      const dateStr = start.toISOString().split('T')[0];
+      const whStart = zonedTimeToUtc(dateStr, whStartHour, whStartMinute, tz);
+      const whEnd = zonedTimeToUtc(dateStr, whEndHour, whEndMinute, tz);
 
       if (start < whStart || end > whEnd) {
         continue;

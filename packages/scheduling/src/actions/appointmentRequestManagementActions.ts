@@ -1143,7 +1143,7 @@ function normalizeTimeValue(value: string | Date | null | undefined): string | n
   if (typeof value === 'string') {
     return value.slice(0, 5);
   }
-  const hours = value.getHours().toString().padStart(2, '0');
-  const minutes = value.getMinutes().toString().padStart(2, '0');
+  const hours = value.getUTCHours().toString().padStart(2, '0');
+  const minutes = value.getUTCMinutes().toString().padStart(2, '0');
   return `${hours}:${minutes}`;
 }

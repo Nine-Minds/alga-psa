@@ -1692,9 +1692,8 @@ export const getAvailableTimeSlotsForDate = withAuth(async (
     console.log(`[getAvailableTimeSlotsForDate] Returning ${technicians.length} technicians with durations:`,
       technicians.map((t: any) => `${t.full_name}: ${t.duration}min`));
 
-    // Format time slots for UI - always use SERVICE duration for display
-    // Display times as UTC (business hours) without timezone conversion
-    // since working hours represent when the business is open
+    // Format time slots for UI - display in user's local timezone
+    const displayTimezone = userTimezone || 'UTC';
     const timeSlots = slots.map(slot => {
       const slotTime = new Date(slot.start_time);
       return {
@@ -1702,7 +1701,7 @@ export const getAvailableTimeSlotsForDate = withAuth(async (
           hour: '2-digit',
           minute: '2-digit',
           hour12: false,
-          timeZone: 'UTC' // Always display in UTC to match how working hours are stored
+          timeZone: displayTimezone
         }),
         startTime: slot.start_time, // Keep the original UTC ISO timestamp for backend
         available: slot.is_available,

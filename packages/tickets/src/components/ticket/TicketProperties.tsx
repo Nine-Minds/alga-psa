@@ -11,7 +11,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
-import { Clock, Edit2, Play, Pause, StopCircle, UserPlus, X, AlertCircle, Calendar as CalendarIcon, Building, Users } from 'lucide-react';
+import { Clock, Edit2, Play, Pause, StopCircle, UserPlus, X, AlertCircle, Calendar as CalendarIcon, Building, Users, CalendarCheck } from 'lucide-react';
 import { formatMinutesAsHoursAndMinutes } from '@alga-psa/core';
 import styles from './TicketDetails.module.css';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
@@ -31,6 +31,8 @@ import type { SurveyTicketSatisfactionSummary } from '@alga-psa/types';
 import TicketMaterialsCard from './TicketMaterialsCard';
 import TicketSurveySummaryCard from './TicketSurveySummaryCard';
 import { useRegisterUnsavedChanges } from '@alga-psa/ui/context';
+import { useDrawer } from '@alga-psa/ui';
+import { getAppointmentRequestsByTicketId } from '@alga-psa/scheduling/actions';
 
 interface TicketPropertiesProps {
   id?: string;
@@ -150,6 +152,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
   surveySummary = null,
   renderIntervalManagement,
 }) => {
+  const { openDrawer } = useDrawer();
   const [showContactPicker, setShowContactPicker] = useState(false);
   const [showClientPicker, setShowClientPicker] = useState(false);
   const [showLocationPicker, setShowLocationPicker] = useState(false);
@@ -165,6 +168,8 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
   const [additionalAgentAvatarUrls, setAdditionalAgentAvatarUrls] = useState<Record<string, string | null>>({});
   const [contactAvatarUrl, setContactAvatarUrl] = useState<string | null>(null);
   const [dateTimeFormat, setDateTimeFormat] = useState<string>('MMM d, yyyy h:mm a');
+  const [appointmentRequests, setAppointmentRequests] = useState<any[]>([]);
+  const [showAppointmentTooltip, setShowAppointmentTooltip] = useState(false);
 
   // Register unsaved changes for contact, client, and location pickers
   // Popup triggers if picker is open AND a different selection is made (but not yet saved)
@@ -283,6 +288,22 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
     };
     loadDisplay();
   }, []);
+
+  // Fetch appointment requests linked to this ticket
+  useEffect(() => {
+    const fetchAppointmentRequests = async () => {
+      if (!ticket.ticket_id) return;
+      try {
+        const result = await getAppointmentRequestsByTicketId(ticket.ticket_id);
+        if (result.success && result.data) {
+          setAppointmentRequests(result.data);
+        }
+      } catch (error) {
+        console.error('Error fetching appointment requests:', error);
+      }
+    };
+    fetchAppointmentRequests();
+  }, [ticket.ticket_id]);
 
   return (
     <div className="flex-shrink-0 space-y-6">
@@ -641,6 +662,139 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
             <Users className="inline-block w-5 h-5 mr-2" />
             Agent team
           </h2>
+          {/* Appointment Requests Indicator */}
+          {appointmentRequests.length > 0 && (
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setShowAppointmentTooltip(prev => !prev)}
+                className="flex items-center text-sm text-blue-600 hover:text-blue-800 p-1.5 rounded hover:bg-blue-50"
+                title="Appointment requests"
+              >
+                <CalendarCheck className="h-4 w-4 mr-1" />
+                <span>{appointmentRequests.length}</span>
+              </button>
+
+              {showAppointmentTooltip && (
+                <>
+                  {/* Backdrop to close dropdown */}
+                  <div className="fixed inset-0 z-40" onClick={() => setShowAppointmentTooltip(false)} />
+                  <div className="absolute right-0 top-full mt-2 w-72 bg-white border border-gray-200 rounded-lg shadow-lg z-50 p-3 max-h-48 overflow-y-auto">
+                    <div className="space-y-1">
+                      {appointmentRequests.map((request: any, index: number) => {
+                        // Normalize PG DATE/TIME values
+                        const dateVal = request.requested_date;
+                        const dateStr = dateVal instanceof Date
+                          ? dateVal.toISOString().split('T')[0]
+                          : typeof dateVal === 'string' ? dateVal.slice(0, 10) : null;
+                        const timeStr = typeof request.requested_time === 'string'
+                          ? request.requested_time.slice(0, 5) : null;
+                        let displayDateTime = 'N/A';
+                        if (dateStr && timeStr) {
+                          try {
+                            const dt = new Date(`${dateStr}T${timeStr}:00Z`);
+                            if (!isNaN(dt.getTime())) {
+                              displayDateTime = dt.toLocaleString('en-US', {
+                                month: 'short', day: 'numeric',
+                                hour: '2-digit', minute: '2-digit'
+                              });
+                            }
+                          } catch { /* fallback */ }
+                        }
+
+                        const statusColor = request.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                          request.status === 'approved' ? 'bg-green-100 text-green-800' :
+                          request.status === 'declined' ? 'bg-red-100 text-red-800' :
+                          'bg-gray-100 text-gray-800';
+
+                        return (
+                          <button
+                            key={request.appointment_request_id}
+                            type="button"
+                            onClick={() => {
+                              setShowAppointmentTooltip(false);
+                              openDrawer(
+                                <div className="p-6 space-y-4">
+                                  <h2 className="text-lg font-semibold">Appointment Request</h2>
+                                  <div className="space-y-3">
+                                    <div>
+                                      <span className="text-sm text-gray-500">Service</span>
+                                      <p className="text-sm font-medium">{request.service_name || 'N/A'}</p>
+                                    </div>
+                                    <div>
+                                      <span className="text-sm text-gray-500">Status</span>
+                                      <p><span className={`text-xs px-2 py-0.5 rounded ${statusColor}`}>{request.status}</span></p>
+                                    </div>
+                                    <div>
+                                      <span className="text-sm text-gray-500">Requested Date & Time</span>
+                                      <p className="text-sm font-medium">{displayDateTime}</p>
+                                    </div>
+                                    <div>
+                                      <span className="text-sm text-gray-500">Duration</span>
+                                      <p className="text-sm font-medium">{request.requested_duration} minutes</p>
+                                    </div>
+                                    {request.description && (
+                                      <div>
+                                        <span className="text-sm text-gray-500">Description</span>
+                                        <p className="text-sm">{request.description}</p>
+                                      </div>
+                                    )}
+                                    {request.contact_name && (
+                                      <div>
+                                        <span className="text-sm text-gray-500">Contact</span>
+                                        <p className="text-sm font-medium">{request.contact_name}</p>
+                                      </div>
+                                    )}
+                                    {request.approved_at && (
+                                      <div>
+                                        <span className="text-sm text-gray-500">Approved At</span>
+                                        <p className="text-sm font-medium">
+                                          {new Date(request.approved_at).toLocaleString('en-US', {
+                                            month: 'short', day: 'numeric', year: 'numeric',
+                                            hour: '2-digit', minute: '2-digit'
+                                          })}
+                                        </p>
+                                      </div>
+                                    )}
+                                    {request.decline_reason && (
+                                      <div>
+                                        <span className="text-sm text-gray-500">Decline Reason</span>
+                                        <p className="text-sm text-red-600">{request.decline_reason}</p>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            }}
+                            className={`block w-full text-left p-2 rounded hover:bg-gray-50 cursor-pointer ${index > 0 ? 'border-t border-gray-100' : ''}`}
+                          >
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-xs font-medium text-gray-900 truncate">
+                                {request.service_name || 'Appointment'}
+                              </span>
+                              <span className={`text-xs px-1.5 py-0.5 rounded ${statusColor}`}>
+                                {request.status}
+                              </span>
+                            </div>
+                            <div className="text-xs text-gray-500 flex items-center gap-2">
+                              <span className="flex items-center">
+                                <CalendarIcon className="h-3 w-3 mr-0.5" />
+                                {displayDateTime}
+                              </span>
+                              <span className="flex items-center">
+                                <Clock className="h-3 w-3 mr-0.5" />
+                                {request.requested_duration}m
+                              </span>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
         </div>
         <div className="space-y-4">
           {/* Primary Agent */}
