@@ -57,7 +57,14 @@ export function TemplateRenderer({ template, invoiceData }: TemplateRendererProp
         console.log("Processed Invoice Data:", processedInvoiceData);
 
         // Call the server action with the processed data
-        const { html, css } = await renderTemplateOnServer(template.template_id, processedInvoiceData);
+        const templateId =
+          typeof template.template_id === 'string' && template.template_id.trim().length > 0
+            ? template.template_id
+            : null;
+
+        const { html, css } = await renderTemplateOnServer(templateId, processedInvoiceData, {
+          templateAst: (template as any).templateAst ?? null,
+        });
 
         setRenderedHtml(html);
         setRenderedCss(css);

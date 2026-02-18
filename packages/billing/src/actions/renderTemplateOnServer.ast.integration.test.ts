@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { INVOICE_TEMPLATE_AST_VERSION } from '@alga-psa/types';
 
 const getAllTemplatesMock = vi.fn();
@@ -64,6 +64,25 @@ const templateAst = {
 };
 
 describe('renderTemplateOnServer AST integration', () => {
+  beforeEach(() => {
+    getAllTemplatesMock.mockReset();
+  });
+
+  it('renders from inline templateAst override without template lookup by id', async () => {
+    const result = await (renderTemplateOnServer as any)(
+      { id: 'test-user' },
+      { tenant: 'test-tenant' },
+      null,
+      invoiceData,
+      { templateAst }
+    );
+
+    expect(result.html).toContain('INV-AST-001');
+    expect(result.html).toContain('110');
+    expect(typeof result.css).toBe('string');
+    expect(getAllTemplatesMock).not.toHaveBeenCalled();
+  });
+
   it('renders template HTML/CSS from canonical AST payload', async () => {
     getAllTemplatesMock.mockResolvedValueOnce([
       {

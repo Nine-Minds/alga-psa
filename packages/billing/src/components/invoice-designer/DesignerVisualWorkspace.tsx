@@ -7,6 +7,10 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { fetchInvoicesPaginated, getInvoiceForRendering } from '@alga-psa/billing/actions/invoiceQueries';
 import { runAuthoritativeInvoiceTemplatePreview } from '@alga-psa/billing/actions/invoiceTemplatePreview';
 import { mapDbInvoiceToWasmViewModel } from '@alga-psa/billing/lib/adapters/invoiceAdapters';
+import type { IInvoiceTemplate } from '@alga-psa/types';
+import { exportWorkspaceToInvoiceTemplateAst } from './ast/workspaceAst';
+import PaperInvoice from '../billing-dashboard/PaperInvoice';
+import { TemplateRenderer } from '../billing-dashboard/TemplateRenderer';
 import { DesignerShell } from './DesignerShell';
 import { useInvoiceDesignerStore } from './state/designerStore';
 import {
@@ -109,13 +113,40 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
     html: authoritativePreview?.render.html ?? null,
   });
   const canDisplaySuccessStates = hasValidSelectionForSource && hasRenderedPreviewOutput;
-  const previewIframeHeightPx = useMemo(() => {
-    const measuredHeight = authoritativePreview?.render.contentHeightPx;
-    if (typeof measuredHeight !== 'number' || !Number.isFinite(measuredHeight)) {
-      return 640;
+  const previewWorkspace = useMemo(
+    () => ({
+      rootId,
+      nodesById: Object.fromEntries(
+        debouncedNodes.map((node) => [
+          node.id,
+          { id: node.id, type: node.type, props: node.props, children: node.children },
+        ])
+      ),
+      snapToGrid,
+      gridSize,
+      showGuides,
+      showRulers,
+      canvasScale,
+    }),
+    [canvasScale, debouncedNodes, gridSize, rootId, showGuides, showRulers, snapToGrid]
+  );
+  const previewTemplate = useMemo<IInvoiceTemplate | null>(() => {
+    if (!previewData) {
+      return null;
     }
-    return Math.max(640, Math.ceil(measuredHeight));
-  }, [authoritativePreview?.render.contentHeightPx]);
+    try {
+      const templateAst = exportWorkspaceToInvoiceTemplateAst(previewWorkspace as any);
+      return {
+        template_id: `designer-preview-${previewWorkspace.rootId ?? 'root'}-${manualRunNonce}`,
+        name: 'Designer Preview',
+        version: 1,
+        isStandard: false,
+        templateAst,
+      } as IInvoiceTemplate;
+    } catch {
+      return null;
+    }
+  }, [manualRunNonce, previewData, previewWorkspace]);
   const displayStatuses = derivePreviewPipelineDisplayStatuses({
     statuses: {
       shapeStatus: previewState.shapeStatus,
@@ -231,20 +262,7 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
     dispatch({ type: 'pipeline-phase-start', phase: 'verify' });
 
     runAuthoritativeInvoiceTemplatePreview({
-      workspace: {
-        rootId,
-        nodesById: Object.fromEntries(
-          debouncedNodes.map((node) => [
-            node.id,
-            { id: node.id, type: node.type, props: node.props, children: node.children },
-          ])
-        ),
-        snapToGrid,
-        gridSize,
-        showGuides,
-        showRulers,
-        canvasScale,
-      },
+      workspace: previewWorkspace as any,
       invoiceData: previewData,
     })
       .then((result) => {
@@ -285,18 +303,12 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
         dispatch({ type: 'pipeline-phase-error', phase: 'shape', error: message });
       });
   }, [
-    canvasScale,
-    debouncedNodes,
-    gridSize,
-    rootId,
     manualRunNonce,
     previewData,
+    previewWorkspace,
     previewState.isInvoiceDetailLoading,
     previewState.selectedInvoiceId,
     previewState.sourceKind,
-    showGuides,
-    showRulers,
-    snapToGrid,
     visualWorkspaceTab,
   ]);
 
@@ -598,23 +610,24 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
             </div>
           )}
 
-          {previewData && authoritativePreview?.render.status === 'error' && (
+          {previewData && !previewTemplate && (
             <div
               className="p-4 text-sm text-red-700 bg-red-50 border-t border-red-200"
               data-automation-id="invoice-designer-preview-render-error"
             >
-              {authoritativePreview.render.error ?? 'Preview rendering failed.'}
+              Preview template could not be generated from the current workspace.
             </div>
           )}
 
-          {previewData && authoritativePreview?.render.status === 'success' && authoritativePreview.render.html && (
-            <iframe
-              title="Invoice Preview Output"
-              className="block w-full border-0"
-              style={{ height: `${previewIframeHeightPx}px` }}
-              srcDoc={`<!doctype html><html><head><meta charset="utf-8" /><style>html,body{margin:0;padding:0;background:#fff;}</style><style>${authoritativePreview.render.css ?? ''}</style></head><body>${authoritativePreview.render.html}</body></html>`}
-              data-automation-id="invoice-designer-preview-render-iframe"
-            />
+          {previewData && previewTemplate && (
+            <div className="p-2" data-automation-id="invoice-designer-preview-render-template">
+              <PaperInvoice>
+                <TemplateRenderer
+                  template={previewTemplate}
+                  invoiceData={previewData}
+                />
+              </PaperInvoice>
+            </div>
           )}
         </div>
 

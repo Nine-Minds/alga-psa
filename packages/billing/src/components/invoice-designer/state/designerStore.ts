@@ -1154,7 +1154,6 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
     loadWorkspace: (workspace) => {
       setWithIndex((state) => {
         const legacyNodes = (workspace as { nodes?: unknown }).nodes;
-        const nextRootId = typeof workspace.rootId === 'string' ? workspace.rootId : state.rootId;
         const legacyNodesById = Array.isArray(legacyNodes)
           ? (Object.fromEntries(
               (legacyNodes as Array<Record<string, unknown>>)
@@ -1162,8 +1161,17 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
                 .map((node) => [node.id, node as unknown as DesignerWorkspaceSnapshot['nodesById'][string]])
             ) as DesignerWorkspaceSnapshot['nodesById'])
           : null;
+        const incomingNodesById = legacyNodesById ?? workspace.nodesById ?? {};
+        const requestedRootId = typeof workspace.rootId === 'string' ? workspace.rootId : null;
+        const canUseExistingRootId =
+          !requestedRootId && typeof state.rootId === 'string' && Boolean(incomingNodesById[state.rootId]);
+        const fallbackRootId =
+          Object.values(incomingNodesById).find((node) => node.type === 'document')?.id ??
+          Object.keys(incomingNodesById)[0] ??
+          state.rootId;
+        const nextRootId = requestedRootId ?? (canUseExistingRootId ? state.rootId : fallbackRootId);
         const nextNodes = materializeNodesFromSnapshot({
-          nodesById: legacyNodesById ?? workspace.nodesById ?? {},
+          nodesById: incomingNodesById,
           rootId: nextRootId,
         });
         return {

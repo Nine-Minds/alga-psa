@@ -303,11 +303,16 @@ export async function getInvoiceAnnotations(invoiceId: string): Promise<IInvoice
  * @returns A promise resolving to an object containing the rendered HTML and CSS.
  * @throws If template lookup, AST evaluation, or rendering fails.
  */
+type RenderTemplateOnServerOptions = {
+    templateAst?: InvoiceTemplateAst | null;
+};
+
 export const renderTemplateOnServer = withAuth(async (
     user,
     { tenant },
-    templateId: string,
-    invoiceData: WasmInvoiceViewModel | null // Allow null invoiceData
+    templateId: string | null,
+    invoiceData: WasmInvoiceViewModel | null, // Allow null invoiceData
+    options?: RenderTemplateOnServerOptions
 ): Promise<RenderOutput> => {
     // Handle null invoiceData early
     if (!invoiceData) {
@@ -316,17 +321,25 @@ export const renderTemplateOnServer = withAuth(async (
     }
 
     try {
-        const { knex } = await createTenantKnex();
-        const templates = await withTransaction(knex, async (trx: Knex.Transaction) =>
-          Invoice.getAllTemplates(trx, tenant)
-        );
-        const template = templates.find((entry) => entry.template_id === templateId);
-        if (!template) {
-          throw new Error(`Template ${templateId} not found for tenant ${tenant}.`);
-        }
-        const templateAst = (template.templateAst ?? null) as InvoiceTemplateAst | null;
+        let templateAst = (options?.templateAst ?? null) as InvoiceTemplateAst | null;
+
         if (!templateAst) {
-          throw new Error(`Template ${templateId} does not have a canonical templateAst payload.`);
+          if (!templateId) {
+            throw new Error('Template id is required when no templateAst override is provided.');
+          }
+          const { knex } = await createTenantKnex();
+          const templates = await withTransaction(knex, async (trx: Knex.Transaction) =>
+            Invoice.getAllTemplates(trx, tenant)
+          );
+          const template = templates.find((entry) => entry.template_id === templateId);
+          if (!template) {
+            throw new Error(`Template ${templateId} not found for tenant ${tenant}.`);
+          }
+          templateAst = (template.templateAst ?? null) as InvoiceTemplateAst | null;
+        }
+
+        if (!templateAst) {
+          throw new Error(`Template ${templateId ?? '<inline>'} does not have a canonical templateAst payload.`);
         }
 
         const evaluation = evaluateInvoiceTemplateAst(
@@ -335,7 +348,7 @@ export const renderTemplateOnServer = withAuth(async (
         );
         const { html, css } = await renderEvaluatedInvoiceTemplateAst(templateAst, evaluation);
 
-        console.log(`[Server Action] Successfully rendered template: ${templateId}`);
+        console.log(`[Server Action] Successfully rendered template: ${templateId ?? 'inline-templateAst'}`);
         return { html, css };
 
     } catch (error: any) {
