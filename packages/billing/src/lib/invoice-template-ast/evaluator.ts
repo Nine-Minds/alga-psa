@@ -407,7 +407,8 @@ export const evaluateInvoiceTemplateAst = (
 ): InvoiceTemplateEvaluationResult => {
   const astValidation = validateInvoiceTemplateAst(ast);
   if (!astValidation.success) {
-    const issues: InvoiceTemplateEvaluationIssue[] = astValidation.errors.map((error) => ({
+    const validationErrors = 'errors' in astValidation ? astValidation.errors : [];
+    const issues: InvoiceTemplateEvaluationIssue[] = validationErrors.map((error) => ({
       code: 'SCHEMA_VALIDATION_FAILED',
       message: error.message,
       path: error.path,

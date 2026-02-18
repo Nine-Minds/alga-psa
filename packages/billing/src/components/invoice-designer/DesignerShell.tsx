@@ -572,7 +572,7 @@ export const DesignerShell: React.FC = () => {
       });
       if (!resolution.ok) {
         recordDropResult(false);
-        showDropFeedback('error', resolution.message);
+        showDropFeedback('error', 'message' in resolution ? resolution.message : 'Drop target is not compatible.');
         return false;
       }
 

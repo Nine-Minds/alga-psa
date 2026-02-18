@@ -73,7 +73,7 @@ type ValueExpressionInput =
   | { type: 'path'; path: string }
   | { type: 'template'; template: string; args?: Record<string, ValueExpressionInput> };
 
-const valueExpressionSchema: z.ZodType<ValueExpressionInput> = z.lazy(() =>
+const valueExpressionSchema: z.ZodTypeAny = z.lazy(() =>
   z.discriminatedUnion('type', [
     z.object({
       type: z.literal('literal'),
@@ -106,7 +106,7 @@ type ComputationExpressionInput =
       right: ComputationExpressionInput;
     };
 
-const computationExpressionSchema: z.ZodType<ComputationExpressionInput> = z.lazy(() =>
+const computationExpressionSchema: z.ZodTypeAny = z.lazy(() =>
   z.discriminatedUnion('type', [
     z.object({
       type: z.literal('literal'),
@@ -146,7 +146,7 @@ type PredicateInput =
       condition: PredicateInput;
     };
 
-const predicateSchema: z.ZodType<PredicateInput> = z.lazy(() =>
+const predicateSchema: z.ZodTypeAny = z.lazy(() =>
   z.discriminatedUnion('type', [
     z.object({
       type: z.literal('comparison'),
@@ -321,7 +321,7 @@ type NodeInput =
       }>;
     };
 
-const nodeSchema: z.ZodType<NodeInput> = z.lazy(() =>
+const nodeSchema: z.ZodTypeAny = z.lazy(() =>
   z.discriminatedUnion('type', [
     z.object({
       id: z.string().min(1),
@@ -489,7 +489,8 @@ export const validateInvoiceTemplateAst = (input: unknown): InvoiceTemplateAstVa
 export const parseInvoiceTemplateAst = (input: unknown): InvoiceTemplateAst => {
   const result = validateInvoiceTemplateAst(input);
   if (!result.success) {
-    const message = result.errors.map((error) =>
+    const validationErrors = 'errors' in result ? result.errors : [];
+    const message = validationErrors.map((error) =>
       `${error.path || '<root>'}: ${error.message}`
     ).join('; ');
     throw new Error(`Invalid invoice template AST. ${message}`);
