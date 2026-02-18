@@ -22,6 +22,55 @@ type ColumnModel = {
 
 type BorderPreset = 'list' | 'boxed' | 'grid' | 'none' | 'custom';
 
+type ColumnPreset = {
+  id: string;
+  label: string;
+  header: string;
+  key: string;
+  type: string;
+  width: number;
+  description: string;
+};
+
+const COLUMN_PRESETS: ColumnPreset[] = [
+  {
+    id: 'description',
+    label: 'Description',
+    header: 'Description',
+    key: 'item.description',
+    type: 'text',
+    width: 280,
+    description: 'Line item description',
+  },
+  {
+    id: 'quantity',
+    label: 'Qty',
+    header: 'Qty',
+    key: 'item.quantity',
+    type: 'number',
+    width: 90,
+    description: 'Quantity',
+  },
+  {
+    id: 'unit-price',
+    label: 'Rate',
+    header: 'Rate',
+    key: 'item.unitPrice',
+    type: 'currency',
+    width: 120,
+    description: 'Unit price',
+  },
+  {
+    id: 'amount',
+    label: 'Amount',
+    header: 'Amount',
+    key: 'item.total',
+    type: 'currency',
+    width: 140,
+    description: 'Line total',
+  },
+];
+
 export const TableEditorWidget: React.FC<Props> = ({ node }) => {
   const setNodeProp = useInvoiceDesignerStore((state) => state.setNodeProp);
 
@@ -67,24 +116,70 @@ export const TableEditorWidget: React.FC<Props> = ({ node }) => {
     [columns, updateColumns]
   );
 
+  const appendColumn = useCallback(
+    (nextColumn: Omit<ColumnModel, 'id'>) => {
+      updateColumns(
+        [
+          ...columns,
+          {
+            id: createLocalId(),
+            ...nextColumn,
+          },
+        ],
+        true
+      );
+    },
+    [columns, updateColumns]
+  );
+
   const handleAddColumn = useCallback(() => {
-    updateColumns(
-      [
-        ...columns,
-        {
-          id: createLocalId(),
-          header: 'New Column',
-          key: 'data.field',
-          type: 'text',
-          width: 120,
-        },
-      ],
-      true
-    );
-  }, [columns, updateColumns]);
+    appendColumn({
+      header: 'New Column',
+      key: 'item.field',
+      type: 'text',
+      width: 120,
+    });
+  }, [appendColumn]);
+
+  const handleAddPresetColumn = useCallback(
+    (presetId: string) => {
+      const preset = COLUMN_PRESETS.find((candidate) => candidate.id === presetId);
+      if (!preset) {
+        return;
+      }
+      appendColumn({
+        header: preset.header,
+        key: preset.key,
+        type: preset.type,
+        width: preset.width,
+      });
+    },
+    [appendColumn]
+  );
 
   const handleRemoveColumn = useCallback(
     (columnId: string) => updateColumns(columns.filter((column) => column.id !== columnId), true),
+    [columns, updateColumns]
+  );
+
+  const handleMoveColumn = useCallback(
+    (columnId: string, direction: -1 | 1) => {
+      const index = columns.findIndex((column) => column.id === columnId);
+      if (index < 0) {
+        return;
+      }
+      const targetIndex = index + direction;
+      if (targetIndex < 0 || targetIndex >= columns.length) {
+        return;
+      }
+      const next = [...columns];
+      const [moved] = next.splice(index, 1);
+      if (!moved) {
+        return;
+      }
+      next.splice(targetIndex, 0, moved);
+      updateColumns(next, true);
+    },
     [columns, updateColumns]
   );
 
@@ -144,6 +239,36 @@ export const TableEditorWidget: React.FC<Props> = ({ node }) => {
         <Button id="designer-add-column" variant="outline" size="xs" onClick={handleAddColumn}>
           Add column
         </Button>
+      </div>
+
+      <div className="rounded border border-slate-100 bg-slate-50 px-2 py-2 space-y-2">
+        <div className="text-xs font-semibold text-slate-700">Quick Add</div>
+        <div className="flex flex-wrap gap-1">
+          {COLUMN_PRESETS.map((preset) => (
+            <Button
+              key={preset.id}
+              id={`designer-add-column-preset-${preset.id}`}
+              variant="outline"
+              size="xs"
+              onClick={() => handleAddPresetColumn(preset.id)}
+            >
+              {preset.label}
+            </Button>
+          ))}
+        </div>
+      </div>
+
+      <div className="rounded border border-slate-100 bg-slate-50 px-2 py-2 space-y-1 text-xs text-slate-600">
+        <p className="font-semibold text-slate-700">Line Item Key Legend</p>
+        <p className="text-[11px] text-slate-500">Use <code>item.&lt;field&gt;</code> for line-item values.</p>
+        <div className="space-y-1">
+          {COLUMN_PRESETS.map((preset) => (
+            <div key={`legend-${preset.id}`} className="flex items-center justify-between gap-2">
+              <code className="text-[11px] text-slate-700">{preset.key}</code>
+              <span className="text-[11px] text-slate-500">{preset.description}</span>
+            </div>
+          ))}
+        </div>
       </div>
 
       <div className="rounded border border-slate-100 bg-slate-50 px-2 py-2 space-y-1 text-xs text-slate-600">
@@ -217,24 +342,50 @@ export const TableEditorWidget: React.FC<Props> = ({ node }) => {
 
       {columns.length === 0 && <p className="text-xs text-slate-500">No columns defined. Add at least one column.</p>}
 
-      {columns.map((column) => (
+      {columns.map((column, index) => (
         <div key={column.id} className="border border-slate-100 rounded-md p-2 space-y-2 bg-slate-50">
           <div className="flex items-center justify-between">
-            <Input
-              id={`column-header-${column.id}`}
-              value={column.header ?? ''}
-              onChange={(event) => updateColumn(column.id, { header: event.target.value }, false)}
-              onBlur={(event) => updateColumn(column.id, { header: event.target.value }, true)}
-              className="text-xs"
-            />
-            <Button
-              id={`designer-remove-column-${column.id}`}
-              variant="ghost"
-              size="icon"
-              onClick={() => handleRemoveColumn(column.id)}
-            >
-              ✕
-            </Button>
+            <div className="flex items-center gap-2 flex-1">
+              <span className="text-[11px] text-slate-500 whitespace-nowrap">#{index + 1}</span>
+              <Input
+                id={`column-header-${column.id}`}
+                value={column.header ?? ''}
+                onChange={(event) => updateColumn(column.id, { header: event.target.value }, false)}
+                onBlur={(event) => updateColumn(column.id, { header: event.target.value }, true)}
+                className="text-xs"
+              />
+            </div>
+            <div className="flex items-center gap-1">
+              <Button
+                id={`designer-move-column-up-${column.id}`}
+                variant="ghost"
+                size="icon"
+                aria-label={`Move ${column.id} up`}
+                disabled={index === 0}
+                onClick={() => handleMoveColumn(column.id, -1)}
+              >
+                ↑
+              </Button>
+              <Button
+                id={`designer-move-column-down-${column.id}`}
+                variant="ghost"
+                size="icon"
+                aria-label={`Move ${column.id} down`}
+                disabled={index === columns.length - 1}
+                onClick={() => handleMoveColumn(column.id, 1)}
+              >
+                ↓
+              </Button>
+              <Button
+                id={`designer-remove-column-${column.id}`}
+                variant="ghost"
+                size="icon"
+                aria-label={`Remove ${column.id}`}
+                onClick={() => handleRemoveColumn(column.id)}
+              >
+                ✕
+              </Button>
+            </div>
           </div>
           <div className="grid grid-cols-2 gap-2 text-xs text-slate-600">
             <div>
@@ -277,4 +428,3 @@ export const TableEditorWidget: React.FC<Props> = ({ node }) => {
     </div>
   );
 };
-
