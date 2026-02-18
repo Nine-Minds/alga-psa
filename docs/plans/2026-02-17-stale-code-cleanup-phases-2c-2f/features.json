@@ -210,7 +210,7 @@
   {
     "id": "F027",
     "description": "Task 2f-2: Migrate 3 callers of server/src/lib/models/document-association.tsx (EntityImageService.ts, documentPermissionUtils.ts, test file) to import DocumentAssociation from @alga-psa/documents/models/documentAssociation. Verify API compatibility. Delete server model.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-13"
     ]

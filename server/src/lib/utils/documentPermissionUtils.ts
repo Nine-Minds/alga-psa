@@ -2,7 +2,7 @@ import { IUser } from '@/interfaces/auth.interfaces';
 import { IDocument } from '@/interfaces/document.interface';
 import { IDocumentAssociation } from '@/interfaces/document-association.interface';
 import { hasPermission } from '@/lib/auth/rbac';
-import DocumentAssociation from '@/lib/models/document-association';
+import DocumentAssociation from '@alga-psa/documents/models/documentAssociation';
 import { createTenantKnex } from '@/lib/db';
 
 /**

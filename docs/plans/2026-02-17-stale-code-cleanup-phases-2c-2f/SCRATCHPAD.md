@@ -99,3 +99,5 @@ Must be executed in this exact order:
 - (2026-02-18) Build after Task 2e-4 still fails: missing @dnd-kit/sortable in packages/billing.
 - (2026-02-18) Task 2f-1: Repointed internalNotification model imports in broadcaster, hooks, and tests to @alga-psa/notifications; deleted server/src/lib/models/internalNotification.ts.
 - (2026-02-18) Build after Task 2f-1 still fails: missing @dnd-kit/sortable in packages/billing.
+- (2026-02-18) Task 2f-2: Updated DocumentAssociation imports/mocks in EntityImageService, documentPermissionUtils, and unit test to @alga-psa/documents/models/documentAssociation. Deleted server/src/lib/models/document-association.tsx.
+- (2026-02-18) Build after Task 2f-2 still fails: missing @dnd-kit/sortable in packages/billing.

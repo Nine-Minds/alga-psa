@@ -105,7 +105,7 @@
   {
     "id": "T012",
     "description": "Task 2f-2: Verify @alga-psa/documents/models/documentAssociation exports DocumentAssociation with compatible API. Update EntityImageService.ts, documentPermissionUtils.ts, test. Delete server model. npm run build passes.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F027"
     ]

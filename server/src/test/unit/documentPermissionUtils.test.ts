@@ -14,7 +14,7 @@ vi.mock('../../lib/auth/rbac', () => ({
   hasPermission: vi.fn()
 }));
 
-vi.mock('../../lib/models/document-association', () => ({
+vi.mock('@alga-psa/documents/models/documentAssociation', () => ({
   default: {
     getByDocumentId: vi.fn()
   }
@@ -25,7 +25,7 @@ vi.mock('../../lib/db', () => ({
 }));
 
 import { hasPermission } from '@/lib/auth/rbac';
-import DocumentAssociation from '@/lib/models/document-association';
+import DocumentAssociation from '@alga-psa/documents/models/documentAssociation';
 import { createTenantKnex } from '@/lib/db';
 
 describe('documentPermissionUtils', () => {
