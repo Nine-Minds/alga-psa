@@ -31,7 +31,8 @@ const InvoiceDetailsDialog: React.FC<InvoiceDetailsDialogProps> = React.memo(({
   const [error, setError] = useState<string | null>(null);
   const [isDownloading, setIsDownloading] = useState(false);
   const [isSendingEmail, setIsSendingEmail] = useState(false);
-  const { t } = useTranslation('clientPortal');
+  const { t } = useTranslation('features/billing');
+  const { t: tCommon } = useTranslation('common');
 
   // Fetch invoice details when dialog opens
   useEffect(() => {
@@ -48,7 +49,7 @@ const InvoiceDetailsDialog: React.FC<InvoiceDetailsDialogProps> = React.memo(({
         setInvoice(invoiceData);
       } catch (err) {
         console.error('Error fetching invoice details:', err);
-        setError(t('billing.invoice.loadFailed', 'Failed to load invoice details. Please try again.'));
+        setError(t('invoice.loadFailed', 'Failed to load invoice details. Please try again.'));
       } finally {
         setIsLoading(false);
       }
@@ -64,7 +65,7 @@ const InvoiceDetailsDialog: React.FC<InvoiceDetailsDialogProps> = React.memo(({
     setIsDownloading(true);
 
     try {
-      toast.success(t('billing.invoice.downloadStarted', 'Preparing PDF download...'));
+      toast.success(t('invoice.downloadStarted', 'Preparing PDF download...'));
       const result = await downloadClientInvoicePdf(invoiceId);
 
       if (result.success && result.fileId) {
@@ -76,13 +77,13 @@ const InvoiceDetailsDialog: React.FC<InvoiceDetailsDialogProps> = React.memo(({
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-        toast.success(t('billing.invoice.downloadComplete', 'PDF downloaded successfully.'));
+        toast.success(t('invoice.downloadComplete', 'PDF downloaded successfully.'));
       } else {
-        toast.error(result.error || t('billing.invoice.downloadFailed', 'Failed to download PDF.'));
+        toast.error(result.error || t('invoice.downloadFailed', 'Failed to download PDF.'));
       }
     } catch (error) {
       console.error('Failed to download PDF:', error);
-      toast.error(t('billing.invoice.downloadFailed', 'Failed to download PDF. Please try again.'));
+      toast.error(t('invoice.downloadFailed', 'Failed to download PDF. Please try again.'));
     } finally {
       setIsDownloading(false);
     }
@@ -95,17 +96,17 @@ const InvoiceDetailsDialog: React.FC<InvoiceDetailsDialogProps> = React.memo(({
     setIsSendingEmail(true);
 
     try {
-      toast.success(t('billing.invoice.emailStarted', 'Sending invoice email...'));
+      toast.success(t('invoice.emailStarted', 'Sending invoice email...'));
       const result = await sendClientInvoiceEmail(invoiceId);
 
       if (result.success) {
-        toast.success(t('billing.invoice.emailSent', 'Invoice email sent successfully.'));
+        toast.success(t('invoice.emailSent', 'Invoice email sent successfully.'));
       } else {
-        toast.error(result.error || t('billing.invoice.sendEmailFailed', 'Failed to send email.'));
+        toast.error(result.error || t('invoice.sendEmailFailed', 'Failed to send email.'));
       }
     } catch (error) {
       console.error('Failed to send email:', error);
-      toast.error(t('billing.invoice.sendEmailFailed', 'Failed to send invoice email. Please try again.'));
+      toast.error(t('invoice.sendEmailFailed', 'Failed to send invoice email. Please try again.'));
     } finally {
       setIsSendingEmail(false);
     }
@@ -120,44 +121,44 @@ const InvoiceDetailsDialog: React.FC<InvoiceDetailsDialogProps> = React.memo(({
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <p className="text-sm font-medium text-gray-500">{t('billing.invoice.number', 'Invoice Number')}</p>
+              <p className="text-sm font-medium text-gray-500">{t('invoice.number', 'Invoice Number')}</p>
               <p className="mt-1">{invoice.invoice_number}</p>
             </div>
             <div>
-              <p className="text-sm font-medium text-gray-500">{t('billing.invoice.date', 'Invoice Date')}</p>
+              <p className="text-sm font-medium text-gray-500">{t('invoice.date', 'Invoice Date')}</p>
               <p className="mt-1">{formatDate(invoice.invoice_date)}</p>
             </div>
             <div>
-              <p className="text-sm font-medium text-gray-500">{t('billing.invoice.amount', 'Amount')}</p>
+              <p className="text-sm font-medium text-gray-500">{t('invoice.amount', 'Amount')}</p>
               <p className="mt-1">{formatCurrency(invoice.total, invoice.currencyCode)}</p>
             </div>
             <div>
-              <p className="text-sm font-medium text-gray-500">{t('billing.invoice.status', 'Status')}</p>
+              <p className="text-sm font-medium text-gray-500">{t('invoice.status', 'Status')}</p>
               <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-1 ${
                 invoice.finalized_at ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
               }`}>
-                {invoice.finalized_at ? t('billing.invoice.finalized', 'Finalized') : t('billing.invoice.draft', 'Draft')}
+                {invoice.finalized_at ? t('invoice.finalized', 'Finalized') : t('invoice.draft', 'Draft')}
               </span>
             </div>
             <div>
-              <p className="text-sm font-medium text-gray-500">{t('billing.invoice.manualInvoice', 'Manual Invoice')}</p>
-              <p className="mt-1">{invoice.is_manual ? t('common.yes', 'Yes') : t('common.no', 'No')}</p>
+              <p className="text-sm font-medium text-gray-500">{t('invoice.manualInvoice', 'Manual Invoice')}</p>
+              <p className="mt-1">{invoice.is_manual ? tCommon('common.yes', 'Yes') : tCommon('common.no', 'No')}</p>
             </div>
             <div>
-              <p className="text-sm font-medium text-gray-500">{t('billing.invoice.credits', 'Credits')}</p>
+              <p className="text-sm font-medium text-gray-500">{t('invoice.credits', 'Credits')}</p>
               <p className="mt-1">{formatCurrency(invoice.credit_applied, invoice.currencyCode)}</p>
             </div>
           </div>
 
           <div>
-            <h4 className="font-semibold mt-4">{t('billing.invoice.lineItems', 'Line Items')}</h4>
+            <h4 className="font-semibold mt-4">{t('invoice.lineItems', 'Line Items')}</h4>
             <table className="min-w-full divide-y divide-gray-200 mt-2">
               <thead>
                 <tr>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">{t('billing.invoice.description', 'Description')}</th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">{t('billing.invoice.quantity', 'Quantity')}</th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">{t('billing.invoice.unitPrice', 'Unit Price')}</th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">{t('billing.invoice.total', 'Total')}</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">{t('invoice.description', 'Description')}</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">{t('invoice.quantity', 'Quantity')}</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">{t('invoice.unitPrice', 'Unit Price')}</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">{t('invoice.total', 'Total')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
@@ -183,7 +184,7 @@ const InvoiceDetailsDialog: React.FC<InvoiceDetailsDialogProps> = React.memo(({
                 ) : (
                   <tr>
                     <td colSpan={4} className="px-3 py-2 text-center text-gray-500">
-                      {t('billing.invoice.noLineItems', 'No line items available')}
+                      {t('invoice.noLineItems', 'No line items available')}
                     </td>
                   </tr>
                 )}
@@ -192,10 +193,10 @@ const InvoiceDetailsDialog: React.FC<InvoiceDetailsDialogProps> = React.memo(({
           </div>
 
           <div>
-            <h4 className="font-semibold mt-4">{t('billing.invoice.taxBreakdown', 'Tax Breakdown')}</h4>
+            <h4 className="font-semibold mt-4">{t('invoice.taxBreakdown', 'Tax Breakdown')}</h4>
             <ul className="mt-2 space-y-1">
               <li className="flex justify-between">
-                <span>{t('billing.invoice.tax', 'Tax')}</span>
+                <span>{t('invoice.tax', 'Tax')}</span>
                 <span>{formatCurrency(invoice.tax, invoice.currencyCode)}</span>
               </li>
             </ul>
@@ -233,7 +234,7 @@ const InvoiceDetailsDialog: React.FC<InvoiceDetailsDialogProps> = React.memo(({
     <Dialog 
       isOpen={isOpen} 
       onClose={onClose} 
-      title={t('billing.invoice.details', 'Invoice Details')} 
+      title={t('invoice.details', 'Invoice Details')} 
       data-automation-id="invoice-details-dialog"
     >
       <DialogContent>

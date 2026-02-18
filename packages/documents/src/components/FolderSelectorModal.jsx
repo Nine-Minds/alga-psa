@@ -7,12 +7,15 @@ import { Folder, Home, FolderPlus, X } from 'lucide-react';
 import { Input } from '@alga-psa/ui/components/Input';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 export default function FolderSelectorModal({ isOpen, onClose, onSelectFolder, title: titleProp, description: descriptionProp, namespace = 'common' }) {
-    const [selectedFolder, setSelectedFolder] = useState(null);
-    const [folders, setFolders] = useState([]);
-    const [loading, setLoading] = useState(false);
-    const { t } = useTranslation(namespace);
-    const title = titleProp ?? t('documents.folderSelector.defaultTitle', 'Select Destination Folder');
-    const description = descriptionProp ?? t('documents.folderSelector.defaultDescription', 'Choose where to save this document');
+  const [selectedFolder, setSelectedFolder] = useState(null);
+  const [folders, setFolders] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const { t } = useTranslation(namespace);
+  const { t: tCommon } = useTranslation('common');
+  const documentKeyPrefix = namespace === 'common' ? 'documents.' : '';
+  const tDoc = (key, options) => t(`${documentKeyPrefix}${key}`, options);
+  const title = titleProp ?? tDoc('folderSelector.defaultTitle', 'Select Destination Folder');
+  const description = descriptionProp ?? tDoc('folderSelector.defaultDescription', 'Choose where to save this document');
     // New folder creation state
     const [showNewFolderInput, setShowNewFolderInput] = useState(false);
     const [newFolderName, setNewFolderName] = useState('');
@@ -48,12 +51,12 @@ export default function FolderSelectorModal({ isOpen, onClose, onSelectFolder, t
     };
     const handleCreateFolder = async () => {
         if (!newFolderName.trim()) {
-            setError(t('documents.folderSelector.errors.nameRequired', 'Please enter a folder name'));
+            setError(tDoc('folderSelector.errors.nameRequired', 'Please enter a folder name'));
             return;
         }
         // Validate folder name - no slashes allowed
         if (newFolderName.includes('/')) {
-            setError(t('documents.folderSelector.errors.invalidCharacters', 'Folder name cannot contain "/"'));
+            setError(tDoc('folderSelector.errors.invalidCharacters', 'Folder name cannot contain "/"'));
             return;
         }
         setCreatingFolder(true);
@@ -77,7 +80,7 @@ export default function FolderSelectorModal({ isOpen, onClose, onSelectFolder, t
             console.error('Error creating folder:', err);
             setError(err instanceof Error && err.message
                 ? err.message
-                : t('documents.folderSelector.errors.createFailed', 'Failed to create folder'));
+                : tDoc('folderSelector.errors.createFailed', 'Failed to create folder'));
         }
         finally {
             setCreatingFolder(false);
@@ -121,7 +124,7 @@ export default function FolderSelectorModal({ isOpen, onClose, onSelectFolder, t
             <div className="flex items-center justify-between">
               <h4 className="text-sm font-medium text-gray-900 flex items-center gap-2">
                 <FolderPlus className="w-4 h-4 text-purple-600"/>
-                {t('documents.folderSelector.createTitle', 'Create New Folder')}
+                {tDoc('folderSelector.createTitle', 'Create New Folder')}
               </h4>
               <button id="cancel-new-folder-btn" type="button" onClick={handleCancelNewFolder} className="text-gray-400 hover:text-gray-600" disabled={creatingFolder}>
                 <X className="w-4 h-4"/>
@@ -130,15 +133,15 @@ export default function FolderSelectorModal({ isOpen, onClose, onSelectFolder, t
 
             <div>
               <label className="block text-sm text-gray-600 mb-1">
-                {t('documents.folderSelector.parentLabel', {
-                folder: newFolderParent || t('documents.folderSelector.rootLabel', '/ (Root)'),
+                {tDoc('folderSelector.parentLabel', {
+                folder: newFolderParent || tDoc('folderSelector.rootLabel', '/ (Root)'),
                 defaultValue: `Parent folder: ${newFolderParent || '/ (Root)'}`
             })}
               </label>
             </div>
 
             <div className="space-y-2">
-              <Input id="new-folder-name-input" type="text" placeholder={t('documents.folderSelector.namePlaceholder', 'Enter folder name')} value={newFolderName} onChange={(e) => setNewFolderName(e.target.value)} onKeyDown={(e) => {
+              <Input id="new-folder-name-input" type="text" placeholder={tDoc('folderSelector.namePlaceholder', 'Enter folder name')} value={newFolderName} onChange={(e) => setNewFolderName(e.target.value)} onKeyDown={(e) => {
                 if (e.key === 'Enter') {
                     handleCreateFolder();
                 }
@@ -151,46 +154,46 @@ export default function FolderSelectorModal({ isOpen, onClose, onSelectFolder, t
 
             <div className="flex gap-2 justify-end">
               <Button id="cancel-folder-creation-btn" type="button" variant="outline" size="sm" onClick={handleCancelNewFolder} disabled={creatingFolder}>
-                {t('common.cancel', 'Cancel')}
+                {tCommon('cancel', 'Cancel')}
               </Button>
               <Button id="create-folder-btn" type="button" size="sm" onClick={handleCreateFolder} disabled={creatingFolder || !newFolderName.trim()}>
                 {creatingFolder
-                ? t('documents.folderSelector.creating', 'Creating...')
-                : t('documents.folderSelector.createButton', 'Create Folder')}
+                ? tDoc('folderSelector.creating', 'Creating...')
+                : tDoc('folderSelector.createButton', 'Create Folder')}
               </Button>
             </div>
           </div>) : (<div className="flex justify-end">
             <Button id="new-folder-btn" type="button" variant="outline" size="sm" onClick={handleStartNewFolder} disabled={loading} className="flex items-center gap-2">
               <FolderPlus className="w-4 h-4"/>
-              {t('documents.folderSelector.newFolderButton', 'New Folder')}
+              {tDoc('folderSelector.newFolderButton', 'New Folder')}
             </Button>
           </div>)}
 
         <div className="flex-1 overflow-y-auto border border-gray-200 rounded-md p-2 space-y-1">
           {loading ? (<div className="text-center py-8 text-gray-500">
-              {t('documents.folderSelector.loading', 'Loading folders...')}
+              {tDoc('folderSelector.loading', 'Loading folders...')}
             </div>) : (<>
               {/* Root option */}
               <button type="button" onClick={() => setSelectedFolder(null)} className={`block w-full text-left px-3 py-2 text-sm rounded hover:bg-gray-100 ${selectedFolder === null ? 'bg-purple-50 text-purple-700 font-medium border-l-2 border-purple-500' : 'text-gray-700'}`}>
                 <div className="flex items-center gap-2">
                   <Home className="w-4 h-4"/>
-                  <span>{t('documents.folderSelector.rootOption', 'Root (No folder)')}</span>
+                  <span>{tDoc('folderSelector.rootOption', 'Root (No folder)')}</span>
                 </div>
               </button>
 
               {/* Folder tree */}
               {folders.length > 0 ? (renderFolderTree(folders)) : (<div className="text-center py-4 text-sm text-gray-500">
-                  {t('documents.folderSelector.empty', 'No folders available. Documents will be saved to root.')}
+                  {tDoc('folderSelector.empty', 'No folders available. Documents will be saved to root.')}
                 </div>)}
             </>)}
         </div>
 
         <DialogFooter>
           <Button id="folder-selector-cancel-btn" variant="outline" onClick={onClose}>
-            {t('common.cancel', 'Cancel')}
+            {tCommon('cancel', 'Cancel')}
           </Button>
           <Button id="folder-selector-confirm-btn" onClick={handleConfirm}>
-            {t('common.confirm', 'Confirm')}
+            {tCommon('confirm', 'Confirm')}
           </Button>
         </DialogFooter>
       </DialogContent>

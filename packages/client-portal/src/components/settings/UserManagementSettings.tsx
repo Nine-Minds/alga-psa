@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
+import { DeleteEntityDialog } from '@alga-psa/ui';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import { 
@@ -19,20 +20,23 @@ import {
   getUserRolesWithPermissions, 
   getUserClientId, 
   deleteUser,
+  updateUser,
   getClientUsersForClient
 } from '@alga-psa/users/actions';
 import { createOrFindContactByEmail } from '@alga-psa/clients/actions';
 import { createClientUser, getClientPortalRoles, getClientUserRoles } from '@alga-psa/client-portal/actions';
-import type { IUser, IPermission } from '@alga-psa/types';
+import type { DeletionValidationResult, IUser, IPermission } from '@alga-psa/types';
 import type { IRole as SharedIRole } from '@shared/interfaces/user.interfaces';
 import { useDrawer } from "@alga-psa/ui";
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { ColumnDefinition } from '@alga-psa/types';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
 
 export function UserManagementSettings() {
-  const { t } = useTranslation('clientPortal');
+  const { t: tProfile } = useTranslation('client-portal');
+  const { t: tCommon } = useTranslation('common');
   const router = useRouter();
   const [users, setUsers] = useState<IUser[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -42,6 +46,9 @@ export function UserManagementSettings() {
   const [newUser, setNewUser] = useState({ firstName: '', lastName: '', email: '', password: '', roleId: '' });
   const [clientId, setClientId] = useState<string | null>(null);
   const [userToDelete, setUserToDelete] = useState<IUser | null>(null);
+  const [deleteValidation, setDeleteValidation] = useState<DeletionValidationResult | null>(null);
+  const [isDeleteValidating, setIsDeleteValidating] = useState(false);
+  const [isDeleteProcessing, setIsDeleteProcessing] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [availableRoles, setAvailableRoles] = useState<SharedIRole[]>([]);
   const [userRoles, setUserRoles] = useState<{ [key: string]: SharedIRole[] }>({});
@@ -82,14 +89,14 @@ export function UserManagementSettings() {
       );
 
       if (!hasRequiredPermissions) {
-        setError(t('clientSettings.users.permissionError', 'You do not have permission to manage users'));
+        setError(tProfile('clientSettings.users.permissionError', 'You do not have permission to manage users'));
         return;
       }
 
       // Get client ID
       const userClientId = await getUserClientId(user.user_id);
       if (!userClientId) {
-        setError(t('clientSettings.users.clientNotFound', 'Client not found'));
+        setError(tProfile('clientSettings.users.clientNotFound', 'Client not found'));
         return;
       }
 
@@ -114,7 +121,7 @@ export function UserManagementSettings() {
       setLoading(false);
     } catch (error) {
       console.error('Error loading users:', error);
-      setError(t('clientSettings.users.loadError', 'Failed to load users'));
+      setError(tProfile('clientSettings.users.loadError', 'Failed to load users'));
       setLoading(false);
     }
   }
@@ -164,9 +171,9 @@ export function UserManagementSettings() {
     } catch (error) {
       console.error('Error creating user:', error);
       if (error instanceof Error && error.message.includes('EMAIL_EXISTS')) {
-        setError(t('clientSettings.users.emailExists', 'A contact with this email address already exists'));
+        setError(tProfile('clientSettings.users.emailExists', 'A contact with this email address already exists'));
       } else {
-        setError(t('clientSettings.users.createError', 'Failed to create user'));
+        setError(tProfile('clientSettings.users.createError', 'Failed to create user'));
       }
     }
   };
@@ -180,20 +187,72 @@ export function UserManagementSettings() {
     );
   };
 
+  const resetDeleteState = () => {
+    setUserToDelete(null);
+    setDeleteValidation(null);
+  };
+
+  const runDeleteValidation = useCallback(async (userId: string) => {
+    setIsDeleteValidating(true);
+    try {
+      const result = await preCheckDeletion('user', userId);
+      setDeleteValidation(result);
+    } catch (error) {
+      console.error('Error validating user deletion:', error);
+      setDeleteValidation({
+        canDelete: false,
+        code: 'VALIDATION_FAILED',
+        message: tProfile('clientSettings.users.deleteError', 'Failed to validate user deletion'),
+        dependencies: [],
+        alternatives: []
+      });
+    } finally {
+      setIsDeleteValidating(false);
+    }
+  }, [tProfile]);
+
   const handleDeleteClick = (user: IUser) => {
     setUserToDelete(user);
+    void runDeleteValidation(user.user_id);
   };
 
   const confirmDelete = async () => {
     if (!userToDelete) return;
 
+    setIsDeleteProcessing(true);
     try {
-      await deleteUser(userToDelete.user_id);
+      const result = await deleteUser(userToDelete.user_id);
+      if (!result.success) {
+        setDeleteValidation(result);
+        return;
+      }
       setUsers(users.filter(user => user.user_id !== userToDelete.user_id));
-      setUserToDelete(null);
+      resetDeleteState();
     } catch (error) {
       console.error('Error deleting user:', error);
-      setError(t('clientSettings.users.deleteError', 'Failed to delete user'));
+      setError(tProfile('clientSettings.users.deleteError', 'Failed to delete user'));
+    } finally {
+      setIsDeleteProcessing(false);
+    }
+  };
+
+  const handleDeleteAlternativeAction = async (action: string) => {
+    if (action !== 'deactivate' || !userToDelete) {
+      return;
+    }
+
+    setIsDeleteProcessing(true);
+    try {
+      const updatedUser = await updateUser(userToDelete.user_id, { is_inactive: true });
+      if (updatedUser) {
+        setUsers(prev => prev.map(user => user.user_id === updatedUser.user_id ? updatedUser : user));
+      }
+      resetDeleteState();
+    } catch (error) {
+      console.error('Error deactivating user:', error);
+      setError(tProfile('clientSettings.users.deleteError', 'Failed to deactivate user'));
+    } finally {
+      setIsDeleteProcessing(false);
     }
   };
 
@@ -206,22 +265,22 @@ export function UserManagementSettings() {
   // Define columns for DataTable
   const columns: ColumnDefinition<IUser>[] = [
     {
-      title: t('clientSettings.users.firstName'),
+      title: tProfile('clientSettings.users.firstName'),
       dataIndex: 'first_name',
       width: '15%',
     },
     {
-      title: t('clientSettings.users.lastName'),
+      title: tProfile('clientSettings.users.lastName'),
       dataIndex: 'last_name',
       width: '15%',
     },
     {
-      title: t('clientSettings.users.email'),
+      title: tProfile('clientSettings.users.email'),
       dataIndex: 'email',
       width: '20%',
     },
     {
-      title: t('clientSettings.users.phone'),
+      title: tProfile('clientSettings.users.phone'),
       dataIndex: 'phone',
       width: '12%',
       render: (value, record) => (
@@ -229,7 +288,7 @@ export function UserManagementSettings() {
       ),
     },
     {
-      title: t('clientSettings.users.roles'),
+      title: tProfile('clientSettings.users.roles'),
       dataIndex: 'user_id',
       width: '13%',
       render: (userId) => {
@@ -244,12 +303,12 @@ export function UserManagementSettings() {
       },
     },
     {
-      title: t('clientSettings.users.lastLogin', 'Last Login'),
+      title: tProfile('clientSettings.users.lastLogin', 'Last Login'),
       dataIndex: 'last_login_at',
       width: '15%',
       render: (lastLoginAt: string | null, record: IUser) => {
         if (!lastLoginAt) {
-          return <span className="text-gray-400 text-sm">{t('clientSettings.users.never', 'Never')}</span>;
+          return <span className="text-gray-400 text-sm">{tProfile('clientSettings.users.never', 'Never')}</span>;
         }
         const date = new Date(lastLoginAt);
         const formattedDate = date.toLocaleDateString('en-US', {
@@ -261,24 +320,24 @@ export function UserManagementSettings() {
           <div className="flex flex-col">
             <span className="text-sm">{formattedDate}</span>
             {record.last_login_method && (
-              <span className="text-xs text-gray-500">{t('clientSettings.users.via', 'via')} {record.last_login_method}</span>
+              <span className="text-xs text-gray-500">{tProfile('clientSettings.users.via', 'via')} {record.last_login_method}</span>
             )}
           </div>
         );
       },
     },
     {
-      title: t('clientSettings.users.status'),
+      title: tProfile('clientSettings.users.status'),
       dataIndex: 'is_inactive',
       width: '10%',
       render: (value, record) => (
         <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${record.is_inactive ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>
-          {record.is_inactive ? t('clientSettings.users.inactive') : t('clientSettings.users.active')}
+          {record.is_inactive ? tProfile('clientSettings.users.inactive') : tProfile('clientSettings.users.active')}
         </span>
       ),
     },
     {
-      title: t('clientSettings.users.actions'),
+      title: tProfile('clientSettings.users.actions'),
       dataIndex: 'user_id',
       width: '5%',
       render: (_, record) => (
@@ -301,7 +360,7 @@ export function UserManagementSettings() {
                 className="flex items-center gap-2"
               >
                 <Pencil className="h-4 w-4" />
-                {t('common.edit')}
+                {tCommon('common.edit')}
               </DropdownMenuItem>
               <DropdownMenuItem
                 id={`delete-user-menu-item-${record.user_id}`}
@@ -309,7 +368,7 @@ export function UserManagementSettings() {
                 className="flex items-center gap-2 text-red-600"
               >
                 <Trash2 className="h-4 w-4" />
-                {t('common.delete')}
+                {tCommon('common.delete')}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -342,22 +401,22 @@ export function UserManagementSettings() {
           <div className="relative">
             <Input
               type="text"
-              placeholder={t('clientSettings.users.searchUsers')}
+              placeholder={tProfile('clientSettings.users.searchUsers')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="border-2 border-gray-200 focus:border-purple-500 rounded-md pl-10 pr-4 py-2 w-64 outline-none bg-white"
             />
             <Search size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
           </div>
-          <Button id="create-new-user-btn" onClick={() => setShowNewUserForm(true)}>{t('clientSettings.users.addNewUser')}</Button>
+          <Button id="create-new-user-btn" onClick={() => setShowNewUserForm(true)}>{tProfile('clientSettings.users.addNewUser')}</Button>
         </div>
 
         {showNewUserForm && (
           <div className="mb-4 p-4 border rounded-md">
-            <h3 className="text-lg font-semibold mb-2">{t('clientSettings.users.addNewUser')}</h3>
+            <h3 className="text-lg font-semibold mb-2">{tProfile('clientSettings.users.addNewUser')}</h3>
             <div className="space-y-2">
               <div>
-                <Label htmlFor="firstName">{t('clientSettings.users.firstName')}</Label>
+                <Label htmlFor="firstName">{tProfile('clientSettings.users.firstName')}</Label>
                 <Input
                   id="firstName"
                   value={newUser.firstName}
@@ -365,7 +424,7 @@ export function UserManagementSettings() {
                 />
               </div>
               <div>
-                <Label htmlFor="lastName">{t('clientSettings.users.lastName')}</Label>
+                <Label htmlFor="lastName">{tProfile('clientSettings.users.lastName')}</Label>
                 <Input
                   id="lastName"
                   value={newUser.lastName}
@@ -373,7 +432,7 @@ export function UserManagementSettings() {
                 />
               </div>
               <div>
-                <Label htmlFor="email">{t('clientSettings.users.email')}</Label>
+                <Label htmlFor="email">{tProfile('clientSettings.users.email')}</Label>
                 <Input
                   id="email"
                   type="email"
@@ -388,7 +447,7 @@ export function UserManagementSettings() {
                 />
               </div>
               <div>
-                <Label htmlFor="password">{t('auth.password')}</Label>
+                <Label htmlFor="password">{tProfile('auth.password')}</Label>
                 <div className="relative">
                   <Input
                     id="password"
@@ -411,7 +470,7 @@ export function UserManagementSettings() {
                 </div>
               </div>
               <div>
-                <Label htmlFor="role">{t('clientSettings.users.roles')}</Label>
+                <Label htmlFor="role">{tProfile('clientSettings.users.roles')}</Label>
                 <CustomSelect
                   value={newUser.roleId}
                   onValueChange={(value) => setNewUser({ ...newUser, roleId: value })}
@@ -419,10 +478,10 @@ export function UserManagementSettings() {
                     value: role.role_id,
                     label: role.role_name
                   }))}
-                  placeholder={t('clientSettings.users.selectRole', 'Select a role (optional)')}
+                  placeholder={tProfile('clientSettings.users.selectRole', 'Select a role (optional)')}
                 />
               </div>
-              <Button id="submit-new-user-btn" onClick={handleCreateUser}>{t('clientSettings.users.createUser', 'Create User')}</Button>
+              <Button id="submit-new-user-btn" onClick={handleCreateUser}>{tProfile('clientSettings.users.createUser', 'Create User')}</Button>
             </div>
           </div>
         )}
@@ -442,33 +501,17 @@ export function UserManagementSettings() {
       </CardContent>
 
       {/* Delete Confirmation Modal */}
-      {userToDelete && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg p-6 max-w-sm w-full">
-            <h3 className="text-lg font-semibold mb-4">Confirm Deletion</h3>
-            <p className="text-gray-600 mb-6">
-              Are you sure you want to delete {userToDelete.first_name} {userToDelete.last_name}?
-              This action cannot be undone.
-            </p>
-            <div className="flex justify-end space-x-4">
-              <Button
-                id="cancel-delete-btn"
-                variant="outline"
-                onClick={() => setUserToDelete(null)}
-              >
-                Cancel
-              </Button>
-              <Button
-                id="confirm-delete-btn"
-                variant="destructive"
-                onClick={confirmDelete}
-              >
-                Delete
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      <DeleteEntityDialog
+        id="client-portal-delete-user"
+        isOpen={Boolean(userToDelete)}
+        onClose={resetDeleteState}
+        onConfirmDelete={confirmDelete}
+        onAlternativeAction={handleDeleteAlternativeAction}
+        entityName={userToDelete ? `${userToDelete.first_name ?? ''} ${userToDelete.last_name ?? ''}`.trim() || 'this user' : 'this user'}
+        validationResult={deleteValidation}
+        isValidating={isDeleteValidating}
+        isDeleting={isDeleteProcessing}
+      />
     </Card>
   );
 }

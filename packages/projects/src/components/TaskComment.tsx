@@ -206,8 +206,8 @@ const TaskComment: React.FC<TaskCommentProps> = ({
                 <Button
                   id={`edit-comment-${comment.taskCommentId}-button`}
                   variant="ghost"
+                  size="sm"
                   onClick={() => setIsEditing(true)}
-                  className="text-indigo-600 hover:text-indigo-800 font-medium p-1 rounded-full hover:bg-indigo-100 transition duration-150 ease-in-out"
                   aria-label="Edit comment"
                 >
                   <Pencil className="w-4 h-4" />
@@ -215,8 +215,8 @@ const TaskComment: React.FC<TaskCommentProps> = ({
                 <Button
                   id={`delete-comment-${comment.taskCommentId}-button`}
                   variant="ghost"
+                  size="sm"
                   onClick={() => setIsDeleteDialogOpen(true)}
-                  className="text-red-600 hover:text-red-800 font-medium p-1 rounded-full hover:bg-red-100 transition duration-150 ease-in-out"
                   aria-label="Delete comment"
                 >
                   <Trash className="w-4 h-4" />

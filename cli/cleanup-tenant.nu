@@ -488,6 +488,7 @@ def "main cleanup" [
         
         # === LEVEL 7: Configuration and settings ===
         # API and auth
+        "mobile_auth_otts" "mobile_refresh_tokens"
         "api_keys" "portal_invitations" "password_reset_tokens"
         "portal_domain_session_otts" "portal_domains"
 

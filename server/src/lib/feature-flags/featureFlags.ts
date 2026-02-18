@@ -38,6 +38,7 @@ const DEFAULT_BOOLEAN_FLAGS: Record<string, boolean> = {
   
   // Migration features
   'enable_client_client_dual_write': true, // Dual-write to both clients and clients tables during migration
+  'msp-i18n-enabled': false,
 };
 
 const DEFAULT_VARIANT_FLAGS: Record<string, string> = {
@@ -302,6 +303,11 @@ export class FeatureFlags {
 
     if (context.subscriptionPlan) {
       properties.subscription_plan = context.subscriptionPlan;
+    }
+
+    // Include tenant ID so PostHog can match on it (e.g. "tenant equals <uuid>")
+    if (context.tenantId) {
+      properties.tenant = context.tenantId;
     }
 
     // Add tenant-specific properties if needed

@@ -1,15 +1,15 @@
 'use server'
 
-import type { IClient, IContact, ImportContactResult, ITag, MappableField } from '@alga-psa/types';
+import type { DeletionValidationResult, IClient, IContact, ImportContactResult, ITag, MappableField } from '@alga-psa/types';
 import { createTenantKnex } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
-import { unparseCSV } from '@alga-psa/core';
+import { deleteEntityWithValidation, unparseCSV } from '@alga-psa/core';
 import { getContactAvatarUrlsBatchAsync } from '../../lib/documentsHelpers';
 import { createTag } from '@alga-psa/tags/actions';
+import { deleteEntityTags } from '@alga-psa/tags/lib/tagCleanup';
 import { hasPermissionAsync } from '../../lib/authHelpers';
 import { ContactModel, CreateContactInput } from '@alga-psa/shared/models/contactModel';
-import { deleteEntityTags } from '@alga-psa/tags/lib/tagCleanup';
 import { withAuth } from '@alga-psa/auth';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import {
@@ -89,239 +89,133 @@ export const getContactByContactNameId = withAuth(async (
 });
 
 export const deleteContact = withAuth(async (
-  _user,
+  user,
   { tenant },
   contactId: string
-): Promise<{
+): Promise<DeletionValidationResult & {
   success: boolean;
-  code?: string;
-  message?: string;
-  dependencies?: string[];
+  deleted?: boolean;
   counts?: Record<string, number>;
-  dependencyText?: string;
 }> => {
-  console.log('Starting deleteContact function with contactId:', contactId);
-
   const { knex: db } = await createTenantKnex();
-  console.log('Got database connection, tenant:', tenant);
 
   try {
     if (!contactId) {
       throw new Error('VALIDATION_ERROR: Contact ID is required');
     }
 
-    console.log('Checking if contact exists...');
+    if (!await hasPermissionAsync(user, 'contact', 'delete')) {
+      throw new Error('Permission denied: Cannot delete contacts');
+    }
+
     const contact = await withTransaction(db, async (trx: Knex.Transaction) => {
       return await trx('contacts')
         .where({ contact_name_id: contactId, tenant })
         .first();
     });
 
-    console.log('Contact found:', !!contact);
     if (!contact) {
-      throw new Error('VALIDATION_ERROR: The contact you are trying to delete no longer exists');
-    }
-
-    console.log('Checking for dependencies...');
-    const dependencies: string[] = [];
-    const counts: Record<string, number> = {};
-
-    await withTransaction(db, async (trx: Knex.Transaction) => {
-      if (contact.client_id) {
-        const clientInfo = await trx('clients')
-          .where({ client_id: contact.client_id, tenant })
-          .first();
-
-        if (clientInfo && clientInfo.billing_contact_id === contactId) {
-          dependencies.push('billing_contact');
-          counts['billing_contact'] = 1;
-        }
-      }
-
-      const ticketCount = await trx('tickets')
-        .where({ contact_name_id: contactId, tenant })
-        .count('* as count')
-        .first();
-      if (ticketCount && Number(ticketCount.count) > 0) {
-        dependencies.push('ticket');
-        counts['ticket'] = Number(ticketCount.count);
-      }
-
-      const interactionCount = await trx('interactions')
-        .where({ contact_name_id: contactId, tenant })
-        .count('* as count')
-        .first();
-      if (interactionCount && Number(interactionCount.count) > 0) {
-        dependencies.push('interaction');
-        counts['interaction'] = Number(interactionCount.count);
-      }
-
-      const documentCount = await trx('document_associations')
-        .where({ entity_id: contactId, entity_type: 'contact', tenant })
-        .count('* as count')
-        .first();
-      if (documentCount && Number(documentCount.count) > 0) {
-        dependencies.push('document');
-        counts['document'] = Number(documentCount.count);
-      }
-
-      const projectCount = await trx('projects')
-        .where({ contact_name_id: contactId, tenant })
-        .count('* as count')
-        .first();
-      if (projectCount && Number(projectCount.count) > 0) {
-        dependencies.push('project');
-        counts['project'] = Number(projectCount.count);
-      }
-
-      const portalUserCount = await trx('users')
-        .where({ contact_id: contactId, tenant, user_type: 'client' })
-        .count('* as count')
-        .first();
-      if (portalUserCount && Number(portalUserCount.count) > 0) {
-        dependencies.push('portal_user');
-        counts['portal_user'] = Number(portalUserCount.count);
-      }
-    });
-
-    if (dependencies.length > 0) {
-      const readableTypes: Record<string, string> = {
-        'billing_contact': 'billing contact assignment',
-        'ticket': 'tickets',
-        'interaction': 'interactions',
-        'document': 'documents',
-        'project': 'projects',
-        'portal_user': 'client portal user account'
-      };
-
-      const dependencyText = dependencies.map(dep => {
-        const readableName = readableTypes[dep] || dep;
-        const count = counts[dep];
-        return count === 1 ? readableName : `${count} ${readableName}`;
-      }).join(', ');
-
       return {
         success: false,
-        code: 'CONTACT_HAS_DEPENDENCIES',
-        message: 'Cannot delete contact with active business records. Consider marking as inactive instead to preserve data integrity.',
-        dependencies: dependencies.map((dep: string): string => readableTypes[dep] || dep),
-        counts,
-        dependencyText
+        canDelete: false,
+        code: 'NOT_FOUND',
+        message: 'The contact you are trying to delete no longer exists.',
+        dependencies: [],
+        alternatives: []
       };
     }
 
-    console.log('Proceeding with contact deletion...');
-    const result = await withTransaction(db, async (trx: Knex.Transaction) => {
-      try {
-        console.log('Inside transaction, attempting deletion with params:', { contact_name_id: contactId, tenant });
+    const result = await deleteEntityWithValidation('contact', contactId, db, tenant, async (trx, tenantId) => {
+      await deleteEntityTags(trx, contactId, 'contact');
 
-        const contactRecord = await trx('contacts')
-          .where({ contact_name_id: contactId, tenant })
-          .select('notes_document_id')
-          .first();
+      // Clean up child records owned by the contact
+      await trx('comments').where({ contact_id: contactId, tenant: tenantId }).delete();
+      await trx('portal_invitations').where({ contact_id: contactId, tenant: tenantId }).delete();
 
-        if (contactRecord?.notes_document_id) {
-          console.log('Cleaning up notes document:', contactRecord.notes_document_id);
+      const contactRecord = await trx('contacts')
+        .where({ contact_name_id: contactId, tenant: tenantId })
+        .select('notes_document_id')
+        .first();
 
-          await trx('document_block_content')
-            .where({ tenant, document_id: contactRecord.notes_document_id })
-            .delete();
-
-          await trx('document_associations')
-            .where({ tenant, document_id: contactRecord.notes_document_id })
-            .delete();
-
-          await trx('documents')
-            .where({ tenant, document_id: contactRecord.notes_document_id })
-            .delete();
-        }
-
-        await deleteEntityTags(trx, contactId, 'contact');
-
-        const deleted = await trx('contacts')
-          .where({ contact_name_id: contactId, tenant })
+      if (contactRecord?.notes_document_id) {
+        await trx('document_block_content')
+          .where({ tenant: tenantId, document_id: contactRecord.notes_document_id })
           .delete();
 
-        console.log('Deletion result:', deleted);
+        await trx('document_associations')
+          .where({ tenant: tenantId, document_id: contactRecord.notes_document_id })
+          .delete();
 
-        if (!deleted || deleted === 0) {
-          console.error('No rows were deleted');
-          throw new Error('Contact record not found or could not be deleted');
-        }
+        await trx('documents')
+          .where({ tenant: tenantId, document_id: contactRecord.notes_document_id })
+          .delete();
+      }
 
-        console.log('Contact deletion successful');
-        return { success: true };
-      } catch (err) {
-        console.error('Error during contact deletion transaction:', err);
+      const deleted = await trx('contacts')
+        .where({ contact_name_id: contactId, tenant: tenantId })
+        .delete();
 
-        let errorMessage = 'Unknown error';
-        if (err instanceof Error) {
-          errorMessage = err.message;
-          console.error('Detailed error message:', errorMessage);
-          console.error('Error stack:', err.stack);
-
-          if ('code' in err) {
-            console.error('Database error code:', (err as any).code);
-          }
-          if ('detail' in err) {
-            console.error('Database error detail:', (err as any).detail);
-          }
-          if ('constraint' in err) {
-            console.error('Database constraint:', (err as any).constraint);
-          }
-        }
-
-        if (errorMessage.includes('relation') && errorMessage.includes('does not exist')) {
-          throw new Error(`SYSTEM_ERROR: Database table missing - ${errorMessage}`);
-        }
-
-        if (errorMessage.includes('violates foreign key constraint')) {
-          throw new Error('VALIDATION_ERROR: Cannot delete contact because it has associated records');
-        }
-
-        if (errorMessage.includes('connection') || errorMessage.includes('timeout')) {
-          throw new Error(`SYSTEM_ERROR: Database connection issue - ${errorMessage}`);
-        }
-
-        throw err;
+      if (!deleted || deleted === 0) {
+        throw new Error('Contact record not found or could not be deleted');
       }
     });
 
-    return result;
+    const counts = result.dependencies.reduce<Record<string, number>>((acc, dependency) => {
+      acc[dependency.type] = dependency.count;
+      return acc;
+    }, {});
+
+    return {
+      ...result,
+      deleted: result.deleted,
+      success: result.deleted === true,
+      counts
+    };
   } catch (err) {
-    console.error('Error in deleteContact outer catch:', err);
+    console.error('Error deleting contact:', err);
 
     if (err instanceof Error) {
       const message = err.message;
 
       if (message.includes('violates foreign key constraint')) {
-        console.error('Foreign key constraint violation detected');
         return {
           success: false,
-          message: 'Cannot delete contact because it has associated records'
+          canDelete: false,
+          code: 'VALIDATION_FAILED',
+          message: 'Cannot delete contact because it has associated records',
+          dependencies: [],
+          alternatives: []
         };
       }
 
       if (message.includes('connection') || message.includes('timeout')) {
-        console.error('Database connection issue detected:', message);
         return {
           success: false,
-          message: `Database connection issue - ${message}`
+          canDelete: false,
+          code: 'VALIDATION_FAILED',
+          message: `Database connection issue - ${message}`,
+          dependencies: [],
+          alternatives: []
         };
       }
 
-      console.error('Contact deletion failed:', message);
-      console.error('Error stack:', err.stack);
       return {
         success: false,
-        message: `Contact deletion failed - ${message}`
+        canDelete: false,
+        code: 'VALIDATION_FAILED',
+        message: `Contact deletion failed - ${message}`,
+        dependencies: [],
+        alternatives: []
       };
     }
 
-    console.error('Non-Error object thrown:', typeof err, err);
     return {
       success: false,
-      message: 'An unexpected error occurred while deleting the contact'
+      canDelete: false,
+      code: 'VALIDATION_FAILED',
+      message: 'An unexpected error occurred while deleting the contact',
+      dependencies: [],
+      alternatives: []
     };
   }
 });

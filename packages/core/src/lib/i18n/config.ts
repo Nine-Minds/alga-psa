@@ -91,7 +91,7 @@ export const I18N_CONFIG = {
   fallbackLng: LOCALE_CONFIG.defaultLocale,
   supportedLngs: [...LOCALE_CONFIG.supportedLocales],
   defaultNS: 'common',
-  ns: ['common', 'clientPortal'],
+  ns: ['common', 'client-portal', 'msp'],
   interpolation: {
     escapeValue: false, // React already escapes values
   },

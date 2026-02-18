@@ -7,7 +7,6 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Mail } from 'lucide-react';
 import { requestTenantLoginLinksAction } from '@alga-psa/client-portal/actions';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import toast from 'react-hot-toast';
 
 interface ClientPortalTenantDiscoveryProps {
@@ -15,7 +14,6 @@ interface ClientPortalTenantDiscoveryProps {
 }
 
 export default function ClientPortalTenantDiscovery({ callbackUrl }: ClientPortalTenantDiscoveryProps) {
-  const { t } = useTranslation('clientPortal');
   const [email, setEmail] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);

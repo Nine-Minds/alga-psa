@@ -7,13 +7,15 @@ import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
-import { useToast } from '@alga-psa/ui';
+import { DeleteEntityDialog, useToast } from '@alga-psa/ui';
 import {
   createSurveyTemplate,
   deleteSurveyTemplate,
   updateSurveyTemplate,
 } from '@alga-psa/surveys/actions/surveyActions';
 import type { SurveyTemplate } from '@alga-psa/surveys/actions/surveyActions';
+import type { DeletionValidationResult } from '@alga-psa/types';
+import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
 import {
   getDefaultRatingLabels,
   RatingButton,
@@ -117,6 +119,9 @@ export function TemplateForm({ template, onSuccess, onDeleteSuccess, onCancel }:
   const [formState, setFormState] = useState<FormState>(initialState);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [deleteValidation, setDeleteValidation] = useState<DeletionValidationResult | null>(null);
+  const [isDeleteValidating, setIsDeleteValidating] = useState(false);
 
   const ratingTypeOptions: SelectOption[] = useMemo(
     () => [
@@ -186,36 +191,74 @@ export function TemplateForm({ template, onSuccess, onDeleteSuccess, onCancel }:
     }
   };
 
-  const handleDelete = async () => {
-    if (!template) {
+  useEffect(() => {
+    if (!isDeleteDialogOpen || !template) {
       return;
     }
 
-    const confirmed = window.confirm(
-      t(
-        'surveys.settings.templateList.deleteConfirm',
-        'Delete this template? Invitations already sent will not be affected.'
-      )
-    );
+    const runValidation = async () => {
+      setIsDeleteValidating(true);
+      try {
+        const result = await preCheckDeletion('survey_template', template.templateId);
+        setDeleteValidation(result);
+      } catch (error) {
+        console.error('[TemplateForm] Failed to validate survey template deletion', error);
+        setDeleteValidation({
+          canDelete: false,
+          code: 'VALIDATION_FAILED',
+          message: 'Failed to validate deletion. Please try again.',
+          dependencies: [],
+          alternatives: []
+        });
+      } finally {
+        setIsDeleteValidating(false);
+      }
+    };
 
-    if (!confirmed) {
+    void runValidation();
+  }, [isDeleteDialogOpen, template]);
+
+  const resetDeleteState = () => {
+    setIsDeleteDialogOpen(false);
+    setDeleteValidation(null);
+    setIsDeleteValidating(false);
+  };
+
+  const handleDelete = () => {
+    if (!template) {
+      return;
+    }
+    setDeleteValidation(null);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!template) {
       return;
     }
 
     setIsDeleting(true);
     try {
-      await deleteSurveyTemplate(template.templateId);
-      toast({
-        title: t('surveys.settings.templateList.toasts.deleted', 'Template deleted'),
-        description: template.templateName,
-      });
-      onDeleteSuccess?.(template.templateId);
+      const result = await deleteSurveyTemplate(template.templateId);
+      if (result.success) {
+        toast({
+          title: t('surveys.settings.templateList.toasts.deleted', 'Template deleted'),
+          description: template.templateName,
+        });
+        onDeleteSuccess?.(template.templateId);
+        resetDeleteState();
+        return;
+      }
+
+      setDeleteValidation(result);
     } catch (error) {
       console.error('[TemplateForm] Failed to delete survey template', error);
-      toast({
-        title: t('surveys.settings.templateList.toasts.deleteError', 'Unable to delete template'),
-        description: error instanceof Error ? error.message : '',
-        variant: 'destructive',
+      setDeleteValidation({
+        canDelete: false,
+        code: 'VALIDATION_FAILED',
+        message: error instanceof Error ? error.message : 'Unable to delete template',
+        dependencies: [],
+        alternatives: []
       });
     } finally {
       setIsDeleting(false);
@@ -240,6 +283,7 @@ export function TemplateForm({ template, onSuccess, onDeleteSuccess, onCancel }:
   );
 
   return (
+    <>
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div className="space-y-2">
@@ -413,6 +457,17 @@ export function TemplateForm({ template, onSuccess, onDeleteSuccess, onCancel }:
         </div>
       </div>
     </form>
+    <DeleteEntityDialog
+      id={template ? `delete-survey-template-${template.templateId}` : 'delete-survey-template-dialog'}
+      isOpen={isDeleteDialogOpen}
+      onClose={resetDeleteState}
+      onConfirmDelete={handleDeleteConfirm}
+      entityName={template?.templateName || 'this survey template'}
+      validationResult={deleteValidation}
+      isValidating={isDeleteValidating}
+      isDeleting={isDeleting}
+    />
+    </>
   );
 }
 

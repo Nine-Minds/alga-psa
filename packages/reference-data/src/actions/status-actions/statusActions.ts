@@ -4,6 +4,8 @@ import { createTenantKnex } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withAuth } from '@alga-psa/auth';
+import { deleteEntityWithValidation } from '@alga-psa/core';
+import type { DeletionValidationResult } from '@alga-psa/types';
 import { IStatus, ItemType } from '@alga-psa/types';
 
 export const getStatuses = withAuth(async (_user, { tenant }, type?: ItemType) => {
@@ -291,101 +293,52 @@ export const getWorkItemStatusOptions = withAuth(async (_user, { tenant }, itemT
   }
 });
 
-export const deleteStatus = withAuth(async (_user, { tenant }, statusId: string) => {
+export const deleteStatus = withAuth(async (
+  _user,
+  { tenant },
+  statusId: string
+): Promise<DeletionValidationResult & { success: boolean; deleted?: boolean }> => {
   if (!statusId) {
-    throw new Error('Status ID is required');
+    return {
+      success: false,
+      canDelete: false,
+      code: 'VALIDATION_FAILED',
+      message: 'Status ID is required',
+      dependencies: [],
+      alternatives: []
+    };
   }
 
-  const {knex: db} = await createTenantKnex();
   try {
-    return await withTransaction(db, async (trx: Knex.Transaction) => {
-      // Get the status to check its type
-      const status = await trx<IStatus>('statuses')
+    const { knex } = await createTenantKnex();
+    const result = await deleteEntityWithValidation('status', statusId, knex, tenant, async (trx, tenantId) => {
+      const deletedCount = await trx('statuses')
         .where({
-          tenant,
-          status_id: statusId
-        })
-        .first();
-
-      if (!status) {
-        throw new Error('Status not found');
-      }
-
-      // Check if status is in use based on its type
-      let inUseCount = 0;
-      let errorMessage = '';
-
-      if (status.status_type === 'ticket') {
-        const ticketsCount = await trx('tickets')
-          .where({
-            tenant,
-            status_id: statusId
-          })
-          .count('status_id as count')
-          .first();
-        inUseCount = Number(ticketsCount?.count || 0);
-        errorMessage = 'Cannot delete status that is in use by tickets';
-      } else if (status.status_type === 'project') {
-        const projectsCount = await trx('projects')
-          .where({
-            tenant,
-            status: statusId
-          })
-          .count('status as count')
-          .first();
-        inUseCount = Number(projectsCount?.count || 0);
-        errorMessage = 'Cannot delete status that is in use by projects';
-      } else if (status.status_type === 'project_task') {
-        // Check if status is used in project_tasks
-        const tasksCount = await trx('project_tasks')
-          .where({
-            tenant,
-            status_id: statusId
-          })
-          .count('task_id as count')
-          .first();
-        
-        // Check if status is used in project_status_mappings
-        const mappingsCount = await trx('project_status_mappings')
-          .where({
-            tenant,
-            status_id: statusId
-          })
-          .count('project_status_mapping_id as count')
-          .first();
-
-        inUseCount = Number(tasksCount?.count || 0) + Number(mappingsCount?.count || 0);
-        errorMessage = 'Cannot delete status that is in use by project tasks or status mappings';
-      } else if (status.status_type === 'interaction') {
-        const interactionsCount = await trx('interactions')
-          .where({
-            tenant,
-            status_id: statusId
-          })
-          .count('interaction_id as count')
-          .first();
-        inUseCount = Number(interactionsCount?.count || 0);
-        errorMessage = 'Cannot delete status that is in use by interactions';
-      }
-
-      if (inUseCount > 0) {
-        throw new Error(errorMessage);
-      }
-
-      await trx('statuses')
-        .where({
-          tenant,
+          tenant: tenantId,
           status_id: statusId
         })
         .del();
-      return true;
+
+      if (deletedCount === 0) {
+        throw new Error('Status not found');
+      }
     });
+
+    return {
+      ...result,
+      success: result.deleted === true,
+      deleted: result.deleted
+    };
   } catch (error) {
     console.error('Error deleting status:', error);
-    if (error instanceof Error) {
-      throw error;
-    }
-    throw new Error('Failed to delete status');
+    return {
+      success: false,
+      canDelete: false,
+      code: 'VALIDATION_FAILED',
+      message: error instanceof Error ? error.message : 'Failed to delete status',
+      dependencies: [],
+      alternatives: []
+    };
   }
 });
 

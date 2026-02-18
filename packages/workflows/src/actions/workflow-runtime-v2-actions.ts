@@ -6,6 +6,8 @@ import { createHash } from 'crypto';
 import { v4 as uuidv4 } from 'uuid';
 import { RateLimiterMemory } from 'rate-limiter-flexible';
 import { createTenantKnex } from '@alga-psa/db';
+import { deleteEntityWithValidation } from '@alga-psa/core';
+import { preCheckDeletion } from '@alga-psa/auth';
 import { withAuth, hasPermission, getCurrentUser } from '@alga-psa/auth';
 import {
   WorkflowRuntimeV2,
@@ -34,6 +36,7 @@ import WorkflowRunLogModelV2 from '@shared/workflow/persistence/workflowRunLogMo
 import { auditLog } from '@alga-psa/db';
 import { analytics } from '@alga-psa/analytics';
 import { EventCatalogModel } from '../models/eventCatalog';
+import type { DeletionValidationResult } from '@alga-psa/types';
 import {
   CreateWorkflowDefinitionInput,
   DeleteWorkflowDefinitionInput,
@@ -1227,33 +1230,126 @@ export const updateWorkflowDefinitionMetadataAction = withAuth(async (user, { te
   return updated;
 });
 
-export const deleteWorkflowDefinitionAction = withAuth(async (user, { tenant }, input: unknown) => {
+export const preCheckWorkflowDefinitionDeletion = withAuth(async (
+  _user,
+  _ctx,
+  input: unknown
+): Promise<DeletionValidationResult> => {
   const parsed = DeleteWorkflowDefinitionInput.parse(input);
   const { knex } = await createTenantKnex();
-  await requireWorkflowPermission(user, 'manage', knex);
+
+  const base = await preCheckDeletion('workflow', parsed.workflowId);
+  if (!base.canDelete) {
+    return base;
+  }
 
   const current = await WorkflowDefinitionModelV2.getById(knex, parsed.workflowId);
   if (!current) {
-    return throwHttpError(404, 'Not found');
-  }
-  if (current.is_system) {
-    return throwHttpError(403, 'System workflows cannot be deleted');
+    return {
+      canDelete: false,
+      code: 'NOT_FOUND',
+      message: 'Workflow not found.',
+      dependencies: [],
+      alternatives: []
+    };
   }
 
-  // Check for active runs
+  if (current.is_system) {
+    return {
+      ...base,
+      canDelete: false,
+      code: 'PERMISSION_DENIED',
+      message: 'System workflows cannot be deleted.',
+      dependencies: []
+    };
+  }
+
   const activeRuns = await knex('workflow_runs')
     .where({ workflow_id: parsed.workflowId })
     .whereIn('status', ['RUNNING', 'WAITING'])
     .count('* as count')
     .first();
 
-  if (activeRuns && Number(activeRuns.count) > 0) {
-    return throwHttpError(409, 'Cannot delete workflow with active runs. Cancel all runs first.');
+  const activeRunCount = Number(activeRuns?.count ?? 0);
+  if (activeRunCount > 0) {
+    return {
+      ...base,
+      canDelete: false,
+      code: 'DEPENDENCIES_EXIST',
+      message: 'Cannot delete workflow with active runs. Cancel all runs first.',
+      dependencies: [
+        {
+          type: 'workflow_run',
+          count: activeRunCount,
+          label: 'active workflow run'
+        }
+      ]
+    };
   }
 
-  // Delete related records in order (respecting foreign key constraints)
-  await knex.transaction(async (trx) => {
-    // Delete run-related data
+  return base;
+});
+
+export const deleteWorkflowDefinitionAction = withAuth(async (
+  user,
+  { tenant },
+  input: unknown
+): Promise<DeletionValidationResult & { success: boolean; deleted?: boolean }> => {
+  const parsed = DeleteWorkflowDefinitionInput.parse(input);
+  const { knex } = await createTenantKnex();
+
+  const base = await preCheckDeletion('workflow', parsed.workflowId);
+  if (!base.canDelete) {
+    return { ...base, success: false };
+  }
+
+  const current = await WorkflowDefinitionModelV2.getById(knex, parsed.workflowId);
+  if (!current) {
+    return {
+      success: false,
+      canDelete: false,
+      code: 'NOT_FOUND',
+      message: 'Workflow not found.',
+      dependencies: [],
+      alternatives: []
+    };
+  }
+  if (current.is_system) {
+    return {
+      success: false,
+      canDelete: false,
+      code: 'PERMISSION_DENIED',
+      message: 'System workflows cannot be deleted.',
+      dependencies: [],
+      alternatives: base.alternatives
+    };
+  }
+
+  const activeRuns = await knex('workflow_runs')
+    .where({ workflow_id: parsed.workflowId })
+    .whereIn('status', ['RUNNING', 'WAITING'])
+    .count('* as count')
+    .first();
+
+  const activeRunCount = Number(activeRuns?.count ?? 0);
+  if (activeRunCount > 0) {
+    return {
+      success: false,
+      canDelete: false,
+      code: 'DEPENDENCIES_EXIST',
+      message: 'Cannot delete workflow with active runs. Cancel all runs first.',
+      dependencies: [
+        {
+          type: 'workflow_run',
+          count: activeRunCount,
+          label: 'active workflow run'
+        }
+      ],
+      alternatives: base.alternatives
+    };
+  }
+
+  const result = await deleteEntityWithValidation('workflow', parsed.workflowId, knex, tenant, async (trx) => {
     const runIds = await trx('workflow_runs')
       .where({ workflow_id: parsed.workflowId })
       .pluck('run_id');
@@ -1267,16 +1363,26 @@ export const deleteWorkflowDefinitionAction = withAuth(async (user, { tenant }, 
       await trx('workflow_runs').whereIn('run_id', runIds).del();
     }
 
-    // Delete versions
+    // Clean up child records owned by the workflow
+    await trx('workflow_registration_versions')
+      .where({ registration_id: parsed.workflowId })
+      .del();
+
     await trx('workflow_definition_versions')
       .where({ workflow_id: parsed.workflowId })
       .del();
 
-    // Delete the definition
     await trx('workflow_definitions')
       .where({ workflow_id: parsed.workflowId })
       .del();
   });
+
+  if (!result.deleted) {
+    return {
+      ...result,
+      success: false
+    };
+  }
 
   await auditWorkflowEvent(knex, user, {
     operation: 'workflow_definition_delete',
@@ -1292,7 +1398,7 @@ export const deleteWorkflowDefinitionAction = withAuth(async (user, { tenant }, 
     source: 'api'
   });
 
-  return { deleted: true, workflowId: parsed.workflowId };
+  return { ...result, success: true, deleted: true };
 });
 
 export const publishWorkflowDefinitionAction = withAuth(async (user, { tenant }, input: unknown) => {

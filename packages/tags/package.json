@@ -30,6 +30,11 @@
       "types": "./dist/hooks/index.d.ts",
       "import": "./dist/hooks/index.mjs",
       "require": "./dist/hooks/index.js"
+    },
+    "./lib/tagCleanup": {
+      "types": "./dist/lib/tagCleanup.d.ts",
+      "import": "./dist/lib/tagCleanup.mjs",
+      "require": "./dist/lib/tagCleanup.js"
     }
   },
   "scripts": {

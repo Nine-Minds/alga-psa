@@ -26,3 +26,4 @@ export * from './ui-reflection';
 export * from './context';
 export * from './editor';
 export * from './services';
+export { DeleteEntityDialog } from './components/DeleteEntityDialog';

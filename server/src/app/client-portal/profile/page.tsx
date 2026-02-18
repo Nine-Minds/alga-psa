@@ -5,7 +5,7 @@ import { ClientProfile } from '@alga-psa/client-portal/components';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 export default function ProfilePage() {
-  const { t } = useTranslation('clientPortal');
+  const { t } = useTranslation('client-portal');
 
   return (
     <div className="container mx-auto p-4">

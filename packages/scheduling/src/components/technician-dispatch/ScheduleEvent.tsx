@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Trash, ExternalLink, MoreVertical } from 'lucide-react';
-import { IScheduleEntry } from '@alga-psa/types';
+import { IScheduleEntry, DeletionValidationResult } from '@alga-psa/types';
 import { getEventColors } from './utils';
-import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
+import { DeleteEntityDialog } from '@alga-psa/ui';
 import { Button } from '@alga-psa/ui/components/Button';
 import {
   DropdownMenu,
@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger
 } from '@alga-psa/ui/components/DropdownMenu';
 import { useIsCompactEvent } from '@alga-psa/ui/hooks';
+import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
 
 interface ScheduleEventProps {
   event: Omit<IScheduleEntry, 'tenant'>;
@@ -21,7 +22,7 @@ interface ScheduleEventProps {
   onMouseDown: (e: React.MouseEvent) => void;
   onMouseEnter: () => void;
   onMouseLeave: () => void;
-  onDelete: (e: React.MouseEvent) => void;
+  onDelete: () => Promise<DeletionValidationResult & { success: boolean; deleted?: boolean; error?: string; isPrivateError?: boolean }>;
   onResizeStart: (e: React.MouseEvent, direction: 'left' | 'right') => void;
   onClick: () => void;
 }
@@ -39,8 +40,10 @@ const ScheduleEvent: React.FC<ScheduleEventProps> = ({
   isResizing,
   onClick,
 }) => {
-  const [isConfirmDeleteDialogOpen, setIsConfirmDeleteDialogOpen] = useState(false);
-  const [deleteInitiatingEvent, setDeleteInitiatingEvent] = useState<React.MouseEvent | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [deleteValidation, setDeleteValidation] = useState<DeletionValidationResult | null>(null);
+  const [isDeleteValidating, setIsDeleteValidating] = useState(false);
+  const [isDeleteProcessing, setIsDeleteProcessing] = useState(false);
   const [isNarrow, setIsNarrow] = useState(false);
   const [isRecentlyResized, setIsRecentlyResized] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -89,17 +92,58 @@ const ScheduleEvent: React.FC<ScheduleEventProps> = ({
   }, [position.width]);
 
   const handleDeleteClick = (e: React.MouseEvent) => {
-    setDeleteInitiatingEvent(e);
     e.stopPropagation();
-    setIsConfirmDeleteDialogOpen(true);
+    setDeleteValidation(null);
+    setIsDeleteDialogOpen(true);
   };
 
-  const handleConfirmDelete = () => {
-    if (deleteInitiatingEvent) {
-      onDelete(deleteInitiatingEvent);
+  useEffect(() => {
+    if (!isDeleteDialogOpen) {
+      return;
     }
-    setIsConfirmDeleteDialogOpen(false);
-    setDeleteInitiatingEvent(null);
+
+    const runValidation = async () => {
+      setIsDeleteValidating(true);
+      try {
+        const result = await preCheckDeletion('schedule_entry', event.entry_id);
+        setDeleteValidation(result);
+      } catch (error) {
+        console.error('Failed to validate schedule entry deletion:', error);
+        setDeleteValidation({
+          canDelete: false,
+          code: 'VALIDATION_FAILED',
+          message: 'Failed to validate deletion. Please try again.',
+          dependencies: [],
+          alternatives: []
+        });
+      } finally {
+        setIsDeleteValidating(false);
+      }
+    };
+
+    void runValidation();
+  }, [event.entry_id, isDeleteDialogOpen]);
+
+  const handleConfirmDelete = async () => {
+    setIsDeleteProcessing(true);
+    try {
+      const result = await onDelete();
+      if (result.success) {
+        setIsDeleteDialogOpen(false);
+        setDeleteValidation(null);
+      } else {
+        setDeleteValidation(result);
+      }
+    } finally {
+      setIsDeleteProcessing(false);
+    }
+  };
+
+  const handleDeleteDialogClose = () => {
+    setIsDeleteDialogOpen(false);
+    setDeleteValidation(null);
+    setIsDeleteValidating(false);
+    setIsDeleteProcessing(false);
   };
 
   return (
@@ -292,17 +336,15 @@ const ScheduleEvent: React.FC<ScheduleEventProps> = ({
         ></div>
       </div>
 
-      <ConfirmationDialog
+      <DeleteEntityDialog
         id={`delete-schedule-${event.entry_id}`}
-        isOpen={isConfirmDeleteDialogOpen}
-        onClose={() => {
-          setIsConfirmDeleteDialogOpen(false);
-          setDeleteInitiatingEvent(null);
-        }}
-        onConfirm={handleConfirmDelete}
-        title="Confirm Deletion"
-        message="Are you sure you want to delete this entry? This action cannot be undone."
-        confirmLabel="Delete"
+        isOpen={isDeleteDialogOpen}
+        onClose={handleDeleteDialogClose}
+        onConfirmDelete={handleConfirmDelete}
+        entityName={event.title || 'this schedule entry'}
+        validationResult={deleteValidation}
+        isValidating={isDeleteValidating}
+        isDeleting={isDeleteProcessing}
       />
     </div>
   );

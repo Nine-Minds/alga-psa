@@ -100,16 +100,16 @@ const ClientLink: React.FC<ClientLinkProps> = ({ client, onClick }) => {
         {client.client_name}
       </a>
       {isDefault && (
-        <div className="inline-flex items-center px-2 py-0.5 rounded-full bg-purple-100" title="Default Client">
-          <Shield className="h-3 w-3 text-purple-600 mr-1" />
-          <span className="text-xs text-purple-700 font-medium">Default</span>
+        <div className="inline-flex items-center px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-900/40" title="Default Client">
+          <Shield className="h-3 w-3 text-purple-600 dark:text-purple-400 mr-1" />
+          <span className="text-xs text-purple-700 dark:text-purple-300 font-medium">Default</span>
         </div>
       )}
       {client.is_tax_exempt && (
         <Tooltip content="This client is tax exempt - no taxes will be applied to their invoices">
-          <div className="inline-flex items-center px-2 py-0.5 rounded-full bg-amber-100">
-            <ShieldOff className="h-3 w-3 text-amber-600 mr-1" />
-            <span className="text-xs text-amber-700 font-medium">Tax Exempt</span>
+          <div className="inline-flex items-center px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/40">
+            <ShieldOff className="h-3 w-3 text-amber-600 dark:text-amber-400 mr-1" />
+            <span className="text-xs text-amber-700 dark:text-amber-300 font-medium">Tax Exempt</span>
           </div>
         </Tooltip>
       )}

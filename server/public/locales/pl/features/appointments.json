@@ -1,0 +1,138 @@
+{
+  "modal": {
+    "title": "Złóż wniosek o wizytę",
+    "editTitle": "Edytuj wniosek o wizytę",
+    "step": "Krok",
+    "of": "z"
+  },
+  "steps": {
+    "service": "Usługa",
+    "date": "Data",
+    "time": "Godzina",
+    "confirm": "Potwierdź"
+  },
+  "step1": {
+    "title": "Wybierz usługę",
+    "description": "Wybierz usługę, z którą potrzebujesz pomocy",
+    "selectService": "Wybierz usługę",
+    "serviceLabel": "Usługa",
+    "ticketLabel": "Powiąż z istniejącym zgłoszeniem (opcjonalnie)",
+    "selectTicket": "Wybierz zgłoszenie",
+    "noTicket": "Brak zgłoszenia",
+    "searchTickets": "Szukaj zgłoszeń...",
+    "noTicketsFound": "Brak zgłoszeń spełniających kryteria",
+    "ticketHint": "Opcjonalnie powiąż wizytę z istniejącym zgłoszeniem"
+  },
+  "step2": {
+    "title": "Wybierz datę",
+    "description": "Wybierz preferowaną datę wizyty",
+    "selectDate": "Wybierz dostępną datę",
+    "selectedDate": "Wybrana data"
+  },
+  "step3": {
+    "title": "Wybierz godzinę i technika",
+    "description": "Wybierz preferowany termin i opcjonalnie technika",
+    "selectTime": "Dostępne terminy",
+    "minutes": "min",
+    "noTimeSlotsAvailable": "Brak dostępnych terminów na tę datę. Wybierz inną datę.",
+    "technicianLabel": "Preferowany technik (opcjonalnie)",
+    "selectTechnician": "Wybierz technika",
+    "noPreference": "Brak preferencji",
+    "technicianHint": "To tylko preferencja i może zostać zmieniona w zależności od dostępności"
+  },
+  "step4": {
+    "title": "Podsumuj i potwierdź",
+    "description": "Dodaj szczegóły i sprawdź wniosek o wizytę",
+    "descriptionPlaceholder": "Dodaj dodatkowe informacje dotyczące Twojego wniosku...",
+    "summaryTitle": "Podsumowanie wizyty",
+    "service": "Usługa",
+    "dateTime": "Data i godzina",
+    "at": "o",
+    "duration": "Czas trwania",
+    "technician": "Preferowany technik",
+    "linkedTicket": "Powiązane zgłoszenie",
+    "approvalNote": "Twój wniosek zostanie przesłany do zatwierdzenia. Otrzymasz e-mail z potwierdzeniem po akceptacji.",
+    "submit": "Złóż wniosek o wizytę",
+    "update": "Zaktualizuj wizytę"
+  },
+  "status": {
+    "pending": "Oczekuje na zatwierdzenie",
+    "approved": "Potwierdzona",
+    "declined": "Odrzucona",
+    "cancelled": "Anulowana"
+  },
+  "errors": {
+    "loadServicesFailed": "Nie udało się wczytać dostępnych usług. Spróbuj ponownie.",
+    "loadDatesFailed": "Nie udało się wczytać dostępnych dat. Spróbuj ponownie.",
+    "loadSlotsFailed": "Nie udało się wczytać dostępnych terminów. Spróbuj ponownie.",
+    "createFailed": "Nie udało się utworzyć wniosku o wizytę. Spróbuj ponownie.",
+    "updateFailed": "Nie udało się zaktualizować wniosku o wizytę. Spróbuj ponownie.",
+    "loadFailed": "Nie udało się wczytać wizyt. Spróbuj ponownie."
+  },
+  "messages": {
+    "requestSuccess": "Wniosek o wizytę został wysłany!",
+    "requestSuccessDetail": "Sprawdzimy wniosek i wyślemy e-mail z potwierdzeniem po zatwierdzeniu.",
+    "updateSuccess": "Wniosek o wizytę zaktualizowany!",
+    "updateSuccessDetail": "Twój wniosek o wizytę został zaktualizowany.",
+    "cancelSuccess": "Wizyta anulowana pomyślnie.",
+    "cancelFailed": "Nie udało się anulować wizyty. Spróbuj ponownie."
+  },
+  "page": {
+    "title": "Moje wizyty",
+    "subtitle": "Przeglądaj i zarządzaj wnioskami o wizyty",
+    "requestButton": "Złóż nowy wniosek",
+    "noAppointments": "Brak wizyt",
+    "noAppointmentsDescription": "Nie złożyłeś jeszcze żadnego wniosku. Złóż teraz, aby rozpocząć!"
+  },
+  "filters": {
+    "all": "Wszystkie",
+    "pending": "Oczekujące",
+    "approved": "Zatwierdzone",
+    "declined": "Odrzucone"
+  },
+  "table": {
+    "service": "Usługa",
+    "dateTime": "Data i godzina",
+    "status": "Status",
+    "technician": "Technik",
+    "actions": "Działania",
+    "minutes": "min",
+    "notAssigned": "Nieprzypisany",
+    "viewDetails": "Zobacz szczegóły",
+    "edit": "Edytuj",
+    "cancel": "Anuluj"
+  },
+  "details": {
+    "title": "Szczegóły wizyty",
+    "statusApproved": "Ta wizyta została potwierdzona",
+    "statusPending": "Ta wizyta oczekuje na zatwierdzenie",
+    "statusDeclined": "Ten wniosek o wizytę został odrzucony",
+    "statusCancelled": "Ta wizyta została anulowana",
+    "reason": "Powód",
+    "reference": "Referencja",
+    "service": "Usługa",
+    "dateTime": "Data i godzina",
+    "technician": "Przypisany technik",
+    "linkedTicket": "Powiązane zgłoszenie",
+    "description": "Opis",
+    "created": "Złożono",
+    "approved": "Zatwierdzono",
+    "cancelButton": "Anuluj wizytę"
+  },
+  "cancel": {
+    "title": "Anuluj wizytę",
+    "message": "Czy na pewno chcesz anulować wniosek o wizytę? Tej operacji nie można cofnąć.",
+    "confirm": "Tak, anuluj"
+  },
+  "ticketSection": {
+    "title": "Wnioski o wizytę",
+    "service": "Usługa",
+    "publicRequest": "Wniosek publiczny",
+    "minutes": "minuty",
+    "preferred": "Preferowany:",
+    "approvedBy": "Zatwierdzono przez",
+    "on": "w dniu",
+    "declined": "Odrzucono:",
+    "invalidDateTime": "Nieprawidłowa data/godzina"
+  }
+}

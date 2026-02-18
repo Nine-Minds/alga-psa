@@ -420,10 +420,10 @@ const MultiUserPicker = ({
       onMouseDown={(e) => e.stopPropagation()}
       onClick={(e) => e.stopPropagation()}
     >
-      <div className="bg-white rounded-md shadow-lg border border-gray-200 overflow-hidden w-full">
+      <div className="bg-white dark:bg-[rgb(var(--color-card))] rounded-md shadow-lg border border-gray-200 dark:border-[rgb(var(--color-border-200))] overflow-hidden w-full">
         {/* Search Input */}
         {showSearch && (
-          <div className="p-2 border-b border-gray-200">
+          <div className="p-2 border-b border-gray-200 dark:border-[rgb(var(--color-border-200))]">
             <div className="relative">
               <Input
                 ref={searchInputRef}
@@ -442,7 +442,7 @@ const MultiUserPicker = ({
         {/* Unassigned option (filter mode only) */}
         {filterMode && (
           <div
-            className="px-3 py-2 border-b border-gray-200 flex items-center gap-3 cursor-pointer hover:bg-gray-50"
+            className="px-3 py-2 border-b border-gray-200 dark:border-[rgb(var(--color-border-200))] flex items-center gap-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-[rgb(var(--color-border-100))]"
             onClick={handleUnassignedToggle}
           >
             <Checkbox
@@ -503,7 +503,7 @@ const MultiUserPicker = ({
                   key={user.user_id}
                   className={`
                     relative flex items-center px-3 py-2 text-sm rounded cursor-pointer
-                    hover:bg-gray-100 ${isSelected ? 'bg-gray-50' : ''}
+                    hover:bg-gray-100 dark:hover:bg-[rgb(var(--color-border-100))] ${isSelected ? 'bg-gray-50 dark:bg-[rgb(var(--color-border-50))]' : ''}
                   `}
                   onClick={() => handleUserToggle(user.user_id)}
                 >
@@ -530,7 +530,7 @@ const MultiUserPicker = ({
 
         {/* Clear all button */}
         {(values.length > 0 || includeUnassigned) && (
-          <div className="border-t border-gray-200 p-2">
+          <div className="border-t border-gray-200 dark:border-[rgb(var(--color-border-200))] p-2">
             <Button
               id={`${id || 'multi-user-picker'}-clear-all`}
               variant="ghost"

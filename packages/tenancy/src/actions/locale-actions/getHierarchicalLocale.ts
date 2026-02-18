@@ -93,12 +93,25 @@ export const getHierarchicalLocaleAction = withOptionalAuth(async (user: IUserWi
     .where({ tenant })
     .first();
 
-  // Check client portal default first (for client users)
-  if (user.user_type === 'client') {
-    const clientPortalLocale = tenantSettings?.settings?.clientPortal?.defaultLocale;
-    if (clientPortalLocale && isSupportedLocale(clientPortalLocale)) {
-      return clientPortalLocale;
+  // Internal users use MSP portal defaults
+  if (user.user_type === 'internal') {
+    const mspPortalLocale = tenantSettings?.settings?.mspPortal?.defaultLocale;
+    if (mspPortalLocale && isSupportedLocale(mspPortalLocale)) {
+      return mspPortalLocale;
     }
+
+    const tenantDefaultLocale = tenantSettings?.settings?.defaultLocale;
+    if (tenantDefaultLocale && isSupportedLocale(tenantDefaultLocale)) {
+      return tenantDefaultLocale;
+    }
+
+    return LOCALE_CONFIG.defaultLocale as SupportedLocale;
+  }
+
+  // Client users: check client portal default first
+  const clientPortalLocale = tenantSettings?.settings?.clientPortal?.defaultLocale;
+  if (clientPortalLocale && isSupportedLocale(clientPortalLocale)) {
+    return clientPortalLocale;
   }
 
   // Check tenant-wide default

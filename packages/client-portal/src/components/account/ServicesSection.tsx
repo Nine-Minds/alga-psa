@@ -16,7 +16,14 @@ import {
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 export default function ServicesSection() {
-  const { t } = useTranslation('clientPortal');
+  const { t: tAccount } = useTranslation('client-portal');
+  const { t: tCommon } = useTranslation('common');
+  const tAccountServices = (key: string, options?: Record<string, any> | string): string => {
+    if (typeof options === 'string') {
+      return tAccount(`account.services.${key}`, { defaultValue: options });
+    }
+    return tAccount(`account.services.${key}`, options) as string;
+  };
   const [services, setServices] = useState<Service[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
@@ -32,7 +39,7 @@ export default function ServicesSection() {
         const data = await getActiveServices();
         setServices(data);
       } catch (err) {
-        setError(err instanceof Error ? err.message : t('account.services.loadError', 'Failed to load services'));
+        setError(err instanceof Error ? err.message : tAccountServices('loadError', 'Failed to load services'));
       } finally {
         setIsLoading(false);
       }
@@ -51,7 +58,7 @@ export default function ServicesSection() {
       setAvailableContractLines(contractLines);
       setIsManaging(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('account.services.loadContractLinesError', 'Failed to load service contract lines'));
+      setError(err instanceof Error ? err.message : tAccountServices('loadContractLinesError', 'Failed to load service contract lines'));
     }
   };
 
@@ -77,14 +84,14 @@ export default function ServicesSection() {
       setSelectedService(null);
       setAvailableContractLines([]);
     } catch (err) {
-      setActionError(err instanceof Error ? err.message : t('account.services.updateError', 'Failed to update service'));
+      setActionError(err instanceof Error ? err.message : tAccountServices('updateError', 'Failed to update service'));
     } finally {
       setIsProcessing(false);
     }
   };
 
   if (isLoading) {
-    return <div className="text-center py-8">{t('account.services.loading', 'Loading services...')}</div>;
+    return <div className="text-center py-8">{tAccountServices('loading', 'Loading services...')}</div>;
   }
 
   if (error) {
@@ -99,23 +106,23 @@ export default function ServicesSection() {
     <div className="space-y-8">
       {/* Active Services */}
       <section>
-        <h3 className="text-lg font-medium mb-4">{t('account.services.activeTitle', 'Active Services')}</h3>
+        <h3 className="text-lg font-medium mb-4">{tAccountServices('activeTitle', 'Active Services')}</h3>
         <Table>
           <thead>
             <tr>
-              <th>{t('account.services.columns.service', 'Service')}</th>
-              <th>{t('account.services.columns.description', 'Description')}</th>
-              <th>{t('account.services.columns.status', 'Status')}</th>
-              <th>{t('account.services.columns.currentContractLine', 'Current Contract Line')}</th>
-              <th>{t('account.services.columns.nextBilling', 'Next Billing')}</th>
-              <th>{t('clientPortal.common.actions', 'Actions')}</th>
+              <th>{tAccountServices('columns.service', 'Service')}</th>
+              <th>{tAccountServices('columns.description', 'Description')}</th>
+              <th>{tAccountServices('columns.status', 'Status')}</th>
+              <th>{tAccountServices('columns.currentContractLine', 'Current Contract Line')}</th>
+              <th>{tAccountServices('columns.nextBilling', 'Next Billing')}</th>
+              <th>{tCommon('common.actions', 'Actions')}</th>
             </tr>
           </thead>
           <tbody>
             {services.length === 0 ? (
               <tr>
                 <td colSpan={6} className="text-center py-4 text-gray-500">
-                  {t('account.services.empty', 'No active services found')}
+                  {tAccountServices('empty', 'No active services found')}
                 </td>
               </tr>
             ) : (
@@ -149,7 +156,7 @@ export default function ServicesSection() {
                       onClick={() => handleManageService(service)}
                       disabled={!service.canManage}
                     >
-                      {t('account.services.actions.manage', 'Manage')}
+                      {tAccountServices('actions.manage', 'Manage')}
                     </Button>
                   </td>
                 </tr>
@@ -169,14 +176,14 @@ export default function ServicesSection() {
         <DialogContent>
           <div className="space-y-6">
             <h3 className="text-lg font-medium">
-              {t('account.services.manageTitle', {
+              {tAccountServices('manageTitle', {
                 defaultValue: 'Manage {{service}}',
-                service: selectedService?.name || t('account.services.genericServiceLabel', 'Service')
+                service: selectedService?.name || tAccountServices('genericServiceLabel', 'Service')
               })}
             </h3>
 
             <div>
-              <h4 className="text-sm font-medium mb-2">{t('account.services.currentContractLine', 'Current Contract Line')}</h4>
+              <h4 className="text-sm font-medium mb-2">{tAccountServices('currentContractLine', 'Current Contract Line')}</h4>
               <div className="text-sm text-gray-600">
                 {selectedService?.billing.display}
                 {selectedService?.rate && (
@@ -186,7 +193,7 @@ export default function ServicesSection() {
             </div>
 
             <div>
-              <h4 className="text-sm font-medium mb-4">{t('account.services.availableContractLines', 'Available Contract Lines')}</h4>
+              <h4 className="text-sm font-medium mb-4">{tAccountServices('availableContractLines', 'Available Contract Lines')}</h4>
               <div className="space-y-4">
                 {availableContractLines.map((contractLine): React.JSX.Element => (
                   <Card key={contractLine.id} className="p-4">
@@ -211,10 +218,10 @@ export default function ServicesSection() {
                             disabled={isProcessing}
                           >
                             {isProcessing
-                              ? t('common:status.processing', 'Processing...')
+                              ? tCommon('status.processing', 'Processing...')
                               : Number(contractLine.rate.amount) > Number(selectedService?.rate?.amount || 0)
-                                ? t('account.services.actions.upgrade', 'Upgrade')
-                                : t('account.services.actions.downgrade', 'Downgrade')
+                                ? tAccountServices('actions.upgrade', 'Upgrade')
+                                : tAccountServices('actions.downgrade', 'Downgrade')
                             }
                           </Button>
                         )}
@@ -241,7 +248,7 @@ export default function ServicesSection() {
                 }}
                 disabled={isProcessing}
               >
-                {t('common.close', 'Close')}
+                {tCommon('common.close', 'Close')}
               </Button>
             </div>
           </div>
@@ -250,22 +257,22 @@ export default function ServicesSection() {
 
       {/* Available Services */}
       <section>
-        <h3 className="text-lg font-medium mb-4">{t('account.services.catalog.title', 'Available Services')}</h3>
+        <h3 className="text-lg font-medium mb-4">{tAccountServices('catalog.title', 'Available Services')}</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <Card className="p-6 hover:shadow-lg transition-shadow duration-200">
             <div className="flex flex-col h-full">
-              <h4 className="text-lg font-medium mb-2">{t('account.services.catalog.managedIt.title', 'Managed IT Support')}</h4>
+              <h4 className="text-lg font-medium mb-2">{tAccountServices('catalog.managedIt.title', 'Managed IT Support')}</h4>
               <p className="text-sm text-gray-600 mb-4 flex-grow">
-                {t('account.services.catalog.managedIt.description', '24/7 IT support and monitoring for your business. Includes proactive maintenance, security updates, and dedicated technical support.')}
+                {tAccountServices('catalog.managedIt.description', '24/7 IT support and monitoring for your business. Includes proactive maintenance, security updates, and dedicated technical support.')}
               </p>
               <div className="flex justify-between items-center mt-auto">
-                <span className="text-sm font-medium">{t('account.services.catalog.managedIt.price', 'Starting at $299/mo')}</span>
+                <span className="text-sm font-medium">{tAccountServices('catalog.managedIt.price', 'Starting at $299/mo')}</span>
                 <Button 
                   id="learn-more-managed-it"
                   variant="outline" 
                   size="sm"
                 >
-                  {t('account.services.catalog.learnMore', 'Learn More')}
+                  {tAccountServices('catalog.learnMore', 'Learn More')}
                 </Button>
               </div>
             </div>
@@ -273,18 +280,18 @@ export default function ServicesSection() {
 
           <Card className="p-6 hover:shadow-lg transition-shadow duration-200">
             <div className="flex flex-col h-full">
-              <h4 className="text-lg font-medium mb-2">{t('account.services.catalog.cloudBackup.title', 'Cloud Backup')}</h4>
+              <h4 className="text-lg font-medium mb-2">{tAccountServices('catalog.cloudBackup.title', 'Cloud Backup')}</h4>
               <p className="text-sm text-gray-600 mb-4 flex-grow">
-                {t('account.services.catalog.cloudBackup.description', 'Secure cloud backup and disaster recovery solutions. Automated backups, quick recovery options, and data encryption included.')}
+                {tAccountServices('catalog.cloudBackup.description', 'Secure cloud backup and disaster recovery solutions. Automated backups, quick recovery options, and data encryption included.')}
               </p>
               <div className="flex justify-between items-center mt-auto">
-                <span className="text-sm font-medium">{t('account.services.catalog.cloudBackup.price', 'Starting at $99/mo')}</span>
+                <span className="text-sm font-medium">{tAccountServices('catalog.cloudBackup.price', 'Starting at $99/mo')}</span>
                 <Button 
                   id="learn-more-cloud-backup"
                   variant="outline" 
                   size="sm"
                 >
-                  {t('account.services.catalog.learnMore', 'Learn More')}
+                  {tAccountServices('catalog.learnMore', 'Learn More')}
                 </Button>
               </div>
             </div>
@@ -292,18 +299,18 @@ export default function ServicesSection() {
 
           <Card className="p-6 hover:shadow-lg transition-shadow duration-200">
             <div className="flex flex-col h-full">
-              <h4 className="text-lg font-medium mb-2">{t('account.services.catalog.cybersecurity.title', 'Cybersecurity')}</h4>
+              <h4 className="text-lg font-medium mb-2">{tAccountServices('catalog.cybersecurity.title', 'Cybersecurity')}</h4>
               <p className="text-sm text-gray-600 mb-4 flex-grow">
-                {t('account.services.catalog.cybersecurity.description', 'Advanced security monitoring and threat prevention. Includes firewall management, endpoint protection, and regular security assessments.')}
+                {tAccountServices('catalog.cybersecurity.description', 'Advanced security monitoring and threat prevention. Includes firewall management, endpoint protection, and regular security assessments.')}
               </p>
               <div className="flex justify-between items-center mt-auto">
-                <span className="text-sm font-medium">{t('account.services.catalog.cybersecurity.price', 'Starting at $199/mo')}</span>
+                <span className="text-sm font-medium">{tAccountServices('catalog.cybersecurity.price', 'Starting at $199/mo')}</span>
                 <Button 
                   id="learn-more-cybersecurity"
                   variant="outline" 
                   size="sm"
                 >
-                  {t('account.services.catalog.learnMore', 'Learn More')}
+                  {tAccountServices('catalog.learnMore', 'Learn More')}
                 </Button>
               </div>
             </div>

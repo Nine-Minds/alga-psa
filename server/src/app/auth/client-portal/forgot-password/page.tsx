@@ -16,7 +16,7 @@ type FormData = {
 };
 
 const ClientPortalForgotPassword: React.FC = () => {
-  const { t } = useTranslation('clientPortal');
+  const { t } = useTranslation('client-portal');
   const [formData, setFormData] = useState<FormData>({
     email: '',
   });

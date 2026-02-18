@@ -3,13 +3,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
-import type { ColumnDefinition } from '@alga-psa/types';
+import type { ColumnDefinition, DeletionValidationResult } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Badge, BadgeVariant } from '@alga-psa/ui/components/Badge';
 import { SearchInput } from '@alga-psa/ui/components/SearchInput';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
-import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
+import { DeleteEntityDialog } from '@alga-psa/ui';
 import {
   Plus,
   Play,
@@ -30,6 +30,7 @@ import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import {
   listWorkflowDefinitionsPagedAction,
   deleteWorkflowDefinitionAction,
+  preCheckWorkflowDefinitionDeletion,
   updateWorkflowDefinitionMetadataAction
 } from '@alga-psa/workflows/actions';
 import { formatDistanceToNow } from 'date-fns';
@@ -203,6 +204,8 @@ export default function WorkflowList({ onSelectWorkflow, onCreateNew, onOpenEven
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [workflowToDelete, setWorkflowToDelete] = useState<WorkflowDefinitionListItem | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteValidation, setDeleteValidation] = useState<DeletionValidationResult | null>(null);
+  const [isDeleteValidating, setIsDeleteValidating] = useState(false);
 
   const statusOptions = [
     { value: 'all', label: 'All statuses' },
@@ -411,12 +414,41 @@ export default function WorkflowList({ onSelectWorkflow, onCreateNew, onOpenEven
     setRefreshKey((v) => v + 1);
   };
 
+  const resetDeleteState = () => {
+    setIsDeleteDialogOpen(false);
+    setWorkflowToDelete(null);
+    setDeleteValidation(null);
+    setIsDeleteValidating(false);
+  };
+
+  const runDeleteValidation = async (workflowId: string) => {
+    setIsDeleteValidating(true);
+    try {
+      const result = await preCheckWorkflowDefinitionDeletion({ workflowId });
+      setDeleteValidation(result);
+    } catch (err) {
+      console.error('Failed to validate workflow deletion:', err);
+      setDeleteValidation({
+        canDelete: false,
+        code: 'VALIDATION_FAILED',
+        message: 'Failed to validate deletion. Please try again.',
+        dependencies: [],
+        alternatives: []
+      });
+    } finally {
+      setIsDeleteValidating(false);
+    }
+  };
+
   const handleBulkDelete = async () => {
     for (const workflowId of selectedWorkflows) {
       const workflow = workflows.find(w => w.workflow_id === workflowId);
       if (workflow?.is_system) continue;
       try {
-        await deleteWorkflowDefinitionAction({ workflowId });
+        const result = await deleteWorkflowDefinitionAction({ workflowId });
+        if (!result.success) {
+          console.error(`Failed to delete workflow ${workflowId}:`, result.message ?? result.code);
+        }
       } catch (err) {
         console.error(`Failed to delete workflow ${workflowId}:`, err);
       }
@@ -428,7 +460,9 @@ export default function WorkflowList({ onSelectWorkflow, onCreateNew, onOpenEven
   const handleDeleteClick = (workflow: WorkflowDefinitionListItem, e: React.MouseEvent) => {
     e.stopPropagation();
     setWorkflowToDelete(workflow);
+    setDeleteValidation(null);
     setIsDeleteDialogOpen(true);
+    void runDeleteValidation(workflow.workflow_id);
   };
 
   const handleConfirmDelete = async () => {
@@ -436,10 +470,13 @@ export default function WorkflowList({ onSelectWorkflow, onCreateNew, onOpenEven
 
     setIsDeleting(true);
     try {
-      await deleteWorkflowDefinitionAction({ workflowId: workflowToDelete.workflow_id });
-      setRefreshKey((v) => v + 1);
-      setIsDeleteDialogOpen(false);
-      setWorkflowToDelete(null);
+      const result = await deleteWorkflowDefinitionAction({ workflowId: workflowToDelete.workflow_id });
+      if (result.success) {
+        setRefreshKey((v) => v + 1);
+        resetDeleteState();
+        return;
+      }
+      setDeleteValidation(result);
     } catch (err) {
       console.error('Failed to delete workflow:', err);
     } finally {
@@ -905,23 +942,15 @@ export default function WorkflowList({ onSelectWorkflow, onCreateNew, onOpenEven
           </div>
         )}
 
-        {/* Delete Confirmation Dialog */}
-        <ConfirmationDialog
-          id="delete-workflow-dialog"
+        <DeleteEntityDialog
+          id={workflowToDelete ? `delete-workflow-${workflowToDelete.workflow_id}` : 'delete-workflow-dialog'}
           isOpen={isDeleteDialogOpen}
-          onClose={() => {
-            setIsDeleteDialogOpen(false);
-            setWorkflowToDelete(null);
-          }}
-          onConfirm={handleConfirmDelete}
-          title="Delete Workflow"
-          message={
-            workflowToDelete
-              ? `Are you sure you want to delete "${workflowToDelete.name}"? This action cannot be undone.`
-              : ''
-          }
-          confirmLabel={isDeleting ? 'Deleting...' : 'Delete'}
-          isConfirming={isDeleting}
+          onClose={resetDeleteState}
+          onConfirmDelete={handleConfirmDelete}
+          entityName={workflowToDelete?.name || 'this workflow'}
+          validationResult={deleteValidation}
+          isValidating={isDeleteValidating}
+          isDeleting={isDeleting}
         />
       </div>
     </ReflectionContainer>

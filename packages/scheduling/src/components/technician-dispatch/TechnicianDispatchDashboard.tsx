@@ -5,7 +5,7 @@ import { produce, enableMapSet } from 'immer';
 import { useSession } from 'next-auth/react';
 import { WorkItemDetailsDrawer } from './WorkItemDetailsDrawer';
 import { useDrawer } from "@alga-psa/ui";
-import { IScheduleEntry, IEditScope } from '@alga-psa/types';
+import { IScheduleEntry, IEditScope, DeletionDependency, DeletionAlternative } from '@alga-psa/types';
 import { WorkItemType, IWorkItem, IExtendedWorkItem } from '@alga-psa/types';
 import { IUser } from '@shared/interfaces/user.interfaces';
 import WorkItemListPanel from './WorkItemListPanel';
@@ -485,15 +485,25 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
         setEvents((prevEvents) => prevEvents.filter(event => event.entry_id !== eventId));
         setError(null);
       } else {
-        if (result.isPrivateError) {
-          toast.error(result.error || 'This is a private entry. Only the creator can delete it.');
-        } else {
-          setError('Failed to delete schedule entry');
+        const message = result.error || result.message || 'Failed to delete schedule entry';
+        if (!result.isPrivateError) {
+          setError(message);
         }
       }
+      return result;
     } catch (err) {
       console.error('Error deleting schedule entry:', err);
-      setError('Failed to delete schedule entry');
+      const fallback = {
+        success: false as const,
+        error: 'Failed to delete schedule entry',
+        canDelete: false as const,
+        code: 'VALIDATION_FAILED' as const,
+        message: 'Failed to delete schedule entry',
+        dependencies: [] as DeletionDependency[],
+        alternatives: [] as DeletionAlternative[]
+      };
+      setError(fallback.error);
+      return fallback;
     }
   }, []);
 

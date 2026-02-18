@@ -33,7 +33,8 @@ export default function TicketAppointmentRequests({
   appointments = [],
   isLoading = false
 }: TicketAppointmentRequestsProps) {
-  const { t } = useTranslation('clientPortal');
+  const { t } = useTranslation('features/appointments');
+  const { t: tCore } = useTranslation('common');
 
   const getStatusBadgeVariant = (status: string): BadgeVariant => {
     switch (status) {
@@ -59,9 +60,9 @@ export default function TicketAppointmentRequests({
       const ampm = hour >= 12 ? 'PM' : 'AM';
       const hour12 = hour % 12 || 12;
       const formattedTime = `${hour12}:${minutes} ${ampm}`;
-      return `${formattedDate} ${t('appointments.step4.at')} ${formattedTime}`;
+      return `${formattedDate} ${t('step4.at')} ${formattedTime}`;
     } catch {
-      return t('appointments.ticketSection.invalidDateTime');
+      return t('ticketSection.invalidDateTime');
     }
   };
 
@@ -70,7 +71,7 @@ export default function TicketAppointmentRequests({
     return (
       <div className="mt-4 flex items-center justify-center py-4 text-muted-foreground">
         <Loader2 className="h-4 w-4 animate-spin mr-2" />
-        {t('common.loading')}
+        {tCore('common.loading')}
       </div>
     );
   }
@@ -82,7 +83,7 @@ export default function TicketAppointmentRequests({
 
   return (
     <div className="mt-4">
-      <h3 className="text-sm font-medium mb-3">{t('appointments.ticketSection.title')}</h3>
+      <h3 className="text-sm font-medium mb-3">{t('ticketSection.title')}</h3>
       <div className="space-y-3">
         {appointments.map((appointment) => (
           <div
@@ -94,10 +95,10 @@ export default function TicketAppointmentRequests({
                 {/* Service name */}
                 <div className="flex items-center gap-2 mb-2">
                   <span className="font-medium text-sm truncate">
-                    {appointment.service_name || t('appointments.ticketSection.service')}
+                    {appointment.service_name || t('ticketSection.service')}
                   </span>
                   <Badge variant={getStatusBadgeVariant(appointment.status)}>
-                    {t(`appointments.status.${appointment.status}`)}
+                    {t(`status.${appointment.status}`)}
                   </Badge>
                 </div>
 
@@ -113,7 +114,7 @@ export default function TicketAppointmentRequests({
                 <div className="flex items-center gap-1 text-xs text-muted-foreground mb-1">
                   <Clock className="h-3 w-3" />
                   <span>
-                    {appointment.requested_duration} {t('appointments.ticketSection.minutes')}
+                    {appointment.requested_duration} {t('ticketSection.minutes')}
                   </span>
                 </div>
 
@@ -122,7 +123,7 @@ export default function TicketAppointmentRequests({
                   <div className="flex items-center gap-1 text-xs text-muted-foreground mb-1">
                     <User className="h-3 w-3" />
                     <span>
-                      {t('appointments.ticketSection.preferred')} {appointment.preferred_assigned_user_name}
+                      {t('ticketSection.preferred')} {appointment.preferred_assigned_user_name}
                     </span>
                   </div>
                 )}
@@ -132,7 +133,7 @@ export default function TicketAppointmentRequests({
                   <div className="text-xs text-muted-foreground mt-1">
                     {appointment.approver_first_name && (
                       <span>
-                        {t('appointments.ticketSection.approvedBy')} {appointment.approver_first_name} {appointment.approver_last_name} {t('appointments.ticketSection.on')}{' '}
+                        {t('ticketSection.approvedBy')} {appointment.approver_first_name} {appointment.approver_last_name} {t('ticketSection.on')}{' '}
                         {format(parseISO(appointment.approved_at), 'MMM d, yyyy')}
                       </span>
                     )}
@@ -142,14 +143,14 @@ export default function TicketAppointmentRequests({
                 {/* Declined reason */}
                 {appointment.status === 'declined' && appointment.declined_reason && (
                   <div className="text-xs text-destructive mt-1">
-                    {t('appointments.ticketSection.declined')} {appointment.declined_reason}
+                    {t('ticketSection.declined')} {appointment.declined_reason}
                   </div>
                 )}
 
                 {/* Public request indicator */}
                 {!appointment.is_authenticated && (
                   <div className="text-xs text-muted-foreground mt-1 italic">
-                    {t('appointments.ticketSection.publicRequest')}
+                    {t('ticketSection.publicRequest')}
                   </div>
                 )}
               </div>

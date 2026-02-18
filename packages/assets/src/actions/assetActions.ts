@@ -34,9 +34,11 @@ import {
     HealthStatus,
     SecurityStatus,
     WarrantyStatus,
+    DeletionValidationResult,
 } from '@alga-psa/types';
 import type { IDocument } from '@alga-psa/types';
 import { validateData } from '@alga-psa/validation';
+import { deleteEntityWithValidation } from '@alga-psa/core';
 import {
     assetSchema,
     assetAssociationSchema,
@@ -734,52 +736,72 @@ export const updateAsset = withAuth(async (user, { tenant }, asset_id: string, d
     }
 });
 
-export const deleteAsset = withAuth(async (user, { tenant }, asset_id: string): Promise<void> => {
-    const { knex } = await createTenantKnex();
-
-    if (!await hasPermission(user, 'asset', 'delete')) {
-        throw new Error('Permission denied: Cannot delete assets');
-    }
-
+export const deleteAsset = withAuth(async (
+    user,
+    { tenant },
+    asset_id: string
+): Promise<DeletionValidationResult & { success: boolean; deleted?: boolean }> => {
     try {
-        await knex.transaction(async (trx: Knex.Transaction) => {
+        const { knex } = await createTenantKnex();
+        const result = await deleteEntityWithValidation('asset', asset_id, knex, tenant, async (trx, tenantId) => {
             const asset = await trx('assets')
-                .where({ tenant, asset_id })
+                .where({ tenant: tenantId, asset_id })
                 .first();
 
             if (!asset) {
                 throw new Error('Asset not found');
             }
 
-            await deleteExtensionData(trx, tenant, asset_id, asset.asset_type);
+            await deleteExtensionData(trx, tenantId, asset_id, asset.asset_type);
 
-            await trx('asset_history').where({ tenant, asset_id }).delete();
-            await trx('asset_maintenance_history').where({ tenant, asset_id }).delete();
-            await trx('asset_maintenance_schedules').where({ tenant, asset_id }).delete();
+            await trx('asset_history').where({ tenant: tenantId, asset_id }).delete();
+            await trx('asset_maintenance_history').where({ tenant: tenantId, asset_id }).delete();
+            await trx('asset_maintenance_schedules').where({ tenant: tenantId, asset_id }).delete();
             await trx('asset_relationships')
-                .where({ tenant, parent_asset_id: asset_id })
-                .orWhere({ tenant, child_asset_id: asset_id })
+                .where({ tenant: tenantId, parent_asset_id: asset_id })
+                .orWhere({ tenant: tenantId, child_asset_id: asset_id })
                 .delete();
-            await trx('asset_associations').where({ tenant, asset_id }).delete();
+            await trx('asset_associations').where({ tenant: tenantId, asset_id }).delete();
             await trx('document_associations')
-                .where({ tenant, entity_type: 'asset', entity_id: asset_id })
+                .where({ tenant: tenantId, entity_type: 'asset', entity_id: asset_id })
                 .delete();
             await trx('tenant_external_entity_mappings')
-                .where({ tenant, alga_entity_type: 'asset', alga_entity_id: asset_id })
+                .where({ tenant: tenantId, alga_entity_type: 'asset', alga_entity_id: asset_id })
+                .delete();
+            await trx('external_entity_mappings')
+                .where({ tenant: tenantId, asset_id })
+                .delete();
+            await trx('import_job_items')
+                .where({ tenant: tenantId, asset_id })
                 .delete();
 
             await trx('assets')
-                .where({ tenant, asset_id })
+                .where({ tenant: tenantId, asset_id })
                 .delete();
         });
 
-        revalidatePath('/assets');
-        revalidatePath('/msp/assets');
-        revalidatePath(`/assets/${asset_id}`);
-        revalidatePath(`/msp/assets/${asset_id}`);
+        if (result.deleted) {
+            revalidatePath('/assets');
+            revalidatePath('/msp/assets');
+            revalidatePath(`/assets/${asset_id}`);
+            revalidatePath(`/msp/assets/${asset_id}`);
+        }
+
+        return {
+            ...result,
+            success: result.deleted === true,
+            deleted: result.deleted
+        };
     } catch (error) {
         console.error('Error deleting asset:', error);
-        throw new Error('Failed to delete asset');
+        return {
+            success: false,
+            canDelete: false,
+            code: 'VALIDATION_FAILED',
+            message: error instanceof Error ? error.message : 'Failed to delete asset',
+            dependencies: [],
+            alternatives: []
+        };
     }
 });
 

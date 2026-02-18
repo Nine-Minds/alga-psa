@@ -7,6 +7,7 @@ import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { ItilStandardsService } from '../../services/itilStandardsService';
 import { withAuth } from '@alga-psa/auth';
+import { deleteEntityWithValidation } from '@alga-psa/core';
 
 export interface FindBoardByNameOutput {
   id: string;
@@ -291,6 +292,32 @@ export const deleteBoard = withAuth(async (
           dependencies: ['itil_data']
         };
       }
+    }
+
+    if (!force && !isLastItilBoard && allCategoryIds.length === 0) {
+      const result = await deleteEntityWithValidation('board', boardId, db, tenant, async (boardTrx, tenantId) => {
+        const deletedCount = await boardTrx('boards')
+          .where({ tenant: tenantId, board_id: boardId })
+          .delete();
+
+        if (deletedCount === 0) {
+          throw new Error('Board not found');
+        }
+      });
+
+      if (!result.deleted) {
+        return {
+          success: false,
+          code: result.code,
+          message: result.message || 'Failed to delete board',
+          dependencies: result.dependencies?.map((dep) => dep.type)
+        };
+      }
+
+      return {
+        success: true,
+        message: 'Board deleted.'
+      };
     }
 
     // 9. Delete custom categories (ITIL categories are shared and cleaned up separately)

@@ -839,5 +839,42 @@
         "confirm_delete": "¿Seguro que deseas eliminar este comentario?"
       }
     }
+  },
+  "common": {
+    "actions": "Acciones",
+    "active": "Activo",
+    "inactive": "Inactivo",
+    "loading": "Cargando...",
+    "error": "Ocurrió un error",
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "delete": "Eliminar",
+    "edit": "Editar",
+    "close": "Cerrar",
+    "confirm": "Confirmar",
+    "yes": "Sí",
+    "no": "No",
+    "search": "Buscar",
+    "filter": "Filtrar",
+    "resetFilters": "Reiniciar filtros",
+    "sort": "Ordenar",
+    "refresh": "Actualizar",
+    "export": "Exportar",
+    "import": "Importar",
+    "download": "Descargar",
+    "upload": "Subir",
+    "selectAll": "Seleccionar todo",
+    "clearSelection": "Limpiar selección",
+    "view": "Ver",
+    "back": "Atrás",
+    "next": "Siguiente",
+    "previous": "Anterior",
+    "submit": "Enviar",
+    "reset": "Restablecer",
+    "noData": "No hay datos disponibles",
+    "required": "Obligatorio",
+    "optional": "Opcional",
+    "notSpecified": "No especificado",
+    "unknown": "Desconocido"
   }
 }

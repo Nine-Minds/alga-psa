@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
-import { IScheduleEntry } from '@alga-psa/types';
+import { IScheduleEntry, DeletionValidationResult } from '@alga-psa/types';
 import { IUser } from '@shared/interfaces/user.interfaces';
 import TimeHeader from './TimeHeader';
 import TechnicianRow from './TechnicianRow';
@@ -47,7 +47,7 @@ interface DailyTechnicianScheduleGridProps {
   selectedDate: Date;
   onDrop?: (dropEvent: DropEvent) => void;
   onResize?: (eventId: string, techId: string, newStart: Date, newEnd: Date) => void;
-  onDeleteEvent?: (eventId: string) => void;
+  onDeleteEvent?: (eventId: string) => Promise<DeletionValidationResult & { success: boolean; deleted?: boolean; error?: string; isPrivateError?: boolean }>;
   onEventClick: (event: Omit<IScheduleEntry, 'tenant'>) => void;
   onTechnicianClick: (technicianId: string) => void;
   canEdit?: boolean;
@@ -150,18 +150,26 @@ const DailyTechnicianScheduleGrid: React.FC<DailyTechnicianScheduleGridProps> = 
     };
   }, []);
 
-  const handleDelete = useCallback((e: React.MouseEvent | null, eventId: string) => {
-    if (e) {
-      e.preventDefault();
-      e.stopPropagation();
-     }
-      onDeleteEvent?.(eventId);
-      isDraggingRef.current = false;
-      dragStateRef.current = null;
-      resizingRef.current = null;
-      setIsDragging(false);
-      setDragState(null);
-      setHighlightedSlots(null);
+  const handleDelete = useCallback((eventId: string) => {
+    isDraggingRef.current = false;
+    dragStateRef.current = null;
+    resizingRef.current = null;
+    setIsDragging(false);
+    setDragState(null);
+    setHighlightedSlots(null);
+
+    if (!onDeleteEvent) {
+      return Promise.resolve<DeletionValidationResult & { success: boolean }>({
+        success: false,
+        canDelete: false,
+        code: 'VALIDATION_FAILED',
+        message: 'Delete action is unavailable.',
+        dependencies: [],
+        alternatives: []
+      });
+    }
+
+    return onDeleteEvent(eventId);
   }, [onDeleteEvent]);
 
   const handleResizeStart = useCallback((e: React.MouseEvent, event: Omit<IScheduleEntry, 'tenant'>, direction: 'left' | 'right') => {

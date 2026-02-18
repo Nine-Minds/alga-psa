@@ -14,7 +14,7 @@ import { formatDateOnly } from '@alga-psa/core';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 export default function ProjectsOverviewPage() {
-  const { t } = useTranslation('clientPortal');
+  const { t } = useTranslation('features/projects');
   const router = useRouter();
   const [projects, setProjects] = useState<IProject[]>([]);
   const [loading, setLoading] = useState(true);
@@ -27,7 +27,7 @@ export default function ProjectsOverviewPage() {
   // Define columns for the DataTable
   const columns: ColumnDefinition<IProject>[] = [
     {
-      title: t('projects.fields.projectNumber'),
+      title: t('fields.projectNumber'),
       dataIndex: 'project_number',
       width: '10%',
       render: (value, record) => (
@@ -41,7 +41,7 @@ export default function ProjectsOverviewPage() {
       )
     },
     {
-      title: t('projects.fields.projectName'),
+      title: t('fields.projectName'),
       dataIndex: 'project_name',
       width: '35%',
       render: (value, record) => (
@@ -55,7 +55,7 @@ export default function ProjectsOverviewPage() {
       )
     },
     {
-      title: t('projects.fields.status'),
+      title: t('fields.status'),
       dataIndex: 'status_name',
       width: '15%',
       render: (value) => (
@@ -65,19 +65,19 @@ export default function ProjectsOverviewPage() {
       )
     },
     {
-      title: t('projects.fields.startDate'),
+      title: t('fields.startDate'),
       dataIndex: 'start_date',
       width: '15%',
       render: (value) => value ? formatDateOnly(new Date(value)) : 'N/A'
     },
     {
-      title: t('projects.fields.endDate'),
+      title: t('fields.endDate'),
       dataIndex: 'end_date',
       width: '15%',
       render: (value) => value ? formatDateOnly(new Date(value)) : 'N/A'
     },
     {
-      title: t('projects.details'),
+      title: t('details'),
       dataIndex: 'project_id',
       width: '10%',
       render: (_, record) => {
@@ -132,9 +132,9 @@ export default function ProjectsOverviewPage() {
     <div className="container mx-auto py-6 space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-semibold">{t('projects.title')}</h1>
+          <h1 className="text-2xl font-semibold">{t('title')}</h1>
           <p className="text-gray-600">
-            {t('projects.subtitle')}
+            {t('subtitle')}
           </p>
         </div>
       </div>
@@ -145,7 +145,7 @@ export default function ProjectsOverviewPage() {
           <Input
             id="project-search-input"
             type="text"
-            placeholder={t('projects.searchPlaceholder')}
+            placeholder={t('searchPlaceholder')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-10"
@@ -159,7 +159,7 @@ export default function ProjectsOverviewPage() {
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
         >
-          <option value="all">{t('projects.allStatuses')}</option>
+          <option value="all">{t('allStatuses')}</option>
           <option value="open">All Open Projects</option>
           <option value="closed">All Closed Projects</option>
           <option value="planning">Planning</option>
@@ -176,7 +176,7 @@ export default function ProjectsOverviewPage() {
           className="whitespace-nowrap flex items-center gap-2 ml-auto"
         >
           <XCircle className="h-4 w-4" />
-          {t('projects.resetFilters')}
+          {t('resetFilters')}
         </Button>
       </div>
       

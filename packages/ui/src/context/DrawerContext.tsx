@@ -422,7 +422,7 @@ export const DrawerOutlet: React.FC = () => {
                 size="sm"
                 onClick={closeDrawer}
                 aria-label="Close drawer"
-                className="hover:bg-gray-100"
+                className="hover:bg-gray-100 dark:hover:bg-[rgb(var(--color-border-100))]"
               >
                 <X className="h-4 w-4" />
               </Button>

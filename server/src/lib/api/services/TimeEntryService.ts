@@ -21,9 +21,10 @@ import {
   RequestTimeEntryChangesData
 } from '../schemas/timeEntry';
 import { publishEvent, publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
-import { ValidationError } from '../middleware/apiMiddleware';
+import { ForbiddenError, ValidationError } from '../middleware/apiMiddleware';
 import { computeWorkDateFields, resolveUserTimeZone } from 'server/src/lib/utils/workDate';
 import { buildTicketTimeEntryAddedWorkflowEvent } from './timeEntryWorkflowEvents';
+import { hasPermission } from '../../auth/rbac';
 
 export class TimeEntryService extends BaseService<any> {
   constructor() {
@@ -205,6 +206,48 @@ export class TimeEntryService extends BaseService<any> {
 
   async create(data: CreateTimeEntryData, context: ServiceContext): Promise<any> {
     const { knex } = await this.getKnex();
+
+    if (data.work_item_type === 'ticket') {
+      if (!data.work_item_id) {
+        throw new ValidationError('Validation failed', [
+          {
+            path: ['work_item_id'],
+            message: 'work_item_id is required when work_item_type is ticket',
+          },
+        ]);
+      }
+
+      if (!context.user) {
+        throw new ForbiddenError('Permission denied: Missing user context');
+      }
+
+      const canReadTickets = await hasPermission(context.user, 'ticket', 'read', knex);
+      if (!canReadTickets) {
+        throw new ForbiddenError('Permission denied: Cannot read tickets');
+      }
+
+      const ticketExists = await knex('tickets')
+        .where({ tenant: context.tenant, ticket_id: data.work_item_id })
+        .first('ticket_id');
+
+      if (!ticketExists) {
+        throw new ValidationError('Validation failed', [
+          {
+            path: ['work_item_id'],
+            message: 'Ticket not found',
+          },
+        ]);
+      }
+    }
+
+    if (data.work_item_type === 'project_task' && !data.work_item_id) {
+      throw new ValidationError('Validation failed', [
+        {
+          path: ['work_item_id'],
+          message: 'work_item_id is required when work_item_type is project_task',
+        },
+      ]);
+    }
 
     const userTimeZone = await resolveUserTimeZone(knex, context.tenant, context.userId);
     const { work_date, work_timezone } = computeWorkDateFields(data.start_time, userTimeZone);

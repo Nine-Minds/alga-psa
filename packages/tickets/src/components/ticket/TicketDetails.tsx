@@ -193,7 +193,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     renderClientDetails,
     renderIntervalManagement
 }) => {
-    const { t } = useTranslation('clientPortal');
+    const { t } = useTranslation('features/tickets');
     const { data: session } = useSession();
     const [hasHydrated, setHasHydrated] = useState(false);
     const { enabled: emailLogsEnabled } = useFeatureFlag('email-logs', { defaultValue: false });
@@ -251,11 +251,11 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const [pendingChildToAdd, setPendingChildToAdd] = useState<{ ticket_id: string; ticket_number?: string | null; client_id?: string | null } | null>(null);
     const ticketOrigin = useMemo(() => getTicketOrigin(ticket as any), [ticket]);
     const ticketOriginLabels = useMemo(() => ({
-        internal: t('tickets.origin.internal', 'Created Internally'),
-        clientPortal: t('tickets.origin.clientPortal', 'Created via Client Portal'),
-        inboundEmail: t('tickets.origin.inboundEmail', 'Created via Inbound Email'),
-        api: t('tickets.origin.api', 'Created via API'),
-        other: t('tickets.origin.other', 'Created via Other'),
+        internal: t('origin.internal', 'Created Internally'),
+        clientPortal: t('origin.clientPortal', 'Created via Client Portal'),
+        inboundEmail: t('origin.inboundEmail', 'Created via Inbound Email'),
+        api: t('origin.api', 'Created via API'),
+        other: t('origin.other', 'Created via Other'),
     }), [t]);
 
     useEffect(() => {
