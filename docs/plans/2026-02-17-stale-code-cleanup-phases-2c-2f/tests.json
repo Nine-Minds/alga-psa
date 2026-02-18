@@ -49,7 +49,7 @@
   {
     "id": "T005",
     "description": "Task 2d-2: Find all callers of eventBus/events shim. Update each to import from @alga-psa/event-schemas. Delete shim. npm run build passes.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F020"
     ]

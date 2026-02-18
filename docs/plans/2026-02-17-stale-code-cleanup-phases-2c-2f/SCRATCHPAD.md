@@ -84,3 +84,5 @@ Must be executed in this exact order:
 - (2026-02-18) Build after Task 2c-3 failed with missing @dnd-kit/sortable (packages/billing). SystemEmailProviderFactory error resolved by updating SystemEmailService import.
 - (2026-02-18) Task 2d-1: Updated packages/projects projectActions to import user actions from @alga-psa/users/actions and adjusted calendarActions.sync.test mock path. Deleted server/src/lib/user-actions/userActions.ts shim.
 - (2026-02-18) Build after Task 2d-1 failed with missing @dnd-kit/sortable in packages/billing (same as prior).
+- (2026-02-18) Task 2d-2: Updated eventBus/events imports to @alga-psa/event-schemas in surveyTriggerDispatch.integration.test.ts and ticket-response-state.integration.test.ts. Deleted server/src/lib/eventBus/events.ts.
+- (2026-02-18) Build after Task 2d-2 still fails: missing @dnd-kit/sortable in packages/billing (eventBus import errors resolved).

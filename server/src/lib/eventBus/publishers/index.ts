@@ -1,5 +1,5 @@
 import logger from '@alga-psa/core/logger';
-import { Event } from '../events';
+import { Event } from '@alga-psa/event-schemas';
 import { getEventBus } from '../index';
 import { getEmailEventChannel } from '../../notifications/emailChannel';
 import { buildWorkflowPayload, type WorkflowEventPublishContext, type WorkflowPublishHooks } from '@alga-psa/event-schemas';

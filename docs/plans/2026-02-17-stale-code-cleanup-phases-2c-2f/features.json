@@ -154,7 +154,7 @@
   {
     "id": "F020",
     "description": "Task 2d-2: Delete shim server/src/lib/eventBus/events.ts (pure re-export of @alga-psa/event-schemas) and update all callers to import from @alga-psa/event-schemas directly",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-06"
     ]

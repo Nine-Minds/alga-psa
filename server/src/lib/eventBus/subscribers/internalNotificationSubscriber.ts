@@ -23,7 +23,7 @@ import {
   AppointmentRequestApprovedEvent,
   AppointmentRequestDeclinedEvent,
   AppointmentRequestCancelledEvent
-} from '../events';
+} from '@alga-psa/event-schemas';
 import { createNotificationFromTemplateInternal } from '@alga-psa/notifications/actions';
 import logger from '@alga-psa/core/logger';
 import { getConnection } from '../../db/db';
