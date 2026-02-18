@@ -272,9 +272,12 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     // Pending additional agent IDs (null = no pending changes)
     const [pendingAdditionalAgentIds, setPendingAdditionalAgentIds] = useState<string[] | null>(null);
     const effectiveAdditionalAgentIds = useMemo(() => {
-        if (pendingAdditionalAgentIds !== null) return pendingAdditionalAgentIds;
-        return additionalAgents.filter(a => a.additional_user_id).map(a => a.additional_user_id!);
-    }, [pendingAdditionalAgentIds, additionalAgents]);
+        const ids = pendingAdditionalAgentIds !== null
+            ? pendingAdditionalAgentIds
+            : additionalAgents.filter(a => a.additional_user_id).map(a => a.additional_user_id!);
+        // Always exclude the primary agent to prevent dedup edge cases
+        return ticket.assigned_to ? ids.filter(id => id !== ticket.assigned_to) : ids;
+    }, [pendingAdditionalAgentIds, additionalAgents, ticket.assigned_to]);
     const hasPendingAdditionalAgents = pendingAdditionalAgentIds !== null;
     useRegisterUnsavedChanges(`ticket-additional-agents-${id}`, hasPendingAdditionalAgents);
 
@@ -1225,42 +1228,46 @@ const handleClose = () => {
             const agentsToAdd = resolvedPendingAgents.filter(id => !currentAgentIds.includes(id));
             const agentsToRemove = currentAgentIds.filter(id => !resolvedPendingAgents!.includes(id));
 
-            let agentSaveFailed = false;
+            const addResults = await Promise.allSettled(
+                agentsToAdd.map(userId => addTicketResource(ticket.ticket_id!, userId, 'support'))
+            );
+            const removeResults = await Promise.allSettled(
+                agentsToRemove.map(userId => {
+                    const agent = additionalAgents.find(a => a.additional_user_id === userId);
+                    if (agent?.assignment_id) {
+                        return removeTicketResource(agent.assignment_id);
+                    }
+                    return Promise.resolve();
+                })
+            );
 
-            for (const userId of agentsToAdd) {
+            const hasFailed = [...addResults, ...removeResults].some(r => r.status === 'rejected');
+
+            if (hasFailed) {
+                // Refresh from server so UI matches reality
                 try {
-                    const result = await addTicketResource(ticket.ticket_id!, userId, 'support');
-                    if (result) {
-                        setAdditionalAgents(prev => [...prev, result]);
-                    }
-                } catch (error) {
-                    console.error('Error adding agent:', error);
-                    agentSaveFailed = true;
+                    const resources = await getTicketResources(ticket.ticket_id!);
+                    setAdditionalAgents(resources);
+                } catch (refreshError) {
+                    console.error('Error refreshing agents after partial save:', refreshError);
                 }
-            }
-            for (const userId of agentsToRemove) {
-                const agent = additionalAgents.find(a => a.additional_user_id === userId);
-                if (agent?.assignment_id) {
-                    try {
-                        await removeTicketResource(agent.assignment_id);
-                        setAdditionalAgents(prev => prev.filter(a => a.assignment_id !== agent.assignment_id));
-                    } catch (error) {
-                        console.error('Error removing agent:', error);
-                        agentSaveFailed = true;
-                    }
-                }
-            }
-
-            if (agentSaveFailed) {
                 toast.error('Some agent changes failed to save');
+                setPendingAdditionalAgentIds(null);
                 return false;
             }
 
+            // All succeeded — refresh from server for authoritative state
+            try {
+                const resources = await getTicketResources(ticket.ticket_id!);
+                setAdditionalAgents(resources);
+            } catch (refreshError) {
+                console.error('Error refreshing agents after save:', refreshError);
+            }
             setPendingAdditionalAgentIds(null);
         }
 
         return true;
-    }, [onBatchTicketUpdate, handleItilFieldChange, pendingAdditionalAgentIds, additionalAgents, ticket.ticket_id]);
+    }, [onBatchTicketUpdate, handleItilFieldChange, handleSelectChange, pendingAdditionalAgentIds, additionalAgents, ticket.ticket_id]);
 
     const handleClientChange = async (newClientId: string) => {
         try {
