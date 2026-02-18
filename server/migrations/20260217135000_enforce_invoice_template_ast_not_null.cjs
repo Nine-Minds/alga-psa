@@ -37,12 +37,38 @@ async function setColumnNullability(knex, tableName, columnName, nullable) {
   await knex.raw('ALTER TABLE ?? ALTER COLUMN ?? SET NOT NULL', [tableName, columnName]);
 }
 
-async function assertNoMissingAst(knex, tableName) {
+async function getNullCount(knex, tableName, columnName) {
   const result = await knex(tableName)
-    .whereNull('templateAst')
+    .whereNull(columnName)
     .count('* as count')
     .first();
-  const count = Number(result?.count || 0);
+
+  return Number(result?.count || 0);
+}
+
+async function enforceNotNullBestEffort(knex, tableName, columnName) {
+  try {
+    await setColumnNullability(knex, tableName, columnName, false);
+  } catch (error) {
+    const message = String(error?.message || '');
+    const visibleNullCount = await getNullCount(knex, tableName, columnName);
+
+    // Some Citus/cluster table states can report "contains null values" during ALTER even when
+    // all visible rows are non-null. Treat only that mismatch as non-fatal and continue.
+    if (visibleNullCount === 0 && /contains null values/i.test(message)) {
+      // eslint-disable-next-line no-console
+      console.warn(
+        `[invoice-ast-cutover] Skipping SET NOT NULL for ${tableName}.${columnName}: ALTER reported null values, but visible rows are fully populated.`
+      );
+      return;
+    }
+
+    throw error;
+  }
+}
+
+async function assertNoMissingAst(knex, tableName) {
+  const count = await getNullCount(knex, tableName, 'templateAst');
   if (count > 0) {
     throw new Error(
       `[invoice-ast-cutover] ${tableName} has ${count} row(s) with NULL templateAst; run data normalization first.`
@@ -290,12 +316,12 @@ exports.up = async function up(knex) {
 
   const invoiceTemplateAstIsNullable = await isColumnNullable(knex, INVOICE_TEMPLATES_TABLE, 'templateAst');
   if (invoiceTemplateAstIsNullable) {
-    await setColumnNullability(knex, INVOICE_TEMPLATES_TABLE, 'templateAst', false);
+    await enforceNotNullBestEffort(knex, INVOICE_TEMPLATES_TABLE, 'templateAst');
   }
 
   const standardTemplateAstIsNullable = await isColumnNullable(knex, STANDARD_TEMPLATES_TABLE, 'templateAst');
   if (standardTemplateAstIsNullable) {
-    await setColumnNullability(knex, STANDARD_TEMPLATES_TABLE, 'templateAst', false);
+    await enforceNotNullBestEffort(knex, STANDARD_TEMPLATES_TABLE, 'templateAst');
   }
 };
 
