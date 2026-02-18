@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { getScheduledHoursForTicket } from '../../actions/ticketActions';
+import { getScheduledHoursForTicket, getTicketAppointmentRequests } from '../../actions/ticketActions';
 import { ITicket, ITimeSheet, ITimePeriod, ITimePeriodView, ITimeEntry, IAgentSchedule, IClient, IClientLocation } from '@alga-psa/types'; // Added IClient and IClientLocation
 import { IUserWithRoles, ITeam } from '@alga-psa/types';
 import { ITicketResource } from '@alga-psa/types';
@@ -32,7 +32,6 @@ import TicketMaterialsCard from './TicketMaterialsCard';
 import TicketSurveySummaryCard from './TicketSurveySummaryCard';
 import { useRegisterUnsavedChanges } from '@alga-psa/ui/context';
 import { useDrawer } from '@alga-psa/ui';
-import { getAppointmentRequestsByTicketId } from '@alga-psa/scheduling/actions';
 
 interface TicketPropertiesProps {
   id?: string;
@@ -294,7 +293,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
     const fetchAppointmentRequests = async () => {
       if (!ticket.ticket_id) return;
       try {
-        const result = await getAppointmentRequestsByTicketId(ticket.ticket_id);
+        const result = await getTicketAppointmentRequests(ticket.ticket_id);
         if (result.success && result.data) {
           setAppointmentRequests(result.data);
         }

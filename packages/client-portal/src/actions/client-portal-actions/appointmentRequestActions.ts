@@ -592,6 +592,15 @@ export const createAppointmentRequest = withAuth(async (
         defaultApproverId
       });
 
+      // Resolve preferred technician name
+      let preferredTechnicianName = 'Not specified';
+      if (validatedData.preferred_assigned_user_id) {
+        const techUser = staffUsers.find(u => u.user_id === validatedData.preferred_assigned_user_id);
+        if (techUser) {
+          preferredTechnicianName = `${techUser.first_name} ${techUser.last_name}`;
+        }
+      }
+
       for (const staffUser of staffUsers) {
         if (!isValidEmail(staffUser.email)) continue;
         await emailService.sendNewAppointmentRequest(staffUser.email, {
@@ -602,7 +611,7 @@ export const createAppointmentRequest = withAuth(async (
           requestedDate: await formatDate(validatedData.requested_date, 'en'),
           requestedTime: await formatTime(validatedData.requested_time, 'en'),
           duration: validatedData.requested_duration,
-          preferredTechnician: 'Not specified',
+          preferredTechnician: preferredTechnicianName,
           referenceNumber: appointmentRequest.appointment_request_id.slice(0, 8).toUpperCase(),
           submittedAt: new Date().toLocaleString(),
           isAuthenticated: true,
