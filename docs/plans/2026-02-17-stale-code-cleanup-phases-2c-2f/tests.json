@@ -26,7 +26,7 @@
   {
     "id": "T003",
     "description": "Task 2c-3: Grep-verify each of the 9 dead email files has 0 direct imports. Delete all 9 files/dirs. Confirm system/SystemEmailService.ts, BaseEmailService.ts, tenant/templateProcessors.ts, system/types.ts are NOT deleted. npm run build passes.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F011",
       "F012",

@@ -638,7 +638,7 @@ export async function sendCancellationFeedbackAction(
       .first('client_name', 'email');
 
     // Import the email function dynamically
-    const { sendCancellationFeedbackEmail } = await import('../../../../../server/src/lib/email/sendCancellationFeedbackEmail');
+    const { sendCancellationFeedbackEmail } = await import('@alga-psa/email');
 
     // Send email to support
     await sendCancellationFeedbackEmail({

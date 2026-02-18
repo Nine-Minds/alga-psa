@@ -14,7 +14,7 @@ import {
   NewAppointmentRequestData
 } from './types';
 import { IEmailProvider } from '../../../types/email.types';
-import { SystemEmailProviderFactory } from './SystemEmailProviderFactory';
+import { SystemEmailProviderFactory } from '@alga-psa/email';
 import { getConnection } from '@/lib/db/db';
 import { SupportedLocale, LOCALE_CONFIG, isSupportedLocale } from '@alga-psa/ui/lib/i18n/config';
 import { resolveEmailLocale } from '@/lib/notifications/emailLocaleResolver';
