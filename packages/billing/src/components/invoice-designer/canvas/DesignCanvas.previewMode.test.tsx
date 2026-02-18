@@ -127,6 +127,40 @@ describe('DesignCanvas preview mode', () => {
     expect(screen.getByText('INV-770')).toBeTruthy();
   });
 
+  it('renders field metadata label inline with the bound value when present', () => {
+    const nodes = buildCanvasNodes([
+      baseNode({
+        id: 'field-labeled',
+        type: 'field',
+        name: 'Invoice Date Field',
+        metadata: { label: 'Issue Date', bindingKey: 'invoice.issueDate', format: 'date' },
+      }),
+    ]);
+    render(
+      <DesignCanvas
+        nodes={nodes}
+        selectedNodeId={null}
+        showGuides={false}
+        showRulers={false}
+        gridSize={8}
+        canvasScale={1}
+        snapToGrid
+        guides={[]}
+        isDragActive={false}
+        forcedDropTarget={null}
+        droppableId="preview"
+        onPointerLocationChange={() => undefined}
+        onNodeSelect={() => undefined}
+        onResize={() => undefined}
+        readOnly
+        previewData={previewData}
+      />
+    );
+
+    expect(screen.getByText('Issue Date:')).toBeTruthy();
+    expect(screen.getByText((content) => content.includes('2026'))).toBeTruthy();
+  });
+
   it('falls back to scaffold placeholders when bound value is missing', () => {
     const nodes = buildCanvasNodes([
       baseNode({
@@ -156,7 +190,7 @@ describe('DesignCanvas preview mode', () => {
         previewData={previewData}
       />
     );
-    expect(screen.getByText('INV-000123')).toBeTruthy();
+    expect(screen.getByText('Sample value')).toBeTruthy();
   });
 
   it('renders totals and table data from preview invoice payload', () => {

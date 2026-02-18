@@ -846,6 +846,7 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
   const isLabelNode = node.type === 'label';
   const isTextNode = node.type === 'text';
   const isFieldNode = node.type === 'field';
+  const fieldDisplayLabel = isFieldNode ? asTrimmedString(metadata.label) : '';
   const isMediaNode = node.type === 'image' || node.type === 'logo' || node.type === 'qr';
   const labelWeightClass = FONT_WEIGHT_CLASS[
     resolveFontWeightStyle(metadata.fontWeight ?? metadata.labelFontWeight, 'semibold')
@@ -1043,22 +1044,43 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
         </div>
       ) : (
         isCompactLeaf ? (
-          <div
-            className={clsx(
-              'h-full text-[11px] text-slate-500',
-              isLabelNode
-                ? clsx('px-1 py-0.5 flex items-center bg-transparent text-slate-700', labelWeightClass)
-                : isTotalsRow
-                  ? 'p-1.5 whitespace-pre-wrap'
-                  : isTextNode
-                    ? 'px-2 py-1 whitespace-pre-wrap text-slate-700 bg-transparent'
-                  : fieldSurfaceClasses,
-              previewContent.singleLine && 'whitespace-nowrap overflow-hidden',
-              previewContent.isPlaceholder && (isLabelNode ? 'text-slate-400 font-normal italic' : 'text-slate-400')
-            )}
-          >
-            {previewContent.content}
-          </div>
+          isFieldNode ? (
+            <div
+              className={clsx(
+                'h-full text-[11px] text-slate-500 gap-1.5',
+                fieldSurfaceClasses,
+                previewContent.singleLine && 'whitespace-nowrap overflow-hidden',
+                previewContent.isPlaceholder && 'text-slate-400'
+              )}
+            >
+              {fieldDisplayLabel && (
+                <span
+                  className="shrink-0 truncate text-[10px] font-medium text-slate-500"
+                  title={fieldDisplayLabel}
+                >
+                  {fieldDisplayLabel}:
+                </span>
+              )}
+              <span className="min-w-0 truncate">{previewContent.content}</span>
+            </div>
+          ) : (
+            <div
+              className={clsx(
+                'h-full text-[11px] text-slate-500',
+                isLabelNode
+                  ? clsx('px-1 py-0.5 flex items-center bg-transparent text-slate-700', labelWeightClass)
+                  : isTotalsRow
+                    ? 'p-1.5 whitespace-pre-wrap'
+                    : isTextNode
+                      ? 'px-2 py-1 whitespace-pre-wrap text-slate-700 bg-transparent'
+                    : fieldSurfaceClasses,
+                previewContent.singleLine && 'whitespace-nowrap overflow-hidden',
+                previewContent.isPlaceholder && (isLabelNode ? 'text-slate-400 font-normal italic' : 'text-slate-400')
+              )}
+            >
+              {previewContent.content}
+            </div>
+          )
         ) : (
           <>
             <div className="px-2 py-1 border-b bg-slate-50 text-xs font-semibold text-slate-600 flex items-center justify-between">
