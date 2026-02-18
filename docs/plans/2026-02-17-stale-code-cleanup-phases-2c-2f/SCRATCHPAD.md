@@ -77,3 +77,5 @@ Must be executed in this exact order:
 
 ## Updates
 - (2026-02-18) Task 2c-1: rg-verified no callers, deleted orphaned models role.ts, standardServiceType.ts, timeSheetComment.ts, session.tsx, ticketResource.tsx, userPreferences.tsx, notification.ts and empty models/index.ts.
+- (2026-02-18) Task 2c-2: rg-verified no callers, deleted PasswordResetService.ts and taskTypeService.ts.
+- (2026-02-18) Build after Task 2c-2 failed: Next build missing @dnd-kit/sortable in packages/billing (module not found). Attempted NODE_OPTIONS=--max-old-space-size=8192 to avoid prior OOM; build proceeded to dependency error.

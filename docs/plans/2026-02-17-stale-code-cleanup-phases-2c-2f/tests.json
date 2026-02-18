@@ -17,7 +17,7 @@
   {
     "id": "T002",
     "description": "Task 2c-2: Grep-verify PasswordResetService.ts and taskTypeService.ts have 0 import references. Delete both. npm run build passes.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F009",
       "F010"
