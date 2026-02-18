@@ -602,9 +602,10 @@ export const getSlaOverview = withAuth(async (
   const { knex: db } = await createTenantKnex();
 
   return withTransaction(db, async (trx: Knex.Transaction) => {
-    // Get compliance metrics
-    const complianceResult = await getSlaComplianceRate(_user, { tenant }, filters);
-    const averageTimesResult = await getAverageTimesMetrics(_user, { tenant }, filters);
+    // Get compliance metrics - call the wrapped functions directly with just filters
+    // (they get user/tenant from session automatically)
+    const complianceResult = await getSlaComplianceRate(filters);
+    const averageTimesResult = await getAverageTimesMetrics(filters);
 
     // Get active ticket counts
     let activeQuery = trx('tickets as t')
@@ -633,7 +634,7 @@ export const getSlaOverview = withAuth(async (
       .first();
 
     // Get at-risk count (simplified - tickets > 75% elapsed)
-    const atRiskTickets = await getTicketsAtRisk(_user, { tenant }, 100);
+    const atRiskTickets = await getTicketsAtRisk(100);
     const atRiskCount = atRiskTickets.filter(t => t.percentElapsed >= 75 && t.minutesRemaining > 0).length;
 
     return {
