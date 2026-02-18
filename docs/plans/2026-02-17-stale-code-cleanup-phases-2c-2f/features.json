@@ -202,7 +202,7 @@
   {
     "id": "F026",
     "description": "Task 2f-1: Migrate all 9 callers of server/src/lib/models/internalNotification.ts to import types (InternalNotification, CreateInternalNotificationRequest, etc.) from @alga-psa/notifications instead. Delete the server model file.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-12"
     ]

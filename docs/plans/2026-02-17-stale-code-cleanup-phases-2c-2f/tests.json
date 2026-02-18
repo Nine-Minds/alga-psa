@@ -97,7 +97,7 @@
   {
     "id": "T011",
     "description": "Task 2f-1: Verify @alga-psa/notifications exports all types from internalNotification (InternalNotification, CreateInternalNotificationRequest, etc.). Find all 9 callers. Update imports. Delete server model. npm run build passes.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F026"
     ]

@@ -9,7 +9,7 @@ import {
   cleanupPreferences
 } from '../../helpers/notificationTestHelpers';
 
-import type { InternalNotification } from 'server/src/lib/models/internalNotification';
+import type { InternalNotification } from '@alga-psa/notifications';
 
 vi.mock('server/src/lib/realtime/internalNotificationBroadcaster', () => ({
   broadcastNotification: vi.fn().mockResolvedValue(undefined),

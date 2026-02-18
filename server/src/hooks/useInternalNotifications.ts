@@ -7,7 +7,7 @@ import {
   InternalNotification,
   InternalNotificationListResponse,
   UnreadCountResponse
-} from '../lib/models/internalNotification';
+} from '@alga-psa/notifications';
 import {
   getNotificationsAction,
   getUnreadCountAction,

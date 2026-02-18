@@ -97,3 +97,5 @@ Must be executed in this exact order:
 - (2026-02-18) Build after Task 2e-3 still fails: missing @dnd-kit/sortable in packages/billing.
 - (2026-02-18) Task 2e-4: Simplified server/src/lib/email/index.ts to a single re-export from @alga-psa/email.
 - (2026-02-18) Build after Task 2e-4 still fails: missing @dnd-kit/sortable in packages/billing.
+- (2026-02-18) Task 2f-1: Repointed internalNotification model imports in broadcaster, hooks, and tests to @alga-psa/notifications; deleted server/src/lib/models/internalNotification.ts.
+- (2026-02-18) Build after Task 2f-1 still fails: missing @dnd-kit/sortable in packages/billing.
