@@ -250,8 +250,6 @@ const sanitizePersistedNodeProps = (props: Record<string, unknown> | undefined):
   return clone;
 };
 
-type LabelNormalizationKind = 'name' | 'metadata';
-
 const normalizeDesignerPatchPath = (input: string): string => {
   const path = input.trim();
   if (path.startsWith('props.')) return path;
@@ -263,67 +261,6 @@ const normalizeDesignerPatchPath = (input: string): string => {
   if (path === 'style' || path.startsWith('style.')) return `props.${path}`;
 
   return path;
-};
-
-const resolveLabelNormalizationKind = (path: string): LabelNormalizationKind | null => {
-  if (path === 'name' || path === 'props.name') {
-    return 'name';
-  }
-  if (path === 'metadata' || path === 'props.metadata') {
-    return 'metadata';
-  }
-  if (path.startsWith('metadata.') || path.startsWith('props.metadata.')) {
-    return 'metadata';
-  }
-  return null;
-};
-
-const normalizeLabelAfterMutation = (
-  nodes: DesignerNode[],
-  nodeId: string,
-  kind: LabelNormalizationKind
-): DesignerNode[] => {
-  const index = nodes.findIndex((node) => node.id === nodeId);
-  if (index < 0) return nodes;
-  const node = nodes[index];
-  if (!node || node.type !== 'label') return nodes;
-
-  const existingProps = isPlainObject(node.props) ? node.props : {};
-  const propsMetadata = isPlainObject(existingProps.metadata) ? (existingProps.metadata as Record<string, unknown>) : {};
-
-  if (kind === 'name') {
-    const nextText = typeof existingProps.name === 'string' ? (existingProps.name as string) : '';
-    const nextMetadata = { ...propsMetadata, text: nextText };
-    const nextProps = { ...existingProps, name: nextText, metadata: nextMetadata };
-    const nextNode: DesignerNode = { ...node, props: nextProps };
-    if (nextNode === node) return nodes;
-    const copy = nodes.slice();
-    copy[index] = nextNode;
-    return copy;
-  }
-
-  const candidateText = typeof propsMetadata.text === 'string' ? propsMetadata.text.trim() : '';
-  const candidateLabel = typeof propsMetadata.label === 'string' ? propsMetadata.label.trim() : '';
-
-  if (candidateText) {
-    const nextMetadata = { ...propsMetadata, text: candidateText };
-    const nextProps = { ...existingProps, name: candidateText, metadata: nextMetadata };
-    const nextNode: DesignerNode = { ...node, props: nextProps };
-    const copy = nodes.slice();
-    copy[index] = nextNode;
-    return copy;
-  }
-
-  if (candidateLabel) {
-    const nextMetadata = { ...propsMetadata, text: candidateLabel, label: candidateLabel };
-    const nextProps = { ...existingProps, name: candidateLabel, metadata: nextMetadata };
-    const nextNode: DesignerNode = { ...node, props: nextProps };
-    const copy = nodes.slice();
-    copy[index] = nextNode;
-    return copy;
-  }
-
-  return nodes;
 };
 
 const snapshotWorkspaceNodesById = (
@@ -1046,13 +983,8 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
     setNodeProp: (nodeId, path, value, commit = true) => {
       setWithIndex((state) => {
         const normalizedPath = normalizeDesignerPatchPath(path);
-        let nodes = patchSetNodeProp(state.nodes, nodeId, normalizedPath, value);
+        const nodes = patchSetNodeProp(state.nodes, nodeId, normalizedPath, value);
         if (nodes === state.nodes) return state;
-
-        const labelNormalization = resolveLabelNormalizationKind(normalizedPath);
-        if (labelNormalization) {
-          nodes = normalizeLabelAfterMutation(nodes, nodeId, labelNormalization);
-        }
 
         if (!commit) return { nodes };
 
@@ -1064,13 +996,8 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
     unsetNodeProp: (nodeId, path, commit = true) => {
       setWithIndex((state) => {
         const normalizedPath = normalizeDesignerPatchPath(path);
-        let nodes = patchUnsetNodeProp(state.nodes, nodeId, normalizedPath);
+        const nodes = patchUnsetNodeProp(state.nodes, nodeId, normalizedPath);
         if (nodes === state.nodes) return state;
-
-        const labelNormalization = resolveLabelNormalizationKind(normalizedPath);
-        if (labelNormalization) {
-          nodes = normalizeLabelAfterMutation(nodes, nodeId, labelNormalization);
-        }
 
         if (!commit) return { nodes };
 

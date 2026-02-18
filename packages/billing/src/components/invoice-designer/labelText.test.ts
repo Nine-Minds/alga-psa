@@ -49,7 +49,7 @@ describe('resolveLabelText', () => {
     });
   });
 
-  it('falls back to node name when metadata text fields are empty', () => {
+  it('does not fall back to node name by default when metadata text fields are empty', () => {
     const resolved = resolveLabelText(
       nodeWithProps({
         name: 'Name Fallback',
@@ -61,20 +61,20 @@ describe('resolveLabelText', () => {
     );
 
     expect(resolved).toEqual({
-      text: 'Name Fallback',
-      source: 'name',
+      text: '',
+      source: 'none',
     });
   });
 
-  it('can resolve only explicit metadata text fields without name fallback', () => {
+  it('can include node name fallback when explicitly enabled', () => {
     const resolved = resolveLabelText(
       nodeWithProps({ name: 'Name Fallback', metadata: {} } as any),
-      { includeNameFallback: false }
+      { includeNameFallback: true }
     );
 
     expect(resolved).toEqual({
-      text: '',
-      source: 'none',
+      text: 'Name Fallback',
+      source: 'name',
     });
   });
 

@@ -70,22 +70,24 @@ describe('previewScaffolds', () => {
     expect(resolveFieldPreviewScaffold(dueDate).text).toBe('MM/DD/YYYY');
   });
 
-  it('returns date scaffold for issue/due date name context', () => {
+  it('returns date scaffold for issue/due date metadata label context', () => {
     const dueDate = createNode({
       type: 'field',
       props: {
-        name: 'Due Date',
+        name: 'Any Layer Name',
         metadata: {
           bindingKey: '',
+          label: 'Due Date',
         },
       },
     });
     const issueDate = createNode({
       type: 'field',
       props: {
-        name: 'Issue Date',
+        name: 'Any Layer Name',
         metadata: {
           bindingKey: '',
+          label: 'Issue Date',
         },
       },
     });
@@ -165,7 +167,7 @@ describe('previewScaffolds', () => {
     const emptyLabelNode = createNode({
       type: 'label',
       props: {
-        name: 'PO Number Label',
+        name: 'Layer Name',
         metadata: {
           text: '',
         },
@@ -174,7 +176,7 @@ describe('previewScaffolds', () => {
     const populatedLabelNode = createNode({
       type: 'label',
       props: {
-        name: 'PO Number Label',
+        name: 'Layer Name',
         metadata: {
           text: 'PO Number',
         },
@@ -185,7 +187,7 @@ describe('previewScaffolds', () => {
     const populatedPreview = resolveLabelPreviewScaffold(populatedLabelNode);
 
     expect(emptyPreview.isPlaceholder).toBe(true);
-    expect(emptyPreview.text).toBe('PO Number');
+    expect(emptyPreview.text).toBe('Label');
     expect(populatedPreview.isPlaceholder).toBe(false);
     expect(populatedPreview.text).toBe('PO Number');
   });

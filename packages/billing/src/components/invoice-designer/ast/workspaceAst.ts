@@ -100,11 +100,6 @@ const normalizeInvoiceBindingPath = (bindingKey: string): string => {
   return aliases[normalized] ?? normalized;
 };
 
-const getWorkspaceNodeName = (node: WorkspaceNode): string => {
-  const props = isRecord(node.props) ? node.props : {};
-  return typeof props.name === 'string' ? props.name : node.id;
-};
-
 const getWorkspaceNodeMetadata = (node: WorkspaceNode): UnknownRecord => {
   const props = isRecord(node.props) ? node.props : {};
   return isRecord(props.metadata) ? (props.metadata as UnknownRecord) : {};
@@ -158,11 +153,15 @@ const resolveCollectionPath = (node: WorkspaceNode): string => {
 
 const resolveNodeTextContent = (node: WorkspaceNode): string => {
   const metadata = getWorkspaceNodeMetadata(node);
+  const kindSpecificFallback =
+    asTrimmedString(metadata.title) ||
+    asTrimmedString(metadata.signerLabel) ||
+    asTrimmedString(metadata.placeholder);
   return (
     asTrimmedString(metadata.text) ||
     asTrimmedString(metadata.label) ||
     asTrimmedString(metadata.content) ||
-    getWorkspaceNodeName(node)
+    kindSpecificFallback
   );
 };
 
@@ -597,6 +596,7 @@ const mapDesignerNodeToAstNode = (
     case 'qr': {
       const metadata = getWorkspaceNodeMetadata(node);
       const src = asTrimmedString(metadata.src) || asTrimmedString(metadata.url) || '';
+      const alt = asTrimmedString(metadata.alt);
       const preservedSrcExpression = isInvoiceTemplateValueExpression(metadata.astSrcExpression)
         ? metadata.astSrcExpression
         : null;
@@ -607,7 +607,7 @@ const mapDesignerNodeToAstNode = (
         ...createBaseNode(node),
         type: 'image',
         src: preservedSrcExpression ?? { type: 'literal', value: src },
-        alt: preservedAltExpression ?? { type: 'literal', value: getWorkspaceNodeName(node) },
+        alt: preservedAltExpression ?? { type: 'literal', value: alt },
       };
     }
     case 'signature':
@@ -927,7 +927,6 @@ export const importInvoiceTemplateAstToWorkspace = (
           metadata.astContentExpression = inputNode.content;
           const resolvedText = resolveExpressionPreviewText(inputNode.content, astInput);
           metadata.text = resolvedText;
-          props.name = resolvedText || inputNode.id;
         } else if (inputNode.type === 'field') {
           const bindingPath =
             astInput.bindings?.values?.[inputNode.binding.bindingId]?.path ??
@@ -939,7 +938,6 @@ export const importInvoiceTemplateAstToWorkspace = (
           }
           if (inputNode.label) {
             metadata.label = inputNode.label;
-            props.name = inputNode.label;
           }
           if (typeof inputNode.emptyValue === 'string') {
             metadata.emptyValue = inputNode.emptyValue;
@@ -985,11 +983,9 @@ export const importInvoiceTemplateAstToWorkspace = (
               metadata.alt = String(inputNode.alt.value ?? '');
             }
           }
-          props.name = asTrimmedString(metadata.alt) || props.name;
         } else if (inputNode.type === 'section') {
           if (typeof inputNode.title === 'string' && inputNode.title.trim().length > 0) {
             metadata.title = inputNode.title;
-            props.name = inputNode.title;
           }
         }
 

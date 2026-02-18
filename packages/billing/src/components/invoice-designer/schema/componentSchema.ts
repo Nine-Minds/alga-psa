@@ -290,12 +290,39 @@ const FIELD_INSPECTOR: DesignerInspectorSchema = {
   ],
 };
 
+const TEXT_INSPECTOR: DesignerInspectorSchema = {
+  panels: [
+    {
+      id: 'text-content',
+      title: 'Text Content',
+      fields: [
+        {
+          kind: 'textarea',
+          id: 'text',
+          domId: 'designer-text-content',
+          label: 'Text',
+          path: 'metadata.text',
+          placeholder: 'Enter text or {{binding.path}}',
+        },
+      ],
+    },
+  ],
+};
+
 const LABEL_INSPECTOR: DesignerInspectorSchema = {
   panels: [
     {
       id: 'label-style',
       title: 'Label Text',
       fields: [
+        {
+          kind: 'string',
+          id: 'text',
+          domId: 'designer-label-text',
+          label: 'Text',
+          path: 'metadata.text',
+          placeholder: 'Label',
+        },
         {
           kind: 'enum',
           id: 'fontWeight',
@@ -590,7 +617,7 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
       allowedChildren: [],
       allowedParents: ['column', 'container', 'section'],
     },
-    inspector: COMMON_INSPECTOR,
+    inspector: mergeInspectorSchemas(COMMON_INSPECTOR, TEXT_INSPECTOR),
   },
   totals: {
     type: 'totals',

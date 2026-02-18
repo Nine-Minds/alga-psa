@@ -1424,7 +1424,7 @@ export const DesignerShell: React.FC = () => {
 		          {selectedNode ? (
 		            <div className="space-y-3">
               <div>
-                <label htmlFor="selected-name" className="text-xs text-slate-500 block mb-1">Name</label>
+                <label htmlFor="selected-name" className="text-xs text-slate-500 block mb-1">Layer Name</label>
                 <Input
                   id="selected-name"
                   value={getNodeName(selectedNode)}

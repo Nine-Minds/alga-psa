@@ -411,7 +411,7 @@ const resolveTotalsRowPreviewModel = (
 ): TotalsRowPreviewModel => {
   if (!isTotalsRowType(node.type)) {
     return {
-      label: getNodeName(node),
+      label: 'Value',
       bindingKey: 'binding',
       previewValue: '$0.00',
       isGrandTotal: false,
@@ -420,7 +420,7 @@ const resolveTotalsRowPreviewModel = (
 
   const metadata = getNodeMetadata(node);
   const fallbackLabel = resolveTotalsRowLabelFallback(node.type);
-  const label = asTrimmedString(metadata.label) || asTrimmedString(getNodeName(node)) || fallbackLabel;
+  const label = asTrimmedString(metadata.label) || fallbackLabel;
   const bindingKey = asTrimmedString(metadata.bindingKey) || resolveTotalsRowBindingFallback(node.type);
   const format = normalizeFieldFormat(metadata.format ?? 'currency');
   const boundValue = formatBoundValue(
@@ -609,12 +609,21 @@ const getPreviewContent = (node: DesignerNode, previewData: WasmInvoiceViewModel
       };
     }
     case 'text': {
-      const text = typeof metadata.text === 'string' ? metadata.text : getNodeName(node);
-      const content = text.length > 0 ? text.slice(0, 140) : getNodeName(node);
+      const text =
+        asTrimmedString(metadata.text) ||
+        asTrimmedString(metadata.label) ||
+        asTrimmedString(metadata.content);
+      const content = text.length > 0 ? text.slice(0, 140) : '';
       
       // Check for interpolation variables {{var}}
       const parts = content.split(/(\{\{.*?\}\})/g);
       if (parts.length === 1) {
+        if (content.length === 0) {
+          return {
+            content: renderPlaceholderPreview('Text'),
+            isPlaceholder: true,
+          };
+        }
         return { content };
       }
       

@@ -1,6 +1,6 @@
 import type { DesignerNode } from '../state/designerStore';
 import { resolveLabelText } from '../labelText';
-import { getNodeMetadata, getNodeName } from '../utils/nodeProps';
+import { getNodeMetadata } from '../utils/nodeProps';
 
 type NodeMetadata = Record<string, unknown>;
 
@@ -123,6 +123,10 @@ const inferContextualLabelScaffold = (labelHint: string): string => {
   return 'Label';
 };
 
+const resolveFieldLabelHint = (metadata: NodeMetadata): string =>
+  asTrimmedString(metadata.label) ||
+  asTrimmedString(metadata.text);
+
 export const resolveFieldPreviewScaffold = (node: DesignerNode): EditorPreviewScaffold => {
   const metadata = getNodeMetadata(node) as NodeMetadata;
   const sampleValue = resolveSampleValue(metadata);
@@ -144,7 +148,7 @@ export const resolveFieldPreviewScaffold = (node: DesignerNode): EditorPreviewSc
     text: inferContextualValueScaffold({
       bindingKey,
       placeholderHint,
-      labelHint: getNodeName(node),
+      labelHint: resolveFieldLabelHint(metadata),
       format,
     }),
     isPlaceholder: true,
@@ -160,7 +164,7 @@ export const resolveLabelPreviewScaffold = (node: DesignerNode): EditorPreviewSc
     };
   }
   return {
-    text: inferContextualLabelScaffold(resolveLabelText(node).text),
+    text: inferContextualLabelScaffold(resolveLabelText(node, { includeNameFallback: false }).text),
     isPlaceholder: true,
   };
 };

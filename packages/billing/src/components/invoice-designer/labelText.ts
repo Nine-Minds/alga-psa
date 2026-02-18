@@ -23,12 +23,13 @@ export const resolveLabelText = (
   options: ResolveLabelTextOptions = {}
 ): ResolvedLabelText => {
   const metadata = asRecord(getNodeMetadata(node));
+  const includeNameFallback = options.includeNameFallback === true;
   const candidates: Array<{ source: LabelTextSource; value: string }> = [
     { source: 'metadata.text', value: asTrimmedString(metadata.text) },
     { source: 'metadata.label', value: asTrimmedString(metadata.label) },
   ];
 
-  if (options.includeNameFallback !== false) {
+  if (includeNameFallback) {
     candidates.push({ source: 'name', value: asTrimmedString(getNodeName(node)) });
   }
 
