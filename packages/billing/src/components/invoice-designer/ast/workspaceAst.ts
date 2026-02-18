@@ -115,6 +115,21 @@ const getWorkspaceNodeLayout = (node: WorkspaceNode): Partial<DesignerContainerL
   return isRecord(props.layout) ? (props.layout as Partial<DesignerContainerLayout>) : undefined;
 };
 
+const hasInlineLayoutKeys = (inline: Record<string, unknown> | undefined): boolean => {
+  if (!inline) return false;
+  return (
+    inline.display !== undefined ||
+    inline.flexDirection !== undefined ||
+    inline.justifyContent !== undefined ||
+    inline.alignItems !== undefined ||
+    inline.gap !== undefined ||
+    inline.padding !== undefined ||
+    inline.gridTemplateColumns !== undefined ||
+    inline.gridTemplateRows !== undefined ||
+    inline.gridAutoFlow !== undefined
+  );
+};
+
 const resolveFieldBindingPath = (node: WorkspaceNode): string => {
   const metadata = getWorkspaceNodeMetadata(node);
   const fromMetadata =
@@ -165,7 +180,35 @@ const resolveNodeTextContent = (node: WorkspaceNode): string => {
   );
 };
 
-const createNodeStyle = (node: WorkspaceNode) => {
+const resolveTextNodeContentExpression = (node: WorkspaceNode): InvoiceTemplateValueExpression => {
+  const metadata = getWorkspaceNodeMetadata(node);
+  const currentText = resolveNodeTextContent(node);
+  const preservedExpression = isInvoiceTemplateValueExpression(metadata.astContentExpression)
+    ? metadata.astContentExpression
+    : null;
+
+  if (!preservedExpression) {
+    return { type: 'literal', value: currentText };
+  }
+
+  const importedPreviewText = asTrimmedString(metadata.__astContentPreviewText);
+  if (importedPreviewText.length > 0) {
+    return currentText === importedPreviewText
+      ? preservedExpression
+      : { type: 'literal', value: currentText };
+  }
+
+  if (preservedExpression.type === 'literal') {
+    const preservedLiteral = asTrimmedString(preservedExpression.value);
+    return currentText === preservedLiteral
+      ? preservedExpression
+      : { type: 'literal', value: currentText };
+  }
+
+  return preservedExpression;
+};
+
+const createNodeStyle = (node: WorkspaceNode): InvoiceTemplateNode['style'] | undefined => {
   const inline: Record<string, unknown> = {};
   const style = getWorkspaceNodeStyle(node);
   const metadata = getWorkspaceNodeMetadata(node);
@@ -177,6 +220,10 @@ const createNodeStyle = (node: WorkspaceNode) => {
   const astImported = metadata.__astImported === true;
   const astHadWidth = metadata.__astHadWidth === true;
   const astHadHeight = metadata.__astHadHeight === true;
+  const astHadLayout = metadata.__astHadLayout === true;
+  const styleTokenIds = Array.isArray(metadata.__astStyleTokenIds)
+    ? metadata.__astStyleTokenIds.filter((tokenId: unknown): tokenId is string => typeof tokenId === 'string' && tokenId.trim().length > 0)
+    : [];
 
   if (style.width) {
     inline.width = style.width;
@@ -205,8 +252,27 @@ const createNodeStyle = (node: WorkspaceNode) => {
 
   if (style.aspectRatio) inline.aspectRatio = style.aspectRatio;
   if (style.objectFit) inline.objectFit = style.objectFit;
+  if (style.margin) inline.margin = style.margin;
+  if (style.border) inline.border = style.border;
+  if (style.borderRadius) inline.borderRadius = style.borderRadius;
+  if (style.color) inline.color = style.color;
+  if (style.backgroundColor) inline.backgroundColor = style.backgroundColor;
+  if (style.fontSize) inline.fontSize = style.fontSize;
+  if (style.fontWeight !== undefined) inline.fontWeight = style.fontWeight;
+  if (style.fontFamily) inline.fontFamily = style.fontFamily;
+  if (style.lineHeight !== undefined) inline.lineHeight = style.lineHeight;
+  if (style.textAlign) inline.textAlign = style.textAlign;
+  if (style.display) inline.display = style.display;
+  if (style.flexDirection) inline.flexDirection = style.flexDirection;
+  if (style.justifyContent) inline.justifyContent = style.justifyContent;
+  if (style.alignItems) inline.alignItems = style.alignItems;
+  if (style.gap) inline.gap = style.gap;
+  if (style.padding) inline.padding = style.padding;
+  if (style.gridTemplateColumns) inline.gridTemplateColumns = style.gridTemplateColumns;
+  if (style.gridTemplateRows) inline.gridTemplateRows = style.gridTemplateRows;
+  if (style.gridAutoFlow) inline.gridAutoFlow = style.gridAutoFlow;
 
-  if (layout) {
+  if (layout && (!astImported || astHadLayout)) {
     inline.display = layout.display;
     if (layout.gap) inline.gap = layout.gap;
     if (layout.padding) inline.padding = layout.padding;
@@ -224,7 +290,15 @@ const createNodeStyle = (node: WorkspaceNode) => {
     }
   }
 
-  return { inline };
+  const styleRef: NonNullable<InvoiceTemplateNode['style']> = {};
+  if (styleTokenIds.length > 0) {
+    styleRef.tokenIds = styleTokenIds;
+  }
+  if (Object.keys(inline).length > 0) {
+    styleRef.inline = inline;
+  }
+
+  return Object.keys(styleRef).length > 0 ? styleRef : undefined;
 };
 
 const coerceCssLength = (value: unknown): string | undefined => {
@@ -251,8 +325,34 @@ const coerceNumber = (value: unknown): number | undefined => {
   return undefined;
 };
 
+const coerceString = (value: unknown): string | undefined => {
+  if (typeof value !== 'string') {
+    return undefined;
+  }
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+};
+
+const coerceNumberish = (value: unknown): string | number | undefined => {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value;
+  }
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : undefined;
+  }
+  return undefined;
+};
+
 const coerceObjectFit = (value: unknown): DesignerNodeStyle['objectFit'] | undefined => {
   if (value === 'contain' || value === 'cover' || value === 'fill' || value === 'none' || value === 'scale-down') {
+    return value;
+  }
+  return undefined;
+};
+
+const coerceTextAlign = (value: unknown): DesignerNodeStyle['textAlign'] | undefined => {
+  if (value === 'left' || value === 'center' || value === 'right' || value === 'justify') {
     return value;
   }
   return undefined;
@@ -380,6 +480,64 @@ const coerceNodeStyleFromInlineStyle = (inline: Record<string, unknown> | undefi
   const objectFit = coerceObjectFit(inline.objectFit);
   if (objectFit) style.objectFit = objectFit;
 
+  const margin = coerceCssLength(inline.margin);
+  if (margin) style.margin = margin;
+
+  const border = coerceString(inline.border);
+  if (border) style.border = border;
+
+  const borderRadius = coerceCssLength(inline.borderRadius);
+  if (borderRadius) style.borderRadius = borderRadius;
+
+  const color = coerceString(inline.color);
+  if (color) style.color = color;
+
+  const backgroundColor = coerceString(inline.backgroundColor);
+  if (backgroundColor) style.backgroundColor = backgroundColor;
+
+  const fontSize = coerceCssLength(inline.fontSize);
+  if (fontSize) style.fontSize = fontSize;
+
+  const fontWeight = coerceNumberish(inline.fontWeight);
+  if (fontWeight !== undefined) style.fontWeight = fontWeight;
+
+  const fontFamily = coerceString(inline.fontFamily);
+  if (fontFamily) style.fontFamily = fontFamily;
+
+  const lineHeight = coerceNumberish(inline.lineHeight);
+  if (lineHeight !== undefined) style.lineHeight = lineHeight;
+
+  const textAlign = coerceTextAlign(inline.textAlign);
+  if (textAlign) style.textAlign = textAlign;
+
+  const display = inline.display === 'flex' || inline.display === 'grid' ? inline.display : undefined;
+  if (display) style.display = display;
+
+  const flexDirection =
+    inline.flexDirection === 'row' || inline.flexDirection === 'column' ? inline.flexDirection : undefined;
+  if (flexDirection) style.flexDirection = flexDirection;
+
+  const justifyContent = coerceJustifyContent(inline.justifyContent);
+  if (justifyContent) style.justifyContent = justifyContent;
+
+  const alignItems = coerceAlignItems(inline.alignItems);
+  if (alignItems) style.alignItems = alignItems;
+
+  const gap = coerceCssLength(inline.gap);
+  if (gap) style.gap = gap;
+
+  const padding = coerceCssLength(inline.padding);
+  if (padding) style.padding = padding;
+
+  const gridTemplateColumns = coerceString(inline.gridTemplateColumns);
+  if (gridTemplateColumns) style.gridTemplateColumns = gridTemplateColumns;
+
+  const gridTemplateRows = coerceString(inline.gridTemplateRows);
+  if (gridTemplateRows) style.gridTemplateRows = gridTemplateRows;
+
+  const gridAutoFlow = coerceGridAutoFlow(inline.gridAutoFlow);
+  if (gridAutoFlow) style.gridAutoFlow = gridAutoFlow;
+
   return Object.keys(style).length > 0 ? style : undefined;
 };
 
@@ -425,8 +583,14 @@ const mapTableColumns = (node: WorkspaceNode): InvoiceTemplateTableColumn[] => {
   ];
 };
 
+const getAstNodeId = (node: WorkspaceNode): string => {
+  const metadata = getWorkspaceNodeMetadata(node);
+  const originalId = asTrimmedString(metadata.__astOriginalNodeId);
+  return originalId.length > 0 ? originalId : node.id;
+};
+
 const createBaseNode = (node: WorkspaceNode): Pick<InvoiceTemplateNode, 'id' | 'style'> => ({
-  id: node.id,
+  id: getAstNodeId(node),
   style: createNodeStyle(node),
 });
 
@@ -443,12 +607,33 @@ const mapDesignerNodeToAstNode = (
     .filter((child): child is InvoiceTemplateNode => Boolean(child));
 
   switch (node.type) {
-    case 'document':
+    case 'document': {
+      const mappedChildren: InvoiceTemplateNode[] = [];
+      for (const childId of node.children) {
+        const childNode = nodesById.get(childId);
+        if (!childNode) continue;
+        const mappedChild = mapDesignerNodeToAstNode(childNode, nodesById, registerValueBinding, registerCollectionBinding);
+        if (!mappedChild) continue;
+
+        const childMetadata = getWorkspaceNodeMetadata(childNode);
+        const isSyntheticPage =
+          childNode.type === 'page' &&
+          childMetadata.__astSyntheticPage === true &&
+          mappedChild.type === 'section';
+
+        if (isSyntheticPage) {
+          mappedChildren.push(...mappedChild.children);
+        } else {
+          mappedChildren.push(mappedChild);
+        }
+      }
+
       return {
         ...createBaseNode(node),
         type: 'document',
-        children,
+        children: mappedChildren,
       };
+    }
     case 'page':
     case 'section':
     case 'column':
@@ -480,14 +665,10 @@ const mapDesignerNodeToAstNode = (
 	      }
     case 'text':
     case 'label': {
-      const metadata = getWorkspaceNodeMetadata(node);
-      const preservedExpression = isInvoiceTemplateValueExpression(metadata.astContentExpression)
-        ? metadata.astContentExpression
-        : null;
       return {
         ...createBaseNode(node),
         type: 'text',
-        content: preservedExpression ?? { type: 'literal', value: resolveNodeTextContent(node) },
+        content: resolveTextNodeContentExpression(node),
       };
     }
     case 'field':
@@ -632,8 +813,46 @@ export const exportWorkspaceToInvoiceTemplateAst = (
     (typeof workspace.rootId === 'string' ? (workspace.nodesById?.[workspace.rootId] as WorkspaceNode | undefined) : undefined) ??
     (entries.find(([, node]) => (node as WorkspaceNode).type === 'document')?.[1] as WorkspaceNode | undefined) ??
     (entries[0]?.[1] as WorkspaceNode | undefined);
-  const valueBindings: Record<string, { id: string; kind: 'value'; path: string }> = {};
+  const rootMetadata = root ? getWorkspaceNodeMetadata(root) : {};
+  const importedBindings = isRecord(rootMetadata.__astBindingCatalog)
+    ? (rootMetadata.__astBindingCatalog as UnknownRecord)
+    : null;
+  const importedValueBindings = importedBindings && isRecord(importedBindings.values)
+    ? (importedBindings.values as UnknownRecord)
+    : null;
+  const importedCollectionBindings = importedBindings && isRecord(importedBindings.collections)
+    ? (importedBindings.collections as UnknownRecord)
+    : null;
+
+  const valueBindings: Record<string, { id: string; kind: 'value'; path: string; fallback?: unknown }> = {};
   const collectionBindings: Record<string, { id: string; kind: 'collection'; path: string }> = {};
+
+  if (importedValueBindings) {
+    for (const [bindingId, binding] of Object.entries(importedValueBindings)) {
+      if (!isRecord(binding)) continue;
+      if (binding.kind !== 'value') continue;
+      if (typeof binding.path !== 'string') continue;
+      valueBindings[bindingId] = {
+        id: typeof binding.id === 'string' && binding.id.trim().length > 0 ? binding.id : bindingId,
+        kind: 'value',
+        path: binding.path,
+        ...(Object.prototype.hasOwnProperty.call(binding, 'fallback') ? { fallback: binding.fallback } : {}),
+      };
+    }
+  }
+
+  if (importedCollectionBindings) {
+    for (const [bindingId, binding] of Object.entries(importedCollectionBindings)) {
+      if (!isRecord(binding)) continue;
+      if (binding.kind !== 'collection') continue;
+      if (typeof binding.path !== 'string') continue;
+      collectionBindings[bindingId] = {
+        id: typeof binding.id === 'string' && binding.id.trim().length > 0 ? binding.id : bindingId,
+        kind: 'collection',
+        path: binding.path,
+      };
+    }
+  }
 
   const registerValueBinding = (path: string): string => {
     const normalizedPath = normalizeInvoiceBindingPath(path);
@@ -668,6 +887,12 @@ export const exportWorkspaceToInvoiceTemplateAst = (
   return {
     kind: 'invoice-template-ast',
     version: INVOICE_TEMPLATE_AST_VERSION,
+    metadata: isRecord(rootMetadata.__astTemplateMetadata)
+      ? ({ ...(rootMetadata.__astTemplateMetadata as Record<string, unknown>) } as InvoiceTemplateAst['metadata'])
+      : undefined,
+    styles: isRecord(rootMetadata.__astStyleCatalog)
+      ? ({ ...(rootMetadata.__astStyleCatalog as Record<string, unknown>) } as InvoiceTemplateAst['styles'])
+      : undefined,
     bindings: {
       values: valueBindings,
       collections: collectionBindings,
@@ -765,7 +990,16 @@ export const importInvoiceTemplateAstToWorkspace = (
         type: 'document',
         props: {
           name: 'Document',
-          metadata: {},
+          metadata: {
+            __astImported: true,
+            __astOriginalNodeId: astDocument?.id ?? DOCUMENT_NODE_ID,
+            __astHadWidth: Boolean(documentInline && Object.prototype.hasOwnProperty.call(documentInline, 'width')),
+            __astHadHeight: Boolean(documentInline && Object.prototype.hasOwnProperty.call(documentInline, 'height')),
+            __astHadLayout: hasInlineLayoutKeys(documentInline),
+            __astBindingCatalog: ast.bindings ?? undefined,
+            __astStyleCatalog: ast.styles ?? undefined,
+            __astTemplateMetadata: ast.metadata ?? undefined,
+          },
           layout: documentLayout,
           style: documentStyle,
           size: { width: DESIGNER_CANVAS_BOUNDS.width, height: DESIGNER_CANVAS_BOUNDS.height },
@@ -799,7 +1033,14 @@ export const importInvoiceTemplateAstToWorkspace = (
         type: 'page',
         props: {
           name: 'Page 1',
-          metadata: {},
+          metadata: {
+            __astImported: true,
+            __astSyntheticPage: !astPageSectionCandidate,
+            __astOriginalNodeId: astPageSectionCandidate?.id ?? '',
+            __astHadWidth: Boolean(pageSectionInline && Object.prototype.hasOwnProperty.call(pageSectionInline, 'width')),
+            __astHadHeight: Boolean(pageSectionInline && Object.prototype.hasOwnProperty.call(pageSectionInline, 'height')),
+            __astHadLayout: hasInlineLayoutKeys(pageSectionInline),
+          },
           layout: pageLayout,
           style: pageStyle,
           size: resolvedPageSize,
@@ -920,13 +1161,19 @@ export const importInvoiceTemplateAstToWorkspace = (
         const metadata = isRecord(props.metadata) ? (props.metadata as UnknownRecord) : {};
         const inline = isRecord(inputNode.style?.inline) ? (inputNode.style.inline as Record<string, unknown>) : undefined;
         metadata.__astImported = true;
+        metadata.__astOriginalNodeId = inputNode.id;
         metadata.__astHadWidth = Boolean(inline && Object.prototype.hasOwnProperty.call(inline, 'width'));
         metadata.__astHadHeight = Boolean(inline && Object.prototype.hasOwnProperty.call(inline, 'height'));
+        metadata.__astHadLayout = hasInlineLayoutKeys(inline);
+        metadata.__astStyleTokenIds = Array.isArray(inputNode.style?.tokenIds)
+          ? inputNode.style.tokenIds.filter((tokenId): tokenId is string => typeof tokenId === 'string' && tokenId.trim().length > 0)
+          : undefined;
 
         if (inputNode.type === 'text') {
           metadata.astContentExpression = inputNode.content;
           const resolvedText = resolveExpressionPreviewText(inputNode.content, astInput);
           metadata.text = resolvedText;
+          metadata.__astContentPreviewText = resolvedText;
         } else if (inputNode.type === 'field') {
           const bindingPath =
             astInput.bindings?.values?.[inputNode.binding.bindingId]?.path ??
