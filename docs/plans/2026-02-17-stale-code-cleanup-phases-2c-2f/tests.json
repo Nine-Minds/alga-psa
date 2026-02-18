@@ -89,7 +89,7 @@
   {
     "id": "T010",
     "description": "Task 2e-4: Rewrite email/index.ts to pure re-exports from @alga-psa/email only (no local ./system, ./tenant, ./BaseEmailService). Verify all callers of @/lib/email still resolve. npm run build passes.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F025"
     ]

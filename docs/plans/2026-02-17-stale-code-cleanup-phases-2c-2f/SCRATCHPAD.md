@@ -95,3 +95,5 @@ Must be executed in this exact order:
 - (2026-02-18) Build after Task 2e-2 still fails: missing @dnd-kit/sortable in packages/billing.
 - (2026-02-18) Task 2e-3: surveyService and surveyEmailTemplates test now import DatabaseTemplateProcessor from @alga-psa/email. Email barrel re-exports template processor APIs from package. Deleted server/src/lib/email/tenant/templateProcessors.ts and tenant/ dir.
 - (2026-02-18) Build after Task 2e-3 still fails: missing @dnd-kit/sortable in packages/billing.
+- (2026-02-18) Task 2e-4: Simplified server/src/lib/email/index.ts to a single re-export from @alga-psa/email.
+- (2026-02-18) Build after Task 2e-4 still fails: missing @dnd-kit/sortable in packages/billing.

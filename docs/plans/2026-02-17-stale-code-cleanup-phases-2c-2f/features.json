@@ -194,7 +194,7 @@
   {
     "id": "F025",
     "description": "Task 2e-4: Rewrite server/src/lib/email/index.ts to be a pure re-export barrel from @alga-psa/email only. Remove all local file imports. All callers of @/lib/email must still resolve.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-11"
     ]
