@@ -2,79 +2,120 @@
   {
     "id": "T001",
     "description": "Task 2c-1: Grep-verify each of role.ts, standardServiceType.ts, timeSheetComment.ts, session.tsx, ticketResource.tsx, userPreferences.tsx, notification.ts, index.ts has 0 import references. Delete all 8 files. npm run build passes.",
-    "implemented": false,
-    "featureIds": ["F001", "F002", "F003", "F004", "F005", "F006", "F007", "F008"]
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F002",
+      "F003",
+      "F004",
+      "F005",
+      "F006",
+      "F007",
+      "F008"
+    ]
   },
   {
     "id": "T002",
     "description": "Task 2c-2: Grep-verify PasswordResetService.ts and taskTypeService.ts have 0 import references. Delete both. npm run build passes.",
     "implemented": false,
-    "featureIds": ["F009", "F010"]
+    "featureIds": [
+      "F009",
+      "F010"
+    ]
   },
   {
     "id": "T003",
     "description": "Task 2c-3: Grep-verify each of the 9 dead email files has 0 direct imports. Delete all 9 files/dirs. Confirm system/SystemEmailService.ts, BaseEmailService.ts, tenant/templateProcessors.ts, system/types.ts are NOT deleted. npm run build passes.",
     "implemented": false,
-    "featureIds": ["F011", "F012", "F013", "F014", "F015", "F016", "F017", "F018"]
+    "featureIds": [
+      "F011",
+      "F012",
+      "F013",
+      "F014",
+      "F015",
+      "F016",
+      "F017",
+      "F018"
+    ]
   },
   {
     "id": "T004",
     "description": "Task 2d-1: Find all callers of user-actions/userActions shim. Update each to import from @alga-psa/users/actions. Delete shim + directory. npm run build passes.",
     "implemented": false,
-    "featureIds": ["F019"]
+    "featureIds": [
+      "F019"
+    ]
   },
   {
     "id": "T005",
     "description": "Task 2d-2: Find all callers of eventBus/events shim. Update each to import from @alga-psa/event-schemas. Delete shim. npm run build passes.",
     "implemented": false,
-    "featureIds": ["F020"]
+    "featureIds": [
+      "F020"
+    ]
   },
   {
     "id": "T006",
     "description": "Task 2d-3: Grep-verify all 23 callers of auth/getSession shim (12 server + 11 EE). Verify getSession and getSessionWithRevocationCheck are exported from @alga-psa/auth. Update all 23 callers. Delete shim. npm run build passes.",
     "implemented": false,
-    "featureIds": ["F021"]
+    "featureIds": [
+      "F021"
+    ]
   },
   {
     "id": "T007",
     "description": "Task 2e-1: Verify SystemEmailService is exported from @alga-psa/email. Update appointment-request/route.ts import. Delete system/SystemEmailService.ts, system/types.ts, system/ dir. npm run build passes.",
     "implemented": false,
-    "featureIds": ["F022"]
+    "featureIds": [
+      "F022"
+    ]
   },
   {
     "id": "T008",
     "description": "Task 2e-2: Verify BaseEmailService is exported from @alga-psa/email. Update outboundEmailWorkflowEvents.test.ts import. Delete BaseEmailService.ts. npm run build passes.",
     "implemented": false,
-    "featureIds": ["F023"]
+    "featureIds": [
+      "F023"
+    ]
   },
   {
     "id": "T009",
     "description": "Task 2e-3: Verify DatabaseTemplateProcessor is exported from @alga-psa/email (check which of the two package locations is in the barrel). Update surveyService.ts and surveyEmailTemplates test. Delete tenant/templateProcessors.ts and tenant/ dir. npm run build passes.",
     "implemented": false,
-    "featureIds": ["F024"]
+    "featureIds": [
+      "F024"
+    ]
   },
   {
     "id": "T010",
     "description": "Task 2e-4: Rewrite email/index.ts to pure re-exports from @alga-psa/email only (no local ./system, ./tenant, ./BaseEmailService). Verify all callers of @/lib/email still resolve. npm run build passes.",
     "implemented": false,
-    "featureIds": ["F025"]
+    "featureIds": [
+      "F025"
+    ]
   },
   {
     "id": "T011",
     "description": "Task 2f-1: Verify @alga-psa/notifications exports all types from internalNotification (InternalNotification, CreateInternalNotificationRequest, etc.). Find all 9 callers. Update imports. Delete server model. npm run build passes.",
     "implemented": false,
-    "featureIds": ["F026"]
+    "featureIds": [
+      "F026"
+    ]
   },
   {
     "id": "T012",
     "description": "Task 2f-2: Verify @alga-psa/documents/models/documentAssociation exports DocumentAssociation with compatible API. Update EntityImageService.ts, documentPermissionUtils.ts, test. Delete server model. npm run build passes.",
     "implemented": false,
-    "featureIds": ["F027"]
+    "featureIds": [
+      "F027"
+    ]
   },
   {
     "id": "T013",
     "description": "Task 2f-3: Add consumePortalDomainOtt, pruneExpiredPortalDomainOtts, __setPortalDomainOttConnectionFactoryForTests exports to @alga-psa/auth barrel. Find all 4 callers. Update imports. Delete server model. npm run build passes.",
     "implemented": false,
-    "featureIds": ["F028"]
+    "featureIds": [
+      "F028"
+    ]
   }
 ]

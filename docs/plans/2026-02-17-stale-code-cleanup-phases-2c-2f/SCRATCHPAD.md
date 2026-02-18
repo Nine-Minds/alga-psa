@@ -13,7 +13,7 @@ Working memory for the stale code cleanup. Append discoveries as tasks are execu
 - (2026-02-17) Process tasks strictly in order: 2c -> 2d -> 2e -> 2f. Each task must build green before next.
 - (2026-02-17) Always grep-verify caller counts before deleting. The counts in this plan are from 2026-02-17 and code changes daily.
 - (2026-02-17) Do NOT delete files that have callers unless those callers are updated first in the same task.
-- (2026-02-17) **Git strategy:** Create branch `stale-code-cleanup-2c-2f`. One commit per task (13 total). Grep verifications and build checks are internal steps within each task, not separate commits. Commit message format: `chore: delete orphaned models (Task 2c-1)` etc.
+- (2026-02-17) **Git strategy:** Use branch `cleanup_phase_2_again`. One commit per task (13 total). Grep verifications and build checks are internal steps within each task, not separate commits. Commit message format: `chore: delete orphaned models (Task 2c-1)` etc.
 - (2026-02-17) Task 2f-3 (PortalDomainSessionToken) requires adding exports to @alga-psa/auth barrel since the package file exists but isn't exported. Server version has server-specific deps (analytics, sessionCookies types) that the package version resolved internally.
 - (2026-02-17) For email migration (Phase 2e), DatabaseTemplateProcessor exists in TWO locations in the email package: `packages/email/src/templateProcessors.ts` AND `packages/email/src/tenant/templateProcessors.ts`. Verify which one is exported from the package barrel before updating callers.
 
@@ -74,3 +74,6 @@ Must be executed in this exact order:
 
 - Should we also delete `server/src/lib/email/README.md` if it exists? (Low priority, doesn't affect build)
 - After Phase 2f, how many models remain in `server/src/lib/models/`? Expected: 5 (contact.tsx, ticketCategory.tsx, documentBlockContent.tsx, document-association.tsx if 2f-2 fails, internalNotification.ts if 2f-1 fails)
+
+## Updates
+- (2026-02-18) Task 2c-1: rg-verified no callers, deleted orphaned models role.ts, standardServiceType.ts, timeSheetComment.ts, session.tsx, ticketResource.tsx, userPreferences.tsx, notification.ts and empty models/index.ts.
