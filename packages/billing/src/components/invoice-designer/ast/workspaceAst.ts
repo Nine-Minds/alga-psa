@@ -1,4 +1,11 @@
-import type { InvoiceTemplateAst, InvoiceTemplateNode, InvoiceTemplateTableColumn } from '@alga-psa/types';
+import type {
+  InvoiceTemplateAst,
+  InvoiceTemplateNode,
+  InvoiceTemplateTableColumn,
+  InvoiceTemplateTotalsRow,
+  InvoiceTemplateValueExpression,
+  InvoiceTemplateValueFormat,
+} from '@alga-psa/types';
 import { INVOICE_TEMPLATE_AST_VERSION } from '@alga-psa/types';
 import type {
   DesignerComponentType,
@@ -19,6 +26,52 @@ const isRecord = (value: unknown): value is UnknownRecord =>
 
 const asTrimmedString = (value: unknown): string =>
   typeof value === 'string' ? value.trim() : '';
+
+const isInvoiceTemplateValueFormat = (value: unknown): value is InvoiceTemplateValueFormat =>
+  value === 'text' || value === 'number' || value === 'currency' || value === 'date';
+
+const parseInvoiceTemplateValueFormat = (value: unknown): InvoiceTemplateValueFormat | undefined =>
+  isInvoiceTemplateValueFormat(value) ? value : undefined;
+
+const isInvoiceTemplateValueExpression = (value: unknown): value is InvoiceTemplateValueExpression => {
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  if (value.type === 'literal') {
+    return 'value' in value;
+  }
+  if (value.type === 'binding') {
+    return typeof value.bindingId === 'string';
+  }
+  if (value.type === 'path') {
+    return typeof value.path === 'string';
+  }
+  if (value.type === 'template') {
+    return typeof value.template === 'string';
+  }
+  return false;
+};
+
+const resolveExpressionPreviewText = (
+  expression: InvoiceTemplateValueExpression,
+  astInput: InvoiceTemplateAst
+): string => {
+  if (expression.type === 'literal') {
+    return String(expression.value ?? '');
+  }
+  if (expression.type === 'binding') {
+    const bindingPath =
+      astInput.bindings?.values?.[expression.bindingId]?.path ??
+      astInput.bindings?.collections?.[expression.bindingId]?.path ??
+      expression.bindingId;
+    return `{{${denormalizeBindingPath(bindingPath)}}}`;
+  }
+  if (expression.type === 'path') {
+    return `{{${denormalizeBindingPath(expression.path)}}}`;
+  }
+  return expression.template;
+};
 
 const sanitizeId = (value: string): string =>
   value.replace(/[^a-zA-Z0-9_.-]+/g, '_').replace(/^_+|_+$/g, '');
@@ -116,14 +169,31 @@ const resolveNodeTextContent = (node: WorkspaceNode): string => {
 const createNodeStyle = (node: WorkspaceNode) => {
   const inline: Record<string, unknown> = {};
   const style = getWorkspaceNodeStyle(node);
+  const metadata = getWorkspaceNodeMetadata(node);
   const layout = getWorkspaceNodeLayout(node);
   const props = isRecord(node.props) ? node.props : {};
   const sizeFromProps = isRecord(props.size) ? (props.size as UnknownRecord) : null;
   const widthFromSize = sizeFromProps && typeof sizeFromProps.width === 'number' ? `${sizeFromProps.width}px` : undefined;
   const heightFromSize = sizeFromProps && typeof sizeFromProps.height === 'number' ? `${sizeFromProps.height}px` : undefined;
+  const astImported = metadata.__astImported === true;
+  const astHadWidth = metadata.__astHadWidth === true;
+  const astHadHeight = metadata.__astHadHeight === true;
 
-  inline.width = style.width ?? widthFromSize ?? '1px';
-  inline.height = style.height ?? heightFromSize ?? '1px';
+  if (style.width) {
+    inline.width = style.width;
+  } else if (!astImported || astHadWidth) {
+    if (widthFromSize) {
+      inline.width = widthFromSize;
+    }
+  }
+
+  if (style.height) {
+    inline.height = style.height;
+  } else if (!astImported || astHadHeight) {
+    if (heightFromSize) {
+      inline.height = heightFromSize;
+    }
+  }
 
   if (style.minWidth) inline.minWidth = style.minWidth;
   if (style.minHeight) inline.minHeight = style.minHeight;
@@ -218,17 +288,45 @@ const coerceGridAutoFlow = (value: unknown): DesignerContainerLayout['gridAutoFl
 };
 
 const coerceContainerLayoutFromInlineStyle = (
-  inline: Record<string, unknown> | undefined
+  inline: Record<string, unknown> | undefined,
+  preferredDirection?: 'row' | 'column'
 ): DesignerContainerLayout | undefined => {
-  if (!inline) return undefined;
-  const display = inline.display === 'flex' || inline.display === 'grid' ? inline.display : undefined;
+  if (!inline) {
+    if (!preferredDirection) {
+      return undefined;
+    }
+    return {
+      display: 'flex',
+      flexDirection: preferredDirection,
+      justifyContent: undefined,
+      alignItems: undefined,
+      gap: undefined,
+      padding: undefined,
+    };
+  }
+  const inferredFlexDisplay =
+    preferredDirection !== undefined ||
+    inline.gap !== undefined ||
+    inline.padding !== undefined ||
+    inline.justifyContent !== undefined ||
+    inline.alignItems !== undefined ||
+    inline.flexDirection !== undefined;
+  const display =
+    inline.display === 'flex' || inline.display === 'grid'
+      ? inline.display
+      : inferredFlexDisplay
+        ? 'flex'
+        : undefined;
   if (!display) return undefined;
 
   const gap = coerceCssLength(inline.gap);
   const padding = coerceCssLength(inline.padding);
 
   if (display === 'flex') {
-    const flexDirection = inline.flexDirection === 'row' || inline.flexDirection === 'column' ? inline.flexDirection : undefined;
+    const flexDirection =
+      inline.flexDirection === 'row' || inline.flexDirection === 'column'
+        ? inline.flexDirection
+        : preferredDirection;
     const justifyContent = coerceJustifyContent(inline.justifyContent);
     const alignItems = coerceAlignItems(inline.alignItems);
     return {
@@ -300,11 +398,20 @@ const mapTableColumns = (node: WorkspaceNode): InvoiceTemplateTableColumn[] => {
       const key = normalizeInvoiceBindingPath(
         asTrimmedString(column.key) || asTrimmedString(column.path) || asTrimmedString(column.bindingKey)
       );
-      return {
+      const preservedExpression = isInvoiceTemplateValueExpression(column.valueExpression)
+        ? column.valueExpression
+        : null;
+      const parsedFormat = parseInvoiceTemplateValueFormat(column.format ?? column.type);
+
+      const mapped: InvoiceTemplateTableColumn = {
         id: sanitizeId(id),
         header: header.length > 0 ? header : undefined,
-        value: { type: 'path', path: key.length > 0 ? key : 'description' },
+        value: preservedExpression ?? { type: 'path', path: key.length > 0 ? key : 'description' },
       };
+      if (parsedFormat) {
+        mapped.format = parsedFormat;
+      }
+      return mapped;
     })
     .filter((column): column is InvoiceTemplateTableColumn => Boolean(column));
 
@@ -343,42 +450,74 @@ const mapDesignerNodeToAstNode = (
         type: 'document',
         children,
       };
-	    case 'page':
-	    case 'section':
-	    case 'column':
-	      return {
-	        ...createBaseNode(node),
-	        type: 'section',
-	        title: node.type === 'section' ? getWorkspaceNodeName(node) : undefined,
-	        children,
-	      };
+    case 'page':
+    case 'section':
+    case 'column':
+      {
+        const metadata = getWorkspaceNodeMetadata(node);
+        const explicitTitle = asTrimmedString(metadata.title);
+      return {
+        ...createBaseNode(node),
+        type: 'section',
+        title: node.type === 'section' && explicitTitle.length > 0 ? explicitTitle : undefined,
+        children,
+      };
+      }
 	    case 'container':
-	      return {
-	        ...createBaseNode(node),
-	        type: 'stack',
-	        children,
-	      };
+	      {
+	        const layout = getWorkspaceNodeLayout(node);
+	        const direction =
+	          layout?.display === 'flex'
+	            ? layout.flexDirection === 'row'
+	              ? 'row'
+	              : 'column'
+	            : undefined;
+	        return {
+	          ...createBaseNode(node),
+	          type: 'stack',
+	          direction,
+	          children,
+	        };
+	      }
     case 'text':
-    case 'label':
+    case 'label': {
+      const metadata = getWorkspaceNodeMetadata(node);
+      const preservedExpression = isInvoiceTemplateValueExpression(metadata.astContentExpression)
+        ? metadata.astContentExpression
+        : null;
       return {
         ...createBaseNode(node),
         type: 'text',
-        content: { type: 'literal', value: resolveNodeTextContent(node) },
+        content: preservedExpression ?? { type: 'literal', value: resolveNodeTextContent(node) },
       };
+    }
     case 'field':
     case 'subtotal':
     case 'tax':
     case 'discount':
     case 'custom-total': {
+      const metadata = getWorkspaceNodeMetadata(node);
       const bindingPath = resolveFieldBindingPath(node);
       const bindingId = registerValueBinding(bindingPath);
-      return {
+      const explicitLabel = asTrimmedString(metadata.label);
+      const format = parseInvoiceTemplateValueFormat(metadata.format);
+      const emptyValue = asTrimmedString(metadata.emptyValue);
+      const mapped: InvoiceTemplateNode = {
         ...createBaseNode(node),
         type: 'field',
         binding: { bindingId },
-        label: node.type === 'field' ? undefined : resolveNodeTextContent(node),
-        emptyValue: '',
+        label:
+          node.type === 'field'
+            ? explicitLabel.length > 0
+              ? explicitLabel
+              : undefined
+            : resolveNodeTextContent(node),
+        emptyValue: emptyValue.length > 0 ? emptyValue : '',
       };
+      if (format) {
+        mapped.format = format;
+      }
+      return mapped;
     }
     case 'table':
     case 'dynamic-table': {
@@ -395,16 +534,58 @@ const mapDesignerNodeToAstNode = (
       };
     }
     case 'totals':
-      return {
-        ...createBaseNode(node),
-        type: 'totals',
-        sourceBinding: { bindingId: registerCollectionBinding('lineItems.shaped') },
-        rows: [
-          { id: 'subtotal', label: 'Subtotal', value: { type: 'path', path: 'subtotal' } },
-          { id: 'tax', label: 'Tax', value: { type: 'path', path: 'tax' } },
-          { id: 'total', label: 'Total', value: { type: 'path', path: 'total' }, emphasize: true },
-        ],
-      };
+      {
+        const metadata = getWorkspaceNodeMetadata(node);
+        const sourceBindingPath = resolveCollectionPath(node);
+        const rowsSource = Array.isArray(metadata.totalsRows) ? metadata.totalsRows : [];
+        const rows: InvoiceTemplateTotalsRow[] =
+          rowsSource
+            .map((row, index): InvoiceTemplateTotalsRow | null => {
+              if (!isRecord(row)) {
+                return null;
+              }
+              const id = asTrimmedString(row.id) || `row-${index + 1}`;
+              const label = asTrimmedString(row.label) || id;
+              const preservedValue = isInvoiceTemplateValueExpression(row.valueExpression)
+                ? row.valueExpression
+                : null;
+              const valuePath = normalizeInvoiceBindingPath(asTrimmedString(row.valuePath));
+              const format = parseInvoiceTemplateValueFormat(row.format ?? row.type);
+              const mappedRow: InvoiceTemplateTotalsRow = {
+                id: sanitizeId(id),
+                label,
+                value: preservedValue ?? { type: 'path', path: valuePath.length > 0 ? valuePath : 'total' },
+              };
+              if (format) {
+                mappedRow.format = format;
+              }
+              if (row.emphasize === true) {
+                mappedRow.emphasize = true;
+              }
+              return mappedRow;
+            })
+            .filter((row): row is InvoiceTemplateTotalsRow => Boolean(row));
+
+        return {
+          ...createBaseNode(node),
+          type: 'totals',
+          sourceBinding: { bindingId: registerCollectionBinding(sourceBindingPath) },
+          rows:
+            rows.length > 0
+              ? rows
+              : [
+                  { id: 'subtotal', label: 'Subtotal', value: { type: 'path', path: 'subtotal' }, format: 'currency' },
+                  { id: 'tax', label: 'Tax', value: { type: 'path', path: 'tax' }, format: 'currency' },
+                  {
+                    id: 'total',
+                    label: 'Total',
+                    value: { type: 'path', path: 'total' },
+                    format: 'currency',
+                    emphasize: true,
+                  },
+                ],
+        };
+      }
     case 'divider':
     case 'spacer':
       return {
@@ -416,11 +597,17 @@ const mapDesignerNodeToAstNode = (
     case 'qr': {
       const metadata = getWorkspaceNodeMetadata(node);
       const src = asTrimmedString(metadata.src) || asTrimmedString(metadata.url) || '';
+      const preservedSrcExpression = isInvoiceTemplateValueExpression(metadata.astSrcExpression)
+        ? metadata.astSrcExpression
+        : null;
+      const preservedAltExpression = isInvoiceTemplateValueExpression(metadata.astAltExpression)
+        ? metadata.astAltExpression
+        : null;
       return {
         ...createBaseNode(node),
         type: 'image',
-        src: { type: 'literal', value: src },
-        alt: { type: 'literal', value: getWorkspaceNodeName(node) },
+        src: preservedSrcExpression ?? { type: 'literal', value: src },
+        alt: preservedAltExpression ?? { type: 'literal', value: getWorkspaceNodeName(node) },
       };
     }
     case 'signature':
@@ -518,10 +705,9 @@ const denormalizeBindingPath = (path: string): string => {
   return aliases[path] ?? path;
 };
 
-const parseSizeFromStyle = (node: InvoiceTemplateNode): { width: number; height: number } => {
+const parseSizeFromStyle = (node: InvoiceTemplateNode): { width?: number; height?: number } => {
   const inline = node.style?.inline ?? {};
-  const defaultSize = getDefinition('text')?.defaultSize ?? { width: 180, height: 48 };
-  const parse = (value: unknown, fallback: number): number => {
+  const parse = (value: unknown): number | undefined => {
     if (typeof value === 'number' && Number.isFinite(value)) {
       return Math.max(1, value);
     }
@@ -531,11 +717,11 @@ const parseSizeFromStyle = (node: InvoiceTemplateNode): { width: number; height:
         return Math.max(1, numeric);
       }
     }
-    return fallback;
+    return undefined;
   };
   return {
-    width: parse(inline.width, defaultSize.width),
-    height: parse(inline.height, defaultSize.height),
+    width: parse(inline.width),
+    height: parse(inline.height),
   };
 };
 
@@ -636,7 +822,8 @@ export const importInvoiceTemplateAstToWorkspace = (
         const size = parseSizeFromStyle(inputNode);
         const inline = isRecord(inputNode.style?.inline) ? (inputNode.style?.inline as Record<string, unknown>) : undefined;
         const styleFromInline = coerceNodeStyleFromInlineStyle(inline);
-        const layoutFromInline = coerceContainerLayoutFromInlineStyle(inline);
+        const preferredDirection = inputNode.type === 'stack' ? inputNode.direction : undefined;
+        const layoutFromInline = coerceContainerLayoutFromInlineStyle(inline, preferredDirection);
 
         const isFixedFrame = designerType === 'document' || designerType === 'page';
         const defaultContainerLayout: DesignerContainerLayout | undefined =
@@ -677,9 +864,11 @@ export const importInvoiceTemplateAstToWorkspace = (
             ? layoutFromInline ?? defaultContainerLayout
             : undefined;
 
+        const parsedWidth = typeof size.width === 'number' && Number.isFinite(size.width) ? size.width : undefined;
+        const parsedHeight = typeof size.height === 'number' && Number.isFinite(size.height) ? size.height : undefined;
         const resolvedSize = {
-          width: Number.isFinite(size.width) ? size.width : def?.defaultSize.width ?? 220,
-          height: Number.isFinite(size.height) ? size.height : def?.defaultSize.height ?? 56,
+          width: parsedWidth ?? def?.defaultSize.width ?? 220,
+          height: parsedHeight ?? def?.defaultSize.height ?? 56,
         };
 
         const resolvedPosition = isFixedFrame
@@ -729,21 +918,31 @@ export const importInvoiceTemplateAstToWorkspace = (
 
         const props = isRecord(nextNode.props) ? nextNode.props : {};
         const metadata = isRecord(props.metadata) ? (props.metadata as UnknownRecord) : {};
+        const inline = isRecord(inputNode.style?.inline) ? (inputNode.style.inline as Record<string, unknown>) : undefined;
+        metadata.__astImported = true;
+        metadata.__astHadWidth = Boolean(inline && Object.prototype.hasOwnProperty.call(inline, 'width'));
+        metadata.__astHadHeight = Boolean(inline && Object.prototype.hasOwnProperty.call(inline, 'height'));
 
         if (inputNode.type === 'text') {
-          if (inputNode.content.type === 'literal') {
-            metadata.text = String(inputNode.content.value ?? '');
-            props.name = String(inputNode.content.value ?? inputNode.id);
-          }
+          metadata.astContentExpression = inputNode.content;
+          const resolvedText = resolveExpressionPreviewText(inputNode.content, astInput);
+          metadata.text = resolvedText;
+          props.name = resolvedText || inputNode.id;
         } else if (inputNode.type === 'field') {
           const bindingPath =
             astInput.bindings?.values?.[inputNode.binding.bindingId]?.path ??
             astInput.bindings?.collections?.[inputNode.binding.bindingId]?.path ??
             inputNode.binding.bindingId;
           metadata.bindingKey = denormalizeBindingPath(bindingPath);
+          if (inputNode.format) {
+            metadata.format = inputNode.format;
+          }
           if (inputNode.label) {
             metadata.label = inputNode.label;
             props.name = inputNode.label;
+          }
+          if (typeof inputNode.emptyValue === 'string') {
+            metadata.emptyValue = inputNode.emptyValue;
           }
         } else if (inputNode.type === 'dynamic-table' || inputNode.type === 'table') {
           const collectionPath =
@@ -757,7 +956,41 @@ export const importInvoiceTemplateAstToWorkspace = (
             id: column.id,
             header: column.header,
             key: column.value.type === 'path' ? `item.${column.value.path}` : column.id,
+            valueExpression: column.value,
+            type: column.format,
+            format: column.format,
           }));
+        } else if (inputNode.type === 'totals') {
+          const sourcePath =
+            astInput.bindings?.collections?.[inputNode.sourceBinding.bindingId]?.path ??
+            inputNode.sourceBinding.bindingId;
+          metadata.collectionBindingKey = denormalizeBindingPath(sourcePath);
+          metadata.totalsRows = inputNode.rows.map((row) => ({
+            id: row.id,
+            label: row.label,
+            valueExpression: row.value,
+            valuePath: row.value.type === 'path' ? row.value.path : '',
+            type: row.format,
+            format: row.format,
+            emphasize: row.emphasize === true,
+          }));
+        } else if (inputNode.type === 'image') {
+          metadata.astSrcExpression = inputNode.src;
+          if (inputNode.src.type === 'literal') {
+            metadata.src = String(inputNode.src.value ?? '');
+          }
+          if (inputNode.alt) {
+            metadata.astAltExpression = inputNode.alt;
+            if (inputNode.alt.type === 'literal') {
+              metadata.alt = String(inputNode.alt.value ?? '');
+            }
+          }
+          props.name = asTrimmedString(metadata.alt) || props.name;
+        } else if (inputNode.type === 'section') {
+          if (typeof inputNode.title === 'string' && inputNode.title.trim().length > 0) {
+            metadata.title = inputNode.title;
+            props.name = inputNode.title;
+          }
         }
 
         nextNode.props = {
