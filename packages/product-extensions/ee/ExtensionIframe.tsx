@@ -50,15 +50,13 @@ function extractThemeVariables(): Record<string, string> {
     '--alga-accent': rgbToHex(getVar('--color-accent-500')),
     '--alga-accent-foreground': '#ffffff',
 
-    // Destructive
-    '--alga-danger': '#dc2626',
-    '--alga-danger-dark': rgbToHex(getVar('--color-accent-600')),
+    // Destructive / Status
+    '--alga-danger': rgbToHex(getVar('--color-status-error')),
+    '--alga-danger-dark': rgbToHex(getVar('--color-destructive')),
 
     // Text colors
     '--alga-fg': rgbToHex(getVar('--color-text-900')),
-    '--alga-fg-muted': rgbToHex(getVar('--color-text-500')),
     '--alga-muted-fg': rgbToHex(getVar('--color-text-500')),
-    '--alga-fg-light': rgbToHex(getVar('--color-text-400')),
 
     // Border colors
     '--alga-border': rgbToHex(getVar('--color-border-200')),
@@ -81,11 +79,11 @@ function extractThemeVariables(): Record<string, string> {
     '--alga-primary-border': rgbToHex(getVar('--color-primary-400')),
 
     // Success/Warning
-    '--alga-success': '#22c55e',
-    '--alga-warning': '#f59e0b',
+    '--alga-success': rgbToHex(getVar('--color-status-success')),
+    '--alga-warning': rgbToHex(getVar('--color-status-warning')),
 
     // Layout
-    '--alga-radius': '8px',
+    '--alga-radius': getVar('--radius-lg') || '8px',
     '--alga-ring': '0 0% 0%',
   };
 }
