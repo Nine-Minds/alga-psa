@@ -54,6 +54,15 @@ WORKDIR /app/ee/temporal-workflows
 RUN npm install
 WORKDIR /app
 RUN npm install --ignore-scripts --workspaces=false --legacy-peer-deps
+
+# Build packages whose "main" points to dist/ (needed at runtime)
+WORKDIR /app/packages/event-schemas
+RUN npx tsup
+WORKDIR /app/packages/core
+RUN npx tsc -b
+WORKDIR /app/packages/db
+RUN npx tsc -b
+
 WORKDIR /app/ee/temporal-workflows
 RUN npm run build
 
@@ -110,6 +119,10 @@ COPY --from=development /app/shared /app/shared
 # Copy built temporal-workflows
 COPY --from=development /app/ee/temporal-workflows/dist /app/ee/temporal-workflows/dist
 COPY --from=development /app/ee/temporal-workflows/node_modules /app/ee/temporal-workflows/node_modules
+# Copy built package dist directories needed at runtime
+COPY --from=development /app/packages/event-schemas/dist /app/packages/event-schemas/dist
+COPY --from=development /app/packages/core/dist /app/packages/core/dist
+COPY --from=development /app/packages/db/dist /app/packages/db/dist
 # Copy integrations node_modules to both locations for module resolution
 COPY --from=development /app/packages/integrations/node_modules /app/packages/integrations/node_modules
 COPY --from=development /app/packages/integrations/node_modules /app/ee/temporal-workflows/dist/packages/integrations/node_modules
