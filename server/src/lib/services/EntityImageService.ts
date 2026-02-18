@@ -91,13 +91,13 @@ export async function uploadEntityImage(
       }
 
       // Step 2: Create the new association, marking it as the logo if applicable.
-      await DocumentAssociation.create({
+      await DocumentAssociation.create(trx, {
         document_id: document.document_id,
         entity_id: entityId,
         entity_type: entityType,
         tenant,
         is_entity_logo: isLogoUpload || false,
-      }, trx);
+      });
 
       return document;
     });
@@ -279,13 +279,13 @@ export async function linkExistingDocumentAsEntityImage(
           .update({ is_entity_logo: true });
       } else {
         // Create new association
-        await DocumentAssociation.create({
+        await DocumentAssociation.create(trx, {
           document_id: documentId,
           entity_id: entityId,
           entity_type: entityType,
           tenant,
           is_entity_logo: true,
-        }, trx);
+        });
       }
 
       // Get the image URL for the response

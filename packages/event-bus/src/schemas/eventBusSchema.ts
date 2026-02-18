@@ -52,6 +52,9 @@ export const EventTypeEnum = z.enum([
   'APPOINTMENT_REQUEST_APPROVED',
   'APPOINTMENT_REQUEST_DECLINED',
   'APPOINTMENT_REQUEST_CANCELLED',
+  'APPOINTMENT_ASSIGNED',
+  'NOTIFICATION_SENT',
+  'NOTIFICATION_DELIVERED',
   'SURVEY_INVITATION_SENT',
   'SURVEY_RESPONSE_SUBMITTED',
   'SURVEY_NEGATIVE_RESPONSE',
@@ -407,11 +410,43 @@ export const DocumentMentionPayloadSchema = BasePayloadSchema.extend({
 });
 
 export const AppointmentRequestEventPayloadSchema = BasePayloadSchema.extend({
-  requestId: z.string().uuid(),
-  ticketId: z.string().uuid().optional(),
+  appointmentRequestId: z.string().uuid(),
+  clientId: z.string().uuid().optional(),
   contactId: z.string().uuid().optional(),
-  userId: z.string().uuid().optional(),
+  clientUserId: z.string().uuid().optional(),
+  serviceId: z.string().uuid(),
+  serviceName: z.string(),
+  requestedDate: z.string(),
+  requestedTime: z.string(),
+  requestedDuration: z.number(),
+  preferredAssignedUserId: z.string().uuid().optional(),
+  isAuthenticated: z.boolean(),
+  requesterName: z.string().nullable().optional(),
+  requesterEmail: z.string(),
+  requesterPhone: z.string().nullable().optional(),
+  clientName: z.string().nullable().optional(),
+  ticketId: z.string().uuid().optional(),
+  description: z.string().optional(),
+  approvedByUserId: z.string().uuid().optional(),
+  assignedUserId: z.string().uuid().optional(),
+  scheduleEntryId: z.string().uuid().optional(),
+  declineReason: z.string().optional(),
 });
+
+// Appointment assignment payload schema
+export const AppointmentAssignedPayloadSchema = BasePayloadSchema.extend({
+  appointmentId: z.string().uuid(),
+  ticketId: z.string().uuid().optional(),
+  previousAssigneeId: z.string().uuid().optional(),
+  previousAssigneeType: z.enum(['user', 'team']).optional(),
+  newAssigneeId: z.string().uuid(),
+  newAssigneeType: z.enum(['user', 'team']),
+  assignedAt: z.string().datetime().optional(),
+});
+
+// Notification event payload schemas
+export const NotificationSentPayloadSchema = BasePayloadSchema.extend({});
+export const NotificationDeliveredPayloadSchema = BasePayloadSchema.extend({});
 
 // Survey/CSAT event payload schemas.
 // Keep validation permissive while requiring tenant context so workflow/domain payloads can evolve.
@@ -547,6 +582,9 @@ export const EventPayloadSchemas = {
   APPOINTMENT_REQUEST_APPROVED: AppointmentRequestEventPayloadSchema,
   APPOINTMENT_REQUEST_DECLINED: AppointmentRequestEventPayloadSchema,
   APPOINTMENT_REQUEST_CANCELLED: AppointmentRequestEventPayloadSchema,
+  APPOINTMENT_ASSIGNED: AppointmentAssignedPayloadSchema,
+  NOTIFICATION_SENT: NotificationSentPayloadSchema,
+  NOTIFICATION_DELIVERED: NotificationDeliveredPayloadSchema,
   SURVEY_INVITATION_SENT: SurveyInvitationSentPayloadSchema,
   SURVEY_RESPONSE_SUBMITTED: SurveyResponseSubmittedPayloadSchema,
   SURVEY_NEGATIVE_RESPONSE: SurveyNegativeResponsePayloadSchema,

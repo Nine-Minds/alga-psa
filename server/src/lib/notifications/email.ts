@@ -26,7 +26,7 @@ import {
   UserNotificationPreference,
   NotificationLog,
   NotificationService
-} from '../models/notification';
+} from '@alga-psa/notifications';
 import { EmailProviderManager } from '@alga-psa/email';
 import { TenantEmailSettings, EmailMessage } from '@alga-psa/types';
 import { TenantEmailService } from '@alga-psa/email';
