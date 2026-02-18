@@ -146,7 +146,7 @@
   {
     "id": "F019",
     "description": "Task 2d-1: Delete shim server/src/lib/user-actions/userActions.ts (pure re-export of @alga-psa/users/actions) and update all callers to import from @alga-psa/users/actions directly",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-05"
     ]

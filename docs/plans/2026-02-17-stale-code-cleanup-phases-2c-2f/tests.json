@@ -41,7 +41,7 @@
   {
     "id": "T004",
     "description": "Task 2d-1: Find all callers of user-actions/userActions shim. Update each to import from @alga-psa/users/actions. Delete shim + directory. npm run build passes.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F019"
     ]

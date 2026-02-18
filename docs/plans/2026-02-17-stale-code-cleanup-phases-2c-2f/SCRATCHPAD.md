@@ -82,3 +82,5 @@ Must be executed in this exact order:
 - (2026-02-18) Task 2c-3: Removed dead email files (sendPasswordResetEmail, sendPortalInvitationEmail, sendVerificationEmail, sendCancellationFeedbackEmail, clientPortalTenantRecoveryEmail, SystemEmailProviderFactory, tenant/types, system/templates/emailVerification). Updated EE license-actions cancellation feedback to import from @alga-psa/email.
 - (2026-02-18) Adjusted server/src/lib/email/system/SystemEmailService.ts to import SystemEmailProviderFactory from @alga-psa/email after deleting local factory.
 - (2026-02-18) Build after Task 2c-3 failed with missing @dnd-kit/sortable (packages/billing). SystemEmailProviderFactory error resolved by updating SystemEmailService import.
+- (2026-02-18) Task 2d-1: Updated packages/projects projectActions to import user actions from @alga-psa/users/actions and adjusted calendarActions.sync.test mock path. Deleted server/src/lib/user-actions/userActions.ts shim.
+- (2026-02-18) Build after Task 2d-1 failed with missing @dnd-kit/sortable in packages/billing (same as prior).
