@@ -1,7 +1,7 @@
 import { Context } from '@temporalio/activity';
 import { getAdminConnection } from '@alga-psa/db/admin.js';
 import type { Knex } from 'knex';
-import { hashPassword, generateSecurePassword } from '@alga-psa/shared/utils/encryption.js';
+import { hashPassword, generateSecurePassword } from '@alga-psa/core/encryption';
 import type {
   CreateAdminUserActivityInput,
   CreateAdminUserActivityResult

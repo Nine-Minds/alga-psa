@@ -1,7 +1,7 @@
 import { Context } from '@temporalio/activity';
 import { getAdminConnection } from '@alga-psa/db/admin.js';
 import type { Knex } from 'knex';
-import { generateSecurePassword } from '@alga-psa/shared/utils/encryption.js';
+import { generateSecurePassword } from '@alga-psa/core/encryption';
 import { 
   createPortalUserInDB as createPortalUserInSharedModel,
   CreatePortalUserInput

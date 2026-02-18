@@ -5,7 +5,7 @@
 
 import { v4 as uuidv4 } from 'uuid';
 import type { Knex } from 'knex';
-import { hashPassword, generateSecurePassword } from '@shared/utils/encryption';
+import { hashPassword, generateSecurePassword } from '@alga-psa/core/encryption';
 
 async function deleteTenantScopedRows(
   trx: Knex.Transaction,

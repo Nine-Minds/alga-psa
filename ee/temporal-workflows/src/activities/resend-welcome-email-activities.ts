@@ -1,6 +1,6 @@
 import { Context } from '@temporalio/activity';
 import { getAdminConnection } from '@alga-psa/db/admin.js';
-import { hashPassword } from '@alga-psa/shared/utils/encryption.js';
+import { hashPassword } from '@alga-psa/core/encryption';
 import { generateTemporaryPassword as generatePassword } from './email-activities.js';
 import { sendWelcomeEmail as sendEmail } from './email-activities.js';
 import type { SendWelcomeEmailActivityInput } from '../types/workflow-types.js';
