@@ -113,7 +113,7 @@
   {
     "id": "T013",
     "description": "Task 2f-3: Add consumePortalDomainOtt, pruneExpiredPortalDomainOtts, __setPortalDomainOttConnectionFactoryForTests exports to @alga-psa/auth barrel. Find all 4 callers. Update imports. Delete server model. npm run build passes.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F028"
     ]

@@ -20,6 +20,21 @@ export { getSession, getSessionWithRevocationCheck } from './lib/getSession';
 
 // Type exports
 export type { PortalSessionTokenPayload } from './lib/session';
+export {
+  issuePortalDomainOtt,
+  consumePortalDomainOtt,
+  pruneExpiredPortalDomainOtts,
+  __setPortalDomainOttConnectionFactoryForTests,
+  __resetPortalDomainOttTestState
+} from './lib/PortalDomainSessionToken';
+export type {
+  PortalDomainSessionOtt,
+  PortalDomainSessionOttMetadata,
+  IssuePortalDomainOttParams,
+  IssuePortalDomainOttResult,
+  ConsumePortalDomainOttParams,
+  ConsumePortalDomainOttResult
+} from './lib/PortalDomainSessionToken';
 
 // Permission utilities
 export {

@@ -218,7 +218,7 @@
   {
     "id": "F028",
     "description": "Task 2f-3: Add PortalDomainSessionToken exports (consumePortalDomainOtt, pruneExpiredPortalDomainOtts, __setPortalDomainOttConnectionFactoryForTests) to @alga-psa/auth barrel exports. Migrate 4 callers (domain-session/route.ts, route.test.ts, portalDomainSessionOtt.test.ts, prune script). Delete server/src/lib/models/PortalDomainSessionToken.ts.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-14"
     ]
