@@ -6,7 +6,22 @@ import { App } from './App';
 // ============================================================================
 
 /**
- * Apply theme variables to the document root
+ * Detect whether a hex color is "dark" by computing relative luminance.
+ * Returns true when the background is dark enough to warrant dark-mode tokens.
+ */
+function isDarkColor(hex: string): boolean {
+  const h = hex.replace('#', '');
+  if (h.length !== 6) return false;
+  const r = parseInt(h.substring(0, 2), 16) / 255;
+  const g = parseInt(h.substring(2, 4), 16) / 255;
+  const b = parseInt(h.substring(4, 6), 16) / 255;
+  // sRGB luminance
+  const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  return luminance < 0.5;
+}
+
+/**
+ * Apply theme variables to the document root and set data-theme attribute.
  */
 function applyTheme(vars: Record<string, string>) {
   if (typeof document === 'undefined') return;
@@ -14,6 +29,16 @@ function applyTheme(vars: Record<string, string>) {
   Object.entries(vars).forEach(([key, value]) => {
     root.style.setProperty(key, value);
   });
+
+  // Detect dark mode from the background color and set data-theme so that
+  // tokens.css dark overrides activate as a fallback.
+  const bg = vars['--alga-bg'];
+  if (bg) {
+    const mode = isDarkColor(bg) ? 'dark' : 'light';
+    root.setAttribute('data-theme', mode);
+    // Dispatch a custom event so React components (e.g. theme toggle) can react
+    window.dispatchEvent(new CustomEvent('alga-theme-change', { detail: { mode } }));
+  }
 }
 
 /**

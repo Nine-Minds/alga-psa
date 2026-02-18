@@ -318,11 +318,20 @@ interface ReportDefinition {
   };
 }
 
+interface ConditionalLabel {
+  column: string;
+  operator: 'lt' | 'gt' | 'lte' | 'gte' | 'eq';
+  value: number;
+  tone: 'danger' | 'warning' | 'success' | 'info';
+  label?: string;
+}
+
 interface MetricDefinition {
   id: string;
   name: string;
   type: 'count' | 'sum' | 'avg' | 'query';
   query: QueryDefinition;
+  conditionalLabels?: ConditionalLabel[];
 }
 
 interface QueryDefinition {
@@ -482,6 +491,26 @@ async function callFeatureFlagApi<T>(
   } catch (error) {
     console.error('Feature Flag API call failed:', error);
     return { success: false, error: String(error) };
+  }
+}
+
+// Audit logger for feature flag actions
+async function logFeatureFlagAudit(
+  action: string,
+  details: Record<string, unknown>
+) {
+  try {
+    await proxyApiCall('/api/v1/platform-reports/access', {
+      method: 'POST',
+      body: {
+        eventType: `feature_flag.${action}`,
+        resourceType: 'feature_flag',
+        ...details,
+      },
+    });
+  } catch {
+    // Silently fail - audit logging shouldn't break the app
+    console.debug('[nineminds-control-panel] Failed to log feature flag audit:', action);
   }
 }
 
@@ -757,8 +786,46 @@ interface ReportResult {
   };
 }
 
+// Helper: evaluate conditional label for a cell value
+function getConditionalBadge(
+  value: unknown,
+  columnKey: string,
+  labels?: ConditionalLabel[]
+): { tone: 'danger' | 'warning' | 'success' | 'info'; text: string } | null {
+  if (!labels || labels.length === 0) return null;
+  const numValue = Number(value);
+  if (isNaN(numValue)) return null;
+
+  for (const label of labels) {
+    if (label.column !== '*' && label.column !== columnKey) continue;
+    let matches = false;
+    switch (label.operator) {
+      case 'lt': matches = numValue < label.value; break;
+      case 'gt': matches = numValue > label.value; break;
+      case 'lte': matches = numValue <= label.value; break;
+      case 'gte': matches = numValue >= label.value; break;
+      case 'eq': matches = numValue === label.value; break;
+    }
+    if (matches) {
+      return { tone: label.tone, text: label.label || `${label.operator} ${label.value}` };
+    }
+  }
+  return null;
+}
+
 // Stat Card for single-value metrics (counts, sums, etc.)
-function StatCard({ title, value, subtitle }: { title: string; value: string | number; subtitle?: string }) {
+function StatCard({ title, value, subtitle, conditionalLabels }: {
+  title: string;
+  value: string | number;
+  subtitle?: string;
+  conditionalLabels?: ConditionalLabel[];
+}) {
+  const badge = getConditionalBadge(
+    typeof value === 'string' ? Number(value.replace(/,/g, '')) : value,
+    'count',
+    conditionalLabels
+  );
+
   return (
     <div style={{
       background: 'linear-gradient(135deg, var(--alga-primary) 0%, var(--alga-primary-light) 100%)',
@@ -768,14 +835,21 @@ function StatCard({ title, value, subtitle }: { title: string; value: string | n
       minWidth: '200px',
     }}>
       <div style={{ fontSize: '0.875rem', opacity: 0.9, marginBottom: '4px' }}>{title}</div>
-      <div style={{ fontSize: '2rem', fontWeight: 'bold' }}>{value}</div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div style={{ fontSize: '2rem', fontWeight: 'bold' }}>{value}</div>
+        {badge && <Badge tone={badge.tone}>{badge.text}</Badge>}
+      </div>
       {subtitle && <div style={{ fontSize: '0.75rem', opacity: 0.8, marginTop: '4px' }}>{subtitle}</div>}
     </div>
   );
 }
 
 // Table for displaying metric rows with search and sorting
-function ResultsTable({ data, title }: { data: unknown[]; title: string }) {
+function ResultsTable({ data, title, conditionalLabels }: {
+  data: unknown[];
+  title: string;
+  conditionalLabels?: ConditionalLabel[];
+}) {
   const [search, setSearch] = useState('');
 
   if (!Array.isArray(data) || data.length === 0) {
@@ -819,13 +893,19 @@ function ResultsTable({ data, title }: { data: unknown[]; title: string }) {
       })
     : data;
 
-  // Build columns for DataTable
+  // Build columns for DataTable with conditional label support
   const columns: Column<Record<string, unknown>>[] = columnKeys.map(key => ({
     key: key as keyof Record<string, unknown> & string,
     header: formatHeader(key),
-    render: (row: Record<string, unknown>) => (
-      <span>{formatValue(row[key])}</span>
-    ),
+    render: (row: Record<string, unknown>) => {
+      const badge = getConditionalBadge(row[key], key, conditionalLabels);
+      return (
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+          {formatValue(row[key])}
+          {badge && <Badge tone={badge.tone}>{badge.text}</Badge>}
+        </span>
+      );
+    },
   }));
 
   return (
@@ -899,12 +979,16 @@ function SimpleBarChart({ data, labelKey, valueKey, title }: {
 function ResultsRenderer({ results, report }: { results: ReportResult; report?: PlatformReport }) {
   const { metrics, metadata, parameters, executedAt } = results;
 
-  // Build a map of metric ID -> metric name from report definition
+  // Build maps from report definition
   const metricNames: Record<string, string> = {};
+  const metricLabels: Record<string, ConditionalLabel[]> = {};
   if (report?.report_definition?.metrics) {
     report.report_definition.metrics.forEach(m => {
       if (m.id && m.name) {
         metricNames[m.id] = m.name;
+      }
+      if (m.id && m.conditionalLabels?.length) {
+        metricLabels[m.id] = m.conditionalLabels;
       }
     });
   }
@@ -987,6 +1071,7 @@ function ResultsRenderer({ results, report }: { results: ReportResult; report?: 
         if (!Array.isArray(data)) return null;
 
         const displayName = getMetricDisplayName(metricId);
+        const labels = metricLabels[metricId];
 
         // Single count value → StatCard (fit-to-content width)
         if (isSingleCount(data)) {
@@ -998,6 +1083,7 @@ function ResultsRenderer({ results, report }: { results: ReportResult; report?: 
                 title={displayName}
                 value={Number(row[countKey]).toLocaleString()}
                 subtitle="Total count"
+                conditionalLabels={labels}
               />
             </div>
           );
@@ -1014,13 +1100,13 @@ function ResultsRenderer({ results, report }: { results: ReportResult; report?: 
                 valueKey={grouped.valueKey}
                 title={`${displayName} (Chart)`}
               />
-              <ResultsTable data={data} title={`${displayName} (Data)`} />
+              <ResultsTable data={data} title={`${displayName} (Data)`} conditionalLabels={labels} />
             </div>
           );
         }
 
         // Default → Table
-        return <ResultsTable key={metricId} data={data} title={displayName} />;
+        return <ResultsTable key={metricId} data={data} title={displayName} conditionalLabels={labels} />;
       })}
 
       {/* Raw JSON toggle */}
@@ -2571,6 +2657,12 @@ const AUDIT_EVENT_TYPE_OPTIONS: SelectOption[] = [
   { value: 'report.execute', label: 'Report Execute' },
   { value: 'schema.view', label: 'Schema View' },
   { value: 'extension.access', label: 'Extension Access' },
+  { value: 'feature_flag.create', label: 'Flag Create' },
+  { value: 'feature_flag.toggle', label: 'Flag Toggle' },
+  { value: 'feature_flag.delete', label: 'Flag Delete' },
+  { value: 'feature_flag.add_tenant', label: 'Flag Add Tenant' },
+  { value: 'feature_flag.remove_tenant', label: 'Flag Remove Tenant' },
+  { value: 'feature_flag.enable_all', label: 'Flag Enable All' },
   { value: 'tenant.list', label: 'Tenant List' },
   { value: 'tenant.view', label: 'Tenant View' },
   { value: 'tenant.create', label: 'Tenant Create' },
@@ -3753,42 +3845,59 @@ function TenantManagementView() {
 }
 
 function AuditLogs() {
+  const PAGE_SIZE = 50;
   const [logs, setLogs] = useState<AuditLogEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [eventTypeFilter, setEventTypeFilter] = useState('__all__');
   const [resourceIdFilter, setResourceIdFilter] = useState('');
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
 
-  const fetchLogs = useCallback(async () => {
+  const fetchLogs = useCallback(async (pageNum: number = 0) => {
     setLoading(true);
     setError(null);
 
     const params = new URLSearchParams();
     if (eventTypeFilter && eventTypeFilter !== '__all__') params.set('eventType', eventTypeFilter);
     if (resourceIdFilter) params.set('resourceId', resourceIdFilter);
-    // Fetch up to 500 logs, let DataTable handle pagination display
-    params.set('limit', '500');
+    params.set('limit', String(PAGE_SIZE));
+    params.set('offset', String(pageNum * PAGE_SIZE));
 
     const queryString = params.toString();
     const path = queryString ? `/audit?${queryString}` : '/audit';
 
-    console.log('[AuditLogs] Fetching from path:', path);
     const result = await callExtensionApi<AuditLogEntry[]>(path);
-    console.log('[AuditLogs] API result:', result);
 
     if (result.success && result.data) {
-      console.log('[AuditLogs] Setting logs:', result.data.length, 'entries');
       setLogs(result.data);
+      setHasMore(result.data.length >= PAGE_SIZE);
     } else {
-      console.error('[AuditLogs] Error:', result.error);
       setError(result.error || 'Failed to fetch audit logs');
     }
     setLoading(false);
   }, [eventTypeFilter, resourceIdFilter]);
 
   useEffect(() => {
-    fetchLogs();
+    setPage(0);
+    fetchLogs(0);
   }, [fetchLogs]);
+
+  const handlePrevPage = () => {
+    if (page > 0) {
+      const newPage = page - 1;
+      setPage(newPage);
+      fetchLogs(newPage);
+    }
+  };
+
+  const handleNextPage = () => {
+    if (hasMore) {
+      const newPage = page + 1;
+      setPage(newPage);
+      fetchLogs(newPage);
+    }
+  };
 
   const formatEventType = (type: string): string => {
     return type
@@ -3915,7 +4024,7 @@ function AuditLogs() {
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <h2 style={{ margin: 0 }}>Audit Logs</h2>
-        <Button variant="outline" onClick={fetchLogs} disabled={loading}>
+        <Button variant="outline" onClick={() => fetchLogs(page)} disabled={loading}>
           {loading ? 'Loading...' : 'Refresh'}
         </Button>
       </div>
@@ -3959,15 +4068,32 @@ function AuditLogs() {
           <DataTable
             columns={columns}
             data={logs}
-            paginate
-            defaultPageSize={25}
-            pageSizeOptions={[25, 50, 100, 200]}
             initialSortKey="created_at"
             initialSortDir="desc"
           />
-          <Text tone="muted" style={{ display: 'block', marginTop: '8px', fontSize: '0.75rem' }}>
-            Total: {logs.length} log entries (use page size selector below to show more per page)
-          </Text>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px' }}>
+            <Text tone="muted" style={{ fontSize: '0.8125rem' }}>
+              Page {page + 1} &middot; Showing {logs.length} entries
+            </Text>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handlePrevPage}
+                disabled={page === 0 || loading}
+              >
+                Previous
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleNextPage}
+                disabled={!hasMore || loading}
+              >
+                Next
+              </Button>
+            </div>
+          </div>
         </>
       )}
     </div>
@@ -5011,7 +5137,7 @@ function FeatureFlagsView() {
       sortable: false,
       render: (row) => (
         <Button
-          variant="secondary"
+          variant="primary"
           size="sm"
           onClick={() => {
             setSelectedFlag(row);
@@ -5183,6 +5309,10 @@ function CreateFeatureFlagForm({
     });
 
     if (result.success) {
+      logFeatureFlagAudit('create', {
+        resourceName: key.trim(),
+        details: { key: key.trim(), name: name.trim(), active },
+      });
       onCreated();
     } else {
       setError(result.error || 'Failed to create feature flag');
@@ -5292,19 +5422,38 @@ function TenantPicker({
     );
   });
 
+  const handleAddRandomUuid = () => {
+    const uuid = crypto.randomUUID();
+    onSelect(uuid);
+  };
+
   return (
     <div ref={containerRef} style={{ position: 'relative' }}>
-      <Input
-        type="text"
-        value={query}
-        onChange={(e) => {
-          setQuery(e.target.value);
-          setShowDropdown(true);
-        }}
-        onFocus={() => setShowDropdown(true)}
-        placeholder={loading ? 'Loading tenants...' : 'Search by name, email, or ID...'}
-        disabled={disabled || loading}
-      />
+      <div style={{ display: 'flex', gap: '8px' }}>
+        <div style={{ flex: 1 }}>
+          <Input
+            type="text"
+            value={query}
+            onChange={(e) => {
+              setQuery(e.target.value);
+              setShowDropdown(true);
+            }}
+            onFocus={() => setShowDropdown(true)}
+            placeholder={loading ? 'Loading tenants...' : 'Search by name, email, or ID...'}
+            disabled={disabled || loading}
+          />
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleAddRandomUuid}
+          disabled={disabled}
+          title="Add random UUID (for localhost testing)"
+          style={{ whiteSpace: 'nowrap' }}
+        >
+          Random UUID
+        </Button>
+      </div>
       {showDropdown && !loading && (
         <div style={{
           position: 'absolute',
@@ -5373,6 +5522,7 @@ function FeatureFlagDetail({
   onDelete: () => void;
 }) {
   const [toggling, setToggling] = useState(false);
+  const [enablingAll, setEnablingAll] = useState(false);
   const [addingTenant, setAddingTenant] = useState(false);
   const [removingTenant, setRemovingTenant] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -5406,6 +5556,56 @@ function FeatureFlagDetail({
     return [...new Set(ids)];
   })();
 
+  // Detect if flag is enabled for everyone (100% rollout, no tenant conditions)
+  const isEnabledForEveryone = flag.active && flag.filters?.groups?.some(g =>
+    g.rollout_percentage === 100 && (!g.properties || g.properties.length === 0)
+  ) || false;
+
+  const handleEnableForEveryone = async (enable: boolean) => {
+    setEnablingAll(true);
+    setError(null);
+    if (enable) {
+      // Set active + 100% rollout with no conditions
+      const result = await callFeatureFlagApi(`/${flag.id}`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          active: true,
+          filters: {
+            groups: [{ properties: [], rollout_percentage: 100, variant: null }],
+            multivariate: flag.filters?.multivariate || null,
+          },
+        }),
+      });
+      if (result.success) {
+        logFeatureFlagAudit('enable_all', {
+          resourceId: String(flag.id),
+          resourceName: flag.key,
+          details: { enabled: true },
+        });
+        onUpdate();
+      } else {
+        setError(result.error || 'Failed to enable for everyone');
+      }
+    } else {
+      // Disable: just deactivate the flag
+      const result = await callFeatureFlagApi(`/${flag.id}`, {
+        method: 'PUT',
+        body: JSON.stringify({ active: false }),
+      });
+      if (result.success) {
+        logFeatureFlagAudit('enable_all', {
+          resourceId: String(flag.id),
+          resourceName: flag.key,
+          details: { enabled: false },
+        });
+        onUpdate();
+      } else {
+        setError(result.error || 'Failed to disable flag');
+      }
+    }
+    setEnablingAll(false);
+  };
+
   const handleToggle = async (active: boolean) => {
     setToggling(true);
     setError(null);
@@ -5414,6 +5614,11 @@ function FeatureFlagDetail({
       body: JSON.stringify({ active }),
     });
     if (result.success) {
+      logFeatureFlagAudit('toggle', {
+        resourceId: String(flag.id),
+        resourceName: flag.key,
+        details: { active, previousActive: flag.active },
+      });
       onUpdate();
     } else {
       setError(result.error || 'Failed to toggle flag');
@@ -5429,6 +5634,11 @@ function FeatureFlagDetail({
       body: JSON.stringify({ __action: 'add', tenantId }),
     });
     if (result.success) {
+      logFeatureFlagAudit('add_tenant', {
+        resourceId: String(flag.id),
+        resourceName: flag.key,
+        details: { tenantId, action: 'add' },
+      });
       onUpdate();
     } else {
       setError(result.error || 'Failed to add tenant');
@@ -5444,6 +5654,11 @@ function FeatureFlagDetail({
       body: JSON.stringify({ __action: 'remove', tenantId }),
     });
     if (result.success) {
+      logFeatureFlagAudit('remove_tenant', {
+        resourceId: String(flag.id),
+        resourceName: flag.key,
+        details: { tenantId, action: 'remove' },
+      });
       onUpdate();
     } else {
       setError(result.error || 'Failed to remove tenant');
@@ -5456,6 +5671,10 @@ function FeatureFlagDetail({
       method: 'DELETE',
     });
     if (result.success) {
+      logFeatureFlagAudit('delete', {
+        resourceId: String(flag.id),
+        resourceName: flag.key,
+      });
       onDelete();
     } else {
       setError(result.error || 'Failed to delete flag');
@@ -5474,12 +5693,34 @@ function FeatureFlagDetail({
           <Switch
             checked={flag.active}
             onCheckedChange={handleToggle}
-            disabled={toggling}
+            disabled={toggling || enablingAll}
             size="sm"
           />
           <Text>{flag.active ? 'Active' : 'Inactive'}</Text>
           {toggling && <Spinner size="button" />}
         </div>
+      </div>
+
+      {/* Enable for Everyone */}
+      <div>
+        <Label>Release to Everyone</Label>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '8px' }}>
+          <Switch
+            checked={isEnabledForEveryone}
+            onCheckedChange={handleEnableForEveryone}
+            disabled={enablingAll || toggling}
+            size="sm"
+          />
+          <Text>
+            {isEnabledForEveryone ? '100% rollout (all users)' : 'Tenant-specific or inactive'}
+          </Text>
+          {enablingAll && <Spinner size="button" />}
+        </div>
+        <Text tone="muted" style={{ display: 'block', fontSize: '0.75rem', marginTop: '4px' }}>
+          {isEnabledForEveryone
+            ? 'This flag is active for all users. Toggle off to deactivate.'
+            : 'Toggle on to activate this flag for 100% of users (removes tenant conditions).'}
+        </Text>
       </div>
 
       {flag.name && (
@@ -5624,10 +5865,10 @@ function FeatureFlagDetail({
 }
 
 // Main App
-type View = 'reports' | 'create' | 'execute' | 'tenants' | 'feature-flags' | 'audit';
+type View = 'execute' | 'reports' | 'create' | 'tenants' | 'feature-flags' | 'audit';
 
 function App() {
-  const [currentView, setCurrentView] = useState<View>('feature-flags');
+  const [currentView, setCurrentView] = useState<View>('execute');
 
   // Log extension access on mount (via proxy)
   useEffect(() => {
@@ -5651,9 +5892,9 @@ function App() {
   }, []);
 
   const tabItems: TabItem[] = [
+    { key: 'execute', label: 'Execute', content: <ExecuteReport /> },
     { key: 'reports', label: 'Reports', content: <ReportsList /> },
     { key: 'create', label: 'Create Report', content: <CreateReport /> },
-    { key: 'execute', label: 'Execute', content: <ExecuteReport /> },
     { key: 'tenants', label: 'Tenant Management', content: <TenantManagementView /> },
     { key: 'feature-flags', label: 'Feature Flags', content: <FeatureFlagsView /> },
     { key: 'audit', label: 'Audit Logs', content: <AuditLogs /> },
