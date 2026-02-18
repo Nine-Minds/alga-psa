@@ -1,6 +1,7 @@
 import type {
   InvoiceTemplateAst,
   InvoiceTemplateNode,
+  InvoiceTemplateNodeStyleRef,
   InvoiceTemplateTableColumn,
   InvoiceTemplateTotalsRow,
   InvoiceTemplateValueExpression,
@@ -545,6 +546,29 @@ const mapTableColumns = (node: WorkspaceNode): InvoiceTemplateTableColumn[] => {
   const metadata = getWorkspaceNodeMetadata(node);
   const columns = Array.isArray(metadata.columns) ? metadata.columns : [];
 
+  const mapColumnStyle = (value: unknown): InvoiceTemplateNodeStyleRef | undefined => {
+    if (!isRecord(value)) {
+      return undefined;
+    }
+
+    const mapped: InvoiceTemplateNodeStyleRef = {};
+
+    if (Array.isArray(value.tokenIds)) {
+      const tokenIds = value.tokenIds.filter(
+        (tokenId: unknown): tokenId is string => typeof tokenId === 'string' && tokenId.trim().length > 0
+      );
+      if (tokenIds.length > 0) {
+        mapped.tokenIds = tokenIds;
+      }
+    }
+
+    if (isRecord(value.inline)) {
+      mapped.inline = { ...(value.inline as Record<string, unknown>) };
+    }
+
+    return Object.keys(mapped).length > 0 ? mapped : undefined;
+  };
+
   const mappedColumns = columns
     .map((column, index): InvoiceTemplateTableColumn | null => {
       if (!isRecord(column)) {
@@ -565,6 +589,10 @@ const mapTableColumns = (node: WorkspaceNode): InvoiceTemplateTableColumn[] => {
         header: header.length > 0 ? header : undefined,
         value: preservedExpression ?? { type: 'path', path: key.length > 0 ? key : 'description' },
       };
+      const style = mapColumnStyle(column.style);
+      if (style) {
+        mapped.style = style;
+      }
       if (parsedFormat) {
         mapped.format = parsedFormat;
       }
@@ -681,7 +709,11 @@ const mapDesignerNodeToAstNode = (
       const bindingId = registerValueBinding(bindingPath);
       const explicitLabel = asTrimmedString(metadata.label);
       const format = parseInvoiceTemplateValueFormat(metadata.format);
-      const emptyValue = asTrimmedString(metadata.emptyValue);
+      const astImported = metadata.__astImported === true;
+      const hadImportedFormat = metadata.__astFieldHadFormat === true;
+      const hadImportedEmptyValue = metadata.__astFieldHadEmptyValue === true;
+      const hasExplicitEmptyValue = typeof metadata.emptyValue === 'string';
+      const emptyValue = hasExplicitEmptyValue ? asTrimmedString(metadata.emptyValue) : '';
       const mapped: InvoiceTemplateNode = {
         ...createBaseNode(node),
         type: 'field',
@@ -692,15 +724,21 @@ const mapDesignerNodeToAstNode = (
               ? explicitLabel
               : undefined
             : resolveNodeTextContent(node),
-        emptyValue: emptyValue.length > 0 ? emptyValue : '',
       };
-      if (format) {
+      if (hasExplicitEmptyValue) {
+        mapped.emptyValue = emptyValue;
+      } else if (!astImported || hadImportedEmptyValue) {
+        // Designer-authored fields default to empty string; imported templates only retain this when explicitly present.
+        mapped.emptyValue = '';
+      }
+      if (format && (!astImported || hadImportedFormat || format !== 'text')) {
         mapped.format = format;
       }
       return mapped;
     }
     case 'table':
     case 'dynamic-table': {
+      const metadata = getWorkspaceNodeMetadata(node);
       const collectionPath = resolveCollectionPath(node);
       const sourceBindingId = registerCollectionBinding(collectionPath);
       return {
@@ -711,6 +749,10 @@ const mapDesignerNodeToAstNode = (
           itemBinding: 'item',
         },
         columns: mapTableColumns(node),
+        emptyStateText:
+          typeof metadata.emptyStateText === 'string' && metadata.emptyStateText.trim().length > 0
+            ? metadata.emptyStateText.trim()
+            : undefined,
       };
     }
     case 'totals':
@@ -854,9 +896,42 @@ export const exportWorkspaceToInvoiceTemplateAst = (
     }
   }
 
+  const valueBindingPathToId = new Map<string, string>();
+  for (const [bindingId, binding] of Object.entries(valueBindings)) {
+    if (!valueBindingPathToId.has(binding.path)) {
+      valueBindingPathToId.set(binding.path, bindingId);
+    }
+  }
+
+  const collectionBindingPathToId = new Map<string, string>();
+  for (const [bindingId, binding] of Object.entries(collectionBindings)) {
+    if (!collectionBindingPathToId.has(binding.path)) {
+      collectionBindingPathToId.set(binding.path, bindingId);
+    }
+  }
+
+  const createUniqueBindingId = (
+    preferredId: string,
+    registry: Record<string, { id: string; kind: 'value' | 'collection'; path: string; fallback?: unknown }>
+  ): string => {
+    if (!registry[preferredId]) {
+      return preferredId;
+    }
+    let index = 2;
+    while (registry[`${preferredId}_${index}`]) {
+      index += 1;
+    }
+    return `${preferredId}_${index}`;
+  };
+
   const registerValueBinding = (path: string): string => {
     const normalizedPath = normalizeInvoiceBindingPath(path);
-    const bindingId = sanitizeId(`value.${normalizedPath}`) || `value.${Object.keys(valueBindings).length + 1}`;
+    const existingBindingId = valueBindingPathToId.get(normalizedPath);
+    if (existingBindingId) {
+      return existingBindingId;
+    }
+    const preferredBindingId = sanitizeId(`value.${normalizedPath}`) || `value.${Object.keys(valueBindings).length + 1}`;
+    const bindingId = createUniqueBindingId(preferredBindingId, valueBindings);
     if (!valueBindings[bindingId]) {
       valueBindings[bindingId] = {
         id: bindingId,
@@ -864,12 +939,19 @@ export const exportWorkspaceToInvoiceTemplateAst = (
         path: normalizedPath,
       };
     }
+    valueBindingPathToId.set(normalizedPath, bindingId);
     return bindingId;
   };
 
   const registerCollectionBinding = (path: string): string => {
     const normalizedPath = normalizeInvoiceBindingPath(path);
-    const bindingId = sanitizeId(`collection.${normalizedPath}`) || `collection.${Object.keys(collectionBindings).length + 1}`;
+    const existingBindingId = collectionBindingPathToId.get(normalizedPath);
+    if (existingBindingId) {
+      return existingBindingId;
+    }
+    const preferredBindingId =
+      sanitizeId(`collection.${normalizedPath}`) || `collection.${Object.keys(collectionBindings).length + 1}`;
+    const bindingId = createUniqueBindingId(preferredBindingId, collectionBindings);
     if (!collectionBindings[bindingId]) {
       collectionBindings[bindingId] = {
         id: bindingId,
@@ -877,6 +959,7 @@ export const exportWorkspaceToInvoiceTemplateAst = (
         path: normalizedPath,
       };
     }
+    collectionBindingPathToId.set(normalizedPath, bindingId);
     return bindingId;
   };
 
@@ -1180,6 +1263,8 @@ export const importInvoiceTemplateAstToWorkspace = (
             astInput.bindings?.collections?.[inputNode.binding.bindingId]?.path ??
             inputNode.binding.bindingId;
           metadata.bindingKey = denormalizeBindingPath(bindingPath);
+          metadata.__astFieldHadFormat = Object.prototype.hasOwnProperty.call(inputNode, 'format');
+          metadata.__astFieldHadEmptyValue = Object.prototype.hasOwnProperty.call(inputNode, 'emptyValue');
           if (inputNode.format) {
             metadata.format = inputNode.format;
           }
@@ -1204,7 +1289,11 @@ export const importInvoiceTemplateAstToWorkspace = (
             valueExpression: column.value,
             type: column.format,
             format: column.format,
+            style: column.style ? ({ ...column.style } as Record<string, unknown>) : undefined,
           }));
+          if (typeof inputNode.emptyStateText === 'string' && inputNode.emptyStateText.trim().length > 0) {
+            metadata.emptyStateText = inputNode.emptyStateText.trim();
+          }
         } else if (inputNode.type === 'totals') {
           const sourcePath =
             astInput.bindings?.collections?.[inputNode.sourceBinding.bindingId]?.path ??
