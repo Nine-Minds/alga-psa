@@ -89,3 +89,5 @@ Must be executed in this exact order:
 - (2026-02-18) Task 2d-3: Repointed all getSession/getSessionWithRevocationCheck imports and mocks from server/src/lib/auth/getSession to @alga-psa/auth across server and EE; deleted server/src/lib/auth/getSession.ts shim.
 - (2026-02-18) Task 2d-3 follow-up: Updated ApiAccountingExportController.ts, ApiCSVAccountingController.ts, and auth-compat.ts to import getSession from @alga-psa/auth after build flagged relative imports.
 - (2026-02-18) Build after Task 2d-3 still fails: missing @dnd-kit/sortable in packages/billing.
+- (2026-02-18) Task 2e-1: Appointment request route now imports SystemEmailService from @alga-psa/email. Updated email barrel to re-export system types from package. Updated appointment notification/request tests to mock @alga-psa/email. Deleted server/src/lib/email/system/SystemEmailService.ts and system/types.ts (removed system/ dir).
+- (2026-02-18) Build after Task 2e-1 still fails: missing @dnd-kit/sortable in packages/billing.

@@ -8,8 +8,22 @@
  */
 
 // System email exports
-export { SystemEmailService, getSystemEmailService } from './system/SystemEmailService';
-export * from './system/types';
+export { SystemEmailService, getSystemEmailService } from '@alga-psa/email';
+export type {
+  SystemEmailConfig,
+  SystemEmailOptions,
+  SystemEmailAttachment,
+  SystemEmailTemplate,
+  SystemEmailResult,
+  EmailVerificationData,
+  PasswordResetData,
+  SystemNotificationData,
+  PortalInvitationData,
+  AppointmentRequestReceivedData,
+  AppointmentRequestApprovedData,
+  AppointmentRequestDeclinedData,
+  NewAppointmentRequestData
+} from '@alga-psa/email';
 
 // Tenant email exports
 export { TenantEmailService } from '@alga-psa/email';

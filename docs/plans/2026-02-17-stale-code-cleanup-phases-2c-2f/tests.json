@@ -65,7 +65,7 @@
   {
     "id": "T007",
     "description": "Task 2e-1: Verify SystemEmailService is exported from @alga-psa/email. Update appointment-request/route.ts import. Delete system/SystemEmailService.ts, system/types.ts, system/ dir. npm run build passes.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F022"
     ]

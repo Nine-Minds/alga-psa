@@ -170,7 +170,7 @@
   {
     "id": "F022",
     "description": "Task 2e-1: Update server/src/app/api/public/appointment-request/route.ts to import SystemEmailService from @alga-psa/email instead of @/lib/email/system/SystemEmailService. Delete server/src/lib/email/system/SystemEmailService.ts, server/src/lib/email/system/types.ts, and system/ directory.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-08"
     ]

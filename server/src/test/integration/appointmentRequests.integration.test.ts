@@ -53,7 +53,7 @@ const mockEmailInstance = {
   sendEmail: vi.fn(() => Promise.resolve())
 };
 
-vi.mock('server/src/lib/email/system/SystemEmailService', () => ({
+vi.mock('@alga-psa/email', () => ({
   SystemEmailService: {
     getInstance: vi.fn(() => mockEmailInstance)
   }
@@ -323,7 +323,7 @@ describe('Appointment Request Integration Tests', () => {
       tomorrow.setDate(tomorrow.getDate() + 1);
       const requestDate = tomorrow.toISOString().split('T')[0];
 
-      const SystemEmailService = (await import('server/src/lib/email/system/SystemEmailService')).SystemEmailService;
+      const SystemEmailService = (await import('@alga-psa/email')).SystemEmailService;
       const emailInstance = SystemEmailService.getInstance();
 
       const result = await createAppointmentRequest({
@@ -513,7 +513,7 @@ describe('Appointment Request Integration Tests', () => {
       setupCommonMocks({ tenantId, userId: 'staff-user-id', user: staffUser, permissionCheck: () => true });
 
 
-      const SystemEmailService = (await import('server/src/lib/email/system/SystemEmailService')).SystemEmailService;
+      const SystemEmailService = (await import('@alga-psa/email')).SystemEmailService;
       const emailInstance = SystemEmailService.getInstance();
 
       await approveAppointmentRequest({
@@ -753,7 +753,7 @@ describe('Appointment Request Integration Tests', () => {
       setupCommonMocks({ tenantId, userId: 'staff-user-id', user: staffUser, permissionCheck: () => true });
 
 
-      const SystemEmailService = (await import('server/src/lib/email/system/SystemEmailService')).SystemEmailService;
+      const SystemEmailService = (await import('@alga-psa/email')).SystemEmailService;
       const emailInstance = SystemEmailService.getInstance();
 
       await declineAppointmentRequest({
