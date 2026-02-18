@@ -81,5 +81,113 @@ describe('DesignerShell selected context header', () => {
     const selected = document.querySelector('[data-automation-id="designer-selected-context"]');
     expect(selected?.textContent).toContain('Canonical Name');
     expect(selected?.textContent).toContain('(text)');
+
+    const selectedNodeType = document.querySelector('[data-automation-id="designer-selected-node-type"]');
+    expect(selectedNodeType?.textContent?.trim()).toBe('Text Block');
+    expect(selectedNodeType?.textContent).not.toMatch(/\btext\b/);
+  });
+
+  it('shows selected field type details in the inspector for field nodes', () => {
+    act(() => {
+      useInvoiceDesignerStore.setState(
+        {
+          selectedNodeId: 'field-1',
+          nodes: [
+            {
+              id: 'doc-1',
+              type: 'document',
+              props: { name: 'Document' },
+              position: { x: 0, y: 0 },
+              size: { width: 816, height: 1056 },
+              parentId: null,
+              children: ['page-1'],
+              allowedChildren: ['page'],
+            },
+            {
+              id: 'page-1',
+              type: 'page',
+              props: { name: 'Page' },
+              position: { x: 0, y: 0 },
+              size: { width: 816, height: 1056 },
+              parentId: 'doc-1',
+              children: ['field-1'],
+              allowedChildren: ['field'],
+            },
+            {
+              id: 'field-1',
+              type: 'field',
+              props: {
+                name: 'Due Date Value',
+                metadata: {
+                  bindingKey: 'invoice.dueDate',
+                },
+              },
+              position: { x: 20, y: 20 },
+              size: { width: 160, height: 28 },
+              parentId: 'page-1',
+              children: [],
+              allowedChildren: [],
+            },
+          ],
+        } as any,
+        false
+      );
+    });
+
+    render(<DesignerShell />);
+
+    const selectedNodeType = document.querySelector('[data-automation-id="designer-selected-node-type"]');
+    expect(selectedNodeType?.textContent).toContain('Data Field');
+
+    const fieldType = document.querySelector('[data-automation-id="designer-selected-field-type"]');
+    expect(fieldType?.textContent).toContain('Due Date');
+  });
+
+  it('shows selected node type details in the inspector for table nodes', () => {
+    act(() => {
+      useInvoiceDesignerStore.setState(
+        {
+          selectedNodeId: 'table-1',
+          nodes: [
+            {
+              id: 'doc-1',
+              type: 'document',
+              props: { name: 'Document' },
+              position: { x: 0, y: 0 },
+              size: { width: 816, height: 1056 },
+              parentId: null,
+              children: ['page-1'],
+              allowedChildren: ['page'],
+            },
+            {
+              id: 'page-1',
+              type: 'page',
+              props: { name: 'Page' },
+              position: { x: 0, y: 0 },
+              size: { width: 816, height: 1056 },
+              parentId: 'doc-1',
+              children: ['table-1'],
+              allowedChildren: ['table'],
+            },
+            {
+              id: 'table-1',
+              type: 'table',
+              props: { name: 'Line Items' },
+              position: { x: 20, y: 20 },
+              size: { width: 320, height: 140 },
+              parentId: 'page-1',
+              children: [],
+              allowedChildren: [],
+            },
+          ],
+        } as any,
+        false
+      );
+    });
+
+    render(<DesignerShell />);
+
+    const selectedNodeType = document.querySelector('[data-automation-id="designer-selected-node-type"]');
+    expect(selectedNodeType?.textContent).toContain('Line Items Table');
   });
 });
