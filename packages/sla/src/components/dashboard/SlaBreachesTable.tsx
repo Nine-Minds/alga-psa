@@ -93,10 +93,10 @@ export const SlaBreachesTable: React.FC<SlaBreachesTableProps> = ({ data, loadin
                   <td className="py-2 px-3">
                     <div className="flex gap-1">
                       {breach.responseBreached && (
-                        <Badge variant="destructive" className="text-xs">Response</Badge>
+                        <Badge variant="error" className="text-xs">Response</Badge>
                       )}
                       {breach.resolutionBreached && (
-                        <Badge variant="destructive" className="text-xs">Resolution</Badge>
+                        <Badge variant="error" className="text-xs">Resolution</Badge>
                       )}
                     </div>
                   </td>

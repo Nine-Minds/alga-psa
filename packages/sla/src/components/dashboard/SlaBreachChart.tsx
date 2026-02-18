@@ -102,8 +102,8 @@ export const SlaBreachChart: React.FC<SlaBreachChartProps> = ({
                   borderRadius: '8px',
                   boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
                 }}
-                formatter={(value: number, name: string, props: { payload: { breached: number; total: number } }) => {
-                  if (name === 'breachRate') {
+                formatter={(value: number, name: string, props: { payload?: { breached: number; total: number } }) => {
+                  if (name === 'breachRate' && props.payload) {
                     return [`${value}% (${props.payload.breached}/${props.payload.total})`, 'Breach Rate'];
                   }
                   return [value, name];
