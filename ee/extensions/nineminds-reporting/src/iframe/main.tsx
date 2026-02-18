@@ -2609,7 +2609,7 @@ interface PendingDeletion {
     invoiceCount: number;
     projectCount: number;
     documentCount: number;
-    companyCount: number;
+    clientCount: number;
     contactCount: number;
     collectedAt: string;
   } | null;
