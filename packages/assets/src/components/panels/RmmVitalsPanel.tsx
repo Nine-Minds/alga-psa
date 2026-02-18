@@ -4,7 +4,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { RefreshCw, WifiOff } from 'lucide-react';
 import type { RmmCachedData } from '@alga-psa/types';
 import { StatusBadge } from '../shared/StatusBadge';
-import { formatRelativeDateTime } from '@alga-psa/core';
+import { formatRelativeDateTime } from '@alga-psa/core/dateTimeUtils';
 
 interface RmmVitalsPanelProps {
   data: RmmCachedData | null | undefined;
