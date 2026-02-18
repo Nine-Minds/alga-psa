@@ -55,6 +55,21 @@ describe('previewScaffolds', () => {
     expect(resolveFieldPreviewScaffold(dueDate).text).toBe('MM/DD/YYYY');
   });
 
+  it('does not let generic invoice-number placeholder override due date context', () => {
+    const dueDate = createNode({
+      type: 'field',
+      props: {
+        name: 'Field',
+        metadata: {
+          bindingKey: 'invoice.dueDate',
+          placeholder: 'Invoice Number',
+        },
+      },
+    });
+
+    expect(resolveFieldPreviewScaffold(dueDate).text).toBe('MM/DD/YYYY');
+  });
+
   it('returns date scaffold for issue/due date name context', () => {
     const dueDate = createNode({
       type: 'field',
@@ -86,6 +101,23 @@ describe('previewScaffolds', () => {
         name: 'Field 3',
         metadata: {
           bindingKey: 'invoice.purchaseOrder',
+        },
+      },
+    });
+
+    const preview = resolveFieldPreviewScaffold(node);
+    expect(preview.isPlaceholder).toBe(true);
+    expect(preview.text).toBe('Optional');
+  });
+
+  it('does not let generic invoice-number placeholder override PO context', () => {
+    const node = createNode({
+      type: 'field',
+      props: {
+        name: 'Field',
+        metadata: {
+          bindingKey: 'invoice.poNumber',
+          placeholder: 'Invoice Number',
         },
       },
     });

@@ -70,9 +70,9 @@ const inferContextualValueScaffold = (input: {
   labelHint: string;
   format: string;
 }): string => {
-  const haystack = normalizeHintText(`${input.bindingKey} ${input.placeholderHint} ${input.labelHint}`);
+  const contextHaystack = normalizeHintText(`${input.bindingKey} ${input.labelHint}`);
   if (
-    hasAnyKeyword(haystack, [
+    hasAnyKeyword(contextHaystack, [
       /\binvoice (number|no|id)\b/,
       /\binvoice #\b/,
       /\binv #\b/,
@@ -82,7 +82,7 @@ const inferContextualValueScaffold = (input: {
     return 'INV-000123';
   }
   if (
-    hasAnyKeyword(haystack, [
+    hasAnyKeyword(contextHaystack, [
       /\b(issue|invoice) date\b/,
       /\bissued\b/,
       /\bdue date\b/,
@@ -91,7 +91,7 @@ const inferContextualValueScaffold = (input: {
   ) {
     return 'MM/DD/YYYY';
   }
-  if (hasAnyKeyword(haystack, [/\bpo\b/, /\bpo number\b/, /\bpurchase order\b/, /\bpurchaseorder\b/])) {
+  if (hasAnyKeyword(contextHaystack, [/\bpo\b/, /\bpo number\b/, /\bpurchase order\b/, /\bpurchaseorder\b/])) {
     return 'Optional';
   }
   if (input.format === 'date') {

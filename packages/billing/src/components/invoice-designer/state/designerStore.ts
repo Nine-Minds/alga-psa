@@ -438,9 +438,17 @@ const materializeNodesFromSnapshot = (snapshot: Pick<DesignerWorkspaceSnapshot, 
       height: sizeFromProps?.height ?? sizeFromStyle.height ?? defaultSize.height,
     });
 
-    // Keep CSS size in sync with the numeric box size when not explicitly set.
-    if (!style.width) style.width = `${Math.round(size.width)}px`;
-    if (!style.height) style.height = `${Math.round(size.height)}px`;
+    // Keep CSS size in sync with numeric box size for authored/designer-native nodes.
+    // AST-imported nodes should remain fluid unless width/height existed in the source AST.
+    const astImported = metadata.__astImported === true;
+    const astHadWidth = metadata.__astHadWidth === true;
+    const astHadHeight = metadata.__astHadHeight === true;
+    if (!style.width && (!astImported || astHadWidth)) {
+      style.width = `${Math.round(size.width)}px`;
+    }
+    if (!style.height && (!astImported || astHadHeight)) {
+      style.height = `${Math.round(size.height)}px`;
+    }
 
     const rawPositionValue = (rawProps as any).position ?? (snapshotNode as any).position;
     const positionFromProps = coercePoint(rawPositionValue);
@@ -1220,12 +1228,17 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
       setWithIndex((state) => {
         const legacyNodes = (workspace as { nodes?: unknown }).nodes;
         const nextRootId = typeof workspace.rootId === 'string' ? workspace.rootId : state.rootId;
-        const nextNodes = Array.isArray(legacyNodes)
-          ? snapshotNodes(legacyNodes as DesignerNode[])
-          : materializeNodesFromSnapshot({
-              nodesById: workspace.nodesById ?? {},
-              rootId: nextRootId,
-            });
+        const legacyNodesById = Array.isArray(legacyNodes)
+          ? (Object.fromEntries(
+              (legacyNodes as Array<Record<string, unknown>>)
+                .filter((node): node is Record<string, unknown> & { id: string } => typeof node?.id === 'string')
+                .map((node) => [node.id, node as unknown as DesignerWorkspaceSnapshot['nodesById'][string]])
+            ) as DesignerWorkspaceSnapshot['nodesById'])
+          : null;
+        const nextNodes = materializeNodesFromSnapshot({
+          nodesById: legacyNodesById ?? workspace.nodesById ?? {},
+          rootId: nextRootId,
+        });
         return {
           rootId: nextRootId,
           nodes: nextNodes,
