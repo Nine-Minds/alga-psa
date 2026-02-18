@@ -24,6 +24,7 @@ import styles from './TicketDetails.module.css';
 import { getTicketCategories, getTicketCategoriesByBoard, BoardCategoryData } from '@alga-psa/tickets/actions';
 import { ItilLabels, calculateItilPriority } from '@alga-psa/tickets/lib/itilUtils';
 import { Pencil, Check, X, HelpCircle, Save, AlertCircle } from 'lucide-react';
+import MultiUserPicker from '@alga-psa/ui/components/MultiUserPicker';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
@@ -59,6 +60,11 @@ interface TicketInfoProps {
   itilSubcategory?: string;
   renderProjectTaskActions?: (args: { ticket: ITicket; additionalAgents?: { user_id: string; name: string }[] }) => React.ReactNode;
   additionalAgents?: { user_id: string; name: string }[];
+  effectiveAdditionalAgentIds?: string[];
+  onPendingAgentChange?: (userIds: string[]) => void;
+  hasPendingAdditionalAgents?: boolean;
+  onDiscardPendingAgents?: () => void;
+  onAgentClick?: (userId: string) => void;
 }
 
 const TicketInfo: React.FC<TicketInfoProps> = ({
@@ -86,6 +92,11 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
   itilSubcategory,
   renderProjectTaskActions,
   additionalAgents,
+  effectiveAdditionalAgentIds = [],
+  onPendingAgentChange,
+  hasPendingAdditionalAgents = false,
+  onDiscardPendingAgents,
+  onAgentClick,
 }) => {
   // Use initialCategories from server to avoid timing issues on first render
   const [categories, setCategories] = useState<ITicketCategory[]>(initialCategories);
@@ -202,8 +213,8 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
     const hasTitleChange = titleValue !== ticket.title;
     const hasDescriptionChange = hasDescriptionContentChanged;
 
-    return hasPendingTicketChanges || hasPendingItilChanges || hasTitleChange || hasDescriptionChange;
-  }, [isFormInitialized, pendingChanges, pendingItilChanges, titleValue, ticket.title, hasDescriptionContentChanged]);
+    return hasPendingTicketChanges || hasPendingItilChanges || hasTitleChange || hasDescriptionChange || hasPendingAdditionalAgents;
+  }, [isFormInitialized, pendingChanges, pendingItilChanges, titleValue, ticket.title, hasDescriptionContentChanged, hasPendingAdditionalAgents]);
 
   // Register unsaved changes with the context
   useRegisterUnsavedChanges(`ticket-info-${id}`, hasUnsavedChanges);
@@ -566,7 +577,8 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
     setHasDescriptionContentChanged(false);
     setIsEditingTitle(false);
     setIsEditingDescription(false);
-  }, [ticket.title]);
+    onDiscardPendingAgents?.();
+  }, [ticket.title, onDiscardPendingAgents]);
 
   // Handler for Cancel button click
   const handleCancelClick = useCallback(() => {
@@ -730,7 +742,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
           )}
 
           <div className="grid grid-cols-2 gap-4 mb-4">
-            {/* Row 1: Status + Assigned To */}
+            {/* Row 1: Status + Assigned To (Primary Agent) */}
             <div>
               <h5 className="font-bold mb-2">Status</h5>
               <CustomSelect
@@ -743,10 +755,16 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
               />
             </div>
             <div>
-              <h5 className="font-bold mb-2">Assigned To</h5>
+              <h5 className="font-bold mb-2">Assigned To <span className="font-normal text-[rgb(var(--color-text-400))]">(Primary Agent)</span></h5>
               <UserPicker
                 value={pendingChanges.assigned_to ?? originalTicketValues.assigned_to ?? ''}
-                onValueChange={(value) => handlePendingChange('assigned_to', value)}
+                onValueChange={(value) => {
+                  handlePendingChange('assigned_to', value);
+                  // Dedup: if new primary is in additional agents, remove from additional
+                  if (value && effectiveAdditionalAgentIds.includes(value) && onPendingAgentChange) {
+                    onPendingAgentChange(effectiveAdditionalAgentIds.filter(id => id !== value));
+                  }
+                }}
                 users={usersList}
                 getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
                 labelStyle="none"
@@ -756,9 +774,32 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                 placeholder="Not assigned"
                 disabled={workflowLocked}
               />
+              {/* Additional Agents — nested under Assigned To */}
+              <div className="mt-3 max-w-[240px]">
+                <h5 className="font-bold mb-1.5 text-sm">Additional Agents</h5>
+                <MultiUserPicker
+                  id={`${id}-additional-agents-picker`}
+                  values={effectiveAdditionalAgentIds}
+                  getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
+                  onValuesChange={(newUserIds) => {
+                    const effectivePrimaryId = pendingChanges.assigned_to ?? originalTicketValues.assigned_to;
+                    const deduped = effectivePrimaryId
+                      ? newUserIds.filter(id => id !== effectivePrimaryId)
+                      : newUserIds;
+                    onPendingAgentChange?.(deduped);
+                  }}
+                  users={usersList.filter(u => {
+                    const effectivePrimaryId = pendingChanges.assigned_to ?? originalTicketValues.assigned_to;
+                    return u.user_id !== effectivePrimaryId;
+                  })}
+                  size="sm"
+                  placeholder="Add agents..."
+                  onUserClick={onAgentClick}
+                />
+              </div>
             </div>
 
-            {/* Row 2: Board + Category */}
+            {/* Row 3: Board + Category */}
             <div>
               <h5 className="font-bold mb-2">Board</h5>
               <CustomSelect

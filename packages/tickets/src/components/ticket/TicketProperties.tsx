@@ -1,30 +1,20 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
-import { getScheduledHoursForTicket } from '../../actions/ticketActions';
-import { ITicket, ITimeSheet, ITimePeriod, ITimePeriodView, ITimeEntry, IAgentSchedule, IClient, IClientLocation } from '@alga-psa/types'; // Added IClient and IClientLocation
-import { IUserWithRoles, ITeam } from '@alga-psa/types';
-import { ITicketResource } from '@alga-psa/types';
+import React, { useState, useEffect } from 'react';
+import { ITicket, ITimeSheet, ITimePeriodView, IClient, IClientLocation } from '@alga-psa/types';
 import { ITag } from '@alga-psa/types';
-import { TagManager } from '@alga-psa/tags/components';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
-import { Clock, Edit2, Play, Pause, StopCircle, UserPlus, X, AlertCircle, Calendar as CalendarIcon, Building, Users } from 'lucide-react';
-import { formatMinutesAsHoursAndMinutes } from '@alga-psa/core';
+import { Clock, Edit2, Play, Pause, StopCircle, X, Building } from 'lucide-react';
 import styles from './TicketDetails.module.css';
-import UserPicker from '@alga-psa/ui/components/UserPicker';
-import MultiUserPicker from '@alga-psa/ui/components/MultiUserPicker';
-import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
-import { toast } from 'react-hot-toast';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
 import ClientAvatar from '@alga-psa/ui/components/ClientAvatar';
 import ContactAvatar from '@alga-psa/ui/components/ContactAvatar';
-import { getUserAvatarUrlAction, getContactAvatarUrlAction, getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
-import { getUserContactId } from '@alga-psa/users/actions';
+import { getContactAvatarUrlAction } from '@alga-psa/users/actions';
 import { utcToLocal, formatDateTime, getUserTimeZone } from '@alga-psa/core';
 import { getTicketingDisplaySettings } from '../../actions/ticketDisplaySettings';
 import type { SurveyTicketSatisfactionSummary } from '@alga-psa/types';
@@ -43,9 +33,6 @@ interface TicketPropertiesProps {
   isRunning: boolean;
   isTimerLocked?: boolean;
   timeDescription: string;
-  team: ITeam | null;
-  additionalAgents: ITicketResource[];
-  availableAgents: IUserWithRoles[];
   currentTimeSheet: ITimeSheet | null;
   currentTimePeriod: ITimePeriodView | null;
   userId: string;
@@ -62,9 +49,6 @@ interface TicketPropertiesProps {
   onAddTimeEntry: () => void;
   onClientClick: () => void;
   onContactClick: () => void;
-  onAgentClick: (userId: string) => void;
-  onAddAgent: (userId: string) => Promise<void>;
-  onRemoveAgent: (assignmentId: string) => Promise<void>;
   onChangeContact: (contactId: string | null) => void;
   onChangeClient: (clientId: string) => void;
   onChangeLocation?: (locationId: string | null) => void;
@@ -116,9 +100,6 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
   isRunning,
   isTimerLocked = false,
   timeDescription,
-  team,
-  additionalAgents,
-  availableAgents,
   currentTimeSheet,
   currentTimePeriod,
   userId,
@@ -135,9 +116,6 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
   onAddTimeEntry,
   onClientClick,
   onContactClick,
-  onAgentClick,
-  onAddAgent,
-  onRemoveAgent,
   onChangeContact,
   onChangeClient,
   onChangeLocation,
@@ -154,15 +132,10 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
   const [showClientPicker, setShowClientPicker] = useState(false);
   const [showLocationPicker, setShowLocationPicker] = useState(false);
 
-  // Ref to prevent race conditions when rapidly adding/removing agents
-  const isProcessingAgentsRef = useRef(false);
   const [contactFilterState, setContactFilterState] = useState<'all' | 'active' | 'inactive'>('active');
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null);
-  const [agentSchedules, setAgentSchedules] = useState<IAgentSchedule[]>([]);
-  const [primaryAgentAvatarUrl, setPrimaryAgentAvatarUrl] = useState<string | null>(null);
-  const [additionalAgentAvatarUrls, setAdditionalAgentAvatarUrls] = useState<Record<string, string | null>>({});
   const [contactAvatarUrl, setContactAvatarUrl] = useState<string | null>(null);
   const [dateTimeFormat, setDateTimeFormat] = useState<string>('MMM d, yyyy h:mm a');
 
@@ -192,56 +165,6 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
     });
   }, [clients]);
 
-  // Fetch scheduled hours from schedule entries
-  useEffect(() => {
-    const fetchScheduledHours = async () => {
-      if (!ticket.ticket_id) return;
-      
-      try {
-        // Use the server action to get scheduled hours
-        const schedules = await getScheduledHoursForTicket(ticket.ticket_id);
-        setAgentSchedules(schedules);
-      } catch (error) {
-        console.error('Error fetching scheduled hours:', error);
-      }
-    };
-    
-    fetchScheduledHours();
-  }, [ticket.ticket_id, userId]);
-
-  // Fetch avatar URLs for primary agent, additional agents, and contact
-  useEffect(() => {
-    const fetchAvatarUrls = async () => {
-      if (!tenant) return;
-
-      // Fetch primary agent avatar URL
-      if (ticket.assigned_to) {
-        try {
-          const avatarUrl = await getUserAvatarUrlAction(ticket.assigned_to, tenant);
-          setPrimaryAgentAvatarUrl(avatarUrl);
-        } catch (error) {
-          console.error('Error fetching primary agent avatar URL:', error);
-        }
-      }
-
-      // Fetch additional agents avatar URLs
-      const avatarUrls: Record<string, string | null> = {};
-      for (const agent of additionalAgents) {
-        if (agent.additional_user_id) {
-          try {
-            const avatarUrl = await getUserAvatarUrlAction(agent.additional_user_id, tenant);
-            avatarUrls[agent.additional_user_id] = avatarUrl;
-          } catch (error) {
-            console.error(`Error fetching avatar URL for agent ${agent.additional_user_id}:`, error);
-          }
-        }
-      }
-      setAdditionalAgentAvatarUrls(avatarUrls);
-    };
-
-    fetchAvatarUrls();
-  }, [ticket.assigned_to, additionalAgents, tenant]);
-
   // Fetch contact avatar URL
   useEffect(() => {
     const fetchContactAvatarUrl = async () => {
@@ -257,12 +180,6 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
 
     fetchContactAvatarUrl();
   }, [contactInfo?.contact_name_id, tenant]);
-
-  // Helper function to get scheduled hours for a specific agent
-  const getAgentScheduledHours = (agentId: string): number => {
-    const schedule = agentSchedules.find(s => s.userId === agentId);
-    return schedule ? schedule.minutes : 0;
-  };
 
   const formatTime = (seconds: number) => {
     const hours = Math.floor(seconds / 3600);
@@ -634,111 +551,6 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
           </div>
         </div>
       </div>
-
-      <div className={`${styles['card']} p-6 space-y-4`}>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className={`${styles['panel-header']}`}>
-            <Users className="inline-block w-5 h-5 mr-2" />
-            Agent team
-          </h2>
-        </div>
-        <div className="space-y-4">
-          {/* Primary Agent */}
-          <div>
-            <h5 className="font-bold mb-2">Primary Agent</h5>
-            {ticket.assigned_to ? (
-              <div
-                className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-2 rounded"
-                onClick={() => onAgentClick(ticket.assigned_to!)}
-              >
-                <UserAvatar
-                  {...withDataAutomationId({ id: `${id}-primary-agent-avatar` })}
-                  userId={ticket.assigned_to}
-                  userName={`${availableAgents.find(a => a.user_id === ticket.assigned_to)?.first_name || ''} ${availableAgents.find(a => a.user_id === ticket.assigned_to)?.last_name || ''}`}
-                  avatarUrl={primaryAgentAvatarUrl}
-                  size="sm"
-                />
-                <div className="flex flex-col">
-                  <span className="text-sm">
-                    {availableAgents.find(a => a.user_id === ticket.assigned_to)?.first_name || 'Unknown'}{' '}
-                    {availableAgents.find(a => a.user_id === ticket.assigned_to)?.last_name || 'Agent'}
-                  </span>
-                  <div className="flex items-center text-xs text-gray-500 mt-1">
-                    <Clock className="w-3 h-3 mr-1" />
-                    <span>Scheduled: {formatMinutesAsHoursAndMinutes(getAgentScheduledHours(ticket.assigned_to!))}</span>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <p className="text-sm text-gray-500">No primary agent assigned</p>
-            )}
-          </div>
-
-          {/* Team - Commented out for now
-          <div>
-            <h5 className="font-bold mb-2">Team</h5>
-            {team ? (
-              <div className="text-sm">
-                <p>{team.team_name}</p>
-                <p className="text-gray-500">
-                  Manager: {team.members.find(m => m.user_id === team.manager_id)?.first_name || 'Unknown Manager'}
-                </p>
-              </div>
-            ) : (
-              <p className="text-sm text-gray-500">No team assigned</p>
-            )}
-          </div>
-          */}
-
-          {/* Additional Agents */}
-          <div>
-            <h5 className="font-bold mb-2">Additional Agents</h5>
-            <MultiUserPicker
-              id={`${id}-additional-agents`}
-              values={additionalAgents.filter(a => a.additional_user_id).map(a => a.additional_user_id!)}
-              getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
-              onValuesChange={async (newUserIds) => {
-                // Prevent race conditions from rapid clicks
-                if (isProcessingAgentsRef.current) {
-                  return;
-                }
-                isProcessingAgentsRef.current = true;
-
-                try {
-                  const currentUserIds = additionalAgents
-                    .filter(a => a.additional_user_id)
-                    .map(a => a.additional_user_id!);
-
-                  // Find added users
-                  const addedUserIds = newUserIds.filter(id => !currentUserIds.includes(id));
-                  // Find removed users
-                  const removedUserIds = currentUserIds.filter(id => !newUserIds.includes(id));
-
-                  // Process all additions sequentially
-                  for (const userId of addedUserIds) {
-                    await onAddAgent(userId);
-                  }
-
-                  // Process all removals sequentially
-                  for (const userId of removedUserIds) {
-                    const agent = additionalAgents.find(a => a.additional_user_id === userId);
-                    if (agent?.assignment_id) {
-                      await onRemoveAgent(agent.assignment_id);
-                    }
-                  }
-                } finally {
-                  isProcessingAgentsRef.current = false;
-                }
-              }}
-              users={availableAgents.filter(agent => agent.user_id !== ticket.assigned_to)}
-              size="sm"
-              placeholder="Select additional agents..."
-              onUserClick={onAgentClick}
-            />
-          </div>
-        </div>
-      </div>
-
 
       {ticket.ticket_id && ticket.client_id && (
         <TicketMaterialsCard

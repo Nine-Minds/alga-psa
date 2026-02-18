@@ -34,7 +34,7 @@ import TicketConversation from "./TicketConversation";
 import { useSession } from 'next-auth/react';
 import { toast } from 'react-hot-toast';
 import { useDrawer } from "@alga-psa/ui";
-import { useSchedulingCallbacks } from '@alga-psa/ui/context';
+import { useSchedulingCallbacks, useRegisterUnsavedChanges } from '@alga-psa/ui/context';
 import { findUserById, getCurrentUser } from "@alga-psa/users/actions";
 import { findBoardById, getAllBoards } from "@alga-psa/tickets/actions";
 import { findCommentsByTicketId, deleteComment, createComment, updateComment, findCommentById } from "@alga-psa/tickets/actions";
@@ -268,6 +268,23 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
 
     const [availableAgents, setAvailableAgents] = useState<IUserWithRoles[]>(initialAvailableAgents);
     const [additionalAgents, setAdditionalAgents] = useState<ITicketResource[]>(initialAdditionalAgents);
+
+    // Pending additional agent IDs (null = no pending changes)
+    const [pendingAdditionalAgentIds, setPendingAdditionalAgentIds] = useState<string[] | null>(null);
+    const effectiveAdditionalAgentIds = useMemo(() => {
+        if (pendingAdditionalAgentIds !== null) return pendingAdditionalAgentIds;
+        return additionalAgents.filter(a => a.additional_user_id).map(a => a.additional_user_id!);
+    }, [pendingAdditionalAgentIds, additionalAgents]);
+    const hasPendingAdditionalAgents = pendingAdditionalAgentIds !== null;
+    useRegisterUnsavedChanges(`ticket-additional-agents-${id}`, hasPendingAdditionalAgents);
+
+    const handlePendingAgentChange = useCallback((userIds: string[]) => {
+        setPendingAdditionalAgentIds(userIds);
+    }, []);
+
+    const handleDiscardPendingAgents = useCallback(() => {
+        setPendingAdditionalAgentIds(null);
+    }, []);
 
     const [newCommentContent, setNewCommentContent] = useState<PartialBlock[]>([{
         type: "paragraph",
@@ -1163,35 +1180,87 @@ const handleClose = () => {
 
     // Handler for batch save changes from TicketInfo
     const handleBatchSaveChanges = useCallback(async (changes: Record<string, unknown>): Promise<boolean> => {
-        // If we have a batch handler from container, use it
-        if (onBatchTicketUpdate) {
-            const success = await onBatchTicketUpdate(changes);
-            if (success) {
-                // Update local ticket state with the saved changes
-                setTicket(prevTicket => ({
-                    ...prevTicket,
-                    ...changes,
-                    updated_at: new Date().toISOString()
-                }));
-            }
-            return success;
+        // Deduplication: if the new primary agent is in pending additional agents, remove them
+        let resolvedPendingAgents = pendingAdditionalAgentIds;
+        if (resolvedPendingAgents !== null && changes.assigned_to) {
+            resolvedPendingAgents = resolvedPendingAgents.filter(id => id !== changes.assigned_to);
         }
 
-        // Fallback: save each change individually
-        try {
-            for (const [field, value] of Object.entries(changes)) {
-                if (field === 'itil_impact' || field === 'itil_urgency') {
-                    await handleItilFieldChange(field, value);
+        const hasTicketFieldChanges = Object.keys(changes).length > 0;
+
+        // Save ticket field changes (skip if only agent changes)
+        if (hasTicketFieldChanges) {
+            if (onBatchTicketUpdate) {
+                const success = await onBatchTicketUpdate(changes);
+                if (success) {
+                    setTicket(prevTicket => ({
+                        ...prevTicket,
+                        ...changes,
+                        updated_at: new Date().toISOString()
+                    }));
                 } else {
-                    await handleSelectChange(field as keyof ITicket, value as string | null);
+                    return false;
+                }
+            } else {
+                try {
+                    for (const [field, value] of Object.entries(changes)) {
+                        if (field === 'itil_impact' || field === 'itil_urgency') {
+                            await handleItilFieldChange(field, value);
+                        } else {
+                            await handleSelectChange(field as keyof ITicket, value as string | null);
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error in batch save:', error);
+                    return false;
                 }
             }
-            return true;
-        } catch (error) {
-            console.error('Error in batch save:', error);
-            return false;
         }
-    }, [onBatchTicketUpdate, handleItilFieldChange]);
+
+        // Process pending additional agent changes
+        if (resolvedPendingAgents !== null) {
+            const currentAgentIds = additionalAgents
+                .filter(a => a.additional_user_id)
+                .map(a => a.additional_user_id!);
+            const agentsToAdd = resolvedPendingAgents.filter(id => !currentAgentIds.includes(id));
+            const agentsToRemove = currentAgentIds.filter(id => !resolvedPendingAgents!.includes(id));
+
+            let agentSaveFailed = false;
+
+            for (const userId of agentsToAdd) {
+                try {
+                    const result = await addTicketResource(ticket.ticket_id!, userId, 'support');
+                    if (result) {
+                        setAdditionalAgents(prev => [...prev, result]);
+                    }
+                } catch (error) {
+                    console.error('Error adding agent:', error);
+                    agentSaveFailed = true;
+                }
+            }
+            for (const userId of agentsToRemove) {
+                const agent = additionalAgents.find(a => a.additional_user_id === userId);
+                if (agent?.assignment_id) {
+                    try {
+                        await removeTicketResource(agent.assignment_id);
+                        setAdditionalAgents(prev => prev.filter(a => a.assignment_id !== agent.assignment_id));
+                    } catch (error) {
+                        console.error('Error removing agent:', error);
+                        agentSaveFailed = true;
+                    }
+                }
+            }
+
+            if (agentSaveFailed) {
+                toast.error('Some agent changes failed to save');
+                return false;
+            }
+
+            setPendingAdditionalAgentIds(null);
+        }
+
+        return true;
+    }, [onBatchTicketUpdate, handleItilFieldChange, pendingAdditionalAgentIds, additionalAgents, ticket.ticket_id]);
 
     const handleClientChange = async (newClientId: string) => {
         try {
@@ -1807,6 +1876,11 @@ const handleClose = () => {
                                             ? `${availableAgents.find(u => u.user_id === (a.additional_user_id || a.assigned_to))!.first_name} ${availableAgents.find(u => u.user_id === (a.additional_user_id || a.assigned_to))!.last_name || ''}`.trim()
                                             : ''
                                     }))}
+                                    effectiveAdditionalAgentIds={effectiveAdditionalAgentIds}
+                                    onPendingAgentChange={handlePendingAgentChange}
+                                    hasPendingAdditionalAgents={hasPendingAdditionalAgents}
+                                    onDiscardPendingAgents={handleDiscardPendingAgents}
+                                    onAgentClick={handleAgentClick}
                                 />
                             </div>
                         </Suspense>
@@ -1885,12 +1959,6 @@ const handleClose = () => {
                                 onAddTimeEntry={handleAddTimeEntry}
                                 onClientClick={handleClientClick}
                                 onContactClick={handleContactClick}
-                                team={team}
-                                additionalAgents={additionalAgents}
-                                availableAgents={availableAgents}
-                                onAgentClick={handleAgentClick}
-                                onAddAgent={handleAddAgent}
-                                onRemoveAgent={handleRemoveAgent}
                                 currentTimeSheet={currentTimeSheet}
                                 currentTimePeriod={currentTimePeriod}
                                 userId={userId || ''}
@@ -1905,9 +1973,6 @@ const handleClose = () => {
                                 onChangeLocation={handleLocationChange}
                                 onClientFilterStateChange={setClientFilterState}
                                 onClientTypeFilterChange={setClientTypeFilter}
-                                tags={tags}
-                                allTagTexts={allTags.filter(tag => tag.tagged_type === 'ticket').map(tag => tag.tag_text)}
-                                onTagsChange={handleTagsChange}
                                 onItilFieldChange={handleItilFieldChange}
                                 surveySummary={surveySummary}
                                 renderIntervalManagement={renderIntervalManagement}
