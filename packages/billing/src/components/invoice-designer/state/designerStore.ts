@@ -66,6 +66,7 @@ export type CssJustifyContent =
 export type CssAlignItems = 'flex-start' | 'center' | 'flex-end' | 'stretch';
 
 export type CssGridAutoFlow = 'row' | 'column' | 'dense' | 'row dense' | 'column dense';
+export type CssTextAlign = 'left' | 'center' | 'right' | 'justify';
 
 export interface DesignerContainerLayout {
   display: 'flex' | 'grid';
@@ -101,6 +102,30 @@ export interface DesignerNodeStyle {
   // Media
   aspectRatio?: string; // e.g. '16 / 9', '1'
   objectFit?: 'contain' | 'cover' | 'fill' | 'none' | 'scale-down';
+
+  // Visual
+  margin?: CssLength;
+  border?: string;
+  borderRadius?: CssLength;
+  color?: string;
+  backgroundColor?: string;
+  fontSize?: CssLength;
+  fontWeight?: string | number;
+  fontFamily?: string;
+  lineHeight?: string | number;
+  textAlign?: CssTextAlign;
+
+  // Non-container layout-like style declarations that can be attached directly
+  // to nodes such as fields in template AST inline styles.
+  display?: 'flex' | 'grid';
+  flexDirection?: 'row' | 'column';
+  justifyContent?: CssJustifyContent;
+  alignItems?: CssAlignItems;
+  gap?: CssLength;
+  padding?: CssLength;
+  gridTemplateColumns?: string;
+  gridTemplateRows?: string;
+  gridAutoFlow?: CssGridAutoFlow;
 }
 
 export interface DesignerNode {
@@ -250,8 +275,6 @@ const sanitizePersistedNodeProps = (props: Record<string, unknown> | undefined):
   return clone;
 };
 
-type LabelNormalizationKind = 'name' | 'metadata';
-
 const normalizeDesignerPatchPath = (input: string): string => {
   const path = input.trim();
   if (path.startsWith('props.')) return path;
@@ -263,67 +286,6 @@ const normalizeDesignerPatchPath = (input: string): string => {
   if (path === 'style' || path.startsWith('style.')) return `props.${path}`;
 
   return path;
-};
-
-const resolveLabelNormalizationKind = (path: string): LabelNormalizationKind | null => {
-  if (path === 'name' || path === 'props.name') {
-    return 'name';
-  }
-  if (path === 'metadata' || path === 'props.metadata') {
-    return 'metadata';
-  }
-  if (path.startsWith('metadata.') || path.startsWith('props.metadata.')) {
-    return 'metadata';
-  }
-  return null;
-};
-
-const normalizeLabelAfterMutation = (
-  nodes: DesignerNode[],
-  nodeId: string,
-  kind: LabelNormalizationKind
-): DesignerNode[] => {
-  const index = nodes.findIndex((node) => node.id === nodeId);
-  if (index < 0) return nodes;
-  const node = nodes[index];
-  if (!node || node.type !== 'label') return nodes;
-
-  const existingProps = isPlainObject(node.props) ? node.props : {};
-  const propsMetadata = isPlainObject(existingProps.metadata) ? (existingProps.metadata as Record<string, unknown>) : {};
-
-  if (kind === 'name') {
-    const nextText = typeof existingProps.name === 'string' ? (existingProps.name as string) : '';
-    const nextMetadata = { ...propsMetadata, text: nextText };
-    const nextProps = { ...existingProps, name: nextText, metadata: nextMetadata };
-    const nextNode: DesignerNode = { ...node, props: nextProps };
-    if (nextNode === node) return nodes;
-    const copy = nodes.slice();
-    copy[index] = nextNode;
-    return copy;
-  }
-
-  const candidateText = typeof propsMetadata.text === 'string' ? propsMetadata.text.trim() : '';
-  const candidateLabel = typeof propsMetadata.label === 'string' ? propsMetadata.label.trim() : '';
-
-  if (candidateText) {
-    const nextMetadata = { ...propsMetadata, text: candidateText };
-    const nextProps = { ...existingProps, name: candidateText, metadata: nextMetadata };
-    const nextNode: DesignerNode = { ...node, props: nextProps };
-    const copy = nodes.slice();
-    copy[index] = nextNode;
-    return copy;
-  }
-
-  if (candidateLabel) {
-    const nextMetadata = { ...propsMetadata, text: candidateLabel, label: candidateLabel };
-    const nextProps = { ...existingProps, name: candidateLabel, metadata: nextMetadata };
-    const nextNode: DesignerNode = { ...node, props: nextProps };
-    const copy = nodes.slice();
-    copy[index] = nextNode;
-    return copy;
-  }
-
-  return nodes;
 };
 
 const snapshotWorkspaceNodesById = (
@@ -438,9 +400,17 @@ const materializeNodesFromSnapshot = (snapshot: Pick<DesignerWorkspaceSnapshot, 
       height: sizeFromProps?.height ?? sizeFromStyle.height ?? defaultSize.height,
     });
 
-    // Keep CSS size in sync with the numeric box size when not explicitly set.
-    if (!style.width) style.width = `${Math.round(size.width)}px`;
-    if (!style.height) style.height = `${Math.round(size.height)}px`;
+    // Keep CSS size in sync with numeric box size for authored/designer-native nodes.
+    // AST-imported nodes should remain fluid unless width/height existed in the source AST.
+    const astImported = metadata.__astImported === true;
+    const astHadWidth = metadata.__astHadWidth === true;
+    const astHadHeight = metadata.__astHadHeight === true;
+    if (!style.width && (!astImported || astHadWidth)) {
+      style.width = `${Math.round(size.width)}px`;
+    }
+    if (!style.height && (!astImported || astHadHeight)) {
+      style.height = `${Math.round(size.height)}px`;
+    }
 
     const rawPositionValue = (rawProps as any).position ?? (snapshotNode as any).position;
     const positionFromProps = coercePoint(rawPositionValue);
@@ -1038,13 +1008,8 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
     setNodeProp: (nodeId, path, value, commit = true) => {
       setWithIndex((state) => {
         const normalizedPath = normalizeDesignerPatchPath(path);
-        let nodes = patchSetNodeProp(state.nodes, nodeId, normalizedPath, value);
+        const nodes = patchSetNodeProp(state.nodes, nodeId, normalizedPath, value);
         if (nodes === state.nodes) return state;
-
-        const labelNormalization = resolveLabelNormalizationKind(normalizedPath);
-        if (labelNormalization) {
-          nodes = normalizeLabelAfterMutation(nodes, nodeId, labelNormalization);
-        }
 
         if (!commit) return { nodes };
 
@@ -1056,13 +1021,8 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
     unsetNodeProp: (nodeId, path, commit = true) => {
       setWithIndex((state) => {
         const normalizedPath = normalizeDesignerPatchPath(path);
-        let nodes = patchUnsetNodeProp(state.nodes, nodeId, normalizedPath);
+        const nodes = patchUnsetNodeProp(state.nodes, nodeId, normalizedPath);
         if (nodes === state.nodes) return state;
-
-        const labelNormalization = resolveLabelNormalizationKind(normalizedPath);
-        if (labelNormalization) {
-          nodes = normalizeLabelAfterMutation(nodes, nodeId, labelNormalization);
-        }
 
         if (!commit) return { nodes };
 
@@ -1219,13 +1179,26 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
     loadWorkspace: (workspace) => {
       setWithIndex((state) => {
         const legacyNodes = (workspace as { nodes?: unknown }).nodes;
-        const nextRootId = typeof workspace.rootId === 'string' ? workspace.rootId : state.rootId;
-        const nextNodes = Array.isArray(legacyNodes)
-          ? snapshotNodes(legacyNodes as DesignerNode[])
-          : materializeNodesFromSnapshot({
-              nodesById: workspace.nodesById ?? {},
-              rootId: nextRootId,
-            });
+        const legacyNodesById = Array.isArray(legacyNodes)
+          ? (Object.fromEntries(
+              (legacyNodes as Array<Record<string, unknown>>)
+                .filter((node): node is Record<string, unknown> & { id: string } => typeof node?.id === 'string')
+                .map((node) => [node.id, node as unknown as DesignerWorkspaceSnapshot['nodesById'][string]])
+            ) as DesignerWorkspaceSnapshot['nodesById'])
+          : null;
+        const incomingNodesById = legacyNodesById ?? workspace.nodesById ?? {};
+        const requestedRootId = typeof workspace.rootId === 'string' ? workspace.rootId : null;
+        const canUseExistingRootId =
+          !requestedRootId && typeof state.rootId === 'string' && Boolean(incomingNodesById[state.rootId]);
+        const fallbackRootId =
+          Object.values(incomingNodesById).find((node) => node.type === 'document')?.id ??
+          Object.keys(incomingNodesById)[0] ??
+          state.rootId;
+        const nextRootId = requestedRootId ?? (canUseExistingRootId ? state.rootId : fallbackRootId);
+        const nextNodes = materializeNodesFromSnapshot({
+          nodesById: incomingNodesById,
+          rootId: nextRootId,
+        });
         return {
           rootId: nextRootId,
           nodes: nextNodes,

@@ -411,7 +411,7 @@ const resolveTotalsRowPreviewModel = (
 ): TotalsRowPreviewModel => {
   if (!isTotalsRowType(node.type)) {
     return {
-      label: getNodeName(node),
+      label: 'Value',
       bindingKey: 'binding',
       previewValue: '$0.00',
       isGrandTotal: false,
@@ -420,7 +420,7 @@ const resolveTotalsRowPreviewModel = (
 
   const metadata = getNodeMetadata(node);
   const fallbackLabel = resolveTotalsRowLabelFallback(node.type);
-  const label = asTrimmedString(metadata.label) || asTrimmedString(getNodeName(node)) || fallbackLabel;
+  const label = asTrimmedString(metadata.label) || fallbackLabel;
   const bindingKey = asTrimmedString(metadata.bindingKey) || resolveTotalsRowBindingFallback(node.type);
   const format = normalizeFieldFormat(metadata.format ?? 'currency');
   const boundValue = formatBoundValue(
@@ -609,12 +609,21 @@ const getPreviewContent = (node: DesignerNode, previewData: WasmInvoiceViewModel
       };
     }
     case 'text': {
-      const text = typeof metadata.text === 'string' ? metadata.text : getNodeName(node);
-      const content = text.length > 0 ? text.slice(0, 140) : getNodeName(node);
+      const text =
+        asTrimmedString(metadata.text) ||
+        asTrimmedString(metadata.label) ||
+        asTrimmedString(metadata.content);
+      const content = text.length > 0 ? text.slice(0, 140) : '';
       
       // Check for interpolation variables {{var}}
       const parts = content.split(/(\{\{.*?\}\})/g);
       if (parts.length === 1) {
+        if (content.length === 0) {
+          return {
+            content: renderPlaceholderPreview('Text'),
+            isPlaceholder: true,
+          };
+        }
         return { content };
       }
       
@@ -800,6 +809,12 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
   const resolvedWidth = resolvedBoxStyle.width;
   const resolvedHeight = resolvedBoxStyle.height;
   const isFlowPositioning = parentUsesFlowLayout;
+  const metadata = getNodeMetadata(node);
+  const astImported = metadata.__astImported === true;
+  const astHadWidth = metadata.__astHadWidth === true;
+  const astHadHeight = metadata.__astHadHeight === true;
+  const allowInferredFlowMinWidth = !astImported || astHadWidth;
+  const allowInferredFlowMinHeight = !astImported || astHadHeight;
   const nodeStyle: React.CSSProperties = {
     ...resolvedBoxStyle,
     // Keep box sizing stable when we apply padding/borders via Tailwind classes.
@@ -810,11 +825,13 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
     height: isFlowPositioning ? resolvedHeight : (resolvedHeight ?? inferredHeight),
     minWidth:
       isFlowPositioning
-        ? (resolvedBoxStyle.minWidth ?? (resolvedWidth ? undefined : inferredWidth))
+        ? (resolvedBoxStyle.minWidth ??
+          (resolvedWidth ? undefined : allowInferredFlowMinWidth ? inferredWidth : undefined))
         : resolvedBoxStyle.minWidth,
     minHeight:
       isFlowPositioning
-        ? (resolvedBoxStyle.minHeight ?? (resolvedHeight ? undefined : inferredHeight))
+        ? (resolvedBoxStyle.minHeight ??
+          (resolvedHeight ? undefined : allowInferredFlowMinHeight ? inferredHeight : undefined))
         : resolvedBoxStyle.minHeight,
     top: isFlowPositioning ? undefined : node.position.y,
     left: isFlowPositioning ? undefined : node.position.x,
@@ -824,11 +841,12 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
     zIndex: isDragging ? 40 : isSelected ? 30 : 10,
   };
   const shouldDeemphasize = shouldDeemphasizeNode(hasActiveSelection, isInSelectionContext, isDragging);
-  const metadata = getNodeMetadata(node);
   const sectionCue = node.type === 'section' ? getSectionSemanticCue(getNodeName(node)) : null;
   const isTotalsRow = isTotalsRowType(node.type);
   const isLabelNode = node.type === 'label';
+  const isTextNode = node.type === 'text';
   const isFieldNode = node.type === 'field';
+  const fieldDisplayLabel = isFieldNode ? asTrimmedString(metadata.label) : '';
   const isMediaNode = node.type === 'image' || node.type === 'logo' || node.type === 'qr';
   const labelWeightClass = FONT_WEIGHT_CLASS[
     resolveFontWeightStyle(metadata.fontWeight ?? metadata.labelFontWeight, 'semibold')
@@ -841,7 +859,7 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
       : 'border bg-blue-50/40 border-blue-200 border-dashed';
   const fieldSurfaceClasses = resolveFieldBorderClasses(fieldBorderStyle);
   const isInlineFieldLike = isFieldNode || isLabelNode;
-  const isCompactLeaf = isTotalsRow || isInlineFieldLike;
+  const isCompactLeaf = isTotalsRow || isInlineFieldLike || isTextNode;
   const isResizeHandleSupported =
     node.type === 'image' ||
     node.type === 'logo' ||
@@ -1026,20 +1044,43 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
         </div>
       ) : (
         isCompactLeaf ? (
-          <div
-            className={clsx(
-              'h-full text-[11px] text-slate-500',
-              isLabelNode
-                ? clsx('px-1 py-0.5 flex items-center bg-transparent text-slate-700', labelWeightClass)
-                : isTotalsRow
-                  ? 'p-1.5 whitespace-pre-wrap'
-                  : fieldSurfaceClasses,
-              previewContent.singleLine && 'whitespace-nowrap overflow-hidden',
-              previewContent.isPlaceholder && (isLabelNode ? 'text-slate-400 font-normal italic' : 'text-slate-400')
-            )}
-          >
-            {previewContent.content}
-          </div>
+          isFieldNode ? (
+            <div
+              className={clsx(
+                'h-full text-[11px] text-slate-500 gap-1.5',
+                fieldSurfaceClasses,
+                previewContent.singleLine && 'whitespace-nowrap overflow-hidden',
+                previewContent.isPlaceholder && 'text-slate-400'
+              )}
+            >
+              {fieldDisplayLabel && (
+                <span
+                  className="shrink-0 truncate text-[10px] font-medium text-slate-500"
+                  title={fieldDisplayLabel}
+                >
+                  {fieldDisplayLabel}:
+                </span>
+              )}
+              <span className="min-w-0 truncate">{previewContent.content}</span>
+            </div>
+          ) : (
+            <div
+              className={clsx(
+                'h-full text-[11px] text-slate-500',
+                isLabelNode
+                  ? clsx('px-1 py-0.5 flex items-center bg-transparent text-slate-700', labelWeightClass)
+                  : isTotalsRow
+                    ? 'p-1.5 whitespace-pre-wrap'
+                    : isTextNode
+                      ? 'px-2 py-1 whitespace-pre-wrap text-slate-700 bg-transparent'
+                    : fieldSurfaceClasses,
+                previewContent.singleLine && 'whitespace-nowrap overflow-hidden',
+                previewContent.isPlaceholder && (isLabelNode ? 'text-slate-400 font-normal italic' : 'text-slate-400')
+              )}
+            >
+              {previewContent.content}
+            </div>
+          )
         ) : (
           <>
             <div className="px-2 py-1 border-b bg-slate-50 text-xs font-semibold text-slate-600 flex items-center justify-between">
@@ -1155,12 +1196,19 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
   previewData = null,
 }) => {
   const artboardRef = useRef<HTMLDivElement>(null);
-  const documentNode = useMemo(() => nodes.find((node) => node.parentId === null), [nodes]);
+  const documentNode = useMemo(
+    () => nodes.find((node) => node.type === 'document') ?? nodes.find((node) => node.parentId === null),
+    [nodes]
+  );
   const defaultPageNode = useMemo(
-    () => nodes.find((node) => node.type === 'page' && node.parentId === documentNode?.id),
+    () =>
+      (documentNode
+        ? nodes.find((node) => node.type === 'page' && node.parentId === documentNode.id)
+        : undefined) ?? nodes.find((node) => node.type === 'page'),
     [nodes, documentNode?.id]
   );
-  const rootDropMeta = defaultPageNode ?? documentNode;
+  // Prefer page/document roots, but tolerate malformed parent links from imported snapshots.
+  const rootDropMeta = defaultPageNode ?? documentNode ?? nodes.find((node) => node.parentId === null);
   const { setNodeRef: setDroppableNodeRef, isOver } = useDroppable({
     id: droppableId,
     data: rootDropMeta
@@ -1305,7 +1353,7 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
     selectedNodeId,
   ]);
 
-  const rootParentId = (defaultPageNode ?? documentNode)?.id;
+  const rootParentId = rootDropMeta?.id;
   const canvasWidth = defaultPageNode?.size.width ?? DESIGNER_CANVAS_WIDTH;
   const canvasHeight = defaultPageNode?.size.height ?? DESIGNER_CANVAS_HEIGHT;
 

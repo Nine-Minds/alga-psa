@@ -103,64 +103,62 @@ const seedLabelWorkspace = () => {
   useInvoiceDesignerStore.getState().loadNodes([document, page, section, container, label]);
 };
 
-describe('designerStore label text authority', () => {
+describe('designerStore label text semantics', () => {
   beforeEach(() => {
     useInvoiceDesignerStore.getState().resetWorkspace();
     seedLabelWorkspace();
   });
 
-  it('syncs label props.name from metadata.text updates', () => {
+  it('does not overwrite layer name when metadata.text updates', () => {
     useInvoiceDesignerStore.getState().setNodeProp('label', 'metadata.text', 'INVOICE', true);
     const label = useInvoiceDesignerStore.getState().nodesById['label'];
     expect(label).toBeTruthy();
     if (!label) return;
 
-    expect(getNodeName(label)).toBe('INVOICE');
+    expect(getNodeName(label)).toBe('label 12');
     expect((getNodeMetadata(label) as any).text).toBe('INVOICE');
   });
 
-  it('syncs label metadata.text from name updates', () => {
+  it('does not overwrite metadata.text when layer name updates', () => {
     useInvoiceDesignerStore.getState().setNodeProp('label', 'name', 'DUE DATE', true);
     const label = useInvoiceDesignerStore.getState().nodesById['label'];
     expect(label).toBeTruthy();
     if (!label) return;
 
     expect(getNodeName(label)).toBe('DUE DATE');
-    expect((getNodeMetadata(label) as any).text).toBe('DUE DATE');
+    expect((getNodeMetadata(label) as any).text).toBe('Label');
   });
 
-  it('preserves synced label text after position/size commits', () => {
-    const store = useInvoiceDesignerStore.getState();
-    store.setNodeProp('label', 'metadata.text', 'INVOICE', true);
-    store.setNodeProp('label', 'position.x', 24, false);
-    store.setNodeProp('label', 'position.y', 24, true);
-    const nodeBefore = store.nodesById['label'];
+  it('preserves independent layer name and metadata.text after position/size commits', () => {
+    useInvoiceDesignerStore.getState().setNodeProp('label', 'metadata.text', 'INVOICE', true);
+    useInvoiceDesignerStore.getState().setNodeProp('label', 'name', 'Layer Label Node', true);
+    useInvoiceDesignerStore.getState().setNodeProp('label', 'position.x', 24, false);
+    useInvoiceDesignerStore.getState().setNodeProp('label', 'position.y', 24, true);
+    const nodeBefore = useInvoiceDesignerStore.getState().nodesById['label'];
     expect(nodeBefore).toBeTruthy();
     if (!nodeBefore) return;
 
     const clamped = clampNodeSizeToPracticalMinimum(nodeBefore.type, { width: 160, height: 40 });
     const rounded = { width: Math.round(clamped.width), height: Math.round(clamped.height) };
-    store.setNodeProp('label', 'size.width', rounded.width, false);
-    store.setNodeProp('label', 'size.height', rounded.height, false);
-    store.setNodeProp('label', 'baseSize.width', rounded.width, false);
-    store.setNodeProp('label', 'baseSize.height', rounded.height, false);
-    store.setNodeProp('label', 'style.width', `${rounded.width}px`, false);
-    store.setNodeProp('label', 'style.height', `${rounded.height}px`, true);
+    useInvoiceDesignerStore.getState().setNodeProp('label', 'size.width', rounded.width, false);
+    useInvoiceDesignerStore.getState().setNodeProp('label', 'size.height', rounded.height, false);
+    useInvoiceDesignerStore.getState().setNodeProp('label', 'baseSize.width', rounded.width, false);
+    useInvoiceDesignerStore.getState().setNodeProp('label', 'baseSize.height', rounded.height, false);
+    useInvoiceDesignerStore.getState().setNodeProp('label', 'style.width', `${rounded.width}px`, false);
+    useInvoiceDesignerStore.getState().setNodeProp('label', 'style.height', `${rounded.height}px`, true);
 
-    const label = store.nodesById['label'];
-    expect(getNodeName(label)).toBe('INVOICE');
+    const label = useInvoiceDesignerStore.getState().nodesById['label'];
+    expect(getNodeName(label)).toBe('Layer Label Node');
     expect((getNodeMetadata(label) as any).text).toBe('INVOICE');
   });
 
-  it('syncs label props.name and metadata.text from metadata.label for legacy nodes', () => {
-    const store = useInvoiceDesignerStore.getState();
-    store.setNodeProp('label', 'metadata.text', '', false);
-    store.setNodeProp('label', 'metadata.label', 'Billing Contact', true);
+  it('keeps metadata.label independent from layer name and metadata.text', () => {
+    useInvoiceDesignerStore.getState().setNodeProp('label', 'metadata.text', '', false);
+    useInvoiceDesignerStore.getState().setNodeProp('label', 'metadata.label', 'Billing Contact', true);
 
-    const label = store.nodesById['label'];
-    expect(getNodeName(label)).toBe('Billing Contact');
-    expect((getNodeMetadata(label) as any).text).toBe('Billing Contact');
+    const label = useInvoiceDesignerStore.getState().nodesById['label'];
+    expect(getNodeName(label)).toBe('label 12');
+    expect((getNodeMetadata(label) as any).text).toBe('');
     expect((getNodeMetadata(label) as any).label).toBe('Billing Contact');
   });
 });
-

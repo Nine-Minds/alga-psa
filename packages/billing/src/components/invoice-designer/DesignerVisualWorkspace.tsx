@@ -7,6 +7,10 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { fetchInvoicesPaginated, getInvoiceForRendering } from '@alga-psa/billing/actions/invoiceQueries';
 import { runAuthoritativeInvoiceTemplatePreview } from '@alga-psa/billing/actions/invoiceTemplatePreview';
 import { mapDbInvoiceToWasmViewModel } from '@alga-psa/billing/lib/adapters/invoiceAdapters';
+import type { IInvoiceTemplate } from '@alga-psa/types';
+import { exportWorkspaceToInvoiceTemplateAst } from './ast/workspaceAst';
+import PaperInvoice from '../billing-dashboard/PaperInvoice';
+import { TemplateRenderer } from '../billing-dashboard/TemplateRenderer';
 import { DesignerShell } from './DesignerShell';
 import { useInvoiceDesignerStore } from './state/designerStore';
 import {
@@ -109,13 +113,40 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
     html: authoritativePreview?.render.html ?? null,
   });
   const canDisplaySuccessStates = hasValidSelectionForSource && hasRenderedPreviewOutput;
-  const previewIframeHeightPx = useMemo(() => {
-    const measuredHeight = authoritativePreview?.render.contentHeightPx;
-    if (typeof measuredHeight !== 'number' || !Number.isFinite(measuredHeight)) {
-      return 640;
+  const previewWorkspace = useMemo(
+    () => ({
+      rootId,
+      nodesById: Object.fromEntries(
+        debouncedNodes.map((node) => [
+          node.id,
+          { id: node.id, type: node.type, props: node.props, children: node.children },
+        ])
+      ),
+      snapToGrid,
+      gridSize,
+      showGuides,
+      showRulers,
+      canvasScale,
+    }),
+    [canvasScale, debouncedNodes, gridSize, rootId, showGuides, showRulers, snapToGrid]
+  );
+  const previewTemplate = useMemo<IInvoiceTemplate | null>(() => {
+    if (!previewData) {
+      return null;
     }
-    return Math.max(640, Math.ceil(measuredHeight));
-  }, [authoritativePreview?.render.contentHeightPx]);
+    try {
+      const templateAst = exportWorkspaceToInvoiceTemplateAst(previewWorkspace as any);
+      return {
+        template_id: `designer-preview-${previewWorkspace.rootId ?? 'root'}-${manualRunNonce}`,
+        name: 'Designer Preview',
+        version: 1,
+        isStandard: false,
+        templateAst,
+      } as IInvoiceTemplate;
+    } catch {
+      return null;
+    }
+  }, [manualRunNonce, previewData, previewWorkspace]);
   const displayStatuses = derivePreviewPipelineDisplayStatuses({
     statuses: {
       shapeStatus: previewState.shapeStatus,
@@ -125,6 +156,15 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
     canDisplaySuccessStates,
   });
   const shapeDiagnostics = authoritativePreview?.compile.diagnostics ?? [];
+  const authoritativeRenderOutput =
+    authoritativePreview?.render.status === 'success' &&
+    typeof authoritativePreview.render.html === 'string' &&
+    typeof authoritativePreview.render.css === 'string'
+      ? {
+          html: authoritativePreview.render.html,
+          css: authoritativePreview.render.css,
+        }
+      : null;
   const isPreviewRunning =
     previewState.shapeStatus === 'running' ||
     previewState.renderStatus === 'running' ||
@@ -231,20 +271,7 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
     dispatch({ type: 'pipeline-phase-start', phase: 'verify' });
 
     runAuthoritativeInvoiceTemplatePreview({
-      workspace: {
-        rootId,
-        nodesById: Object.fromEntries(
-          debouncedNodes.map((node) => [
-            node.id,
-            { id: node.id, type: node.type, props: node.props, children: node.children },
-          ])
-        ),
-        snapToGrid,
-        gridSize,
-        showGuides,
-        showRulers,
-        canvasScale,
-      },
+      workspace: previewWorkspace as any,
       invoiceData: previewData,
     })
       .then((result) => {
@@ -285,18 +312,12 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
         dispatch({ type: 'pipeline-phase-error', phase: 'shape', error: message });
       });
   }, [
-    canvasScale,
-    debouncedNodes,
-    gridSize,
-    rootId,
     manualRunNonce,
     previewData,
+    previewWorkspace,
     previewState.isInvoiceDetailLoading,
     previewState.selectedInvoiceId,
     previewState.sourceKind,
-    showGuides,
-    showRulers,
-    snapToGrid,
     visualWorkspaceTab,
   ]);
 
@@ -527,13 +548,6 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
               >
                 {displayStatuses.renderStatus}
               </span>
-              <span className="font-semibold">Verify</span>
-              <span
-                className="rounded border border-slate-200 bg-slate-50 px-2 py-0.5 uppercase"
-                data-automation-id="invoice-designer-preview-verify-status"
-              >
-                {displayStatuses.verifyStatus}
-              </span>
             </div>
             <Button
               id="invoice-designer-preview-rerun-button"
@@ -598,7 +612,16 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
             </div>
           )}
 
-          {previewData && authoritativePreview?.render.status === 'error' && (
+          {previewData && !previewTemplate && (
+            <div
+              className="p-4 text-sm text-red-700 bg-red-50 border-t border-red-200"
+              data-automation-id="invoice-designer-preview-render-error"
+            >
+              Preview template could not be generated from the current workspace.
+            </div>
+          )}
+
+          {previewData && previewTemplate && authoritativePreview?.render.status === 'error' && (
             <div
               className="p-4 text-sm text-red-700 bg-red-50 border-t border-red-200"
               data-automation-id="invoice-designer-preview-render-error"
@@ -607,69 +630,16 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
             </div>
           )}
 
-          {previewData && authoritativePreview?.render.status === 'success' && authoritativePreview.render.html && (
-            <iframe
-              title="Invoice Preview Output"
-              className="block w-full border-0"
-              style={{ height: `${previewIframeHeightPx}px` }}
-              srcDoc={`<!doctype html><html><head><meta charset="utf-8" /><style>html,body{margin:0;padding:0;background:#fff;}</style><style>${authoritativePreview.render.css ?? ''}</style></head><body>${authoritativePreview.render.html}</body></html>`}
-              data-automation-id="invoice-designer-preview-render-iframe"
-            />
-          )}
-        </div>
-
-        <div
-          className="rounded-md border border-slate-200 bg-white px-3 py-2 space-y-2"
-          data-automation-id="invoice-designer-preview-verification-summary"
-        >
-          <div className="flex items-center justify-between">
-            <p className="text-sm font-semibold text-slate-800">Layout Verification</p>
-            <span
-              className="rounded border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs uppercase"
-              data-automation-id="invoice-designer-preview-verification-badge"
-            >
-              {hasValidSelectionForSource ? authoritativePreview?.verification.status ?? 'idle' : 'idle'}
-            </span>
-          </div>
-
-          {hasValidSelectionForSource && authoritativePreview?.verification.status === 'error' && (
-            <p
-              className="rounded border border-red-200 bg-red-50 px-2 py-1 text-xs text-red-700"
-              data-automation-id="invoice-designer-preview-verification-error"
-            >
-              {authoritativePreview.verification.error ?? 'Verification failed to execute.'}
-            </p>
-          )}
-
-          {hasValidSelectionForSource && authoritativePreview?.verification.mismatches?.length ? (
-            <ul
-              className="space-y-1"
-              data-automation-id="invoice-designer-preview-verification-mismatch-list"
-            >
-              {authoritativePreview.verification.mismatches.map((mismatch) => (
-                <li
-                  key={mismatch.constraintId}
-                  className="rounded border border-amber-200 bg-amber-50 px-2 py-1 text-xs text-amber-900"
-                  data-automation-id="invoice-designer-preview-verification-mismatch-item"
-                >
-                  <span className="font-semibold">{mismatch.constraintId}</span>{' '}
-                  <span>
-                    expected {mismatch.expected}, actual {mismatch.actual ?? 'missing'}, delta{' '}
-                    {mismatch.delta ?? 'n/a'}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            hasValidSelectionForSource &&
-            authoritativePreview?.verification.status === 'pass' && (
-              <p
-                className="rounded border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs text-emerald-800"
-                data-automation-id="invoice-designer-preview-verification-pass"
-              >
-                All layout constraints are within tolerance.
-              </p>
-            )
+          {previewData && previewTemplate && authoritativeRenderOutput && (
+            <div className="p-2" data-automation-id="invoice-designer-preview-render-template">
+              <PaperInvoice>
+                <TemplateRenderer
+                  template={previewTemplate}
+                  invoiceData={previewData}
+                  renderOverride={authoritativeRenderOutput}
+                />
+              </PaperInvoice>
+            </div>
           )}
         </div>
       </TabsContent>

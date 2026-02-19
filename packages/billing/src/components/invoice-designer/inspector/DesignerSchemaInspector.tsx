@@ -9,7 +9,13 @@ import type {
   DesignerInspectorVisibleWhen,
 } from '../schema/inspectorSchema';
 import { TableEditorWidget } from './widgets/TableEditorWidget';
-import { normalizeCssColor, normalizeCssLength, normalizeNumber, normalizeString } from './normalizers';
+import {
+  normalizeCssColor,
+  normalizeCssLength,
+  normalizeNumber,
+  normalizeString,
+  normalizeStringLive,
+} from './normalizers';
 
 const isPlainObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -117,7 +123,7 @@ export const DesignerSchemaInspector: React.FC<Props> = ({ node, nodesById }) =>
             id={domId}
             value={valueAsString}
             placeholder={field.placeholder}
-            onChange={(event) => applyNormalized(field.path, normalizeString(event.target.value), false)}
+            onChange={(event) => applyNormalized(field.path, normalizeStringLive(event.target.value), false)}
             onBlur={(event) => applyNormalized(field.path, normalizeString(event.target.value), true)}
           />
         </div>
@@ -137,7 +143,7 @@ export const DesignerSchemaInspector: React.FC<Props> = ({ node, nodesById }) =>
             className="w-full border border-slate-300 rounded-md px-2 py-1 text-sm"
             value={valueAsString}
             placeholder={field.placeholder}
-            onChange={(event) => applyNormalized(field.path, normalizeString(event.target.value), false)}
+            onChange={(event) => applyNormalized(field.path, normalizeStringLive(event.target.value), false)}
             onBlur={(event) => applyNormalized(field.path, normalizeString(event.target.value), true)}
           />
         </div>

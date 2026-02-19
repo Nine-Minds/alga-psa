@@ -188,6 +188,47 @@ const COMMON_INSPECTOR: DesignerInspectorSchema = {
       ],
     },
     {
+      id: 'appearance',
+      title: 'Appearance',
+      fields: [
+        {
+          kind: 'css-color',
+          id: 'backgroundColor',
+          label: 'Background',
+          path: 'style.backgroundColor',
+          placeholder: '#f9fafb',
+        },
+        {
+          kind: 'css-color',
+          id: 'color',
+          label: 'Text color',
+          path: 'style.color',
+          placeholder: '#111827',
+        },
+        {
+          kind: 'string',
+          id: 'border',
+          label: 'Border',
+          path: 'style.border',
+          placeholder: '1px solid #e5e7eb',
+        },
+        {
+          kind: 'css-length',
+          id: 'borderRadius',
+          label: 'Radius',
+          path: 'style.borderRadius',
+          placeholder: '8px',
+        },
+        {
+          kind: 'css-length',
+          id: 'margin',
+          label: 'Margin',
+          path: 'style.margin',
+          placeholder: '0 | 0 0 12px 0',
+        },
+      ],
+    },
+    {
       id: 'flex-item',
       title: 'Flex Item',
       visibleWhen: { kind: 'parentPathEquals', path: 'layout.display', value: 'flex' },
@@ -249,6 +290,14 @@ const FIELD_INSPECTOR: DesignerInspectorSchema = {
       fields: [
         {
           kind: 'string',
+          id: 'label',
+          domId: 'designer-field-label',
+          label: 'Label',
+          path: 'metadata.label',
+          placeholder: 'Invoice #',
+        },
+        {
+          kind: 'string',
           id: 'bindingKey',
           domId: 'designer-field-binding',
           label: 'Binding key',
@@ -268,9 +317,17 @@ const FIELD_INSPECTOR: DesignerInspectorSchema = {
         },
         {
           kind: 'string',
+          id: 'emptyValue',
+          domId: 'designer-field-empty-value',
+          label: 'Empty value',
+          path: 'metadata.emptyValue',
+          placeholder: '-',
+        },
+        {
+          kind: 'string',
           id: 'placeholder',
           domId: 'designer-field-placeholder',
-          label: 'Placeholder',
+          label: 'Designer placeholder',
           path: 'metadata.placeholder',
         },
         {
@@ -290,12 +347,39 @@ const FIELD_INSPECTOR: DesignerInspectorSchema = {
   ],
 };
 
+const TEXT_INSPECTOR: DesignerInspectorSchema = {
+  panels: [
+    {
+      id: 'text-content',
+      title: 'Text Content',
+      fields: [
+        {
+          kind: 'textarea',
+          id: 'text',
+          domId: 'designer-text-content',
+          label: 'Text',
+          path: 'metadata.text',
+          placeholder: 'Enter text or {{binding.path}}',
+        },
+      ],
+    },
+  ],
+};
+
 const LABEL_INSPECTOR: DesignerInspectorSchema = {
   panels: [
     {
       id: 'label-style',
       title: 'Label Text',
       fields: [
+        {
+          kind: 'string',
+          id: 'text',
+          domId: 'designer-label-text',
+          label: 'Text',
+          path: 'metadata.text',
+          placeholder: 'Label',
+        },
         {
           kind: 'enum',
           id: 'fontWeight',
@@ -437,6 +521,13 @@ const TABLE_INSPECTOR: DesignerInspectorSchema = {
       id: 'table',
       title: 'Table',
       fields: [
+        {
+          kind: 'css-length',
+          id: 'tablePadding',
+          label: 'Table padding',
+          path: 'style.padding',
+          placeholder: '0px | 8px | 0 8px',
+        },
         {
           kind: 'widget',
           id: 'tableEditor',
@@ -590,7 +681,7 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
       allowedChildren: [],
       allowedParents: ['column', 'container', 'section'],
     },
-    inspector: COMMON_INSPECTOR,
+    inspector: mergeInspectorSchemas(COMMON_INSPECTOR, TEXT_INSPECTOR),
   },
   totals: {
     type: 'totals',

@@ -253,6 +253,80 @@ const shouldPromoteParentToCanvasForManualPosition = (
   return Math.abs(draft.x - node.position.x) >= 0.5 || Math.abs(draft.y - node.position.y) >= 0.5;
 };
 
+const asTrimmedString = (value: unknown): string => (typeof value === 'string' ? value.trim() : '');
+
+const FIELD_TYPE_LABELS: Record<string, string> = {
+  'invoice.number': 'Invoice Number',
+  'invoice.invoiceNumber': 'Invoice Number',
+  'invoice.issueDate': 'Issue Date',
+  'invoice.dueDate': 'Due Date',
+  'invoice.poNumber': 'PO Number',
+  'invoice.subtotal': 'Subtotal',
+  'invoice.tax': 'Tax',
+  'invoice.discount': 'Discount',
+  'invoice.total': 'Total',
+  'invoice.currencyCode': 'Currency Code',
+  'customer.name': 'Customer Name',
+  'customer.address': 'Customer Address',
+  'tenant.name': 'Tenant Name',
+  'tenant.address': 'Tenant Address',
+};
+
+const humanizeBindingToken = (input: string): string =>
+  input
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .replace(/[._\-/#:]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .split(' ')
+    .filter(Boolean)
+    .map((part) => {
+      if (part.length <= 2) {
+        return part.toUpperCase();
+      }
+      return `${part.charAt(0).toUpperCase()}${part.slice(1).toLowerCase()}`;
+    })
+    .join(' ');
+
+const resolveFieldTypeLabel = (bindingKey: string): string => {
+  const normalized = bindingKey.trim();
+  if (!normalized) {
+    return 'Unbound';
+  }
+  const known = FIELD_TYPE_LABELS[normalized];
+  if (known) {
+    return known;
+  }
+  return humanizeBindingToken(normalized);
+};
+
+const resolveSelectedFieldType = (selectedNode: DesignerNode | null): { label: string; bindingKey: string } | null => {
+  if (!selectedNode || selectedNode.type !== 'field') {
+    return null;
+  }
+  const metadata = getNodeMetadata(selectedNode) as Record<string, unknown>;
+  const bindingKey =
+    asTrimmedString(metadata.bindingKey) ||
+    asTrimmedString(metadata.binding) ||
+    asTrimmedString(metadata.path);
+
+  return {
+    label: resolveFieldTypeLabel(bindingKey),
+    bindingKey,
+  };
+};
+
+const resolveSelectedNodeTypeLabel = (selectedNode: DesignerNode | null): string => {
+  if (!selectedNode) {
+    return '';
+  }
+  const definition = getDefinition(selectedNode.type);
+  if (definition?.label) {
+    return definition.label;
+  }
+  return humanizeBindingToken(selectedNode.type);
+};
+
 export const DesignerShell: React.FC = () => {
   const nodes = useInvoiceDesignerStore((state) => state.nodes);
   const selectedNodeId = useInvoiceDesignerStore((state) => state.selectedNodeId);
@@ -304,6 +378,8 @@ export const DesignerShell: React.FC = () => {
   const referenceNodeId = null;
   const selectedCounterpartNodeIds = useMemo(() => new Set<string>(), []);
   const selectedPreset = selectedNode?.layoutPresetId ? getPresetById(selectedNode.layoutPresetId) : null;
+  const selectedNodeTypeLabel = useMemo(() => resolveSelectedNodeTypeLabel(selectedNode), [selectedNode]);
+  const selectedFieldType = useMemo(() => resolveSelectedFieldType(selectedNode), [selectedNode]);
   const selectedMediaParentSection = useMemo(() => {
     if (!selectedNode || !['image', 'logo', 'qr'].includes(selectedNode.type)) {
       return null;
@@ -1347,15 +1423,36 @@ export const DesignerShell: React.FC = () => {
             <h3 className="text-sm font-semibold text-slate-800 uppercase tracking-wide">Inspector</h3>
 		          {selectedNode ? (
 		            <div className="space-y-3">
-		              <div>
-		                <label htmlFor="selected-name" className="text-xs text-slate-500 block mb-1">Name</label>
-		                <Input
-	                  id="selected-name"
-	                  value={getNodeName(selectedNode)}
-	                  onChange={(event) => setNodeProp(selectedNode.id, 'name', event.target.value, false)}
-	                  onBlur={(event) => setNodeProp(selectedNode.id, 'name', event.target.value, true)}
-	                />
-	              </div>
+              <div>
+                <label htmlFor="selected-name" className="text-xs text-slate-500 block mb-1">Layer Name</label>
+                <Input
+                  id="selected-name"
+                  value={getNodeName(selectedNode)}
+                  onChange={(event) => setNodeProp(selectedNode.id, 'name', event.target.value, false)}
+                  onBlur={(event) => setNodeProp(selectedNode.id, 'name', event.target.value, true)}
+                />
+              </div>
+              <div
+                className="rounded border border-slate-200 bg-white px-3 py-2 space-y-1"
+                data-automation-id="designer-selected-node-type-panel"
+              >
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Type</p>
+                <p className="text-sm text-slate-700" data-automation-id="designer-selected-node-type">
+                  {selectedNodeTypeLabel}
+                </p>
+              </div>
+              {selectedFieldType && (
+                <div
+                  className="rounded border border-slate-200 bg-white px-3 py-2 space-y-1"
+                  data-automation-id="designer-selected-field-type-panel"
+                >
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Field Type</p>
+                  <p className="text-sm text-slate-700" data-automation-id="designer-selected-field-type">
+                    {selectedFieldType.label}
+                  </p>
+                  <p className="text-[11px] text-slate-500">{selectedFieldType.bindingKey || 'No binding key set'}</p>
+                </div>
+              )}
               <div className="grid grid-cols-2 gap-3 text-xs text-slate-500">
                 <div>
                   <label htmlFor="prop-x" className="block mb-1">X</label>
