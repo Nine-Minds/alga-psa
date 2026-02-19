@@ -54,3 +54,37 @@ export async function resolveUserTimeZone(
   return normalizeIanaTimeZone(row?.timezone ?? null);
 }
 
+/**
+ * Resolve the effective timezone for a user within a tenant.
+ * Resolution chain: user timezone -> tenant timezone -> UTC.
+ */
+export async function resolveEffectiveTimeZone(
+  knexOrTrx: Knex | Knex.Transaction,
+  tenant: string,
+  userId?: string | null
+): Promise<string> {
+  // 1. Try user timezone if userId provided
+  if (userId) {
+    const userRow = await knexOrTrx('users')
+      .where({ tenant, user_id: userId })
+      .select('timezone')
+      .first();
+    if (userRow?.timezone) {
+      return normalizeIanaTimeZone(userRow.timezone);
+    }
+  }
+
+  // 2. Try tenant timezone from settings JSONB
+  const settingsRow = await knexOrTrx('tenant_settings')
+    .where({ tenant })
+    .select('settings')
+    .first();
+  const tenantTz = settingsRow?.settings?.timezone;
+  if (tenantTz && typeof tenantTz === 'string') {
+    return normalizeIanaTimeZone(tenantTz);
+  }
+
+  // 3. Fall back to UTC
+  return 'UTC';
+}
+

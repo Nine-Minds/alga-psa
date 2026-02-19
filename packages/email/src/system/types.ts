@@ -119,6 +119,20 @@ export interface AppointmentRequestDeclinedData {
   contactPhone?: string;
 }
 
+export interface AppointmentAssignedToTechnicianData {
+  technicianName: string;
+  technicianEmail: string;
+  serviceName: string;
+  appointmentDate: string;
+  appointmentTime: string;
+  duration: number;
+  clientName?: string;
+  description?: string;
+  calendarLink?: string;
+  contactEmail: string;
+  contactPhone?: string;
+}
+
 export interface NewAppointmentRequestData {
   requesterName: string;
   requesterEmail: string;

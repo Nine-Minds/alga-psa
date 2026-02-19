@@ -22,6 +22,7 @@ import { buildTenantPortalSlug } from '@shared/utils/tenantSlug';
 import { TenantEmailService } from '@alga-psa/email';
 import { NotificationAccumulator, PendingNotification, AccumulatedChange } from '../../notifications/NotificationAccumulator';
 import { isValidEmail } from '@alga-psa/core';
+import { resolveEffectiveTimeZone } from '../../utils/workDate';
 
 /**
  * Get the base URL from NEXTAUTH_URL environment variable
@@ -277,19 +278,19 @@ async function sendNotificationIfEnabled(
 /**
  * Format changes record into a readable string
  */
-async function formatChanges(db: any, changes: Record<string, unknown>, tenantId: string): Promise<string> {
+async function formatChanges(db: any, changes: Record<string, unknown>, tenantId: string, timeZone: string = 'UTC'): Promise<string> {
   const formattedChanges = await Promise.all(
     Object.entries(changes).map(async ([field, value]): Promise<string> => {
       // Handle structured change objects with old/new values
       if (typeof value === 'object' && value !== null) {
         const { old: oldVal, new: newVal } = value as { old?: unknown; new?: unknown };
         if (oldVal !== undefined && newVal !== undefined) {
-          const resolvedOldValue = await resolveValue(db, field, oldVal, tenantId);
-          const resolvedNewValue = await resolveValue(db, field, newVal, tenantId);
+          const resolvedOldValue = await resolveValue(db, field, oldVal, tenantId, timeZone);
+          const resolvedNewValue = await resolveValue(db, field, newVal, tenantId, timeZone);
           return `${formatFieldName(field)}: ${resolvedOldValue} → ${resolvedNewValue}`;
         }
       }
-      const resolvedValue = await resolveValue(db, field, value, tenantId);
+      const resolvedValue = await resolveValue(db, field, value, tenantId, timeZone);
       return `${formatFieldName(field)}: ${resolvedValue}`;
     })
   );
@@ -299,7 +300,7 @@ async function formatChanges(db: any, changes: Record<string, unknown>, tenantId
 /**
  * Resolve field values to human-readable names
  */
-async function resolveValue(db: any, field: string, value: unknown, tenantId: string): Promise<string> {
+async function resolveValue(db: any, field: string, value: unknown, tenantId: string, timeZone: string = 'UTC'): Promise<string> {
   if (value === null || value === undefined) {
     return 'None';
   }
@@ -380,7 +381,7 @@ async function resolveValue(db: any, field: string, value: unknown, tenantId: st
               year: 'numeric',
               month: 'short',
               day: 'numeric',
-              timeZone: 'UTC'
+              timeZone
             });
           }
           return date.toLocaleString('en-US', {
@@ -389,7 +390,7 @@ async function resolveValue(db: any, field: string, value: unknown, tenantId: st
             day: 'numeric',
             hour: 'numeric',
             minute: '2-digit',
-            timeZone: 'UTC'
+            timeZone
           });
         }
       }
@@ -451,6 +452,32 @@ function formatValue(value: unknown): string {
     return JSON.stringify(value);
   }
   return String(value);
+}
+
+/**
+ * Format a date/time value for display in ticket emails.
+ * Uses the resolved timezone (user -> tenant -> UTC).
+ */
+function formatTicketDateTime(
+  value: Date | string | null | undefined,
+  timeZone: string
+): string {
+  if (!value) {
+    return 'Not available';
+  }
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return typeof value === 'string' ? value : 'Not available';
+  }
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'short',
+    day: '2-digit',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    timeZone,
+    timeZoneName: 'short'
+  }).format(date);
 }
 
 /**
@@ -579,23 +606,7 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
 
     const ticketingFromAddress = await resolveTicketingFromAddress(db, tenantId);
 
-    const formatDateTime = (value?: Date | string | null) => {
-      if (!value) {
-        return 'Not available';
-      }
-      const date = value instanceof Date ? value : new Date(value);
-      if (Number.isNaN(date.getTime())) {
-        return typeof value === 'string' ? value : 'Not available';
-      }
-      return new Intl.DateTimeFormat('en-US', {
-        month: 'short',
-        day: '2-digit',
-        year: 'numeric',
-        hour: 'numeric',
-        minute: '2-digit',
-        timeZoneName: 'short'
-      }).format(date);
-    };
+    const emailTimeZone = await resolveEffectiveTimeZone(db, tenantId, payload.userId);
 
     const priorityName = safeString(ticket.priority_name) || 'Unspecified';
     const statusName = safeString(ticket.status_name) || 'Unknown';
@@ -604,7 +615,7 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
 
     const clientName = safeString(ticket.client_name) || 'Unassigned Client';
 
-    const createdAt = formatDateTime(ticket.entered_at as string | Date | null);
+    const createdAt = formatTicketDateTime(ticket.entered_at as string | Date | null, emailTimeZone);
     const createdByName = safeString(ticket.created_by_name) || payload.userId || 'System';
     const createdDetails = `${createdAt} · ${createdByName}`;
 
@@ -905,23 +916,7 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
       status: ticket.status_name
     });
 
-    const formatDateTime = (value?: Date | string | null) => {
-      if (!value) {
-        return 'Not available';
-      }
-      const date = value instanceof Date ? value : new Date(value);
-      if (Number.isNaN(date.getTime())) {
-        return typeof value === 'string' ? value : 'Not available';
-      }
-      return new Intl.DateTimeFormat('en-US', {
-        month: 'short',
-        day: '2-digit',
-        year: 'numeric',
-        hour: 'numeric',
-        minute: '2-digit',
-        timeZoneName: 'short'
-      }).format(date);
-    };
+    const emailTimeZone = await resolveEffectiveTimeZone(db, tenantId, payload.userId);
 
     const priorityName = safeString(ticket.priority_name) || 'Unspecified';
     const statusName = safeString(ticket.status_name) || 'Unknown';
@@ -997,7 +992,7 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
     const description = descriptionText || 'No description provided.';
 
     // Format changes with database lookups
-    const formattedChanges = await formatChanges(db, payload.changes || {}, tenantId);
+    const formattedChanges = await formatChanges(db, payload.changes || {}, tenantId, emailTimeZone);
 
     // Get updater's name
     const updater = await db('users')
@@ -1194,7 +1189,8 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
 async function formatAccumulatedChanges(
   db: any,
   accumulatedChanges: AccumulatedChange[],
-  tenantId: string
+  tenantId: string,
+  timeZone: string = 'UTC'
 ): Promise<string> {
   const formattedSections: string[] = [];
 
@@ -1208,8 +1204,11 @@ async function formatAccumulatedChanges(
     const timestamp = new Date(changeSet.timestamp).toLocaleString('en-US', {
       month: 'short',
       day: '2-digit',
+      year: 'numeric',
       hour: 'numeric',
-      minute: '2-digit'
+      minute: '2-digit',
+      timeZone,
+      timeZoneName: 'short'
     });
 
     const formattedChanges = await Promise.all(
@@ -1217,12 +1216,12 @@ async function formatAccumulatedChanges(
         if (typeof value === 'object' && value !== null) {
           const { old: oldVal, new: newVal } = value as { old?: unknown; new?: unknown };
           if (oldVal !== undefined && newVal !== undefined) {
-            const resolvedOldValue = await resolveValue(db, field, oldVal, tenantId);
-            const resolvedNewValue = await resolveValue(db, field, newVal, tenantId);
+            const resolvedOldValue = await resolveValue(db, field, oldVal, tenantId, timeZone);
+            const resolvedNewValue = await resolveValue(db, field, newVal, tenantId, timeZone);
             return `  • ${formatFieldName(field)}: ${resolvedOldValue} → ${resolvedNewValue}`;
           }
         }
-        const resolvedValue = await resolveValue(db, field, value, tenantId);
+        const resolvedValue = await resolveValue(db, field, value, tenantId, timeZone);
         return `  • ${formatFieldName(field)}: ${resolvedValue}`;
       })
     );
@@ -1415,8 +1414,11 @@ export async function handleAccumulatedTicketUpdates(notification: PendingNotifi
     const descriptionText = descriptionFormatting.text || rawDescription;
     const description = descriptionText || 'No description provided.';
 
+    // Resolve timezone for email formatting (tenant-level, no single userId for accumulated changes)
+    const emailTimeZone = await resolveEffectiveTimeZone(db, tenantId);
+
     // Format all accumulated changes
-    const formattedChanges = await formatAccumulatedChanges(db, accumulatedChanges, tenantId);
+    const formattedChanges = await formatAccumulatedChanges(db, accumulatedChanges, tenantId, emailTimeZone);
 
     // Determine the URL based on whether recipient is internal or external
     const { internalUrl, portalUrl } = await resolveTicketLinks(db, tenantId, ticket.ticket_id, ticket.ticket_number);
@@ -1601,23 +1603,8 @@ async function handleTicketAssigned(event: TicketAssignedEvent): Promise<void> {
       }
       return String(value).trim();
     };
-    const formatDateTime = (value?: Date | string | null) => {
-      if (!value) {
-        return 'Not available';
-      }
-      const date = value instanceof Date ? value : new Date(value);
-      if (Number.isNaN(date.getTime())) {
-        return typeof value === 'string' ? value : 'Not available';
-      }
-      return new Intl.DateTimeFormat('en-US', {
-        month: 'short',
-        day: '2-digit',
-        year: 'numeric',
-        hour: 'numeric',
-        minute: '2-digit',
-        timeZoneName: 'short'
-      }).format(date);
-    };
+
+    const emailTimeZone = await resolveEffectiveTimeZone(db, tenantId, payload.userId);
 
     const priorityName = safeString(ticket.priority_name) || 'Unspecified';
     const statusName = safeString(ticket.status_name) || 'Unknown';
@@ -1975,23 +1962,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
       commentAuthorEmail = payload.comment.author.trim();
     }
 
-    const formatDateTime = (value?: Date | string | null) => {
-      if (!value) {
-        return 'Not available';
-      }
-      const date = value instanceof Date ? value : new Date(value);
-      if (Number.isNaN(date.getTime())) {
-        return typeof value === 'string' ? value : 'Not available';
-      }
-      return new Intl.DateTimeFormat('en-US', {
-        month: 'short',
-        day: '2-digit',
-        year: 'numeric',
-        hour: 'numeric',
-        minute: '2-digit',
-        timeZoneName: 'short'
-      }).format(date);
-    };
+    const emailTimeZone = await resolveEffectiveTimeZone(db, tenantId, payload.userId);
 
     const priorityName = safeString(ticket.priority_name) || 'Unspecified';
     const statusName = safeString(ticket.status_name) || 'Unknown';
@@ -2464,23 +2435,7 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
       return String(value).trim();
     };
 
-    const formatDateTime = (value?: Date | string | null) => {
-      if (!value) {
-        return 'Not available';
-      }
-      const date = value instanceof Date ? value : new Date(value);
-      if (Number.isNaN(date.getTime())) {
-        return typeof value === 'string' ? value : 'Not available';
-      }
-      return new Intl.DateTimeFormat('en-US', {
-        month: 'short',
-        day: '2-digit',
-        year: 'numeric',
-        hour: 'numeric',
-        minute: '2-digit',
-        timeZoneName: 'short'
-      }).format(date);
-    };
+    const emailTimeZone = await resolveEffectiveTimeZone(db, tenantId, payload.userId);
 
     const priorityName = safeString(ticket.priority_name) || 'Unspecified';
     const statusName = safeString(ticket.status_name) || 'Unknown';
@@ -2556,7 +2511,7 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
     const descriptionText = descriptionFormatting.text || rawDescription;
     const description = descriptionText || 'No description provided.';
 
-    const changes = await formatChanges(db, payload.changes || {}, tenantId);
+    const changes = await formatChanges(db, payload.changes || {}, tenantId, emailTimeZone);
 
     // Get closer's name
     const closer = await db('users')

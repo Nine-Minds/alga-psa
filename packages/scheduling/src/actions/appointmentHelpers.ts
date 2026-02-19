@@ -155,7 +155,16 @@ export async function getClientUserIdFromContact(
  */
 export async function formatDate(dateString: string, locale: string = 'en'): Promise<string> {
   try {
-    const date = new Date(dateString);
+    // Parse date components to avoid UTC midnight day-shift.
+    // Appointment dates are wall-clock values (e.g. "2025-11-15"), not UTC instants.
+    // new Date("2025-11-15") parses as UTC midnight, which when formatted in a
+    // server timezone west of UTC would show the previous day.
+    const [yearStr, monthStr, dayStr] = dateString.split('-');
+    const date = new Date(
+      parseInt(yearStr, 10),
+      parseInt(monthStr, 10) - 1,
+      parseInt(dayStr, 10)
+    );
 
     // Map locale codes to date-fns locales
     const localeMap: Record<string, Locale> = {
@@ -187,9 +196,9 @@ export async function formatTime(timeString: string, locale: string = 'en'): Pro
     // Parse time string (HH:MM)
     const [hours, minutes] = timeString.split(':').map(Number);
 
-    // Create a date object for today with the specified time
-    const date = new Date();
-    date.setHours(hours, minutes, 0, 0);
+    // Use a fixed date (Jan 15, 2000) to avoid DST edge cases on the current day.
+    // Appointment times are wall-clock values, not UTC instants.
+    const date = new Date(2000, 0, 15, hours, minutes, 0, 0);
 
     // Map locale codes to date-fns locales
     const localeMap: Record<string, Locale> = {

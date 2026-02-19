@@ -48,6 +48,7 @@ const SUBTYPES = [
   { category: 'appointments', name: 'appointment-request-approved', description: 'Appointment request approved' },
   { category: 'appointments', name: 'appointment-request-declined', description: 'Appointment request declined' },
   { category: 'appointments', name: 'appointment-request-cancelled', description: 'Appointment request cancelled' },
+  { category: 'appointments', name: 'appointment-assigned-technician', description: 'Appointment assigned to technician' },
 ];
 
 /**

@@ -9,13 +9,15 @@ import { Label } from "@alga-psa/ui/components/Label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@alga-psa/ui/components/Table";
 import { Plus, Trash } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { getTenantDetails, updateTenantName, addClientToTenant, removeClientFromTenant, setDefaultClient } from "@alga-psa/tenancy/actions";
+import { getTenantDetails, updateTenantName, addClientToTenant, removeClientFromTenant, setDefaultClient, getTenantTimezoneAuth, setTenantTimezone } from "@alga-psa/tenancy/actions";
 import { getAllClients } from "@alga-psa/clients/actions";
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
+import TimezonePicker from '@alga-psa/ui/components/TimezonePicker';
 import { IClient } from "@alga-psa/types";
 
 const GeneralSettings = () => {
   const [tenantName, setTenantName] = React.useState('');
+  const [tenantTimezone, setTenantTimezoneState] = React.useState('');
   const [clients, setClients] = React.useState<{ id: string; name: string; isDefault: boolean }[]>([]);
 
   React.useEffect(() => {
@@ -28,9 +30,13 @@ const GeneralSettings = () => {
 
   const loadTenantData = async () => {
     try {
-      const tenant = await getTenantDetails();
+      const [tenant, tz] = await Promise.all([
+        getTenantDetails(),
+        getTenantTimezoneAuth()
+      ]);
       const safeTenantName = typeof tenant?.client_name === 'string' ? tenant.client_name : '';
       setTenantName(safeTenantName);
+      setTenantTimezoneState(tz || '');
       setClients((tenant.clients ?? []).map(c => ({
         id: c.client_id,
         name: c.client_name,
@@ -47,6 +53,17 @@ const GeneralSettings = () => {
       toast.success("Tenant name updated successfully");
     } catch (error) {
       toast.error("Failed to update tenant name");
+    }
+  };
+
+  const handleSaveTimezone = async () => {
+    try {
+      if (tenantTimezone) {
+        await setTenantTimezone(tenantTimezone);
+        toast.success("Default timezone updated successfully");
+      }
+    } catch (error) {
+      toast.error("Failed to update timezone");
     }
   };
 
@@ -134,6 +151,26 @@ const GeneralSettings = () => {
               onClick={handleSaveTenantName}
             >
               Save Organization Name
+            </Button>
+          </div>
+
+        <div className="space-y-4">
+            <div>
+              <Label htmlFor="tenantTimezone">Default Time Zone</Label>
+              <p className="text-sm text-muted-foreground mb-2">
+                Used for emails and notifications when a user has not set their own timezone.
+              </p>
+              <TimezonePicker
+                value={tenantTimezone}
+                onValueChange={setTenantTimezoneState}
+              />
+            </div>
+            <Button
+              id="save-timezone-button"
+              onClick={handleSaveTimezone}
+              disabled={!tenantTimezone}
+            >
+              Save Default Time Zone
             </Button>
           </div>
 

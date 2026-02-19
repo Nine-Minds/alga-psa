@@ -54,6 +54,7 @@ const SUBTYPES = [
   { category: 'Appointments', name: 'appointment-request-approved', description: 'Notification that appointment request was approved' },
   { category: 'Appointments', name: 'appointment-request-declined', description: 'Notification that appointment request was declined' },
   { category: 'Appointments', name: 'new-appointment-request', description: 'New appointment request notification for MSP staff' },
+  { category: 'Appointments', name: 'appointment-assigned-technician', description: 'Notification to technician when assigned to an approved appointment' },
 ];
 
 /**
