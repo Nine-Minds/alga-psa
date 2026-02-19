@@ -483,6 +483,18 @@ export async function processInboundEmailInApp(
   const commentAuthorContactId = matchedSenderContact?.contact_id;
   const commentAuthorUserId = matchedSenderContact?.user_id ?? null;
 
+  // Ticket creation requires a client. If neither defaults nor sender/domain matching
+  // can resolve one, skip without failing the webhook.
+  if (!targetClientId) {
+    console.warn('processInboundEmailInApp: no target client resolved; skipping email', {
+      tenantId,
+      providerId,
+      emailId: emailData.id,
+      senderEmail,
+    });
+    return { outcome: 'skipped', reason: 'missing_defaults' };
+  }
+
   // New-ticket idempotency: ticket could have been created in another parallel process.
   const existingTicketAfterDefaults = await findExistingEmailTicket({
     tenantId,

@@ -408,6 +408,11 @@ spec:
               secretKeyRef:
                 name: "{{include "sebastian.fullname" .}}-secrets"
                 key: NEXTAUTH_SECRET
+          - name: IMAP_WEBHOOK_SECRET
+            valueFrom:
+              secretKeyRef:
+                name: "{{include "sebastian.fullname" .}}-secrets"
+                key: IMAP_WEBHOOK_SECRET
           - name: NEXTAUTH_SESSION_EXPIRES
             value: "{{ .Values.auth.nextauth_session_expires }}"
 

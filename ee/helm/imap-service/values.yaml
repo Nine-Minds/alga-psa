@@ -54,6 +54,12 @@ imap:
   startupStaggerMs: 2000
   reconnectJitterPct: 0.5
 
+webhook:
+  url: ""
+  secretKeyRef:
+    name: ""
+    key: "IMAP_WEBHOOK_SECRET"
+
 redis:
   host: "redis.default.svc.cluster.local"
   port: "6379"
@@ -79,6 +85,7 @@ secrets:
   nextauthSecret: "change-me-in-prod"
   tokenSecretKey: "change-me-in-prod"
   cryptoKey: "change-me-in-prod"
+  imapWebhookSecret: "change-me-in-prod"
 
 vaultAgent:
   enabled: false
@@ -138,4 +145,3 @@ serviceAccount:
   name: ""
   annotations: {}
   automountServiceAccountToken: true
-

@@ -4,7 +4,6 @@ import { v4 as uuidv4 } from 'uuid';
 import { createHash } from 'crypto';
 import logger from '@alga-psa/core/logger';
 import { getAdminConnection } from '@alga-psa/db/admin';
-import { publishEvent } from '@alga-psa/shared/events/publisher';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import axios from 'axios';
 import type { EmailMessageDetails } from '@alga-psa/shared/interfaces/inbound-email.interfaces';
@@ -18,6 +17,9 @@ const DEFAULT_LEASE_TTL_MS = 120_000;
 const DEFAULT_MAX_CONNECTIONS_PER_TENANT = 5;
 const DEFAULT_CONNECTION_TIMEOUT_MS = 10_000;
 const DEFAULT_MAX_EMAILS_PER_SYNC = 5;
+const DEFAULT_WEBHOOK_TIMEOUT_MS = 10_000;
+const DEFAULT_WEBHOOK_MAX_ATTEMPTS = 3;
+const DEFAULT_WEBHOOK_RETRY_BASE_MS = 500;
 const DEFAULT_TIMER_JITTER_PCT = 0.1;
 const DEFAULT_STARTUP_STAGGER_MS = 2_000;
 
@@ -197,6 +199,94 @@ class ImapFolderListener {
         last_sync_at: db.fn.now(),
         updated_at: db.fn.now(),
       });
+  }
+
+  private resolveWebhookUrl(): string {
+    const explicitUrl = (process.env.IMAP_WEBHOOK_URL || '').trim();
+    if (explicitUrl) {
+      return explicitUrl;
+    }
+
+    const baseUrl = (process.env.IMAP_WEBHOOK_BASE_URL || '').trim();
+    if (baseUrl) {
+      return `${baseUrl.replace(/\/$/, '')}/api/email/webhooks/imap`;
+    }
+
+    return 'http://server:3000/api/email/webhooks/imap';
+  }
+
+  private async dispatchInboundWebhook(emailData: EmailMessageDetails): Promise<void> {
+    const url = this.resolveWebhookUrl();
+    const timeoutMs = Number(process.env.IMAP_WEBHOOK_TIMEOUT_MS || DEFAULT_WEBHOOK_TIMEOUT_MS);
+    const maxAttempts = clampNumber(
+      Number(process.env.IMAP_WEBHOOK_MAX_ATTEMPTS || DEFAULT_WEBHOOK_MAX_ATTEMPTS),
+      1,
+      10
+    );
+
+    const headers: Record<string, string> = {};
+    const webhookSecret = (process.env.IMAP_WEBHOOK_SECRET || '').trim();
+    if (!webhookSecret) {
+      throw new Error('IMAP_WEBHOOK_SECRET is not configured');
+    }
+    headers['x-imap-webhook-secret'] = webhookSecret;
+
+    const payload = {
+      providerId: this.provider.id,
+      tenant: this.provider.tenant,
+      tenantId: this.provider.tenant,
+      emailData,
+    };
+
+    let lastError: Error | null = null;
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+      try {
+        const response = await axios.post(url, payload, {
+          timeout: timeoutMs,
+          headers,
+          validateStatus: () => true,
+        });
+
+        if (response.status >= 200 && response.status < 300) {
+          return;
+        }
+
+        let bodySummary = '';
+        if (typeof response.data === 'string') {
+          bodySummary = response.data.slice(0, 300);
+        } else if (response.data) {
+          try {
+            bodySummary = JSON.stringify(response.data).slice(0, 300);
+          } catch {
+            bodySummary = '[unserializable response body]';
+          }
+        }
+
+        lastError = new Error(
+          `IMAP webhook returned HTTP ${response.status}${bodySummary ? ` (${bodySummary})` : ''}`
+        );
+      } catch (error: any) {
+        lastError = error instanceof Error ? error : new Error(String(error));
+      }
+
+      stateLog('webhook_retry', {
+        providerId: this.provider.id,
+        tenant: this.provider.tenant,
+        folder: this.folder,
+        listenerId: this.listenerId,
+        attempt,
+        maxAttempts,
+        message: lastError?.message || 'unknown webhook dispatch error',
+      });
+
+      if (attempt < maxAttempts) {
+        const retryBase = Math.min(DEFAULT_WEBHOOK_RETRY_BASE_MS * 2 ** (attempt - 1), 5_000);
+        await sleep(jitterMs(retryBase, this.jitterPct));
+      }
+    }
+
+    throw lastError || new Error('Failed to dispatch IMAP webhook');
   }
 
   private async getPasswordSecret(): Promise<string | null> {
@@ -418,17 +508,7 @@ class ImapFolderListener {
           continue;
         }
 
-        await publishEvent({
-          eventType: 'INBOUND_EMAIL_RECEIVED',
-          tenant: this.provider.tenant,
-          correlationId: process.env.IMAP_EVENT_CHANNEL_BY_TENANT === 'true' ? this.provider.tenant : undefined,
-          payload: {
-            tenantId: this.provider.tenant,
-            tenant: this.provider.tenant,
-            providerId: this.provider.id,
-            emailData,
-          }
-        });
+        await this.dispatchInboundWebhook(emailData);
 
         await this.recordLastProcessedMessageId(emailData.id);
 
@@ -721,7 +801,9 @@ class ImapFolderListener {
         // ignore
       }
     }
-    await this.updateProviderStatus('disconnected', null);
+    // Do not force provider status to disconnected here.
+    // Listeners stop during routine worker restarts and lease handoffs; writing
+    // disconnected in those paths causes false UI states.
   }
 
   private async delayWithBackoff() {

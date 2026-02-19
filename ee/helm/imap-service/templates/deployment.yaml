@@ -22,6 +22,7 @@ spec:
     metadata:
       annotations:
         checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        checksum/secrets: {{ include (print $.Template.BasePath "/secrets.yaml") . | sha256sum }}
         {{- if .Values.vaultAgent.enabled }}
         vault.hashicorp.com/agent-inject: "true"
         vault.hashicorp.com/role: "{{ .Values.vaultAgent.role }}"
@@ -179,6 +180,15 @@ spec:
               value: "{{ .Values.imap.startupStaggerMs }}"
             - name: IMAP_RECONNECT_JITTER_PCT
               value: "{{ .Values.imap.reconnectJitterPct }}"
+            {{- if .Values.webhook.url }}
+            - name: IMAP_WEBHOOK_URL
+              value: "{{ .Values.webhook.url }}"
+            {{- end }}
+            - name: IMAP_WEBHOOK_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ default (printf "%s-secrets" (include "imap-service.fullname" .)) .Values.webhook.secretKeyRef.name | quote }}
+                  key: {{ default "IMAP_WEBHOOK_SECRET" .Values.webhook.secretKeyRef.key | quote }}
 
             {{- if not .Values.vaultAgent.enabled }}
             - name: NEXTAUTH_SECRET
@@ -241,4 +251,3 @@ spec:
         {{- toYaml . | nindent 8 }}
         {{- end }}
 {{- end }}
-

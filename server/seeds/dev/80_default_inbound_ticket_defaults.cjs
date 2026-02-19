@@ -21,7 +21,8 @@ exports.seed = async function(knex) {
   const [
     defaultBoardId,
     defaultStatusId,
-    defaultPriorityId
+    defaultPriorityId,
+    defaultClientId
   ] = await Promise.all([
     getDefaultId('boards', { is_default: true }, 'board_id') || 
     getDefaultId('boards', {}, 'board_id'), // Fallback to first board
@@ -30,12 +31,28 @@ exports.seed = async function(knex) {
     getDefaultId('statuses', { status_type: 'ticket' }, 'status_id'), // Fallback to first ticket status
     
     // Priorities table doesn't have is_default column, so just get the first one
-    getDefaultId('priorities', { item_type: 'ticket' }, 'priority_id')
+    getDefaultId('priorities', { item_type: 'ticket' }, 'priority_id'),
+
+    // Prefer a stable demo client if present, otherwise use any client.
+    getDefaultId('clients', { client_name: 'Wonderland' }, 'client_id') ||
+    getDefaultId('clients', {}, 'client_id')
   ]);
 
-  if (!defaultBoardId || !defaultStatusId || !defaultPriorityId) {
+  if (!defaultBoardId || !defaultStatusId || !defaultPriorityId || !defaultClientId) {
     console.warn('Could not find required default values for ticket defaults. Skipping seed.');
     return;
+  }
+
+  // Backfill historical seeded rows where client_id was null.
+  const updatedDefaults = await knex('inbound_ticket_defaults')
+    .where({ tenant: tenantId })
+    .whereNull('client_id')
+    .update({
+      client_id: defaultClientId,
+      updated_at: knex.fn.now()
+    });
+  if (updatedDefaults > 0) {
+    console.log(`✅ Backfilled client_id for ${updatedDefaults} inbound ticket defaults row(s).`);
   }
 
   // Check if default already exists
@@ -58,7 +75,7 @@ exports.seed = async function(knex) {
     board_id: defaultBoardId,
     status_id: defaultStatusId,
     priority_id: defaultPriorityId,
-    client_id: null,
+    client_id: defaultClientId,
     entered_by: null, // System-generated tickets
     category_id: null,
     subcategory_id: null,
