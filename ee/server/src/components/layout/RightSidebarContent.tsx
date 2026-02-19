@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Chat } from '../chat/Chat';
 import * as Collapsible from '@radix-ui/react-collapsible';
-import { PlusIcon } from '@radix-ui/react-icons';
+import { Plus } from 'lucide-react';
 import { getChatMessagesAction } from '../../lib/chat-actions/chatActions';
 
 import '../chat/chat.css';
@@ -137,7 +137,7 @@ const RightSidebarContent: React.FC<RightSidebarProps> = ({
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-bold text-gray-800">Chat</h2>
               <button className="text-xl font-bold text-gray-800" onClick={handleNewChat}>
-                <PlusIcon />
+                <Plus className="h-4 w-4" />
               </button>
             </div>
           </div>

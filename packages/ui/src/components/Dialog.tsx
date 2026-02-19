@@ -3,7 +3,7 @@
 // server/src/components/ui/Dialog.tsx
 import React, { ReactNode, useEffect, useState, useRef } from 'react';
 import * as RadixDialog from '@radix-ui/react-dialog';
-import { Cross2Icon } from '@radix-ui/react-icons';
+import { X } from 'lucide-react';
 import * as VisuallyHidden from '@radix-ui/react-visually-hidden';
 import { ReflectionParentContext } from '../ui-reflection/ReflectionParentContext';
 import { ModalityContext, InsideDialogContext, useInsideDialog } from './ModalityContext';
@@ -352,9 +352,9 @@ export function Dialog({
             <div className="px-6 pt-6 pb-4 border-b border-[rgb(var(--color-border-100))] rounded-t-lg">
               <h2 className="text-xl font-semibold select-none">{title}</h2>
             </div>
-          ) : (
+          ) : draggable ? (
             <div className="p-2 rounded-t-lg" />
-          )}
+          ) : null}
           {/* Scrollable body */}
           <div
             className={`px-6 pt-3 pb-6 flex-1 min-h-0 ${allowOverflow ? 'overflow-visible' : 'overflow-y-auto'} ${contentClassName || ''}`}
@@ -374,7 +374,7 @@ export function Dialog({
               className="absolute top-2 right-2 text-muted-foreground hover:text-[rgb(var(--color-text-600))] focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 rounded z-10"
               aria-label="Close"
             >
-              <Cross2Icon />
+              <X className="h-4 w-4" />
             </button>
           )}
         </div>
@@ -442,25 +442,31 @@ export function Dialog({
             }
           }}
         >
-          {/* Drag handle area - always present for consistent dragging */}
-          <div
-            data-drag-handle
-            className={`${draggable ? 'cursor-move hover:bg-muted' : ''} ${title ? 'px-6 pt-6 pb-4' : 'p-2'} ${title ? 'border-b border-[rgb(var(--color-border-100))]' : ''} rounded-t-lg transition-colors`}
-            onMouseDown={handleMouseDown}
-          >
-            {title ? (
-              <RadixDialog.Title className="text-xl font-semibold select-none">{title}</RadixDialog.Title>
-            ) : (
-              <>
-                <VisuallyHidden.Root>
-                  <RadixDialog.Title>Dialog</RadixDialog.Title>
-                </VisuallyHidden.Root>
-                <div className="flex items-center justify-center">
-                  <div className="w-12 h-1 bg-[rgb(var(--color-border-300))] rounded-full" /> {/* Visual drag indicator */}
-                </div>
-              </>
-            )}
-          </div>
+          {/* Drag handle area */}
+          {(title || draggable) ? (
+            <div
+              data-drag-handle
+              className={`${draggable ? 'cursor-move hover:bg-muted' : ''} ${title ? 'px-6 pt-6 pb-4' : 'p-2'} ${title ? 'border-b border-[rgb(var(--color-border-100))]' : ''} rounded-t-lg transition-colors`}
+              onMouseDown={handleMouseDown}
+            >
+              {title ? (
+                <RadixDialog.Title className="text-xl font-semibold select-none">{title}</RadixDialog.Title>
+              ) : (
+                <>
+                  <VisuallyHidden.Root>
+                    <RadixDialog.Title>Dialog</RadixDialog.Title>
+                  </VisuallyHidden.Root>
+                  <div className="flex items-center justify-center">
+                    <div className="w-12 h-1 bg-[rgb(var(--color-border-300))] rounded-full" /> {/* Visual drag indicator */}
+                  </div>
+                </>
+              )}
+            </div>
+          ) : (
+            <VisuallyHidden.Root>
+              <RadixDialog.Title>Dialog</RadixDialog.Title>
+            </VisuallyHidden.Root>
+          )}
           <div
             className={`px-6 pt-3 pb-6 flex-1 min-h-0 ${allowOverflow ? 'overflow-visible' : 'overflow-y-auto'} ${contentClassName || ''}`}
           >
@@ -479,7 +485,7 @@ export function Dialog({
                 className="absolute top-2 right-2 text-muted-foreground hover:text-[rgb(var(--color-text-600))] focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 rounded z-10"
                 aria-label="Close"
               >
-                <Cross2Icon />
+                <X className="h-4 w-4" />
               </button>
             ) : (
               <RadixDialog.Close asChild>
@@ -487,7 +493,7 @@ export function Dialog({
                   className="absolute top-2 right-2 text-muted-foreground hover:text-[rgb(var(--color-text-600))] focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 rounded z-10"
                   aria-label="Close"
                 >
-                  <Cross2Icon />
+                  <X className="h-4 w-4" />
                 </button>
               </RadixDialog.Close>
             )

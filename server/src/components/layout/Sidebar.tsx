@@ -1,10 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { usePathname, useSearchParams, useRouter } from 'next/navigation';
-import * as RadixIcons from '@radix-ui/react-icons';
-import { ChevronRightIcon, MagnifyingGlassIcon } from '@radix-ui/react-icons';
 import Image from 'next/image';
 import * as Tooltip from '@radix-ui/react-tooltip';
-import { ChevronLeft, ExternalLink } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ExternalLink, Search } from 'lucide-react';
 import { getAppVersion } from '@alga-psa/core';
 import { Button } from '@alga-psa/ui/components/Button';
 import { DynamicNavigationSlot } from '@alga-psa/ui/components/extensions/DynamicNavigationSlot';
@@ -318,7 +316,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           onClick={() => !sidebarOpen && setSidebarOpen(true)}
           style={{ cursor: sidebarOpen ? 'default' : 'pointer' }}
         >
-          <MagnifyingGlassIcon className="absolute left-2 top-1/2 h-5 w-5 text-gray-500 transform -translate-y-1/2" />
+          <Search className="absolute left-2 top-1/2 h-5 w-5 text-gray-500 transform -translate-y-1/2" />
           {sidebarOpen ? (
             <input
               type="text"
@@ -439,7 +437,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         className="absolute -right-3 top-12 z-10 transform w-6 h-6 rounded-full flex items-center justify-center"
         aria-label={sidebarOpen ? 'Collapse sidebar' : 'Expand sidebar'}
       >
-        <ChevronRightIcon className={`w-4 h-4 transition-transform duration-300 ${sidebarOpen ? 'transform rotate-180' : ''}`} />
+        <ChevronRight className={`w-4 h-4 transition-transform duration-300 ${sidebarOpen ? 'transform rotate-180' : ''}`} />
       </Button>
     </aside>
   );

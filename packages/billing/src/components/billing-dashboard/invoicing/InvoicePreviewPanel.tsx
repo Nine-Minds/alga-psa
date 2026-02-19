@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { Card } from '@alga-psa/ui/components/Card';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
-import { FileTextIcon, GearIcon } from '@radix-ui/react-icons';
+import { FileText, Settings } from 'lucide-react';
 import type { IInvoiceTemplate, TaxSource } from '@alga-psa/types';
 import type { WasmInvoiceViewModel } from '@alga-psa/types';
 import { getInvoiceForRendering, getInvoicePurchaseOrderSummary, type InvoicePurchaseOrderSummary } from '@alga-psa/billing/actions/invoiceQueries';
@@ -145,7 +145,7 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
       <Card className="h-full">
         <div className="p-6 flex items-center justify-center h-64 text-muted-foreground">
           <div className="text-center">
-            <FileTextIcon className="h-12 w-12 mx-auto mb-2 text-muted-foreground" />
+            <FileText className="h-12 w-12 mx-auto mb-2 text-muted-foreground" />
             <p>Select an invoice to preview</p>
           </div>
         </div>
@@ -167,9 +167,9 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
               label: (
                 <div className="flex items-center gap-2">
                   {template.isStandard ? (
-                    <><FileTextIcon className="w-4 h-4" /> {template.name} (Standard)</>
+                    <><FileText className="w-4 h-4" /> {template.name} (Standard)</>
                   ) : (
-                    <><GearIcon className="w-4 h-4" /> {template.name}</>
+                    <><Settings className="w-4 h-4" /> {template.name}</>
                   )}
                 </div>
               )

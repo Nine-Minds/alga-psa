@@ -2,7 +2,7 @@
 
 import { withTransaction } from '@alga-psa/db';
 import { IServiceCategory } from '@alga-psa/types';
-import { TextNoneIcon } from '@radix-ui/react-icons';
+
 import { createTenantKnex } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withAuth } from '@alga-psa/auth';
