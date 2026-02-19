@@ -2120,33 +2120,28 @@ export default function ProjectDetail({
               placeholder="Task Type"
             />
 
-            {/* Clear all filters button */}
-            {(searchQuery || searchWholeWord || searchCaseSensitive ||
-              selectedTaskTags.length > 0 || selectedAgentFilter.length > 0 ||
-              includeUnassignedAgents || primaryAgentOnly || selectedPriorityFilter !== 'all' ||
-              selectedTaskTypeFilter !== 'all') && (
-              <Tooltip content="Clear all filters">
-                <Button
-                  id="clear-task-filters-list"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    setSearchQuery('');
-                    setSearchWholeWord(false);
-                    setSearchCaseSensitive(false);
-                    setSelectedTaskTags([]);
-                    setSelectedAgentFilter([]);
-                    setIncludeUnassignedAgents(false);
-                    setPrimaryAgentOnly(false);
-                    setSelectedPriorityFilter('all');
-                    setSelectedTaskTypeFilter('all');
-                  }}
-                  className="-ml-1 shrink-0 text-gray-500 hover:text-gray-700"
-                >
-                  <XCircle className="h-4 w-4" />
-                </Button>
-              </Tooltip>
-            )}
+            {/* Reset filters button */}
+            <Button
+              id="clear-task-filters-list"
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setSearchQuery('');
+                setSearchWholeWord(false);
+                setSearchCaseSensitive(false);
+                setSelectedTaskTags([]);
+                setSelectedAgentFilter([]);
+                setIncludeUnassignedAgents(false);
+                setPrimaryAgentOnly(false);
+                setSelectedPriorityFilter('all');
+                setSelectedTaskTypeFilter('all');
+              }}
+              className={`shrink-0 flex items-center gap-1 ${(searchQuery || searchWholeWord || searchCaseSensitive || selectedTaskTags.length > 0 || selectedAgentFilter.length > 0 || includeUnassignedAgents || primaryAgentOnly || selectedPriorityFilter !== 'all' || selectedTaskTypeFilter !== 'all') ? 'text-gray-500 hover:text-gray-700' : 'invisible'}`}
+              disabled={!(searchQuery || searchWholeWord || searchCaseSensitive || selectedTaskTags.length > 0 || selectedAgentFilter.length > 0 || includeUnassignedAgents || primaryAgentOnly || selectedPriorityFilter !== 'all' || selectedTaskTypeFilter !== 'all')}
+            >
+              <XCircle className="h-4 w-4" />
+              Reset
+            </Button>
           </div>
         </div>
       );
@@ -2345,33 +2340,28 @@ export default function ProjectDetail({
               placeholder="Task Type"
             />
 
-            {/* Clear all filters button */}
-            {(searchQuery || searchWholeWord || searchCaseSensitive ||
-              selectedTaskTags.length > 0 || selectedAgentFilter.length > 0 ||
-              includeUnassignedAgents || primaryAgentOnly || selectedPriorityFilter !== 'all' ||
-              selectedTaskTypeFilter !== 'all') && (
-              <Tooltip content="Clear all filters">
-                <Button
-                  id="clear-task-filters-kanban"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    setSearchQuery('');
-                    setSearchWholeWord(false);
-                    setSearchCaseSensitive(false);
-                    setSelectedTaskTags([]);
-                    setSelectedAgentFilter([]);
-                    setIncludeUnassignedAgents(false);
-                    setPrimaryAgentOnly(false);
-                    setSelectedPriorityFilter('all');
-                    setSelectedTaskTypeFilter('all');
-                  }}
-                  className="-ml-1 shrink-0 text-gray-500 hover:text-gray-700"
-                >
-                  <XCircle className="h-4 w-4" />
-                </Button>
-              </Tooltip>
-            )}
+            {/* Reset filters button */}
+            <Button
+              id="clear-task-filters-kanban"
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setSearchQuery('');
+                setSearchWholeWord(false);
+                setSearchCaseSensitive(false);
+                setSelectedTaskTags([]);
+                setSelectedAgentFilter([]);
+                setIncludeUnassignedAgents(false);
+                setPrimaryAgentOnly(false);
+                setSelectedPriorityFilter('all');
+                setSelectedTaskTypeFilter('all');
+              }}
+              className={`shrink-0 flex items-center gap-1 ${(searchQuery || searchWholeWord || searchCaseSensitive || selectedTaskTags.length > 0 || selectedAgentFilter.length > 0 || includeUnassignedAgents || primaryAgentOnly || selectedPriorityFilter !== 'all' || selectedTaskTypeFilter !== 'all') ? 'text-gray-500 hover:text-gray-700' : 'invisible'}`}
+              disabled={!(searchQuery || searchWholeWord || searchCaseSensitive || selectedTaskTags.length > 0 || selectedAgentFilter.length > 0 || includeUnassignedAgents || primaryAgentOnly || selectedPriorityFilter !== 'all' || selectedTaskTypeFilter !== 'all')}
+            >
+              <XCircle className="h-4 w-4" />
+              Reset
+            </Button>
           </div>
 
           {/* Completion Stats */}

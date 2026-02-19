@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Calendar, Filter, RefreshCw } from 'lucide-react';
+import { Calendar, Filter, XCircle } from 'lucide-react';
 
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -95,7 +95,7 @@ export default function FilterPanel({
       </div>
       <div className="flex gap-2">
         <Button id="reset-filters" variant="outline" onClick={handleReset}>
-          <RefreshCw className="mr-2 h-4 w-4" />
+          <XCircle className="mr-2 h-4 w-4" />
           Reset
         </Button>
         <Button id="apply-filters" onClick={handleApply}>

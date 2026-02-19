@@ -561,95 +561,92 @@ export default function Projects({ initialProjects, clients }: ProjectsProps) {
       </div>
 
       {/* Filter section */}
-      <div className="mb-6 flex flex-wrap items-center gap-2">
-        {/* Search bar */}
-        <div className="relative p-0.5">
-          <Input
-            type="text"
-            placeholder="Search projects"
-            className="pl-10 pr-4 py-2 w-64"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-          <Search size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-        </div>
+      <div className="mb-6 flex items-center gap-2">
+          {/* Search bar */}
+          <div className="relative p-0.5 shrink-0">
+            <Input
+              type="text"
+              placeholder="Search projects"
+              className="pl-10 pr-4 py-2 w-64"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+            <Search size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+          </div>
 
-        {/* Status filter */}
-        <div className="relative z-10">
-          <CustomSelect
-            options={statusOptions}
-            value={filterStatus}
-            onValueChange={(value) => setFilterStatus(value as 'all' | 'active' | 'inactive')}
-            placeholder="Select status"
-            customStyles={{
-              content: 'mt-1'
+          {/* Status filter */}
+          <div className="relative z-10 shrink-0">
+            <CustomSelect
+              options={statusOptions}
+              value={filterStatus}
+              onValueChange={(value) => setFilterStatus(value as 'all' | 'active' | 'inactive')}
+              placeholder="Select status"
+              customStyles={{
+                content: 'mt-1'
+              }}
+            />
+          </div>
+
+          {/* Client filter */}
+          <ClientPicker
+            id="project-client-filter"
+            clients={clients}
+            onSelect={(clientId) => setFilterClientId(clientId)}
+            selectedClientId={filterClientId}
+            filterState={clientFilterState}
+            onFilterStateChange={setClientFilterState}
+            clientTypeFilter={clientClientTypeFilter}
+            onClientTypeFilterChange={setClientClientTypeFilter}
+            fitContent={true}
+          />
+
+          {/* Contact filter */}
+          <ContactPicker
+            id="project-contact-filter"
+            contacts={contacts}
+            value={filterContactId || ''}
+            onValueChange={(value) => setFilterContactId(value || null)}
+            clientId={filterClientId || undefined}
+            placeholder="Filter by contact"
+            buttonWidth="fit"
+          />
+
+          {/* Project Manager filter */}
+          <UserPicker
+            value={filterManagerId || ''}
+            onValueChange={(value) => setFilterManagerId(value || null)}
+            users={users}
+            getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
+            placeholder="All managers"
+            buttonWidth="fit"
+            labelStyle="none"
+          />
+
+          {/* Deadline filter */}
+          <DeadlineFilter
+            id="project-deadline-filter"
+            value={filterDeadline}
+            onChange={setFilterDeadline}
+            placeholder="Filter by deadline"
+          />
+
+          {/* Tag filter */}
+          <TagFilter
+            tags={allUniqueTags}
+            selectedTags={selectedTags}
+            onToggleTag={(tag) => {
+              setSelectedTags(prev =>
+                prev.includes(tag)
+                  ? prev.filter(t => t !== tag)
+                  : [...prev, tag]
+              );
             }}
+            onClearTags={() => setSelectedTags([])}
           />
-        </div>
 
-        {/* Client filter */}
-        <ClientPicker
-          id="project-client-filter"
-          clients={clients}
-          onSelect={(clientId) => setFilterClientId(clientId)}
-          selectedClientId={filterClientId}
-          filterState={clientFilterState}
-          onFilterStateChange={setClientFilterState}
-          clientTypeFilter={clientClientTypeFilter}
-          onClientTypeFilterChange={setClientClientTypeFilter}
-          fitContent={true}
-        />
-
-        {/* Contact filter */}
-        <ContactPicker
-          id="project-contact-filter"
-          contacts={contacts}
-          value={filterContactId || ''}
-          onValueChange={(value) => setFilterContactId(value || null)}
-          clientId={filterClientId || undefined}
-          placeholder="Filter by contact"
-          buttonWidth="fit"
-        />
-
-        {/* Project Manager filter */}
-        <UserPicker
-          value={filterManagerId || ''}
-          onValueChange={(value) => setFilterManagerId(value || null)}
-          users={users}
-          getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
-          placeholder="All managers"
-          buttonWidth="fit"
-          labelStyle="none"
-        />
-
-        {/* Deadline filter */}
-        <DeadlineFilter
-          id="project-deadline-filter"
-          value={filterDeadline}
-          onChange={setFilterDeadline}
-          placeholder="Filter by deadline"
-        />
-
-        {/* Tag filter */}
-        <TagFilter
-          tags={allUniqueTags}
-          selectedTags={selectedTags}
-          onToggleTag={(tag) => {
-            setSelectedTags(prev =>
-              prev.includes(tag)
-                ? prev.filter(t => t !== tag)
-                : [...prev, tag]
-            );
-          }}
-          onClearTags={() => setSelectedTags([])}
-        />
-
-        {/* Clear filters button */}
-        {(searchTerm || filterStatus !== 'active' || selectedTags.length > 0 || 
-          filterClientId || filterContactId || filterManagerId || filterDeadline) && (
           <Button
             id="clear-all-filters-button"
-            variant="outline"
+            variant="ghost"
             size="sm"
             onClick={() => {
               setSearchTerm('');
@@ -662,12 +659,12 @@ export default function Projects({ initialProjects, clients }: ProjectsProps) {
               setClientFilterState('all');
               setClientClientTypeFilter('all');
             }}
-            className="flex items-center gap-1 bg-white"
+            className={`shrink-0 flex items-center gap-1 ${(searchTerm || filterStatus !== 'active' || selectedTags.length > 0 || filterClientId || filterContactId || filterManagerId || filterDeadline) ? 'text-gray-500 hover:text-gray-700' : 'invisible'}`}
+            disabled={!(searchTerm || filterStatus !== 'active' || selectedTags.length > 0 || filterClientId || filterContactId || filterManagerId || filterDeadline)}
           >
             <XCircle className="h-4 w-4" />
-            <span>Clear all filters</span>
+            Reset
           </Button>
-        )}
       </div>
 
       <div className="bg-white shadow rounded-lg p-4">

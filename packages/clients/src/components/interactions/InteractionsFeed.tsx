@@ -1,7 +1,7 @@
 'use client'
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Card, CardContent, CardHeader } from '@alga-psa/ui/components/Card';
-import { Filter, Plus, RefreshCw } from 'lucide-react';
+import { Filter, Plus, XCircle } from 'lucide-react';
 import InteractionIcon from '@alga-psa/ui/components/InteractionIcon';
 import { IInteraction, IInteractionType } from '@alga-psa/types';
 import { QuickAddInteraction } from './QuickAddInteraction';
@@ -102,7 +102,7 @@ const InteractionsFeed: React.FC<InteractionsFeedProps> = ({
   const { automationIdProps: resetButtonProps } = useAutomationIdAndRegister<ButtonComponent>({
     id: `${id}-reset-button`,
     type: 'button',
-    label: 'Reset Filters',
+    label: 'Reset',
     helperText: 'Clear all applied filters'
   });
 
@@ -324,14 +324,15 @@ const InteractionsFeed: React.FC<InteractionsFeedProps> = ({
               placeholder="End Date"
             />
             <div className="flex justify-between">
-              <Button 
+              <Button
                 {...resetButtonProps}
-                onClick={resetFilters} 
-                variant="outline" 
-                className="flex items-center"
+                onClick={resetFilters}
+                variant="ghost"
+                size="sm"
+                className="text-gray-500 hover:text-gray-700 flex items-center gap-1"
               >
-                <RefreshCw className="mr-2 h-4 w-4" />
-                Reset Filters
+                <XCircle className="h-4 w-4" />
+                Reset
               </Button>
               <Button 
                 {...applyButtonProps}
