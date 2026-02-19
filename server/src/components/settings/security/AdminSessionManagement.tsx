@@ -32,7 +32,7 @@ import {
   Mail,
   Search,
   Filter,
-  X,
+  XCircle,
 } from 'lucide-react';
 
 export default function AdminSessionManagement() {
@@ -350,7 +350,7 @@ export default function AdminSessionManagement() {
                   onClick={clearFilters}
                   className="h-10"
                 >
-                  <X className="h-4 w-4 mr-2" />
+                  <XCircle className="h-4 w-4 mr-2" />
                   Reset
                 </Button>
               </div>

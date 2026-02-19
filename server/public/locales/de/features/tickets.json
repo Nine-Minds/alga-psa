@@ -6,7 +6,7 @@
   "createButton": "Support-Ticket erstellen",
   "viewAll": "Alle Tickets anzeigen",
   "myTickets": "Meine Tickets",
-  "resetFilters": "Filter zurücksetzen",
+  "resetFilters": "Zurücksetzen",
   "filters": {
     "allStatuses": "Alle Status",
     "allOpen": "Alle offenen Tickets",

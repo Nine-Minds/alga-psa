@@ -7,7 +7,7 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Badge } from '@alga-psa/ui/components/Badge';
-import { Search, ChevronDown, ChevronUp, X } from 'lucide-react';
+import { Search, ChevronDown, ChevronUp, XCircle } from 'lucide-react';
 import { IContractLinePreset, IContractLinePresetService, IContractLinePresetFixedConfig } from '@alga-psa/types';
 import {
   getContractLinePresets,
@@ -387,7 +387,7 @@ export const AddContractLinesDialog: React.FC<AddContractLinesDialogProps> = ({
                   setTypeFilter('all');
                 }}
               >
-                <X className="h-4 w-4 mr-1" />
+                <XCircle className="h-4 w-4 mr-1" />
                 Reset
               </Button>
             )}

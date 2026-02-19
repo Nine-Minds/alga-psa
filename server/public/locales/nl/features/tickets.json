@@ -6,7 +6,7 @@
   "createButton": "Supportticket aanmaken",
   "viewAll": "Alle tickets bekijken",
   "myTickets": "Mijn tickets",
-  "resetFilters": "Filters resetten",
+  "resetFilters": "Resetten",
   "filters": {
     "allStatuses": "Alle statussen",
     "allOpen": "Alle open tickets",
