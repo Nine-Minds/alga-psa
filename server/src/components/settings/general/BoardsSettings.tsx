@@ -16,7 +16,6 @@ import { getAllPriorities } from '@alga-psa/reference-data/actions';
 import { getAllUsers, getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
 import { getSlaPolicies } from '@alga-psa/sla/actions';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
-import { IUser } from '@alga-psa/types';
 import { ISlaPolicy } from '@alga-psa/sla/types';
 import { toast } from 'react-hot-toast';
 import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';

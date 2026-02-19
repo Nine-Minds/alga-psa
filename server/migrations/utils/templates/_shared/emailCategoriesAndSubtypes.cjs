@@ -14,6 +14,7 @@ const CATEGORIES = [
   { name: 'User Account', description: 'Authentication and account-related notifications (password reset, email verification, etc.)', is_enabled: true, is_default_enabled: true },
   { name: 'Authentication', description: 'Authentication and security notifications', is_enabled: true, is_default_enabled: true },
   { name: 'Appointments', description: 'Appointment request and scheduling notifications', is_enabled: true, is_default_enabled: true },
+  { name: 'SLA', description: 'SLA-related email notifications', is_enabled: true, is_default_enabled: true },
 ];
 
 const SUBTYPES = [
@@ -55,6 +56,10 @@ const SUBTYPES = [
   { category: 'Appointments', name: 'appointment-request-declined', description: 'Notification that appointment request was declined' },
   { category: 'Appointments', name: 'new-appointment-request', description: 'New appointment request notification for MSP staff' },
   { category: 'Appointments', name: 'appointment-assigned-technician', description: 'Notification to technician when assigned to an approved appointment' },
+  // SLA
+  { category: 'SLA', name: 'SLA Warning', description: 'SLA threshold warning email (approaching breach)' },
+  { category: 'SLA', name: 'SLA Breach', description: 'SLA breach notification email' },
+  { category: 'SLA', name: 'SLA Escalation', description: 'Ticket escalation due to SLA' },
 ];
 
 /**

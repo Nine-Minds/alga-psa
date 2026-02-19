@@ -12,6 +12,7 @@ const CATEGORIES = [
   { name: 'system', description: 'System and administrative notifications', is_enabled: true, is_default_enabled: true },
   { name: 'messages', description: 'Direct messages and communication', is_enabled: true, is_default_enabled: true },
   { name: 'appointments', description: 'Appointment request and scheduling notifications', is_enabled: true, is_default_enabled: true },
+  { name: 'sla', description: 'SLA-related notifications', is_enabled: true, is_default_enabled: true },
 ];
 
 const SUBTYPES = [
@@ -49,6 +50,12 @@ const SUBTYPES = [
   { category: 'appointments', name: 'appointment-request-declined', description: 'Appointment request declined' },
   { category: 'appointments', name: 'appointment-request-cancelled', description: 'Appointment request cancelled' },
   { category: 'appointments', name: 'appointment-assigned-technician', description: 'Appointment assigned to technician' },
+  // SLA
+  { category: 'sla', name: 'sla-warning', description: 'SLA approaching breach threshold' },
+  { category: 'sla', name: 'sla-breach', description: 'SLA has been breached' },
+  { category: 'sla', name: 'sla-response-met', description: 'Response SLA was met' },
+  { category: 'sla', name: 'sla-resolution-met', description: 'Resolution SLA was met' },
+  { category: 'sla', name: 'sla-escalation', description: 'SLA escalation notification' },
 ];
 
 /**
