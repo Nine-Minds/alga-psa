@@ -70,7 +70,8 @@ interface TaskDependency {
 const VIEW_MODE_STORAGE_KEY = 'client-portal-project-view-mode';
 
 export default function ProjectDetailView({ project }: ProjectDetailViewProps) {
-  const { t, i18n } = useTranslation('clientPortal');
+  const { t, i18n } = useTranslation('features/projects');
+  const { t: tCommon } = useTranslation('common');
   const dateLocale = getDateFnsLocale(i18n.language);
   const [metrics, setMetrics] = useState<ProjectCompletionMetrics | null>(null);
   const [loading, setLoading] = useState(true);
@@ -207,8 +208,8 @@ export default function ProjectDetailView({ project }: ProjectDetailViewProps) {
 
   // View switcher options
   const viewOptions = useMemo(() => [
-    { value: 'kanban' as ViewMode, label: t('projects.kanbanView', 'Kanban'), icon: LayoutGrid },
-    { value: 'list' as ViewMode, label: t('projects.listView', 'List'), icon: List }
+    { value: 'kanban' as ViewMode, label: t('kanbanView', 'Kanban'), icon: LayoutGrid },
+    { value: 'list' as ViewMode, label: t('listView', 'List'), icon: List }
   ], [t]);
 
   if (loading) {
@@ -235,12 +236,12 @@ export default function ProjectDetailView({ project }: ProjectDetailViewProps) {
       <div className="p-6 bg-white rounded-lg shadow">
         <h2 className="text-2xl font-bold mb-2">{project.project_name}</h2>
         <p className="text-gray-600 mb-6">
-          {project.description || t('projects.messages.noDescription', 'No description provided')}
+          {project.description || t('messages.noDescription', 'No description provided')}
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
           <div className="bg-gray-50 p-4 rounded-lg">
-            <h3 className="text-lg font-semibold mb-4">{t('projects.taskCompletion', 'Task Completion')}</h3>
+            <h3 className="text-lg font-semibold mb-4">{t('taskCompletion', 'Task Completion')}</h3>
             <div className="flex items-center">
               <div className="mr-4">
                 <DonutChart
@@ -249,21 +250,21 @@ export default function ProjectDetailView({ project }: ProjectDetailViewProps) {
                 />
               </div>
               <div>
-                <p className="font-medium">{t('projects.percentComplete', '{{percent}}% Complete', { percent: Math.round(metrics?.taskCompletionPercentage || 0) })}</p>
+                <p className="font-medium">{t('percentComplete', '{{percent}}% Complete', { percent: Math.round(metrics?.taskCompletionPercentage || 0) })}</p>
                 <p className="text-sm text-gray-600">
-                  {t('projects.tasksCompleted', '{{completed}} of {{total}} tasks completed', { completed: metrics?.completedTasks || 0, total: metrics?.totalTasks || 0 })}
+                  {t('tasksCompleted', '{{completed}} of {{total}} tasks completed', { completed: metrics?.completedTasks || 0, total: metrics?.totalTasks || 0 })}
                 </p>
               </div>
             </div>
           </div>
 
           <div className="bg-gray-50 p-4 rounded-lg">
-            <h3 className="text-lg font-semibold mb-4">{t('projects.budgetHours', 'Budget Hours')}</h3>
+            <h3 className="text-lg font-semibold mb-4">{t('budgetHours', 'Budget Hours')}</h3>
             <div className="flex flex-col">
               <div className="flex flex-col mb-1">
-                <p className="font-medium">{t('projects.budgetUsed', '{{percent}}% of Budget Used', { percent: Math.round(metrics?.hoursCompletionPercentage || 0) })}</p>
+                <p className="font-medium">{t('budgetUsed', '{{percent}}% of Budget Used', { percent: Math.round(metrics?.hoursCompletionPercentage || 0) })}</p>
                 <p className="text-sm text-gray-600">
-                  {t('projects.hoursUsed', '{{spent}} of {{budgeted}} hours', { spent: (metrics?.spentHours || 0).toFixed(1), budgeted: (metrics?.budgetedHours || 0).toFixed(1) })}
+                  {t('hoursUsed', '{{spent}} of {{budgeted}} hours', { spent: (metrics?.spentHours || 0).toFixed(1), budgeted: (metrics?.budgetedHours || 0).toFixed(1) })}
                 </p>
               </div>
               <HoursProgressBar
@@ -273,9 +274,9 @@ export default function ProjectDetailView({ project }: ProjectDetailViewProps) {
                 showTooltip={true}
                 tooltipContent={
                   <div className="p-2">
-                    <p className="font-medium">{t('projects.hoursUsage', 'Hours Usage')}</p>
-                    <p className="text-sm">{t('projects.hoursUsedDetail', '{{spent}} of {{budgeted}} hours used', { spent: (metrics?.spentHours || 0).toFixed(1), budgeted: (metrics?.budgetedHours || 0).toFixed(1) })}</p>
-                    <p className="text-sm">{t('projects.hoursRemaining', '{{remaining}} hours remaining', { remaining: (metrics?.remainingHours || 0).toFixed(1) })}</p>
+                    <p className="font-medium">{t('hoursUsage', 'Hours Usage')}</p>
+                    <p className="text-sm">{t('hoursUsedDetail', '{{spent}} of {{budgeted}} hours used', { spent: (metrics?.spentHours || 0).toFixed(1), budgeted: (metrics?.budgetedHours || 0).toFixed(1) })}</p>
+                    <p className="text-sm">{t('hoursRemaining', '{{remaining}} hours remaining', { remaining: (metrics?.remainingHours || 0).toFixed(1) })}</p>
                   </div>
                 }
               />
@@ -284,35 +285,35 @@ export default function ProjectDetailView({ project }: ProjectDetailViewProps) {
         </div>
 
         <div>
-          <h3 className="text-lg font-semibold mb-2">{t('projects.details')}</h3>
+          <h3 className="text-lg font-semibold mb-2">{t('details')}</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <p className="text-sm text-gray-600">{t('projects.startDate')}</p>
+              <p className="text-sm text-gray-600">{t('startDate')}</p>
               <p className="font-medium">
                 {project.start_date
                   ? new Date(project.start_date).toLocaleDateString()
-                  : t('common.notSpecified', 'Not specified')}
+                  : tCommon('common.notSpecified', 'Not specified')}
               </p>
             </div>
             <div>
-              <p className="text-sm text-gray-600">{t('projects.endDate')}</p>
+              <p className="text-sm text-gray-600">{t('endDate')}</p>
               <p className="font-medium">
                 {project.end_date
                   ? new Date(project.end_date).toLocaleDateString()
-                  : t('common.notSpecified', 'Not specified')}
+                  : tCommon('common.notSpecified', 'Not specified')}
               </p>
             </div>
             <div>
-              <p className="text-sm text-gray-600">{t('projects.lastUpdated', 'Last Updated')}</p>
+              <p className="text-sm text-gray-600">{t('lastUpdated', 'Last Updated')}</p>
               <p className="font-medium">
                 {project.updated_at
                   ? formatDistanceToNow(new Date(project.updated_at), { addSuffix: true, locale: dateLocale })
-                  : t('common.unknown', 'Unknown')}
+                  : tCommon('common.unknown', 'Unknown')}
               </p>
             </div>
             <div>
-              <p className="text-sm text-gray-600">{t('projects.fields.status')}</p>
-              <p className="font-medium">{project.status_name ? t(`projects.status.${project.status_name.toLowerCase().replace(/\s+/g, '')}`, project.status_name) : t('projects.status.active', 'Active')}</p>
+              <p className="text-sm text-gray-600">{t('fields.status')}</p>
+              <p className="font-medium">{project.status_name ? t(`status.${project.status_name.toLowerCase().replace(/\s+/g, '')}`, project.status_name) : t('status.active', 'Active')}</p>
             </div>
           </div>
         </div>
@@ -327,10 +328,10 @@ export default function ProjectDetailView({ project }: ProjectDetailViewProps) {
               <div className="flex items-center gap-4">
                 <h3 className="text-lg font-semibold">
                   {showPhases && showTasks
-                    ? t('projects.phasesAndTasks', 'Phases & Tasks')
+                    ? t('phasesAndTasks', 'Phases & Tasks')
                     : showPhases
-                      ? t('projects.phases.title', 'Project Phases')
-                      : t('projects.tasks.title', 'Tasks')}
+                      ? t('phases.title', 'Project Phases')
+                      : t('tasks.title', 'Tasks')}
                 </h3>
               </div>
 

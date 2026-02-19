@@ -81,38 +81,29 @@ const installLocalStorageMock = () => {
 
 const createWorkspaceWithField = (fieldId: string): DesignerWorkspaceSnapshot => {
   const base = useInvoiceDesignerStore.getState().exportWorkspace();
-  const pageNode = base.nodes.find((node) => node.type === 'page');
+  const pageNode = Object.values(base.nodesById).find((node) => node.type === 'page');
   if (!pageNode) {
     return base;
   }
 
-  const fieldNode = {
-    id: fieldId,
-    type: 'field' as const,
-    name: 'Invoice Number',
-    position: { x: 24, y: 24 },
-    size: { width: 220, height: 48 },
-    canRotate: false,
-    allowResize: true,
-    rotation: 0,
-    metadata: { bindingKey: 'invoice.number', format: 'text' },
-    parentId: pageNode.id,
-    childIds: [],
-    allowedChildren: [],
-  };
-
   return {
     ...base,
-    nodes: base.nodes
-      .map((node) =>
-        node.id === pageNode.id
-          ? {
-              ...node,
-              childIds: [...node.childIds, fieldId],
-            }
-          : node
-      )
-      .concat(fieldNode),
+    nodesById: {
+      ...base.nodesById,
+      [pageNode.id]: {
+        ...base.nodesById[pageNode.id],
+        children: [...(base.nodesById[pageNode.id]?.children ?? []), fieldId],
+      },
+      [fieldId]: {
+        id: fieldId,
+        type: 'field',
+        props: {
+          name: 'Invoice Number',
+          metadata: { bindingKey: 'invoice.number', format: 'text' },
+        },
+        children: [],
+      },
+    },
   };
 };
 
@@ -131,7 +122,11 @@ describe('InvoiceTemplateEditor authoritative preview flow', () => {
     getInvoiceTemplateMock.mockResolvedValue({
       template_id: 'tpl-flow',
       name: 'Template Flow',
-      assemblyScriptSource: '// existing source',
+      templateAst: {
+        kind: 'invoice-template-ast',
+        version: 1,
+        layout: { id: 'root', type: 'document', children: [] },
+      },
       isStandard: false,
     });
 
@@ -186,7 +181,7 @@ describe('InvoiceTemplateEditor authoritative preview flow', () => {
     vi.restoreAllMocks();
   });
 
-  it('covers design edit -> authoritative preview -> verification -> save', async () => {
+  it('covers design edit -> authoritative preview -> save', async () => {
     render(<InvoiceTemplateEditor templateId="tpl-flow" />);
 
     await waitFor(() =>
@@ -204,17 +199,12 @@ describe('InvoiceTemplateEditor authoritative preview flow', () => {
     await waitFor(() => {
       expect(runAuthoritativeInvoiceTemplatePreviewMock.mock.calls.length).toBeGreaterThan(baselinePreviewCalls);
       const hasUpdatedWorkspaceCall = runAuthoritativeInvoiceTemplatePreviewMock.mock.calls.some((call) =>
-        call[0].workspace.nodes.some((node: { id: string }) => node.id === 'field-flow')
+        Boolean(call[0].workspace.nodesById?.['field-flow'])
       );
       expect(hasUpdatedWorkspaceCall).toBe(true);
     }, { timeout: 2500 });
 
-    await waitFor(() => {
-      expect(
-        document.querySelector('[data-automation-id=\"invoice-designer-preview-verification-badge\"]')?.textContent
-      ).toContain('pass');
-    });
-    expect(document.querySelector('[data-automation-id=\"invoice-designer-preview-render-iframe\"]')).toBeTruthy();
+    expect(document.querySelector('[data-automation-id=\"invoice-designer-preview-render-template\"]')).toBeTruthy();
 
     fireEvent.click(screen.getByRole('button', { name: 'Save Template' }));
 
@@ -224,8 +214,11 @@ describe('InvoiceTemplateEditor authoritative preview flow', () => {
       template_id: 'tpl-flow',
       name: 'Template Flow',
     });
-    expect(payload.assemblyScriptSource).toContain('field-flow');
-    expect(payload.assemblyScriptSource).toContain('ALGA_INVOICE_DESIGNER_STATE_V1');
+    expect(payload.templateAst).toMatchObject({
+      kind: 'invoice-template-ast',
+      version: 1,
+    });
+    expect(JSON.stringify(payload.templateAst)).toContain('field-flow');
   });
 
   it('updates authoritative preview when switching to existing invoice data', async () => {
@@ -246,7 +239,7 @@ describe('InvoiceTemplateEditor authoritative preview flow', () => {
       )
     );
 
-    const iframe = document.querySelector('[data-automation-id=\"invoice-designer-preview-render-iframe\"]');
-    expect(iframe?.getAttribute('srcdoc') ?? iframe?.getAttribute('srcDoc')).toContain('INV-EX-001');
+    const renderedPreview = document.querySelector('[data-automation-id=\"invoice-designer-preview-render-output\"]');
+    expect(renderedPreview?.textContent ?? '').toContain('INV-EX-001');
   });
 });

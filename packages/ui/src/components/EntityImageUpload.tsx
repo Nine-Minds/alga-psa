@@ -72,7 +72,8 @@ const EntityImageUpload = ({
   linkDocumentAsAvatar,
   renderDocumentSelector,
 }: EntityImageUploadProps) => {
-  const { t } = useTranslation('clientPortal');
+  const { t } = useTranslation('client-portal');
+  const { t: tCore } = useTranslation('common');
   const [isEditing, setIsEditing] = useState(false);
   const [isPendingUpload, startUploadTransition] = useTransition();
   const [isPendingDelete, startDeleteTransition] = useTransition();
@@ -441,7 +442,7 @@ const EntityImageUpload = ({
                 className="w-fit"
                 data-automation-id={`cancel-${entityType}-image-edit-button`}
               >
-                {t('common.cancel', 'Cancel')}
+                {tCore('common.cancel', 'Cancel')}
               </Button>
             </div>
             
@@ -467,8 +468,8 @@ const EntityImageUpload = ({
           ? t('profile.imageUpload.deleteLogoConfirm', `Are you sure you want to delete the logo for "${entityName}"? This action cannot be undone.`)
           : t('profile.imageUpload.deleteAvatarConfirm', `Are you sure you want to delete the profile picture for "${entityName}"? This action cannot be undone.`)
         }
-        confirmLabel={t('common.delete', 'Delete')}
-        cancelLabel={t('common.cancel', 'Cancel')}
+        confirmLabel={tCore('common.delete', 'Delete')}
+        cancelLabel={tCore('common.cancel', 'Cancel')}
         isConfirming={isPendingDelete}
       />
 

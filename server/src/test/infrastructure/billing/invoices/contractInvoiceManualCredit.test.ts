@@ -28,7 +28,7 @@ describe('Contract Invoice Manual Credit', () => {
     hasPermission: vi.fn(() => Promise.resolve(true))
   }));
 
-  vi.mock('server/src/lib/auth/getSession', () => ({
+  vi.mock('@alga-psa/auth', () => ({
     getSession: vi.fn(async () => ({
       user: {
         id: mockedUserId,

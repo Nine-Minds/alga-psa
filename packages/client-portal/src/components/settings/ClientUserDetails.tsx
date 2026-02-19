@@ -29,7 +29,8 @@ interface ClientUserDetailsProps {
 }
 
 const ClientUserDetails: React.FC<ClientUserDetailsProps> = ({ userId, onUpdate }) => {
-  const { t } = useTranslation('clientPortal');
+  const { t: tProfile } = useTranslation('client-portal');
+  const { t: tCommon } = useTranslation('common');
   const [user, setUser] = useState<IUser | null>(null);
   const [currentUser, setCurrentUser] = useState<IUserWithRoles | null>(null);
   const [firstName, setFirstName] = useState('');
@@ -115,11 +116,11 @@ const ClientUserDetails: React.FC<ClientUserDetailsProps> = ({ userId, onUpdate 
         const allRoles = await getClientPortalRoles();
         setAvailableRoles(allRoles);
       } else {
-        setError(t('clientSettings.users.userNotFound', 'User not found'));
+        setError(tProfile('clientSettings.users.userNotFound', 'User not found'));
       }
     } catch (err) {
       console.error('Error fetching user details:', err);
-      setError(t('clientSettings.users.failedToLoad', 'Failed to load user details. Please try again.'));
+      setError(tProfile('clientSettings.users.failedToLoad', 'Failed to load user details. Please try again.'));
     } finally {
       setLoading(false);
     }
@@ -141,11 +142,11 @@ const ClientUserDetails: React.FC<ClientUserDetailsProps> = ({ userId, onUpdate 
           onUpdate();
           closeDrawer();
         } else {
-          setError(t('clientSettings.users.failedToUpdate', 'Failed to update user. User not found.'));
+          setError(tProfile('clientSettings.users.failedToUpdate', 'Failed to update user. User not found.'));
         }
       } catch (err) {
         console.error('Error updating user:', err);
-        setError(t('clientSettings.users.failedToUpdate', 'Failed to update user. Please try again.'));
+        setError(tProfile('clientSettings.users.failedToUpdate', 'Failed to update user. Please try again.'));
       }
     }
   };
@@ -161,7 +162,7 @@ const ClientUserDetails: React.FC<ClientUserDetailsProps> = ({ userId, onUpdate 
       setSelectedRoleId('');
     } catch (err) {
       console.error('Error assigning role:', err);
-      setError(t('clientSettings.users.failedToAssignRole', 'Failed to assign role'));
+      setError(tProfile('clientSettings.users.failedToAssignRole', 'Failed to assign role'));
     }
   };
   
@@ -173,7 +174,7 @@ const ClientUserDetails: React.FC<ClientUserDetailsProps> = ({ userId, onUpdate 
       setUserRoles(updatedRoles);
     } catch (err) {
       console.error('Error removing role:', err);
-      setError(t('clientSettings.users.failedToRemoveRole', 'Failed to remove role'));
+      setError(tProfile('clientSettings.users.failedToRemoveRole', 'Failed to remove role'));
     }
   };
 
@@ -183,14 +184,14 @@ const ClientUserDetails: React.FC<ClientUserDetailsProps> = ({ userId, onUpdate 
     setPasswordSuccess(null);
 
     if (adminNewPassword.length < 8) {
-      setPasswordError(t('profile.changePassword.requirements'));
+      setPasswordError(tProfile('profile.changePassword.requirements'));
       return;
     }
 
     try {
       const result = await resetClientUserPassword(userId, adminNewPassword);
       if (result.success) {
-        setPasswordSuccess(t('profile.changePassword.success'));
+        setPasswordSuccess(tProfile('profile.changePassword.success'));
         setAdminNewPassword('');
         // Collapse the form after successful password change
         setTimeout(() => {
@@ -198,10 +199,10 @@ const ClientUserDetails: React.FC<ClientUserDetailsProps> = ({ userId, onUpdate 
           setPasswordSuccess(null);
         }, 2000);
       } else {
-        setPasswordError(result.error || t('profile.changePassword.error'));
+        setPasswordError(result.error || tProfile('profile.changePassword.error'));
       }
     } catch (err) {
-      setPasswordError(t('profile.changePassword.error'));
+      setPasswordError(tProfile('profile.changePassword.error'));
     }
   };
 
@@ -209,7 +210,7 @@ const ClientUserDetails: React.FC<ClientUserDetailsProps> = ({ userId, onUpdate 
     return (
       <Card className="p-6">
         <CardContent>
-          <div className="text-sm">{t('common.loading')}</div>
+          <div className="text-sm">{tCommon('common.loading')}</div>
         </CardContent>
       </Card>
     );
@@ -219,7 +220,7 @@ const ClientUserDetails: React.FC<ClientUserDetailsProps> = ({ userId, onUpdate 
     return (
       <Card className="p-6">
         <CardContent>
-          <div className="text-sm text-red-500">{t('common.error')}: {error}</div>
+          <div className="text-sm text-red-500">{tCommon('common.error')}: {error}</div>
         </CardContent>
       </Card>
     );
@@ -229,7 +230,7 @@ const ClientUserDetails: React.FC<ClientUserDetailsProps> = ({ userId, onUpdate 
     return (
       <Card className="p-6">
         <CardContent>
-          <div className="text-sm">{t('clientSettings.users.userNotFound', 'No user found')}</div>
+          <div className="text-sm">{tProfile('clientSettings.users.userNotFound', 'No user found')}</div>
         </CardContent>
       </Card>
     );
@@ -237,59 +238,59 @@ const ClientUserDetails: React.FC<ClientUserDetailsProps> = ({ userId, onUpdate 
 
   return (
     <Card className="space-y-6 p-6">
-      <h2 className="text-xl font-bold mb-6">{t('clientSettings.users.editUser')}</h2>
+      <h2 className="text-xl font-bold mb-6">{tProfile('clientSettings.users.editUser')}</h2>
       
       <div className="flex flex-col gap-4">
         <div>
           <label className="text-sm font-medium mb-2 block">
-            {t('clientSettings.users.firstName')}
+            {tProfile('clientSettings.users.firstName')}
           </label>
           <Input
             id={`user-${userId}-first-name`}
             type="text"
             value={firstName}
             onChange={(e) => setFirstName(e.target.value)}
-            placeholder={t('clientSettings.users.firstName')}
+            placeholder={tProfile('clientSettings.users.firstName')}
             className="w-full"
           />
         </div>
 
         <div>
           <label className="text-sm font-medium mb-2 block">
-            {t('clientSettings.users.lastName')}
+            {tProfile('clientSettings.users.lastName')}
           </label>
           <Input
             id={`user-${userId}-last-name`}
             type="text"
             value={lastName}
             onChange={(e) => setLastName(e.target.value)}
-            placeholder={t('clientSettings.users.lastName')}
+            placeholder={tProfile('clientSettings.users.lastName')}
             className="w-full"
           />
         </div>
 
         <div>
           <label className="text-sm font-medium mb-2 block">
-            {t('clientSettings.users.email')}
+            {tProfile('clientSettings.users.email')}
           </label>
           <Input
             id={`user-${userId}-email`}
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder={t('clientSettings.users.email')}
+            placeholder={tProfile('clientSettings.users.email')}
             className="w-full"
           />
         </div>
 
         <div className="flex items-center justify-between py-3">
           <div className="flex-1">
-            <div className="text-sm font-medium">{t('clientSettings.users.status')}</div>
-            <div className="text-sm text-gray-500 block">{t('clientSettings.users.statusDescription', 'Set user account status')}</div>
+            <div className="text-sm font-medium">{tProfile('clientSettings.users.status')}</div>
+            <div className="text-sm text-gray-500 block">{tProfile('clientSettings.users.statusDescription', 'Set user account status')}</div>
           </div>
           <div className="flex items-center gap-3">
             <div className="text-sm text-gray-500">
-              {isActive ? t('clientSettings.users.active') : t('clientSettings.users.inactive')}
+              {isActive ? tProfile('clientSettings.users.active') : tProfile('clientSettings.users.inactive')}
             </div>
             <Switch
               checked={isActive}
@@ -304,7 +305,7 @@ const ClientUserDetails: React.FC<ClientUserDetailsProps> = ({ userId, onUpdate 
           <div className="mt-4 space-y-4">
             <div>
               <label className="text-sm font-medium mb-2 block">
-                {t('clientSettings.users.roles')}
+                {tProfile('clientSettings.users.roles')}
               </label>
               
               {/* Current Roles */}
@@ -325,7 +326,7 @@ const ClientUserDetails: React.FC<ClientUserDetailsProps> = ({ userId, onUpdate 
                     </div>
                   ))
                 ) : (
-                  <p className="text-sm text-gray-500">{t('clientSettings.users.noRolesAssigned', 'No roles assigned')}</p>
+                  <p className="text-sm text-gray-500">{tProfile('clientSettings.users.noRolesAssigned', 'No roles assigned')}</p>
                 )}
               </div>
               
@@ -341,7 +342,7 @@ const ClientUserDetails: React.FC<ClientUserDetailsProps> = ({ userId, onUpdate 
                         value: role.role_id,
                         label: role.role_name
                       }))}
-                    placeholder={t('clientSettings.users.selectRole')}
+                    placeholder={tProfile('clientSettings.users.selectRole')}
                   />
                 </div>
                 <Button
@@ -350,7 +351,7 @@ const ClientUserDetails: React.FC<ClientUserDetailsProps> = ({ userId, onUpdate 
                   disabled={!selectedRoleId}
                   size="sm"
                 >
-                  {t('clientSettings.users.assignRole', 'Assign Role')}
+                  {tProfile('clientSettings.users.assignRole', 'Assign Role')}
                 </Button>
               </div>
             </div>
@@ -371,7 +372,7 @@ const ClientUserDetails: React.FC<ClientUserDetailsProps> = ({ userId, onUpdate 
                 onClick={() => setIsAdminPasswordExpanded(!isAdminPasswordExpanded)}
                 className="w-full flex items-center justify-between text-left hover:bg-gray-50 p-2 rounded-md transition-colors"
               >
-                <span className="text-base font-medium">{t('clientSettings.users.resetPassword', 'Reset User Password')}</span>
+                <span className="text-base font-medium">{tProfile('clientSettings.users.resetPassword', 'Reset User Password')}</span>
                 {isAdminPasswordExpanded ? (
                   <ChevronUp className="h-5 w-5 text-gray-500" />
                 ) : (
@@ -384,7 +385,7 @@ const ClientUserDetails: React.FC<ClientUserDetailsProps> = ({ userId, onUpdate 
                 <form onSubmit={handleAdminResetPassword} className="space-y-4">
                   <div>
                     <label className="text-sm font-medium mb-2 block">
-                      {t('profile.changePassword.new')}
+                      {tProfile('profile.changePassword.new')}
                     </label>
                     <div className="relative">
                       <Input
@@ -409,7 +410,7 @@ const ClientUserDetails: React.FC<ClientUserDetailsProps> = ({ userId, onUpdate 
                     </div>
                   </div>
                   <Button id='reset-password-btn' type="submit" variant="default">
-                    {t('clientSettings.users.resetPassword', 'Reset Password')}
+                    {tProfile('clientSettings.users.resetPassword', 'Reset Password')}
                   </Button>
                 </form>
               </CardContent>
@@ -436,14 +437,14 @@ const ClientUserDetails: React.FC<ClientUserDetailsProps> = ({ userId, onUpdate 
           onClick={closeDrawer}
           variant="outline"
         >
-          {t('common.cancel')}
+          {tCommon('common.cancel')}
         </Button>
         <Button
           id='save-changes-btn'
           onClick={handleSave}
           variant="default"
         >
-          {t('clientSettings.messages.saveChanges')}
+          {tProfile('clientSettings.messages.saveChanges')}
         </Button>
       </div>
     </Card>

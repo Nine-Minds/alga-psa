@@ -21,7 +21,7 @@ interface ProjectPhasesSectionProps {
 }
 
 export default function ProjectPhasesSection({ projectId, showCompletion }: ProjectPhasesSectionProps) {
-  const { t, i18n } = useTranslation('clientPortal');
+  const { t, i18n } = useTranslation('features/projects');
   const dateLocale = getDateFnsLocale(i18n.language);
   const [phases, setPhases] = useState<Phase[]>([]);
   const [loading, setLoading] = useState(true);
@@ -70,15 +70,15 @@ export default function ProjectPhasesSection({ projectId, showCompletion }: Proj
   if (phases.length === 0) {
     return (
       <div className="bg-[rgb(var(--color-border-50))] p-4 rounded-lg">
-        <h3 className="text-lg font-semibold mb-2">{t('projects.phases.title', 'Project Phases')}</h3>
-        <p className="text-[rgb(var(--color-text-600))] text-sm">{t('projects.phases.noPhases', 'No phases to display')}</p>
+        <h3 className="text-lg font-semibold mb-2">{t('phases.title', 'Project Phases')}</h3>
+        <p className="text-[rgb(var(--color-text-600))] text-sm">{t('phases.noPhases', 'No phases to display')}</p>
       </div>
     );
   }
 
   return (
     <div className="bg-[rgb(var(--color-border-50))] p-4 rounded-lg mb-6">
-      <h3 className="text-lg font-semibold mb-4">{t('projects.phases.title', 'Project Phases')}</h3>
+      <h3 className="text-lg font-semibold mb-4">{t('phases.title', 'Project Phases')}</h3>
       <div className="space-y-3">
         {phases.map((phase) => (
           <div key={phase.phase_id} className="bg-[rgb(var(--color-card))] p-4 rounded-lg border border-[rgb(var(--color-border-200))]">
@@ -95,7 +95,7 @@ export default function ProjectPhasesSection({ projectId, showCompletion }: Proj
                     {phase.completion_percentage}%
                   </div>
                   <div className="text-xs text-[rgb(var(--color-text-500))]">
-                    {t('projects.phases.completion', 'Complete')}
+                    {t('phases.completion', 'Complete')}
                   </div>
                 </div>
               )}
@@ -103,13 +103,13 @@ export default function ProjectPhasesSection({ projectId, showCompletion }: Proj
             <div className="flex gap-4 text-sm text-[rgb(var(--color-text-600))] mt-2">
               {phase.start_date && (
                 <div>
-                  <span className="font-medium">{t('projects.startDate', 'Start Date')}:</span>{' '}
+                  <span className="font-medium">{t('startDate', 'Start Date')}:</span>{' '}
                   {format(new Date(phase.start_date), 'PPP', { locale: dateLocale })}
                 </div>
               )}
               {phase.end_date && (
                 <div>
-                  <span className="font-medium">{t('projects.endDate', 'End Date')}:</span>{' '}
+                  <span className="font-medium">{t('endDate', 'End Date')}:</span>{' '}
                   {format(new Date(phase.end_date), 'PPP', { locale: dateLocale })}
                 </div>
               )}

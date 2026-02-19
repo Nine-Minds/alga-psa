@@ -839,5 +839,42 @@
         "confirm_delete": "Weet u zeker dat u deze opmerking wilt verwijderen?"
       }
     }
+  },
+  "common": {
+    "actions": "Acties",
+    "active": "Actief",
+    "inactive": "Inactief",
+    "loading": "Bezig met laden...",
+    "error": "Er is een fout opgetreden",
+    "save": "Opslaan",
+    "cancel": "Annuleren",
+    "delete": "Verwijderen",
+    "edit": "Bewerken",
+    "close": "Sluiten",
+    "confirm": "Bevestigen",
+    "yes": "Ja",
+    "no": "Nee",
+    "search": "Zoeken",
+    "filter": "Filteren",
+    "resetFilters": "Filters resetten",
+    "sort": "Sorteren",
+    "refresh": "Vernieuwen",
+    "export": "Exporteren",
+    "import": "Importeren",
+    "download": "Downloaden",
+    "upload": "Uploaden",
+    "selectAll": "Alles selecteren",
+    "clearSelection": "Selectie wissen",
+    "view": "Bekijken",
+    "back": "Terug",
+    "next": "Volgende",
+    "previous": "Vorige",
+    "submit": "Indienen",
+    "reset": "Resetten",
+    "noData": "Geen gegevens beschikbaar",
+    "required": "Verplicht",
+    "optional": "Optioneel",
+    "notSpecified": "Niet gespecificeerd",
+    "unknown": "Onbekend"
   }
 }

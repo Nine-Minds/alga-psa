@@ -2,7 +2,7 @@ import { StorageService } from 'server/src/lib/storage/StorageService';
 import { deleteDocument, getDocumentTypeId } from '@alga-psa/documents/actions/documentActions';
 import { getEntityImageUrl } from 'server/src/lib/utils/avatarUtils';
 import Document from '@alga-psa/documents/models/document';
-import DocumentAssociation from 'server/src/lib/models/document-association';
+import DocumentAssociation from '@alga-psa/documents/models/documentAssociation';
 import { createTenantKnex } from 'server/src/lib/db';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
@@ -91,13 +91,13 @@ export async function uploadEntityImage(
       }
 
       // Step 2: Create the new association, marking it as the logo if applicable.
-      await DocumentAssociation.create({
+      await DocumentAssociation.create(trx, {
         document_id: document.document_id,
         entity_id: entityId,
         entity_type: entityType,
         tenant,
         is_entity_logo: isLogoUpload || false,
-      }, trx);
+      });
 
       return document;
     });
@@ -279,13 +279,13 @@ export async function linkExistingDocumentAsEntityImage(
           .update({ is_entity_logo: true });
       } else {
         // Create new association
-        await DocumentAssociation.create({
+        await DocumentAssociation.create(trx, {
           document_id: documentId,
           entity_id: entityId,
           entity_type: entityType,
           tenant,
           is_entity_logo: true,
-        }, trx);
+        });
       }
 
       // Get the image URL for the response

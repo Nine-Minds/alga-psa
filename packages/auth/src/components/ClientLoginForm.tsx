@@ -18,7 +18,7 @@ interface ClientLoginFormProps {
 }
 
 export default function ClientLoginForm({ callbackUrl, onError, onTwoFactorRequired, tenantSlug }: ClientLoginFormProps) {
-  const { t } = useTranslation('clientPortal');
+  const { t } = useTranslation('client-portal');
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)

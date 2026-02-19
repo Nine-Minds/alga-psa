@@ -1,0 +1,200 @@
+[
+  {
+    "id": "F001",
+    "description": "Add 'msp-i18n-enabled' boolean feature flag (default: false) to DEFAULT_BOOLEAN_FLAGS",
+    "implemented": true,
+    "prdRefs": ["FR1"]
+  },
+  {
+    "id": "F002",
+    "description": "Standard MSP server layout checks flag and fetches locale via getHierarchicalLocaleAction only when enabled",
+    "implemented": true,
+    "prdRefs": ["FR2"]
+  },
+  {
+    "id": "F003",
+    "description": "Standard MspLayoutClient conditionally wraps children in I18nWrapper when flag is enabled",
+    "implemented": true,
+    "prdRefs": ["FR3"]
+  },
+  {
+    "id": "F004",
+    "description": "Standard MspLayoutClient renders without I18nWrapper when flag is disabled (zero behavior change)",
+    "implemented": true,
+    "prdRefs": ["FR3"]
+  },
+  {
+    "id": "F005",
+    "description": "EE MSP layout checks flag and fetches locale when enabled",
+    "implemented": true,
+    "prdRefs": ["FR2"]
+  },
+  {
+    "id": "F006",
+    "description": "EE MspLayoutClient conditionally wraps children in I18nWrapper when flag is enabled",
+    "implemented": true,
+    "prdRefs": ["FR3"]
+  },
+  {
+    "id": "F007",
+    "description": "Create features/tickets.json for all 7 languages by extracting tickets.* from clientPortal.json (flattened, no wrapper key)",
+    "implemented": true,
+    "prdRefs": ["FR4"]
+  },
+  {
+    "id": "F008",
+    "description": "Create features/projects.json for all 7 languages by extracting projects.* from clientPortal.json",
+    "implemented": true,
+    "prdRefs": ["FR4"]
+  },
+  {
+    "id": "F009",
+    "description": "Create features/billing.json for all 7 languages by extracting billing.* from clientPortal.json",
+    "implemented": true,
+    "prdRefs": ["FR4"]
+  },
+  {
+    "id": "F010",
+    "description": "Create features/documents.json for all 7 languages by extracting documents.* from clientPortal.json",
+    "implemented": true,
+    "prdRefs": ["FR4"]
+  },
+  {
+    "id": "F011",
+    "description": "Create features/appointments.json for all 7 languages by extracting appointments.* from clientPortal.json",
+    "implemented": true,
+    "prdRefs": ["FR4"]
+  },
+  {
+    "id": "F012",
+    "description": "Create client-portal.json for all 7 languages (nav, dashboard, common, pagination, time, auth, account, profile, clientSettings, notifications keys from clientPortal.json)",
+    "implemented": true,
+    "prdRefs": ["FR5"]
+  },
+  {
+    "id": "F013",
+    "description": "Auth/account keys merged into client-portal.json (flat namespace, no separate auth file)",
+    "implemented": true,
+    "prdRefs": ["FR5"]
+  },
+  {
+    "id": "F014",
+    "description": "Profile/clientSettings/notifications keys merged into client-portal.json (flat namespace, no separate profile file)",
+    "implemented": true,
+    "prdRefs": ["FR5"]
+  },
+  {
+    "id": "F015",
+    "description": "Migrate all client portal components using tickets.* keys to useTranslation('features/tickets')",
+    "implemented": true,
+    "prdRefs": ["FR6"]
+  },
+  {
+    "id": "F016",
+    "description": "Migrate all client portal components using projects.* keys to useTranslation('features/projects')",
+    "implemented": true,
+    "prdRefs": ["FR6"]
+  },
+  {
+    "id": "F017",
+    "description": "Migrate all client portal components using billing.* keys to useTranslation('features/billing')",
+    "implemented": true,
+    "prdRefs": ["FR6"]
+  },
+  {
+    "id": "F018",
+    "description": "Migrate all client portal components using documents.* keys to useTranslation('features/documents')",
+    "implemented": true,
+    "prdRefs": ["FR6"]
+  },
+  {
+    "id": "F019",
+    "description": "Migrate all client portal components using appointments.* keys to useTranslation('features/appointments')",
+    "implemented": true,
+    "prdRefs": ["FR6"]
+  },
+  {
+    "id": "F020",
+    "description": "Migrate client portal components using nav/dashboard/common/pagination/time keys to useTranslation('client-portal')",
+    "implemented": true,
+    "prdRefs": ["FR6"]
+  },
+  {
+    "id": "F021",
+    "description": "Migrate client portal components using auth/account keys to useTranslation('client-portal')",
+    "implemented": true,
+    "prdRefs": ["FR6"]
+  },
+  {
+    "id": "F022",
+    "description": "Migrate client portal components using profile/clientSettings/notifications keys to useTranslation('client-portal')",
+    "implemented": true,
+    "prdRefs": ["FR6"]
+  },
+  {
+    "id": "F023",
+    "description": "Remove or empty clientPortal.json after all components are migrated — no duplication",
+    "implemented": true,
+    "prdRefs": ["FR7"]
+  },
+  {
+    "id": "F024",
+    "description": "Create msp.json for English with nav items from menuConfig.ts, sidebar labels, header actions, and settings tab names",
+    "implemented": true,
+    "prdRefs": ["FR8"]
+  },
+  {
+    "id": "F025",
+    "description": "Create msp.json for all 6 non-English languages (machine-translated placeholders)",
+    "implemented": true,
+    "prdRefs": ["FR8"]
+  },
+  {
+    "id": "F026",
+    "description": "Add personal language preference section to UserProfile component (/msp/profile), gated by useFeatureFlag('msp-i18n-enabled')",
+    "implemented": true,
+    "prdRefs": ["FR9"]
+  },
+  {
+    "id": "F027",
+    "description": "Personal language preference uses existing LanguagePreference component with showNoneOption for fallback to org default",
+    "implemented": true,
+    "prdRefs": ["FR9"]
+  },
+  {
+    "id": "F028",
+    "description": "Create MspLanguageSettings component (mirrors ClientPortalSettings language section) with default language dropdown and enabled languages checkboxes",
+    "implemented": true,
+    "prdRefs": ["FR10"]
+  },
+  {
+    "id": "F029",
+    "description": "Add MspLanguageSettings to Settings > General > Organization & Access section, after Teams, gated by feature flag",
+    "implemented": true,
+    "prdRefs": ["FR10"]
+  },
+  {
+    "id": "F030",
+    "description": "Org MSP language settings persist to tenant_settings (mspPortal.defaultLocale and mspPortal.enabledLocales)",
+    "implemented": true,
+    "prdRefs": ["FR10"]
+  },
+  {
+    "id": "F031",
+    "description": "Create server actions for reading/writing MSP org locale settings (getTenantMspLocaleSettings, updateTenantMspLocaleSettings)",
+    "implemented": true,
+    "prdRefs": ["FR10"]
+  },
+  {
+    "id": "F032",
+    "description": "Extend getHierarchicalLocaleAction to include MSP org default in resolution chain (user > msp org default > system default) for internal users",
+    "implemented": true,
+    "prdRefs": ["FR11"]
+  },
+  {
+    "id": "F033",
+    "description": "All new namespace JSON files are valid with no duplicate keys, consistent structure across all 7 languages",
+    "implemented": true,
+    "prdRefs": ["FR12"]
+  }
+]

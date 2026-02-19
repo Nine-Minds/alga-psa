@@ -40,11 +40,9 @@ vi.mock('server/src/models/PortalDomainModel', () => ({
   normalizeHostname: normalizeHostnameMock,
 }));
 
-vi.mock('server/src/lib/models/PortalDomainSessionToken', () => ({
+vi.mock('@alga-psa/auth', async (importOriginal) => ({
+  ...(await importOriginal()),
   consumePortalDomainOtt: consumeOttMock,
-}));
-
-vi.mock('server/src/lib/auth/sessionCookies', () => ({
   encodePortalSessionToken: encodeSessionMock,
   buildSessionCookie: buildSessionCookieMock,
 }));

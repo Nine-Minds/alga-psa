@@ -1,0 +1,73 @@
+{
+  "nav": {
+    "home": "Strona główna",
+    "userActivities": "Aktywności użytkowników",
+    "tickets": "Zgłoszenia",
+    "surveys": "Ankiety",
+    "projects": "Projekty",
+    "projectsAll": "Wszystkie projekty",
+    "projectsTemplates": "Szablony",
+    "clients": "Klienci",
+    "contacts": "Kontakty",
+    "documents": "Dokumenty",
+    "assets": "Zasoby",
+    "timeManagement": "Zarządzanie czasem",
+    "timeEntry": "Ewidencja czasu",
+    "approvals": "Zatwierdzenia",
+    "billing": "Rozliczenia",
+    "schedule": "Harmonogram",
+    "technicianDispatch": "Dyspozycja techników",
+    "automationHub": "Centrum automatyzacji",
+    "workflows": "Przepływy pracy",
+    "runs": "Uruchomienia",
+    "events": "Zdarzenia",
+    "deadLetter": "Dead Letter",
+    "systemMonitor": "Monitor systemu",
+    "jobs": "Zadania",
+    "emailLogs": "Logi e-mail",
+    "extensions": "Rozszerzenia"
+  },
+  "sidebar": {
+    "backToMain": "Powrót do głównego",
+    "searchPlaceholder": "Szukaj",
+    "settings": "Ustawienia",
+    "support": "Wsparcie"
+  },
+  "settings": {
+    "sections": {
+      "organizationAccess": "Organizacja i dostęp",
+      "workManagement": "Zarządzanie pracą",
+      "timeBilling": "Czas i rozliczenia",
+      "communication": "Komunikacja",
+      "dataIntegration": "Dane i integracje",
+      "experimental": "Eksperymentalne"
+    },
+    "tabs": {
+      "general": "Ogólne",
+      "users": "Użytkownicy",
+      "teams": "Zespoły",
+      "clientPortal": "Portal klienta",
+      "ticketing": "Obsługa zgłoszeń",
+      "projects": "Projekty",
+      "interactions": "Interakcje",
+      "notifications": "Powiadomienia",
+      "timeEntry": "Ewidencja czasu",
+      "billing": "Rozliczenia",
+      "secrets": "Sekrety",
+      "importExport": "Import/Eksport",
+      "email": "E-mail",
+      "integrations": "Integracje",
+      "extensions": "Rozszerzenia",
+      "experimentalFeatures": "Funkcje eksperymentalne",
+      "profile": "Profil",
+      "security": "Bezpieczeństwo"
+    }
+  },
+  "header": {
+    "userFallback": "Użytkownik",
+    "quickAccess": "Szybki dostęp do profilu i konta.",
+    "profile": "Profil",
+    "account": "Konto",
+    "signOut": "Wyloguj się"
+  }
+}

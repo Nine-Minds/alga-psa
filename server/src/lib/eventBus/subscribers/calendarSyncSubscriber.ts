@@ -10,7 +10,7 @@ import {
   ScheduleEntryDeletedEvent,
   CalendarConflictDetectedEvent,
   EventType 
-} from '../events';
+} from '@alga-psa/event-schemas';
 import { CalendarSyncService } from '@/services/calendar/CalendarSyncService';
 import { CalendarProviderService } from '@/services/calendar/CalendarProviderService';
 import logger from '@alga-psa/core/logger';

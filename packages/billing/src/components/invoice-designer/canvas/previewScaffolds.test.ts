@@ -6,29 +6,33 @@ import { resolveFieldPreviewScaffold, resolveLabelPreviewScaffold } from './prev
 const createNode = (overrides: Partial<DesignerNode>): DesignerNode => ({
   id: overrides.id ?? 'node-' + Math.random().toString(36).slice(2, 7),
   type: overrides.type ?? 'field',
-  name: overrides.name ?? 'Node',
+  props: overrides.props ?? {
+    name: 'Node',
+    metadata: {},
+    style: { width: '200px', height: '48px' },
+  },
   position: overrides.position ?? { x: 0, y: 0 },
   size: overrides.size ?? { width: 200, height: 48 },
   baseSize: overrides.baseSize ?? overrides.size ?? { width: 200, height: 48 },
   canRotate: overrides.canRotate ?? true,
   rotation: overrides.rotation ?? 0,
   allowResize: overrides.allowResize ?? true,
-  metadata: overrides.metadata ?? {},
   layoutPresetId: overrides.layoutPresetId,
   parentId: overrides.parentId ?? null,
-  childIds: overrides.childIds ?? [],
+  children: overrides.children ?? [],
   allowedChildren: overrides.allowedChildren ?? [],
-  layout: overrides.layout,
 });
 
 describe('previewScaffolds', () => {
   it('returns contextual invoice number placeholder from bindingKey when field value is empty', () => {
     const node = createNode({
       type: 'field',
-      name: 'Field 1',
-      metadata: {
-        bindingKey: 'invoice.number',
-        previewValue: '',
+      props: {
+        name: 'Field 1',
+        metadata: {
+          bindingKey: 'invoice.number',
+          previewValue: '',
+        },
       },
     });
 
@@ -40,28 +44,51 @@ describe('previewScaffolds', () => {
   it('returns date scaffold for due date bindingKey context', () => {
     const dueDate = createNode({
       type: 'field',
-      name: 'Field 2',
-      metadata: {
-        bindingKey: 'invoice.dueDate',
+      props: {
+        name: 'Field 2',
+        metadata: {
+          bindingKey: 'invoice.dueDate',
+        },
       },
     });
 
     expect(resolveFieldPreviewScaffold(dueDate).text).toBe('MM/DD/YYYY');
   });
 
-  it('returns date scaffold for issue/due date name context', () => {
+  it('does not let generic invoice-number placeholder override due date context', () => {
     const dueDate = createNode({
       type: 'field',
-      name: 'Due Date',
-      metadata: {
-        bindingKey: '',
+      props: {
+        name: 'Field',
+        metadata: {
+          bindingKey: 'invoice.dueDate',
+          placeholder: 'Invoice Number',
+        },
+      },
+    });
+
+    expect(resolveFieldPreviewScaffold(dueDate).text).toBe('MM/DD/YYYY');
+  });
+
+  it('returns date scaffold for issue/due date metadata label context', () => {
+    const dueDate = createNode({
+      type: 'field',
+      props: {
+        name: 'Any Layer Name',
+        metadata: {
+          bindingKey: '',
+          label: 'Due Date',
+        },
       },
     });
     const issueDate = createNode({
       type: 'field',
-      name: 'Issue Date',
-      metadata: {
-        bindingKey: '',
+      props: {
+        name: 'Any Layer Name',
+        metadata: {
+          bindingKey: '',
+          label: 'Issue Date',
+        },
       },
     });
 
@@ -72,9 +99,28 @@ describe('previewScaffolds', () => {
   it('returns optional scaffold for purchase order bindingKey context', () => {
     const node = createNode({
       type: 'field',
-      name: 'Field 3',
-      metadata: {
-        bindingKey: 'invoice.purchaseOrder',
+      props: {
+        name: 'Field 3',
+        metadata: {
+          bindingKey: 'invoice.purchaseOrder',
+        },
+      },
+    });
+
+    const preview = resolveFieldPreviewScaffold(node);
+    expect(preview.isPlaceholder).toBe(true);
+    expect(preview.text).toBe('Optional');
+  });
+
+  it('does not let generic invoice-number placeholder override PO context', () => {
+    const node = createNode({
+      type: 'field',
+      props: {
+        name: 'Field',
+        metadata: {
+          bindingKey: 'invoice.poNumber',
+          placeholder: 'Invoice Number',
+        },
       },
     });
 
@@ -86,10 +132,12 @@ describe('previewScaffolds', () => {
   it('hides placeholder immediately when field has metadata.previewValue', () => {
     const node = createNode({
       type: 'field',
-      name: 'Invoice Number',
-      metadata: {
-        bindingKey: 'invoice.number',
-        previewValue: 'INV-2026-0099',
+      props: {
+        name: 'Invoice Number',
+        metadata: {
+          bindingKey: 'invoice.number',
+          previewValue: 'INV-2026-0099',
+        },
       },
     });
 
@@ -101,10 +149,12 @@ describe('previewScaffolds', () => {
   it('metadata.previewValue takes precedence over contextual scaffold', () => {
     const node = createNode({
       type: 'field',
-      name: 'Invoice Number',
-      metadata: {
-        bindingKey: 'invoice.number',
-        previewValue: 'INV-2026-1001',
+      props: {
+        name: 'Invoice Number',
+        metadata: {
+          bindingKey: 'invoice.number',
+          previewValue: 'INV-2026-1001',
+        },
       },
     });
 
@@ -116,16 +166,20 @@ describe('previewScaffolds', () => {
   it('shows contextual label placeholder only when label text is empty', () => {
     const emptyLabelNode = createNode({
       type: 'label',
-      name: 'PO Number Label',
-      metadata: {
-        text: '',
+      props: {
+        name: 'Layer Name',
+        metadata: {
+          text: '',
+        },
       },
     });
     const populatedLabelNode = createNode({
       type: 'label',
-      name: 'PO Number Label',
-      metadata: {
-        text: 'PO Number',
+      props: {
+        name: 'Layer Name',
+        metadata: {
+          text: 'PO Number',
+        },
       },
     });
 
@@ -133,7 +187,7 @@ describe('previewScaffolds', () => {
     const populatedPreview = resolveLabelPreviewScaffold(populatedLabelNode);
 
     expect(emptyPreview.isPlaceholder).toBe(true);
-    expect(emptyPreview.text).toBe('PO Number');
+    expect(emptyPreview.text).toBe('Label');
     expect(populatedPreview.isPlaceholder).toBe(false);
     expect(populatedPreview.text).toBe('PO Number');
   });
@@ -141,10 +195,12 @@ describe('previewScaffolds', () => {
   it('uses metadata.label for label text when metadata.text is empty', () => {
     const node = createNode({
       type: 'label',
-      name: 'label 12',
-      metadata: {
-        text: '',
-        label: 'Billing Contact',
+      props: {
+        name: 'label 12',
+        metadata: {
+          text: '',
+          label: 'Billing Contact',
+        },
       },
     });
 

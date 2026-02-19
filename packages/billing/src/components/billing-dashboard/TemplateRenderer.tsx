@@ -13,9 +13,13 @@ interface TemplateRendererProps {
   template: IInvoiceTemplate | null; // Allow null template
   // Use the correct InvoiceViewModel type for the prop
   invoiceData: WasmInvoiceViewModel | null; // Allow null invoiceData
+  renderOverride?: {
+    html: string;
+    css: string;
+  } | null;
 }
 
-export function TemplateRenderer({ template, invoiceData }: TemplateRendererProps) {
+export function TemplateRenderer({ template, invoiceData, renderOverride = null }: TemplateRendererProps) {
   const [renderedHtml, setRenderedHtml] = useState<string | null>(null);
   const [renderedCss, setRenderedCss] = useState<string | null>(null); // Added state for CSS
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -27,6 +31,13 @@ export function TemplateRenderer({ template, invoiceData }: TemplateRendererProp
       setRenderedHtml(null);
       setRenderedCss(null);
       setError(null);
+
+      if (renderOverride) {
+        setRenderedHtml(renderOverride.html);
+        setRenderedCss(renderOverride.css);
+        setIsLoading(false);
+        return;
+      }
 
       if (!template || !invoiceData) {
         // Don't show loading if there's nothing to load
@@ -57,7 +68,14 @@ export function TemplateRenderer({ template, invoiceData }: TemplateRendererProp
         console.log("Processed Invoice Data:", processedInvoiceData);
 
         // Call the server action with the processed data
-        const { html, css } = await renderTemplateOnServer(template.template_id, processedInvoiceData);
+        const templateId =
+          typeof template.template_id === 'string' && template.template_id.trim().length > 0
+            ? template.template_id
+            : null;
+
+        const { html, css } = await renderTemplateOnServer(templateId, processedInvoiceData, {
+          templateAst: (template as any).templateAst ?? null,
+        });
 
         setRenderedHtml(html);
         setRenderedCss(css);
@@ -73,7 +91,7 @@ export function TemplateRenderer({ template, invoiceData }: TemplateRendererProp
     };
 
     performRender();
-  }, [template, invoiceData]); // Rerun effect when template or invoiceData changes
+  }, [template, invoiceData, renderOverride]); // Rerun effect when template/invoice/override changes
 
   if (isLoading) {
     return <div>Loading template preview...</div>; // Or a Skeleton loader
@@ -81,6 +99,15 @@ export function TemplateRenderer({ template, invoiceData }: TemplateRendererProp
 
   if (error) {
     return <div className="text-red-600 p-4 border border-red-300 bg-red-50 rounded">Error: {error}</div>;
+  }
+
+  if (renderOverride) {
+    return (
+      <>
+        <style>{renderedCss ?? renderOverride.css}</style>
+        <div dangerouslySetInnerHTML={{ __html: renderedHtml ?? renderOverride.html }} />
+      </>
+    );
   }
 
   // Initial state or missing data message

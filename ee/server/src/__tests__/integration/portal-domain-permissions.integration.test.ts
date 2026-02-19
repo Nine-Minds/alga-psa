@@ -84,8 +84,8 @@ vi.mock('@alga-psa/core/logger', async () => {
   return actual;
 });
 
-vi.mock('@shared/utils/encryption', async () => {
-  const modulePath = path.resolve(process.cwd(), '..', '..', 'shared', 'utils', 'encryption.ts');
+vi.mock('@alga-psa/core/encryption', async () => {
+  const modulePath = path.resolve(process.cwd(), '..', '..', 'packages', 'core', 'src', 'lib', 'encryption.ts');
   const actual = await import(pathToFileURL(modulePath).href);
   return actual;
 });

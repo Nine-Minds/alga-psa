@@ -87,21 +87,21 @@ const BucketUsageHistoryChart = dynamic(() => import('./BucketUsageHistoryChart'
 const SHOW_USAGE_FEATURES = true;
 
 export default function BillingOverview() {
-  const { t } = useTranslation('clientPortal');
+  const { t } = useTranslation('features/billing');
   const searchParams = useSearchParams();
   const tabParam = searchParams?.get('tab');
 
   // Create mappings between slugs and translated labels
   const slugToLabelMap = useMemo(() => ({
-    'overview': t('billing.tabs.overview'),
-    'invoices': t('billing.tabs.invoices'),
+    'overview': t('tabs.overview'),
+    'invoices': t('tabs.invoices'),
     'hours-by-service': 'Hours by Service',
     'usage-metrics': 'Usage Metrics'
   }), [t]);
 
   const labelToSlugMap = useMemo(() => ({
-    [t('billing.tabs.overview')]: 'overview',
-    [t('billing.tabs.invoices')]: 'invoices',
+    [t('tabs.overview')]: 'overview',
+    [t('tabs.invoices')]: 'invoices',
     'Hours by Service': 'hours-by-service',
     'Usage Metrics': 'usage-metrics'
   }), [t]);
@@ -111,7 +111,7 @@ export default function BillingOverview() {
     if (tabParam && slugToLabelMap[tabParam as keyof typeof slugToLabelMap]) {
       return slugToLabelMap[tabParam as keyof typeof slugToLabelMap];
     }
-    return t('billing.tabs.overview');
+    return t('tabs.overview');
   }, [tabParam, slugToLabelMap, t]);
 
   const [currentTab, setCurrentTab] = useState<string | null>(initialTab);
@@ -162,7 +162,7 @@ export default function BillingOverview() {
   useEffect(() => {
     const targetTab = tabParam && slugToLabelMap[tabParam as keyof typeof slugToLabelMap]
       ? slugToLabelMap[tabParam as keyof typeof slugToLabelMap]
-      : t('billing.tabs.overview');
+      : t('tabs.overview');
     if (targetTab !== currentTab) {
       setCurrentTab(targetTab);
     }
@@ -363,7 +363,7 @@ export default function BillingOverview() {
 
   // Create a function to switch to the Invoices tab
   const handleViewAllInvoices = useCallback(() => {
-    const invoicesTabLabel = t('billing.tabs.invoices');
+    const invoicesTabLabel = t('tabs.invoices');
     setCurrentTab(invoicesTabLabel);
     // Update URL when navigating to Invoices tab
     if (typeof window !== 'undefined') {
@@ -378,7 +378,7 @@ export default function BillingOverview() {
   const tabs: TabContent[] = useMemo(() => {
     const tabsArray: TabContent[] = [
       {
-        label: t('billing.tabs.overview'),
+        label: t('tabs.overview'),
         content: (
           <div id="overview-tab">
             <BillingOverviewTab
@@ -399,7 +399,7 @@ export default function BillingOverview() {
     // Add Invoices tab only if user has access
     if (hasInvoiceAccess) {
       tabsArray.push({
-        label: t('billing.tabs.invoices'),
+        label: t('tabs.invoices'),
         content: (
           <div id="invoices-tab">
             <InvoicesTab

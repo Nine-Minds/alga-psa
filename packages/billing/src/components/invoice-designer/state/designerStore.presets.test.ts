@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+
+import { getNodeMetadata, getNodeName } from '../utils/nodeProps';
 import { useInvoiceDesignerStore } from './designerStore';
 
 describe('designerStore preset metadata', () => {
@@ -8,34 +10,34 @@ describe('designerStore preset metadata', () => {
     store.insertPreset('modern-invoice-complete', { x: 0, y: 0 });
 
     const nodes = useInvoiceDesignerStore.getState().nodes;
-    const invoiceNumberField = nodes.find((node) => node.name === 'Invoice Number');
-    const invoiceNumberLabel = nodes.find((node) => node.name === 'Invoice Number Label');
-    const fromAddressText = nodes.find((node) => node.name === 'From Address');
-    const clientAddressText = nodes.find((node) => node.name === 'Client Address');
-    const headerSection = nodes.find((node) => node.name === 'Header');
-    const itemsTable = nodes.find((node) => node.name === 'Line Items');
+    const invoiceNumberField = nodes.find((node) => getNodeName(node) === 'Invoice Number');
+    const invoiceNumberLabel = nodes.find((node) => getNodeName(node) === 'Invoice Number Label');
+    const fromAddressText = nodes.find((node) => getNodeName(node) === 'From Address');
+    const clientAddressText = nodes.find((node) => getNodeName(node) === 'Client Address');
+    const headerSection = nodes.find((node) => getNodeName(node) === 'Header');
+    const itemsTable = nodes.find((node) => getNodeName(node) === 'Line Items');
 
     expect(invoiceNumberField).toBeTruthy();
-    expect(invoiceNumberField?.metadata?.bindingKey).toBe('invoice.number');
-    expect(invoiceNumberField?.metadata?.format).toBe('text');
-    expect(invoiceNumberField?.metadata?.placeholder).toBe('Invoice Number');
-    expect(invoiceNumberField?.metadata?.fieldBorderStyle).toBe('underline');
-    expect(invoiceNumberLabel?.metadata?.fontWeight).toBe('bold');
+    expect(getNodeMetadata(invoiceNumberField!).bindingKey).toBe('invoice.number');
+    expect(getNodeMetadata(invoiceNumberField!).format).toBe('text');
+    expect(getNodeMetadata(invoiceNumberField!).placeholder).toBe('Invoice Number');
+    expect(getNodeMetadata(invoiceNumberField!).fieldBorderStyle).toBe('underline');
+    expect(getNodeMetadata(invoiceNumberLabel!).fontWeight).toBe('bold');
 
     expect(fromAddressText).toBeTruthy();
-    expect(fromAddressText?.metadata?.bindingKey).toBe('tenant.address');
+    expect(getNodeMetadata(fromAddressText!).bindingKey).toBe('tenant.address');
 
     expect(clientAddressText).toBeTruthy();
-    expect(clientAddressText?.metadata?.bindingKey).toBe('customer.address');
+    expect(getNodeMetadata(clientAddressText!).bindingKey).toBe('customer.address');
 
     expect(headerSection).toBeTruthy();
-    expect(headerSection?.metadata?.sectionBorderStyle).toBe('none');
+    expect(getNodeMetadata(headerSection!).sectionBorderStyle).toBe('none');
 
     expect(itemsTable).toBeTruthy();
-    expect(itemsTable?.metadata?.tableBorderPreset).toBe('list');
-    expect(itemsTable?.metadata?.tableOuterBorder).toBe(false);
-    expect(itemsTable?.metadata?.tableRowDividers).toBe(true);
-    expect(itemsTable?.metadata?.tableColumnDividers).toBe(false);
-    expect(itemsTable?.metadata?.tableHeaderFontWeight).toBe('semibold');
+    expect(getNodeMetadata(itemsTable!).tableBorderPreset).toBe('list');
+    expect(getNodeMetadata(itemsTable!).tableOuterBorder).toBe(false);
+    expect(getNodeMetadata(itemsTable!).tableRowDividers).toBe(true);
+    expect(getNodeMetadata(itemsTable!).tableColumnDividers).toBe(false);
+    expect(getNodeMetadata(itemsTable!).tableHeaderFontWeight).toBe('semibold');
   });
 });

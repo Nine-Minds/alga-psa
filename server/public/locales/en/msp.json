@@ -1,0 +1,73 @@
+{
+  "nav": {
+    "home": "Home",
+    "userActivities": "User Activities",
+    "tickets": "Tickets",
+    "surveys": "Surveys",
+    "projects": "Projects",
+    "projectsAll": "All Projects",
+    "projectsTemplates": "Templates",
+    "clients": "Clients",
+    "contacts": "Contacts",
+    "documents": "Documents",
+    "assets": "Assets",
+    "timeManagement": "Time Management",
+    "timeEntry": "Time Entry",
+    "approvals": "Approvals",
+    "billing": "Billing",
+    "schedule": "Schedule",
+    "technicianDispatch": "Technician Dispatch",
+    "automationHub": "Automation Hub",
+    "workflows": "Workflows",
+    "runs": "Runs",
+    "events": "Events",
+    "deadLetter": "Dead Letter",
+    "systemMonitor": "System Monitor",
+    "jobs": "Jobs",
+    "emailLogs": "Email Logs",
+    "extensions": "Extensions"
+  },
+  "sidebar": {
+    "backToMain": "Back to Main",
+    "searchPlaceholder": "Search",
+    "settings": "Settings",
+    "support": "Support"
+  },
+  "settings": {
+    "sections": {
+      "organizationAccess": "Organization & Access",
+      "workManagement": "Work Management",
+      "timeBilling": "Time & Billing",
+      "communication": "Communication",
+      "dataIntegration": "Data & Integration",
+      "experimental": "Experimental"
+    },
+    "tabs": {
+      "general": "General",
+      "users": "Users",
+      "teams": "Teams",
+      "clientPortal": "Client Portal",
+      "ticketing": "Ticketing",
+      "projects": "Projects",
+      "interactions": "Interactions",
+      "notifications": "Notifications",
+      "timeEntry": "Time Entry",
+      "billing": "Billing",
+      "secrets": "Secrets",
+      "importExport": "Import/Export",
+      "email": "Email",
+      "integrations": "Integrations",
+      "extensions": "Extensions",
+      "experimentalFeatures": "Experimental Features",
+      "profile": "Profile",
+      "security": "Security"
+    }
+  },
+  "header": {
+    "userFallback": "User",
+    "quickAccess": "Quick access to profile & account.",
+    "profile": "Profile",
+    "account": "Account",
+    "signOut": "Sign out"
+  }
+}

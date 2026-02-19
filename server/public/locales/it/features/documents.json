@@ -1,0 +1,189 @@
+{
+  "title": "Documenti",
+  "noDocuments": "Nessun documento allegato",
+  "upload": "Carica documento",
+  "download": "Scarica",
+  "remove": "Rimuovi",
+  "preview": "Anteprima",
+  "linkDocuments": "Collega documenti",
+  "editDocument": "Modifica documento",
+  "viewDocument": "Visualizza documento",
+  "downloadToPlay": "Scarica per riprodurre",
+  "delete": "Elimina",
+  "previewUnavailable": "Anteprima non disponibile",
+  "newDocument": "Nuovo documento",
+  "uploadFile": "Carica file",
+  "deleteTitle": "Elimina documento",
+  "deleteMessage": "Sei sicuro di voler eliminare \"{{name}}\"? Questa azione non può essere annullata.",
+  "deleteVideoTitle": "Elimina video",
+  "deleteVideoMessage": "Sei sicuro di voler eliminare il video \"{{name}}\"? Questa azione non può essere annullata.",
+  "removeTitle": "Rimuovi documento",
+  "removeMessage": "Sei sicuro di voler rimuovere \"{{name}}\" da questo elemento? Il documento resterà disponibile nella libreria documenti.",
+  "removeVideoTitle": "Rimuovi video",
+  "removeVideoMessage": "Sei sicuro di voler rimuovere il video \"{{name}}\" da questo elemento? Il file resterà disponibile nella libreria documenti.",
+  "downloadFile": "Scarica file",
+  "videoUnsupported": "Formato video ({{mimeType}}) non supportato per la riproduzione nel browser",
+  "videoTagUnsupported": "Il tuo browser non supporta il tag video.",
+  "unnamed": "Senza titolo",
+  "videoDownloadInfo": "Il video verrà scaricato e potrà essere riprodotto con il lettore predefinito del sistema.",
+  "previewUnavailableNoId": "Anteprima non disponibile (nessun identificatore)",
+  "previewLoadFailed": "Impossibile caricare l'anteprima",
+  "videoCodecWarning": "Chrome potrebbe non supportare questo codec video. Prova a scaricare o usa Safari/Edge.",
+  "messages": {
+    "fetchFailed": "Impossibile recuperare i documenti.",
+    "folderCreated": "Cartella \"{{name}}\" creata correttamente",
+    "folderCreateFailed": "Impossibile creare la cartella",
+    "moveDocumentsSuccess_one": "{{count}} documento spostato in {{destination}}",
+    "moveDocumentsSuccess_other": "{{count}} documenti spostati in {{destination}}",
+    "moveDocumentsFailed": "Impossibile spostare i documenti",
+    "deleteSuccess": "Documento \"{{name}}\" eliminato correttamente",
+    "deleteFailed": "Impossibile eliminare il documento",
+    "removeAssociationFailed": "Impossibile rimuovere l'associazione del documento",
+    "moveDocumentSuccess": "Documento \"{{name}}\" spostato correttamente",
+    "moveDocumentFailed": "Impossibile spostare il documento",
+    "createFailed": "Impossibile creare il documento",
+    "saveFailed": "Impossibile salvare il documento",
+    "loadContentFailed": "Impossibile caricare il contenuto del documento",
+    "downloadFailed": "Impossibile scaricare il documento",
+    "bulkDeleteFailed": "Impossibile eliminare alcuni documenti",
+    "bulkDeleteSuccess_one": "{{count}} documento eliminato correttamente",
+    "bulkDeleteSuccess_other": "{{count}} documenti eliminati correttamente"
+  },
+  "validation": {
+    "nameRequired": "Il nome del documento è obbligatorio"
+  },
+  "bulkActions": {
+    "selected_one": "{{count}} documento selezionato",
+    "selected_other": "{{count}} documenti selezionati",
+    "moveToFolder": "Sposta in cartella",
+    "deleteSelected": "Elimina selezionati",
+    "clearSelection": "Pulisci selezione"
+  },
+  "prompts": {
+    "confirmBulkDelete_one": "Sei sicuro di voler eliminare {{count}} documento?",
+    "confirmBulkDelete_other": "Sei sicuro di voler eliminare {{count}} documenti?"
+  },
+  "pagination": {
+    "perPage": "{{count}} per pagina"
+  },
+  "folderSelector": {
+    "defaultTitle": "Seleziona cartella di destinazione",
+    "defaultDescription": "Scegli dove salvare questo documento",
+    "newDocumentTitle": "Seleziona la cartella per il nuovo documento",
+    "newDocumentDescription": "Scegli dove salvare questo nuovo documento",
+    "moveTitle": "Sposta documento",
+    "moveDescriptionWithName": "Seleziona la cartella di destinazione per \"{{name}}\"",
+    "moveDescription": "Seleziona la cartella di destinazione",
+    "bulkMoveTitle": "Sposta documenti selezionati",
+    "bulkMoveDescription_one": "Seleziona la cartella di destinazione per {{count}} documento",
+    "bulkMoveDescription_other": "Seleziona la cartella di destinazione per {{count}} documenti",
+    "errors": {
+      "nameRequired": "Inserisci un nome per la cartella",
+      "invalidCharacters": "Il nome della cartella non può contenere \"/\"",
+      "createFailed": "Impossibile creare la cartella"
+    },
+    "creating": "Creazione in corso...",
+    "createButton": "Crea cartella",
+    "newFolderButton": "Nuova cartella",
+    "parentLabel": "Cartella principale: {{folder}}",
+    "rootLabel": "/ (Radice)",
+    "namePlaceholder": "Inserisci il nome della cartella",
+    "loading": "Caricamento cartelle...",
+    "rootOption": "Radice (nessuna cartella)",
+    "empty": "Nessuna cartella disponibile. I documenti saranno salvati nella radice."
+  },
+  "filters": {
+    "searchLabel": "Cerca documenti",
+    "searchPlaceholder": "Cerca per nome documento...",
+    "typeLabel": "Tipo di documento",
+    "entityTypeLabel": "Tipo di entità associata",
+    "uploadedByLabel": "Caricato da",
+    "uploadedByPlaceholder": "Tutti gli utenti",
+    "updatedStartLabel": "Data aggiornamento (inizio)",
+    "updatedEndLabel": "Data aggiornamento (fine)",
+    "startDatePlaceholder": "Seleziona data iniziale",
+    "endDatePlaceholder": "Seleziona data finale",
+    "sortByLabel": "Ordina per",
+    "clear": "Pulisci filtri",
+    "typeOptions": {
+      "all": "Tutti i tipi di documento",
+      "pdf": "PDF",
+      "image": "Immagini",
+      "text": "Documenti",
+      "video": "Video",
+      "other": "Altro"
+    },
+    "sortOptions": {
+      "updated_at": "Data",
+      "document_name": "Nome documento",
+      "file_size": "Dimensione file",
+      "created_by_full_name": "Creato da"
+    },
+    "sortOrder": {
+      "default": {
+        "asc": "Mostra in ordine crescente",
+        "desc": "Mostra in ordine decrescente"
+      },
+      "document_name": {
+        "asc": "Mostra dalla A alla Z",
+        "desc": "Mostra dalla Z alla A"
+      },
+      "updated_at": {
+        "asc": "Mostra i più vecchi",
+        "desc": "Mostra i più recenti"
+      },
+      "file_size": {
+        "asc": "Mostra i più piccoli",
+        "desc": "Mostra i più grandi"
+      },
+      "created_by_full_name": {
+        "asc": "Mostra dalla A alla Z",
+        "desc": "Mostra dalla Z alla A"
+      }
+    }
+  },
+  "selector": {
+    "title": "Seleziona documenti",
+    "reflectionLabel": "Selettore documenti",
+    "searchPlaceholder": "Cerca documenti...",
+    "foldersLabel": "Cartelle",
+    "folderHint": "nella cartella \"{{folder}}\"",
+    "saving": "Salvataggio...",
+    "selectDocument": "Seleziona documento",
+    "associateSelected": "Associa selezionati",
+    "errors": {
+      "configuration": "Errore di configurazione: dati entità mancanti",
+      "invalidData": "Dati del documento non validi",
+      "load": "Impossibile caricare i documenti",
+      "save": "Impossibile salvare la selezione dei documenti"
+    },
+    "configErrorTitle": "Errore di configurazione",
+    "configErrorMessage": "Configurazione necessaria mancante. Contatta il supporto."
+  },
+  "uploadSection": {
+    "reflectionLabel": "Caricamento documenti",
+    "dragDrop": "Trascina qui il file oppure",
+    "browse": "Sfoglia file",
+    "uploading": "Caricamento...",
+    "error": "Impossibile caricare il documento",
+    "fileError": "Impossibile caricare il file"
+  },
+  "folders": {
+    "root": "Radice",
+    "loadFailed": "Impossibile caricare la struttura delle cartelle",
+    "deleteConfirm": "Sei sicuro di voler eliminare la cartella \"{{name}}\"? Funzionerà solo se la cartella è vuota.",
+    "deleteSuccess": "Cartella \"{{name}}\" eliminata correttamente",
+    "deleteFailed": "Impossibile eliminare la cartella",
+    "deleteAction": "Elimina cartella",
+    "loading": "Caricamento cartelle...",
+    "title": "Cartelle",
+    "collapse": "Comprimi cartelle",
+    "allDocuments": "Tutti i documenti"
+  },
+  "folderManager": {
+    "title": "Crea nuova cartella",
+    "nameLabel": "Nome cartella",
+    "namePlaceholder": "Inserisci il nome della cartella",
+    "willCreateIn": "Verrà creata in: {{folder}}"
+  }
+}

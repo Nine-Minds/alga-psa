@@ -5,8 +5,8 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-libra
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import InvoiceTemplateEditor from './InvoiceTemplateEditor';
 import { useInvoiceDesignerStore } from '../invoice-designer/state/designerStore';
-import * as persistenceUtils from '../invoice-designer/utils/persistence';
 import type { DesignerWorkspaceSnapshot } from '../invoice-designer/state/designerStore';
+import { exportWorkspaceToInvoiceTemplateAst } from '../invoice-designer/ast/workspaceAst';
 
 const pushMock = vi.fn();
 const getInvoiceTemplateMock = vi.fn();
@@ -64,36 +64,60 @@ vi.mock('../invoice-designer/DesignerVisualWorkspace', () => ({
 
 const createWorkspaceWithField = (fieldId: string): DesignerWorkspaceSnapshot => {
   const base = useInvoiceDesignerStore.getState().exportWorkspace();
-  const documentNode = base.nodes.find((node) => node.type === 'document');
-  const pageNode = base.nodes.find((node) => node.type === 'page');
-  if (!documentNode || !pageNode) {
+  const pageNode = Object.values(base.nodesById).find((node) => node.type === 'page');
+  if (!pageNode) {
     return base;
   }
-  const fieldNode = {
-    id: fieldId,
-    type: 'field' as const,
-    name: 'Invoice Number',
-    position: { x: 24, y: 24 },
-    size: { width: 220, height: 48 },
-    canRotate: false,
-    allowResize: true,
-    rotation: 0,
-    metadata: { bindingKey: 'invoice.number', format: 'text' },
-    parentId: pageNode.id,
-    childIds: [],
-    allowedChildren: [],
-  };
   return {
     ...base,
-    nodes: base.nodes.map((node) => {
-      if (node.id !== pageNode.id) {
-        return node;
-      }
-      return {
-        ...node,
-        childIds: [...node.childIds, fieldId],
-      };
-    }).concat(fieldNode),
+    nodesById: {
+      ...base.nodesById,
+      [pageNode.id]: {
+        ...base.nodesById[pageNode.id],
+        children: [...(base.nodesById[pageNode.id]?.children ?? []), fieldId],
+      },
+      [fieldId]: {
+        id: fieldId,
+        type: 'field',
+        props: { name: 'Invoice Number', metadata: { bindingKey: 'invoice.number', format: 'text' } },
+        children: [],
+      },
+    },
+  };
+};
+
+const createWorkspaceWithFieldAndDynamicTable = (fieldId: string): DesignerWorkspaceSnapshot => {
+  const base = createWorkspaceWithField(fieldId);
+  const pageNode = Object.values(base.nodesById).find((node) => node.type === 'page');
+  if (!pageNode) {
+    return base;
+  }
+  const tableId = `${fieldId}-table`;
+
+  return {
+    ...base,
+    nodesById: {
+      ...base.nodesById,
+      [pageNode.id]: {
+        ...base.nodesById[pageNode.id],
+        children: [...(base.nodesById[pageNode.id]?.children ?? []), tableId],
+      },
+      [tableId]: {
+        id: tableId,
+        type: 'dynamic-table',
+        props: {
+          name: 'Line Items',
+          metadata: {
+            collectionBindingKey: 'items',
+            columns: [
+              { id: 'col-desc', header: 'Description', key: 'item.description' },
+              { id: 'col-total', header: 'Amount', key: 'item.total' },
+            ],
+          },
+        },
+        children: [],
+      },
+    },
   };
 };
 
@@ -122,8 +146,6 @@ const installLocalStorageMock = () => {
 describe('InvoiceTemplateEditor preview workspace integration', () => {
   beforeEach(() => {
     installLocalStorageMock();
-    Object.defineProperty(window, 'atob', { value: undefined, configurable: true });
-    Object.defineProperty(window, 'btoa', { value: undefined, configurable: true });
     searchParamsState = new URLSearchParams();
     featureFlagState.enabled = true;
     featureFlagState.loading = false;
@@ -136,7 +158,11 @@ describe('InvoiceTemplateEditor preview workspace integration', () => {
     getInvoiceTemplateMock.mockResolvedValue({
       template_id: 'tpl-1',
       name: 'Template A',
-      assemblyScriptSource: '// template source',
+      templateAst: {
+        kind: 'invoice-template-ast',
+        version: 1,
+        layout: { id: 'root', type: 'document', children: [] },
+      },
       isStandard: false,
     });
   });
@@ -159,39 +185,20 @@ describe('InvoiceTemplateEditor preview workspace integration', () => {
     expect(screen.getByTestId('designer-visual-workspace-tab').textContent).toBe('preview');
   });
 
-  it('hydrates workspace from source-embedded designer state', async () => {
-    const workspace = createWorkspaceWithField('embedded-field');
-    const extractSpy = vi
-      .spyOn(persistenceUtils, 'extractInvoiceDesignerStateFromSource')
-      .mockReturnValue({ version: 1, workspace } as any);
-    getInvoiceTemplateMock.mockResolvedValueOnce({
-      template_id: 'tpl-embedded',
-      name: 'Template Embedded',
-      assemblyScriptSource: '// source',
-      isStandard: false,
-    });
-
-    render(<InvoiceTemplateEditor templateId="tpl-embedded" />);
-
-    await waitFor(() => {
-      expect(useInvoiceDesignerStore.getState().nodes.some((node) => node.id === 'embedded-field')).toBe(true);
-    });
-    extractSpy.mockRestore();
-  });
-
-  it('hydrates workspace from localStorage fallback when source has no embedded state', async () => {
+  it('hydrates workspace from localStorage fallback', async () => {
     const workspace = createWorkspaceWithField('local-field');
     const storage = globalThis.localStorage as Storage | undefined;
     if (storage && typeof storage.setItem === 'function') {
-      storage.setItem(
-        persistenceUtils.getInvoiceDesignerLocalStorageKey('tpl-local'),
-        JSON.stringify({ version: 1, workspace })
-      );
+      storage.setItem(`alga.invoiceDesigner.workspace.${'tpl-local'}`, JSON.stringify(workspace));
     }
     getInvoiceTemplateMock.mockResolvedValueOnce({
       template_id: 'tpl-local',
       name: 'Template Local',
-      assemblyScriptSource: '// plain source',
+      templateAst: {
+        kind: 'invoice-template-ast',
+        version: 1,
+        layout: { id: 'root', type: 'document', children: [] },
+      },
       isStandard: false,
     });
 
@@ -199,6 +206,24 @@ describe('InvoiceTemplateEditor preview workspace integration', () => {
 
     await waitFor(() => {
       expect(useInvoiceDesignerStore.getState().nodes.some((node) => node.id === 'local-field')).toBe(true);
+    });
+  });
+
+  it('hydrates workspace from persisted templateAst payload', async () => {
+    const workspace = createWorkspaceWithFieldAndDynamicTable('ast-field');
+    const astPayload = exportWorkspaceToInvoiceTemplateAst(workspace);
+    getInvoiceTemplateMock.mockResolvedValueOnce({
+      template_id: 'tpl-ast',
+      name: 'Template AST',
+      templateAst: astPayload,
+      isStandard: false,
+    });
+
+    render(<InvoiceTemplateEditor templateId="tpl-ast" />);
+
+    await waitFor(() => {
+      expect(useInvoiceDesignerStore.getState().nodes.some((node) => node.type === 'dynamic-table')).toBe(true);
+      expect(useInvoiceDesignerStore.getState().nodes.some((node) => node.id === 'ast-field')).toBe(true);
     });
   });
 
@@ -214,9 +239,10 @@ describe('InvoiceTemplateEditor preview workspace integration', () => {
       name: 'Template A',
       template_id: 'tpl-1',
     });
-    expect(typeof payload.assemblyScriptSource).toBe('string');
-    expect(payload.assemblyScriptSource).toContain('export function generateLayout');
-    expect(payload.assemblyScriptSource).toContain('ALGA_INVOICE_DESIGNER_STATE_V1');
+    expect(payload.templateAst).toMatchObject({
+      kind: 'invoice-template-ast',
+      version: 1,
+    });
   });
 
   it('does not trigger save writes from preview interactions alone', async () => {
@@ -249,8 +275,10 @@ describe('InvoiceTemplateEditor preview workspace integration', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Save Template' }));
     await waitFor(() => expect(saveInvoiceTemplateMock).toHaveBeenCalled());
     const payload = saveInvoiceTemplateMock.mock.calls.at(-1)?.[0];
-    expect(payload.assemblyScriptSource).toContain('export function generateLayout');
-    expect(payload.assemblyScriptSource).not.toContain('// manually edited source should be ignored');
+    expect(payload.templateAst).toMatchObject({
+      kind: 'invoice-template-ast',
+      version: 1,
+    });
   });
 
   it('enables visual designer in local QA via forceInvoiceDesigner=1 when feature flag is off', async () => {
@@ -291,10 +319,9 @@ describe('InvoiceTemplateEditor preview workspace integration', () => {
     });
 
     act(() => {
-      useInvoiceDesignerStore.getState().updateNodeMetadata('field-sync', {
-        bindingKey: 'customer.name',
-        format: 'text',
-      });
+      const store = useInvoiceDesignerStore.getState();
+      store.setNodeProp('field-sync', 'metadata.bindingKey', 'customer.name', false);
+      store.setNodeProp('field-sync', 'metadata.format', 'text', true);
     });
 
     fireEvent.click(screen.getByRole('tab', { name: 'Visual' }));

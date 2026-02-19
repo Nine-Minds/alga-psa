@@ -758,7 +758,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
             <div>
               <Label>Requested Date & Time</Label>
               <div className="text-sm bg-gray-50 p-3 rounded border">
-                {formatInTimeZone(new Date(event.scheduled_start), 'UTC', 'PPP p')} - {formatInTimeZone(new Date(event.scheduled_end), 'UTC', 'p')} UTC
+                {formatInTimeZone(new Date(event.scheduled_start), Intl.DateTimeFormat().resolvedOptions().timeZone, 'PPP p')} - {formatInTimeZone(new Date(event.scheduled_end), Intl.DateTimeFormat().resolvedOptions().timeZone, 'p')}
               </div>
             </div>
 
@@ -800,7 +800,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
                 <div>
                   <Label>Scheduled Date & Time</Label>
                   <div className="text-sm bg-gray-50 p-3 rounded border">
-                    {formatInTimeZone(new Date(event.scheduled_start), 'UTC', 'PPP p')} - {formatInTimeZone(new Date(event.scheduled_end), 'UTC', 'p')} UTC
+                    {formatInTimeZone(new Date(event.scheduled_start), Intl.DateTimeFormat().resolvedOptions().timeZone, 'PPP p')} - {formatInTimeZone(new Date(event.scheduled_end), Intl.DateTimeFormat().resolvedOptions().timeZone, 'p')}
                   </div>
                 </div>
 

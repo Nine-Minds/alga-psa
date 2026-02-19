@@ -51,6 +51,27 @@ const dateToIso = (value?: string | Date | null): string | null => {
   return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
 };
 
+const isModuleNotFoundError = (error: unknown): boolean => {
+  if (!error || typeof error !== 'object') {
+    return false;
+  }
+
+  const typedError = error as { code?: string; message?: string; cause?: unknown };
+  if (typedError.code === 'MODULE_NOT_FOUND' || typedError.code === 'ERR_MODULE_NOT_FOUND') {
+    return true;
+  }
+
+  if (typeof typedError.message === 'string' && typedError.message.includes('Cannot find module')) {
+    return true;
+  }
+
+  if (typedError.cause && typedError.cause !== error) {
+    return isModuleNotFoundError(typedError.cause);
+  }
+
+  return false;
+};
+
 const buildErrorStep = (
   id: OnboardingStepId,
   message: string,
@@ -94,16 +115,30 @@ async function resolveIdentityStep(tenantId: string): Promise<OnboardingStepServ
     const providerOptions = await getSsoProviderOptions();
     const configuredProviders = providerOptions.filter((option) => option.configured);
 
-    const adminDb = await getAdminConnection();
-    type LinkAggregateRow = { total?: string | number | null; latest_updated?: Date | string | null };
-    const aggregate = (await adminDb('user_auth_accounts')
-      .where({ tenant: tenantId })
-      .count('user_id as total')
-      .max({ latest_updated: 'updated_at' })
-      .first()) as LinkAggregateRow | undefined;
+    let linkedCount = 0;
+    let lastUpdated: string | null = null;
+    let linkedAccountsUnavailableReason: string | null = null;
 
-    const linkedCount = aggregate?.total ? Number(aggregate.total) : 0;
-    const lastUpdated = dateToIso(aggregate?.latest_updated ?? null);
+    try {
+      const adminDb = await getAdminConnection();
+      type LinkAggregateRow = { total?: string | number | null; latest_updated?: Date | string | null };
+      const aggregate = (await adminDb('user_auth_accounts')
+        .where({ tenant: tenantId })
+        .count('user_id as total')
+        .max({ latest_updated: 'updated_at' })
+        .first()) as LinkAggregateRow | undefined;
+
+      linkedCount = aggregate?.total ? Number(aggregate.total) : 0;
+      lastUpdated = dateToIso(aggregate?.latest_updated ?? null);
+    } catch (error) {
+      linkedAccountsUnavailableReason = 'Unable to verify linked team members right now.';
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logger.warn('[onboarding-progress] Unable to load linked identity accounts; defaulting to zero linked users', {
+        tenantId,
+        errorMessage,
+      });
+    }
+
     const hasProvider = configuredProviders.length > 0;
     const hasLinkedAccount = linkedCount > 0;
 
@@ -132,14 +167,24 @@ async function resolveIdentityStep(tenantId: string): Promise<OnboardingStepServ
       meta: {
         configuredProviders: configuredProviders.map((option) => option.id),
         linkedAccounts: linkedCount,
+        linkedAccountsLoaded: linkedAccountsUnavailableReason === null,
       },
       blocker: hasProvider
         ? hasLinkedAccount
           ? null
-          : 'No users are linked to an identity provider yet. Ask an MSP admin to connect Google or Microsoft.'
+          : linkedAccountsUnavailableReason ??
+            'No users are linked to an identity provider yet. Ask an MSP admin to connect Google or Microsoft.'
         : 'Add Google Workspace or Microsoft 365 credentials to enable SSO for your team.',
     };
   } catch (error) {
+    if (isModuleNotFoundError(error)) {
+      return {
+        id: 'identity_sso',
+        status: 'blocked',
+        blocker: 'SSO provider configuration is unavailable in this environment.',
+        lastUpdated: null,
+      };
+    }
     return buildErrorStep('identity_sso', 'Unable to load SSO configuration status.', error);
   }
 }
@@ -398,7 +443,7 @@ async function resolveEmailStep(tenantId: string): Promise<OnboardingStepServerS
       },
     };
   } catch (error: any) {
-    if (error?.code === 'MODULE_NOT_FOUND') {
+    if (isModuleNotFoundError(error)) {
       return {
         id: 'managed_email',
         status: 'blocked',

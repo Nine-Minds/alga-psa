@@ -7,21 +7,45 @@ import type { WasmInvoiceViewModel } from '@alga-psa/types';
 import type { DesignerNode } from '../state/designerStore';
 import { DesignCanvas } from './DesignCanvas';
 
-const baseNode = (overrides: Partial<DesignerNode>): DesignerNode => ({
-  id: 'node-id',
-  type: 'field',
-  name: 'Field',
-  position: { x: 20, y: 20 },
-  size: { width: 200, height: 48 },
-  canRotate: false,
-  allowResize: true,
-  rotation: 0,
-  metadata: {},
-  parentId: 'page-1',
-  childIds: [],
-  allowedChildren: [],
-  ...overrides,
-});
+const baseNode = (
+  overrides: Partial<DesignerNode> & {
+    // Convenience inputs for test fixtures; these are written into props.
+    name?: string;
+    metadata?: Record<string, unknown>;
+    layout?: Record<string, unknown>;
+    style?: Record<string, unknown>;
+    childIds?: string[];
+  }
+): DesignerNode => {
+  const rawProps = overrides.props ?? {};
+  const name = overrides.name ?? (rawProps as any).name ?? 'Field';
+  const metadata = overrides.metadata ?? (rawProps as any).metadata;
+  const layout = overrides.layout ?? (rawProps as any).layout;
+  const style = overrides.style ?? (rawProps as any).style;
+  const children = overrides.children ?? overrides.childIds ?? [];
+
+  return {
+    id: overrides.id ?? 'node-id',
+    type: overrides.type ?? 'field',
+    props: {
+      ...rawProps,
+      name,
+      ...(metadata ? { metadata } : {}),
+      ...(layout ? { layout } : {}),
+      ...(style ? { style } : {}),
+    },
+    position: overrides.position ?? { x: 20, y: 20 },
+    size: overrides.size ?? { width: 200, height: 48 },
+    baseSize: overrides.baseSize,
+    canRotate: overrides.canRotate ?? false,
+    allowResize: overrides.allowResize ?? true,
+    rotation: overrides.rotation ?? 0,
+    layoutPresetId: overrides.layoutPresetId,
+    parentId: overrides.parentId ?? 'page-1',
+    children,
+    allowedChildren: overrides.allowedChildren ?? [],
+  };
+};
 
 const buildCanvasNodes = (children: DesignerNode[]): DesignerNode[] => [
   baseNode({
@@ -103,6 +127,40 @@ describe('DesignCanvas preview mode', () => {
     expect(screen.getByText('INV-770')).toBeTruthy();
   });
 
+  it('renders field metadata label inline with the bound value when present', () => {
+    const nodes = buildCanvasNodes([
+      baseNode({
+        id: 'field-labeled',
+        type: 'field',
+        name: 'Invoice Date Field',
+        metadata: { label: 'Issue Date', bindingKey: 'invoice.issueDate', format: 'date' },
+      }),
+    ]);
+    render(
+      <DesignCanvas
+        nodes={nodes}
+        selectedNodeId={null}
+        showGuides={false}
+        showRulers={false}
+        gridSize={8}
+        canvasScale={1}
+        snapToGrid
+        guides={[]}
+        isDragActive={false}
+        forcedDropTarget={null}
+        droppableId="preview"
+        onPointerLocationChange={() => undefined}
+        onNodeSelect={() => undefined}
+        onResize={() => undefined}
+        readOnly
+        previewData={previewData}
+      />
+    );
+
+    expect(screen.getByText('Issue Date:')).toBeTruthy();
+    expect(screen.getByText((content) => content.includes('2026'))).toBeTruthy();
+  });
+
   it('falls back to scaffold placeholders when bound value is missing', () => {
     const nodes = buildCanvasNodes([
       baseNode({
@@ -132,7 +190,7 @@ describe('DesignCanvas preview mode', () => {
         previewData={previewData}
       />
     );
-    expect(screen.getByText('INV-000123')).toBeTruthy();
+    expect(screen.getByText('Sample value')).toBeTruthy();
   });
 
   it('renders totals and table data from preview invoice payload', () => {

@@ -4,7 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { __testHooks } from '../../lib/eventBus/subscribers/surveySubscriber';
-import type { Event } from '../../lib/eventBus/events';
+import type { Event } from '@alga-psa/event-schemas';
 import type { SendSurveyInvitationResult } from '../../services/surveyService';
 
 type TestState = {

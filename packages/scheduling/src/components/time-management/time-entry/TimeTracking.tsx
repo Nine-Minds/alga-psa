@@ -11,6 +11,7 @@ import { IUserWithRoles } from '@alga-psa/types';
 import { fetchTimePeriods, fetchOrCreateTimeSheet } from '../../../actions/timeEntryActions';
 import { fetchEligibleTimeEntrySubjects } from '../../../actions/timeEntryDelegationActions';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
+import { getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
 
 
@@ -94,6 +95,7 @@ export default function TimeTracking({ currentUser, isManager: _isManager }: Tim
             value={subjectUserId}
             onValueChange={setSubjectUserId}
             users={subjectUsers}
+            getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
             buttonWidth="full"
           />
         </div>

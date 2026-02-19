@@ -32,7 +32,8 @@ const InvoicesTab: React.FC<InvoicesTabProps> = React.memo(({
   formatCurrency,
   formatDate
 }) => {
-  const { t } = useTranslation('clientPortal');
+  const { t } = useTranslation('features/billing');
+  const { t: tCommon } = useTranslation('common');
   const router = useRouter();
   const searchParams = useSearchParams();
   
@@ -69,7 +70,7 @@ const InvoicesTab: React.FC<InvoicesTabProps> = React.memo(({
         setInvoices(fetchedInvoices);
       } catch (err) {
         console.error('Error loading invoices:', err);
-        setError(t('billing.failedToLoad'));
+        setError(t('failedToLoad'));
       } finally {
         setIsLoading(false);
       }
@@ -102,7 +103,7 @@ const InvoicesTab: React.FC<InvoicesTabProps> = React.memo(({
     setDownloadingInvoices(prev => new Set(prev).add(invoiceId));
 
     try {
-      toast.success(t('billing.invoice.downloadStarted', 'Preparing PDF download...'));
+      toast.success(t('invoice.downloadStarted', 'Preparing PDF download...'));
       const result = await downloadClientInvoicePdf(invoiceId);
 
       if (result.success && result.fileId) {
@@ -114,13 +115,13 @@ const InvoicesTab: React.FC<InvoicesTabProps> = React.memo(({
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-        toast.success(t('billing.invoice.downloadComplete', 'PDF downloaded successfully.'));
+        toast.success(t('invoice.downloadComplete', 'PDF downloaded successfully.'));
       } else {
-        toast.error(result.error || t('billing.invoice.downloadFailed', 'Failed to download PDF.'));
+        toast.error(result.error || t('invoice.downloadFailed', 'Failed to download PDF.'));
       }
     } catch (error) {
       console.error('Failed to download PDF:', error);
-      toast.error(t('billing.invoice.downloadFailed', 'Failed to download PDF. Please try again.'));
+      toast.error(t('invoice.downloadFailed', 'Failed to download PDF. Please try again.'));
     } finally {
       setDownloadingInvoices(prev => {
         const next = new Set(prev);
@@ -135,17 +136,17 @@ const InvoicesTab: React.FC<InvoicesTabProps> = React.memo(({
     setSendingEmails(prev => new Set(prev).add(invoiceId));
 
     try {
-      toast.success(t('billing.invoice.emailStarted', 'Sending invoice email...'));
+      toast.success(t('invoice.emailStarted', 'Sending invoice email...'));
       const result = await sendClientInvoiceEmail(invoiceId);
 
       if (result.success) {
-        toast.success(t('billing.invoice.emailSent', 'Invoice email sent successfully.'));
+        toast.success(t('invoice.emailSent', 'Invoice email sent successfully.'));
       } else {
-        toast.error(result.error || t('billing.invoice.sendEmailFailed', 'Failed to send email.'));
+        toast.error(result.error || t('invoice.sendEmailFailed', 'Failed to send email.'));
       }
     } catch (error) {
       console.error('Failed to send email:', error);
-      toast.error(t('billing.invoice.sendEmailFailed', 'Failed to send invoice email. Please try again.'));
+      toast.error(t('invoice.sendEmailFailed', 'Failed to send invoice email. Please try again.'));
     } finally {
       setSendingEmails(prev => {
         const next = new Set(prev);
@@ -171,16 +172,16 @@ const InvoicesTab: React.FC<InvoicesTabProps> = React.memo(({
   // Memoize the columns to prevent unnecessary re-creation
   const invoiceColumns: ColumnDefinition<InvoiceViewModel>[] = useMemo(() => [
     {
-      title: t('billing.invoice.number'),
+      title: t('invoice.number'),
       dataIndex: 'invoice_number'
     },
     {
-      title: t('billing.invoice.date'),
+      title: t('invoice.date'),
       dataIndex: 'invoice_date',
       render: (value) => formatDate(value)
     },
     {
-      title: t('billing.invoice.amount'),
+      title: t('invoice.amount'),
       dataIndex: 'total',
       render: (value, record) => {
         // Convert cents to dollars and handle potential null/undefined
@@ -189,18 +190,18 @@ const InvoicesTab: React.FC<InvoicesTabProps> = React.memo(({
       }
     },
     {
-      title: t('billing.invoice.status'),
+      title: t('invoice.status'),
       dataIndex: 'finalized_at',
       render: (value) => (
         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
           value ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
         }`}>
-          {value ? t('billing.invoice.finalized') : t('billing.invoice.draft')}
+          {value ? t('invoice.finalized') : t('invoice.draft')}
         </span>
       )
     },
     {
-      title: t('common.actions'),
+      title: tCommon('common.actions'),
       dataIndex: 'invoice_id',
       render: (value: string, record: InvoiceViewModel) => (
         <DropdownMenu>
@@ -227,7 +228,7 @@ const InvoicesTab: React.FC<InvoicesTabProps> = React.memo(({
               }}
             >
               <CreditCard className="mr-2 h-4 w-4" />
-              {t('billing.invoice.pay', 'Pay Now')}
+              {t('invoice.pay', 'Pay Now')}
             </DropdownMenuItem>
             <DropdownMenuItem
               id={`view-invoice-${record.invoice_number}-menu-item`}
@@ -237,7 +238,7 @@ const InvoicesTab: React.FC<InvoicesTabProps> = React.memo(({
               }}
             >
               <Eye className="mr-2 h-4 w-4" />
-              {t('billing.invoice.view')}
+              {t('invoice.view')}
             </DropdownMenuItem>
             <DropdownMenuItem
               id={`download-invoice-${record.invoice_number}-menu-item`}
@@ -247,7 +248,7 @@ const InvoicesTab: React.FC<InvoicesTabProps> = React.memo(({
               }}
             >
               <Download className="mr-2 h-4 w-4" />
-              {t('billing.invoice.download')}
+              {t('invoice.download')}
             </DropdownMenuItem>
             <DropdownMenuItem
               id={`email-invoice-${record.invoice_number}-menu-item`}
@@ -257,7 +258,7 @@ const InvoicesTab: React.FC<InvoicesTabProps> = React.memo(({
               }}
             >
               <Mail className="mr-2 h-4 w-4" />
-              {t('billing.invoice.sendEmail')}
+              {t('invoice.sendEmail')}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -297,7 +298,7 @@ const InvoicesTab: React.FC<InvoicesTabProps> = React.memo(({
         />
         {invoices.length === 0 && (
           <div className="text-center py-10">
-            <p className="text-gray-500">{t('billing.messages.noInvoices', 'No invoices found')}</p>
+            <p className="text-gray-500">{t('messages.noInvoices', 'No invoices found')}</p>
           </div>
         )}
       </div>
@@ -306,7 +307,7 @@ const InvoicesTab: React.FC<InvoicesTabProps> = React.memo(({
         <div className="mt-8">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-xl font-semibold">
-              {t('billing.invoice.details', 'Invoice Details')} - {selectedInvoice.invoice_number}
+              {t('invoice.details', 'Invoice Details')} - {selectedInvoice.invoice_number}
             </h3>
             <Button
               id="close-invoice-details"

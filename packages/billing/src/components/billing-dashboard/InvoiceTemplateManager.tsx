@@ -105,8 +105,7 @@ const InvoiceTemplateManager: React.FC<InvoiceTemplateManagerProps> = ({
           </div>
         </div>
         
-        {/* Removed the entire "Edit Template" section (Name Input, DSL TextArea, Save Button) */}
-        {/* as editing is now handled by AssemblyScriptTemplateEditorComponent via navigation */}
+        {/* Template editing is handled by the Invoice Template Editor screen. */}
       </div>
 
       {/* Render preview if a template and sample invoice are selected */}

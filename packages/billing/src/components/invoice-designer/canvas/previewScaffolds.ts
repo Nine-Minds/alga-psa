@@ -1,5 +1,6 @@
 import type { DesignerNode } from '../state/designerStore';
 import { resolveLabelText } from '../labelText';
+import { getNodeMetadata } from '../utils/nodeProps';
 
 type NodeMetadata = Record<string, unknown>;
 
@@ -69,9 +70,9 @@ const inferContextualValueScaffold = (input: {
   labelHint: string;
   format: string;
 }): string => {
-  const haystack = normalizeHintText(`${input.bindingKey} ${input.placeholderHint} ${input.labelHint}`);
+  const contextHaystack = normalizeHintText(`${input.bindingKey} ${input.labelHint}`);
   if (
-    hasAnyKeyword(haystack, [
+    hasAnyKeyword(contextHaystack, [
       /\binvoice (number|no|id)\b/,
       /\binvoice #\b/,
       /\binv #\b/,
@@ -81,7 +82,7 @@ const inferContextualValueScaffold = (input: {
     return 'INV-000123';
   }
   if (
-    hasAnyKeyword(haystack, [
+    hasAnyKeyword(contextHaystack, [
       /\b(issue|invoice) date\b/,
       /\bissued\b/,
       /\bdue date\b/,
@@ -90,7 +91,7 @@ const inferContextualValueScaffold = (input: {
   ) {
     return 'MM/DD/YYYY';
   }
-  if (hasAnyKeyword(haystack, [/\bpo\b/, /\bpo number\b/, /\bpurchase order\b/, /\bpurchaseorder\b/])) {
+  if (hasAnyKeyword(contextHaystack, [/\bpo\b/, /\bpo number\b/, /\bpurchase order\b/, /\bpurchaseorder\b/])) {
     return 'Optional';
   }
   if (input.format === 'date') {
@@ -122,8 +123,12 @@ const inferContextualLabelScaffold = (labelHint: string): string => {
   return 'Label';
 };
 
+const resolveFieldLabelHint = (metadata: NodeMetadata): string =>
+  asTrimmedString(metadata.label) ||
+  asTrimmedString(metadata.text);
+
 export const resolveFieldPreviewScaffold = (node: DesignerNode): EditorPreviewScaffold => {
-  const metadata = (node.metadata ?? {}) as NodeMetadata;
+  const metadata = getNodeMetadata(node) as NodeMetadata;
   const sampleValue = resolveSampleValue(metadata);
   if (sampleValue.length > 0) {
     return {
@@ -143,7 +148,7 @@ export const resolveFieldPreviewScaffold = (node: DesignerNode): EditorPreviewSc
     text: inferContextualValueScaffold({
       bindingKey,
       placeholderHint,
-      labelHint: node.name,
+      labelHint: resolveFieldLabelHint(metadata),
       format,
     }),
     isPlaceholder: true,
@@ -159,7 +164,7 @@ export const resolveLabelPreviewScaffold = (node: DesignerNode): EditorPreviewSc
     };
   }
   return {
-    text: inferContextualLabelScaffold(resolveLabelText(node).text),
+    text: inferContextualLabelScaffold(resolveLabelText(node, { includeNameFallback: false }).text),
     isPlaceholder: true,
   };
 };

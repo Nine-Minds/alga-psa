@@ -745,8 +745,8 @@ export const approveAppointmentRequest = withAuth(async (
             requesterName: recipientName,
             requesterEmail: recipientEmail,
             serviceName: service.service_name,
-            appointmentDate: finalDate,
-            appointmentTime: finalTime,
+            appointmentDate: await formatDate(finalDate),
+            appointmentTime: await formatTime(finalTime),
             duration: request.requested_duration,
             technicianName: `${assignedUser.first_name} ${assignedUser.last_name}`,
             technicianEmail: assignedUser.email || '',
@@ -936,8 +936,8 @@ export const declineAppointmentRequest = withAuth(async (
             requesterName: recipientName,
             requesterEmail: recipientEmail,
             serviceName: service.service_name,
-            requestedDate: request.requested_date,
-            requestedTime: request.requested_time,
+            requestedDate: await formatDate(normalizeDateValue(request.requested_date) || ''),
+            requestedTime: await formatTime(normalizeTimeValue(request.requested_time) || ''),
             referenceNumber: request.appointment_request_id.slice(0, 8).toUpperCase(),
             declineReason: validatedData.decline_reason,
             requestNewAppointmentLink,
@@ -1143,7 +1143,7 @@ function normalizeTimeValue(value: string | Date | null | undefined): string | n
   if (typeof value === 'string') {
     return value.slice(0, 5);
   }
-  const hours = value.getHours().toString().padStart(2, '0');
-  const minutes = value.getMinutes().toString().padStart(2, '0');
+  const hours = value.getUTCHours().toString().padStart(2, '0');
+  const minutes = value.getUTCMinutes().toString().padStart(2, '0');
   return `${hours}:${minutes}`;
 }

@@ -2,14 +2,13 @@ import { StorageService } from 'server/src/lib/storage/StorageService';
 import { Browser } from 'puppeteer';
 import { FileStore } from 'server/src/types/storage';
 import { getInvoiceForRendering } from '@alga-psa/billing/actions/invoiceQueries';
-import { getInvoiceTemplates, getCompiledWasm } from '@alga-psa/billing/actions/invoiceTemplates';
+import { getInvoiceTemplates } from '@alga-psa/billing/actions/invoiceTemplates';
 import { runWithTenant, createTenantKnex } from 'server/src/lib/db';
 import { getClientLogoUrl } from 'server/src/lib/utils/avatarUtils';
-import { executeWasmTemplate } from 'server/src/lib/invoice-renderer/wasm-executor';
-import { renderLayout } from 'server/src/lib/invoice-renderer/layout-renderer';
-import type { WasmInvoiceViewModel } from 'server/src/lib/invoice-renderer/types';
+import { evaluateInvoiceTemplateAst } from '@alga-psa/billing/lib/invoice-template-ast/evaluator';
+import { renderInvoiceTemplateAstHtmlDocument } from '@alga-psa/billing/lib/invoice-template-ast/server-render';
 import type { InvoiceViewModel as DbInvoiceViewModel, IInvoiceCharge } from 'server/src/interfaces/invoice.interfaces';
-import { DateValue } from '@alga-psa/types';
+import type { DateValue, InvoiceTemplateAst, WasmInvoiceViewModel } from '@alga-psa/types';
 import { browserPoolService, BrowserPoolService } from './browser-pool.service';
 import { IDocument } from 'server/src/interfaces/document.interface';
 import { getDocument } from '@alga-psa/documents/actions/documentActions';
@@ -261,27 +260,21 @@ export class PDFGenerationService {
       if (!template.template_id) {
         throw new Error('Selected template does not have an ID.');
       }
-      const wasmBuffer = await getCompiledWasm(template.template_id);
-      const wasmInvoiceViewModel = await this.mapInvoiceDataToViewModel(dbInvoiceData);
-      const layoutElement = await executeWasmTemplate(wasmInvoiceViewModel, wasmBuffer);
-      const renderedOutput = renderLayout(layoutElement);
 
-      return `
-        <!DOCTYPE html>
-        <html lang="en">
-          <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Invoice</title>
-            <style>
-              ${renderedOutput.css}
-            </style>
-          </head>
-          <body>
-            ${renderedOutput.html}
-          </body>
-        </html>
-      `;
+      const templateAst = ((template as any).templateAst ?? null) as InvoiceTemplateAst | null;
+      if (!templateAst) {
+        throw new Error(`Selected template ${template.template_id} does not include a template AST payload.`);
+      }
+
+      const invoiceViewModel = await this.mapInvoiceDataToViewModel(dbInvoiceData);
+      const evaluation = evaluateInvoiceTemplateAst(
+        templateAst,
+        invoiceViewModel as unknown as Record<string, unknown>
+      );
+
+      return await renderInvoiceTemplateAstHtmlDocument(templateAst, evaluation, {
+        title: 'Invoice',
+      });
     });
   }
 

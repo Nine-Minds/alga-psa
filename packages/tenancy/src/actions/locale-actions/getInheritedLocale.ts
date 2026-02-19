@@ -80,8 +80,24 @@ export const getInheritedLocaleAction = withOptionalAuth(async (user: IUserWithR
     .where({ tenant })
     .first();
 
-  // Check client portal default first (for client users)
-  if (user.user_type === 'client') {
+  if (user.user_type === 'internal') {
+    const mspPortalLocale = tenantSettings?.settings?.mspPortal?.defaultLocale;
+    if (mspPortalLocale && isSupportedLocale(mspPortalLocale)) {
+      return {
+        locale: mspPortalLocale,
+        source: 'tenant'
+      };
+    }
+
+    const tenantDefaultLocale = tenantSettings?.settings?.defaultLocale;
+    if (tenantDefaultLocale && isSupportedLocale(tenantDefaultLocale)) {
+      return {
+        locale: tenantDefaultLocale,
+        source: 'tenant'
+      };
+    }
+  } else {
+    // Check client portal default first (for client users)
     const clientPortalLocale = tenantSettings?.settings?.clientPortal?.defaultLocale;
     if (clientPortalLocale && isSupportedLocale(clientPortalLocale)) {
       return {
@@ -89,15 +105,15 @@ export const getInheritedLocaleAction = withOptionalAuth(async (user: IUserWithR
         source: 'tenant'
       };
     }
-  }
 
-  // Check tenant-wide default
-  const tenantDefaultLocale = tenantSettings?.settings?.defaultLocale;
-  if (tenantDefaultLocale && isSupportedLocale(tenantDefaultLocale)) {
-    return {
-      locale: tenantDefaultLocale,
-      source: 'tenant'
-    };
+    // Check tenant-wide default
+    const tenantDefaultLocale = tenantSettings?.settings?.defaultLocale;
+    if (tenantDefaultLocale && isSupportedLocale(tenantDefaultLocale)) {
+      return {
+        locale: tenantDefaultLocale,
+        source: 'tenant'
+      };
+    }
   }
 
   // 3. System default

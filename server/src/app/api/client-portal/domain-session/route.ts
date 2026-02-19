@@ -5,8 +5,8 @@ import logger from '@alga-psa/core/logger';
 import { getAdminConnection } from '@alga-psa/db/admin';
 
 import { analytics } from 'server/src/lib/analytics/posthog';
-import { buildSessionCookie, encodePortalSessionToken } from 'server/src/lib/auth/sessionCookies';
-import { consumePortalDomainOtt } from 'server/src/lib/models/PortalDomainSessionToken';
+import { buildSessionCookie, encodePortalSessionToken } from '@alga-psa/auth';
+import { consumePortalDomainOtt } from '@alga-psa/auth';
 import { getPortalDomainByHostname, normalizeHostname } from 'server/src/models/PortalDomainModel';
 
 function sanitizeReturnPath(returnPath: unknown, fallback: string): string {

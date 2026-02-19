@@ -132,32 +132,31 @@ export default function AppointmentRequestsPanel({
     // Handle date/time parsing safely - prefill with requested date/time
     try {
       if (request.requested_date && request.requested_time) {
+        // Normalize PG DATE (may be JS Date object at runtime despite string type) to YYYY-MM-DD
+        const rawDate = request.requested_date as unknown;
+        const dateStr = rawDate instanceof Date
+          ? rawDate.toISOString().split('T')[0]
+          : typeof rawDate === 'string' ? rawDate.slice(0, 10) : null;
+
         // Database stores time in HH:MM or HH:MM:SS format (UTC)
-        const timeStr = request.requested_time.slice(0, 5); // Get HH:MM only
+        const timeStr = typeof request.requested_time === 'string'
+          ? request.requested_time.slice(0, 5)
+          : null;
 
-        // Parse time components
-        const [hours, minutes] = timeStr.split(':').map(Number);
+        if (dateStr && timeStr) {
+          const [hours, minutes] = timeStr.split(':').map(Number);
+          const parsedDate = new Date(`${dateStr}T00:00:00Z`);
 
-        // Create date object from the requested date (parse as UTC)
-        const parsedDate = new Date(request.requested_date + 'T00:00:00Z');
-
-        // Set the time components in UTC
-        if (!isNaN(parsedDate.getTime()) && !isNaN(hours) && !isNaN(minutes)) {
-          parsedDate.setUTCHours(hours, minutes, 0, 0);
-
-          console.log('Prefilling date/time:', {
-            date: request.requested_date,
-            time: request.requested_time,
-            parsed: parsedDate.toISOString()
-          });
-
-          setFinalDateTime(parsedDate);
+          if (!isNaN(parsedDate.getTime()) && !isNaN(hours) && !isNaN(minutes)) {
+            parsedDate.setUTCHours(hours, minutes, 0, 0);
+            setFinalDateTime(parsedDate);
+          } else {
+            setFinalDateTime(null);
+          }
         } else {
-          console.error('Invalid date/time components:', { date: request.requested_date, time: timeStr });
           setFinalDateTime(null);
         }
       } else {
-        console.error('Missing date or time:', { date: request.requested_date, time: request.requested_time });
         setFinalDateTime(null);
       }
     } catch (error) {
@@ -306,14 +305,23 @@ export default function AppointmentRequestsPanel({
     }
   };
 
-  const formatDateTime = (date: string, time: string) => {
+  const formatDateTime = (date: unknown, time: unknown) => {
     try {
       if (!date || !time) {
         return 'Invalid date/time';
       }
-      const dateTime = new Date(`${date}T${time}Z`);
+      // Normalize PG DATE (may be JS Date object) to YYYY-MM-DD string
+      const dateStr = date instanceof Date
+        ? date.toISOString().split('T')[0]
+        : typeof date === 'string' ? date.slice(0, 10) : null;
+      // Normalize PG TIME to HH:MM string
+      const timeStr = typeof time === 'string' ? time.slice(0, 5) : null;
+
+      if (!dateStr || !timeStr) return 'Invalid date/time';
+
+      const dateTime = new Date(`${dateStr}T${timeStr}:00Z`);
       if (isNaN(dateTime.getTime())) {
-        return `${date} ${time}`;
+        return `${dateStr} ${timeStr}`;
       }
       return dateTime.toLocaleString('en-US', {
         weekday: 'short',
@@ -321,11 +329,10 @@ export default function AppointmentRequestsPanel({
         day: 'numeric',
         year: 'numeric',
         hour: '2-digit',
-        minute: '2-digit',
-        timeZone: 'UTC'
-      }) + ' UTC';
+        minute: '2-digit'
+      });
     } catch {
-      return `${date} ${time}`;
+      return 'Invalid date/time';
     }
   };
 

@@ -8,13 +8,11 @@ const {
   mockCreateTenantKnex,
   mockRunWithTenant
 } = vi.hoisted(() => {
-  const calendarActionsModuleUrl = new URL('../../../lib/actions/calendarActions.ts', import.meta.url);
-  const userPath = new URL('../user-actions/userActions.ts', calendarActionsModuleUrl).pathname;
-  const userPathNoExt = userPath.replace(/\.ts$/, '');
+  const userPath = '@alga-psa/users/actions';
 
   return {
     userActionsModulePath: userPath,
-    userActionsModulePathNoExt: userPathNoExt,
+    userActionsModulePathNoExt: userPath,
     mockGetCurrentUser: vi.fn(),
     mockHasPermission: vi.fn(),
     mockCreateTenantKnex: vi.fn(),

@@ -6,27 +6,28 @@ import { __designCanvasPreviewTestUtils } from './DesignCanvas';
 const createNode = (overrides: Partial<DesignerNode>): DesignerNode => ({
   id: overrides.id ?? 'node-' + Math.random().toString(36).slice(2, 7),
   type: overrides.type ?? 'subtotal',
-  name: overrides.name ?? 'Subtotal',
+  props: overrides.props ?? {
+    name: 'Subtotal',
+    metadata: {},
+    style: { width: '280px', height: '56px' },
+  },
   position: overrides.position ?? { x: 0, y: 0 },
   size: overrides.size ?? { width: 280, height: 56 },
   baseSize: overrides.baseSize ?? overrides.size ?? { width: 280, height: 56 },
   canRotate: overrides.canRotate ?? true,
   rotation: overrides.rotation ?? 0,
   allowResize: overrides.allowResize ?? true,
-  metadata: overrides.metadata ?? {},
   layoutPresetId: overrides.layoutPresetId,
   parentId: overrides.parentId ?? null,
-  childIds: overrides.childIds ?? [],
+  children: overrides.children ?? [],
   allowedChildren: overrides.allowedChildren ?? [],
-  layout: overrides.layout,
 });
 
 describe('DesignCanvas totals preview model', () => {
   it('provides sane fallbacks for subtotal rows', () => {
     const node = createNode({
       type: 'subtotal',
-      name: 'Subtotal',
-      metadata: {},
+      props: { name: 'Subtotal', metadata: {} },
     });
 
     const model = __designCanvasPreviewTestUtils.resolveTotalsRowPreviewModel(node);
@@ -39,11 +40,13 @@ describe('DesignCanvas totals preview model', () => {
   it('detects grand total emphasis and respects metadata overrides', () => {
     const node = createNode({
       type: 'custom-total',
-      name: 'Custom Total',
-      metadata: {
-        label: 'Grand Total',
-        bindingKey: 'invoice.balanceDue',
-        previewValue: '$4,096.21',
+      props: {
+        name: 'Custom Total',
+        metadata: {
+          label: 'Grand Total',
+          bindingKey: 'invoice.balanceDue',
+          previewValue: '$4,096.21',
+        },
       },
     });
 

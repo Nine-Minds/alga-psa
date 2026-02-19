@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { Knex } from 'knex';
 
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
-import { DatabaseTemplateProcessor } from '../../lib/email/tenant/templateProcessors';
+import { DatabaseTemplateProcessor } from '@alga-psa/email';
 
 const TEMPLATE_NAME = 'SURVEY_TICKET_CLOSED';
 const SUPPORTED_LOCALES = [

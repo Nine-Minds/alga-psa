@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { EmailMessage, EmailSendResult, IEmailProvider } from '../../types/email.types';
-import { BaseEmailService } from '../../lib/email/BaseEmailService';
+import { BaseEmailService } from '@alga-psa/email';
 
 vi.mock('@alga-psa/core/logger', () => {
   const stub = {
@@ -165,4 +165,3 @@ describe('outbound email workflow events', () => {
     expect(result.success).toBe(true);
   });
 });
-

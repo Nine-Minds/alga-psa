@@ -16,6 +16,21 @@ import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import toast from 'react-hot-toast';
 import { getMyAppointmentRequests, cancelAppointmentRequest } from '@alga-psa/client-portal/actions';
 
+/** Safely convert a PG DATE (may be JS Date object) or string to YYYY-MM-DD */
+function normalizeDateValue(value: unknown): string | null {
+  if (!value) return null;
+  if (value instanceof Date) return value.toISOString().split('T')[0];
+  if (typeof value === 'string') return value.slice(0, 10);
+  return null;
+}
+
+/** Safely convert a PG TIME (may be string like "11:00:00") to HH:MM */
+function normalizeTimeValue(value: unknown): string | null {
+  if (!value) return null;
+  if (typeof value === 'string') return value.slice(0, 5);
+  return null;
+}
+
 interface AppointmentRequest {
   appointment_request_id: string;
   service_id: string;
@@ -36,7 +51,8 @@ interface AppointmentRequest {
 type FilterStatus = 'all' | 'pending' | 'approved' | 'declined' | 'cancelled';
 
 export default function AppointmentsPage() {
-  const { t } = useTranslation('clientPortal');
+  const { t } = useTranslation('features/appointments');
+  const { t: tCommon } = useTranslation('common');
 
   const [appointments, setAppointments] = useState<AppointmentRequest[]>([]);
   const [loading, setLoading] = useState(true);
@@ -64,7 +80,7 @@ export default function AppointmentsPage() {
       }
     } catch (error) {
       console.error('Error loading appointments:', error);
-      toast.error(t('appointments.errors.loadFailed'));
+      toast.error(t('errors.loadFailed'));
       setAppointments([]);
     } finally {
       setLoading(false);
@@ -81,15 +97,15 @@ export default function AppointmentsPage() {
     try {
       const result = await cancelAppointmentRequest({ appointment_request_id: appointmentToCancel });
       if (!result.success) {
-        throw new Error(result.error || t('appointments.messages.cancelFailed'));
+        throw new Error(result.error || t('messages.cancelFailed'));
       }
 
-      toast.success(t('appointments.messages.cancelSuccess'));
+      toast.success(t('messages.cancelSuccess'));
       setAppointmentToCancel(null);
       loadAppointments();
     } catch (error) {
       console.error('Error cancelling appointment:', error);
-      toast.error(t('appointments.messages.cancelFailed'));
+      toast.error(t('messages.cancelFailed'));
     }
   };
 
@@ -102,10 +118,10 @@ export default function AppointmentsPage() {
 
   const getStatusBadge = (status: AppointmentRequest['status']) => {
     const variants: Record<AppointmentRequest['status'], { variant: 'default' | 'primary' | 'success' | 'warning' | 'error'; label: string }> = {
-      pending: { variant: 'warning', label: t('appointments.status.pending') },
-      approved: { variant: 'success', label: t('appointments.status.approved') },
-      declined: { variant: 'error', label: t('appointments.status.declined') },
-      cancelled: { variant: 'default', label: t('appointments.status.cancelled') }
+      pending: { variant: 'warning', label: t('status.pending') },
+      approved: { variant: 'success', label: t('status.approved') },
+      declined: { variant: 'error', label: t('status.declined') },
+      cancelled: { variant: 'default', label: t('status.cancelled') }
     };
 
     const config = variants[status];
@@ -114,7 +130,7 @@ export default function AppointmentsPage() {
 
   const columns: ColumnDefinition<AppointmentRequest>[] = [
     {
-      title: t('appointments.table.service'),
+      title: t('table.service'),
       dataIndex: 'service_name',
       width: '25%',
       render: (value: string, record: AppointmentRequest) => (
@@ -127,54 +143,58 @@ export default function AppointmentsPage() {
       )
     },
     {
-      title: t('appointments.table.dateTime'),
+      title: t('table.dateTime'),
       dataIndex: 'requested_date',
       width: '20%',
-      render: (value: string, record: AppointmentRequest) => {
-        let dateDisplay = 'N/A';
-        try {
-          if (value) {
-            const date = new Date(value + 'T00:00:00Z');
-            if (!isNaN(date.getTime())) {
-              dateDisplay = format(date, 'MMM d, yyyy');
+      render: (value: unknown, record: AppointmentRequest) => {
+        const dateStr = normalizeDateValue(value);
+        const timeStr = normalizeTimeValue(record.requested_time);
+
+        let display = 'N/A';
+        if (dateStr && timeStr) {
+          try {
+            const dt = new Date(`${dateStr}T${timeStr}:00Z`);
+            if (!isNaN(dt.getTime())) {
+              display = dt.toLocaleString('en-US', {
+                month: 'short', day: 'numeric', year: 'numeric',
+                hour: '2-digit', minute: '2-digit'
+              });
             }
-          }
-        } catch {
-          dateDisplay = 'N/A';
+          } catch { /* fallback */ }
         }
 
         return (
           <div className="text-sm">
             <div className="flex items-center gap-1 text-gray-900">
               <Calendar className="h-3 w-3" />
-              {dateDisplay}
+              {display}
             </div>
             <div className="flex items-center gap-1 text-gray-600 mt-1">
               <Clock className="h-3 w-3" />
-              {record.requested_time || 'N/A'} ({record.requested_duration} {t('appointments.table.minutes')})
+              {record.requested_duration} {t('table.minutes')}
             </div>
           </div>
         );
       }
     },
     {
-      title: t('appointments.table.status'),
+      title: t('table.status'),
       dataIndex: 'status',
       width: '15%',
       render: (value: AppointmentRequest['status']) => getStatusBadge(value)
     },
     {
-      title: t('appointments.table.technician'),
+      title: t('table.technician'),
       dataIndex: 'preferred_assigned_user_name',
       width: '20%',
       render: (value: string) => (
         <div className="text-sm">
-          {value || <span className="text-gray-400">{t('appointments.table.notAssigned')}</span>}
+          {value || <span className="text-gray-400">{t('table.notAssigned')}</span>}
         </div>
       )
     },
     {
-      title: t('appointments.table.actions'),
+      title: t('table.actions'),
       dataIndex: 'appointment_request_id',
       width: '20%',
       render: (value: string, record: AppointmentRequest) => (
@@ -185,7 +205,7 @@ export default function AppointmentsPage() {
             size="sm"
             onClick={() => setSelectedAppointment(record)}
           >
-            {t('appointments.table.viewDetails')}
+            {t('table.viewDetails')}
           </Button>
           {record.status === 'pending' && (
             <>
@@ -198,7 +218,7 @@ export default function AppointmentsPage() {
                   setIsRequestModalOpen(true);
                 }}
               >
-                {t('appointments.table.edit')}
+                {t('table.edit')}
               </Button>
               <Button
                 id={`cancel-appointment-${value}`}
@@ -206,7 +226,7 @@ export default function AppointmentsPage() {
                 size="sm"
                 onClick={() => setAppointmentToCancel(value)}
               >
-                {t('appointments.table.cancel')}
+                {t('table.cancel')}
               </Button>
             </>
           )}
@@ -219,7 +239,7 @@ export default function AppointmentsPage() {
     return (
       <div className="flex justify-center items-center min-h-[400px]">
         <Spinner size="sm" />
-        <span className="ml-3 text-gray-600">{t('common.loading')}</span>
+        <span className="ml-3 text-gray-600">{tCommon('common.loading')}</span>
       </div>
     );
   }
@@ -230,10 +250,10 @@ export default function AppointmentsPage() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-semibold text-[rgb(var(--color-text-900))]">
-            {t('appointments.page.title')}
+            {t('page.title')}
           </h1>
           <p className="mt-1 text-sm text-[rgb(var(--color-text-600))]">
-            {t('appointments.page.subtitle')}
+            {t('page.subtitle')}
           </p>
         </div>
         <Button
@@ -241,7 +261,7 @@ export default function AppointmentsPage() {
           variant="default"
           onClick={() => setIsRequestModalOpen(true)}
         >
-          {t('appointments.page.requestButton')}
+          {t('page.requestButton')}
         </Button>
       </div>
 
@@ -263,7 +283,7 @@ export default function AppointmentsPage() {
                   }
                 `}
               >
-                {t(`appointments.filters.${status}`)}
+                {t(`filters.${status}`)}
                 {status !== 'all' && (
                   <span className="ml-2 px-2 py-0.5 rounded-full bg-gray-100 text-xs">
                     {appointments.filter(apt => apt.status === status).length}
@@ -279,17 +299,17 @@ export default function AppointmentsPage() {
               <div className="text-center py-12">
                 <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                 <h3 className="text-lg font-medium text-gray-900 mb-2">
-                  {t('appointments.page.noAppointments')}
+                  {t('page.noAppointments')}
                 </h3>
                 <p className="text-sm text-gray-600 mb-4">
-                  {t('appointments.page.noAppointmentsDescription')}
+                  {t('page.noAppointmentsDescription')}
                 </p>
                 <Button
                   id="request-first-appointment-button"
                   variant="default"
                   onClick={() => setIsRequestModalOpen(true)}
                 >
-                  {t('appointments.page.requestButton')}
+                  {t('page.requestButton')}
                 </Button>
               </div>
             ) : (
@@ -327,7 +347,7 @@ export default function AppointmentsPage() {
         <Dialog
           isOpen={!!selectedAppointment}
           onClose={() => setSelectedAppointment(null)}
-          title={t('appointments.details.title')}
+          title={t('details.title')}
           className="max-w-2xl"
         >
           <DialogContent>
@@ -343,16 +363,16 @@ export default function AppointmentsPage() {
                   <div className="flex items-center gap-2">
                     {getStatusBadge(selectedAppointment.status)}
                     <span className="text-sm font-medium">
-                      {selectedAppointment.status === 'approved' && t('appointments.details.statusApproved')}
-                      {selectedAppointment.status === 'pending' && t('appointments.details.statusPending')}
-                      {selectedAppointment.status === 'declined' && t('appointments.details.statusDeclined')}
-                      {selectedAppointment.status === 'cancelled' && t('appointments.details.statusCancelled')}
+                      {selectedAppointment.status === 'approved' && t('details.statusApproved')}
+                      {selectedAppointment.status === 'pending' && t('details.statusPending')}
+                      {selectedAppointment.status === 'declined' && t('details.statusDeclined')}
+                      {selectedAppointment.status === 'cancelled' && t('details.statusCancelled')}
                     </span>
                   </div>
                 </div>
                 {selectedAppointment.status === 'declined' && selectedAppointment.declined_reason && (
                   <div className="mt-2 text-sm text-red-800">
-                    <strong>{t('appointments.details.reason')}:</strong> {selectedAppointment.declined_reason}
+                    <strong>{t('details.reason')}:</strong> {selectedAppointment.declined_reason}
                   </div>
                 )}
               </div>
@@ -363,7 +383,7 @@ export default function AppointmentsPage() {
                   <FileText className="h-5 w-5 text-gray-500 mt-0.5" />
                   <div className="flex-1">
                     <div className="text-sm font-medium text-gray-700">
-                      {t('appointments.details.reference')}
+                      {t('details.reference')}
                     </div>
                     <div className="text-sm font-mono text-gray-900">{selectedAppointment.appointment_request_id.slice(0, 8).toUpperCase()}</div>
                   </div>
@@ -373,7 +393,7 @@ export default function AppointmentsPage() {
                   <FileText className="h-5 w-5 text-gray-500 mt-0.5" />
                   <div className="flex-1">
                     <div className="text-sm font-medium text-gray-700">
-                      {t('appointments.details.service')}
+                      {t('details.service')}
                     </div>
                     <div className="text-sm text-gray-900">{selectedAppointment.service_name}</div>
                   </div>
@@ -383,22 +403,27 @@ export default function AppointmentsPage() {
                   <Calendar className="h-5 w-5 text-gray-500 mt-0.5" />
                   <div className="flex-1">
                     <div className="text-sm font-medium text-gray-700">
-                      {t('appointments.details.dateTime')}
+                      {t('details.dateTime')}
                     </div>
                     <div className="text-sm text-gray-900">
                       {(() => {
+                        const dateStr = normalizeDateValue(selectedAppointment.requested_date);
+                        const timeStr = normalizeTimeValue(selectedAppointment.requested_time);
+                        if (!dateStr || !timeStr) return 'N/A';
                         try {
-                          if (!selectedAppointment.requested_date) return 'N/A';
-                          const date = new Date(selectedAppointment.requested_date + 'T00:00:00Z');
-                          if (isNaN(date.getTime())) return 'N/A';
-                          return format(date, 'EEEE, MMMM d, yyyy');
+                          const dt = new Date(`${dateStr}T${timeStr}:00Z`);
+                          if (isNaN(dt.getTime())) return 'N/A';
+                          return dt.toLocaleString('en-US', {
+                            weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',
+                            hour: '2-digit', minute: '2-digit'
+                          });
                         } catch {
                           return 'N/A';
                         }
                       })()}
                     </div>
                     <div className="text-sm text-gray-600 mt-1">
-                      {selectedAppointment.requested_time || 'N/A'} ({selectedAppointment.requested_duration} {t('appointments.table.minutes')})
+                      {selectedAppointment.requested_duration} {t('table.minutes')}
                     </div>
                   </div>
                 </div>
@@ -408,7 +433,7 @@ export default function AppointmentsPage() {
                     <User className="h-5 w-5 text-gray-500 mt-0.5" />
                     <div className="flex-1">
                       <div className="text-sm font-medium text-gray-700">
-                        {t('appointments.details.technician')}
+                        {t('details.technician')}
                       </div>
                       <div className="text-sm text-gray-900">
                         {selectedAppointment.preferred_assigned_user_name}
@@ -422,7 +447,7 @@ export default function AppointmentsPage() {
                     <FileText className="h-5 w-5 text-gray-500 mt-0.5" />
                     <div className="flex-1">
                       <div className="text-sm font-medium text-gray-700">
-                        {t('appointments.details.linkedTicket')}
+                        {t('details.linkedTicket')}
                       </div>
                       <div className="text-sm text-gray-900">{selectedAppointment.ticket_number}</div>
                     </div>
@@ -434,7 +459,7 @@ export default function AppointmentsPage() {
                     <FileText className="h-5 w-5 text-gray-500 mt-0.5" />
                     <div className="flex-1">
                       <div className="text-sm font-medium text-gray-700">
-                        {t('appointments.details.description')}
+                        {t('details.description')}
                       </div>
                       <div className="text-sm text-gray-900 whitespace-pre-wrap">
                         {selectedAppointment.description}
@@ -450,7 +475,7 @@ export default function AppointmentsPage() {
                       if (!isNaN(date.getTime())) {
                         return (
                           <div className="text-xs text-gray-500">
-                            {t('appointments.details.created')}: {format(date, 'MMM d, yyyy h:mm a')}
+                            {t('details.created')}: {format(date, 'MMM d, yyyy h:mm a')}
                           </div>
                         );
                       }
@@ -463,7 +488,7 @@ export default function AppointmentsPage() {
                       if (!isNaN(date.getTime())) {
                         return (
                           <div className="text-xs text-gray-500 mt-1">
-                            {t('appointments.details.approved')}: {format(date, 'MMM d, yyyy h:mm a')}
+                            {t('details.approved')}: {format(date, 'MMM d, yyyy h:mm a')}
                           </div>
                         );
                       }
@@ -484,7 +509,7 @@ export default function AppointmentsPage() {
                     setSelectedAppointment(null);
                   }}
                 >
-                  {t('appointments.details.cancelButton')}
+                  {t('details.cancelButton')}
                 </Button>
               )}
               <Button
@@ -492,7 +517,7 @@ export default function AppointmentsPage() {
                 variant="outline"
                 onClick={() => setSelectedAppointment(null)}
               >
-                {t('common.close')}
+                {tCommon('common.close')}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -504,10 +529,10 @@ export default function AppointmentsPage() {
         isOpen={!!appointmentToCancel}
         onClose={() => setAppointmentToCancel(null)}
         onConfirm={handleCancelAppointment}
-        title={t('appointments.cancel.title')}
-        message={t('appointments.cancel.message')}
-        confirmLabel={t('appointments.cancel.confirm')}
-        cancelLabel={t('common.cancel')}
+        title={t('cancel.title')}
+        message={t('cancel.message')}
+        confirmLabel={t('cancel.confirm')}
+        cancelLabel={tCommon('common.cancel')}
       />
     </div>
   );

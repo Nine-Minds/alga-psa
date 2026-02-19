@@ -6,33 +6,22 @@ import { __designerShellTestUtils } from './DesignerShell';
 const createNode = (overrides: Partial<DesignerNode>): DesignerNode => ({
   id: overrides.id ?? `node-${Math.random().toString(36).slice(2, 7)}`,
   type: overrides.type ?? 'text',
-  name: overrides.name ?? 'Node',
+  props: overrides.props ?? ({ name: 'Node', metadata: {} } as any),
   position: overrides.position ?? { x: 0, y: 0 },
   size: overrides.size ?? { width: 120, height: 48 },
   baseSize: overrides.baseSize ?? overrides.size ?? { width: 120, height: 48 },
   canRotate: overrides.canRotate ?? false,
   allowResize: overrides.allowResize ?? true,
   rotation: overrides.rotation ?? 0,
-  metadata: overrides.metadata ?? {},
   layoutPresetId: overrides.layoutPresetId,
-  layout:
-    overrides.layout ?? {
-      mode: 'canvas',
-      direction: 'column',
-      gap: 0,
-      padding: 0,
-      justify: 'start',
-      align: 'start',
-      sizing: 'fixed',
-    },
   parentId: overrides.parentId ?? null,
-  childIds: overrides.childIds ?? [],
+  children: overrides.children ?? [],
   allowedChildren: overrides.allowedChildren ?? [],
 });
 
 describe('DesignerShell section fit utility', () => {
   it('returns null when section has no children', () => {
-    const section = createNode({ id: 'section', type: 'section', childIds: [] });
+    const section = createNode({ id: 'section', type: 'section', children: [] });
     const size = __designerShellTestUtils.getSectionFitSizeFromChildren(
       section,
       new Map<string, DesignerNode>([['section', section]])
@@ -45,15 +34,18 @@ describe('DesignerShell section fit utility', () => {
     const section = createNode({
       id: 'section',
       type: 'section',
-      childIds: ['field-a', 'field-b'],
-      layout: {
-        mode: 'flex',
-        direction: 'column',
-        gap: 8,
-        padding: 16,
-        justify: 'start',
-        align: 'stretch',
-        sizing: 'fixed',
+      children: ['field-a', 'field-b'],
+      props: {
+        name: 'Section',
+        metadata: {},
+        layout: {
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '8px',
+          padding: '16px',
+          justifyContent: 'flex-start',
+          alignItems: 'stretch',
+        },
       },
     });
     const fieldA = createNode({
@@ -87,15 +79,15 @@ describe('DesignerShell section fit utility', () => {
     const section = createNode({
       id: 'section',
       type: 'section',
-      childIds: ['tiny'],
-      layout: {
-        mode: 'canvas',
-        direction: 'column',
-        gap: 0,
-        padding: 0,
-        justify: 'start',
-        align: 'start',
-        sizing: 'fixed',
+      children: ['tiny'],
+      props: {
+        name: 'Section',
+        metadata: {},
+        layout: {
+          display: 'grid',
+          gap: '0px',
+          padding: '0px',
+        },
       },
     });
     const tiny = createNode({
@@ -121,7 +113,7 @@ describe('DesignerShell section fit utility', () => {
     const section = createNode({
       id: 'section',
       type: 'section',
-      childIds: ['field-a'],
+      children: ['field-a'],
       size: { width: 160, height: 104 },
     });
     const field = createNode({
@@ -147,16 +139,19 @@ describe('DesignerShell section fit utility', () => {
     const section = createNode({
       id: 'section',
       type: 'section',
-      childIds: ['field-a'],
+      children: ['field-a'],
       size: { width: 300, height: 220 },
-      layout: {
-        mode: 'flex',
-        direction: 'column',
-        gap: 0,
-        padding: 16,
-        justify: 'start',
-        align: 'stretch',
-        sizing: 'fixed',
+      props: {
+        name: 'Section',
+        metadata: {},
+        layout: {
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '0px',
+          padding: '16px',
+          justifyContent: 'flex-start',
+          alignItems: 'stretch',
+        },
       },
     });
     const field = createNode({
@@ -182,18 +177,18 @@ describe('DesignerShell section fit utility', () => {
   });
 
   it('resolves nearest ancestor section for media selection', () => {
-    const section = createNode({ id: 'section', type: 'section', childIds: ['container'] });
+    const section = createNode({ id: 'section', type: 'section', children: ['container'] });
     const container = createNode({
       id: 'container',
       type: 'container',
       parentId: 'section',
-      childIds: ['logo'],
+      children: ['logo'],
     });
     const logo = createNode({
       id: 'logo',
       type: 'logo',
       parentId: 'container',
-      childIds: [],
+      children: [],
     });
 
     const resolved = __designerShellTestUtils.resolveNearestAncestorSection(
@@ -209,12 +204,12 @@ describe('DesignerShell section fit utility', () => {
   });
 
   it('returns null when media has no ancestor section', () => {
-    const page = createNode({ id: 'page', type: 'page', childIds: ['logo'] });
+    const page = createNode({ id: 'page', type: 'page', children: ['logo'] });
     const logo = createNode({
       id: 'logo',
       type: 'logo',
       parentId: 'page',
-      childIds: [],
+      children: [],
     });
 
     const resolved = __designerShellTestUtils.resolveNearestAncestorSection(
@@ -243,61 +238,68 @@ describe('DesignerShell section fit utility', () => {
     ).toBe(false);
   });
 
-  it('returns fill-mode no-op guidance for already fitted sections in fill sizing', () => {
+  it('returns already-fitted guidance for sections', () => {
     const fillSection = createNode({
       id: 'section-fill',
       type: 'section',
-      layout: {
-        mode: 'flex',
-        direction: 'column',
-        gap: 8,
-        padding: 16,
-        justify: 'start',
-        align: 'stretch',
-        sizing: 'fill',
+      props: {
+        name: 'Section Fill',
+        metadata: {},
+        layout: {
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '8px',
+          padding: '16px',
+          justifyContent: 'flex-start',
+          alignItems: 'stretch',
+        },
       },
     });
     const fixedSection = createNode({
       id: 'section-fixed',
       type: 'section',
-      layout: {
-        mode: 'flex',
-        direction: 'column',
-        gap: 8,
-        padding: 16,
-        justify: 'start',
-        align: 'stretch',
-        sizing: 'fixed',
+      props: {
+        name: 'Section Fixed',
+        metadata: {},
+        layout: {
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '8px',
+          padding: '16px',
+          justifyContent: 'flex-start',
+          alignItems: 'stretch',
+        },
       },
     });
 
-    expect(__designerShellTestUtils.getSectionFitNoopMessage(fillSection)).toBe(
-      'Section is already fitted in Fill mode. Switch section sizing to Fixed to shrink dimensions.'
-    );
+    expect(__designerShellTestUtils.getSectionFitNoopMessage(fillSection)).toBe('Section is already fitted.');
     expect(__designerShellTestUtils.getSectionFitNoopMessage(fixedSection)).toBe('Section is already fitted.');
   });
 
-  it('promotes flex parent to canvas when label gets manual x/y edits', () => {
-    const label = createNode({
-      id: 'label-1',
-      type: 'label',
-      parentId: 'container-1',
-      position: { x: 24, y: 24 },
-      metadata: { text: 'Label' },
-    });
-    const flexParent = createNode({
-      id: 'container-1',
-      type: 'container',
-      layout: {
-        mode: 'flex',
-        direction: 'column',
-        gap: 8,
-        padding: 16,
-        justify: 'start',
-        align: 'stretch',
-        sizing: 'fixed',
-      },
-    });
+	  it('promotes flex parent to canvas when label gets manual x/y edits', () => {
+	    const label = createNode({
+	      id: 'label-1',
+	      type: 'label',
+	      parentId: 'container-1',
+	      position: { x: 24, y: 24 },
+	      props: { name: 'Label', metadata: { text: 'Label' } },
+	    });
+	    const flexParent = createNode({
+	      id: 'container-1',
+	      type: 'container',
+	      props: {
+	        name: 'Container',
+	        metadata: {},
+	        layout: {
+	          display: 'flex',
+	          flexDirection: 'column',
+	          gap: '8px',
+	          padding: '16px',
+	          justifyContent: 'flex-start',
+	          alignItems: 'stretch',
+	        },
+	      },
+	    });
 
     expect(
       __designerShellTestUtils.shouldPromoteParentToCanvasForManualPosition(label, flexParent, {
@@ -320,19 +322,19 @@ describe('DesignerShell section fit utility', () => {
       parentId: 'container-1',
       position: { x: 24, y: 24 },
     });
-    const canvasParent = createNode({
-      id: 'container-1',
-      type: 'container',
-      layout: {
-        mode: 'canvas',
-        direction: 'column',
-        gap: 0,
-        padding: 0,
-        justify: 'start',
-        align: 'start',
-        sizing: 'fixed',
-      },
-    });
+	    const canvasParent = createNode({
+	      id: 'container-1',
+	      type: 'container',
+	      props: {
+	        name: 'Container',
+	        metadata: {},
+	        layout: {
+	          display: 'grid',
+	          gap: '0px',
+	          padding: '0px',
+	        },
+	      },
+	    });
 
     expect(
       __designerShellTestUtils.shouldPromoteParentToCanvasForManualPosition(text, canvasParent, {

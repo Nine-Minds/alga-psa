@@ -13,6 +13,21 @@ import { format } from 'date-fns';
 import toast from 'react-hot-toast';
 import { getAppointmentRequestDetails, cancelAppointmentRequest } from '@alga-psa/client-portal/actions';
 
+/** Safely convert a PG DATE (may be JS Date object) or string to YYYY-MM-DD */
+function normalizeDateValue(value: unknown): string | null {
+  if (!value) return null;
+  if (value instanceof Date) return value.toISOString().split('T')[0];
+  if (typeof value === 'string') return value.slice(0, 10);
+  return null;
+}
+
+/** Safely convert a PG TIME (may be string like "11:00:00") to HH:MM */
+function normalizeTimeValue(value: unknown): string | null {
+  if (!value) return null;
+  if (typeof value === 'string') return value.slice(0, 5);
+  return null;
+}
+
 interface AppointmentRequestDetails {
   appointment_request_id: string;
   service_id: string;
@@ -38,7 +53,8 @@ export function AppointmentRequestDetailsPage() {
   const params = useParams();
   const router = useRouter();
   const appointmentRequestId = params?.appointmentRequestId as string;
-  const { t } = useTranslation('clientPortal');
+  const { t } = useTranslation('features/appointments');
+  const { t: tCommon } = useTranslation('common');
 
   const [appointment, setAppointment] = useState<AppointmentRequestDetails | null>(null);
   const [loading, setLoading] = useState(true);
@@ -53,11 +69,11 @@ export function AppointmentRequestDetailsPage() {
       if (result.success && result.data) {
         setAppointment(result.data as unknown as AppointmentRequestDetails);
       } else {
-        setError(result.error || t('appointments.errors.loadFailed', 'Failed to load appointment details'));
+        setError(result.error || t('errors.loadFailed', 'Failed to load appointment details'));
       }
     } catch (err) {
       console.error('Error loading appointment:', err);
-      setError(t('appointments.errors.loadFailed', 'Failed to load appointment details'));
+      setError(t('errors.loadFailed', 'Failed to load appointment details'));
     } finally {
       setLoading(false);
     }
@@ -75,36 +91,41 @@ export function AppointmentRequestDetailsPage() {
     try {
       const result = await cancelAppointmentRequest({ appointment_request_id: appointmentRequestId });
       if (result.success) {
-        toast.success(t('appointments.messages.cancelSuccess', 'Appointment request cancelled'));
+        toast.success(t('messages.cancelSuccess', 'Appointment request cancelled'));
         setShowCancelConfirmation(false);
         loadAppointment();
       } else {
-        toast.error(result.error || t('appointments.messages.cancelFailed', 'Failed to cancel appointment'));
+        toast.error(result.error || t('messages.cancelFailed', 'Failed to cancel appointment'));
       }
     } catch (err) {
       console.error('Error cancelling appointment:', err);
-      toast.error(t('appointments.messages.cancelFailed', 'Failed to cancel appointment'));
+      toast.error(t('messages.cancelFailed', 'Failed to cancel appointment'));
     }
   };
 
   const getStatusBadge = (status: AppointmentRequestDetails['status']) => {
     const variants: Record<AppointmentRequestDetails['status'], { variant: 'default' | 'primary' | 'success' | 'warning' | 'error'; label: string }> = {
-      pending: { variant: 'warning', label: t('appointments.status.pending', 'Pending') },
-      approved: { variant: 'success', label: t('appointments.status.approved', 'Approved') },
-      declined: { variant: 'error', label: t('appointments.status.declined', 'Declined') },
-      cancelled: { variant: 'default', label: t('appointments.status.cancelled', 'Cancelled') }
+      pending: { variant: 'warning', label: t('status.pending', 'Pending') },
+      approved: { variant: 'success', label: t('status.approved', 'Approved') },
+      declined: { variant: 'error', label: t('status.declined', 'Declined') },
+      cancelled: { variant: 'default', label: t('status.cancelled', 'Cancelled') }
     };
 
     const config = variants[status];
     return <Badge variant={config.variant}>{config.label}</Badge>;
   };
 
-  const formatRequestedDate = (dateString: string) => {
+  const formatRequestedDateTime = (dateValue: unknown, timeValue: unknown) => {
+    const dateStr = normalizeDateValue(dateValue);
+    const timeStr = normalizeTimeValue(timeValue);
+    if (!dateStr || !timeStr) return 'N/A';
     try {
-      if (!dateString) return 'N/A';
-      const date = new Date(dateString + 'T00:00:00Z');
-      if (isNaN(date.getTime())) return 'N/A';
-      return format(date, 'EEEE, MMMM d, yyyy');
+      const dt = new Date(`${dateStr}T${timeStr}:00Z`);
+      if (isNaN(dt.getTime())) return 'N/A';
+      return dt.toLocaleString('en-US', {
+        weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',
+        hour: '2-digit', minute: '2-digit'
+      });
     } catch {
       return 'N/A';
     }
@@ -114,7 +135,7 @@ export function AppointmentRequestDetailsPage() {
     return (
       <div className="flex justify-center items-center min-h-[400px]">
         <Spinner size="sm" />
-        <span className="ml-3 text-gray-600">{t('common.loading', 'Loading...')}</span>
+        <span className="ml-3 text-gray-600">{tCommon('common.loading', 'Loading...')}</span>
       </div>
     );
   }
@@ -129,13 +150,13 @@ export function AppointmentRequestDetailsPage() {
           className="mb-4"
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
-          {t('appointments.backToAppointments', 'Back to Appointments')}
+          {t('backToAppointments', 'Back to Appointments')}
         </Button>
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center gap-3 text-red-600">
               <AlertCircle className="h-6 w-6" />
-              <p>{error || t('appointments.errors.notFound', 'Appointment request not found')}</p>
+              <p>{error || t('errors.notFound', 'Appointment request not found')}</p>
             </div>
           </CardContent>
         </Card>
@@ -159,7 +180,7 @@ export function AppointmentRequestDetailsPage() {
         onClick={handleClose}
       >
         <ArrowLeft className="h-4 w-4 mr-2" />
-        {t('appointments.backToAppointments', 'Back to Appointments')}
+        {t('backToAppointments', 'Back to Appointments')}
       </Button>
 
       <Card>
@@ -182,15 +203,15 @@ export function AppointmentRequestDetailsPage() {
             }`}>
               <div className="flex items-center gap-2">
                 <span className="text-sm font-medium">
-                  {appointment.status === 'approved' && t('appointments.details.statusApproved', 'Your appointment has been approved')}
-                  {appointment.status === 'pending' && t('appointments.details.statusPending', 'Your appointment request is being reviewed')}
-                  {appointment.status === 'declined' && t('appointments.details.statusDeclined', 'Your appointment request was declined')}
-                  {appointment.status === 'cancelled' && t('appointments.details.statusCancelled', 'This appointment request was cancelled')}
+                  {appointment.status === 'approved' && t('details.statusApproved', 'Your appointment has been approved')}
+                  {appointment.status === 'pending' && t('details.statusPending', 'Your appointment request is being reviewed')}
+                  {appointment.status === 'declined' && t('details.statusDeclined', 'Your appointment request was declined')}
+                  {appointment.status === 'cancelled' && t('details.statusCancelled', 'This appointment request was cancelled')}
                 </span>
               </div>
               {appointment.status === 'declined' && appointment.declined_reason && (
                 <div className="mt-2 text-sm text-red-800">
-                  <strong>{t('appointments.details.reason', 'Reason')}:</strong> {appointment.declined_reason}
+                  <strong>{t('details.reason', 'Reason')}:</strong> {appointment.declined_reason}
                 </div>
               )}
             </div>
@@ -201,7 +222,7 @@ export function AppointmentRequestDetailsPage() {
                 <FileText className="h-5 w-5 text-gray-500 mt-0.5" />
                 <div className="flex-1">
                   <div className="text-sm font-medium text-gray-700">
-                    {t('appointments.details.reference', 'Reference Number')}
+                    {t('details.reference', 'Reference Number')}
                   </div>
                   <div className="text-sm font-mono text-gray-900">
                     {appointment.appointment_request_id.slice(0, 8).toUpperCase()}
@@ -213,14 +234,14 @@ export function AppointmentRequestDetailsPage() {
                 <Calendar className="h-5 w-5 text-gray-500 mt-0.5" />
                 <div className="flex-1">
                   <div className="text-sm font-medium text-gray-700">
-                    {t('appointments.details.dateTime', 'Date & Time')}
+                    {t('details.dateTime', 'Date & Time')}
                   </div>
                   <div className="text-sm text-gray-900">
-                    {formatRequestedDate(appointment.requested_date)}
+                    {formatRequestedDateTime(appointment.requested_date, appointment.requested_time)}
                   </div>
                   <div className="text-sm text-gray-600 mt-1 flex items-center gap-1">
                     <Clock className="h-4 w-4" />
-                    {appointment.requested_time || 'N/A'} ({appointment.requested_duration} {t('appointments.table.minutes', 'minutes')})
+                    {appointment.requested_duration} {t('table.minutes', 'minutes')}
                   </div>
                 </div>
               </div>
@@ -230,7 +251,7 @@ export function AppointmentRequestDetailsPage() {
                   <User className="h-5 w-5 text-gray-500 mt-0.5" />
                   <div className="flex-1">
                     <div className="text-sm font-medium text-gray-700">
-                      {t('appointments.details.technician', 'Preferred Technician')}
+                      {t('details.technician', 'Preferred Technician')}
                     </div>
                     <div className="text-sm text-gray-900">
                       {preferredTechnicianName}
@@ -244,7 +265,7 @@ export function AppointmentRequestDetailsPage() {
                   <FileText className="h-5 w-5 text-gray-500 mt-0.5" />
                   <div className="flex-1">
                     <div className="text-sm font-medium text-gray-700">
-                      {t('appointments.details.linkedTicket', 'Linked Ticket')}
+                      {t('details.linkedTicket', 'Linked Ticket')}
                     </div>
                     <div className="text-sm text-gray-900">{appointment.ticket_title}</div>
                   </div>
@@ -256,7 +277,7 @@ export function AppointmentRequestDetailsPage() {
                   <FileText className="h-5 w-5 text-gray-500 mt-0.5" />
                   <div className="flex-1">
                     <div className="text-sm font-medium text-gray-700">
-                      {t('appointments.details.description', 'Description')}
+                      {t('details.description', 'Description')}
                     </div>
                     <div className="text-sm text-gray-900 whitespace-pre-wrap">
                       {appointment.description}
@@ -273,7 +294,7 @@ export function AppointmentRequestDetailsPage() {
                     if (!isNaN(date.getTime())) {
                       return (
                         <div className="text-xs text-gray-500">
-                          {t('appointments.details.created', 'Requested')}: {format(date, 'MMM d, yyyy h:mm a')}
+                          {t('details.created', 'Requested')}: {format(date, 'MMM d, yyyy h:mm a')}
                         </div>
                       );
                     }
@@ -286,7 +307,7 @@ export function AppointmentRequestDetailsPage() {
                     if (!isNaN(date.getTime())) {
                       return (
                         <div className="text-xs text-gray-500 mt-1">
-                          {t('appointments.details.approved', 'Approved')}: {format(date, 'MMM d, yyyy h:mm a')} by {approverName}
+                          {t('details.approved', 'Approved')}: {format(date, 'MMM d, yyyy h:mm a')} by {approverName}
                         </div>
                       );
                     }
@@ -304,7 +325,7 @@ export function AppointmentRequestDetailsPage() {
                   variant="destructive"
                   onClick={() => setShowCancelConfirmation(true)}
                 >
-                  {t('appointments.details.cancelButton', 'Cancel Request')}
+                  {t('details.cancelButton', 'Cancel Request')}
                 </Button>
               </div>
             )}
@@ -317,10 +338,10 @@ export function AppointmentRequestDetailsPage() {
         isOpen={showCancelConfirmation}
         onClose={() => setShowCancelConfirmation(false)}
         onConfirm={handleCancelAppointment}
-        title={t('appointments.cancel.title', 'Cancel Appointment Request')}
-        message={t('appointments.cancel.message', 'Are you sure you want to cancel this appointment request? This action cannot be undone.')}
-        confirmLabel={t('appointments.cancel.confirm', 'Yes, Cancel')}
-        cancelLabel={t('common.cancel', 'Cancel')}
+        title={t('cancel.title', 'Cancel Appointment Request')}
+        message={t('cancel.message', 'Are you sure you want to cancel this appointment request? This action cannot be undone.')}
+        confirmLabel={t('cancel.confirm', 'Yes, Cancel')}
+        cancelLabel={tCommon('common.cancel', 'Cancel')}
       />
     </div>
   );

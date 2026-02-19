@@ -1,0 +1,537 @@
+[
+  {
+    "id": "T001",
+    "description": "AST schema accepts a valid minimal document template",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F002"
+    ],
+    "type": "unit"
+  },
+  {
+    "id": "T002",
+    "description": "AST schema rejects unknown node type with actionable validation error",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F002"
+    ],
+    "type": "unit"
+  },
+  {
+    "id": "T003",
+    "description": "AST schema enforces required binding metadata for dynamic table nodes",
+    "implemented": true,
+    "featureIds": [
+      "F003",
+      "F002"
+    ],
+    "type": "unit"
+  },
+  {
+    "id": "T004",
+    "description": "AST schema enforces transform operation payload shapes (filter/sort/group/aggregate/computed)",
+    "implemented": true,
+    "featureIds": [
+      "F004",
+      "F002"
+    ],
+    "type": "unit"
+  },
+  {
+    "id": "T005",
+    "description": "AST schema accepts optional `strategyId` on transform nodes",
+    "implemented": true,
+    "featureIds": [
+      "F005",
+      "F002"
+    ],
+    "type": "unit"
+  },
+  {
+    "id": "T006",
+    "description": "Strategy registry resolves known strategy IDs and rejects unknown IDs",
+    "implemented": true,
+    "featureIds": [
+      "F006",
+      "F029"
+    ],
+    "type": "unit"
+  },
+  {
+    "id": "T007",
+    "description": "Evaluator applies filter transforms to invoice items correctly",
+    "implemented": true,
+    "featureIds": [
+      "F007",
+      "F004"
+    ],
+    "type": "unit"
+  },
+  {
+    "id": "T008",
+    "description": "Evaluator applies multi-key sort transforms deterministically",
+    "implemented": true,
+    "featureIds": [
+      "F007",
+      "F008"
+    ],
+    "type": "unit"
+  },
+  {
+    "id": "T009",
+    "description": "Evaluator applies grouping transforms with expected bucket keys",
+    "implemented": true,
+    "featureIds": [
+      "F007",
+      "F004"
+    ],
+    "type": "unit"
+  },
+  {
+    "id": "T010",
+    "description": "Evaluator computes aggregate totals (sum/count/avg) accurately",
+    "implemented": true,
+    "featureIds": [
+      "F007",
+      "F004"
+    ],
+    "type": "unit"
+  },
+  {
+    "id": "T011",
+    "description": "Evaluator computes derived fields using declared expressions",
+    "implemented": true,
+    "featureIds": [
+      "F007",
+      "F004"
+    ],
+    "type": "unit"
+  },
+  {
+    "id": "T012",
+    "description": "Evaluator executes allowlisted strategy hook for custom group key generation",
+    "implemented": true,
+    "featureIds": [
+      "F005",
+      "F006",
+      "F007"
+    ],
+    "type": "unit"
+  },
+  {
+    "id": "T013",
+    "description": "Evaluator reports explicit error when strategy hook throws",
+    "implemented": true,
+    "featureIds": [
+      "F009",
+      "F006"
+    ],
+    "type": "unit"
+  },
+  {
+    "id": "T014",
+    "description": "Evaluator output is byte-for-byte stable for same AST+input fixture",
+    "implemented": true,
+    "featureIds": [
+      "F008"
+    ],
+    "type": "unit"
+  },
+  {
+    "id": "T015",
+    "description": "Renderer produces HTML for static text/field/table/totals node combinations",
+    "implemented": true,
+    "featureIds": [
+      "F010"
+    ],
+    "type": "unit"
+  },
+  {
+    "id": "T016",
+    "description": "Renderer applies style declarations and class tokens consistently",
+    "implemented": true,
+    "featureIds": [
+      "F010"
+    ],
+    "type": "unit"
+  },
+  {
+    "id": "T017",
+    "description": "Renderer escapes unsafe text content to prevent HTML injection",
+    "implemented": true,
+    "featureIds": [
+      "F010",
+      "F029"
+    ],
+    "type": "unit"
+  },
+  {
+    "id": "T018",
+    "description": "Server render helper returns complete HTML document wrapper for headless PDF",
+    "implemented": true,
+    "featureIds": [
+      "F011"
+    ],
+    "type": "unit"
+  },
+  {
+    "id": "T019",
+    "description": "Designer export returns valid AST payload from current canvas state",
+    "implemented": true,
+    "featureIds": [
+      "F012",
+      "F001"
+    ],
+    "type": "integration"
+  },
+  {
+    "id": "T020",
+    "description": "Designer hydration reconstructs workspace from persisted AST",
+    "implemented": true,
+    "featureIds": [
+      "F013"
+    ],
+    "type": "integration"
+  },
+  {
+    "id": "T021",
+    "description": "InvoiceTemplateEditor save path no longer calls `extractInvoiceDesignerIr`",
+    "implemented": true,
+    "featureIds": [
+      "F014",
+      "F025"
+    ],
+    "type": "integration"
+  },
+  {
+    "id": "T022",
+    "description": "InvoiceTemplateEditor save path no longer calls `generateAssemblyScriptFromIr`",
+    "implemented": true,
+    "featureIds": [
+      "F014",
+      "F025"
+    ],
+    "type": "integration"
+  },
+  {
+    "id": "T023",
+    "description": "Template interfaces include AST field and compile without legacy compile-required assumptions",
+    "implemented": true,
+    "featureIds": [
+      "F015"
+    ],
+    "type": "unit"
+  },
+  {
+    "id": "T024",
+    "description": "Template save persists AST payload for tenant templates",
+    "implemented": true,
+    "featureIds": [
+      "F016"
+    ],
+    "type": "integration"
+  },
+  {
+    "id": "T025",
+    "description": "Template fetch returns AST payload for tenant templates",
+    "implemented": true,
+    "featureIds": [
+      "F016"
+    ],
+    "type": "integration"
+  },
+  {
+    "id": "T026",
+    "description": "Standard templates are loadable via AST definitions",
+    "implemented": true,
+    "featureIds": [
+      "F017"
+    ],
+    "type": "integration"
+  },
+  {
+    "id": "T027",
+    "description": "Preview action executes AST validation + evaluator + renderer pipeline",
+    "implemented": true,
+    "featureIds": [
+      "F018",
+      "F002",
+      "F007",
+      "F010"
+    ],
+    "type": "integration"
+  },
+  {
+    "id": "T028",
+    "description": "Preview action does not execute AssemblyScript compiler commands",
+    "implemented": true,
+    "featureIds": [
+      "F018",
+      "F025"
+    ],
+    "type": "integration"
+  },
+  {
+    "id": "T029",
+    "description": "Preview action no longer references Wasm executor modules",
+    "implemented": true,
+    "featureIds": [
+      "F018",
+      "F025"
+    ],
+    "type": "integration"
+  },
+  {
+    "id": "T030",
+    "description": "Preview sample source continues rendering output after pipeline swap",
+    "implemented": true,
+    "featureIds": [
+      "F019"
+    ],
+    "type": "component"
+  },
+  {
+    "id": "T031",
+    "description": "Preview existing-invoice source continues rendering output after pipeline swap",
+    "implemented": true,
+    "featureIds": [
+      "F019"
+    ],
+    "type": "component"
+  },
+  {
+    "id": "T032",
+    "description": "Preview status UI maps to shape/render/verify phases correctly",
+    "implemented": true,
+    "featureIds": [
+      "F020"
+    ],
+    "type": "component"
+  },
+  {
+    "id": "T033",
+    "description": "Preview surfaces structured AST validation errors",
+    "implemented": true,
+    "featureIds": [
+      "F021",
+      "F002"
+    ],
+    "type": "component"
+  },
+  {
+    "id": "T034",
+    "description": "Preview surfaces structured evaluator/strategy errors",
+    "implemented": true,
+    "featureIds": [
+      "F021",
+      "F009"
+    ],
+    "type": "component"
+  },
+  {
+    "id": "T035",
+    "description": "PDF generation invoice path renders via shared AST renderer helper",
+    "implemented": true,
+    "featureIds": [
+      "F022",
+      "F011"
+    ],
+    "type": "integration"
+  },
+  {
+    "id": "T036",
+    "description": "PDF generation invoice path no longer calls `executeWasmTemplate`",
+    "implemented": true,
+    "featureIds": [
+      "F022",
+      "F025",
+      "F027"
+    ],
+    "type": "integration"
+  },
+  {
+    "id": "T037",
+    "description": "Preview and PDF produce equivalent semantic output for same AST + invoice fixture",
+    "implemented": true,
+    "featureIds": [
+      "F023",
+      "F033"
+    ],
+    "type": "integration"
+  },
+  {
+    "id": "T038",
+    "description": "Preview cache module for compile artifacts is removed and unreferenced",
+    "implemented": true,
+    "featureIds": [
+      "F024",
+      "F025"
+    ],
+    "type": "unit"
+  },
+  {
+    "id": "T039",
+    "description": "Deleted compiler/executor files are absent from repo and import graph",
+    "implemented": true,
+    "featureIds": [
+      "F025"
+    ],
+    "type": "integration"
+  },
+  {
+    "id": "T040",
+    "description": "Build/test pass without AssemblyScript compile helper module",
+    "implemented": true,
+    "featureIds": [
+      "F025"
+    ],
+    "type": "integration"
+  },
+  {
+    "id": "T041",
+    "description": "saveInvoiceTemplate path does not invoke compileAndSaveTemplate for AST templates",
+    "implemented": true,
+    "featureIds": [
+      "F026"
+    ],
+    "type": "integration"
+  },
+  {
+    "id": "T042",
+    "description": "Template persistence no longer requires or writes Wasm binary for runtime rendering",
+    "implemented": true,
+    "featureIds": [
+      "F026",
+      "F027"
+    ],
+    "type": "integration"
+  },
+  {
+    "id": "T043",
+    "description": "Invoice rendering path does not call `getCompiledWasm` for AST templates",
+    "implemented": true,
+    "featureIds": [
+      "F027",
+      "F022"
+    ],
+    "type": "integration"
+  },
+  {
+    "id": "T044",
+    "description": "Compatibility behavior is defined when legacy columns exist but AST is canonical",
+    "implemented": true,
+    "featureIds": [
+      "F028"
+    ],
+    "type": "integration"
+  },
+  {
+    "id": "T045",
+    "description": "Runtime rejects non-allowlisted strategy IDs even if present in AST payload",
+    "implemented": true,
+    "featureIds": [
+      "F029",
+      "F006"
+    ],
+    "type": "integration"
+  },
+  {
+    "id": "T046",
+    "description": "Unit suite covers transform composition order (filter -> sort -> group -> aggregate)",
+    "implemented": true,
+    "featureIds": [
+      "F030",
+      "F007"
+    ],
+    "type": "unit"
+  },
+  {
+    "id": "T047",
+    "description": "Unit suite covers empty/edge invoice-item arrays for grouping and totals",
+    "implemented": true,
+    "featureIds": [
+      "F030",
+      "F007"
+    ],
+    "type": "unit"
+  },
+  {
+    "id": "T048",
+    "description": "Integration suite validates preview pipeline with sample data fixtures",
+    "implemented": true,
+    "featureIds": [
+      "F031"
+    ],
+    "type": "integration"
+  },
+  {
+    "id": "T049",
+    "description": "Integration suite validates preview pipeline with existing invoice query payload",
+    "implemented": true,
+    "featureIds": [
+      "F031"
+    ],
+    "type": "integration"
+  },
+  {
+    "id": "T050",
+    "description": "Integration suite validates PDF generation pipeline with AST template fixture",
+    "implemented": true,
+    "featureIds": [
+      "F032"
+    ],
+    "type": "integration"
+  },
+  {
+    "id": "T051",
+    "description": "Parity test verifies totals values match between preview and PDF paths",
+    "implemented": true,
+    "featureIds": [
+      "F033"
+    ],
+    "type": "integration"
+  },
+  {
+    "id": "T052",
+    "description": "Parity test verifies grouped line-item section ordering matches between preview and PDF paths",
+    "implemented": true,
+    "featureIds": [
+      "F033",
+      "F004"
+    ],
+    "type": "integration"
+  },
+  {
+    "id": "T053",
+    "description": "Docs describe AST model, evaluator pipeline, and allowed strategy extension mechanism",
+    "implemented": true,
+    "featureIds": [
+      "F034"
+    ],
+    "type": "docs"
+  },
+  {
+    "id": "T054",
+    "description": "Docs include deletion/removal notes for compiler/Wasm runtime architecture",
+    "implemented": true,
+    "featureIds": [
+      "F034",
+      "F025"
+    ],
+    "type": "docs"
+  },
+  {
+    "id": "T055",
+    "description": "End-to-end author flow passes: design edit -> AST preview -> save -> PDF render",
+    "implemented": true,
+    "featureIds": [
+      "F012",
+      "F018",
+      "F016",
+      "F022"
+    ],
+    "type": "e2e"
+  }
+]

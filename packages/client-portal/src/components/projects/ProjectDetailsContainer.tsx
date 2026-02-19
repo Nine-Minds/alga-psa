@@ -14,7 +14,7 @@ interface ProjectDetailsContainerProps {
 
 export default function ProjectDetailsContainer({ project }: ProjectDetailsContainerProps) {
   const router = useRouter();
-  const { t } = useTranslation('clientPortal');
+  const { t } = useTranslation('features/projects');
 
   const handleBack = () => {
     router.push('/client-portal/projects');
@@ -23,7 +23,7 @@ export default function ProjectDetailsContainer({ project }: ProjectDetailsConta
   if (!project || !project.project_id) {
     return (
       <div id="project-invalid-data" className="p-4 bg-red-50 border border-red-200 rounded-lg">
-        <p className="text-red-700">{t('projects.invalidProjectData', 'Invalid project data')}</p>
+        <p className="text-red-700">{t('invalidProjectData', 'Invalid project data')}</p>
       </div>
     );
   }
@@ -32,7 +32,7 @@ export default function ProjectDetailsContainer({ project }: ProjectDetailsConta
     <div className="w-full">
       <Button id="back-to-projects-button" variant="soft" onClick={handleBack} className="mb-4">
         <ArrowLeft className="h-4 w-4 mr-2" />
-        {t('projects.backToProjects', 'Back to Projects')}
+        {t('backToProjects', 'Back to Projects')}
       </Button>
 
       <ProjectDetailView project={project} />
