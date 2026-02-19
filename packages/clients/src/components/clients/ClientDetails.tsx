@@ -38,6 +38,7 @@ import { DeleteEntityDialog } from '@alga-psa/ui';
 import CustomTabs from '@alga-psa/ui/components/CustomTabs';
 import { QuickAddTicket } from '@alga-psa/tickets/components/QuickAddTicket';
 import { Button } from '@alga-psa/ui/components/Button';
+import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import { ExternalLink, Trash2 } from 'lucide-react';
 import BackNav from '@alga-psa/ui/components/BackNav';
 import InteractionsFeed from '../interactions/InteractionsFeed';
@@ -774,16 +775,6 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     return (contacts ?? []).filter((c) => !c?.is_inactive);
   }, [contacts]);
 
-  const defaultContactOptions: SelectOption[] = useMemo(() => {
-    return [
-      { value: '', label: 'None' },
-      ...clientActiveContacts.map((c) => ({
-        value: c.contact_name_id,
-        label: c.email ? `${c.full_name} (${c.email})` : c.full_name,
-      })),
-    ];
-  }, [clientActiveContacts]);
-
   const handleDefaultContactChange = useCallback((contactId: string) => {
     const selected = contactId ? clientActiveContacts.find((c) => c.contact_name_id === contactId) : undefined;
     const selectedName = contactId ? (selected?.full_name ?? '') : '';
@@ -914,13 +905,14 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
                 automationId="default-contact-field"
               >
                 <Text as="label" size="2" className="text-gray-700 font-medium">Default contact</Text>
-                <CustomSelect
+                <ContactPicker
                   id="client-default-contact-select"
+                  contacts={clientActiveContacts}
                   value={editedClient.properties?.primary_contact_id || ''}
                   onValueChange={handleDefaultContactChange}
-                  options={defaultContactOptions}
-                  placeholder={defaultContactOptions.length ? "Select default contact" : "No active contacts"}
-                  className="!w-full"
+                  clientId={editedClient.client_id}
+                  label="Default contact"
+                  placeholder={clientActiveContacts.length ? "Select default contact" : "No active contacts"}
                 />
               </FieldContainer>
 
@@ -1309,7 +1301,6 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     client.client_name, 
     handleBillingConfigSave, 
     contacts, 
-    defaultContactOptions,
     handleDefaultContactChange,
     currentUser, 
     documents, 

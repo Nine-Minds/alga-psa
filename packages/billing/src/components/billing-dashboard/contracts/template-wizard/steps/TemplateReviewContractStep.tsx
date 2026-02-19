@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
-import { TemplateWizardData } from '../TemplateWizard';
+import { BucketOverlayInput, TemplateWizardData } from '../TemplateWizard';
 import { Badge } from '@alga-psa/ui/components/Badge';
 
 interface TemplateReviewContractStepProps {
@@ -13,6 +13,38 @@ interface TemplateReviewContractStepProps {
 export function TemplateReviewContractStep({
   data,
 }: TemplateReviewContractStepProps) {
+  const formatBucketSummary = (
+    overlay?: BucketOverlayInput | null,
+    mode: 'hours' | 'usage' = 'hours',
+    unitOfMeasure?: string
+  ): string | null => {
+    if (!overlay) return null;
+
+    const segments: string[] = [];
+    if (overlay.total_minutes != null) {
+      if (mode === 'hours') {
+        segments.push(`${(overlay.total_minutes / 60).toFixed(2)} hours included`);
+      } else {
+        segments.push(`${overlay.total_minutes} ${unitOfMeasure || 'units'} included`);
+      }
+    }
+
+    if (overlay.overage_rate != null) {
+      const unitLabel = mode === 'hours' ? 'hour' : unitOfMeasure || 'unit';
+      segments.push(`Overage $${(overlay.overage_rate / 100).toFixed(2)}/${unitLabel}`);
+    }
+
+    if (overlay.allow_rollover) {
+      segments.push('Rollover enabled');
+    }
+
+    if (overlay.billing_period) {
+      segments.push(`Period: ${overlay.billing_period}`);
+    }
+
+    return segments.length > 0 ? segments.join(' • ') : null;
+  };
+
   return (
     <div className="space-y-4">
       <h3 className="text-lg font-semibold">Review Template</h3>
@@ -116,6 +148,11 @@ export function TemplateReviewContractStep({
                     <p className="font-medium text-[rgb(var(--color-text-900))]">
                       {service.service_name || 'Unnamed Service'}
                     </p>
+                    {formatBucketSummary(service.bucket_overlay, 'hours') && (
+                      <div className="text-xs text-gray-600 mt-1">
+                        Bucket: {formatBucketSummary(service.bucket_overlay, 'hours')}
+                      </div>
+                    )}
                   </div>
                 ))}
               </CardContent>
@@ -139,6 +176,11 @@ export function TemplateReviewContractStep({
                     {service.unit_of_measure && (
                       <div className="text-xs text-[rgb(var(--color-text-500))] mt-1">
                         Unit: {service.unit_of_measure}
+                      </div>
+                    )}
+                    {formatBucketSummary(service.bucket_overlay, 'usage', service.unit_of_measure) && (
+                      <div className="text-xs text-gray-600 mt-1">
+                        Bucket: {formatBucketSummary(service.bucket_overlay, 'usage', service.unit_of_measure)}
                       </div>
                     )}
                   </div>

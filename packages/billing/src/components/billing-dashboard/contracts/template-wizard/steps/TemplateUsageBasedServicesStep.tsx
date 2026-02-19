@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { TemplateWizardData } from '../TemplateWizard';
+import { BucketOverlayInput, TemplateWizardData } from '../TemplateWizard';
 import { Label } from '@alga-psa/ui/components/Label';
 import { ServiceCatalogPicker, ServiceCatalogPickerItem } from '../../ServiceCatalogPicker';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -9,6 +9,8 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { BarChart3, Plus, X } from 'lucide-react';
 import { TemplateServicePreviewSection } from '../TemplateServicePreviewSection';
+import { SwitchWithLabel } from '@alga-psa/ui/components/SwitchWithLabel';
+import { BucketOverlayFields } from '../../BucketOverlayFields';
 
 interface TemplateUsageBasedServicesStepProps {
   data: TemplateWizardData;
@@ -23,7 +25,7 @@ export function TemplateUsageBasedServicesStep({
     updateData({
       usage_services: [
         ...(data.usage_services ?? []),
-        { service_id: '', service_name: '', unit_of_measure: '' },
+        { service_id: '', service_name: '', unit_of_measure: '', bucket_overlay: undefined },
       ],
     });
   };
@@ -47,6 +49,39 @@ export function TemplateUsageBasedServicesStep({
   const handleUnitChange = (index: number, unit: string) => {
     const next = [...(data.usage_services ?? [])];
     next[index] = { ...next[index], unit_of_measure: unit };
+    updateData({ usage_services: next });
+  };
+
+  const defaultOverlay = (billingFrequency: string): BucketOverlayInput => ({
+    total_minutes: undefined,
+    overage_rate: undefined,
+    allow_rollover: false,
+    billing_period: billingFrequency === 'weekly' ? 'weekly' : 'monthly',
+  });
+
+  const toggleBucketOverlay = (index: number, enabled: boolean) => {
+    const next = [...(data.usage_services ?? [])];
+    if (enabled) {
+      const existing = next[index]?.bucket_overlay;
+      next[index] = {
+        ...next[index],
+        bucket_overlay: existing ? { ...existing } : defaultOverlay(data.billing_frequency),
+      };
+    } else {
+      next[index] = {
+        ...next[index],
+        bucket_overlay: undefined,
+      };
+    }
+    updateData({ usage_services: next });
+  };
+
+  const updateBucketOverlay = (index: number, overlay: BucketOverlayInput) => {
+    const next = [...(data.usage_services ?? [])];
+    next[index] = {
+      ...next[index],
+      bucket_overlay: { ...overlay },
+    };
     updateData({ usage_services: next });
   };
 
@@ -144,6 +179,24 @@ export function TemplateUsageBasedServicesStep({
                     placeholder="e.g., GB, API call, user"
                   />
                   <p className="text-xs text-[rgb(var(--color-text-400))]">Override the default unit of measure for this service.</p>
+                </div>
+
+                <div className="space-y-3 pt-2 border-t border-dashed border-blue-100">
+                  <SwitchWithLabel
+                    label="Set bucket allocation"
+                    checked={Boolean(service.bucket_overlay)}
+                    onCheckedChange={(checked) => toggleBucketOverlay(index, Boolean(checked))}
+                  />
+                  {service.bucket_overlay && (
+                    <BucketOverlayFields
+                      mode="usage"
+                      unitLabel={service.unit_of_measure}
+                      value={service.bucket_overlay ?? defaultOverlay(data.billing_frequency)}
+                      onChange={(next) => updateBucketOverlay(index, next)}
+                      automationId={`template-usage-bucket-${index}`}
+                      billingFrequency={data.billing_frequency}
+                    />
+                  )}
                 </div>
               </div>
 
