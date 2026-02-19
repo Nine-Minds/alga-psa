@@ -8,12 +8,14 @@ interface SidebarSubMenuItemProps {
   item: MenuItem;
   parentId: string;
   isActive: (path: string) => boolean;
+  onMenuItemClick?: (href?: string) => void;
 }
 
 const SidebarSubMenuItem: React.FC<SidebarSubMenuItemProps> = ({
   item,
   parentId,
   isActive,
+  onMenuItemClick,
 }) => {
   const { automationIdProps, updateMetadata } = useAutomationIdAndRegister<ButtonComponent>({
     type: 'button',
@@ -26,6 +28,7 @@ const SidebarSubMenuItem: React.FC<SidebarSubMenuItemProps> = ({
     <Link prefetch={false}
       href={item.href || '#'}
       className={`flex items-center px-4 py-2 hover:bg-sidebar-hover ${isActive(item.href || '#') ? 'bg-[rgb(var(--color-primary-500)/0.2)]' : ''}`}
+      onClick={() => onMenuItemClick?.(item.href)}
       {...automationIdProps}
     >
       <item.icon className="h-4 w-4 mr-2 flex-shrink-0" />

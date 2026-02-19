@@ -12,6 +12,7 @@ interface SidebarMenuItemProps {
   sidebarOpen: boolean;
   openSubmenu: string | null;
   onToggleSubmenu: (name: string) => void;
+  onMenuItemClick?: (href?: string) => void;
 }
 
 const SidebarMenuItem: React.FC<SidebarMenuItemProps> = ({
@@ -21,6 +22,7 @@ const SidebarMenuItem: React.FC<SidebarMenuItemProps> = ({
   sidebarOpen,
   openSubmenu,
   onToggleSubmenu,
+  onMenuItemClick,
 }) => {
   const hasActiveSubItem = item.subItems?.some((subItem) => isActive(subItem.href || '')) ?? false;
 
@@ -51,7 +53,7 @@ const SidebarMenuItem: React.FC<SidebarMenuItemProps> = ({
               {content}
             </a>
           ) : (
-            <Link prefetch={false} href={item.href} className="flex items-center min-w-0 flex-1">
+            <Link prefetch={false} href={item.href} className="flex items-center min-w-0 flex-1" onClick={() => onMenuItemClick?.(item.href)}>
               {content}
             </Link>
           )
@@ -118,6 +120,7 @@ const SidebarMenuItem: React.FC<SidebarMenuItemProps> = ({
       href={item.href || '#'}
       className={`flex items-center px-4 py-2 hover:bg-sidebar-hover ${isActive(item.href || '#') ? 'bg-[rgb(var(--color-primary-500)/0.2)]' : ''}`}
       data-automation-id={`sidebar-menu-${id}`}
+      onClick={() => onMenuItemClick?.(item.href)}
     >
       {linkContent}
     </Link>
