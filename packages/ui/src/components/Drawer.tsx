@@ -82,6 +82,13 @@ const Drawer = ({
         <Dialog.Content
           className={`fixed inset-y-0 right-0 ${widthClasses} bg-[rgb(var(--color-card))] shadow-lg focus:outline-none overflow-y-auto transform transition-all duration-300 ease-in-out will-change-transform data-[state=open]:translate-x-0 data-[state=closed]:translate-x-full data-[state=closed]:opacity-0 data-[state=open]:opacity-100 ${drawerVariant === 'document' ? 'ticket-document-drawer' : ''} ${isInDrawer ? 'z-[61]' : 'z-50'}`}
           style={isInsideDialog ? { ...widthStyle, pointerEvents: 'auto' } : widthStyle}
+          onOpenAutoFocus={(e) => {
+            // Prevent Radix from auto-focusing the first tabbable child element.
+            // This avoids unwanted focus rings (e.g. on the avatar edit button) when
+            // the drawer opens. The Dialog.Content itself receives focus instead
+            // (styled with focus:outline-none).
+            e.preventDefault();
+          }}
           onCloseAutoFocus={(e) => e.preventDefault()}
           onEscapeKeyDown={isInsideDialog ? (e) => e.stopPropagation() : undefined}
           onInteractOutside={isInsideDialog ? (e) => e.preventDefault() : undefined}

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
+import { type NavMode } from "@/config/menuConfig";
 import SidebarWithFeatureFlags from "./SidebarWithFeatureFlags";
 import Header from "./Header";
 import Body from "./Body";
@@ -24,16 +25,19 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
   const searchParams = useSearchParams();
   const [aiAssistantEnabled, setAiAssistantEnabled] = useState(false);
 
-  // Track page type for sidebar mode switching
-  const isOnSettingsPage = pathname?.startsWith('/msp/settings') ?? false;
-  const isOnBillingPage = pathname?.startsWith('/msp/billing') ?? false;
-  const isOnExtensionsPage = pathname?.startsWith('/msp/extensions') ?? false;
+  // Determine sidebar mode from a path prefix
+  const modeForPath = (path: string): NavMode => {
+    if (path.startsWith('/msp/settings')) return 'settings';
+    if (path.startsWith('/msp/billing')) return 'billing';
+    if (path.startsWith('/msp/extensions')) return 'extensions';
+    return 'main';
+  };
 
   // Determine default sidebar mode based on current route
-  const defaultSidebarMode = isOnSettingsPage ? 'settings' : isOnBillingPage ? 'billing' : isOnExtensionsPage ? 'extensions' : 'main';
+  const defaultSidebarMode = modeForPath(pathname ?? '/');
 
   // Allow overriding the mode (e.g., show main menu while on settings page)
-  const [modeOverride, setModeOverride] = useState<'main' | null>(null);
+  const [modeOverride, setModeOverride] = useState<NavMode | null>(null);
 
   // Reset mode override when navigating to any new page (including query param changes)
   // This ensures that clicking a menu item (e.g., Billing) after "Back to Main"
@@ -48,6 +52,24 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
   // Callback for "Back to Main" - just switches to main menu without navigation
   const handleBackToMain = () => {
     setModeOverride('main');
+  };
+
+  // Callback for when any menu item is clicked.
+  // For same-path clicks (URL won't change, so useEffect won't fire),
+  // set the override to the target mode immediately.
+  // For different-path clicks, leave the override alone - the useEffect
+  // will handle the mode switch when the URL changes.
+  const handleMenuItemClick = (href?: string) => {
+    if (!href) return;
+
+    const [targetPath] = href.split('?');
+
+    // Different pathname → real navigation will happen → useEffect handles it
+    if (pathname !== targetPath) return;
+
+    // Same pathname → URL may not change → set override manually
+    const targetMode = modeForPath(targetPath);
+    setModeOverride(targetMode === 'main' ? null : targetMode);
   };
 
   // Sidebar collapsed state
@@ -225,6 +247,7 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
             disableTransition={disableTransition}
             mode={sidebarMode}
             onBackToMain={handleBackToMain}
+            onMenuItemClick={handleMenuItemClick}
           />
           <div className="flex-1 flex flex-col overflow-hidden">
             <Header

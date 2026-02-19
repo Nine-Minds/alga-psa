@@ -34,6 +34,7 @@ interface SidebarProps {
   disableTransition?: boolean;
   mode?: NavMode;
   onBackToMain?: () => void;
+  onMenuItemClick?: (href?: string) => void;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({
@@ -44,7 +45,8 @@ const Sidebar: React.FC<SidebarProps> = ({
   menuSections,
   disableTransition = false,
   mode = 'main',
-  onBackToMain
+  onBackToMain,
+  onMenuItemClick
 }): React.JSX.Element => {
   const appVersion = getAppVersion();
   const pathname = usePathname();
@@ -144,6 +146,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             sidebarOpen={sidebarOpen}
             openSubmenu={openSubmenu}
             onToggleSubmenu={toggleSubmenu}
+            onMenuItemClick={onMenuItemClick}
           />
           {item.subItems && openSubmenu === item.name && (
             <ul className="ml-4 mt-2 space-y-1">
@@ -153,6 +156,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                     item={subItem}
                     parentId={`menu-${item.name.toLowerCase().replace(/\s+/g, '-')}`}
                     isActive={isActive}
+                    onMenuItemClick={onMenuItemClick}
                   />
                 </li>
               ))}
@@ -174,6 +178,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                 sidebarOpen={sidebarOpen}
                 openSubmenu={openSubmenu}
                 onToggleSubmenu={toggleSubmenu}
+                onMenuItemClick={onMenuItemClick}
               />
               {item.subItems && openSubmenu === item.name && (
                 <ul className="ml-4 mt-2 space-y-1">
@@ -183,6 +188,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                         item={subItem}
                         parentId={`menu-${item.name.toLowerCase().replace(/\s+/g, '-')}`}
                         isActive={isActive}
+                        onMenuItemClick={onMenuItemClick}
                       />
                     </li>
                   ))}
@@ -382,6 +388,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                   sidebarOpen={sidebarOpen}
                   openSubmenu={openSubmenu}
                   onToggleSubmenu={toggleSubmenu}
+                  onMenuItemClick={onMenuItemClick}
                 />
                 {item.subItems && openSubmenu === item.name && (
                   <ul className="ml-4 mt-2 space-y-1">
@@ -391,6 +398,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                           item={subItem}
                           parentId={`bottom-menu-${item.name.toLowerCase().replace(/\s+/g, '-')}`}
                           isActive={isActive}
+                          onMenuItemClick={onMenuItemClick}
                         />
                       </li>
                     ))}
