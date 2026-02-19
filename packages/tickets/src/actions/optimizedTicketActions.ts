@@ -1535,6 +1535,21 @@ export const updateTicketWithCache = withAuth(async (user, { tenant }, id: strin
       };
     }
 
+    // Record closed_at / closed_by when transitioning to/from closed status
+    if (newStatus?.is_closed && !oldStatus?.is_closed) {
+      await trx('tickets')
+        .where({ ticket_id: id, tenant: tenant })
+        .update({ closed_at: occurredAt, closed_by: user.user_id });
+      updatedTicket.closed_at = occurredAt;
+      updatedTicket.closed_by = user.user_id;
+    } else if (!newStatus?.is_closed && oldStatus?.is_closed) {
+      await trx('tickets')
+        .where({ ticket_id: id, tenant: tenant })
+        .update({ closed_at: null, closed_by: null });
+      updatedTicket.closed_at = null;
+      updatedTicket.closed_by = null;
+    }
+
     // Publish appropriate event based on the update
     if (newStatus?.is_closed && !oldStatus?.is_closed) {
       // Ticket was closed
