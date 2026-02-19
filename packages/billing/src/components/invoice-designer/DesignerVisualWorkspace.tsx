@@ -548,13 +548,6 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
               >
                 {displayStatuses.renderStatus}
               </span>
-              <span className="font-semibold">Verify</span>
-              <span
-                className="rounded border border-slate-200 bg-slate-50 px-2 py-0.5 uppercase"
-                data-automation-id="invoice-designer-preview-verify-status"
-              >
-                {displayStatuses.verifyStatus}
-              </span>
             </div>
             <Button
               id="invoice-designer-preview-rerun-button"
@@ -647,61 +640,6 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
                 />
               </PaperInvoice>
             </div>
-          )}
-        </div>
-
-        <div
-          className="rounded-md border border-slate-200 bg-white px-3 py-2 space-y-2"
-          data-automation-id="invoice-designer-preview-verification-summary"
-        >
-          <div className="flex items-center justify-between">
-            <p className="text-sm font-semibold text-slate-800">Layout Verification</p>
-            <span
-              className="rounded border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs uppercase"
-              data-automation-id="invoice-designer-preview-verification-badge"
-            >
-              {hasValidSelectionForSource ? authoritativePreview?.verification.status ?? 'idle' : 'idle'}
-            </span>
-          </div>
-
-          {hasValidSelectionForSource && authoritativePreview?.verification.status === 'error' && (
-            <p
-              className="rounded border border-red-200 bg-red-50 px-2 py-1 text-xs text-red-700"
-              data-automation-id="invoice-designer-preview-verification-error"
-            >
-              {authoritativePreview.verification.error ?? 'Verification failed to execute.'}
-            </p>
-          )}
-
-          {hasValidSelectionForSource && authoritativePreview?.verification.mismatches?.length ? (
-            <ul
-              className="space-y-1"
-              data-automation-id="invoice-designer-preview-verification-mismatch-list"
-            >
-              {authoritativePreview.verification.mismatches.map((mismatch) => (
-                <li
-                  key={mismatch.constraintId}
-                  className="rounded border border-amber-200 bg-amber-50 px-2 py-1 text-xs text-amber-900"
-                  data-automation-id="invoice-designer-preview-verification-mismatch-item"
-                >
-                  <span className="font-semibold">{mismatch.constraintId}</span>{' '}
-                  <span>
-                    expected {mismatch.expected}, actual {mismatch.actual ?? 'missing'}, delta{' '}
-                    {mismatch.delta ?? 'n/a'}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            hasValidSelectionForSource &&
-            authoritativePreview?.verification.status === 'pass' && (
-              <p
-                className="rounded border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs text-emerald-800"
-                data-automation-id="invoice-designer-preview-verification-pass"
-              >
-                All layout constraints are within tolerance.
-              </p>
-            )
           )}
         </div>
       </TabsContent>

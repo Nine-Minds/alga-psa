@@ -407,97 +407,13 @@ describe('DesignerVisualWorkspace', () => {
     });
   });
 
-  it('shows distinct verification error state when layout verification execution fails', async () => {
-    runAuthoritativeInvoiceTemplatePreviewMock.mockResolvedValueOnce({
-      success: false,
-      sourceHash: 'verify-error-hash',
-      generatedSource: '// generated',
-      compile: {
-        status: 'success',
-        diagnostics: [],
-      },
-      render: {
-        status: 'success',
-        html: '<div>Preview</div>',
-        css: '',
-      },
-      verification: {
-        status: 'error',
-        mismatches: [],
-        error: 'Verification engine failed to evaluate constraints.',
-      },
-    });
-
+  it('does not render the layout verification summary panel', async () => {
     renderWorkspace('preview');
 
-    await waitFor(() => {
-      const verificationError = document.querySelector(
-        '[data-automation-id=\"invoice-designer-preview-verification-error\"]'
-      );
-      expect(verificationError?.textContent).toContain('Verification engine failed to evaluate constraints.');
-      expect(
-        document.querySelector('[data-automation-id=\"invoice-designer-preview-verification-badge\"]')?.textContent
-      ).toContain('error');
-    });
-  });
-
-  it('shows pass verification badge when all layout constraints pass', async () => {
-    renderWorkspace('preview');
-
-    await waitFor(() => {
-      expect(
-        document.querySelector('[data-automation-id=\"invoice-designer-preview-verification-badge\"]')?.textContent
-      ).toContain('pass');
-      expect(
-        document.querySelector('[data-automation-id=\"invoice-designer-preview-verification-pass\"]')
-      ).toBeTruthy();
-    });
-  });
-
-  it('shows issues verification badge when one or more constraints fail', async () => {
-    runAuthoritativeInvoiceTemplatePreviewMock.mockResolvedValueOnce({
-      success: true,
-      sourceHash: 'verify-issues-hash',
-      generatedSource: '// generated',
-      compile: {
-        status: 'success',
-        diagnostics: [],
-      },
-      render: {
-        status: 'success',
-        html: '<div>Preview</div>',
-        css: '',
-      },
-      verification: {
-        status: 'issues',
-        mismatches: [
-          {
-            constraintId: 'field-1:width',
-            nodeId: 'field-1',
-            metric: 'width',
-            expected: 220,
-            actual: 240,
-            delta: 20,
-            tolerance: 2,
-            message: 'Constraint exceeded tolerance.',
-          },
-        ],
-      },
-    });
-
-    renderWorkspace('preview');
-
-    await waitFor(() => {
-      expect(
-        document.querySelector('[data-automation-id=\"invoice-designer-preview-verification-badge\"]')?.textContent
-      ).toContain('issues');
-      expect(
-        document.querySelector('[data-automation-id=\"invoice-designer-preview-verification-mismatch-list\"]')
-      ).toBeTruthy();
-      expect(
-        document.querySelector('[data-automation-id=\"invoice-designer-preview-verification-mismatch-item\"]')
-      ).toBeTruthy();
-    });
+    await waitFor(() => expect(runAuthoritativeInvoiceTemplatePreviewMock).toHaveBeenCalled());
+    expect(
+      document.querySelector('[data-automation-id=\"invoice-designer-preview-verification-summary\"]')
+    ).toBeFalsy();
   });
 
   it('clears selected existing invoice when reset action is used', async () => {
@@ -572,13 +488,12 @@ describe('DesignerVisualWorkspace', () => {
     });
   });
 
-  it('exposes stable automation ids for shape/render/verify status indicators', async () => {
+  it('exposes stable automation ids for shape and render status indicators', async () => {
     renderWorkspace('preview');
 
     await waitFor(() => expect(runAuthoritativeInvoiceTemplatePreviewMock).toHaveBeenCalled());
     expect(document.querySelector('[data-automation-id=\"invoice-designer-preview-shape-status\"]')).toBeTruthy();
     expect(document.querySelector('[data-automation-id=\"invoice-designer-preview-render-status\"]')).toBeTruthy();
-    expect(document.querySelector('[data-automation-id=\"invoice-designer-preview-verify-status\"]')).toBeTruthy();
   });
 
   it('blocks drag-like interactions while in preview mode', async () => {

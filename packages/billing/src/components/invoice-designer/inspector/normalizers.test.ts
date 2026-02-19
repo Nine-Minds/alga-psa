@@ -1,12 +1,24 @@
 import { describe, expect, it } from 'vitest';
 
-import { normalizeCssColor, normalizeCssLength, normalizeNumber, normalizeString } from './normalizers';
+import {
+  normalizeCssColor,
+  normalizeCssLength,
+  normalizeNumber,
+  normalizeString,
+  normalizeStringLive,
+} from './normalizers';
 
 describe('invoice designer inspector normalizers', () => {
   it('normalizeString trims whitespace and unsets empty strings', () => {
     expect(normalizeString('')).toBeUndefined();
     expect(normalizeString('   ')).toBeUndefined();
     expect(normalizeString('  hello  ')).toBe('hello');
+  });
+
+  it('normalizeStringLive preserves spacing while typing', () => {
+    expect(normalizeStringLive('')).toBeUndefined();
+    expect(normalizeStringLive('   ')).toBe('   ');
+    expect(normalizeStringLive('  hello  ')).toBe('  hello  ');
   });
 
   it('normalizeCssLength trims and adds px for unitless numbers', () => {
@@ -39,4 +51,3 @@ describe('invoice designer inspector normalizers', () => {
     expect(normalizeNumber('wat')).toBeUndefined();
   });
 });
-

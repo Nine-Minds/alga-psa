@@ -181,7 +181,7 @@ describe('InvoiceTemplateEditor authoritative preview flow', () => {
     vi.restoreAllMocks();
   });
 
-  it('covers design edit -> authoritative preview -> verification -> save', async () => {
+  it('covers design edit -> authoritative preview -> save', async () => {
     render(<InvoiceTemplateEditor templateId="tpl-flow" />);
 
     await waitFor(() =>
@@ -204,12 +204,7 @@ describe('InvoiceTemplateEditor authoritative preview flow', () => {
       expect(hasUpdatedWorkspaceCall).toBe(true);
     }, { timeout: 2500 });
 
-    await waitFor(() => {
-      expect(
-        document.querySelector('[data-automation-id=\"invoice-designer-preview-verification-badge\"]')?.textContent
-      ).toContain('pass');
-    });
-    expect(document.querySelector('[data-automation-id=\"invoice-designer-preview-render-iframe\"]')).toBeTruthy();
+    expect(document.querySelector('[data-automation-id=\"invoice-designer-preview-render-template\"]')).toBeTruthy();
 
     fireEvent.click(screen.getByRole('button', { name: 'Save Template' }));
 
@@ -244,7 +239,7 @@ describe('InvoiceTemplateEditor authoritative preview flow', () => {
       )
     );
 
-    const iframe = document.querySelector('[data-automation-id=\"invoice-designer-preview-render-iframe\"]');
-    expect(iframe?.getAttribute('srcdoc') ?? iframe?.getAttribute('srcDoc')).toContain('INV-EX-001');
+    const renderedPreview = document.querySelector('[data-automation-id=\"invoice-designer-preview-render-output\"]');
+    expect(renderedPreview?.textContent ?? '').toContain('INV-EX-001');
   });
 });

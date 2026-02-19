@@ -357,11 +357,6 @@ const InvoiceTemplateEditor: React.FC<InvoiceTemplateEditorProps> = ({ templateI
                  <TabsTrigger value="code" data-automation-id="invoice-template-editor-code-tab">Code</TabsTrigger>
                </TabsList>
                <TabsContent value="visual" className="pt-4 space-y-3">
-                 <Alert variant="info">
-                   <AlertDescription>
-                     Visual designer is feature-flagged and exports a versioned JSON AST as the canonical template model.
-                   </AlertDescription>
-                 </Alert>
                  {forceLocalDesignerOverride && !guiDesignerEnabled && (
                    <Alert variant="info" data-automation-id="invoice-template-editor-local-designer-override">
                      <AlertDescription>
