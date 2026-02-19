@@ -1419,6 +1419,23 @@ const JOIN_TYPE_OPTIONS: SelectOption[] = [
   { value: 'full', label: 'FULL JOIN' },
 ];
 
+// Conditional label operator options
+const LABEL_OPERATOR_OPTIONS: SelectOption[] = [
+  { value: 'lt', label: '<' },
+  { value: 'lte', label: '<=' },
+  { value: 'gt', label: '>' },
+  { value: 'gte', label: '>=' },
+  { value: 'eq', label: '=' },
+];
+
+// Conditional label tone options
+const LABEL_TONE_OPTIONS: SelectOption[] = [
+  { value: 'danger', label: 'Danger (Red)' },
+  { value: 'warning', label: 'Warning (Yellow)' },
+  { value: 'success', label: 'Success (Green)' },
+  { value: 'info', label: 'Info (Blue)' },
+];
+
 function CreateReport() {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -1565,6 +1582,29 @@ function CreateReport() {
     const newMetrics = [...metrics];
     newMetrics[metricIndex].query.joins = (newMetrics[metricIndex].query.joins || [])
       .filter((_, i) => i !== joinIndex);
+    setMetrics(newMetrics);
+  };
+
+  const addLabel = (metricIndex: number) => {
+    const newMetrics = [...metrics];
+    const labels = [...(newMetrics[metricIndex].conditionalLabels || [])];
+    labels.push({ column: '', operator: 'gte', value: 0, tone: 'warning', label: '' });
+    newMetrics[metricIndex].conditionalLabels = labels;
+    setMetrics(newMetrics);
+  };
+
+  const updateLabel = (metricIndex: number, labelIndex: number, updates: Partial<ConditionalLabel>) => {
+    const newMetrics = [...metrics];
+    const labels = [...(newMetrics[metricIndex].conditionalLabels || [])];
+    labels[labelIndex] = { ...labels[labelIndex], ...updates };
+    newMetrics[metricIndex].conditionalLabels = labels;
+    setMetrics(newMetrics);
+  };
+
+  const removeLabel = (metricIndex: number, labelIndex: number) => {
+    const newMetrics = [...metrics];
+    newMetrics[metricIndex].conditionalLabels = (newMetrics[metricIndex].conditionalLabels || [])
+      .filter((_, i) => i !== labelIndex);
     setMetrics(newMetrics);
   };
 
@@ -2222,6 +2262,88 @@ function CreateReport() {
                   </div>
                     </>
                   )}
+
+                  {/* Conditional Labels Section */}
+                  <div style={{ marginTop: '16px', borderTop: '1px solid var(--alga-border)', paddingTop: '16px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                      <Text style={{ fontWeight: 500 }}>Conditional Labels</Text>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => addLabel(index)}
+                      >
+                        + Add Label
+                      </Button>
+                    </div>
+
+                    {(metric.conditionalLabels || []).length === 0 ? (
+                      <Text tone="muted" style={{ fontSize: '0.75rem' }}>
+                        No labels. Add conditional labels to highlight values with colored badges (e.g. "Danger Zone" when risk_score &gt;= 4).
+                      </Text>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        {(metric.conditionalLabels || []).map((label, labelIndex) => (
+                          <div
+                            key={labelIndex}
+                            style={{
+                              display: 'flex',
+                              gap: '6px',
+                              alignItems: 'center',
+                              padding: '8px',
+                              background: 'var(--alga-muted)',
+                              borderRadius: 'var(--alga-radius)',
+                            }}
+                          >
+                            <Input
+                              type="text"
+                              value={label.column}
+                              onChange={(e) => updateLabel(index, labelIndex, { column: e.target.value })}
+                              placeholder="Column"
+                              style={{ width: '120px', fontSize: '0.8125rem' }}
+                            />
+                            <CustomSelect
+                              options={LABEL_OPERATOR_OPTIONS}
+                              value={label.operator}
+                              onValueChange={(value) => updateLabel(index, labelIndex, { operator: value as ConditionalLabel['operator'] })}
+                              style={{ width: '70px' }}
+                            />
+                            <Input
+                              type="number"
+                              value={String(label.value)}
+                              onChange={(e) => updateLabel(index, labelIndex, { value: Number(e.target.value) })}
+                              placeholder="Value"
+                              style={{ width: '80px', fontSize: '0.8125rem' }}
+                            />
+                            <CustomSelect
+                              options={LABEL_TONE_OPTIONS}
+                              value={label.tone}
+                              onValueChange={(value) => updateLabel(index, labelIndex, { tone: value as ConditionalLabel['tone'] })}
+                              style={{ width: '140px' }}
+                            />
+                            <Input
+                              type="text"
+                              value={label.label || ''}
+                              onChange={(e) => updateLabel(index, labelIndex, { label: e.target.value })}
+                              placeholder="Badge text"
+                              style={{ flex: 1, fontSize: '0.8125rem' }}
+                            />
+                            <Button
+                              type="button"
+                              variant="danger"
+                              size="sm"
+                              onClick={() => removeLabel(index, labelIndex)}
+                            >
+                              X
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <Text tone="muted" style={{ display: 'block', fontSize: '0.7rem', marginTop: '6px' }}>
+                      Labels are evaluated in order — first match wins. Put stricter rules first (e.g. &gt;= 30 before &gt;= 14). Only works on numeric values.
+                    </Text>
+                  </div>
                 </Card>
               ))}
             </div>
@@ -4284,6 +4406,29 @@ function EditReport({
     setMetrics(newMetrics);
   };
 
+  const addLabel = (metricIndex: number) => {
+    const newMetrics = [...metrics];
+    const labels = [...(newMetrics[metricIndex].conditionalLabels || [])];
+    labels.push({ column: '', operator: 'gte', value: 0, tone: 'warning', label: '' });
+    newMetrics[metricIndex].conditionalLabels = labels;
+    setMetrics(newMetrics);
+  };
+
+  const updateLabel = (metricIndex: number, labelIndex: number, updates: Partial<ConditionalLabel>) => {
+    const newMetrics = [...metrics];
+    const labels = [...(newMetrics[metricIndex].conditionalLabels || [])];
+    labels[labelIndex] = { ...labels[labelIndex], ...updates };
+    newMetrics[metricIndex].conditionalLabels = labels;
+    setMetrics(newMetrics);
+  };
+
+  const removeLabel = (metricIndex: number, labelIndex: number) => {
+    const newMetrics = [...metrics];
+    newMetrics[metricIndex].conditionalLabels = (newMetrics[metricIndex].conditionalLabels || [])
+      .filter((_, i) => i !== labelIndex);
+    setMetrics(newMetrics);
+  };
+
   const handleSave = async () => {
     setSaving(true);
     setError(null);
@@ -4940,6 +5085,88 @@ function EditReport({
                 </div>
                   </>
                 )}
+
+                  {/* Conditional Labels Section */}
+                  <div style={{ marginTop: '16px', borderTop: '1px solid var(--alga-border)', paddingTop: '16px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                      <Text style={{ fontWeight: 500 }}>Conditional Labels</Text>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => addLabel(index)}
+                      >
+                        + Add Label
+                      </Button>
+                    </div>
+
+                    {(metric.conditionalLabels || []).length === 0 ? (
+                      <Text tone="muted" style={{ fontSize: '0.75rem' }}>
+                        No labels. Add conditional labels to highlight values with colored badges (e.g. "Danger Zone" when risk_score &gt;= 4).
+                      </Text>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        {(metric.conditionalLabels || []).map((label, labelIndex) => (
+                          <div
+                            key={labelIndex}
+                            style={{
+                              display: 'flex',
+                              gap: '6px',
+                              alignItems: 'center',
+                              padding: '8px',
+                              background: 'var(--alga-muted)',
+                              borderRadius: 'var(--alga-radius)',
+                            }}
+                          >
+                            <Input
+                              type="text"
+                              value={label.column}
+                              onChange={(e) => updateLabel(index, labelIndex, { column: e.target.value })}
+                              placeholder="Column"
+                              style={{ width: '120px', fontSize: '0.8125rem' }}
+                            />
+                            <CustomSelect
+                              options={LABEL_OPERATOR_OPTIONS}
+                              value={label.operator}
+                              onValueChange={(value) => updateLabel(index, labelIndex, { operator: value as ConditionalLabel['operator'] })}
+                              style={{ width: '70px' }}
+                            />
+                            <Input
+                              type="number"
+                              value={String(label.value)}
+                              onChange={(e) => updateLabel(index, labelIndex, { value: Number(e.target.value) })}
+                              placeholder="Value"
+                              style={{ width: '80px', fontSize: '0.8125rem' }}
+                            />
+                            <CustomSelect
+                              options={LABEL_TONE_OPTIONS}
+                              value={label.tone}
+                              onValueChange={(value) => updateLabel(index, labelIndex, { tone: value as ConditionalLabel['tone'] })}
+                              style={{ width: '140px' }}
+                            />
+                            <Input
+                              type="text"
+                              value={label.label || ''}
+                              onChange={(e) => updateLabel(index, labelIndex, { label: e.target.value })}
+                              placeholder="Badge text"
+                              style={{ flex: 1, fontSize: '0.8125rem' }}
+                            />
+                            <Button
+                              type="button"
+                              variant="danger"
+                              size="sm"
+                              onClick={() => removeLabel(index, labelIndex)}
+                            >
+                              X
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <Text tone="muted" style={{ display: 'block', fontSize: '0.7rem', marginTop: '6px' }}>
+                      Labels are evaluated in order — first match wins. Put stricter rules first (e.g. &gt;= 30 before &gt;= 14). Only works on numeric values.
+                    </Text>
+                  </div>
               </Card>
             ))}
           </div>
@@ -5422,9 +5649,14 @@ function TenantPicker({
     );
   });
 
-  const handleAddRandomUuid = () => {
-    const uuid = crypto.randomUUID();
-    onSelect(uuid);
+  const [customUuid, setCustomUuid] = useState('');
+
+  const handleAddCustomUuid = () => {
+    const trimmed = customUuid.trim();
+    if (trimmed) {
+      onSelect(trimmed);
+      setCustomUuid('');
+    }
   };
 
   return (
@@ -5443,15 +5675,25 @@ function TenantPicker({
             disabled={disabled || loading}
           />
         </div>
+      </div>
+      <div style={{ display: 'flex', gap: '8px', marginTop: '6px' }}>
+        <Input
+          type="text"
+          value={customUuid}
+          onChange={(e) => setCustomUuid(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddCustomUuid(); } }}
+          placeholder="Paste custom UUID..."
+          disabled={disabled}
+          style={{ flex: 1, fontSize: '0.8125rem' }}
+        />
         <Button
           variant="outline"
           size="sm"
-          onClick={handleAddRandomUuid}
-          disabled={disabled}
-          title="Add random UUID (for localhost testing)"
+          onClick={handleAddCustomUuid}
+          disabled={disabled || !customUuid.trim()}
           style={{ whiteSpace: 'nowrap' }}
         >
-          Random UUID
+          Add UUID
         </Button>
       </div>
       {showDropdown && !loading && (
