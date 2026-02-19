@@ -4,7 +4,6 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Eye, EyeOff } from 'lucide-react';
-import { CheckCircledIcon, CrossCircledIcon } from '@radix-ui/react-icons';
 import * as Form from '@radix-ui/react-form';
 import { setNewPassword, getAccountInfoFromToken } from '@alga-psa/auth/actions';
 import { AlertProps, TPasswordCriteria } from 'server/src/interfaces';

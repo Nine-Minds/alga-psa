@@ -14,8 +14,7 @@ import {
 import { getInvoiceTemplates, saveInvoiceTemplate, setDefaultTemplate, deleteInvoiceTemplate } from '@alga-psa/billing/actions/invoiceTemplates'; // Added deleteInvoiceTemplate import
 import { IInvoiceTemplate, DeletionValidationResult } from '@alga-psa/types';
 // Removed InvoiceTemplateManager import
-import { FileTextIcon, PencilIcon, MoreVertical } from 'lucide-react'; // Added PencilIcon and MoreVertical imports
-import { GearIcon, CheckCircledIcon } from '@radix-ui/react-icons';
+import { FileTextIcon, PencilIcon, MoreVertical, Settings, CheckCircle2 } from 'lucide-react';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { ColumnDefinition } from '@alga-psa/types';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
@@ -118,7 +117,7 @@ const InvoiceTemplates: React.FC = () => {
             <><FileTextIcon className="w-4 h-4" /> {value} (Standard)</>
           ) : (
             <div className="flex items-center gap-1">
-              <GearIcon className="w-4 h-4" />
+              <Settings className="w-4 h-4" />
               {value}
             </div>
           )}
@@ -138,7 +137,7 @@ const InvoiceTemplates: React.FC = () => {
       render: (_, record) =>
         record.isTenantDefault ? (
           <div className="flex justify-center items-center">
-            <CheckCircledIcon className="h-4 w-4 text-primary-500" />
+            <CheckCircle2 className="h-4 w-4 text-primary-500" />
           </div>
         ) : null,
     },

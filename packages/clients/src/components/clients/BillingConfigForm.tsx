@@ -5,8 +5,7 @@ import { getInvoiceTemplatesAsync, getDefaultTemplateAsync, getActiveTaxRegionsA
 import { IInvoiceTemplate } from '@alga-psa/types';
 import { IContact } from '@alga-psa/types';
 import { ITaxRegion } from '@alga-psa/types'; // Added
-import { FileTextIcon } from 'lucide-react';
-import { GearIcon } from '@radix-ui/react-icons';
+import { FileText, Settings } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import { CURRENCY_OPTIONS } from '@alga-psa/core';
@@ -83,14 +82,14 @@ const BillingConfigForm: React.FC<BillingConfigFormProps> = ({
             <div className="flex items-center gap-2">
                 {template.isStandard ? (
                     <div className="flex items-center gap-1">
-                        <FileTextIcon className="w-4 h-4" /> 
+                        <FileText className="w-4 h-4" /> 
                         {template.name} 
                         <span className="text-gray-500">(Standard)</span>
                         {template.isTenantDefault && <span className="text-blue-500">(Default)</span>}
                     </div>
                 ) : (
                     <div className="flex items-center gap-1">
-                        <GearIcon className="w-4 h-4" /> 
+                        <Settings className="w-4 h-4" /> 
                         {template.name}
                         {template.isTenantDefault && <span className="text-blue-500">(Default)</span>}
                     </div>

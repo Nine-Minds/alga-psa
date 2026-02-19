@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, ChevronDown } from 'lucide-react';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -12,8 +12,7 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
-import * as Accordion from '@radix-ui/react-accordion'; // Import Radix Accordion
-import { ChevronDownIcon } from '@radix-ui/react-icons'; // Icon for Accordion
+import * as Accordion from '@radix-ui/react-accordion';
 
 // Import actions and types
 import { getContractLineServicesWithConfigurations } from '@alga-psa/billing/actions/contractLineServiceActions'; // Get list of services
@@ -688,7 +687,7 @@ export function UsagePlanConfiguration({
                         })()}
                       </span>
                     </div>
-                    <ChevronDownIcon className="h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200" />
+                    <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200" />
                   </Accordion.Trigger>
                 </Accordion.Header>
                 <Accordion.Content

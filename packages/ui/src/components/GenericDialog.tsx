@@ -2,7 +2,7 @@
 
 import React, { ReactNode, useState, useRef, useEffect } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
-import { Cross2Icon } from '@radix-ui/react-icons';
+import { X } from 'lucide-react';
 import { useAutomationIdAndRegister } from '../ui-reflection/useAutomationIdAndRegister';
 import { DialogComponent, ButtonComponent, AutomationProps } from '../ui-reflection/types';
 import { ReflectionContainer } from '../ui-reflection/ReflectionContainer';
@@ -167,7 +167,7 @@ const GenericDialog = ({
               className="absolute top-2 right-2 text-muted-foreground hover:text-[rgb(var(--color-text-600))]"
               aria-label="Close"
             >
-              <Cross2Icon />
+              <X className="h-4 w-4" />
             </button>
           </Dialog.Close>
         </Dialog.Content>

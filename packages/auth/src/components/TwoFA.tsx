@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from 'react';
-import { LockClosedIcon } from '@radix-ui/react-icons';
+import { Lock } from 'lucide-react';
 import { Dialog, DialogContent, Input } from '@alga-psa/ui/components';
 import { useRegisterUIComponent } from '@alga-psa/ui/ui-reflection';
 import type { FormFieldComponent, ButtonComponent } from '@alga-psa/ui/ui-reflection';
@@ -96,7 +96,7 @@ const TwoFactorInput: React.FC<TwoFactorInputProps> = ({ isOpen, onClose, onComp
         <div className="p-8">
             <div className="flex justify-center mb-4">
               <div className="bg-[rgb(var(--color-primary-100))] p-3 rounded-full">
-                <LockClosedIcon className="h-6 w-6 text-[rgb(var(--color-primary-500))]" />
+                <Lock className="h-6 w-6 text-[rgb(var(--color-primary-500))]" />
               </div>
             </div>
             <h2 className="text-2xl font-bold text-center mb-2">Easy peasy</h2>
