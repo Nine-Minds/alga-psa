@@ -855,16 +855,18 @@ export const getTemplateLineServicesWithConfigurations = withAuth(async (
           .first();
       }
 
-      // Fetch bucket config details if it exists
-      let bucketConfigDetails: IContractLineServiceBucketConfig | null = null;
-      if (bucketConfigRecord) {
-        bucketConfigDetails = await trx('contract_template_line_service_bucket_config')
+      // Template bucket configs are keyed by the primary config_id in current schema.
+      // Support both models:
+      // 1) dedicated Bucket configuration row (bucketConfigRecord.config_id), and
+      // 2) bucket row attached directly to the primary Hourly/Usage config_id.
+      const bucketConfigId = bucketConfigRecord?.config_id ?? configToUse.config_id;
+      const bucketConfigDetails =
+        (await trx('contract_template_line_service_bucket_config')
           .where({
             tenant,
-            config_id: bucketConfigRecord.config_id,
+            config_id: bucketConfigId,
           })
-          .first();
-      }
+          .first()) ?? null;
 
       const configuration: IContractLineServiceConfiguration = {
         ...configToUse,
