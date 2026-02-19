@@ -543,13 +543,13 @@ export function ContractWizard({
             <div className="mb-4">{renderStep()}</div>
 
             {errors[currentStep] && (
-              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
-                <p className="text-red-700 text-sm">{errors[currentStep]}</p>
+              <div className="mb-4 p-3 bg-[rgb(var(--color-destructive)/0.1)] border border-[rgb(var(--color-destructive)/0.3)] rounded-md">
+                <p className="text-[rgb(var(--color-destructive))] text-sm">{errors[currentStep]}</p>
               </div>
             )}
           </div>
 
-          <div className="flex-shrink-0 px-6 pb-6 border-t bg-white">
+          <div className="flex-shrink-0 px-6 pb-6 border-t border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))]">
             <WizardNavigation
               currentStep={currentStep}
               totalSteps={STEPS.length}

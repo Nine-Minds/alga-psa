@@ -15,6 +15,7 @@ import { RemoteAccessButton } from './RemoteAccessButton';
 import { SearchInput } from '@alga-psa/ui/components/SearchInput';
 import Pagination from '@alga-psa/ui/components/Pagination';
 import { AssetDetailDrawerClient } from './AssetDetailDrawerClient';
+import { Badge } from '@alga-psa/ui/components/Badge';
 import { Monitor, Server, Smartphone, Printer, Network, Boxes } from 'lucide-react';
 import { ContentCard } from '@alga-psa/ui/components';
 import {
@@ -416,14 +417,13 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
                                     </div>
                                     <div className="flex items-center gap-2 flex-shrink-0">
                                         {association.asset && (
-                                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                                association.asset.status === 'active' ? 'bg-purple-100 text-purple-800' :
-                                                association.asset.status === 'inactive' ? 'bg-gray-100 text-gray-800' :
-                                                association.asset.status === 'maintenance' ? 'bg-yellow-100 text-yellow-800' :
-                                                'bg-gray-100 text-gray-800'
-                                            }`}>
+                                            <Badge variant={
+                                                association.asset.status === 'active' ? 'success' :
+                                                association.asset.status === 'maintenance' ? 'warning' :
+                                                'default-muted'
+                                            }>
                                                 {association.asset.status}
-                                            </span>
+                                            </Badge>
                                         )}
                                         {association.asset && association.asset.rmm_provider && association.asset.rmm_device_id && (
                                             <RemoteAccessButton
@@ -579,14 +579,13 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
                                                                 placeholder="Type..."
                                                             />
                                                         ) : (
-                                                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                                                asset.status === 'active' ? 'bg-purple-100 text-purple-800' :
-                                                                asset.status === 'inactive' ? 'bg-gray-100 text-gray-800' :
-                                                                asset.status === 'maintenance' ? 'bg-yellow-100 text-yellow-800' :
-                                                                'bg-gray-100 text-gray-800'
-                                                            }`}>
+                                                            <Badge variant={
+                                                                asset.status === 'active' ? 'success' :
+                                                                asset.status === 'maintenance' ? 'warning' :
+                                                                'default-muted'
+                                                            }>
                                                                 {asset.status}
-                                                            </span>
+                                                            </Badge>
                                                         )}
                                                     </td>
                                                 </tr>

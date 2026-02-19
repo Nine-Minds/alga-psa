@@ -138,7 +138,7 @@ const AssetFormSkeleton = ({
               <div className="h-5 bg-gray-200 rounded w-24"></div>
               <div className="flex flex-wrap gap-2">
                 {Array.from({ length: 4 }, (_, i) => (
-                  <div key={i} className="h-6 bg-blue-100 rounded-full px-3 py-1">
+                  <div key={i} className="h-6 bg-info/15 rounded-full px-3 py-1">
                     <div className="h-3 bg-blue-200 rounded w-12"></div>
                   </div>
                 ))}
@@ -150,7 +150,7 @@ const AssetFormSkeleton = ({
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
               <div className="h-4 bg-gray-200 rounded w-16"></div>
-              <div className="h-6 bg-green-100 rounded w-20 px-2 py-1">
+              <div className="h-6 bg-success/15 rounded w-20 px-2 py-1">
                 <div className="h-3 bg-green-200 rounded w-12"></div>
               </div>
             </div>

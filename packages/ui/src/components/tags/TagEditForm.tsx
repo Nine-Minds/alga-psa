@@ -9,8 +9,9 @@ import { ITag } from '@alga-psa/types';
 import { generateEntityColor } from '../../lib/colorUtils';
 import { toast } from 'react-hot-toast';
 import tinycolor from 'tinycolor2';
-import { Trash2, ShieldAlert } from 'lucide-react';
+import { Trash2 } from 'lucide-react';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { handleError } from '../../lib/errorHandling';
 
 const PRESET_COLORS = [
@@ -182,12 +183,11 @@ export const TagEditForm: React.FC<TagEditFormProps> = ({
         <div className="space-y-4">
           {/* Show warning if no permissions */}
           {!allowColorEdit && !allowTextEdit && (
-            <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3 flex items-start">
-              <ShieldAlert className="h-4 w-4 text-yellow-600 mt-0.5 flex-shrink-0" />
-              <div className="ml-2 text-sm text-yellow-800">
+            <Alert variant="warning">
+              <AlertDescription>
                 You don't have permission to edit tags. Contact your administrator for access.
-              </div>
-            </div>
+              </AlertDescription>
+            </Alert>
           )}
           
           {/* Preview */}
@@ -320,7 +320,7 @@ export const TagEditForm: React.FC<TagEditFormProps> = ({
                     variant="outline"
                     size="sm"
                     onClick={() => setShowDeleteConfirm(true)}
-                    className="flex-1 text-red-600 hover:text-red-700 hover:bg-red-50"
+                    className="flex-1 text-destructive hover:text-destructive hover:bg-[rgb(var(--color-destructive)/0.1)]"
                   >
                     <Trash2 size={14} className="mr-1" />
                     Delete All

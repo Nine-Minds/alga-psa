@@ -753,7 +753,7 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
     const commonHeader = (
       <div className="flex items-center justify-between">
         <label className="text-sm font-medium text-gray-700">
-          {label}{isRequired && <span className="text-red-500"> *</span>}
+          {label}{isRequired && <span className="text-destructive"> *</span>}
         </label>
         {resolved.default !== undefined && (
           <Button
@@ -873,7 +873,7 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
           />
           {description}
           {fieldErrors.map((err) => (
-            <div key={`${fieldPath}-err`} className="text-xs text-red-600">{err.message}</div>
+            <div key={`${fieldPath}-err`} className="text-xs text-destructive">{err.message}</div>
           ))}
         </div>
       );
@@ -892,7 +892,7 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
           </div>
           {description}
           {fieldErrors.map((err) => (
-            <div key={`${fieldPath}-err`} className="text-xs text-red-600">{err.message}</div>
+            <div key={`${fieldPath}-err`} className="text-xs text-destructive">{err.message}</div>
           ))}
         </div>
       );
@@ -914,7 +914,7 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
         />
         {description}
         {fieldErrors.map((err) => (
-          <div key={`${fieldPath}-err`} className="text-xs text-red-600">{err.message}</div>
+          <div key={`${fieldPath}-err`} className="text-xs text-destructive">{err.message}</div>
         ))}
       </div>
     );
@@ -957,9 +957,9 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
 
         <div className="space-y-4">
           {!publishedVersion && (
-            <div className="rounded border border-yellow-200 bg-yellow-50 p-3 text-sm text-yellow-900 space-y-2">
+            <div className="rounded border border-warning/30 bg-warning/10 p-3 text-sm text-warning-foreground space-y-2">
               <div className="font-medium">No published version</div>
-              <div className="text-xs text-yellow-800">
+              <div className="text-xs opacity-90">
                 You can preview the payload builder, but you must publish the workflow before starting a run.
               </div>
               {canPublish && onPublishDraft && (
@@ -1083,13 +1083,13 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
                   emptyMessage="No schemas found"
                 />
                 {customSchemaRef && !customSchema && (
-                  <div className="mt-2 text-xs text-red-600">Unknown schema ref.</div>
+                  <div className="mt-2 text-xs text-destructive">Unknown schema ref.</div>
                 )}
               </div>
             )}
 
             {schemaWarning && (
-              <div className="rounded border border-yellow-200 bg-yellow-50 p-2 text-xs text-yellow-800 space-y-2">
+              <div className="rounded border border-warning/30 bg-warning/10 p-2 text-xs text-warning-foreground space-y-2">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <span>{schemaWarning}</span>
                   {eventSchema && schemaSource !== 'event' && (
@@ -1161,7 +1161,7 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
           </div>
 
           {draftVersion && publishedVersion && draftVersion !== publishedVersion && (
-            <div className="rounded border border-yellow-200 bg-yellow-50 p-2 text-xs text-yellow-700 flex items-center justify-between">
+            <div className="rounded border border-warning/30 bg-warning/10 p-2 text-xs text-warning-foreground flex items-center justify-between">
               <span>Draft version differs from published (v{publishedVersion}).</span>
               {canPublish && onPublishDraft && (
                 <Button id="run-dialog-publish-latest" size="sm" onClick={() => onPublishDraft()}>
@@ -1288,7 +1288,7 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
           ))}
 
           {schemaErrors.length > 0 && (
-            <div className="rounded border border-red-200 bg-red-50 p-2 text-xs text-red-700 space-y-1">
+            <div className="rounded border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive space-y-1">
               <div className="font-semibold">Schema validation errors</div>
               {schemaErrors.slice(0, 6).map((err, index) => (
                 <div key={`${err.path}-${index}`}>{err.path || 'payload'}: {err.message}</div>
@@ -1305,9 +1305,9 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
                 value={runPayloadText}
                 onChange={(event) => handleRunPayloadChange(event.target.value)}
                 rows={12}
-                className={runPayloadError ? 'border-red-500' : ''}
+                className={runPayloadError ? 'border-destructive' : ''}
               />
-              {runPayloadError && <div className="text-xs text-red-600 mt-1">{runPayloadError}</div>}
+              {runPayloadError && <div className="text-xs text-destructive mt-1">{runPayloadError}</div>}
             </div>
           ) : (
             <div className="space-y-3">

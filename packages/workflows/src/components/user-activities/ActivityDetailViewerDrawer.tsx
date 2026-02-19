@@ -11,7 +11,8 @@ import { useDrawer } from "@alga-psa/ui";
 import { useActivitiesCache } from "../../hooks/useActivitiesCache";
 import { getConsolidatedTicketData } from "@alga-psa/tickets/actions/optimizedTicketActions";
 import { useTenant } from "@alga-psa/ui/components/providers/TenantProvider";
-import { AlertCircle, ArrowLeft } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Button } from '@alga-psa/ui/components/Button';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import { getTicketById } from "@alga-psa/tickets/actions/ticketActions";
@@ -414,15 +415,14 @@ export function ActivityDetailViewerDrawer({
             setContent(
               <div className="h-full p-6">
                 <h2 className="text-xl font-semibold mb-4">Time Entry Details</h2>
-                <div className="bg-red-50 border border-red-200 rounded-md p-4 flex items-start">
-                  <AlertCircle className="h-5 w-5 text-red-500 mr-3 mt-0.5" />
-                  <div>
-                    <h3 className="text-sm font-medium text-red-800">Error loading time entry</h3>
-                    <p className="text-sm text-red-700 mt-1">
+                <Alert variant="destructive">
+                  <AlertDescription>
+                    <p className="font-medium">Error loading time entry</p>
+                    <p className="mt-1">
                       {error instanceof Error ? error.message : String(error)}
                     </p>
-                  </div>
-                </div>
+                  </AlertDescription>
+                </Alert>
               </div>
             );
           }
@@ -774,15 +774,14 @@ export function ActivityDetailViewerDrawer({
       setError('Failed to load activity details. Please try again later.');
       setContent(
         <div className="h-full p-6">
-          <div className="bg-red-50 border border-red-200 rounded-md p-4 flex items-start">
-            <AlertCircle className="h-5 w-5 text-red-500 mr-3 mt-0.5" />
-            <div>
-              <h3 className="text-sm font-medium text-red-800">Error loading activity details</h3>
-              <p className="text-sm text-red-700 mt-1">
+          <Alert variant="destructive">
+            <AlertDescription>
+              <p className="font-medium">Error loading activity details</p>
+              <p className="mt-1">
                 {error instanceof Error ? error.message : String(error)}
               </p>
-            </div>
-          </div>
+            </AlertDescription>
+          </Alert>
         </div>
       );
     } finally {

@@ -106,12 +106,12 @@ const PricingSchedules: React.FC<PricingSchedulesProps> = ({ contractId }) => {
       dataIndex: 'custom_rate',
       render: (value) => value !== undefined && value !== null
         ? formatCurrency(value / 100)
-        : <span className="text-gray-400">Use default rate</span>
+        : <span className="text-muted-foreground">Use default rate</span>
     },
     {
       title: 'Notes',
       dataIndex: 'notes',
-      render: (value) => value || <span className="text-gray-400">-</span>
+      render: (value) => value || <span className="text-muted-foreground">-</span>
     },
     {
       title: 'Actions',
@@ -174,7 +174,7 @@ const PricingSchedules: React.FC<PricingSchedulesProps> = ({ contractId }) => {
           {isLoading ? (
             <LoadingIndicator
               layout="stacked"
-              className="py-10 text-gray-600"
+              className="py-10 text-muted-foreground"
               spinnerProps={{ size: 'md' }}
               text="Loading pricing schedules"
             />
@@ -182,23 +182,23 @@ const PricingSchedules: React.FC<PricingSchedulesProps> = ({ contractId }) => {
             <>
               {schedules.length === 0 ? (
                 <div className="text-center py-8">
-                  <Calendar className="h-12 w-12 mx-auto mb-3 text-gray-400" />
-                  <p className="text-gray-500 mb-2">No pricing schedules yet</p>
-                  <p className="text-sm text-gray-400 mb-4">
+                  <Calendar className="h-12 w-12 mx-auto mb-3 text-muted-foreground" />
+                  <p className="text-muted-foreground mb-2">No pricing schedules yet</p>
+                  <p className="text-sm text-muted-foreground mb-4">
                     Add pricing schedules to define time-based rate changes for this contract
                   </p>
                 </div>
               ) : (
                 <>
                   {/* Timeline visualization */}
-                  <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+                  <div className="mb-6 p-4 bg-muted rounded-lg">
                     <h4 className="text-sm font-medium mb-3 flex items-center">
                       <Calendar className="h-4 w-4 mr-2" />
                       Pricing Timeline
                     </h4>
                     <div className="relative">
                       {/* Timeline line */}
-                      <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-gray-300" style={{ left: '10px' }}></div>
+                      <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-[rgb(var(--color-border-300))]" style={{ left: '10px' }}></div>
 
                       {/* Timeline items */}
                       <div className="space-y-4">
@@ -207,19 +207,19 @@ const PricingSchedules: React.FC<PricingSchedulesProps> = ({ contractId }) => {
                             {/* Timeline dot */}
                             <div className="absolute w-5 h-5 rounded-full bg-blue-500 border-4 border-white" style={{ left: '1px', top: '1px' }}></div>
 
-                            <div className="bg-white p-3 rounded border shadow-sm">
+                            <div className="bg-card p-3 rounded border shadow-sm">
                               <div className="flex justify-between items-start mb-2">
                                 <div>
                                   <div className="text-sm font-medium">
                                     {toPlainDate(schedule.effective_date).toLocaleString()}
                                     {schedule.end_date && (
-                                      <span className="text-gray-500"> → {toPlainDate(schedule.end_date).toLocaleString()}</span>
+                                      <span className="text-muted-foreground"> → {toPlainDate(schedule.end_date).toLocaleString()}</span>
                                     )}
                                     {!schedule.end_date && index === schedules.length - 1 && (
-                                      <span className="text-gray-500"> → Ongoing</span>
+                                      <span className="text-muted-foreground"> → Ongoing</span>
                                     )}
                                   </div>
-                                  <div className="text-sm text-gray-600 mt-1 flex items-center">
+                                  <div className="text-sm text-muted-foreground mt-1 flex items-center">
                                     <Coins className="h-3 w-3 mr-1" />
                                     {schedule.custom_rate !== undefined && schedule.custom_rate !== null
                                       ? formatCurrency(schedule.custom_rate / 100)
@@ -228,7 +228,7 @@ const PricingSchedules: React.FC<PricingSchedulesProps> = ({ contractId }) => {
                                 </div>
                               </div>
                               {schedule.notes && (
-                                <div className="text-xs text-gray-500 mt-2">
+                                <div className="text-xs text-muted-foreground mt-2">
                                   {schedule.notes}
                                 </div>
                               )}

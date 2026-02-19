@@ -108,13 +108,13 @@ export function HourlyServicesStep({ data, updateData }: HourlyServicesStepProps
     <div className="space-y-6">
       <div className="mb-6">
         <h3 className="text-lg font-semibold mb-2">Hourly Services</h3>
-        <p className="text-sm text-gray-600">
+        <p className="text-sm text-[rgb(var(--color-text-500))]">
           Configure services that are billed based on time tracked. Perfect for T&M (Time & Materials) work.
         </p>
       </div>
 
-      <div className="p-4 bg-amber-50 border border-amber-200 rounded-md mb-6">
-        <p className="text-sm text-amber-800">
+      <div className="p-4 bg-[rgb(var(--color-accent-50))] border border-[rgb(var(--color-accent-200))] rounded-md mb-6">
+        <p className="text-sm text-[rgb(var(--color-accent-800))]">
           <strong>What are Hourly Services?</strong> These services are billed based on actual time tracked. Each time entry will be multiplied by the hourly rate to calculate the invoice amount.
         </p>
       </div>
@@ -137,7 +137,7 @@ export function HourlyServicesStep({ data, updateData }: HourlyServicesStepProps
             }
             placeholder="15"
           />
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-[rgb(var(--color-text-400))]">
             e.g., 15 minutes - any time entry less than this will be rounded up
           </p>
         </div>
@@ -158,7 +158,7 @@ export function HourlyServicesStep({ data, updateData }: HourlyServicesStepProps
             }
             placeholder="15"
           />
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-[rgb(var(--color-text-400))]">
             e.g., 15 minutes - time entries will be rounded up to the nearest interval
           </p>
         </div>
@@ -173,7 +173,7 @@ export function HourlyServicesStep({ data, updateData }: HourlyServicesStepProps
         {data.hourly_services.map((service, index) => (
           <div
             key={index}
-            className="flex items-start gap-3 p-4 border border-gray-200 rounded-md bg-gray-50"
+            className="flex items-start gap-3 p-4 border border-[rgb(var(--color-border-200))] rounded-md bg-[rgb(var(--color-border-50))]"
           >
             <div className="flex-1 space-y-3">
               <div className="space-y-2">
@@ -197,7 +197,7 @@ export function HourlyServicesStep({ data, updateData }: HourlyServicesStepProps
                   Hourly Rate
                 </Label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[rgb(var(--color-text-400))]">
                     {currencySymbol}
                   </span>
                   <Input
@@ -228,7 +228,7 @@ export function HourlyServicesStep({ data, updateData }: HourlyServicesStepProps
                     className="pl-10"
                   />
                 </div>
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-[rgb(var(--color-text-400))]">
                   {service.hourly_rate
                     ? `${formatCurrency(service.hourly_rate)}/hour`
                     : 'Enter the hourly rate'}
@@ -259,7 +259,7 @@ export function HourlyServicesStep({ data, updateData }: HourlyServicesStepProps
               variant="ghost"
               size="sm"
               onClick={() => handleRemoveService(index)}
-              className="mt-8 text-red-600 hover:text-red-700 hover:bg-red-50"
+              className="mt-8 text-[rgb(var(--color-destructive))] hover:text-[rgb(var(--color-destructive))] hover:bg-[rgb(var(--color-destructive)/0.1)]"
             >
               <X className="h-4 w-4" />
             </Button>
@@ -279,8 +279,8 @@ export function HourlyServicesStep({ data, updateData }: HourlyServicesStepProps
       </div>
 
       {data.hourly_services.length === 0 && (
-        <div className="p-4 bg-gray-50 border border-gray-200 rounded-md">
-          <p className="text-sm text-gray-600 text-center">
+        <div className="p-4 bg-[rgb(var(--color-border-50))] border border-[rgb(var(--color-border-200))] rounded-md">
+          <p className="text-sm text-[rgb(var(--color-text-500))] text-center">
             No hourly services added yet. Click “Add Hourly Service” above or “Skip” if you don’t
             need time & materials billing.
           </p>

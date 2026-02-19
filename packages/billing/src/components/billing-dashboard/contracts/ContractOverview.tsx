@@ -46,14 +46,14 @@ const getTypeIcon = (type: 'Fixed' | 'Hourly' | 'Usage') => {
   }
 };
 
-const getTypeBadgeColor = (type: 'Fixed' | 'Hourly' | 'Usage') => {
+const getTypeBadgeVariant = (type: 'Fixed' | 'Hourly' | 'Usage'): 'info' | 'success' | 'warning' => {
   switch (type) {
     case 'Fixed':
-      return 'bg-blue-100 text-blue-800 border-blue-200';
+      return 'info';
     case 'Hourly':
-      return 'bg-emerald-100 text-emerald-800 border-emerald-200';
+      return 'success';
     case 'Usage':
-      return 'bg-orange-100 text-orange-800 border-orange-200';
+      return 'warning';
   }
 };
 
@@ -64,18 +64,18 @@ const ContractLineCard: React.FC<{
   currencyCode: string;
 }> = ({ line, isExpanded, onToggle, currencyCode }) => {
   return (
-    <div className="border border-gray-200 rounded-lg overflow-hidden">
+    <div className="border border-[rgb(var(--color-border-200))] rounded-lg overflow-hidden">
       <button
         type="button"
         onClick={onToggle}
-        className="w-full flex items-center justify-between p-3 hover:bg-gray-50 transition-colors text-left"
+        className="w-full flex items-center justify-between p-3 hover:bg-muted transition-colors text-left"
       >
         <div className="flex items-center gap-3">
           {getTypeIcon(line.contract_line_type)}
           <div>
-            <div className="font-medium text-gray-900">{line.contract_line_name}</div>
-            <div className="flex items-center gap-2 text-sm text-gray-500">
-              <Badge className={cn('text-xs border', getTypeBadgeColor(line.contract_line_type))}>
+            <div className="font-medium text-[rgb(var(--color-text-900))]">{line.contract_line_name}</div>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Badge variant={getTypeBadgeVariant(line.contract_line_type)} className="text-xs">
                 {line.contract_line_type}
               </Badge>
               <span>•</span>
@@ -83,7 +83,7 @@ const ContractLineCard: React.FC<{
               {line.base_rate !== null && line.contract_line_type === 'Fixed' && (
                 <>
                   <span>•</span>
-                  <span className="font-medium text-gray-700">{formatCurrency(line.base_rate, currencyCode)}</span>
+                  <span className="font-medium text-[rgb(var(--color-text-700))]">{formatCurrency(line.base_rate, currencyCode)}</span>
                 </>
               )}
             </div>
@@ -91,34 +91,34 @@ const ContractLineCard: React.FC<{
         </div>
         <div className="flex items-center gap-2">
           {line.services.length > 0 && (
-            <span className="text-sm text-gray-500">
+            <span className="text-sm text-muted-foreground">
               {line.services.length} service{line.services.length !== 1 ? 's' : ''}
             </span>
           )}
           {isExpanded ? (
-            <ChevronDown className="h-4 w-4 text-gray-400" />
+            <ChevronDown className="h-4 w-4 text-muted-foreground" />
           ) : (
-            <ChevronRight className="h-4 w-4 text-gray-400" />
+            <ChevronRight className="h-4 w-4 text-muted-foreground" />
           )}
         </div>
       </button>
 
       {isExpanded && line.services.length > 0 && (
-        <div className="border-t border-gray-200 bg-gray-50 p-3">
-          <div className="text-xs uppercase tracking-wide text-gray-500 mb-2">Included Services</div>
+        <div className="border-t border-[rgb(var(--color-border-200))] bg-muted p-3">
+          <div className="text-xs uppercase tracking-wide text-muted-foreground mb-2">Included Services</div>
           <div className="space-y-2">
             {line.services.map((service) => (
               <div
                 key={service.service_id}
-                className="flex items-center justify-between bg-white rounded border border-gray-100 px-3 py-2"
+                className="flex items-center justify-between bg-card rounded border border-[rgb(var(--color-border-100))] px-3 py-2"
               >
-                <span className="text-sm text-gray-700">{service.service_name}</span>
-                <div className="flex items-center gap-2 text-sm text-gray-500">
+                <span className="text-sm text-[rgb(var(--color-text-700))]">{service.service_name}</span>
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   {service.quantity && service.quantity > 1 && (
                     <span>x{service.quantity}</span>
                   )}
                   {service.custom_rate !== null && (
-                    <span className="font-medium text-gray-700">
+                    <span className="font-medium text-[rgb(var(--color-text-700))]">
                       {formatCurrency(service.custom_rate, currencyCode)}
                       {line.contract_line_type === 'Hourly' && '/hr'}
                       {line.contract_line_type === 'Usage' && service.unit_of_measure && `/${service.unit_of_measure}`}
@@ -132,8 +132,8 @@ const ContractLineCard: React.FC<{
       )}
 
       {isExpanded && line.services.length === 0 && (
-        <div className="border-t border-gray-200 bg-gray-50 p-3">
-          <div className="text-sm text-gray-500 italic">No services configured</div>
+        <div className="border-t border-[rgb(var(--color-border-200))] bg-muted p-3">
+          <div className="text-sm text-muted-foreground italic">No services configured</div>
         </div>
       )}
     </div>
@@ -206,7 +206,7 @@ export const ContractOverview: React.FC<ContractOverviewProps> = ({
     return (
       <Card>
         <CardContent className="py-6">
-          <div className="text-center text-gray-500">{error}</div>
+          <div className="text-center text-muted-foreground">{error}</div>
         </CardContent>
       </Card>
     );
@@ -230,32 +230,32 @@ export const ContractOverview: React.FC<ContractOverviewProps> = ({
         {/* Summary Stats */}
         <div className="grid gap-3 sm:grid-cols-3">
           {/* Estimated Value */}
-          <div className="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 rounded-lg p-3">
-            <div className="flex items-center gap-2 text-sm text-green-700 mb-1">
+          <div className="bg-success/10 border border-success/30 rounded-lg p-3">
+            <div className="flex items-center gap-2 text-sm text-success mb-1">
               <Coins className="h-4 w-4" />
               <span>Est. Monthly Value</span>
             </div>
-            <div className="text-xl font-bold text-green-900">
+            <div className="text-xl font-bold text-foreground">
               {overview.totalEstimatedMonthlyValue !== null ? (
                 formatCurrency(overview.totalEstimatedMonthlyValue, overview.currencyCode)
               ) : (
-                <span className="text-base font-normal text-green-700">Variable</span>
+                <span className="text-base font-normal text-success">Variable</span>
               )}
             </div>
             {hasVariableComponents && overview.totalEstimatedMonthlyValue !== null && (
-              <div className="text-xs text-green-600 mt-1">
+              <div className="text-xs text-success mt-1">
                 + variable (hourly/usage)
               </div>
             )}
           </div>
 
           {/* Contract Lines */}
-          <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
-            <div className="flex items-center gap-2 text-sm text-gray-600 mb-1">
+          <div className="bg-muted border border-[rgb(var(--color-border-200))] rounded-lg p-3">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
               <Layers3 className="h-4 w-4" />
               <span>Contract Lines</span>
             </div>
-            <div className="text-xl font-bold text-gray-900">
+            <div className="text-xl font-bold text-[rgb(var(--color-text-900))]">
               {overview.contractLines.length}
             </div>
             {onNavigateToLines && (
@@ -270,23 +270,23 @@ export const ContractOverview: React.FC<ContractOverviewProps> = ({
           </div>
 
           {/* Services */}
-          <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
-            <div className="flex items-center gap-2 text-sm text-gray-600 mb-1">
+          <div className="bg-muted border border-[rgb(var(--color-border-200))] rounded-lg p-3">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
               <Package className="h-4 w-4" />
               <span>Total Services</span>
             </div>
-            <div className="text-xl font-bold text-gray-900">
+            <div className="text-xl font-bold text-[rgb(var(--color-text-900))]">
               {overview.serviceCount}
             </div>
             <div className="flex flex-wrap gap-1 mt-1">
               {overview.hasFixedServices && (
-                <Badge className="text-xs bg-blue-50 text-blue-700 border border-blue-200">Fixed</Badge>
+                <Badge variant="info" className="text-xs">Fixed</Badge>
               )}
               {overview.hasHourlyServices && (
-                <Badge className="text-xs bg-emerald-50 text-emerald-700 border border-emerald-200">Hourly</Badge>
+                <Badge variant="success" className="text-xs">Hourly</Badge>
               )}
               {overview.hasUsageServices && (
-                <Badge className="text-xs bg-orange-50 text-orange-700 border border-orange-200">Usage</Badge>
+                <Badge variant="warning" className="text-xs">Usage</Badge>
               )}
             </div>
           </div>
@@ -295,7 +295,7 @@ export const ContractOverview: React.FC<ContractOverviewProps> = ({
         {/* Contract Lines List */}
         {overview.contractLines.length > 0 ? (
           <div className="space-y-2">
-            <div className="text-sm font-medium text-gray-700 flex items-center justify-between">
+            <div className="text-sm font-medium text-[rgb(var(--color-text-700))] flex items-center justify-between">
               <span>Contract Lines</span>
               {overview.contractLines.length > 3 && (
                 <button
@@ -326,10 +326,10 @@ export const ContractOverview: React.FC<ContractOverviewProps> = ({
             </div>
           </div>
         ) : (
-          <div className="text-center py-6 bg-gray-50 rounded-lg border border-dashed border-gray-300">
-            <Layers3 className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-            <p className="text-gray-600 font-medium">No contract lines yet</p>
-            <p className="text-sm text-gray-500 mt-1">
+          <div className="text-center py-6 bg-muted rounded-lg border border-dashed border-[rgb(var(--color-border-300))]">
+            <Layers3 className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+            <p className="text-muted-foreground font-medium">No contract lines yet</p>
+            <p className="text-sm text-muted-foreground mt-1">
               Add contract lines to define what's included in this contract
             </p>
             {onNavigateToLines && (

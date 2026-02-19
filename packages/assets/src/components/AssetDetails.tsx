@@ -46,6 +46,7 @@ import {
 import CreateTicketFromAssetButton from './CreateTicketFromAssetButton';
 import CustomTabs from '@alga-psa/ui/components/CustomTabs';
 import DeleteAssetButton from './DeleteAssetButton';
+import { Badge } from '@alga-psa/ui/components/Badge';
 
 interface AssetDetailsProps {
   asset: Asset;
@@ -110,13 +111,13 @@ export default function AssetDetails({ asset, maintenanceReport: initialMaintena
     <div {...withDataAutomationId({ id: 'basic-info-grid' })} className="grid grid-cols-2 md:grid-cols-4 gap-4">
       <div {...withDataAutomationId({ id: 'asset-status-info' })}>
         <Text as="div" size="2" className="font-medium text-gray-700">Status</Text>
-        <div className={`inline-flex px-2 py-1 rounded-full text-sm ${
-          asset.status === 'active' ? 'bg-green-100 text-green-800' :
-          asset.status === 'inactive' ? 'bg-gray-100 text-gray-800' :
-          'bg-amber-100 text-amber-800'
-        }`}>
+        <Badge variant={
+          asset.status === 'active' ? 'success' :
+          asset.status === 'inactive' ? 'default-muted' :
+          'warning'
+        }>
           {asset.status}
-        </div>
+        </Badge>
       </div>
       <div {...withDataAutomationId({ id: 'asset-serial-info' })}>
         <Text as="div" size="2" className="font-medium text-gray-700">Serial Number</Text>

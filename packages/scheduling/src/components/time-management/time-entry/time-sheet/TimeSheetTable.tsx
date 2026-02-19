@@ -320,7 +320,7 @@ export function TimeSheetTable({
                             >
                                 <div className="flex w-full h-full items-center justify-center py-16 px-4">
                                     <div className="flex flex-col items-center justify-center text-center max-w-md">
-                                        <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mb-4">
+                                        <div className="w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-4">
                                             <ClipboardList className="w-8 h-8 text-gray-400" />
                                         </div>
                                         <h3 className="text-lg font-semibold text-gray-900 mb-2">
@@ -384,8 +384,8 @@ export function TimeSheetTable({
                                                     : workItem.type === 'project_task'
                                                         ? 'bg-[rgb(var(--color-secondary-100))] text-[rgb(var(--color-secondary-700))]'
                                                         : workItem.type === 'interaction'
-                                                            ? 'bg-green-100 text-green-700'
-                                                            : 'bg-gray-100 text-gray-700'
+                                                            ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
+                                                            : 'bg-gray-100 dark:bg-gray-800/30 text-gray-700 dark:text-gray-300'
                                             }`}>
                                                 {formatWorkItemType(workItem.type)}
                                             </span>
@@ -640,7 +640,7 @@ export function TimeSheetTable({
                                                                         id="quick-save-time-entry"
                                                                         variant="ghost"
                                                                         size="icon"
-                                                                        className="!h-6 !w-6 !p-0 text-green-600 hover:bg-green-50"
+                                                                        className="!h-6 !w-6 !p-0 text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30"
                                                                     onClick={async (e) => {
                                                                         e.stopPropagation();
                                                                         const inputValue = quickInputValues[cellKey] || '';
@@ -689,7 +689,7 @@ export function TimeSheetTable({
                                                                         id="quick-cancel-time-entry"
                                                                         variant="ghost"
                                                                         size="icon"
-                                                                        className="!h-6 !w-6 !p-0 text-gray-500 hover:bg-gray-100"
+                                                                        className="!h-6 !w-6 !p-0 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
                                                                     onClick={(e) => {
                                                                         e.stopPropagation();
                                                                         setQuickInputValues(prev => {
@@ -720,8 +720,8 @@ export function TimeSheetTable({
                 </tbody>
 
                 <tfoot>
-                    <tr className="bg-gray-100 border-t border-gray-200">
-                        <td className="px-4 py-3 text-sm font-semibold text-gray-900 border-t border-r border-gray-200 sticky left-0 z-10 bg-gray-100">
+                    <tr className="bg-gray-100 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
+                        <td className="px-4 py-3 text-sm font-semibold text-gray-900 dark:text-gray-100 border-t border-r border-gray-200 dark:border-gray-700 sticky left-0 z-10 bg-gray-100 dark:bg-gray-800">
                             Weekly Total
                         </td>
                         {visibleDates.map((date): React.JSX.Element => {

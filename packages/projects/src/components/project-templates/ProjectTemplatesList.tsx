@@ -170,7 +170,7 @@ export default function ProjectTemplatesList({ initialTemplates, initialCategori
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={() => handleDelete(row.template_id)}
-              className="text-red-600"
+              className="text-destructive"
             >
               <Trash className="mr-2 h-4 w-4" />
               Delete

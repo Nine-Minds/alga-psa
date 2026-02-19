@@ -179,7 +179,7 @@ export const ServiceForm: React.FC = () => {
       />
 
       <div>
-        <label htmlFor="description" className="block text-sm font-medium text-gray-700">Description</label>
+        <label htmlFor="description" className="block text-sm font-medium text-[rgb(var(--color-text-700))]">Description</label>
         <Input
           id="description"
           value={description}

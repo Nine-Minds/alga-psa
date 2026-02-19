@@ -30,11 +30,11 @@ type DeadLetterResponse = {
 };
 
 const STATUS_STYLES: Record<string, string> = {
-  RUNNING: 'bg-blue-100 text-blue-700',
-  WAITING: 'bg-amber-100 text-amber-700',
-  SUCCEEDED: 'bg-green-100 text-green-700',
-  FAILED: 'bg-red-100 text-red-700',
-  CANCELED: 'bg-gray-100 text-gray-600'
+  RUNNING: 'bg-info/15 text-info-foreground',
+  WAITING: 'bg-warning/15 text-warning-foreground',
+  SUCCEEDED: 'bg-success/15 text-success',
+  FAILED: 'bg-destructive/15 text-destructive',
+  CANCELED: 'bg-muted text-muted-foreground'
 };
 
 const formatDateTime = (value?: string | null) => {
@@ -124,7 +124,7 @@ const WorkflowDeadLetterQueue: React.FC<WorkflowDeadLetterQueueProps> = ({ isAct
                 {runs.map((run) => (
                   <TableRow
                     key={run.run_id}
-                    className={selectedRunId === run.run_id ? 'bg-blue-50' : 'cursor-pointer'}
+                    className={selectedRunId === run.run_id ? 'bg-table-selected' : 'cursor-pointer'}
                     onClick={() => setSelectedRunId(run.run_id)}
                   >
                     <TableCell className="font-mono text-xs">{run.run_id}</TableCell>

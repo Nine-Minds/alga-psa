@@ -98,7 +98,7 @@ export default function CreateWorkflowDialog({
             autoFocus
           />
           {nameError && (
-            <p className="mt-1 text-sm text-red-600">{nameError}</p>
+            <p className="mt-1 text-sm text-destructive">{nameError}</p>
           )}
         </div>
 

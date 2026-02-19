@@ -218,7 +218,7 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
               onChange={handleInputChange}
               placeholder="Enter project name..."
               className={`w-full text-base font-medium p-2 border rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-purple-500 ${
-                hasAttemptedSubmit && !project.project_name?.trim() ? 'border-red-500' : 'border-gray-300'
+                hasAttemptedSubmit && !project.project_name?.trim() ? 'border-destructive' : 'border-gray-300'
               }`}
               rows={1}
               required

@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import Drawer from '@alga-psa/ui/components/Drawer';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@alga-psa/ui/components/Tabs';
 import { Badge } from '@alga-psa/ui/components/Badge';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card } from '@alga-psa/ui/components/Card';
 import type {
@@ -61,10 +62,10 @@ const TAB_ORDER: AssetDrawerTab[] = [
   ASSET_DRAWER_TABS.DOCUMENTS,
 ];
 
-const STATUS_STYLES: Record<string, string> = {
-  active: 'bg-emerald-100 text-emerald-700 ring-1 ring-emerald-600/20',
-  inactive: 'bg-gray-100 text-gray-700 ring-1 ring-gray-600/20',
-  maintenance: 'bg-amber-100 text-amber-700 ring-1 ring-amber-600/20',
+const STATUS_VARIANT: Record<string, 'success' | 'default-muted' | 'warning'> = {
+  active: 'success',
+  inactive: 'default-muted',
+  maintenance: 'warning',
 };
 
 export function AssetDetailDrawerClient({
@@ -119,12 +120,12 @@ export function AssetDetailDrawerClient({
     if (!asset) {
       return null;
     }
-    const statusClass = STATUS_STYLES[asset.status] || 'bg-blue-100 text-blue-700 ring-1 ring-blue-600/20';
+    const statusVariant = STATUS_VARIANT[asset.status] || 'info';
     return (
       <Badge
         id="asset-drawer-status"
-        variant="outline"
-        className={`px-2 py-1 text-xs font-semibold ${statusClass}`}
+        variant={statusVariant}
+        className="px-2 py-1 text-xs font-semibold"
       >
         {asset.status.charAt(0).toUpperCase() + asset.status.slice(1)}
       </Badge>
@@ -196,9 +197,9 @@ export function AssetDetailDrawerClient({
         </header>
 
         {error ? (
-          <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-            {error}
-          </div>
+          <Alert variant="destructive">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
         ) : (
           <Tabs value={desiredTab} onValueChange={handleTabChange} className="space-y-4">
             <TabsList className="w-full gap-2 border-b border-gray-200 text-sm font-medium text-gray-500">

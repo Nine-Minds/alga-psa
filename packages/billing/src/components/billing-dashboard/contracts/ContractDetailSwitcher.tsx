@@ -100,7 +100,7 @@ const ContractDetailSwitcher: React.FC<ContractDetailSwitcherProps> = ({
     return (
       <div className="p-6">
         <LoadingIndicator
-          className="py-12 text-gray-600"
+          className="py-12 text-muted-foreground"
           layout="stacked"
           spinnerProps={{ size: 'md' }}
           text="Loading contract..."

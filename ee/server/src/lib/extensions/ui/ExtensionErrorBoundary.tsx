@@ -12,15 +12,15 @@ import { logger, ExtensionErrorBoundaryProps, ExtensionErrorBoundaryState } from
  * Default fallback UI for extension errors
  */
 const DefaultErrorFallback = ({ error, extensionId }: { error: Error, extensionId: string }) => (
-  <div 
-    className="rounded-md border border-red-200 bg-red-50 p-4 text-sm" 
+  <div
+    className="rounded-md border border-destructive/30 bg-destructive/10 p-4 text-sm"
     data-extension-error={extensionId}
   >
-    <div className="font-medium text-red-800">Extension Error</div>
-    <div className="mt-2 text-red-700">
+    <div className="font-medium text-destructive">Extension Error</div>
+    <div className="mt-2 text-destructive/80">
       {error.message || 'An error occurred in this extension'}
     </div>
-    <div className="mt-1 text-red-600 text-xs">{extensionId}</div>
+    <div className="mt-1 text-destructive/70 text-xs">{extensionId}</div>
   </div>
 );
 

@@ -333,7 +333,7 @@ const CategoriesSettings = (): React.JSX.Element => {
             {value}
           </span>
           {record.is_from_itil_standard && (
-            <span className="ml-2 px-1.5 py-0.5 text-xs font-medium bg-blue-100 text-blue-800 rounded">
+            <span className="ml-2 px-1.5 py-0.5 text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 rounded">
               ITIL
             </span>
           )}
@@ -366,7 +366,7 @@ const CategoriesSettings = (): React.JSX.Element => {
           return (
             <div className="flex items-center pl-4">
               <CornerDownRight className="h-3 w-3 text-muted-foreground mr-2" />
-              <span className="text-gray-500 text-sm bg-gray-100 px-2 py-0.5 rounded">
+              <span className="text-gray-500 dark:text-gray-400 text-sm bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded">
                 {orderWithinParent}
               </span>
             </div>
@@ -708,7 +708,7 @@ const CategoriesSettings = (): React.JSX.Element => {
                           orderDisplay = (
                             <div className="flex items-center justify-end pr-4">
                               <CornerDownRight className="h-3 w-3 text-muted-foreground mr-1" />
-                              <span className="text-gray-500 text-xs bg-gray-100 px-1.5 py-0.5 rounded">
+                              <span className="text-gray-500 dark:text-gray-400 text-xs bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded">
                                 {orderWithinParent}
                               </span>
                             </div>

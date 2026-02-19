@@ -5,13 +5,14 @@ import { WorkflowTaskStatus } from '@alga-psa/shared/workflow/persistence/workfl
 import { Button } from '@alga-psa/ui/components/Button';
 import { Badge, BadgeVariant } from '@alga-psa/ui/components/Badge';
 import { Card } from '@alga-psa/ui/components/Card';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { useRouter } from 'next/navigation';
 
 // Simple Spinner component
 function Spinner({ size = "md" }: { size?: "sm" | "md" | "lg" }) {
   const sizeClass = size === "sm" ? "h-4 w-4" : size === "lg" ? "h-8 w-8" : "h-6 w-6";
   return (
-    <div className={`animate-spin rounded-full border-2 border-gray-300 border-t-blue-600 ${sizeClass}`}></div>
+    <div className={`animate-spin rounded-full border-2 border-gray-300 border-t-primary-500 ${sizeClass}`}></div>
   );
 }
 
@@ -205,7 +206,7 @@ export function TaskList({
     });
     
     return (
-      <span className={isOverdue ? 'text-red-500 font-medium' : ''}>
+      <span className={isOverdue ? 'text-destructive font-medium' : ''}>
         {formatted} {isOverdue && '(Overdue)'}
       </span>
     );
@@ -294,9 +295,9 @@ export function TaskList({
   return (
     <div className={className}>
       {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-          {error}
-        </div>
+        <Alert variant="destructive" className="mb-4">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
       )}
       
       {loading ? (

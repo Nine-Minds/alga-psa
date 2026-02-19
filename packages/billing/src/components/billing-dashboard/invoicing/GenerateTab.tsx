@@ -13,6 +13,7 @@ import AutomaticInvoices from '../AutomaticInvoices';
 import ManualInvoices from '../ManualInvoices';
 import PrepaymentInvoices from '../PrepaymentInvoices';
 import SuccessDialog from '@alga-psa/ui/components/SuccessDialog';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
 
 interface GenerateTabProps {
@@ -162,7 +163,7 @@ const GenerateTab: React.FC<GenerateTabProps> = ({
         <Card>
           <div className="p-4">
             <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-2">
                 Invoice Type
               </label>
               <CustomSelect
@@ -174,9 +175,9 @@ const GenerateTab: React.FC<GenerateTabProps> = ({
             </div>
 
             {error && (
-              <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4">
-                {error}
-              </div>
+              <Alert variant="destructive" className="mb-4">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
             )}
 
             {renderContent()}

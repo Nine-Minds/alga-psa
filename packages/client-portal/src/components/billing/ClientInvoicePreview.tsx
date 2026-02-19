@@ -108,7 +108,7 @@ const ClientInvoicePreview: React.FC<ClientInvoicePreviewProps> = ({
 
   if (error) {
     return (
-      <div className={`text-red-500 p-4 border border-red-200 bg-red-50 rounded ${className}`}>
+      <div className={`text-destructive p-4 border border-destructive/30 bg-destructive/10 rounded ${className}`}>
         {error}
       </div>
     );

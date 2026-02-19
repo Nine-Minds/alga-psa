@@ -158,11 +158,11 @@ export function TenantTelemetrySettings({ onSettingsUpdate }: TenantTelemetrySet
           </div>
           
           {!settings.allowUserOverride && settings.enabled && (
-            <div className="ml-6 p-4 bg-amber-50 border border-amber-200 rounded-md">
-              <p className="text-sm text-amber-800">
-                ⚠️ Centralized control: Users cannot opt-out individually. Ensure compliance with local privacy regulations.
-              </p>
-            </div>
+            <Alert variant="warning" className="ml-6">
+              <AlertDescription>
+                Centralized control: Users cannot opt-out individually. Ensure compliance with local privacy regulations.
+              </AlertDescription>
+            </Alert>
           )}
         </div>
 
@@ -222,28 +222,30 @@ export function TenantTelemetrySettings({ onSettingsUpdate }: TenantTelemetrySet
         )}
 
         {/* Privacy Information */}
-        <div className="p-4 bg-green-50 border border-green-200 rounded-md">
-          <h4 className="text-sm font-medium text-green-900 mb-2">What We Collect</h4>
-          <ul className="text-sm text-green-800 space-y-1">
-            <li>• Error information (no sensitive data)</li>
-            <li>• Performance metrics (page load times, API response times)</li>
-            <li>• Feature usage patterns (which features are used)</li>
-            <li>• System metrics (for infrastructure optimization)</li>
-          </ul>
-          
-          <h4 className="text-sm font-medium text-green-900 mt-4 mb-2">What We DON'T Collect</h4>
-          <ul className="text-sm text-green-800 space-y-1">
-            <li>• Personal information (names, emails, addresses)</li>
-            <li>• Client data or business information</li>
-            <li>• Passwords or authentication tokens</li>
-            <li>• File contents or documents</li>
-          </ul>
-        </div>
+        <Alert variant="success">
+          <AlertDescription>
+            <h4 className="text-sm font-medium mb-2">What We Collect</h4>
+            <ul className="text-sm space-y-1">
+              <li>• Error information (no sensitive data)</li>
+              <li>• Performance metrics (page load times, API response times)</li>
+              <li>• Feature usage patterns (which features are used)</li>
+              <li>• System metrics (for infrastructure optimization)</li>
+            </ul>
+
+            <h4 className="text-sm font-medium mt-4 mb-2">What We DON'T Collect</h4>
+            <ul className="text-sm space-y-1">
+              <li>• Personal information (names, emails, addresses)</li>
+              <li>• Client data or business information</li>
+              <li>• Passwords or authentication tokens</li>
+              <li>• File contents or documents</li>
+            </ul>
+          </AlertDescription>
+        </Alert>
 
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded-md p-4">
-            <div className="text-sm text-red-800">{error}</div>
-          </div>
+          <Alert variant="destructive">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
         )}
 
         <div className="flex justify-between items-center pt-4 border-t">

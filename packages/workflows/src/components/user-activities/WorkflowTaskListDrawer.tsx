@@ -233,7 +233,7 @@ export function WorkflowTaskListDrawer({ onSelectTask }: WorkflowTaskListDrawerP
         </div>
       ) : error ? (
         <div className="flex justify-center items-center h-40">
-          <p className="text-red-500">{error}</p>
+          <p className="text-destructive">{error}</p>
         </div>
       ) : filteredTasks.length === 0 ? (
         <div className="flex justify-center items-center h-40">

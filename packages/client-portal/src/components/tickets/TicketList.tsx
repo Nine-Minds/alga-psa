@@ -421,11 +421,11 @@ export function TicketList() {
         if (hoursUntilDue < 0) {
           // Overdue - red/warning style
           textColorClass = 'text-red-700';
-          bgColorClass = 'bg-red-50';
+          bgColorClass = 'bg-destructive/10';
         } else if (hoursUntilDue <= 24) {
           // Approaching due date (within 24 hours) - orange/caution style
           textColorClass = 'text-orange-700';
-          bgColorClass = 'bg-orange-50';
+          bgColorClass = 'bg-warning/10';
         }
 
         return (
@@ -511,8 +511,8 @@ export function TicketList() {
 
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-        <p className="text-red-700">{error}</p>
+      <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-4">
+        <p className="text-destructive">{error}</p>
       </div>
     );
   }

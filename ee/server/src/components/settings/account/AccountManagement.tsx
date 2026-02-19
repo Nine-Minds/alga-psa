@@ -299,31 +299,30 @@ export default function AccountManagement() {
 
       {/* Scheduled License Changes Alert */}
       {scheduledChanges && (
-        <Alert className="bg-blue-50 border-blue-200">
-          <Info className="h-4 w-4 text-blue-600" />
+        <Alert variant="info">
           <AlertDescription>
-            <p className="font-semibold mb-2 text-blue-900">
+            <p className="font-semibold mb-2">
               Scheduled License Change
             </p>
-            <p className="text-sm mb-2 text-blue-800">
+            <p className="text-sm mb-2">
               Your license count will change from <strong>{scheduledChanges.current_quantity}</strong> to{' '}
               <strong>{scheduledChanges.scheduled_quantity}</strong> on{' '}
               <strong>{new Date(scheduledChanges.effective_date).toLocaleDateString()}</strong>.
             </p>
-            <div className="text-sm space-y-1 text-blue-800">
+            <div className="text-sm space-y-1">
               <div className="flex justify-between">
                 <span>Current monthly cost:</span>
                 <span className="font-medium">${scheduledChanges.current_monthly_cost.toFixed(2)}</span>
               </div>
               <div className="flex justify-between">
                 <span>New monthly cost:</span>
-                <span className="font-medium text-blue-600">
+                <span className="font-medium">
                   ${scheduledChanges.scheduled_monthly_cost.toFixed(2)}
                 </span>
               </div>
-              <div className="flex justify-between pt-1 border-t border-blue-200">
+              <div className="flex justify-between pt-1 border-t border-border">
                 <span className="font-semibold">Monthly savings:</span>
-                <span className="font-semibold text-blue-600">
+                <span className="font-semibold">
                   ${scheduledChanges.monthly_savings.toFixed(2)}
                 </span>
               </div>
@@ -377,7 +376,7 @@ export default function AccountManagement() {
                   {licenseInfo?.plan_name} Plan
                 </p>
               </div>
-              <Badge className="bg-green-100 text-green-800">
+              <Badge variant="success">
                 Active
               </Badge>
             </div>
@@ -500,7 +499,7 @@ export default function AccountManagement() {
           <div className="rounded-lg border p-4 bg-muted/50">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold">Subscription Status</h3>
-              <Badge className={subscriptionInfo?.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}>
+              <Badge variant={subscriptionInfo?.status === 'active' ? 'success' : 'default-muted'}>
                 {subscriptionInfo?.status ? subscriptionInfo.status.charAt(0).toUpperCase() + subscriptionInfo.status.slice(1) : 'Unknown'}
               </Badge>
             </div>

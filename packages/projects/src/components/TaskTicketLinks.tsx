@@ -585,7 +585,7 @@ const TaskTicketLinks = forwardRef<TaskTicketLinksRef, TaskTicketLinksProps>(fun
                 type="button"
                 variant="ghost"
                 onClick={() => onDeleteLink(link.link_id)}
-                className="flex items-center text-sm text-red-500 hover:text-red-700"
+                className="flex items-center text-sm text-destructive hover:text-destructive"
               >
                 <Trash2 className="h-4 w-4" />
               </Button>

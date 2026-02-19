@@ -145,7 +145,7 @@ export function Input({
   return (
     <div className={containerClassName !== undefined ? containerClassName : "mb-0"}>
       {label && (
-        <label className={`block text-sm font-medium mb-1 ${hasErrorState ? 'text-red-700' : 'text-[rgb(var(--color-text-700))]'}`}>
+        <label className={`block text-sm font-medium mb-1 ${hasErrorState ? 'text-destructive' : 'text-[rgb(var(--color-text-700))]'}`}>
           {label}
         </label>
       )}
@@ -154,7 +154,7 @@ export function Input({
         ref={mergedRef}
         className={`w-full ${inputSizeClasses[size]} border rounded-md shadow-sm focus:outline-none focus:ring-2 placeholder:text-[rgb(var(--color-text-400))] ${
           hasErrorState
-            ? 'border-red-500 focus:ring-red-500 focus:border-red-500 bg-red-50'
+            ? 'border-destructive focus:ring-destructive focus:border-destructive bg-[rgb(var(--color-destructive)/0.1)]'
             : 'border-[rgb(var(--color-border-400))] focus:ring-[rgb(var(--color-primary-500))] focus:border-transparent file:mr-3 file:rounded-md file:border-0 file:bg-[rgba(var(--color-primary-500),0.08)] file:px-3 file:py-2 file:text-sm file:font-medium file:text-[rgb(var(--color-primary-700))]'
         } ${className}`}
         value={value}
@@ -168,7 +168,7 @@ export function Input({
       {displayErrors.length > 0 && (
         <div className="mt-1">
           {displayErrors.map((errorMsg, index) => (
-            <p key={index} className="text-sm text-red-600">
+            <p key={index} className="text-sm text-destructive">
               {errorMsg}
             </p>
           ))}

@@ -406,7 +406,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
         <Box p="8">
           <LoadingIndicator
             layout="stacked"
-            className="py-6 text-gray-600"
+            className="py-6 text-muted-foreground"
             spinnerProps={{ size: 'md' }}
             text="Loading contract lines"
           />
@@ -421,7 +421,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <h3 className="text-lg font-medium">Contract Lines</h3>
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-muted-foreground">
               Manage the contract lines and services for this contract
             </p>
           </div>
@@ -452,7 +452,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
         )}
 
         {contractLines.length === 0 ? (
-          <div className="text-center py-12 text-gray-500">
+          <div className="text-center py-12 text-muted-foreground">
             <p>No contract lines added yet.</p>
             <p className="text-sm mt-1">Select a contract line above to get started.</p>
           </div>
@@ -466,37 +466,38 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
               return (
                 <div
                   key={line.contract_line_id}
-                  className="border rounded-lg overflow-hidden bg-white"
+                  className="border rounded-lg overflow-hidden bg-card"
                 >
                   {/* Header */}
-                  <div className="flex items-center gap-3 p-4 bg-gray-50 border-b">
+                  <div className="flex items-center gap-3 p-4 bg-muted border-b">
                     <button
                       type="button"
                       onClick={() => toggleExpand(line.contract_line_id)}
-                      className="p-1 hover:bg-gray-200 rounded transition-colors"
+                      className="p-1 hover:bg-muted rounded transition-colors"
                     >
                       {isExpanded ? (
-                        <ChevronUp className="h-5 w-5 text-gray-600" />
+                        <ChevronUp className="h-5 w-5 text-muted-foreground" />
                       ) : (
-                        <ChevronDown className="h-5 w-5 text-gray-600" />
+                        <ChevronDown className="h-5 w-5 text-muted-foreground" />
                       )}
                     </button>
 
                     <div className="flex-1 min-w-0">
-                      <div className="font-medium text-gray-900">
+                      <div className="font-medium text-[rgb(var(--color-text-900))]">
                         {line.contract_line_name}
                       </div>
-                      <div className="flex items-center gap-2 mt-1 text-xs text-gray-600">
+                      <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
                         <Badge
-                          className={`text-xs ${
+                          variant={
                             line.contract_line_type === 'Fixed'
-                              ? 'bg-green-100 text-green-800'
+                              ? 'info'
                               : line.contract_line_type === 'Hourly'
-                              ? 'bg-purple-100 text-purple-800'
+                              ? 'success'
                               : line.contract_line_type === 'Usage'
-                              ? 'bg-indigo-100 text-indigo-800'
-                              : 'bg-gray-100 text-gray-800'
-                          }`}
+                              ? 'warning'
+                              : 'default-muted'
+                          }
+                          className="text-xs"
                         >
                           {line.contract_line_type}
                         </Badge>
@@ -534,7 +535,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
                           e.stopPropagation();
                           handleEditContractLine(line);
                         }}
-                        className="h-8 text-gray-600 hover:text-gray-700 hover:bg-gray-100"
+                        className="h-8 text-muted-foreground hover:text-[rgb(var(--color-text-700))] hover:bg-muted"
                       >
                         <Edit className="h-4 w-4 mr-1" />
                         Edit
@@ -547,7 +548,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
                           e.stopPropagation();
                           handleRemoveContractLine(line.contract_line_id);
                         }}
-                        className="h-8 text-red-600 hover:text-red-700 hover:bg-red-50"
+                        className="h-8 text-destructive hover:text-destructive hover:bg-destructive/10"
                       >
                         <Trash2 className="h-4 w-4 mr-1" />
                         Remove
@@ -557,9 +558,9 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
 
                   {/* Expanded Content */}
                   {isExpanded && (
-                    <div className="p-4 bg-white border-t">
+                    <div className="p-4 bg-card border-t">
                       {isLoadingServices ? (
-                        <div className="flex items-center justify-center py-8 text-gray-500">
+                        <div className="flex items-center justify-center py-8 text-muted-foreground">
                           <LoadingIndicator
                             layout="inline"
                             spinnerProps={{ size: 'sm' }}
@@ -569,11 +570,11 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
                       ) : (
                         <div className="space-y-6">
                           {/* Contract Line Configuration Section */}
-                          <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 space-y-4">
+                          <div className="rounded-lg border border-[rgb(var(--color-border-200))] bg-muted p-4 space-y-4">
                             <div className="flex flex-wrap items-start justify-between gap-3">
                               <div>
-                                <p className="font-semibold text-gray-900">Contract Line Configuration</p>
-                                <p className="text-xs text-gray-500">
+                                <p className="font-semibold text-[rgb(var(--color-text-900))]">Contract Line Configuration</p>
+                                <p className="text-xs text-muted-foreground">
                                   Settings that apply to this contract line
                                 </p>
                               </div>
@@ -607,7 +608,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
                             {/* Billing Timing - applies to all line types */}
                             <div className="grid gap-4 md:grid-cols-2">
                               <div>
-                                <Label className="text-xs uppercase tracking-wide text-gray-500">
+                                <Label className="text-xs uppercase tracking-wide text-muted-foreground">
                                   Billing Timing
                                 </Label>
                                 {editingLineId === line.contract_line_id ? (
@@ -625,7 +626,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
                                     className="mt-1"
                                   />
                                 ) : (
-                                  <p className="mt-1 text-sm text-gray-800">
+                                  <p className="mt-1 text-sm text-[rgb(var(--color-text-800))]">
                                     {(line.billing_timing || 'arrears') === 'advance'
                                       ? 'Advance (bill at start of period)'
                                       : 'Arrears (bill at end of period)'}
@@ -639,7 +640,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
                               {line.contract_line_type === 'Hourly' && (
                                 <>
                                   <div>
-                                    <Label className="text-xs uppercase tracking-wide text-gray-500">
+                                    <Label className="text-xs uppercase tracking-wide text-muted-foreground">
                                       Minimum Billable Time (minutes)
                                     </Label>
                                     {editingLineId === line.contract_line_id ? (
@@ -656,13 +657,13 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
                                         className="mt-1"
                                       />
                                     ) : (
-                                      <p className="mt-1 text-sm text-gray-800">
+                                      <p className="mt-1 text-sm text-[rgb(var(--color-text-800))]">
                                         {line.minimum_billable_time || 15} minutes
                                       </p>
                                     )}
                                   </div>
                                   <div>
-                                    <Label className="text-xs uppercase tracking-wide text-gray-500">
+                                    <Label className="text-xs uppercase tracking-wide text-muted-foreground">
                                       Round Up To Nearest (minutes)
                                     </Label>
                                     {editingLineId === line.contract_line_id ? (
@@ -679,7 +680,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
                                         className="mt-1"
                                       />
                                     ) : (
-                                      <p className="mt-1 text-sm text-gray-800">
+                                      <p className="mt-1 text-sm text-[rgb(var(--color-text-800))]">
                                         {line.round_up_to_nearest || 15} minutes
                                       </p>
                                     )}
@@ -690,7 +691,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
                               {/* Fixed contract line - show info message */}
                               {line.contract_line_type === 'Fixed' && (
                                 <div className="col-span-2 space-y-2">
-                                  <p className="text-sm text-gray-600">
+                                  <p className="text-sm text-muted-foreground">
                                     Fixed contract lines bill a flat recurring fee regardless of individual service rates.
                                   </p>
                                   <Alert variant="info">
@@ -707,7 +708,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
                               {/* Usage contract line - show info message */}
                               {line.contract_line_type === 'Usage' && (
                                 <div className="col-span-2">
-                                  <p className="text-sm text-gray-600">
+                                  <p className="text-sm text-muted-foreground">
                                     Usage-based contract lines are configured per service with unit rates.
                                   </p>
                                 </div>
@@ -717,11 +718,11 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
 
                           {/* Services List Section */}
                           <div>
-                            <h4 className="text-sm font-medium text-gray-700 mb-3">
+                            <h4 className="text-sm font-medium text-[rgb(var(--color-text-700))] mb-3">
                               Services ({services.filter(s => s.configuration.configuration_type !== 'Bucket').length})
                             </h4>
                             {services.filter(s => s.configuration.configuration_type !== 'Bucket').length === 0 ? (
-                              <div className="text-center py-8 text-gray-500 bg-gray-50 rounded-lg border border-gray-200">
+                              <div className="text-center py-8 text-muted-foreground bg-muted rounded-lg border border-[rgb(var(--color-border-200))]">
                                 <p className="text-sm">No services configured for this contract line.</p>
                               </div>
                             ) : (
@@ -734,15 +735,15 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
                                   return (
                                     <div
                                       key={`${serviceConfig.configuration.config_id}-${idx}`}
-                                      className="rounded-lg border border-gray-200 bg-gray-50 p-4 space-y-4"
+                                      className="rounded-lg border border-[rgb(var(--color-border-200))] bg-muted p-4 space-y-4"
                                     >
                                       <div className="flex flex-wrap items-start justify-between gap-3">
                                         <div className="flex items-center gap-2">
                                           <div>
-                                            <p className="font-semibold text-gray-900">
+                                            <p className="font-semibold text-[rgb(var(--color-text-900))]">
                                               {serviceConfig.service.service_name}
                                             </p>
-                                            <p className="text-xs text-gray-500">
+                                            <p className="text-xs text-muted-foreground">
                                               {serviceConfig.configuration.configuration_type} Service
                                             </p>
                                           </div>
@@ -758,7 +759,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
                                         {/* Quantity - Fixed and Usage only (not used for Hourly billing) */}
                                         {serviceConfig.configuration.configuration_type !== 'Hourly' && (
                                           <div>
-                                            <Label className="text-xs uppercase tracking-wide text-gray-500">
+                                            <Label className="text-xs uppercase tracking-wide text-muted-foreground">
                                               {line.contract_line_type === 'Fixed' ? 'Quantity (for tax allocation)' : 'Quantity'}
                                             </Label>
                                             {isEditing ? (
@@ -777,7 +778,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
                                                 className="mt-1"
                                               />
                                             ) : (
-                                              <p className="mt-1 text-sm text-gray-800 font-semibold">
+                                              <p className="mt-1 text-sm text-[rgb(var(--color-text-800))] font-semibold">
                                                 {serviceConfig.configuration.quantity || 1}
                                               </p>
                                             )}
@@ -786,14 +787,14 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
 
                                         {/* Rate field - varies by type */}
                                         <div>
-                                          <Label className="text-xs uppercase tracking-wide text-gray-500">
+                                          <Label className="text-xs uppercase tracking-wide text-muted-foreground">
                                             {serviceConfig.configuration.configuration_type === 'Hourly' ? 'Hourly Rate' :
                                              serviceConfig.configuration.configuration_type === 'Usage' ? 'Unit Rate' :
                                              'Rate (for tax allocation)'}
                                           </Label>
                                           {isEditing ? (
                                             <div className="relative mt-1">
-                                              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">{getCurrencySymbol(contract.currency_code || 'USD')}</span>
+                                              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">{getCurrencySymbol(contract.currency_code || 'USD')}</span>
                                               <Input
                                                 id={`rate-${serviceConfig.configuration.config_id}`}
                                                 type="number"
@@ -828,7 +829,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
                                               />
                                             </div>
                                           ) : (
-                                            <p className="mt-1 text-sm text-gray-800">
+                                            <p className="mt-1 text-sm text-[rgb(var(--color-text-800))]">
                                               {formatRate(serviceConfig.typeConfig?.hourly_rate || serviceConfig.typeConfig?.base_rate)}
                                             </p>
                                           )}
@@ -837,7 +838,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
                                         {/* Unit of Measure - Usage only */}
                                         {serviceConfig.configuration.configuration_type === 'Usage' && (
                                           <div>
-                                            <Label className="text-xs uppercase tracking-wide text-gray-500">
+                                            <Label className="text-xs uppercase tracking-wide text-muted-foreground">
                                               Unit of Measure
                                             </Label>
                                             {isEditing ? (
@@ -856,7 +857,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
                                                 className="mt-1"
                                               />
                                             ) : (
-                                              <p className="mt-1 text-sm text-gray-800">
+                                              <p className="mt-1 text-sm text-[rgb(var(--color-text-800))]">
                                                 {serviceConfig.typeConfig?.unit_of_measure || 'unit'}
                                               </p>
                                             )}
@@ -866,7 +867,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
 
                                       {/* Bucket Configuration - Hourly and Usage services only */}
                                       {isEditing && (serviceConfig.configuration.configuration_type === 'Hourly' || serviceConfig.configuration.configuration_type === 'Usage') && (
-                                        <div className="col-span-2 pt-4 border-t border-dashed border-gray-200">
+                                        <div className="col-span-2 pt-4 border-t border-dashed border-[rgb(var(--color-border-200))]">
                                           <SwitchWithLabel
                                             label="Enable bucket usage tracking"
                                             checked={Boolean(editBucketConfigs[serviceConfig.service.service_id])}
@@ -913,7 +914,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, onContractLines
 
                                       {/* Display bucket configuration in read-only mode */}
                                       {!isEditing && serviceConfig.bucketConfig && (
-                                        <div className="col-span-2 pt-4 border-t border-dashed border-gray-200">
+                                        <div className="col-span-2 pt-4 border-t border-dashed border-[rgb(var(--color-border-200))]">
                                           <div className="rounded-md border border-primary-100 bg-primary-50 p-4">
                                             <p className="text-sm font-medium text-primary-900 mb-2">Bucket Configuration</p>
                                             <div className="text-sm text-primary-800 space-y-1">

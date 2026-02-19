@@ -36,20 +36,20 @@ export function ActivityCard({ activity, onViewDetails, onActionComplete, render
   const { openActivityDrawer } = useActivityDrawer();
   // Color mapping based on activity type
   const typeColorMap: Record<ActivityType, string> = {
-    [ActivityType.SCHEDULE]: 'border-green-500',
-    [ActivityType.PROJECT_TASK]: 'border-blue-500',
+    [ActivityType.SCHEDULE]: 'border-success',
+    [ActivityType.PROJECT_TASK]: 'border-primary-500',
     [ActivityType.TICKET]: 'border-purple-500',
     [ActivityType.TIME_ENTRY]: 'border-orange-500',
-    [ActivityType.WORKFLOW_TASK]: 'border-red-500',
-    [ActivityType.NOTIFICATION]: 'border-yellow-500',
+    [ActivityType.WORKFLOW_TASK]: 'border-destructive',
+    [ActivityType.NOTIFICATION]: 'border-warning',
     [ActivityType.DOCUMENT]: 'border-teal-500',
   };
 
   // Priority indicator
   const priorityIndicator = {
-    [ActivityPriority.LOW]: <div className="w-2 h-2 rounded-full bg-gray-400" />,
-    [ActivityPriority.MEDIUM]: <div className="w-2 h-2 rounded-full bg-yellow-400" />,
-    [ActivityPriority.HIGH]: <div className="w-2 h-2 rounded-full bg-red-500" />,
+    [ActivityPriority.LOW]: <div className="w-2 h-2 rounded-full bg-muted-foreground" />,
+    [ActivityPriority.MEDIUM]: <div className="w-2 h-2 rounded-full bg-warning" />,
+    [ActivityPriority.HIGH]: <div className="w-2 h-2 rounded-full bg-destructive" />,
   };
 
   const router = useRouter();

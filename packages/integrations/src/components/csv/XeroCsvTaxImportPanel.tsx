@@ -5,6 +5,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@alga
 import { Button } from '@alga-psa/ui/components/Button';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Upload, FileText, AlertCircle, CheckCircle2, HelpCircle, ChevronDown, ChevronUp, XCircle } from 'lucide-react';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import {
   previewXeroCsvTaxImport,
   executeXeroCsvTaxImport
@@ -133,20 +134,20 @@ export function XeroCsvTaxImportPanel({ onImportComplete }: XeroCsvTaxImportPane
           <button
             type="button"
             onClick={() => setShowHelp(!showHelp)}
-            className="flex items-center justify-between w-full p-4 text-left hover:bg-gray-50"
+            className="flex items-center justify-between w-full p-4 text-left hover:bg-muted/50"
           >
             <div className="flex items-center gap-2">
               <HelpCircle className="h-5 w-5 text-blue-500" />
               <span className="font-medium">How to export tax data from Xero</span>
             </div>
             {showHelp ? (
-              <ChevronUp className="h-5 w-5 text-gray-500" />
+              <ChevronUp className="h-5 w-5 text-muted-foreground" />
             ) : (
-              <ChevronDown className="h-5 w-5 text-gray-500" />
+              <ChevronDown className="h-5 w-5 text-muted-foreground" />
             )}
           </button>
           {showHelp && (
-            <div className="px-4 pb-4 space-y-3 text-sm text-gray-600">
+            <div className="px-4 pb-4 space-y-3 text-sm text-muted-foreground">
               <ol className="list-decimal list-inside space-y-2">
                 <li>In Xero, go to <strong>Reports &gt; All Reports</strong></li>
                 <li>Select <strong>Sales (Invoices and Revenue)</strong></li>
@@ -155,7 +156,7 @@ export function XeroCsvTaxImportPanel({ onImportComplete }: XeroCsvTaxImportPane
                 <li>Click <strong>Export</strong> and choose <strong>CSV</strong></li>
                 <li>Upload the exported file here</li>
               </ol>
-              <p className="text-gray-500">
+              <p className="text-muted-foreground">
                 The report should include columns for Invoice Number, Contact Name, Line Amount, and Tax Amount.
                 Invoices are matched using the Reference field or tracking categories set during export.
               </p>
@@ -171,7 +172,7 @@ export function XeroCsvTaxImportPanel({ onImportComplete }: XeroCsvTaxImportPane
             onDragOver={(e) => e.preventDefault()}
             onClick={() => fileInputRef.current?.click()}
             className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
-              file ? 'border-green-400 bg-green-50' : 'border-gray-300 hover:border-gray-400 hover:bg-gray-50'
+              file ? 'border-green-400 bg-green-50 dark:bg-green-950/30 dark:border-green-600' : 'border-border hover:border-muted-foreground hover:bg-muted/50'
             }`}
           >
             <input
@@ -185,12 +186,12 @@ export function XeroCsvTaxImportPanel({ onImportComplete }: XeroCsvTaxImportPane
               <div className="flex items-center justify-center gap-2 text-green-700">
                 <FileText className="h-6 w-6" />
                 <span className="font-medium">{file.name}</span>
-                <span className="text-sm text-gray-500">
+                <span className="text-sm text-muted-foreground">
                   ({(file.size / 1024).toFixed(1)} KB)
                 </span>
               </div>
             ) : (
-              <div className="text-gray-500">
+              <div className="text-muted-foreground">
                 <Upload className="h-8 w-8 mx-auto mb-2" />
                 <p>Drag and drop a Xero Invoice Details Report CSV here, or click to browse</p>
               </div>
@@ -200,10 +201,9 @@ export function XeroCsvTaxImportPanel({ onImportComplete }: XeroCsvTaxImportPane
 
         {/* Error Message */}
         {error && (
-          <div className="flex items-center gap-2 p-3 bg-red-50 text-red-700 rounded-lg">
-            <AlertCircle className="h-5 w-5 flex-shrink-0" />
-            <span>{error}</span>
-          </div>
+          <Alert variant="destructive">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
         )}
 
         {/* Preview Results */}
@@ -215,56 +215,54 @@ export function XeroCsvTaxImportPanel({ onImportComplete }: XeroCsvTaxImportPane
             </h4>
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="text-center p-3 bg-gray-50 rounded">
+              <div className="text-center p-3 bg-muted/50 rounded">
                 <div className="text-2xl font-bold">{previewResult.invoiceCount}</div>
-                <div className="text-sm text-gray-500">Total Rows</div>
+                <div className="text-sm text-muted-foreground">Total Rows</div>
               </div>
-              <div className="text-center p-3 bg-gray-50 rounded">
+              <div className="text-center p-3 bg-muted/50 rounded">
                 <div className="text-2xl font-bold text-green-600">{previewResult.matchedCount}</div>
-                <div className="text-sm text-gray-500">Matched Invoices</div>
+                <div className="text-sm text-muted-foreground">Matched Invoices</div>
               </div>
-              <div className="text-center p-3 bg-gray-50 rounded">
+              <div className="text-center p-3 bg-muted/50 rounded">
                 <div className="text-2xl font-bold text-red-600">{previewResult.unmatchedCount}</div>
-                <div className="text-sm text-gray-500">Unmatched</div>
+                <div className="text-sm text-muted-foreground">Unmatched</div>
               </div>
-              <div className="text-center p-3 bg-gray-50 rounded">
+              <div className="text-center p-3 bg-muted/50 rounded">
                 <div className="text-2xl font-bold text-blue-600">
                   {formatCurrency(previewResult.totalTaxToImport * 100)}
                 </div>
-                <div className="text-sm text-gray-500">Tax to Import</div>
+                <div className="text-sm text-muted-foreground">Tax to Import</div>
               </div>
             </div>
 
             {previewResult.alreadyImportedCount > 0 && (
-              <div className="flex items-center gap-2 p-3 bg-yellow-50 text-yellow-700 rounded-lg text-sm">
-                <AlertCircle className="h-4 w-4 flex-shrink-0" />
-                <span>{previewResult.alreadyImportedCount} invoice(s) already have imported tax and will be skipped.</span>
-              </div>
+              <Alert variant="warning">
+                <AlertDescription>{previewResult.alreadyImportedCount} invoice(s) already have imported tax and will be skipped.</AlertDescription>
+              </Alert>
             )}
 
             {previewResult.notPendingCount > 0 && (
-              <div className="flex items-center gap-2 p-3 bg-yellow-50 text-yellow-700 rounded-lg text-sm">
-                <AlertCircle className="h-4 w-4 flex-shrink-0" />
-                <span>{previewResult.notPendingCount} invoice(s) don't have pending external tax and will be skipped.</span>
-              </div>
+              <Alert variant="warning">
+                <AlertDescription>{previewResult.notPendingCount} invoice(s) don't have pending external tax and will be skipped.</AlertDescription>
+              </Alert>
             )}
 
             {/* Preview Table */}
             {previewResult.preview.length > 0 && (
               <div className="border rounded-md overflow-hidden max-h-64 overflow-y-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50 sticky top-0">
+                <table className="min-w-full divide-y divide-border">
+                  <thead className="bg-muted/50 sticky top-0">
                     <tr>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Xero Invoice</th>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Alga Invoice</th>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Contact</th>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Tax Amount</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase">Status</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase">Xero Invoice</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase">Alga Invoice</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase">Contact</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase">Tax Amount</th>
                     </tr>
                   </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
+                  <tbody className="bg-card divide-y divide-border">
                     {previewResult.preview.slice(0, 20).map((item, index) => (
-                      <tr key={index} className={item.status === 'matched' ? '' : 'bg-gray-50'}>
+                      <tr key={index} className={item.status === 'matched' ? '' : 'bg-muted/50'}>
                         <td className="px-3 py-2">
                           {item.status === 'matched' ? (
                             <CheckCircle2 className="h-4 w-4 text-green-500" />
@@ -283,7 +281,7 @@ export function XeroCsvTaxImportPanel({ onImportComplete }: XeroCsvTaxImportPane
                   </tbody>
                 </table>
                 {previewResult.preview.length > 20 && (
-                  <div className="px-3 py-2 text-xs text-gray-500 bg-gray-50">
+                  <div className="px-3 py-2 text-xs text-muted-foreground bg-muted/50">
                     Showing first 20 of {previewResult.preview.length} rows
                   </div>
                 )}
@@ -299,7 +297,7 @@ export function XeroCsvTaxImportPanel({ onImportComplete }: XeroCsvTaxImportPane
                     .filter(p => p.status === 'unmatched' && p.reason)
                     .slice(0, 10)
                     .map((item, index) => (
-                      <div key={index} className="text-red-600 bg-red-50 px-3 py-1 rounded text-sm">
+                      <div key={index} className="text-destructive bg-destructive/10 px-3 py-1 rounded text-sm">
                         {item.reason}: {item.algaInvoiceId || item.xeroInvoiceNumber}
                       </div>
                     ))}
@@ -311,21 +309,14 @@ export function XeroCsvTaxImportPanel({ onImportComplete }: XeroCsvTaxImportPane
 
         {/* Import Result */}
         {importResult && (
-          <div className={`flex items-center gap-2 p-3 rounded-lg ${
-            importResult.success ? 'bg-green-50 text-green-700' : 'bg-yellow-50 text-yellow-700'
-          }`}>
-            {importResult.success ? (
-              <CheckCircle2 className="h-5 w-5 flex-shrink-0" />
-            ) : (
-              <AlertCircle className="h-5 w-5 flex-shrink-0" />
-            )}
-            <span>
+          <Alert variant={importResult.success ? 'success' : 'warning'}>
+            <AlertDescription>
               Imported tax for {importResult.successCount} invoice{importResult.successCount !== 1 ? 's' : ''}.
               Total tax imported: {formatCurrency(importResult.totalTaxImported)}.
               {importResult.failureCount > 0 && ` ${importResult.failureCount} failed.`}
               {importResult.skippedCount > 0 && ` ${importResult.skippedCount} skipped.`}
-            </span>
-          </div>
+            </AlertDescription>
+          </Alert>
         )}
 
         {/* Action Buttons */}

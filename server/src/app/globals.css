@@ -390,9 +390,9 @@ body {
     --color-accent-800: 255 219 153;
     --color-accent-900: 255 237 204;
 
-    /* Destructive Colors */
-    --color-destructive: 220 38 38; /* red-600 */
-    --color-destructive-foreground: 254 226 226; /* red-100 */
+    /* Destructive Colors — softened for dark backgrounds */
+    --color-destructive: 239 68 68; /* red-500 (lighter than light-mode red-600) */
+    --color-destructive-foreground: 254 202 202; /* red-200 */
 
     /* TABLE ROW COLORS */
     --color-table-row-alt: 30 33 52;              /* dark slate with purple-blue tint */

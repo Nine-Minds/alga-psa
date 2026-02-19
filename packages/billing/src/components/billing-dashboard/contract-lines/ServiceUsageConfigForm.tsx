@@ -99,7 +99,7 @@ export function ServiceUsageConfigForm({
                         </Tooltip>
                     </Label>
                     <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
                         <Input
                             id={`usage-contract-line-base-rate-${serviceId}`}
                             type="text"

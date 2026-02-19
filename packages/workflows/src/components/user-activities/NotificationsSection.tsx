@@ -217,7 +217,7 @@ export function NotificationsSection({ limit = 5, onViewAll, noCard = false }: N
       <div className="flex items-center gap-2">
         {!noCard && <h3 className="text-lg font-semibold">Notifications</h3>}
         {realTimeHook.unreadCount > 0 && (
-          <Badge variant="default" className="bg-blue-500">
+          <Badge variant="primary">
             {realTimeHook.unreadCount}
           </Badge>
         )}
@@ -282,7 +282,7 @@ export function NotificationsSection({ limit = 5, onViewAll, noCard = false }: N
     if (error) {
       return (
         <div className="flex justify-center items-center h-40">
-          <p className="text-red-500">{error}</p>
+          <p className="text-destructive">{error}</p>
         </div>
       );
     }
@@ -326,7 +326,7 @@ export function NotificationsSection({ limit = 5, onViewAll, noCard = false }: N
 
   const tabStyles = {
     trigger: "px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300 focus:outline-none focus:text-gray-700 focus:border-gray-300 border-b-2 border-transparent",
-    activeTrigger: "data-[state=active]:border-blue-500 data-[state=active]:text-blue-600"
+    activeTrigger: "data-[state=active]:border-primary-500 data-[state=active]:text-primary-500"
   };
 
   const bodyContent = (
@@ -363,7 +363,7 @@ export function NotificationsSection({ limit = 5, onViewAll, noCard = false }: N
         <div className="flex items-center gap-2">
           <CardTitle>Notifications</CardTitle>
           {realTimeHook.unreadCount > 0 && (
-            <Badge variant="default" className="bg-blue-500">
+            <Badge variant="primary">
               {realTimeHook.unreadCount}
             </Badge>
           )}

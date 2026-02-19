@@ -302,7 +302,7 @@ export default function UserProfile({ userId }: UserProfileProps) {
   if (error) {
     return (
       <Card className="p-6">
-        <div className="text-red-500">Error: {error}</div>
+        <div className="text-destructive">Error: {error}</div>
       </Card>
     );
   }
@@ -337,7 +337,7 @@ export default function UserProfile({ userId }: UserProfileProps) {
             <div className="grid grid-cols-2 gap-x-4 gap-y-4">
               <div>
                 <Label htmlFor="firstName">
-                  First Name <span className="text-red-500">*</span>
+                  First Name <span className="text-destructive">*</span>
                 </Label>
                 <Input
                   id="firstName"
@@ -353,15 +353,15 @@ export default function UserProfile({ userId }: UserProfileProps) {
                     const error = validateContactName(firstName);
                     setFieldErrors(prev => ({ ...prev, first_name: error || '' }));
                   }}
-                  className={fieldErrors.first_name ? 'border-red-500' : ''}
+                  className={fieldErrors.first_name ? 'border-destructive' : ''}
                 />
                 {fieldErrors.first_name && (
-                  <p className="text-sm text-red-600 mt-1">{fieldErrors.first_name}</p>
+                  <p className="text-sm text-destructive mt-1">{fieldErrors.first_name}</p>
                 )}
               </div>
               <div>
                 <Label htmlFor="lastName">
-                  Last Name <span className="text-red-500">*</span>
+                  Last Name <span className="text-destructive">*</span>
                 </Label>
                 <Input
                   id="lastName"
@@ -377,16 +377,16 @@ export default function UserProfile({ userId }: UserProfileProps) {
                     const error = validateContactName(lastName);
                     setFieldErrors(prev => ({ ...prev, last_name: error || '' }));
                   }}
-                  className={fieldErrors.last_name ? 'border-red-500' : ''}
+                  className={fieldErrors.last_name ? 'border-destructive' : ''}
                 />
                 {fieldErrors.last_name && (
-                  <p className="text-sm text-red-600 mt-1">{fieldErrors.last_name}</p>
+                  <p className="text-sm text-destructive mt-1">{fieldErrors.last_name}</p>
                 )}
               </div>
             </div>
             <div>
               <Label htmlFor="email">
-                Email <span className="text-red-500">*</span>
+                Email <span className="text-destructive">*</span>
               </Label>
               <Input
                 id="email"
@@ -403,10 +403,10 @@ export default function UserProfile({ userId }: UserProfileProps) {
                   const error = validateEmailAddress(email);
                   setFieldErrors(prev => ({ ...prev, email: error || '' }));
                 }}
-                className={fieldErrors.email ? 'border-red-500' : ''}
+                className={fieldErrors.email ? 'border-destructive' : ''}
               />
               {fieldErrors.email && (
-                <p className="text-sm text-red-600 mt-1">{fieldErrors.email}</p>
+                <p className="text-sm text-destructive mt-1">{fieldErrors.email}</p>
               )}
             </div>
             <div>
@@ -435,7 +435,7 @@ export default function UserProfile({ userId }: UserProfileProps) {
                 data-automation-id="profile-phone"
               />
               {fieldErrors.phone && (
-                <p className="text-sm text-red-600 mt-1">{fieldErrors.phone}</p>
+                <p className="text-sm text-destructive mt-1">{fieldErrors.phone}</p>
               )}
             </div>
             <div>
@@ -553,7 +553,7 @@ export default function UserProfile({ userId }: UserProfileProps) {
       {/* Action Buttons */}
       <div className="flex justify-end items-center space-x-2">
         {hasAttemptedSubmit && Object.keys(fieldErrors).some(key => fieldErrors[key]) && (
-          <span className="text-red-600 text-sm mr-2" role="alert">
+          <span className="text-destructive text-sm mr-2" role="alert">
             Please fill in all required fields
           </span>
         )}

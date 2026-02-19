@@ -171,7 +171,7 @@ const ContractForm: React.FC<ContractFormProps> = ({ contract, onContractUpdated
               disabled={contract.status === 'expired'}
             />
             {contract.status === 'expired' && (
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-muted-foreground mt-1">
                 Expired contracts cannot be changed to another status
               </p>
             )}

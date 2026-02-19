@@ -142,7 +142,7 @@ export function ContractBasicsStep({
     <div className="space-y-6" data-automation-id="contract-basics-step">
       <div className="mb-6 space-y-3">
         <h3 className="text-lg font-semibold">Contract Basics</h3>
-        <p className="text-sm text-gray-600">
+        <p className="text-sm text-[rgb(var(--color-text-500))]">
           Choose a template (optional), select the client, and set foundational contract details.
           Service details load in the next steps.
         </p>
@@ -162,7 +162,7 @@ export function ContractBasicsStep({
           disabled={isLoadingTemplates || isTemplateLoading}
           allowClear
         />
-        <p className="text-xs text-gray-500">
+        <p className="text-xs text-[rgb(var(--color-text-400))]">
           Prefill services, notes, and billing cadence from an existing template. You can still
           adjust everything before publishing.
         </p>
@@ -173,19 +173,19 @@ export function ContractBasicsStep({
           <p className="text-xs text-red-600">{templateError}</p>
         )}
         {selectedTemplate && (
-          <div className="text-xs text-gray-600 border border-purple-100 bg-purple-50 rounded-md p-3 mt-2 space-y-1">
+          <div className="text-xs text-[rgb(var(--color-text-500))] border border-[rgb(var(--color-primary-100))] bg-[rgb(var(--color-primary-50))] rounded-md p-3 mt-2 space-y-1">
             <p>
-              <span className="font-semibold text-purple-700">Template:</span>{' '}
+              <span className="font-semibold text-[rgb(var(--color-primary-700))]">Template:</span>{' '}
               {selectedTemplate.contract_name}
             </p>
             <p>
-              <span className="font-semibold text-purple-700">Billing cadence:</span>{' '}
+              <span className="font-semibold text-[rgb(var(--color-primary-700))]">Billing cadence:</span>{' '}
               {selectedTemplate.billing_frequency
                 ? selectedTemplate.billing_frequency.replace(/_/g, ' ')
                 : 'Not specified'}
             </p>
             {selectedTemplate.contract_description && (
-              <p className="text-gray-700">{selectedTemplate.contract_description}</p>
+              <p className="text-[rgb(var(--color-text-600))]">{selectedTemplate.contract_description}</p>
             )}
           </div>
         )}
@@ -216,7 +216,7 @@ export function ContractBasicsStep({
           className="w-full"
         />
         {!data.client_id && (
-          <p className="text-xs text-gray-500">Choose the client this contract is for.</p>
+          <p className="text-xs text-[rgb(var(--color-text-400))]">Choose the client this contract is for.</p>
         )}
         {clientHasActiveContract && !data.is_draft && (
           <p className="text-sm text-red-600">
@@ -225,7 +225,7 @@ export function ContractBasicsStep({
           </p>
         )}
         {checkingActiveContract && (
-          <p className="text-xs text-gray-500">Checking current contract status…</p>
+          <p className="text-xs text-[rgb(var(--color-text-400))]">Checking current contract status…</p>
         )}
       </div>
 
@@ -242,7 +242,7 @@ export function ContractBasicsStep({
           placeholder="e.g., Standard MSP Services, Premium Support Package"
           className="w-full"
         />
-        <p className="text-xs text-gray-500">Give this contract a descriptive name.</p>
+        <p className="text-xs text-[rgb(var(--color-text-400))]">Give this contract a descriptive name.</p>
       </div>
 
       <div className="space-y-2">
@@ -258,7 +258,7 @@ export function ContractBasicsStep({
           placeholder="Select billing frequency"
           className="w-full"
         />
-        <p className="text-xs text-gray-500">How often should this contract be billed?</p>
+        <p className="text-xs text-[rgb(var(--color-text-400))]">How often should this contract be billed?</p>
       </div>
 
       <div className="space-y-2">
@@ -274,7 +274,7 @@ export function ContractBasicsStep({
           placeholder="Select currency"
           className="w-full"
         />
-        <p className="text-xs text-gray-500">
+        <p className="text-xs text-[rgb(var(--color-text-400))]">
           Currency for this contract. Defaults to the client's preferred currency.
         </p>
       </div>
@@ -293,7 +293,7 @@ export function ContractBasicsStep({
           }}
           className="w-full"
         />
-        <p className="text-xs text-gray-500">When does this contract become active?</p>
+        <p className="text-xs text-[rgb(var(--color-text-400))]">When does this contract become active?</p>
       </div>
 
       <div className="space-y-2">
@@ -303,7 +303,7 @@ export function ContractBasicsStep({
             End Date (Optional)
           </Label>
           <Tooltip content="Leave blank for ongoing contracts that don't have a fixed end date. You can always set an end date later when the contract is terminated or expires.">
-            <HelpCircle className="h-4 w-4 text-gray-400 cursor-help" />
+            <HelpCircle className="h-4 w-4 text-[rgb(var(--color-text-300))] cursor-help" />
           </Tooltip>
         </div>
         <DatePicker
@@ -320,7 +320,7 @@ export function ContractBasicsStep({
           <p className="text-xs text-red-600">End date must be after start date</p>
         )}
         {!(endDate && startDate && endDate < startDate) && (
-          <p className="text-xs text-gray-500">Leave blank for an ongoing contract.</p>
+          <p className="text-xs text-[rgb(var(--color-text-400))]">Leave blank for an ongoing contract.</p>
         )}
       </div>
 
@@ -333,12 +333,12 @@ export function ContractBasicsStep({
           placeholder="Add any additional notes about this contract..."
           className="min-h-[100px] w-full"
         />
-        <p className="text-xs text-gray-500">Internal notes or contract details.</p>
+        <p className="text-xs text-[rgb(var(--color-text-400))]">Internal notes or contract details.</p>
       </div>
 
       <div className="border-t pt-6 space-y-4">
         <div className="flex items-center gap-2 mb-4">
-          <FileCheck className="h-5 w-5 text-gray-700" />
+          <FileCheck className="h-5 w-5 text-[rgb(var(--color-text-600))]" />
           <h4 className="text-base font-semibold">Purchase Order (Optional)</h4>
         </div>
 
@@ -350,10 +350,10 @@ export function ContractBasicsStep({
                   Require Purchase Order for invoicing
                 </Label>
                 <Tooltip content="When enabled, invoices cannot be generated for this contract unless a PO number is provided.">
-                  <HelpCircle className="h-4 w-4 text-gray-400 cursor-help" />
+                  <HelpCircle className="h-4 w-4 text-[rgb(var(--color-text-300))] cursor-help" />
                 </Tooltip>
               </div>
-              <p className="text-xs text-gray-500">Block invoice generation if PO is not provided.</p>
+              <p className="text-xs text-[rgb(var(--color-text-400))]">Block invoice generation if PO is not provided.</p>
             </div>
             <Switch
               id="po_required"
@@ -382,13 +382,13 @@ export function ContractBasicsStep({
                 placeholder="e.g., PO-2024-12345"
                 className="w-full"
               />
-              <p className="text-xs text-gray-500">Client's purchase order reference number.</p>
+              <p className="text-xs text-[rgb(var(--color-text-400))]">Client's purchase order reference number.</p>
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="po_amount">PO Amount</Label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[rgb(var(--color-text-400))]">
                   {getCurrencySymbol(data.currency_code)}
                 </span>
                 <Input
@@ -420,7 +420,7 @@ export function ContractBasicsStep({
                   className="pl-7"
                 />
               </div>
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-[rgb(var(--color-text-400))]">
                 Total authorized amount on the purchase order.
               </p>
             </div>

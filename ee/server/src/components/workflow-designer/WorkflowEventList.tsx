@@ -479,8 +479,8 @@ const WorkflowEventList: React.FC<WorkflowEventListProps> = ({ isActive, canAdmi
                   {eventDetail.event.payload_schema_ref ?? '—'}
                 </div>
                 {eventDetail.event.schema_ref_conflict && (
-                  <div className="rounded border border-amber-200 bg-amber-50 p-2 text-[11px] text-amber-800">
-                    Schema ref conflict: catalog <code className="bg-amber-100 px-1 rounded">{eventDetail.event.schema_ref_conflict.catalog}</code> vs submission <code className="bg-amber-100 px-1 rounded">{eventDetail.event.schema_ref_conflict.submission}</code>
+                  <div className="rounded border border-warning/30 bg-warning/10 p-2 text-[11px] text-warning-foreground">
+                    Schema ref conflict: catalog <code className="bg-warning/20 px-1 rounded">{eventDetail.event.schema_ref_conflict.catalog}</code> vs submission <code className="bg-warning/20 px-1 rounded">{eventDetail.event.schema_ref_conflict.submission}</code>
                   </div>
                 )}
                 <div className="text-xs text-gray-500">Created</div>
@@ -488,7 +488,7 @@ const WorkflowEventList: React.FC<WorkflowEventListProps> = ({ isActive, canAdmi
                 <div className="text-xs text-gray-500">Processed</div>
                 <div className="text-sm">{formatDateTime(eventDetail.event.processed_at ?? null)}</div>
                 {eventDetail.event.error_message && (
-                  <div className="text-sm text-red-600">Error: {eventDetail.event.error_message}</div>
+                  <div className="text-sm text-destructive">Error: {eventDetail.event.error_message}</div>
                 )}
                 {eventDetail.wait && (
                   <div className="space-y-1">

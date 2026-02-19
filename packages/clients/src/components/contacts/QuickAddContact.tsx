@@ -35,18 +35,20 @@ interface QuickAddContactProps {
 
 function ErrorFallback({ error, resetErrorBoundary }: { error: Error; resetErrorBoundary: () => void }) {
   return (
-    <div className="p-4 bg-red-50 border border-red-200 rounded-md">
-      <h2 className="text-lg font-semibold text-red-800">Something went wrong:</h2>
-      <pre className="mt-2 text-sm text-red-600">{error.message}</pre>
-      <Button
-        id='try-again-button'
-        onClick={resetErrorBoundary}
-        className="mt-4"
-        variant="secondary"
-      >
-        Try again
-      </Button>
-    </div>
+    <Alert variant="destructive">
+      <AlertDescription>
+        <h2 className="text-lg font-semibold">Something went wrong:</h2>
+        <pre className="mt-2 text-sm">{error.message}</pre>
+        <Button
+          id='try-again-button'
+          onClick={resetErrorBoundary}
+          className="mt-4"
+          variant="secondary"
+        >
+          Try again
+        </Button>
+      </AlertDescription>
+    </Alert>
   );
 }
 
@@ -416,32 +418,34 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
           </Alert>
         )}
         {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
+          <Alert variant="destructive" className="mb-4 relative" role="alert">
             <button
               onClick={() => setError(null)}
-              className="absolute top-2 right-2 p-1 hover:bg-red-200 rounded-full transition-colors"
+              className="absolute top-2 right-2 p-1 hover:bg-destructive/20 rounded-full transition-colors"
               aria-label="Close error message"
             >
               <X className="h-5 w-5" />
             </button>
-            <h4 className="font-semibold mb-2">Error creating contact:</h4>
-            <div className="text-sm">
-              {error.split('\n').map((line, index) => {
-                // Format error messages for display
-                let displayMessage = line;
-                if (line.includes('VALIDATION_ERROR:')) {
-                  displayMessage = line.replace('VALIDATION_ERROR:', 'Please fix the following:');
-                } else if (line.includes('EMAIL_EXISTS:')) {
-                  displayMessage = line.replace('EMAIL_EXISTS:', 'Email already exists:');
-                } else if (line.includes('FOREIGN_KEY_ERROR:')) {
-                  displayMessage = line.replace('FOREIGN_KEY_ERROR:', 'Invalid reference:');
-                } else if (line.includes('SYSTEM_ERROR:')) {
-                  displayMessage = line.replace('SYSTEM_ERROR:', 'System error:');
-                }
-                return <p key={index} className="mb-1">{displayMessage}</p>;
-              })}
-            </div>
-          </div>
+            <AlertDescription>
+              <h4 className="font-semibold mb-2">Error creating contact:</h4>
+              <div className="text-sm">
+                {error.split('\n').map((line, index) => {
+                  // Format error messages for display
+                  let displayMessage = line;
+                  if (line.includes('VALIDATION_ERROR:')) {
+                    displayMessage = line.replace('VALIDATION_ERROR:', 'Please fix the following:');
+                  } else if (line.includes('EMAIL_EXISTS:')) {
+                    displayMessage = line.replace('EMAIL_EXISTS:', 'Email already exists:');
+                  } else if (line.includes('FOREIGN_KEY_ERROR:')) {
+                    displayMessage = line.replace('FOREIGN_KEY_ERROR:', 'Invalid reference:');
+                  } else if (line.includes('SYSTEM_ERROR:')) {
+                    displayMessage = line.replace('SYSTEM_ERROR:', 'System error:');
+                  }
+                  return <p key={index} className="mb-1">{displayMessage}</p>;
+                })}
+              </div>
+            </AlertDescription>
+          </Alert>
         )}
         <form onSubmit={(e) => {
           e.preventDefault();

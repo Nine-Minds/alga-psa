@@ -27,6 +27,7 @@ import { TimeSheetDateNavigatorState } from './types';
 import { TimeSheetComments } from '../../approvals/TimeSheetComments';
 import { WorkItemDrawer } from './WorkItemDrawer';
 import { IntervalSection } from '../../interval-tracking/IntervalSection';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { useAutomationIdAndRegister } from '@alga-psa/ui/ui-reflection/useAutomationIdAndRegister';
 import { ContainerComponent } from '@alga-psa/ui/ui-reflection/types';
@@ -610,10 +611,12 @@ export function TimeSheet({
         <ReflectionContainer id="timesheet-main" label="Time Sheet Management">
             <div className="h-full overflow-y-auto" {...timeSheetProps}>
                 {delegatedEditingBlocked && (
-                    <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
-                        Delegated time entry is currently disabled. Enable the <span className="font-mono">delegated-time-entry</span> feature flag to
-                        edit other users&#39; time sheets.
-                    </div>
+                    <Alert variant="warning" className="mb-4">
+                        <AlertDescription>
+                            Delegated time entry is currently disabled. Enable the <span className="font-mono">delegated-time-entry</span> feature flag to
+                            edit other users&#39; time sheets.
+                        </AlertDescription>
+                    </Alert>
                 )}
                 <TimeSheetHeader
                 status={timeSheet.approval_status}

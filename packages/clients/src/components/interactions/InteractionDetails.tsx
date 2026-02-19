@@ -263,7 +263,7 @@ const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: in
             onClick={() => setIsDeleteDialogOpen(true)}
             variant="ghost"
             size="sm"
-            className="text-red-600 hover:text-red-800 hover:bg-red-50"
+            className="text-red-600 hover:text-red-800 hover:bg-red-50 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-red-950/50"
           >
             <Trash2 className="mr-2 h-4 w-4" />
             Delete

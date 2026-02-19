@@ -99,12 +99,12 @@ export function TaxReconciliationView({ invoiceId }: TaxReconciliationViewProps)
       <CardContent className="space-y-6">
         {/* Summary Comparison */}
         <div className="grid grid-cols-3 gap-4">
-          <div className="p-4 bg-green-50 rounded-lg border border-green-200">
-            <div className="flex items-center gap-2 text-green-700 mb-2">
+          <div className="p-4 bg-success/10 rounded-lg border border-success/30">
+            <div className="flex items-center gap-2 text-success mb-2">
               <Calculator className="h-4 w-4" />
               <span className="text-sm font-medium">Internal (Alga PSA)</span>
             </div>
-            <p className="text-2xl font-bold text-green-800">
+            <p className="text-2xl font-bold text-success">
               {formatCurrency(data.internalTax)}
             </p>
           </div>
@@ -113,12 +113,12 @@ export function TaxReconciliationView({ invoiceId }: TaxReconciliationViewProps)
             <div className="flex flex-col items-center">
               <ArrowRight className="h-6 w-6 text-muted-foreground" />
               <span className={`text-sm font-medium mt-1 ${
-                data.hasSignificantDifference ? 'text-amber-600' : 'text-green-600'
+                data.hasSignificantDifference ? 'text-warning' : 'text-success'
               }`}>
                 {formatCurrency(data.difference)}
               </span>
               <span className={`text-xs ${
-                data.hasSignificantDifference ? 'text-amber-600' : 'text-muted-foreground'
+                data.hasSignificantDifference ? 'text-warning' : 'text-muted-foreground'
               }`}>
                 ({formatPercent(data.differencePercent)})
               </span>
@@ -167,7 +167,7 @@ export function TaxReconciliationView({ invoiceId }: TaxReconciliationViewProps)
                 {data.lineComparisons.map((line, index) => (
                   <tr
                     key={line.chargeId}
-                    className={`border-t ${line.difference !== 0 ? 'bg-amber-50' : ''}`}
+                    className={`border-t ${line.difference !== 0 ? 'bg-warning/10' : ''}`}
                   >
                     <td className="px-4 py-2">
                       {line.description || `Line ${index + 1}`}

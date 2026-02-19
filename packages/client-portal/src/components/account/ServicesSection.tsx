@@ -1,6 +1,7 @@
 'use client';
 
 import { Card } from "@alga-psa/ui/components/Card";
+import { Badge } from "@alga-psa/ui/components/Badge";
 import { Table } from "@alga-psa/ui/components/Table";
 import { Button } from "@alga-psa/ui/components/Button";
 import { Dialog, DialogContent } from "@alga-psa/ui/components/Dialog";
@@ -131,13 +132,13 @@ export default function ServicesSection() {
                   <td className="font-medium">{service.name}</td>
                   <td className="text-sm text-gray-600">{service.description}</td>
                   <td>
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      service.status === 'active' ? 'bg-green-100 text-green-800' : 
-                      service.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 
-                      'bg-gray-100 text-gray-800'
-                    }`}>
+                    <Badge variant={
+                      service.status === 'active' ? 'success' :
+                      service.status === 'pending' ? 'warning' :
+                      'default-muted'
+                    }>
                       {service.status}
-                    </span>
+                    </Badge>
                   </td>
                   <td>
                     <div className="text-sm">

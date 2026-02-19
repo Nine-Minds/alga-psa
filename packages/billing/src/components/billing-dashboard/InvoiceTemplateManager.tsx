@@ -94,8 +94,8 @@ const InvoiceTemplateManager: React.FC<InvoiceTemplateManagerProps> = ({
             {sampleInvoices.map((invoice): React.JSX.Element => (
               <div
                 key={invoice.invoice_number}
-                className={`p-2 border rounded cursor-pointer hover:bg-gray-50 ${
-                  selectedSampleInvoice?.invoiceNumber === invoice.invoice_number ? 'bg-blue-50 border-blue-300' : '' // Compare with mapped data
+                className={`p-2 border rounded cursor-pointer hover:bg-muted ${
+                  selectedSampleInvoice?.invoiceNumber === invoice.invoice_number ? 'bg-primary/10 border-primary/30' : '' // Compare with mapped data
                 }`}
                 onClick={() => handleSampleInvoiceSelect(invoice.invoice_number)}
               >

@@ -33,7 +33,7 @@ export function handleError(error: unknown, fallbackMessage?: string): void {
     // Show permission errors with an Alert-style layout
     toast.custom((t) => (
       React.createElement('div', {
-        className: `${t.visible ? 'animate-enter' : 'animate-leave'} max-w-md w-full bg-red-50 shadow-lg rounded-lg pointer-events-auto flex items-start p-4 border border-red-200`,
+        className: `${t.visible ? 'animate-enter' : 'animate-leave'} max-w-md w-full bg-destructive/10 shadow-lg rounded-lg pointer-events-auto flex items-start p-4 border border-destructive/30`,
       }, [
         React.createElement(ShieldAlert, { 
           key: 'icon',

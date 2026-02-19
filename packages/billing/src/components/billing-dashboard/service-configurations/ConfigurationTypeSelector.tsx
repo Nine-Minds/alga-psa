@@ -96,7 +96,7 @@ export function ConfigurationTypeSelector({
               className={`p-4 cursor-pointer transition-all hover:shadow-md ${
                 value === type
                   ? 'border-2 border-blue-500 bg-blue-50'
-                  : 'border border-gray-200'
+                  : 'border border-[rgb(var(--color-border-200))]'
               }`}
               onClick={() => !disabled && handleTypeChange(type)}
             >
@@ -113,7 +113,7 @@ export function ConfigurationTypeSelector({
                       <CheckCircle className="h-5 w-5 text-blue-500" />
                     )}
                   </div>
-                  <p className="text-sm text-gray-500 mt-1">
+                  <p className="text-sm text-muted-foreground mt-1">
                     {CONFIGURATION_TYPE_DESCRIPTIONS[type]}
                   </p>
                 </div>
@@ -159,7 +159,7 @@ export function ConfigurationTypeSelector({
         disabled={disabled}
       />
       {showDescriptions && value && (
-        <p className="text-sm text-gray-500 mt-2">
+        <p className="text-sm text-muted-foreground mt-2">
           {CONFIGURATION_TYPE_DESCRIPTIONS[value]}
         </p>
       )}

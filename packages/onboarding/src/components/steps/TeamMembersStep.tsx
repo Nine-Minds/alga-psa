@@ -6,7 +6,7 @@ import React, { useState, useEffect } from 'react';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Button } from '@alga-psa/ui/components/Button';
-import { Plus, Trash2, Users, AlertCircle, CheckCircle, Eye, EyeOff } from 'lucide-react';
+import { Plus, Trash2, Users, AlertCircle, Eye, EyeOff } from 'lucide-react';
 import type { StepProps } from '@alga-psa/types';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
@@ -219,17 +219,16 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
 
       {/* Success Message for Created Team Members */}
       {data.createdTeamMemberEmails && data.createdTeamMemberEmails.length > 0 && (
-        <div className="rounded-md bg-green-50 border border-green-200 p-4 flex items-center gap-3">
-          <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
-          <div>
-            <p className="text-sm font-medium text-green-800">
+        <Alert variant="success">
+          <AlertDescription>
+            <p className="font-medium">
               {data.createdTeamMemberEmails.length} team member{data.createdTeamMemberEmails.length > 1 ? 's' : ''} created successfully!
             </p>
-            <p className="text-sm text-green-600 mt-1">
+            <p className="text-sm mt-1">
               Created users: {data.createdTeamMemberEmails.join(', ')}
             </p>
-          </div>
-        </div>
+          </AlertDescription>
+        </Alert>
       )}
 
       {/* License Status Display */}
@@ -270,7 +269,7 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
             <div className="flex items-center gap-2">
               <h3 className="font-medium">Team Member {index + 1}</h3>
               {isAlreadyCreated && (
-                <span className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-700">
+                <span className="text-xs px-2 py-1 rounded-full bg-success/10 text-success">
                   Created
                 </span>
               )}
@@ -382,12 +381,9 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
           )}
           
           {hasError && (
-            <div className="rounded-md bg-red-50 border border-red-200 p-3">
-              <div className="flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0" />
-                <p className="text-sm text-red-800">{saveErrors[index]}</p>
-              </div>
-            </div>
+            <Alert variant="destructive">
+              <AlertDescription>{saveErrors[index]}</AlertDescription>
+            </Alert>
           )}
         </div>
         );
@@ -406,35 +402,21 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
       </Button>
 
       {hasUnsavedForm && (
-        <div className="rounded-md bg-yellow-50 border border-yellow-200 p-4">
-          <div className="flex items-center gap-2">
-            <AlertCircle className="w-5 h-5 text-yellow-600" />
-            <div>
-              <p className="text-sm font-medium text-yellow-800">
-                Unsaved team member
-              </p>
-              <p className="text-xs text-yellow-600">
-                Please save the current team member before adding a new one.
-              </p>
-            </div>
-          </div>
-        </div>
+        <Alert variant="warning">
+          <AlertDescription>
+            <p className="font-medium">Unsaved team member</p>
+            <p className="text-xs mt-1">Please save the current team member before adding a new one.</p>
+          </AlertDescription>
+        </Alert>
       )}
 
       {licenseInfo && !licenseInfo.allowed && !hasUnsavedForm && (
-        <div className="rounded-md bg-red-50 border border-red-200 p-4">
-          <div className="flex items-center gap-2">
-            <AlertCircle className="w-5 h-5 text-red-600" />
-            <div>
-              <p className="text-sm font-medium text-red-800">
-                User limit reached
-              </p>
-              <p className="text-xs text-red-600">
-                You've reached the maximum number of users for your current plan. Contact support to increase your limit.
-              </p>
-            </div>
-          </div>
-        </div>
+        <Alert variant="destructive">
+          <AlertDescription>
+            <p className="font-medium">User limit reached</p>
+            <p className="text-xs mt-1">You've reached the maximum number of users for your current plan. Contact support to increase your limit.</p>
+          </AlertDescription>
+        </Alert>
       )}
 
       <Alert variant="info">

@@ -126,13 +126,13 @@ export const QuickAskOverlay: React.FC<QuickAskOverlayProps> = ({
             <div
               className={[
                 'flex items-center gap-2 rounded-md px-2 py-1',
-                yoloEnabled ? 'bg-red-50 ring-1 ring-red-200' : 'bg-gray-50 ring-1 ring-gray-200',
+                yoloEnabled ? 'bg-destructive/10 ring-1 ring-destructive/30' : 'bg-muted ring-1 ring-border',
               ].join(' ')}
             >
               <span
                 className={[
                   'text-xs font-bold tracking-wide',
-                  yoloEnabled ? 'text-red-700' : 'text-gray-600',
+                  yoloEnabled ? 'text-destructive' : 'text-gray-600',
                 ].join(' ')}
               >
                 YOLO

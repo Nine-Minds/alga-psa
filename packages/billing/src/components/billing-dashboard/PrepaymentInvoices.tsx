@@ -5,6 +5,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Card } from '@alga-psa/ui/components/Card';
 import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { createPrepaymentInvoice } from '@alga-psa/billing/actions/creditActions';
 import type { IClient } from '@alga-psa/types';
@@ -80,14 +81,14 @@ const PrepaymentInvoices: React.FC<PrepaymentInvoicesProps> = ({ clients, onGene
         </h2>
 
         {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4">
-            {error}
-          </div>
+          <Alert variant="destructive" className="mb-4">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
               Type
             </label>
             <CustomSelect
@@ -99,7 +100,7 @@ const PrepaymentInvoices: React.FC<PrepaymentInvoicesProps> = ({ clients, onGene
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
               Client
             </label>
             <ClientPicker
@@ -115,7 +116,7 @@ const PrepaymentInvoices: React.FC<PrepaymentInvoicesProps> = ({ clients, onGene
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
               Amount
             </label>
             <Input
@@ -130,7 +131,7 @@ const PrepaymentInvoices: React.FC<PrepaymentInvoicesProps> = ({ clients, onGene
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
               Description
             </label>
             <Input

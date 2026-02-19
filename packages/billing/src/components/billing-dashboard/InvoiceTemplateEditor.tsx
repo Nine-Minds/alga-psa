@@ -312,7 +312,7 @@ const InvoiceTemplateEditor: React.FC<InvoiceTemplateEditorProps> = ({ templateI
        </CardHeader>
        <CardContent>
          <div className="mt-4">
-           <label htmlFor="templateName" className="block text-sm font-medium text-gray-700">Template Name</label>
+           <label htmlFor="templateName" className="block text-sm font-medium text-[rgb(var(--color-text-700))]">Template Name</label>
            <Input
              type="text"
              id="templateName" // Keep ID for label association
@@ -330,7 +330,7 @@ const InvoiceTemplateEditor: React.FC<InvoiceTemplateEditorProps> = ({ templateI
          </div>
          {!canUseDesigner ? (
            <div className="mt-4">
-               <label htmlFor="templateAstJson" className="block text-sm font-medium text-gray-700">Template AST (JSON)</label>
+               <label htmlFor="templateAstJson" className="block text-sm font-medium text-[rgb(var(--color-text-700))]">Template AST (JSON)</label>
                {/* Removed h-80, added ref */}
                <div ref={editorContainerRef} className="mt-1 border rounded-md overflow-hidden">
                  <Editor
@@ -364,7 +364,7 @@ const InvoiceTemplateEditor: React.FC<InvoiceTemplateEditorProps> = ({ templateI
                      </AlertDescription>
                    </Alert>
                  )}
-                 <div className="border rounded overflow-hidden bg-white" id="invoice-template-visual-designer">
+                 <div className="border rounded overflow-hidden bg-card" id="invoice-template-visual-designer">
                    <DesignerVisualWorkspace
                      visualWorkspaceTab={visualWorkspaceTab}
                      onVisualWorkspaceTabChange={setVisualWorkspaceTab}
@@ -379,7 +379,7 @@ const InvoiceTemplateEditor: React.FC<InvoiceTemplateEditorProps> = ({ templateI
                      </AlertDescription>
                    </Alert>
                  )}
-                 <label htmlFor="templateAssemblyScriptSource" className="block text-sm font-medium text-gray-700">
+                 <label htmlFor="templateAssemblyScriptSource" className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
                    Template AST (JSON)
                  </label>
                  <div ref={editorContainerRef} className="mt-1 border rounded-md overflow-hidden">
@@ -404,7 +404,7 @@ const InvoiceTemplateEditor: React.FC<InvoiceTemplateEditorProps> = ({ templateI
          )}
         </CardContent>
         <CardFooter className="flex justify-between items-center gap-2"> {/* Updated class for layout */}
-           <div className="text-sm text-gray-500"> {/* Container for timestamps */}
+           <div className="text-sm text-muted-foreground"> {/* Container for timestamps */}
              {template?.created_at && (
                <p id="template-created-at"> {/* Add id */}
                  Created: {new Date(template.created_at).toLocaleString()}

@@ -5,6 +5,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
 import type { IClientContractLine } from '@alga-psa/types';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
+import { Badge } from '@alga-psa/ui/components/Badge';
 import { X, Package } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
@@ -58,11 +59,9 @@ const ContractLineDetailsDialog: React.FC<ContractLineDetailsDialogProps> = Reac
           </div>
           <div>
             <p className="text-sm font-medium text-gray-500">{t('contractLine.status')}</p>
-            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-1 ${
-              contractLine.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-            }`}>
+            <Badge variant={contractLine.is_active ? 'success' : 'error'} className="mt-1">
               {contractLine.is_active ? tCommon('common.active') : tCommon('common.inactive')}
-            </span>
+            </Badge>
           </div>
           {contractLine.custom_rate !== undefined && (
             <div>

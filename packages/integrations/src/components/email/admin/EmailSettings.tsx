@@ -283,8 +283,8 @@ export const EmailSettings: React.FC<EmailSettingsProps> = () => {
               {showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
             </button>
           </div>
-          <p className="text-sm text-gray-500 mt-1">
-            Get your API key from <a href="https://resend.com/api-keys" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">resend.com/api-keys</a>
+          <p className="text-sm text-muted-foreground mt-1">
+            Get your API key from <a href="https://resend.com/api-keys" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">resend.com/api-keys</a>
           </p>
         </div>
 
@@ -296,7 +296,7 @@ export const EmailSettings: React.FC<EmailSettingsProps> = () => {
             placeholder="noreply@yourdomain.com"
             onChange={(e) => updateProviderConfig(config.providerId, { from: e.target.value })}
           />
-          <p className="text-sm text-gray-500 mt-1">
+          <p className="text-sm text-muted-foreground mt-1">
             Must be from a verified domain. Use the Domains tab to add custom domains.
           </p>
         </div>
@@ -315,7 +315,7 @@ export const EmailSettings: React.FC<EmailSettingsProps> = () => {
 
     const getStatusBadge = () => {
       switch (domain.status) {
-        case 'verified': return <Badge variant="default" className="bg-green-100 text-green-800">Verified</Badge>;
+        case 'verified': return <Badge variant="success">Verified</Badge>;
         case 'failed': return <Badge variant="error">Failed</Badge>;
         default: return <Badge variant="secondary">Pending</Badge>;
       }
@@ -345,10 +345,10 @@ export const EmailSettings: React.FC<EmailSettingsProps> = () => {
 
         {domain.dnsRecords && domain.status !== 'verified' && (
           <div className="mt-3">
-            <p className="text-sm text-gray-600 mb-2">Required DNS Records:</p>
+            <p className="text-sm text-muted-foreground mb-2">Required DNS Records:</p>
             <div className="space-y-2 text-sm">
               {domain.dnsRecords.map((record, idx) => (
-                <div key={idx} className="bg-gray-50 p-2 rounded font-mono text-xs">
+                <div key={idx} className="bg-muted p-2 rounded font-mono text-xs">
                   <strong>{record.type}</strong> {record.name} → {record.value}
                 </div>
               ))}
@@ -408,7 +408,7 @@ export const EmailSettings: React.FC<EmailSettingsProps> = () => {
                   ]}
                   placeholder="Select email provider"
                 />
-                <p className="text-sm text-gray-500 mt-1">
+                <p className="text-sm text-muted-foreground mt-1">
                   {selectedProvider === 'smtp'
                     ? 'Configure traditional SMTP email server settings'
                     : 'Configure Resend API for modern email delivery'
@@ -421,7 +421,7 @@ export const EmailSettings: React.FC<EmailSettingsProps> = () => {
                 <Badge variant={getCurrentProviderConfig()?.isEnabled ? "default" : "secondary"}>
                   {getCurrentProviderConfig()?.isEnabled ? "Active" : "Inactive"}
                 </Badge>
-                <span className="text-sm text-gray-600">
+                <span className="text-sm text-muted-foreground">
                   {selectedProvider.toUpperCase()} Provider
                 </span>
               </div>

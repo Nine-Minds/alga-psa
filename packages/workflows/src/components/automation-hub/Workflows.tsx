@@ -256,7 +256,7 @@ export default function Workflows({ workflowId }: WorkflowsProps) {
         <div className="flex flex-wrap gap-1">
           {workflow.events.length > 0 ? (
             workflow.events.map((event) => (
-              <Badge key={event} className="bg-blue-100 text-blue-800">
+              <Badge key={event} variant="info">
                 {event}
               </Badge>
             ))
@@ -355,7 +355,7 @@ export default function Workflows({ workflowId }: WorkflowsProps) {
               )}
               <DropdownMenuItem
                 id={`delete-${workflow.id}-menu-item`}
-                className="text-red-600 focus:text-red-600"
+                className="text-destructive focus:text-destructive"
                 onClick={async () => {
                   if (workflow.isSystemManaged) return;
                   if (confirm('Are you sure you want to delete this workflow? This action cannot be undone.')) {

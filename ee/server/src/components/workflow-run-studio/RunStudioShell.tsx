@@ -270,7 +270,7 @@ const RunStudioShell: React.FC<RunStudioShellProps> = ({ runId }) => {
   }, [run?.status]);
 
   const status = run?.status ?? 'UNKNOWN';
-  const badgeClass = statusBadgeClasses[status] ?? 'bg-gray-100 text-gray-700 border-gray-200';
+  const badgeClass = statusBadgeClasses[status] ?? 'bg-gray-500/15 text-gray-600 border-gray-500/30';
 
   const stepStatusMap = useMemo(() => {
     const map = new Map<string, WorkflowRunStepRecord>();
@@ -582,7 +582,7 @@ const RunStudioShell: React.FC<RunStudioShellProps> = ({ runId }) => {
           </div>
           <div className="flex items-center gap-2">
             {record?.attempt && record.attempt > 1 && (
-              <Badge className="bg-yellow-50 text-yellow-700 border-yellow-200 text-xs">Attempt {record.attempt}</Badge>
+              <Badge variant="warning" className="text-xs">Attempt {record.attempt}</Badge>
             )}
             <Badge className={statusInfo.badge.className}>{statusInfo.badge.label}</Badge>
           </div>
@@ -642,10 +642,10 @@ const RunStudioShell: React.FC<RunStudioShellProps> = ({ runId }) => {
   const durationSeconds = durationMs != null ? Math.max(0, Math.floor(durationMs / 1000)) : null;
 
   const logLevelStyles: Record<string, string> = {
-    ERROR: 'text-red-700 bg-red-50 border-red-100',
-    WARN: 'text-yellow-700 bg-yellow-50 border-yellow-100',
-    INFO: 'text-blue-700 bg-blue-50 border-blue-100',
-    DEBUG: 'text-gray-600 bg-gray-50 border-gray-100'
+    ERROR: 'text-destructive bg-destructive/10 border-destructive/20',
+    WARN: 'text-warning-foreground bg-warning/10 border-warning/20',
+    INFO: 'text-info-foreground bg-info/10 border-info/20',
+    DEBUG: 'text-muted-foreground bg-muted border-border'
   };
 
   const filteredLogs = useMemo(() => {
@@ -793,10 +793,10 @@ const RunStudioShell: React.FC<RunStudioShellProps> = ({ runId }) => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 flex-1 min-h-0">
         <Card className="lg:col-span-2 p-4 flex flex-col min-h-[420px]">
           {run?.status === 'FAILED' && (
-            <div className="mb-3 rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+            <div className="mb-3 rounded border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
               <div className="font-semibold">Run failed</div>
               {lastSucceededStep && (
-                <div className="mt-1 text-xs text-red-700">
+                <div className="mt-1 text-xs">
                   Last successful step: {lastSucceededStep.label}
                 </div>
               )}
@@ -938,7 +938,7 @@ const RunStudioShell: React.FC<RunStudioShellProps> = ({ runId }) => {
                 <RunJsonPanel title="Output" value={selectedInvocation.output_json} />
               )}
               {selectedInvocation?.error_message && (
-                <div className="rounded border border-red-200 bg-red-50 p-3 text-xs text-red-700">
+                <div className="rounded border border-destructive/30 bg-destructive/10 p-3 text-xs text-destructive">
                   {selectedInvocation.error_message}
                 </div>
               )}
@@ -1115,10 +1115,10 @@ const RunStudioShell: React.FC<RunStudioShellProps> = ({ runId }) => {
                   value={replayPayloadText}
                   onChange={(event) => handleReplayPayloadChange(event.target.value)}
                   rows={10}
-                  className={replayPayloadError ? 'border-red-500' : ''}
+                  className={replayPayloadError ? 'border-destructive' : ''}
                 />
                 {replayPayloadError && (
-                  <div className="text-xs text-red-600 mt-1">{replayPayloadError}</div>
+                  <div className="text-xs text-destructive mt-1">{replayPayloadError}</div>
                 )}
               </div>
             )}

@@ -354,10 +354,10 @@ export default function AppointmentsPage() {
             <div className="space-y-6">
               {/* Status Banner */}
               <div className={`p-4 rounded-lg ${
-                selectedAppointment.status === 'approved' ? 'bg-green-50 border border-green-200' :
-                selectedAppointment.status === 'declined' ? 'bg-red-50 border border-red-200' :
+                selectedAppointment.status === 'approved' ? 'bg-success/10 border border-success/30' :
+                selectedAppointment.status === 'declined' ? 'bg-destructive/10 border border-destructive/30' :
                 selectedAppointment.status === 'cancelled' ? 'bg-gray-50 border border-gray-200' :
-                'bg-yellow-50 border border-yellow-200'
+                'bg-warning/10 border border-warning/30'
               }`}>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">

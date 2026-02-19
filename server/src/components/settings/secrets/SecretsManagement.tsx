@@ -168,7 +168,7 @@ export default function SecretsManagement() {
             size="sm"
             onClick={() => handleDeleteClick(record)}
             title="Delete secret"
-            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+            className="text-destructive hover:text-destructive hover:bg-destructive/10"
           >
             <Trash2 className="h-4 w-4" />
           </Button>
@@ -245,14 +245,14 @@ export default function SecretsManagement() {
               </p>
 
               {getUsageForSecret(secretToDelete.name).length > 0 && (
-                <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                <div className="p-3 bg-warning/10 border border-warning/30 rounded-lg">
                   <div className="flex items-start gap-2">
-                    <AlertTriangle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                    <AlertTriangle className="h-5 w-5 text-warning flex-shrink-0 mt-0.5" />
                     <div>
-                      <p className="font-medium text-amber-800">
+                      <p className="font-medium text-[rgb(var(--color-text-800))]">
                         This secret is used by {getUsageForSecret(secretToDelete.name).length} workflow(s)
                       </p>
-                      <p className="text-sm text-amber-700 mt-1">
+                      <p className="text-sm text-[rgb(var(--color-text-700))]">
                         Deleting it will cause those workflows to fail when they try to access this secret.
                       </p>
                     </div>

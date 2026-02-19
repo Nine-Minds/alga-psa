@@ -447,7 +447,7 @@ export function MicrosoftProviderForm({
           </div>
 
           {/* OAuth Authorization */}
-          <div className="bg-blue-500/10 p-4 rounded-lg">
+          <div className="bg-muted/50 p-4 rounded-lg">
             <div className="flex items-center justify-between">
               <div>
                 <h4 className="font-medium">OAuth Authorization</h4>

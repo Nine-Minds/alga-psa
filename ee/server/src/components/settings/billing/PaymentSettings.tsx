@@ -17,13 +17,13 @@ import { Switch } from '@alga-psa/ui/components/Switch';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import {
-  AlertCircle,
   CheckCircle,
   CreditCard,
   RefreshCw,
   Unplug,
   Settings,
 } from 'lucide-react';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import {
   getPaymentConfigAction,
   connectStripeAction,
@@ -369,90 +369,95 @@ export const PaymentSettings: React.FC = () => {
           {config?.is_enabled ? (
             <div className="space-y-4">
               {/* Connected Status */}
-              <div className="flex items-center justify-between p-4 bg-green-50 rounded-lg border border-green-200">
-                <div className="flex items-center gap-3">
-                  <CheckCircle className="h-5 w-5 text-green-600" />
-                  <div>
-                    <p className="font-medium text-green-800">Stripe Connected</p>
-                    <p className="text-sm text-green-600">
-                      Publishable key: {config.publishable_key?.slice(0, 12)}...
-                    </p>
+              <Alert variant="success" showIcon={false}>
+                <AlertDescription>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <CheckCircle className="h-5 w-5 text-success" />
+                      <div>
+                        <p className="font-medium">Stripe Connected</p>
+                        <p className="text-sm">
+                          Publishable key: {config.publishable_key?.slice(0, 12)}...
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="default"
+                        size="sm"
+                        onClick={handleTestConnection}
+                        disabled={testing}
+                        id="test-stripe-connection"
+                      >
+                        {testing ? (
+                          <RefreshCw className="h-4 w-4 animate-spin" />
+                        ) : (
+                          'Test Connection'
+                        )}
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => setShowDisconnectDialog(true)}
+                        id="disconnect-stripe"
+                      >
+                        <Unplug className="h-4 w-4 mr-1" />
+                        Disconnect
+                      </Button>
+                    </div>
                   </div>
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    variant="default"
-                    size="sm"
-                    onClick={handleTestConnection}
-                    disabled={testing}
-                    id="test-stripe-connection"
-                  >
-                    {testing ? (
-                      <RefreshCw className="h-4 w-4 animate-spin" />
-                    ) : (
-                      'Test Connection'
-                    )}
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => setShowDisconnectDialog(true)}
-                    id="disconnect-stripe"
-                  >
-                    <Unplug className="h-4 w-4 mr-1" />
-                    Disconnect
-                  </Button>
-                </div>
-              </div>
+                </AlertDescription>
+              </Alert>
 
               {/* Webhook Status */}
               {config.webhook_status === 'enabled' ? (
                 <div className="space-y-3">
                   <Label>Webhook Configuration</Label>
-                  <div className="p-3 bg-green-50 rounded-lg border border-green-200">
-                    <div className="flex items-center gap-2 text-green-700 mb-2">
-                      <CheckCircle className="h-4 w-4" />
-                      <span className="font-medium">Webhooks configured automatically</span>
-                    </div>
-                    <p className="text-sm text-green-600 mb-2">
-                      Alga PSA will receive payment notifications for:
-                    </p>
-                    <ul className="text-sm text-green-600 list-disc list-inside space-y-1">
-                      {config.webhook_events?.map((event) => (
-                        <li key={event}>{event}</li>
-                      ))}
-                    </ul>
-                  </div>
+                  <Alert variant="success" showIcon={false}>
+                    <AlertDescription>
+                      <div className="flex items-center gap-2 mb-2">
+                        <CheckCircle className="h-4 w-4 text-success" />
+                        <span className="font-medium">Webhooks configured automatically</span>
+                      </div>
+                      <p className="text-sm mb-2">
+                        Alga PSA will receive payment notifications for:
+                      </p>
+                      <ul className="text-sm list-disc list-inside space-y-1">
+                        {config.webhook_events?.map((event) => (
+                          <li key={event}>{event}</li>
+                        ))}
+                      </ul>
+                    </AlertDescription>
+                  </Alert>
                 </div>
               ) : (
-                <div className="p-3 bg-amber-50 rounded-lg border border-amber-200">
-                  <div className="flex items-center gap-2 text-amber-700 mb-2">
-                    <AlertCircle className="h-4 w-4" />
-                    <span className="font-medium">Webhook configuration failed</span>
-                  </div>
-                  <p className="text-sm text-amber-600 mb-3">
-                    Automatic webhook configuration failed. Click retry to attempt configuration again.
-                  </p>
-                  <Button
-                    id="retry-webhook-config"
-                    variant="default"
-                    size="sm"
-                    onClick={handleRetryWebhook}
-                    disabled={retryingWebhook}
-                  >
-                    {retryingWebhook ? (
-                      <>
-                        <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                        Configuring...
-                      </>
-                    ) : (
-                      <>
-                        <RefreshCw className="h-4 w-4 mr-2" />
-                        Retry Configuration
-                      </>
-                    )}
-                  </Button>
-                </div>
+                <Alert variant="warning" showIcon={false}>
+                  <AlertDescription>
+                    <p className="font-medium mb-2">Webhook configuration failed</p>
+                    <p className="text-sm mb-3">
+                      Automatic webhook configuration failed. Click retry to attempt configuration again.
+                    </p>
+                    <Button
+                      id="retry-webhook-config"
+                      variant="default"
+                      size="sm"
+                      onClick={handleRetryWebhook}
+                      disabled={retryingWebhook}
+                    >
+                      {retryingWebhook ? (
+                        <>
+                          <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                          Configuring...
+                        </>
+                      ) : (
+                        <>
+                          <RefreshCw className="h-4 w-4 mr-2" />
+                          Retry Configuration
+                        </>
+                      )}
+                    </Button>
+                  </AlertDescription>
+                </Alert>
               )}
             </div>
           ) : showConnectForm ? (

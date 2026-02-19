@@ -46,7 +46,7 @@ export function ServicePicker({
       label={label}
       id={pickerId}
       className={cn(
-        "bg-white border border-[rgb(var(--color-border-400))] text-[rgb(var(--color-text-700))]",
+        "bg-card border border-[rgb(var(--color-border-400))] text-[rgb(var(--color-text-700))]",
         "hover:bg-[rgb(var(--color-primary-50))] hover:text-[rgb(var(--color-primary-700))]",
         className
       )}

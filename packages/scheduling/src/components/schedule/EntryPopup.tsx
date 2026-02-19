@@ -710,28 +710,17 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
       </div>  
         {/* Display message for private events */}
         {privateEventMessage && (
-          <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-4">
-            <div className="flex">
-              <div className="flex-shrink-0">
-                <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                </svg>
-              </div>
-              <div className="ml-3">
-                <p className="text-sm text-yellow-700">
-                  {privateEventMessage}
-                </p>
-              </div>
-            </div>
-          </div>
+          <Alert variant="warning" className="mb-4">
+            <AlertDescription>{privateEventMessage}</AlertDescription>
+          </Alert>
         )}
 
         {/* Info badge for approved appointment requests */}
         {isAppointmentRequest && event && appointmentRequestData && appointmentRequestData.status === 'approved' && (
-          <Alert className="border-green-200 bg-green-50 mb-4">
+          <Alert variant="success" className="mb-4">
             <AlertDescription>
-              <p className="font-medium text-green-900">Approved Appointment</p>
-              <p className="text-sm text-green-700 mt-1">
+              <p className="font-medium">Approved Appointment</p>
+              <p className="text-sm mt-1">
                 This appointment originated from a client request{appointmentRequestData.approved_at ? ` and was approved on ${format(new Date(appointmentRequestData.approved_at), 'PPP')}` : ''}.
               </p>
             </AlertDescription>
@@ -741,12 +730,12 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
         {/* Status display for declined/cancelled appointment requests */}
         {isAppointmentRequest && event && appointmentRequestData && (appointmentRequestData.status === 'declined' || appointmentRequestData.status === 'cancelled') && (
           <div className="space-y-4">
-            <Alert className={appointmentRequestData.status === 'declined' ? 'border-red-200 bg-red-50' : 'border-gray-200 bg-gray-50'}>
+            <Alert variant={appointmentRequestData.status === 'declined' ? 'destructive' : 'default'}>
               <AlertDescription>
-                <p className={`font-medium ${appointmentRequestData.status === 'declined' ? 'text-red-900' : 'text-gray-900'}`}>
+                <p className="font-medium">
                   {appointmentRequestData.status === 'declined' ? 'Declined Appointment Request' : 'Cancelled Appointment Request'}
                 </p>
-                <p className={`text-sm mt-1 ${appointmentRequestData.status === 'declined' ? 'text-red-700' : 'text-gray-700'}`}>
+                <p className="text-sm mt-1">
                   {appointmentRequestData.status === 'declined' &&
                     `This appointment request was declined${appointmentRequestData.declined_reason ? `: ${appointmentRequestData.declined_reason}` : '.'}`}
                   {appointmentRequestData.status === 'cancelled' &&

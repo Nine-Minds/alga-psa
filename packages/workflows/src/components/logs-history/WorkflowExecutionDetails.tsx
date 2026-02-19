@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@alga-psa/ui/component
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import { Button } from '@alga-psa/ui/components/Button';
 import { ArrowLeft, RefreshCw } from 'lucide-react';
+import { Badge, BadgeVariant } from '@alga-psa/ui/components/Badge';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { IWorkflowExecution } from '@alga-psa/shared/workflow/persistence';
 import { getWorkflowExecutionDetails } from '../../actions/workflow-actions';
@@ -87,7 +88,7 @@ export function WorkflowExecutionDetails({ executionId, onBack }: WorkflowExecut
           </Button>
           <h1 className="text-xl font-semibold">Error</h1>
         </div>
-        <div className="p-4 text-center text-red-500">
+        <div className="p-4 text-center text-destructive">
           {error}
         </div>
       </Card>
@@ -119,21 +120,21 @@ export function WorkflowExecutionDetails({ executionId, onBack }: WorkflowExecut
     return date.toLocaleString();
   };
 
-  // Get status color
-  const getStatusColor = (status: string) => {
+  // Get status badge variant
+  const getStatusVariant = (status: string): string => {
     switch (status.toLowerCase()) {
       case 'active':
-        return 'bg-blue-100 text-blue-800';
+        return 'info';
       case 'completed':
-        return 'bg-green-100 text-green-800';
+        return 'success';
       case 'failed':
-        return 'bg-red-100 text-red-800';
+        return 'error';
       case 'paused':
-        return 'bg-yellow-100 text-yellow-800';
+        return 'warning';
       case 'cancelled':
-        return 'bg-gray-100 text-gray-800';
+        return 'default-muted';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'default-muted';
     }
   };
 
@@ -146,9 +147,9 @@ export function WorkflowExecutionDetails({ executionId, onBack }: WorkflowExecut
             Back
           </Button>
           <h1 className="text-xl font-semibold">{execution.workflow_name}</h1>
-          <span className={`ml-4 px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(execution.status)}`}>
+          <Badge variant={getStatusVariant(execution.status) as BadgeVariant} className="ml-4">
             {execution.status}
-          </span>
+          </Badge>
         </div>
         <Button 
           variant="outline" 

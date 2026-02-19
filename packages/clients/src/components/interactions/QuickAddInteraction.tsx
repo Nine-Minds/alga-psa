@@ -597,8 +597,8 @@ export function QuickAddInteraction({
                         />
                       </Suspense>
                     ) : (
-                      <div className="w-full h-[100px] bg-gray-100 border border-gray-200 rounded-lg flex items-center justify-center">
-                        <span className="text-gray-500">Loading editor...</span>
+                      <div className="w-full h-[100px] bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg flex items-center justify-center">
+                        <span className="text-gray-500 dark:text-gray-400">Loading editor...</span>
                       </div>
                     )}
                   </div>

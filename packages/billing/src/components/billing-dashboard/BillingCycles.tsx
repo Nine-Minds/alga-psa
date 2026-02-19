@@ -8,6 +8,7 @@ import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Info, Search } from 'lucide-react';
 import {
   getAllBillingCycles
@@ -234,9 +235,9 @@ const BillingCycles: React.FC = () => {
       dataIndex: 'client_id',
       render: (value: string) => {
         const contractId = clientContracts[value];
-        if (!contractId) return <span className="text-gray-400">No active contract</span>;
+        if (!contractId) return <span className="text-muted-foreground">No active contract</span>;
         const contract = contracts[contractId];
-        return contract?.contract_name || <span className="text-gray-400">Unknown</span>;
+        return contract?.contract_name || <span className="text-muted-foreground">Unknown</span>;
       },
     },
     {
@@ -286,7 +287,7 @@ const BillingCycles: React.FC = () => {
         <div className="flex items-center gap-2">
           <h2 className="text-2xl font-bold">Billing Cycles</h2>
           <Tooltip content="Configure billing cycles for clients and create new billing periods.">
-            <Info className="h-4 w-4 text-gray-500" />
+            <Info className="h-4 w-4 text-muted-foreground" />
           </Tooltip>
         </div>
       </div>
@@ -295,7 +296,7 @@ const BillingCycles: React.FC = () => {
         <CardHeader className="flex flex-col gap-4">
           <div className="flex flex-wrap items-end gap-4">
             <div className="relative flex-1 min-w-[240px] max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 type="text"
                 placeholder="Search clients..."
@@ -329,14 +330,14 @@ const BillingCycles: React.FC = () => {
         </CardHeader>
         <CardContent>
           {error && (
-            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-              {error}
-            </div>
+            <Alert variant="destructive" className="mb-4">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
           )}
           {loading ? (
             <LoadingIndicator
               layout="stacked"
-              className="py-10 text-gray-600"
+              className="py-10 text-muted-foreground"
               spinnerProps={{ size: 'md' }}
               text="Loading billing cycles"
             />

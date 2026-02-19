@@ -138,10 +138,10 @@ const XeroCsvIntegrationSettings: React.FC = () => {
 
       {/* Xero Setup Instructions - shown if setup not acknowledged */}
       {!settings?.setupAcknowledged && (
-        <Card id="xero-csv-setup-card" className="border-blue-200 bg-blue-50/50">
+        <Card id="xero-csv-setup-card" className="border-primary/30 bg-primary/5">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Info className="h-5 w-5 text-blue-500" />
+              <Info className="h-5 w-5 text-primary" />
               Xero Setup Required
             </CardTitle>
             <CardDescription>
@@ -299,9 +299,9 @@ const XeroCsvIntegrationSettings: React.FC = () => {
             </div>
           </div>
 
-          <div className="rounded-lg border border-blue-200 bg-blue-50/50 p-4">
+          <div className="rounded-lg border border-primary/30 bg-primary/5 p-4">
             <div className="flex gap-3">
-              <FileText className="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" />
+              <FileText className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
               <div className="text-sm">
                 <p className="font-medium text-foreground">Tracking Categories for Reconciliation</p>
                 <p className="text-muted-foreground mt-1">

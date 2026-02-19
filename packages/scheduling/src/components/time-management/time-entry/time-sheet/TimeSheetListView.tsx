@@ -259,7 +259,7 @@ export function TimeSheetListView({
                         ) : !hasWorkItems || flattenedEntries.length === 0 ? (
                             <div className="flex w-full h-48 items-center justify-center py-8 px-4">
                                 <div className="flex flex-col items-center justify-center text-center max-w-md">
-                                    <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mb-3">
+                                    <div className="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-3">
                                         <ClipboardList className="w-6 h-6 text-gray-400" />
                                     </div>
                                     <h3 className="text-base font-semibold text-gray-900 mb-1">
@@ -335,8 +335,8 @@ export function TimeSheetListView({
                                                     <tr
                                                         className={`${
                                                             hasEntries
-                                                                ? 'bg-gray-50 hover:bg-gray-100 cursor-pointer'
-                                                                : 'bg-gray-50/50 cursor-default'
+                                                                ? 'bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer'
+                                                                : 'bg-gray-50/50 dark:bg-gray-800/30 cursor-default'
                                                         }`}
                                                         onClick={() => hasEntries && toggleDay(group.dateKey)}
                                                     >
@@ -420,8 +420,8 @@ export function TimeSheetListView({
                                                                                     : workItem.type === 'project_task'
                                                                                         ? 'bg-[rgb(var(--color-secondary-100))] text-[rgb(var(--color-secondary-700))]'
                                                                                         : workItem.type === 'interaction'
-                                                                                            ? 'bg-green-100 text-green-700'
-                                                                                            : 'bg-gray-100 text-gray-700'
+                                                                                            ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
+                                                                                            : 'bg-gray-100 dark:bg-gray-800/30 text-gray-700 dark:text-gray-300'
                                                                             }`}>
                                                                                 {formatWorkItemType(workItem.type)}
                                                                             </span>

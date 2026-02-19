@@ -6,6 +6,7 @@ import { useState, useEffect } from 'react';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Search, X, Check, FileText, FileImage, Video, File } from 'lucide-react';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -264,10 +265,9 @@ export default function DocumentSelector({
 
                         {/* Error Message */}
                         {error && (
-                            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded flex items-center">
-                                <X className="w-4 h-4 mr-2" />
-                                {error}
-                            </div>
+                            <Alert variant="destructive">
+                                <AlertDescription>{error}</AlertDescription>
+                            </Alert>
                         )}
 
                         {/* Two-pane layout: Folders + Documents */}

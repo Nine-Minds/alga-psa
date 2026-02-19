@@ -8,6 +8,7 @@ import { Label } from "@alga-psa/ui/components/Label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@alga-psa/ui/components/Tabs";
 import { Card } from "@alga-psa/ui/components/Card";
 import { Trash2, Plus, ArrowRight } from "lucide-react";
+import { Alert, AlertDescription } from "@alga-psa/ui/components/Alert";
 import { toast } from "react-hot-toast";
 import { IEventCatalogEntry, ICreateWorkflowEventAttachment, ICreateWorkflowTrigger, ICreateWorkflowEventMapping } from "@alga-psa/shared/workflow";
 import { createWorkflowTrigger, createWorkflowEventMappings } from "@alga-psa/workflows/actions/workflow-trigger-actions";
@@ -195,14 +196,16 @@ export default function EventTriggerDialog({ isOpen, onClose, event }: EventTrig
 
           <TabsContent value="basic" className="space-y-4 py-4">
             {hasAttemptedSubmit && validationError && (
-              <div className="bg-red-50 border border-red-300 text-red-700 px-4 py-3 rounded mb-4">
-                <p className="font-medium mb-2">Please fill in the required fields:</p>
-                <ul className="list-disc list-inside space-y-1">
-                  {validationError.split(": ")[1]?.split(", ").map((err, index) => (
-                    <li key={index}>{err}</li>
-                  )) || <li>{validationError}</li>}
-                </ul>
-              </div>
+              <Alert variant="destructive" className="mb-4">
+                <AlertDescription>
+                  <p className="font-medium mb-2">Please fill in the required fields:</p>
+                  <ul className="list-disc list-inside space-y-1">
+                    {validationError.split(": ")[1]?.split(", ").map((err, index) => (
+                      <li key={index}>{err}</li>
+                    )) || <li>{validationError}</li>}
+                  </ul>
+                </AlertDescription>
+              </Alert>
             )}
             <div className="space-y-4">
               <div className="grid grid-cols-1 gap-4">
@@ -220,7 +223,7 @@ export default function EventTriggerDialog({ isOpen, onClose, event }: EventTrig
                     <select
                       id="workflow-select"
                       className={`w-full border rounded-md p-2 mt-1 ${
-                        hasAttemptedSubmit && !selectedWorkflowId ? 'border-red-500' : 'border-gray-300'
+                        hasAttemptedSubmit && !selectedWorkflowId ? 'border-destructive' : 'border-gray-300'
                       }`}
                       value={selectedWorkflowId}
                       onChange={(e) => {
@@ -238,7 +241,7 @@ export default function EventTriggerDialog({ isOpen, onClose, event }: EventTrig
                     </select>
                   )}
                   {workflowOptions.length === 0 && !isLoadingWorkflows && (
-                    <p className="text-sm text-red-500 mt-1">
+                    <p className="text-sm text-destructive mt-1">
                       No workflows available. Please create a workflow first.
                     </p>
                   )}
@@ -254,7 +257,7 @@ export default function EventTriggerDialog({ isOpen, onClose, event }: EventTrig
                       clearErrorIfSubmitted();
                     }}
                     placeholder="Enter trigger name *"
-                    className={hasAttemptedSubmit && !triggerName.trim() ? 'border-red-500' : ''}
+                    className={hasAttemptedSubmit && !triggerName.trim() ? 'border-destructive' : ''}
                   />
                 </div>
 
@@ -376,7 +379,7 @@ export default function EventTriggerDialog({ isOpen, onClose, event }: EventTrig
                           onClick={() => removeParameterMapping(index)}
                           className="mt-5"
                         >
-                          <Trash2 className="h-4 w-4 text-red-500" />
+                          <Trash2 className="h-4 w-4 text-destructive" />
                         </Button>
                       </div>
                     ))}

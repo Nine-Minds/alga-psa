@@ -25,7 +25,7 @@ function Badge({ className, variant = 'default', size = 'md', ref, ...props }: B
         badgeSizeClasses[size],
         {
           'border-transparent bg-primary text-primary-foreground': variant === 'primary',
-          'border-transparent bg-secondary-100 text-secondary-800': variant === 'secondary',
+          'border-[rgb(var(--badge-default-border))] bg-[rgb(var(--badge-default-bg))] text-[rgb(var(--badge-default-text))]': variant === 'secondary',
           'border-transparent bg-success text-success-foreground': variant === 'success',
           'border-transparent bg-warning text-warning-foreground': variant === 'warning',
           'border-transparent bg-error text-error-foreground': variant === 'error',
@@ -33,7 +33,7 @@ function Badge({ className, variant = 'default', size = 'md', ref, ...props }: B
           'border-current bg-transparent': variant === 'outline',
           'border-[rgb(var(--badge-info-border))] bg-[rgb(var(--badge-info-bg))] text-[rgb(var(--badge-info-text))]': variant === 'info',
           'border-[rgb(var(--badge-default-border))] bg-[rgb(var(--badge-default-bg))] text-[rgb(var(--badge-default-text))]': variant === 'default-muted',
-          'border-blue-500/30 bg-blue-500/15 text-blue-600': variant === 'itil',
+          'border-[rgb(var(--badge-info-border))] bg-[rgb(var(--badge-info-bg))] text-[rgb(var(--badge-info-text))]': variant === 'itil',
         },
         className
       )}

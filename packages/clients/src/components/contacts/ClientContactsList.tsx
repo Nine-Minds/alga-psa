@@ -7,6 +7,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { Eye, ExternalLink, MoreVertical, Pen } from 'lucide-react';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { ColumnDefinition } from '@alga-psa/types';
 import ContactAvatar from '@alga-psa/ui/components/ContactAvatar';
@@ -280,26 +281,28 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
 
   if (error) {
     return (
-      <div className="p-4 border border-red-300 bg-red-50 rounded-md text-red-600">
-        <p className="font-semibold">Error loading contacts</p>
-        <p>{error}</p>
-        <button
-          onClick={() => {
-            setLoading(true);
-            setError(null);
-            getContactsByClient(clientId, statusFilter)
-              .then(data => setContacts(addIdToContacts(data)))
-              .catch(err => {
-                console.error('Error retrying contact fetch:', err);
-                setError('Failed to load contacts. Please try again.');
-              })
-              .finally(() => setLoading(false));
-          }}
-          className="mt-2 px-4 py-2 bg-red-100 hover:bg-red-200 text-red-700 rounded-md"
-        >
-          Retry
-        </button>
-      </div>
+      <Alert variant="destructive">
+        <AlertDescription>
+          <p className="font-semibold">Error loading contacts</p>
+          <p>{error}</p>
+          <button
+            onClick={() => {
+              setLoading(true);
+              setError(null);
+              getContactsByClient(clientId, statusFilter)
+                .then(data => setContacts(addIdToContacts(data)))
+                .catch(err => {
+                  console.error('Error retrying contact fetch:', err);
+                  setError('Failed to load contacts. Please try again.');
+                })
+                .finally(() => setLoading(false));
+            }}
+            className="mt-2 px-4 py-2 bg-destructive/20 hover:bg-destructive/30 rounded-md"
+          >
+            Retry
+          </button>
+        </AlertDescription>
+      </Alert>
     );
   }
 

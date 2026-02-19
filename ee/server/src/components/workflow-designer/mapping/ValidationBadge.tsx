@@ -65,9 +65,9 @@ const getStatusIcon = (status: ValidationStatus, size: 'sm' | 'md') => {
     case 'valid':
       return <CheckCircle className={`${iconClass} text-green-600`} />;
     case 'warning':
-      return <AlertTriangle className={`${iconClass} text-yellow-600`} />;
+      return <AlertTriangle className={`${iconClass} text-warning`} />;
     case 'error':
-      return <XCircle className={`${iconClass} text-red-600`} />;
+      return <XCircle className={`${iconClass} text-destructive`} />;
     case 'incomplete':
       return <Circle className={`${iconClass} text-gray-400`} />;
   }
@@ -79,11 +79,11 @@ const getStatusIcon = (status: ValidationStatus, size: 'sm' | 'md') => {
 const getStatusStyle = (status: ValidationStatus): string => {
   switch (status) {
     case 'valid':
-      return 'bg-green-500/15 text-green-600 border-green-500/30';
+      return 'bg-success/15 text-success border-success/30';
     case 'warning':
-      return 'bg-yellow-500/15 text-yellow-600 border-yellow-500/30';
+      return 'bg-warning/15 text-warning-foreground border-warning/30';
     case 'error':
-      return 'bg-red-500/15 text-red-600 border-red-500/30';
+      return 'bg-destructive/15 text-destructive border-destructive/30';
     case 'incomplete':
       return 'bg-gray-500/15 text-gray-600 border-gray-500/30';
   }
@@ -194,14 +194,14 @@ export const ValidationBadge: React.FC<ValidationBadgeProps> = ({
           {/* Error list */}
           {errorList.length > 0 && (
             <div className="p-2 border-b border-gray-100">
-              <div className="flex items-center gap-1 text-xs font-semibold text-red-700 mb-1">
+              <div className="flex items-center gap-1 text-xs font-semibold text-destructive mb-1">
                 <XCircle className="w-3 h-3" />
                 Errors ({errorList.length})
               </div>
               <ul className="space-y-1">
                 {errorList.slice(0, 5).map((err, i) => (
                   <li key={i} className="text-xs text-gray-700 pl-4">
-                    <span className="font-mono text-red-600">{err.code}</span>
+                    <span className="font-mono text-destructive">{err.code}</span>
                     <span className="mx-1">-</span>
                     <span>{err.message}</span>
                     {err.stepPath && (
@@ -223,14 +223,14 @@ export const ValidationBadge: React.FC<ValidationBadgeProps> = ({
           {/* Warning list */}
           {warningList.length > 0 && (
             <div className="p-2 border-b border-gray-100">
-              <div className="flex items-center gap-1 text-xs font-semibold text-yellow-700 mb-1">
+              <div className="flex items-center gap-1 text-xs font-semibold text-warning mb-1">
                 <AlertTriangle className="w-3 h-3" />
                 Warnings ({warningList.length})
               </div>
               <ul className="space-y-1">
                 {warningList.slice(0, 3).map((warn, i) => (
                   <li key={i} className="text-xs text-gray-700 pl-4">
-                    <span className="font-mono text-yellow-600">{warn.code}</span>
+                    <span className="font-mono text-warning">{warn.code}</span>
                     <span className="mx-1">-</span>
                     <span>{warn.message}</span>
                   </li>

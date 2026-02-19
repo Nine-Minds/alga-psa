@@ -50,15 +50,15 @@ const getRelativeTime = (dateString?: string) => {
 const getActivityTypeIcon = (type: ActivityType) => {
   switch (type) {
     case ActivityType.SCHEDULE:
-      return <Calendar className="h-4 w-4 text-blue-500" />;
+      return <Calendar className="h-4 w-4 text-primary-500" />;
     case ActivityType.PROJECT_TASK:
-      return <Briefcase className="h-4 w-4 text-green-500" />;
+      return <Briefcase className="h-4 w-4 text-success" />;
     case ActivityType.TICKET:
       return <TicketIcon className="h-4 w-4 text-purple-500" />;
     case ActivityType.TIME_ENTRY:
       return <Clock className="h-4 w-4 text-orange-500" />;
     case ActivityType.WORKFLOW_TASK:
-      return <ListChecks className="h-4 w-4 text-red-500" />;
+      return <ListChecks className="h-4 w-4 text-destructive" />;
     case ActivityType.NOTIFICATION:
       return <Bell className="h-4 w-4 text-indigo-500" />;
     default:
@@ -70,11 +70,11 @@ const getActivityTypeIcon = (type: ActivityType) => {
 const getPriorityIcon = (priority: ActivityPriority) => {
   switch (priority) {
     case ActivityPriority.HIGH:
-      return <AlertTriangle className="h-4 w-4 text-red-500" />;
+      return <AlertTriangle className="h-4 w-4 text-destructive" />;
     case ActivityPriority.MEDIUM:
-      return <div className="w-2 h-2 rounded-full bg-yellow-400" />;
+      return <div className="w-2 h-2 rounded-full bg-warning" />;
     case ActivityPriority.LOW:
-      return <div className="w-2 h-2 rounded-full bg-gray-400" />;
+      return <div className="w-2 h-2 rounded-full bg-muted-foreground" />;
     default:
       return null;
   }
@@ -140,10 +140,10 @@ export const ActivitiesDataTable = React.memo(function ActivitiesDataTable({
              </span>
           )}
           {record.type === ActivityType.NOTIFICATION && !(record as NotificationActivity).isRead && (
-            <div className="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0" title="Unread" />
+            <div className="w-2 h-2 rounded-full bg-primary-500 flex-shrink-0" title="Unread" />
           )}
           {record.priority === ActivityPriority.HIGH && (
-            <AlertTriangle className="h-4 w-4 text-red-500 flex-shrink-0 ml-1" />
+            <AlertTriangle className="h-4 w-4 text-destructive flex-shrink-0 ml-1" />
           )}
         </div>
       ),

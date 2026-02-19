@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Button } from '@alga-psa/ui/components/Button';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { formatCurrency } from '@alga-psa/core';
 import type { ColumnDefinition } from '@alga-psa/types';
 import type { ICreditExpirationSettings, ICreditTracking } from '@alga-psa/types';
@@ -90,7 +91,7 @@ const columns: ColumnDefinition<ICreditTracking & { transaction_description?: st
                 variant="outline"
                 size="sm"
                 id={`expire-credit-${value}`}
-                className="text-red-600 hover:bg-red-50"
+                className="text-destructive hover:bg-destructive/10"
               >
                 Expire
               </Button>
@@ -107,17 +108,17 @@ async function CreditsList({ clientId, includeExpired = false }: { clientId: str
 
   if (!response.success) {
     return (
-      <div className="p-4 border border-red-300 rounded-md bg-red-50">
-        <p className="text-red-600">Error loading credits: {response.error}</p>
-      </div>
+      <Alert variant="destructive" className="p-4 rounded-md">
+        <AlertDescription>Error loading credits: {response.error}</AlertDescription>
+      </Alert>
     );
   }
 
   if (!response.data) {
     return (
-      <div className="p-4 border border-red-300 rounded-md bg-red-50">
-        <p className="text-red-600">No data returned from server</p>
-      </div>
+      <Alert variant="destructive" className="p-4 rounded-md">
+        <AlertDescription>No data returned from server</AlertDescription>
+      </Alert>
     );
   }
 
@@ -126,7 +127,7 @@ async function CreditsList({ clientId, includeExpired = false }: { clientId: str
   if (credits.length === 0) {
     return (
       <div className="p-8 text-center">
-        <p className="text-gray-500">No credits found</p>
+        <p className="text-muted-foreground">No credits found</p>
       </div>
     );
   }
@@ -156,7 +157,7 @@ async function CreditExpirationSettings({ clientId }: { clientId: string }) {
   const settings = await getCreditExpirationSettings(clientId);
 
   return (
-    <div className="p-4 border rounded-md bg-gray-50 mb-4">
+    <div className="p-4 border rounded-md bg-muted mb-4">
       <h3 className="text-lg font-medium mb-2">Credit Expiration Settings</h3>
       <div className="space-y-2">
         <div className="flex justify-between">

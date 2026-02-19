@@ -295,7 +295,7 @@ const ClientUserDetails: React.FC<ClientUserDetailsProps> = ({ userId, onUpdate 
             <Switch
               checked={isActive}
               onCheckedChange={(checked) => setIsActive(checked)}
-              className="data-[state=checked]:bg-green-500"
+              className="data-[state=checked]:bg-success"
             />
           </div>
         </div>

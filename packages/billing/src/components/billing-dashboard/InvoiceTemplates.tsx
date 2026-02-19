@@ -19,6 +19,7 @@ import { GearIcon, CheckCircledIcon } from '@radix-ui/react-icons';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { ColumnDefinition } from '@alga-psa/types';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { DeleteEntityDialog } from '@alga-psa/ui';
 import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
 
@@ -267,14 +268,14 @@ return (
       </CardHeader>
       <CardContent>
         {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4">
-            {error}
-          </div>
+          <Alert variant="destructive" className="mb-4">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
         )}
         {isLoading ? (
           <LoadingIndicator
             layout="stacked"
-            className="py-10 text-gray-600"
+            className="py-10 text-muted-foreground"
             spinnerProps={{ size: 'md' }}
             text="Loading invoice templates"
           />

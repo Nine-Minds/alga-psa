@@ -8,7 +8,7 @@ import { Label } from '@alga-psa/ui/components/Label';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import type { StepProps } from '@alga-psa/types';
-import { CheckCircle, ChevronDown, ChevronUp, Package, Trash2, Settings } from 'lucide-react';
+import { ChevronDown, ChevronUp, Package, Trash2, Settings } from 'lucide-react';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
@@ -145,15 +145,14 @@ export function BillingSetupStep({ data, updateData, attemptedToProceed = false 
       </div>
 
       {isServiceCreated && (
-        <div className="rounded-md bg-green-50 border border-green-200 p-4 flex items-center gap-3">
-          <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
-          <div>
-            <p className="text-sm font-medium text-green-800">Service created successfully!</p>
-            <p className="text-sm text-green-600 mt-1">
+        <Alert variant="success">
+          <AlertDescription>
+            <p className="font-medium">Service created successfully!</p>
+            <p className="text-sm mt-1">
               <span className="font-semibold">{data.serviceName}</span> has been added to your service catalog.
             </p>
-          </div>
-        </div>
+          </AlertDescription>
+        </Alert>
       )}
 
       <div className="space-y-4">
@@ -433,18 +432,17 @@ export function BillingSetupStep({ data, updateData, attemptedToProceed = false 
                 </p>
 
                 {importResult && importResult.imported > 0 && (
-              <div className="rounded-md bg-green-50 border border-green-200 p-4 flex items-center gap-3">
-                <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
-                <div>
-                  <p className="text-sm font-medium text-green-800">
+              <Alert variant="success">
+                <AlertDescription>
+                  <p className="font-medium">
                     Service type{importResult.imported !== 1 ? 's' : ''} imported successfully!
                   </p>
-                  <p className="text-sm text-green-600 mt-1">
+                  <p className="text-sm mt-1">
                     {importResult.imported} type{importResult.imported !== 1 ? 's' : ''} added to your catalog.
                     {importResult.skipped > 0 && ` ${importResult.skipped} skipped.`}
                   </p>
-                </div>
-              </div>
+                </AlertDescription>
+              </Alert>
             )}
 
             <div className="border rounded-lg overflow-hidden">
@@ -574,11 +572,11 @@ export function BillingSetupStep({ data, updateData, attemptedToProceed = false 
       </div>
 
       {serviceTypeOptions.length === 0 && attemptedToProceed && (
-        <div className="rounded-md bg-red-50 border border-red-200 p-4">
-          <p className="text-sm text-red-800">
+        <Alert variant="destructive">
+          <AlertDescription>
             <span className="font-semibold">Action Required:</span> Click "Manage Service Types" above to create or import at least one service type before creating a service.
-          </p>
-        </div>
+          </AlertDescription>
+        </Alert>
       )}
     </div>
   );

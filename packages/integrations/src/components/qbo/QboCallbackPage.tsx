@@ -29,10 +29,10 @@ export default async function QboCallbackPage({ searchParams }: QboCallbackPageP
         </CardHeader>
         <CardContent className="space-y-4">
           {isSuccess ? (
-            <Alert variant="default" className="bg-green-50 border-green-200">
+            <Alert variant="success">
               <AlertDescription>
-                <p className="font-semibold text-green-800">Successfully connected to QuickBooks Online!</p>
-                {realmId && <p className="text-sm text-gray-600 mt-1">Realm ID: {realmId}</p>}
+                <p className="font-semibold">Successfully connected to QuickBooks Online!</p>
+                {realmId && <p className="text-sm text-muted-foreground mt-1">Realm ID: {realmId}</p>}
               </AlertDescription>
             </Alert>
           ) : (

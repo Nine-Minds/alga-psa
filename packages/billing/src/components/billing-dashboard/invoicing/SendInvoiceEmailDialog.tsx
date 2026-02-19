@@ -120,12 +120,12 @@ export const SendInvoiceEmailDialog: React.FC<SendInvoiceEmailDialogProps> = ({
       {loading ? (
         <div className="flex items-center justify-center py-12">
           <Loader2 className="h-8 w-8 animate-spin text-primary-500" />
-          <span className="ml-3 text-gray-600">Loading recipient information...</span>
+          <span className="ml-3 text-muted-foreground">Loading recipient information...</span>
         </div>
       ) : (
         <div className="space-y-6">
           {/* Summary */}
-          <div className="bg-gray-50 rounded-lg p-4">
+          <div className="bg-muted rounded-lg p-4">
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">
                 <Mail className="h-5 w-5 text-primary-500" />
@@ -148,45 +148,45 @@ export const SendInvoiceEmailDialog: React.FC<SendInvoiceEmailDialogProps> = ({
 
           {/* Recipients List */}
           <div className="space-y-3">
-            <h3 className="text-sm font-medium text-gray-700">Recipients</h3>
+            <h3 className="text-sm font-medium text-[rgb(var(--color-text-700))]">Recipients</h3>
             <div className="max-h-64 overflow-y-auto space-y-2">
               {recipients.map((recipient) => (
                 <div
                   key={recipient.invoiceId}
                   className={`border rounded-lg p-4 ${
                     recipient.recipientEmail
-                      ? 'border-gray-200 bg-white'
-                      : 'border-amber-200 bg-amber-50'
+                      ? 'border-[rgb(var(--color-border-200))] bg-card'
+                      : 'border-warning/30 bg-warning/10'
                   }`}
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       {/* Invoice Info */}
                       <div className="flex items-center gap-2 mb-2">
-                        <FileText className="h-4 w-4 text-gray-400" />
+                        <FileText className="h-4 w-4 text-muted-foreground" />
                         <span className="font-medium">{recipient.invoiceNumber}</span>
-                        <span className="text-gray-500">-</span>
+                        <span className="text-muted-foreground">-</span>
                         <span className="font-medium text-primary-600">{recipient.totalAmount}</span>
                       </div>
 
                       {/* Client */}
-                      <div className="flex items-center gap-2 text-sm text-gray-600 mb-1">
-                        <Building className="h-4 w-4 text-gray-400" />
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
+                        <Building className="h-4 w-4 text-muted-foreground" />
                         <span>{recipient.clientName}</span>
                       </div>
 
                       {/* Recipient */}
                       {recipient.recipientEmail ? (
                         <div className="flex items-center gap-2 text-sm">
-                          <User className="h-4 w-4 text-gray-400" />
+                          <User className="h-4 w-4 text-muted-foreground" />
                           <span className="font-medium">{recipient.recipientName}</span>
-                          <span className="text-gray-400">&lt;{recipient.recipientEmail}&gt;</span>
-                          <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">
+                          <span className="text-muted-foreground">&lt;{recipient.recipientEmail}&gt;</span>
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
                             {recipientSourceLabels[recipient.recipientSource]}
                           </span>
                         </div>
                       ) : (
-                        <div className="flex items-center gap-2 text-sm text-amber-600">
+                        <div className="flex items-center gap-2 text-sm text-warning">
                           <AlertCircle className="h-4 w-4" />
                           <span>No email address configured for this client</span>
                         </div>
@@ -194,7 +194,7 @@ export const SendInvoiceEmailDialog: React.FC<SendInvoiceEmailDialogProps> = ({
 
                       {/* Due Date */}
                       {recipient.dueDate && (
-                        <div className="text-xs text-gray-500 mt-1">
+                        <div className="text-xs text-muted-foreground mt-1">
                           Due: {recipient.dueDate}
                         </div>
                       )}
@@ -207,9 +207,9 @@ export const SendInvoiceEmailDialog: React.FC<SendInvoiceEmailDialogProps> = ({
               {errors.map((error, index) => (
                 <div
                   key={`error-${index}`}
-                  className="border border-red-200 bg-red-50 rounded-lg p-4"
+                  className="border border-destructive/30 bg-destructive/10 rounded-lg p-4"
                 >
-                  <div className="flex items-center gap-2 text-sm text-red-600">
+                  <div className="flex items-center gap-2 text-sm text-destructive">
                     <AlertCircle className="h-4 w-4" />
                     <span>{error.error}</span>
                   </div>
@@ -220,20 +220,20 @@ export const SendInvoiceEmailDialog: React.FC<SendInvoiceEmailDialogProps> = ({
 
           {/* Custom Message (Optional) */}
           <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700">
+            <label className="text-sm font-medium text-[rgb(var(--color-text-700))]">
               Additional Message (Optional)
             </label>
             <textarea
               value={customMessage}
               onChange={(e) => setCustomMessage(e.target.value)}
               placeholder="Add a personal note to include in the email..."
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-primary-500 focus:border-primary-500"
+              className="w-full px-3 py-2 border border-[rgb(var(--color-border-300))] rounded-md text-sm focus:ring-primary-500 focus:border-primary-500"
               rows={3}
             />
           </div>
 
           {/* Email Preview Info */}
-          <div className="text-sm text-gray-500 bg-blue-50 border border-blue-100 rounded-lg p-3">
+          <div className="text-sm text-muted-foreground bg-blue-50 border border-blue-100 rounded-lg p-3">
             <p className="flex items-start gap-2">
               <Mail className="h-4 w-4 mt-0.5 text-blue-500" />
               <span>

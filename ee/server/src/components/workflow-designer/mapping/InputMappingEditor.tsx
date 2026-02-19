@@ -655,7 +655,7 @@ const MappingFieldEditor: React.FC<{
             )}
           </span>
           {isMissingRequired && (
-            <span className="inline-flex items-center gap-1 text-[11px] text-red-600" title="Required field is missing a value">
+            <span className="inline-flex items-center gap-1 text-[11px] text-destructive" title="Required field is missing a value">
               <AlertTriangle className="w-3 h-3" />
               Missing
             </span>
@@ -714,7 +714,7 @@ const MappingFieldEditor: React.FC<{
                 ariaLabel={`Expression for ${field.name}`}
               />
               {(expressionError || validationErrors.length > 0) && (
-                <div className="flex items-center gap-1 text-xs text-red-600">
+                <div className="flex items-center gap-1 text-xs text-destructive">
                   <AlertTriangle className="w-3 h-3" />
                   {expressionError || validationErrors[0]}
                 </div>
@@ -722,7 +722,7 @@ const MappingFieldEditor: React.FC<{
               {/* §16.2 - Type mismatch warning */}
               {!expressionError && typeMismatchWarning && (
                 <div className={`flex items-center gap-1 text-xs ${
-                  typeMismatchWarning.type === 'error' ? 'text-red-600' : 'text-yellow-600'
+                  typeMismatchWarning.type === 'error' ? 'text-destructive' : 'text-warning'
                 }`}>
                   <AlertTriangle className="w-3 h-3" />
                   {typeMismatchWarning.message}
@@ -870,11 +870,11 @@ const LiteralValueEditor: React.FC<{
           onChange={(e) => handleJsonChange(e.target.value)}
           rows={4}
           placeholder={fieldType === 'array' ? '[]' : '{}'}
-          className={jsonError ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : ''}
+          className={jsonError ? 'border-destructive focus:ring-destructive focus:border-destructive' : ''}
           disabled={disabled}
         />
         {jsonError && (
-          <div className="flex items-center gap-1 text-xs text-red-600">
+          <div className="flex items-center gap-1 text-xs text-destructive">
             <AlertTriangle className="w-3 h-3" />
             {jsonError}
           </div>
@@ -1144,7 +1144,7 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
             <span className="text-[11px] text-gray-500" aria-hidden>*</span> required
           </div>
           {missingRequiredCount > 0 && (
-            <div className="text-xs text-red-600 flex items-center gap-1" title="Required fields are missing values">
+            <div className="text-xs text-destructive flex items-center gap-1" title="Required fields are missing values">
               <AlertTriangle className="w-3 h-3" />
               {missingRequiredCount} missing
             </div>
@@ -1171,7 +1171,7 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
               size="sm"
               onClick={handleClearAll}
               disabled={disabled}
-              className="text-xs text-gray-500 hover:text-red-600"
+              className="text-xs text-gray-500 hover:text-destructive"
             >
               <RotateCcw className="w-3.5 h-3.5 mr-1" />
               Clear all
@@ -1216,14 +1216,14 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
                 />
                 <button
                   onClick={() => handleRemoveMapping(field.name)}
-                  className={`absolute -right-2 -top-2 p-1 bg-white border border-gray-200 rounded-full shadow-sm transition-opacity hover:bg-red-50 hover:border-red-200 ${
+                  className={`absolute -right-2 -top-2 p-1 bg-white border border-gray-200 rounded-full shadow-sm transition-opacity hover:bg-destructive/10 hover:border-destructive/30 ${
                     isFocused ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
                   }`}
                   title="Remove mapping (Delete/Backspace)"
                   disabled={disabled}
                   tabIndex={-1}
                 >
-                  <Trash2 className="w-3.5 h-3.5 text-gray-500 hover:text-red-600" />
+                  <Trash2 className="w-3.5 h-3.5 text-gray-500 hover:text-destructive" />
                 </button>
               </div>
             );
@@ -1306,7 +1306,7 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
                       <span className="text-sm text-gray-700">{field.name}</span>
                       {field.required && (
                         <span
-                          className={`text-[11px] ${isMissingRequired ? 'text-red-600' : 'text-gray-500'}`}
+                          className={`text-[11px] ${isMissingRequired ? 'text-destructive' : 'text-gray-500'}`}
                           aria-hidden
                           title={isMissingRequired ? 'Required field is missing a value' : 'Required'}
                         >

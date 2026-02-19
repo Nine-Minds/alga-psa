@@ -227,9 +227,9 @@ export function TaxHolidayManager({ taxRateId, taxRateName, isReadOnly = false }
   const getStatusBadge = (status: HolidayStatus) => {
     switch (status) {
       case 'active':
-        return <Badge variant="default" className="bg-green-500">Active</Badge>;
+        return <Badge variant="success">Active</Badge>;
       case 'upcoming':
-        return <Badge variant="default" className="bg-blue-500">Upcoming</Badge>;
+        return <Badge variant="info">Upcoming</Badge>;
       case 'expired':
         return <Badge variant="outline">Expired</Badge>;
     }
@@ -340,7 +340,7 @@ export function TaxHolidayManager({ taxRateId, taxRateName, isReadOnly = false }
             {holidayStats.upcoming} upcoming
           </span>
           <span className="flex items-center gap-1">
-            <CalendarDays className="h-4 w-4 text-gray-400" />
+            <CalendarDays className="h-4 w-4 text-muted-foreground" />
             {holidayStats.expired} expired
           </span>
         </div>

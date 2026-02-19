@@ -334,7 +334,7 @@ export function WorkItemDetailsDrawer({
                                 {appointmentRequest.declined_reason && (
                                     <div>
                                         <div className="font-semibold text-gray-700 mb-1">Decline Reason</div>
-                                        <div className="text-sm bg-red-50 p-3 rounded border border-red-200">{String(appointmentRequest.declined_reason)}</div>
+                                        <div className="text-sm bg-red-50 dark:bg-red-900/20 p-3 rounded border border-red-200 dark:border-red-800 text-red-900 dark:text-red-300">{String(appointmentRequest.declined_reason)}</div>
                                     </div>
                                 )}
                                 {appointmentRequest.approved_by_user_id && (

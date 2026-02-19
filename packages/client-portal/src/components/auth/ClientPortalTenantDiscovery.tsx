@@ -52,8 +52,8 @@ export default function ClientPortalTenantDiscovery({ callbackUrl }: ClientPorta
         <Card className="max-w-md w-full bg-white shadow-xl">
           <CardHeader className="space-y-1">
             <div className="flex justify-center mb-4">
-              <div className="bg-green-100 rounded-full p-3">
-                <Mail className="w-8 h-8 text-green-600" />
+              <div className="bg-success/10 rounded-full p-3">
+                <Mail className="w-8 h-8 text-success" />
               </div>
             </div>
             <CardTitle className="text-2xl font-bold text-center">

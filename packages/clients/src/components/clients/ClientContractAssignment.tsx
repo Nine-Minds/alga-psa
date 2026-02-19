@@ -249,7 +249,7 @@ const ClientContractAssignment: React.FC<ClientContractAssignmentProps> = ({ cli
       title: 'Status',
       dataIndex: 'is_active',
       render: (value) => (
-        <Badge className={value ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}>
+        <Badge variant={value ? 'success' : 'default-muted'}>
           {value ? 'Active' : 'Inactive'}
         </Badge>
       ),

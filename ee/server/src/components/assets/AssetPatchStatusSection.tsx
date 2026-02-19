@@ -127,10 +127,10 @@ export function AssetPatchStatusSection({ asset, className = '' }: AssetPatchSta
   const totalPending = patchData.pendingOsPatches + patchData.pendingSoftwarePatches;
 
   return (
-    <div className={`bg-white rounded-lg border border-gray-200 ${className}`}>
+    <div className={`bg-[rgb(var(--color-card))] rounded-lg border border-[rgb(var(--color-border-200))] ${className}`}>
       {/* Header */}
       <button
-        className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-50"
+        className="w-full flex items-center justify-between p-4 text-left hover:bg-[rgb(var(--color-border-100))]"
         onClick={() => setIsExpanded(!isExpanded)}
       >
         <div className="flex items-center gap-2">
@@ -152,7 +152,7 @@ export function AssetPatchStatusSection({ asset, className = '' }: AssetPatchSta
 
       {/* Content */}
       {isExpanded && (
-        <div className="border-t border-gray-200 p-4">
+        <div className="border-t border-[rgb(var(--color-border-200))] p-4">
           <div className="grid grid-cols-2 gap-4">
             {/* OS Patches */}
             <div className="flex items-start gap-3">
@@ -167,7 +167,7 @@ export function AssetPatchStatusSection({ asset, className = '' }: AssetPatchSta
               </div>
               <div>
                 <p className="text-xs font-medium uppercase tracking-wide text-gray-500">OS Patches</p>
-                <p className="text-lg font-semibold text-gray-900">{patchData.pendingOsPatches}</p>
+                <p className="text-lg font-semibold text-[rgb(var(--color-text-900))]">{patchData.pendingOsPatches}</p>
                 <p className="text-xs text-gray-500">pending</p>
               </div>
             </div>
@@ -185,7 +185,7 @@ export function AssetPatchStatusSection({ asset, className = '' }: AssetPatchSta
               </div>
               <div>
                 <p className="text-xs font-medium uppercase tracking-wide text-gray-500">Software</p>
-                <p className="text-lg font-semibold text-gray-900">{patchData.pendingSoftwarePatches}</p>
+                <p className="text-lg font-semibold text-[rgb(var(--color-text-900))]">{patchData.pendingSoftwarePatches}</p>
                 <p className="text-xs text-gray-500">pending</p>
               </div>
             </div>
@@ -198,7 +198,7 @@ export function AssetPatchStatusSection({ asset, className = '' }: AssetPatchSta
                 </div>
                 <div>
                   <p className="text-xs font-medium uppercase tracking-wide text-gray-500">Failed</p>
-                  <p className="text-lg font-semibold text-red-600">{patchData.failedPatches}</p>
+                  <p className="text-lg font-semibold text-destructive">{patchData.failedPatches}</p>
                   <p className="text-xs text-gray-500">patches</p>
                 </div>
               </div>
@@ -211,7 +211,7 @@ export function AssetPatchStatusSection({ asset, className = '' }: AssetPatchSta
               </div>
               <div>
                 <p className="text-xs font-medium uppercase tracking-wide text-gray-500">Last Scan</p>
-                <p className="text-sm font-medium text-gray-900">
+                <p className="text-sm font-medium text-[rgb(var(--color-text-900))]">
                   {formatRelativeTime(patchData.lastPatchScan)}
                 </p>
               </div>
@@ -220,7 +220,7 @@ export function AssetPatchStatusSection({ asset, className = '' }: AssetPatchSta
 
           {/* Antivirus Status */}
           {patchData.antivirusProduct && (
-            <div className="mt-4 pt-4 border-t border-gray-100">
+            <div className="mt-4 pt-4 border-t border-[rgb(var(--color-border-100))]">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Shield className={`h-4 w-4 ${
@@ -228,7 +228,7 @@ export function AssetPatchStatusSection({ asset, className = '' }: AssetPatchSta
                       ? 'text-emerald-500'
                       : 'text-amber-500'
                   }`} />
-                  <span className="text-sm font-medium text-gray-700">{patchData.antivirusProduct}</span>
+                  <span className="text-sm font-medium text-[rgb(var(--color-text-700))]">{patchData.antivirusProduct}</span>
                 </div>
                 <span className={`inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full ${
                   patchData.antivirusStatus === 'good' || patchData.antivirusStatus === 'active'

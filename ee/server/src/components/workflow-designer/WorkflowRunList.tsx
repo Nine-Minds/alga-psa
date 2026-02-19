@@ -86,11 +86,11 @@ const SORT_OPTIONS: SelectOption[] = [
 ];
 
 const STATUS_STYLES: Record<string, string> = {
-  RUNNING: 'bg-blue-100 text-blue-700',
-  WAITING: 'bg-amber-100 text-amber-700',
-  SUCCEEDED: 'bg-green-100 text-green-700',
-  FAILED: 'bg-red-100 text-red-700',
-  CANCELED: 'bg-gray-100 text-gray-600'
+  RUNNING: 'bg-info/15 text-info-foreground',
+  WAITING: 'bg-warning/15 text-warning-foreground',
+  SUCCEEDED: 'bg-success/15 text-success',
+  FAILED: 'bg-destructive/15 text-destructive',
+  CANCELED: 'bg-muted text-muted-foreground'
 };
 
 const DEFAULT_FILTERS: WorkflowRunFilters = {
@@ -505,7 +505,7 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({
                     </Badge>
                     <span>{workflow.name}</span>
                     {workflow.runCount != null && (
-                      <Badge className="bg-blue-50 text-blue-700">
+                      <Badge variant="info">
                         {workflow.runCount} runs
                       </Badge>
                     )}
@@ -688,7 +688,7 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({
                         </div>
                         <div className="flex items-center gap-1">
                           {run.trigger_mapping_applied ? (
-                            <Badge className="bg-blue-50 text-blue-700 border-blue-200 text-[10px]">Mapped</Badge>
+                            <Badge variant="info" className="text-[10px]">Mapped</Badge>
                           ) : (
                             <Badge className="bg-gray-100 text-gray-600 border-gray-200 text-[10px]">Identity</Badge>
                           )}

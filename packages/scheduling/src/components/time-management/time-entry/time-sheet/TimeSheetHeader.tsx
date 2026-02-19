@@ -98,7 +98,7 @@ export function TimeSheetHeader({
                                         disabled={!dateNavigator.canGoBack || dateNavigator.isAnimating}
                                         className={`p-1.5 rounded-md transition-colors ${
                                             dateNavigator.canGoBack && !dateNavigator.isAnimating
-                                                ? 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                                                ? 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100'
                                                 : 'text-gray-300 cursor-not-allowed'
                                         }`}
                                         aria-label="Previous week"
@@ -121,7 +121,7 @@ export function TimeSheetHeader({
                                         disabled={!dateNavigator.canGoForward || dateNavigator.isAnimating}
                                         className={`p-1.5 rounded-md transition-colors ${
                                             dateNavigator.canGoForward && !dateNavigator.isAnimating
-                                                ? 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                                                ? 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100'
                                                 : 'text-gray-300 cursor-not-allowed'
                                         }`}
                                         aria-label="Next week"

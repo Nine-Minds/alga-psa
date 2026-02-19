@@ -33,8 +33,8 @@ export const QuickStartGuide: React.FC<QuickStartGuideProps> = ({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <PlayCircle className="h-5 w-5 text-blue-600" />
-            <span className="font-semibold text-gray-900">Quick Start Guide</span>
-            <Badge variant="default" className="bg-blue-100 text-blue-800">
+            <span className="font-semibold text-[rgb(var(--color-text-900))]">Quick Start Guide</span>
+            <Badge variant="info">
               New
             </Badge>
           </div>
@@ -58,10 +58,10 @@ export const QuickStartGuide: React.FC<QuickStartGuideProps> = ({
         <div className="flex items-center gap-3">
           <PlayCircle className="h-6 w-6 text-blue-600" />
           <div>
-            <h3 className="text-lg font-semibold text-gray-900">Quick Start Guide</h3>
-            <p className="text-sm text-gray-600">Learn how to create and manage contracts</p>
+            <h3 className="text-lg font-semibold text-[rgb(var(--color-text-900))]">Quick Start Guide</h3>
+            <p className="text-sm text-muted-foreground">Learn how to create and manage contracts</p>
           </div>
-          <Badge variant="default" className="bg-blue-100 text-blue-800">
+          <Badge variant="info">
             New
           </Badge>
         </div>
@@ -71,7 +71,7 @@ export const QuickStartGuide: React.FC<QuickStartGuideProps> = ({
               variant="ghost"
               size="sm"
               onClick={() => setIsExpanded(false)}
-              className="text-gray-500"
+              className="text-muted-foreground"
             >
               Minimize
             </Button>
@@ -81,7 +81,7 @@ export const QuickStartGuide: React.FC<QuickStartGuideProps> = ({
               variant="ghost"
               size="sm"
               onClick={onDismiss}
-              className="text-gray-500"
+              className="text-muted-foreground"
             >
               <X className="h-4 w-4" />
             </Button>
@@ -98,13 +98,13 @@ export const QuickStartGuide: React.FC<QuickStartGuideProps> = ({
             </div>
           </div>
           <div className="flex-1">
-            <h4 className="font-semibold text-gray-900 mb-1">Create a Contract</h4>
-            <p className="text-sm text-gray-600 mb-2">
+            <h4 className="font-semibold text-[rgb(var(--color-text-900))] mb-1">Create a Contract</h4>
+            <p className="text-sm text-muted-foreground mb-2">
               Click "New Contract" to start the wizard. Choose a client and name your contract.
             </p>
             <div className="flex items-center gap-2">
-              <FileText className="h-4 w-4 text-gray-400" />
-              <span className="text-xs text-gray-500">Required: Client, Contract Name, Start Date</span>
+              <FileText className="h-4 w-4 text-muted-foreground" />
+              <span className="text-xs text-muted-foreground">Required: Client, Contract Name, Start Date</span>
             </div>
           </div>
         </div>
@@ -117,26 +117,26 @@ export const QuickStartGuide: React.FC<QuickStartGuideProps> = ({
             </div>
           </div>
           <div className="flex-1">
-            <h4 className="font-semibold text-gray-900 mb-1">Configure Billing</h4>
-            <p className="text-sm text-gray-600 mb-2">
+            <h4 className="font-semibold text-[rgb(var(--color-text-900))] mb-1">Configure Billing</h4>
+            <p className="text-sm text-muted-foreground mb-2">
               Choose your billing model(s). You can combine multiple types:
             </p>
             <div className="space-y-2 ml-2">
               <div className="flex items-center gap-2">
                 <Coins className="h-4 w-4 text-green-600" />
-                <span className="text-sm text-gray-700"><strong>Fixed Fee:</strong> Same price every month</span>
+                <span className="text-sm text-[rgb(var(--color-text-700))]"><strong>Fixed Fee:</strong> Same price every month</span>
               </div>
               <div className="flex items-center gap-2">
                 <Clock className="h-4 w-4 text-purple-600" />
-                <span className="text-sm text-gray-700"><strong>Hourly:</strong> Bill by time tracked</span>
+                <span className="text-sm text-[rgb(var(--color-text-700))]"><strong>Hourly:</strong> Bill by time tracked</span>
               </div>
               <div className="flex items-center gap-2">
                 <Droplet className="h-4 w-4 text-blue-600" />
-                <span className="text-sm text-gray-700"><strong>Bucket Hours:</strong> Prepaid hours + overage</span>
+                <span className="text-sm text-[rgb(var(--color-text-700))]"><strong>Bucket Hours:</strong> Prepaid hours + overage</span>
               </div>
               <div className="flex items-center gap-2">
                 <Activity className="h-4 w-4 text-orange-600" />
-                <span className="text-sm text-gray-700"><strong>Usage-Based:</strong> Bill by consumption/usage</span>
+                <span className="text-sm text-[rgb(var(--color-text-700))]"><strong>Usage-Based:</strong> Bill by consumption/usage</span>
               </div>
             </div>
           </div>
@@ -150,24 +150,24 @@ export const QuickStartGuide: React.FC<QuickStartGuideProps> = ({
             </div>
           </div>
           <div className="flex-1">
-            <h4 className="font-semibold text-gray-900 mb-1">Review & Create</h4>
-            <p className="text-sm text-gray-600 mb-2">
+            <h4 className="font-semibold text-[rgb(var(--color-text-900))] mb-1">Review & Create</h4>
+            <p className="text-sm text-muted-foreground mb-2">
               Double-check everything before creating. You can always edit later.
             </p>
             <div className="flex items-center gap-2">
-              <CheckCircle className="h-4 w-4 text-gray-400" />
-              <span className="text-xs text-gray-500">Tip: At least one service line is required</span>
+              <CheckCircle className="h-4 w-4 text-muted-foreground" />
+              <span className="text-xs text-muted-foreground">Tip: At least one service line is required</span>
             </div>
           </div>
         </div>
 
         {/* Best Practices */}
         <div className="mt-6 pt-4 border-t border-blue-200">
-          <h4 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
+          <h4 className="font-semibold text-[rgb(var(--color-text-900))] mb-2 flex items-center gap-2">
             <CheckCircle className="h-4 w-4 text-blue-600" />
             Best Practices
           </h4>
-          <ul className="space-y-1 ml-6 text-sm text-gray-600">
+          <ul className="space-y-1 ml-6 text-sm text-muted-foreground">
             <li className="list-disc">Use clear, descriptive contract names (e.g., "Acme Corp - MSP Services Q4 2024")</li>
             <li className="list-disc">Enable proration for contracts that start/end mid-month</li>
             <li className="list-disc">Set end dates for fixed-term contracts to track renewal dates</li>

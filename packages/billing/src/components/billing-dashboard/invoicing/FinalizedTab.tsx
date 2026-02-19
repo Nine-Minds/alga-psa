@@ -9,6 +9,7 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Badge } from '@alga-psa/ui/components/Badge';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { MoreVertical, CheckCircle, GripVertical, Download, Mail, RotateCcw, Search, ArrowRight } from 'lucide-react';
 import {
   DropdownMenu,
@@ -315,7 +316,7 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
     {
       title: 'Status',
       dataIndex: 'finalized_at',
-      render: () => <Badge variant="default" className="bg-green-100 text-green-800 border-green-200">Finalized</Badge>,
+      render: () => <Badge variant="success">Finalized</Badge>,
     },
     {
       title: 'Actions',
@@ -380,7 +381,7 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-4 flex-1 max-w-md">
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" aria-hidden="true" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" aria-hidden="true" />
             <Input
               type="text"
               placeholder="Search invoices..."
@@ -421,23 +422,23 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
       </div>
 
       {error && (
-        <div className="text-red-500 mb-4 bg-red-50 border border-red-200 rounded p-3">
-          {error}
-        </div>
+        <Alert variant="destructive" className="mb-4">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
       )}
 
       {isLoading ? (
         <Card>
           <div className="p-12 flex items-center justify-center">
-            <LoadingIndicator text="Loading invoices..." spinnerProps={{ size: 'md' }} layout="stacked" textClassName="text-gray-600" />
+            <LoadingIndicator text="Loading invoices..." spinnerProps={{ size: 'md' }} layout="stacked" textClassName="text-muted-foreground" />
           </div>
         </Card>
       ) : filteredInvoices.length === 0 ? (
         <Card>
           <div className="p-12 text-center">
-            <CheckCircle className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">No Finalized Invoices</h3>
-            <p className="text-gray-600 mb-4">
+            <CheckCircle className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+            <h3 className="text-lg font-semibold text-[rgb(var(--color-text-900))] mb-2">No Finalized Invoices</h3>
+            <p className="text-muted-foreground mb-4">
               Finalized invoices will appear here once you've approved and finalized your drafts.
             </p>
             <Button id="finalized-empty-view-drafts" onClick={() => router.push('/msp/billing?tab=invoicing&subtab=drafts')} className="flex items-center gap-2">

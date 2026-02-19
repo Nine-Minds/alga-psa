@@ -434,7 +434,7 @@ const planServiceColumns: ColumnDefinition<SimplePlanService>[] = [
                                           Override ({contractCurrency}):
                                         </span>
                                         <div className="relative w-28">
-                                          <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-500 text-xs">
+                                          <span className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground text-xs">
                                             {currencySymbol}
                                           </span>
                                           <Input

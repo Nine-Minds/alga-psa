@@ -178,7 +178,7 @@ export const ExpressionEditorField: React.FC<ExpressionEditorFieldProps> = ({
 
       {/* Error message */}
       {error && (
-        <div className="text-xs text-red-600">{error}</div>
+        <div className="text-xs text-destructive">{error}</div>
       )}
 
       {/* Description */}

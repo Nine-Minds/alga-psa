@@ -100,8 +100,8 @@ export default function ProjectTasksSection({
 
   if (error) {
     return (
-      <div className="bg-red-50 p-4 rounded-lg">
-        <p className="text-red-600 text-sm">{error}</p>
+      <div className="bg-destructive/10 p-4 rounded-lg">
+        <p className="text-destructive text-sm">{error}</p>
       </div>
     );
   }

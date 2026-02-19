@@ -5,7 +5,7 @@
 import React, { useState, useEffect } from 'react';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
-import { Eye, EyeOff, AlertTriangle } from 'lucide-react';
+import { Eye, EyeOff } from 'lucide-react';
 import type { StepProps } from '@alga-psa/types';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { validateEmailAddress, validateContactName, validateClientName } from '@alga-psa/validation';
@@ -162,21 +162,12 @@ export function ClientInfoStep({ data, updateData, isRevisit = false }: ClientIn
       </div>
 
       <div className="space-y-4 pt-4 border-t">
-        <div className="rounded-md bg-amber-50 border border-amber-200 p-4 mb-4">
-          <div className="flex">
-            <div className="flex-shrink-0">
-              <AlertTriangle className="h-5 w-5 text-amber-400" />
-            </div>
-            <div className="ml-3">
-              <h3 className="text-sm font-semibold text-amber-800">
-                Password Reset Required
-              </h3>
-              <div className="mt-1 text-sm text-amber-700">
-                <p>You must set a new password to continue with the setup process. This step cannot be skipped.</p>
-              </div>
-            </div>
-          </div>
-        </div>
+        <Alert variant="warning" className="mb-4">
+          <AlertDescription>
+            <p className="font-semibold">Password Reset Required</p>
+            <p className="mt-1 text-sm">You must set a new password to continue with the setup process. This step cannot be skipped.</p>
+          </AlertDescription>
+        </Alert>
 
         <div className="space-y-2">
           <h3 className="text-lg font-medium">Set Your Password</h3>

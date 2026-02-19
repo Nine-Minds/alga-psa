@@ -175,8 +175,8 @@ export function ClientDetailsSettings() {
 
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 rounded-md p-4">
-        <p className="text-red-800">{error}</p>
+      <div className="bg-destructive/10 border border-destructive/30 rounded-md p-4">
+        <p className="text-destructive">{error}</p>
       </div>
     );
   }

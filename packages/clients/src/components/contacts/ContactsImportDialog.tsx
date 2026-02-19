@@ -506,16 +506,15 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
       >
         <DialogContent>
           {errors.length > 0 && (
-            <div className="mb-4 p-4 border border-red-300 bg-red-50 rounded-md">
-              <div className="flex items-center gap-2 text-red-800">
-                <AlertTriangle className="h-4 w-4" />
+            <Alert variant="destructive" className="mb-4">
+              <AlertDescription>
                 <ul>
                   {errors.map((error: string, index: number): React.JSX.Element => (
                     <li key={index}>{error}</li>
                   ))}
                 </ul>
-              </div>
-            </div>
+              </AlertDescription>
+            </Alert>
           )}
 
           {step === 'upload' && (
@@ -626,12 +625,11 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
                 <p>* Required fields must be mapped for import to proceed</p>
               </div>
               {fullCSVData && fullCSVData.length > 100 && (
-                <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
-                  <p className="text-sm text-yellow-800">
-                    <AlertTriangle className="inline h-4 w-4 mr-1" />
+                <Alert variant="warning" className="mt-4">
+                  <AlertDescription>
                     You are importing {fullCSVData.length} records. Processing may take a moment.
-                  </p>
-                </div>
+                  </AlertDescription>
+                </Alert>
               )}
               <div className="mt-4">
                 <DialogFooter>

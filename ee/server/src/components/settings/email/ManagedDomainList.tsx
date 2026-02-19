@@ -117,7 +117,7 @@ export default function ManagedDomainList({
             </CardHeader>
             <CardContent className="space-y-4">
               {domain.failureReason ? (
-                <p className="text-sm text-red-600">Failure reason: {domain.failureReason}</p>
+                <p className="text-sm text-destructive">Failure reason: {domain.failureReason}</p>
               ) : null}
 
               <div className="flex flex-wrap gap-2">

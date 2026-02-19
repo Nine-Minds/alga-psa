@@ -107,11 +107,11 @@ export function TemplateServicePreviewSection({
             {services.map((service) => (
               <div
                 key={service.id}
-                className="flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-md"
+                className="flex items-center gap-3 p-3 bg-[rgb(var(--color-card))] border border-[rgb(var(--color-border-200))] rounded-md"
               >
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-gray-900">
+                    <span className="text-sm font-medium text-[rgb(var(--color-text-900))]">
                       {service.name}
                     </span>
                     {service.fromPreset && (
@@ -125,7 +125,7 @@ export function TemplateServicePreviewSection({
 
                 {onQuantityChange && service.quantity !== undefined && (
                   <div className="flex items-center gap-2">
-                    <Label htmlFor={`preview-quantity-${service.id}`} className="text-xs text-gray-600">
+                    <Label htmlFor={`preview-quantity-${service.id}`} className="text-xs text-[rgb(var(--color-text-500))]">
                       Qty:
                     </Label>
                     <Input
@@ -145,7 +145,7 @@ export function TemplateServicePreviewSection({
                   variant="ghost"
                   size="sm"
                   onClick={() => handleRemoveClick(service)}
-                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                  className="text-[rgb(var(--color-destructive))] hover:text-[rgb(var(--color-destructive))] hover:bg-[rgb(var(--color-destructive)/0.1)]"
                 >
                   <X className="h-4 w-4" />
                 </Button>

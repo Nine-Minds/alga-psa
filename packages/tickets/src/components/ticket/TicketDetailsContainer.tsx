@@ -226,7 +226,7 @@ export default function TicketDetailsContainer({
 
   return (
     <UnsavedChangesProvider>
-      <div className="bg-gray-100 min-h-screen p-4">
+      <div className="bg-gray-100 dark:bg-gray-900 min-h-screen p-4">
         <Suspense fallback={<TicketDetailsSkeleton />}>
         <TicketDetails
           initialTicket={ticketData.ticket}

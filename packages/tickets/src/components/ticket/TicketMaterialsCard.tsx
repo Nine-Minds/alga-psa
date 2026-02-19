@@ -412,7 +412,7 @@ export default function TicketMaterialsCard({
                             size="sm"
                             onClick={() => handleDeleteMaterial(material.ticket_material_id)}
                             disabled={deletingId === material.ticket_material_id}
-                            className="text-red-500 hover:text-red-700 hover:bg-red-50 p-1 h-auto"
+                            className="text-red-500 hover:text-red-700 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 p-1 h-auto"
                           >
                             {deletingId === material.ticket_material_id ? (
                               <Loader2 className="w-4 h-4 animate-spin" />

@@ -1495,7 +1495,7 @@ const handleClose = () => {
 
     return (
         <ReflectionContainer id={id} label={`Ticket Details - ${ticket.ticket_number}`}>
-            <div className="bg-gray-100">
+            <div className="bg-gray-100 dark:bg-gray-900">
                 <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-3 min-w-0 flex-1">
                         {/* Only show the Back button if NOT in a drawer, using BackNav */}
@@ -1629,7 +1629,7 @@ const handleClose = () => {
 
                 <div className="flex gap-6 min-w-0">
                     <div className="flex-grow col-span-2 min-w-0" id="ticket-main-content">
-                        <Suspense fallback={<div id="ticket-info-skeleton" className="animate-pulse bg-gray-200 h-64 rounded-lg mb-6"></div>}>
+                        <Suspense fallback={<div id="ticket-info-skeleton" className="animate-pulse bg-gray-200 dark:bg-gray-800 h-64 rounded-lg mb-6"></div>}>
                             <div className="mb-6">
                                 {bundle?.isBundleChild && bundle?.masterTicket ? (
                                     <div className="mb-3 rounded-lg border border-amber-200 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/30 px-4 py-2 text-sm text-amber-900 dark:text-amber-200" id="ticket-bundle-child-banner">
@@ -1642,11 +1642,11 @@ const handleClose = () => {
                                 ) : null}
 
                                 {bundle?.isBundleMaster ? (
-                                    <div className="mb-3 rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-2 text-sm text-indigo-900" id="ticket-bundle-master-banner">
+                                    <div className="mb-3 rounded-lg border border-indigo-200 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/30 px-4 py-2 text-sm text-indigo-900 dark:text-indigo-200" id="ticket-bundle-master-banner">
                                         This ticket is the master of a bundle ({Array.isArray(bundle.children) ? bundle.children.length : 0} children). Mode:{' '}
                                         {(bundle.mode || 'sync_updates').split('_').map((word: string) => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}.
                                         {bundleHasMultipleClients ? (
-                                            <span className="ml-2 inline-flex items-center rounded bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-900">
+                                            <span className="ml-2 inline-flex items-center rounded bg-amber-100 dark:bg-amber-900/30 px-2 py-0.5 text-[11px] font-medium text-amber-900 dark:text-amber-200">
                                                 Multiple clients
                                             </span>
                                         ) : null}
@@ -1705,7 +1705,7 @@ const handleClose = () => {
                                                                 {searchResults.map((result) => (
                                                                     <li
                                                                         key={result.ticket_id}
-                                                                        className="px-3 py-2 hover:bg-gray-100 cursor-pointer"
+                                                                        className="px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer"
                                                                         onClick={() => handleSelectSearchResult(result)}
                                                                     >
                                                                         <div className="min-w-0">

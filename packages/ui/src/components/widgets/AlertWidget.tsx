@@ -24,13 +24,13 @@ const AlertWidget = ({ value, options, id }: CustomAlertWidgetProps) => {
   let alertClasses = 'p-4 mb-4 text-sm rounded-lg';
   switch (alertType) {
     case 'success':
-      alertClasses += ' bg-green-100 text-green-700';
+      alertClasses += ' bg-success/15 text-success';
       break;
     case 'warning':
-      alertClasses += ' bg-yellow-100 text-yellow-700';
+      alertClasses += ' bg-warning/15 text-warning-foreground';
       break;
     case 'error':
-      alertClasses += ' bg-red-100 text-red-700';
+      alertClasses += ' bg-destructive/15 text-destructive';
       break;
     case 'info':
     default:

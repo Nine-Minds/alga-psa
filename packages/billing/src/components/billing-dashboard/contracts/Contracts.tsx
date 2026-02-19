@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Box, Card, Heading } from '@radix-ui/themes';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Badge } from '@alga-psa/ui/components/Badge';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { MoreVertical, Wand2, Search, Sparkles, Plus } from 'lucide-react';
 import {
   DropdownMenu,
@@ -236,16 +237,16 @@ const Contracts: React.FC = () => {
 
 const renderStatusBadge = (status: string) => {
   const normalized = (status || 'draft').toLowerCase();
-  const statusConfig: Record<string, { className: string; label: string }> = {
-    active: { className: 'bg-green-100 text-green-800', label: 'Active' },
-    draft: { className: 'bg-gray-100 text-gray-800', label: 'Draft' },
-    terminated: { className: 'bg-orange-100 text-orange-800', label: 'Terminated' },
-    expired: { className: 'bg-red-100 text-red-800', label: 'Expired' },
-    published: { className: 'bg-green-100 text-green-800', label: 'Published' },
-    archived: { className: 'bg-gray-200 text-gray-700', label: 'Archived' },
+  const statusConfig: Record<string, { variant: 'success' | 'default-muted' | 'warning' | 'error' | 'info'; label: string }> = {
+    active: { variant: 'success', label: 'Active' },
+    draft: { variant: 'default-muted', label: 'Draft' },
+    terminated: { variant: 'warning', label: 'Terminated' },
+    expired: { variant: 'error', label: 'Expired' },
+    published: { variant: 'success', label: 'Published' },
+    archived: { variant: 'default-muted', label: 'Archived' },
   };
   const config = statusConfig[normalized] ?? statusConfig.draft;
-  return <Badge className={config.className}>{config.label}</Badge>;
+  return <Badge variant={config.variant}>{config.label}</Badge>;
 };
 
   const templateColumns: ColumnDefinition<IContract>[] = [
@@ -485,7 +486,7 @@ const renderStatusBadge = (status: string) => {
       <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div className="relative max-w-md w-full">
           <Search
-            className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400"
+            className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground"
             aria-hidden="true"
           />
           <Input
@@ -529,7 +530,7 @@ const renderStatusBadge = (status: string) => {
       <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div className="relative max-w-md w-full">
           <Search
-            className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400"
+            className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground"
             aria-hidden="true"
           />
           <Input
@@ -586,7 +587,7 @@ const renderStatusBadge = (status: string) => {
       <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div className="relative max-w-md w-full">
           <Search
-            className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400"
+            className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground"
             aria-hidden="true"
           />
           <Input
@@ -601,7 +602,7 @@ const renderStatusBadge = (status: string) => {
       </div>
 
       {draftContracts.length === 0 ? (
-        <div className="py-8 text-center text-gray-600">
+        <div className="py-8 text-center text-muted-foreground">
           No draft contracts. Start creating a new contract to save as draft.
         </div>
       ) : (
@@ -720,7 +721,7 @@ const renderStatusBadge = (status: string) => {
     {
       label: 'Drafts',
       icon: draftBadgeCount != null ? (
-        <Badge className="ml-2 order-last bg-gray-100 text-gray-800">{draftBadgeCount}</Badge>
+        <Badge variant="default-muted" className="ml-2 order-last">{draftBadgeCount}</Badge>
       ) : undefined,
       content: renderDraftsTab(),
     },
@@ -737,18 +738,18 @@ const renderStatusBadge = (status: string) => {
           </div>
 
           {error && (
-            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-              {error}
-            </div>
+            <Alert variant="destructive" className="mb-4">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
           )}
 
           {isLoading ? (
             <LoadingIndicator
-              className="py-12 text-gray-600"
+              className="py-12 text-muted-foreground"
               layout="stacked"
               spinnerProps={{ size: 'md' }}
               text="Loading contracts..."
-              textClassName="text-gray-600"
+              textClassName="text-muted-foreground"
             />
           ) : (
             <CustomTabs

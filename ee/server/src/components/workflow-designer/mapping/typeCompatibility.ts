@@ -37,28 +37,28 @@ export const COMPATIBILITY_COLORS = {
  */
 export const COMPATIBILITY_CLASSES = {
   [TypeCompatibility.EXACT]: {
-    bg: 'bg-green-100',
-    text: 'text-green-700',
-    border: 'border-green-300',
-    ring: 'ring-green-500'
+    bg: 'bg-success/15',
+    text: 'text-success',
+    border: 'border-success/30',
+    ring: 'ring-success'
   },
   [TypeCompatibility.COERCIBLE]: {
-    bg: 'bg-yellow-100',
-    text: 'text-yellow-700',
-    border: 'border-yellow-300',
-    ring: 'ring-yellow-500'
+    bg: 'bg-warning/15',
+    text: 'text-warning-foreground',
+    border: 'border-warning/30',
+    ring: 'ring-warning'
   },
   [TypeCompatibility.INCOMPATIBLE]: {
-    bg: 'bg-red-100',
-    text: 'text-red-700',
-    border: 'border-red-300',
-    ring: 'ring-red-500'
+    bg: 'bg-destructive/15',
+    text: 'text-destructive',
+    border: 'border-destructive/30',
+    ring: 'ring-destructive'
   },
   [TypeCompatibility.UNKNOWN]: {
-    bg: 'bg-gray-100',
-    text: 'text-gray-500',
-    border: 'border-gray-300',
-    ring: 'ring-gray-400'
+    bg: 'bg-muted',
+    text: 'text-muted-foreground',
+    border: 'border-border',
+    ring: 'ring-muted-foreground'
   }
 } as const;
 

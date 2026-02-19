@@ -2,6 +2,7 @@ import React from 'react';
 import { getClientProjectDetails } from '@alga-psa/client-portal/actions';
 import { ProjectDetailsContainer } from '@alga-psa/client-portal/components';
 import logger from '@alga-psa/core/logger';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 
 interface ProjectPageProps {
   params: Promise<{
@@ -19,11 +20,11 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
 
     if (!project) {
       return (
-        <div id="project-not-found" className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-          <p className="text-yellow-700">
+        <Alert id="project-not-found" variant="warning">
+          <AlertDescription>
             Project not found or you do not have access to this project.
-          </p>
-        </div>
+          </AlertDescription>
+        </Alert>
       );
     }
 
@@ -40,11 +41,11 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
     });
 
     return (
-      <div id="project-error-message" className="p-4 bg-red-50 border border-red-200 rounded-lg">
-        <p className="text-red-700">
+      <Alert id="project-error-message" variant="destructive">
+        <AlertDescription>
           Error: {error instanceof Error ? error.message : 'Failed to load project details'}
-        </p>
-      </div>
+        </AlertDescription>
+      </Alert>
     );
   }
 }

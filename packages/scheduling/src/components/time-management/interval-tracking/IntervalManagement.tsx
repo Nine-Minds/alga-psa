@@ -266,7 +266,7 @@ export function IntervalManagement({
       
       {/* Action buttons */}
       {selectedIntervalIds.length > 0 && (
-        <Card className="p-3 bg-blue-50">
+        <Card className="p-3 bg-blue-50 dark:bg-blue-900/20">
           <div className="flex items-center justify-between">
             <div>
               <span className="font-medium">{selectedIntervalIds.length} interval{selectedIntervalIds.length !== 1 ? 's' : ''} selected</span>

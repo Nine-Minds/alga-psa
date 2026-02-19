@@ -198,7 +198,7 @@ export function TemplateStatusManager({
                       disabled={sortedMappings.length <= 1}
                       title={sortedMappings.length <= 1 ? 'Cannot remove last status column' : 'Remove'}
                     >
-                      <Trash className="w-4 h-4 text-red-500" />
+                      <Trash className="w-4 h-4 text-destructive" />
                     </Button>
                   </div>
                 ))

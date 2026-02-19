@@ -693,7 +693,7 @@ export default function TaskDocumentsSimple({
                     size="sm"
                     variant="ghost"
                     onClick={(e) => handleDeleteClick(e, doc)}
-                    className="text-red-600 hover:text-red-700"
+                    className="text-destructive hover:text-destructive"
                     title="Remove"
                   >
                     <X className="h-3 w-3" />

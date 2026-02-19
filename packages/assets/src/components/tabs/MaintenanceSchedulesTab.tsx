@@ -150,7 +150,7 @@ export const MaintenanceSchedulesTab: React.FC<MaintenanceSchedulesTabProps> = (
                               variant="ghost"
                               size="xs"
                               onClick={() => setDeletingSchedule(schedule)}
-                              className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                              className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
                             >
                               <Trash2 size={16} />
                             </Button>

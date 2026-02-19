@@ -1181,7 +1181,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
             <Package className="w-5 h-5 text-gray-500" />
             <span className="font-medium">Boards</span>
             {!hasBoard() && (
-              <span className="text-xs bg-red-100 text-red-800 px-2 py-1 rounded">Required</span>
+              <span className="text-xs bg-destructive/10 text-destructive px-2 py-1 rounded">Required</span>
             )}
           </div>
           {expandedSections.boards ? (
@@ -1390,9 +1390,9 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                 <h4 className="font-medium">Import Standard Boards</h4>
                 
                 {importResults.boards && (
-                  <div className="rounded-md bg-green-50 border border-green-200 p-3 flex items-center gap-2">
-                    <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0" />
-                    <p className="text-sm text-green-800">
+                  <div className="rounded-md bg-success/10 border border-success/30 p-3 flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-success flex-shrink-0" />
+                    <p className="text-sm text-success">
                       Successfully imported {importResults.boards.imported} board{importResults.boards.imported !== 1 ? 's' : ''}.
                     </p>
                   </div>
@@ -1539,7 +1539,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                           <td className="px-2 py-1 text-center text-xs text-gray-600">{board.display_order || 0}</td>
                           <td className="px-2 py-1 text-center">
                             {board.category_type === 'itil' && board.priority_type === 'itil' ? (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
                                 ITIL
                               </span>
                             ) : (
@@ -1570,7 +1570,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                           <td className="px-2 py-1 text-center text-xs text-gray-600">1</td>
                           <td className="px-2 py-1 text-center">
                             {data.is_itil_compliant ? (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
                                 ITIL
                               </span>
                             ) : (
@@ -1741,9 +1741,9 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                 <h4 className="font-medium">Import Standard Categories</h4>
                 
                 {importResults.categories && (
-                  <div className="rounded-md bg-green-50 border border-green-200 p-3 flex items-center gap-2">
-                    <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0" />
-                    <p className="text-sm text-green-800">
+                  <div className="rounded-md bg-success/10 border border-success/30 p-3 flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-success flex-shrink-0" />
+                    <p className="text-sm text-success">
                       Successfully imported {importResults.categories.imported} categor{importResults.categories.imported !== 1 ? 'ies' : 'y'}.
                     </p>
                   </div>
@@ -2232,9 +2232,9 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                 <h4 className="font-medium">Import Standard Statuses</h4>
                 
                 {importResults.statuses && (
-                  <div className="rounded-md bg-green-50 border border-green-200 p-3 flex items-center gap-2">
-                    <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0" />
-                    <p className="text-sm text-green-800">
+                  <div className="rounded-md bg-success/10 border border-success/30 p-3 flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-success flex-shrink-0" />
+                    <p className="text-sm text-success">
                       Successfully imported {importResults.statuses.imported} status{importResults.statuses.imported !== 1 ? 'es' : ''}.
                     </p>
                   </div>
@@ -2399,7 +2399,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
             <Package className="w-5 h-5 text-gray-500" />
             <span className="font-medium">Priorities</span>
             {data.priorities.length === 0 && (
-              <span className="text-xs bg-red-100 text-red-800 px-2 py-1 rounded">Required</span>
+              <span className="text-xs bg-destructive/10 text-destructive px-2 py-1 rounded">Required</span>
             )}
           </div>
           {expandedSections.priorities ? (
@@ -2534,9 +2534,9 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                 <h4 className="font-medium">Import Standard Priorities</h4>
                 
                 {importResults.priorities && (
-                  <div className="rounded-md bg-green-50 border border-green-200 p-3 flex items-center gap-2">
-                    <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0" />
-                    <p className="text-sm text-green-800">
+                  <div className="rounded-md bg-success/10 border border-success/30 p-3 flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-success flex-shrink-0" />
+                    <p className="text-sm text-success">
                       Successfully imported {importResults.priorities.imported} priorit{importResults.priorities.imported !== 1 ? 'ies' : 'y'}.
                     </p>
                   </div>
@@ -2826,41 +2826,41 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                   <tbody>
                     <tr>
                       <td className="px-3 py-2 text-gray-600 border-r font-medium bg-gray-50">High Impact (1)</td>
-                      <td className="px-3 py-2 text-center bg-red-100 text-red-800 font-semibold border">Critical (1)</td>
+                      <td className="px-3 py-2 text-center bg-destructive/10 text-destructive font-semibold border">Critical (1)</td>
                       <td className="px-3 py-2 text-center bg-orange-100 text-orange-800 font-semibold border">High (2)</td>
                       <td className="px-3 py-2 text-center bg-orange-100 text-orange-800 font-semibold border">High (2)</td>
-                      <td className="px-3 py-2 text-center bg-yellow-100 text-yellow-800 font-semibold border">Medium (3)</td>
-                      <td className="px-3 py-2 text-center bg-yellow-100 text-yellow-800 font-semibold border">Medium (3)</td>
+                      <td className="px-3 py-2 text-center bg-warning/10 text-warning font-semibold border">Medium (3)</td>
+                      <td className="px-3 py-2 text-center bg-warning/10 text-warning font-semibold border">Medium (3)</td>
                     </tr>
                     <tr>
                       <td className="px-3 py-2 text-gray-600 border-r font-medium bg-gray-50">Medium-High Impact (2)</td>
                       <td className="px-3 py-2 text-center bg-orange-100 text-orange-800 font-semibold border">High (2)</td>
                       <td className="px-3 py-2 text-center bg-orange-100 text-orange-800 font-semibold border">High (2)</td>
-                      <td className="px-3 py-2 text-center bg-yellow-100 text-yellow-800 font-semibold border">Medium (3)</td>
-                      <td className="px-3 py-2 text-center bg-yellow-100 text-yellow-800 font-semibold border">Medium (3)</td>
-                      <td className="px-3 py-2 text-center bg-blue-100 text-blue-800 font-semibold border">Low (4)</td>
+                      <td className="px-3 py-2 text-center bg-warning/10 text-warning font-semibold border">Medium (3)</td>
+                      <td className="px-3 py-2 text-center bg-warning/10 text-warning font-semibold border">Medium (3)</td>
+                      <td className="px-3 py-2 text-center bg-primary/10 text-primary font-semibold border">Low (4)</td>
                     </tr>
                     <tr>
                       <td className="px-3 py-2 text-gray-600 border-r font-medium bg-gray-50">Medium Impact (3)</td>
                       <td className="px-3 py-2 text-center bg-orange-100 text-orange-800 font-semibold border">High (2)</td>
-                      <td className="px-3 py-2 text-center bg-yellow-100 text-yellow-800 font-semibold border">Medium (3)</td>
-                      <td className="px-3 py-2 text-center bg-yellow-100 text-yellow-800 font-semibold border">Medium (3)</td>
-                      <td className="px-3 py-2 text-center bg-blue-100 text-blue-800 font-semibold border">Low (4)</td>
-                      <td className="px-3 py-2 text-center bg-blue-100 text-blue-800 font-semibold border">Low (4)</td>
+                      <td className="px-3 py-2 text-center bg-warning/10 text-warning font-semibold border">Medium (3)</td>
+                      <td className="px-3 py-2 text-center bg-warning/10 text-warning font-semibold border">Medium (3)</td>
+                      <td className="px-3 py-2 text-center bg-primary/10 text-primary font-semibold border">Low (4)</td>
+                      <td className="px-3 py-2 text-center bg-primary/10 text-primary font-semibold border">Low (4)</td>
                     </tr>
                     <tr>
                       <td className="px-3 py-2 text-gray-600 border-r font-medium bg-gray-50">Medium-Low Impact (4)</td>
-                      <td className="px-3 py-2 text-center bg-yellow-100 text-yellow-800 font-semibold border">Medium (3)</td>
-                      <td className="px-3 py-2 text-center bg-yellow-100 text-yellow-800 font-semibold border">Medium (3)</td>
-                      <td className="px-3 py-2 text-center bg-blue-100 text-blue-800 font-semibold border">Low (4)</td>
-                      <td className="px-3 py-2 text-center bg-blue-100 text-blue-800 font-semibold border">Low (4)</td>
+                      <td className="px-3 py-2 text-center bg-warning/10 text-warning font-semibold border">Medium (3)</td>
+                      <td className="px-3 py-2 text-center bg-warning/10 text-warning font-semibold border">Medium (3)</td>
+                      <td className="px-3 py-2 text-center bg-primary/10 text-primary font-semibold border">Low (4)</td>
+                      <td className="px-3 py-2 text-center bg-primary/10 text-primary font-semibold border">Low (4)</td>
                       <td className="px-3 py-2 text-center bg-gray-100 text-gray-800 font-semibold border">Planning (5)</td>
                     </tr>
                     <tr>
                       <td className="px-3 py-2 text-gray-600 border-r font-medium bg-gray-50">Low Impact (5)</td>
-                      <td className="px-3 py-2 text-center bg-yellow-100 text-yellow-800 font-semibold border">Medium (3)</td>
-                      <td className="px-3 py-2 text-center bg-blue-100 text-blue-800 font-semibold border">Low (4)</td>
-                      <td className="px-3 py-2 text-center bg-blue-100 text-blue-800 font-semibold border">Low (4)</td>
+                      <td className="px-3 py-2 text-center bg-warning/10 text-warning font-semibold border">Medium (3)</td>
+                      <td className="px-3 py-2 text-center bg-primary/10 text-primary font-semibold border">Low (4)</td>
+                      <td className="px-3 py-2 text-center bg-primary/10 text-primary font-semibold border">Low (4)</td>
                       <td className="px-3 py-2 text-center bg-gray-100 text-gray-800 font-semibold border">Planning (5)</td>
                       <td className="px-3 py-2 text-center bg-gray-100 text-gray-800 font-semibold border">Planning (5)</td>
                     </tr>

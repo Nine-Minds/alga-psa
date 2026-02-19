@@ -203,7 +203,7 @@ export function ScheduleSection({ limit = 5, onViewAll, noCard = false }: Schedu
         </div>
       ) : error ? (
         <div className="flex justify-center items-center h-40">
-          <p className="text-red-500">{error}</p>
+          <p className="text-destructive">{error}</p>
         </div>
       ) : activities.length === 0 ? (
         <div className="flex justify-center items-center h-40">
@@ -293,7 +293,7 @@ export function ScheduleSection({ limit = 5, onViewAll, noCard = false }: Schedu
           </div>
         ) : error ? (
           <div className="flex justify-center items-center h-40">
-            <p className="text-red-500">{error}</p>
+            <p className="text-destructive">{error}</p>
           </div>
         ) : activities.length === 0 ? (
           <div className="flex justify-center items-center h-40">

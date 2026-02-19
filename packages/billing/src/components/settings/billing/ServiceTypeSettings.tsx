@@ -422,7 +422,7 @@ const ServiceTypeSettings: React.FC = () => {
               </Alert>
             )}
             <div>
-              <label htmlFor="typeName" className="block text-sm font-medium text-gray-700">Name *</label>
+              <label htmlFor="typeName" className="block text-sm font-medium text-[rgb(var(--color-text-700))]">Name *</label>
               <Input
                 id="typeName"
                 value={editingType?.name || ''}
@@ -436,7 +436,7 @@ const ServiceTypeSettings: React.FC = () => {
               />
             </div>
             <div>
-              <label htmlFor="typeDescription" className="block text-sm font-medium text-gray-700">Description (Optional)</label>
+              <label htmlFor="typeDescription" className="block text-sm font-medium text-[rgb(var(--color-text-700))]">Description (Optional)</label>
               <TextArea
                 id="typeDescription"
                 value={editingType?.description || ''}
@@ -561,7 +561,7 @@ const ServiceTypeSettings: React.FC = () => {
                                 setSelectedImportTypes(selectedImportTypes.filter(id => id !== type.id));
                               }
                             }}
-                            className="rounded border-gray-300"
+                            className="rounded border-[rgb(var(--color-border-300))]"
                           />
                         </div>
                         <div className="flex-1">{type.name}</div>

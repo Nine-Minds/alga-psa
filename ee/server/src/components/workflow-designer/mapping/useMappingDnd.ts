@@ -332,14 +332,14 @@ export function getDropTargetClasses(
   // Show compatibility-based styling when hovering
   switch (state.dropCompatibility) {
     case TypeCompatibility.EXACT:
-      return 'ring-2 ring-green-500 bg-green-50';
+      return 'ring-2 ring-success bg-success/10';
     case TypeCompatibility.COERCIBLE:
-      return 'ring-2 ring-yellow-500 bg-yellow-50';
+      return 'ring-2 ring-warning bg-warning/10';
     case TypeCompatibility.INCOMPATIBLE:
-      return 'ring-2 ring-red-500 bg-red-50';
+      return 'ring-2 ring-destructive bg-destructive/10';
     case TypeCompatibility.UNKNOWN:
     default:
-      return 'ring-2 ring-gray-400 bg-gray-50';
+      return 'ring-2 ring-muted-foreground bg-muted';
   }
 }
 

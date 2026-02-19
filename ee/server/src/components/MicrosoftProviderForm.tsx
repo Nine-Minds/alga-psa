@@ -310,10 +310,10 @@ export function MicrosoftProviderForm({
                 id="providerName"
                 {...form.register('providerName')}
                 placeholder="e.g., Support Microsoft 365"
-                className={hasAttemptedSubmit && form.formState.errors.providerName ? 'border-red-500' : ''}
+                className={hasAttemptedSubmit && form.formState.errors.providerName ? 'border-destructive' : ''}
               />
               {form.formState.errors.providerName && (
-                <p className="text-sm text-red-500">{form.formState.errors.providerName.message}</p>
+                <p className="text-sm text-destructive">{form.formState.errors.providerName.message}</p>
               )}
             </div>
 
@@ -324,10 +324,10 @@ export function MicrosoftProviderForm({
                 type="email"
                 {...form.register('mailbox')}
                 placeholder="support@client.com"
-                className={hasAttemptedSubmit && form.formState.errors.mailbox ? 'border-red-500' : ''}
+                className={hasAttemptedSubmit && form.formState.errors.mailbox ? 'border-destructive' : ''}
               />
               {form.formState.errors.mailbox && (
-                <p className="text-sm text-red-500">{form.formState.errors.mailbox.message}</p>
+                <p className="text-sm text-destructive">{form.formState.errors.mailbox.message}</p>
               )}
             </div>
           </div>
@@ -354,7 +354,7 @@ export function MicrosoftProviderForm({
         <CardContent className="space-y-4">
           {/* OAuth Authorization */}
           <div className={`p-4 rounded-lg transition-colors ${
-            oauthStatus === 'success' ? 'bg-green-50 border-2 border-green-200' : 'bg-blue-50'
+            oauthStatus === 'success' ? 'bg-success/10 border-2 border-success/30' : 'bg-primary-500/10'
           }`}>
             <div className="flex items-center justify-between">
               <div>
@@ -392,40 +392,42 @@ export function MicrosoftProviderForm({
 
           {/* Next Step Indicator */}
           {oauthStatus === 'success' && (
-            <div className="bg-amber-50 border-2 border-amber-200 p-4 rounded-lg">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <div className="flex-shrink-0">
-                    <div className="w-8 h-8 bg-amber-100 rounded-full flex items-center justify-center">
-                      <span className="text-amber-600 font-semibold">2</span>
+            <Alert variant="warning" showIcon={false}>
+              <AlertDescription>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center">
+                    <div className="flex-shrink-0">
+                      <div className="w-8 h-8 bg-warning/20 rounded-full flex items-center justify-center">
+                        <span className="text-warning font-semibold">2</span>
+                      </div>
+                    </div>
+                    <div className="ml-3">
+                      <h4 className="font-medium">Complete Setup</h4>
+                      <p className="text-sm">
+                        {autoSubmitCountdown !== null ? (
+                          <>Auto-completing in <strong>{autoSubmitCountdown}</strong> seconds, or click "<strong>{isEditing ? 'Update Provider' : 'Add Provider'}</strong>" below now.</>
+                        ) : (
+                          <>Click "<strong>{isEditing ? 'Update Provider' : 'Add Provider'}</strong>" below to finish configuration.</>
+                        )}
+                      </p>
                     </div>
                   </div>
-                  <div className="ml-3">
-                    <h4 className="font-medium text-amber-800">Complete Setup</h4>
-                    <p className="text-sm text-amber-700">
-                      {autoSubmitCountdown !== null ? (
-                        <>Auto-completing in <strong>{autoSubmitCountdown}</strong> seconds, or click "<strong>{isEditing ? 'Update Provider' : 'Add Provider'}</strong>" below now.</>
-                      ) : (
-                        <>Click "<strong>{isEditing ? 'Update Provider' : 'Add Provider'}</strong>" below to finish configuration.</>
-                      )}
-                    </p>
-                  </div>
+                  {autoSubmitCountdown !== null && (
+                    <Button
+                      id="cancel-auto-submit"
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setAutoSubmitCountdown(null);
+                      }}
+                    >
+                      Cancel Auto-Submit
+                    </Button>
+                  )}
                 </div>
-                {autoSubmitCountdown !== null && (
-                  <Button
-                    id="cancel-auto-submit"
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setAutoSubmitCountdown(null);
-                    }}
-                  >
-                    Cancel Auto-Submit
-                  </Button>
-                )}
-              </div>
-            </div>
+              </AlertDescription>
+            </Alert>
           )}
         </CardContent>
       </Card>
@@ -525,21 +527,14 @@ export function MicrosoftProviderForm({
 
       {/* OAuth Warning */}
       {oauthStatus !== 'success' && (
-        <div className="bg-yellow-50 border-2 border-yellow-200 p-4 rounded-lg">
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
-                <span className="text-yellow-600 font-semibold">⚠</span>
-              </div>
-            </div>
-            <div className="ml-3">
-              <h4 className="font-medium text-yellow-800">Microsoft 365 Connection Required</h4>
-              <p className="text-sm text-yellow-700">
-                You must connect your Microsoft 365 account above before {isEditing ? 'updating' : 'adding'} the provider.
-              </p>
-            </div>
-          </div>
-        </div>
+        <Alert variant="warning">
+          <AlertDescription>
+            <h4 className="font-medium">Microsoft 365 Connection Required</h4>
+            <p className="text-sm">
+              You must connect your Microsoft 365 account above before {isEditing ? 'updating' : 'adding'} the provider.
+            </p>
+          </AlertDescription>
+        </Alert>
       )}
 
       {/* Form Actions */}

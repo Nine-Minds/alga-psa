@@ -170,7 +170,7 @@ export function ServiceSelectionDialog({
           {/* Search and filters */}
           <div className="flex flex-col md:flex-row gap-4 shrink-0">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
               <Input
                 id="service-search-input"
                 placeholder="Search services/products..."
@@ -199,7 +199,7 @@ export function ServiceSelectionDialog({
           <div className="overflow-auto flex-1 border rounded-md">
             {loading ? (
               <div className="flex justify-center items-center h-40">
-                <p className="text-gray-500">Loading services...</p>
+                <p className="text-muted-foreground">Loading services...</p>
               </div>
             ) : error ? (
               <div className="flex justify-center items-center h-40">
@@ -207,7 +207,7 @@ export function ServiceSelectionDialog({
               </div>
             ) : filteredServices.length === 0 ? (
               <div className="flex justify-center items-center h-40">
-                <p className="text-gray-500">No services found</p>
+                <p className="text-muted-foreground">No services found</p>
               </div>
             ) : (
               <Table>
@@ -229,7 +229,7 @@ export function ServiceSelectionDialog({
                       style={{ cursor: 'pointer' }}
                     >
                       <TableCell>
-                        <div className="flex items-center justify-center h-5 w-5 rounded-full border border-gray-300 bg-white">
+                        <div className="flex items-center justify-center h-5 w-5 rounded-full border border-[rgb(var(--color-border-300))] bg-card">
                           {selectedServices.includes(service.service_id) && (
                             <Check className="h-3 w-3 text-blue-600" />
                           )}
@@ -254,8 +254,8 @@ export function ServiceSelectionDialog({
           </div>
           
           {/* Quick add section */}
-          <div className="flex flex-wrap gap-2 p-3 bg-gray-50 rounded-md">
-            <span className="text-sm font-medium text-gray-700 mr-2">Quick Add:</span>
+          <div className="flex flex-wrap gap-2 p-3 bg-muted rounded-md">
+            <span className="text-sm font-medium text-[rgb(var(--color-text-700))] mr-2">Quick Add:</span>
             {serviceTypes.map(type => (
               <Button
                 key={`quick-add-${type}`}
@@ -293,7 +293,7 @@ export function ServiceSelectionDialog({
           <div className="flex justify-between w-full">
             <div>
               {selectedServices.length > 0 && (
-                <span className="text-sm text-gray-600">
+                <span className="text-sm text-muted-foreground">
                   {selectedServices.length} service{selectedServices.length !== 1 ? 's' : ''} selected
                 </span>
               )}

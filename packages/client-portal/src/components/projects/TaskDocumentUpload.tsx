@@ -527,8 +527,8 @@ export default function TaskDocumentUpload({ taskId, compact = false }: TaskDocu
         </div>
 
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-            <p className="text-sm text-red-600">{error}</p>
+          <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-3">
+            <p className="text-sm text-destructive">{error}</p>
           </div>
         )}
 

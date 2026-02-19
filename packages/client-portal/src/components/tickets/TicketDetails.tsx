@@ -412,8 +412,8 @@ export function TicketDetails({
   const ticketContent = (
     <>
       {error && (
-        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
-          <p className="text-red-700 text-sm">{error}</p>
+        <div className="mb-4 p-3 bg-destructive/10 border border-destructive/30 rounded-md">
+          <p className="text-destructive text-sm">{error}</p>
         </div>
       )}
 
@@ -554,10 +554,10 @@ export function TicketDetails({
 
                 if (hoursUntilDue < 0) {
                   textColorClass = 'text-red-700';
-                  bgColorClass = 'bg-red-50';
+                  bgColorClass = 'bg-destructive/10';
                 } else if (hoursUntilDue <= 24) {
                   textColorClass = 'text-orange-700';
-                  bgColorClass = 'bg-orange-50';
+                  bgColorClass = 'bg-warning/10';
                 }
 
                 return (

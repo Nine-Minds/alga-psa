@@ -344,9 +344,9 @@ const TaxRates: React.FC = () => {
         </CardHeader>
         <CardContent>
           {error && (
-            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
-              <span className="block sm:inline">{error || errorTaxRegions}</span> {/* Show either error */}
-            </div>
+            <Alert variant="destructive" className="mb-4">
+              <AlertDescription>{error || errorTaxRegions}</AlertDescription>
+            </Alert>
           )}
           <div className="flex justify-end mb-4">
             <Button
@@ -366,7 +366,7 @@ const TaxRates: React.FC = () => {
           {isLoading ? (
             <LoadingIndicator
               layout="stacked"
-              className="py-10 text-gray-600"
+              className="py-10 text-muted-foreground"
               spinnerProps={{ size: 'md' }}
               text="Loading tax rates"
             />

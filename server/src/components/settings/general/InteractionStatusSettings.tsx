@@ -289,7 +289,7 @@ const InteractionStatusSettings = (): React.JSX.Element => {
             </DropdownMenuItem>
             <DropdownMenuItem
               id={`delete-interaction-status-${item.status_id}`}
-              className="text-red-600 focus:text-red-600"
+              className="text-destructive focus:text-destructive"
               onClick={(e) => {
                 e.stopPropagation();
                 handleDeleteStatusRequest(item.status_id);

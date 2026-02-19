@@ -198,7 +198,7 @@ const ConnectionPath: React.FC<{
           />
           <foreignObject x="-6" y="-6" width="12" height="12">
             <div className="flex items-center justify-center w-full h-full">
-              <Trash2 className="w-3 h-3 text-red-500" />
+              <Trash2 className="w-3 h-3 text-destructive" />
             </div>
           </foreignObject>
         </g>

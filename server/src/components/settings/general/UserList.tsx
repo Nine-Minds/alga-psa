@@ -339,7 +339,7 @@ const UserList: React.FC<UserListProps> = ({ users, onDeleteSuccess, onUpdate, s
                 e.stopPropagation();
                 handleDeleteClick(record);
               }}
-              className="px-2 py-1 text-sm cursor-pointer hover:bg-gray-100 flex items-center text-red-600"
+              className="px-2 py-1 text-sm cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center text-destructive"
             >
               <Trash2 size={14} className="mr-2" />
               Remove

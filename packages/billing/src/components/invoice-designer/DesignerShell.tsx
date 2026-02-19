@@ -1371,8 +1371,8 @@ export const DesignerShell: React.FC = () => {
 	          className={clsx(
             'border-b px-4 py-2 text-xs',
             dropFeedback.tone === 'error'
-              ? 'border-red-200 bg-red-50 text-red-700'
-              : 'border-blue-200 bg-blue-50 text-blue-700'
+              ? 'border-destructive/30 bg-destructive/10 text-destructive'
+              : 'border-primary/30 bg-primary/10 text-primary'
           )}
           role="status"
           aria-live="polite"
@@ -1606,7 +1606,7 @@ const DesignerWorkspace: React.FC<DesignerWorkspaceProps> = ({
 	          <div
               className={clsx(
                 'px-3 py-2 border rounded shadow-lg text-sm font-semibold',
-                isInvalidDrop ? 'bg-red-50 border-red-200 text-red-800 cursor-not-allowed' : 'bg-white cursor-grab'
+                isInvalidDrop ? 'bg-destructive/10 border-destructive/30 text-destructive cursor-not-allowed' : 'bg-background cursor-grab'
               )}
             >
 	            {activeDrag.kind === 'component'

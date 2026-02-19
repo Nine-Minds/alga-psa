@@ -33,9 +33,9 @@ function statusIcon(status: Microsoft365DiagnosticsStep['status']) {
 function statusBadge(status: Microsoft365DiagnosticsStep['status']) {
   switch (status) {
     case 'pass':
-      return <Badge className="bg-green-100 text-green-800">Pass</Badge>;
+      return <Badge variant="success">Pass</Badge>;
     case 'warn':
-      return <Badge className="bg-yellow-100 text-yellow-800">Warn</Badge>;
+      return <Badge variant="warning">Warn</Badge>;
     case 'fail':
       return <Badge variant="error">Fail</Badge>;
     case 'skip':
@@ -191,7 +191,7 @@ export function Microsoft365DiagnosticsDialog({
                       </div>
                     )}
                     {step.error && (
-                      <div className="text-red-700 bg-red-50 border border-red-200 rounded p-2">
+                      <div className="text-destructive bg-destructive/10 border border-destructive/30 rounded p-2">
                         <div className="font-medium">Error</div>
                         <div>{step.error.message}</div>
                         <div className="text-xs mt-1">

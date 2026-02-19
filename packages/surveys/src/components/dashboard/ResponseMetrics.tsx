@@ -57,7 +57,7 @@ export default function ResponseMetrics({ metrics }: ResponseMetricsProps) {
         value: metrics.averageRating !== null ? ratingFormatter.format(metrics.averageRating) : '—',
         icon: Star,
         tone: 'text-amber-600',
-        background: 'bg-amber-50',
+        background: 'bg-warning/10',
       },
     ],
     [metrics.averageRating, metrics.responseRate, metrics.totalInvitations, metrics.totalResponses]

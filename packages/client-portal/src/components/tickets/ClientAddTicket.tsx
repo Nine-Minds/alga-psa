@@ -4,7 +4,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import Spinner from '@alga-psa/ui/components/Spinner';
-import { AlertCircle } from 'lucide-react';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { createClientTicket } from '@alga-psa/client-portal/actions';
 import { getClientTicketFormData } from '@alga-psa/tickets/actions/ticketFormActions';
 import { IPriority } from '@alga-psa/types';
@@ -145,10 +145,9 @@ export function ClientAddTicket({ open, onOpenChange, onTicketAdded }: ClientAdd
         ) : (
           <>
             {hasAttemptedSubmit && error && (
-              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md flex items-start space-x-2">
-                <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
-                <span className="text-red-700 text-sm">{error}</span>
-              </div>
+              <Alert variant="destructive">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
             )}
 
             <form onSubmit={handleSubmit} className="space-y-4" noValidate>

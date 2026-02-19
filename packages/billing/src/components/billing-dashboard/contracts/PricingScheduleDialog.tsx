@@ -251,7 +251,7 @@ export function PricingScheduleDialog({
             <div>
               <Label htmlFor="custom-rate">Custom Rate *</Label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
+                <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">$</span>
                 <Input
                   id="custom-rate"
                   type="number"

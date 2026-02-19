@@ -187,7 +187,7 @@ const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({ agentId }) => {
           </div>
         )}
         {error && (
-          <div className="absolute inset-0 bg-red-100 text-red-700 flex items-center justify-center z-10 p-4">
+          <div className="absolute inset-0 bg-red-100 dark:bg-red-900/20 text-red-700 dark:text-red-300 flex items-center justify-center z-10 p-4">
             {error}
           </div>
         )}

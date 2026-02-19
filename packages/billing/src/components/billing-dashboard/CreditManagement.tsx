@@ -118,7 +118,7 @@ const columns: ColumnDefinition<ICreditTracking & { transaction_description?: st
                 variant="outline"
                 size="sm"
                 id={`expire-credit-${value}`}
-                className="text-red-600 hover:bg-red-50"
+                className="text-destructive hover:bg-destructive/10"
               >
                 Expire
               </Button>
@@ -427,12 +427,12 @@ const CreditManagement: React.FC = () => {
               </ResponsiveContainer>
             </div>
             <div className="mt-4 grid grid-cols-2 gap-4">
-              <div className="bg-blue-50 p-3 rounded-md">
-                <p className="text-sm text-blue-700">Total Active Credits</p>
+              <div className="bg-primary/10 p-3 rounded-md">
+                <p className="text-sm text-primary">Total Active Credits</p>
                 <p className="text-xl font-bold">{formatCurrency(creditStats.totalActive)}</p>
               </div>
-              <div className="bg-orange-50 p-3 rounded-md">
-                <p className="text-sm text-orange-700">Expiring in 30 Days</p>
+              <div className="bg-warning/10 p-3 rounded-md">
+                <p className="text-sm text-warning">Expiring in 30 Days</p>
                 <p className="text-xl font-bold">{formatCurrency(creditStats.expiringWithin30Days)}</p>
               </div>
             </div>
@@ -468,12 +468,12 @@ const CreditManagement: React.FC = () => {
               </ResponsiveContainer>
             </div>
             <div className="mt-4 grid grid-cols-2 gap-4">
-              <div className="bg-green-50 p-3 rounded-md">
-                <p className="text-sm text-green-700">Total Credits Applied</p>
+              <div className="bg-success/10 p-3 rounded-md">
+                <p className="text-sm text-success">Total Credits Applied</p>
                 <p className="text-xl font-bold">{formatCurrency(creditStats.totalCreditsApplied)}</p>
               </div>
-              <div className="bg-red-50 p-3 rounded-md">
-                <p className="text-sm text-red-700">Total Credits Expired</p>
+              <div className="bg-destructive/10 p-3 rounded-md">
+                <p className="text-sm text-destructive">Total Credits Expired</p>
                 <p className="text-xl font-bold">{formatCurrency(creditStats.totalExpired)}</p>
               </div>
             </div>

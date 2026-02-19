@@ -390,7 +390,7 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-gray-500">No active bucket plans found.</p>
+              <p className="text-sm text-muted-foreground">No active bucket plans found.</p>
             )}
           </CardContent>
         </Card>
@@ -467,7 +467,7 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
             {isLoading ? (
               <LoadingIndicator
                 layout="stacked"
-                className="py-10 text-gray-600"
+                className="py-10 text-muted-foreground"
                 spinnerProps={{ size: 'md' }}
                 text="Loading usage records"
               />
@@ -580,7 +580,7 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
                 )}
 
                 <div className="flex items-center space-x-1">
-                  <label className={`block text-sm font-medium ${eligibleContractLines.length > 1 ? 'text-blue-700' : 'text-gray-700'}`}>
+                  <label className={`block text-sm font-medium ${eligibleContractLines.length > 1 ? 'text-blue-700' : 'text-[rgb(var(--color-text-700))]'}`}>
                     Contract Line <span className="text-red-500">*</span>
                   </label>
                   <div className="relative inline-block">
@@ -594,7 +594,7 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
                             ? `This usage will be billed under the "${eligibleContractLines[0].contract_line_name}" contract line.`
                             : "No eligible contract lines found for this service."}
                     >
-                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 text-gray-500">
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 text-muted-foreground">
                         <circle cx="12" cy="12" r="10"></circle>
                         <path d="M12 16v-4M12 8h.01"></path>
                       </svg>
@@ -622,7 +622,7 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
                 />
 
                 {eligibleContractLines.length > 1 && (
-                  <div className="mt-1 text-xs text-gray-600">
+                  <div className="mt-1 text-xs text-muted-foreground">
                     <span className="flex items-center">
                       <AlertTriangle className="h-3 w-3 text-amber-500 mr-1" />
                       Selecting the wrong contract line may result in incorrect billing
@@ -631,11 +631,11 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
                 )}
 
                 {!newUsage.client_id ? (
-                  <small className="text-gray-500 mt-1">
+                  <small className="text-muted-foreground mt-1">
                     Client information not available. The system will use the default contract line.
                   </small>
                 ) : eligibleContractLines.length === 0 ? (
-                  <small className="text-gray-500 mt-1">
+                  <small className="text-muted-foreground mt-1">
                     No eligible contract lines found for this service.
                   </small>
                 ) : <></>}

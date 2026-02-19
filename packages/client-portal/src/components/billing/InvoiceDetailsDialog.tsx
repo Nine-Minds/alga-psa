@@ -134,11 +134,9 @@ const InvoiceDetailsDialog: React.FC<InvoiceDetailsDialogProps> = React.memo(({
             </div>
             <div>
               <p className="text-sm font-medium text-gray-500">{t('invoice.status', 'Status')}</p>
-              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-1 ${
-                invoice.finalized_at ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-              }`}>
+              <Badge variant={invoice.finalized_at ? 'success' : 'warning'} className="mt-1">
                 {invoice.finalized_at ? t('invoice.finalized', 'Finalized') : t('invoice.draft', 'Draft')}
-              </span>
+              </Badge>
             </div>
             <div>
               <p className="text-sm font-medium text-gray-500">{t('invoice.manualInvoice', 'Manual Invoice')}</p>

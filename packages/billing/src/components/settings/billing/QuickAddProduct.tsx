@@ -244,11 +244,11 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
     setPrimaryInput: (v: string) => void
   ) => {
     return (
-      <div className="border rounded-lg p-4 bg-gray-50">
+      <div className="border rounded-lg p-4 bg-muted">
         <div className="flex justify-between items-center mb-3">
-          <label className="block text-sm font-medium text-gray-700">
+          <label className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
             Pricing *
-            <span className="text-xs font-normal text-gray-500 ml-2">(Rate)</span>
+            <span className="text-xs font-normal text-muted-foreground ml-2">(Rate)</span>
           </label>
           <Button
             id="quick-add-product-price-add-currency"
@@ -287,7 +287,7 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
                 />
               </div>
               <div className="relative flex-1">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
                   {getCurrencySymbol(price.currency_code)}
                 </span>
                 <Input
@@ -334,7 +334,7 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="text-red-500 hover:text-red-700 hover:bg-red-50 px-2"
+                  className="text-destructive hover:text-destructive hover:bg-destructive/10 px-2"
                   onClick={() => {
                     const next = prices.filter((_, i) => i !== index);
                     setPrices(next);
@@ -349,7 +349,7 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
             </div>
           ))}
         </div>
-        <p className="text-xs text-gray-500 mt-2">
+        <p className="text-xs text-muted-foreground mt-2">
           Add prices in multiple currencies. The first currency is the primary rate.
         </p>
       </div>
@@ -362,7 +362,7 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
         {error && <div className="text-red-500 mb-4">{error}</div>}
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Product Name *</label>
+            <label className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">Product Name *</label>
             <Input
               id="quick-add-product-name"
               value={formProduct.service_name || ''}
@@ -394,7 +394,7 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">SKU</label>
+              <label className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">SKU</label>
               <Input
                 id="quick-add-product-sku"
                 value={formProduct.sku || ''}
@@ -402,7 +402,7 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+              <label className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">Category</label>
               <CustomSelect
                 value={formProduct.category_id || ''}
                 placeholder={isLoadingCategories ? 'Loading…' : 'Uncategorized'}
@@ -417,7 +417,7 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Label</label>
+            <label className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">Label</label>
             <Input
               id="quick-add-product-label"
               value={formProduct.product_category || ''}
@@ -428,7 +428,7 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Vendor</label>
+              <label className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">Vendor</label>
               <Input
                 id="quick-add-product-vendor"
                 value={formProduct.vendor || ''}
@@ -436,7 +436,7 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Manufacturer</label>
+              <label className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">Manufacturer</label>
               <Input
                 id="quick-add-product-manufacturer"
                 value={formProduct.manufacturer || ''}
@@ -447,7 +447,7 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Cost</label>
+              <label className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">Cost</label>
               <div className="flex gap-2">
                 <div className="w-24">
                   <CustomSelect
@@ -458,7 +458,7 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
                   />
                 </div>
                 <div className="relative flex-1">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
                     {getCurrencySymbol(formProduct.cost_currency || 'USD')}
                   </span>
                   <Input
@@ -481,7 +481,7 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Billing Method</label>
+              <label className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">Billing Method</label>
               <CustomSelect
                 options={BILLING_METHOD_OPTIONS}
                 value={(formProduct.billing_method as string) || 'per_unit'}
@@ -493,7 +493,7 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
           {renderPricesEditor(formPrices, setFormPrices, priceInput, setPriceInput)}
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Tax Rate</label>
+            <label className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">Tax Rate</label>
             <CustomSelect
               value={formProduct.tax_rate_id || ''}
               placeholder={isLoadingTaxRates ? 'Loading...' : 'Non-Taxable'}
@@ -506,7 +506,7 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
 
           <div className="grid grid-cols-2 gap-3 items-end">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Active</label>
+              <label className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">Active</label>
               <CustomSelect
                 options={[
                   { value: 'true', label: 'Active' },
@@ -517,7 +517,7 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Unit of Measure *</label>
+              <label className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">Unit of Measure *</label>
               <Input
                 id="quick-add-product-unit-of-measure"
                 value={formProduct.unit_of_measure || ''}
@@ -529,7 +529,7 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">License?</label>
+              <label className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">License?</label>
               <CustomSelect
                 options={[
                   { value: 'false', label: 'No' },
@@ -551,7 +551,7 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+            <label className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">Description</label>
             <Input
               id="quick-add-product-description"
               value={formProduct.description || ''}

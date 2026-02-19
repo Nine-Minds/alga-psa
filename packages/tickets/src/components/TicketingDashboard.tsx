@@ -1583,20 +1583,22 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       >
         <DialogContent>
           {bulkDeleteErrors.length > 0 && (
-            <div className="mb-4 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-              <p className="font-medium">The following tickets could not be deleted:</p>
-              <ul className="mt-2 space-y-1">
-                {bulkDeleteErrors.map(error => {
-                  const detail = selectedTicketDetails.find(item => item.ticket_id === error.ticketId);
-                  const label = detail?.ticket_number || detail?.title || error.ticketId;
-                  return (
-                    <li key={error.ticketId}>
-                      <span className="font-medium">{label}</span>: {error.message}
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
+            <Alert variant="destructive" className="mb-4">
+              <AlertDescription>
+                <p className="font-medium">The following tickets could not be deleted:</p>
+                <ul className="mt-2 space-y-1">
+                  {bulkDeleteErrors.map(error => {
+                    const detail = selectedTicketDetails.find(item => item.ticket_id === error.ticketId);
+                    const label = detail?.ticket_number || detail?.title || error.ticketId;
+                    return (
+                      <li key={error.ticketId}>
+                        <span className="font-medium">{label}</span>: {error.message}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </AlertDescription>
+            </Alert>
           )}
           <p className="text-gray-600">
             {selectedTicketIdsArray.length === 1
@@ -1660,16 +1662,16 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       >
         <DialogContent>
           {bundleError && (
-            <div className="mb-3 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-              {bundleError}
-            </div>
+            <Alert variant="destructive" className="mb-3">
+              <AlertDescription>{bundleError}</AlertDescription>
+            </Alert>
           )}
           {(() => {
             if (!isSelectedBundleMultiClient) return null;
             return (
-              <div className="mb-3 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
-                This bundle spans multiple clients. You'll be asked to confirm before bundling.
-              </div>
+              <Alert variant="warning" className="mb-3">
+                <AlertDescription>This bundle spans multiple clients. You'll be asked to confirm before bundling.</AlertDescription>
+              </Alert>
             );
           })()}
           <div className="space-y-4">

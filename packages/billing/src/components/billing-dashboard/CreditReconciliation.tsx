@@ -343,7 +343,7 @@ const CreditReconciliation: React.FC = () => {
                 id="client-selector"
                 value={selectedClient}
                 onChange={handleClientChange}
-                className="border border-[rgb(var(--color-border-300))] rounded-md px-3 py-2 text-sm text-[rgb(var(--color-text-700))] bg-white"
+                className="border border-[rgb(var(--color-border-300))] rounded-md px-3 py-2 text-sm text-[rgb(var(--color-text-700))] bg-card"
               >
                 <option value="">Select Client</option>
                 {clients.map(client => (
@@ -373,7 +373,7 @@ const CreditReconciliation: React.FC = () => {
                   id="status-filter"
                   value={selectedStatus}
                   onChange={(e) => setSelectedStatus(e.target.value as ReconciliationStatus | '')}
-                  className="border border-[rgb(var(--color-border-300))] rounded-md px-3 py-2 text-sm text-[rgb(var(--color-text-700))] bg-white"
+                  className="border border-[rgb(var(--color-border-300))] rounded-md px-3 py-2 text-sm text-[rgb(var(--color-text-700))] bg-card"
                 >
                   <option value="">All Statuses</option>
                   <option value="open">Open</option>
@@ -391,7 +391,7 @@ const CreditReconciliation: React.FC = () => {
                   type="date"
                   value={dateRange.startDate || ''}
                   onChange={(e) => setDateRange({...dateRange, startDate: e.target.value || null})}
-                  className="border border-[rgb(var(--color-border-300))] rounded-md px-3 py-2 text-sm text-[rgb(var(--color-text-700))] bg-white"
+                  className="border border-[rgb(var(--color-border-300))] rounded-md px-3 py-2 text-sm text-[rgb(var(--color-text-700))] bg-card"
                 />
               </div>
               
@@ -404,7 +404,7 @@ const CreditReconciliation: React.FC = () => {
                   type="date"
                   value={dateRange.endDate || ''}
                   onChange={(e) => setDateRange({...dateRange, endDate: e.target.value || null})}
-                  className="border border-[rgb(var(--color-border-300))] rounded-md px-3 py-2 text-sm text-[rgb(var(--color-text-700))] bg-white"
+                  className="border border-[rgb(var(--color-border-300))] rounded-md px-3 py-2 text-sm text-[rgb(var(--color-text-700))] bg-card"
                 />
               </div>
               

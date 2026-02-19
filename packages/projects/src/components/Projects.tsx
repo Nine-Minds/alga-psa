@@ -475,7 +475,7 @@ export default function Projects({ initialProjects, clients }: ProjectsProps) {
               Edit
             </DropdownMenu.Item>
             <DropdownMenu.Item
-              className="px-2 py-1 text-sm cursor-pointer hover:bg-gray-100 flex items-center text-red-600"
+              className="px-2 py-1 text-sm cursor-pointer hover:bg-gray-100 flex items-center text-destructive"
               onSelect={(e) => {
                 e.stopPropagation();
                 handleDelete(record);

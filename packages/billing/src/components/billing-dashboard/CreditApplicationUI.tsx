@@ -192,13 +192,13 @@ const CreditApplicationUI: React.FC<CreditApplicationUIProps> = ({
       <CardContent>
         {loading && availableCredits.length === 0 ? (
           <div className="animate-pulse space-y-2">
-            <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-            <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+            <div className="h-4 bg-[rgb(var(--color-border-200))] rounded w-3/4"></div>
+            <div className="h-4 bg-[rgb(var(--color-border-200))] rounded w-1/2"></div>
           </div>
         ) : error ? (
           <div className="text-red-500">{error}</div>
         ) : availableCredits.length === 0 ? (
-          <div className="text-gray-500">No credits available for this client</div>
+          <div className="text-muted-foreground">No credits available for this client</div>
         ) : (
           <div className="space-y-4">
             <div className="flex justify-between text-sm">
@@ -239,7 +239,7 @@ const CreditApplicationUI: React.FC<CreditApplicationUIProps> = ({
                 disabled={!selectedCreditId}
                 className="w-full"
               />
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-muted-foreground">
                 Credits are applied in order of expiration date (oldest first)
               </p>
             </div>

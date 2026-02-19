@@ -25,6 +25,7 @@ import { downloadDocument, getDocumentDownloadUrl } from '@alga-psa/documents/li
 import toast from 'react-hot-toast';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { useRegisterUnsavedChanges } from '@alga-psa/ui/context';
 import { useUserPreference } from '@alga-psa/users/hooks';
 import { searchUsersForMentions } from '@alga-psa/users/actions';
@@ -932,16 +933,16 @@ const Documents = ({
               {isLoading ? (
                 <DocumentsGridSkeleton gridColumns={3} />
               ) : error ? (
-                <div className="text-center py-4 text-red-500 bg-red-50 rounded-md">
-                  {error}
-                </div>
+                <Alert variant="destructive">
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
               ) : (
                 <>
                   {/* Bulk Actions Toolbar */}
                   {selectedDocumentsForMove.size > 0 && viewMode === 'list' && (
-                    <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between">
+                    <div className="mb-4 p-3 bg-[rgb(var(--color-primary-50))] dark:bg-[rgb(var(--color-primary-900))]/20 border border-[rgb(var(--color-primary-200))] dark:border-[rgb(var(--color-primary-800))] rounded-lg flex items-center justify-between">
                       <div className="flex items-center gap-4">
-                        <span className="text-sm font-medium text-blue-900">
+                        <span className="text-sm font-medium text-[rgb(var(--color-primary-900))] dark:text-[rgb(var(--color-primary-100))]">
                           {tDoc('bulkActions.selected', {
                             count: selectedDocumentsForMove.size,
                             defaultValue: `${selectedDocumentsForMove.size} document${selectedDocumentsForMove.size !== 1 ? 's' : ''} selected`
@@ -1220,9 +1221,9 @@ const Documents = ({
 
             <div className="flex-1 overflow-hidden flex flex-col">
               {drawerError && (
-                <div className="mb-4 bg-red-50 border border-red-300 text-red-700 px-4 py-3 rounded">
-                  {drawerError}
-                </div>
+                <Alert variant="destructive" className="mb-4">
+                  <AlertDescription>{drawerError}</AlertDescription>
+                </Alert>
               )}
               <div className="mb-4 relative p-0.5">
                 <Input
@@ -1389,9 +1390,9 @@ const Documents = ({
         ) : null}
 
         {error && (
-          <div className="text-center py-4 text-red-500 bg-red-50 rounded-md">
-            {error}
-          </div>
+          <Alert variant="destructive">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
         )}
 
         {isLoading ? (
@@ -1553,9 +1554,9 @@ const Documents = ({
 
             <div className="flex-1 overflow-hidden flex flex-col">
               {drawerError && (
-                <div className="mb-4 bg-red-50 border border-red-300 text-red-700 px-4 py-3 rounded">
-                  {drawerError}
-                </div>
+                <Alert variant="destructive" className="mb-4">
+                  <AlertDescription>{drawerError}</AlertDescription>
+                </Alert>
               )}
               <div className="mb-4 relative p-0.5">
                 <Input

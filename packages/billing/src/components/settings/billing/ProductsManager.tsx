@@ -223,7 +223,7 @@ const ProductsManager: React.FC = () => {
                 .map((p) => `${p.currency_code}: ${formatMoneyCents(Number(p.rate ?? 0), p.currency_code)}`)
                 .join('\n')}
             >
-              {primaryDisplay} <span className="text-xs text-gray-500">+{prices.length - 1}</span>
+              {primaryDisplay} <span className="text-xs text-muted-foreground">+{prices.length - 1}</span>
             </span>
           );
         }
@@ -454,7 +454,7 @@ const ProductsManager: React.FC = () => {
             {isLoading ? (
               <LoadingIndicator
                 layout="stacked"
-                className="py-10 text-gray-600"
+                className="py-10 text-muted-foreground"
                 spinnerProps={{ size: 'md' }}
                 text="Loading products"
               />

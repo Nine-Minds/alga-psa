@@ -61,9 +61,9 @@ const CreditExpirationNotification: React.FC<CreditExpirationNotificationProps> 
   
   const getUrgencyColor = () => {
     switch (urgency) {
-      case 'high': return 'border-red-200 bg-red-50';
-      case 'medium': return 'border-amber-200 bg-amber-50';
-      case 'low': return 'border-blue-200 bg-blue-50';
+      case 'high': return 'border-destructive/30 bg-destructive/10';
+      case 'medium': return 'border-warning/30 bg-warning/10';
+      case 'low': return 'border-primary/30 bg-primary/10';
     }
   };
   

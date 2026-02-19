@@ -232,10 +232,10 @@ export function AsyncSearchableSelect({
                 setOpen(false);
               }
             }}
-            className="flex h-9 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-gray-500"
+            className="flex h-9 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-[rgb(var(--color-text-400))]"
             placeholder={resolvedSearchPlaceholder}
           />
-          {loading && <Loader2 className="ml-2 h-4 w-4 animate-spin text-gray-400" />}
+          {loading && <Loader2 className="ml-2 h-4 w-4 animate-spin text-[rgb(var(--color-text-300))]" />}
         </div>
 
         <Command.List className="overflow-y-auto overscroll-contain p-1" style={{ maxHeight: maxListHeight }}>
@@ -253,21 +253,21 @@ export function AsyncSearchableSelect({
                   }}
                   className={cn(
                     'flex items-center px-2 py-1.5 text-sm rounded-sm cursor-pointer',
-                    'hover:bg-gray-100',
-                    'aria-selected:bg-gray-100',
-                    value === option.value && 'bg-gray-100'
+                    'hover:bg-[rgb(var(--color-border-100))]',
+                    'aria-selected:bg-[rgb(var(--color-border-100))]',
+                    value === option.value && 'bg-[rgb(var(--color-border-100))]'
                   )}
                 >
                   <span className="flex-1 flex items-center gap-2">
                     {option.badge && (
                       <span className={cn(
                         'inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium',
-                        option.badge.variant === 'primary' && 'bg-primary-100 text-primary-700',
-                        option.badge.variant === 'secondary' && 'bg-gray-100 text-gray-700',
-                        option.badge.variant === 'success' && 'bg-green-100 text-green-700',
-                        option.badge.variant === 'warning' && 'bg-amber-100 text-amber-700',
-                        option.badge.variant === 'danger' && 'bg-red-100 text-red-700',
-                        (!option.badge.variant || option.badge.variant === 'default') && 'bg-blue-100 text-blue-700'
+                        option.badge.variant === 'primary' && 'bg-[rgb(var(--color-primary-100))] text-[rgb(var(--color-primary-700))]',
+                        option.badge.variant === 'secondary' && 'bg-[rgb(var(--color-border-100))] text-[rgb(var(--color-text-600))]',
+                        option.badge.variant === 'success' && 'bg-[rgb(var(--badge-success-bg))] text-[rgb(var(--badge-success-text))]',
+                        option.badge.variant === 'warning' && 'bg-[rgb(var(--badge-warning-bg))] text-[rgb(var(--badge-warning-text))]',
+                        option.badge.variant === 'danger' && 'bg-[rgb(var(--badge-error-bg))] text-[rgb(var(--badge-error-text))]',
+                        (!option.badge.variant || option.badge.variant === 'default') && 'bg-[rgb(var(--badge-info-bg))] text-[rgb(var(--badge-info-text))]'
                       )}>
                         {option.badge.text}
                       </span>
@@ -279,13 +279,13 @@ export function AsyncSearchableSelect({
               ))}
 
               {hasMore && (
-                <div className="px-2 py-2 text-xs text-gray-500">
+                <div className="px-2 py-2 text-xs text-[rgb(var(--color-text-400))]">
                   Showing {options.length} of {total}. Refine your search to see more.
                 </div>
               )}
             </>
           ) : (
-            <div className="py-6 text-center text-sm text-gray-500">{emptyMessage}</div>
+            <div className="py-6 text-center text-sm text-[rgb(var(--color-text-400))]">{emptyMessage}</div>
           )}
         </Command.List>
       </Command>
@@ -294,7 +294,7 @@ export function AsyncSearchableSelect({
 
   return (
     <div className={label ? 'mb-4' : ''} id={id} data-automation-type="async-searchable-select">
-      {label && <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>}
+      {label && <label className="block text-sm font-medium text-[rgb(var(--color-text-600))] mb-1">{label}</label>}
 
       <div className="relative">
         <Button
@@ -308,7 +308,7 @@ export function AsyncSearchableSelect({
           disabled={disabled}
           {...automationIdProps}
         >
-          <span className={cn('truncate', !value && 'text-gray-400')}>
+          <span className={cn('truncate', !value && 'text-[rgb(var(--color-text-300))]')}>
             {selectedOption?.label ?? selectedLabel ?? (value ? value : placeholder)}
           </span>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />

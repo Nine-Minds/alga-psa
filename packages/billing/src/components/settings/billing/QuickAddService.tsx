@@ -333,7 +333,7 @@ if (createdService?.service_id) {
           )}
           <form onSubmit={handleSubmit} className="space-y-4" noValidate>
             <div>
-              <Label htmlFor="serviceName" className="block text-sm font-medium text-gray-700 mb-1">Service Name *</Label>
+              <Label htmlFor="serviceName" className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">Service Name *</Label>
               <Input
                 id="serviceName"
                 value={serviceData.service_name}
@@ -383,7 +383,7 @@ if (createdService?.service_id) {
             </div>
 
             <div>
-              <Label htmlFor="billingMethod" className="block text-sm font-medium text-gray-700 mb-1">Billing Method *</Label>
+              <Label htmlFor="billingMethod" className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">Billing Method *</Label>
               <CustomSelect
                 options={BILLING_METHOD_OPTIONS}
                 value={serviceData.billing_method}
@@ -394,7 +394,7 @@ if (createdService?.service_id) {
             </div>
 
             <div>
-              <Label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">Description</Label>
+              <Label htmlFor="description" className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">Description</Label>
               <Input
                 id="description"
                 value={serviceData.description || ''}
@@ -404,11 +404,11 @@ if (createdService?.service_id) {
             </div>
 
             {/* Multi-Currency Pricing Section */}
-            <div className="border rounded-lg p-4 bg-gray-50">
+            <div className="border rounded-lg p-4 bg-muted">
               <div className="flex justify-between items-center mb-3">
-                <label className="block text-sm font-medium text-gray-700">
+                <label className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
                   Pricing *
-                  <span className="text-xs font-normal text-gray-500 ml-2">
+                  <span className="text-xs font-normal text-muted-foreground ml-2">
                     ({serviceData.billing_method === 'fixed' ? 'Monthly' : serviceData.billing_method === 'hourly' ? 'Per Hour' : serviceData.billing_method === 'usage' ? 'Per Unit' : 'Rate'})
                   </span>
                 </label>
@@ -452,7 +452,7 @@ if (createdService?.service_id) {
                       />
                     </div>
                     <div className="relative flex-1">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
                         {getCurrencySymbol(price.currency_code)}
                       </span>
                       <Input
@@ -493,7 +493,7 @@ if (createdService?.service_id) {
                         type="button"
                         variant="ghost"
                         size="sm"
-                        className="text-red-500 hover:text-red-700 hover:bg-red-50 px-2"
+                        className="text-destructive hover:text-destructive hover:bg-destructive/10 px-2"
                         onClick={() => {
                           const newPrices = prices.filter((_, i) => i !== index);
                           const newInputs = priceInputs.filter((_, i) => i !== index);
@@ -507,7 +507,7 @@ if (createdService?.service_id) {
                   </div>
                 ))}
               </div>
-              <p className="text-xs text-gray-500 mt-2">
+              <p className="text-xs text-muted-foreground mt-2">
                 Add prices in multiple currencies. The first currency is the primary rate.
               </p>
             </div>
@@ -515,7 +515,7 @@ if (createdService?.service_id) {
             {/* Unit of Measure for usage-based services */}
             {serviceData.billing_method === 'usage' && (
               <div>
-                <Label htmlFor="unitOfMeasure" className="block text-sm font-medium text-gray-700 mb-1">Unit of Measure *</Label>
+                <Label htmlFor="unitOfMeasure" className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">Unit of Measure *</Label>
                 <Input
                   id="unitOfMeasure"
                   type="text"
@@ -528,7 +528,7 @@ if (createdService?.service_id) {
                   required
                   className={`${hasAttemptedSubmit && !serviceData.unit_of_measure ? 'border-red-500' : ''}`}
                 />
-                <p className="text-xs text-gray-500 mt-1">The measurable unit for billing (e.g., GB, API call, user)</p>
+                <p className="text-xs text-muted-foreground mt-1">The measurable unit for billing (e.g., GB, API call, user)</p>
               </div>
             )}
 
@@ -537,7 +537,7 @@ if (createdService?.service_id) {
 
             {/* Replaced Is Taxable Switch and Tax Region Select with Tax Rate Select */}
             <div>
-              <Label htmlFor="taxRate" className="block text-sm font-medium text-gray-700 mb-1">Tax Rate (Optional)</Label>
+              <Label htmlFor="taxRate" className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">Tax Rate (Optional)</Label>
               <CustomSelect
                   id="quick-add-service-tax-rate-select"
                   value={serviceData.tax_rate_id || ''} // Bind to tax_rate_id
@@ -570,7 +570,7 @@ if (createdService?.service_id) {
             {allServiceTypes.find(t => t.id === serviceData.custom_service_type_id)?.name === 'Hardware' && (
               <>
                 <div>
-                  <Label htmlFor="sku" className="block text-sm font-medium text-gray-700 mb-1">SKU</Label>
+                  <Label htmlFor="sku" className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">SKU</Label>
                   <Input
                     id="sku"
                     value={serviceData.sku || ''}
@@ -579,7 +579,7 @@ if (createdService?.service_id) {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="inventoryCount" className="block text-sm font-medium text-gray-700 mb-1">Inventory Count</Label>
+                  <Label htmlFor="inventoryCount" className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">Inventory Count</Label>
                   <Input
                     id="inventoryCount"
                     type="number"
@@ -595,7 +595,7 @@ if (createdService?.service_id) {
             {allServiceTypes.find(t => t.id === serviceData.custom_service_type_id)?.name === 'Software License' && (
               <>
                 <div>
-                  <Label htmlFor="seatLimit" className="block text-sm font-medium text-gray-700 mb-1">Seat Limit</Label>
+                  <Label htmlFor="seatLimit" className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">Seat Limit</Label>
                   <Input
                     id="seatLimit"
                     type="number"
@@ -605,7 +605,7 @@ if (createdService?.service_id) {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="licenseTerm" className="block text-sm font-medium text-gray-700 mb-1">License Term</Label>
+                  <Label htmlFor="licenseTerm" className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">License Term</Label>
                   <CustomSelect
                     options={LICENSE_TERM_OPTIONS}
                     value={serviceData.license_term || 'monthly'}

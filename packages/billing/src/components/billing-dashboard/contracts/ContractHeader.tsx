@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Badge } from '@alga-psa/ui/components/Badge';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { IContract } from '@alga-psa/types';
 import type { IContractSummary } from '@alga-psa/billing/actions/contractActions';
 import { Calendar, CalendarClock, FileCheck, Layers3, Coins } from 'lucide-react';
@@ -93,15 +94,15 @@ const ContractHeader: React.FC<ContractHeaderProps> = ({ contract, summary }) =>
   const hasSummary = Boolean(summary);
 
   return (
-    <div className="w-full rounded-md border border-gray-200 bg-white p-4 shadow-sm">
+    <div className="w-full rounded-md border border-[rgb(var(--color-border-200))] bg-card p-4 shadow-sm">
       <div className="flex flex-col gap-3">
         <div className="flex flex-wrap items-center gap-2">
-          <h1 className="text-2xl font-bold text-gray-900">{contract.contract_name}</h1>
-          <Badge className={
-            contract.status === 'active' ? 'bg-green-100 text-green-800' :
-            contract.status === 'terminated' ? 'bg-orange-100 text-orange-800' :
-            contract.status === 'expired' ? 'bg-red-100 text-red-800' :
-            'bg-gray-100 text-gray-800'
+          <h1 className="text-2xl font-bold text-foreground">{contract.contract_name}</h1>
+          <Badge variant={
+            contract.status === 'active' ? 'success' :
+            contract.status === 'terminated' ? 'warning' :
+            contract.status === 'expired' ? 'error' :
+            'default-muted'
           }>
             {contract.status === 'active' ? 'Active' :
              contract.status === 'terminated' ? 'Terminated' :
@@ -109,7 +110,7 @@ const ContractHeader: React.FC<ContractHeaderProps> = ({ contract, summary }) =>
              'Draft'}
           </Badge>
           {contract.is_template !== false && (
-            <Badge className="border border-blue-200 bg-blue-50 text-blue-800">
+            <Badge variant="info">
               Template
             </Badge>
           )}
@@ -118,32 +119,34 @@ const ContractHeader: React.FC<ContractHeaderProps> = ({ contract, summary }) =>
         <div className="flex flex-wrap items-center gap-3">
           {stats.map(({ label, value, icon: Icon }, index) => (
             <React.Fragment key={label}>
-              <span className="flex items-center gap-1.5 text-sm text-gray-600">
-                <Icon className="h-4 w-4 text-gray-400" />
-                <span className="text-gray-500">{label}:</span>
-                <span className="font-medium text-gray-900">{value}</span>
+              <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                <Icon className="h-4 w-4 text-muted-foreground" />
+                <span className="text-muted-foreground">{label}:</span>
+                <span className="font-medium text-foreground">{value}</span>
               </span>
-              {index < stats.length - 1 && <span className="text-gray-400">•</span>}
+              {index < stats.length - 1 && <span className="text-muted-foreground">•</span>}
             </React.Fragment>
           ))}
         </div>
 
         {contract.contract_description && (
-          <p className="text-sm text-gray-700">{contract.contract_description}</p>
+          <p className="text-sm text-[rgb(var(--color-text-700))]">{contract.contract_description}</p>
         )}
 
         {hasSummary && summary?.poRequiredCount ? (
-          <div className="flex flex-wrap items-center gap-2 rounded-md border border-orange-200 bg-orange-50 px-3 py-2 text-sm text-orange-800">
-            <FileCheck className="h-4 w-4" />
-            <span>
-              Purchase order required for this contract.
-            </span>
-            {summary.poNumbers.length > 0 && (
-              <span className="font-medium text-orange-900">
-                PO: {summary.poNumbers.join(', ')}
+          <Alert variant="warning">
+            <AlertDescription className="flex flex-wrap items-center gap-2">
+              <FileCheck className="h-4 w-4" />
+              <span>
+                Purchase order required for this contract.
               </span>
-            )}
-          </div>
+              {summary.poNumbers.length > 0 && (
+                <span className="font-medium">
+                  PO: {summary.poNumbers.join(', ')}
+                </span>
+              )}
+            </AlertDescription>
+          </Alert>
         ) : null}
       </div>
     </div>

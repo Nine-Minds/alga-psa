@@ -115,13 +115,13 @@ export function UsageBasedServicesStep({ data, updateData }: UsageBasedServicesS
     <div className="space-y-6">
       <div className="mb-6">
         <h3 className="text-lg font-semibold mb-2">Usage-Based Services</h3>
-        <p className="text-sm text-gray-600">
+        <p className="text-sm text-[rgb(var(--color-text-500))]">
           Configure services that are billed based on usage or consumption. Perfect for metered services like data transfer, API calls, or storage.
         </p>
       </div>
 
-      <div className="p-4 bg-amber-50 border border-amber-200 rounded-md mb-6">
-        <p className="text-sm text-amber-800">
+      <div className="p-4 bg-[rgb(var(--color-accent-50))] border border-[rgb(var(--color-accent-200))] rounded-md mb-6">
+        <p className="text-sm text-[rgb(var(--color-accent-800))]">
           <strong>What are Usage-Based Services?</strong> These services are billed based on actual consumption or usage metrics. Each unit consumed will be multiplied by the unit rate to calculate the invoice amount.
         </p>
       </div>
@@ -135,7 +135,7 @@ export function UsageBasedServicesStep({ data, updateData }: UsageBasedServicesS
         {(data.usage_services ?? []).map((service, index) => (
           <div
             key={index}
-            className="flex items-start gap-3 p-4 border border-gray-200 rounded-md bg-gray-50"
+            className="flex items-start gap-3 p-4 border border-[rgb(var(--color-border-200))] rounded-md bg-[rgb(var(--color-border-50))]"
           >
             <div className="flex-1 space-y-3">
               <div className="space-y-2">
@@ -160,7 +160,7 @@ export function UsageBasedServicesStep({ data, updateData }: UsageBasedServicesS
                     Rate per Unit
                   </Label>
                   <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[rgb(var(--color-text-400))]">
                       {currencySymbol}
                     </span>
                     <Input
@@ -191,7 +191,7 @@ export function UsageBasedServicesStep({ data, updateData }: UsageBasedServicesS
                       className="pl-10"
                     />
                   </div>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-[rgb(var(--color-text-400))]">
                     {service.unit_rate
                       ? `${formatCurrency(service.unit_rate)}/${service.unit_of_measure || 'unit'}`
                       : 'Enter the unit rate'}
@@ -209,7 +209,7 @@ export function UsageBasedServicesStep({ data, updateData }: UsageBasedServicesS
                     onChange={(event) => handleUnitChange(index, event.target.value)}
                     placeholder="e.g., GB, API call, user"
                   />
-                  <p className="text-xs text-gray-500">Choose the unit this service bills on.</p>
+                  <p className="text-xs text-[rgb(var(--color-text-400))]">Choose the unit this service bills on.</p>
                 </div>
               </div>
 
@@ -238,7 +238,7 @@ export function UsageBasedServicesStep({ data, updateData }: UsageBasedServicesS
               variant="ghost"
               size="sm"
               onClick={() => handleRemoveService(index)}
-              className="mt-8 text-red-600 hover:text-red-700 hover:bg-red-50"
+              className="mt-8 text-[rgb(var(--color-destructive))] hover:text-[rgb(var(--color-destructive))] hover:bg-[rgb(var(--color-destructive)/0.1)]"
             >
               <X className="h-4 w-4" />
             </Button>
@@ -258,8 +258,8 @@ export function UsageBasedServicesStep({ data, updateData }: UsageBasedServicesS
       </div>
 
       {(data.usage_services?.length ?? 0) === 0 && (
-        <div className="p-4 bg-gray-50 border border-gray-200 rounded-md">
-          <p className="text-sm text-gray-600 text-center">
+        <div className="p-4 bg-[rgb(var(--color-border-50))] border border-[rgb(var(--color-border-200))] rounded-md">
+          <p className="text-sm text-[rgb(var(--color-text-500))] text-center">
             No usage-based services added yet. Click “Add Usage-Based Service” above or “Skip” if
             you don’t need consumption billing.
           </p>

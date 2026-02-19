@@ -23,7 +23,7 @@ export const HoursProgressBar: React.FC<HoursProgressBarProps> = ({
       {label && (
         <div className="text-xs text-gray-600 dark:text-gray-400 mb-1">{label}</div>
       )}
-      <div className="relative w-full bg-blue-100 dark:bg-blue-950 rounded-full overflow-hidden" style={{ width: `${width}px`, height: `${height}px` }}>
+      <div className="relative w-full bg-info/15 rounded-full overflow-hidden" style={{ width: `${width}px`, height: `${height}px` }}>
         <div 
           className="absolute top-0 left-0 h-full bg-blue-500 rounded-full"
           style={{ width: `${Math.min(100, percentage)}%` }}

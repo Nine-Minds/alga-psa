@@ -615,16 +615,16 @@ const fetchContacts = async (): Promise<void> => {
               Create New {portalType === 'msp' ? 'MSP User' : 'Client Portal User'}
             </h3>
             {error && (
-              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
-                <p className="text-sm text-red-600">{error}</p>
-              </div>
+              <Alert variant="destructive" className="mb-4">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
             )}
             <div className="space-y-2">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Left column: manual details */}
                 <div className="space-y-2">
                   <div>
-                    <Label htmlFor="first-name">First Name <span className="text-red-500">*</span></Label>
+                    <Label htmlFor="first-name">First Name <span className="text-destructive">*</span></Label>
                     <Input
                       id="first-name"
                       value={newUser.firstName}
@@ -634,10 +634,10 @@ const fetchContacts = async (): Promise<void> => {
                       onBlur={() => {
                         validateField('first_name', newUser.firstName);
                       }}
-                      className={fieldErrors.first_name.length > 0 ? 'border-red-500' : ''}
+                      className={fieldErrors.first_name.length > 0 ? 'border-destructive' : ''}
                     />
                     {fieldErrors.first_name.length > 0 && (
-                      <div className="text-sm text-red-600 mt-1">
+                      <div className="text-sm text-destructive mt-1">
                         {fieldErrors.first_name.map((error, idx) => (
                           <p key={idx}>{error}</p>
                         ))}
@@ -645,7 +645,7 @@ const fetchContacts = async (): Promise<void> => {
                     )}
                   </div>
                   <div>
-                    <Label htmlFor="last-name">Last Name <span className="text-red-500">*</span></Label>
+                    <Label htmlFor="last-name">Last Name <span className="text-destructive">*</span></Label>
                     <Input
                       id="last-name"
                       value={newUser.lastName}
@@ -655,10 +655,10 @@ const fetchContacts = async (): Promise<void> => {
                       onBlur={() => {
                         validateField('last_name', newUser.lastName);
                       }}
-                      className={fieldErrors.last_name.length > 0 ? 'border-red-500' : ''}
+                      className={fieldErrors.last_name.length > 0 ? 'border-destructive' : ''}
                     />
                     {fieldErrors.last_name.length > 0 && (
-                      <div className="text-sm text-red-600 mt-1">
+                      <div className="text-sm text-destructive mt-1">
                         {fieldErrors.last_name.map((error, idx) => (
                           <p key={idx}>{error}</p>
                         ))}
@@ -666,7 +666,7 @@ const fetchContacts = async (): Promise<void> => {
                     )}
                   </div>
                   <div>
-                    <Label htmlFor="email">Email <span className="text-red-500">*</span></Label>
+                    <Label htmlFor="email">Email <span className="text-destructive">*</span></Label>
                     <Input
                       id="email"
                       type="email"
@@ -677,10 +677,10 @@ const fetchContacts = async (): Promise<void> => {
                       onBlur={() => {
                         validateField('email', newUser.email);
                       }}
-                      className={fieldErrors.email.length > 0 ? 'border-red-500' : ''}
+                      className={fieldErrors.email.length > 0 ? 'border-destructive' : ''}
                     />
                     {fieldErrors.email.length > 0 && (
-                      <div className="text-sm text-red-600 mt-1">
+                      <div className="text-sm text-destructive mt-1">
                         {fieldErrors.email.map((error, idx) => (
                           <p key={idx}>{error}</p>
                         ))}
@@ -762,7 +762,7 @@ const fetchContacts = async (): Promise<void> => {
                   )}
                   <div>
                     <Label htmlFor="password">
-                      Password {portalType === 'msp' && <span className="text-red-500">*</span>} {portalType === 'client' && <span className="text-sm text-gray-500">(Leave blank to send invitation)</span>}
+                      Password {portalType === 'msp' && <span className="text-destructive">*</span>} {portalType === 'client' && <span className="text-sm text-gray-500">(Leave blank to send invitation)</span>}
                     </Label>
                     <div className="relative">
                       <Input

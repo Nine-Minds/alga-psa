@@ -372,7 +372,7 @@ export function TemplateList({ templates, isLoading, onTemplatesChange, onRefres
                         {!template.isDefault && <DropdownMenuSeparator />}
                         <DropdownMenuItem
                           id={`survey-template-delete-${template.templateId}`}
-                          className="text-red-600 focus:bg-red-50 focus:text-red-700"
+                          className="text-destructive focus:bg-destructive/10 focus:text-destructive"
                           onSelect={() => handleDelete(template)}
                         >
                           {t('actions.delete', 'Delete')}

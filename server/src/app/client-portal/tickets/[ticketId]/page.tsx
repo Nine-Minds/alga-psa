@@ -3,6 +3,7 @@ import { getClientTicketDetails } from '@alga-psa/client-portal/actions';
 import { getTicketStatuses } from '@alga-psa/reference-data/actions';
 import { TicketDetailsContainer } from '@alga-psa/client-portal/components';
 import logger from '@alga-psa/core/logger';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 
 interface TicketPageProps {
   params: Promise<{
@@ -38,11 +39,11 @@ export default async function TicketPage({ params }: TicketPageProps) {
     });
 
     return (
-      <div id="ticket-error-message" className="p-4 bg-red-50 border border-red-200 rounded-lg">
-        <p className="text-red-700">
+      <Alert id="ticket-error-message" variant="destructive">
+        <AlertDescription>
           Error: {error instanceof Error ? error.message : 'Failed to load ticket details'}
-        </p>
-      </div>
+        </AlertDescription>
+      </Alert>
     );
   }
 }

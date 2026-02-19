@@ -22,8 +22,8 @@ export default function ProjectDetailsContainer({ project }: ProjectDetailsConta
 
   if (!project || !project.project_id) {
     return (
-      <div id="project-invalid-data" className="p-4 bg-red-50 border border-red-200 rounded-lg">
-        <p className="text-red-700">{t('invalidProjectData', 'Invalid project data')}</p>
+      <div id="project-invalid-data" className="p-4 bg-destructive/10 border border-destructive/30 rounded-lg">
+        <p className="text-destructive">{t('invalidProjectData', 'Invalid project data')}</p>
       </div>
     );
   }

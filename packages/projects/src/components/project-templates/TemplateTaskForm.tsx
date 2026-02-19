@@ -14,6 +14,7 @@ import { getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
 import { TaskTypeSelector } from '../TaskTypeSelector';
 import { ListChecks, Link2, Plus, Trash2, Ban, GitBranch } from 'lucide-react';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
+import { Badge } from '@alga-psa/ui/components/Badge';
 import {
   IProjectTemplateTask,
   IProjectTemplateStatusMapping,
@@ -374,7 +375,7 @@ export function TemplateTaskForm({
   const getDependencyTypeInfo = (type: DependencyType) => {
     switch (type) {
       case 'blocks':
-        return { icon: <Ban className="h-4 w-4 text-red-500" />, label: 'Blocks' };
+        return { icon: <Ban className="h-4 w-4 text-destructive" />, label: 'Blocks' };
       case 'blocked_by':
         return { icon: <Ban className="h-4 w-4 text-orange-500" />, label: 'Blocked by' };
       case 'related_to':
@@ -474,9 +475,9 @@ export function TemplateTaskForm({
                 placeholder="Enter task name"
                 autoFocus
                 disabled={isSubmitting}
-                className={error ? 'border-red-500' : ''}
+                className={error ? 'border-destructive' : ''}
               />
-              {error && <p className="text-sm text-red-600 mt-1">{error}</p>}
+              {error && <p className="text-sm text-destructive mt-1">{error}</p>}
             </div>
 
             {/* Description */}
@@ -704,7 +705,7 @@ export function TemplateTaskForm({
                             id={`checklist-item-${index}-remove`}
                             type="button"
                             onClick={() => removeChecklistItem(item.id)}
-                            className="text-red-500 flex-none"
+                            className="text-destructive flex-none"
                             onMouseDown={(e) => e.preventDefault()}
                           >
                             Remove
@@ -765,15 +766,15 @@ export function TemplateTaskForm({
                             <span className="text-sm text-gray-600">{typeInfo.label}</span>
                             <span className="text-sm font-medium">{dep.predecessorTaskName}</span>
                             {dep.isNew && (
-                              <span className="text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded">
+                              <Badge variant="success" size="sm">
                                 New
-                              </span>
+                              </Badge>
                             )}
                           </div>
                           <button
                             type="button"
                             onClick={() => removeDependency(dep)}
-                            className="text-red-500 hover:text-red-700 p-1"
+                            className="text-destructive hover:text-destructive p-1"
                             title="Remove dependency"
                           >
                             <Trash2 className="h-4 w-4" />

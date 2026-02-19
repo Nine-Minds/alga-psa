@@ -1173,7 +1173,7 @@ export default function TaskForm({
               }}
               placeholder="Enter task name..."
               className={`w-full text-2xl font-bold p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 ${
-                hasAttemptedSubmit && !taskName.trim() ? 'border-red-500' : 'border-gray-300'
+                hasAttemptedSubmit && !taskName.trim() ? 'border-destructive' : 'border-gray-300'
               }`}
               rows={1}
             />
@@ -1489,7 +1489,7 @@ export default function TaskForm({
                           <button
                             type="button"
                             onClick={() => removeChecklistItem(index)}
-                            className="text-red-500 flex-none"
+                            className="text-destructive flex-none"
                           >
                             Remove
                           </button>

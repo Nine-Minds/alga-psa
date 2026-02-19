@@ -198,7 +198,7 @@ function TaskCard({
                   }
                 >
                   <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded cursor-help ${
-                    (task.checklist_completed ?? 0) === task.checklist_total ? 'bg-green-500/10 text-green-600' : 'bg-[rgb(var(--color-border-50))] text-[rgb(var(--color-text-500))]'
+                    (task.checklist_completed ?? 0) === task.checklist_total ? 'bg-success/10 text-success' : 'bg-[rgb(var(--color-border-50))] text-[rgb(var(--color-text-500))]'
                   }`}>
                     <CheckSquare className="w-3 h-3" />
                     <span>{task.checklist_completed ?? 0}/{task.checklist_total}</span>
@@ -247,7 +247,7 @@ function TaskCard({
                   }
                 >
                   <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded ${
-                    hasBlockingDeps ? 'bg-red-500/10 text-red-500' : 'bg-blue-500/10 text-blue-500'
+                    hasBlockingDeps ? 'bg-destructive/10 text-destructive' : 'bg-primary/10 text-primary'
                   }`}>
                     {hasBlockingDeps ? <Ban className="w-3 h-3" /> : <GitBranch className="w-3 h-3" />}
                     <span>{dependencies!.predecessors.length + dependencies!.successors.length}</span>

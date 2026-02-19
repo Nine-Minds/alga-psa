@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { BucketOverlayInput, ContractWizardData } from '../ContractWizard';
 import { Card } from '@alga-psa/ui/components/Card';
 import { Badge } from '@alga-psa/ui/components/Badge';
@@ -108,35 +108,35 @@ export function ReviewContractStep({ data }: ReviewContractStepProps) {
     <div className="space-y-6">
       <div className="mb-6">
         <h3 className="text-lg font-semibold mb-2">Review Contract</h3>
-        <p className="text-sm text-gray-600">
+        <p className="text-sm text-[rgb(var(--color-text-500))]">
           Review all contract details before creating. You can still edit after creation if needed.
         </p>
       </div>
 
       <Card className="p-4">
         <div className="flex items-center gap-2 mb-3">
-          <FileText className="h-5 w-5 text-blue-600" />
+          <FileText className="h-5 w-5 text-[rgb(var(--color-secondary-500))]" />
           <h4 className="font-semibold">Contract Basics</h4>
         </div>
         <div className="space-y-2 text-sm">
           <div className="flex items-start gap-2">
-            <Building2 className="h-4 w-4 mt-0.5 text-gray-400" />
+            <Building2 className="h-4 w-4 mt-0.5 text-[rgb(var(--color-text-300))]" />
             <div>
-              <p className="text-gray-600">Client</p>
+              <p className="text-[rgb(var(--color-text-500))]">Client</p>
               <p className="font-medium">{clientName || 'Not selected'}</p>
             </div>
           </div>
           <div className="flex items-start gap-2">
-            <FileText className="h-4 w-4 mt-0.5 text-gray-400" />
+            <FileText className="h-4 w-4 mt-0.5 text-[rgb(var(--color-text-300))]" />
             <div>
-              <p className="text-gray-600">Contract Name</p>
+              <p className="text-[rgb(var(--color-text-500))]">Contract Name</p>
               <p className="font-medium">{data.contract_name || 'Not specified'}</p>
             </div>
           </div>
           <div className="flex items-start gap-2">
-            <Repeat className="h-4 w-4 mt-0.5 text-gray-400" />
+            <Repeat className="h-4 w-4 mt-0.5 text-[rgb(var(--color-text-300))]" />
             <div>
-              <p className="text-gray-600">Billing Frequency</p>
+              <p className="text-[rgb(var(--color-text-500))]">Billing Frequency</p>
               <p className="font-medium">
                 {BILLING_FREQUENCY_OPTIONS.find((opt) => opt.value === data.billing_frequency)?.label ||
                   data.billing_frequency ||
@@ -145,9 +145,9 @@ export function ReviewContractStep({ data }: ReviewContractStepProps) {
             </div>
           </div>
           <div className="flex items-start gap-2">
-            <Coins className="h-4 w-4 mt-0.5 text-gray-400" />
+            <Coins className="h-4 w-4 mt-0.5 text-[rgb(var(--color-text-300))]" />
             <div>
-              <p className="text-gray-600">Currency</p>
+              <p className="text-[rgb(var(--color-text-500))]">Currency</p>
               <p className="font-medium">
                 {CURRENCY_OPTIONS.find((opt) => opt.value === data.currency_code)?.label ||
                   data.currency_code ||
@@ -156,16 +156,16 @@ export function ReviewContractStep({ data }: ReviewContractStepProps) {
             </div>
           </div>
           <div className="flex items-start gap-2">
-            <Calendar className="h-4 w-4 mt-0.5 text-gray-400" />
+            <Calendar className="h-4 w-4 mt-0.5 text-[rgb(var(--color-text-300))]" />
             <div>
-              <p className="text-gray-600">Start Date</p>
+              <p className="text-[rgb(var(--color-text-500))]">Start Date</p>
               <p className="font-medium">{formatDate(data.start_date)}</p>
             </div>
           </div>
           <div className="flex items-start gap-2">
-            <Calendar className="h-4 w-4 mt-0.5 text-gray-400" />
+            <Calendar className="h-4 w-4 mt-0.5 text-[rgb(var(--color-text-300))]" />
             <div>
-              <p className="text-gray-600">End Date</p>
+              <p className="text-[rgb(var(--color-text-500))]">End Date</p>
               <p className="font-medium">{data.end_date ? formatDate(data.end_date) : 'Ongoing'}</p>
             </div>
           </div>
@@ -173,12 +173,12 @@ export function ReviewContractStep({ data }: ReviewContractStepProps) {
       </Card>
 
       {(data.po_required || data.po_number || data.po_amount) && (
-        <Card className="p-4 bg-amber-50 border border-amber-200">
+        <Card className="p-4 bg-[rgb(var(--color-accent-50))] border border-[rgb(var(--color-accent-200))]">
           <div className="flex items-center gap-2 mb-2">
-            <FileCheck className="h-5 w-5 text-amber-700" />
-            <h4 className="font-semibold text-amber-800">Purchase Order Requirements</h4>
+            <FileCheck className="h-5 w-5 text-[rgb(var(--color-accent-700))]" />
+            <h4 className="font-semibold text-[rgb(var(--color-accent-800))]">Purchase Order Requirements</h4>
           </div>
-          <div className="space-y-1 text-sm text-amber-800">
+          <div className="space-y-1 text-sm text-[rgb(var(--color-accent-800))]">
             <p>
               <strong>PO Required:</strong> {data.po_required ? 'Yes' : 'No'}
             </p>
@@ -200,16 +200,16 @@ export function ReviewContractStep({ data }: ReviewContractStepProps) {
         <Card className="p-4">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
-              <Package className="h-5 w-5 text-green-600" />
+              <Package className="h-5 w-5 text-[rgb(var(--color-status-success))]" />
               <h4 className="font-semibold">Fixed Fee Services</h4>
             </div>
-            <Badge variant="default" className="bg-green-100 text-green-800">
+            <Badge variant="default" className="bg-[rgb(var(--badge-success-bg))] text-[rgb(var(--badge-success-text))] border border-[rgb(var(--badge-success-border))]">
               {data.fixed_services.length} services
             </Badge>
           </div>
           <div className="space-y-2 text-sm">
             <div className="flex items-center gap-2">
-              <Coins className="h-4 w-4 text-gray-400" />
+              <Coins className="h-4 w-4 text-[rgb(var(--color-text-300))]" />
               <span className="font-medium">Monthly Base Rate:</span>
               <span>{formatCurrency(data.fixed_base_rate)}</span>
             </div>
@@ -220,7 +220,7 @@ export function ReviewContractStep({ data }: ReviewContractStepProps) {
                     {service.service_name || service.service_id} (Qty: {service.quantity})
                   </span>
                   {formatBucketSummary(service.bucket_overlay, 'hours') && (
-                    <p className="text-xs text-blue-700 pl-4">
+                    <p className="text-xs text-[rgb(var(--color-secondary-600))] pl-4">
                       Bucket: {formatBucketSummary(service.bucket_overlay, 'hours')}
                     </p>
                   )}
@@ -229,15 +229,15 @@ export function ReviewContractStep({ data }: ReviewContractStepProps) {
             </ul>
             <div className="pt-2 border-t space-y-1">
               <div className="flex items-center gap-2">
-                <CheckCircle2 className="h-4 w-4 text-green-600" />
-                <p className="text-gray-600">
+                <CheckCircle2 className="h-4 w-4 text-[rgb(var(--color-status-success))]" />
+                <p className="text-[rgb(var(--color-text-500))]">
                   Proration: {data.enable_proration ? 'Enabled' : 'Disabled'}
                 </p>
               </div>
               {data.fixed_billing_frequency && data.fixed_billing_frequency !== data.billing_frequency && (
                 <div className="flex items-center gap-2">
-                  <Repeat className="h-4 w-4 text-gray-400" />
-                  <p className="text-gray-600">
+                  <Repeat className="h-4 w-4 text-[rgb(var(--color-text-300))]" />
+                  <p className="text-[rgb(var(--color-text-500))]">
                     <strong>Billing Frequency Override:</strong> {BILLING_FREQUENCY_DISPLAY[data.fixed_billing_frequency] || data.fixed_billing_frequency}
                   </p>
                 </div>
@@ -251,10 +251,10 @@ export function ReviewContractStep({ data }: ReviewContractStepProps) {
         <Card className="p-4">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
-              <Package className="h-5 w-5 text-purple-600" />
+              <Package className="h-5 w-5 text-[rgb(var(--color-primary-500))]" />
               <h4 className="font-semibold">Products</h4>
             </div>
-            <Badge variant="default" className="bg-purple-100 text-purple-800">
+            <Badge variant="default" className="bg-[rgb(var(--color-primary-100))] text-[rgb(var(--color-primary-800))]">
               {data.product_services.length} products
             </Badge>
           </div>
@@ -280,16 +280,16 @@ export function ReviewContractStep({ data }: ReviewContractStepProps) {
         <Card className="p-4">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
-              <Clock className="h-5 w-5 text-purple-600" />
+              <Clock className="h-5 w-5 text-[rgb(var(--color-primary-500))]" />
               <h4 className="font-semibold">Hourly Services</h4>
             </div>
-            <Badge variant="default" className="bg-purple-100 text-purple-800">
+            <Badge variant="default" className="bg-[rgb(var(--color-primary-100))] text-[rgb(var(--color-primary-800))]">
               {data.hourly_services.length} services
             </Badge>
           </div>
           <div className="space-y-2 text-sm">
             <div>
-              <p className="text-gray-600 mb-1">Services & Rates</p>
+              <p className="text-[rgb(var(--color-text-500))] mb-1">Services & Rates</p>
               <ul className="list-disc list-inside space-y-1 ml-2">
                 {data.hourly_services.map((service, idx) => (
                   <li key={idx} className="space-y-1">
@@ -298,7 +298,7 @@ export function ReviewContractStep({ data }: ReviewContractStepProps) {
                       {formatCurrency(service.hourly_rate)}/hour
                     </span>
                     {formatBucketSummary(service.bucket_overlay, 'hours') && (
-                      <p className="text-xs text-blue-700 pl-4">
+                      <p className="text-xs text-[rgb(var(--color-secondary-600))] pl-4">
                         Bucket: {formatBucketSummary(service.bucket_overlay, 'hours')}
                       </p>
                     )}
@@ -309,19 +309,19 @@ export function ReviewContractStep({ data }: ReviewContractStepProps) {
             {(data.minimum_billable_time || data.round_up_to_nearest || (data.hourly_billing_frequency && data.hourly_billing_frequency !== data.billing_frequency)) && (
               <div className="pt-2 border-t space-y-1">
                 {data.minimum_billable_time && (
-                  <p className="text-gray-600">
+                  <p className="text-[rgb(var(--color-text-500))]">
                     <strong>Minimum Time:</strong> {data.minimum_billable_time} minutes
                   </p>
                 )}
                 {data.round_up_to_nearest && (
-                  <p className="text-gray-600">
+                  <p className="text-[rgb(var(--color-text-500))]">
                     <strong>Round Up:</strong> {data.round_up_to_nearest} minutes
                   </p>
                 )}
                 {data.hourly_billing_frequency && data.hourly_billing_frequency !== data.billing_frequency && (
                   <div className="flex items-center gap-2">
-                    <Repeat className="h-4 w-4 text-gray-400" />
-                    <p className="text-gray-600">
+                    <Repeat className="h-4 w-4 text-[rgb(var(--color-text-300))]" />
+                    <p className="text-[rgb(var(--color-text-500))]">
                       <strong>Billing Frequency Override:</strong> {BILLING_FREQUENCY_DISPLAY[data.hourly_billing_frequency] || data.hourly_billing_frequency}
                     </p>
                   </div>
@@ -336,10 +336,10 @@ export function ReviewContractStep({ data }: ReviewContractStepProps) {
         <Card className="p-4">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
-              <Activity className="h-5 w-5 text-indigo-600" />
+              <Activity className="h-5 w-5 text-[rgb(var(--badge-info-text))]" />
               <h4 className="font-semibold">Usage-Based Services</h4>
             </div>
-            <Badge variant="default" className="bg-indigo-100 text-indigo-800">
+            <Badge variant="default" className="bg-[rgb(var(--badge-info-bg))] text-[rgb(var(--badge-info-text))] border border-[rgb(var(--badge-info-border))]">
               {data.usage_services?.length ?? 0} services
             </Badge>
           </div>
@@ -352,7 +352,7 @@ export function ReviewContractStep({ data }: ReviewContractStepProps) {
                     {formatCurrency(service.unit_rate)}/{service.unit_of_measure || 'unit'}
                   </span>
                   {formatBucketSummary(service.bucket_overlay, 'usage', service.unit_of_measure) && (
-                    <p className="text-xs text-blue-700 pl-4">
+                    <p className="text-xs text-[rgb(var(--color-secondary-600))] pl-4">
                       Bucket: {formatBucketSummary(service.bucket_overlay, 'usage', service.unit_of_measure)}
                     </p>
                   )}
@@ -362,8 +362,8 @@ export function ReviewContractStep({ data }: ReviewContractStepProps) {
             {data.usage_billing_frequency && data.usage_billing_frequency !== data.billing_frequency && (
               <div className="pt-2 border-t">
                 <div className="flex items-center gap-2">
-                  <Repeat className="h-4 w-4 text-gray-400" />
-                  <p className="text-gray-600">
+                  <Repeat className="h-4 w-4 text-[rgb(var(--color-text-300))]" />
+                  <p className="text-[rgb(var(--color-text-500))]">
                     <strong>Billing Frequency Override:</strong> {BILLING_FREQUENCY_DISPLAY[data.usage_billing_frequency] || data.usage_billing_frequency}
                   </p>
                 </div>
@@ -373,26 +373,26 @@ export function ReviewContractStep({ data }: ReviewContractStepProps) {
         </Card>
       )}
 
-      <Card className="p-4 bg-gradient-to-r from-blue-50 to-purple-50 border-2 border-blue-200">
+      <Card className="p-4 bg-gradient-to-r from-[rgb(var(--color-secondary-50))] to-[rgb(var(--color-primary-50))] border-2 border-[rgb(var(--color-secondary-200))]">
         <div className="flex items-center justify-between">
           <div>
             <h4 className="font-semibold text-lg mb-1">Estimated Monthly Total</h4>
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-[rgb(var(--color-text-500))]">
               Fixed charges only. Hourly and usage services bill separately based on actual usage.
             </p>
           </div>
           <div className="text-right">
-            <p className="text-3xl font-bold text-blue-900">{formatCurrency(calculateTotalMonthly())}</p>
-            <p className="text-xs text-gray-600">per month</p>
+            <p className="text-3xl font-bold text-[rgb(var(--color-primary-800))]">{formatCurrency(calculateTotalMonthly())}</p>
+            <p className="text-xs text-[rgb(var(--color-text-500))]">per month</p>
           </div>
         </div>
       </Card>
 
-      <div className="p-4 bg-amber-50 border border-amber-200 rounded-md">
-        <p className="text-sm text-amber-800">
+      <div className="p-4 bg-[rgb(var(--color-accent-50))] border border-[rgb(var(--color-accent-200))] rounded-md">
+        <p className="text-sm text-[rgb(var(--color-accent-800))]">
           <strong>Before you finish:</strong>
         </p>
-        <ul className="text-sm text-amber-800 list-disc list-inside space-y-1 mt-2 ml-2">
+        <ul className="text-sm text-[rgb(var(--color-accent-800))] list-disc list-inside space-y-1 mt-2 ml-2">
           <li>Double-check all rates, quantities, and buckets</li>
           <li>Confirm PO requirements (if any)</li>
           <li>Verify the start and end dates</li>

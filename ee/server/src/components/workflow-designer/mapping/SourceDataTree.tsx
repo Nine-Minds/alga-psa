@@ -327,7 +327,7 @@ const TreeNode: React.FC<{
 
         {/* Required indicator */}
         {field.required && (
-          <span className="text-red-500 text-xs">*</span>
+          <span className="text-destructive text-xs">*</span>
         )}
 
         {/* Nullable indicator */}
@@ -338,7 +338,7 @@ const TreeNode: React.FC<{
         {/* Pin button */}
         <button
           onClick={handlePin}
-          className={`p-0.5 rounded opacity-0 group-hover:opacity-100 ${isPinned ? 'opacity-100 text-yellow-600' : 'text-gray-400 hover:text-gray-600'}`}
+          className={`p-0.5 rounded opacity-0 group-hover:opacity-100 ${isPinned ? 'opacity-100 text-warning' : 'text-gray-400 hover:text-gray-600'}`}
           title={isPinned ? 'Unpin' : 'Pin'}
         >
           {isPinned ? <Pin className="w-3 h-3" /> : <PinOff className="w-3 h-3" />}
@@ -500,8 +500,8 @@ export const SourceDataTree: React.FC<SourceDataTreeProps> = ({
       >
         {/* Pinned fields */}
         {pinnedFields.length > 0 && (
-          <div className="p-2 border-b border-gray-200 bg-yellow-50">
-            <div className="flex items-center gap-2 mb-2 text-xs font-medium text-yellow-800">
+          <div className="p-2 border-b border-warning/30 bg-warning/10">
+            <div className="flex items-center gap-2 mb-2 text-xs font-medium text-warning-foreground">
               <Pin className="w-3.5 h-3.5" />
               Pinned Fields
             </div>
@@ -511,7 +511,7 @@ export const SourceDataTree: React.FC<SourceDataTreeProps> = ({
                 onClick={() => !disabled && onSelectField(field.path)}
                 className={`
                   flex items-center gap-2 py-1 px-2 rounded cursor-pointer text-sm
-                  ${selectedPath === field.path ? 'bg-yellow-200' : 'hover:bg-yellow-100'}
+                  ${selectedPath === field.path ? 'bg-warning/20' : 'hover:bg-warning/10'}
                   ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
                 `}
               >
@@ -519,7 +519,7 @@ export const SourceDataTree: React.FC<SourceDataTreeProps> = ({
                 <span className="truncate">{field.path}</span>
                 <button
                   onClick={(e) => { e.stopPropagation(); togglePin(field.path); }}
-                  className="ml-auto text-yellow-600 hover:text-yellow-800"
+                  className="ml-auto text-warning hover:text-warning"
                 >
                   <Pin className="w-3 h-3" />
                 </button>
@@ -581,7 +581,7 @@ export const SourceDataTree: React.FC<SourceDataTreeProps> = ({
                   context.vars.map(stepVar => {
                     const stepVarPath = `vars.${stepVar.saveAs}`;
                     return (
-                      <div key={stepVar.stepId} className="border-l-2 border-green-200 ml-2">
+                      <div key={stepVar.stepId} className="border-l-2 border-success/30 ml-2">
                         <div
                           ref={(el) => {
                             onRegisterRef?.(stepVarPath, el);
@@ -607,7 +607,7 @@ export const SourceDataTree: React.FC<SourceDataTreeProps> = ({
                           }}
                           className={`
                             flex items-center gap-2 py-1 px-2 rounded cursor-pointer group
-                            ${selectedPath === stepVarPath ? 'bg-green-100' : 'hover:bg-gray-50'}
+                            ${selectedPath === stepVarPath ? 'bg-success/15' : 'hover:bg-muted'}
                             ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
                             ${!disabled ? 'cursor-grab active:cursor-grabbing' : ''}
                           `}
@@ -680,7 +680,7 @@ export const SourceDataTree: React.FC<SourceDataTreeProps> = ({
                     <span className="text-sm font-medium text-gray-800">
                       {context.forEach.indexVar}
                     </span>
-                    <Badge className="text-xs bg-blue-100 text-blue-700">loop index</Badge>
+                    <Badge variant="info" className="text-xs">loop index</Badge>
                   </div>
                 </div>
               )}

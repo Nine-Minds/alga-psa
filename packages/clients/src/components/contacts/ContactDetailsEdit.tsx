@@ -12,6 +12,7 @@ import { ClientPicker } from '../clients/ClientPicker';
 import { TagManager } from '@alga-psa/tags/components';
 import { useTags } from '@alga-psa/tags/context';
 import { ArrowLeft } from 'lucide-react';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { useAutomationIdAndRegister } from '@alga-psa/ui/ui-reflection/useAutomationIdAndRegister';
@@ -123,9 +124,9 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
     <ReflectionContainer id={id} label={`Edit Contact - ${contact.full_name}`}>
       <div className="p-6 bg-white shadow rounded-lg">
         {error && (
-          <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-md">
-            <p className="text-red-800">{error}</p>
-          </div>
+          <Alert variant="destructive" className="mb-4">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
         )}
         <div className="flex justify-between items-center mb-4">
           <Heading size="6">Edit Contact: {contact.full_name}</Heading>
