@@ -2,6 +2,7 @@ import { useState, FormEvent, useEffect, useMemo } from 'react';
 import { withTheme } from '@rjsf/core';
 import validator from '@rjsf/validator-ajv8';
 import { RJSFSchema, UiSchema, ValidatorType } from '@rjsf/utils';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { customWidgets } from '@alga-psa/workflows/forms/customWidgets';
 // import { CustomFieldTemplate } from '../../lib/workflow/forms/customFieldTemplate'; // Removed
 // import { CustomTitleField } from '../../lib/workflow/forms/CustomTitleField'; // Removed
@@ -172,9 +173,9 @@ console.log('[DynamicForm] Received contextData:', contextData);
   return (
     <div>
       {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-          {error}
-        </div>
+        <Alert variant="destructive" className="mb-4">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
       )}
       
       <ThemedForm

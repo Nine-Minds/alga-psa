@@ -223,7 +223,7 @@ export function TemplatePhasesStep({
 
                       <div>
                         {!phase.phase_name.trim() && saveAttempted.has(phase.temp_id) && (
-                          <p className="text-sm text-red-600 mb-2">
+                          <p className="text-sm text-destructive mb-2">
                             Phase name is required
                           </p>
                         )}
@@ -301,7 +301,7 @@ export function TemplatePhasesStep({
                               size="sm"
                               onClick={() => removePhase(phase.temp_id)}
                             >
-                              <Trash2 className="w-4 h-4 text-red-600" />
+                              <Trash2 className="w-4 h-4 text-destructive" />
                             </Button>
                           </div>
                         </div>
@@ -339,10 +339,10 @@ export function TemplatePhasesStep({
 
       {/* Recalculate offsets hint - shown after reordering */}
       {showRecalculateHint && data.phases.length > 1 && (
-        <div className="flex items-center justify-between bg-amber-50 border border-amber-200 rounded-lg p-3">
-          <p className="text-sm text-amber-800">
+        <Alert variant="warning" className="flex items-center justify-between">
+          <AlertDescription>
             Phases reordered. Would you like to recalculate offsets based on phase order and durations?
-          </p>
+          </AlertDescription>
           <div className="flex gap-2">
             <Button
               id="recalculate-offsets"
@@ -362,7 +362,7 @@ export function TemplatePhasesStep({
               <X className="w-4 h-4" />
             </Button>
           </div>
-        </div>
+        </Alert>
       )}
 
       {/* Always show recalculate button when there are multiple phases */}

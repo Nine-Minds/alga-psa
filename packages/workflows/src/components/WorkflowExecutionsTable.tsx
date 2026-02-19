@@ -174,7 +174,7 @@ export default function WorkflowExecutionsTable({
             {(record.status === 'active' || record.status === 'paused') && (
               <DropdownMenuItem
                 id="cancel-workflow-menu-item"
-                className="text-red-600 focus:text-red-600"
+                className="text-destructive focus:text-destructive"
                 onClick={async (e) => {
                   e.stopPropagation();
                   await cancelWorkflowExecutionAction(executionId);

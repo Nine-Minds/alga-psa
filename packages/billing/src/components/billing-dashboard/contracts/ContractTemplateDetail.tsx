@@ -557,7 +557,7 @@ const ContractTemplateDetail: React.FC = () => {
     return (
       <div className="p-6">
         <LoadingIndicator
-          className="py-12 text-gray-600"
+          className="py-12 text-muted-foreground"
           layout="stacked"
           spinnerProps={{ size: 'md' }}
           text="Loading template..."
@@ -602,15 +602,15 @@ const ContractTemplateDetail: React.FC = () => {
               Back to Templates
             </Button>
             <Badge
-              className={(() => {
+              variant={(() => {
                 const normalized = contract.status?.toLowerCase() ?? 'draft';
-                const map: Record<string, string> = {
-                  active: 'bg-green-100 text-green-800',
-                  draft: 'bg-gray-100 text-gray-800',
-                  terminated: 'bg-orange-100 text-orange-800',
-                  expired: 'bg-red-100 text-red-800',
-                  published: 'bg-green-100 text-green-800',
-                  archived: 'bg-gray-200 text-gray-700',
+                const map: Record<string, 'success' | 'default-muted' | 'warning' | 'error'> = {
+                  active: 'success',
+                  draft: 'default-muted',
+                  terminated: 'warning',
+                  expired: 'error',
+                  published: 'success',
+                  archived: 'default-muted',
                 };
                 return map[normalized] ?? map.draft;
               })()}
@@ -620,7 +620,7 @@ const ContractTemplateDetail: React.FC = () => {
             <Badge variant="secondary">Template</Badge>
           </div>
           <div className="flex flex-wrap items-center gap-3">
-            <Heading as="h2" size="7" className="text-gray-900">
+            <Heading as="h2" size="7" className="text-[rgb(var(--color-text-900))]">
               {contract.contract_name}
             </Heading>
             <Button
@@ -642,14 +642,14 @@ const ContractTemplateDetail: React.FC = () => {
             </Button>
           </div>
           {contract.contract_description && (
-            <p className="text-sm text-gray-700 max-w-2xl">{contract.contract_description}</p>
+            <p className="text-sm text-[rgb(var(--color-text-700))] max-w-2xl">{contract.contract_description}</p>
           )}
         </div>
 
         {isEditingBasics && (
           <Card>
             <CardHeader>
-              <CardTitle className="text-base font-semibold text-gray-800">Edit Template Basics</CardTitle>
+              <CardTitle className="text-base font-semibold text-[rgb(var(--color-text-800))]">Edit Template Basics</CardTitle>
             </CardHeader>
             <CardContent>
               {basicsError && (
@@ -743,7 +743,7 @@ const ContractTemplateDetail: React.FC = () => {
         {isEditingGuidance && (
           <Card>
             <CardHeader>
-              <CardTitle className="text-base font-semibold text-gray-800">Edit Template Guidance</CardTitle>
+              <CardTitle className="text-base font-semibold text-[rgb(var(--color-text-800))]">Edit Template Guidance</CardTitle>
             </CardHeader>
             <CardContent>
               {guidanceError && (
@@ -795,7 +795,7 @@ const ContractTemplateDetail: React.FC = () => {
                     }
                     placeholder="Comma separated (e.g., onboarding, finance)"
                   />
-                  <p className="text-xs text-gray-500">Tags help teams find relevant templates quickly.</p>
+                  <p className="text-xs text-muted-foreground">Tags help teams find relevant templates quickly.</p>
                 </div>
 
                 <div className="flex justify-end gap-2 pt-2">
@@ -825,9 +825,9 @@ const ContractTemplateDetail: React.FC = () => {
         <section className="grid gap-4 md:grid-cols-3">
           <Card>
             <CardHeader>
-              <CardTitle className="text-sm font-semibold text-gray-700">Template Snapshot</CardTitle>
+              <CardTitle className="text-sm font-semibold text-[rgb(var(--color-text-700))]">Template Snapshot</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3 text-sm text-gray-700">
+            <CardContent className="space-y-3 text-sm text-[rgb(var(--color-text-700))]">
               <div className="flex items-center justify-between">
                 <span>Billing Frequency</span>
                 <span className="font-medium">{humanize(contract.billing_frequency)}</span>
@@ -857,9 +857,9 @@ const ContractTemplateDetail: React.FC = () => {
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-sm font-semibold text-gray-700">Client Assignments</CardTitle>
+              <CardTitle className="text-sm font-semibold text-[rgb(var(--color-text-700))]">Client Assignments</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4 text-sm text-gray-700">
+            <CardContent className="space-y-4 text-sm text-[rgb(var(--color-text-700))]">
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <span>Total Assignments</span>
@@ -870,8 +870,8 @@ const ContractTemplateDetail: React.FC = () => {
                   <span className="font-medium">{summary?.activeClientCount ?? assignments.filter((assignment) => assignment.is_active).length}</span>
                 </div>
                 <div className="space-y-1">
-                  <span className="text-xs uppercase tracking-wide text-gray-500">Purchase Orders</span>
-                  <p className="text-sm text-gray-800">
+                  <span className="text-xs uppercase tracking-wide text-muted-foreground">Purchase Orders</span>
+                  <p className="text-sm text-[rgb(var(--color-text-800))]">
                     {summary?.poRequiredCount || assignments.some((assignment) => assignment.po_required)
                       ? `${summary?.poRequiredCount ?? assignments.filter((assignment) => assignment.po_required).length} assignments require PO`
                       : 'No PO requirements captured.'}
@@ -879,13 +879,13 @@ const ContractTemplateDetail: React.FC = () => {
                 </div>
               </div>
 
-              <div className="border-t border-gray-100 pt-3">
+              <div className="border-t border-[rgb(var(--color-border-100))] pt-3">
                 {assignments.length === 0 ? (
-                  <p className="text-sm text-gray-500">
+                  <p className="text-sm text-muted-foreground">
                     No client contracts are currently using this template.
                   </p>
                 ) : (
-                  <p className="text-sm text-gray-600">
+                  <p className="text-sm text-muted-foreground">
                     Review the full assignment list in the details section below.
                   </p>
                 )}
@@ -895,7 +895,7 @@ const ContractTemplateDetail: React.FC = () => {
 
           <Card>
             <CardHeader className="flex items-center justify-between gap-2">
-              <CardTitle className="text-sm font-semibold text-gray-700">Template Guidance</CardTitle>
+              <CardTitle className="text-sm font-semibold text-[rgb(var(--color-text-700))]">Template Guidance</CardTitle>
               <Button
                 id="toggle-guidance-editor"
                 size="sm"
@@ -914,25 +914,25 @@ const ContractTemplateDetail: React.FC = () => {
                 {isEditingGuidance ? 'Close' : 'Edit'}
               </Button>
             </CardHeader>
-            <CardContent className="space-y-3 text-sm text-gray-700">
+            <CardContent className="space-y-3 text-sm text-[rgb(var(--color-text-700))]">
               <div>
-                <span className="text-xs uppercase tracking-wide text-gray-500">Usage Notes</span>
-                <p className={usageNotes ? 'text-gray-800' : 'text-gray-500 italic'}>
+                <span className="text-xs uppercase tracking-wide text-muted-foreground">Usage Notes</span>
+                <p className={usageNotes ? 'text-[rgb(var(--color-text-800))]' : 'text-muted-foreground italic'}>
                   {usageNotes || 'Add guidance to help others understand how to use this template.'}
                 </p>
               </div>
               <div>
-                <span className="text-xs uppercase tracking-wide text-gray-500">Recommended Cadence</span>
-                <p className={recommendedCadence ? 'text-gray-800' : 'text-gray-500 italic'}>
+                <span className="text-xs uppercase tracking-wide text-muted-foreground">Recommended Cadence</span>
+                <p className={recommendedCadence ? 'text-[rgb(var(--color-text-800))]' : 'text-muted-foreground italic'}>
                   {recommendedCadence || 'No recommended cadence provided.'}
                 </p>
               </div>
               {templateTags.length > 0 && (
                 <div>
-                  <span className="text-xs uppercase tracking-wide text-gray-500">Tags</span>
+                  <span className="text-xs uppercase tracking-wide text-muted-foreground">Tags</span>
                   <div className="flex flex-wrap gap-2 mt-1">
                     {templateTags.map((tag) => (
-                      <Badge key={tag} className="border border-gray-200 bg-gray-50 text-gray-700">
+                      <Badge key={tag} variant="default-muted">
                         {tag}
                       </Badge>
                     ))}
@@ -946,43 +946,43 @@ const ContractTemplateDetail: React.FC = () => {
 
       <Card className="mt-4">
         <CardHeader>
-          <CardTitle className="text-base font-semibold text-gray-800">Assignment Details</CardTitle>
+          <CardTitle className="text-base font-semibold text-[rgb(var(--color-text-800))]">Assignment Details</CardTitle>
         </CardHeader>
         <CardContent>
           {assignments.length === 0 ? (
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-muted-foreground">
               When client contracts adopt this template they will be listed here with purchase order context.
             </p>
           ) : (
-            <div className="rounded-md border border-gray-200">
+            <div className="rounded-md border border-[rgb(var(--color-border-200))]">
               <div className="max-h-96 overflow-y-auto">
-                <table className="min-w-full divide-y divide-gray-200 text-sm">
-                  <thead className="bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
+                <table className="min-w-full divide-y divide-[rgb(var(--color-border-200))] text-sm">
+                  <thead className="bg-muted text-xs uppercase tracking-wide text-muted-foreground">
                     <tr>
-                      <th scope="col" className="sticky top-0 z-10 bg-gray-50 px-4 py-2 text-left font-medium">
+                      <th scope="col" className="sticky top-0 z-10 bg-muted px-4 py-2 text-left font-medium">
                         Client
                       </th>
-                      <th scope="col" className="sticky top-0 z-10 bg-gray-50 px-4 py-2 text-left font-medium">
+                      <th scope="col" className="sticky top-0 z-10 bg-muted px-4 py-2 text-left font-medium">
                         Status
                       </th>
-                      <th scope="col" className="sticky top-0 z-10 bg-gray-50 px-4 py-2 text-left font-medium">
+                      <th scope="col" className="sticky top-0 z-10 bg-muted px-4 py-2 text-left font-medium">
                         Start
                       </th>
-                      <th scope="col" className="sticky top-0 z-10 bg-gray-50 px-4 py-2 text-left font-medium">
+                      <th scope="col" className="sticky top-0 z-10 bg-muted px-4 py-2 text-left font-medium">
                         End
                       </th>
-                      <th scope="col" className="sticky top-0 z-10 bg-gray-50 px-4 py-2 text-left font-medium">
+                      <th scope="col" className="sticky top-0 z-10 bg-muted px-4 py-2 text-left font-medium">
                         PO Required
                       </th>
-                      <th scope="col" className="sticky top-0 z-10 bg-gray-50 px-4 py-2 text-left font-medium">
+                      <th scope="col" className="sticky top-0 z-10 bg-muted px-4 py-2 text-left font-medium">
                         PO Number
                       </th>
-                      <th scope="col" className="sticky top-0 z-10 bg-gray-50 px-4 py-2 text-right font-medium">
+                      <th scope="col" className="sticky top-0 z-10 bg-muted px-4 py-2 text-right font-medium">
                         PO Amount
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-100">
+                  <tbody className="divide-y divide-[rgb(var(--color-border-100))]">
 	                    {assignments.map((assignment) => {
 	                      const currencyCode = contract?.currency_code ?? 'USD';
 	                      const poAmount =
@@ -991,41 +991,41 @@ const ContractTemplateDetail: React.FC = () => {
 	                          : '—';
 
 	                      return (
-                        <tr key={assignment.client_contract_id} className="bg-white hover:bg-gray-50">
+                        <tr key={assignment.client_contract_id} className="bg-card hover:bg-muted">
                           <td className="whitespace-nowrap px-4 py-3">
                             <div className="flex flex-col">
-                              <span className="font-medium text-gray-900">
+                              <span className="font-medium text-[rgb(var(--color-text-900))]">
                                 {assignment.client_name || assignment.client_id}
                               </span>
-                              <span className="text-xs text-gray-500">
+                              <span className="text-xs text-muted-foreground">
                                 Contract ID: {assignment.client_contract_id}
                               </span>
                             </div>
                           </td>
                           <td className="px-4 py-3">
                             <Badge
-                              className={
+                              variant={
                                 assignment.is_active
-                                  ? 'bg-green-100 text-green-800'
-                                  : 'bg-gray-100 text-gray-700'
+                                  ? 'success'
+                                  : 'default-muted'
                               }
                             >
                               {assignment.is_active ? 'Active' : 'Inactive'}
                             </Badge>
                           </td>
-                          <td className="whitespace-nowrap px-4 py-3 text-gray-900">
+                          <td className="whitespace-nowrap px-4 py-3 text-[rgb(var(--color-text-900))]">
                             {assignment.start_date ? formatDate(assignment.start_date) : '—'}
                           </td>
-                          <td className="whitespace-nowrap px-4 py-3 text-gray-900">
+                          <td className="whitespace-nowrap px-4 py-3 text-[rgb(var(--color-text-900))]">
                             {assignment.end_date ? formatDate(assignment.end_date) : 'Ongoing'}
                           </td>
-                          <td className="whitespace-nowrap px-4 py-3 text-gray-900">
+                          <td className="whitespace-nowrap px-4 py-3 text-[rgb(var(--color-text-900))]">
                             {assignment.po_required ? 'Yes' : 'No'}
                           </td>
-                          <td className="px-4 py-3 text-gray-900">
+                          <td className="px-4 py-3 text-[rgb(var(--color-text-900))]">
                             {assignment.po_required ? assignment.po_number || '—' : 'Not required'}
                           </td>
-                          <td className="whitespace-nowrap px-4 py-3 text-right text-gray-900">
+                          <td className="whitespace-nowrap px-4 py-3 text-right text-[rgb(var(--color-text-900))]">
                             {poAmount}
                           </td>
                         </tr>
@@ -1042,16 +1042,16 @@ const ContractTemplateDetail: React.FC = () => {
       {recommendedServices.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base font-semibold text-gray-800 flex items-center gap-2">
+            <CardTitle className="text-base font-semibold text-[rgb(var(--color-text-800))] flex items-center gap-2">
               <ListChecks className="h-4 w-4 text-purple-600" />
               Recommended Services
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             {recommendedServices.map((service, index) => (
-              <div key={`${service.service_id ?? index}`} className="border border-gray-200 rounded-md p-3">
-                <p className="font-medium text-gray-900">{service.service_name || service.service_id || 'Unnamed Service'}</p>
-                {service.notes && <p className="text-sm text-gray-600 mt-1">{service.notes}</p>}
+              <div key={`${service.service_id ?? index}`} className="border border-[rgb(var(--color-border-200))] rounded-md p-3">
+                <p className="font-medium text-[rgb(var(--color-text-900))]">{service.service_name || service.service_id || 'Unnamed Service'}</p>
+                {service.notes && <p className="text-sm text-muted-foreground mt-1">{service.notes}</p>}
               </div>
             ))}
           </CardContent>
@@ -1075,7 +1075,7 @@ const ContractTemplateDetail: React.FC = () => {
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <Layers3 className="h-4 w-4 text-blue-600" />
-            <Heading as="h3" size="5" className="text-gray-900">
+            <Heading as="h3" size="5" className="text-[rgb(var(--color-text-900))]">
               Template Composition
             </Heading>
           </div>
@@ -1112,7 +1112,7 @@ const ContractTemplateDetail: React.FC = () => {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-sm text-gray-500">
+                    <p className="text-sm text-muted-foreground">
                       No {type === 'Fixed' ? 'fixed fee' : type === 'Hourly' ? 'hourly' : 'usage-based'} contract lines configured yet.
                     </p>
                   </CardContent>
@@ -1129,11 +1129,11 @@ const ContractTemplateDetail: React.FC = () => {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {lines.map((line) => (
-                    <div key={line.contract_line_id} className="border border-gray-200 rounded-md p-4 bg-gray-50">
+                    <div key={line.contract_line_id} className="border border-[rgb(var(--color-border-200))] rounded-md p-4 bg-muted">
                       <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-2">
                         <div>
-                          <p className="font-medium text-gray-900">{line.contract_line_name}</p>
-                          <p className="text-xs text-gray-500 uppercase tracking-wide">
+                          <p className="font-medium text-[rgb(var(--color-text-900))]">{line.contract_line_name}</p>
+                          <p className="text-xs text-muted-foreground uppercase tracking-wide">
                             {humanize(line.contract_line_type)} • {humanize(line.billing_frequency)}
                           </p>
                         </div>
@@ -1143,20 +1143,20 @@ const ContractTemplateDetail: React.FC = () => {
                       </div>
                       <div className="mt-3 space-y-2">
                         {line.services.length === 0 ? (
-                          <p className="text-sm text-gray-600 italic">No services assigned to this contract line.</p>
+                          <p className="text-sm text-muted-foreground italic">No services assigned to this contract line.</p>
                         ) : (
                           line.services.map((service) => (
                             <div
                               key={`${line.contract_line_id}-${service.service_id}`}
-                              className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 rounded-md bg-white p-3 border border-gray-200"
+                              className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 rounded-md bg-card p-3 border border-[rgb(var(--color-border-200))]"
                             >
                               <div>
-                                <p className="font-medium text-gray-900">{service.service_name}</p>
-                                <p className="text-xs text-gray-500">
+                                <p className="font-medium text-[rgb(var(--color-text-900))]">{service.service_name}</p>
+                                <p className="text-xs text-muted-foreground">
                                   {service.billing_method ? humanize(service.billing_method) : 'Service'} • {service.configuration.configuration_type}
                                 </p>
                               </div>
-                              <div className="flex flex-wrap gap-3 text-xs text-gray-600">
+                              <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
                                 {service.quantity != null && (
                                   <span>Quantity: <span className="font-medium">{service.quantity}</span></span>
                                 )}
@@ -1236,22 +1236,22 @@ const TemplateServicesManager: React.FC<TemplateServicesManagerProps> = ({
   return (
     <Card className="mt-4">
       <CardHeader>
-        <CardTitle className="text-base font-semibold text-gray-800">
+        <CardTitle className="text-base font-semibold text-[rgb(var(--color-text-800))]">
           Manage Template Services
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
         {contractLines.length === 0 ? (
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-muted-foreground">
             Add contract lines to this template before managing services.
           </p>
         ) : (
           contractLines.map((line) => (
-            <div key={line.contract_line_id} className="border border-gray-200 rounded-md p-4">
+            <div key={line.contract_line_id} className="border border-[rgb(var(--color-border-200))] rounded-md p-4">
               <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-2">
                 <div>
-                  <p className="font-medium text-gray-900">{line.contract_line_name}</p>
-                  <p className="text-xs text-gray-500 uppercase tracking-wide">
+                  <p className="font-medium text-[rgb(var(--color-text-900))]">{line.contract_line_name}</p>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wide">
                     {humanize(line.contract_line_type)} • {humanize(line.billing_frequency)}
                   </p>
                 </div>

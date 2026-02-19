@@ -6,6 +6,7 @@ import { getDocumentsByEntity } from '@alga-psa/documents/actions/documentAction
 import { getContactByContactNameId } from '@alga-psa/clients/actions';
 import { getAllClients } from '@alga-psa/clients/actions';
 import { getContactPortalPermissions } from '@alga-psa/auth/actions';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 
 
 interface ContactDetailPageProps {
@@ -23,10 +24,12 @@ const ContactDetailPage = async ({ params, searchParams }: ContactDetailPageProp
     if (!currentUser) {
       return (
         <div className="p-6">
-          <div className="p-4 border border-red-300 bg-red-50 rounded-md text-red-600">
-            <p className="font-semibold">Error</p>
-            <p>User not authenticated</p>
-          </div>
+          <Alert variant="destructive">
+            <AlertDescription>
+              <p className="font-semibold">Error</p>
+              <p>User not authenticated</p>
+            </AlertDescription>
+          </Alert>
         </div>
       );
     }
@@ -68,10 +71,12 @@ const ContactDetailPage = async ({ params, searchParams }: ContactDetailPageProp
     console.error(`Error fetching data for contact with id ${id}:`, error);
     return (
       <div className="p-6">
-        <div className="p-4 border border-red-300 bg-red-50 rounded-md text-red-600">
-          <p className="font-semibold">Error loading contact</p>
-          <p>{error instanceof Error ? error.message : 'Unknown error occurred'}</p>
-        </div>
+        <Alert variant="destructive">
+          <AlertDescription>
+            <p className="font-semibold">Error loading contact</p>
+            <p>{error instanceof Error ? error.message : 'Unknown error occurred'}</p>
+          </AlertDescription>
+        </Alert>
       </div>
     );
   }

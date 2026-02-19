@@ -7,6 +7,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { ToggleGroup, ToggleGroupItem } from '@alga-psa/ui/components/ToggleGroup';
 import { AlertCircle, RotateCcw } from 'lucide-react';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 
 export function CSVExportLockResetPanel() {
   const [mode, setMode] = useState<'invoice' | 'batch'>('invoice');
@@ -140,16 +141,9 @@ export function CSVExportLockResetPanel() {
         </div>
 
         {result && (
-          <div
-            className={`flex items-center gap-2 rounded-lg p-3 text-sm ${
-              result.kind === 'success'
-                ? 'bg-green-50 text-green-700'
-                : 'bg-red-50 text-red-700'
-            }`}
-          >
-            <AlertCircle className="h-5 w-5 flex-shrink-0" />
-            <span>{result.message}</span>
-          </div>
+          <Alert variant={result.kind === 'success' ? 'success' : 'destructive'}>
+            <AlertDescription>{result.message}</AlertDescription>
+          </Alert>
         )}
 
         <Dialog
@@ -159,7 +153,7 @@ export function CSVExportLockResetPanel() {
           title="Reset export lock?"
         >
           <div className="space-y-4">
-            <p className="text-sm text-gray-700">
+            <p className="text-sm text-foreground">
               {mode === 'batch' ? (
                 <>
                   This will allow Alga PSA to export invoices from batch <strong>{batchId.trim()}</strong> again.
@@ -172,9 +166,11 @@ export function CSVExportLockResetPanel() {
                 </>
               )}
             </p>
-            <div className="rounded-md bg-amber-50 border border-amber-200 p-3 text-sm text-amber-900">
-              Only proceed if you are sure the invoice was not imported, or you deleted/voided it in QuickBooks.
-            </div>
+            <Alert variant="warning">
+              <AlertDescription>
+                Only proceed if you are sure the invoice was not imported, or you deleted/voided it in QuickBooks.
+              </AlertDescription>
+            </Alert>
             <div className="flex justify-end gap-2">
               <Button
                 id="qbcsv-reset-export-lock-cancel"

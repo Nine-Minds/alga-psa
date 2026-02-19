@@ -76,22 +76,22 @@ export function LegendComponent() {
             </div>
             
             <div className="flex items-center">
-              <div className="w-4 h-4 rounded-sm border-blue-500 bg-blue-50 mr-2"></div>
+              <div className="w-4 h-4 rounded-sm border-primary-500 bg-primary-500/10 mr-2"></div>
               <span className="text-xs text-gray-700">Active</span>
             </div>
-            
+
             <div className="flex items-center">
-              <div className="w-4 h-4 rounded-sm border-green-500 bg-green-50 mr-2"></div>
+              <div className="w-4 h-4 rounded-sm border-success bg-success/10 mr-2"></div>
               <span className="text-xs text-gray-700">Success</span>
             </div>
-            
+
             <div className="flex items-center">
-              <div className="w-4 h-4 rounded-sm border-red-500 bg-red-50 mr-2"></div>
+              <div className="w-4 h-4 rounded-sm border-destructive bg-destructive/10 mr-2"></div>
               <span className="text-xs text-gray-700">Error</span>
             </div>
-            
+
             <div className="flex items-center">
-              <div className="w-4 h-4 rounded-sm border-yellow-500 bg-yellow-50 mr-2"></div>
+              <div className="w-4 h-4 rounded-sm border-warning bg-warning/10 mr-2"></div>
               <span className="text-xs text-gray-700">Warning</span>
             </div>
           </div>
@@ -105,32 +105,32 @@ export function LegendComponent() {
             </div>
             
             <div className="flex items-center">
-              <div className="w-6 h-0.5 bg-blue-500 mr-2" style={{ borderTopStyle: 'dashed' }}></div>
+              <div className="w-6 h-0.5 bg-primary-500 mr-2" style={{ borderTopStyle: 'dashed' }}></div>
               <span className="text-xs text-gray-700">Conditional Branch</span>
             </div>
-            
+
             <div className="flex items-center">
-              <div className="w-6 h-0.5 bg-green-500 mr-2" style={{ borderTopStyle: 'dashed' }}></div>
+              <div className="w-6 h-0.5 bg-success mr-2" style={{ borderTopStyle: 'dashed' }}></div>
               <span className="text-xs text-gray-700">True Branch</span>
             </div>
-            
+
             <div className="flex items-center">
-              <div className="w-6 h-0.5 bg-red-500 mr-2" style={{ borderTopStyle: 'dashed' }}></div>
+              <div className="w-6 h-0.5 bg-destructive mr-2" style={{ borderTopStyle: 'dashed' }}></div>
               <span className="text-xs text-gray-700">False Branch</span>
             </div>
-            
+
             <div className="flex items-center">
-              <div className="w-6 h-0.5 bg-red-500 mr-2" style={{ borderTopStyle: 'dashed' }}></div>
+              <div className="w-6 h-0.5 bg-destructive mr-2" style={{ borderTopStyle: 'dashed' }}></div>
               <span className="text-xs text-gray-700">Loop</span>
             </div>
-            
+
             <div className="flex items-center">
-              <div className="w-6 h-0.5 bg-green-500 mr-2"></div>
+              <div className="w-6 h-0.5 bg-success mr-2"></div>
               <span className="text-xs text-gray-700">Parallel Execution</span>
             </div>
-            
+
             <div className="flex items-center">
-              <div className="w-6 h-0.5 bg-blue-500 animate-pulse mr-2"></div>
+              <div className="w-6 h-0.5 bg-primary-500 animate-pulse mr-2"></div>
               <span className="text-xs text-gray-700">Active Flow</span>
             </div>
             

@@ -25,7 +25,7 @@ export function TemplateContractBasicsStep({
     <div className="space-y-6" data-automation-id="template-contract-basics-step">
       <div className="mb-6">
         <h3 className="text-lg font-semibold mb-2">Template Basics</h3>
-        <p className="text-sm text-gray-600">
+        <p className="text-sm text-[rgb(var(--color-text-500))]">
           Name this contract template and capture high-level guidance. Pricing and client
           specifics will be finalized when the template is applied to a client.
         </p>
@@ -49,7 +49,7 @@ export function TemplateContractBasicsStep({
             {nameError}
           </p>
         )}
-        <p className="text-xs text-gray-500">
+        <p className="text-xs text-[rgb(var(--color-text-400))]">
           Use a descriptive name so teams can quickly identify the right template.
         </p>
       </div>
@@ -66,7 +66,7 @@ export function TemplateContractBasicsStep({
           placeholder="Describe where this template applies, onboarding tips, or approval requirements."
           className="min-h-[96px]"
         />
-        <p className="text-xs text-gray-500">
+        <p className="text-xs text-[rgb(var(--color-text-400))]">
           These notes stay with the template to provide context when teammates use it.
         </p>
       </div>
@@ -83,7 +83,7 @@ export function TemplateContractBasicsStep({
           onValueChange={(value) => updateData({ billing_frequency: value })}
           placeholder="Select billing cadence"
         />
-        <p className="text-xs text-gray-500">
+        <p className="text-xs text-[rgb(var(--color-text-400))]">
           Sets the default cadence when the template is applied. It can still be adjusted per
           client.
         </p>

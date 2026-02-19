@@ -243,7 +243,7 @@ export function UsageServiceConfigPanel({
             {validationErrors.unitOfMeasure ? (
               <p className="text-sm text-red-500 mt-1">{validationErrors.unitOfMeasure}</p>
             ) : (
-              <p className="text-sm text-gray-500 mt-1">
+              <p className="text-sm text-muted-foreground mt-1">
                 The unit used to measure usage (e.g., GB, User, Device)
               </p>
             )}
@@ -265,7 +265,7 @@ export function UsageServiceConfigPanel({
             {validationErrors.minimumUsage ? (
               <p className="text-sm text-red-500 mt-1">{validationErrors.minimumUsage}</p>
             ) : (
-              <p className="text-sm text-gray-500 mt-1">
+              <p className="text-sm text-muted-foreground mt-1">
                 Minimum billable usage per period (0 for no minimum)
               </p>
             )}
@@ -284,7 +284,7 @@ export function UsageServiceConfigPanel({
           </div>
 
           {enableTieredPricing && onRateTiersChange && (
-            <div className="pl-6 border-l-2 border-gray-200">
+            <div className="pl-6 border-l-2 border-[rgb(var(--color-border-200))]">
               <div className="mb-2 flex justify-between items-center">
                 <h4 className="font-medium">Pricing Tiers</h4>
                 <Button
@@ -308,13 +308,13 @@ export function UsageServiceConfigPanel({
               )}
               
               {tiers.length === 0 ? (
-                <p className="text-sm text-gray-500 mb-2">
+                <p className="text-sm text-muted-foreground mb-2">
                   No tiers configured. Add a tier to define volume-based pricing.
                 </p>
               ) : (
                 <div className="space-y-3">
                   {tiers.map((tier, index) => (
-                    <div key={tier.id} className="grid grid-cols-12 gap-2 items-end border p-2 rounded-md bg-gray-50">
+                    <div key={tier.id} className="grid grid-cols-12 gap-2 items-end border p-2 rounded-md bg-muted">
                       <div className="col-span-3">
                         <Label htmlFor={`tier-${tier.id}-from`} className="text-xs">From ({unitOfMeasure})</Label>
                         <Input
@@ -364,7 +364,7 @@ export function UsageServiceConfigPanel({
                           size="sm"
                           onClick={() => handleRemoveTier(tier.id)}
                           disabled={disabled}
-                          className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                          className="text-destructive hover:text-destructive hover:bg-destructive/10"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -374,7 +374,7 @@ export function UsageServiceConfigPanel({
                 </div>
               )}
               
-              <p className="text-sm text-gray-500 mt-3">
+              <p className="text-sm text-muted-foreground mt-3">
                 Configure volume-based pricing tiers. Each tier applies its rate to usage that falls within its range.
               </p>
             </div>

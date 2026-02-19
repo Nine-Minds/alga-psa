@@ -58,16 +58,16 @@ function StatusBadge({ status }: { status: string }) {
   let Icon = Circle;
 
   if (normalizedStatus.includes('complete') || normalizedStatus.includes('done') || normalizedStatus.includes('closed')) {
-    bgColor = 'bg-green-100';
-    textColor = 'text-green-700';
+    bgColor = 'bg-success/10';
+    textColor = 'text-success';
     Icon = CheckCircle2;
   } else if (normalizedStatus.includes('progress') || normalizedStatus.includes('active') || normalizedStatus.includes('working')) {
-    bgColor = 'bg-blue-100';
-    textColor = 'text-blue-700';
+    bgColor = 'bg-primary/10';
+    textColor = 'text-primary';
     Icon = Clock;
   } else if (normalizedStatus.includes('blocked') || normalizedStatus.includes('hold') || normalizedStatus.includes('waiting')) {
-    bgColor = 'bg-amber-100';
-    textColor = 'text-amber-700';
+    bgColor = 'bg-warning/10';
+    textColor = 'text-warning';
     Icon = AlertCircle;
   } else if (normalizedStatus.includes('new') || normalizedStatus.includes('open') || normalizedStatus.includes('todo')) {
     bgColor = 'bg-purple-100';
@@ -203,8 +203,8 @@ export default function ProjectPhaseTasksView({ projectId, config }: ProjectPhas
 
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-        <p className="text-red-600 text-sm">{error}</p>
+      <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-4">
+        <p className="text-destructive text-sm">{error}</p>
       </div>
     );
   }

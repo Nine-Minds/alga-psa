@@ -702,7 +702,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                 </h1>
                 <button
                   onClick={() => setIsEditingTitle(true)}
-                  className="p-1 hover:bg-gray-100 rounded-full transition-colors duration-200 flex-shrink-0"
+                  className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors duration-200 flex-shrink-0"
                   title="Edit title"
                 >
                   <Pencil className="w-4 h-4 text-gray-500" />
@@ -722,8 +722,8 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
 
           {/* Success alert after saving */}
           {saveSuccess && (
-            <Alert className="bg-green-50 border-green-200 mb-4">
-              <AlertDescription className="text-green-800">
+            <Alert variant="success" className="mb-4">
+              <AlertDescription>
                 Changes saved successfully!
               </AlertDescription>
             </Alert>
@@ -778,7 +778,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                 <h5 className="font-bold mb-2">{effectiveBoardConfig.category_type === 'custom' ? 'Category' : 'ITIL Category'}</h5>
                 <div className="w-fit">
                   {isLoadingBoardConfig ? (
-                    <div className="h-10 w-48 bg-gray-100 animate-pulse rounded-md flex items-center justify-center text-sm text-gray-500">
+                    <div className="h-10 w-48 bg-gray-100 dark:bg-gray-800 animate-pulse rounded-md flex items-center justify-center text-sm text-gray-500 dark:text-gray-400">
                       Loading...
                     </div>
                   ) : (
@@ -878,43 +878,43 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                           <tbody>
                             <tr>
                               <td className="px-2 py-1 text-gray-600 border-r font-medium">High Impact (1)</td>
-                              <td className="px-2 py-1 text-center bg-red-100 text-red-800 font-semibold">Critical (1)</td>
-                              <td className="px-2 py-1 text-center bg-orange-100 text-orange-800 font-semibold">High (2)</td>
-                              <td className="px-2 py-1 text-center bg-orange-100 text-orange-800 font-semibold">High (2)</td>
-                              <td className="px-2 py-1 text-center bg-yellow-100 text-yellow-800 font-semibold">Medium (3)</td>
-                              <td className="px-2 py-1 text-center bg-yellow-100 text-yellow-800 font-semibold">Medium (3)</td>
+                              <td className="px-2 py-1 text-center bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 font-semibold">Critical (1)</td>
+                              <td className="px-2 py-1 text-center bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300 font-semibold">High (2)</td>
+                              <td className="px-2 py-1 text-center bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300 font-semibold">High (2)</td>
+                              <td className="px-2 py-1 text-center bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 font-semibold">Medium (3)</td>
+                              <td className="px-2 py-1 text-center bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 font-semibold">Medium (3)</td>
                             </tr>
                             <tr>
                               <td className="px-2 py-1 text-gray-600 border-r font-medium">Medium-High Impact (2)</td>
-                              <td className="px-2 py-1 text-center bg-orange-100 text-orange-800 font-semibold">High (2)</td>
-                              <td className="px-2 py-1 text-center bg-orange-100 text-orange-800 font-semibold">High (2)</td>
-                              <td className="px-2 py-1 text-center bg-yellow-100 text-yellow-800 font-semibold">Medium (3)</td>
-                              <td className="px-2 py-1 text-center bg-yellow-100 text-yellow-800 font-semibold">Medium (3)</td>
-                              <td className="px-2 py-1 text-center bg-blue-100 text-blue-800 font-semibold">Low (4)</td>
+                              <td className="px-2 py-1 text-center bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300 font-semibold">High (2)</td>
+                              <td className="px-2 py-1 text-center bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300 font-semibold">High (2)</td>
+                              <td className="px-2 py-1 text-center bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 font-semibold">Medium (3)</td>
+                              <td className="px-2 py-1 text-center bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 font-semibold">Medium (3)</td>
+                              <td className="px-2 py-1 text-center bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 font-semibold">Low (4)</td>
                             </tr>
                             <tr>
                               <td className="px-2 py-1 text-gray-600 border-r font-medium">Medium Impact (3)</td>
-                              <td className="px-2 py-1 text-center bg-orange-100 text-orange-800 font-semibold">High (2)</td>
-                              <td className="px-2 py-1 text-center bg-yellow-100 text-yellow-800 font-semibold">Medium (3)</td>
-                              <td className="px-2 py-1 text-center bg-yellow-100 text-yellow-800 font-semibold">Medium (3)</td>
-                              <td className="px-2 py-1 text-center bg-blue-100 text-blue-800 font-semibold">Low (4)</td>
-                              <td className="px-2 py-1 text-center bg-blue-100 text-blue-800 font-semibold">Low (4)</td>
+                              <td className="px-2 py-1 text-center bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300 font-semibold">High (2)</td>
+                              <td className="px-2 py-1 text-center bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 font-semibold">Medium (3)</td>
+                              <td className="px-2 py-1 text-center bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 font-semibold">Medium (3)</td>
+                              <td className="px-2 py-1 text-center bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 font-semibold">Low (4)</td>
+                              <td className="px-2 py-1 text-center bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 font-semibold">Low (4)</td>
                             </tr>
                             <tr>
                               <td className="px-2 py-1 text-gray-600 border-r font-medium">Medium-Low Impact (4)</td>
-                              <td className="px-2 py-1 text-center bg-yellow-100 text-yellow-800 font-semibold">Medium (3)</td>
-                              <td className="px-2 py-1 text-center bg-yellow-100 text-yellow-800 font-semibold">Medium (3)</td>
-                              <td className="px-2 py-1 text-center bg-blue-100 text-blue-800 font-semibold">Low (4)</td>
-                              <td className="px-2 py-1 text-center bg-blue-100 text-blue-800 font-semibold">Low (4)</td>
-                              <td className="px-2 py-1 text-center bg-gray-100 text-gray-800 font-semibold">Planning (5)</td>
+                              <td className="px-2 py-1 text-center bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 font-semibold">Medium (3)</td>
+                              <td className="px-2 py-1 text-center bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 font-semibold">Medium (3)</td>
+                              <td className="px-2 py-1 text-center bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 font-semibold">Low (4)</td>
+                              <td className="px-2 py-1 text-center bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 font-semibold">Low (4)</td>
+                              <td className="px-2 py-1 text-center bg-gray-100 dark:bg-gray-800/30 text-gray-800 dark:text-gray-300 font-semibold">Planning (5)</td>
                             </tr>
                             <tr>
                               <td className="px-2 py-1 text-gray-600 border-r font-medium">Low Impact (5)</td>
-                              <td className="px-2 py-1 text-center bg-yellow-100 text-yellow-800 font-semibold">Medium (3)</td>
-                              <td className="px-2 py-1 text-center bg-blue-100 text-blue-800 font-semibold">Low (4)</td>
-                              <td className="px-2 py-1 text-center bg-blue-100 text-blue-800 font-semibold">Low (4)</td>
-                              <td className="px-2 py-1 text-center bg-gray-100 text-gray-800 font-semibold">Planning (5)</td>
-                              <td className="px-2 py-1 text-center bg-gray-100 text-gray-800 font-semibold">Planning (5)</td>
+                              <td className="px-2 py-1 text-center bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 font-semibold">Medium (3)</td>
+                              <td className="px-2 py-1 text-center bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 font-semibold">Low (4)</td>
+                              <td className="px-2 py-1 text-center bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 font-semibold">Low (4)</td>
+                              <td className="px-2 py-1 text-center bg-gray-100 dark:bg-gray-800/30 text-gray-800 dark:text-gray-300 font-semibold">Planning (5)</td>
+                              <td className="px-2 py-1 text-center bg-gray-100 dark:bg-gray-800/30 text-gray-800 dark:text-gray-300 font-semibold">Planning (5)</td>
                             </tr>
                           </tbody>
                         </table>
@@ -963,9 +963,9 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                   const now = new Date();
                   const hoursUntilDue = (effectiveDueDate.getTime() - now.getTime()) / (1000 * 60 * 60);
                   if (hoursUntilDue < 0) {
-                    containerClass = '[&_button]:border-red-500 [&_button]:text-red-600 [&_button]:bg-red-500/10';
+                    containerClass = '[&_button]:border-red-500 [&_button]:text-red-600 dark:[&_button]:text-red-400 [&_button]:bg-red-500/10';
                   } else if (hoursUntilDue <= 24) {
-                    containerClass = '[&_button]:border-orange-500 [&_button]:text-orange-600 [&_button]:bg-orange-500/10';
+                    containerClass = '[&_button]:border-orange-500 [&_button]:text-orange-600 dark:[&_button]:text-orange-400 [&_button]:bg-orange-500/10';
                   }
                 }
 
@@ -1063,7 +1063,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                     setHasDescriptionContentChanged(false);
                     setIsEditingDescription(true);
                   }}
-                  className="p-1 hover:bg-gray-100 rounded-full transition-colors duration-200"
+                  className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors duration-200"
                   title="Edit description"
                 >
                   <Pencil className="w-4 h-4 text-gray-500" />

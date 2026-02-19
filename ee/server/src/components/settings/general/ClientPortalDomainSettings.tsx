@@ -255,17 +255,19 @@ const ClientPortalDomainSettings = () => {
                     Last checked: {formatTimestamp(portalStatus?.lastCheckedAt)}
                   </p>
                   {editingExistingDomain && (
-                    <div className="rounded border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
-                      {isDirtyDomain ? (
-                        <span>
-                          Updating domain to <strong>{normalizedInput || '—'}</strong>. Provisioning will restart once you update.
-                        </span>
-                      ) : (
-                        <span>
-                          To change your domain, edit the value below and submit to kick off a new provisioning run.
-                        </span>
-                      )}
-                    </div>
+                    <Alert variant="warning" showIcon={false} className="text-xs">
+                      <AlertDescription>
+                        {isDirtyDomain ? (
+                          <span>
+                            Updating domain to <strong>{normalizedInput || '—'}</strong>. Provisioning will restart once you update.
+                          </span>
+                        ) : (
+                          <span>
+                            To change your domain, edit the value below and submit to kick off a new provisioning run.
+                          </span>
+                        )}
+                      </AlertDescription>
+                    </Alert>
                   )}
                 </div>
                 <div className="flex gap-2">

@@ -85,7 +85,7 @@ export function ContractLineEditDialog({ line, currencyCode, onClose, onSave }: 
             <div>
               <Label htmlFor="contract-line-rate">Rate</Label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">
+                <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">
                   {currencySymbol}
                 </span>
                 <Input
@@ -139,7 +139,7 @@ export function ContractLineEditDialog({ line, currencyCode, onClose, onSave }: 
                   }
                 ]}
               />
-              <p className="text-xs text-gray-500 mt-2">
+              <p className="text-xs text-muted-foreground mt-2">
                 {billingTiming === 'arrears'
                   ? 'Charges will be billed after the service is provided'
                   : 'Charges will be billed before the service is provided'}

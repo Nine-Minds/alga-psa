@@ -75,13 +75,13 @@ const CreditExpirationInfo: React.FC<CreditExpirationInfoProps> = ({ creditAppli
       <CardContent>
         {loading ? (
           <div className="animate-pulse space-y-2">
-            <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-            <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+            <div className="h-4 bg-[rgb(var(--color-border-200))] rounded w-3/4"></div>
+            <div className="h-4 bg-[rgb(var(--color-border-200))] rounded w-1/2"></div>
           </div>
         ) : error ? (
           <div className="text-red-500">{error}</div>
         ) : creditDetails.length === 0 ? (
-          <div className="text-gray-500">No credit details available</div>
+          <div className="text-muted-foreground">No credit details available</div>
         ) : (
           <div className="space-y-4">
             {creditDetails.map((credit) => (
@@ -116,7 +116,7 @@ const CreditExpirationInfo: React.FC<CreditExpirationInfoProps> = ({ creditAppli
                 </div>
               </div>
             ))}
-            <div className="mt-2 text-sm text-gray-500">
+            <div className="mt-2 text-sm text-muted-foreground">
               Credits are applied in order of expiration date (oldest first)
             </div>
           </div>

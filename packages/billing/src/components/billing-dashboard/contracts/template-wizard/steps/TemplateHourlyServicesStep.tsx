@@ -110,7 +110,7 @@ export function TemplateHourlyServicesStep({
       <div className="space-y-6">
         <div className="mb-6">
           <h3 className="text-lg font-semibold mb-2">Hourly Services</h3>
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-[rgb(var(--color-text-500))]">
             Select services that are billed based on time tracked. Rates will be determined by the service's pricing in the client's currency when the contract is created.
           </p>
         </div>
@@ -129,7 +129,7 @@ export function TemplateHourlyServicesStep({
 
         {/* Time rounding settings - shown once if any hourly services are added */}
         {data.hourly_services.length > 0 && (
-          <div className="p-4 border border-gray-200 rounded-md bg-gray-50">
+          <div className="p-4 border border-[rgb(var(--color-border-200))] rounded-md bg-[rgb(var(--color-border-50))]">
             <h4 className="text-sm font-medium mb-3">Time Rounding Settings</h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -151,7 +151,7 @@ export function TemplateHourlyServicesStep({
                   }
                   placeholder="15"
                 />
-                <p className="text-xs text-gray-500">e.g., 15 minutes - any time entry less than this will be rounded up</p>
+                <p className="text-xs text-[rgb(var(--color-text-400))]">e.g., 15 minutes - any time entry less than this will be rounded up</p>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="template-round-up" className="text-sm">
@@ -172,7 +172,7 @@ export function TemplateHourlyServicesStep({
                   }
                   placeholder="15"
                 />
-                <p className="text-xs text-gray-500">e.g., 15 minutes - time entries will be rounded up to the nearest interval</p>
+                <p className="text-xs text-[rgb(var(--color-text-400))]">e.g., 15 minutes - time entries will be rounded up to the nearest interval</p>
               </div>
             </div>
           </div>
@@ -187,7 +187,7 @@ export function TemplateHourlyServicesStep({
           {data.hourly_services.map((service, index) => (
             <div
               key={index}
-              className="flex items-start gap-3 p-4 border border-gray-200 rounded-md bg-gray-50"
+              className="flex items-center gap-3 p-4 border border-[rgb(var(--color-border-200))] rounded-md bg-[rgb(var(--color-border-50))]"
             >
               <div className="flex-1 space-y-3">
                 <div className="space-y-2">
@@ -229,7 +229,7 @@ export function TemplateHourlyServicesStep({
                 variant="ghost"
                 size="sm"
                 onClick={() => handleRemoveService(index)}
-                className="mt-6 text-red-600 hover:text-red-700 hover:bg-red-50"
+                className="mt-6 text-[rgb(var(--color-destructive))] hover:text-[rgb(var(--color-destructive))] hover:bg-[rgb(var(--color-destructive)/0.1)]"
               >
                 <X className="h-4 w-4" />
               </Button>

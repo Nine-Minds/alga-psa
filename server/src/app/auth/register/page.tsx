@@ -117,10 +117,10 @@ export default function Register() {
 
 
   const CriteriaIcon = ({ met }: { met: boolean }) =>
-    !hasStartedTyping ? null : met ? <CheckCircle className="h-4 w-4 text-green-500" /> : <XCircle className="h-4 w-4 text-red-500" />;
+    !hasStartedTyping ? null : met ? <CheckCircle className="h-4 w-4 text-green-500" /> : <XCircle className="h-4 w-4 text-destructive" />;
 
   return (
-    <div className="flex min-h-screen bg-gray-100">
+    <div className="flex min-h-screen bg-[rgb(var(--color-background-50))]">
 
     <Alert
         type={alertInfo.type}
@@ -138,11 +138,11 @@ export default function Register() {
                 height={50}
                 className="rounded-full mr-4 "
               />
-          <span className="text-lg font-semibold text-gray-800">AI-Enhanced PSA Platform for MSPs</span>
+          <span className="text-lg font-semibold text-[rgb(var(--color-text-800))]">AI-Enhanced PSA Platform for MSPs</span>
         </div>
 
       {/* Left side with logo */}
-      <div className="hidden lg:flex lg:w-1/2 bg-white p-12 flex-col justify-center items-center">
+      <div className="hidden lg:flex lg:w-1/2 bg-card p-12 flex-col justify-center items-center">
         <Image
           src="/images/avatar-purple-big.png"
           alt="Client Logo"
@@ -150,7 +150,7 @@ export default function Register() {
           height={200}
           className="rounded-full"
         />
-        <p className="mt-4 text-center text-2xl font-bold text-gray-700">
+        <p className="mt-4 text-center text-2xl font-bold text-[rgb(var(--color-text-700))]">
           An open source PSA, <br />
           empowering the future of MSPs <br />
           with AI-driven insights and automation.
@@ -161,13 +161,13 @@ export default function Register() {
       <div className="w-full lg:w-1/2 flex items-center justify-center">
         <div className="max-w-md w-full space-y-8 p-8">
           <div>
-            <h2 className="mt-6 text-3xl font-extrabold text-gray-900 text-center">Sign up</h2>
-            <p className="mt-2 text-sm text-gray-600 text-center">Start to use Alga MSP.</p>
+            <h2 className="mt-6 text-3xl font-extrabold text-[rgb(var(--color-text-900))] text-center">Sign up</h2>
+            <p className="mt-2 text-sm text-[rgb(var(--color-text-600))] text-center">Start to use Alga MSP.</p>
           </div>
           <form onSubmit={handleSubmit} className="mt-8 space-y-6">
             <div className="space-y-4">
               <div>
-                <Label.Root className="block text-sm font-medium text-gray-700">
+                <Label.Root className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
                   Client name
                 </Label.Root>
                 <Input
@@ -178,11 +178,11 @@ export default function Register() {
                   onChange={handleChange}
                   required
                   placeholder="Enter your client name"
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-[rgb(var(--color-primary-500))] focus:border-[rgb(var(--color-primary-500))] sm:text-sm"
+                  className="mt-1 block w-full px-3 py-2 border border-[rgb(var(--color-border-300))] rounded-md shadow-sm placeholder-[rgb(var(--color-text-400))] focus:outline-none focus:ring-[rgb(var(--color-primary-500))] focus:border-[rgb(var(--color-primary-500))] sm:text-sm"
                 />
               </div>
               <div>
-                <Label.Root className="block text-sm font-medium text-gray-700">
+                <Label.Root className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
                   User Name
                 </Label.Root>
                 <Input
@@ -193,12 +193,12 @@ export default function Register() {
                   onChange={handleChange}
                   required
                   placeholder="Enter your user name"
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-[rgb(var(--color-primary-500))] focus:border-[rgb(var(--color-primary-500))] sm:text-sm"
+                  className="mt-1 block w-full px-3 py-2 border border-[rgb(var(--color-border-300))] rounded-md shadow-sm placeholder-[rgb(var(--color-text-400))] focus:outline-none focus:ring-[rgb(var(--color-primary-500))] focus:border-[rgb(var(--color-primary-500))] sm:text-sm"
                 />
               </div>
               <div>
-                <Label.Root className="block text-sm font-medium text-gray-700">
-                  Email <span className="text-red-500">*</span>
+                <Label.Root className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
+                  Email <span className="text-destructive">*</span>
                 </Label.Root>
                 <Input
                   id="register-email-input"
@@ -208,12 +208,12 @@ export default function Register() {
                   onChange={handleChange}
                   required
                   placeholder="Enter your email"
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-[rgb(var(--color-primary-500))] focus:border-[rgb(var(--color-primary-500))] sm:text-sm"
+                  className="mt-1 block w-full px-3 py-2 border border-[rgb(var(--color-border-300))] rounded-md shadow-sm placeholder-[rgb(var(--color-text-400))] focus:outline-none focus:ring-[rgb(var(--color-primary-500))] focus:border-[rgb(var(--color-primary-500))] sm:text-sm"
                 />
               </div>
               <div>
 
-                <Label.Root className="block text-sm font-medium text-gray-700">
+                <Label.Root className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
                   Password
                 </Label.Root>
                 <div className="relative">
@@ -225,7 +225,7 @@ export default function Register() {
                     onChange={handleChange}
                     required
                     placeholder="Create a password"
-                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-[rgb(var(--color-primary-500))] focus:border-[rgb(var(--color-primary-500))] sm:text-sm"
+                    className="mt-1 block w-full px-3 py-2 border border-[rgb(var(--color-border-300))] rounded-md shadow-sm placeholder-[rgb(var(--color-text-400))] focus:outline-none focus:ring-[rgb(var(--color-primary-500))] focus:border-[rgb(var(--color-primary-500))] sm:text-sm"
                   />
                   <button
                       type="button"
@@ -233,13 +233,13 @@ export default function Register() {
                       className="absolute inset-y-0 right-0 pr-3 flex items-center"
                     >
                       {showPassword ? (
-                        <Eye className="h-5 w-5 text-gray-400" />
+                        <Eye className="h-5 w-5 text-[rgb(var(--color-text-400))]" />
                       ) : (
-                        <EyeOff className="h-5 w-5 text-gray-400" />
+                        <EyeOff className="h-5 w-5 text-[rgb(var(--color-text-400))]" />
                       )}
                   </button>
                 </div>
-                <div className="mt-4 flex flex-wrap justify-center items-center gap-3 text-xs text-gray-600">
+                <div className="mt-4 flex flex-wrap justify-center items-center gap-3 text-xs text-[rgb(var(--color-text-600))]">
                   <div className="flex items-center">
                     <CriteriaIcon met={passwordCriteria.minLength} />
                     <span className="ml-1">8+ chars</span>
@@ -278,7 +278,7 @@ export default function Register() {
             <button
               type="button"
               onClick={handleGoogleSignIn}
-              className="w-full flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[rgb(var(--color-primary-500))]"
+              className="w-full flex justify-center py-2 px-4 border border-[rgb(var(--color-border-300))] rounded-md shadow-sm bg-white text-sm font-medium text-[rgb(var(--color-text-700))] hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[rgb(var(--color-primary-500))]"
             >
               <svg className="w-5 h-5 mr-2" viewBox="0 0 21 20" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M20.3081 10.2303C20.3081 9.55056 20.253 8.86711 20.1354 8.19836H10.7031V12.0492H16.1046C15.8804 13.2911 15.1602 14.3898 14.1057 15.0879V17.5866H17.3282C19.2205 15.8449 20.3081 13.2728 20.3081 10.2303Z" fill="#3F83F8"/>
@@ -290,9 +290,9 @@ export default function Register() {
             </button>
           </div> */}
 
-          <p className="mt-2 text-center text-sm text-gray-600">
+          <p className="mt-2 text-center text-sm text-[rgb(var(--color-text-600))]">
             Already have an account?{' '}
-            <Link href="/auth/msp/signin" className="font-medium text-purple-600 hover:text-purple-500">
+            <Link href="/auth/msp/signin" className="font-medium text-[rgb(var(--color-primary-500))] hover:text-[rgb(var(--color-primary-400))]">
               Log in
             </Link>
           </p>

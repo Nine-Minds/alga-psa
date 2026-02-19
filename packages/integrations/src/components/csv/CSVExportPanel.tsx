@@ -6,6 +6,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { StringDateRangePicker } from '@alga-psa/ui/components/DateRangePicker';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Download, FileText, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import {
   INVOICE_STATUS_METADATA,
   INVOICE_STATUS_DISPLAY_ORDER,
@@ -175,8 +176,8 @@ export function CSVExportPanel({ onExportComplete }: CSVExportPanelProps) {
                 onClick={() => handleStatusToggle(option.value)}
                 className={`px-3 py-1.5 text-sm rounded-full border transition-colors ${
                   selectedStatuses.includes(option.value)
-                    ? 'bg-primary-100 border-primary-500 text-primary-700'
-                    : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+                    ? 'bg-primary/10 border-primary text-primary'
+                    : 'bg-card border-border text-foreground hover:bg-muted/50'
                 }`}
               >
                 {option.label}
@@ -187,39 +188,37 @@ export function CSVExportPanel({ onExportComplete }: CSVExportPanelProps) {
 
         {/* Error Message */}
         {error && (
-          <div className="p-3 bg-red-50 text-red-700 rounded-lg">
-            <div className="flex items-center gap-2">
-              <AlertCircle className="h-5 w-5 flex-shrink-0" />
-              <span>{error}</span>
-            </div>
-            {summarizedErrors.length > 0 && (
-              <ul className="mt-2 ml-7 list-disc space-y-1 text-sm">
-                {summarizedErrors.map((item, index) => {
-                  const serviceName = item.metadata?.service_name as string | undefined;
-                  const serviceId = item.metadata?.service_id as string | undefined;
-                  const label =
-                    item.code === 'missing_service_mapping'
-                      ? `Missing item mapping${serviceName ? `: ${serviceName}` : ''}${!serviceName && serviceId ? ` (${serviceId})` : ''}`
-                      : item.message;
-                  return <li key={`${item.code}-${index}`}>{label}</li>;
-                })}
-              </ul>
-            )}
-            <div className="mt-2 ml-7 text-sm text-red-700/80">
-              Configure missing mappings above, then retry the export.
-            </div>
-          </div>
+          <Alert variant="destructive">
+            <AlertDescription>
+              <div>{error}</div>
+              {summarizedErrors.length > 0 && (
+                <ul className="mt-2 ml-2 list-disc space-y-1 text-sm">
+                  {summarizedErrors.map((item, index) => {
+                    const serviceName = item.metadata?.service_name as string | undefined;
+                    const serviceId = item.metadata?.service_id as string | undefined;
+                    const label =
+                      item.code === 'missing_service_mapping'
+                        ? `Missing item mapping${serviceName ? `: ${serviceName}` : ''}${!serviceName && serviceId ? ` (${serviceId})` : ''}`
+                        : item.message;
+                    return <li key={`${item.code}-${index}`}>{label}</li>;
+                  })}
+                </ul>
+              )}
+              <div className="mt-2 ml-2 text-sm opacity-80">
+                Configure missing mappings above, then retry the export.
+              </div>
+            </AlertDescription>
+          </Alert>
         )}
 
         {/* Success Message */}
         {success && (
-          <div className="flex items-center gap-2 p-3 bg-green-50 text-green-700 rounded-lg">
-            <CheckCircle2 className="h-5 w-5 flex-shrink-0" />
-            <span>
+          <Alert variant="success">
+            <AlertDescription>
               Exported {success.invoiceCount} invoice{success.invoiceCount !== 1 ? 's' : ''} to{' '}
               <strong>{success.filename}</strong>
-            </span>
-          </div>
+            </AlertDescription>
+          </Alert>
         )}
 
         {/* Export Button */}

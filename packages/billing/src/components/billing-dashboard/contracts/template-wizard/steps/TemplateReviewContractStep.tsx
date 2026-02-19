@@ -48,7 +48,7 @@ export function TemplateReviewContractStep({
   return (
     <div className="space-y-4">
       <h3 className="text-lg font-semibold">Review Template</h3>
-      <p className="text-sm text-gray-600">
+      <p className="text-sm text-[rgb(var(--color-text-500))]">
         Confirm the template contents. Rates will be determined by each service's pricing in the client's currency when a contract is created from this template.
       </p>
 
@@ -59,18 +59,18 @@ export function TemplateReviewContractStep({
             </CardHeader>
             <CardContent className="space-y-2 text-sm">
               <div className="flex items-center justify-between">
-                <span className="text-gray-600">Template Name</span>
-                <span className="font-medium text-gray-900">{data.contract_name || '—'}</span>
+                <span className="text-[rgb(var(--color-text-500))]">Template Name</span>
+                <span className="font-medium text-[rgb(var(--color-text-900))]">{data.contract_name || '—'}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-gray-600">Billing Frequency</span>
-                <span className="font-medium text-gray-900">
+                <span className="text-[rgb(var(--color-text-500))]">Billing Frequency</span>
+                <span className="font-medium text-[rgb(var(--color-text-900))]">
                   {data.billing_frequency ? data.billing_frequency.replace(/_/g, ' ') : '—'}
                 </span>
               </div>
               <div>
-                <span className="text-gray-600 block mb-1">Internal Notes</span>
-                <p className="text-gray-900">
+                <span className="text-[rgb(var(--color-text-500))] block mb-1">Internal Notes</span>
+                <p className="text-[rgb(var(--color-text-900))]">
                   {data.description?.trim() ? data.description : 'No notes added.'}
                 </p>
               </div>
@@ -87,11 +87,11 @@ export function TemplateReviewContractStep({
               </CardHeader>
               <CardContent className="space-y-3 text-sm">
                 {data.fixed_services.map((service, index) => (
-                  <div key={`${service.service_id}-${index}`} className="border border-gray-200 rounded-md p-3 bg-gray-50">
-                    <p className="font-medium text-gray-900">
+                  <div key={`${service.service_id}-${index}`} className="border border-[rgb(var(--color-border-200))] rounded-md p-3 bg-[rgb(var(--color-border-50))]">
+                    <p className="font-medium text-[rgb(var(--color-text-900))]">
                       {service.service_name || 'Unnamed Service'}
                     </p>
-                    <div className="text-xs text-gray-600 mt-1">
+                    <div className="text-xs text-[rgb(var(--color-text-500))] mt-1">
                       Quantity: {service.quantity ?? 1}
                     </div>
                   </div>
@@ -112,12 +112,12 @@ export function TemplateReviewContractStep({
                 {data.product_services.map((product, index) => (
                   <div
                     key={`${product.service_id}-${index}`}
-                    className="border border-gray-200 rounded-md p-3 bg-gray-50"
+                    className="border border-[rgb(var(--color-border-200))] rounded-md p-3 bg-[rgb(var(--color-border-50))]"
                   >
-                    <p className="font-medium text-gray-900">
+                    <p className="font-medium text-[rgb(var(--color-text-900))]">
                       {product.service_name || 'Unnamed Product'}
                     </p>
-                    <div className="text-xs text-gray-600 mt-1">Quantity: {product.quantity ?? 1}</div>
+                    <div className="text-xs text-[rgb(var(--color-text-500))] mt-1">Quantity: {product.quantity ?? 1}</div>
                   </div>
                 ))}
               </CardContent>
@@ -134,7 +134,7 @@ export function TemplateReviewContractStep({
               </CardHeader>
               <CardContent className="space-y-3 text-sm">
                 {(data.minimum_billable_time || data.round_up_to_nearest) && (
-                  <div className="text-xs text-gray-600 flex flex-wrap gap-3 mb-2 pb-2 border-b border-gray-200">
+                  <div className="text-xs text-[rgb(var(--color-text-500))] flex flex-wrap gap-3 mb-2 pb-2 border-b border-[rgb(var(--color-border-200))]">
                     {data.minimum_billable_time ? (
                       <span>Minimum billable time: {data.minimum_billable_time} minutes</span>
                     ) : null}
@@ -144,8 +144,8 @@ export function TemplateReviewContractStep({
                   </div>
                 )}
                 {data.hourly_services.map((service, index) => (
-                  <div key={`${service.service_id}-${index}`} className="border border-gray-200 rounded-md p-3 bg-gray-50">
-                    <p className="font-medium text-gray-900">
+                  <div key={`${service.service_id}-${index}`} className="border border-[rgb(var(--color-border-200))] rounded-md p-3 bg-[rgb(var(--color-border-50))]">
+                    <p className="font-medium text-[rgb(var(--color-text-900))]">
                       {service.service_name || 'Unnamed Service'}
                     </p>
                     {formatBucketSummary(service.bucket_overlay, 'hours') && (
@@ -169,12 +169,12 @@ export function TemplateReviewContractStep({
               </CardHeader>
               <CardContent className="space-y-3 text-sm">
                 {data.usage_services?.map((service, index) => (
-                  <div key={`${service.service_id}-${index}`} className="border border-gray-200 rounded-md p-3 bg-gray-50">
-                    <p className="font-medium text-gray-900">
+                  <div key={`${service.service_id}-${index}`} className="border border-[rgb(var(--color-border-200))] rounded-md p-3 bg-[rgb(var(--color-border-50))]">
+                    <p className="font-medium text-[rgb(var(--color-text-900))]">
                       {service.service_name || 'Unnamed Service'}
                     </p>
                     {service.unit_of_measure && (
-                      <div className="text-xs text-gray-600 mt-1">
+                      <div className="text-xs text-[rgb(var(--color-text-500))] mt-1">
                         Unit: {service.unit_of_measure}
                       </div>
                     )}

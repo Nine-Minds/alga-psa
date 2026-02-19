@@ -270,10 +270,10 @@ const CustomSelect = ({
                   key="__CLEAR__"
                   value="__CLEAR__"
                   className={`
-                    relative flex items-center px-3 py-2 text-sm rounded text-red-600 italic
-                    cursor-pointer hover:bg-red-50 focus:bg-red-50
+                    relative flex items-center px-3 py-2 text-sm rounded text-destructive italic
+                    cursor-pointer hover:bg-[rgb(var(--color-destructive)/0.1)] focus:bg-[rgb(var(--color-destructive)/0.1)]
                     focus:outline-none select-none whitespace-nowrap
-                    data-[highlighted]:bg-red-50
+                    data-[highlighted]:bg-[rgb(var(--color-destructive)/0.1)]
                     ${customStyles?.item || ''}
                   `}
                 >

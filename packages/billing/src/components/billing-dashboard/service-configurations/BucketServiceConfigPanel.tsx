@@ -103,7 +103,7 @@ export function BucketServiceConfigPanel({
             {validationErrors.totalMinutes ? (
               <p className="text-sm text-red-500 mt-1">{validationErrors.totalMinutes}</p>
             ) : (
-              <p className="text-sm text-gray-500 mt-1">
+              <p className="text-sm text-muted-foreground mt-1">
                 The total number of minutes included in this bucket contract line
               </p>
             )}
@@ -125,7 +125,7 @@ export function BucketServiceConfigPanel({
                 <span className="font-semibold">⚠️ Mismatch:</span> Bucket billing period ({billingPeriod}) should match contract line billing frequency ({contractLineBillingFrequency})
               </p>
             ) : (
-              <p className="text-sm text-gray-500 mt-1">
+              <p className="text-sm text-muted-foreground mt-1">
                 The period over which the bucket hours are allocated
               </p>
             )}
@@ -147,7 +147,7 @@ export function BucketServiceConfigPanel({
             {validationErrors.overageRate ? (
               <p className="text-sm text-red-500 mt-1">{validationErrors.overageRate}</p>
             ) : (
-              <p className="text-sm text-gray-500 mt-1">
+              <p className="text-sm text-muted-foreground mt-1">
                 The hourly rate charged for hours used beyond the bucket limit
               </p>
             )}

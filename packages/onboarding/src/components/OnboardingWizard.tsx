@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { WizardProgress } from '@alga-psa/ui/components/onboarding/WizardProgress';
 import { WizardNavigation } from '@alga-psa/ui/components/onboarding/WizardNavigation';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { ClientInfoStep } from './steps/ClientInfoStep';
 import { TeamMembersStep } from './steps/TeamMembersStep';
 import { AddClientStep } from './steps/AddClientStep';
@@ -458,9 +459,9 @@ export function OnboardingWizard({
       )}
 
       {errors[currentStep] && (
-        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
-          <p className="text-red-700 text-sm">{errors[currentStep]}</p>
-        </div>
+        <Alert variant="destructive" className="mb-4">
+          <AlertDescription>{errors[currentStep]}</AlertDescription>
+        </Alert>
       )}
 
       <WizardNavigation

@@ -11,6 +11,7 @@ import { fetchInstalledExtensionsV2, toggleExtensionV2, uninstallExtensionV2 } f
 import { Extension } from '../../../lib/extensions/types';
 import ExtensionDetailsModal from './ExtensionDetailsModal';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 
 // Define local interface to match UI expectations
 interface ExtensionUI {
@@ -132,17 +133,12 @@ export default function Extensions() {
       )}
       
       {error && !loading && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-          <div className="flex items-start">
-            <svg className="h-5 w-5 text-red-600 mr-3 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <div>
-              <h3 className="text-sm font-medium text-red-800">Error</h3>
-              <p className="text-sm text-red-700 mt-1">{error}</p>
-            </div>
-          </div>
-        </div>
+        <Alert variant="destructive" className="mb-6">
+          <AlertDescription>
+            <h3 className="text-sm font-medium">Error</h3>
+            <p className="text-sm mt-1">{error}</p>
+          </AlertDescription>
+        </Alert>
       )}
       
       {!loading && !error && extensions.length === 0 && (
@@ -207,9 +203,9 @@ export default function Extensions() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      extension.isEnabled 
-                        ? 'bg-green-100 text-green-800' 
-                        : 'bg-gray-100 text-gray-800'
+                      extension.isEnabled
+                        ? 'bg-success/15 text-success'
+                        : 'bg-muted text-muted-foreground'
                     }`}>
                       {extension.isEnabled ? 'Enabled' : 'Disabled'}
                     </span>
@@ -231,7 +227,7 @@ export default function Extensions() {
                       </button>
                       <button
                         onClick={() => alert('Extension settings will be available in the next update.')}
-                        className="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded-md bg-blue-100 text-blue-700 hover:bg-blue-200"
+                        className="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded-md bg-info/15 text-info-foreground hover:bg-info/25"
                       >
                         <svg className="h-3.5 w-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
@@ -243,8 +239,8 @@ export default function Extensions() {
                         onClick={() => void handleToggleExtension(extension.id, extension.isEnabled)}
                         className={`inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded-md ${
                           extension.isEnabled
-                            ? 'bg-amber-100 text-amber-700 hover:bg-amber-200'
-                            : 'bg-green-100 text-green-700 hover:bg-green-200'
+                            ? 'bg-warning/15 text-warning-foreground hover:bg-warning/25'
+                            : 'bg-success/15 text-success hover:bg-success/25'
                         }`}
                       >
                         {extension.isEnabled ? (
@@ -265,7 +261,7 @@ export default function Extensions() {
                       </button>
                       <button
                         onClick={() => void handleRemoveExtension(extension.id)}
-                        className="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded-md bg-red-100 text-red-700 hover:bg-red-200"
+                        className="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded-md bg-destructive/15 text-destructive hover:bg-destructive/25"
                       >
                         Remove
                       </button>

@@ -347,7 +347,7 @@ export const AddContractLinesDialog: React.FC<AddContractLinesDialogProps> = ({
             {/* Search Input */}
             <div className="relative flex-1 min-w-[200px]">
               <Search
-                className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400"
+                className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground"
                 aria-hidden="true"
               />
               <Input
@@ -396,15 +396,15 @@ export const AddContractLinesDialog: React.FC<AddContractLinesDialogProps> = ({
           {/* Contract Line Presets List */}
           <div className="flex-1 overflow-y-auto border rounded-md p-2 space-y-1 max-h-[50vh]">
             {isLoading ? (
-              <div className="text-sm text-gray-500 p-4 text-center">
+              <div className="text-sm text-muted-foreground p-4 text-center">
                 Loading contract line presets...
               </div>
             ) : availablePresets.length === 0 ? (
-              <div className="text-sm text-gray-500 p-4 text-center">
+              <div className="text-sm text-muted-foreground p-4 text-center">
                 No contract line presets available.
               </div>
             ) : filteredPresets.length === 0 ? (
-              <div className="text-sm text-gray-500 p-4 text-center">
+              <div className="text-sm text-muted-foreground p-4 text-center">
                 No presets match your search.
               </div>
             ) : (
@@ -416,10 +416,10 @@ export const AddContractLinesDialog: React.FC<AddContractLinesDialogProps> = ({
                 const fixedConfig = presetFixedConfigs[preset.preset_id];
 
                 return (
-                  <div key={preset.preset_id} className="border rounded bg-white shadow-sm">
+                  <div key={preset.preset_id} className="border rounded bg-card shadow-sm">
                     {/* Main row - clickable to expand */}
                     <div
-                      className="flex items-center gap-3 p-3 hover:bg-gray-50 cursor-pointer transition-colors"
+                      className="flex items-center gap-3 p-3 hover:bg-muted cursor-pointer transition-colors"
                       onClick={() => preset.preset_id && toggleExpand(preset.preset_id)}
                     >
                       <div onClick={(e) => e.stopPropagation()}>
@@ -430,28 +430,28 @@ export const AddContractLinesDialog: React.FC<AddContractLinesDialogProps> = ({
                         />
                       </div>
                       <div className="flex-1">
-                        <div className="font-medium text-sm text-gray-900">{preset.preset_name}</div>
+                        <div className="font-medium text-sm text-[rgb(var(--color-text-900))]">{preset.preset_name}</div>
                         <div className="flex items-center gap-2 mt-1">
                           <Badge
-                            className={
+                            variant={
                               preset.contract_line_type === 'Fixed'
-                                ? 'bg-green-100 text-green-800 border-green-200'
+                                ? 'info'
                                 : preset.contract_line_type === 'Hourly'
-                                ? 'bg-purple-100 text-purple-800 border-purple-200'
+                                ? 'success'
                                 : preset.contract_line_type === 'Usage'
-                                ? 'bg-indigo-100 text-indigo-800 border-indigo-200'
-                                : 'bg-gray-100 text-gray-800 border-gray-200'
+                                ? 'warning'
+                                : 'default-muted'
                             }
                           >
                             {preset.contract_line_type}
                           </Badge>
-                          <span className="text-xs text-gray-600">{preset.billing_frequency}</span>
+                          <span className="text-xs text-muted-foreground">{preset.billing_frequency}</span>
                           {serviceCount > 0 && (
-                            <span className="text-xs text-gray-600">• {serviceCount} service{serviceCount !== 1 ? 's' : ''}</span>
+                            <span className="text-xs text-muted-foreground">• {serviceCount} service{serviceCount !== 1 ? 's' : ''}</span>
                           )}
                         </div>
                       </div>
-                      <div className="text-gray-600">
+                      <div className="text-muted-foreground">
                         {isExpanded ? (
                           <ChevronUp className="h-5 w-5" />
                         ) : (
@@ -462,28 +462,28 @@ export const AddContractLinesDialog: React.FC<AddContractLinesDialogProps> = ({
 
                     {/* Expanded details */}
                     {isExpanded && (
-                      <div className="px-5 py-4 bg-gray-50 border-t space-y-4">
+                      <div className="px-5 py-4 bg-muted border-t space-y-4">
                         {/* Fixed Rate Configuration for Fixed type presets */}
                         {preset.contract_line_type === 'Fixed' && (
-                          <div className="bg-white rounded-md p-4 border border-gray-200">
+                          <div className="bg-card rounded-md p-4 border border-[rgb(var(--color-border-200))]">
                             <div className="flex items-center justify-between mb-3">
-                              <Label className="text-sm font-semibold text-gray-900">Fixed Rate Configuration</Label>
+                              <Label className="text-sm font-semibold text-[rgb(var(--color-text-900))]">Fixed Rate Configuration</Label>
                             </div>
                             <div className="space-y-2">
                               <div className="text-sm">
-                                <span className="font-medium text-gray-700">Default Base Rate:</span>
-                                <span className="ml-2 text-gray-900 font-semibold">
+                                <span className="font-medium text-[rgb(var(--color-text-700))]">Default Base Rate:</span>
+                                <span className="ml-2 text-[rgb(var(--color-text-900))] font-semibold">
                                   {fixedConfig?.base_rate !== null && fixedConfig?.base_rate !== undefined
                                     ? `$${(fixedConfig.base_rate / 100).toFixed(2)}`
                                     : 'Not set'}
                                 </span>
                               </div>
                               <div>
-                                <Label htmlFor={`rate-override-${preset.preset_id}`} className="text-sm font-medium text-gray-700">
+                                <Label htmlFor={`rate-override-${preset.preset_id}`} className="text-sm font-medium text-[rgb(var(--color-text-700))]">
                                   Override Base Rate
                                 </Label>
                                 <div className="relative mt-1.5">
-                                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">$</span>
+                                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
                                   <Input
                                     id={`rate-override-${preset.preset_id}`}
                                     type="text"
@@ -526,7 +526,7 @@ export const AddContractLinesDialog: React.FC<AddContractLinesDialogProps> = ({
                                     className="pl-8 h-9 text-sm"
                                   />
                                 </div>
-                                <p className="text-xs text-gray-500 mt-1">
+                                <p className="text-xs text-muted-foreground mt-1">
                                   Leave blank to use the default rate
                                 </p>
                               </div>
@@ -535,24 +535,24 @@ export const AddContractLinesDialog: React.FC<AddContractLinesDialogProps> = ({
                         )}
 
                         {/* Services Configuration */}
-                        <div className="bg-white rounded-md p-4 border border-gray-200">
-                          <Label className="text-sm font-semibold text-gray-900 mb-3 block">
+                        <div className="bg-card rounded-md p-4 border border-[rgb(var(--color-border-200))]">
+                          <Label className="text-sm font-semibold text-[rgb(var(--color-text-900))] mb-3 block">
                             {preset.contract_line_type === 'Fixed' ? 'Services Included (Reference)' : 'Services Configuration'}
                           </Label>
                           {services.length === 0 ? (
-                            <div className="text-sm text-gray-500 italic">No services configured for this preset</div>
+                            <div className="text-sm text-muted-foreground italic">No services configured for this preset</div>
                           ) : preset.contract_line_type === 'Fixed' ? (
                             /* For Fixed presets, show services as read-only reference */
                             <div className="space-y-2">
-                              <p className="text-xs text-gray-600 mb-3">
+                              <p className="text-xs text-muted-foreground mb-3">
                                 These services are included for reference only. The fixed rate above determines the billing amount.
                               </p>
                               {services.map((service) => (
-                                <div key={service.service_id} className="bg-gray-50 rounded-md p-2 border border-gray-200">
+                                <div key={service.service_id} className="bg-muted rounded-md p-2 border border-[rgb(var(--color-border-200))]">
                                   <div className="flex items-center justify-between">
-                                    <span className="text-sm text-gray-900">{service.service_name}</span>
+                                    <span className="text-sm text-[rgb(var(--color-text-900))]">{service.service_name}</span>
                                     {service.quantity && service.quantity > 1 && (
-                                      <span className="text-xs text-gray-600">Qty: {service.quantity}</span>
+                                      <span className="text-xs text-muted-foreground">Qty: {service.quantity}</span>
                                     )}
                                   </div>
                                 </div>
@@ -562,11 +562,11 @@ export const AddContractLinesDialog: React.FC<AddContractLinesDialogProps> = ({
                             /* For Hourly presets, show hourly configuration fields */
                             <div className="space-y-4">
                               {/* Hourly Configuration */}
-                              <div className="bg-gray-50 rounded-md p-3 border border-gray-200">
-                                <Label className="text-xs font-semibold text-gray-900 mb-2 block">Time Billing Configuration</Label>
+                              <div className="bg-muted rounded-md p-3 border border-[rgb(var(--color-border-200))]">
+                                <Label className="text-xs font-semibold text-[rgb(var(--color-text-900))] mb-2 block">Time Billing Configuration</Label>
                                 <div className="grid grid-cols-2 gap-3">
                                   <div>
-                                    <Label htmlFor={`min-billable-${preset.preset_id}`} className="text-xs font-medium text-gray-700">
+                                    <Label htmlFor={`min-billable-${preset.preset_id}`} className="text-xs font-medium text-[rgb(var(--color-text-700))]">
                                       Minimum billable minutes
                                     </Label>
                                     <Input
@@ -605,7 +605,7 @@ export const AddContractLinesDialog: React.FC<AddContractLinesDialogProps> = ({
                                     />
                                   </div>
                                   <div>
-                                    <Label htmlFor={`round-up-${preset.preset_id}`} className="text-xs font-medium text-gray-700">
+                                    <Label htmlFor={`round-up-${preset.preset_id}`} className="text-xs font-medium text-[rgb(var(--color-text-700))]">
                                       Round up to nearest (minutes)
                                     </Label>
                                     <Input
@@ -648,7 +648,7 @@ export const AddContractLinesDialog: React.FC<AddContractLinesDialogProps> = ({
 
                               {/* Services with hourly rates */}
                               <div>
-                                <Label className="text-xs font-semibold text-gray-900 mb-2 block">Services & Hourly Rates</Label>
+                                <Label className="text-xs font-semibold text-[rgb(var(--color-text-900))] mb-2 block">Services & Hourly Rates</Label>
                                 <div className="space-y-2">
                                   {services.map((service) => {
                                     const customRateValue = service.custom_rate !== undefined && service.custom_rate !== null
@@ -665,14 +665,14 @@ export const AddContractLinesDialog: React.FC<AddContractLinesDialogProps> = ({
                                     };
 
                                     return (
-                                      <div key={service.service_id} className="bg-gray-50 rounded-md p-3 border border-gray-200">
-                                        <div className="font-medium text-sm text-gray-900 mb-2">{service.service_name}</div>
+                                      <div key={service.service_id} className="bg-muted rounded-md p-3 border border-[rgb(var(--color-border-200))]">
+                                        <div className="font-medium text-sm text-[rgb(var(--color-text-900))] mb-2">{service.service_name}</div>
                                         <div>
-                                          <Label htmlFor={`hourly-rate-${preset.preset_id}-${service.service_id}`} className="text-xs font-medium text-gray-700">
+                                          <Label htmlFor={`hourly-rate-${preset.preset_id}-${service.service_id}`} className="text-xs font-medium text-[rgb(var(--color-text-700))]">
                                             Hourly Rate
                                           </Label>
                                           <div className="relative mt-1">
-                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">$</span>
+                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
                                             <Input
                                               id={`hourly-rate-${preset.preset_id}-${service.service_id}`}
                                               type="text"
@@ -725,7 +725,7 @@ export const AddContractLinesDialog: React.FC<AddContractLinesDialogProps> = ({
                                               className="pl-8 h-9 text-sm"
                                             />
                                           </div>
-                                          <p className="text-xs text-gray-500 mt-0.5">
+                                          <p className="text-xs text-muted-foreground mt-0.5">
                                             Default: ${(service.default_rate! / 100).toFixed(2)}
                                           </p>
                                         </div>
@@ -753,11 +753,11 @@ export const AddContractLinesDialog: React.FC<AddContractLinesDialogProps> = ({
                                 };
 
                                 return (
-                                  <div key={service.service_id} className="bg-gray-50 rounded-md p-3 border border-gray-200">
-                                    <div className="font-medium text-sm text-gray-900 mb-2">{service.service_name}</div>
+                                  <div key={service.service_id} className="bg-muted rounded-md p-3 border border-[rgb(var(--color-border-200))]">
+                                    <div className="font-medium text-sm text-[rgb(var(--color-text-900))] mb-2">{service.service_name}</div>
                                     <div className="grid grid-cols-3 gap-3">
                                       <div>
-                                        <Label htmlFor={`quantity-${preset.preset_id}-${service.service_id}`} className="text-xs font-medium text-gray-700">
+                                        <Label htmlFor={`quantity-${preset.preset_id}-${service.service_id}`} className="text-xs font-medium text-[rgb(var(--color-text-700))]">
                                           Quantity
                                         </Label>
                                         <Input
@@ -797,11 +797,11 @@ export const AddContractLinesDialog: React.FC<AddContractLinesDialogProps> = ({
                                         />
                                       </div>
                                       <div>
-                                        <Label htmlFor={`rate-${preset.preset_id}-${service.service_id}`} className="text-xs font-medium text-gray-700">
+                                        <Label htmlFor={`rate-${preset.preset_id}-${service.service_id}`} className="text-xs font-medium text-[rgb(var(--color-text-700))]">
                                           Rate (per unit)
                                         </Label>
                                         <div className="relative mt-1">
-                                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">$</span>
+                                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
                                           <Input
                                             id={`rate-${preset.preset_id}-${service.service_id}`}
                                             type="text"
@@ -854,12 +854,12 @@ export const AddContractLinesDialog: React.FC<AddContractLinesDialogProps> = ({
                                             className="pl-8 h-9 text-sm"
                                           />
                                         </div>
-                                        <p className="text-xs text-gray-500 mt-0.5">
+                                        <p className="text-xs text-muted-foreground mt-0.5">
                                           Default: ${(service.default_rate! / 100).toFixed(2)}
                                         </p>
                                       </div>
                                       <div>
-                                        <Label htmlFor={`unit-measure-${preset.preset_id}-${service.service_id}`} className="text-xs font-medium text-gray-700">
+                                        <Label htmlFor={`unit-measure-${preset.preset_id}-${service.service_id}`} className="text-xs font-medium text-[rgb(var(--color-text-700))]">
                                           Unit of Measure
                                         </Label>
                                         <Input
@@ -867,9 +867,9 @@ export const AddContractLinesDialog: React.FC<AddContractLinesDialogProps> = ({
                                           type="text"
                                           value={service.unit_of_measure || 'unit'}
                                           disabled
-                                          className="h-9 text-sm mt-1 bg-gray-100"
+                                          className="h-9 text-sm mt-1 bg-muted"
                                         />
-                                        <p className="text-xs text-gray-500 mt-0.5">
+                                        <p className="text-xs text-muted-foreground mt-0.5">
                                           e.g., GB, API call, user
                                         </p>
                                       </div>

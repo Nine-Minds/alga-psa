@@ -72,8 +72,8 @@ export default function PaymentSuccessContent({ invoiceId, sessionId }: PaymentS
           {status === 'verifying' && (
             <>
               <div className="flex justify-center mb-4">
-                <div className="h-16 w-16 rounded-full bg-blue-100 flex items-center justify-center">
-                  <Clock className="h-8 w-8 text-blue-600 animate-pulse" />
+                <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
+                  <Clock className="h-8 w-8 text-primary animate-pulse" />
                 </div>
               </div>
               <h1 className="text-2xl font-semibold text-gray-900 mb-2">Verifying Payment</h1>
@@ -84,8 +84,8 @@ export default function PaymentSuccessContent({ invoiceId, sessionId }: PaymentS
           {status === 'success' && (
             <>
               <div className="flex justify-center mb-4">
-                <div className="h-16 w-16 rounded-full bg-green-100 flex items-center justify-center">
-                  <CheckCircle className="h-8 w-8 text-green-600" />
+                <div className="h-16 w-16 rounded-full bg-success/10 flex items-center justify-center">
+                  <CheckCircle className="h-8 w-8 text-success" />
                 </div>
               </div>
               <h1 className="text-2xl font-semibold text-gray-900 mb-2">Payment Successful!</h1>
@@ -103,8 +103,8 @@ export default function PaymentSuccessContent({ invoiceId, sessionId }: PaymentS
           {status === 'pending' && (
             <>
               <div className="flex justify-center mb-4">
-                <div className="h-16 w-16 rounded-full bg-yellow-100 flex items-center justify-center">
-                  <Clock className="h-8 w-8 text-yellow-600" />
+                <div className="h-16 w-16 rounded-full bg-warning/10 flex items-center justify-center">
+                  <Clock className="h-8 w-8 text-warning" />
                 </div>
               </div>
               <h1 className="text-2xl font-semibold text-gray-900 mb-2">Payment Processing</h1>
@@ -118,8 +118,8 @@ export default function PaymentSuccessContent({ invoiceId, sessionId }: PaymentS
           {status === 'failed' && (
             <>
               <div className="flex justify-center mb-4">
-                <div className="h-16 w-16 rounded-full bg-red-100 flex items-center justify-center">
-                  <XCircle className="h-8 w-8 text-red-600" />
+                <div className="h-16 w-16 rounded-full bg-destructive/10 flex items-center justify-center">
+                  <XCircle className="h-8 w-8 text-destructive" />
                 </div>
               </div>
               <h1 className="text-2xl font-semibold text-gray-900 mb-2">Payment Verification Failed</h1>

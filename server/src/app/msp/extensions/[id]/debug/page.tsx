@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 
 type DebugEvent = {
   ts?: string;
@@ -29,21 +30,21 @@ function classifyLine(e: DebugEvent): { label: string; className: string } {
   const level = (e.level || 'info').toLowerCase();
 
   if (stream === 'stderr') {
-    return { label: 'stderr', className: 'bg-red-50 text-red-800 border-red-100' };
+    return { label: 'stderr', className: 'bg-destructive/10 text-destructive border-destructive/20' };
   }
   if (stream === 'stdout') {
-    return { label: 'stdout', className: 'bg-slate-50 text-slate-800 border-slate-100' };
+    return { label: 'stdout', className: 'bg-muted text-muted-foreground border-border' };
   }
 
   switch (level) {
     case 'error':
-      return { label: 'log:error', className: 'bg-red-50 text-red-800 border-red-100' };
+      return { label: 'log:error', className: 'bg-destructive/10 text-destructive border-destructive/20' };
     case 'warn':
-      return { label: 'log:warn', className: 'bg-amber-50 text-amber-800 border-amber-100' };
+      return { label: 'log:warn', className: 'bg-warning/10 text-warning-foreground border-warning/20' };
     case 'debug':
-      return { label: 'log:debug', className: 'bg-slate-50 text-slate-700 border-slate-100' };
+      return { label: 'log:debug', className: 'bg-muted text-muted-foreground border-border' };
     default:
-      return { label: 'log', className: 'bg-slate-50 text-slate-800 border-slate-100' };
+      return { label: 'log', className: 'bg-muted text-muted-foreground border-border' };
   }
 }
 
@@ -494,10 +495,10 @@ export default function ExtensionDebugPage({
           <span
             className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] ${
               connected
-                ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
+                ? 'bg-success/10 text-success border-success/30'
                 : connecting
-                ? 'bg-amber-50 text-amber-700 border-amber-100'
-                : 'bg-slate-50 text-slate-500 border-slate-100'
+                ? 'bg-warning/10 text-warning-foreground border-warning/30'
+                : 'bg-muted text-muted-foreground border-border'
             }`}
           >
             <span
@@ -519,9 +520,9 @@ export default function ExtensionDebugPage({
       </div>
 
       {error && (
-        <div className="text-xs text-red-700 bg-red-50 border border-red-100 rounded px-2 py-1">
-          {error}
-        </div>
+        <Alert variant="destructive" className="text-xs">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
       )}
 
       <div

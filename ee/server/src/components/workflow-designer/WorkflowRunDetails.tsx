@@ -143,17 +143,17 @@ type WorkflowDefinitionVersionRecord = {
 };
 
 const STATUS_STYLES: Record<string, string> = {
-  RUNNING: 'bg-blue-100 text-blue-700',
-  WAITING: 'bg-amber-100 text-amber-700',
-  SUCCEEDED: 'bg-green-100 text-green-700',
-  FAILED: 'bg-red-100 text-red-700',
-  CANCELED: 'bg-gray-100 text-gray-600',
-  STARTED: 'bg-blue-100 text-blue-700',
-  RETRY_SCHEDULED: 'bg-amber-100 text-amber-700',
-  INFO: 'bg-blue-100 text-blue-700',
-  WARN: 'bg-amber-100 text-amber-700',
-  ERROR: 'bg-red-100 text-red-700',
-  DEBUG: 'bg-gray-100 text-gray-600'
+  RUNNING: 'bg-info/15 text-info-foreground',
+  WAITING: 'bg-warning/15 text-warning-foreground',
+  SUCCEEDED: 'bg-success/15 text-success',
+  FAILED: 'bg-destructive/15 text-destructive',
+  CANCELED: 'bg-muted text-muted-foreground',
+  STARTED: 'bg-info/15 text-info-foreground',
+  RETRY_SCHEDULED: 'bg-warning/15 text-warning-foreground',
+  INFO: 'bg-info/15 text-info-foreground',
+  WARN: 'bg-warning/15 text-warning-foreground',
+  ERROR: 'bg-destructive/15 text-destructive',
+  DEBUG: 'bg-muted text-muted-foreground'
 };
 
 const STEP_STATUS_OPTIONS: SelectOption[] = [
@@ -816,18 +816,18 @@ const WorkflowRunDetails: React.FC<WorkflowRunDetailsProps> = ({
             <span>Trigger payload schema:</span>
             <span className="font-mono break-all">{run.source_payload_schema_ref}</span>
             {run.trigger_mapping_applied ? (
-              <Badge className="bg-blue-50 text-blue-700 border-blue-200 text-[10px]">Mapped</Badge>
+              <Badge variant="info" className="text-[10px]">Mapped</Badge>
             ) : (
-              <Badge className="bg-gray-100 text-gray-600 border-gray-200 text-[10px]">Identity</Badge>
+              <Badge variant="default-muted" className="text-[10px]">Identity</Badge>
             )}
           </div>
         )}
         {run?.error_json && (
-          <div className="flex items-start gap-2 text-sm text-red-700">
+          <div className="flex items-start gap-2 text-sm text-destructive">
             <AlertTriangle className="h-4 w-4 mt-0.5" />
             <div>
               <div>{String((run.error_json as any)?.message ?? 'Run error')}</div>
-              <div className="text-xs text-red-600">
+              <div className="text-xs text-destructive">
                 {(run.error_json as any)?.category ?? 'Error'} · {formatDateTime((run.error_json as any)?.at ?? null)}
               </div>
             </div>
@@ -904,7 +904,7 @@ const WorkflowRunDetails: React.FC<WorkflowRunDetailsProps> = ({
                   {formatDateTime(retryWaitsByStep.get(step.step_path)?.timeout_at ?? null)}
                 </TableCell>
                 <TableCell>{formatDateTime(step.started_at)}</TableCell>
-                <TableCell className="text-xs text-red-600">
+                <TableCell className="text-xs text-destructive">
                   {(step.error_json as any)?.message ?? '—'}
                 </TableCell>
                 <TableCell>
@@ -980,12 +980,12 @@ const WorkflowRunDetails: React.FC<WorkflowRunDetailsProps> = ({
           </div>
 
           {selectedStepError && (
-            <Card className="p-3 border border-red-200 bg-red-50">
-              <div className="text-xs font-semibold text-red-700">Error</div>
-              <div className="text-sm text-red-700">
+            <Card className="p-3 border border-destructive/30 bg-destructive/10">
+              <div className="text-xs font-semibold text-destructive">Error</div>
+              <div className="text-sm text-destructive">
                 {String(selectedStepError.message ?? 'Step error')}
               </div>
-              <div className="text-xs text-red-600">
+              <div className="text-xs text-destructive/80">
                 {selectedStepError.category ?? 'Error'} · {formatDateTime(selectedStepError.at ?? null)}
               </div>
             </Card>
@@ -1085,7 +1085,7 @@ const WorkflowRunDetails: React.FC<WorkflowRunDetailsProps> = ({
                     Duration: {formatDuration(invocation.started_at, invocation.completed_at)}
                   </div>
                   {invocation.error_message && (
-                    <div className="text-xs text-red-600 mt-1">{invocation.error_message}</div>
+                    <div className="text-xs text-destructive mt-1">{invocation.error_message}</div>
                   )}
                   <div className="text-xs text-gray-500 mt-1">
                     Input size: {formatBytes(inputSize)}{inputPreview.truncated ? ' (truncated)' : ''} · Output size: {formatBytes(outputSize)}{outputPreview.truncated ? ' (truncated)' : ''}

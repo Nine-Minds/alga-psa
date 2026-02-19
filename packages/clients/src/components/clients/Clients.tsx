@@ -28,6 +28,7 @@ import { useUserPreference } from '@alga-psa/users/hooks';
 import ClientsImportDialog from './ClientsImportDialog';
 import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
 import { Input } from '@alga-psa/ui/components/Input';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import Drawer from '@alga-psa/ui/components/Drawer';
 import ClientDetails from './ClientDetails';
 import { useAutomationIdAndRegister } from '@alga-psa/ui/ui-reflection/useAutomationIdAndRegister';
@@ -1218,24 +1219,26 @@ const Clients: React.FC = () => {
               <>
                 {/* Success message if any were deleted */}
                 {multiDeleteResults.successCount > 0 && (
-                  <div className="bg-green-50 border border-green-200 rounded-md p-3">
-                    <p className="text-green-800">
+                  <Alert variant="success">
+                    <AlertDescription>
                       <span className="font-semibold">{multiDeleteResults.successCount}</span> client{multiDeleteResults.successCount !== 1 ? 's were' : ' was'} successfully deleted.
-                    </p>
-                  </div>
+                    </AlertDescription>
+                  </Alert>
                 )}
 
                 {/* Failed clients section */}
                 {multiDeleteResults.failedClients.length > 0 && (
                   <div className="space-y-3">
-                    <div className="bg-amber-50 border border-amber-200 rounded-md p-3">
-                      <p className="text-amber-800 font-semibold mb-2">
-                        {multiDeleteResults.failedClients.length} client{multiDeleteResults.failedClients.length !== 1 ? 's' : ''} could not be deleted
-                      </p>
-                      <p className="text-amber-700 text-sm">
-                        These clients have associated records that must be removed first.
-                      </p>
-                    </div>
+                    <Alert variant="warning">
+                      <AlertDescription>
+                        <p className="font-semibold mb-2">
+                          {multiDeleteResults.failedClients.length} client{multiDeleteResults.failedClients.length !== 1 ? 's' : ''} could not be deleted
+                        </p>
+                        <p className="text-sm">
+                          These clients have associated records that must be removed first.
+                        </p>
+                      </AlertDescription>
+                    </Alert>
 
                     <div className="max-h-48 overflow-y-auto border rounded-md">
                       <table className="w-full text-sm">
@@ -1256,11 +1259,11 @@ const Clients: React.FC = () => {
                       </table>
                     </div>
 
-                    <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
-                      <p className="text-blue-800 text-sm">
+                    <Alert variant="info">
+                      <AlertDescription>
                         <span className="font-semibold">Alternative:</span> Mark these clients as inactive. They will be hidden from most views but retain all their data.
-                      </p>
-                    </div>
+                      </AlertDescription>
+                    </Alert>
                   </div>
                 )}
               </>
@@ -1320,11 +1323,11 @@ const Clients: React.FC = () => {
           <div className="space-y-4">
             {clientToDelete?.is_inactive && showDeactivateOption && deleteDependencies ? (
               <>
-                <div className="bg-amber-50 border border-amber-200 rounded-md p-4">
-                  <p className="text-amber-800">
+                <Alert variant="warning">
+                  <AlertDescription>
                     <span className="font-semibold">Note:</span> This client is already marked as inactive.
-                  </p>
-                </div>
+                  </AlertDescription>
+                </Alert>
                 <p className="text-gray-700">Unable to delete this client due to the following associated records:</p>
                 <div>
                   <ul className="list-disc list-inside space-y-1 text-gray-700">
@@ -1394,16 +1397,18 @@ const Clients: React.FC = () => {
                     )}
                   </ul>
                 </div>
-                <div className="bg-blue-50 border border-blue-200 rounded-md p-4">
-                  <p className="text-blue-800">
-                    <span className="font-semibold">Alternative Option:</span> You can mark this client as inactive instead. Inactive clients are hidden from most views but retain all their data and can be marked as active later.
-                  </p>
-                  {deleteDependencies.contacts && deleteDependencies.contacts > 0 && (
-                    <p className="text-blue-800 mt-2">
-                      Would you like to also deactivate the {deleteDependencies.contacts} associated contact{deleteDependencies.contacts !== 1 ? 's' : ''}?
+                <Alert variant="info">
+                  <AlertDescription>
+                    <p>
+                      <span className="font-semibold">Alternative Option:</span> You can mark this client as inactive instead. Inactive clients are hidden from most views but retain all their data and can be marked as active later.
                     </p>
-                  )}
-                </div>
+                    {deleteDependencies.contacts && deleteDependencies.contacts > 0 && (
+                      <p className="mt-2">
+                        Would you like to also deactivate the {deleteDependencies.contacts} associated contact{deleteDependencies.contacts !== 1 ? 's' : ''}?
+                      </p>
+                    )}
+                  </AlertDescription>
+                </Alert>
               </>
             ) : deleteError ? (
               <div className="text-gray-600 whitespace-pre-line">

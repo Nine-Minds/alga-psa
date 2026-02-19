@@ -108,10 +108,10 @@ export default function PortalSessionHandoff({
 
   if (state === 'error') {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50 px-6 py-24">
-        <div className="max-w-md rounded-lg bg-white p-8 shadow-lg">
-          <h1 className="text-2xl font-semibold text-gray-900">We couldn’t finalize your login</h1>
-          <p className="mt-4 text-gray-600">
+      <div className="flex min-h-screen items-center justify-center bg-[rgb(var(--color-background-50))] px-6 py-24">
+        <div className="max-w-md rounded-lg bg-card p-8 shadow-lg">
+          <h1 className="text-2xl font-semibold text-[rgb(var(--color-text-900))]">We couldn’t finalize your login</h1>
+          <p className="mt-4 text-[rgb(var(--color-text-600))]">
             {error || 'The one-time access token is no longer valid. Please return to the sign-in page and try again.'}
           </p>
 
@@ -119,7 +119,7 @@ export default function PortalSessionHandoff({
             <Button id="return-to-signin-button" className="w-full" onClick={handleReturnToSignin}>
               Return to Sign In
             </Button>
-            <p className="text-sm text-gray-500 text-center">
+            <p className="text-sm text-[rgb(var(--color-text-500))] text-center">
               You’ll be redirected to our secure sign-in page to restart the process.
             </p>
           </div>
@@ -129,12 +129,12 @@ export default function PortalSessionHandoff({
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-slate-50 px-6 py-24">
-      <div className="flex items-center gap-3 rounded-lg bg-white px-6 py-5 shadow-md">
-        <Spinner size="sm" className="text-indigo-600" />
+    <div className="flex min-h-screen flex-col items-center justify-center bg-[rgb(var(--color-background-50))] px-6 py-24">
+      <div className="flex items-center gap-3 rounded-lg bg-card px-6 py-5 shadow-md">
+        <Spinner size="sm" className="text-[rgb(var(--color-primary-500))]" />
         <div>
-          <p className="text-sm font-medium text-gray-900">Preparing your secure session</p>
-          <p className="text-sm text-gray-500">Hold tight—this usually takes just a second.</p>
+          <p className="text-sm font-medium text-[rgb(var(--color-text-900))]">Preparing your secure session</p>
+          <p className="text-sm text-[rgb(var(--color-text-500))]">Hold tight—this usually takes just a second.</p>
         </div>
       </div>
     </div>

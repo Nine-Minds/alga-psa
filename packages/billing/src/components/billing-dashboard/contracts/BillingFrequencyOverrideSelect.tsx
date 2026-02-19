@@ -53,7 +53,7 @@ export function BillingFrequencyOverrideSelect({
         <Repeat className="h-4 w-4" />
         {label}
       </Label>
-      <p className="text-xs text-gray-500">
+      <p className="text-xs text-muted-foreground">
         {description || `Optional: Override the contract's billing frequency (${contractFrequencyLabel}) for this specific contract line.`}
       </p>
 
@@ -68,7 +68,7 @@ export function BillingFrequencyOverrideSelect({
         />
 
         {value && value !== contractBillingFrequency && (
-          <p className="text-xs text-gray-600">
+          <p className="text-xs text-muted-foreground">
             This contract line will be billed {BILLING_FREQUENCY_DISPLAY[value]?.toLowerCase()} instead of {contractFrequencyLabel.toLowerCase()}.
           </p>
         )}

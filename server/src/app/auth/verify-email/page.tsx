@@ -51,8 +51,8 @@ const VerifyEmailContent = () => {
     }, [countdown, router]);
 
     return (
-        <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-        <div className="bg-white p-8 rounded-lg shadow-lg max-w-md text-center">
+        <div className="min-h-screen bg-[rgb(var(--color-background-50))] flex items-center justify-center">
+        <div className="bg-card p-8 rounded-lg shadow-lg max-w-md text-center">
             
             {
                 token
@@ -60,30 +60,30 @@ const VerifyEmailContent = () => {
                 verificationSuccess
                 ?
                 <>
-                    <h1 className="text-3xl font-bold text-blue-600 mb-4">Welcome!</h1>
-                    <p className="text-gray-700 mb-6">
+                    <h1 className="text-3xl font-bold text-[rgb(var(--color-primary-500))] mb-4">Welcome!</h1>
+                    <p className="text-[rgb(var(--color-text-700))] mb-6">
                     Your email has been successfully verified. You will be redirected to the sign in page shortly.
                     </p>
                 </>
                 :
                 <>
-                    <h1 className="text-3xl font-bold text-blue-600 mb-4">Process Error!</h1>
-                    <p className="text-gray-700 mb-6">
+                    <h1 className="text-3xl font-bold text-[rgb(var(--color-primary-500))] mb-4">Process Error!</h1>
+                    <p className="text-[rgb(var(--color-text-700))] mb-6">
                         {verificationMessage}
                     </p>
                 </>
                 :
                 <>
-                    <h1 className="text-3xl font-bold text-blue-600 mb-4">Error!</h1>
-                    <p className="text-gray-700 mb-6">
+                    <h1 className="text-3xl font-bold text-[rgb(var(--color-primary-500))] mb-4">Error!</h1>
+                    <p className="text-[rgb(var(--color-text-700))] mb-6">
                     Verification process required a token. Please try again.
                     </p>
                 </>
             }
-            <p className="text-gray-500 mb-4">Redirecting in {countdown} seconds...</p>
+            <p className="text-[rgb(var(--color-text-500))] mb-4">Redirecting in {countdown} seconds...</p>
             <button
             onClick={() => router.push('/auth/msp/signin')}
-            className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-md shadow hover:bg-indigo-700 transition"
+            className="mt-4 px-4 py-2 bg-[rgb(var(--color-primary-600))] text-white rounded-md shadow hover:bg-[rgb(var(--color-primary-700))] transition"
             >
             Go to Sign In
             </button>

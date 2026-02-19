@@ -6,6 +6,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { StringDateRangePicker } from '@alga-psa/ui/components/DateRangePicker';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Upload, FileText, AlertCircle, CheckCircle2, HelpCircle, ChevronDown, ChevronUp } from 'lucide-react';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { CSVImportPreview } from './CSVImportPreview';
 
 interface CSVTaxImportPanelProps {
@@ -203,20 +204,20 @@ export function CSVTaxImportPanel({ onImportComplete }: CSVTaxImportPanelProps) 
           <button
             type="button"
             onClick={() => setShowHelp(!showHelp)}
-            className="flex items-center justify-between w-full p-4 text-left hover:bg-gray-50"
+            className="flex items-center justify-between w-full p-4 text-left hover:bg-muted/50"
           >
             <div className="flex items-center gap-2">
               <HelpCircle className="h-5 w-5 text-blue-500" />
               <span className="font-medium">How to export tax data from QuickBooks</span>
             </div>
             {showHelp ? (
-              <ChevronUp className="h-5 w-5 text-gray-500" />
+              <ChevronUp className="h-5 w-5 text-muted-foreground" />
             ) : (
-              <ChevronDown className="h-5 w-5 text-gray-500" />
+              <ChevronDown className="h-5 w-5 text-muted-foreground" />
             )}
           </button>
           {showHelp && (
-            <div className="px-4 pb-4 space-y-3 text-sm text-gray-600">
+            <div className="px-4 pb-4 space-y-3 text-sm text-muted-foreground">
               <ol className="list-decimal list-inside space-y-2">
                 <li>In QuickBooks, go to <strong>Reports &gt; All Reports</strong></li>
                 <li>Select <strong>Sales Tax Liability</strong> or <strong>Transaction Detail by Account</strong></li>
@@ -224,7 +225,7 @@ export function CSVTaxImportPanel({ onImportComplete }: CSVTaxImportPanelProps) 
                 <li>Click <strong>Export</strong> and choose <strong>Export to Excel</strong> or <strong>Export to CSV</strong></li>
                 <li>Save the file and upload it here</li>
               </ol>
-              <p className="text-gray-500">
+              <p className="text-muted-foreground">
                 The CSV must include Invoice Number, Invoice Date, and Tax Amount columns.
               </p>
               <button
@@ -246,7 +247,7 @@ export function CSVTaxImportPanel({ onImportComplete }: CSVTaxImportPanelProps) 
             value={dateRange}
             onChange={setDateRange}
           />
-          <p className="text-sm text-gray-500 mt-1">
+          <p className="text-sm text-muted-foreground mt-1">
             Only invoices within this date range will be processed.
           </p>
         </div>
@@ -259,7 +260,7 @@ export function CSVTaxImportPanel({ onImportComplete }: CSVTaxImportPanelProps) 
             onDragOver={(e) => e.preventDefault()}
             onClick={() => fileInputRef.current?.click()}
             className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
-              file ? 'border-green-400 bg-green-50' : 'border-gray-300 hover:border-gray-400 hover:bg-gray-50'
+              file ? 'border-green-400 bg-green-50 dark:bg-green-950/30 dark:border-green-600' : 'border-border hover:border-muted-foreground hover:bg-muted/50'
             }`}
           >
             <input
@@ -273,12 +274,12 @@ export function CSVTaxImportPanel({ onImportComplete }: CSVTaxImportPanelProps) 
               <div className="flex items-center justify-center gap-2 text-green-700">
                 <FileText className="h-6 w-6" />
                 <span className="font-medium">{file.name}</span>
-                <span className="text-sm text-gray-500">
+                <span className="text-sm text-muted-foreground">
                   ({(file.size / 1024).toFixed(1)} KB)
                 </span>
               </div>
             ) : (
-              <div className="text-gray-500">
+              <div className="text-muted-foreground">
                 <Upload className="h-8 w-8 mx-auto mb-2" />
                 <p>Drag and drop a CSV file here, or click to browse</p>
               </div>
@@ -288,10 +289,9 @@ export function CSVTaxImportPanel({ onImportComplete }: CSVTaxImportPanelProps) 
 
         {/* Error Message */}
         {error && (
-          <div className="flex items-center gap-2 p-3 bg-red-50 text-red-700 rounded-lg">
-            <AlertCircle className="h-5 w-5 flex-shrink-0" />
-            <span>{error}</span>
-          </div>
+          <Alert variant="destructive">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
         )}
 
         {/* Validation/Import Preview */}
@@ -301,14 +301,13 @@ export function CSVTaxImportPanel({ onImportComplete }: CSVTaxImportPanelProps) 
 
         {/* Success Message */}
         {importResult?.success && (
-          <div className="flex items-center gap-2 p-3 bg-green-50 text-green-700 rounded-lg">
-            <CheckCircle2 className="h-5 w-5 flex-shrink-0" />
-            <span>
+          <Alert variant="success">
+            <AlertDescription>
               Successfully imported tax for {importResult.summary.successfulUpdates} invoice
               {importResult.summary.successfulUpdates !== 1 ? 's' : ''}.
               Total tax imported: ${(importResult.summary.totalImportedTax / 100).toFixed(2)}
-            </span>
-          </div>
+            </AlertDescription>
+          </Alert>
         )}
 
         {/* Action Buttons */}

@@ -229,13 +229,13 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ contr
     fetchData();
   };
 
-  const getConfigTypeColor = (type?: 'Fixed' | 'Hourly' | 'Usage' | 'Bucket') => {
+  const getConfigTypeVariant = (type?: 'Fixed' | 'Hourly' | 'Usage' | 'Bucket'): 'info' | 'success' | 'warning' | 'default-muted' => {
     switch (type) {
-      case 'Fixed': return 'bg-green-100 text-green-800 border-green-200';
-      case 'Hourly': return 'bg-purple-100 text-purple-800 border-purple-200';
-      case 'Usage': return 'bg-orange-100 text-orange-800 border-orange-200';
-      case 'Bucket': return 'bg-blue-100 text-blue-800 border-blue-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
+      case 'Fixed': return 'info';
+      case 'Hourly': return 'success';
+      case 'Usage': return 'warning';
+      case 'Bucket': return 'default-muted';
+      default: return 'default-muted';
     }
   };
 
@@ -288,7 +288,7 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ contr
 
         return (
           // Pass potentially undefined derivedType to getConfigTypeColor
-          <Badge className={`${getConfigTypeColor(derivedType)}`}>
+          <Badge variant={getConfigTypeVariant(derivedType)}>
             {displayText}
           </Badge>
         );
@@ -426,7 +426,7 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ contr
                       return (
                         <div
                           key={service.service_id}
-                          className={`flex items-center space-x-2 p-2 hover:bg-muted/50 rounded ${!hasCurrencyPrice ? 'bg-amber-50' : ''}`}
+                          className={`flex items-center space-x-2 p-2 hover:bg-muted/50 rounded ${!hasCurrencyPrice ? 'bg-warning/10' : ''}`}
                         >
                           <div className="[&>div]:mb-0">
                             <Checkbox

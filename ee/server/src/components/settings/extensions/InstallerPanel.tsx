@@ -10,6 +10,7 @@ import { Label } from '@alga-psa/ui/components/Label';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import Link from 'next/link';
 import { toast } from 'react-hot-toast';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 
 // EE server actions
 import { extFinalizeUpload, extAbortUpload, extUploadProxy } from '../../../lib/actions/extBundleActions';
@@ -388,7 +389,7 @@ export default function InstallerPanel() {
             {/* Fallback: shown only if manifest extraction failed */}
             {needsManifest && (
               <div className="space-y-3">
-                <div className="text-sm text-amber-700">
+                <div className="text-sm text-warning">
                   Could not extract manifest from bundle. Please provide it manually.
                 </div>
                 <div className="space-y-2">
@@ -431,21 +432,25 @@ export default function InstallerPanel() {
 
         {success && (
           <div className="space-y-3">
-            <div className="rounded border border-green-200 bg-green-50 p-4">
-              <div className="font-medium text-green-800">Extension installed</div>
-              <div className="text-sm text-green-900 mt-1">
-                {success.extension.name} v{success.version.version}
-              </div>
-            </div>
+            <Alert variant="success">
+              <AlertDescription>
+                <div className="font-medium">Extension installed</div>
+                <div className="text-sm mt-1">
+                  {success.extension.name} v{success.version.version}
+                </div>
+              </AlertDescription>
+            </Alert>
             <div />
           </div>
         )}
 
         {error && (
-          <div className="rounded border border-red-200 bg-red-50 p-3">
-            <div className="text-sm text-red-700 font-medium">Error</div>
-            <div className="text-sm text-red-800 mt-1">{error.error}</div>
-          </div>
+          <Alert variant="destructive">
+            <AlertDescription>
+              <div className="text-sm font-medium">Error</div>
+              <div className="text-sm mt-1">{error.error}</div>
+            </AlertDescription>
+          </Alert>
         )}
       </CardContent>
       {renderActionButtons()}

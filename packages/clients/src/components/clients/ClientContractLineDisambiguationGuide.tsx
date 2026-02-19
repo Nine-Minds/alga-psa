@@ -71,55 +71,57 @@ const ClientPlanDisambiguationGuide: React.FC<ClientPlanDisambiguationGuideProps
           </Alert>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="p-4 bg-amber-50 border border-amber-100 rounded-md">
-              <h4 className="text-md font-medium text-amber-800 mb-2 flex items-center">
-                <AlertTriangle className="h-5 w-5 mr-2" />
-                Potential Issues for This Client
-              </h4>
-              <ul className="text-sm space-y-2 text-amber-700">
-                <li className="flex items-start">
-                  <ArrowRight className="h-3 w-3 mt-0.5 mr-1 flex-shrink-0" />
-                  <span>Incorrect billing due to automatic contract line selection</span>
-                </li>
-                <li className="flex items-start">
-                  <ArrowRight className="h-3 w-3 mt-0.5 mr-1 flex-shrink-0" />
-                  <span>User confusion when selecting contract lines for time entry</span>
-                </li>
-                <li className="flex items-start">
-                  <ArrowRight className="h-3 w-3 mt-0.5 mr-1 flex-shrink-0" />
-                  <span>Reporting inconsistencies across different contract lines</span>
-                </li>
-                <li className="flex items-start">
-                  <ArrowRight className="h-3 w-3 mt-0.5 mr-1 flex-shrink-0" />
-                  <span>Unexpected billing behavior for this client</span>
-                </li>
-              </ul>
-            </div>
+            <Alert variant="warning">
+              <AlertDescription>
+                <h4 className="text-md font-medium mb-2">
+                  Potential Issues for This Client
+                </h4>
+                <ul className="text-sm space-y-2">
+                  <li className="flex items-start">
+                    <ArrowRight className="h-3 w-3 mt-0.5 mr-1 flex-shrink-0" />
+                    <span>Incorrect billing due to automatic contract line selection</span>
+                  </li>
+                  <li className="flex items-start">
+                    <ArrowRight className="h-3 w-3 mt-0.5 mr-1 flex-shrink-0" />
+                    <span>User confusion when selecting contract lines for time entry</span>
+                  </li>
+                  <li className="flex items-start">
+                    <ArrowRight className="h-3 w-3 mt-0.5 mr-1 flex-shrink-0" />
+                    <span>Reporting inconsistencies across different contract lines</span>
+                  </li>
+                  <li className="flex items-start">
+                    <ArrowRight className="h-3 w-3 mt-0.5 mr-1 flex-shrink-0" />
+                    <span>Unexpected billing behavior for this client</span>
+                  </li>
+                </ul>
+              </AlertDescription>
+            </Alert>
             
-            <div className="p-4 bg-green-50 border border-green-100 rounded-md">
-              <h4 className="text-md font-medium text-green-800 mb-2 flex items-center">
-                <CheckCircle className="h-5 w-5 mr-2" />
-                Benefits of Proper Disambiguation
-              </h4>
-              <ul className="text-sm space-y-2 text-green-700">
-                <li className="flex items-start">
-                  <ArrowRight className="h-3 w-3 mt-0.5 mr-1 flex-shrink-0" />
-                  <span>Accurate billing and revenue recognition</span>
+            <Alert variant="success">
+              <AlertDescription>
+                <h4 className="text-md font-medium mb-2">
+                  Benefits of Proper Disambiguation
+                </h4>
+                <ul className="text-sm space-y-2">
+                  <li className="flex items-start">
+                    <ArrowRight className="h-3 w-3 mt-0.5 mr-1 flex-shrink-0" />
+                    <span>Accurate billing and revenue recognition</span>
+                  </li>
+                  <li className="flex items-start">
+                    <ArrowRight className="h-3 w-3 mt-0.5 mr-1 flex-shrink-0" />
+                    <span>Simplified time entry and usage tracking</span>
+                  </li>
+                  <li className="flex items-start">
+                    <ArrowRight className="h-3 w-3 mt-0.5 mr-1 flex-shrink-0" />
+                    <span>Clear reporting and analytics</span>
+                  </li>
+                  <li className="flex items-start">
+                    <ArrowRight className="h-3 w-3 mt-0.5 mr-1 flex-shrink-0" />
+                    <span>Improved client transparency</span>
                 </li>
-                <li className="flex items-start">
-                  <ArrowRight className="h-3 w-3 mt-0.5 mr-1 flex-shrink-0" />
-                  <span>Simplified time entry and usage tracking</span>
-                </li>
-                <li className="flex items-start">
-                  <ArrowRight className="h-3 w-3 mt-0.5 mr-1 flex-shrink-0" />
-                  <span>Clear reporting and analytics</span>
-                </li>
-                <li className="flex items-start">
-                  <ArrowRight className="h-3 w-3 mt-0.5 mr-1 flex-shrink-0" />
-                  <span>Improved client transparency</span>
-                </li>
-              </ul>
-            </div>
+                </ul>
+              </AlertDescription>
+            </Alert>
           </div>
         </TabsContent>
         

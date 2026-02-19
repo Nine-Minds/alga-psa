@@ -139,7 +139,7 @@ export function EditableServiceTypeSelect({
   return (
     <div className={className}>
       {label && (
-        <Label className="block text-sm font-medium text-gray-700 mb-1">
+        <Label className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
           {label}
         </Label>
       )}
@@ -151,7 +151,7 @@ export function EditableServiceTypeSelect({
         onOpenChange={setIsOpen}
       >
         <Select.Trigger
-          className="inline-flex items-center justify-between w-full px-3 py-2 text-sm bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none disabled:bg-gray-100 disabled:cursor-not-allowed"
+          className="inline-flex items-center justify-between w-full px-3 py-2 text-sm bg-card border border-[rgb(var(--color-border-300))] rounded-md shadow-sm hover:bg-muted focus:outline-none disabled:bg-muted disabled:cursor-not-allowed"
           disabled={disabled}
         >
           <Select.Value placeholder={placeholder}>
@@ -164,7 +164,7 @@ export function EditableServiceTypeSelect({
 
         <Select.Portal>
           <Select.Content
-            className="bg-white dark:bg-[rgb(var(--color-card))] rounded-md shadow-lg border border-gray-200 dark:border-[rgb(var(--color-border-200))] z-50"
+            className="bg-card rounded-md shadow-lg border border-[rgb(var(--color-border-200))] z-50"
             position="popper"
             sideOffset={5}
           >
@@ -195,7 +195,7 @@ export function EditableServiceTypeSelect({
                         onClick={handleSaveEdit}
                         disabled={isSaving || !editingName.trim()}
                       >
-                        <Check className="h-4 w-4 text-green-600" />
+                        <Check className="h-4 w-4 text-success" />
                       </Button>
                       <Button
                         id={`cancel-edit-service-type-${type.id}`}
@@ -205,7 +205,7 @@ export function EditableServiceTypeSelect({
                         onClick={handleCancelEdit}
                         disabled={isSaving}
                       >
-                        <X className="h-4 w-4 text-red-600" />
+                        <X className="h-4 w-4 text-destructive" />
                       </Button>
                     </div>
                   ) : (
@@ -213,7 +213,7 @@ export function EditableServiceTypeSelect({
                     <div className="flex items-center justify-between group">
                       <Select.Item
                         value={type.id}
-                        className="flex-1 relative flex items-center px-8 py-2 text-sm outline-none cursor-pointer select-none hover:bg-gray-100 data-[highlighted]:bg-gray-100"
+                        className="flex-1 relative flex items-center px-8 py-2 text-sm outline-none cursor-pointer select-none hover:bg-muted data-[highlighted]:bg-muted"
                       >
                         <Select.ItemText>{type.name}</Select.ItemText>
                       </Select.Item>
@@ -229,7 +229,7 @@ export function EditableServiceTypeSelect({
                           }}
                           disabled={isSaving}
                         >
-                          <Pencil className="h-3 w-3 text-gray-600" />
+                          <Pencil className="h-3 w-3 text-muted-foreground" />
                         </Button>
                         <Button
                           id={`delete-service-type-${type.id}`}
@@ -242,7 +242,7 @@ export function EditableServiceTypeSelect({
                           }}
                           disabled={isSaving}
                         >
-                          <Trash2 className="h-3 w-3 text-red-600" />
+                          <Trash2 className="h-3 w-3 text-destructive" />
                         </Button>
                       </div>
                     </div>
@@ -252,7 +252,7 @@ export function EditableServiceTypeSelect({
 
               {/* Separator before add button */}
               {serviceTypes.length > 0 && (
-                <Select.Separator className="h-px bg-gray-200 my-1" />
+                <Select.Separator className="h-px bg-[rgb(var(--color-border-200))] my-1" />
               )}
 
               {/* Add new service type */}
@@ -275,7 +275,7 @@ export function EditableServiceTypeSelect({
                     onClick={handleSaveAdd}
                     disabled={isSaving || !newTypeName.trim()}
                   >
-                    <Check className="h-4 w-4 text-green-600" />
+                    <Check className="h-4 w-4 text-success" />
                   </Button>
                   <Button
                     id="cancel-new-service-type-button"
@@ -285,7 +285,7 @@ export function EditableServiceTypeSelect({
                     onClick={handleCancelAdd}
                     disabled={isSaving}
                   >
-                    <X className="h-4 w-4 text-red-600" />
+                    <X className="h-4 w-4 text-destructive" />
                   </Button>
                 </div>
               ) : (

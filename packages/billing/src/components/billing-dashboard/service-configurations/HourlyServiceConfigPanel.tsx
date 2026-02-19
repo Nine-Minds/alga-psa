@@ -145,7 +145,7 @@ export function HourlyServiceConfigPanel({
               {validationErrors.minimumBillableTime ? (
                 <p className="text-sm text-red-500 mt-1">{validationErrors.minimumBillableTime}</p>
               ) : (
-                <p className="text-sm text-gray-500 mt-1">
+                <p className="text-sm text-muted-foreground mt-1">
                   Minimum time to bill (e.g., 15 minutes)
                 </p>
               )}
@@ -166,7 +166,7 @@ export function HourlyServiceConfigPanel({
               {validationErrors.roundUpToNearest ? (
                 <p className="text-sm text-red-500 mt-1">{validationErrors.roundUpToNearest}</p>
               ) : (
-                <p className="text-sm text-gray-500 mt-1">
+                <p className="text-sm text-muted-foreground mt-1">
                   Round time entries up to nearest increment
                 </p>
               )}
@@ -175,7 +175,7 @@ export function HourlyServiceConfigPanel({
 
           {/* User Type Rates Section */}
           {onUserTypeRatesChange && (
-            <div className="border p-3 rounded-md bg-gray-50">
+            <div className="border p-3 rounded-md bg-muted">
               <h4 className="font-medium mb-2">User Type Rates</h4>
               
               {userTypeRates.length > 0 && (

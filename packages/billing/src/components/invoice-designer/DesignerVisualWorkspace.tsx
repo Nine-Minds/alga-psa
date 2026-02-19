@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@alga-psa/ui/components/Tabs';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Button } from '@alga-psa/ui/components/Button';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { fetchInvoicesPaginated, getInvoiceForRendering } from '@alga-psa/billing/actions/invoiceQueries';
 import { runAuthoritativeInvoiceTemplatePreview } from '@alga-psa/billing/actions/invoiceTemplatePreview';
 import { mapDbInvoiceToWasmViewModel } from '@alga-psa/billing/lib/adapters/invoiceAdapters';
@@ -413,7 +414,7 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
 
               {!previewState.isInvoiceListLoading && previewState.invoiceListError && (
                 <p
-                  className="rounded border border-red-200 bg-red-50 px-2 py-1 text-xs text-red-700"
+                  className="rounded border border-destructive/30 bg-destructive/10 px-2 py-1 text-xs text-destructive"
                   data-automation-id="invoice-designer-preview-existing-error"
                 >
                   {previewState.invoiceListError}
@@ -511,7 +512,7 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
 
           {previewState.sourceKind === 'existing' && previewState.invoiceDetailError && (
             <p
-              className="rounded border border-red-200 bg-red-50 px-2 py-1 text-xs text-red-700"
+              className="rounded border border-destructive/30 bg-destructive/10 px-2 py-1 text-xs text-destructive"
               data-automation-id="invoice-designer-preview-existing-detail-error"
             >
               {previewState.invoiceDetailError}
@@ -563,12 +564,12 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
 
           {authoritativePreview?.compile.status === 'error' && (
             <div
-              className="rounded border border-red-200 bg-red-50 px-2 py-1 text-xs text-red-700 space-y-1"
+              className="rounded border border-destructive/30 bg-destructive/10 px-2 py-1 text-xs text-destructive space-y-1"
               data-automation-id="invoice-designer-preview-shape-error"
             >
               <p>{authoritativePreview.compile.error ?? 'Shaping failed.'}</p>
               {authoritativePreview.compile.details && (
-                <p className="text-[11px] text-red-600">{authoritativePreview.compile.details}</p>
+                <p className="text-[11px] text-destructive">{authoritativePreview.compile.details}</p>
               )}
             </div>
           )}
@@ -581,7 +582,7 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
               {shapeDiagnostics.map((diagnostic, index) => (
                 <li
                   key={`${diagnostic.raw}-${index}`}
-                  className="rounded border border-amber-200 bg-amber-50 px-2 py-1 text-amber-900"
+                  className="rounded border border-warning/30 bg-warning/10 px-2 py-1 text-warning"
                   data-automation-id="invoice-designer-preview-shape-diagnostic-item"
                 >
                   <span className="font-semibold uppercase">{diagnostic.severity}</span>{' '}
@@ -613,21 +614,27 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
           )}
 
           {previewData && !previewTemplate && (
-            <div
-              className="p-4 text-sm text-red-700 bg-red-50 border-t border-red-200"
+            <Alert
+              variant="destructive"
+              className="rounded-none border-x-0 border-b-0"
               data-automation-id="invoice-designer-preview-render-error"
             >
-              Preview template could not be generated from the current workspace.
-            </div>
+              <AlertDescription className="text-sm">
+                Preview template could not be generated from the current workspace.
+              </AlertDescription>
+            </Alert>
           )}
 
           {previewData && previewTemplate && authoritativePreview?.render.status === 'error' && (
-            <div
-              className="p-4 text-sm text-red-700 bg-red-50 border-t border-red-200"
+            <Alert
+              variant="destructive"
+              className="rounded-none border-x-0 border-b-0"
               data-automation-id="invoice-designer-preview-render-error"
             >
-              {authoritativePreview.render.error ?? 'Preview rendering failed.'}
-            </div>
+              <AlertDescription className="text-sm">
+                {authoritativePreview.render.error ?? 'Preview rendering failed.'}
+              </AlertDescription>
+            </Alert>
           )}
 
           {previewData && previewTemplate && authoritativeRenderOutput && (

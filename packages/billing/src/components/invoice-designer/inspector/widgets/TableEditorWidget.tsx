@@ -416,7 +416,7 @@ export const TableEditorWidget: React.FC<Props> = ({ node }) => {
                   variant="outline"
                   size="icon"
                   aria-label={`Remove ${column.id}`}
-                  className="h-6 w-6 text-slate-400 hover:text-red-500 hover:bg-red-50"
+                  className="h-6 w-6 text-slate-400 hover:text-destructive hover:bg-destructive/10"
                   onClick={() => handleRemoveColumn(column.id)}
                 >
                   ×

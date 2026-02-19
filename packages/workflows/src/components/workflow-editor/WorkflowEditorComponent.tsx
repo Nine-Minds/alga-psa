@@ -8,7 +8,8 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { Switch } from '@alga-psa/ui/components/Switch';
-import { ArrowLeft, Save, BookTemplate, AlertTriangle, Tag } from 'lucide-react';
+import { ArrowLeft, Save, BookTemplate, Tag } from 'lucide-react';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { createWorkflow, updateWorkflow, getWorkflow, testWorkflow } from '@alga-psa/workflows/actions/workflow-editor-actions';
 import WorkflowEditor from './WorkflowEditor';
@@ -362,17 +363,16 @@ export default function WorkflowEditorComponent({ workflowId, onBack }: Workflow
         </div>
 
         {testWarnings.length > 0 && (
-          <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-md">
-            <div className="flex items-center mb-2">
-              <AlertTriangle className="h-5 w-5 text-yellow-500 mr-2" />
-              <h3 className="text-sm font-medium text-yellow-700">Security and Best Practice Warnings</h3>
-            </div>
-            <ul className="text-sm text-yellow-600 space-y-1 ml-7 list-disc">
-              {testWarnings.map((warning, index) => (
-                <li key={index}>{warning}</li>
-              ))}
-            </ul>
-          </div>
+          <Alert variant="warning" className="mb-6">
+            <AlertDescription>
+              <p className="font-medium mb-1">Security and Best Practice Warnings</p>
+              <ul className="text-sm space-y-1 ml-5 list-disc">
+                {testWarnings.map((warning, index) => (
+                  <li key={index}>{warning}</li>
+                ))}
+              </ul>
+            </AlertDescription>
+          </Alert>
         )}
         
         {isLoading ? (

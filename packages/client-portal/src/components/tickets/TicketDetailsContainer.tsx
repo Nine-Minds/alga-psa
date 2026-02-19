@@ -24,8 +24,8 @@ export default function TicketDetailsContainer({ ticketId, ticketData, statuses 
 
   if (!ticketData || (!ticketData.ticket_id && !ticketId)) {
     return (
-      <div id="ticket-invalid-data" className="p-4 bg-red-50 border border-red-200 rounded-lg">
-        <p className="text-red-700">{t('invalidTicketData', 'Invalid ticket data')}</p>
+      <div id="ticket-invalid-data" className="p-4 bg-destructive/10 border border-destructive/30 rounded-lg">
+        <p className="text-destructive">{t('invalidTicketData', 'Invalid ticket data')}</p>
       </div>
     );
   }

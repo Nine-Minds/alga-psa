@@ -474,7 +474,7 @@ export default function ClientTaskListView({
                               {statusGroup.tasks.map((task, index) => (
                                 <tr
                                   key={task.task_id}
-                                  className={`${index % 2 === 0 ? 'bg-gray-50' : 'bg-white'} hover:bg-blue-50 transition-colors`}
+                                  className={`${index % 2 === 0 ? 'bg-gray-50' : 'bg-white'} hover:bg-primary/10 transition-colors`}
                                 >
                                   <td className="px-3 py-3" />
 

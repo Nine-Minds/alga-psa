@@ -253,11 +253,11 @@ export function ServiceRateTiers({ service, onUpdate }: ServiceRateTiersProps) {
       <CardContent>
         {isLoading ? (
           <div className="flex justify-center items-center h-40">
-            <p className="text-gray-500">Loading rate tiers...</p>
+            <p className="text-muted-foreground">Loading rate tiers...</p>
           </div>
         ) : (
           <div className="space-y-4">
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-muted-foreground">
             Configure different rates based on quantity ranges. Higher quantities can have discounted rates.
           </p>
           

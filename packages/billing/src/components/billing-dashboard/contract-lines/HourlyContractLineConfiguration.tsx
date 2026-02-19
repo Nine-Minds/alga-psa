@@ -595,7 +595,7 @@ export function HourlyPlanConfiguration({
                                     <div>
                                     <Label htmlFor="overtime-rate">Overtime Rate ($/hr)</Label>
                                     <div className="relative">
-                                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+                                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
                                       <Input
                                         id="overtime-rate"
                                         type="text"
@@ -722,7 +722,7 @@ export function HourlyPlanConfiguration({
                     <section className="space-y-4">
                         <div>
                             <h3 className="text-lg font-semibold">Contract Line Basics</h3>
-                            <p className="text-sm text-gray-600">
+                            <p className="text-sm text-muted-foreground">
                                 Name the contract line and choose how it should bill by default.
                             </p>
                         </div>

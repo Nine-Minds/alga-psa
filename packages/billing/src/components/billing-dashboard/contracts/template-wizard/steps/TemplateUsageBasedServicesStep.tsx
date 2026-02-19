@@ -123,7 +123,7 @@ export function TemplateUsageBasedServicesStep({
       <div className="space-y-6">
         <div className="mb-6">
           <h3 className="text-lg font-semibold mb-2">Usage-Based Services</h3>
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-[rgb(var(--color-text-500))]">
             Select services that are billed based on usage or consumption. Rates will be determined by the service's pricing in the client's currency when the contract is created.
           </p>
         </div>
@@ -149,7 +149,7 @@ export function TemplateUsageBasedServicesStep({
           {(data.usage_services ?? []).map((service, index) => (
             <div
               key={index}
-              className="flex items-start gap-3 p-4 border border-gray-200 rounded-md bg-gray-50"
+              className="flex items-start gap-3 p-4 border border-[rgb(var(--color-border-200))] rounded-md bg-[rgb(var(--color-border-50))]"
             >
               <div className="flex-1 space-y-3">
                 <div className="space-y-2">
@@ -178,7 +178,7 @@ export function TemplateUsageBasedServicesStep({
                     onChange={(event) => handleUnitChange(index, event.target.value)}
                     placeholder="e.g., GB, API call, user"
                   />
-                  <p className="text-xs text-gray-500">Override the default unit of measure for this service.</p>
+                  <p className="text-xs text-[rgb(var(--color-text-400))]">Override the default unit of measure for this service.</p>
                 </div>
 
                 <div className="space-y-3 pt-2 border-t border-dashed border-blue-100">
@@ -206,7 +206,7 @@ export function TemplateUsageBasedServicesStep({
                 variant="ghost"
                 size="sm"
                 onClick={() => handleRemoveService(index)}
-                className="mt-6 text-red-600 hover:text-red-700 hover:bg-red-50"
+                className="mt-6 text-[rgb(var(--color-destructive))] hover:text-[rgb(var(--color-destructive))] hover:bg-[rgb(var(--color-destructive)/0.1)]"
               >
                 <X className="h-4 w-4" />
               </Button>

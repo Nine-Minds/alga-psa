@@ -37,7 +37,7 @@ type WorkflowGraphProps<TStep> = {
 const StartNode: React.FC<{ data: WorkflowGraphNodeData }> = ({ data }) => {
   return (
     <div
-      className="rounded-full bg-green-100 border-2 border-green-500 flex items-center justify-center text-xs font-semibold text-green-700 shadow-sm"
+      className="rounded-full bg-success/15 border-2 border-success flex items-center justify-center text-xs font-semibold text-success shadow-sm"
       style={{ width: 52, height: 52, boxSizing: 'border-box' }}
     >
       <Handle
@@ -134,7 +134,7 @@ const StepNode: React.FC<NodeProps<WorkflowGraphNodeData>> = ({ data, selected }
       {selected && data.stepId && data.onRequestDelete && (
         <button
           type="button"
-          className="absolute -right-2 -top-2 rounded-full border border-gray-200 bg-white shadow-sm p-1 text-gray-500 hover:text-red-600 hover:border-red-200"
+          className="absolute -right-2 -top-2 rounded-full border border-gray-200 bg-white shadow-sm p-1 text-gray-500 hover:text-destructive hover:border-destructive/30"
           aria-label="Delete step"
           title="Delete step"
           onClick={(event) => {
@@ -332,10 +332,10 @@ export default function WorkflowGraph<TStep extends { id: string; type: string }
   if (buildError) {
     return (
       <div className={`w-full h-full flex items-center justify-center ${className ?? ''}`}>
-        <div className="max-w-xl rounded border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+        <div className="max-w-xl rounded border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
           <div className="font-semibold">Graph render error</div>
-          <div className="mt-1 font-mono text-[11px] text-red-800 break-words">{buildError}</div>
-          <div className="mt-2 text-xs text-red-700">
+          <div className="mt-1 font-mono text-[11px] break-words">{buildError}</div>
+          <div className="mt-2 text-xs">
             Switch to List view to continue editing.
           </div>
         </div>

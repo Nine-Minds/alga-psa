@@ -55,7 +55,7 @@ export default function MspSignIn() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-purple-100 to-indigo-100">
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-purple-100 to-indigo-100 dark:bg-none dark:bg-card">
       <TwoFactorInput
         isOpen={isOpen2FA}
         onClose={() => setIsOpen2FA(false)}
@@ -81,7 +81,7 @@ export default function MspSignIn() {
             className="rounded-full mr-4"
           />
           <div>
-            <span className="text-2xl font-bold text-gray-800">MSP Dashboard</span>
+            <span className="text-2xl font-bold text-[rgb(var(--color-text-800))]">MSP Dashboard</span>
           </div>
         </div>
       </div>
@@ -97,53 +97,53 @@ export default function MspSignIn() {
               height={200}
               className="rounded-full mb-8 mx-auto"
             />
-            <h1 className="text-4xl font-bold text-gray-800 mb-4 text-center">
+            <h1 className="text-4xl font-bold text-[rgb(var(--color-text-800))] mb-4 text-center">
               Professional Services Automation
             </h1>
-            <p className="text-lg text-gray-600 mb-2 text-center">
+            <p className="text-lg text-[rgb(var(--color-text-600))] mb-2 text-center">
               Open source PSA platform for Managed Service Providers
             </p>
             <div className="space-y-3">
               <div className="flex items-start space-x-3">
-                <Ticket className="w-5 h-5 text-purple-600 mt-1 flex-shrink-0" />
+                <Ticket className="w-5 h-5 text-[rgb(var(--color-primary-500))] mt-1 flex-shrink-0" />
                 <div>
-                  <h3 className="text-gray-800 font-semibold text-sm">Comprehensive Ticketing</h3>
+                  <h3 className="text-[rgb(var(--color-text-800))] font-semibold text-sm">Comprehensive Ticketing</h3>
                 </div>
               </div>
               <div className="flex items-start space-x-3">
-                <Mail className="w-5 h-5 text-purple-600 mt-1 flex-shrink-0" />
+                <Mail className="w-5 h-5 text-[rgb(var(--color-primary-500))] mt-1 flex-shrink-0" />
                 <div>
-                  <h3 className="text-gray-800 font-semibold text-sm">Inbound Emails</h3>
+                  <h3 className="text-[rgb(var(--color-text-800))] font-semibold text-sm">Inbound Emails</h3>
                 </div>
               </div>
               <div className="flex items-start space-x-3">
-                <Calendar className="w-5 h-5 text-purple-600 mt-1 flex-shrink-0" />
+                <Calendar className="w-5 h-5 text-[rgb(var(--color-primary-500))] mt-1 flex-shrink-0" />
                 <div>
-                  <h3 className="text-gray-800 font-semibold text-sm">Technician Dispatch and Scheduling</h3>
+                  <h3 className="text-[rgb(var(--color-text-800))] font-semibold text-sm">Technician Dispatch and Scheduling</h3>
                 </div>
               </div>
               <div className="flex items-start space-x-3">
-                <Clock className="w-5 h-5 text-purple-600 mt-1 flex-shrink-0" />
+                <Clock className="w-5 h-5 text-[rgb(var(--color-primary-500))] mt-1 flex-shrink-0" />
                 <div>
-                  <h3 className="text-gray-800 font-semibold text-sm">Time Entry/Tracking</h3>
+                  <h3 className="text-[rgb(var(--color-text-800))] font-semibold text-sm">Time Entry/Tracking</h3>
                 </div>
               </div>
               <div className="flex items-start space-x-3">
-                <Layers className="w-5 h-5 text-purple-600 mt-1 flex-shrink-0" />
+                <Layers className="w-5 h-5 text-[rgb(var(--color-primary-500))] mt-1 flex-shrink-0" />
                 <div>
-                  <h3 className="text-gray-800 font-semibold text-sm">Project Management Tools</h3>
+                  <h3 className="text-[rgb(var(--color-text-800))] font-semibold text-sm">Project Management Tools</h3>
                 </div>
               </div>
               <div className="flex items-start space-x-3">
-                <Users className="w-5 h-5 text-purple-600 mt-1 flex-shrink-0" />
+                <Users className="w-5 h-5 text-[rgb(var(--color-primary-500))] mt-1 flex-shrink-0" />
                 <div>
-                  <h3 className="text-gray-800 font-semibold text-sm">Client and Contact Management</h3>
+                  <h3 className="text-[rgb(var(--color-text-800))] font-semibold text-sm">Client and Contact Management</h3>
                 </div>
               </div>
               <div className="flex items-start space-x-3">
-                <FileText className="w-5 h-5 text-purple-600 mt-1 flex-shrink-0" />
+                <FileText className="w-5 h-5 text-[rgb(var(--color-primary-500))] mt-1 flex-shrink-0" />
                 <div>
-                  <h3 className="text-gray-800 font-semibold text-sm">Centralized Document Uploads and Storage</h3>
+                  <h3 className="text-[rgb(var(--color-text-800))] font-semibold text-sm">Centralized Document Uploads and Storage</h3>
                 </div>
               </div>
             </div>
@@ -152,7 +152,7 @@ export default function MspSignIn() {
 
         {/* Right side with login form */}
         <div className="w-full lg:w-1/2 flex items-center justify-center p-8">
-          <Card className="max-w-md w-full bg-white/95 backdrop-blur">
+          <Card className="max-w-md w-full bg-card/95 backdrop-blur">
             <CardHeader className="space-y-1">
               <CardTitle className="text-2xl font-bold text-center">
                 MSP Dashboard Login
@@ -168,7 +168,7 @@ export default function MspSignIn() {
                 onTwoFactorRequired={() => setIsOpen2FA(true)}
               />
               <div className="mt-6 text-center">
-                <a href="/auth/client-portal/signin" className="text-sm text-gray-600 hover:text-purple-600">
+                <a href="/auth/client-portal/signin" className="text-sm text-[rgb(var(--color-text-600))] hover:text-[rgb(var(--color-primary-500))]">
                   Looking for the Client Portal? Click here →
                 </a>
               </div>

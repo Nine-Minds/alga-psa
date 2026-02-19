@@ -6,6 +6,7 @@ import { Box, Card, Heading } from '@radix-ui/themes';
 import { toast } from 'react-hot-toast'; // Import toast
 import { Button } from '@alga-psa/ui/components/Button';
 import { MoreVertical, Plus, Search, XCircle } from 'lucide-react';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -204,9 +205,9 @@ const ContractLinesOverview: React.FC = () => {
         </div>
 
         {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-            {error}
-          </div>
+          <Alert variant="destructive" className="mb-4">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
         )}
 
         {/* Filter section */}
@@ -221,7 +222,7 @@ const ContractLinesOverview: React.FC = () => {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
-            <Search size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+            <Search size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
           </div>
 
           {/* Type filter */}
@@ -248,7 +249,7 @@ const ContractLinesOverview: React.FC = () => {
                 setSearchTerm('');
                 setFilterType('all');
               }}
-              className="flex items-center gap-1 bg-white"
+              className="flex items-center gap-1 bg-card"
             >
               <XCircle className="h-4 w-4" />
               <span>Clear filters</span>
@@ -259,7 +260,7 @@ const ContractLinesOverview: React.FC = () => {
         {isLoading ? (
           <LoadingIndicator
             layout="stacked"
-            className="py-10 text-gray-600"
+            className="py-10 text-muted-foreground"
             spinnerProps={{ size: 'md' }}
             text="Loading contract line presets"
           />

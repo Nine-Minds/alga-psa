@@ -337,7 +337,7 @@ export function GoogleCalendarProviderForm({
               </Alert>
             )}
             <div className={`p-4 rounded-lg transition-colors ${
-              oauthStatus === 'success' ? 'bg-green-50 border-2 border-green-200' : 'bg-blue-50'
+              oauthStatus === 'success' ? 'bg-success/10 border-2 border-success/30' : 'bg-muted/50'
             }`}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">

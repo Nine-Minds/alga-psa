@@ -8,6 +8,7 @@ import type { IInvoiceTemplate } from '@alga-psa/types'; // Keep this for templa
 // Removed getCompiledWasm, executeWasmTemplate, renderLayout imports
 // Import the new server action
 import { renderTemplateOnServer } from '@alga-psa/billing/actions/invoiceTemplates';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 
 interface TemplateRendererProps {
   template: IInvoiceTemplate | null; // Allow null template
@@ -98,7 +99,7 @@ export function TemplateRenderer({ template, invoiceData, renderOverride = null 
   }
 
   if (error) {
-    return <div className="text-red-600 p-4 border border-red-300 bg-red-50 rounded">Error: {error}</div>;
+    return <Alert variant="destructive" className="p-4 rounded"><AlertDescription>Error: {error}</AlertDescription></Alert>;
   }
 
   if (renderOverride) {
@@ -112,7 +113,7 @@ export function TemplateRenderer({ template, invoiceData, renderOverride = null 
 
   // Initial state or missing data message
   if (!template || !invoiceData) {
-      return <div className="text-gray-500 p-4 border border-gray-300 bg-gray-50 rounded">Please select an invoice and a template to preview.</div>;
+      return <div className="text-muted-foreground p-4 border border-[rgb(var(--color-border-300))] bg-muted rounded">Please select an invoice and a template to preview.</div>;
   }
 
   // Rendered content

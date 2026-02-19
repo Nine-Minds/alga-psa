@@ -1679,13 +1679,13 @@ const WorkflowDesigner: React.FC = () => {
   const workflowValidationBadge = useMemo(() => {
     switch (workflowValidationStatus) {
       case 'error':
-        return { label: 'Invalid', className: 'bg-red-100 text-red-700 border-red-200' };
+        return { label: 'Invalid', className: 'bg-destructive/15 text-destructive border-destructive/30' };
       case 'warning':
-        return { label: 'Warnings', className: 'bg-yellow-100 text-yellow-700 border-yellow-200' };
+        return { label: 'Warnings', className: 'bg-warning/15 text-warning-foreground border-warning/30' };
       case 'valid':
-        return { label: 'Valid', className: 'bg-green-100 text-green-700 border-green-200' };
+        return { label: 'Valid', className: 'bg-success/15 text-success border-success/30' };
       default:
-        return { label: 'Unknown', className: 'bg-gray-100 text-gray-600 border-gray-200' };
+        return { label: 'Unknown', className: 'bg-muted text-muted-foreground border-border' };
     }
   }, [workflowValidationStatus]);
 
@@ -3202,7 +3202,7 @@ const WorkflowDesigner: React.FC = () => {
 
             {currentValidationErrors.length > 0 && activeDefinition && (
               <div className="mt-6">
-                <h3 className="text-sm font-semibold text-red-700 flex items-center gap-2 mb-2">
+                <h3 className="text-sm font-semibold text-destructive flex items-center gap-2 mb-2">
                   <AlertTriangle className="h-4 w-4" /> Validation Errors
                 </h3>
                 <div className="mb-3 rounded border border-gray-200 bg-gray-50 p-3 text-xs text-gray-700">
@@ -3218,8 +3218,8 @@ const WorkflowDesigner: React.FC = () => {
                 </div>
                 <div className="space-y-3">
                   {currentValidationErrors.map((error, index) => (
-                    <Card key={`${error.stepPath}-${index}`} className="p-3 border border-red-200">
-                      <div className="text-xs font-semibold text-red-700">{error.code}</div>
+                    <Card key={`${error.stepPath}-${index}`} className="p-3 border border-destructive/30">
+                      <div className="text-xs font-semibold text-destructive">{error.code}</div>
                       <div className="text-sm text-gray-800">{error.message}</div>
                       <div className="text-xs text-gray-500 mt-1">
                         {buildPathBreadcrumbs(activeDefinition.steps as Step[], error.stepPath).join(' > ') || error.stepPath}
@@ -3247,8 +3247,8 @@ const WorkflowDesigner: React.FC = () => {
                 </div>
                 <div className="space-y-3">
                   {currentValidationWarnings.map((warning, index) => (
-                    <Card key={`${warning.stepPath}-${index}`} className="p-3 border border-yellow-200">
-                      <div className="text-xs font-semibold text-yellow-700">{warning.code}</div>
+                    <Card key={`${warning.stepPath}-${index}`} className="p-3 border border-warning/30">
+                      <div className="text-xs font-semibold text-warning">{warning.code}</div>
                       <div className="text-sm text-gray-800">{warning.message}</div>
                       <div className="text-xs text-gray-500 mt-1">
                         {buildPathBreadcrumbs(activeDefinition.steps as Step[], warning.stepPath).join(' > ') || warning.stepPath}
@@ -3345,7 +3345,7 @@ const WorkflowDesigner: React.FC = () => {
                       : null;
                     const schemaBadgeClass = (status: WorkflowEventCatalogOptionV2['payload_schema_ref_status']) => {
                       if (status === 'missing') return 'bg-gray-500/15 text-gray-600 border-gray-500/30';
-                      if (status === 'unknown') return 'bg-red-500/15 text-red-600 border-red-500/30';
+                      if (status === 'unknown') return 'bg-destructive/15 text-destructive border-destructive/30';
                       return 'bg-sky-500/15 text-sky-600 border-sky-500/30';
                     };
                     const schemaBadgeLabel = (status: WorkflowEventCatalogOptionV2['payload_schema_ref_status']) => {
@@ -3412,10 +3412,10 @@ const WorkflowDesigner: React.FC = () => {
                                 {selectedOption.source === 'system' ? 'System' : 'Tenant'}
                               </Badge>
                               <Badge className={
-                                selectedOption.status === 'active' ? 'bg-green-500/15 text-green-600 border-green-500/30'
-                                  : selectedOption.status === 'beta' ? 'bg-yellow-500/15 text-yellow-600 border-yellow-500/30'
-                                    : selectedOption.status === 'draft' ? 'bg-gray-500/15 text-gray-600 border-gray-500/30'
-                                      : 'bg-red-500/15 text-red-600 border-red-500/30'
+                                selectedOption.status === 'active' ? 'bg-success/15 text-success border-success/30'
+                                  : selectedOption.status === 'beta' ? 'bg-warning/15 text-warning-foreground border-warning/30'
+                                    : selectedOption.status === 'draft' ? 'bg-muted text-muted-foreground border-border'
+                                      : 'bg-destructive/15 text-destructive border-destructive/30'
                               }>
                                 {selectedOption.status.charAt(0).toUpperCase() + selectedOption.status.slice(1)}
                               </Badge>
@@ -3466,19 +3466,19 @@ const WorkflowDesigner: React.FC = () => {
                               </div>
                             </div>
                             {eventCatalogStatus === 'loaded' && selectedOption.payload_schema_ref_status !== 'known' && (
-                              <div className="mt-2 rounded border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800">
+                              <div className="mt-2 rounded border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
                                 This event is missing a valid schema reference. Publishing and running are disabled until it is fixed.
                               </div>
                             )}
                           </div>
                         )}
                         {eventCatalogStatus === 'loaded' && !selectedOption && selectedEventName && (
-                          <div className="rounded border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800">
+                          <div className="rounded border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
                             Trigger event <span className="font-mono">{selectedEventName}</span> is not present in the event catalog. Publishing and running are disabled until it is fixed.
                           </div>
                         )}
                         {eventCatalogStatus === 'error' && (
-                          <div className="text-xs text-red-700">
+                          <div className="text-xs text-destructive">
                             Failed to load the event catalog. Publishing and running are disabled for event-triggered workflows until this loads.
                           </div>
                         )}
@@ -3527,10 +3527,10 @@ const WorkflowDesigner: React.FC = () => {
                             <span className="text-gray-500">Workflow payload schema:</span>
                             <span className="font-mono break-all">{activeDefinition.payloadSchemaRef ?? '—'}</span>
                             {triggerPayloadMappingInfo.schemaRefsMatch && (
-                              <Badge className="bg-green-50 text-green-700 border-green-200">Match</Badge>
+                              <Badge variant="success">Match</Badge>
                             )}
                             {!triggerPayloadMappingInfo.schemaRefsMatch && triggerSourceSchemaRef && activeDefinition.payloadSchemaRef && (
-                              <Badge className="bg-amber-50 text-amber-700 border-amber-200">Mismatch</Badge>
+                              <Badge variant="warning">Mismatch</Badge>
                             )}
                           </div>
                           {inferredSchemaRef && (
@@ -3550,7 +3550,7 @@ const WorkflowDesigner: React.FC = () => {
                         {(triggerValidationErrors.length > 0 || triggerValidationWarnings.length > 0) && (
                           <div className="mt-3 space-y-2">
                             {triggerValidationErrors.length > 0 && (
-                              <div className="rounded border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800">
+                              <div className="rounded border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
                                 <div className="font-semibold mb-1">Trigger validation errors</div>
                                 <ul className="list-disc pl-4 space-y-1">
                                   {triggerValidationErrors.slice(0, 5).map((err, idx) => (
@@ -3558,12 +3558,12 @@ const WorkflowDesigner: React.FC = () => {
                                   ))}
                                 </ul>
                                 {triggerValidationErrors.length > 5 && (
-                                  <div className="mt-1 text-[11px] text-red-700">+{triggerValidationErrors.length - 5} more</div>
+                                  <div className="mt-1 text-[11px] opacity-80">+{triggerValidationErrors.length - 5} more</div>
                                 )}
                               </div>
                             )}
                             {triggerValidationWarnings.length > 0 && (
-                              <div className="rounded border border-yellow-200 bg-yellow-50 px-3 py-2 text-xs text-yellow-800">
+                              <div className="rounded border border-warning/30 bg-warning/10 px-3 py-2 text-xs text-warning-foreground">
                                 <div className="font-semibold mb-1">Trigger warnings</div>
                                 <ul className="list-disc pl-4 space-y-1">
                                   {triggerValidationWarnings.slice(0, 5).map((warn, idx) => (
@@ -3571,7 +3571,7 @@ const WorkflowDesigner: React.FC = () => {
                                   ))}
                                 </ul>
                                 {triggerValidationWarnings.length > 5 && (
-                                  <div className="mt-1 text-[11px] text-yellow-700">+{triggerValidationWarnings.length - 5} more</div>
+                                  <div className="mt-1 text-[11px] opacity-80">+{triggerValidationWarnings.length - 5} more</div>
                                 )}
                               </div>
                             )}
@@ -3629,9 +3629,9 @@ const WorkflowDesigner: React.FC = () => {
                               <div className="flex items-center gap-2">
                                 <div className="text-xs font-semibold text-gray-800">Trigger mapping</div>
                                 {mappingRequired ? (
-                                  <Badge className="bg-red-100 text-red-700 border-red-200">Required</Badge>
+                                  <Badge variant="error">Required</Badge>
                                 ) : (
-                                  <Badge className="bg-green-100 text-green-700 border-green-200">Optional</Badge>
+                                  <Badge variant="success">Optional</Badge>
                                 )}
                               </div>
                               {!mappingRequired && (
@@ -3650,13 +3650,13 @@ const WorkflowDesigner: React.FC = () => {
                             </div>
 
                             {!triggerSourceSchemaRef && (
-                              <div className="mt-2 text-xs text-red-600">
-                                No source schema available for this event yet. Add <code className="bg-red-50 px-1 rounded">payload_schema_ref</code> to the event catalog or set an override.
+                              <div className="mt-2 text-xs text-destructive">
+                                No source schema available for this event yet. Add <code className="bg-destructive/10 px-1 rounded">payload_schema_ref</code> to the event catalog or set an override.
                               </div>
                             )}
 
                             {mappingRequired && !mappingProvided && (
-                              <div className="mt-2 rounded border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800">
+                              <div className="mt-2 rounded border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
                                 <div className="flex flex-wrap items-center justify-between gap-2">
                                   <div>
                                     A trigger mapping is required because the trigger source schema does not match the workflow payload schema.
@@ -3666,7 +3666,7 @@ const WorkflowDesigner: React.FC = () => {
                                     variant="ghost"
                                     size="sm"
                                     type="button"
-                                    className="h-auto px-2 py-1 text-xs text-red-700 hover:text-red-800"
+                                    className="h-auto px-2 py-1 text-xs text-destructive hover:opacity-80"
                                     onClick={() => {
                                       document.getElementById('workflow-designer-contract-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
                                     }}
@@ -3686,7 +3686,7 @@ const WorkflowDesigner: React.FC = () => {
                             {(mappingErrors.length > 0 || mappingWarnings.length > 0) && (
                               <div className="mt-3 space-y-2">
                                 {mappingErrors.length > 0 && (
-                                  <div className="rounded border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800">
+                                  <div className="rounded border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
                                     <div className="font-semibold mb-1">Mapping errors</div>
                                     <ul className="list-disc pl-4 space-y-1">
                                       {mappingErrors.slice(0, 5).map((err, idx) => (
@@ -3694,12 +3694,12 @@ const WorkflowDesigner: React.FC = () => {
                                       ))}
                                     </ul>
                                     {mappingErrors.length > 5 && (
-                                      <div className="mt-1 text-[11px] text-red-700">+{mappingErrors.length - 5} more</div>
+                                      <div className="mt-1 text-[11px] opacity-80">+{mappingErrors.length - 5} more</div>
                                     )}
                                   </div>
                                 )}
                                 {mappingWarnings.length > 0 && (
-                                  <div className="rounded border border-yellow-200 bg-yellow-50 px-3 py-2 text-xs text-yellow-800">
+                                  <div className="rounded border border-warning/30 bg-warning/10 px-3 py-2 text-xs text-warning-foreground">
                                     <div className="font-semibold mb-1">Mapping warnings</div>
                                     <ul className="list-disc pl-4 space-y-1">
                                       {mappingWarnings.slice(0, 5).map((warn, idx) => (
@@ -3707,7 +3707,7 @@ const WorkflowDesigner: React.FC = () => {
                                       ))}
                                     </ul>
                                     {mappingWarnings.length > 5 && (
-                                      <div className="mt-1 text-[11px] text-yellow-700">+{mappingWarnings.length - 5} more</div>
+                                      <div className="mt-1 text-[11px] opacity-80">+{mappingWarnings.length - 5} more</div>
                                     )}
                                   </div>
                                 )}
@@ -3896,7 +3896,7 @@ const WorkflowDesigner: React.FC = () => {
                             )}
                           </div>
                           {inferredSchemaStatus === 'error' && activeDefinition?.trigger?.type === 'event' && (
-                            <div className="mt-2 rounded border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800">
+                            <div className="mt-2 rounded border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
                               No schema is available for <span className="font-mono">{activeDefinition.trigger.eventName}</span>. Fix the event catalog entry to include a valid schema.
                             </div>
                           )}
@@ -3904,9 +3904,9 @@ const WorkflowDesigner: React.FC = () => {
                             activeWorkflowRecord?.payload_schema_ref &&
                             effectivePayloadSchemaRef &&
                             activeWorkflowRecord.payload_schema_ref !== effectivePayloadSchemaRef && (
-                            <div className="mt-2 rounded border border-yellow-200 bg-yellow-50 px-3 py-2 text-xs text-yellow-900">
+                            <div className="mt-2 rounded border border-warning/30 bg-warning/10 px-3 py-2 text-xs text-warning-foreground">
                               <div className="font-semibold">Draft contract differs from published</div>
-                              <div className="mt-1 text-yellow-800">
+                              <div className="mt-1 opacity-90">
                                 Published contract uses <span className="font-mono">{activeWorkflowRecord.payload_schema_ref}</span>. This draft is currently inferred as{' '}
                                 <span className="font-mono">{effectivePayloadSchemaRef}</span>.
                               </div>
@@ -3940,7 +3940,7 @@ const WorkflowDesigner: React.FC = () => {
                     {effectivePayloadSchemaRef &&
                       schemaRefs.length > 0 &&
                       !schemaRefs.includes(effectivePayloadSchemaRef) && (
-                      <div className="mt-2 flex items-center justify-between gap-3 text-xs text-red-600">
+                      <div className="mt-2 flex items-center justify-between gap-3 text-xs text-destructive">
                         <div>
                           Unknown schema ref. Select a valid schema from the dropdown (or update the ref in Advanced).
                         </div>
@@ -3950,7 +3950,7 @@ const WorkflowDesigner: React.FC = () => {
                             variant="ghost"
                             size="sm"
                             type="button"
-                            className="h-auto px-2 py-1 text-xs text-red-600 hover:text-red-700"
+                            className="h-auto px-2 py-1 text-xs text-destructive hover:text-destructive"
                             onClick={() => {
                               if (payloadSchemaModeDraft === 'pinned') {
                                 setPinnedPayloadSchemaRefDraft('');
@@ -4080,7 +4080,7 @@ const WorkflowDesigner: React.FC = () => {
                           <div className="text-xs text-gray-500">Loading schema…</div>
                         )}
                         {payloadSchemaStatus === 'error' && (
-                          <div className="text-xs text-red-600">Failed to load schema.</div>
+                          <div className="text-xs text-destructive">Failed to load schema.</div>
                         )}
                         {payloadSchemaStatus === 'loaded' && payloadSchema && (
                           <pre
@@ -4132,7 +4132,7 @@ const WorkflowDesigner: React.FC = () => {
                           <div className="text-xs text-gray-500">Loading schema…</div>
                         )}
                         {triggerSchemaModalStatus === 'error' && (
-                          <div className="text-xs text-red-600">Failed to load schema.</div>
+                          <div className="text-xs text-destructive">Failed to load schema.</div>
                         )}
                         {triggerSchemaModalStatus === 'loaded' && triggerSchemaModalSchema && (
                           <pre
@@ -4180,7 +4180,7 @@ const WorkflowDesigner: React.FC = () => {
                           <div className="text-xs text-gray-500">Loading schema…</div>
                         )}
                         {publishedContractModalStatus === 'error' && (
-                          <div className="text-xs text-red-600">
+                          <div className="text-xs text-destructive">
                             {publishedContractModalError ?? 'Failed to load published schema.'}
                           </div>
                         )}
@@ -4236,7 +4236,7 @@ const WorkflowDesigner: React.FC = () => {
                         Graph
                       </Button>
                       {publishWarnings.length > 0 && (
-                        <Badge className="bg-yellow-100 text-yellow-800">{publishWarnings.length} warnings</Badge>
+                        <Badge variant="warning">{publishWarnings.length} warnings</Badge>
                       )}
                     </div>
                   </div>
@@ -4518,7 +4518,7 @@ const Pipe: React.FC<{
           {/* Pipeline Start (only for root) */}
           {isRoot && steps.length > 0 && (
             <div className="flex flex-col items-center mb-2">
-              <div className="flex items-center justify-center w-8 h-8 rounded-full bg-green-100 border-2 border-green-500" data-testid="pipeline-start">
+              <div className="flex items-center justify-center w-8 h-8 rounded-full bg-success/15 border-2 border-success" data-testid="pipeline-start">
                 <Play className="h-4 w-4 text-green-600 ml-0.5" />
               </div>
               <div className="text-xs text-gray-500 mt-1">Start</div>
@@ -4669,7 +4669,7 @@ const StepCard: React.FC<{
             )}
             {/* Error badge */}
             {errorCount > 0 && (
-              <Badge className="bg-red-100 text-red-700 text-xs">
+              <Badge variant="error" className="text-xs">
                 {errorCount} {errorCount === 1 ? 'error' : 'errors'}
               </Badge>
             )}
@@ -4697,7 +4697,7 @@ const StepCard: React.FC<{
                 variant="ghost"
                 size="sm"
                 onClick={() => onDeleteStep(step.id)}
-                className="text-gray-400 hover:text-red-500 p-1 h-auto"
+                className="text-gray-400 hover:text-destructive p-1 h-auto"
                 data-testid={`step-delete-${step.id}`}
                 title="Delete step"
               >
@@ -4989,9 +4989,9 @@ const StepConfigPanel: React.FC<{
       </div>
 
       {errors.length > 0 && (
-        <Card className="border border-red-200 bg-red-50 p-3">
-          <div className="text-xs font-semibold text-red-700 mb-1">Validation errors</div>
-          <ul className="text-xs text-red-700 space-y-1">
+        <Card className="border border-destructive/30 bg-destructive/10 p-3">
+          <div className="text-xs font-semibold text-destructive mb-1">Validation errors</div>
+          <ul className="text-xs text-destructive space-y-1">
             {errors.map((error, index) => (
               <li key={`${error.code}-${index}`}>{error.message}</li>
             ))}
@@ -5003,31 +5003,31 @@ const StepConfigPanel: React.FC<{
       {expressionValidations.length > 0 && (
         <div className="space-y-2">
           {expressionValidations.filter(v => v.validation.error).length > 0 && (
-            <Card className="border border-red-200 bg-red-50 p-3">
-              <div className="text-xs font-semibold text-red-700 mb-1 flex items-center gap-1">
+            <Card className="border border-destructive/30 bg-destructive/10 p-3">
+              <div className="text-xs font-semibold text-destructive mb-1 flex items-center gap-1">
                 <AlertTriangle className="w-3.5 h-3.5" />
                 Expression errors
               </div>
-              <ul className="text-xs text-red-700 space-y-1">
+              <ul className="text-xs text-destructive space-y-1">
                 {expressionValidations
                   .filter(v => v.validation.error)
                   .map((v, i) => (
-                    <li key={i}><code className="bg-red-100 px-1 rounded">{v.field}</code>: {v.validation.error}</li>
+                    <li key={i}><code className="bg-destructive/15 px-1 rounded">{v.field}</code>: {v.validation.error}</li>
                   ))}
               </ul>
             </Card>
           )}
           {expressionValidations.filter(v => v.validation.warning && !v.validation.error).length > 0 && (
-            <Card className="border border-yellow-200 bg-yellow-50 p-3">
-              <div className="text-xs font-semibold text-yellow-700 mb-1 flex items-center gap-1">
+            <Card className="border border-warning/30 bg-warning/10 p-3">
+              <div className="text-xs font-semibold text-warning-foreground mb-1 flex items-center gap-1">
                 <AlertTriangle className="w-3.5 h-3.5" />
                 Warnings
               </div>
-              <ul className="text-xs text-yellow-700 space-y-1">
+              <ul className="text-xs text-warning-foreground space-y-1">
                 {expressionValidations
                   .filter(v => v.validation.warning && !v.validation.error)
                   .map((v, i) => (
-                    <li key={i}><code className="bg-yellow-100 px-1 rounded">{v.field}</code>: {v.validation.warning}</li>
+                    <li key={i}><code className="bg-warning/15 px-1 rounded">{v.field}</code>: {v.validation.warning}</li>
                   ))}
               </ul>
             </Card>
@@ -5098,7 +5098,7 @@ const StepConfigPanel: React.FC<{
                     placeholder="e.g., ticketDefaults"
                     value={currentSaveAs}
                     onChange={(event) => handleSaveAsChange(event.target.value)}
-                    className={`flex-1 ${saveAsValidation?.type === 'error' ? 'border-red-500' : saveAsValidation?.type === 'warning' ? 'border-yellow-500' : ''}`}
+                    className={`flex-1 ${saveAsValidation?.type === 'error' ? 'border-destructive' : saveAsValidation?.type === 'warning' ? 'border-warning' : ''}`}
                   />
                   <Button
                     id={`workflow-step-saveAs-copy-${step.id}`}
@@ -5123,7 +5123,7 @@ const StepConfigPanel: React.FC<{
                 {/* §16.1 - saveAs conflict validation warning */}
                 {saveAsValidation && (
                   <div className={`flex items-center gap-1 text-xs ${
-                    saveAsValidation.type === 'error' ? 'text-red-600' : 'text-yellow-600'
+                    saveAsValidation.type === 'error' ? 'text-destructive' : 'text-warning'
                   }`}>
                     <AlertTriangle className="w-3 h-3" />
                     {saveAsValidation.message}
@@ -5691,7 +5691,7 @@ const SchemaForm: React.FC<{
       <div>
         <div className="text-sm font-semibold text-gray-800">Node Configuration</div>
         {missingRequired.length > 0 && (
-          <div className="text-xs text-red-600">Missing required: {missingRequired.map(k => getFieldMeta(k).label).join(', ')}</div>
+          <div className="text-xs text-destructive">Missing required: {missingRequired.map(k => getFieldMeta(k).label).join(', ')}</div>
         )}
       </div>
 
@@ -5775,7 +5775,7 @@ const ExpressionField: React.FC<{
         hasError={!!error}
         ariaLabel={label}
       />
-      {error && <div className="text-xs text-red-600">{error}</div>}
+      {error && <div className="text-xs text-destructive">{error}</div>}
       {description && !error && <div className="text-xs text-gray-500">{description}</div>}
     </div>
   );
@@ -5889,9 +5889,9 @@ const JsonField: React.FC<{
         value={text}
         onChange={(event) => handleChange(event.target.value)}
         rows={4}
-        className={error ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : ''}
+        className={error ? 'border-destructive focus:ring-destructive focus:border-destructive' : ''}
       />
-      {error && <div className="text-xs text-red-600">{error}</div>}
+      {error && <div className="text-xs text-destructive">{error}</div>}
     </div>
   );
 };
@@ -5967,7 +5967,7 @@ const SchemaFieldRow: React.FC<{
         )}
 
         <span className="font-medium text-gray-800">{field.name}</span>
-        {field.required && <span className="text-red-500">*</span>}
+        {field.required && <span className="text-destructive">*</span>}
 
         {/* §16.4 - Type with tooltip for constraints */}
         <span
@@ -6179,10 +6179,10 @@ const ActionSchemaReference: React.FC<{
 
       {/* SaveAs preview */}
       {saveAs && (
-        <div className="text-xs bg-green-50 border border-green-200 rounded-md p-2 flex items-center gap-2">
-          <Check className="w-3.5 h-3.5 text-green-600" />
-          <span className="text-green-700">
-            Output available at <code className="bg-green-100 px-1 rounded">${`{vars.${saveAs}}`}</code>
+        <div className="text-xs bg-success/10 border border-success/30 rounded-md p-2 flex items-center gap-2">
+          <Check className="w-3.5 h-3.5 text-success" />
+          <span className="text-success">
+            Output available at <code className="bg-success/15 px-1 rounded">${`{vars.${saveAs}}`}</code>
           </span>
         </div>
       )}

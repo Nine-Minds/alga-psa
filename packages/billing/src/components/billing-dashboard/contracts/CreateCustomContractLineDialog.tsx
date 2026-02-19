@@ -259,13 +259,13 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
 
     return (
       <div className="space-y-4">
-        <div className="p-4 bg-amber-50 border border-amber-200 rounded-md">
-          <p className="text-sm text-amber-800">
+        <Alert variant="info">
+          <AlertDescription className="text-sm">
             <strong>Fixed Fee Services:</strong> The contract line's base rate (set below) is the billed amount.
             You can also attach <strong>Products</strong> to this contract line; product quantities are billed as
             units, while fixed-fee service quantities are used for <em>tax allocation</em> only.
-          </p>
-        </div>
+          </AlertDescription>
+        </Alert>
 
         <div className="space-y-4">
           <Label className="flex items-center gap-2">
@@ -274,7 +274,7 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
           </Label>
 
           {fixedServices.map((service, index) => (
-            <div key={index} className="flex items-start gap-3 p-4 border border-gray-200 rounded-md bg-gray-50">
+            <div key={index} className="flex items-start gap-3 p-4 border border-[rgb(var(--color-border-200))] rounded-md bg-muted">
               <div className="flex-1 space-y-3">
                 <div className="space-y-2">
                   <Label htmlFor={`fixed-service-${index}`} className="text-sm">
@@ -319,7 +319,7 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
                 variant="ghost"
                 size="sm"
                 onClick={() => handleRemoveFixedService(index)}
-                className="mt-8 text-red-600 hover:text-red-700 hover:bg-red-50"
+                className="mt-8 text-destructive hover:text-destructive hover:bg-destructive/10"
               >
                 <X className="h-4 w-4" />
               </Button>
@@ -339,8 +339,8 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
         </div>
 
         {fixedServices.length === 0 && (
-          <div className="p-4 bg-gray-50 border border-gray-200 rounded-md">
-            <p className="text-sm text-gray-600 text-center">
+          <div className="p-4 bg-muted border border-[rgb(var(--color-border-200))] rounded-md">
+            <p className="text-sm text-muted-foreground text-center">
               No fixed fee items added yet. Click "Add Item" above to get started.
             </p>
           </div>
@@ -370,11 +370,11 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
 
     return (
       <div className="space-y-4">
-        <div className="p-4 bg-amber-50 border border-amber-200 rounded-md">
-          <p className="text-sm text-amber-800">
+        <Alert variant="info">
+          <AlertDescription className="text-sm">
             <strong>Hourly Services:</strong> These services are billed based on actual time tracked.
-          </p>
-        </div>
+          </AlertDescription>
+        </Alert>
 
         {hourlyServices.length > 0 && (
           <>
@@ -421,7 +421,7 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
           </Label>
 
           {hourlyServices.map((service, index) => (
-            <div key={index} className="flex items-start gap-3 p-4 border border-gray-200 rounded-md bg-gray-50">
+            <div key={index} className="flex items-start gap-3 p-4 border border-[rgb(var(--color-border-200))] rounded-md bg-muted">
               <div className="flex-1 space-y-3">
                 <div className="space-y-2">
                   <Label htmlFor={`hourly-service-${index}`} className="text-sm">
@@ -458,7 +458,7 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
                     Hourly Rate
                   </Label>
                   <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
                     <Input
                       id={`hourly-rate-${index}`}
                       type="text"
@@ -487,13 +487,13 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
                       className="pl-7"
                     />
                   </div>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-muted-foreground">
                     {service.hourly_rate ? `${formatCurrency(service.hourly_rate)}/hour` : 'Enter hourly rate'}
                   </p>
                 </div>
 
                 {/* Bucket Overlay Section */}
-                <div className="space-y-3 pt-3 border-t border-dashed border-gray-200">
+                <div className="space-y-3 pt-3 border-t border-dashed border-[rgb(var(--color-border-200))]">
                   <SwitchWithLabel
                     label="Add bucket of hours"
                     checked={Boolean(service.bucket_overlay)}
@@ -543,7 +543,7 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
                 variant="ghost"
                 size="sm"
                 onClick={() => handleRemoveHourlyService(index)}
-                className="mt-8 text-red-600 hover:text-red-700 hover:bg-red-50"
+                className="mt-8 text-destructive hover:text-destructive hover:bg-destructive/10"
               >
                 <X className="h-4 w-4" />
               </Button>
@@ -563,8 +563,8 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
         </div>
 
         {hourlyServices.length === 0 && (
-          <div className="p-4 bg-gray-50 border border-gray-200 rounded-md">
-            <p className="text-sm text-gray-600 text-center">
+          <div className="p-4 bg-muted border border-[rgb(var(--color-border-200))] rounded-md">
+            <p className="text-sm text-muted-foreground text-center">
               No hourly services added yet. Click "Add Hourly Service" above to get started.
             </p>
           </div>
@@ -600,11 +600,11 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
 
     return (
       <div className="space-y-4">
-        <div className="p-4 bg-amber-50 border border-amber-200 rounded-md">
-          <p className="text-sm text-amber-800">
+        <Alert variant="info">
+          <AlertDescription className="text-sm">
             <strong>Usage-Based Services:</strong> These services are billed based on actual consumption.
-          </p>
-        </div>
+          </AlertDescription>
+        </Alert>
 
         <div className="space-y-4">
           <Label className="flex items-center gap-2">
@@ -613,7 +613,7 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
           </Label>
 
           {usageServices.map((service, index) => (
-            <div key={index} className="flex items-start gap-3 p-4 border border-gray-200 rounded-md bg-gray-50">
+            <div key={index} className="flex items-start gap-3 p-4 border border-[rgb(var(--color-border-200))] rounded-md bg-muted">
               <div className="flex-1 space-y-3">
                 <div className="space-y-2">
                   <Label htmlFor={`usage-service-${index}`} className="text-sm">
@@ -652,7 +652,7 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
                       Rate per Unit
                     </Label>
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
                       <Input
                         id={`unit-rate-${index}`}
                         type="text"
@@ -681,7 +681,7 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
                         className="pl-10"
                       />
                     </div>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-muted-foreground">
                       {service.unit_rate ? `${formatCurrency(service.unit_rate)}/${service.unit_of_measure || 'unit'}` : 'Enter unit rate'}
                     </p>
                   </div>
@@ -701,7 +701,7 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
                 </div>
 
                 {/* Bucket Overlay Section */}
-                <div className="space-y-3 pt-3 border-t border-dashed border-gray-200">
+                <div className="space-y-3 pt-3 border-t border-dashed border-[rgb(var(--color-border-200))]">
                   <SwitchWithLabel
                     label="Add bucket of consumption"
                     checked={Boolean(service.bucket_overlay)}
@@ -752,7 +752,7 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
                 variant="ghost"
                 size="sm"
                 onClick={() => handleRemoveUsageService(index)}
-                className="mt-8 text-red-600 hover:text-red-700 hover:bg-red-50"
+                className="mt-8 text-destructive hover:text-destructive hover:bg-destructive/10"
               >
                 <X className="h-4 w-4" />
               </Button>
@@ -772,8 +772,8 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
         </div>
 
         {usageServices.length === 0 && (
-          <div className="p-4 bg-gray-50 border border-gray-200 rounded-md">
-            <p className="text-sm text-gray-600 text-center">
+          <div className="p-4 bg-muted border border-[rgb(var(--color-border-200))] rounded-md">
+            <p className="text-sm text-muted-foreground text-center">
               No usage-based services added yet. Click "Add Usage-Based Service" above to get started.
             </p>
           </div>
@@ -807,7 +807,7 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
           <section className="space-y-4">
             <div>
               <h3 className="text-lg font-semibold">Contract Line Basics</h3>
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-muted-foreground">
                 Create a custom contract line directly for this contract.
               </p>
             </div>
@@ -851,7 +851,7 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
                     { value: 'arrears', label: 'Arrears (bill at end of period)' }
                   ]}
                 />
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-muted-foreground mt-1">
                   Advance billing is typical for fixed fees; arrears for time/usage-based services.
                 </p>
               </div>
@@ -861,7 +861,7 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
           <section className="space-y-4">
             <div>
               <h3 className="text-lg font-semibold">Choose a Billing Model *</h3>
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-muted-foreground">
                 Select the billing behavior that fits this offering.
               </p>
             </div>
@@ -897,14 +897,14 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
                     clearErrorIfSubmitted();
                   }}
                   className={`text-left p-4 border-2 rounded-lg transition-all focus:outline-none ${
-                    planType === key ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-blue-500 hover:bg-blue-50'
+                    planType === key ? 'border-blue-500 bg-blue-50' : 'border-[rgb(var(--color-border-200))] hover:border-blue-500 hover:bg-blue-50'
                   }`}
                 >
                   <div className="flex items-start gap-3">
                     <Icon className={`h-8 w-8 mt-1 flex-shrink-0 ${accent}`} />
                     <div>
-                      <h4 className="font-semibold text-gray-900 mb-1">{title}</h4>
-                      <p className="text-sm text-gray-600">{description}</p>
+                      <h4 className="font-semibold text-[rgb(var(--color-text-900))] mb-1">{title}</h4>
+                      <p className="text-sm text-muted-foreground">{description}</p>
                     </div>
                   </div>
                 </button>
@@ -916,7 +916,7 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
             <section className="space-y-4">
               <div>
                 <h3 className="text-lg font-semibold">Fixed Fee Services</h3>
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-muted-foreground">
                   Set up services that are billed at a fixed recurring rate.
                 </p>
               </div>
@@ -927,7 +927,7 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
                   <div className="space-y-2 pt-4 border-t">
                     <Label htmlFor="base-rate">Recurring Base Rate</Label>
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
                       <Input
                         id="base-rate"
                         type="text"
@@ -955,12 +955,12 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
                         className="pl-10"
                       />
                     </div>
-                    <p className="text-xs text-gray-500">Recurring fee for all fixed services.</p>
+                    <p className="text-xs text-muted-foreground">Recurring fee for all fixed services.</p>
                   </div>
 
-                  <div className="border border-gray-200 rounded-md p-4 bg-white space-y-3">
+                  <div className="border border-[rgb(var(--color-border-200))] rounded-md p-4 bg-card space-y-3">
                     <div className="flex items-center justify-between">
-                      <Label htmlFor="enable-proration" className="font-medium text-gray-800">
+                      <Label htmlFor="enable-proration" className="font-medium text-[rgb(var(--color-text-800))]">
                         Enable Proration
                       </Label>
                       <Switch
@@ -969,7 +969,7 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
                         onCheckedChange={setEnableProration}
                       />
                     </div>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-muted-foreground">
                       When enabled, the recurring fee will be prorated for partial billing periods
                     </p>
                   </div>
@@ -982,7 +982,7 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
             <section className="space-y-4">
               <div>
                 <h3 className="text-lg font-semibold">Hourly Services</h3>
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-muted-foreground">
                   Configure services that are billed based on time tracked.
                 </p>
               </div>
@@ -994,7 +994,7 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
             <section className="space-y-4">
               <div>
                 <h3 className="text-lg font-semibold">Usage-Based Services</h3>
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-muted-foreground">
                   Configure services that are billed based on usage or consumption.
                 </p>
               </div>

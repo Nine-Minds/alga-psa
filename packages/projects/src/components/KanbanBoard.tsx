@@ -85,7 +85,7 @@ const getStatusIcon = (status: ProjectStatus): React.ReactNode => {
 };
 
 const borderColors = ['border-gray-300 dark:border-gray-700', 'border-indigo-300 dark:border-indigo-800', 'border-green-300 dark:border-green-800', 'border-yellow-300 dark:border-yellow-800'];
-const cycleColors = ['bg-gray-100 dark:bg-gray-900', 'bg-indigo-100 dark:bg-indigo-950', 'bg-green-100 dark:bg-green-950', 'bg-yellow-100 dark:bg-yellow-950'];
+const cycleColors = ['bg-gray-100 dark:bg-gray-900', 'bg-indigo-100 dark:bg-indigo-950', 'bg-success/15', 'bg-warning/15'];
 const darkCycleColors = ['bg-gray-200 dark:bg-gray-800', 'bg-indigo-200 dark:bg-indigo-900', 'bg-green-200 dark:bg-green-900', 'bg-yellow-200 dark:bg-yellow-900'];
 
 export const KanbanBoard: React.FC<KanbanBoardProps> = ({

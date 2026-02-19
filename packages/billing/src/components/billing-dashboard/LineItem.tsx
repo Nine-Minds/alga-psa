@@ -196,9 +196,9 @@ export const LineItem: React.FC<LineItemProps> = ({
     return (
       <div
         onClick={onToggleExpand}
-        className={`p-3 border rounded-lg mb-2 cursor-pointer hover:bg-gray-50 flex justify-between items-center ${
-          editState.isRemoved ? 'opacity-50 bg-gray-50' : ''
-        } ${editState.is_discount ? 'border-blue-200 bg-blue-50' : ''}`}
+        className={`p-3 border rounded-lg mb-2 cursor-pointer hover:bg-muted flex justify-between items-center ${
+          editState.isRemoved ? 'opacity-50 bg-muted' : ''
+        } ${editState.is_discount ? 'border-primary/30 bg-primary/10' : ''}`}
       >
         <div className="flex-1">
           {editState.is_discount ? (
@@ -206,14 +206,14 @@ export const LineItem: React.FC<LineItemProps> = ({
               <span className="font-medium text-blue-600">
                 {editState.applies_to_item_id ? 'Item Discount' : 'Invoice Discount'}
               </span>
-              <span className="mx-2 text-gray-400">|</span>
-              <span className="text-gray-600">
+              <span className="mx-2 text-muted-foreground">|</span>
+              <span className="text-muted-foreground">
                 {editState.discount_type === 'percentage'
                   ? `${editState.discount_percentage}%`
                   : `${currencySymbol}${(Math.abs(editState.rate) / 100).toFixed(2)}`}
                 {editState.applies_to_item_id && (
                   <>
-                    <span className="mx-2 text-gray-400">|</span>
+                    <span className="mx-2 text-muted-foreground">|</span>
                     <span>Applied to: {invoiceItems?.find(i => i.item_id === editState.applies_to_item_id)?.description}</span>
                   </>
                 )}
@@ -223,17 +223,17 @@ export const LineItem: React.FC<LineItemProps> = ({
             <>
               <span className="font-medium">{selectedService?.label || 'Select Service'}</span>
               {/* Derive taxable status directly from tax_rate_id */}
-              <span className="text-xs text-gray-500 ml-1">
+              <span className="text-xs text-muted-foreground ml-1">
                 {!!selectedService?.tax_rate_id ? '(Taxable)' : '(Non-Taxable)'}
               </span>
-              <span className="mx-2 text-gray-400">|</span>
-              <span className="text-gray-600">{editState.description}</span>
+              <span className="mx-2 text-muted-foreground">|</span>
+              <span className="text-muted-foreground">{editState.description}</span>
             </>
           )}
         </div>
         <div className="flex items-center gap-4">
           {!editState.is_discount && (
-            <span className="text-gray-600">{editState.quantity} × {currencySymbol}{rateInDollars.toFixed(2)}</span>
+            <span className="text-muted-foreground">{editState.quantity} × {currencySymbol}{rateInDollars.toFixed(2)}</span>
           )}
           <span className="font-medium">
             {editState.discount_type === 'percentage'
@@ -241,7 +241,7 @@ export const LineItem: React.FC<LineItemProps> = ({
               : `${currencySymbol}${Math.abs(subtotal / 100).toFixed(2)}`}
           </span>
           {editState.discount_type === 'percentage' && (
-            <span className="text-sm text-gray-500 ml-1">
+            <span className="text-sm text-muted-foreground ml-1">
               (calculated on save)
             </span>
           )}
@@ -252,7 +252,7 @@ export const LineItem: React.FC<LineItemProps> = ({
 
   return (
     <div className={`p-4 border rounded-lg space-y-3 mb-2 ${
-      editState.isRemoved ? 'opacity-50 bg-gray-50' : ''
+      editState.isRemoved ? 'opacity-50 bg-muted' : ''
     } ${editState.is_discount ? 'border-blue-200 bg-blue-50' : ''}`}>
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-2">
@@ -260,7 +260,7 @@ export const LineItem: React.FC<LineItemProps> = ({
             {editState.is_discount ? 'Discount' : `Item ${index + 1}`}
           </h3>
           {editState.isRemoved && (
-            <span className="text-xs text-red-600 bg-red-50 px-2 py-1 rounded">
+            <span className="text-xs text-destructive bg-destructive/10 px-2 py-1 rounded">
               Marked for removal
             </span>
           )}
@@ -292,7 +292,7 @@ export const LineItem: React.FC<LineItemProps> = ({
           // Regular line item fields
           <>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
                 Service
               </label>
               <CustomSelect
@@ -306,7 +306,7 @@ export const LineItem: React.FC<LineItemProps> = ({
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
                 Quantity
               </label>
               <Input
@@ -325,7 +325,7 @@ export const LineItem: React.FC<LineItemProps> = ({
           // Discount fields
           <>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
                 Discount Type
               </label>
               <CustomSelect
@@ -339,7 +339,7 @@ export const LineItem: React.FC<LineItemProps> = ({
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
                 {editState.discount_type === 'percentage' ? 'Percentage' : `Amount (${currencySymbol})`}
               </label>
               <Input
@@ -399,7 +399,7 @@ export const LineItem: React.FC<LineItemProps> = ({
         {editState.is_discount ? (
           <>
             <div className="col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
                 Discount Description
               </label>
               <Input
@@ -415,7 +415,7 @@ export const LineItem: React.FC<LineItemProps> = ({
 
             {invoiceItems && invoiceItems.length > 0 && (
               <div className="col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
                   Apply Discount To
                 </label>
                 <CustomSelect
@@ -440,7 +440,7 @@ export const LineItem: React.FC<LineItemProps> = ({
           </>
         ) : (
           <div className="col-span-1">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
               Rate ({currencySymbol})
             </label>
             <Input
@@ -465,7 +465,7 @@ export const LineItem: React.FC<LineItemProps> = ({
 
       {!editState.is_discount && (
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
             Description
           </label>
           <Input
@@ -477,14 +477,14 @@ export const LineItem: React.FC<LineItemProps> = ({
             disabled={editState.isRemoved}
           />
           {editState.isRemoved && (
-            <p className="mt-1 text-xs text-gray-500">
+            <p className="mt-1 text-xs text-muted-foreground">
               This item will be removed when you save changes
             </p>
           )}
         </div>
       )}
 
-      <div className="text-right text-sm text-gray-600">
+      <div className="text-right text-sm text-muted-foreground">
         {editState.is_discount ? (
           <>
             <span className="text-blue-600 font-medium">
@@ -498,7 +498,7 @@ export const LineItem: React.FC<LineItemProps> = ({
               {editState.applies_to_item_id && (
                 <>
                   <span className="mx-2">|</span>
-                  <span className="text-gray-500">
+                  <span className="text-muted-foreground">
                     Applied to: {invoiceItems?.find(i => i.item_id === editState.applies_to_item_id)?.description}
                   </span>
                 </>

@@ -390,7 +390,7 @@ export function TemplateTasksStep({
                                 <button
                                   type="button"
                                   onClick={() => removeChecklistItem(item.temp_id)}
-                                  className="text-red-500 flex-none"
+                                  className="text-destructive flex-none"
                                   onMouseDown={(e) => e.preventDefault()} // Prevent blur before click registers
                                 >
                                   Remove
@@ -411,7 +411,7 @@ export function TemplateTasksStep({
 
                         <div>
                           {!task.task_name.trim() && saveAttempted.has(task.temp_id) && (
-                            <p className="text-sm text-red-600 mb-2">
+                            <p className="text-sm text-destructive mb-2">
                               Task name is required
                             </p>
                           )}
@@ -497,7 +497,7 @@ export function TemplateTasksStep({
                               size="sm"
                               onClick={() => removeTask(task.temp_id)}
                             >
-                              <Trash2 className="w-4 h-4 text-red-600" />
+                              <Trash2 className="w-4 h-4 text-destructive" />
                             </Button>
                           </div>
                         </div>

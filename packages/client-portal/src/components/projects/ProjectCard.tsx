@@ -52,11 +52,11 @@ export function ProjectCard({ project }: ProjectCardProps) {
     
     switch (progress.timelineStatus) {
       case 'on_track':
-        return 'bg-green-500';
+        return 'bg-success';
       case 'delayed':
-        return 'bg-amber-500';
+        return 'bg-warning';
       case 'at_risk':
-        return 'bg-red-500';
+        return 'bg-destructive';
       default:
         return 'bg-blue-500';
     }

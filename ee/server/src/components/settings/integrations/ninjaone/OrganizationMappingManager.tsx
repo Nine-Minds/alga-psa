@@ -314,12 +314,12 @@ const OrganizationMappingManager: React.FC<OrganizationMappingManagerProps> = ({
                       </td>
                       <td className="px-4 py-3 text-center">
                         {mapping.client_id ? (
-                          <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
+                          <span className="inline-flex items-center rounded-full bg-success/15 px-2 py-0.5 text-xs font-medium text-success">
                             <Check className="mr-1 h-3 w-3" />
                             Mapped
                           </span>
                         ) : (
-                          <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
+                          <span className="inline-flex items-center rounded-full bg-warning/15 px-2 py-0.5 text-xs font-medium text-warning-foreground">
                             Unmapped
                           </span>
                         )}

@@ -52,13 +52,13 @@ export const getEventColors = (
       text = 'text-[rgb(var(--color-text-900))]';
       break;
     case 'interaction':
-      bg = 'bg-green-100';
-      hover = 'hover:bg-green-200';
-      text = 'text-green-900';
+      bg = 'bg-green-100 dark:bg-green-900/30';
+      hover = 'hover:bg-green-200 dark:hover:bg-green-900/50';
+      text = 'text-green-900 dark:text-green-300';
       break;
     case 'appointment_request':
-      bg = 'bg-rose-200';
-      hover = 'hover:bg-rose-300';
+      bg = 'bg-rose-200 dark:bg-rose-900/30';
+      hover = 'hover:bg-rose-300 dark:hover:bg-rose-900/50';
       text = 'text-[rgb(var(--color-text-900))]';
       break;
   }

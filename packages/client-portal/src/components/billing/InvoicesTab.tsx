@@ -5,6 +5,7 @@ import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { ColumnDefinition } from '@alga-psa/types';
 import type { InvoiceViewModel } from '@alga-psa/types';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
+import { Badge } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
 import { MoreVertical, Download, Eye, Mail, CreditCard, X } from 'lucide-react';
 import {
@@ -193,11 +194,9 @@ const InvoicesTab: React.FC<InvoicesTabProps> = React.memo(({
       title: t('invoice.status'),
       dataIndex: 'finalized_at',
       render: (value) => (
-        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-          value ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-        }`}>
+        <Badge variant={value ? 'success' : 'warning'}>
           {value ? t('invoice.finalized') : t('invoice.draft')}
-        </span>
+        </Badge>
       )
     },
     {
@@ -328,8 +327,8 @@ const InvoicesTab: React.FC<InvoicesTabProps> = React.memo(({
 
             {/* Show credit information if credits were applied */}
             {selectedInvoice.credit_applied > 0 && (
-              <div className="mx-4 mb-4 p-4 bg-blue-50 rounded-md">
-                <p className="text-blue-800">
+              <div className="mx-4 mb-4 p-4 bg-primary/10 rounded-md">
+                <p className="text-primary">
                   Credit Applied: {formatCurrency(selectedInvoice.credit_applied, selectedInvoice.currencyCode)}
                 </p>
               </div>

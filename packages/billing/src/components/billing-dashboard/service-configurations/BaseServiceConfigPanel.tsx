@@ -76,7 +76,7 @@ export function BaseServiceConfigPanel({
         <div className="flex justify-between items-center">
           <h3 className="text-md font-medium">Service Configuration</h3>
           {service && (
-            <div className="text-sm text-gray-500">
+            <div className="text-sm text-muted-foreground">
               Service: <span className="font-medium">{service.service_name}</span>
             </div>
           )}
@@ -120,7 +120,7 @@ export function BaseServiceConfigPanel({
               {validationErrors.quantity ? (
                 <p className="text-sm text-red-500 mt-1">{validationErrors.quantity}</p>
               ) : (
-                <p className="text-sm text-gray-500 mt-1">
+                <p className="text-sm text-muted-foreground mt-1">
                   Number of units of this service
                 </p>
               )}
@@ -143,7 +143,7 @@ export function BaseServiceConfigPanel({
             {validationErrors.custom_rate ? (
               <p className="text-sm text-red-500 mt-1">{validationErrors.custom_rate}</p>
             ) : (
-              <p className="text-sm text-gray-500 mt-1">
+              <p className="text-sm text-muted-foreground mt-1">
                 {service?.default_rate !== undefined
                   ? `Leave blank to use default rate (${service.default_rate.toFixed(2)})` // Display default as decimal
                   : 'Custom rate for this service'}

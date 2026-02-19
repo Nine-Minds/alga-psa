@@ -520,7 +520,7 @@ const BoardsSettings: React.FC = () => {
                   boardId: value,
                   boardName: record.board_name || ''
                 })}
-                className="text-red-600"
+                className="text-destructive"
               >
                 Delete
               </DropdownMenuItem>

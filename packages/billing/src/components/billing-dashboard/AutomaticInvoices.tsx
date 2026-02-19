@@ -9,6 +9,7 @@ import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { DateRangePicker, DateRange } from '@alga-psa/ui/components/DateRangePicker';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Search, Info, AlertTriangle, X, MoreVertical, Eye } from 'lucide-react';
 import type { IClientContractLineCycle, PreviewInvoiceResponse } from '@alga-psa/types';
 import { getPurchaseOrderOverageForBillingCycle, previewInvoice } from '@alga-psa/billing/actions/invoiceGeneration';
@@ -567,35 +568,37 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
       {isInitialLoading ? (
         <LoadingIndicator
           layout="stacked"
-          className="py-10 text-gray-600"
+          className="py-10 text-muted-foreground"
           spinnerProps={{ size: 'md' }}
           text="Loading billing data"
         />
       ) : loadError ? (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4">
-          <button
-            id="dismiss-load-error-button"
-            className="absolute top-2 right-2"
-            onClick={() => setLoadError(null)}
-          >
-            <X className="h-4 w-4" />
-          </button>
-          <p>{loadError}</p>
-          <Button
-            id="retry-load-button"
-            variant="outline"
-            size="sm"
-            className="mt-2"
-            onClick={() => {
-              setLoadError(null);
-              // Reset to page 1 to trigger a fresh load
-              setCurrentReadyPage(1);
-              setInvoicedCurrentPage(1);
-            }}
-          >
-            Retry
-          </Button>
-        </div>
+        <Alert variant="destructive" className="relative mb-4">
+          <AlertDescription>
+            <button
+              id="dismiss-load-error-button"
+              className="absolute top-2 right-2"
+              onClick={() => setLoadError(null)}
+            >
+              <X className="h-4 w-4" />
+            </button>
+            <p>{loadError}</p>
+            <Button
+              id="retry-load-button"
+              variant="outline"
+              size="sm"
+              className="mt-2"
+              onClick={() => {
+                setLoadError(null);
+                // Reset to page 1 to trigger a fresh load
+                setCurrentReadyPage(1);
+                setInvoicedCurrentPage(1);
+              }}
+            >
+              Retry
+            </Button>
+          </AlertDescription>
+        </Alert>
       ) : (
       <div className="space-y-8">
         <div>
@@ -654,23 +657,25 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
           </div>
 
           {Object.keys(errors).length > 0 && (
-            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4">
-              <button
-                onClick={() => setErrors({})}
-                className="absolute top-2 right-2 p-1 hover:bg-red-200 rounded-full transition-colors"
-                aria-label="Close error message"
-              >
-                <X className="h-5 w-5" />
-              </button>
-              <h4 className="font-semibold mb-2">Errors occurred while finalizing invoices:</h4>
-              <ul className="list-disc pl-5">
-                {Object.entries(errors).map(([client, errorMessage]): React.JSX.Element => (
-                  <li key={client}>
-                    <span className="font-medium">{client}:</span> {errorMessage}
-                  </li>
-                ))}
-              </ul>
-            </div>
+            <Alert variant="destructive" className="relative mb-4">
+              <AlertDescription>
+                <button
+                  onClick={() => setErrors({})}
+                  className="absolute top-2 right-2 p-1 hover:bg-destructive/20 rounded-full transition-colors"
+                  aria-label="Close error message"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+                <h4 className="font-semibold mb-2">Errors occurred while finalizing invoices:</h4>
+                <ul className="list-disc pl-5">
+                  {Object.entries(errors).map(([client, errorMessage]): React.JSX.Element => (
+                    <li key={client}>
+                      <span className="font-medium">{client}:</span> {errorMessage}
+                    </li>
+                  ))}
+                </ul>
+              </AlertDescription>
+            </Alert>
           )}
 
           <DataTable
@@ -769,7 +774,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                           {/* Delete Option Moved Here */}
                           <DropdownMenuItem
                             id={`delete-billing-cycle-${record.billing_cycle_id}`}
-                            className="text-red-600 focus:text-red-600 focus:bg-red-50"
+                            className="text-destructive focus:text-destructive focus:bg-destructive/10"
                             onSelect={(e) => e.preventDefault()} // Prevent closing dropdown immediately
                             onClick={() => {
                               setSelectedCycleToDelete({
@@ -890,16 +895,18 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
             <p>Period: {selectedCycleToReverse?.period}</p>
           </div>
 
-          <div className="bg-yellow-50 border border-yellow-200 rounded p-4 text-sm space-y-2 mt-4">
-            <p className="font-semibold text-yellow-800">This action will:</p>
-            <ul className="list-disc pl-5 text-yellow-700">
-              <li>Reverse any invoices generated for this billing cycle</li>
-              <li>Reissue any credits that were applied to these invoices</li>
-              <li>Unmark all time entries and usage records as invoiced</li>
-              <li>Mark the billing cycle as inactive</li>
-            </ul>
-            <p className="text-red-600 font-semibold mt-4">This action cannot be undone!</p>
-          </div>
+          <Alert variant="warning" className="mt-4">
+            <AlertDescription className="text-sm space-y-2">
+              <p className="font-semibold">This action will:</p>
+              <ul className="list-disc pl-5">
+                <li>Reverse any invoices generated for this billing cycle</li>
+                <li>Reissue any credits that were applied to these invoices</li>
+                <li>Unmark all time entries and usage records as invoiced</li>
+                <li>Mark the billing cycle as inactive</li>
+              </ul>
+              <p className="text-destructive font-semibold mt-4">This action cannot be undone!</p>
+            </AlertDescription>
+          </Alert>
         </DialogContent>
 
         <DialogFooter>
@@ -953,17 +960,17 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                 <h3 className="font-semibold">Invoice Details</h3>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <p className="text-sm text-gray-500">Invoice Number</p>
+                    <p className="text-sm text-muted-foreground">Invoice Number</p>
                     {/* Use invoiceNumber */}
                     <p>{previewState.data.invoiceNumber}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-500">Date</p>
+                    <p className="text-sm text-muted-foreground">Date</p>
                     {/* Use issueDate and convert */}
                     <p>{toPlainDate(previewState.data.issueDate).toLocaleString()}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-500">Due Date</p>
+                    <p className="text-sm text-muted-foreground">Due Date</p>
                     {/* Use dueDate and convert */}
                     <p>{toPlainDate(previewState.data.dueDate).toLocaleString()}</p>
                   </div>

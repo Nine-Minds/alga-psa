@@ -492,7 +492,7 @@ const ImportExportSettings = (): React.JSX.Element => {
                     <TableCell>{job.file_name ?? '—'}</TableCell>
                     <TableCell className="capitalize">{job.status}</TableCell>
                     <TableCell className="text-right">{job.created_rows}</TableCell>
-                    <TableCell className="text-right text-amber-700">{job.duplicate_rows}</TableCell>
+                    <TableCell className="text-right text-warning">{job.duplicate_rows}</TableCell>
                     <TableCell className="text-right text-destructive">{job.error_rows}</TableCell>
                   </TableRow>
                 ))
@@ -780,7 +780,7 @@ const JobDuplicatesTable = ({ items }: { items: ImportJobItemRecord[] }) => {
               <TableCell className="font-medium text-foreground">
                 {item.external_id ?? `Row ${index + 1}`}
               </TableCell>
-              <TableCell className="text-amber-700">{renderDuplicateSummary(item)}</TableCell>
+              <TableCell className="text-warning">{renderDuplicateSummary(item)}</TableCell>
               <TableCell>
                 <KeyValuePreview data={item.source_data} />
               </TableCell>

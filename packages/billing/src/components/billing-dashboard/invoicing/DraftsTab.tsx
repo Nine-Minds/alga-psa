@@ -9,6 +9,7 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Badge } from '@alga-psa/ui/components/Badge';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { FileText, MoreVertical, GripVertical, Search, CheckCircle, Download, ArrowRight, RotateCcw } from 'lucide-react';
 import {
   DropdownMenu,
@@ -311,7 +312,7 @@ const DraftsTab: React.FC<DraftsTabProps> = ({
       title: 'Status',
       dataIndex: 'status',
       render: () => (
-        <Badge variant="default" className="bg-amber-100 text-amber-800 border-amber-200">
+        <Badge variant="warning">
           Draft
         </Badge>
       ),
@@ -381,7 +382,7 @@ const DraftsTab: React.FC<DraftsTabProps> = ({
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-4 flex-1 max-w-md">
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" aria-hidden="true" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" aria-hidden="true" />
             <Input
               type="text"
               placeholder="Search invoices..."
@@ -418,23 +419,23 @@ const DraftsTab: React.FC<DraftsTabProps> = ({
       </div>
 
       {error && (
-        <div className="text-red-500 mb-4 bg-red-50 border border-red-200 rounded p-3">
-          {error}
-        </div>
+        <Alert variant="destructive" className="mb-4">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
       )}
 
       {isLoading ? (
         <Card>
           <div className="p-12 flex items-center justify-center">
-            <LoadingIndicator text="Loading draft invoices..." spinnerProps={{ size: 'md' }} layout="stacked" textClassName="text-gray-600" />
+            <LoadingIndicator text="Loading draft invoices..." spinnerProps={{ size: 'md' }} layout="stacked" textClassName="text-muted-foreground" />
           </div>
         </Card>
       ) : filteredInvoices.length === 0 ? (
         <Card>
           <div className="p-12 text-center">
-            <FileText className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">No Draft Invoices</h3>
-            <p className="text-gray-600 mb-4">
+            <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+            <h3 className="text-lg font-semibold text-[rgb(var(--color-text-900))] mb-2">No Draft Invoices</h3>
+            <p className="text-muted-foreground mb-4">
               Draft invoices will appear here once you create invoices that have not been finalized.
             </p>
             <Button

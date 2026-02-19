@@ -41,7 +41,7 @@ const PaymentSettingsSkeleton: React.FC = () => {
       {/* Loading Indicator */}
       <div className="flex flex-col items-center justify-center py-4">
         <Spinner size="md" />
-        <p className="mt-2 text-gray-600">Loading payment settings...</p>
+        <p className="mt-2 text-muted-foreground">Loading payment settings...</p>
       </div>
     </div>
   );

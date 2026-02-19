@@ -2,6 +2,8 @@
 
 import React from 'react';
 import { CheckCircle2, XCircle, AlertTriangle, FileText } from 'lucide-react';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
+import { Badge } from '@alga-psa/ui/components/Badge';
 
 interface ValidationError {
   rowNumber?: number;
@@ -53,10 +55,10 @@ export function CSVImportPreview({ validation, importResult }: CSVImportPreviewP
   };
 
   return (
-    <div className="space-y-4 border rounded-lg p-4 bg-gray-50">
+    <div className="space-y-4 border rounded-lg p-4 bg-muted/50">
       {/* Header */}
       <div className="flex items-center gap-2">
-        <FileText className="h-5 w-5 text-gray-500" />
+        <FileText className="h-5 w-5 text-muted-foreground" />
         <h4 className="font-medium">
           {importResult ? 'Import Results' : 'Validation Results'}
         </h4>
@@ -64,47 +66,47 @@ export function CSVImportPreview({ validation, importResult }: CSVImportPreviewP
 
       {/* Stats Summary */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-white p-3 rounded-lg border">
+        <div className="bg-card p-3 rounded-lg border">
           <div className="text-2xl font-bold">{validation.stats.totalRows}</div>
-          <div className="text-sm text-gray-500">Total Rows</div>
+          <div className="text-sm text-muted-foreground">Total Rows</div>
         </div>
-        <div className="bg-white p-3 rounded-lg border">
+        <div className="bg-card p-3 rounded-lg border">
           <div className="text-2xl font-bold text-green-600">{validation.stats.validRows}</div>
-          <div className="text-sm text-gray-500">Valid Rows</div>
+          <div className="text-sm text-muted-foreground">Valid Rows</div>
         </div>
-        <div className="bg-white p-3 rounded-lg border">
+        <div className="bg-card p-3 rounded-lg border">
           <div className="text-2xl font-bold text-blue-600">{validation.stats.matchedInvoices}</div>
-          <div className="text-sm text-gray-500">Matched Invoices</div>
+          <div className="text-sm text-muted-foreground">Matched Invoices</div>
         </div>
-        <div className="bg-white p-3 rounded-lg border">
+        <div className="bg-card p-3 rounded-lg border">
           <div className="text-2xl font-bold">{validation.stats.uniqueInvoices}</div>
-          <div className="text-sm text-gray-500">Unique Invoices</div>
+          <div className="text-sm text-muted-foreground">Unique Invoices</div>
         </div>
       </div>
 
       {/* Import Summary (if available) */}
       {importResult && (
-        <div className="bg-white p-4 rounded-lg border space-y-2">
+        <div className="bg-card p-4 rounded-lg border space-y-2">
           <h5 className="font-medium">Import Summary</h5>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
             <div>
-              <span className="text-gray-500">Successful Updates:</span>{' '}
+              <span className="text-muted-foreground">Successful Updates:</span>{' '}
               <span className="font-medium text-green-600">{importResult.summary.successfulUpdates}</span>
             </div>
             <div>
-              <span className="text-gray-500">Failed Updates:</span>{' '}
+              <span className="text-muted-foreground">Failed Updates:</span>{' '}
               <span className="font-medium text-red-600">{importResult.summary.failedUpdates}</span>
             </div>
             <div>
-              <span className="text-gray-500">Original Tax:</span>{' '}
+              <span className="text-muted-foreground">Original Tax:</span>{' '}
               <span className="font-medium">{formatCurrency(importResult.summary.totalOriginalTax)}</span>
             </div>
             <div>
-              <span className="text-gray-500">Imported Tax:</span>{' '}
+              <span className="text-muted-foreground">Imported Tax:</span>{' '}
               <span className="font-medium">{formatCurrency(importResult.summary.totalImportedTax)}</span>
             </div>
             <div>
-              <span className="text-gray-500">Difference:</span>{' '}
+              <span className="text-muted-foreground">Difference:</span>{' '}
               <span className={`font-medium ${importResult.summary.totalDifference > 0 ? 'text-green-600' : importResult.summary.totalDifference < 0 ? 'text-red-600' : ''}`}>
                 {importResult.summary.totalDifference >= 0 ? '+' : ''}{formatCurrency(importResult.summary.totalDifference)}
               </span>
@@ -136,17 +138,17 @@ export function CSVImportPreview({ validation, importResult }: CSVImportPreviewP
             <XCircle className="h-4 w-4" />
             <span className="font-medium">Errors ({validation.errors.length})</span>
           </div>
-          <div className="bg-red-50 border border-red-200 rounded-lg divide-y divide-red-200 max-h-48 overflow-y-auto">
+          <div className="bg-destructive/10 border border-destructive/30 rounded-lg divide-y divide-destructive/20 max-h-48 overflow-y-auto">
             {validation.errors.slice(0, 10).map((error, index) => (
               <div key={index} className="p-2 text-sm">
                 {error.rowNumber && (
-                  <span className="text-red-500 font-mono mr-2">Row {error.rowNumber}:</span>
+                  <span className="text-destructive font-mono mr-2">Row {error.rowNumber}:</span>
                 )}
-                <span className="text-red-700">{error.message}</span>
+                <span className="text-destructive">{error.message}</span>
               </div>
             ))}
             {validation.errors.length > 10 && (
-              <div className="p-2 text-sm text-red-500">
+              <div className="p-2 text-sm text-destructive">
                 ... and {validation.errors.length - 10} more errors
               </div>
             )}
@@ -161,17 +163,17 @@ export function CSVImportPreview({ validation, importResult }: CSVImportPreviewP
             <AlertTriangle className="h-4 w-4" />
             <span className="font-medium">Warnings ({validation.warnings.length})</span>
           </div>
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg divide-y divide-yellow-200 max-h-48 overflow-y-auto">
+          <div className="bg-warning/10 border border-warning/30 rounded-lg divide-y divide-warning/20 max-h-48 overflow-y-auto">
             {validation.warnings.slice(0, 10).map((warning, index) => (
               <div key={index} className="p-2 text-sm">
                 {warning.rowNumber && (
-                  <span className="text-yellow-600 font-mono mr-2">Row {warning.rowNumber}:</span>
+                  <span className="text-warning font-mono mr-2">Row {warning.rowNumber}:</span>
                 )}
-                <span className="text-yellow-700">{warning.message}</span>
+                <span className="text-warning">{warning.message}</span>
               </div>
             ))}
             {validation.warnings.length > 10 && (
-              <div className="p-2 text-sm text-yellow-600">
+              <div className="p-2 text-sm text-warning">
                 ... and {validation.warnings.length - 10} more warnings
               </div>
             )}
@@ -186,33 +188,31 @@ export function CSVImportPreview({ validation, importResult }: CSVImportPreviewP
             <AlertTriangle className="h-4 w-4" />
             <span className="font-medium">Duplicate Invoices ({validation.stats.duplicateInvoices.length})</span>
           </div>
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-            <p className="text-sm text-blue-700 mb-2">
-              The following invoices appear multiple times. Their tax amounts will be summed:
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {validation.stats.duplicateInvoices.map((invoiceNo) => (
-                <span
-                  key={invoiceNo}
-                  className="px-2 py-1 bg-blue-100 text-blue-700 text-sm rounded font-mono"
-                >
-                  {invoiceNo}
-                </span>
-              ))}
-            </div>
-          </div>
+          <Alert variant="info">
+            <AlertDescription>
+              <p className="mb-2">
+                The following invoices appear multiple times. Their tax amounts will be summed:
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {validation.stats.duplicateInvoices.map((invoiceNo) => (
+                  <Badge key={invoiceNo} variant="info" className="font-mono">
+                    {invoiceNo}
+                  </Badge>
+                ))}
+              </div>
+            </AlertDescription>
+          </Alert>
         </div>
       )}
 
       {/* Success Message (when validation passes) */}
       {validation.valid && !importResult && (
-        <div className="flex items-center gap-2 p-3 bg-green-50 text-green-700 rounded-lg">
-          <CheckCircle2 className="h-5 w-5" />
-          <span>
+        <Alert variant="success">
+          <AlertDescription>
             Validation passed. Ready to import tax data for {validation.stats.matchedInvoices} invoice
             {validation.stats.matchedInvoices !== 1 ? 's' : ''}.
-          </span>
-        </div>
+          </AlertDescription>
+        </Alert>
       )}
     </div>
   );
@@ -220,17 +220,13 @@ export function CSVImportPreview({ validation, importResult }: CSVImportPreviewP
 
 function StatusBadge({ label, valid }: { label: string; valid: boolean }) {
   return (
-    <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm ${
-      valid
-        ? 'bg-green-100 text-green-700'
-        : 'bg-red-100 text-red-700'
-    }`}>
+    <Badge variant={valid ? 'success' : 'error'} className="flex items-center gap-1.5 px-3 py-1.5">
       {valid ? (
         <CheckCircle2 className="h-4 w-4" />
       ) : (
         <XCircle className="h-4 w-4" />
       )}
       {label}
-    </div>
+    </Badge>
   );
 }

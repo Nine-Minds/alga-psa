@@ -229,7 +229,7 @@ export function ProjectTaskStatusSelector({
                       setShowAvailableList(false);
                     }
                   }}
-                  className="w-full text-left px-3 py-2 text-sm bg-white border rounded hover:bg-blue-50 hover:border-blue-300 transition-colors flex items-center"
+                  className="w-full text-left px-3 py-2 text-sm bg-[rgb(var(--color-card))] border rounded hover:bg-primary/10 hover:border-primary/30 transition-colors flex items-center"
                   id={`add-status-${status.status_id}`}
                 >
                   {status.color && (
@@ -314,7 +314,7 @@ export function ProjectTaskStatusSelector({
                     <button
                       type="button"
                       onClick={() => removeStatus(selected.status_id)}
-                      className="p-1 hover:bg-red-100 rounded text-red-600"
+                      className="p-1 hover:bg-destructive/15 rounded text-destructive"
                       title="Remove status"
                       id={`remove-status-${status.status_id}`}
                     >
@@ -339,7 +339,7 @@ export function ProjectTaskStatusSelector({
 
       {/* Error message */}
       {error && (
-        <p className="text-xs text-red-500 mt-1">{error}</p>
+        <p className="text-xs text-destructive mt-1">{error}</p>
       )}
 
       {/* Quick Add Status Dialog */}

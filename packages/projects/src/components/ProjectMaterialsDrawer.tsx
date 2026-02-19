@@ -396,7 +396,7 @@ export default function ProjectMaterialsDrawer({
                             size="sm"
                             onClick={() => handleDeleteMaterial(material.project_material_id)}
                             disabled={deletingId === material.project_material_id}
-                            className="text-red-500 hover:text-red-700 hover:bg-red-50 p-1 h-auto"
+                            className="text-destructive hover:text-destructive hover:bg-destructive/10 p-1 h-auto"
                           >
                             {deletingId === material.project_material_id ? (
                               <Loader2 className="w-4 h-4 animate-spin" />

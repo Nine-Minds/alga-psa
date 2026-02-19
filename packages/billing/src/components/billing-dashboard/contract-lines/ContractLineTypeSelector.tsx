@@ -52,7 +52,7 @@ export function PlanTypeSelector({
   if (showCards) {
     return (
       <div className={className}>
-        <label className="block mb-2 text-sm font-medium text-gray-700">Contract Line Type</label>
+        <label className="block mb-2 text-sm font-medium text-[rgb(var(--color-text-700))]">Contract Line Type</label>
         <div className="grid grid-cols-2 gap-4 mt-2"> {/* Use gap-4 like the original proposal */}
           {(Object.keys(PLAN_TYPE_DESCRIPTIONS) as PlanType[]).map((planType) => {
             const IconComponent = PLAN_TYPE_ICONS[planType];
@@ -73,8 +73,8 @@ export function PlanTypeSelector({
                     : 'border-border-300'
                   }
                   ${isCardDisabled
-                    ? 'opacity-50 cursor-not-allowed bg-gray-100' // Disabled style
-                    : 'cursor-pointer hover:border-primary-300 hover:bg-gray-50' // Enabled style
+                    ? 'opacity-50 cursor-not-allowed bg-muted' // Disabled style
+                    : 'cursor-pointer hover:border-primary-300 hover:bg-muted' // Enabled style
                   }
                 `}
                 onClick={() => !isCardDisabled && onChange(planType)} // Use isCardDisabled
@@ -84,13 +84,13 @@ export function PlanTypeSelector({
                 tabIndex={isCardDisabled ? -1 : 0} // Make focusable only if not disabled
                 onKeyDown={(e) => { if (!isCardDisabled && (e.key === 'Enter' || e.key === ' ')) onChange(planType); }} // Use isCardDisabled
               >
-                <IconComponent className={`h-8 w-8 mb-1 ${isSelected ? 'text-primary-600' : 'text-gray-500'}`} /> {/* Larger icon, dynamic color */}
-                <span className={`font-medium ${isSelected ? 'text-primary-700' : 'text-gray-800'}`}>
+                <IconComponent className={`h-8 w-8 mb-1 ${isSelected ? 'text-primary-600' : 'text-muted-foreground'}`} /> {/* Larger icon, dynamic color */}
+                <span className={`font-medium ${isSelected ? 'text-primary-700' : 'text-[rgb(var(--color-text-800))]'}`}>
                   {planLabel}
                 </span>
                 {/* Keep description if showDescriptions is true */}
                 {showDescriptions && (
-                   <p className="text-xs text-gray-500">{PLAN_TYPE_DESCRIPTIONS[planType]}</p>
+                   <p className="text-xs text-muted-foreground">{PLAN_TYPE_DESCRIPTIONS[planType]}</p>
                 )}
                 {/* Removed CheckCircle as selection is indicated by border/bg */}
               </div>
@@ -104,7 +104,7 @@ export function PlanTypeSelector({
   // Otherwise, render the dropdown selector
   return (
     <div className={className}>
-      <label className="block mb-2 text-sm font-medium text-gray-700">Contract Line Type</label>
+      <label className="block mb-2 text-sm font-medium text-[rgb(var(--color-text-700))]">Contract Line Type</label>
       <CustomSelect
         id="plan-type-selector"
         options={PLAN_TYPE_OPTIONS.map(option => ({
@@ -120,7 +120,7 @@ export function PlanTypeSelector({
         disabled={disabled}
       />
       {showDescriptions && value && (
-        <p className="text-sm text-gray-500 mt-2">
+        <p className="text-sm text-muted-foreground mt-2">
           {PLAN_TYPE_DESCRIPTIONS[value]}
         </p>
       )}

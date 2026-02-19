@@ -22,13 +22,13 @@ interface NotificationCardProps {
 const getNotificationIcon = (type: string) => {
   switch (type) {
     case 'info':
-      return <Info className="h-4 w-4 text-blue-500" />;
+      return <Info className="h-4 w-4 text-primary-500" />;
     case 'success':
-      return <CheckCircle className="h-4 w-4 text-green-500" />;
+      return <CheckCircle className="h-4 w-4 text-success" />;
     case 'error':
-      return <AlertCircle className="h-4 w-4 text-red-500" />;
+      return <AlertCircle className="h-4 w-4 text-destructive" />;
     case 'warning':
-      return <AlertCircle className="h-4 w-4 text-yellow-500" />;
+      return <AlertCircle className="h-4 w-4 text-warning" />;
     default:
       return <Bell className="h-4 w-4 text-gray-500" />;
   }
@@ -38,13 +38,13 @@ const getNotificationIcon = (type: string) => {
 const getBorderColor = (type: string) => {
   switch (type) {
     case 'info':
-      return 'border-blue-500';
+      return 'border-primary-500';
     case 'success':
-      return 'border-green-500';
+      return 'border-success';
     case 'error':
-      return 'border-red-500';
+      return 'border-destructive';
     case 'warning':
-      return 'border-yellow-500';
+      return 'border-warning';
     default:
       return 'border-gray-500';
   }

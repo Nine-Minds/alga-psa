@@ -109,7 +109,7 @@ export function ProductsStep({ data, updateData }: ProductsStepProps) {
       <div className="space-y-6">
         <div className="mb-6">
           <h3 className="text-lg font-semibold mb-2">Products</h3>
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-[rgb(var(--color-text-500))]">
             Attach products that will be billed each cycle. Products use the catalog price for the
             contract currency unless you enter an override.
           </p>
@@ -134,7 +134,7 @@ export function ProductsStep({ data, updateData }: ProductsStepProps) {
             return (
               <div
                 key={index}
-                className="flex items-start gap-3 p-4 border border-gray-200 rounded-md bg-gray-50"
+                className="flex items-start gap-3 p-4 border border-[rgb(var(--color-border-200))] rounded-md bg-[rgb(var(--color-border-50))]"
               >
                 <div className="flex-1 space-y-3">
                   <div className="space-y-2">
@@ -173,7 +173,7 @@ export function ProductsStep({ data, updateData }: ProductsStepProps) {
                         Override unit price (optional)
                       </Label>
                       <div className="relative w-40">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[rgb(var(--color-text-400))]">
                           {currencySymbol}
                         </span>
                         <Input
@@ -216,7 +216,7 @@ export function ProductsStep({ data, updateData }: ProductsStepProps) {
                   variant="ghost"
                   size="sm"
                   onClick={() => handleRemoveProduct(index)}
-                  className="mt-8 text-red-600 hover:text-red-700 hover:bg-red-50"
+                  className="mt-8 text-[rgb(var(--color-destructive))] hover:text-[rgb(var(--color-destructive))] hover:bg-[rgb(var(--color-destructive)/0.1)]"
                 >
                   <X className="h-4 w-4" />
                 </Button>

@@ -248,7 +248,7 @@ export function ProjectTaskStatusEditor({
                   key={status.status_id}
                   type="button"
                   onClick={() => addStatus(status.status_id)}
-                  className="w-full text-left px-3 py-2 text-sm bg-white border rounded hover:bg-blue-50 hover:border-blue-300 transition-colors"
+                  className="w-full text-left px-3 py-2 text-sm bg-[rgb(var(--color-card))] border rounded hover:bg-primary/10 hover:border-primary/30 transition-colors"
                   id={`add-task-status-${status.status_id}`}
                 >
                   {status.name}
@@ -317,7 +317,7 @@ export function ProjectTaskStatusEditor({
                     <button
                       type="button"
                       onClick={() => removeStatus(mapping.project_status_mapping_id)}
-                      className="p-1 hover:bg-red-100 rounded text-red-600"
+                      className="p-1 hover:bg-destructive/15 rounded text-destructive"
                       title="Remove status"
                       id={`remove-task-status-${status.status_id}`}
                     >
@@ -342,7 +342,7 @@ export function ProjectTaskStatusEditor({
 
       {/* Error message */}
       {error && (
-        <p className="text-xs text-red-500 mt-1">{error}</p>
+        <p className="text-xs text-destructive mt-1">{error}</p>
       )}
     </div>
   );

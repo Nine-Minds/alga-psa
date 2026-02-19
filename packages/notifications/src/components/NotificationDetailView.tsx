@@ -34,36 +34,36 @@ const getNotificationStyle = (type: string) => {
       return {
         icon: <Info className="h-6 w-6" />,
         iconColor: 'text-blue-500',
-        bgColor: 'bg-blue-50',
-        borderColor: 'border-blue-200'
+        bgColor: 'bg-primary/10',
+        borderColor: 'border-primary/30'
       };
     case 'success':
       return {
         icon: <CheckCircle className="h-6 w-6" />,
         iconColor: 'text-green-500',
-        bgColor: 'bg-green-50',
-        borderColor: 'border-green-200'
+        bgColor: 'bg-success/10',
+        borderColor: 'border-success/30'
       };
     case 'error':
       return {
         icon: <AlertCircle className="h-6 w-6" />,
         iconColor: 'text-red-500',
-        bgColor: 'bg-red-50',
-        borderColor: 'border-red-200'
+        bgColor: 'bg-destructive/10',
+        borderColor: 'border-destructive/30'
       };
     case 'warning':
       return {
         icon: <AlertTriangle className="h-6 w-6" />,
         iconColor: 'text-yellow-500',
-        bgColor: 'bg-yellow-50',
-        borderColor: 'border-yellow-200'
+        bgColor: 'bg-warning/10',
+        borderColor: 'border-warning/30'
       };
     default:
       return {
         icon: <Info className="h-6 w-6" />,
-        iconColor: 'text-gray-500',
-        bgColor: 'bg-gray-50',
-        borderColor: 'border-gray-200'
+        iconColor: 'text-[rgb(var(--color-text-500))]',
+        bgColor: 'bg-[rgb(var(--color-border-100))]',
+        borderColor: 'border-[rgb(var(--color-border-200))]'
       };
   }
 };
@@ -368,7 +368,7 @@ export function NotificationDetailView({ notification, onClose, onNavigateToDocu
           {/* Comment preview (if available) */}
           {hasCommentPreview && (
             <div className={`border-l-4 ${
-              isInternalComment ? 'border-yellow-400 bg-yellow-50' : 'border-blue-400 bg-blue-50'
+              isInternalComment ? 'border-warning/50 bg-warning/10' : 'border-primary/50 bg-primary/10'
             } p-4 rounded-r-md`}>
               <div className="flex items-start gap-2 mb-2">
                 {notification.metadata?.commentAuthor && (
@@ -377,7 +377,7 @@ export function NotificationDetailView({ notification, onClose, onNavigateToDocu
                   </span>
                 )}
                 {isInternalComment && (
-                  <Badge variant="outline" className="bg-yellow-100 border-yellow-300 text-yellow-800">
+                  <Badge variant="warning">
                     Internal Comment
                   </Badge>
                 )}

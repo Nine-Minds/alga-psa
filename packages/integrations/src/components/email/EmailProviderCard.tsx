@@ -85,7 +85,7 @@ const getStatusBadge = (status: EmailProvider['status'], isActive: boolean) => {
 
   switch (status) {
     case 'connected':
-      return <Badge variant="default" className="bg-green-100 text-green-800">Connected</Badge>;
+      return <Badge variant="success">Connected</Badge>;
     case 'disconnected':
       return <Badge variant="secondary">Disconnected</Badge>;
     case 'error':
@@ -262,9 +262,11 @@ export function EmailProviderCard({
         </div>
 
         {provider.status === 'error' && provider.errorMessage && (
-          <div className="mt-3 p-2 bg-red-50 border border-red-200 rounded text-sm text-red-700">
-            <strong>Error:</strong> {provider.errorMessage}
-          </div>
+          <Alert variant="destructive" className="mt-3">
+            <AlertDescription>
+              <strong>Error:</strong> {provider.errorMessage}
+            </AlertDescription>
+          </Alert>
         )}
 
         {providerNeedsInboundDefaults(provider) && (

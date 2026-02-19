@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Card } from '@alga-psa/ui/components/Card';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Badge } from '@alga-psa/ui/components/Badge';
@@ -175,8 +176,8 @@ const getEventIcon = (entry: WorkflowEventCatalogEntryV2) => {
   if (type.startsWith('schedule.') || type.startsWith('calendar.') || category.includes('calendar')) return { Icon: Calendar, cls: 'bg-teal-500/10 text-teal-600' };
   if (type.startsWith('user.') || category.includes('user')) return { Icon: User, cls: 'bg-gray-500/10 text-gray-600' };
   if (type.startsWith('system.') || category.includes('system')) return { Icon: Server, cls: 'bg-gray-500/10 text-gray-600' };
-  if (type.startsWith('sla.') || category.includes('sla') || type.includes('breach')) return { Icon: Clock, cls: 'bg-yellow-500/10 text-yellow-600' };
-  if (type.includes('error') || category.includes('error') || type.includes('exception')) return { Icon: AlertTriangle, cls: 'bg-red-500/10 text-red-600' };
+  if (type.startsWith('sla.') || category.includes('sla') || type.includes('breach')) return { Icon: Clock, cls: 'bg-warning/10 text-warning' };
+  if (type.includes('error') || category.includes('error') || type.includes('exception')) return { Icon: AlertTriangle, cls: 'bg-destructive/10 text-destructive' };
 
   return { Icon: Zap, cls: 'bg-purple-500/10 text-purple-600' };
 };
@@ -343,7 +344,7 @@ const JsonEditorField: React.FC<{
         className="font-mono text-xs mt-2"
         style={{ minHeight }}
       />
-      {parseError && <div className="mt-1 text-[11px] text-red-700">{parseError}</div>}
+      {parseError && <div className="mt-1 text-[11px] text-destructive">{parseError}</div>}
     </div>
   );
 };
@@ -376,7 +377,7 @@ const SchemaForm: React.FC<{
     const header = (
       <div className="flex items-center gap-2">
         <div className="text-xs font-medium text-gray-800">{label}</div>
-        {required && <Badge className="text-[10px] bg-red-500/15 text-red-600 border-red-500/30">required</Badge>}
+        {required && <Badge variant="error" size="sm">required</Badge>}
         {type && <Badge className="text-[10px] bg-gray-500/15 text-gray-600 border-gray-500/30">{String(type)}</Badge>}
       </div>
     );
@@ -502,29 +503,29 @@ const SchemaForm: React.FC<{
 
 const EventStatusBadge: React.FC<{ status: string }> = ({ status }) => {
   const s = status.toLowerCase();
-  const cls =
-    s === 'active' ? 'bg-green-500/15 text-green-600 border-green-500/30'
-      : s === 'beta' ? 'bg-yellow-500/15 text-yellow-600 border-yellow-500/30'
-        : s === 'draft' ? 'bg-gray-500/15 text-gray-600 border-gray-500/30'
-          : 'bg-red-500/15 text-red-600 border-red-500/30';
+  const variant =
+    s === 'active' ? 'success'
+      : s === 'beta' ? 'warning'
+        : s === 'draft' ? 'default-muted'
+          : 'error';
   const label = s.charAt(0).toUpperCase() + s.slice(1);
-  return <Badge className={`${cls} text-[10px]`}>{label}</Badge>;
+  return <Badge variant={variant as any} size="sm">{label}</Badge>;
 };
 
 const SourceBadge: React.FC<{ source: 'system' | 'tenant' }> = ({ source }) => (
-  <Badge className={`text-[10px] ${source === 'system' ? 'bg-blue-500/15 text-blue-600 border-blue-500/30' : 'bg-emerald-500/15 text-emerald-600 border-emerald-500/30'}`}>
+  <Badge variant={source === 'system' ? 'info' : 'success'} size="sm">
     {source === 'system' ? 'System' : 'Tenant'}
   </Badge>
 );
 
 const SchemaBadge: React.FC<{ status: WorkflowEventCatalogEntryV2['payload_schema_ref_status'] }> = ({ status }) => {
   if (status === 'missing') {
-    return <Badge className="text-[10px] bg-gray-500/15 text-gray-600 border-gray-500/30">No schema</Badge>;
+    return <Badge variant="default-muted" size="sm">No schema</Badge>;
   }
   if (status === 'unknown') {
-    return <Badge className="text-[10px] bg-red-500/15 text-red-600 border-red-500/30">Unknown schema</Badge>;
+    return <Badge variant="error" size="sm">Unknown schema</Badge>;
   }
-  return <Badge className="text-[10px] bg-sky-500/15 text-sky-600 border-sky-500/30">Schema</Badge>;
+  return <Badge variant="info" size="sm">Schema</Badge>;
 };
 
 const MiniMetric: React.FC<{ label: string; value: string }> = ({ label, value }) => (
@@ -1089,7 +1090,7 @@ export default function EventsCatalogV2() {
                           <div key={key} className="rounded border border-gray-200 bg-white px-2 py-2">
                             <div className="flex items-center gap-2">
                               <div className="text-xs font-mono text-gray-900 truncate">{key}</div>
-                              {required && <Badge className="text-[10px] bg-red-50 text-red-700 border-red-200">required</Badge>}
+                              {required && <Badge variant="error" size="sm">required</Badge>}
                               {type && <Badge className="text-[10px] bg-gray-100 text-gray-700 border-gray-200">{String(type)}</Badge>}
                             </div>
                             {prop?.description && (
@@ -1126,9 +1127,9 @@ export default function EventsCatalogV2() {
                         <div className="min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
                             <div className="text-sm font-medium text-gray-900 truncate">{wf.name}</div>
-                            <Badge className="text-[10px] bg-green-50 text-green-700 border-green-200">Published</Badge>
-                            {wf.is_system && <Badge className="text-[10px] bg-purple-50 text-purple-700 border-purple-200">System</Badge>}
-                            {wf.is_paused && <Badge className="text-[10px] bg-yellow-50 text-yellow-700 border-yellow-200">Paused</Badge>}
+                            <Badge variant="success" size="sm">Published</Badge>
+                            {wf.is_system && <Badge variant="info" size="sm">System</Badge>}
+                            {wf.is_paused && <Badge variant="warning" size="sm">Paused</Badge>}
                             {!wf.is_visible && <Badge className="text-[10px] bg-gray-100 text-gray-600 border-gray-200">Hidden</Badge>}
                           </div>
                           <div className="text-xs text-gray-500 font-mono truncate">{wf.workflow_id} · v{wf.published_version ?? '—'}</div>
@@ -1172,7 +1173,7 @@ export default function EventsCatalogV2() {
             <DialogTitle>Payload schema</DialogTitle>
           </DialogHeader>
           {schemaLoading && <div className="text-sm text-gray-500">Loading…</div>}
-          {!schemaLoading && !fullSchema && <div className="text-sm text-red-600">Schema not available.</div>}
+          {!schemaLoading && !fullSchema && <div className="text-sm text-destructive">Schema not available.</div>}
           {!schemaLoading && fullSchema && (
             <div className="max-h-[70vh] overflow-auto">
               <div className="flex justify-end mb-2">
@@ -1567,7 +1568,7 @@ const SimulateDialog: React.FC<{
               JSON
             </Button>
             {!schema && (
-              <div className="text-xs text-yellow-700">No schema available; form mode disabled.</div>
+              <div className="text-xs text-warning">No schema available; form mode disabled.</div>
             )}
           </div>
 
@@ -1589,22 +1590,26 @@ const SimulateDialog: React.FC<{
           )}
 
           {errors.length > 0 && (
-            <Card className="p-3 border border-red-200 bg-red-50">
-              <div className="text-sm font-semibold text-red-800 mb-1">Schema validation errors</div>
-              <ul className="list-disc pl-4 space-y-1 text-xs text-red-800">
-                {errors.slice(0, 8).map((err, idx) => (
-                  <li key={`${err.path}-${idx}`}>{err.path ? `${err.path}: ` : ''}{err.message}</li>
-                ))}
-              </ul>
-              {errors.length > 8 && <div className="text-[11px] text-red-700 mt-1">+{errors.length - 8} more</div>}
-            </Card>
+            <Alert variant="destructive">
+              <AlertDescription>
+                <div className="text-sm font-semibold mb-1">Schema validation errors</div>
+                <ul className="list-disc pl-4 space-y-1 text-xs">
+                  {errors.slice(0, 8).map((err, idx) => (
+                    <li key={`${err.path}-${idx}`}>{err.path ? `${err.path}: ` : ''}{err.message}</li>
+                  ))}
+                </ul>
+                {errors.length > 8 && <div className="text-[11px] mt-1">+{errors.length - 8} more</div>}
+              </AlertDescription>
+            </Alert>
           )}
 
           {submitError && (
-            <Card className="p-3 border border-red-200 bg-red-50">
-              <div className="text-sm font-semibold text-red-800 mb-1">Simulation error</div>
-              <div className="text-xs text-red-800">{submitError}</div>
-            </Card>
+            <Alert variant="destructive">
+              <AlertDescription>
+                <div className="text-sm font-semibold mb-1">Simulation error</div>
+                <div className="text-xs">{submitError}</div>
+              </AlertDescription>
+            </Alert>
           )}
 
           {result && (

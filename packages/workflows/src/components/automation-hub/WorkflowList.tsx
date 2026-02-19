@@ -671,7 +671,7 @@ export default function WorkflowList({ onSelectWorkflow, onCreateNew, onOpenEven
                   <>
                     <DropdownMenu.Separator className="h-px bg-[rgb(var(--color-border-200))] my-1" />
                     <DropdownMenu.Item
-                      className="flex items-center gap-2 px-3 py-2 text-sm text-[rgb(var(--color-destructive))] hover:bg-red-50 cursor-pointer outline-none"
+                      className="flex items-center gap-2 px-3 py-2 text-sm text-[rgb(var(--color-destructive))] hover:bg-destructive/10 cursor-pointer outline-none"
                       onSelect={(e) => handleDeleteClick(record, e as unknown as React.MouseEvent)}
                     >
                       <Trash2 className="w-4 h-4" />
@@ -700,8 +700,8 @@ export default function WorkflowList({ onSelectWorkflow, onCreateNew, onOpenEven
     return (
       <ReflectionContainer id="workflow-list-error" label="Workflow List Error State">
         <div className="flex flex-col items-center justify-center py-16 px-4">
-          <div className="w-16 h-16 rounded-full bg-red-50 flex items-center justify-center mb-4">
-            <FileText className="w-8 h-8 text-red-600" />
+          <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center mb-4">
+            <FileText className="w-8 h-8 text-destructive" />
           </div>
           <h3 className="text-lg font-semibold text-[rgb(var(--color-text-900))] mb-2">
             Failed to load workflows
@@ -783,7 +783,7 @@ export default function WorkflowList({ onSelectWorkflow, onCreateNew, onOpenEven
             <div className="flex items-center gap-2 text-sm text-[rgb(var(--color-text-500))]">
               <span>{counts.total} total</span>
               <span className="text-[rgb(var(--color-border-300))]">•</span>
-              <span className="text-green-600">{counts.active} active</span>
+              <span className="text-success">{counts.active} active</span>
               <span className="text-[rgb(var(--color-border-300))]">•</span>
               <span className="text-[rgb(var(--color-secondary-600))]">{counts.draft} draft</span>
               {counts.paused > 0 && (
@@ -880,7 +880,7 @@ export default function WorkflowList({ onSelectWorkflow, onCreateNew, onOpenEven
                 variant="outline"
                 size="sm"
                 onClick={handleBulkDelete}
-                className="text-[rgb(var(--color-destructive))] border-red-200 hover:bg-red-50"
+                className="text-[rgb(var(--color-destructive))] border-destructive/30 hover:bg-destructive/10"
               >
                 <Trash2 className="w-3.5 h-3.5 mr-1.5" />
                 Delete

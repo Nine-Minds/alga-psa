@@ -60,8 +60,7 @@ const WorkItemCard: React.FC<WorkItemCardProps> = ({
             <div>
               <span className="block lg:hidden w-4 h-4 bg-red-200 rounded-full align-middle"></span>
               <Badge variant="error" className={cn(
-                "hidden lg:inline-flex border-none",
-                "bg-red-100 text-red-800"
+                "hidden lg:inline-flex border-none"
               )}>
                 Needs Dispatch
               </Badge>

@@ -164,7 +164,7 @@ export const RelatedAssetsTab: React.FC<RelatedAssetsTabProps> = ({ asset }) => 
                         id={`unlink-asset-${rel.child_asset_id}-btn`}
                         variant="ghost"
                         size="xs"
-                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
                         onClick={() => handleUnlink(rel.parent_asset_id, rel.child_asset_id)}
                       >
                         Unlink

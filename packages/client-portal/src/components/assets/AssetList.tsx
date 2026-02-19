@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { AssetDetails } from './AssetDetails';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
+import { Badge } from '@alga-psa/ui/components/Badge';
 import { ColumnDefinition } from '@alga-psa/types';
 
 interface AssetListProps {
@@ -37,13 +38,13 @@ export function AssetList({ assets }: AssetListProps) {
       title: 'Status',
       dataIndex: 'status',
       render: (value: string) => (
-        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-          value === 'active' ? 'bg-green-100 text-green-800' :
-          value === 'inactive' ? 'bg-gray-100 text-gray-800' :
-          'bg-yellow-100 text-yellow-800'
-        }`}>
+        <Badge variant={
+          value === 'active' ? 'success' :
+          value === 'inactive' ? 'default-muted' :
+          'warning'
+        }>
           {value}
-        </span>
+        </Badge>
       )
     },
     {

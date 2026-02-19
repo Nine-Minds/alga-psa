@@ -354,7 +354,7 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
                 e.stopPropagation();
                 onDelete(phase);
               }}
-              className="p-1 rounded hover:bg-red-100 text-red-600"
+              className="p-1 rounded hover:bg-destructive/15 text-destructive"
               title="Delete phase"
             >
               <Trash2 className="w-3 h-3" />

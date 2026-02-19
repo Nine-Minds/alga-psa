@@ -215,7 +215,7 @@ export function ServiceHourlyConfigForm({
 
         {/* This section was incorrectly placed here by the previous diff, removing it */}
         <div className="relative">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
           <Input
             id="hourly-rate"
             type="text"
@@ -319,7 +319,7 @@ export function ServiceHourlyConfigForm({
                    <div className="mt-2"> {/* Removed flex-1 and min-w, added margin */}
                        <Label htmlFor={`new-user-type-rate-${configId}`} className="sr-only">Rate ($/hr)</Label>
                        <div className="relative">
-                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
                          <Input
                              id={`new-user-type-rate-${configId}`}
                              type="text"

@@ -376,7 +376,7 @@ const StatusSettings = ({ initialStatusType }: StatusSettingsProps): React.JSX.E
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     id={`delete-status-${item.status_id}`}
-                    className="text-red-600 focus:text-red-600"
+                    className="text-destructive focus:text-destructive"
                     onClick={(e) => {
                       e.stopPropagation();
                       handleDeleteStatusRequest(item.status_id);

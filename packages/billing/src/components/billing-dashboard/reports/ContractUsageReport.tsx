@@ -197,13 +197,13 @@ const ContractUsageReport: React.FC = () => {
         
         <div className="relative">
           {isLoading && (
-            <div className="absolute inset-0 bg-white/50 flex items-center justify-center z-10">
+            <div className="absolute inset-0 bg-card/50 flex items-center justify-center z-10">
               <Spinner size="sm" />
             </div>
           )}
           
           {contractUsage.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
+            <div className="text-center py-8 text-muted-foreground">
               {selectedContract ? 'No clients are using this contract' : 'Select a contract to view usage data'}
             </div>
           ) : (
@@ -224,18 +224,18 @@ const ContractUsageReport: React.FC = () => {
           <div className="mt-6">
             <h3 className="text-lg font-medium mb-2">Summary</h3>
             <div className="grid grid-cols-3 gap-4">
-              <div className="bg-blue-50 p-4 rounded-md">
-                <div className="text-sm text-blue-600">Total Clients</div>
+              <div className="bg-primary/10 p-4 rounded-md">
+                <div className="text-sm text-primary">Total Clients</div>
                 <div className="text-2xl font-bold">{contractUsage.length}</div>
               </div>
-              <div className="bg-green-50 p-4 rounded-md">
-                <div className="text-sm text-green-600">Active Assignments</div>
+              <div className="bg-success/10 p-4 rounded-md">
+                <div className="text-sm text-success">Active Assignments</div>
                 <div className="text-2xl font-bold">
                   {contractUsage.filter(entry => entry.is_active).length}
                 </div>
               </div>
-              <div className="bg-purple-50 p-4 rounded-md">
-                <div className="text-sm text-purple-600">Total Billed</div>
+              <div className="bg-accent/10 p-4 rounded-md">
+                <div className="text-sm text-accent">Total Billed</div>
                 <div className="text-2xl font-bold">
                   ${(contractUsage.reduce((sum, entry) => sum + entry.total_billed, 0) / 100).toFixed(2)}
                 </div>

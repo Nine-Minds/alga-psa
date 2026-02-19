@@ -218,7 +218,7 @@ export function FixedPlanConfiguration({
           <section className="space-y-4">
             <div>
               <h3 className="text-lg font-semibold">Contract Line Basics</h3>
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-muted-foreground">
                 Name the contract line and choose how it should bill by default.
               </p>
             </div>
@@ -264,7 +264,7 @@ export function FixedPlanConfiguration({
                   }))}
                   placeholder="Select billing timing"
                 />
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-muted-foreground mt-1">
                   Advance billing invoices the upcoming period at the start of each cycle.
                 </p>
               </div>
@@ -274,7 +274,7 @@ export function FixedPlanConfiguration({
           <section className="space-y-4">
             <div>
               <h3 className="text-lg font-semibold">Fixed Fee Settings</h3>
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-muted-foreground">
                 Define the recurring base rate and optional proration behavior. Service allocations can be tuned once the line is active.
               </p>
             </div>
@@ -282,7 +282,7 @@ export function FixedPlanConfiguration({
               <div>
                 <Label htmlFor="base-rate">Recurring Base Rate *</Label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
                   <Input
                     id="base-rate"
                     type="text"
@@ -311,13 +311,13 @@ export function FixedPlanConfiguration({
                     className="pl-10"
                   />
                 </div>
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-muted-foreground mt-1">
                   The total recurring fee for all fixed services combined
                 </p>
               </div>
-              <div className="border border-gray-200 rounded-md p-4 bg-white space-y-3">
+              <div className="border border-[rgb(var(--color-border-200))] rounded-md p-4 bg-card space-y-3">
                 <div className="flex items-center justify-between">
-                  <Label htmlFor="enable-proration" className="font-medium text-gray-800">
+                  <Label htmlFor="enable-proration" className="font-medium text-[rgb(var(--color-text-800))]">
                     Enable Proration
                   </Label>
                   <Switch
@@ -329,7 +329,7 @@ export function FixedPlanConfiguration({
                     }}
                   />
                 </div>
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-muted-foreground">
                   Toggle this on if you want the base rate to be prorated when the contract starts mid-cycle.
                 </p>
                 {enableProration && (

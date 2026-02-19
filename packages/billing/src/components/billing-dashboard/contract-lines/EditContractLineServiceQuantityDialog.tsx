@@ -100,7 +100,7 @@ export const EditPlanServiceQuantityDialog: React.FC<EditPlanServiceQuantityDial
                   Unit price override (optional)
                 </label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
                     {currencySymbol ?? '$'}
                   </span>
                   <Input

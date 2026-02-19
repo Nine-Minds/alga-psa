@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
+import { Badge } from '@alga-psa/ui/components/Badge';
 import { DeleteEntityDialog } from '@alga-psa/ui';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
@@ -331,9 +332,9 @@ export function UserManagementSettings() {
       dataIndex: 'is_inactive',
       width: '10%',
       render: (value, record) => (
-        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${record.is_inactive ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>
+        <Badge variant={record.is_inactive ? 'error' : 'success'}>
           {record.is_inactive ? tProfile('clientSettings.users.inactive') : tProfile('clientSettings.users.active')}
-        </span>
+        </Badge>
       ),
     },
     {
@@ -379,8 +380,8 @@ export function UserManagementSettings() {
 
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 rounded-md p-4">
-        <p className="text-red-800">{error}</p>
+      <div className="bg-destructive/10 border border-destructive/30 rounded-md p-4">
+        <p className="text-destructive">{error}</p>
       </div>
     );
   }

@@ -6,7 +6,7 @@ import React, { useState, useEffect } from 'react';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import type { StepProps } from '@alga-psa/types';
-import { CheckCircle, AlertCircle } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 
 export function AddClientStep({ data, updateData }: StepProps) {
@@ -95,15 +95,14 @@ export function AddClientStep({ data, updateData }: StepProps) {
       </div>
 
       {isClientCreated && (
-        <div className="rounded-md bg-green-50 border border-green-200 p-4 flex items-center gap-3">
-          <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
-          <div>
-            <p className="text-sm font-medium text-green-800">Client created successfully!</p>
-            <p className="text-sm text-green-600 mt-1">
+        <Alert variant="success">
+          <AlertDescription>
+            <p className="font-medium">Client created successfully!</p>
+            <p className="text-sm mt-1">
               <span className="font-semibold">{data.clientName}</span> has been added to your client list.
             </p>
-          </div>
-        </div>
+          </AlertDescription>
+        </Alert>
       )}
 
       <div className="space-y-4">

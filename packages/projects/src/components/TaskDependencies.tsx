@@ -131,7 +131,7 @@ export const TaskDependencies = React.forwardRef<TaskDependenciesRef, TaskDepend
   const getDependencyTypeInfo = useCallback((type: DependencyType) => {
     switch (type) {
       case 'blocks':
-        return { icon: <Ban className="h-4 w-4 text-red-500" />, label: 'Blocks' };
+        return { icon: <Ban className="h-4 w-4 text-destructive" />, label: 'Blocks' };
       case 'blocked_by':
         return { icon: <Ban className="h-4 w-4 text-orange-500" />, label: 'Blocked by' };
       case 'related_to':
@@ -331,7 +331,7 @@ export const TaskDependencies = React.forwardRef<TaskDependenciesRef, TaskDepend
         <Link2 className="h-5 w-5 text-gray-500" />
         <h3 className="font-semibold">Dependencies</h3>
       </div>
-      {error && <p className="text-red-500 text-sm">{error}</p>}
+      {error && <p className="text-destructive text-sm">{error}</p>}
 
       {/* Existing dependencies list (edit mode) */}
       {hasDependencies && (
@@ -351,7 +351,7 @@ export const TaskDependencies = React.forwardRef<TaskDependenciesRef, TaskDepend
                 <button
                   type="button"
                   onClick={() => handleRemove(dep.dependency_id)}
-                  className="text-red-500 hover:text-red-700 p-1"
+                  className="text-destructive hover:text-destructive p-1"
                   title="Remove dependency"
                   disabled={isLoading}
                 >
@@ -375,7 +375,7 @@ export const TaskDependencies = React.forwardRef<TaskDependenciesRef, TaskDepend
                 <button
                   type="button"
                   onClick={() => handleRemove(dep.dependency_id)}
-                  className="text-red-500 hover:text-red-700 p-1"
+                  className="text-destructive hover:text-destructive p-1"
                   title="Remove dependency"
                   disabled={isLoading}
                 >
@@ -416,7 +416,7 @@ export const TaskDependencies = React.forwardRef<TaskDependenciesRef, TaskDepend
                   id={`remove-pending-dependency-${index}`}
                   type="button"
                   onClick={() => handleRemovePending(dep.tempId)}
-                  className="text-red-500 hover:text-red-700 p-1"
+                  className="text-destructive hover:text-destructive p-1"
                   title="Remove dependency"
                   aria-label={`Remove ${dep.dependencyType} dependency on ${dep.targetTaskName}`}
                 >

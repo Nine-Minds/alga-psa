@@ -65,35 +65,33 @@ export default function FilterPanel({
   };
 
   return (
-    <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-      <div className="grid w-full grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <CustomSelect
-          label="Customer Segment"
-          value={segment}
-          onValueChange={setSegment}
-          options={segments}
-        />
-        <CustomSelect
-          label="Survey Template"
-          value={template}
-          onValueChange={setTemplate}
-          options={templates}
-        />
-        <CustomSelect
-          label="Timeframe"
-          value={timeframe}
-          onValueChange={setTimeframe}
-          options={timeframes}
-        />
-        <div>
-          <span className="mb-1 block text-sm font-medium text-gray-700">Calendar View</span>
-          <Button id="calendar-view" variant="outline" className="w-full justify-start">
-            <Calendar className="mr-2 h-4 w-4" />
-            Coming soon
-          </Button>
-        </div>
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-[1fr_1fr_1fr_1fr_auto]">
+      <CustomSelect
+        label="Customer Segment"
+        value={segment}
+        onValueChange={setSegment}
+        options={segments}
+      />
+      <CustomSelect
+        label="Survey Template"
+        value={template}
+        onValueChange={setTemplate}
+        options={templates}
+      />
+      <CustomSelect
+        label="Timeframe"
+        value={timeframe}
+        onValueChange={setTimeframe}
+        options={timeframes}
+      />
+      <div>
+        <span className="mb-1 block text-sm font-medium text-[rgb(var(--color-text-700))]">Calendar View</span>
+        <Button id="calendar-view" variant="outline" className="w-full justify-start">
+          <Calendar className="mr-2 h-4 w-4" />
+          Coming soon
+        </Button>
       </div>
-      <div className="flex gap-2">
+      <div className="flex items-end gap-2">
         <Button id="reset-filters" variant="outline" onClick={handleReset}>
           <RefreshCw className="mr-2 h-4 w-4" />
           Reset

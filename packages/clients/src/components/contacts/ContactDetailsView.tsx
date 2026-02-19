@@ -7,6 +7,7 @@ import { Flex, Text, Heading } from '@radix-ui/themes';
 import { QuickAddInteraction } from '../interactions/QuickAddInteraction';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Pen, Plus, ArrowLeft, ExternalLink } from 'lucide-react';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { useDrawer } from '@alga-psa/ui';
 import ContactDetailsEdit from './ContactDetailsEdit';
 import { ITag } from '@alga-psa/types';
@@ -255,9 +256,9 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
     <ReflectionContainer id={id} label={`Contact Details - ${contact.full_name}`}>
       <div className="p-6 bg-white shadow rounded-lg">
         {error && (
-          <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-md">
-            <p className="text-red-800">{error}</p>
-          </div>
+          <Alert variant="destructive" className="mb-4">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
         )}
         <div className="mb-6">
           <div className="flex justify-between items-center mb-4">

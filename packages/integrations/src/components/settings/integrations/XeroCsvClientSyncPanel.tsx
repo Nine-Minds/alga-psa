@@ -4,6 +4,7 @@ import React, { useState, useRef, useTransition } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Users, Download, Upload, AlertCircle, CheckCircle2, FileUp } from 'lucide-react';
+import { Badge } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Alert';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
@@ -292,17 +293,17 @@ export function XeroCsvClientSyncPanel() {
               </div>
 
               <div className="grid grid-cols-3 gap-4 text-center">
-                <div className="p-3 bg-green-50 rounded-lg">
-                  <div className="text-2xl font-bold text-green-700">{previewResult.toUpdate}</div>
-                  <div className="text-xs text-green-600">To Update</div>
+                <div className="p-3 bg-success/10 rounded-lg">
+                  <div className="text-2xl font-bold text-success">{previewResult.toUpdate}</div>
+                  <div className="text-xs text-success/80">To Update</div>
                 </div>
-                <div className="p-3 bg-blue-50 rounded-lg">
-                  <div className="text-2xl font-bold text-blue-700">{previewResult.toCreate}</div>
-                  <div className="text-xs text-blue-600">To Create</div>
+                <div className="p-3 bg-primary/10 rounded-lg">
+                  <div className="text-2xl font-bold text-primary">{previewResult.toCreate}</div>
+                  <div className="text-xs text-primary/80">To Create</div>
                 </div>
-                <div className="p-3 bg-gray-50 rounded-lg">
-                  <div className="text-2xl font-bold text-gray-700">{previewResult.toSkip}</div>
-                  <div className="text-xs text-gray-600">To Skip</div>
+                <div className="p-3 bg-muted rounded-lg">
+                  <div className="text-2xl font-bold text-muted-foreground">{previewResult.toSkip}</div>
+                  <div className="text-xs text-muted-foreground">To Skip</div>
                 </div>
               </div>
 
@@ -342,17 +343,18 @@ export function XeroCsvClientSyncPanel() {
                             <td className="px-3 py-2">{row.contactName}</td>
                             <td className="px-3 py-2 text-muted-foreground">{row.email || '-'}</td>
                             <td className="px-3 py-2">
-                              <span
-                                className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                              <Badge
+                                variant={
                                   row.action === 'create'
-                                    ? 'bg-blue-100 text-blue-700'
+                                    ? 'info'
                                     : row.action === 'update'
-                                      ? 'bg-green-100 text-green-700'
-                                      : 'bg-gray-100 text-gray-700'
-                                }`}
+                                      ? 'success'
+                                      : 'default-muted'
+                                }
+                                size="sm"
                               >
                                 {row.action}
-                              </span>
+                              </Badge>
                             </td>
                             <td className="px-3 py-2 text-muted-foreground">
                               {row.matchedClientName || row.skipReason || '-'}
@@ -401,21 +403,21 @@ export function XeroCsvClientSyncPanel() {
               </Alert>
 
               <div className="grid grid-cols-4 gap-3 text-center">
-                <div className="p-3 bg-green-50 rounded-lg">
-                  <div className="text-xl font-bold text-green-700">{importResult.updated}</div>
-                  <div className="text-xs text-green-600">Updated</div>
+                <div className="p-3 bg-success/10 rounded-lg">
+                  <div className="text-xl font-bold text-success">{importResult.updated}</div>
+                  <div className="text-xs text-success/80">Updated</div>
                 </div>
-                <div className="p-3 bg-blue-50 rounded-lg">
-                  <div className="text-xl font-bold text-blue-700">{importResult.created}</div>
-                  <div className="text-xs text-blue-600">Created</div>
+                <div className="p-3 bg-primary/10 rounded-lg">
+                  <div className="text-xl font-bold text-primary">{importResult.created}</div>
+                  <div className="text-xs text-primary/80">Created</div>
                 </div>
-                <div className="p-3 bg-gray-50 rounded-lg">
-                  <div className="text-xl font-bold text-gray-700">{importResult.skipped}</div>
-                  <div className="text-xs text-gray-600">Skipped</div>
+                <div className="p-3 bg-muted rounded-lg">
+                  <div className="text-xl font-bold text-muted-foreground">{importResult.skipped}</div>
+                  <div className="text-xs text-muted-foreground">Skipped</div>
                 </div>
-                <div className="p-3 bg-purple-50 rounded-lg">
-                  <div className="text-xl font-bold text-purple-700">{importResult.mappingsCreated}</div>
-                  <div className="text-xs text-purple-600">Mappings</div>
+                <div className="p-3 bg-purple-500/10 rounded-lg dark:bg-purple-400/10">
+                  <div className="text-xl font-bold text-purple-700 dark:text-purple-400">{importResult.mappingsCreated}</div>
+                  <div className="text-xs text-purple-600 dark:text-purple-400/80">Mappings</div>
                 </div>
               </div>
 
@@ -447,7 +449,7 @@ export function XeroCsvClientSyncPanel() {
 
         {/* Workflow Guide */}
         <div className="border-t border-border pt-4">
-          <div className="rounded-lg border border-blue-200 bg-blue-50/50 p-4">
+          <div className="rounded-lg border border-primary/30 bg-primary/5 p-4">
             <h5 className="text-sm font-medium text-foreground mb-2">Client Sync Workflow</h5>
             <ol className="list-decimal pl-5 text-sm text-muted-foreground space-y-1">
               <li>Export clients from Alga to Xero Contacts CSV</li>

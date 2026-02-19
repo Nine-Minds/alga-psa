@@ -287,7 +287,7 @@ body {
 .dark {
     --background: 0, 0, 0;
     --color-background: 0 0 0;
-    --color-card: 15 23 42;
+    --color-card: 22 28 48;
 
     /* Border radius tokens */
     --radius-sm: 4px;
@@ -379,8 +379,8 @@ body {
     --color-secondary-900: 217 249 253;
 
     /* Orange (#ff9c30) */
-    --color-accent-50: 153 94 28;
-    --color-accent-100: 179 109 33;
+    --color-accent-50: 45 30 12;
+    --color-accent-100: 80 50 18;
     --color-accent-200: 204 125 38;
     --color-accent-300: 230 140 43;
     --color-accent-400: 255 156 48;
@@ -390,9 +390,23 @@ body {
     --color-accent-800: 255 219 153;
     --color-accent-900: 255 237 204;
 
-    /* Destructive Colors */
-    --color-destructive: 220 38 38; /* red-600 */
-    --color-destructive-foreground: 254 226 226; /* red-100 */
+    /* Destructive Colors — softened for dark backgrounds */
+    --color-destructive: 239 68 68; /* red-500 (lighter than light-mode red-600) */
+    --color-destructive-foreground: 254 202 202; /* red-200 */
+
+    /* ALERT BACKGROUND COLORS — clean opaque tints for dark surfaces */
+    --color-alert-destructive-bg: 50 20 20;   /* deep dark red */
+    --color-alert-warning-bg: 50 35 15;       /* deep dark amber */
+    --color-alert-success-bg: 15 40 25;       /* deep dark green */
+    --color-alert-info-bg: 20 30 60;          /* deep dark blue */
+
+    /* SCHEDULE EVENT COLORS — tuned per-theme for calendar backgrounds */
+    --color-event-non-billable: 160 90 30;    /* warm amber, visible on dark bg */
+    --color-event-non-billable-hover: 180 105 35;
+    --color-event-interaction: 34 120 70;     /* muted green */
+    --color-event-interaction-hover: 40 140 82;
+    --color-event-appointment: 160 50 80;     /* muted rose */
+    --color-event-appointment-hover: 180 60 90;
 
     /* TABLE ROW COLORS */
     --color-table-row-alt: 30 33 52;              /* dark slate with purple-blue tint */
@@ -488,6 +502,14 @@ body {
     /* Switch */
     --color-switch-thumb: 255 255 255;
 
+    /* SCHEDULE EVENT COLORS */
+    --color-event-non-billable: 255 237 204;  /* accent-900 light mode (pastel orange) */
+    --color-event-non-billable-hover: 255 219 153;
+    --color-event-interaction: 220 252 231;   /* green-100 */
+    --color-event-interaction-hover: 187 247 208;
+    --color-event-appointment: 254 205 211;   /* rose-200 */
+    --color-event-appointment-hover: 253 164 175;
+
     /* TABLE ROW COLORS */
     --color-table-row-alt: 248 250 252;           /* slate-50, matches current */
     --color-table-hover: 246 240 254;             /* light purple, matches current primary-50 */
@@ -535,6 +557,12 @@ body {
     /* Destructive Colors */
     --color-destructive: 220 38 38; /* red-600 */
     --color-destructive-foreground: 153 27 27; /* red-800 */
+
+    /* ALERT BACKGROUND COLORS — light tints for light surfaces */
+    --color-alert-destructive-bg: 254 242 242;  /* red-50 */
+    --color-alert-warning-bg: 255 251 235;      /* amber-50 */
+    --color-alert-success-bg: 240 253 244;      /* green-50 */
+    --color-alert-info-bg: 239 246 255;         /* blue-50 */
 
     /* Sidebar Colors  */
     --color-sidebar-bg: #0C111D;
@@ -953,11 +981,11 @@ body {
 .dark .rbc-allday-cell,
 .dark .rbc-time-header.rbc-overflowing,
 .dark .rbc-time-header-content {
-  border-color: rgb(var(--color-border-100)) !important;
+  border-color: rgb(var(--color-border-200)) !important;
 }
 
 .dark .rbc-day-slot::after {
-  background: rgb(var(--color-border-100)) !important;
+  background: rgb(var(--color-border-200)) !important;
 }
 
 /* Paper-feel background for text editors (light + dark) */

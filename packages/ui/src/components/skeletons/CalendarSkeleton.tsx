@@ -20,12 +20,12 @@ const CalendarSkeleton = ({
           <div className="w-12 h-4 bg-gray-200 rounded mr-4"></div>
           <div className="flex-1 space-y-2">
             {Math.random() > 0.5 && (
-              <div className="h-8 bg-blue-100 rounded border-l-4 border-blue-300 px-2 flex items-center">
+              <div className="h-8 bg-info/15 rounded border-l-4 border-blue-300 px-2 flex items-center">
                 <div className="w-24 h-3 bg-blue-200 rounded"></div>
               </div>
             )}
             {Math.random() > 0.7 && (
-              <div className="h-6 bg-green-100 rounded border-l-4 border-green-300 px-2 flex items-center">
+              <div className="h-6 bg-success/15 rounded border-l-4 border-green-300 px-2 flex items-center">
                 <div className="w-16 h-3 bg-green-200 rounded"></div>
               </div>
             )}
@@ -61,13 +61,13 @@ const CalendarSkeleton = ({
               <div key={i} className="h-16 border-b border-gray-200 relative">
                 {/* Random event blocks */}
                 {Math.random() > 0.6 && (
-                  <div className="absolute top-2 left-1 right-1 h-12 bg-blue-100 border-l-4 border-blue-300 rounded p-1">
+                  <div className="absolute top-2 left-1 right-1 h-12 bg-info/15 border-l-4 border-blue-300 rounded p-1">
                     <div className="w-full h-2 bg-blue-200 rounded mb-1"></div>
                     <div className="w-2/3 h-2 bg-blue-200 rounded"></div>
                   </div>
                 )}
                 {Math.random() > 0.8 && (
-                  <div className="absolute top-8 left-1 right-1 h-6 bg-green-100 border-l-4 border-green-300 rounded p-1">
+                  <div className="absolute top-8 left-1 right-1 h-6 bg-success/15 border-l-4 border-green-300 rounded p-1">
                     <div className="w-1/2 h-2 bg-green-200 rounded"></div>
                   </div>
                 )}
@@ -87,12 +87,12 @@ const CalendarSkeleton = ({
             <div className="w-6 h-4 bg-gray-200 rounded mb-2"></div>
             <div className="space-y-1">
               {Math.random() > 0.7 && (
-                <div className="h-3 bg-blue-100 rounded border-l-2 border-blue-300 px-1">
+                <div className="h-3 bg-info/15 rounded border-l-2 border-blue-300 px-1">
                   <div className="w-full h-1 bg-blue-200 rounded"></div>
                 </div>
               )}
               {Math.random() > 0.8 && (
-                <div className="h-3 bg-green-100 rounded border-l-2 border-green-300 px-1">
+                <div className="h-3 bg-success/15 rounded border-l-2 border-green-300 px-1">
                   <div className="w-3/4 h-1 bg-green-200 rounded"></div>
                 </div>
               )}

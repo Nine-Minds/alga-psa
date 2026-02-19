@@ -30,7 +30,7 @@ const JsonEditor = ({ value, onChange, error, height = '200px' }: {
         />
       </div>
       {error && (
-        <p className="text-sm text-red-600">{error}</p>
+        <p className="text-sm text-destructive">{error}</p>
       )}
     </div>
   );

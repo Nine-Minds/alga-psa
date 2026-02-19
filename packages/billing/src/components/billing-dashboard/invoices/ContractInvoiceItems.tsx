@@ -47,7 +47,7 @@ const ContractInvoiceItems: React.FC<ContractInvoiceItemsProps> = ({ items }) =>
           <div key={contractId} className="border rounded-md p-4">
             <h3 className="text-lg font-medium mb-2">{contract.contractName}</h3>
             <table className="w-full">
-              <thead className="text-sm text-gray-500">
+              <thead className="text-sm text-muted-foreground">
                 <tr>
                   <th className="text-left py-2">Description</th>
                   <th className="text-right py-2">Quantity</th>
@@ -89,7 +89,7 @@ const ContractInvoiceItems: React.FC<ContractInvoiceItemsProps> = ({ items }) =>
         <div className="border rounded-md p-4">
           <h3 className="text-lg font-medium mb-2">Other Items</h3>
           <table className="w-full">
-            <thead className="text-sm text-gray-500">
+            <thead className="text-sm text-muted-foreground">
               <tr>
                 <th className="text-left py-2">Description</th>
                 <th className="text-right py-2">Quantity</th>

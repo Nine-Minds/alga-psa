@@ -14,6 +14,7 @@ import {
   Building2,
   AlertCircle
 } from 'lucide-react';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import {
   getContractRevenueReport,
   getContractExpirationReport,
@@ -96,7 +97,7 @@ const ContractReports: React.FC = () => {
       dataIndex: 'client_name',
       render: (value: string) => (
         <div className="flex items-center gap-2">
-          <Building2 className="h-4 w-4 text-gray-400" />
+          <Building2 className="h-4 w-4 text-muted-foreground" />
           {value}
         </div>
       )
@@ -116,11 +117,10 @@ const ContractReports: React.FC = () => {
       dataIndex: 'status',
       render: (value: string) => (
         <Badge
-          variant="default"
-          className={
-            value === 'active' ? 'bg-green-100 text-green-800' :
-            value === 'upcoming' ? 'bg-blue-100 text-blue-800' :
-            'bg-gray-100 text-gray-800'
+          variant={
+            value === 'active' ? 'success' :
+            value === 'upcoming' ? 'info' :
+            'default-muted'
           }
         >
           {value.charAt(0).toUpperCase() + value.slice(1)}
@@ -163,7 +163,7 @@ const ContractReports: React.FC = () => {
       title: 'Auto-Renew',
       dataIndex: 'auto_renew',
       render: (value: boolean) => (
-        <Badge variant="secondary" className={value ? 'border-green-300 text-green-800' : 'border-gray-300 text-gray-600'}>
+        <Badge variant="secondary" className={value ? 'border-green-300 text-green-800' : 'border-[rgb(var(--color-border-300))] text-muted-foreground'}>
           {value ? 'Yes' : 'No'}
         </Badge>
       )
@@ -205,13 +205,13 @@ const ContractReports: React.FC = () => {
       dataIndex: 'utilization_percentage',
       render: (value: number) => (
         <div className="flex items-center gap-2">
-          <div className="flex-1 bg-gray-200 rounded-full h-2 max-w-[100px]">
+          <div className="flex-1 bg-[rgb(var(--color-border-200))] rounded-full h-2 max-w-[100px]">
             <div
-              className={`h-2 rounded-full ${value > 100 ? 'bg-red-500' : value > 80 ? 'bg-amber-500' : 'bg-green-500'}`}
+              className={`h-2 rounded-full ${value > 100 ? 'bg-destructive' : value > 80 ? 'bg-warning' : 'bg-success'}`}
               style={{ width: `${Math.min(value, 100)}%` }}
             />
           </div>
-          <span className={`text-sm font-medium ${value > 100 ? 'text-red-600' : ''}`}>
+          <span className={`text-sm font-medium ${value > 100 ? 'text-destructive' : ''}`}>
             {value}%
           </span>
         </div>
@@ -221,7 +221,7 @@ const ContractReports: React.FC = () => {
       title: 'Overage',
       dataIndex: 'overage_hours',
       render: (value: number) => (
-        <span className={value > 0 ? 'text-red-600 font-semibold' : 'text-gray-400'}>
+        <span className={value > 0 ? 'text-red-600 font-semibold' : 'text-muted-foreground'}>
           {value > 0 ? `+${value} hrs` : '—'}
         </span>
       )
@@ -261,8 +261,7 @@ const ContractReports: React.FC = () => {
       dataIndex: 'margin_percentage',
       render: (value: number) => (
         <Badge
-          variant="default"
-          className={value >= 40 ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'}
+          variant={value >= 40 ? 'success' : 'warning'}
         >
           {value}%
         </Badge>
@@ -323,18 +322,17 @@ const ContractReports: React.FC = () => {
       <div className="space-y-6">
         <div>
           <h2 className="text-2xl font-bold mb-2">Contract Reports</h2>
-          <p className="text-gray-600 text-sm">
+          <p className="text-muted-foreground text-sm">
             Analyze contract performance, revenue, and utilization metrics
           </p>
         </div>
 
-        <div className="bg-red-50 border border-red-200 rounded-md p-4 flex items-start gap-3">
-          <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
-          <div className="text-sm text-red-800">
+        <Alert variant="destructive">
+          <AlertDescription>
             <p className="font-semibold mb-1">Error Loading Reports</p>
             <p>{error}</p>
-          </div>
-        </div>
+          </AlertDescription>
+        </Alert>
       </div>
     );
   }
@@ -343,7 +341,7 @@ const ContractReports: React.FC = () => {
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold mb-2">Contract Reports</h2>
-        <p className="text-gray-600 text-sm">
+        <p className="text-muted-foreground text-sm">
           Analyze contract performance, revenue, and utilization metrics
         </p>
       </div>
@@ -356,7 +354,7 @@ const ContractReports: React.FC = () => {
             <h3 className="font-semibold">Total MRR</h3>
           </div>
           <p className="text-2xl font-bold text-green-600">{formatCurrency(summary?.totalMRR ?? 0)}</p>
-          <p className="text-xs text-gray-500 mt-1">Monthly Recurring Revenue</p>
+          <p className="text-xs text-muted-foreground mt-1">Monthly Recurring Revenue</p>
         </Card>
 
         <Card className="p-4">
@@ -365,7 +363,7 @@ const ContractReports: React.FC = () => {
             <h3 className="font-semibold">YTD Revenue</h3>
           </div>
           <p className="text-2xl font-bold text-blue-600">{formatCurrency(summary?.totalYTD ?? 0)}</p>
-          <p className="text-xs text-gray-500 mt-1">Year to Date</p>
+          <p className="text-xs text-muted-foreground mt-1">Year to Date</p>
         </Card>
 
         <Card className="p-4">
@@ -374,7 +372,7 @@ const ContractReports: React.FC = () => {
             <h3 className="font-semibold">Active Contracts</h3>
           </div>
           <p className="text-2xl font-bold text-purple-600">{summary?.activeContractCount ?? 0}</p>
-          <p className="text-xs text-gray-500 mt-1">Billable clients</p>
+          <p className="text-xs text-muted-foreground mt-1">Billable clients</p>
         </Card>
       </div>
 
@@ -393,11 +391,11 @@ const ContractReports: React.FC = () => {
               <Coins className="h-5 w-5 text-green-600" />
               <h3 className="text-lg font-semibold">Contract Revenue Report</h3>
             </div>
-            <p className="text-sm text-gray-600 mb-4">
+            <p className="text-sm text-muted-foreground mb-4">
               Overview of monthly recurring revenue and year-to-date billing by contract
             </p>
             {revenueData.length === 0 ? (
-              <p className="text-sm text-gray-500 py-8 text-center">No contract revenue data available</p>
+              <p className="text-sm text-muted-foreground py-8 text-center">No contract revenue data available</p>
             ) : (
               <DataTable
                 id="contract-reports-table"
@@ -419,11 +417,11 @@ const ContractReports: React.FC = () => {
               <Calendar className="h-5 w-5 text-amber-600" />
               <h3 className="text-lg font-semibold">Contract Expiration Report</h3>
             </div>
-            <p className="text-sm text-gray-600 mb-4">
+            <p className="text-sm text-muted-foreground mb-4">
               Track upcoming contract expirations and renewal opportunities
             </p>
             {expirationData.length === 0 ? (
-              <p className="text-sm text-gray-500 py-8 text-center">No contracts expiring in the near future</p>
+              <p className="text-sm text-muted-foreground py-8 text-center">No contracts expiring in the near future</p>
             ) : (
               <DataTable
                 id="contract-expiration-table"
@@ -445,11 +443,11 @@ const ContractReports: React.FC = () => {
               <Clock className="h-5 w-5 text-blue-600" />
               <h3 className="text-lg font-semibold">Bucket Hours Utilization</h3>
             </div>
-            <p className="text-sm text-gray-600 mb-4">
+            <p className="text-sm text-muted-foreground mb-4">
               Monitor bucket hours usage and identify overage situations
             </p>
             {bucketUsageData.length === 0 ? (
-              <p className="text-sm text-gray-500 py-8 text-center">No bucket-based contracts found</p>
+              <p className="text-sm text-muted-foreground py-8 text-center">No bucket-based contracts found</p>
             ) : (
               <DataTable
                 id="bucket-usage-table"
@@ -471,11 +469,11 @@ const ContractReports: React.FC = () => {
               <TrendingUp className="h-5 w-5 text-green-600" />
               <h3 className="text-lg font-semibold">Simple Profitability Report</h3>
             </div>
-            <p className="text-sm text-gray-600 mb-4">
+            <p className="text-sm text-muted-foreground mb-4">
               Basic profit margins and revenue vs. cost analysis by contract
             </p>
             {profitabilityData.length === 0 ? (
-              <p className="text-sm text-gray-500 py-8 text-center">No profitability data available</p>
+              <p className="text-sm text-muted-foreground py-8 text-center">No profitability data available</p>
             ) : (
               <DataTable
                 id="profitability-table"

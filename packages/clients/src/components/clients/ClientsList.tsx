@@ -298,7 +298,7 @@ const ClientsList = ({
                             </DropdownMenu.Item>
                             {!(record as any).is_default && (
                                 <DropdownMenu.Item 
-                                    className="px-2 py-1 text-sm cursor-pointer hover:bg-red-100 text-red-600 flex items-center rounded"
+                                    className="px-2 py-1 text-sm cursor-pointer hover:bg-red-100 dark:hover:bg-red-950/50 text-red-600 dark:text-red-400 flex items-center rounded"
                                     onSelect={() => handleDeleteClient(record)}
                                 >
                                     <Trash2 size={14} className="mr-2" />

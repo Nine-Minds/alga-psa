@@ -322,7 +322,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
               <Edit className="mr-2 h-4 w-4" />
               <span>Edit Task</span>
             </DropdownMenuItem>
-            <DropdownMenuItem onSelect={handleDeleteClick} className="text-red-600 focus:text-red-700 focus:bg-red-50">
+            <DropdownMenuItem onSelect={handleDeleteClick} className="text-destructive focus:text-destructive focus:bg-destructive/10">
               <Trash2 className="mr-2 h-4 w-4" />
               <span>Delete Task</span>
             </DropdownMenuItem>
@@ -457,7 +457,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
                 </div>
               }
             >
-              <div className={`flex items-center gap-1 cursor-help ${allCompleted ? 'bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400' : 'text-gray-500 dark:text-[rgb(var(--color-text-400))]'} px-2 py-1 rounded`}>
+              <div className={`flex items-center gap-1 cursor-help ${allCompleted ? 'bg-success/10 text-success' : 'text-gray-500 dark:text-[rgb(var(--color-text-400))]'} px-2 py-1 rounded`}>
                 {allCompleted ? (
                   <CheckSquare className="w-3 h-3" />
                 ) : (
@@ -468,13 +468,13 @@ export const TaskCard: React.FC<TaskCardProps> = ({
             </Tooltip>
           )}
           {taskTickets !== null && displayTickets.length > 0 && (
-            <div className="flex items-center gap-1 text-gray-500 px-2 py-1 rounded bg-gray-50">
+            <div className="flex items-center gap-1 text-gray-500 dark:text-[rgb(var(--color-text-400))] px-2 py-1 rounded bg-gray-50 dark:bg-[rgb(var(--color-border-100))]">
               <Ticket className="w-3 h-3" />
               <span>{displayTickets.length}</span>
             </div>
           )}
           {documentCount > 0 && (
-            <div className="flex items-center gap-1 text-gray-500 px-2 py-1 rounded bg-gray-50">
+            <div className="flex items-center gap-1 text-gray-500 dark:text-[rgb(var(--color-text-400))] px-2 py-1 rounded bg-gray-50 dark:bg-[rgb(var(--color-border-100))]">
               <Paperclip className="w-3 h-3" />
               <span>{documentCount}</span>
             </div>
@@ -522,8 +522,8 @@ export const TaskCard: React.FC<TaskCardProps> = ({
               <div className={`flex items-center gap-1 px-2 py-1 rounded ${
                 taskDependencies.predecessors.some(d => d.dependency_type === 'blocks' || d.dependency_type === 'blocked_by') ||
                 taskDependencies.successors.some(d => d.dependency_type === 'blocks' || d.dependency_type === 'blocked_by')
-                  ? 'bg-red-50 dark:bg-red-500/15 text-red-500'
-                  : 'bg-blue-50 dark:bg-blue-500/15 text-blue-500'
+                  ? 'bg-destructive/10 text-destructive'
+                  : 'bg-primary/10 text-primary'
               }`}>
                 {taskDependencies.predecessors.some(d => d.dependency_type === 'blocks' || d.dependency_type === 'blocked_by') ||
                  taskDependencies.successors.some(d => d.dependency_type === 'blocks' || d.dependency_type === 'blocked_by')

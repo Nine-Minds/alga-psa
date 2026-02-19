@@ -867,25 +867,27 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
 
             {/* Show confirmation for large imports when going directly to import (no agent or status resolution) */}
             {unmatchedAgents.length === 0 && unmatchedStatuses.length === 0 && requiresConfirmation && (
-              <div className="mt-4 p-4 border rounded-lg bg-amber-50 border-amber-200">
-                <label className="flex items-start gap-3 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={importConfirmed}
-                    onChange={(e) => setImportConfirmed(e.target.checked)}
-                    className="mt-1 text-primary-500"
-                  />
-                  <div>
-                    <span className="font-medium text-amber-800">
-                      Confirm large import ({totalTasks} tasks)
-                    </span>
-                    <p className="text-sm text-amber-700 mt-1">
-                      I understand this will create {groupedPhases.length} phase(s) and {totalTasks} task(s).
-                      This action may take a while to complete.
-                    </p>
-                  </div>
-                </label>
-              </div>
+              <Alert variant="warning" className="mt-4">
+                <AlertDescription>
+                  <label className="flex items-start gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={importConfirmed}
+                      onChange={(e) => setImportConfirmed(e.target.checked)}
+                      className="mt-1 text-primary-500"
+                    />
+                    <div>
+                      <span className="font-medium">
+                        Confirm large import ({totalTasks} tasks)
+                      </span>
+                      <p className="text-sm mt-1">
+                        I understand this will create {groupedPhases.length} phase(s) and {totalTasks} task(s).
+                        This action may take a while to complete.
+                      </p>
+                    </div>
+                  </label>
+                </AlertDescription>
+              </Alert>
             )}
 
             <div className="mt-4">
@@ -951,7 +953,7 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
                           ({agentInfo.taskCount} task{agentInfo.taskCount !== 1 ? 's' : ''})
                         </span>
                         {agentInfo.isPrimaryAgent && (
-                          <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded">
+                          <span className="ml-2 text-xs bg-[rgb(var(--color-primary-100))] dark:bg-[rgb(var(--color-primary-900))] text-[rgb(var(--color-primary-800))] dark:text-[rgb(var(--color-primary-200))] px-2 py-0.5 rounded">
                             Primary agent
                           </span>
                         )}
@@ -1031,25 +1033,27 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
 
             {/* Show confirmation for large imports when going directly to import (no status resolution) */}
             {unmatchedStatuses.length === 0 && requiresConfirmation && (
-              <div className="mt-4 p-4 border rounded-lg bg-amber-50 border-amber-200">
-                <label className="flex items-start gap-3 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={importConfirmed}
-                    onChange={(e) => setImportConfirmed(e.target.checked)}
-                    className="mt-1 text-primary-500"
-                  />
-                  <div>
-                    <span className="font-medium text-amber-800">
-                      Confirm large import ({totalTasks} tasks)
-                    </span>
-                    <p className="text-sm text-amber-700 mt-1">
-                      I understand this will create {groupedPhases.length} phase(s) and {totalTasks} task(s).
-                      This action may take a while to complete.
-                    </p>
-                  </div>
-                </label>
-              </div>
+              <Alert variant="warning" className="mt-4">
+                <AlertDescription>
+                  <label className="flex items-start gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={importConfirmed}
+                      onChange={(e) => setImportConfirmed(e.target.checked)}
+                      className="mt-1 text-primary-500"
+                    />
+                    <div>
+                      <span className="font-medium">
+                        Confirm large import ({totalTasks} tasks)
+                      </span>
+                      <p className="text-sm mt-1">
+                        I understand this will create {groupedPhases.length} phase(s) and {totalTasks} task(s).
+                        This action may take a while to complete.
+                      </p>
+                    </div>
+                  </label>
+                </AlertDescription>
+              </Alert>
             )}
 
             <div className="mt-4">
@@ -1182,25 +1186,27 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
             )}
 
             {requiresConfirmation && (
-              <div className="mt-4 p-4 border rounded-lg bg-amber-50 border-amber-200">
-                <label className="flex items-start gap-3 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={importConfirmed}
-                    onChange={(e) => setImportConfirmed(e.target.checked)}
-                    className="mt-1 text-primary-500"
-                  />
-                  <div>
-                    <span className="font-medium text-amber-800">
-                      Confirm large import ({totalTasks} tasks)
-                    </span>
-                    <p className="text-sm text-amber-700 mt-1">
-                      I understand this will create {groupedPhases.length} phase(s) and {totalTasks} task(s).
-                      This action may take a while to complete.
-                    </p>
-                  </div>
-                </label>
-              </div>
+              <Alert variant="warning" className="mt-4">
+                <AlertDescription>
+                  <label className="flex items-start gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={importConfirmed}
+                      onChange={(e) => setImportConfirmed(e.target.checked)}
+                      className="mt-1 text-primary-500"
+                    />
+                    <div>
+                      <span className="font-medium">
+                        Confirm large import ({totalTasks} tasks)
+                      </span>
+                      <p className="text-sm mt-1">
+                        I understand this will create {groupedPhases.length} phase(s) and {totalTasks} task(s).
+                        This action may take a while to complete.
+                      </p>
+                    </div>
+                  </label>
+                </AlertDescription>
+              </Alert>
             )}
 
             <div className="mt-4">

@@ -74,9 +74,9 @@ export default function ExtensionDetailsModal({
             <div className="sm:col-span-2">
               <label className="block text-sm font-medium text-gray-700">Status</label>
               <span className={`mt-1 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                extension.isEnabled 
-                  ? 'bg-green-100 text-green-800' 
-                  : 'bg-gray-100 text-gray-800'
+                extension.isEnabled
+                  ? 'bg-success/15 text-success'
+                  : 'bg-muted text-muted-foreground'
               }`}>
                 {extension.isEnabled ? 'Enabled' : 'Disabled'}
               </span>

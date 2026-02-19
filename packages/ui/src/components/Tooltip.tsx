@@ -37,7 +37,7 @@ export const Tooltip = ({ // Removed AutomationProps from here as it's in the in
             side={side}
             align={align}
             className={cn(
-              "z-[9999] overflow-hidden rounded-md px-2.5 py-1.5 text-xs font-medium text-[rgb(var(--color-text-50))] bg-[rgb(var(--color-text-800))] shadow-md",
+              "z-[9999] overflow-hidden rounded-md px-2.5 py-1.5 text-xs font-medium text-[rgb(var(--color-text-50))] bg-[rgb(var(--color-text-800))] dark:bg-[rgb(var(--color-border-200))] dark:text-[rgb(var(--color-text-900))] shadow-md",
               "animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
               className // Allow overriding/extending styles
             )}

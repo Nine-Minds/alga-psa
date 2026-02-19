@@ -8,6 +8,8 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Mail, Shield, User, Info, RefreshCw } from 'lucide-react';
+import { Badge } from '@alga-psa/ui/components/Badge';
+import type { BadgeVariant } from '@alga-psa/ui/components/Badge';
 import type { IContact } from '@alga-psa/types';
 import {
   updateContactPortalAdminStatus,
@@ -239,19 +241,18 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
     });
   };
 
-  const getStatusBadge = (status: string) => {
-    const baseClasses = "inline-flex px-2 py-1 text-xs font-medium rounded-full";
+  const getStatusBadgeVariant = (status: string): BadgeVariant => {
     switch (status) {
       case 'pending':
-        return `${baseClasses} bg-yellow-100 text-yellow-800`;
+        return 'warning';
       case 'used':
-        return `${baseClasses} bg-green-100 text-green-800`;
+        return 'success';
       case 'expired':
-        return `${baseClasses} bg-red-100 text-red-800`;
+        return 'error';
       case 'revoked':
-        return `${baseClasses} bg-gray-100 text-gray-800`;
+        return 'default-muted';
       default:
-        return `${baseClasses} bg-gray-100 text-gray-800`;
+        return 'default-muted';
     }
   };
 
@@ -592,9 +593,9 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
                           <span className="text-sm font-medium">{invitation.email}</span>
-                          <span className={getStatusBadge(invitation.status)}>
+                          <Badge variant={getStatusBadgeVariant(invitation.status)} size="sm">
                             {invitation.status}
-                          </span>
+                          </Badge>
                         </div>
                         <div className="text-xs text-muted-foreground">
                           Sent: {formatDate(invitation.created_at)}

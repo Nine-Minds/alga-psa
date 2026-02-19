@@ -95,12 +95,12 @@ const TwoFactorInput: React.FC<TwoFactorInputProps> = ({ isOpen, onClose, onComp
       <DialogContent className="p-0">
         <div className="p-8">
             <div className="flex justify-center mb-4">
-              <div className="bg-purple-100 p-3 rounded-full">
-                <LockClosedIcon className="h-6 w-6 text-purple-600" />
+              <div className="bg-[rgb(var(--color-primary-100))] p-3 rounded-full">
+                <LockClosedIcon className="h-6 w-6 text-[rgb(var(--color-primary-500))]" />
               </div>
             </div>
             <h2 className="text-2xl font-bold text-center mb-2">Easy peasy</h2>
-            <p className="text-sm text-gray-500 text-center mb-6">
+            <p className="text-sm text-[rgb(var(--color-text-500))] text-center mb-6">
               Enter 6-digit code from your two factor authenticator APP.
             </p>
             <div className="flex justify-between mb-4">
@@ -115,15 +115,15 @@ const TwoFactorInput: React.FC<TwoFactorInputProps> = ({ isOpen, onClose, onComp
                   pattern="\d*"
                   maxLength={1}
                   className={`w-10 h-12 border-2 rounded-md text-center text-xl 
-                    ${index === 0 ? 'border-blue-500' : 'border-gray-300'}
-                    focus:border-blue-500 focus:outline-none`}
+                    ${index === 0 ? 'border-[rgb(var(--color-primary-500))]' : 'border-[rgb(var(--color-border-300))]'}
+                    focus:border-[rgb(var(--color-primary-500))] focus:outline-none`}
                   value={digit}
                   onChange={e => handleChange(index, e.target.value)}
                   onKeyDown={e => handleKeyDown(index, e)}
                 />
               ))}
             </div>
-            <div className="text-center text-sm text-gray-500">
+            <div className="text-center text-sm text-[rgb(var(--color-text-500))]">
               {6 - code.filter(d => d !== '').length} digits left
             </div>
         </div>

@@ -3,6 +3,7 @@
 import React from 'react';
 import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
 import type { InvoicePurchaseOrderSummary } from '@alga-psa/billing/actions/invoiceQueries';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 
 export function PurchaseOrderSummaryBanner(props: {
   poSummary: InvoicePurchaseOrderSummary | null;
@@ -14,29 +15,31 @@ export function PurchaseOrderSummaryBanner(props: {
   }
 
   return (
-    <div className="mb-4 rounded border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
-      {poSummary?.po_number && (
-        <div className="flex items-center justify-between">
-          <span className="font-medium">PO Number</span>
-          <span>{poSummary.po_number}</span>
-        </div>
-      )}
-      {poSummary?.po_amount_cents != null && (
-        <div className="mt-2 space-y-1">
+    <Alert variant="warning" className="mb-4">
+      <AlertDescription className="text-sm">
+        {poSummary?.po_number && (
           <div className="flex items-center justify-between">
-            <span className="font-medium">PO Authorized</span>
-            <span>{formatCurrencyFromMinorUnits(poSummary.po_amount_cents, 'en-US', currencyCode)}</span>
+            <span className="font-medium">PO Number</span>
+            <span>{poSummary.po_number}</span>
           </div>
-          <div className="flex items-center justify-between">
-            <span className="font-medium">PO Consumed (Finalized)</span>
-            <span>{formatCurrencyFromMinorUnits(poSummary.consumed_cents ?? 0, 'en-US', currencyCode)}</span>
+        )}
+        {poSummary?.po_amount_cents != null && (
+          <div className="mt-2 space-y-1">
+            <div className="flex items-center justify-between">
+              <span className="font-medium">PO Authorized</span>
+              <span>{formatCurrencyFromMinorUnits(poSummary.po_amount_cents, 'en-US', currencyCode)}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="font-medium">PO Consumed (Finalized)</span>
+              <span>{formatCurrencyFromMinorUnits(poSummary.consumed_cents ?? 0, 'en-US', currencyCode)}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="font-medium">PO Remaining</span>
+              <span>{formatCurrencyFromMinorUnits(poSummary.remaining_cents ?? 0, 'en-US', currencyCode)}</span>
+            </div>
           </div>
-          <div className="flex items-center justify-between">
-            <span className="font-medium">PO Remaining</span>
-            <span>{formatCurrencyFromMinorUnits(poSummary.remaining_cents ?? 0, 'en-US', currencyCode)}</span>
-          </div>
-        </div>
-      )}
-    </div>
+        )}
+      </AlertDescription>
+    </Alert>
   );
 }

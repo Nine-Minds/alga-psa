@@ -210,7 +210,7 @@ function WorkflowVisualizerInner({
   }
 
   if (error) {
-    return <div className="workflow-error p-4 text-center text-red-500" id="workflow-visualizer-error">Error: {error.message}</div>;
+    return <div className="workflow-error p-4 text-center text-destructive" id="workflow-visualizer-error">Error: {error.message}</div>;
   }
 
   return (

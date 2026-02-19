@@ -42,8 +42,8 @@ const ClientPortalForgotPassword: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col items-center pt-20 min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      <div className="w-full max-w-md p-8 space-y-8 bg-white rounded-lg shadow-lg">
+    <div className="flex flex-col items-center pt-20 min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:bg-none dark:bg-card">
+      <div className="w-full max-w-md p-8 space-y-8 bg-card rounded-lg shadow-lg">
         <div className="text-center">
           <div className="inline-block align-middle content-center">
             <Image
@@ -54,13 +54,13 @@ const ClientPortalForgotPassword: React.FC = () => {
               className="rounded-full"
             />
           </div>
-          <h2 className="mt-6 text-2xl font-bold text-gray-900">{t('auth.forgotPasswordPage.title', 'Forgot password?')}</h2>
-          <p className="mt-2 text-sm text-gray-600">{t('auth.forgotPasswordPage.subtitle', "No worries, we'll send you reset instructions.")}</p>
+          <h2 className="mt-6 text-2xl font-bold text-[rgb(var(--color-text-900))]">{t('auth.forgotPasswordPage.title', 'Forgot password?')}</h2>
+          <p className="mt-2 text-sm text-[rgb(var(--color-text-600))]">{t('auth.forgotPasswordPage.subtitle', "No worries, we'll send you reset instructions.")}</p>
         </div>
         <Form.Root className="mt-8 space-y-6" onSubmit={handleSubmit}>
           <Form.Field name="email">
             <div className="flex flex-col gap-2">
-              <Label.Root className="text-sm font-medium text-gray-700" htmlFor="email">
+              <Label.Root className="text-sm font-medium text-[rgb(var(--color-text-700))]" htmlFor="email">
                 {t('auth.forgotPasswordPage.emailLabel', 'Email')}
               </Label.Root>
               <Form.Control asChild>
@@ -69,7 +69,7 @@ const ClientPortalForgotPassword: React.FC = () => {
                   name="email"
                   type="email"
                   required
-                  className="w-full px-3 py-2 placeholder-gray-400 border border-gray-300 rounded-md shadow-sm appearance-none focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  className="w-full px-3 py-2 placeholder-[rgb(var(--color-text-400))] border border-[rgb(var(--color-border-300))] rounded-md shadow-sm appearance-none focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                   placeholder={t('auth.forgotPasswordPage.emailPlaceholder', 'Enter your email')}
                   value={formData.email}
                   onChange={handleInputChange}
@@ -91,7 +91,7 @@ const ClientPortalForgotPassword: React.FC = () => {
           </div>
         </Form.Root>
         <div className="text-center">
-          <Link href="/auth/client-portal/signin" className="text-sm font-medium text-blue-600 hover:text-blue-500">
+          <Link href="/auth/client-portal/signin" className="text-sm font-medium text-[rgb(var(--color-primary-500))] hover:text-[rgb(var(--color-primary-400))]">
             {t('auth.forgotPasswordPage.backToLogin', '← Back to log in')}
           </Link>
         </div>

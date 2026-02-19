@@ -219,7 +219,7 @@ const InteractionTypesSettings: React.FC = () => {
             </DropdownMenuItem>
             <DropdownMenuItem
               id={`delete-interaction-type-${record.type_id}`}
-              className="text-red-600 focus:text-red-600"
+              className="text-destructive focus:text-destructive"
               onClick={(e) => {
                 e.stopPropagation();
                 openDeleteDialog(record);

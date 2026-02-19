@@ -302,7 +302,8 @@ export default function EventsCatalog() {
                         <div key={attachment.attachment_id} className="flex justify-between items-center bg-gray-50 p-2 rounded">
                           <div className="flex items-center">
                             <Badge
-                              className={`mr-2 ${attachment.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}
+                              variant={attachment.is_active ? 'success' : 'default-muted'}
+                              className="mr-2"
                             >
                               {attachment.is_active ? 'Active' : 'Inactive'}
                             </Badge>
@@ -340,7 +341,7 @@ export default function EventsCatalog() {
                               </DropdownMenuItem>
                               <DropdownMenuItem
                                 id={`detach-${attachment.attachment_id}-menu-item`}
-                                className={`text-red-600 focus:text-red-600 ${attachment.isSystemManaged ? 'opacity-50 cursor-not-allowed' : ''}`} // Add disabled styling
+                                className={`text-destructive focus:text-destructive ${attachment.isSystemManaged ? 'opacity-50 cursor-not-allowed' : ''}`} // Add disabled styling
                                 onClick={() => !attachment.isSystemManaged && handleDetachWorkflow(attachment)} // Prevent action if system managed
                                 disabled={!!attachment.isSystemManaged} // Disable for system workflows
                               >
@@ -395,7 +396,7 @@ export default function EventsCatalog() {
             <Button
               id="confirm-detach-button"
               onClick={handleConfirmDetach}
-              className="bg-red-600 hover:bg-red-700 text-white"
+              variant="destructive"
             >
               Detach
             </Button>

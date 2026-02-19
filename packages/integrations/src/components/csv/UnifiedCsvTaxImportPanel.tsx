@@ -7,6 +7,8 @@ import { StringDateRangePicker } from '@alga-psa/ui/components/DateRangePicker';
 import { Label } from '@alga-psa/ui/components/Label';
 import { ToggleGroup, ToggleGroupItem } from '@alga-psa/ui/components/ToggleGroup';
 import { Upload, FileText, AlertCircle, CheckCircle2, HelpCircle, ChevronDown, ChevronUp, XCircle } from 'lucide-react';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
+import { Badge } from '@alga-psa/ui/components/Badge';
 import {
   previewXeroCsvTaxImport,
   executeXeroCsvTaxImport
@@ -295,7 +297,7 @@ export function UnifiedCsvTaxImportPanel({ onImportComplete }: UnifiedCsvTaxImpo
           <button
             type="button"
             onClick={() => setShowHelp(!showHelp)}
-            className="flex items-center justify-between w-full p-4 text-left hover:bg-gray-50"
+            className="flex items-center justify-between w-full p-4 text-left hover:bg-muted/50"
           >
             <div className="flex items-center gap-2">
               <HelpCircle className="h-5 w-5 text-blue-500" />
@@ -304,13 +306,13 @@ export function UnifiedCsvTaxImportPanel({ onImportComplete }: UnifiedCsvTaxImpo
               </span>
             </div>
             {showHelp ? (
-              <ChevronUp className="h-5 w-5 text-gray-500" />
+              <ChevronUp className="h-5 w-5 text-muted-foreground" />
             ) : (
-              <ChevronDown className="h-5 w-5 text-gray-500" />
+              <ChevronDown className="h-5 w-5 text-muted-foreground" />
             )}
           </button>
           {showHelp && (
-            <div className="px-4 pb-4 space-y-3 text-sm text-gray-600">
+            <div className="px-4 pb-4 space-y-3 text-sm text-muted-foreground">
               {source === 'xero' ? (
                 <>
                   <ol className="list-decimal list-inside space-y-2">
@@ -334,7 +336,7 @@ export function UnifiedCsvTaxImportPanel({ onImportComplete }: UnifiedCsvTaxImpo
                   <li>Save the file and upload it here</li>
                 </ol>
               )}
-              <p className="text-gray-500">
+              <p className="text-muted-foreground">
                 {source === 'xero'
                   ? 'The exported CSV includes Invoice Number, Contact Name, Line Amount, Tax Amount, and tracking categories.'
                   : 'The CSV must include Invoice Number, Invoice Date, and Tax Amount columns.'}
@@ -352,7 +354,7 @@ export function UnifiedCsvTaxImportPanel({ onImportComplete }: UnifiedCsvTaxImpo
               value={dateRange}
               onChange={setDateRange}
             />
-            <p className="text-sm text-gray-500 mt-1">
+            <p className="text-sm text-muted-foreground mt-1">
               Only invoices within this date range will be processed.
             </p>
           </div>
@@ -366,7 +368,7 @@ export function UnifiedCsvTaxImportPanel({ onImportComplete }: UnifiedCsvTaxImpo
             onDragOver={(e) => e.preventDefault()}
             onClick={() => fileInputRef.current?.click()}
             className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
-              file ? 'border-green-400 bg-green-50' : 'border-gray-300 hover:border-gray-400 hover:bg-gray-50'
+              file ? 'border-green-400 bg-green-50 dark:bg-green-950/30 dark:border-green-600' : 'border-border hover:border-muted-foreground hover:bg-muted/50'
             }`}
           >
             <input
@@ -380,12 +382,12 @@ export function UnifiedCsvTaxImportPanel({ onImportComplete }: UnifiedCsvTaxImpo
               <div className="flex items-center justify-center gap-2 text-green-700">
                 <FileText className="h-6 w-6" />
                 <span className="font-medium">{file.name}</span>
-                <span className="text-sm text-gray-500">
+                <span className="text-sm text-muted-foreground">
                   ({(file.size / 1024).toFixed(1)} KB)
                 </span>
               </div>
             ) : (
-              <div className="text-gray-500">
+              <div className="text-muted-foreground">
                 <Upload className="h-8 w-8 mx-auto mb-2" />
                 <p>Drag and drop a CSV file here, or click to browse</p>
               </div>
@@ -395,10 +397,9 @@ export function UnifiedCsvTaxImportPanel({ onImportComplete }: UnifiedCsvTaxImpo
 
         {/* Error Message */}
         {error && (
-          <div className="flex items-center gap-2 p-3 bg-red-50 text-red-700 rounded-lg">
-            <AlertCircle className="h-5 w-5 flex-shrink-0" />
-            <span>{error}</span>
-          </div>
+          <Alert variant="destructive">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
         )}
 
         {/* Xero Preview Results */}
@@ -410,53 +411,53 @@ export function UnifiedCsvTaxImportPanel({ onImportComplete }: UnifiedCsvTaxImpo
             </h4>
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="text-center p-3 bg-gray-50 rounded">
+              <div className="text-center p-3 bg-muted/50 rounded">
                 <div className="text-2xl font-bold">{xeroPreviewResult.invoiceCount}</div>
-                <div className="text-sm text-gray-500">Total Rows</div>
+                <div className="text-sm text-muted-foreground">Total Rows</div>
               </div>
-              <div className="text-center p-3 bg-gray-50 rounded">
+              <div className="text-center p-3 bg-muted/50 rounded">
                 <div className="text-2xl font-bold text-green-600">{xeroPreviewResult.matchedCount}</div>
-                <div className="text-sm text-gray-500">Matched</div>
+                <div className="text-sm text-muted-foreground">Matched</div>
               </div>
-              <div className="text-center p-3 bg-gray-50 rounded">
+              <div className="text-center p-3 bg-muted/50 rounded">
                 <div className="text-2xl font-bold text-red-600">{xeroPreviewResult.unmatchedCount}</div>
-                <div className="text-sm text-gray-500">Unmatched</div>
+                <div className="text-sm text-muted-foreground">Unmatched</div>
               </div>
-              <div className="text-center p-3 bg-gray-50 rounded">
+              <div className="text-center p-3 bg-muted/50 rounded">
                 <div className="text-2xl font-bold text-blue-600">
                   {formatCurrency(xeroPreviewResult.totalTaxToImport * 100)}
                 </div>
-                <div className="text-sm text-gray-500">Tax to Import</div>
+                <div className="text-sm text-muted-foreground">Tax to Import</div>
               </div>
             </div>
 
             {xeroPreviewResult.alreadyImportedCount > 0 && (
-              <div className="flex items-center gap-2 p-3 bg-yellow-50 text-yellow-700 rounded-lg text-sm">
-                <AlertCircle className="h-4 w-4 flex-shrink-0" />
-                <span>{xeroPreviewResult.alreadyImportedCount} invoice(s) already have imported tax.</span>
-              </div>
+              <Alert variant="warning">
+                <AlertDescription>{xeroPreviewResult.alreadyImportedCount} invoice(s) already have imported tax.</AlertDescription>
+              </Alert>
             )}
 
             {xeroPreviewResult.notPendingCount > 0 && (
-              <div className="flex items-start gap-2 p-3 bg-amber-50 text-amber-700 rounded-lg text-sm">
-                <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
-                <div>
-                  <span className="font-medium">{xeroPreviewResult.notPendingCount} invoice(s) don't use external tax calculation.</span>
-                  <p className="text-xs mt-1 text-amber-600">
-                    These invoices were created with internal tax calculation. To import tax from Xero, invoices must be set up with "Pending External" tax source when exported.
-                  </p>
-                  <div className="mt-2 space-y-1">
-                    {xeroPreviewResult.preview
-                      .filter(p => p.status === 'not_pending')
-                      .slice(0, 3)
-                      .map((item, index) => (
-                        <div key={index} className="text-xs bg-amber-100 px-2 py-1 rounded">
-                          {item.xeroInvoiceNumber} ({item.contactName}): {item.reason}
-                        </div>
-                      ))}
+              <Alert variant="warning">
+                <AlertDescription>
+                  <div>
+                    <span className="font-medium">{xeroPreviewResult.notPendingCount} invoice(s) don't use external tax calculation.</span>
+                    <p className="text-xs mt-1 opacity-80">
+                      These invoices were created with internal tax calculation. To import tax from Xero, invoices must be set up with "Pending External" tax source when exported.
+                    </p>
+                    <div className="mt-2 space-y-1">
+                      {xeroPreviewResult.preview
+                        .filter(p => p.status === 'not_pending')
+                        .slice(0, 3)
+                        .map((item, index) => (
+                          <div key={index} className="text-xs bg-warning/20 px-2 py-1 rounded">
+                            {item.xeroInvoiceNumber} ({item.contactName}): {item.reason}
+                          </div>
+                        ))}
+                    </div>
                   </div>
-                </div>
-              </div>
+                </AlertDescription>
+              </Alert>
             )}
 
             {xeroPreviewResult.preview.filter(p => p.status === 'unmatched').length > 0 && (
@@ -467,7 +468,7 @@ export function UnifiedCsvTaxImportPanel({ onImportComplete }: UnifiedCsvTaxImpo
                     .filter(p => p.status === 'unmatched' && p.reason)
                     .slice(0, 5)
                     .map((item, index) => (
-                      <div key={index} className="text-red-600 bg-red-50 px-3 py-1 rounded text-sm">
+                      <div key={index} className="text-destructive bg-destructive/10 px-3 py-1 rounded text-sm">
                         {item.reason}: {item.algaInvoiceId || item.xeroInvoiceNumber}
                       </div>
                     ))}
@@ -486,43 +487,43 @@ export function UnifiedCsvTaxImportPanel({ onImportComplete }: UnifiedCsvTaxImpo
             </h4>
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="text-center p-3 bg-gray-50 rounded">
+              <div className="text-center p-3 bg-muted/50 rounded">
                 <div className="text-2xl font-bold">{qbValidationResult.stats.totalRows}</div>
-                <div className="text-sm text-gray-500">Total Rows</div>
+                <div className="text-sm text-muted-foreground">Total Rows</div>
               </div>
-              <div className="text-center p-3 bg-gray-50 rounded">
+              <div className="text-center p-3 bg-muted/50 rounded">
                 <div className="text-2xl font-bold">{qbValidationResult.stats.validRows}</div>
-                <div className="text-sm text-gray-500">Valid Rows</div>
+                <div className="text-sm text-muted-foreground">Valid Rows</div>
               </div>
-              <div className="text-center p-3 bg-gray-50 rounded">
+              <div className="text-center p-3 bg-muted/50 rounded">
                 <div className="text-2xl font-bold text-green-600">{qbValidationResult.stats.matchedInvoices}</div>
-                <div className="text-sm text-gray-500">Matched</div>
+                <div className="text-sm text-muted-foreground">Matched</div>
               </div>
-              <div className="text-center p-3 bg-gray-50 rounded">
+              <div className="text-center p-3 bg-muted/50 rounded">
                 <div className="text-2xl font-bold">{qbValidationResult.stats.uniqueInvoices}</div>
-                <div className="text-sm text-gray-500">Unique Invoices</div>
+                <div className="text-sm text-muted-foreground">Unique Invoices</div>
               </div>
             </div>
 
             <div className="flex flex-wrap gap-2">
               {qbValidationResult.structureValid && (
-                <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded text-sm">
+                <Badge variant="success" className="gap-1">
                   <CheckCircle2 className="h-3 w-3" /> Structure
-                </span>
+                </Badge>
               )}
               {qbValidationResult.rowsValid && (
-                <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded text-sm">
+                <Badge variant="success" className="gap-1">
                   <CheckCircle2 className="h-3 w-3" /> Row Data
-                </span>
+                </Badge>
               )}
               {qbValidationResult.databaseValid ? (
-                <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded text-sm">
+                <Badge variant="success" className="gap-1">
                   <CheckCircle2 className="h-3 w-3" /> Database Match
-                </span>
+                </Badge>
               ) : (
-                <span className="inline-flex items-center gap-1 px-2 py-1 bg-red-100 text-red-700 rounded text-sm">
+                <Badge variant="error" className="gap-1">
                   <XCircle className="h-3 w-3" /> Database Match
-                </span>
+                </Badge>
               )}
             </div>
 
@@ -531,7 +532,7 @@ export function UnifiedCsvTaxImportPanel({ onImportComplete }: UnifiedCsvTaxImpo
                 <h5 className="font-medium text-red-600 mb-2">Errors ({qbValidationResult.errors.length})</h5>
                 <div className="space-y-1 max-h-32 overflow-y-auto">
                   {qbValidationResult.errors.slice(0, 5).map((err, index) => (
-                    <div key={index} className="text-red-600 bg-red-50 px-3 py-1 rounded text-sm">
+                    <div key={index} className="text-destructive bg-destructive/10 px-3 py-1 rounded text-sm">
                       {err.message}
                     </div>
                   ))}
@@ -544,7 +545,7 @@ export function UnifiedCsvTaxImportPanel({ onImportComplete }: UnifiedCsvTaxImpo
                 <h5 className="font-medium text-yellow-600 mb-2">Warnings ({qbValidationResult.warnings.length})</h5>
                 <div className="space-y-1 max-h-32 overflow-y-auto">
                   {qbValidationResult.warnings.slice(0, 5).map((warn, index) => (
-                    <div key={index} className="text-yellow-600 bg-yellow-50 px-3 py-1 rounded text-sm">
+                    <div key={index} className="text-warning bg-warning/10 px-3 py-1 rounded text-sm">
                       {warn.message}
                     </div>
                   ))}
@@ -556,31 +557,23 @@ export function UnifiedCsvTaxImportPanel({ onImportComplete }: UnifiedCsvTaxImpo
 
         {/* Import Result */}
         {source === 'xero' && xeroImportResult && (
-          <div className={`flex items-center gap-2 p-3 rounded-lg ${
-            xeroImportResult.success ? 'bg-green-50 text-green-700' : 'bg-yellow-50 text-yellow-700'
-          }`}>
-            {xeroImportResult.success ? (
-              <CheckCircle2 className="h-5 w-5 flex-shrink-0" />
-            ) : (
-              <AlertCircle className="h-5 w-5 flex-shrink-0" />
-            )}
-            <span>
+          <Alert variant={xeroImportResult.success ? 'success' : 'warning'}>
+            <AlertDescription>
               Imported tax for {xeroImportResult.successCount} invoice{xeroImportResult.successCount !== 1 ? 's' : ''}.
               Total: {formatCurrency(xeroImportResult.totalTaxImported)}.
               {xeroImportResult.failureCount > 0 && ` ${xeroImportResult.failureCount} failed.`}
-            </span>
-          </div>
+            </AlertDescription>
+          </Alert>
         )}
 
         {source === 'quickbooks' && qbImportResult?.success && (
-          <div className="flex items-center gap-2 p-3 bg-green-50 text-green-700 rounded-lg">
-            <CheckCircle2 className="h-5 w-5 flex-shrink-0" />
-            <span>
+          <Alert variant="success">
+            <AlertDescription>
               Successfully imported tax for {qbImportResult.summary.successfulUpdates} invoice
               {qbImportResult.summary.successfulUpdates !== 1 ? 's' : ''}.
               Total tax imported: {formatCurrency(qbImportResult.summary.totalImportedTax)}
-            </span>
-          </div>
+            </AlertDescription>
+          </Alert>
         )}
 
         {/* Action Buttons */}

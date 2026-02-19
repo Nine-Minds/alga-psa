@@ -167,21 +167,21 @@ const ServiceCategoriesSettings: React.FC = () => {
       title: 'Name',
       dataIndex: 'category_name',
       render: (value: string) => (
-        <span className="text-gray-700 font-medium">{value}</span>
+        <span className="text-[rgb(var(--color-text-700))] font-medium">{value}</span>
       ),
     },
     {
       title: 'Description',
       dataIndex: 'description',
       render: (value: string | null) => (
-        <span className="text-gray-600">{value || '-'}</span>
+        <span className="text-muted-foreground">{value || '-'}</span>
       ),
     },
     {
       title: 'Order',
       dataIndex: 'display_order',
       render: (value: number) => (
-        <span className="text-gray-600">{value}</span>
+        <span className="text-muted-foreground">{value}</span>
       ),
     },
     {
@@ -221,9 +221,9 @@ const ServiceCategoriesSettings: React.FC = () => {
   ];
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow-sm">
+    <div className="bg-card p-6 rounded-lg shadow-sm">
       <div>
-        <h3 className="text-lg font-semibold mb-4 text-gray-800">Service Categories</h3>
+        <h3 className="text-lg font-semibold mb-4 text-[rgb(var(--color-text-800))]">Service Categories</h3>
         {error && (
           <Alert variant="destructive" className="mb-4">
             <AlertDescription>{error}</AlertDescription>

@@ -13,6 +13,7 @@ import { toast } from 'react-hot-toast';
 import DocumentFilters from './DocumentFilters';
 import DocumentsPageSkeleton from './DocumentsPageSkeleton';
 import { ChevronLeft, ChevronRight, Filter } from 'lucide-react';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useUserPreference } from '@alga-psa/users/hooks';
 
@@ -288,9 +289,9 @@ export default function DocumentsPage() {
         <div className="flex-1">
           <Card className="p-4">
             {displayError ? (
-              <div className="text-center py-4 text-red-500 bg-red-50 rounded-md">
-                {displayError}
-              </div>
+              <Alert variant="destructive">
+                <AlertDescription>{displayError}</AlertDescription>
+              </Alert>
             ) : (
               <Documents
                 id='documents'

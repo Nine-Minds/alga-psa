@@ -14,14 +14,14 @@ export default function ResponsesList({ responses }: ResponsesListProps) {
     <Card className="border-border-200 shadow-sm">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
         <CardTitle className="text-base font-semibold text-text-900">Recent Responses</CardTitle>
-        <div className="rounded-lg bg-primary-50 p-2 shadow-sm">
+        <div className="rounded-lg bg-primary-500/10 p-2 shadow-sm">
           <MessageCircle className="h-4 w-4 text-primary-500" />
         </div>
       </CardHeader>
       <CardContent className="mt-2">
         {responses.length === 0 ? (
-          <div className="flex h-40 flex-col items-center justify-center gap-3 rounded-lg bg-gradient-to-br from-primary-50/30 to-transparent p-6">
-            <div className="rounded-full bg-primary-100 p-3">
+          <div className="flex h-40 flex-col items-center justify-center gap-3 rounded-lg bg-gradient-to-br from-primary-500/5 to-transparent p-6">
+            <div className="rounded-full bg-primary-500/15 p-3">
               <MessageCircle className="h-6 w-6 text-primary-500" />
             </div>
             <p className="text-center text-sm font-medium text-text-600">
@@ -50,7 +50,7 @@ export default function ResponsesList({ responses }: ResponsesListProps) {
                     <TableCell className="text-sm text-muted-foreground">
                       {new Date(response.submittedAt).toLocaleString()}
                     </TableCell>
-                    <TableCell className="text-sm font-medium text-gray-900">
+                    <TableCell className="text-sm font-medium text-[rgb(var(--color-text-900))]">
                       {response.clientName ?? 'Unknown Client'}
                       {response.contactName && (
                         <span className="block text-xs text-muted-foreground">
@@ -62,13 +62,13 @@ export default function ResponsesList({ responses }: ResponsesListProps) {
                       {response.technicianName ?? 'Unassigned'}
                     </TableCell>
                     <TableCell>
-                      <span className="inline-flex items-center rounded-full bg-emerald-500/10 px-2 py-1 text-xs font-semibold text-emerald-600">
+                      <span className="inline-flex items-center rounded-full bg-emerald-500/10 px-2 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
                         {response.rating} ★
                       </span>
                     </TableCell>
                     <TableCell className="max-w-[240px]">
                       {response.comment ? (
-                        <span className="text-sm text-gray-700 line-clamp-2">{response.comment}</span>
+                        <span className="text-sm text-[rgb(var(--color-text-700))] line-clamp-2">{response.comment}</span>
                       ) : (
                         <span className="text-sm italic text-muted-foreground">No comment</span>
                       )}

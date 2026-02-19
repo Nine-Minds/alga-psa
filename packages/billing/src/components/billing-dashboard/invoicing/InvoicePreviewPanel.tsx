@@ -14,6 +14,7 @@ import { TemplateRenderer } from '../TemplateRenderer';
 import PaperInvoice from '../PaperInvoice';
 import CreditExpirationInfo from '../CreditExpirationInfo';
 import { Button } from '@alga-psa/ui/components/Button';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { InvoiceTaxSourceBadge } from '../../invoices/InvoiceTaxSourceBadge';
 
 interface InvoicePreviewPanelProps {
@@ -142,9 +143,9 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
   if (!invoiceId) {
     return (
       <Card className="h-full">
-        <div className="p-6 flex items-center justify-center h-64 text-gray-500">
+        <div className="p-6 flex items-center justify-center h-64 text-muted-foreground">
           <div className="text-center">
-            <FileTextIcon className="h-12 w-12 mx-auto mb-2 text-gray-400" />
+            <FileTextIcon className="h-12 w-12 mx-auto mb-2 text-muted-foreground" />
             <p>Select an invoice to preview</p>
           </div>
         </div>
@@ -180,9 +181,9 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
         </div>
 
         {error && (
-          <div className="mb-4 text-red-500 text-sm bg-red-50 border border-red-200 rounded p-3">
-            {error}
-          </div>
+          <Alert variant="destructive" className="mb-4">
+            <AlertDescription className="text-sm">{error}</AlertDescription>
+          </Alert>
         )}
 
         {isLoading ? (
@@ -300,7 +301,7 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
             )}
           </>
         ) : (
-          <div className="text-gray-500 text-center h-64 flex items-center justify-center">
+          <div className="text-muted-foreground text-center h-64 flex items-center justify-center">
             Could not display preview. Data might be missing.
           </div>
         )}

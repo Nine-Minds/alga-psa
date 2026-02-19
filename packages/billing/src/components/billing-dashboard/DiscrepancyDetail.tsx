@@ -319,7 +319,7 @@ const DiscrepancyDetail: React.FC = () => {
         };
       default:
         return {
-          color: 'bg-gray-100 text-gray-800',
+          color: 'bg-muted text-[rgb(var(--color-text-800))]',
           icon: <XCircle className="h-4 w-4 mr-1" />,
           text: report.status
         };

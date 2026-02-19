@@ -58,7 +58,7 @@ export default function WorkflowRegistryViewer() {
 
   if (error) {
     return (
-      <div className="p-4 text-center text-red-500" id="workflow-registry-error">
+      <div className="p-4 text-center text-destructive" id="workflow-registry-error">
         Error: {error.message}
       </div>
     );

@@ -106,7 +106,7 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
               {!record.master_ticket_id && (record.bundle_child_count ?? 0) > 0 && onToggleBundleExpanded ? (
                 <button
                   type="button"
-                  className="inline-flex items-center justify-center rounded hover:bg-gray-100 relative z-10"
+                  className="inline-flex items-center justify-center rounded hover:bg-gray-100 dark:hover:bg-gray-800 relative z-10"
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
@@ -411,11 +411,11 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
 
           if (hoursUntilDue < 0) {
             // Overdue - red/warning style
-            textColorClass = 'text-red-600';
+            textColorClass = 'text-red-600 dark:text-red-400';
             bgColorClass = 'bg-red-500/10';
           } else if (hoursUntilDue <= 24) {
             // Approaching due date (within 24 hours) - orange/caution style
-            textColorClass = 'text-orange-600';
+            textColorClass = 'text-orange-600 dark:text-orange-400';
             bgColorClass = 'bg-orange-500/10';
           }
 
@@ -503,7 +503,7 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="bg-white z-50">
               <DropdownMenuItem
-                className="px-2 py-1 text-sm cursor-pointer hover:bg-gray-100 text-red-600 flex items-center"
+                className="px-2 py-1 text-sm cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 text-red-600 dark:text-red-400 flex items-center"
                 onSelect={() => onDeleteClick(record.ticket_id as string, record.title || record.ticket_number)}
               >
                 <Trash2 className="mr-2 h-4 w-4" />

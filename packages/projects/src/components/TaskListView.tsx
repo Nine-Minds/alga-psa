@@ -394,7 +394,7 @@ export default function TaskListView({
   const getDependencyTypeInfo = (type: string): { label: string; icon: React.ReactNode; color: string } => {
     switch (type) {
       case 'blocks':
-        return { label: 'Blocks', icon: <Ban className="h-3 w-3" />, color: 'text-red-500' };
+        return { label: 'Blocks', icon: <Ban className="h-3 w-3" />, color: 'text-destructive' };
       case 'blocked_by':
         return { label: 'Blocked by', icon: <Ban className="h-3 w-3" />, color: 'text-orange-500' };
       case 'related_to':
@@ -457,7 +457,7 @@ export default function TaskListView({
                        deps.successors.some(d => d.dependency_type === 'blocks' || d.dependency_type === 'blocked_by');
 
     if (hasBlocking) {
-      return <Ban className="h-3.5 w-3.5 text-red-500" />;
+      return <Ban className="h-3.5 w-3.5 text-destructive" />;
     }
 
     return <GitBranch className="h-3.5 w-3.5 text-blue-500" />;
@@ -931,7 +931,7 @@ export default function TaskListView({
                                   </tr>
                                 )}
                                 <tr
-                                className={`${taskIndex % 2 === 0 ? 'bg-gray-50' : 'bg-white'} hover:bg-blue-50 group transition-colors ${
+                                className={`${taskIndex % 2 === 0 ? 'bg-gray-50 dark:bg-[rgb(var(--color-border-100))]' : 'bg-white dark:bg-[rgb(var(--color-card))]'} hover:bg-primary/10 group transition-colors ${
                                   isDragging ? 'opacity-50' : ''
                                 } ${showDropIndicator ? 'bg-primary-50' : ''}`}
                                 draggable={!!onTaskMove}
@@ -1248,7 +1248,7 @@ export default function TaskListView({
                                       }}
                                       title="Delete task"
                                     >
-                                      <Trash2 className="h-3.5 w-3.5 text-red-600" />
+                                      <Trash2 className="h-3.5 w-3.5 text-destructive" />
                                     </Button>
                                   </div>
                                 </td>

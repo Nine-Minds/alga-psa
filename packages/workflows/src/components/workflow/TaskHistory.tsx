@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Card } from '@alga-psa/ui/components/Card';
 import { Badge } from '@alga-psa/ui/components/Badge';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { WorkflowTaskStatus } from '@alga-psa/shared/workflow/persistence/workflowTaskModel';
 import { TaskHistoryEntry } from '@alga-psa/shared/workflow/persistence/taskInboxInterfaces';
 
@@ -8,7 +9,7 @@ import { TaskHistoryEntry } from '@alga-psa/shared/workflow/persistence/taskInbo
 function Spinner({ size = "md" }: { size?: "sm" | "md" | "lg" }) {
   const sizeClass = size === "sm" ? "h-4 w-4" : size === "lg" ? "h-8 w-8" : "h-6 w-6";
   return (
-    <div className={`animate-spin rounded-full border-2 border-gray-300 border-t-blue-600 ${sizeClass}`}></div>
+    <div className={`animate-spin rounded-full border-2 border-gray-300 border-t-primary-500 ${sizeClass}`}></div>
   );
 }
 
@@ -169,9 +170,9 @@ export function TaskHistory({
   // Render error state
   if (error) {
     return (
-      <div className={`bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded ${className}`}>
-        <p>{error}</p>
-      </div>
+      <Alert variant="destructive" className={className}>
+        <AlertDescription>{error}</AlertDescription>
+      </Alert>
     );
   }
 

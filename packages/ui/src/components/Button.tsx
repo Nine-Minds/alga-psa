@@ -15,14 +15,14 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: 'bg-[rgb(var(--color-primary-500))] text-white hover:bg-[rgb(var(--color-primary-600))]',
-        destructive: 'bg-[rgb(var(--color-accent-500))] text-white hover:bg-[rgb(var(--color-accent-600))]',
-        accent: 'bg-[rgb(var(--color-accent-500))] text-white hover:bg-[rgb(var(--color-accent-600))]',
+        default: 'bg-[rgb(var(--color-primary-500))] text-white hover:bg-[rgb(var(--color-primary-600))] dark:bg-[rgb(var(--color-primary-400))] dark:hover:bg-[rgb(var(--color-primary-500))]',
+        destructive: 'bg-[rgb(var(--color-accent-500))] text-white hover:bg-[rgb(var(--color-accent-600))] dark:bg-[rgb(var(--color-accent-300))] dark:hover:bg-[rgb(var(--color-accent-400))]',
+        accent: 'bg-[rgb(var(--color-accent-500))] text-white hover:bg-[rgb(var(--color-accent-600))] dark:bg-[rgb(var(--color-accent-300))] dark:hover:bg-[rgb(var(--color-accent-400))]',
         outline: 'border border-[rgb(var(--color-border-400))] text-[rgb(var(--color-text-700))] hover:bg-[rgb(var(--color-primary-50))] hover:text-[rgb(var(--color-primary-700))]',
         secondary: 'bg-[rgb(var(--color-secondary-500))] text-white hover:bg-[rgb(var(--color-secondary-600))]',
         ghost: 'text-[rgb(var(--color-text-700))] hover:bg-[rgb(var(--color-primary-50))] hover:text-[rgb(var(--color-primary-700))]',
         link: 'underline-offset-4 hover:underline text-[rgb(var(--color-primary-500))]',
-        soft: 'bg-[rgb(var(--color-primary-100))] text-[rgb(var(--color-primary-700))] hover:bg-[rgb(var(--color-primary-200))]',
+        soft: 'bg-[rgb(var(--color-primary-100))] text-[rgb(var(--color-primary-700))] hover:bg-[rgb(var(--color-primary-200))] dark:bg-[rgb(var(--color-primary-500)/0.15)] dark:text-[rgb(var(--color-primary-800))] dark:hover:bg-[rgb(var(--color-primary-500)/0.25)]',
         dashed: 'bg-[rgb(var(--color-primary-50))] text-[rgb(var(--color-primary-600))] border-2 border-dashed border-[rgb(var(--color-primary-300))] hover:bg-[rgb(var(--color-primary-100))] hover:border-[rgb(var(--color-primary-400))]',
         icon: 'text-[rgb(var(--color-text-500))] hover:text-[rgb(var(--color-text-900))]',
       },

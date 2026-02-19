@@ -786,17 +786,16 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
         <TabsContent value="edit">
           <div className="space-y-6">
             {hasUnsavedChanges && (
-              <Alert className="bg-amber-50 border-amber-200">
-                <AlertDescription className="text-amber-800 flex items-center gap-2">
-                  <AlertCircle className="h-4 w-4" />
-                  <span>You have unsaved changes. Click "Save Changes" to apply them.</span>
+              <Alert variant="warning">
+                <AlertDescription>
+                  You have unsaved changes. Click "Save Changes" to apply them.
                 </AlertDescription>
               </Alert>
             )}
 
             {saveSuccess && (
-              <Alert className="bg-green-50 border-green-200">
-                <AlertDescription className="text-green-800">
+              <Alert variant="success">
+                <AlertDescription>
                   Contract saved successfully!
                 </AlertDescription>
               </Alert>
@@ -884,7 +883,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                           </Button>
                         </div>
                       ) : (
-                        <span className="text-base font-medium text-gray-900">{editContractName}</span>
+                        <span className="text-base font-medium text-foreground">{editContractName}</span>
                       )}
                     </div>
                     <div className="space-y-1">
@@ -936,7 +935,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                           </div>
                         </div>
                       ) : (
-                        <p className="text-base text-gray-700">{editDescription || 'No description'}</p>
+                        <p className="text-base text-[rgb(var(--color-text-700))]">{editDescription || 'No description'}</p>
                       )}
                     </div>
                   </CardContent>
@@ -949,10 +948,10 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                       Contract Snapshot
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-3 text-sm text-gray-700">
+                  <CardContent className="space-y-3 text-sm text-[rgb(var(--color-text-700))]">
                     <div className="space-y-2">
                       <div className="space-y-1">
-                        <span className="text-xs text-gray-500">Status</span>
+                        <span className="text-xs text-muted-foreground">Status</span>
                         <CustomSelect
                           id="edit-status"
                           value={editStatus}
@@ -966,13 +965,13 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                           disabled={contract.status === 'expired'}
                         />
                         {contract.status === 'expired' && (
-                          <p className="text-xs text-gray-500">
+                          <p className="text-xs text-muted-foreground">
                             Expired contracts cannot be changed to another status
                           </p>
                         )}
                       </div>
                       <div className="space-y-1">
-                        <span className="text-xs text-gray-500">Billing Frequency *</span>
+                        <span className="text-xs text-muted-foreground">Billing Frequency *</span>
                         <CustomSelect
                           id="edit-billing-frequency"
                           value={editBillingFrequency}
@@ -1000,8 +999,8 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                     </div>
                     {editDescription && (
                       <div>
-                        <p className="text-xs uppercase tracking-wide text-gray-500 mb-1">Description</p>
-                        <p className="text-sm text-gray-800">{editDescription}</p>
+                        <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">Description</p>
+                        <p className="text-sm text-[rgb(var(--color-text-800))]">{editDescription}</p>
                       </div>
                     )}
                   </CardContent>
@@ -1014,9 +1013,9 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                       Client Details
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-3 text-sm text-gray-700">
+                  <CardContent className="space-y-3 text-sm text-[rgb(var(--color-text-700))]">
                     {assignments.length === 0 ? (
-                      <p className="text-gray-500">No client assigned to this contract yet.</p>
+                      <p className="text-muted-foreground">No client assigned to this contract yet.</p>
                     ) : (
                       <>
                         <div className="flex items-center justify-between">
@@ -1031,11 +1030,11 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                         </div>
                         <div className="flex items-center justify-between">
                           <span>Assignment Status</span>
-                          <Badge className={
-                            contract.status === 'active' ? 'bg-green-100 text-green-800' :
-                            contract.status === 'terminated' ? 'bg-orange-100 text-orange-800' :
-                            contract.status === 'expired' ? 'bg-red-100 text-red-800' :
-                            'bg-gray-100 text-gray-800'
+                          <Badge variant={
+                            contract.status === 'active' ? 'success' :
+                            contract.status === 'terminated' ? 'warning' :
+                            contract.status === 'expired' ? 'error' :
+                            'default-muted'
                           }>
                             {contract.status === 'active' ? 'Active' :
                              contract.status === 'terminated' ? 'Terminated' :
@@ -1096,7 +1095,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {assignments.length === 0 ? (
-                    <div className="py-6 text-sm text-gray-500">
+                    <div className="py-6 text-sm text-muted-foreground">
                       This contract is not assigned to a client yet.
                     </div>
                   ) : (
@@ -1108,14 +1107,14 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                       return (
                         <div
                           key={assignment.client_contract_id}
-                          className="rounded-lg border border-gray-200 bg-gray-50 p-4 space-y-4"
+                          className="rounded-lg border border-[rgb(var(--color-border-200))] bg-muted p-4 space-y-4"
                         >
                           <div className="flex flex-wrap items-start justify-between gap-3">
                             <div>
-                              <p className="font-semibold text-gray-900">
+                              <p className="font-semibold text-[rgb(var(--color-text-900))]">
                                 {assignment.client_name || assignment.client_id}
                               </p>
-                              <p className="text-xs text-gray-500">
+                              <p className="text-xs text-muted-foreground">
                                 Client Contract ID: {assignment.client_contract_id}
                               </p>
                             </div>
@@ -1160,7 +1159,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
 
                           <div className="grid gap-4 md:grid-cols-2">
                             <div>
-                              <Label className="text-xs uppercase tracking-wide text-gray-500">
+                              <Label className="text-xs uppercase tracking-wide text-muted-foreground">
                                 Start Date
                               </Label>
                               {isEditing ? (
@@ -1189,13 +1188,13 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                                   />
                                 </div>
                               ) : (
-                                <p className="mt-1 text-sm text-gray-800">
+                                <p className="mt-1 text-sm text-[rgb(var(--color-text-800))]">
                                   {formatDate(editData.start_date)}
                                 </p>
                               )}
                             </div>
                             <div>
-                              <Label className="text-xs uppercase tracking-wide text-gray-500">
+                              <Label className="text-xs uppercase tracking-wide text-muted-foreground">
                                 End Date
                               </Label>
                               {isEditing ? (
@@ -1217,7 +1216,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                                   />
                                 </div>
                               ) : (
-                                <p className="mt-1 text-sm text-gray-800">
+                                <p className="mt-1 text-sm text-[rgb(var(--color-text-800))]">
                                   {editData.end_date ? formatDate(editData.end_date) : 'Ongoing'}
                                 </p>
                               )}
@@ -1227,7 +1226,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                           {supportsPo && (
                             <div className="grid gap-4 md:grid-cols-2">
                               <div>
-                                <Label className="text-xs uppercase tracking-wide text-gray-500">
+                                <Label className="text-xs uppercase tracking-wide text-muted-foreground">
                                   PO Required
                                 </Label>
                                 {isEditing ? (
@@ -1245,13 +1244,13 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                                     />
                                   </div>
                                 ) : (
-                                  <p className="mt-1 text-sm text-gray-800">
+                                  <p className="mt-1 text-sm text-[rgb(var(--color-text-800))]">
                                     {editData.po_required ? 'Yes' : 'No'}
                                   </p>
                                 )}
                               </div>
                               <div>
-                                <Label className="text-xs uppercase tracking-wide text-gray-500">
+                                <Label className="text-xs uppercase tracking-wide text-muted-foreground">
                                   PO Number
                                 </Label>
                                 {isEditing ? (
@@ -1269,7 +1268,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                                     disabled={!editData.po_required}
                                   />
                                 ) : (
-                                  <p className="mt-1 text-sm text-gray-800">
+                                  <p className="mt-1 text-sm text-[rgb(var(--color-text-800))]">
                                     {editData.po_required
                                       ? editData.po_number || (
                                           <span className="text-orange-600">Required</span>
@@ -1284,12 +1283,12 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                           {supportsPo && (
                             <div className="grid gap-4 md:grid-cols-2">
                               <div>
-                                <Label className="text-xs uppercase tracking-wide text-gray-500">
+                                <Label className="text-xs uppercase tracking-wide text-muted-foreground">
                                   PO Amount
                                 </Label>
                                 {isEditing ? (
                                   <div className="relative mt-1 w-full max-w-xs">
-                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
+                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
                                       {currencyMeta.symbol}
                                     </span>
                                     <Input
@@ -1343,7 +1342,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                                     />
                                   </div>
                                 ) : (
-                                  <p className="mt-1 text-sm text-gray-800">
+                                  <p className="mt-1 text-sm text-[rgb(var(--color-text-800))]">
                                     {editData.po_amount != null
                                       ? formatCurrencyFromMinorUnits(
                                           Number(editData.po_amount),
@@ -1443,7 +1442,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
             />
           ) : (
             <Card>
-              <CardContent className="py-6 text-center text-gray-500">
+              <CardContent className="py-6 text-center text-muted-foreground">
                 Loading documents...
               </CardContent>
             </Card>
@@ -1458,7 +1457,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                 Contract Invoices
               </CardTitle>
             </CardHeader>
-            <CardContent className="text-sm text-gray-600">
+            <CardContent className="text-sm text-muted-foreground">
               <p className="mb-2">
                 Invoice reporting for this contract is coming soon. Once available, you’ll be able to review invoice history, open balances, and links to generated documents here.
               </p>
@@ -1484,7 +1483,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
               />
               <div className="min-w-0">
                 <div className="text-base font-semibold truncate">{quickViewClient.client_name}</div>
-                <div className="text-sm text-gray-600">
+                <div className="text-sm text-muted-foreground">
                   {quickViewClient.is_inactive ? 'Inactive' : 'Active'}
                   {quickViewClient.client_type ? ` • ${quickViewClient.client_type}` : ''}
                 </div>
@@ -1494,20 +1493,20 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
               <CardHeader>
                 <CardTitle className="text-base font-semibold">Client Summary</CardTitle>
               </CardHeader>
-              <CardContent className="text-sm text-gray-700 space-y-2">
+              <CardContent className="text-sm text-[rgb(var(--color-text-700))] space-y-2">
                 <div className="flex justify-between gap-4">
-                  <span className="text-gray-500">Client ID</span>
+                  <span className="text-muted-foreground">Client ID</span>
                   <span className="font-mono text-xs break-all">{quickViewClient.client_id}</span>
                 </div>
                 {'email' in quickViewClient && (quickViewClient as any).email ? (
                   <div className="flex justify-between gap-4">
-                    <span className="text-gray-500">Email</span>
+                    <span className="text-muted-foreground">Email</span>
                     <span className="truncate">{(quickViewClient as any).email}</span>
                   </div>
                 ) : null}
                 {'phone_no' in quickViewClient && (quickViewClient as any).phone_no ? (
                   <div className="flex justify-between gap-4">
-                    <span className="text-gray-500">Phone</span>
+                    <span className="text-muted-foreground">Phone</span>
                     <span className="truncate">{(quickViewClient as any).phone_no}</span>
                   </div>
                 ) : null}

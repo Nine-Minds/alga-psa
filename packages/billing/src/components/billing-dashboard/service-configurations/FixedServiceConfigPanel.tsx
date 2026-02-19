@@ -70,7 +70,7 @@ export function FixedServiceConfigPanel({
         </div>
         
         {enableProration && (
-          <div className="pl-6 border-l-2 border-gray-200">
+          <div className="pl-6 border-l-2 border-[rgb(var(--color-border-200))]">
             <Label htmlFor="fixed-service-billing-cycle-alignment">Billing Cycle Alignment</Label>
             <CustomSelect
               id="fixed-service-billing-cycle-alignment"
@@ -81,7 +81,7 @@ export function FixedServiceConfigPanel({
               className="w-full"
               disabled={disabled}
             />
-            <p className="text-sm text-gray-500 mt-1">
+            <p className="text-sm text-muted-foreground mt-1">
               Determines how partial periods are calculated
             </p>
           </div>

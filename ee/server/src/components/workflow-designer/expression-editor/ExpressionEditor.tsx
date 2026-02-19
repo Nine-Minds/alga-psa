@@ -478,7 +478,7 @@ export const ExpressionEditor = forwardRef<ExpressionEditorHandle, ExpressionEdi
     const wrapperClasses = useMemo(() => {
       const base = 'rounded-md border transition-colors overflow-hidden';
       const focusRing = isFocused ? 'ring-2 ring-primary-500 ring-offset-1' : '';
-      const errorBorder = hasError ? 'border-red-500' : 'border-gray-300';
+      const errorBorder = hasError ? 'border-destructive' : 'border-gray-300';
       const disabledStyle = disabled ? 'opacity-50 cursor-not-allowed bg-gray-50' : 'bg-white';
       return `${base} ${focusRing} ${errorBorder} ${disabledStyle} ${className}`.trim();
     }, [isFocused, hasError, disabled, className]);

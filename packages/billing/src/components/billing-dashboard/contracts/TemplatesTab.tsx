@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Card, Box } from '@radix-ui/themes';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Badge } from '@alga-psa/ui/components/Badge';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { MoreVertical, Search, Sparkles } from 'lucide-react';
 import {
   DropdownMenu,
@@ -76,16 +77,16 @@ const TemplatesTab: React.FC<TemplatesTabProps> = ({ onRefreshNeeded, refreshTri
 
   const renderStatusBadge = (status: string) => {
     const normalized = (status || 'draft').toLowerCase();
-    const statusConfig: Record<string, { className: string; label: string }> = {
-      active: { className: 'bg-green-100 text-green-800', label: 'Active' },
-      draft: { className: 'bg-gray-100 text-gray-800', label: 'Draft' },
-      terminated: { className: 'bg-orange-100 text-orange-800', label: 'Terminated' },
-      expired: { className: 'bg-red-100 text-red-800', label: 'Expired' },
-      published: { className: 'bg-green-100 text-green-800', label: 'Published' },
-      archived: { className: 'bg-gray-200 text-gray-700', label: 'Archived' },
+    const statusConfig: Record<string, { variant: 'success' | 'default-muted' | 'warning' | 'error' | 'info'; label: string }> = {
+      active: { variant: 'success', label: 'Active' },
+      draft: { variant: 'default-muted', label: 'Draft' },
+      terminated: { variant: 'warning', label: 'Terminated' },
+      expired: { variant: 'error', label: 'Expired' },
+      published: { variant: 'success', label: 'Published' },
+      archived: { variant: 'default-muted', label: 'Archived' },
     };
     const config = statusConfig[normalized] ?? statusConfig.draft;
-    return <Badge className={config.className}>{config.label}</Badge>;
+    return <Badge variant={config.variant}>{config.label}</Badge>;
   };
 
   const templateColumns: ColumnDefinition<IContract>[] = [
@@ -166,11 +167,11 @@ const TemplatesTab: React.FC<TemplatesTabProps> = ({ onRefreshNeeded, refreshTri
       <Card size="2">
         <Box p="4">
           <LoadingIndicator
-            className="py-12 text-gray-600"
+            className="py-12 text-muted-foreground"
             layout="stacked"
             spinnerProps={{ size: 'md' }}
             text="Loading templates..."
-            textClassName="text-gray-600"
+            textClassName="text-muted-foreground"
           />
         </Box>
       </Card>
@@ -181,9 +182,9 @@ const TemplatesTab: React.FC<TemplatesTabProps> = ({ onRefreshNeeded, refreshTri
     return (
       <Card size="2">
         <Box p="4">
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-            {error}
-          </div>
+          <Alert variant="destructive">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
         </Box>
       </Card>
     );
@@ -196,7 +197,7 @@ const TemplatesTab: React.FC<TemplatesTabProps> = ({ onRefreshNeeded, refreshTri
           <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div className="relative max-w-md w-full">
               <Search
-                className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400"
+                className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground"
                 aria-hidden="true"
               />
               <Input

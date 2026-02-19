@@ -129,7 +129,7 @@ export default function AdminApiKeysSetup() {
       <Card className="p-6">
         <h2 className="text-2xl font-semibold mb-4">API Keys Administration</h2>
         {error && (
-          <div className="mb-4 p-4 bg-red-50 text-red-700 rounded-md">
+          <div className="mb-4 p-4 bg-destructive/10 text-destructive rounded-md">
             {error}
           </div>
         )}

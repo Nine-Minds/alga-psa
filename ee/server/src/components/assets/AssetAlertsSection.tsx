@@ -164,7 +164,7 @@ export function AssetAlertsSection({ asset, className = '' }: AssetAlertsSection
           <AlertTriangle className={`h-5 w-5 ${hasAlerts ? 'text-amber-500' : 'text-gray-400'}`} />
           <span className="font-medium">Active Alerts</span>
           {hasAlerts && (
-            <span className="inline-flex items-center justify-center px-2 py-0.5 text-xs font-medium rounded-full bg-amber-100 text-amber-800">
+            <span className="inline-flex items-center justify-center px-2 py-0.5 text-xs font-medium rounded-full bg-warning/15 text-warning-foreground">
               {activeAlerts.length}
             </span>
           )}

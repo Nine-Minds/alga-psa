@@ -164,7 +164,7 @@ const ContractPerformance: React.FC = () => {
         
         <div className="relative">
           {isLoading && (
-            <div className="absolute inset-0 bg-white/50 flex items-center justify-center z-10">
+            <div className="absolute inset-0 bg-card/50 flex items-center justify-center z-10">
               <Spinner size="sm" />
             </div>
           )}
@@ -172,41 +172,41 @@ const ContractPerformance: React.FC = () => {
           {selectedMetrics ? (
             <div className="grid grid-cols-2 gap-6">
               <div className="space-y-6">
-                <div className="bg-blue-50 p-4 rounded-md">
-                  <div className="text-sm text-blue-600">Total Clients</div>
+                <div className="bg-primary/10 p-4 rounded-md">
+                  <div className="text-sm text-primary">Total Clients</div>
                   <div className="text-2xl font-bold">{selectedMetrics.totalClients}</div>
                 </div>
                 
-                <div className="bg-green-50 p-4 rounded-md">
-                  <div className="text-sm text-green-600">Active Clients</div>
+                <div className="bg-success/10 p-4 rounded-md">
+                  <div className="text-sm text-success">Active Clients</div>
                   <div className="text-2xl font-bold">{selectedMetrics.activeClients}</div>
                 </div>
                 
-                <div className="bg-purple-50 p-4 rounded-md">
-                  <div className="text-sm text-purple-600">Total Plans</div>
+                <div className="bg-accent/10 p-4 rounded-md">
+                  <div className="text-sm text-accent">Total Plans</div>
                   <div className="text-2xl font-bold">{selectedMetrics.totalPlans}</div>
                 </div>
               </div>
               
               <div className="space-y-6">
-                <div className="bg-yellow-50 p-4 rounded-md">
-                  <div className="text-sm text-yellow-600">Avg. Plans Per Client</div>
+                <div className="bg-warning/10 p-4 rounded-md">
+                  <div className="text-sm text-warning">Avg. Plans Per Client</div>
                   <div className="text-2xl font-bold">{selectedMetrics.averagePlansPerClient.toFixed(2)}</div>
                 </div>
                 
-                <div className="bg-red-50 p-4 rounded-md">
-                  <div className="text-sm text-red-600">Total Revenue</div>
+                <div className="bg-destructive/10 p-4 rounded-md">
+                  <div className="text-sm text-destructive">Total Revenue</div>
                   <div className="text-2xl font-bold">${(selectedMetrics.totalRevenue / 100).toFixed(2)}</div>
                 </div>
                 
-                <div className="bg-indigo-50 p-4 rounded-md">
-                  <div className="text-sm text-indigo-600">Avg. Revenue Per Client</div>
+                <div className="bg-primary/10 p-4 rounded-md">
+                  <div className="text-sm text-primary">Avg. Revenue Per Client</div>
                   <div className="text-2xl font-bold">${(selectedMetrics.averageRevenuePerClient / 100).toFixed(2)}</div>
                 </div>
               </div>
             </div>
           ) : (
-            <div className="text-center py-8 text-gray-500">
+            <div className="text-center py-8 text-muted-foreground">
               {contracts.length > 0 ? 'Select a contract to view performance metrics' : 'No contracts available'}
             </div>
           )}
@@ -217,19 +217,19 @@ const ContractPerformance: React.FC = () => {
             <h3 className="text-lg font-medium mb-4">Contract Comparison</h3>
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-gray-50">
+                <thead className="bg-muted">
                   <tr>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contract</th>
-                    <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Clients</th>
-                    <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Plans</th>
-                    <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Revenue</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Contract</th>
+                    <th className="px-4 py-2 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Clients</th>
+                    <th className="px-4 py-2 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Plans</th>
+                    <th className="px-4 py-2 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Revenue</th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
+                <tbody className="bg-card divide-y divide-[rgb(var(--color-border-200))]">
                   {contractMetrics.map((metric) => (
                     <tr 
                       key={metric.contractId}
-                      className={selectedContract === metric.contractId ? 'bg-blue-50' : ''}
+                      className={selectedContract === metric.contractId ? 'bg-primary/10' : ''}
                     >
                       <td className="px-4 py-2 whitespace-nowrap">{metric.contractName}</td>
                       <td className="px-4 py-2 text-right whitespace-nowrap">{metric.totalClients}</td>

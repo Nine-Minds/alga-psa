@@ -24,22 +24,22 @@ const BucketUsageChart: React.FC<BucketUsageChartProps> = React.memo(({ bucketDa
   const getColorClasses = useMemo(() => {
     return (percent: number) => {
       if (percent >= 90) return {
-        text: 'text-red-600',
-        bg: 'bg-red-500',
-        bgLight: 'bg-red-50',
-        border: 'border-red-200'
+        text: 'text-destructive',
+        bg: 'bg-destructive',
+        bgLight: 'bg-destructive/10',
+        border: 'border-destructive/30'
       };
       if (percent >= 75) return {
-        text: 'text-yellow-600',
-        bg: 'bg-yellow-500',
-        bgLight: 'bg-yellow-50',
-        border: 'border-yellow-200'
+        text: 'text-warning',
+        bg: 'bg-warning',
+        bgLight: 'bg-warning/10',
+        border: 'border-warning/30'
       };
       return {
-        text: 'text-green-600',
-        bg: 'bg-green-500',
-        bgLight: 'bg-green-50',
-        border: 'border-green-200'
+        text: 'text-success',
+        bg: 'bg-success',
+        bgLight: 'bg-success/10',
+        border: 'border-success/30'
       };
     };
   }, []);

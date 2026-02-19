@@ -97,7 +97,7 @@ export const StatusImportDialog: React.FC<StatusImportDialogProps> = ({
                       </span>
                     )}
                     {status.is_default && (
-                      <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-md">
+                      <span className="px-2 py-1 bg-info/15 text-info-foreground text-xs rounded-md">
                         Default
                       </span>
                     )}

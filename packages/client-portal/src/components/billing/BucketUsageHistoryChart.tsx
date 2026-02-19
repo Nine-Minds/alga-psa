@@ -91,9 +91,9 @@ const BucketUsageHistoryChart: React.FC<BucketUsageHistoryChartProps> = React.me
       <div className="space-y-2">
         {sortedData.map((period, index) => {
           const percentage = Math.round(period.percentage_used);
-          const barColor = percentage >= 90 ? 'bg-red-500' :
-                          percentage >= 75 ? 'bg-yellow-500' :
-                          'bg-green-500';
+          const barColor = percentage >= 90 ? 'bg-destructive' :
+                          percentage >= 75 ? 'bg-warning' :
+                          'bg-success';
           const isLatest = index === sortedData.length - 1;
 
           return (

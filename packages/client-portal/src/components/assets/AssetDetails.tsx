@@ -2,6 +2,7 @@
 
 import { Asset } from '@alga-psa/types';
 import { Card } from '@alga-psa/ui/components/Card';
+import { Badge } from '@alga-psa/ui/components/Badge';
 
 interface AssetDetailsProps {
   asset: Asset;
@@ -119,13 +120,13 @@ export function AssetDetails({ asset }: AssetDetailsProps) {
             <div>
               <p className="text-sm text-gray-500">Status</p>
               <p className="mt-1">
-                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                  asset.status === 'active' ? 'bg-green-100 text-green-800' :
-                  asset.status === 'inactive' ? 'bg-gray-100 text-gray-800' :
-                  'bg-yellow-100 text-yellow-800'
-                }`}>
+                <Badge variant={
+                  asset.status === 'active' ? 'success' :
+                  asset.status === 'inactive' ? 'default-muted' :
+                  'warning'
+                }>
                   {asset.status}
-                </span>
+                </Badge>
               </p>
             </div>
             <div>

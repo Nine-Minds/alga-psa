@@ -14,13 +14,13 @@ export function LoopNode({ data, id }: NodeProps<LoopNodeData>) {
   const getStatusClass = () => {
     switch (data.status) {
       case 'active':
-        return 'border-blue-500 bg-blue-50';
+        return 'border-primary-500 bg-primary-500/10';
       case 'success':
-        return 'border-green-500 bg-green-50';
+        return 'border-success bg-success/10';
       case 'error':
-        return 'border-red-500 bg-red-50';
+        return 'border-destructive bg-destructive/10';
       case 'warning':
-        return 'border-yellow-500 bg-yellow-50';
+        return 'border-warning bg-warning/10';
       default:
         return 'border-teal-300 bg-teal-50';
     }

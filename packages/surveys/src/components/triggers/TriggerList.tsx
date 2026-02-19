@@ -384,7 +384,7 @@ export function TriggerList({ templates, triggers, isLoading, onTriggersChange, 
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             id={`survey-trigger-delete-${trigger.triggerId}`}
-                            className="text-red-600 focus:bg-red-50 focus:text-red-700"
+                            className="text-destructive focus:bg-destructive/10 focus:text-destructive"
                             onSelect={() => handleDelete(trigger)}
                           >
                             {t('actions.delete', 'Delete')}

@@ -225,7 +225,7 @@ export const PaymentSettingsConfig: React.FC = () => {
     return (
       <div className="text-center py-8">
         <div className="flex justify-center mb-4">
-          <div className="p-3 bg-amber-100 rounded-full">
+          <div className="p-3 bg-warning/15 rounded-full">
             <AlertCircle className="h-8 w-8 text-amber-600" />
           </div>
         </div>

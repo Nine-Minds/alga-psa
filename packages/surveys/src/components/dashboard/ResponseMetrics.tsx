@@ -33,14 +33,14 @@ export default function ResponseMetrics({ metrics }: ResponseMetricsProps) {
         value: integerFormatter.format(metrics.totalInvitations),
         icon: Send,
         tone: 'text-primary-600',
-        background: 'bg-primary-50',
+        background: 'bg-primary-500/10',
       },
       {
         key: 'responses',
         label: 'Responses Received',
         value: integerFormatter.format(metrics.totalResponses),
         icon: CheckCircle2,
-        tone: 'text-emerald-600',
+        tone: 'text-emerald-600 dark:text-emerald-400',
         background: 'bg-emerald-500/10',
       },
       {
@@ -48,16 +48,16 @@ export default function ResponseMetrics({ metrics }: ResponseMetricsProps) {
         label: 'Response Rate',
         value: percentFormatter.format(metrics.responseRate / 100),
         icon: Clock3,
-        tone: 'text-blue-600',
-        background: 'bg-blue-50',
+        tone: 'text-blue-600 dark:text-blue-400',
+        background: 'bg-blue-500/10',
       },
       {
         key: 'averageRating',
         label: 'Average Rating',
         value: metrics.averageRating !== null ? ratingFormatter.format(metrics.averageRating) : '—',
         icon: Star,
-        tone: 'text-amber-600',
-        background: 'bg-amber-50',
+        tone: 'text-amber-600 dark:text-amber-400',
+        background: 'bg-warning/10',
       },
     ],
     [metrics.averageRating, metrics.responseRate, metrics.totalInvitations, metrics.totalResponses]
@@ -78,7 +78,7 @@ export default function ResponseMetrics({ metrics }: ResponseMetricsProps) {
           </CardContent>
         </Card>
       ))}
-      <Card className="sm:col-span-2 2xl:col-span-1 transition-all duration-200 hover:shadow-lg hover:scale-[1.02] border-border-200 bg-gradient-to-br from-amber-50/50 to-transparent">
+      <Card className="sm:col-span-2 2xl:col-span-1 transition-all duration-200 hover:shadow-lg hover:scale-[1.02] border-border-200 bg-gradient-to-br from-warning/5 to-transparent">
         <CardHeader className="space-y-1 pb-3">
           <CardTitle className="text-sm font-medium text-text-600">
             Outstanding Invitations
@@ -88,13 +88,13 @@ export default function ResponseMetrics({ metrics }: ResponseMetricsProps) {
           <div className="text-3xl font-bold tracking-tight text-text-900">
             {integerFormatter.format(metrics.outstandingInvitations)}
           </div>
-          <div className="flex items-center gap-2 rounded-full bg-amber-100 px-3 py-1.5 text-sm font-medium text-amber-700">
+          <div className="flex items-center gap-2 rounded-full bg-warning/15 px-3 py-1.5 text-sm font-medium text-amber-700 dark:text-amber-300">
             <Clock3 className="h-4 w-4" />
             Awaiting responses
           </div>
         </CardContent>
       </Card>
-      <Card className="sm:col-span-2 2xl:col-span-1 transition-all duration-200 hover:shadow-lg hover:scale-[1.02] border-border-200 bg-gradient-to-br from-rose-50/50 to-transparent">
+      <Card className="sm:col-span-2 2xl:col-span-1 transition-all duration-200 hover:shadow-lg hover:scale-[1.02] border-border-200 bg-gradient-to-br from-destructive/5 to-transparent">
         <CardHeader className="space-y-1 pb-3">
           <CardTitle className="text-sm font-medium text-text-600">
             Negative Responses (≤ 2★)
@@ -104,7 +104,7 @@ export default function ResponseMetrics({ metrics }: ResponseMetricsProps) {
           <div className="text-3xl font-bold tracking-tight text-text-900">
             {integerFormatter.format(metrics.recentNegativeResponses)}
           </div>
-          <div className="flex items-center gap-2 rounded-full bg-rose-100 px-3 py-1.5 text-sm font-medium text-rose-700">
+          <div className="flex items-center gap-2 rounded-full bg-destructive/15 px-3 py-1.5 text-sm font-medium text-rose-700 dark:text-rose-300">
             <TrendingDown className="h-4 w-4" />
             Needs review
           </div>

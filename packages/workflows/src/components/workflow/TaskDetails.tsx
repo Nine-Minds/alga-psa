@@ -5,6 +5,7 @@ import { WorkflowTaskStatus } from '@alga-psa/shared/workflow/persistence';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Card } from '@alga-psa/ui/components/Card';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { TaskForm } from './TaskForm';
 import { TaskHistory } from './TaskHistory';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@alga-psa/ui/components/Tabs';
@@ -13,7 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@alga-psa/ui/component
 function Spinner({ size = "md" }: { size?: "sm" | "md" | "lg" }) {
   const sizeClass = size === "sm" ? "h-4 w-4" : size === "lg" ? "h-8 w-8" : "h-6 w-6";
   return (
-    <div className={`animate-spin rounded-full border-2 border-gray-300 border-t-blue-600 ${sizeClass}`}></div>
+    <div className={`animate-spin rounded-full border-2 border-gray-300 border-t-primary-500 ${sizeClass}`}></div>
   );
 }
 
@@ -231,17 +232,19 @@ export function TaskDetailsComponent({
   // Render error state
   if (error) {
     return (
-      <div className={`bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded ${className}`}>
-        <p>{error}</p>
-        <Button
-          id="retry-load-task"
-          variant="outline"
-          onClick={fetchTaskDetails}
-          className="mt-2"
-        >
-          Retry
-        </Button>
-      </div>
+      <Alert variant="destructive" className={className}>
+        <AlertDescription>
+          <p>{error}</p>
+          <Button
+            id="retry-load-task"
+            variant="outline"
+            onClick={fetchTaskDetails}
+            className="mt-2"
+          >
+            Retry
+          </Button>
+        </AlertDescription>
+      </Alert>
     );
   }
 

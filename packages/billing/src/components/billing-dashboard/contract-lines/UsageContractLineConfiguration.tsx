@@ -497,7 +497,7 @@ export function UsagePlanConfiguration({
                       <section className="space-y-4">
                           <div>
                               <h3 className="text-lg font-semibold">Contract Line Basics</h3>
-                              <p className="text-sm text-gray-600">
+                              <p className="text-sm text-muted-foreground">
                                   Name the contract line and choose how it should bill by default.
                               </p>
                           </div>
@@ -591,7 +591,7 @@ export function UsagePlanConfiguration({
           <section className="space-y-4">
             <div>
               <h3 className="text-lg font-semibold">Contract Line Basics</h3>
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-muted-foreground">
                 Name the contract line and choose how it should bill by default.
               </p>
             </div>

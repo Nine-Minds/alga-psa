@@ -19,6 +19,7 @@ import {
   EmbeddedCheckout,
 } from '@stripe/react-stripe-js';
 import { AlertCircle, ShoppingCart, CreditCard, Calendar } from 'lucide-react';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 
 interface LicensePurchaseFormProps {
@@ -402,32 +403,33 @@ export default function LicensePurchaseForm({ className }: LicensePurchaseFormPr
         <CardContent>
           {/* Current Usage Display */}
           {currentUsage && (
-            <div className="mb-6 p-4 bg-blue-50 rounded-lg">
-              <h3 className="text-sm font-medium text-blue-900 mb-2">
-                Current License Usage
-              </h3>
-              <div className="flex items-center gap-2">
-                <div className="text-2xl font-bold text-blue-600">
-                  {currentUsage.used}
+            <Alert variant="info" showIcon={false} className="mb-6">
+              <AlertDescription>
+                <h3 className="text-sm font-medium mb-2">
+                  Current License Usage
+                </h3>
+                <div className="flex items-center gap-2">
+                  <div className="text-2xl font-bold">
+                    {currentUsage.used}
+                  </div>
+                  <span className="text-gray-500">/</span>
+                  <div className="text-2xl font-bold">
+                    {currentUsage.total !== null ? currentUsage.total : '∞'}
+                  </div>
+                  <span className="text-sm">licenses used</span>
                 </div>
-                <span className="text-gray-500">/</span>
-                <div className="text-2xl font-bold text-gray-900">
-                  {currentUsage.total !== null ? currentUsage.total : '∞'}
-                </div>
-                <span className="text-sm text-gray-600">licenses used</span>
-              </div>
-            </div>
+              </AlertDescription>
+            </Alert>
           )}
 
           {/* Error Display */}
           {error && (
-            <div className="mb-4 p-4 bg-red-50 rounded-lg flex items-start gap-2">
-              <AlertCircle className="h-5 w-5 text-red-600 mt-0.5" />
-              <div className="flex-1">
-                <p className="text-sm font-medium text-red-800">Error</p>
-                <p className="text-sm text-red-600">{error}</p>
-              </div>
-            </div>
+            <Alert variant="destructive" className="mb-4">
+              <AlertDescription>
+                <p className="text-sm font-medium">Error</p>
+                <p className="text-sm">{error}</p>
+              </AlertDescription>
+            </Alert>
           )}
 
           {/* Quantity Selection */}

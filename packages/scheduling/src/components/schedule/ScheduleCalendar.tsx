@@ -148,19 +148,19 @@ const ScheduleCalendar: React.FC = (): React.ReactElement | null => {
   const workItemColors: Record<WorkItemType, string> = {
     ticket: 'rgb(var(--color-primary-200))',
     project_task: 'rgb(var(--color-secondary-100))',
-    non_billable_category: 'rgb(var(--color-accent-100))',
+    non_billable_category: 'rgb(var(--color-event-non-billable))',
     ad_hoc: 'rgb(var(--color-border-200))',
-    interaction: 'rgb(220 252 231)', // Tailwind green-100
-    appointment_request: 'rgb(254 205 211)' // Tailwind rose-200
+    interaction: 'rgb(var(--color-event-interaction))',
+    appointment_request: 'rgb(var(--color-event-appointment))',
   };
 
   const workItemHoverColors: Record<WorkItemType, string> = {
     ticket: 'rgb(var(--color-primary-200))',
     project_task: 'rgb(var(--color-secondary-200))',
-    non_billable_category: 'rgb(var(--color-accent-200))',
+    non_billable_category: 'rgb(var(--color-event-non-billable-hover))',
     ad_hoc: 'rgb(var(--color-border-300))',
-    interaction: 'rgb(187 247 208)', // Tailwind green-200
-    appointment_request: 'rgb(253 164 175)' // Tailwind rose-300 (paler)
+    interaction: 'rgb(var(--color-event-interaction-hover))',
+    appointment_request: 'rgb(var(--color-event-appointment-hover))',
   };
 
   const Legend = () => (
@@ -1015,7 +1015,7 @@ const ScheduleCalendar: React.FC = (): React.ReactElement | null => {
         {/* Calendar container */}
         <div className="flex-grow relative" ref={calendarRef}>
           {isLoading && <div className="absolute inset-0 bg-[rgb(var(--color-card))] bg-opacity-50 flex items-center justify-center z-10">Loading...</div>}
-          {error && <div className="absolute inset-0 bg-red-500/10 text-red-600 flex items-center justify-center z-10 p-4">{error}</div>}
+          {error && <div className="absolute inset-0 bg-red-500/10 text-red-600 dark:text-red-400 flex items-center justify-center z-10 p-4">{error}</div>}
           {/* Create a date object for 8 AM to auto-scroll to working hours */}
           {(() => {
             const scrollToTime = new Date();

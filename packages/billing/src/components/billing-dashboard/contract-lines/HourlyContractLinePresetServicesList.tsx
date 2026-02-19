@@ -323,10 +323,9 @@ const HourlyContractLinePresetServicesList: React.FC<HourlyContractLinePresetSer
   return (
     <div>
       {hasUnsavedChanges && (
-        <Alert className="bg-amber-50 border-amber-200 mb-4">
-          <AlertDescription className="text-amber-800 flex items-center gap-2">
-            <AlertCircle className="h-4 w-4" />
-            <span>You have unsaved changes. Click "Save Changes" to apply them.</span>
+        <Alert variant="warning" className="mb-4">
+          <AlertDescription>
+            You have unsaved changes. Click "Save Changes" to apply them.
           </AlertDescription>
         </Alert>
       )}
@@ -348,7 +347,7 @@ const HourlyContractLinePresetServicesList: React.FC<HourlyContractLinePresetSer
             ) : (
               <div className="space-y-3">
                 {presetServices.map((service) => (
-                  <div key={service.service_id} className="border rounded-lg p-4 bg-white">
+                  <div key={service.service_id} className="border rounded-lg p-4 bg-card">
                     {/* Service Header */}
                     <div className="flex items-start justify-between gap-4 mb-3">
                       <div className="flex-1">
@@ -384,7 +383,7 @@ const HourlyContractLinePresetServicesList: React.FC<HourlyContractLinePresetSer
                     {/* Hourly Rate */}
                     <div className="flex items-center gap-2 mb-3">
                       <label className="text-sm font-medium w-24">Hourly Rate:</label>
-                      <span className="text-gray-500">$</span>
+                      <span className="text-muted-foreground">$</span>
                       <Input
                         type="text"
                         inputMode="decimal"

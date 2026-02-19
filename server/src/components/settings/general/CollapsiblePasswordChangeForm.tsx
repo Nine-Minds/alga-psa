@@ -156,10 +156,10 @@ export default function CollapsiblePasswordChangeForm({ onSuccess, className }: 
               </div>
             </div>
             {passwordError && (
-              <div className="text-red-500 text-sm">{passwordError}</div>
+              <div className="text-destructive text-sm">{passwordError}</div>
             )}
             {passwordSuccess && (
-              <div className="text-green-500 text-sm">{passwordSuccess}</div>
+              <div className="text-success text-sm">{passwordSuccess}</div>
             )}
             <Button id="change-password-button" type="submit" variant="default">
               Change Password

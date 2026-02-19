@@ -19,6 +19,7 @@ import { InvoiceViewModel, DiscountType, IInvoiceCharge } from '@alga-psa/types'
 import type { JSX } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { PlusIcon, MinusCircleIcon } from 'lucide-react';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { formatCurrency } from '@alga-psa/core';
 
 // Use a constant for environment check since process.env is not available
@@ -91,7 +92,7 @@ const AutomatedItemsTable: React.FC<{
     <div className="mb-6">
       <h3 className="text-sm font-medium mb-2">Automated Line Items</h3>
       <table className="w-full">
-        <thead className="text-sm text-gray-500">
+        <thead className="text-sm text-muted-foreground">
           <tr>
             <th className="text-left py-2">Service</th>
             <th className="text-right py-2">Total</th>
@@ -113,18 +114,20 @@ const AutomatedItemsTable: React.FC<{
 
 function ErrorFallback({ error, resetErrorBoundary }: { error: Error; resetErrorBoundary: () => void }) {
   return (
-    <div className="p-4 bg-red-50 border border-red-200 rounded-md">
-      <h2 className="text-lg font-semibold text-red-800">Something went wrong:</h2>
-      <pre className="mt-2 text-sm text-red-600">{error.message}</pre>
-      <Button
-        id='try-again-button'
-        onClick={resetErrorBoundary}
-        className="mt-4"
-        variant="secondary"
-      >
-        Try again
-      </Button>
-    </div>
+    <Alert variant="destructive" className="p-4">
+      <AlertDescription>
+        <h2 className="text-lg font-semibold">Something went wrong:</h2>
+        <pre className="mt-2 text-sm">{error.message}</pre>
+        <Button
+          id='try-again-button'
+          onClick={resetErrorBoundary}
+          className="mt-4"
+          variant="secondary"
+        >
+          Try again
+        </Button>
+      </AlertDescription>
+    </Alert>
   );
 }
 
@@ -642,7 +645,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
       <div className="p-6">
         {loading ? (
           <div className="flex items-center justify-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[rgb(var(--color-border-900))]"></div>
           </div>
         ) : (
           <>
@@ -654,8 +657,8 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
 
             {currentInvoiceData && (
               <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Client</label>
-                <div className="text-gray-900">
+                <label className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">Client</label>
+                <div className="text-[rgb(var(--color-text-900))]">
                   {clients.find(c => c.client_id === currentInvoiceData.client_id)?.client_name || 'Unknown Client'}
                 </div>
               </div>
@@ -663,7 +666,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
 
             {currentInvoiceData && (
               <div className="mb-6">
-                <label htmlFor="invoice-number-input" className="block text-sm font-medium text-gray-700 mb-1">Invoice Number</label>
+                <label htmlFor="invoice-number-input" className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">Invoice Number</label>
                 <input
                   id="invoice-number-input"
                   type="text"
@@ -676,15 +679,15 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
             )}
 
             {error && (
-              <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4">
-                {error}
-              </div>
+              <Alert variant="destructive" className="mb-4">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
             )}
 
             <form onSubmit={handleSubmit} className="space-y-6">
               {!invoice && !currentInvoiceData && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Client</label>
+                  <label className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">Client</label>
                   <ClientPicker
                     id='client-picker'
                     clients={clients}
@@ -700,7 +703,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
 
               {!invoice && !currentInvoiceData && (
                 <div className="mb-6">
-                  <label htmlFor="new-invoice-number-input" className="block text-sm font-medium text-gray-700 mb-1">Invoice Number (Optional)</label>
+                  <label htmlFor="new-invoice-number-input" className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">Invoice Number (Optional)</label>
                   <input
                     id="new-invoice-number-input"
                     type="text"
@@ -737,7 +740,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
                   </div>
                   {isPrepayment && (
                     <div>
-                      <label htmlFor="expiration-date-input" className="block text-sm font-medium text-gray-700 mb-1">Credit Expiration Date</label>
+                      <label htmlFor="expiration-date-input" className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">Credit Expiration Date</label>
                       <div className="flex items-center">
                         <input
                           id="expiration-date-input"
@@ -746,7 +749,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
                           onChange={(e) => setExpirationDate(e.target.value)}
                           className="border rounded-md px-3 py-2 w-full max-w-xs shadow-sm focus:ring-blue-500 focus:border-blue-500"
                         />
-                        <div className="ml-2 text-sm text-gray-500">Leave blank for no expiration or to use default expiration period</div>
+                        <div className="ml-2 text-sm text-muted-foreground">Leave blank for no expiration or to use default expiration period</div>
                       </div>
                     </div>
                   )}

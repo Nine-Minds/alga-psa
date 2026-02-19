@@ -109,9 +109,9 @@ export default function MspLoginForm({ callbackUrl, onError, onTwoFactorRequired
               id="msp-toggle-password-visibility"
             >
               {showPassword ? (
-                <Eye className="h-5 w-5 text-gray-400" />
+                <Eye className="h-5 w-5 text-[rgb(var(--color-text-400))]" />
               ) : (
-                <EyeOff className="h-5 w-5 text-gray-400" />
+                <EyeOff className="h-5 w-5 text-[rgb(var(--color-text-400))]" />
               )}
             </Button>
           </div>
@@ -126,7 +126,7 @@ export default function MspLoginForm({ callbackUrl, onError, onTwoFactorRequired
 
         <div className="text-sm text-right">
           <Link href="/auth/msp/forgot-password"
-          className="font-medium text-purple-600 hover:text-purple-500"
+          className="font-medium text-[rgb(var(--color-primary-500))] hover:text-[rgb(var(--color-primary-400))]"
           {...withDataAutomationId({ id: 'msp-forgot-password-link' })}>
             Forgot your password?
           </Link>

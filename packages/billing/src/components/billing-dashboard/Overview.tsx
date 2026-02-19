@@ -14,6 +14,7 @@ import {
   TrendingUp,
   Users
 } from 'lucide-react';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import { Button } from '@alga-psa/ui/components/Button';
 import { getBillingOverview } from '@alga-psa/reporting';
@@ -54,7 +55,7 @@ const MetricCard: React.FC<MetricCardProps> = ({
   };
 
   return (
-    <Card className={error ? 'border-red-200' : ''}>
+    <Card className={error ? 'border-destructive' : ''}>
       <CardHeader>
         <h3 className="text-lg font-semibold">{title}</h3>
       </CardHeader>
@@ -68,10 +69,10 @@ const MetricCard: React.FC<MetricCardProps> = ({
             )}
           </div>
           <div>
-            <p className={`text-2xl font-bold ${error ? 'text-red-600' : ''}`}>
+            <p className={`text-2xl font-bold ${error ? 'text-destructive' : ''}`}>
               {getDisplayValue()}
             </p>
-            <p className="text-sm text-gray-500">{subtitle || title}</p>
+            <p className="text-sm text-muted-foreground">{subtitle || title}</p>
           </div>
         </div>
       </CardContent>
@@ -80,7 +81,7 @@ const MetricCard: React.FC<MetricCardProps> = ({
 };
 
 const FeatureCard = ({ icon: Icon, title, description }: { icon: any, title: string, description: string }) => (
-  <div className="rounded-lg border border-[rgb(var(--color-border-200))] bg-white hover:shadow-lg transition-shadow p-4">
+  <div className="rounded-lg border border-[rgb(var(--color-border-200))] bg-card hover:shadow-lg transition-shadow p-4">
     <div className="flex items-start space-x-4">
       <div className="p-2 rounded-lg" style={{ background: 'rgb(var(--color-primary-50))' }}>
         <Icon className="h-6 w-6" style={{ color: 'rgb(var(--color-primary-500))' }} />
@@ -123,15 +124,12 @@ const Overview = () => {
     <div className="space-y-6">
       {/* Error Alert */}
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-          <div className="flex items-center space-x-2">
-            <AlertCircle className="h-5 w-5" />
-            <div>
-              <p className="font-medium">Unable to load billing data</p>
-              <p className="text-sm">{error}</p>
-            </div>
-          </div>
-        </div>
+        <Alert variant="destructive">
+          <AlertDescription>
+            <p className="font-medium">Unable to load billing data</p>
+            <p className="text-sm">{error}</p>
+          </AlertDescription>
+        </Alert>
       )}
 
       {/* Primary Billing Metrics */}
@@ -214,7 +212,7 @@ const Overview = () => {
                   metrics.monthly_billable_hours?.formatted || '0 hours'
                 )}
               </p>
-              <p className="text-sm text-gray-500">Billable hours this month</p>
+              <p className="text-sm text-muted-foreground">Billable hours this month</p>
             </div>
           </div>
         </CardContent>
@@ -262,7 +260,7 @@ const Overview = () => {
         <CardContent>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500 mb-2">Manage your service offerings, pricing, and billing configurations</p>
+              <p className="text-sm text-muted-foreground mb-2">Manage your service offerings, pricing, and billing configurations</p>
               <p>
                 <span className="font-semibold">
                   {loading ? '...' : hasError ? 'Error' : (
@@ -286,7 +284,7 @@ const Overview = () => {
 
       {/* Debug info in development */}
       {reportData && process.env.NODE_ENV === 'development' && (
-        <div className="text-xs text-gray-400 p-4 bg-gray-50 rounded">
+        <div className="text-xs text-muted-foreground p-4 bg-muted rounded">
           <p>Report executed: {reportData.executedAt}</p>
           <p>Execution time: {reportData.metadata.executionTime}ms</p>
           <p>Report version: {reportData.metadata.version}</p>

@@ -16,6 +16,7 @@ import { getTaskTypes } from '../../actions/projectTaskActions';
 import { getAllPriorities } from '@alga-psa/reference-data/actions';
 import { getAllUsers } from '@alga-psa/users/actions';
 import { getServices } from '@alga-psa/projects/actions/serviceCatalogActions';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { IUserWithRoles } from '@alga-psa/types';
 import { IStatus } from '@alga-psa/types';
 import { IService } from '@alga-psa/types';
@@ -333,9 +334,9 @@ export function TemplateCreationWizard({
           <div className="mb-4">{renderStep()}</div>
 
           {errors[currentStep] && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
-              <p className="text-red-700 text-sm">{errors[currentStep]}</p>
-            </div>
+            <Alert variant="destructive" className="mb-4">
+              <AlertDescription>{errors[currentStep]}</AlertDescription>
+            </Alert>
           )}
         </div>
 

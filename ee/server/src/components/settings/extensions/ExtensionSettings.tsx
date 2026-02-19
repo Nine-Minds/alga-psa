@@ -708,7 +708,7 @@ export default function ExtensionSettings() {
                               className="text-sm font-medium"
                             >
                               {setting.label || setting.key}
-                              {setting.required && <span className="text-red-500 ml-1">*</span>}
+                              {setting.required && <span className="text-destructive ml-1">*</span>}
                             </label>
                           </div>
                           {setting.description && (
@@ -784,7 +784,7 @@ export default function ExtensionSettings() {
                       variant="ghost"
                       size="icon"
                       onClick={() => handleRemoveCustomSetting(item.id)}
-                      className="text-gray-500 hover:text-red-600"
+                      className="text-gray-500 hover:text-destructive"
                       data-automation-id={`remove-custom-setting-${item.id}`}
                     >
                       <Trash2 className="h-4 w-4" />
@@ -818,7 +818,7 @@ export default function ExtensionSettings() {
           </CardHeader>
           <CardContent>
             {schedulesError ? (
-              <div className="text-sm text-red-600">{schedulesError}</div>
+              <div className="text-sm text-destructive">{schedulesError}</div>
             ) : schedulesLoading ? (
               <div className="text-sm text-gray-500">Loading schedules…</div>
             ) : (
@@ -1063,7 +1063,7 @@ export default function ExtensionSettings() {
                             id={`delete-schedule-${s.id}`}
                             variant="ghost"
                             size="sm"
-                            className="text-red-600 hover:text-red-700"
+                            className="text-destructive hover:text-destructive"
                             onClick={async () => {
                               if (!confirm('Delete this schedule?')) return;
                               const out = await deleteExtensionSchedule(extensionId, s.id);
@@ -1108,7 +1108,7 @@ export default function ExtensionSettings() {
                       <div className="flex items-center justify-between">
                         <label htmlFor={`secret-${secret.key}`} className="text-sm font-medium">
                           {secret.label || secret.key}
-                          {secret.required && <span className="text-red-500 ml-1">*</span>}
+                          {secret.required && <span className="text-destructive ml-1">*</span>}
                         </label>
                       </div>
                       {secret.description && (

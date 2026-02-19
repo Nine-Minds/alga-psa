@@ -7,7 +7,8 @@ import type { editor, Uri } from "monaco-editor";
 import { Card } from "@alga-psa/ui/components/Card";
 import { Button } from "@alga-psa/ui/components/Button";
 import { ReflectionContainer } from "@alga-psa/ui/ui-reflection/ReflectionContainer";
-import { Play, Code2, AlertTriangle } from "lucide-react";
+import { Alert, AlertDescription } from "@alga-psa/ui/components/Alert";
+import { Play, Code2 } from "lucide-react";
 import { getRegisteredWorkflowActions } from "@alga-psa/workflows/actions/workflow-actions/workflowActionRegistry";
 import { ActionParameterDefinition } from "@alga-psa/shared/workflow/core";
 import EditorSkeleton from "@alga-psa/ui/components/skeletons/EditorSkeleton";
@@ -674,27 +675,22 @@ ${action.parameters.map((param: ActionParameterDefinition) => `    ${param.name}
     <ReflectionContainer id="workflow-editor-container" label="Workflow Editor">
       <Card className="p-4">
         {editorError && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
-            <div className="flex items-center mb-2">
-              <AlertTriangle className="h-5 w-5 text-red-500 mr-2" />
-              <h3 className="text-sm font-medium text-red-700">Error</h3>
-            </div>
-            <p className="text-sm text-red-600">{editorError}</p>
-          </div>
+          <Alert variant="destructive" className="mb-4">
+            <AlertDescription>{editorError}</AlertDescription>
+          </Alert>
         )}
         
         {validationWarnings.length > 0 && (
-          <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
-            <div className="flex items-center mb-2">
-              <AlertTriangle className="h-5 w-5 text-yellow-500 mr-2" />
-              <h3 className="text-sm font-medium text-yellow-700">Workflow Validation Warnings</h3>
-            </div>
-            <ul className="text-sm text-yellow-600 space-y-1 ml-7 list-disc">
-              {validationWarnings.map((warning, index) => (
-                <li key={index}>{warning.message}</li>
-              ))}
-            </ul>
-          </div>
+          <Alert variant="warning" className="mb-4">
+            <AlertDescription>
+              <p className="font-medium mb-1">Workflow Validation Warnings</p>
+              <ul className="text-sm space-y-1 ml-5 list-disc">
+                {validationWarnings.map((warning, index) => (
+                  <li key={index}>{warning.message}</li>
+                ))}
+              </ul>
+            </AlertDescription>
+          </Alert>
         )}
         <div className="flex justify-between items-center mb-4">
           <div className="flex items-center">

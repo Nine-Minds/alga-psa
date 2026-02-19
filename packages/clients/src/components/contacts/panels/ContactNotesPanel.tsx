@@ -68,9 +68,9 @@ export const ContactNotesPanel: React.FC<ContactNotesPanelProps> = ({
       <CardContent>
         {/* Legacy notes display for backward compatibility */}
         {legacyNotes && legacyNotes.trim() !== '' && (
-          <div className="bg-gray-100 border border-gray-200 rounded-md p-4 mb-4">
-            <h4 className="text-sm font-medium text-gray-700 mb-2">Initial Note</h4>
-            <p className="whitespace-pre-wrap text-sm text-gray-600">{legacyNotes}</p>
+          <div className="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md p-4 mb-4">
+            <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Initial Note</h4>
+            <p className="whitespace-pre-wrap text-sm text-gray-600 dark:text-gray-400">{legacyNotes}</p>
           </div>
         )}
 

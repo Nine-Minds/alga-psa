@@ -12,7 +12,8 @@ import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContai
 import { useAutomationIdAndRegister } from '@alga-psa/ui/ui-reflection/useAutomationIdAndRegister';
 import { ContainerComponent } from '@alga-psa/ui/ui-reflection/types';
 import { Extension } from '../../../lib/extensions/types';
-import { ChevronLeftIcon, InfoIcon, SettingsIcon, PackageIcon, ShieldIcon, AlertCircleIcon, CheckCircleIcon, XCircleIcon } from 'lucide-react';
+import { ChevronLeftIcon, InfoIcon, SettingsIcon, PackageIcon, ShieldIcon, CheckCircleIcon, XCircleIcon } from 'lucide-react';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { toast } from 'react-hot-toast';
 // Fallback to console for logging in EE components
 import { fetchExtensionById, toggleExtension, uninstallExtension } from '../../../lib/actions/extensionActions';
@@ -175,9 +176,9 @@ export default function ExtensionDetails() {
             </h1>
               {extension && (
                 <span className={`ml-3 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                extension.is_enabled 
-                  ? 'bg-green-100 text-green-800' 
-                  : 'bg-gray-100 text-gray-800'
+                extension.is_enabled
+                  ? 'bg-success/15 text-success'
+                  : 'bg-muted text-muted-foreground'
                 }`}>
                 {extension.is_enabled ? 'Enabled' : 'Disabled'}
                 </span>
@@ -236,15 +237,12 @@ export default function ExtensionDetails() {
         )}
         
         {error && !loading && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-            <div className="flex items-start">
-              <AlertCircleIcon className="h-5 w-5 text-red-600 mr-3 mt-0.5" />
-              <div>
-                <h3 className="text-sm font-medium text-red-800">Error</h3>
-                <p className="text-sm text-red-700 mt-1">{error}</p>
-              </div>
-            </div>
-          </div>
+          <Alert variant="destructive" className="mb-6">
+            <AlertDescription>
+              <h3 className="text-sm font-medium">Error</h3>
+              <p className="text-sm mt-1">{error}</p>
+            </AlertDescription>
+          </Alert>
         )}
         
         {!loading && !error && extension && (
@@ -273,7 +271,7 @@ export default function ExtensionDetails() {
                             href={`https://${installInfo.domain}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md bg-green-100 text-green-700 hover:bg-green-200"
+                            className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md bg-success/15 text-success hover:bg-success/25"
                           >
                             Open
                           </a>
@@ -287,7 +285,7 @@ export default function ExtensionDetails() {
                       ) : (
                         <button
                           onClick={() => { void handleReprovision(); }}
-                          className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md bg-amber-100 text-amber-700 hover:bg-amber-200"
+                          className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md bg-warning/15 text-warning-foreground hover:bg-warning/25"
                         >
                           Provision
                         </button>
@@ -378,7 +376,7 @@ export default function ExtensionDetails() {
                   {versionsLoading ? (
                     <p className="text-sm text-gray-500">Loading versions…</p>
                   ) : versionsError ? (
-                    <p className="text-sm text-red-700">{versionsError}</p>
+                    <p className="text-sm text-destructive">{versionsError}</p>
                   ) : versions.length === 0 ? (
                     <p className="text-sm text-gray-500">No published versions available.</p>
                   ) : (
@@ -476,24 +474,26 @@ export default function ExtensionDetails() {
             
             {/* Right column - Info panel */}
             <div className="lg:col-span-1">
-              <div className="bg-blue-50 rounded-lg border border-blue-200 p-4">
-                <div className="flex">
-                  <div className="flex-shrink-0">
-                    <InfoIcon className="h-5 w-5 text-blue-600" />
-                  </div>
-                  <div className="ml-3">
-                    <h3 className="text-sm font-medium text-blue-800">Extension Information</h3>
-                    <div className="mt-2 text-sm text-blue-700">
-                      <p>
-                        This extension was installed on {extension.created_at.toLocaleDateString()} and last updated on {extension.updated_at.toLocaleDateString()}.
-                      </p>
-                      <p className="mt-2">
-                        Enabling or disabling the extension may require a page refresh for changes to take effect.
-                      </p>
+              <Alert variant="info" showIcon={false}>
+                <AlertDescription>
+                  <div className="flex">
+                    <div className="flex-shrink-0">
+                      <InfoIcon className="h-5 w-5" />
+                    </div>
+                    <div className="ml-3">
+                      <h3 className="text-sm font-medium">Extension Information</h3>
+                      <div className="mt-2 text-sm">
+                        <p>
+                          This extension was installed on {extension.created_at.toLocaleDateString()} and last updated on {extension.updated_at.toLocaleDateString()}.
+                        </p>
+                        <p className="mt-2">
+                          Enabling or disabling the extension may require a page refresh for changes to take effect.
+                        </p>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </div>
+                </AlertDescription>
+              </Alert>
               
               {extension.manifest.settings && extension.manifest.settings.length > 0 && (
                 <div className="bg-white shadow-sm rounded-lg overflow-hidden border border-gray-200 mt-6">

@@ -431,7 +431,7 @@ const ServiceCatalogManager: React.FC = () => {
           if (prices.length > 1) {
             return (
               <span title={prices.map(p => `${p.currency_code}: ${getCurrencySymbol(p.currency_code)}${(p.rate / 100).toFixed(2)}`).join('\n')}>
-                {primaryDisplay} <span className="text-xs text-gray-500">+{prices.length - 1}</span>
+                {primaryDisplay} <span className="text-xs text-muted-foreground">+{prices.length - 1}</span>
               </span>
             );
           }
@@ -543,7 +543,7 @@ const ServiceCatalogManager: React.FC = () => {
             </DropdownMenuItem>
             <DropdownMenuItem
               id={`delete-service-${record.service_id}`}
-              className="text-red-600 focus:text-red-600"
+              className="text-destructive focus:text-destructive"
               onClick={(e) => {
                 e.stopPropagation();
                 handleDeleteService(record.service_id!);
@@ -604,7 +604,7 @@ const ServiceCatalogManager: React.FC = () => {
             {isLoading ? (
               <LoadingIndicator
                 layout="stacked"
-                className="py-10 text-gray-600"
+                className="py-10 text-muted-foreground"
                 spinnerProps={{ size: 'md' }}
                 text="Loading services"
               />
@@ -655,7 +655,7 @@ const ServiceCatalogManager: React.FC = () => {
         <DialogContent>
           <div className="space-y-4">
             <div>
-              <label htmlFor="service-name" className="block text-sm font-medium text-gray-700 mb-1">Service Name</label>
+              <label htmlFor="service-name" className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">Service Name</label>
               <Input
                 id="service-name"
                 placeholder="Service Name"
@@ -695,7 +695,7 @@ const ServiceCatalogManager: React.FC = () => {
             </div>
             {/* Added Billing Method dropdown */}
             <div>
-              <label htmlFor="billing-method" className="block text-sm font-medium text-gray-700 mb-1">Billing Method</label>
+              <label htmlFor="billing-method" className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">Billing Method</label>
               <CustomSelect
                 id="billing-method"
                 options={BILLING_METHOD_OPTIONS}
@@ -706,7 +706,7 @@ const ServiceCatalogManager: React.FC = () => {
             </div>
             
             <div>
-              <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+              <label htmlFor="description" className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">Description</label>
               <Input
                 id="description"
                 placeholder="Description"
@@ -715,11 +715,11 @@ const ServiceCatalogManager: React.FC = () => {
               />
             </div>
             {/* Multi-Currency Pricing Section */}
-            <div className="col-span-2 border rounded-lg p-4 bg-gray-50">
+            <div className="col-span-2 border rounded-lg p-4 bg-muted">
               <div className="flex justify-between items-center mb-3">
-                <label className="block text-sm font-medium text-gray-700">
+                <label className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
                   Pricing *
-                  <span className="text-xs font-normal text-gray-500 ml-2">
+                  <span className="text-xs font-normal text-muted-foreground ml-2">
                     ({editingService?.billing_method === 'fixed' ? 'Monthly' : editingService?.billing_method === 'hourly' ? 'Per Hour' : 'Per Unit'})
                   </span>
                 </label>
@@ -762,7 +762,7 @@ const ServiceCatalogManager: React.FC = () => {
                       />
                     </div>
                     <div className="relative flex-1">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
                         {getCurrencySymbol(price.currency_code)}
                       </span>
                       <Input
@@ -810,7 +810,7 @@ const ServiceCatalogManager: React.FC = () => {
                         type="button"
                         variant="ghost"
                         size="sm"
-                        className="text-red-500 hover:text-red-700 hover:bg-red-50 px-2"
+                        className="text-destructive hover:text-destructive hover:bg-destructive/10 px-2"
                         onClick={() => {
                           const newPrices = editingPrices.filter((_, i) => i !== index);
                           setEditingPrices(newPrices);
@@ -829,7 +829,7 @@ const ServiceCatalogManager: React.FC = () => {
                   </div>
                 ))}
               </div>
-              <p className="text-xs text-gray-500 mt-2">
+              <p className="text-xs text-muted-foreground mt-2">
                 Add prices in multiple currencies. The first currency is the primary rate.
               </p>
             </div>
@@ -838,7 +838,7 @@ const ServiceCatalogManager: React.FC = () => {
             {editingService?.billing_method === 'usage' && (
               <>
                 <div>
-                  <label htmlFor="unit-of-measure" className="block text-sm font-medium text-gray-700 mb-1">Unit of Measure *</label>
+                  <label htmlFor="unit-of-measure" className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">Unit of Measure *</label>
                   <Input
                     id="unit-of-measure"
                     type="text"
@@ -848,7 +848,7 @@ const ServiceCatalogManager: React.FC = () => {
                     required
                     className="w-full"
                   />
-                  <p className="text-xs text-gray-500 mt-1">The measurable unit for billing (e.g., GB, API call, user)</p>
+                  <p className="text-xs text-muted-foreground mt-1">The measurable unit for billing (e.g., GB, API call, user)</p>
                 </div>
               </>
             )}
@@ -884,7 +884,7 @@ const ServiceCatalogManager: React.FC = () => {
             {allServiceTypes.find(t => t.id === editingService?.custom_service_type_id)?.name === 'Hardware' && (
               <>
                 <div>
-                  <label htmlFor="sku" className="block text-sm font-medium text-gray-700 mb-1">SKU</label>
+                  <label htmlFor="sku" className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">SKU</label>
                   <Input
                     id="sku"
                     placeholder="SKU"
@@ -900,7 +900,7 @@ const ServiceCatalogManager: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label htmlFor="inventory-count" className="block text-sm font-medium text-gray-700 mb-1">Inventory Count</label>
+                  <label htmlFor="inventory-count" className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">Inventory Count</label>
                   <Input
                     id="inventory-count"
                     type="number"
@@ -922,7 +922,7 @@ const ServiceCatalogManager: React.FC = () => {
             {allServiceTypes.find(t => t.id === editingService?.custom_service_type_id)?.name === 'Software License' && (
               <>
                 <div>
-                  <label htmlFor="seat-limit" className="block text-sm font-medium text-gray-700 mb-1">Seat Limit</label>
+                  <label htmlFor="seat-limit" className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">Seat Limit</label>
                   <Input
                     id="seat-limit"
                     type="number"
@@ -939,7 +939,7 @@ const ServiceCatalogManager: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label htmlFor="license-term" className="block text-sm font-medium text-gray-700 mb-1">License Term</label>
+                  <label htmlFor="license-term" className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">License Term</label>
                   <CustomSelect
                     id="license-term"
                     options={LICENSE_TERM_OPTIONS}

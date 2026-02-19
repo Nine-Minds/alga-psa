@@ -1,6 +1,7 @@
 'use client';
 
 import { Card } from "@alga-psa/ui/components/Card";
+import { Badge } from "@alga-psa/ui/components/Badge";
 import { Table } from "@alga-psa/ui/components/Table";
 import { Button } from "@alga-psa/ui/components/Button";
 import { Dialog, DialogContent } from "@alga-psa/ui/components/Dialog";
@@ -437,13 +438,13 @@ export default function BillingSection() {
                   <td>{invoice.date}</td>
                   <td>{formatAmount(invoice.amount)}</td>
                   <td>
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      invoice.status === 'paid' ? 'bg-green-100 text-green-800' : 
-                      invoice.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 
-                      'bg-red-100 text-red-800'
-                    }`}>
+                    <Badge variant={
+                      invoice.status === 'paid' ? 'success' :
+                      invoice.status === 'pending' ? 'warning' :
+                      'error'
+                    }>
                       {invoice.status}
-                    </span>
+                    </Badge>
                   </td>
                   <td>
                     <Button id={`view-invoice-${invoice.id}`} variant="ghost" size="sm">
@@ -483,13 +484,13 @@ export default function BillingSection() {
                   <td>{cycle.startDate}</td>
                   <td>{cycle.endDate}</td>
                   <td>
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      cycle.status === 'active' ? 'bg-green-100 text-green-800' : 
-                      cycle.status === 'upcoming' ? 'bg-blue-100 text-blue-800' : 
-                      'bg-gray-100 text-gray-800'
-                    }`}>
+                    <Badge variant={
+                      cycle.status === 'active' ? 'success' :
+                      cycle.status === 'upcoming' ? 'info' :
+                      'default-muted'
+                    }>
                       {cycle.status}
-                    </span>
+                    </Badge>
                   </td>
                 </tr>
               ))

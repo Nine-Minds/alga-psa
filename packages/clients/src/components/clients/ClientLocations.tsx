@@ -25,6 +25,7 @@ import { Switch } from '@alga-psa/ui/components/Switch';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Plus, Edit2, Trash2, MapPin, Star } from 'lucide-react';
+import { Badge } from '@alga-psa/ui/components/Badge';
 import { useToast } from '@alga-psa/ui';
 import { useAutomationIdAndRegister } from '@alga-psa/ui/ui-reflection/useAutomationIdAndRegister';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
@@ -205,14 +206,14 @@ const LocationCard: React.FC<LocationCardProps> = ({ location, onEdit, onDelete,
             
             <div className="flex gap-4 mt-2">
               {location.is_billing_address && (
-                <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">
+                <Badge variant="info" size="sm">
                   {t('clients.locations.card.billingTag', 'Billing')}
-                </span>
+                </Badge>
               )}
               {location.is_shipping_address && (
-                <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded">
+                <Badge variant="success" size="sm">
                   {t('clients.locations.card.shippingTag', 'Shipping')}
-                </span>
+                </Badge>
               )}
             </div>
             

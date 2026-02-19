@@ -110,7 +110,7 @@ export function ServiceTaxSettings({ service, onUpdate }: ServiceTaxSettingsProp
               disabled={isSaving || isLoadingTaxRates} // Disable while saving or loading
               allowClear={false} // Don't allow clearing, use 'Non-Taxable' option instead
           />
-          <p className="text-xs text-gray-500 mt-1">Select 'Non-Taxable' if this service should not be taxed.</p>
+          <p className="text-xs text-muted-foreground mt-1">Select 'Non-Taxable' if this service should not be taxed.</p>
         </div>
 
 

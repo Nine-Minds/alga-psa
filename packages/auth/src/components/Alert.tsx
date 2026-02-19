@@ -16,7 +16,7 @@ const Alert: React.FC<AlertProps> = ({ type, title, message, isOpen, onClose }) 
           case 'warning':
             return { bgColor: 'bg-yellow-400', textColor: 'bg-yellow-400', hoverColor: 'hover:bg-yellow-700', icon: <ExclamationTriangleIcon className="w-12 h-12 text-white" /> };
           default:
-            return { bgColor: 'bg-gray-100', textColor: 'bg-gray-600', hoverColor: 'hover:bg-gray-700', icon: <ExclamationTriangleIcon className="w-12 h-12 text-gray-500" /> };
+            return { bgColor: 'bg-muted', textColor: 'bg-[rgb(var(--color-text-600))]', hoverColor: 'hover:bg-[rgb(var(--color-text-700))]', icon: <ExclamationTriangleIcon className="w-12 h-12 text-[rgb(var(--color-text-500))]" /> };
         }
       };
 
@@ -28,7 +28,7 @@ const Alert: React.FC<AlertProps> = ({ type, title, message, isOpen, onClose }) 
             <AlertDialog.Overlay className="fixed inset-0 bg-black/50" />
             <AlertDialog.Content className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
               <AlertDialog.Title className="sr-only">{title}</AlertDialog.Title>
-              <div className="rounded-lg shadow-lg overflow-hidden min-w-52 max-w-80 w-full bg-gray-50 relative">
+              <div className="rounded-lg shadow-lg overflow-hidden min-w-52 max-w-80 w-full bg-card relative">
                 <div className={`p-4 ${bgColor} relative`}>
                   <AlertDialog.Action asChild>
                     <button
@@ -45,7 +45,7 @@ const Alert: React.FC<AlertProps> = ({ type, title, message, isOpen, onClose }) 
                 </div>
                 <div className="px-4 py-3 text-center">
                     <h3 className="text-3xl font-semibold">{title}</h3>
-                    <p className="mt-2 text-sm text-slate-500 break-words">{message}</p>
+                    <p className="mt-2 text-sm text-[rgb(var(--color-text-500))] break-words">{message}</p>
                   <AlertDialog.Action asChild>
                     <button
                       onClick={onClose}

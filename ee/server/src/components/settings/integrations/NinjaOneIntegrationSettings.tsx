@@ -418,18 +418,20 @@ const NinjaOneIntegrationSettings: React.FC = () => {
               <div className="space-y-3">
                 <p className="text-sm font-medium text-foreground">API Credentials</p>
                 {credentialsStatus.hasCredentials && (
-                  <div className="rounded border border-green-200 bg-green-50 p-3 text-sm text-green-800">
-                    <div className="flex items-center gap-2">
-                      <CheckCircle className="h-4 w-4" />
-                      <span>Credentials saved</span>
-                    </div>
-                    <p className="mt-1 text-xs text-green-700">
-                      Client ID: {credentialsStatus.clientId}
-                      {credentialsStatus.clientSecretMasked && (
-                        <> • Secret: ****{credentialsStatus.clientSecretMasked}</>
-                      )}
-                    </p>
-                  </div>
+                  <Alert variant="success" showIcon={false}>
+                    <AlertDescription>
+                      <div className="flex items-center gap-2">
+                        <CheckCircle className="h-4 w-4" />
+                        <span>Credentials saved</span>
+                      </div>
+                      <p className="mt-1 text-xs">
+                        Client ID: {credentialsStatus.clientId}
+                        {credentialsStatus.clientSecretMasked && (
+                          <> • Secret: ****{credentialsStatus.clientSecretMasked}</>
+                        )}
+                      </p>
+                    </AlertDescription>
+                  </Alert>
                 )}
                 <div className="grid gap-3">
                   <div>

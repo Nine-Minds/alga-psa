@@ -270,7 +270,7 @@ export function TemplateStatusColumnsStep({
                       onClick={() => removeStatusMapping(index)}
                       title="Remove status column"
                     >
-                      <Trash2 className="w-4 h-4 text-red-600" />
+                      <Trash2 className="w-4 h-4 text-destructive" />
                     </Button>
                   </div>
                 );

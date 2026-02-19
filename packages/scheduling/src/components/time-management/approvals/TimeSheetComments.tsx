@@ -52,7 +52,7 @@ export function TimeSheetComments({
         return {
             className: '',
             text: 'Employee',
-            wrapperClassName: 'text-xs bg-gray-100 text-gray-800 px-2 py-1 rounded'
+            wrapperClassName: 'text-xs bg-gray-100 dark:bg-gray-800/30 text-gray-800 dark:text-gray-300 px-2 py-1 rounded'
         };
     };
 

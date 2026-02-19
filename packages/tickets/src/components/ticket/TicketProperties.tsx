@@ -667,7 +667,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
               <button
                 type="button"
                 onClick={() => setShowAppointmentTooltip(prev => !prev)}
-                className="flex items-center text-sm text-blue-600 hover:text-blue-800 p-1.5 rounded hover:bg-blue-50"
+                className="flex items-center text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 p-1.5 rounded hover:bg-blue-50 dark:hover:bg-blue-900/30"
                 title="Appointment requests"
               >
                 <CalendarCheck className="h-4 w-4 mr-1" />
@@ -701,10 +701,10 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
                           } catch { /* fallback */ }
                         }
 
-                        const statusColor = request.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                          request.status === 'approved' ? 'bg-green-100 text-green-800' :
-                          request.status === 'declined' ? 'bg-red-100 text-red-800' :
-                          'bg-gray-100 text-gray-800';
+                        const statusColor = request.status === 'pending' ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300' :
+                          request.status === 'approved' ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300' :
+                          request.status === 'declined' ? 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300' :
+                          'bg-gray-100 dark:bg-gray-800/30 text-gray-800 dark:text-gray-300';
 
                         return (
                           <button

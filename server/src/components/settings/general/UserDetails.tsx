@@ -319,7 +319,7 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
                   id={`remove-role-${role.role_id}`}
                   variant="ghost"
                   onClick={() => handleRemoveRole(role.role_id)}
-                  className="text-red-500 hover:text-red-600"
+                  className="text-destructive hover:text-destructive"
                 >
                   Remove
                 </Button>

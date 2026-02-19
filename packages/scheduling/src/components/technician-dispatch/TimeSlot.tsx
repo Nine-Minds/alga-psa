@@ -23,7 +23,7 @@ const TimeSlot: React.FC<TimeSlotProps> = ({
     <div
       className={`h-full relative ${isHourBoundary ? 'border-l border-[rgb(var(--color-border-200))]' : ''} 
       ${isHighlighted ? 'bg-[rgb(var(--color-primary-100))]' : ''} 
-      ${!isWorkingHour ? 'bg-gray-100' : ''} transition-colors duration-150`}
+      ${!isWorkingHour ? 'bg-gray-100 dark:bg-gray-800' : ''} transition-colors duration-150`}
       data-time={timeSlot}
       onMouseOver={onMouseOver}
       onDragOver={onDragOver}

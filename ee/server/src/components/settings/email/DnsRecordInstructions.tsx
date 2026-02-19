@@ -33,7 +33,7 @@ const STATUS_STYLES: Record<
   },
   missing: {
     label: 'Not Found',
-    className: 'text-red-600 bg-red-500/10 border border-red-500/30',
+    className: 'text-destructive bg-red-500/10 border border-red-500/30',
     icon: <XCircle className="h-3.5 w-3.5" />,
   },
   unknown: {
@@ -191,14 +191,14 @@ export default function DnsRecordInstructions({ records, emptyMessage, detection
             </div>
 
             {status === 'missing' ? (
-              <div className="text-xs text-red-600">
+              <div className="text-xs text-destructive">
                 We have not detected this record in DNS yet. Double-check that it exists in your DNS provider with the exact value
                 shown above.
               </div>
             ) : null}
 
             {status === 'mismatch' && detection ? (
-              <div className="text-xs text-amber-700 space-y-1">
+              <div className="text-xs text-warning space-y-1">
                 <p>The DNS record exists, but the value does not match what Resend expects.</p>
                 {renderDetectedValues(detection.values)}
               </div>

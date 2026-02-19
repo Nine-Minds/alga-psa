@@ -11,7 +11,8 @@ import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContai
 import { useAutomationIdAndRegister } from '@alga-psa/ui/ui-reflection/useAutomationIdAndRegister';
 import { ContainerComponent } from '@alga-psa/ui/ui-reflection/types';
 import { Extension } from '../../../lib/extensions/types';
-import { AlertCircleIcon, CheckCircleIcon, XCircleIcon, Settings, EyeIcon } from 'lucide-react';
+import { CheckCircleIcon, XCircleIcon, Settings, EyeIcon } from 'lucide-react';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@alga-psa/ui/components/Dialog';
 import { fetchInstalledExtensionsV2, toggleExtensionV2, uninstallExtensionV2 } from '../../../lib/actions/extRegistryV2Actions';
 import { getInstallInfo, reprovisionExtension } from '../../../lib/actions/extensionDomainActions';
@@ -151,15 +152,12 @@ export default function Extensions() {
         )}
         
         {error && !loading && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-            <div className="flex items-start">
-              <AlertCircleIcon className="h-5 w-5 text-red-600 mr-3 mt-0.5" />
-              <div>
-                <h3 className="text-sm font-medium text-red-800">Error</h3>
-                <p className="text-sm text-red-700 mt-1">{error}</p>
-              </div>
-            </div>
-          </div>
+          <Alert variant="destructive" className="mb-6">
+            <AlertDescription>
+              <h3 className="text-sm font-medium">Error</h3>
+              <p className="text-sm mt-1">{error}</p>
+            </AlertDescription>
+          </Alert>
         )}
         
         {!loading && !error && extensions.length === 0 && (
@@ -258,7 +256,7 @@ function ExtensionsTable({
           )}
           <div className="mt-1 flex items-center gap-2">
             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-              extension.is_enabled ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+              extension.is_enabled ? 'bg-success/15 text-success' : 'bg-muted text-muted-foreground'
             }`}>
               {extension.is_enabled ? 'Enabled' : 'Disabled'}
             </span>
@@ -267,10 +265,10 @@ function ExtensionsTable({
               if (!state) return null;
               const s = state.toLowerCase();
               const cls = s === 'ready'
-                ? 'bg-green-100 text-green-800'
+                ? 'bg-success/15 text-success'
                 : s === 'error'
-                  ? 'bg-red-100 text-red-800'
-                  : 'bg-amber-100 text-amber-800';
+                  ? 'bg-destructive/15 text-destructive'
+                  : 'bg-warning/15 text-warning-foreground';
               const label = s.charAt(0).toUpperCase() + s.slice(1);
               return (
                 <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${cls}`}>
@@ -341,7 +339,7 @@ function ExtensionsTable({
           </button>
           <Link
             href={`/msp/settings/extensions/${extension.id}/settings`}
-            className="inline-flex items-center justify-center px-3 py-1 border border-transparent text-xs font-medium rounded-md bg-blue-100 text-blue-700 hover:bg-blue-200"
+            className="inline-flex items-center justify-center px-3 py-1 border border-transparent text-xs font-medium rounded-md bg-info/15 text-info-foreground hover:bg-info/25"
             data-automation-id={`extension-settings-${extension.id}`}
           >
             <Settings className="h-3.5 w-3.5 mr-1" />
@@ -350,7 +348,7 @@ function ExtensionsTable({
           {installInfo[extension.id]?.domain ? null : (
             <button
               onClick={() => onReprovision(extension.id)}
-              className="inline-flex items-center justify-center px-3 py-1 border border-transparent text-xs font-medium rounded-md bg-amber-100 text-amber-700 hover:bg-amber-200"
+              className="inline-flex items-center justify-center px-3 py-1 border border-transparent text-xs font-medium rounded-md bg-warning/15 text-warning-foreground hover:bg-warning/25"
             >
               Provision
             </button>
@@ -358,7 +356,7 @@ function ExtensionsTable({
           <button
             onClick={() => { void onToggle(extension.id, extension.is_enabled); }}
             className={`inline-flex items-center justify-center px-3 py-1 border border-transparent text-xs font-medium rounded-md ${
-              extension.is_enabled ? 'bg-amber-100 text-amber-700 hover:bg-amber-200' : 'bg-green-100 text-green-700 hover:bg-green-200'
+              extension.is_enabled ? 'bg-warning/15 text-warning-foreground hover:bg-warning/25' : 'bg-success/15 text-success hover:bg-success/25'
             }`}
             data-automation-id={`extension-toggle-${extension.id}`}
           >
@@ -376,7 +374,7 @@ function ExtensionsTable({
           </button>
           <button
             onClick={() => { void onRemove(extension.id); }}
-            className="inline-flex items-center justify-center px-3 py-1 border border-transparent text-xs font-medium rounded-md bg-red-100 text-red-700 hover:bg-red-200"
+            className="inline-flex items-center justify-center px-3 py-1 border border-transparent text-xs font-medium rounded-md bg-destructive/15 text-destructive hover:bg-destructive/25"
             data-automation-id={`extension-remove-${extension.id}`}
           >
             Remove

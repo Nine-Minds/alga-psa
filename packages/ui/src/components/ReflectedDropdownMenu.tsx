@@ -120,9 +120,9 @@ const ReflectedMenuItem = ({
 
   return (
     <DropdownMenuItem
-      className={`flex items-center px-2 py-1.5 text-sm cursor-pointer hover:bg-gray-100 rounded-[3px] focus:outline-none focus:bg-gray-100 ${
-        item.variant === 'destructive' 
-          ? 'text-red-600 hover:bg-red-50 hover:text-red-700 focus:bg-red-50 focus:text-red-700' 
+      className={`flex items-center px-2 py-1.5 text-sm cursor-pointer hover:bg-muted rounded-[3px] focus:outline-none focus:bg-muted ${
+        item.variant === 'destructive'
+          ? 'text-destructive hover:bg-[rgb(var(--color-destructive)/0.1)] hover:text-destructive focus:bg-[rgb(var(--color-destructive)/0.1)] focus:text-destructive'
           : ''
       }`}
       onSelect={onSelect}

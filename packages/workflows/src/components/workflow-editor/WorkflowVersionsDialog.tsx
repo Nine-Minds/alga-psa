@@ -135,11 +135,11 @@ export default function WorkflowVersionsDialog({
                       </td>
                       <td className="px-4 py-2 whitespace-nowrap">
                         {version.isCurrent ? (
-                          <Badge className="bg-green-100 text-green-800">
+                          <Badge variant="success">
                             Active
                           </Badge>
                         ) : (
-                          <Badge className="bg-gray-100 text-gray-800">
+                          <Badge variant="default-muted">
                             Inactive
                           </Badge>
                         )}

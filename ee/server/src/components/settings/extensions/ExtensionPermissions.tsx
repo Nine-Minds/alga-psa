@@ -100,13 +100,13 @@ const getPermissionSeverity = (permission: string): 'low' | 'medium' | 'high' =>
 const getSeverityColor = (severity: 'low' | 'medium' | 'high') => {
   switch (severity) {
     case 'low':
-      return 'bg-green-100 text-green-800';
+      return 'bg-success/15 text-success';
     case 'medium':
-      return 'bg-amber-100 text-amber-800';
+      return 'bg-warning/15 text-warning-foreground';
     case 'high':
-      return 'bg-red-100 text-red-800';
+      return 'bg-destructive/15 text-destructive';
     default:
-      return 'bg-gray-100 text-gray-800';
+      return 'bg-muted text-muted-foreground';
   }
 };
 
@@ -186,19 +186,19 @@ export function ExtensionPermissions({ permissions, compact = false }: Extension
       
       <div className="text-xs text-gray-500 mt-2">
         <p>
-          <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-xs font-medium bg-green-100 text-green-800 mr-1">
+          <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-xs font-medium bg-success/15 text-success mr-1">
             <CheckCircleIcon className="h-3 w-3 mr-0.5" /> Low
           </span>{' '}
           Read-only permissions allow the extension to view data but not modify it.
         </p>
         <p className="mt-1">
-          <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-xs font-medium bg-amber-100 text-amber-800 mr-1">
+          <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-xs font-medium bg-warning/15 text-warning-foreground mr-1">
             <AlertTriangleIcon className="h-3 w-3 mr-0.5" /> Medium
           </span>{' '}
           Modification permissions allow the extension to update existing data.
         </p>
         <p className="mt-1">
-          <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-xs font-medium bg-red-100 text-red-800 mr-1">
+          <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-xs font-medium bg-destructive/15 text-destructive mr-1">
             <XCircleIcon className="h-3 w-3 mr-0.5" /> High
           </span>{' '}
           Advanced permissions allow the extension to create, delete, or execute operations.

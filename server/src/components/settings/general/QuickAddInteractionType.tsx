@@ -129,7 +129,7 @@ export const QuickAddInteractionType: React.FC<QuickAddInteractionTypeProps> = (
             value={typeName}
             onChange={(e) => setTypeName(e.target.value)}
             placeholder="e.g., 'Client Onboarding Call', 'Sales Demo', 'Project Review'"
-            className={`w-full ${hasAttemptedSubmit && !typeName.trim() ? 'border-red-500' : ''}`}
+            className={`w-full ${hasAttemptedSubmit && !typeName.trim() ? 'border-destructive' : ''}`}
           />
         </div>
 

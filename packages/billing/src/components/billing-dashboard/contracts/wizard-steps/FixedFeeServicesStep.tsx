@@ -104,14 +104,14 @@ export function FixedFeeServicesStep({ data, updateData }: FixedFeeServicesStepP
       <div className="space-y-6">
         <div className="mb-6">
           <h3 className="text-lg font-semibold mb-2">Fixed Fee Services</h3>
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-[rgb(var(--color-text-500))]">
             Configure services that are billed at a fixed rate each billing cycle. You can still
             track time, but billing is based on this flat amount.
           </p>
         </div>
 
-        <div className="p-4 bg-amber-50 border border-amber-200 rounded-md">
-          <p className="text-sm text-amber-800">
+        <div className="p-4 bg-[rgb(var(--color-accent-50))] border border-[rgb(var(--color-accent-200))] rounded-md">
+          <p className="text-sm text-[rgb(var(--color-accent-800))]">
             <strong>What are Fixed Fee Services?</strong> These services have a set recurring price. You'll still track time entries for these services, but billing is based on the fixed rate, not hours worked.
           </p>
         </div>
@@ -123,7 +123,7 @@ export function FixedFeeServicesStep({ data, updateData }: FixedFeeServicesStepP
               Recurring Base Rate *
             </Label>
             <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[rgb(var(--color-text-400))]">
                 {currencySymbol}
               </span>
               <Input
@@ -153,7 +153,7 @@ export function FixedFeeServicesStep({ data, updateData }: FixedFeeServicesStepP
                 className="pl-10"
               />
             </div>
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-[rgb(var(--color-text-400))]">
               Total recurring fee for all fixed services combined.
             </p>
           </div>
@@ -168,10 +168,10 @@ export function FixedFeeServicesStep({ data, updateData }: FixedFeeServicesStepP
                 onCheckedChange={(checked) => updateData({ enable_proration: checked })}
               />
               <Tooltip content="Automatically adjust the recurring fee for partial billing periods based on the contract start and end dates.">
-                <HelpCircle className="h-4 w-4 text-gray-400 cursor-help" />
+                <HelpCircle className="h-4 w-4 text-[rgb(var(--color-text-300))] cursor-help" />
               </Tooltip>
             </div>
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-[rgb(var(--color-text-400))]">
               When enabled, the recurring fee is prorated if the contract starts or ends mid-cycle.
             </p>
           </div>
@@ -186,7 +186,7 @@ export function FixedFeeServicesStep({ data, updateData }: FixedFeeServicesStepP
           {data.fixed_services.map((service, index) => (
             <div
               key={index}
-              className="flex items-start gap-3 p-4 border border-gray-200 rounded-md bg-gray-50"
+              className="flex items-start gap-3 p-4 border border-[rgb(var(--color-border-200))] rounded-md bg-[rgb(var(--color-border-50))]"
             >
               <div className="flex-1 space-y-3">
                 <div className="space-y-2">
@@ -227,7 +227,7 @@ export function FixedFeeServicesStep({ data, updateData }: FixedFeeServicesStepP
                 variant="ghost"
                 size="sm"
                 onClick={() => handleRemoveService(index)}
-                className="mt-8 text-red-600 hover:text-red-700 hover:bg-red-50"
+                className="mt-8 text-[rgb(var(--color-destructive))] hover:text-[rgb(var(--color-destructive))] hover:bg-[rgb(var(--color-destructive)/0.1)]"
               >
                 <X className="h-4 w-4" />
               </Button>
@@ -247,8 +247,8 @@ export function FixedFeeServicesStep({ data, updateData }: FixedFeeServicesStepP
         </div>
 
         {data.fixed_services.length === 0 && (
-          <div className="p-4 bg-gray-50 border border-gray-200 rounded-md">
-            <p className="text-sm text-gray-600 text-center">
+          <div className="p-4 bg-[rgb(var(--color-border-50))] border border-[rgb(var(--color-border-200))] rounded-md">
+            <p className="text-sm text-[rgb(var(--color-text-500))] text-center">
               No fixed fee services added yet. Click “Add Service” above or “Skip” to move on.
             </p>
           </div>

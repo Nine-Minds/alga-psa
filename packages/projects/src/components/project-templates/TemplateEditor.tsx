@@ -841,7 +841,7 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
                   <DropdownMenuItem
                     onSelect={handleDeleteTemplate}
                     disabled={isDeleting}
-                    className="text-red-600 focus:text-red-700 focus:bg-red-50"
+                    className="text-destructive focus:text-destructive focus:bg-destructive/10"
                   >
                     <Trash className="h-4 w-4 mr-2" />
                     Delete Template
@@ -966,7 +966,7 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
                             isPhaseDrop ? styles.dragOver + ' ring-2 ring-purple-400' : ''
                           } ${
                             isTaskDrop && !isCurrentPhaseForTask
-                              ? 'ring-2 ring-blue-400 bg-blue-50 dark:bg-blue-950 scale-[1.02]'
+                              ? 'ring-2 ring-blue-400 bg-primary/10 scale-[1.02]'
                               : ''
                           }`}
                           onClick={() => {
@@ -1066,7 +1066,7 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
                                     e.stopPropagation();
                                     handleDeletePhase(phase);
                                   }}
-                                  className="p-1 rounded hover:bg-red-100 dark:hover:bg-red-950 text-red-600"
+                                  className="p-1 rounded hover:bg-destructive/15 text-destructive"
                                 >
                                   <Trash className="w-3 h-3" />
                                 </button>
@@ -1500,7 +1500,7 @@ function TaskCard({
             </DropdownMenuItem>
             <DropdownMenuItem
               onSelect={() => onDelete(task)}
-              className="text-red-600 focus:text-red-700 focus:bg-red-50"
+              className="text-destructive focus:text-destructive focus:bg-destructive/10"
             >
               <Trash className="mr-2 h-4 w-4" />
               <span>Delete Task</span>
@@ -1659,8 +1659,8 @@ function TaskCard({
               <span className={`flex items-center gap-1 px-1.5 py-0.5 rounded ${
                 taskDependencies.predecessors.some(d => d.dependency_type === 'blocks' || d.dependency_type === 'blocked_by') ||
                 taskDependencies.successors.some(d => d.dependency_type === 'blocks' || d.dependency_type === 'blocked_by')
-                  ? 'bg-red-50 dark:bg-red-950 text-red-500'
-                  : 'bg-blue-50 dark:bg-blue-950 text-blue-500'
+                  ? 'bg-destructive/10 text-destructive'
+                  : 'bg-primary/10 text-primary'
               }`}>
                 {taskDependencies.predecessors.some(d => d.dependency_type === 'blocks' || d.dependency_type === 'blocked_by') ||
                  taskDependencies.successors.some(d => d.dependency_type === 'blocks' || d.dependency_type === 'blocked_by')

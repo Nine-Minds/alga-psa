@@ -7,6 +7,7 @@ import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { Label } from '@alga-psa/ui/components/Label';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { SwitchWithLabel } from '@alga-psa/ui/components/SwitchWithLabel';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { createMaintenanceSchedule, updateMaintenanceSchedule } from '../../actions/assetActions';
 import type { MaintenanceType, MaintenanceFrequency, AssetMaintenanceSchedule } from '@alga-psa/types';
 
@@ -174,9 +175,9 @@ export const CreateMaintenanceScheduleDialog: React.FC<CreateMaintenanceSchedule
       <DialogContent>
         <form onSubmit={handleSubmit} className="space-y-4">
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
-              {error}
-            </div>
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
           )}
 
           <div>

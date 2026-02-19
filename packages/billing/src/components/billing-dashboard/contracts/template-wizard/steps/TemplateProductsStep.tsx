@@ -80,7 +80,7 @@ export function TemplateProductsStep({ data, updateData }: TemplateProductsStepP
       <div className="space-y-6">
         <div className="mb-6">
           <h3 className="text-lg font-semibold mb-2">Products</h3>
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-[rgb(var(--color-text-500))]">
             Attach products to the template. When a contract is created from this template, products
             will be billed each cycle using the product catalog price for the contract currency.
           </p>
@@ -102,7 +102,7 @@ export function TemplateProductsStep({ data, updateData }: TemplateProductsStepP
           {data.product_services.map((product, index) => (
             <div
               key={index}
-              className="flex items-start gap-3 p-4 border border-gray-200 rounded-md bg-gray-50"
+              className="flex items-start gap-3 p-4 border border-[rgb(var(--color-border-200))] rounded-md bg-[rgb(var(--color-border-50))]"
             >
               <div className="flex-1 space-y-3">
                 <div className="space-y-2">
@@ -133,7 +133,7 @@ export function TemplateProductsStep({ data, updateData }: TemplateProductsStepP
                     }
                     className="w-24"
                   />
-                  <p className="text-xs text-gray-500">Suggested quantity when creating contracts</p>
+                  <p className="text-xs text-[rgb(var(--color-text-400))]">Suggested quantity when creating contracts</p>
                 </div>
               </div>
 
@@ -143,7 +143,7 @@ export function TemplateProductsStep({ data, updateData }: TemplateProductsStepP
                 variant="ghost"
                 size="sm"
                 onClick={() => handleRemoveProduct(index)}
-                className="mt-8 text-red-600 hover:text-red-700 hover:bg-red-50"
+                className="mt-8 text-[rgb(var(--color-destructive))] hover:text-[rgb(var(--color-destructive))] hover:bg-[rgb(var(--color-destructive)/0.1)]"
               >
                 <X className="h-4 w-4" />
               </Button>

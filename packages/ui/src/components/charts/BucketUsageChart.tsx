@@ -29,22 +29,22 @@ const BucketUsageChart = React.memo(({ bucketData }: BucketUsageChartProps) => {
   const getColorClasses = useMemo(() => {
     return (percent: number) => {
       if (percent >= 90) return {
-        text: 'text-red-600',
-        bg: 'bg-red-500',
-        bgLight: 'bg-red-50',
-        border: 'border-red-200'
+        text: 'text-destructive',
+        bg: 'bg-destructive',
+        bgLight: 'bg-destructive/10',
+        border: 'border-destructive/30'
       };
       if (percent >= 75) return {
-        text: 'text-yellow-600',
-        bg: 'bg-yellow-500',
-        bgLight: 'bg-yellow-50',
-        border: 'border-yellow-200'
+        text: 'text-warning',
+        bg: 'bg-warning',
+        bgLight: 'bg-warning/10',
+        border: 'border-warning/30'
       };
       return {
-        text: 'text-green-600',
-        bg: 'bg-green-500',
-        bgLight: 'bg-green-50',
-        border: 'border-green-200'
+        text: 'text-success',
+        bg: 'bg-success',
+        bgLight: 'bg-success/10',
+        border: 'border-success/30'
       };
     };
   }, []);
@@ -56,12 +56,12 @@ const BucketUsageChart = React.memo(({ bucketData }: BucketUsageChartProps) => {
     <div className={`border rounded-lg p-4 shadow-sm ${colorClasses.bgLight} ${colorClasses.border}`}>
       <div className="flex justify-between items-start mb-2">
         <div>
-          <h4 className="font-medium text-gray-900">{bucketData.display_label}</h4>
-          <p className="text-sm text-gray-500">{bucketData.plan_name}</p>
+          <h4 className="font-medium text-foreground">{bucketData.display_label}</h4>
+          <p className="text-sm text-muted-foreground">{bucketData.plan_name}</p>
         </div>
         <div className="flex items-center">
-          <span className="text-sm text-gray-500 mr-1">Bucket Contract Line</span>
-          <Info className="h-4 w-4 text-gray-400" />
+          <span className="text-sm text-muted-foreground mr-1">Bucket Contract Line</span>
+          <Info className="h-4 w-4 text-muted-foreground" />
         </div>
       </div>
 
@@ -72,22 +72,22 @@ const BucketUsageChart = React.memo(({ bucketData }: BucketUsageChartProps) => {
             {percentage}%
           </span>
         </div>
-        <div className="w-full bg-gray-200 rounded-full h-2.5">
+        <div className="w-full bg-muted rounded-full h-2.5">
           <div
             className={`h-2.5 rounded-full ${colorClasses.bg}`}
             style={{ width: `${Math.min(percentage, 100)}%` }}
           ></div>
         </div>
-        <div className="flex justify-between mt-1 text-xs text-gray-500">
+        <div className="flex justify-between mt-1 text-xs text-muted-foreground">
           <span>{(bucketData.minutes_used / 60).toFixed(1)} hours used</span>
           <span>{(totalAvailableMinutes / 60).toFixed(1)} hours total</span>
         </div>
       </div>
 
       {bucketData.rolled_over_minutes > 0 && (
-        <div className="mt-3 text-xs text-gray-500 flex items-center">
+        <div className="mt-3 text-xs text-muted-foreground flex items-center">
           <span className="mr-1">Includes {(bucketData.rolled_over_minutes / 60).toFixed(1)} rollover hours</span>
-          <Info className="h-3 w-3 text-gray-400" />
+          <Info className="h-3 w-3 text-muted-foreground" />
         </div>
       )}
     </div>

@@ -67,7 +67,7 @@ export function ServiceConfigurationPanel({ serviceId, onUpdate }: ServiceConfig
       <Card className="w-full">
         <CardContent className="pt-6">
           <div className="flex justify-center items-center h-40">
-            <p className="text-gray-500">Loading service configuration...</p>
+            <p className="text-muted-foreground">Loading service configuration...</p>
           </div>
         </CardContent>
       </Card>
@@ -111,10 +111,10 @@ export function ServiceConfigurationPanel({ serviceId, onUpdate }: ServiceConfig
             
             <div>
               <h3 className="text-lg font-medium mb-2">Base Rate</h3>
-              <p className="text-sm text-gray-500 mb-2">
+              <p className="text-sm text-muted-foreground mb-2">
                 ${service.default_rate} per {service.unit_of_measure}
               </p>
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-muted-foreground">
                 The base rate can be overridden with quantity-based tiers below.
               </p>
             </div>

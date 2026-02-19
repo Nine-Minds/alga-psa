@@ -90,7 +90,7 @@ const PhaseQuickAdd: React.FC<PhaseQuickAddProps> = ({
                 value={phaseName}
                 onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setPhaseName(e.target.value)}
                 placeholder="Phase name... *"
-                className={`w-full px-3 py-3 border rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-purple-500 text-lg font-semibold ${hasAttemptedSubmit && !phaseName.trim() ? 'border-red-500' : 'border-gray-300'}`}
+                className={`w-full px-3 py-3 border rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-purple-500 text-lg font-semibold ${hasAttemptedSubmit && !phaseName.trim() ? 'border-destructive' : 'border-gray-300'}`}
                 rows={1}
               />
               <TextArea

@@ -325,10 +325,9 @@ const FixedContractLinePresetServicesList: React.FC<FixedContractLinePresetServi
   return (
     <div>
       {hasUnsavedChanges && (
-        <Alert className="bg-amber-50 border-amber-200 mb-4">
-          <AlertDescription className="text-amber-800 flex items-center gap-2">
-            <AlertCircle className="h-4 w-4" />
-            <span>You have unsaved changes. Click "Save Changes" to apply them.</span>
+        <Alert variant="warning" className="mb-4">
+          <AlertDescription>
+            You have unsaved changes. Click "Save Changes" to apply them.
           </AlertDescription>
         </Alert>
       )}
