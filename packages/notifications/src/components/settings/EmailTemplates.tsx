@@ -474,7 +474,7 @@ export function EmailTemplates() {
                   className="flex items-center gap-2 text-gray-600 cursor-pointer"
                 >
                   <X className="h-4 w-4" />
-                  Clear filter
+                  Reset
                 </DropdownMenuItem>
               </>
             )}

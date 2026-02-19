@@ -102,7 +102,7 @@ export function AssetCommandPalette({
     },
     {
       id: 'clear-filters',
-      label: 'Clear filters',
+      label: 'Reset',
       description: 'Remove all active filters and search terms',
       icon: <XCircle className="h-4 w-4" />,
       shortcut: 'Shift+⌘+K',

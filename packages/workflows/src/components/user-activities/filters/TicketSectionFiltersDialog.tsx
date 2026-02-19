@@ -262,7 +262,7 @@ export function TicketSectionFiltersDialog({
         </div>
         <DialogFooter>
            <div className="flex justify-between w-full">
-             <Button id="ticket-filter-clear" variant="outline" onClick={handleClear}>Clear Filters</Button>
+             <Button id="ticket-filter-clear" variant="outline" onClick={handleClear}>Reset</Button>
              <div>
                <Button id="ticket-filter-cancel" variant="ghost" className="mr-2" onClick={() => onOpenChange(false)}>Cancel</Button>
                <Button id="ticket-filter-apply" onClick={handleApply}>Apply Filters</Button>

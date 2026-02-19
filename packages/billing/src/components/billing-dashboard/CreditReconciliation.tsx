@@ -419,7 +419,7 @@ const CreditReconciliation: React.FC = () => {
                   }}
                   className="mt-6"
                 >
-                  Clear Filters
+                  Reset
                 </Button>
               </div>
             </div>

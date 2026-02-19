@@ -152,7 +152,7 @@ export function ProjectsSection({ limit = 5, onViewAll }: ProjectsSectionProps) 
                className="gap-1"
              >
               <XCircleIcon className="h-4 w-4" />
-              Reset Filters
+              Reset
             </Button>
 
            ) : (

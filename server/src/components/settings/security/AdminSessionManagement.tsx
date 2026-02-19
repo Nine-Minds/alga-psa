@@ -351,7 +351,7 @@ export default function AdminSessionManagement() {
                   className="h-10"
                 >
                   <X className="h-4 w-4 mr-2" />
-                  Clear
+                  Reset
                 </Button>
               </div>
             )}

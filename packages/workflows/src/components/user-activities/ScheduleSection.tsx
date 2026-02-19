@@ -169,7 +169,7 @@ export function ScheduleSection({ limit = 5, onViewAll, noCard = false }: Schedu
             className="gap-1"
           >
             <XCircleIcon className="h-4 w-4" />
-            Reset Filters
+            Reset
           </Button>
         ) : (
           <Button
@@ -262,7 +262,7 @@ export function ScheduleSection({ limit = 5, onViewAll, noCard = false }: Schedu
               className="gap-1"
             >
               <XCircleIcon className="h-4 w-4" />
-              Reset Filters
+              Reset
             </Button>
           ) : (
             <Button

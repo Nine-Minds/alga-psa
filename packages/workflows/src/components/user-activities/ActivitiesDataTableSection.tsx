@@ -171,7 +171,7 @@ export function ActivitiesDataTableSection({
               disabled={isLoading}
             >
               <XCircleIcon className="h-4 w-4 mr-2" />
-              Reset Filters
+              Reset
             </Button>
           ) : (
             <Button

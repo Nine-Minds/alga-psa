@@ -679,7 +679,7 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
                         }}
                       >
                         <X className="h-4 w-4 mr-1" />
-                        Clear
+                        Reset
                       </Button>
                     )}
                   </div>

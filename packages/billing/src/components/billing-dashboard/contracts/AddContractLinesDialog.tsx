@@ -388,7 +388,7 @@ export const AddContractLinesDialog: React.FC<AddContractLinesDialogProps> = ({
                 }}
               >
                 <X className="h-4 w-4 mr-1" />
-                Clear
+                Reset
               </Button>
             )}
           </div>

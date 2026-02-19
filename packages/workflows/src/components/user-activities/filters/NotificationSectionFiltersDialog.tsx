@@ -154,7 +154,7 @@ export function NotificationSectionFiltersDialog({
         </div>
         <DialogFooter>
           <div className="flex justify-between w-full">
-            <Button id="notification-filter-clear" variant="outline" onClick={handleClear}>Clear Filters</Button>
+            <Button id="notification-filter-clear" variant="outline" onClick={handleClear}>Reset</Button>
             <div>
               <Button id="notification-filter-cancel" variant="ghost" className="mr-2" onClick={() => onOpenChange(false)}>Cancel</Button>
               <Button id="notification-filter-apply" onClick={handleApply}>Apply Filters</Button>

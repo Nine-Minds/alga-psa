@@ -376,7 +376,7 @@ export default function PrefillFromTicketDialog({
                 onClick={clearAllFilters}
                 className="text-sm text-gray-500"
               >
-                Clear all
+                Reset
               </Button>
             </div>
           )}

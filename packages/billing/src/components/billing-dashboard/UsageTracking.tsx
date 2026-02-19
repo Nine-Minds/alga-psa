@@ -459,7 +459,7 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
                     setSelectedClient('all_clients');
                   }}
                 >
-                  Clear Filters
+                  Reset
                 </Button>
               </div>
             </div>

@@ -167,7 +167,7 @@ export function WorkflowTasksSection({ limit = 5, onViewAll }: WorkflowTasksSect
               className="gap-1"
             >
               <XCircleIcon className="h-4 w-4" />
-              Reset Filters
+              Reset
             </Button>
           ) : (
             <Button

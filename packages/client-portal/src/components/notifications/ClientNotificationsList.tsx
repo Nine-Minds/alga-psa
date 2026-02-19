@@ -317,7 +317,7 @@ export function ClientNotificationsList() {
                 className="gap-1"
               >
                 <XCircleIcon className="h-4 w-4" />
-                {tCommon('common.resetFilters', 'Reset Filters')}
+                {tCommon('common.resetFilters', 'Reset')}
               </Button>
             ) : (
               <Button

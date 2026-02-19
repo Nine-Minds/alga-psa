@@ -164,7 +164,7 @@ export function TicketsSection({ limit = 5, onViewAll }: TicketsSectionProps) {
                className="gap-1"
              >
               <XCircleIcon className="h-4 w-4" />
-              Reset Filters
+              Reset
             </Button>
            ) : (
              <Button
