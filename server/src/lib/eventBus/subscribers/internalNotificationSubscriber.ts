@@ -2358,31 +2358,33 @@ async function handleAppointmentRequestApproved(event: AppointmentRequestApprove
   const {
     tenantId,
     appointmentRequestId,
+    clientId,
     clientUserId,
     serviceName,
     requestedDate,
     requestedTime,
-    assignedUserId
+    assignedUserId,
+    requesterName
   } = payload;
 
   try {
     const db = await getConnection(tenantId);
 
-    // Send notification to CLIENT
-    if (clientUserId) {
-      // Get technician name
-      let technicianName = 'Your technician';
-      if (assignedUserId) {
-        const technician = await db('users')
-          .select('first_name', 'last_name')
-          .where({ user_id: assignedUserId, tenant: tenantId })
-          .first();
+    // Get technician name for client notification
+    let technicianName = 'Your technician';
+    if (assignedUserId) {
+      const technician = await db('users')
+        .select('first_name', 'last_name')
+        .where({ user_id: assignedUserId, tenant: tenantId })
+        .first();
 
-        if (technician) {
-          technicianName = `${technician.first_name} ${technician.last_name}`;
-        }
+      if (technician) {
+        technicianName = `${technician.first_name} ${technician.last_name}`;
       }
+    }
 
+    // 1. Send notification to CLIENT
+    if (clientUserId) {
       await createNotificationFromTemplateInternal(db, {
         tenant: tenantId,
         user_id: clientUserId,
@@ -2401,6 +2403,41 @@ async function handleAppointmentRequestApproved(event: AppointmentRequestApprove
       logger.info('[InternalNotificationSubscriber] Created notification for appointment approved', {
         appointmentRequestId,
         clientUserId,
+        tenantId
+      });
+    }
+
+    // 2. Send notification to TECHNICIAN
+    if (assignedUserId) {
+      let clientName = requesterName || '';
+      if (clientId) {
+        const client = await db('clients')
+          .select('client_name')
+          .where({ client_id: clientId, tenant: tenantId })
+          .first();
+        if (client?.client_name) {
+          clientName = client.client_name;
+        }
+      }
+
+      await createNotificationFromTemplateInternal(db, {
+        tenant: tenantId,
+        user_id: assignedUserId,
+        template_name: 'appointment-assigned-technician',
+        type: 'info',
+        category: 'appointments',
+        link: `/msp/schedule`,
+        data: {
+          serviceName,
+          appointmentDate: requestedDate,
+          appointmentTime: requestedTime,
+          clientName
+        }
+      });
+
+      logger.info('[InternalNotificationSubscriber] Created notification for appointment assigned to technician', {
+        appointmentRequestId,
+        assignedUserId,
         tenantId
       });
     }

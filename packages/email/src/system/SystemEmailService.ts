@@ -11,6 +11,7 @@ import {
   AppointmentRequestReceivedData,
   AppointmentRequestApprovedData,
   AppointmentRequestDeclinedData,
+  AppointmentAssignedToTechnicianData,
   NewAppointmentRequestData
 } from './types';
 import { IEmailProvider } from '@alga-psa/types';
@@ -405,6 +406,46 @@ export class SystemEmailService extends BaseEmailService {
 
     return this.sendEmail({
       to: data.requesterEmail,
+      subject: template.subject,
+      html: template.html,
+      text: template.text,
+      locale,
+      tenantId: options?.tenantId,
+      attachments
+    });
+  }
+
+  /**
+   * Send appointment assignment notification to technician with ICS attachment.
+   * Requires 'appointment-assigned-technician' template in the database.
+   */
+  public async sendAppointmentAssignedNotification(
+    data: AppointmentAssignedToTechnicianData,
+    options?: { locale?: SupportedLocale; tenantId?: string; icsAttachment?: { filename: string; content: Buffer } }
+  ): Promise<EmailSendResult> {
+    const locale = await this.determineLocale(data.technicianEmail, options);
+
+    const dbTemplate = await this.fetchTemplate('appointment-assigned-technician', locale, options?.tenantId);
+
+    if (!dbTemplate) {
+      console.warn('[SystemEmailService] No "appointment-assigned-technician" template found — skipping technician email');
+      return { success: false, error: 'Template not found: appointment-assigned-technician' };
+    }
+
+    const template: SystemEmailTemplate = {
+      subject: this.replaceVariables(dbTemplate.subject, data),
+      html: this.replaceVariables(dbTemplate.html, data),
+      text: this.replaceVariables(dbTemplate.text || '', data)
+    };
+
+    const attachments = options?.icsAttachment ? [{
+      filename: options.icsAttachment.filename,
+      content: options.icsAttachment.content,
+      contentType: 'text/calendar; charset=utf-8; method=REQUEST'
+    }] : undefined;
+
+    return this.sendEmail({
+      to: data.technicianEmail,
       subject: template.subject,
       html: template.html,
       text: template.text,

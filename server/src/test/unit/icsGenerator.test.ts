@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { generateICS, generateICSBuffer, generateICSFilename, ICSEventData } from '../../lib/utils/icsGenerator';
+import { generateICS, generateICSBuffer, generateICSFilename, ICSEventData } from '@alga-psa/scheduling/utils/icsGenerator';
 
 describe('ICS Generator', () => {
   const mockEventData: ICSEventData = {

@@ -51,6 +51,7 @@ const { getTemplate: apptReceived } = require('../../migrations/utils/templates/
 const { getTemplate: apptApproved } = require('../../migrations/utils/templates/email/appointments/appointmentRequestApproved.cjs');
 const { getTemplate: apptDeclined } = require('../../migrations/utils/templates/email/appointments/appointmentRequestDeclined.cjs');
 const { getTemplate: apptNew } = require('../../migrations/utils/templates/email/appointments/newAppointmentRequest.cjs');
+const { getTemplate: apptAssignedTech } = require('../../migrations/utils/templates/email/appointments/appointmentAssignedTechnician.cjs');
 
 // Time
 const { getTemplate: timeSubmitted } = require('../../migrations/utils/templates/email/time/timeEntrySubmitted.cjs');
@@ -89,6 +90,7 @@ const TEMPLATE_GETTERS = [
   apptApproved,
   apptDeclined,
   apptNew,
+  apptAssignedTech,
   timeSubmitted,
   timeApproved,
   timeRejected,

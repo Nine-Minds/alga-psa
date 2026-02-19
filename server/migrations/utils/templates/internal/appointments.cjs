@@ -80,6 +80,19 @@ const TEMPLATES = [
       pl: { title: 'Wniosek o wizytę anulowany', message: '{{requesterName}} anulował(a) wniosek o wizytę na {{serviceName}} w dniu {{requestedDate}}.' },
     },
   },
+  {
+    templateName: 'appointment-assigned-technician',
+    subtypeName: 'appointment-assigned-technician',
+    translations: {
+      en: { title: 'New Appointment Assigned', message: 'You have been assigned an appointment for {{serviceName}} on {{appointmentDate}} at {{appointmentTime}}. Client: {{clientName}}.' },
+      fr: { title: 'Nouveau rendez-vous assigné', message: 'Un rendez-vous pour {{serviceName}} le {{appointmentDate}} à {{appointmentTime}} vous a été assigné. Client : {{clientName}}.' },
+      es: { title: 'Nueva cita asignada', message: 'Se le ha asignado una cita para {{serviceName}} el {{appointmentDate}} a las {{appointmentTime}}. Cliente: {{clientName}}.' },
+      de: { title: 'Neuer Termin zugewiesen', message: 'Ihnen wurde ein Termin für {{serviceName}} am {{appointmentDate}} um {{appointmentTime}} zugewiesen. Kunde: {{clientName}}.' },
+      nl: { title: 'Nieuwe afspraak toegewezen', message: 'Er is een afspraak voor {{serviceName}} op {{appointmentDate}} om {{appointmentTime}} aan u toegewezen. Klant: {{clientName}}.' },
+      it: { title: 'Nuovo appuntamento assegnato', message: 'Ti è stato assegnato un appuntamento per {{serviceName}} il {{appointmentDate}} alle {{appointmentTime}}. Cliente: {{clientName}}.' },
+      pl: { title: 'Nowa wizyta przypisana', message: 'Przypisano Ci wizytę na {{serviceName}} w dniu {{appointmentDate}} o {{appointmentTime}}. Klient: {{clientName}}.' },
+    },
+  },
 ];
 
 module.exports = { TEMPLATES };

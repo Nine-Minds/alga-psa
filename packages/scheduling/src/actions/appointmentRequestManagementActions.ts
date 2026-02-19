@@ -686,67 +686,57 @@ export const approveAppointmentRequest = withAuth(async (
         }
       });
 
-      // Send email using SystemEmailService
+      // Send emails using SystemEmailService
       try {
         const emailService = SystemEmailService.getInstance();
+
+        // Shared data for both client and technician emails
+        const tenantSettings = await getTenantSettings(tenant);
+        const scheduleEntryWithDetails = await trx('schedule_entries')
+          .where({ entry_id: scheduleEntry.entry_id, tenant })
+          .first();
+        const calendarLink = await generateICSLink(scheduleEntryWithDetails);
+        const formattedDate = await formatDate(finalDate);
+        const formattedTime = await formatTime(finalTime);
+
+        // Generate ICS file for email attachment
+        const icsEventData: ICSEventData = {
+          uid: scheduleEntry.entry_id,
+          title: `Appointment: ${service.service_name}`,
+          description: request.description || `Appointment for ${service.service_name}`,
+          location: `${tenantSettings.tenantName}`,
+          startDate: new Date(scheduleEntryWithDetails.scheduled_start),
+          endDate: new Date(scheduleEntryWithDetails.scheduled_end),
+          organizerName: `${assignedUser.first_name} ${assignedUser.last_name}`,
+          organizerEmail: assignedUser.email || tenantSettings.contactEmail,
+          url: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/client-portal/appointments/${request.appointment_request_id}`
+        };
+        const icsBuffer = generateICSBuffer(icsEventData);
+        const icsFilename = generateICSFilename(`Appointment-${service.service_name}`);
+        const icsAttachment = { filename: icsFilename, content: icsBuffer };
+
+        // 1. Send approval email to client/requester
         let recipientEmail = '';
         let recipientName = '';
 
         if (request.is_authenticated) {
-          // Get contact email
           const contact = await trx('contacts')
-            .where({
-              contact_name_id: request.contact_id,
-              tenant
-            })
+            .where({ contact_name_id: request.contact_id, tenant })
             .first();
-
           recipientEmail = contact?.email || '';
           recipientName = contact?.full_name || '';
         } else {
-          // Use requester email from request
           recipientEmail = request.requester_email || '';
           recipientName = request.requester_name || '';
         }
 
-        if (recipientEmail && tenant) {
-          // Get tenant settings
-          const tenantSettings = await getTenantSettings(tenant);
-
-          // Generate calendar link
-          const scheduleEntryWithDetails = await trx('schedule_entries')
-            .where({
-              entry_id: scheduleEntry.entry_id,
-              tenant
-            })
-            .first();
-
-          const calendarLink = await generateICSLink(scheduleEntryWithDetails);
-
-          // Generate ICS file for email attachment
-          const icsEventData: ICSEventData = {
-            uid: scheduleEntry.entry_id,
-            title: `Appointment: ${service.service_name}`,
-            description: request.description || `Appointment for ${service.service_name}`,
-            location: `${tenantSettings.tenantName}`,
-            startDate: new Date(scheduleEntryWithDetails.scheduled_start),
-            endDate: new Date(scheduleEntryWithDetails.scheduled_end),
-            organizerName: `${assignedUser.first_name} ${assignedUser.last_name}`,
-            organizerEmail: assignedUser.email || tenantSettings.contactEmail,
-            attendeeName: recipientName,
-            attendeeEmail: recipientEmail,
-            url: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/client-portal/appointments/${request.appointment_request_id}`
-          };
-
-          const icsBuffer = generateICSBuffer(icsEventData);
-          const icsFilename = generateICSFilename(`Appointment-${service.service_name}`);
-
+        if (recipientEmail) {
           await emailService.sendAppointmentRequestApproved({
             requesterName: recipientName,
             requesterEmail: recipientEmail,
             serviceName: service.service_name,
-            appointmentDate: await formatDate(finalDate),
-            appointmentTime: await formatTime(finalTime),
+            appointmentDate: formattedDate,
+            appointmentTime: formattedTime,
             duration: request.requested_duration,
             technicianName: `${assignedUser.first_name} ${assignedUser.last_name}`,
             technicianEmail: assignedUser.email || '',
@@ -758,18 +748,47 @@ export const approveAppointmentRequest = withAuth(async (
             contactPhone: tenantSettings.contactPhone
           }, {
             tenantId: tenant,
-            icsAttachment: {
-              filename: icsFilename,
-              content: icsBuffer
-            }
+            icsAttachment
           });
-
           console.log(`[AppointmentRequest] Approval email sent to ${recipientEmail}`);
+        }
+
+        // 2. Send assignment email to technician with ICS
+        if (assignedUser.email) {
+          // Get client name for the technician email
+          let clientName = '';
+          if (request.client_id) {
+            const client = await trx('clients')
+              .where({ client_id: request.client_id, tenant })
+              .select('client_name')
+              .first();
+            clientName = client?.client_name || recipientName || '';
+          } else {
+            clientName = recipientName || '';
+          }
+
+          await emailService.sendAppointmentAssignedNotification({
+            technicianName: `${assignedUser.first_name} ${assignedUser.last_name}`,
+            technicianEmail: assignedUser.email,
+            serviceName: service.service_name,
+            appointmentDate: formattedDate,
+            appointmentTime: formattedTime,
+            duration: request.requested_duration,
+            clientName,
+            description: request.description || '',
+            calendarLink: calendarLink,
+            contactEmail: tenantSettings.contactEmail,
+            contactPhone: tenantSettings.contactPhone
+          }, {
+            tenantId: tenant,
+            icsAttachment
+          });
+          console.log(`[AppointmentRequest] Assignment email with ICS sent to technician ${assignedUser.email}`);
         }
 
         console.log(`[AppointmentRequest] Request ${request.appointment_request_id} approved by ${user.user_id}`);
       } catch (emailError) {
-        console.error('Error sending approval email:', emailError);
+        console.error('Error sending approval emails:', emailError);
         // Don't fail the approval if email fails
       }
 

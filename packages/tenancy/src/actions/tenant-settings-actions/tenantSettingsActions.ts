@@ -369,6 +369,40 @@ export async function updateTenantAnalyticsSettings(
   return updateTenantAnalyticsSettingsInternal(analyticsSettings);
 }
 
+/**
+ * Get tenant timezone from settings JSONB (non-authenticated, for background processes).
+ */
+export async function getTenantTimezone(tenantId: string): Promise<string | null> {
+  const settings = await getCurrentTenantSettingsJson(tenantId);
+  const tz = settings?.timezone;
+  return typeof tz === 'string' && tz.length > 0 ? tz : null;
+}
+
+/**
+ * Get tenant timezone (authenticated, for UI).
+ */
+export const getTenantTimezoneAuth = withAuth(async (
+  _user: IUserWithRoles,
+  { tenant }: AuthContext
+): Promise<string | null> => {
+  return getTenantTimezone(tenant);
+});
+
+/**
+ * Set tenant timezone (authenticated, requires settings:update permission).
+ */
+export async function setTenantTimezone(
+  timezone: string
+): Promise<void> {
+  // Validate the timezone is a valid IANA timezone
+  try {
+    Intl.DateTimeFormat(undefined, { timeZone: timezone });
+  } catch {
+    throw new Error(`Invalid timezone: ${timezone}`);
+  }
+  return updateTenantSettings({ timezone });
+}
+
 export async function initializeTenantSettings(tenantId: string): Promise<void> {
   try {
     const { knex } = await createTenantKnex(tenantId);
