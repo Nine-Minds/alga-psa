@@ -178,7 +178,7 @@ export default function ProjectsOverviewPage() {
             disabled={!(searchQuery || statusFilter !== 'all')}
           >
             <XCircle className="h-4 w-4" />
-            Reset
+            {t('resetFilters')}
           </Button>
       </div>
       
