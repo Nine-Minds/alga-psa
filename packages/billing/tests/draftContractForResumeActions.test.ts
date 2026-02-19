@@ -494,6 +494,98 @@ describe('getDraftContractForResume action', () => {
     });
   });
 
+  it('returns template snapshot bucket overlays for hourly and usage services', async () => {
+    const knex = makeKnex({
+      contract_templates: {
+        template_id: 'template-1',
+        template_name: 'Template Alpha',
+        template_description: 'Test',
+        default_billing_frequency: 'monthly',
+      },
+    });
+    createTenantKnex.mockResolvedValue({ knex });
+    fetchDetailedContractLines.mockResolvedValue([
+      {
+        contract_line_id: 'hourly-template-line',
+        contract_line_type: 'Hourly',
+      },
+      {
+        contract_line_id: 'usage-template-line',
+        contract_line_type: 'Usage',
+      },
+    ]);
+
+    getTemplateLineServicesWithConfigurations.mockImplementation(async (lineId: string) => {
+      if (lineId === 'hourly-template-line') {
+        return [
+          {
+            service: {
+              service_id: 'svc-hourly',
+              service_name: 'Hourly Service',
+              item_kind: 'service',
+              default_rate: 11300,
+            },
+            configuration: { custom_rate: 0 },
+            typeConfig: {
+              hourly_rate: 0,
+              minimum_billable_time: 20,
+              round_up_to_nearest: 10,
+            },
+            bucketConfig: {
+              total_minutes: 180,
+              overage_rate: 25000,
+              allow_rollover: true,
+              billing_period: 'weekly',
+            },
+          },
+        ];
+      }
+      if (lineId === 'usage-template-line') {
+        return [
+          {
+            service: {
+              service_id: 'svc-usage',
+              service_name: 'Usage Service',
+              item_kind: 'service',
+              default_rate: 640,
+              unit_of_measure: 'device',
+            },
+            configuration: { custom_rate: 0 },
+            typeConfig: {
+              base_rate: 0,
+              unit_of_measure: 'device',
+              enable_tiered_pricing: false,
+            },
+            bucketConfig: {
+              total_minutes: 25,
+              overage_rate: 1500,
+              allow_rollover: false,
+              billing_period: 'monthly',
+            },
+          },
+        ];
+      }
+
+      return [];
+    });
+
+    const { getContractTemplateSnapshotForClientWizard } = await import('../src/actions/contractWizardActions');
+    const snapshot = await getContractTemplateSnapshotForClientWizard('template-1');
+
+    expect(snapshot.hourly_services?.[0]?.bucket_overlay).toEqual({
+      total_minutes: 180,
+      overage_rate: 25000,
+      allow_rollover: true,
+      billing_period: 'weekly',
+    });
+    expect(snapshot.usage_services?.[0]?.bucket_overlay).toEqual({
+      total_minutes: 25,
+      overage_rate: 1500,
+      allow_rollover: false,
+      billing_period: 'monthly',
+    });
+  });
+
   it('throws error if contract is not a draft (T030)', async () => {
     const knex = makeKnex({
       contracts: {

@@ -278,7 +278,7 @@ const ContractTemplateDetail: React.FC = () => {
           : await getContractLineServicesWithConfigurations(contractLineId);
         const serviceMap = new Map<string, TemplateLineService>();
 
-        servicesWithConfig.forEach(({ service, configuration, typeConfig }) => {
+        servicesWithConfig.forEach(({ service, configuration, typeConfig, bucketConfig }) => {
           const base: TemplateLineService = serviceMap.get(configuration.service_id) ?? {
             service_id: service.service_id,
             service_name: service.service_name,
@@ -291,15 +291,20 @@ const ContractTemplateDetail: React.FC = () => {
             quantity: configuration.quantity ?? null,
           };
 
-          if (configuration.configuration_type === 'Bucket' && isBucketConfig(typeConfig)) {
+          const resolvedBucketConfig =
+            (bucketConfig && isBucketConfig(bucketConfig) ? bucketConfig : null) ??
+            (configuration.configuration_type === 'Bucket' && isBucketConfig(typeConfig) ? typeConfig : null);
+
+          if (resolvedBucketConfig) {
             base.bucket_overlay = {
-              total_minutes: typeConfig.total_minutes ?? undefined,
-              overage_rate: typeConfig.overage_rate ?? undefined,
-              allow_rollover: Boolean(typeConfig.allow_rollover),
-              billing_period: (typeConfig.billing_period as BucketOverlayInput['billing_period']) ?? 'monthly',
+              total_minutes: resolvedBucketConfig.total_minutes ?? undefined,
+              overage_rate: resolvedBucketConfig.overage_rate ?? undefined,
+              allow_rollover: Boolean(resolvedBucketConfig.allow_rollover),
+              billing_period: (resolvedBucketConfig.billing_period as BucketOverlayInput['billing_period']) ?? 'monthly',
             };
-            base.quantity = configuration.quantity ?? base.quantity;
-          } else if (configuration.configuration_type === 'Hourly' && isHourlyConfig(typeConfig)) {
+          }
+
+          if (configuration.configuration_type === 'Hourly' && isHourlyConfig(typeConfig)) {
             base.minimum_billable_time = typeConfig.minimum_billable_time ?? base.minimum_billable_time;
             base.round_up_to_nearest = typeConfig.round_up_to_nearest ?? base.round_up_to_nearest;
           } else if (configuration.configuration_type === 'Usage' && isUsageConfig(typeConfig)) {

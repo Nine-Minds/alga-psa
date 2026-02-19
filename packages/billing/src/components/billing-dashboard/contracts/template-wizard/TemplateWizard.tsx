@@ -23,6 +23,13 @@ const TEMPLATE_STEPS = [
 
 const REQUIRED_TEMPLATE_STEPS = [0, 5];
 
+export interface BucketOverlayInput {
+  total_minutes?: number;
+  overage_rate?: number;
+  allow_rollover?: boolean;
+  billing_period?: 'monthly' | 'weekly';
+}
+
 export interface TemplateWizardData {
   contract_name: string;
   description?: string;
@@ -43,11 +50,13 @@ export interface TemplateWizardData {
   hourly_services: Array<{
     service_id: string;
     service_name?: string;
+    bucket_overlay?: BucketOverlayInput | null;
   }>;
   usage_services?: Array<{
     service_id: string;
     service_name?: string;
     unit_of_measure?: string;
+    bucket_overlay?: BucketOverlayInput | null;
   }>;
   minimum_billable_time?: number;
   round_up_to_nearest?: number;

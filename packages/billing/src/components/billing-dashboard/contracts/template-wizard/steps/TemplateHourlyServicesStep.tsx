@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { TemplateWizardData } from '../TemplateWizard';
+import { BucketOverlayInput, TemplateWizardData } from '../TemplateWizard';
 import { Label } from '@alga-psa/ui/components/Label';
 import { ServiceCatalogPicker, ServiceCatalogPickerItem } from '../../ServiceCatalogPicker';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -9,6 +9,8 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { Plus, X, Activity } from 'lucide-react';
 import { TemplateServicePreviewSection } from '../TemplateServicePreviewSection';
+import { SwitchWithLabel } from '@alga-psa/ui/components/SwitchWithLabel';
+import { BucketOverlayFields } from '../../BucketOverlayFields';
 
 interface TemplateHourlyServicesStepProps {
   data: TemplateWizardData;
@@ -23,7 +25,7 @@ export function TemplateHourlyServicesStep({
     updateData({
       hourly_services: [
         ...data.hourly_services,
-        { service_id: '', service_name: '' },
+        { service_id: '', service_name: '', bucket_overlay: undefined },
       ],
     });
   };
@@ -40,6 +42,33 @@ export function TemplateHourlyServicesStep({
       service_id: item.service_id,
       service_name: item.service_name,
     };
+    updateData({ hourly_services: next });
+  };
+
+  const defaultOverlay = (billingFrequency: string): BucketOverlayInput => ({
+    total_minutes: undefined,
+    overage_rate: undefined,
+    allow_rollover: false,
+    billing_period: billingFrequency === 'weekly' ? 'weekly' : 'monthly',
+  });
+
+  const toggleBucketOverlay = (index: number, enabled: boolean) => {
+    const next = [...data.hourly_services];
+    if (enabled) {
+      const existing = next[index]?.bucket_overlay;
+      next[index] = {
+        ...next[index],
+        bucket_overlay: existing ? { ...existing } : defaultOverlay(data.billing_frequency),
+      };
+    } else {
+      next[index] = { ...next[index], bucket_overlay: undefined };
+    }
+    updateData({ hourly_services: next });
+  };
+
+  const updateBucketOverlay = (index: number, overlay: BucketOverlayInput) => {
+    const next = [...data.hourly_services];
+    next[index] = { ...next[index], bucket_overlay: { ...overlay } };
     updateData({ hourly_services: next });
   };
 
@@ -158,21 +187,40 @@ export function TemplateHourlyServicesStep({
           {data.hourly_services.map((service, index) => (
             <div
               key={index}
-              className="flex items-center gap-3 p-4 border border-gray-200 rounded-md bg-gray-50"
+              className="flex items-start gap-3 p-4 border border-gray-200 rounded-md bg-gray-50"
             >
-              <div className="flex-1 space-y-2">
-                <Label htmlFor={`template-hourly-service-${index}`} className="text-sm">
-                  Service {index + 1}
-                </Label>
-                <ServiceCatalogPicker
-                  id={`template-hourly-service-${index}`}
-                  value={service.service_id}
-                  selectedLabel={service.service_name}
-                  onSelect={(item) => handleServiceChange(index, item)}
-                  billingMethods={['hourly']}
-                  itemKinds={['service']}
-                  placeholder="Select a service"
-                />
+              <div className="flex-1 space-y-3">
+                <div className="space-y-2">
+                  <Label htmlFor={`template-hourly-service-${index}`} className="text-sm">
+                    Service {index + 1}
+                  </Label>
+                  <ServiceCatalogPicker
+                    id={`template-hourly-service-${index}`}
+                    value={service.service_id}
+                    selectedLabel={service.service_name}
+                    onSelect={(item) => handleServiceChange(index, item)}
+                    billingMethods={['hourly']}
+                    itemKinds={['service']}
+                    placeholder="Select a service"
+                  />
+                </div>
+
+                <div className="space-y-3 pt-2 border-t border-dashed border-blue-100">
+                  <SwitchWithLabel
+                    label="Set bucket of hours"
+                    checked={Boolean(service.bucket_overlay)}
+                    onCheckedChange={(checked) => toggleBucketOverlay(index, Boolean(checked))}
+                  />
+                  {service.bucket_overlay && (
+                    <BucketOverlayFields
+                      mode="hours"
+                      value={service.bucket_overlay ?? defaultOverlay(data.billing_frequency)}
+                      onChange={(next) => updateBucketOverlay(index, next)}
+                      automationId={`template-hourly-bucket-${index}`}
+                      billingFrequency={data.billing_frequency}
+                    />
+                  )}
+                </div>
               </div>
 
               <Button
