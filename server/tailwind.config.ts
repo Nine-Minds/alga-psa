@@ -132,6 +132,11 @@ const config: Config = {
         // Add destructive colors based on assumed CSS variables
         destructive: 'rgb(var(--color-destructive) / <alpha-value>)',
         'destructive-foreground': 'rgb(var(--color-destructive-foreground) / <alpha-value>)',
+        // Alert background colors — clean opaque tints per theme
+        'alert-destructive-bg': 'rgb(var(--color-alert-destructive-bg))',
+        'alert-warning-bg': 'rgb(var(--color-alert-warning-bg))',
+        'alert-success-bg': 'rgb(var(--color-alert-success-bg))',
+        'alert-info-bg': 'rgb(var(--color-alert-info-bg))',
       },
       backgroundColor: { // Extend background colors specifically
         destructive: 'rgb(var(--color-destructive) / <alpha-value>)',

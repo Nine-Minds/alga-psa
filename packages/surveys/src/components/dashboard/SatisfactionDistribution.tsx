@@ -26,7 +26,7 @@ export default function SatisfactionDistribution({ distribution }: SatisfactionD
       </CardHeader>
       <CardContent className="mt-2 flex-1">
         {distribution.length === 0 ? (
-          <div className="flex h-48 flex-col items-center justify-center gap-3 rounded-lg bg-gradient-to-br from-emerald-50/30 to-transparent p-6">
+          <div className="flex h-48 flex-col items-center justify-center gap-3 rounded-lg bg-gradient-to-br from-emerald-500/5 to-transparent p-6">
             <div className="rounded-full bg-emerald-500/15 p-3">
               <Gauge className="h-6 w-6 text-emerald-500" />
             </div>

@@ -164,9 +164,9 @@ export default function ClientLoginForm({ callbackUrl, onError, onTwoFactorRequi
             id="msp-toggle-password-visibility"
           >
             {showPassword ? (
-              <Eye className="h-5 w-5 text-gray-400" />
+              <Eye className="h-5 w-5 text-[rgb(var(--color-text-400))]" />
             ) : (
-              <EyeOff className="h-5 w-5 text-gray-400" />
+              <EyeOff className="h-5 w-5 text-[rgb(var(--color-text-400))]" />
             )}
           </Button>
         </div>
@@ -175,7 +175,7 @@ export default function ClientLoginForm({ callbackUrl, onError, onTwoFactorRequi
       <div className="text-right">
         <Link
           href="/auth/client-portal/forgot-password"
-          className="text-sm text-blue-600 hover:text-blue-800 transition-colors"
+          className="text-sm text-[rgb(var(--color-primary-500))] hover:text-[rgb(var(--color-primary-600))] transition-colors"
           {...withDataAutomationId({ id: 'client-forgot-password-link' })}
         >
           {t('auth.forgotPasswordLink', 'Forgot your password?')}

@@ -41,14 +41,14 @@ export default function ResponseTrendChart({ trend }: ResponseTrendChartProps) {
     <Card className="col-span-1 flex flex-col border-border-200 shadow-sm hover:shadow-md transition-shadow duration-200">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
         <CardTitle className="text-base font-semibold text-text-900">Response Trend</CardTitle>
-        <div className="rounded-lg bg-primary-50 p-2 shadow-sm">
+        <div className="rounded-lg bg-primary-500/10 p-2 shadow-sm">
           <Sparkles className="h-4 w-4 text-primary-500" />
         </div>
       </CardHeader>
       <CardContent className="mt-2 flex-1">
         {trend.length === 0 ? (
-          <div className="flex h-48 flex-col items-center justify-center gap-3 rounded-lg bg-gradient-to-br from-primary-50/30 to-transparent p-6">
-            <div className="rounded-full bg-primary-100 p-3">
+          <div className="flex h-48 flex-col items-center justify-center gap-3 rounded-lg bg-gradient-to-br from-primary-500/5 to-transparent p-6">
+            <div className="rounded-full bg-primary-500/15 p-3">
               <Sparkles className="h-6 w-6 text-primary-500" />
             </div>
             <p className="text-center text-sm font-medium text-text-600">

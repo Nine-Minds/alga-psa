@@ -39,20 +39,20 @@ const CheckEmailContent: React.FC = () => {
 
   const themeColor = portal === 'client' ? 'blue' : 'purple';
   const bgGradient = portal === 'client' 
-    ? 'bg-gradient-to-br from-blue-50 to-indigo-100' 
-    : 'bg-gradient-to-br from-purple-50 via-purple-100 to-indigo-100';
+    ? 'bg-gradient-to-br from-blue-50 to-indigo-100 dark:bg-none dark:bg-card'
+    : 'bg-gradient-to-br from-purple-50 via-purple-100 to-indigo-100 dark:bg-none dark:bg-card';
 
   return (
     <div className={`min-h-screen flex items-center justify-center p-4 ${bgGradient}`}>
       <div className="w-full max-w-md">
-        <div className="bg-white rounded-lg shadow-lg p-8">
+        <div className="bg-card rounded-lg shadow-lg p-8">
 
           {/* Title */}
-          <h2 className="text-2xl font-bold text-gray-900 text-center mb-2 flex items-center justify-center gap-2">
+          <h2 className="text-2xl font-bold text-[rgb(var(--color-text-900))] text-center mb-2 flex items-center justify-center gap-2">
             <Mail className="w-6 h-6" />
             Check Your Email
           </h2>
-          <p className="text-gray-600 text-center mb-6">
+          <p className="text-[rgb(var(--color-text-600))] text-center mb-6">
             We've sent you a password reset link
           </p>
 
@@ -68,9 +68,9 @@ const CheckEmailContent: React.FC = () => {
 
           {/* What's next section */}
           <div className="mb-6">
-            <div className="p-4 bg-purple-50 rounded-lg">
-              <h4 className="font-medium text-sm mb-2 text-purple-900">What's next?</h4>
-              <ol className="text-sm text-purple-700 space-y-1">
+            <div className="p-4 bg-[rgb(var(--color-primary-50))] rounded-lg">
+              <h4 className="font-medium text-sm mb-2 text-[rgb(var(--color-primary-900))]">What's next?</h4>
+              <ol className="text-sm text-[rgb(var(--color-primary-700))] space-y-1">
                 <li>1. Check your email inbox</li>
                 <li>2. Click the reset link in the email</li>
                 <li>3. Set your new password</li>

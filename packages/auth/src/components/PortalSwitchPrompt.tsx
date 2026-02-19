@@ -44,12 +44,12 @@ export default function PortalSwitchPrompt({
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#F8FFFE] to-[#F0F9FF] p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#F8FFFE] to-[#F0F9FF] dark:bg-none dark:bg-card p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
-            <div className="rounded-full bg-amber-100 p-3">
-              <AlertCircle className="h-8 w-8 text-amber-600" />
+            <div className="rounded-full bg-warning/15 p-3">
+              <AlertCircle className="h-8 w-8 text-warning" />
             </div>
           </div>
           <CardTitle className="text-2xl">Portal Switch Required</CardTitle>

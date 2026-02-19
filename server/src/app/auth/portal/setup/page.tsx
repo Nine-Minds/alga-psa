@@ -159,13 +159,13 @@ export default function PortalSetupPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-[rgb(var(--color-background-50))]">
         <Card className="w-full max-w-md">
           <CardContent className="p-6">
             <div className="animate-pulse space-y-4">
-              <div className="h-8 bg-gray-200 rounded"></div>
-              <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-              <div className="h-32 bg-gray-200 rounded"></div>
+              <div className="h-8 bg-[rgb(var(--color-border-200))] rounded"></div>
+              <div className="h-4 bg-[rgb(var(--color-border-200))] rounded w-3/4"></div>
+              <div className="h-32 bg-[rgb(var(--color-border-200))] rounded"></div>
             </div>
           </CardContent>
         </Card>
@@ -175,10 +175,10 @@ export default function PortalSetupPage() {
 
   if (error || !contactInfo) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-[rgb(var(--color-background-50))]">
         <Card className="w-full max-w-md">
           <CardHeader>
-            <CardTitle className="text-red-600">{t('auth.portalSetup.invalidInvitation', 'Invalid Invitation')}</CardTitle>
+            <CardTitle className="text-destructive">{t('auth.portalSetup.invalidInvitation', 'Invalid Invitation')}</CardTitle>
             <CardDescription>
               {t('auth.portalSetup.invalidInvitationDescription', 'There was a problem with your portal invitation')}
             </CardDescription>
@@ -208,7 +208,7 @@ export default function PortalSetupPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-[rgb(var(--color-background-50))] p-4">
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -222,7 +222,7 @@ export default function PortalSetupPage() {
 
         <CardContent className="space-y-6">
           {/* Account Information */}
-          <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
+          <div className="space-y-4 p-4 bg-[rgb(var(--color-background-50))] rounded-lg">
             <div className="flex items-center gap-2 text-sm font-medium">
               <User className="h-4 w-4" />
               {t('auth.portalSetup.accountInformation', 'Account Information')}
@@ -264,9 +264,9 @@ export default function PortalSetupPage() {
                   className="absolute inset-y-0 right-0 flex items-center pr-3"
                 >
                   {showPassword ? (
-                    <EyeOff className="h-4 w-4 text-gray-400" />
+                    <EyeOff className="h-4 w-4 text-[rgb(var(--color-text-400))]" />
                   ) : (
-                    <Eye className="h-4 w-4 text-gray-400" />
+                    <Eye className="h-4 w-4 text-[rgb(var(--color-text-400))]" />
                   )}
                 </button>
               </div>
@@ -292,9 +292,9 @@ export default function PortalSetupPage() {
                   className="absolute inset-y-0 right-0 flex items-center pr-3"
                 >
                   {showConfirmPassword ? (
-                    <EyeOff className="h-4 w-4 text-gray-400" />
+                    <EyeOff className="h-4 w-4 text-[rgb(var(--color-text-400))]" />
                   ) : (
-                    <Eye className="h-4 w-4 text-gray-400" />
+                    <Eye className="h-4 w-4 text-[rgb(var(--color-text-400))]" />
                   )}
                 </button>
               </div>
@@ -304,28 +304,28 @@ export default function PortalSetupPage() {
             <div className="space-y-2">
               <Label className="text-sm font-medium">{t('auth.portalSetup.passwordRequirements', 'Password Requirements')}</Label>
               <div className="space-y-1 text-xs">
-                <div className={`flex items-center gap-2 ${passwordRequirements.minLength ? 'text-green-600' : 'text-gray-500'}`}>
-                  <div className={`w-2 h-2 rounded-full ${passwordRequirements.minLength ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                <div className={`flex items-center gap-2 ${passwordRequirements.minLength ? 'text-success' : 'text-[rgb(var(--color-text-500))]'}`}>
+                  <div className={`w-2 h-2 rounded-full ${passwordRequirements.minLength ? 'bg-success' : 'bg-[rgb(var(--color-border-300))]'}`}></div>
                   {t('auth.portalSetup.requirements.minLength', 'At least 8 characters')}
                 </div>
-                <div className={`flex items-center gap-2 ${passwordRequirements.hasUppercase ? 'text-green-600' : 'text-gray-500'}`}>
-                  <div className={`w-2 h-2 rounded-full ${passwordRequirements.hasUppercase ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                <div className={`flex items-center gap-2 ${passwordRequirements.hasUppercase ? 'text-success' : 'text-[rgb(var(--color-text-500))]'}`}>
+                  <div className={`w-2 h-2 rounded-full ${passwordRequirements.hasUppercase ? 'bg-success' : 'bg-[rgb(var(--color-border-300))]'}`}></div>
                   {t('auth.portalSetup.requirements.hasUppercase', 'One uppercase letter')}
                 </div>
-                <div className={`flex items-center gap-2 ${passwordRequirements.hasLowercase ? 'text-green-600' : 'text-gray-500'}`}>
-                  <div className={`w-2 h-2 rounded-full ${passwordRequirements.hasLowercase ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                <div className={`flex items-center gap-2 ${passwordRequirements.hasLowercase ? 'text-success' : 'text-[rgb(var(--color-text-500))]'}`}>
+                  <div className={`w-2 h-2 rounded-full ${passwordRequirements.hasLowercase ? 'bg-success' : 'bg-[rgb(var(--color-border-300))]'}`}></div>
                   {t('auth.portalSetup.requirements.hasLowercase', 'One lowercase letter')}
                 </div>
-                <div className={`flex items-center gap-2 ${passwordRequirements.hasNumber ? 'text-green-600' : 'text-gray-500'}`}>
-                  <div className={`w-2 h-2 rounded-full ${passwordRequirements.hasNumber ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                <div className={`flex items-center gap-2 ${passwordRequirements.hasNumber ? 'text-success' : 'text-[rgb(var(--color-text-500))]'}`}>
+                  <div className={`w-2 h-2 rounded-full ${passwordRequirements.hasNumber ? 'bg-success' : 'bg-[rgb(var(--color-border-300))]'}`}></div>
                   {t('auth.portalSetup.requirements.hasNumber', 'One number')}
                 </div>
-                <div className={`flex items-center gap-2 ${passwordRequirements.hasSpecialChar ? 'text-green-600' : 'text-gray-500'}`}>
-                  <div className={`w-2 h-2 rounded-full ${passwordRequirements.hasSpecialChar ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                <div className={`flex items-center gap-2 ${passwordRequirements.hasSpecialChar ? 'text-success' : 'text-[rgb(var(--color-text-500))]'}`}>
+                  <div className={`w-2 h-2 rounded-full ${passwordRequirements.hasSpecialChar ? 'bg-success' : 'bg-[rgb(var(--color-border-300))]'}`}></div>
                   {t('auth.portalSetup.requirements.hasSpecialChar', 'One special character')}
                 </div>
-                <div className={`flex items-center gap-2 ${passwordRequirements.passwordsMatch ? 'text-green-600' : 'text-gray-500'}`}>
-                  <div className={`w-2 h-2 rounded-full ${passwordRequirements.passwordsMatch ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                <div className={`flex items-center gap-2 ${passwordRequirements.passwordsMatch ? 'text-success' : 'text-[rgb(var(--color-text-500))]'}`}>
+                  <div className={`w-2 h-2 rounded-full ${passwordRequirements.passwordsMatch ? 'bg-success' : 'bg-[rgb(var(--color-border-300))]'}`}></div>
                   {t('auth.portalSetup.requirements.passwordsMatch', 'Passwords match')}
                 </div>
               </div>
@@ -350,7 +350,7 @@ export default function PortalSetupPage() {
                   : '/auth/client-portal/signin';
                 router.push(signinUrl);
               }}
-              className="text-blue-600 hover:underline"
+              className="text-[rgb(var(--color-primary-500))] hover:underline"
             >
               {t('auth.portalSetup.signInToPortal', 'Sign in to portal')}
             </button>

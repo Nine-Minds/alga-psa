@@ -36,7 +36,7 @@ const SidebarMenuItem: React.FC<SidebarMenuItemProps> = ({
 
     return (
       <div
-        className={`flex items-center px-4 py-2 hover:bg-sidebar-hover ${isRowActive ? 'bg-[rgb(var(--color-primary-500)/0.15)]' : ''}`}
+        className={`flex items-center px-4 py-2 hover:bg-sidebar-hover ${isRowActive ? 'bg-[rgb(var(--color-primary-500)/0.2)]' : ''}`}
         data-automation-id={`sidebar-menu-${id}`}
         aria-expanded={openSubmenu === item.name}
       >
@@ -116,7 +116,7 @@ const SidebarMenuItem: React.FC<SidebarMenuItemProps> = ({
     <Link
       prefetch={false}
       href={item.href || '#'}
-      className={`flex items-center px-4 py-2 hover:bg-sidebar-hover ${isActive(item.href || '#') ? 'bg-[rgb(var(--color-primary-500)/0.15)]' : ''}`}
+      className={`flex items-center px-4 py-2 hover:bg-sidebar-hover ${isActive(item.href || '#') ? 'bg-[rgb(var(--color-primary-500)/0.2)]' : ''}`}
       data-automation-id={`sidebar-menu-${id}`}
     >
       {linkContent}

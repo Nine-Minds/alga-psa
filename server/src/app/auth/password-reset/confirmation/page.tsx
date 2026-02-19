@@ -14,7 +14,7 @@ const PasswordResetConfirmation: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col items-center p-20 min-h-screen bg-white">
+    <div className="flex flex-col items-center p-20 min-h-screen bg-[rgb(var(--color-background-50))] dark:bg-[rgb(var(--color-background))]">
       <div className="w-full max-w-md p-8 space-y-8 text-center">
         <div>
           <Image
@@ -25,8 +25,8 @@ const PasswordResetConfirmation: React.FC = () => {
             className="mx-auto rounded-full"
           />
         </div>
-        <h2 className="text-2xl font-bold text-gray-900">Password reset</h2>
-        <p className="text-sm text-gray-600">
+        <h2 className="text-2xl font-bold text-[rgb(var(--color-text-900))]">Password reset</h2>
+        <p className="text-sm text-[rgb(var(--color-text-600))]">
           Your password has been successfully reset.
           <br />
           Click below to sign in with your new password.

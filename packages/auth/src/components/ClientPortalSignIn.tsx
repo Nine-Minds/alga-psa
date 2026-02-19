@@ -145,7 +145,7 @@ export default function ClientPortalSignIn({ branding }: ClientPortalSignInProps
   // Generate gradient based on branding colors or use defaults
   const gradientStyle = useMemo(() => {
     if (!branding?.primaryColor || !branding?.secondaryColor) {
-      return 'bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50';
+      return 'bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:bg-none dark:bg-card';
     }
 
     // Create CSS gradient from hex colors with opacity
@@ -161,7 +161,7 @@ export default function ClientPortalSignIn({ branding }: ClientPortalSignInProps
       };
     }
 
-    return 'bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50';
+    return 'bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:bg-none dark:bg-card';
   }, [branding]);
 
   // Use branded colors for accents
@@ -205,7 +205,7 @@ export default function ClientPortalSignIn({ branding }: ClientPortalSignInProps
             />
           )}
           <div>
-            <span className="text-2xl font-bold text-gray-800">
+            <span className="text-2xl font-bold text-[rgb(var(--color-text-800))]">
               {branding?.clientName ?
                 `${branding.clientName} ${t('nav.clientPortal', 'Client Portal')}` :
                 t('nav.clientPortal', 'Client Portal')}
@@ -218,7 +218,7 @@ export default function ClientPortalSignIn({ branding }: ClientPortalSignInProps
         {/* Left side with features */}
         <div className="hidden lg:flex lg:w-1/2 p-12 flex-col justify-center items-center">
           <div className="max-w-lg">
-            <div className="bg-white rounded-full p-8 mb-8 mx-auto w-48 h-48 flex items-center justify-center shadow-lg">
+            <div className="bg-card rounded-full p-8 mb-8 mx-auto w-48 h-48 flex items-center justify-center shadow-lg">
               {branding?.logoUrl ? (
                 <img
                   src={branding.logoUrl}
@@ -229,39 +229,39 @@ export default function ClientPortalSignIn({ branding }: ClientPortalSignInProps
                 <Ticket className="w-24 h-24" style={{ color: accentColor }} />
               )}
             </div>
-            <h1 className="text-4xl font-bold text-gray-800 mb-4 text-center">
+            <h1 className="text-4xl font-bold text-[rgb(var(--color-text-800))] mb-4 text-center">
               {t('auth.welcomeTitle', 'Welcome to Your Client Portal')}
             </h1>
-            <p className="text-lg text-gray-600 mb-8 text-center">
+            <p className="text-lg text-[rgb(var(--color-text-600))] mb-8 text-center">
               {t('auth.welcomeSubtitle', 'Manage your support tickets and stay connected')}
             </p>
             <div className="space-y-4">
               <div className="flex items-start space-x-3">
                 <Ticket className="w-6 h-6 mt-1 flex-shrink-0" style={{ color: accentColor }} />
                 <div>
-                  <h3 className="text-gray-800 font-semibold">{t('auth.features.submitTickets.title', 'Submit Support Tickets')}</h3>
-                  <p className="text-gray-600 text-sm">{t('auth.features.submitTickets.description', 'Create and manage your support requests')}</p>
+                  <h3 className="text-[rgb(var(--color-text-800))] font-semibold">{t('auth.features.submitTickets.title', 'Submit Support Tickets')}</h3>
+                  <p className="text-[rgb(var(--color-text-600))] text-sm">{t('auth.features.submitTickets.description', 'Create and manage your support requests')}</p>
                 </div>
               </div>
               <div className="flex items-start space-x-3">
                 <Eye className="w-6 h-6 mt-1 flex-shrink-0" style={{ color: accentColor }} />
                 <div>
-                  <h3 className="text-gray-800 font-semibold">{t('auth.features.trackStatus.title', 'Track Ticket Status')}</h3>
-                  <p className="text-gray-600 text-sm">{t('auth.features.trackStatus.description', 'Monitor progress in real-time')}</p>
+                  <h3 className="text-[rgb(var(--color-text-800))] font-semibold">{t('auth.features.trackStatus.title', 'Track Ticket Status')}</h3>
+                  <p className="text-[rgb(var(--color-text-600))] text-sm">{t('auth.features.trackStatus.description', 'Monitor progress in real-time')}</p>
                 </div>
               </div>
               <div className="flex items-start space-x-3">
                 <History className="w-6 h-6 mt-1 flex-shrink-0" style={{ color: accentColor }} />
                 <div>
-                  <h3 className="text-gray-800 font-semibold">{t('auth.features.ticketHistory.title', 'Ticket History')}</h3>
-                  <p className="text-gray-600 text-sm">{t('auth.features.ticketHistory.description', 'Access your complete support history')}</p>
+                  <h3 className="text-[rgb(var(--color-text-800))] font-semibold">{t('auth.features.ticketHistory.title', 'Ticket History')}</h3>
+                  <p className="text-[rgb(var(--color-text-600))] text-sm">{t('auth.features.ticketHistory.description', 'Access your complete support history')}</p>
                 </div>
               </div>
               <div className="flex items-start space-x-3">
                 <FileText className="w-6 h-6 mt-1 flex-shrink-0" style={{ color: accentColor }} />
                 <div>
-                  <h3 className="text-gray-800 font-semibold">{t('auth.features.documentation.title', 'Documentation Access')}</h3>
-                  <p className="text-gray-600 text-sm">{t('auth.features.documentation.description', 'View shared documents and resources')}</p>
+                  <h3 className="text-[rgb(var(--color-text-800))] font-semibold">{t('auth.features.documentation.title', 'Documentation Access')}</h3>
+                  <p className="text-[rgb(var(--color-text-600))] text-sm">{t('auth.features.documentation.description', 'View shared documents and resources')}</p>
                 </div>
               </div>
             </div>
@@ -270,7 +270,7 @@ export default function ClientPortalSignIn({ branding }: ClientPortalSignInProps
 
         {/* Right side with login form */}
         <div className="w-full lg:w-1/2 flex items-center justify-center p-8">
-          <Card className="max-w-md w-full bg-white shadow-xl">
+          <Card className="max-w-md w-full bg-card shadow-xl">
             <CardHeader className="space-y-1">
               <CardTitle className="text-2xl font-bold text-center">
                 {t('auth.signIn', 'Sign In')}
@@ -287,7 +287,7 @@ export default function ClientPortalSignIn({ branding }: ClientPortalSignInProps
                 tenantSlug={tenantSlug}
               />
               <div className="mt-6 pt-6 border-t text-center">
-                <a href="/auth/msp/signin" className="text-sm text-gray-600 hover:text-indigo-600">
+                <a href="/auth/msp/signin" className="text-sm text-[rgb(var(--color-text-600))] hover:text-[rgb(var(--color-primary-500))]">
                   MSP Staff? Login here →
                 </a>
               </div>

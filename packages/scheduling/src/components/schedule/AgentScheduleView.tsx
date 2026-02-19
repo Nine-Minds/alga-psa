@@ -23,10 +23,10 @@ const localizer = momentLocalizer(moment);
 const workItemColors: Record<WorkItemType, string> = {
   ticket: 'rgb(var(--color-primary-200))',
   project_task: 'rgb(var(--color-secondary-100))',
-  non_billable_category: 'rgb(var(--color-accent-100))',
+  non_billable_category: 'rgb(var(--color-event-non-billable))',
   ad_hoc: 'rgb(var(--color-border-200))',
-  interaction: 'rgb(220 252 231)',
-  appointment_request: 'rgb(254 205 211)',
+  interaction: 'rgb(var(--color-event-interaction))',
+  appointment_request: 'rgb(var(--color-event-appointment))',
 };
 
 interface AgentScheduleViewProps {

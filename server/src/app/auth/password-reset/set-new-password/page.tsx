@@ -147,8 +147,8 @@ const SetNewPasswordContent: React.FC = () => {
 
   const themeColor = portal === 'client' ? 'blue' : 'purple';
   const bgGradient = portal === 'client' 
-    ? 'bg-gradient-to-br from-blue-50 to-indigo-100' 
-    : 'bg-gradient-to-br from-purple-50 via-purple-100 to-indigo-100';
+    ? 'bg-gradient-to-br from-blue-50 to-indigo-100 dark:bg-none dark:bg-card'
+    : 'bg-gradient-to-br from-purple-50 via-purple-100 to-indigo-100 dark:bg-none dark:bg-card';
 
   return (
     <div className={`min-h-screen flex items-center justify-center p-4 ${bgGradient}`}>
@@ -161,13 +161,13 @@ const SetNewPasswordContent: React.FC = () => {
       />
 
       <div className="w-full max-w-md">
-        <div className="bg-white rounded-lg shadow-lg p-8">
+        <div className="bg-card rounded-lg shadow-lg p-8">
           
           <div className="text-center mb-6">
-          <h2 className="text-2xl font-bold text-gray-900 text-center mb-2 flex items-center justify-center gap-2">
+          <h2 className="text-2xl font-bold text-[rgb(var(--color-text-900))] text-center mb-2 flex items-center justify-center gap-2">
             <Lock className="w-6 h-6" />
               Reset Your Password</h2>
-            <p className="text-gray-600 mt-1">Set a new password for your account</p>
+            <p className="text-[rgb(var(--color-text-600))] mt-1">Set a new password for your account</p>
           </div>
 
           {/* Account Information Section */}
@@ -178,19 +178,19 @@ const SetNewPasswordContent: React.FC = () => {
                 <h3 className="font-semibold mb-3">Account Information</h3>
                 <div className="space-y-2 text-sm">
                   <div className="flex">
-                    <span className="text-gray-500 w-28">Name:</span>
+                    <span className="text-[rgb(var(--color-text-500))] w-28">Name:</span>
                     <span className="font-medium">{accountInfo.name}</span>
                   </div>
                   <div className="flex">
-                    <span className="text-gray-500 w-28">Email:</span>
+                    <span className="text-[rgb(var(--color-text-500))] w-28">Email:</span>
                     <span className="font-medium">{accountInfo.email}</span>
                   </div>
                   <div className="flex">
-                    <span className="text-gray-500 w-28">Username:</span>
+                    <span className="text-[rgb(var(--color-text-500))] w-28">Username:</span>
                     <span className="font-medium">{accountInfo.username}</span>
                   </div>
                   <div className="flex">
-                    <span className="text-gray-500 w-28">Account Type:</span>
+                    <span className="text-[rgb(var(--color-text-500))] w-28">Account Type:</span>
                     <span className="font-medium">{accountInfo.accountType}</span>
                   </div>
                 </div>
@@ -203,7 +203,7 @@ const SetNewPasswordContent: React.FC = () => {
             <Form.Field name="password">
               <div className="space-y-2">
                 <Label
-                className="text-sm font-medium text-gray-700" htmlFor="password">
+                className="text-sm font-medium text-[rgb(var(--color-text-700))]" htmlFor="password">
                   New Password
                 </Label>
                 <div className="relative">
@@ -214,7 +214,7 @@ const SetNewPasswordContent: React.FC = () => {
                       type={showPassword ? "text" : "password"}
                       required
                       placeholder="••••••••"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm appearance-none focus:outline-none focus:ring-1 focus:ring-[rgb(var(--color-primary-500))] focus:border-[rgb(var(--color-primary-500))]"
+                      className="w-full px-3 py-2 border border-[rgb(var(--color-border-300))] rounded-md shadow-sm appearance-none focus:outline-none focus:ring-1 focus:ring-[rgb(var(--color-primary-500))] focus:border-[rgb(var(--color-primary-500))]"
                       value={formData.password}
                       onChange={handleInputChange}
                     />
@@ -222,7 +222,7 @@ const SetNewPasswordContent: React.FC = () => {
                   <button 
                     type="button" 
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-[rgb(var(--color-text-400))] hover:text-[rgb(var(--color-text-600))]"
                   >
                     {showPassword ? (
                       <EyeOff className="h-5 w-5" />
@@ -238,7 +238,7 @@ const SetNewPasswordContent: React.FC = () => {
             <Form.Field name="confirmPassword">
               <div className="space-y-2">
                 <Label
-                 className="text-sm font-medium text-gray-700" htmlFor="confirmPassword">
+                 className="text-sm font-medium text-[rgb(var(--color-text-700))]" htmlFor="confirmPassword">
                   Confirm New Password
                 </Label>
                 <div className="relative">
@@ -249,7 +249,7 @@ const SetNewPasswordContent: React.FC = () => {
                       type={showConfirmPassword ? "text" : "password"}
                       required
                       placeholder="Confirm your new password"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm appearance-none focus:outline-none focus:ring-1 focus:ring-[rgb(var(--color-primary-500))] focus:border-[rgb(var(--color-primary-500))]"
+                      className="w-full px-3 py-2 border border-[rgb(var(--color-border-300))] rounded-md shadow-sm appearance-none focus:outline-none focus:ring-1 focus:ring-[rgb(var(--color-primary-500))] focus:border-[rgb(var(--color-primary-500))]"
                       value={formData.confirmPassword}
                       onChange={handleInputChange}
                     />
@@ -257,7 +257,7 @@ const SetNewPasswordContent: React.FC = () => {
                   <button 
                     type="button" 
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-[rgb(var(--color-text-400))] hover:text-[rgb(var(--color-text-600))]"
                   >
                     {showConfirmPassword ? (
                       <EyeOff className="h-5 w-5" />
@@ -273,28 +273,28 @@ const SetNewPasswordContent: React.FC = () => {
             <div className="space-y-2">
               <Label className="text-sm font-medium">Password Requirements</Label>
               <div className="space-y-1 text-xs">
-                <div className={`flex items-center gap-2 ${passwordRequirements.minLength ? 'text-green-600' : 'text-gray-500'}`}>
-                  <div className={`w-2 h-2 rounded-full ${passwordRequirements.minLength ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                <div className={`flex items-center gap-2 ${passwordRequirements.minLength ? 'text-success' : 'text-[rgb(var(--color-text-500))]'}`}>
+                  <div className={`w-2 h-2 rounded-full ${passwordRequirements.minLength ? 'bg-success' : 'bg-[rgb(var(--color-border-300))]'}`}></div>
                   At least 8 characters
                 </div>
-                <div className={`flex items-center gap-2 ${passwordRequirements.hasUppercase ? 'text-green-600' : 'text-gray-500'}`}>
-                  <div className={`w-2 h-2 rounded-full ${passwordRequirements.hasUppercase ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                <div className={`flex items-center gap-2 ${passwordRequirements.hasUppercase ? 'text-success' : 'text-[rgb(var(--color-text-500))]'}`}>
+                  <div className={`w-2 h-2 rounded-full ${passwordRequirements.hasUppercase ? 'bg-success' : 'bg-[rgb(var(--color-border-300))]'}`}></div>
                   One uppercase letter
                 </div>
-                <div className={`flex items-center gap-2 ${passwordRequirements.hasLowercase ? 'text-green-600' : 'text-gray-500'}`}>
-                  <div className={`w-2 h-2 rounded-full ${passwordRequirements.hasLowercase ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                <div className={`flex items-center gap-2 ${passwordRequirements.hasLowercase ? 'text-success' : 'text-[rgb(var(--color-text-500))]'}`}>
+                  <div className={`w-2 h-2 rounded-full ${passwordRequirements.hasLowercase ? 'bg-success' : 'bg-[rgb(var(--color-border-300))]'}`}></div>
                   One lowercase letter
                 </div>
-                <div className={`flex items-center gap-2 ${passwordRequirements.hasNumber ? 'text-green-600' : 'text-gray-500'}`}>
-                  <div className={`w-2 h-2 rounded-full ${passwordRequirements.hasNumber ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                <div className={`flex items-center gap-2 ${passwordRequirements.hasNumber ? 'text-success' : 'text-[rgb(var(--color-text-500))]'}`}>
+                  <div className={`w-2 h-2 rounded-full ${passwordRequirements.hasNumber ? 'bg-success' : 'bg-[rgb(var(--color-border-300))]'}`}></div>
                   One number
                 </div>
-                <div className={`flex items-center gap-2 ${passwordRequirements.hasSpecialChar ? 'text-green-600' : 'text-gray-500'}`}>
-                  <div className={`w-2 h-2 rounded-full ${passwordRequirements.hasSpecialChar ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                <div className={`flex items-center gap-2 ${passwordRequirements.hasSpecialChar ? 'text-success' : 'text-[rgb(var(--color-text-500))]'}`}>
+                  <div className={`w-2 h-2 rounded-full ${passwordRequirements.hasSpecialChar ? 'bg-success' : 'bg-[rgb(var(--color-border-300))]'}`}></div>
                   One special character
                 </div>
-                <div className={`flex items-center gap-2 ${passwordRequirements.passwordsMatch ? 'text-green-600' : 'text-gray-500'}`}>
-                  <div className={`w-2 h-2 rounded-full ${passwordRequirements.passwordsMatch ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                <div className={`flex items-center gap-2 ${passwordRequirements.passwordsMatch ? 'text-success' : 'text-[rgb(var(--color-text-500))]'}`}>
+                  <div className={`w-2 h-2 rounded-full ${passwordRequirements.passwordsMatch ? 'bg-success' : 'bg-[rgb(var(--color-border-300))]'}`}></div>
                   Passwords match
                 </div>
               </div>
@@ -315,14 +315,12 @@ const SetNewPasswordContent: React.FC = () => {
 
           {/* Back to sign in link */}
           <div className="mt-6 text-center">
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-[rgb(var(--color-text-600))]">
               Remember your password?{' '}
               <Link 
                 href={portal === 'client' ? '/auth/client-portal/signin' : '/auth/msp/signin'} 
                 className={`font-medium ${
-                  themeColor === 'blue' 
-                    ? 'text-blue-600 hover:text-blue-500' 
-                    : 'text-purple-600 hover:text-purple-500'
+                  'text-[rgb(var(--color-primary-500))] hover:text-[rgb(var(--color-primary-400))]'
                 }`}
               >
                 Sign in instead
