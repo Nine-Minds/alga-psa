@@ -20,7 +20,7 @@ import type {
   ItemType,
   ProjectStatus,
 } from '@alga-psa/types';
-import { getAllUsers, findUserById } from '@alga-psa/users/actions/user-actions/userActions';
+import { getAllUsers, findUserById } from '@alga-psa/users/actions';
 import { getContactByContactNameId } from '@alga-psa/clients/actions/contact-actions/contactActions';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';

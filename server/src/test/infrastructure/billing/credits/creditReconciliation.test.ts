@@ -24,7 +24,7 @@ const {
   afterAll: cleanupContext
 } = TestContext.createHelpers();
 
-vi.mock('server/src/lib/auth/getSession', () => ({
+vi.mock('@alga-psa/auth', () => ({
   getSession: vi.fn(async () => ({
     user: {
       id: mockedUserId,

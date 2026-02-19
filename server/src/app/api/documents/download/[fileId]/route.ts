@@ -10,7 +10,7 @@ import { createPDFGenerationService } from 'server/src/services/pdf-generation.s
 import { StorageService } from 'server/src/lib/storage/StorageService';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
-import { getSession } from 'server/src/lib/auth/getSession';
+import { getSession } from '@alga-psa/auth';
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ fileId: string }> }) {
   const resolvedParams = await params;

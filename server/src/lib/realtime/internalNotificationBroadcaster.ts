@@ -1,5 +1,5 @@
 import { getRedisClient, getRedisConfig } from '../../config/redisConfig';
-import { InternalNotification } from '../models/internalNotification';
+import { InternalNotification } from '@alga-psa/notifications';
 import logger from '@alga-psa/core/logger';
 
 /**

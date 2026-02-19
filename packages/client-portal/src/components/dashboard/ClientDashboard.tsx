@@ -11,10 +11,24 @@ import { RequestAppointmentModal } from '../appointments/RequestAppointmentModal
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Calendar, Clock } from 'lucide-react';
-import { format } from 'date-fns';
 
 // Flag to control visibility of the recent activity section
 const SHOW_RECENT_ACTIVITY = false;
+
+/** Safely convert a PG DATE (may be JS Date object) or string to YYYY-MM-DD */
+function normalizeDateValue(value: unknown): string | null {
+  if (!value) return null;
+  if (value instanceof Date) return value.toISOString().split('T')[0];
+  if (typeof value === 'string') return value.slice(0, 10);
+  return null;
+}
+
+/** Safely convert a PG TIME (may be string like "11:00:00") to HH:MM */
+function normalizeTimeValue(value: unknown): string | null {
+  if (!value) return null;
+  if (typeof value === 'string') return value.slice(0, 5);
+  return null;
+}
 
 interface AppointmentRequest {
   appointment_request_id: string;
@@ -260,11 +274,16 @@ export function ClientDashboard() {
                         <div className="flex items-center gap-1">
                           <Calendar className="h-4 w-4" />
                           {(() => {
+                            const dateStr = normalizeDateValue(appointment.requested_date);
+                            const timeStr = normalizeTimeValue(appointment.requested_time);
+                            if (!dateStr || !timeStr) return 'N/A';
                             try {
-                              if (!appointment.requested_date) return 'N/A';
-                              const date = new Date(appointment.requested_date + 'T00:00:00Z');
-                              if (isNaN(date.getTime())) return 'N/A';
-                              return format(date, 'MMM d, yyyy');
+                              const dt = new Date(`${dateStr}T${timeStr}:00Z`);
+                              if (isNaN(dt.getTime())) return 'N/A';
+                              return dt.toLocaleString('en-US', {
+                                month: 'short', day: 'numeric', year: 'numeric',
+                                hour: '2-digit', minute: '2-digit'
+                              });
                             } catch {
                               return 'N/A';
                             }
@@ -272,7 +291,7 @@ export function ClientDashboard() {
                         </div>
                         <div className="flex items-center gap-1">
                           <Clock className="h-4 w-4" />
-                          {appointment.requested_time ? `${appointment.requested_time} UTC` : 'N/A'}
+                          {appointment.requested_duration} min
                         </div>
                       </div>
                       {appointment.preferred_assigned_user_name && (

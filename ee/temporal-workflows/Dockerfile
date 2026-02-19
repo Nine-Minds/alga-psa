@@ -47,12 +47,18 @@ COPY ee/temporal-workflows/ /app/ee/temporal-workflows/
 # Provide source files referenced via TS path aliases
 COPY packages/ /app/packages/
 COPY package*.json /app/
+COPY .npmrc /app/
 
 WORKDIR /app/ee/temporal-workflows
 # Ensure tsc-alias is available for the build
 RUN npm install
 WORKDIR /app
 RUN npm install --ignore-scripts --workspaces=false --legacy-peer-deps
+
+# Build event-schemas (imported at runtime by shared/workflow/streams)
+WORKDIR /app/packages/event-schemas
+RUN npx tsup
+
 WORKDIR /app/ee/temporal-workflows
 RUN npm run build
 
@@ -109,6 +115,8 @@ COPY --from=development /app/shared /app/shared
 # Copy built temporal-workflows
 COPY --from=development /app/ee/temporal-workflows/dist /app/ee/temporal-workflows/dist
 COPY --from=development /app/ee/temporal-workflows/node_modules /app/ee/temporal-workflows/node_modules
+# Copy event-schemas dist (runtime dependency of shared/workflow/streams)
+COPY --from=development /app/packages/event-schemas/dist /app/packages/event-schemas/dist
 # Copy integrations node_modules to both locations for module resolution
 COPY --from=development /app/packages/integrations/node_modules /app/packages/integrations/node_modules
 COPY --from=development /app/packages/integrations/node_modules /app/ee/temporal-workflows/dist/packages/integrations/node_modules

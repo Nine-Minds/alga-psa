@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSession } from '@/lib/auth/getSession';
+import { getSession } from '@alga-psa/auth';
 import { getAdminConnection } from '@alga-psa/db/admin';
 import { ApiKeyServiceForApi } from '@/lib/services/apiKeyServiceForApi';
 import { headObject, getBucket } from '@ee/lib/storage/s3-client';

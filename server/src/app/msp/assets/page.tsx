@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation';
 import { getCurrentUser } from '@alga-psa/users/actions';
 import type { AssetListResponse } from '@alga-psa/types';
 import AssetDashboard from '@alga-psa/assets/components/AssetDashboard';
-import { getSession } from 'server/src/lib/auth/getSession';
+import { getSession } from '@alga-psa/auth';
 
 export default async function AssetsPage() {
   const session = await getSession();

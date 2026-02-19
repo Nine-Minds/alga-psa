@@ -10,7 +10,7 @@ import { createTenantKnex, runWithTenant } from '../lib/db';
 import { issueSurveyToken } from '@alga-psa/surveys/actions/surveyTokenService';
 import { TenantEmailService } from '../lib/email';
 import { isValidEmail } from '@alga-psa/core';
-import { DatabaseTemplateProcessor } from '../lib/email/tenant/templateProcessors';
+import { DatabaseTemplateProcessor } from '@alga-psa/email';
 import { publishWorkflowEvent } from '../lib/eventBus/publishers';
 import {
   buildSurveyReminderSentPayload,

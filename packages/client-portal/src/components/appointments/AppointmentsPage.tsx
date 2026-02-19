@@ -16,6 +16,21 @@ import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import toast from 'react-hot-toast';
 import { getMyAppointmentRequests, cancelAppointmentRequest } from '@alga-psa/client-portal/actions';
 
+/** Safely convert a PG DATE (may be JS Date object) or string to YYYY-MM-DD */
+function normalizeDateValue(value: unknown): string | null {
+  if (!value) return null;
+  if (value instanceof Date) return value.toISOString().split('T')[0];
+  if (typeof value === 'string') return value.slice(0, 10);
+  return null;
+}
+
+/** Safely convert a PG TIME (may be string like "11:00:00") to HH:MM */
+function normalizeTimeValue(value: unknown): string | null {
+  if (!value) return null;
+  if (typeof value === 'string') return value.slice(0, 5);
+  return null;
+}
+
 interface AppointmentRequest {
   appointment_request_id: string;
   service_id: string;
@@ -131,28 +146,32 @@ export default function AppointmentsPage() {
       title: t('table.dateTime'),
       dataIndex: 'requested_date',
       width: '20%',
-      render: (value: string, record: AppointmentRequest) => {
-        let dateDisplay = 'N/A';
-        try {
-          if (value) {
-            const date = new Date(value + 'T00:00:00Z');
-            if (!isNaN(date.getTime())) {
-              dateDisplay = format(date, 'MMM d, yyyy');
+      render: (value: unknown, record: AppointmentRequest) => {
+        const dateStr = normalizeDateValue(value);
+        const timeStr = normalizeTimeValue(record.requested_time);
+
+        let display = 'N/A';
+        if (dateStr && timeStr) {
+          try {
+            const dt = new Date(`${dateStr}T${timeStr}:00Z`);
+            if (!isNaN(dt.getTime())) {
+              display = dt.toLocaleString('en-US', {
+                month: 'short', day: 'numeric', year: 'numeric',
+                hour: '2-digit', minute: '2-digit'
+              });
             }
-          }
-        } catch {
-          dateDisplay = 'N/A';
+          } catch { /* fallback */ }
         }
 
         return (
           <div className="text-sm">
             <div className="flex items-center gap-1 text-gray-900">
               <Calendar className="h-3 w-3" />
-              {dateDisplay}
+              {display}
             </div>
             <div className="flex items-center gap-1 text-gray-600 mt-1">
               <Clock className="h-3 w-3" />
-              {record.requested_time || 'N/A'} ({record.requested_duration} {t('table.minutes')})
+              {record.requested_duration} {t('table.minutes')}
             </div>
           </div>
         );
@@ -388,18 +407,23 @@ export default function AppointmentsPage() {
                     </div>
                     <div className="text-sm text-gray-900">
                       {(() => {
+                        const dateStr = normalizeDateValue(selectedAppointment.requested_date);
+                        const timeStr = normalizeTimeValue(selectedAppointment.requested_time);
+                        if (!dateStr || !timeStr) return 'N/A';
                         try {
-                          if (!selectedAppointment.requested_date) return 'N/A';
-                          const date = new Date(selectedAppointment.requested_date + 'T00:00:00Z');
-                          if (isNaN(date.getTime())) return 'N/A';
-                          return format(date, 'EEEE, MMMM d, yyyy');
+                          const dt = new Date(`${dateStr}T${timeStr}:00Z`);
+                          if (isNaN(dt.getTime())) return 'N/A';
+                          return dt.toLocaleString('en-US', {
+                            weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',
+                            hour: '2-digit', minute: '2-digit'
+                          });
                         } catch {
                           return 'N/A';
                         }
                       })()}
                     </div>
                     <div className="text-sm text-gray-600 mt-1">
-                      {selectedAppointment.requested_time || 'N/A'} ({selectedAppointment.requested_duration} {t('table.minutes')})
+                      {selectedAppointment.requested_duration} {t('table.minutes')}
                     </div>
                   </div>
                 </div>

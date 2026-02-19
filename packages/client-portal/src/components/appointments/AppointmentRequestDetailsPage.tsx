@@ -13,6 +13,21 @@ import { format } from 'date-fns';
 import toast from 'react-hot-toast';
 import { getAppointmentRequestDetails, cancelAppointmentRequest } from '@alga-psa/client-portal/actions';
 
+/** Safely convert a PG DATE (may be JS Date object) or string to YYYY-MM-DD */
+function normalizeDateValue(value: unknown): string | null {
+  if (!value) return null;
+  if (value instanceof Date) return value.toISOString().split('T')[0];
+  if (typeof value === 'string') return value.slice(0, 10);
+  return null;
+}
+
+/** Safely convert a PG TIME (may be string like "11:00:00") to HH:MM */
+function normalizeTimeValue(value: unknown): string | null {
+  if (!value) return null;
+  if (typeof value === 'string') return value.slice(0, 5);
+  return null;
+}
+
 interface AppointmentRequestDetails {
   appointment_request_id: string;
   service_id: string;
@@ -100,12 +115,17 @@ export function AppointmentRequestDetailsPage() {
     return <Badge variant={config.variant}>{config.label}</Badge>;
   };
 
-  const formatRequestedDate = (dateString: string) => {
+  const formatRequestedDateTime = (dateValue: unknown, timeValue: unknown) => {
+    const dateStr = normalizeDateValue(dateValue);
+    const timeStr = normalizeTimeValue(timeValue);
+    if (!dateStr || !timeStr) return 'N/A';
     try {
-      if (!dateString) return 'N/A';
-      const date = new Date(dateString + 'T00:00:00Z');
-      if (isNaN(date.getTime())) return 'N/A';
-      return format(date, 'EEEE, MMMM d, yyyy');
+      const dt = new Date(`${dateStr}T${timeStr}:00Z`);
+      if (isNaN(dt.getTime())) return 'N/A';
+      return dt.toLocaleString('en-US', {
+        weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',
+        hour: '2-digit', minute: '2-digit'
+      });
     } catch {
       return 'N/A';
     }
@@ -217,11 +237,11 @@ export function AppointmentRequestDetailsPage() {
                     {t('details.dateTime', 'Date & Time')}
                   </div>
                   <div className="text-sm text-gray-900">
-                    {formatRequestedDate(appointment.requested_date)}
+                    {formatRequestedDateTime(appointment.requested_date, appointment.requested_time)}
                   </div>
                   <div className="text-sm text-gray-600 mt-1 flex items-center gap-1">
                     <Clock className="h-4 w-4" />
-                    {appointment.requested_time || 'N/A'} ({appointment.requested_duration} {t('table.minutes', 'minutes')})
+                    {appointment.requested_duration} {t('table.minutes', 'minutes')}
                   </div>
                 </div>
               </div>

@@ -1,4 +1,6 @@
 import { createLogger } from 'winston';
+import type { ISecretProvider } from '@alga-psa/core/secrets';
+import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 
 // Configure logger for startup validation
 const logger = createLogger({
@@ -6,36 +8,12 @@ const logger = createLogger({
   transports: []
 });
 
-type SecretProvider = {
-  getAppSecret(key: string): Promise<string | undefined>;
-};
+let secretProviderPromise: Promise<ISecretProvider> | null = null;
 
-let secretProviderPromise: Promise<SecretProvider> | null = null;
-
-async function getSecretProvider(): Promise<SecretProvider> {
+function getSecretProvider(): Promise<ISecretProvider> {
   if (!secretProviderPromise) {
-    secretProviderPromise = (async () => {
-      try {
-        const module = await import('@alga-psa/core/secrets');
-        const factory = (module as { getSecretProviderInstance?: () => Promise<SecretProvider> })
-          .getSecretProviderInstance;
-        if (typeof factory === 'function') {
-          return await factory();
-        }
-      } catch (error) {
-        logger.warn('Secret provider module unavailable, defaulting to env-only provider', {
-          error: error instanceof Error ? error.message : error,
-        });
-      }
-
-      return {
-        async getAppSecret(key: string): Promise<string | undefined> {
-          return process.env[key] ?? process.env[key.toUpperCase()] ?? process.env[key.toLowerCase()];
-        },
-      } satisfies SecretProvider;
-    })();
+    secretProviderPromise = getSecretProviderInstance();
   }
-
   return secretProviderPromise;
 }
 

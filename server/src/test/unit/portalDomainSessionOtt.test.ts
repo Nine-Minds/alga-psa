@@ -8,9 +8,9 @@ import {
   __setPortalDomainOttConnectionFactoryForTests,
   __resetPortalDomainOttTestState,
   type PortalDomainSessionOtt,
-} from 'server/src/lib/models/PortalDomainSessionToken';
+} from '@alga-psa/auth';
 import type { PortalDomainRecord } from 'server/src/models/PortalDomainModel';
-import type { PortalSessionTokenPayload } from 'server/src/lib/auth/sessionCookies';
+import type { PortalSessionTokenPayload } from '@alga-psa/auth';
 import { analytics } from 'server/src/lib/analytics/posthog';
 
 vi.mock('server/src/lib/analytics/posthog', () => ({

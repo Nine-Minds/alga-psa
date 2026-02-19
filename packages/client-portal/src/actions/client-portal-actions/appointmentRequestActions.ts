@@ -592,6 +592,15 @@ export const createAppointmentRequest = withAuth(async (
         defaultApproverId
       });
 
+      // Resolve preferred technician name
+      let preferredTechnicianName = 'Not specified';
+      if (validatedData.preferred_assigned_user_id) {
+        const techUser = staffUsers.find(u => u.user_id === validatedData.preferred_assigned_user_id);
+        if (techUser) {
+          preferredTechnicianName = `${techUser.first_name} ${techUser.last_name}`;
+        }
+      }
+
       for (const staffUser of staffUsers) {
         if (!isValidEmail(staffUser.email)) continue;
         await emailService.sendNewAppointmentRequest(staffUser.email, {
@@ -602,7 +611,7 @@ export const createAppointmentRequest = withAuth(async (
           requestedDate: await formatDate(validatedData.requested_date, 'en'),
           requestedTime: await formatTime(validatedData.requested_time, 'en'),
           duration: validatedData.requested_duration,
-          preferredTechnician: 'Not specified',
+          preferredTechnician: preferredTechnicianName,
           referenceNumber: appointmentRequest.appointment_request_id.slice(0, 8).toUpperCase(),
           submittedAt: new Date().toLocaleString(),
           isAuthenticated: true,
@@ -1692,9 +1701,8 @@ export const getAvailableTimeSlotsForDate = withAuth(async (
     console.log(`[getAvailableTimeSlotsForDate] Returning ${technicians.length} technicians with durations:`,
       technicians.map((t: any) => `${t.full_name}: ${t.duration}min`));
 
-    // Format time slots for UI - always use SERVICE duration for display
-    // Display times as UTC (business hours) without timezone conversion
-    // since working hours represent when the business is open
+    // Format time slots for UI - display in user's local timezone
+    const displayTimezone = userTimezone || 'UTC';
     const timeSlots = slots.map(slot => {
       const slotTime = new Date(slot.start_time);
       return {
@@ -1702,7 +1710,7 @@ export const getAvailableTimeSlotsForDate = withAuth(async (
           hour: '2-digit',
           minute: '2-digit',
           hour12: false,
-          timeZone: 'UTC' // Always display in UTC to match how working hours are stored
+          timeZone: displayTimezone
         }),
         startTime: slot.start_time, // Keep the original UTC ISO timestamp for backend
         available: slot.is_available,
