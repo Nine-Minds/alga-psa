@@ -30,10 +30,9 @@ const imapProviderSchema = z.object({
     .refine((value) => {
       const lower = value.toLowerCase();
       const isLocalPartOnly = /^[^\s@]+$/.test(lower);
-      const isLocalhostEmail = /^[^\s@]+@localhost$/.test(lower);
-      const isStandardEmail = z.string().email().safeParse(lower).success;
-      return isLocalPartOnly || isLocalhostEmail || isStandardEmail;
-    }, 'Valid mailbox is required (e.g. user@domain.com, user@localhost, or user)'),
+      const isEmailLike = /^[^\s@]+@[^\s@]+$/.test(lower);
+      return isLocalPartOnly || isEmailLike;
+    }, 'Valid mailbox is required (e.g. user@domain.com, user@localhost, user@test-server, or user)'),
   host: z.string().min(1, 'IMAP host is required'),
   port: z.number().min(1).max(65535),
   secure: z.boolean(),
@@ -199,7 +198,7 @@ export function ImapProviderForm({
   };
 
   return (
-    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+    <form onSubmit={form.handleSubmit(onSubmit, (errors) => { console.error('Form validation errors:', errors); setHasAttemptedSubmit(true); })} className="space-y-6">
       {error && (
         <Alert variant="destructive">
           <AlertDescription>{error}</AlertDescription>
@@ -214,15 +213,15 @@ export function ImapProviderForm({
         <CardContent className="space-y-4">
           <div>
             <Label htmlFor="providerName">Provider Name</Label>
-            <Input id="providerName" {...form.register('providerName')} />
+            <Input id="providerName" {...form.register('providerName')} error={form.formState.errors.providerName?.message} />
           </div>
           <div>
             <Label htmlFor="mailbox">Mailbox Address</Label>
-            <Input id="mailbox" type="email" {...form.register('mailbox')} />
+            <Input id="mailbox" type="email" {...form.register('mailbox')} error={form.formState.errors.mailbox?.message} />
           </div>
           <div>
             <Label htmlFor="host">IMAP Host</Label>
-            <Input id="host" {...form.register('host')} />
+            <Input id="host" {...form.register('host')} error={form.formState.errors.host?.message} />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -265,7 +264,7 @@ export function ImapProviderForm({
           </div>
           <div>
             <Label htmlFor="username">Username</Label>
-            <Input id="username" {...form.register('username')} />
+            <Input id="username" {...form.register('username')} error={form.formState.errors.username?.message} />
           </div>
 
           {authType === 'password' && (
@@ -280,7 +279,7 @@ export function ImapProviderForm({
                 <Input
                   id="password"
                   type={showPassword ? 'text' : 'password'}
-                  {...form.register('password')}
+                  {...form.register('password')} error={form.formState.errors.password?.message}
                 />
                 <button
                   type="button"
@@ -308,15 +307,15 @@ export function ImapProviderForm({
               )}
               <div>
                 <Label htmlFor="oauthAuthorizeUrl">Authorize URL</Label>
-                <Input id="oauthAuthorizeUrl" {...form.register('oauthAuthorizeUrl')} />
+                <Input id="oauthAuthorizeUrl" {...form.register('oauthAuthorizeUrl')} error={form.formState.errors.oauthAuthorizeUrl?.message} />
               </div>
               <div>
                 <Label htmlFor="oauthTokenUrl">Token URL</Label>
-                <Input id="oauthTokenUrl" {...form.register('oauthTokenUrl')} />
+                <Input id="oauthTokenUrl" {...form.register('oauthTokenUrl')} error={form.formState.errors.oauthTokenUrl?.message} />
               </div>
               <div>
                 <Label htmlFor="oauthClientId">OAuth Client ID</Label>
-                <Input id="oauthClientId" {...form.register('oauthClientId')} />
+                <Input id="oauthClientId" {...form.register('oauthClientId')} error={form.formState.errors.oauthClientId?.message} />
               </div>
               <div>
                 <Label htmlFor="oauthClientSecret">OAuth Client Secret</Label>
@@ -324,7 +323,7 @@ export function ImapProviderForm({
                   <Input
                     id="oauthClientSecret"
                     type={showClientSecret ? 'text' : 'password'}
-                    {...form.register('oauthClientSecret')}
+                    {...form.register('oauthClientSecret')} error={form.formState.errors.oauthClientSecret?.message}
                   />
                   <button
                     type="button"
@@ -337,7 +336,7 @@ export function ImapProviderForm({
               </div>
               <div>
                 <Label htmlFor="oauthScopes">OAuth Scopes</Label>
-                <Input id="oauthScopes" {...form.register('oauthScopes')} placeholder="space-delimited scopes" />
+                <Input id="oauthScopes" {...form.register('oauthScopes')} error={form.formState.errors.oauthScopes?.message} placeholder="space-delimited scopes" />
               </div>
             </div>
           )}
@@ -352,7 +351,7 @@ export function ImapProviderForm({
         <CardContent className="space-y-4">
           <div>
             <Label htmlFor="folderFilters">Folder Filters</Label>
-            <Input id="folderFilters" {...form.register('folderFilters')} placeholder="Inbox, Support, Tickets" />
+            <Input id="folderFilters" {...form.register('folderFilters')} error={form.formState.errors.folderFilters?.message} placeholder="Inbox, Support, Tickets" />
           </div>
           <div className="flex items-center justify-between">
             <Label htmlFor="isActive">Active</Label>
@@ -361,7 +360,7 @@ export function ImapProviderForm({
           <CustomSelect
             id="imap-defaults-select"
             label="Ticket Defaults"
-            value={(form.getValues() as any).inboundTicketDefaultsId || ''}
+            value={form.watch('inboundTicketDefaultsId') || ''}
             onValueChange={(v) => form.setValue('inboundTicketDefaultsId', v || undefined)}
             options={defaultsOptions}
             placeholder={defaultsOptions.length ? 'Select defaults...' : 'No defaults available'}

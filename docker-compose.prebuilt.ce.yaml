@@ -41,6 +41,7 @@ services:
       EMAIL_USERNAME: ${EMAIL_USERNAME:-noreply@example.com}
       NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
       NEXTAUTH_SESSION_EXPIRES: ${NEXTAUTH_SESSION_EXPIRES:-86400}
+      IMAP_WEBHOOK_SECRET: ${IMAP_WEBHOOK_SECRET:-}
     volumes:
       # Persist user-uploaded documents and generated files
       - files_data:/data/files

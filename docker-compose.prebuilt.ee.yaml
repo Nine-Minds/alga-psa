@@ -46,6 +46,7 @@ services:
       WORKFLOW_DISTRIBUTED_MODE: "true"
       WORKFLOW_REDIS_STREAM_PREFIX: "workflow:events:"
       WORKFLOW_REDIS_CONSUMER_GROUP: "workflow-workers"
+      IMAP_WEBHOOK_SECRET: ${IMAP_WEBHOOK_SECRET:-}
     volumes:
       # Persist user-uploaded documents and generated files
       - files_data:/data/files

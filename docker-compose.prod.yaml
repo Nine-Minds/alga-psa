@@ -9,6 +9,7 @@ services:
       # Override defaults for production vault integration
       SECRET_READ_CHAIN: ${SECRET_READ_CHAIN:-env,filesystem,vault}
       SECRET_WRITE_PROVIDER: ${SECRET_WRITE_PROVIDER:-filesystem}
+      IMAP_WEBHOOK_SECRET: ${IMAP_WEBHOOK_SECRET:-}
     build:
       context: .
       dockerfile: Dockerfile.build
@@ -38,6 +39,7 @@ services:
       APP_ENV: production
       SECRET_READ_CHAIN: ${SECRET_READ_CHAIN:-env,filesystem,vault}
       SECRET_WRITE_PROVIDER: ${SECRET_WRITE_PROVIDER:-filesystem}
+      IMAP_WEBHOOK_SECRET: ${IMAP_WEBHOOK_SECRET:-}
       IMAP_PROVIDER_REFRESH_MS: ${IMAP_PROVIDER_REFRESH_MS:-60000}
       IMAP_POLL_INTERVAL_MS: ${IMAP_POLL_INTERVAL_MS:-30000}
       IMAP_LEASE_TTL_MS: ${IMAP_LEASE_TTL_MS:-120000}
