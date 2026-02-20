@@ -134,7 +134,7 @@
   {
     "id": "T017",
     "description": "I18nProvider calls i18next.loadNamespaces() for namespaces not yet loaded when namespaces prop is provided",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F005"
     ]

@@ -156,3 +156,4 @@ ls server/public/locales/*/msp.json  # should fail (files removed)
 - 2026-02-20: Completed T014 checklist entry — getNamespacesForRoute uses longest prefix match when no exact match (e.g., '/msp/tickets/123' matches '/msp/tickets' entry)
 - 2026-02-20: Completed T015 checklist entry — getNamespacesForRoute falls back to ['common'] for unknown routes
 - 2026-02-20: Completed T016 checklist entry — I18nProvider accepts optional namespaces prop (string[])
+- 2026-02-20: Completed T017 checklist entry — I18nProvider calls i18next.loadNamespaces() for namespaces not yet loaded when namespaces prop is provided
