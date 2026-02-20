@@ -239,7 +239,7 @@
   {
     "id": "T030",
     "description": "Pseudo-locale script preserves multiple {{variables}} in a single value (e.g., 'Page {{current}} of {{total}}')",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F013"
     ]
