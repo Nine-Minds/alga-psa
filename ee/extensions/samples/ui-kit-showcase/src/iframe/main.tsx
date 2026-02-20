@@ -21,6 +21,23 @@ function isDarkColor(hex: string): boolean {
 }
 
 /**
+ * Clear host-injected inline style overrides from the document root.
+ * The --alga-* CSS variables remain defined by the extension's own
+ * tokens.css — this only removes the inline layer so the extension
+ * can switch between its own light/dark token sets independently.
+ */
+function clearInlineTheme() {
+  if (typeof document === 'undefined') return;
+  const style = document.documentElement.style;
+  for (let i = style.length - 1; i >= 0; i--) {
+    const prop = style[i];
+    if (prop.startsWith('--alga-')) {
+      style.removeProperty(prop);
+    }
+  }
+}
+
+/**
  * Apply theme variables to the document root and set data-theme attribute.
  */
 function applyTheme(vars: Record<string, string>) {
@@ -36,8 +53,9 @@ function applyTheme(vars: Record<string, string>) {
   if (bg) {
     const mode = isDarkColor(bg) ? 'dark' : 'light';
     root.setAttribute('data-theme', mode);
-    // Dispatch a custom event so React components (e.g. theme toggle) can react
-    window.dispatchEvent(new CustomEvent('alga-theme-change', { detail: { mode } }));
+    // Dispatch a custom event so React components (e.g. theme toggle) can react.
+    // source: 'host' tells listeners this came from the host, not a local toggle.
+    window.dispatchEvent(new CustomEvent('alga-theme-change', { detail: { mode, source: 'host' } }));
   }
 }
 
@@ -77,6 +95,17 @@ function initializeThemeBridge() {
   };
 
   window.addEventListener('message', handleMessage);
+
+  // Listen for local toggle requests from the App component.
+  // When the user clicks the theme toggle, we clear all host-injected inline
+  // styles and let tokens.css dark/light rules take over.
+  window.addEventListener('alga-toggle-theme', ((e: CustomEvent) => {
+    const mode = e.detail?.mode;
+    if (!mode) return;
+    clearInlineTheme();
+    document.documentElement.setAttribute('data-theme', mode);
+    window.dispatchEvent(new CustomEvent('alga-theme-change', { detail: { mode, source: 'toggle' } }));
+  }) as EventListener);
 
   // Send ready message to parent so it knows to send theme
   window.parent.postMessage(

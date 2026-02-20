@@ -97,10 +97,10 @@ function MoonIcon() {
 }
 
 export function App() {
-  const { setMode, getMode } = useTheme();
+  const { getMode } = useTheme();
   const [isDark, setIsDark] = useState(() => getMode() === 'dark');
 
-  // Listen for external theme changes (from the host bridge)
+  // Listen for theme changes (from the host bridge or a local toggle).
   useEffect(() => {
     const handler = (e: Event) => {
       const detail = (e as CustomEvent).detail;
@@ -112,12 +112,13 @@ export function App() {
     return () => window.removeEventListener('alga-theme-change', handler);
   }, []);
 
+  // Dispatch alga-toggle-theme so that main.tsx can clear host inline styles
+  // before switching data-theme. This lets tokens.css rules take effect.
   const toggleTheme = useCallback(() => {
     const next = isDark ? 'light' : 'dark';
-    setMode(next);
+    window.dispatchEvent(new CustomEvent('alga-toggle-theme', { detail: { mode: next } }));
     setIsDark(next === 'dark');
-    window.dispatchEvent(new CustomEvent('alga-theme-change', { detail: { mode: next } }));
-  }, [isDark, setMode]);
+  }, [isDark]);
 
   const tabs = [
     {
