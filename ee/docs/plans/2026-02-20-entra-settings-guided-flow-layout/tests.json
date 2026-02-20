@@ -10,7 +10,7 @@
   {
     "id": "T002",
     "description": "When not connected, guided flow marks Connect as current and hides/locks discovery and sync onboarding CTAs.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F001",
       "F002",
