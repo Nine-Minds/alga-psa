@@ -300,3 +300,6 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - (2026-02-20) `F107` completed: added `EntraSyncResultAggregator` (`ee/server/src/lib/integrations/entra/sync/syncResultAggregator.ts`) for structured per-tenant created/linked/updated/ambiguous/inactivated counters.
 - Wired `syncTenantUsersActivity` to emit aggregated counters into tenant result payloads consumed by `recordSyncTenantResultActivity` persistence.
 - Validation commands: `npx tsc --noEmit -p ee/server/tsconfig.json` and `npx tsc --noEmit -p ee/temporal-workflows/tsconfig.json` (pass).
+- (2026-02-20) `F108` completed: added `executeEntraSync(...)` in `ee/server/src/lib/integrations/entra/sync/syncEngine.ts` with explicit `dryRun` support.
+- Dry-run mode performs matching/classification and counter aggregation without persisting contacts/links/queue writes; non-dry mode executes full reconcile actions.
+- Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).

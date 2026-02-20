@@ -1203,7 +1203,7 @@
   {
     "id": "F108",
     "description": "Dry-run sync mode: provide preview-only execution path used by safe validation actions/tests.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements"
     ],
