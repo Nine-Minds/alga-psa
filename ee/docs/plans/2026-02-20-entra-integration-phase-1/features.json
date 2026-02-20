@@ -12,7 +12,7 @@
   { "id": "F011", "description": "CIPP flag gate: only render CIPP connection option when `entra-integration-cipp` is enabled.", "implemented": true, "prdRefs": ["Feature Flags / Rollout"], "locations": ["ee/server/src/components/settings/integrations/EntraIntegrationSettings.tsx"] },
   { "id": "F012", "description": "Advanced UI gates: guard field-sync controls and ambiguous queue panels with dedicated flags.", "implemented": true, "prdRefs": ["Feature Flags / Rollout"], "locations": ["ee/server/src/components/settings/integrations/EntraIntegrationSettings.tsx"] },
 
-  { "id": "F013", "description": "Schema: create `entra_partner_connections` table for tenant-level Entra connection records.", "implemented": false, "prdRefs": ["Data / API / Integrations"], "locations": ["ee/server/migrations"] },
+  { "id": "F013", "description": "Schema: create `entra_partner_connections` table for tenant-level Entra connection records.", "implemented": true, "prdRefs": ["Data / API / Integrations"], "locations": ["ee/server/migrations"] },
   { "id": "F014", "description": "Schema constraint: enforce at most one active Entra partner connection per tenant.", "implemented": false, "prdRefs": ["Data / API / Integrations"], "locations": ["ee/server/migrations"] },
   { "id": "F015", "description": "Schema: create `entra_managed_tenants` table storing discovered tenant metadata per MSP tenant.", "implemented": false, "prdRefs": ["Data / API / Integrations"], "locations": ["ee/server/migrations"] },
   { "id": "F016", "description": "Schema index: add efficient lookup indexes for managed tenant discovery and domain matching.", "implemented": false, "prdRefs": ["Data / API / Integrations"], "locations": ["ee/server/migrations"] },
