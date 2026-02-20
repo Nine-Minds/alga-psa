@@ -189,3 +189,4 @@ ls server/public/locales/*/msp.json  # should fail (files removed)
 - 2026-02-20: Completed T047 checklist entry — MSP portal with flag OFF: no I18nWrapper rendered, no namespace HTTP requests for msp/core
 - 2026-02-20: Completed T048 checklist entry — MSP portal with flag OFF: layout renders identically to before changes (zero behavior change)
 - 2026-02-20: Completed T049 checklist entry — MSP portal with flag ON: msp/core namespace loads correctly via lazy loading
+- 2026-02-20: Completed T050 checklist entry — MSP portal with flag ON: navigating to /msp/tickets loads features/tickets namespace in addition to msp/core

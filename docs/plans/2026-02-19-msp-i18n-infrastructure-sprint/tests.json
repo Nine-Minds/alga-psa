@@ -402,7 +402,7 @@
   {
     "id": "T050",
     "description": "MSP portal with flag ON: navigating to /msp/tickets loads features/tickets namespace in addition to msp/core",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F022"
     ]
