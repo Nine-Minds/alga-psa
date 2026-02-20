@@ -142,7 +142,7 @@
   {
     "id": "T018",
     "description": "I18nProvider loads new namespaces when namespaces prop changes (simulating route navigation)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F005"
     ]
