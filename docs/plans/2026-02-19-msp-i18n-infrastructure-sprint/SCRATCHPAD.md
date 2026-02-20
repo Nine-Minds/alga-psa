@@ -150,3 +150,4 @@ ls server/public/locales/*/msp.json  # should fail (files removed)
 - 2026-02-20: Completed T008 checklist entry — ROUTE_NAMESPACES maps '/msp/settings' to ['common', 'msp/core']
 - 2026-02-20: Completed T009 checklist entry — All ROUTE_NAMESPACES MSP entries use 'msp/core' (not 'msp')
 - 2026-02-20: Completed T010 checklist entry — getNamespacesForRoute is exported from packages/ui/src/lib/i18n/config.ts
+- 2026-02-20: Completed T011 checklist entry — getNamespacesForRoute('/msp/tickets') returns namespaces including 'msp/core' and 'features/tickets'
