@@ -144,3 +144,4 @@ ls server/public/locales/*/msp.json  # should fail (files removed)
 - 2026-02-20: Verified core `I18N_CONFIG.ns` via Phase 0 test coverage (T002).
 - 2026-02-20: Confirmed `ROUTE_NAMESPACES` export via Phase 0 tests (T003).
 - 2026-02-20: Verified `/client-portal` route namespace mapping in Phase 0 tests (T004).
+- 2026-02-20: Completed T005 checklist entry — ROUTE_NAMESPACES maps '/client-portal/tickets' to ['common', 'client-portal', 'features/tickets']
