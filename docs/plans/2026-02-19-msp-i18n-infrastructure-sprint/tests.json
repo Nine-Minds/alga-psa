@@ -280,7 +280,7 @@
   {
     "id": "T035",
     "description": "Pseudo-locales xx and yy are added to I18N_CONFIG.supportedLngs",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F015"
     ]
