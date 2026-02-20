@@ -38,7 +38,7 @@
   {
     "id": "F007",
     "description": "I18nWrapper calls getNamespacesForRoute(pathname) and passes result as namespaces prop to I18nProvider",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR4"]
   },
   {

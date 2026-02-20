@@ -124,3 +124,4 @@ ls server/public/locales/*/msp.json  # should fail (files removed)
 - 2026-02-20: Added optional `namespaces` prop to `I18nProvider` in `packages/ui/src/lib/i18n/client.tsx` (F004).
 - 2026-02-20: `I18nProvider` now loads missing namespaces on route changes via `i18next.loadNamespaces()` (F005).
 - 2026-02-20: `I18nWrapper` now reads the current route via `usePathname()` (F006).
+- 2026-02-20: `I18nWrapper` now resolves namespaces with `getNamespacesForRoute()` and passes them to `I18nProvider` (F007).

@@ -1,7 +1,7 @@
 'use client';
 
 import { I18nProvider } from '@alga-psa/ui/lib/i18n/client';
-import { SupportedLocale, LOCALE_CONFIG } from '@alga-psa/ui/lib/i18n/config';
+import { SupportedLocale, LOCALE_CONFIG, getNamespacesForRoute } from '@alga-psa/ui/lib/i18n/config';
 import { ReactNode, useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { getHierarchicalLocaleAction } from '../../actions';
@@ -22,6 +22,7 @@ export function I18nWrapper({
   );
   const [isLoading, setIsLoading] = useState(!initialLocale);
   const pathname = usePathname();
+  const namespaces = getNamespacesForRoute(pathname);
 
   useEffect(() => {
     if (!initialLocale) {
@@ -47,7 +48,7 @@ export function I18nWrapper({
   }
 
   return (
-    <I18nProvider initialLocale={locale} portal={portal}>
+    <I18nProvider initialLocale={locale} portal={portal} namespaces={namespaces}>
       {children}
     </I18nProvider>
   );
