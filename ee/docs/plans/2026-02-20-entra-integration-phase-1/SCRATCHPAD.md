@@ -232,3 +232,5 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - Validation command: `npx tsc --noEmit -p ee/temporal-workflows/tsconfig.json` (pass).
 - (2026-02-20) `F083` completed: exported Entra activities in worker activity index (`ee/temporal-workflows/src/activities/index.ts`) for discovery and sync activity registration.
 - Validation command: `npx tsc --noEmit -p ee/temporal-workflows/tsconfig.json` (pass).
+- (2026-02-20) `F084` completed: added EE Temporal wrapper `ee/server/src/lib/integrations/entra/entraWorkflowClient.ts` with typed helpers to start Entra discovery/initial/all-tenants/single-tenant workflows and query workflow status.
+- Validation commands: `npx tsc --noEmit -p ee/server/tsconfig.json`, `npx tsc --noEmit -p ee/temporal-workflows/tsconfig.json` (pass).

@@ -931,7 +931,7 @@
   {
     "id": "F084",
     "description": "EE workflow client wrapper: implement typed start/query helpers for Entra workflows.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data / API / Integrations"
     ],
