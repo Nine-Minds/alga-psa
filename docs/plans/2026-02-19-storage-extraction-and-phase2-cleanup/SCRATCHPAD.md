@@ -150,3 +150,4 @@ grep -r "from '../lib/email'" server/ --include="*.ts" --include="*.tsx"
 - F042: Updated `fileActions.ts` to pull FileStoreModel and FileStore from the storage package.
 - T043: Verified fileActions imports storage model and type from `@alga-psa/storage`.
 - Build attempt: `NODE_OPTIONS=--max-old-space-size=8192 npm run build` ran through Next build with warnings and static page generation, but command timed out at 6m (no success signal).
+- T038: `NODE_OPTIONS=--max-old-space-size=8192 npm run build` completed successfully (warnings only).
