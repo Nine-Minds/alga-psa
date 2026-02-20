@@ -91,3 +91,4 @@ grep -r "from '../lib/email'" server/ --include="*.ts" --include="*.tsx"
 - F029: Updated billing `pdfGenerationService.ts` to import `FileStore` from `@alga-psa/storage/types/storage`.
 - F030: Updated document handlers to import `StorageService` from `@alga-psa/storage/StorageService`.
 - F031: Updated `fileActions.ts` to import `StorageService` from `@alga-psa/storage/StorageService`.
+- F032: Updated `documentActions.ts` to import `StorageService` from `@alga-psa/storage/StorageService`.

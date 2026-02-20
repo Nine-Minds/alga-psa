@@ -188,7 +188,7 @@
   {
     "id": "F032",
     "description": "Update packages/documents/src/actions/documentActions.ts to import StorageService from @alga-psa/storage/StorageService",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-11"]
   },
   {
