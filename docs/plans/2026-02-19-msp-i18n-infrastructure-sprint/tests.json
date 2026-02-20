@@ -362,7 +362,7 @@
   {
     "id": "T045",
     "description": "Client portal at /client-portal/tickets loads features/tickets namespace in addition to common and client-portal",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F020"
     ]
