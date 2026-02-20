@@ -366,4 +366,36 @@ describe('EntraIntegrationSettings guided flow', () => {
     await screen.findByText('Current Step');
     expect(document.getElementById('entra-reconciliation-queue-stub')).not.toBeNull();
   });
+
+  it('T007: field-sync and ambiguous-queue sections remain controlled by existing flags', async () => {
+    getEntraIntegrationStatusMock.mockResolvedValue({
+      success: true,
+      data: buildStatus({
+        status: 'connected',
+        lastDiscoveryAt: '2026-02-20T12:00:00.000Z',
+        mappedTenantCount: 1,
+      }),
+    });
+
+    const firstRender = render(<EntraIntegrationSettings />);
+    await screen.findByText('Current Step');
+    expect(document.getElementById('entra-field-sync-controls-panel')).toBeNull();
+    expect(document.getElementById('entra-reconciliation-queue-stub')).toBeNull();
+    firstRender.unmount();
+
+    applyFlags(['entra-integration-ui', 'entra-integration-field-sync', 'entra-integration-ambiguous-queue']);
+    getEntraIntegrationStatusMock.mockResolvedValue({
+      success: true,
+      data: buildStatus({
+        status: 'connected',
+        lastDiscoveryAt: '2026-02-20T12:00:00.000Z',
+        mappedTenantCount: 1,
+      }),
+    });
+
+    render(<EntraIntegrationSettings />);
+    await screen.findByText('Current Step');
+    expect(document.getElementById('entra-field-sync-controls-panel')).not.toBeNull();
+    expect(document.getElementById('entra-reconciliation-queue-stub')).not.toBeNull();
+  });
 });

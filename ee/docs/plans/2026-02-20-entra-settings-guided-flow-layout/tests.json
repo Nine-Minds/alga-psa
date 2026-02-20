@@ -59,7 +59,7 @@
   {
     "id": "T007",
     "description": "Field-sync and ambiguous-queue sections remain controlled by existing flags after layout changes.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F010"
     ]

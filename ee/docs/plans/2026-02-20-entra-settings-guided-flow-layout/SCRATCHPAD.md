@@ -121,3 +121,6 @@ Focused planning log for guided-layout improvements in Entra integration setting
   - Added `T006` assertion that `Sync All Tenants Now` is rendered under `#entra-ongoing-operations-panel` and remains gated by mapped-tenant count.
   - Revalidated related enable/disable tests (`T124`, `T125`).
   - Command: `cd ee/server && npx vitest run src/__tests__/unit/entraIntegrationSettings.initialSyncCta.test.tsx -t "T006|T124|T125"`.
+- (2026-02-20) T007 completed.
+  - Added explicit `T007` coverage for field-sync + ambiguous-queue flag gating and revalidated queue-specific tests.
+  - Command: `cd ee/server && npx vitest run src/__tests__/unit/entraIntegrationSettings.initialSyncCta.test.tsx -t "T007|T128|T129"`.
