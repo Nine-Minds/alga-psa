@@ -164,7 +164,7 @@
   {
     "id": "F028",
     "description": "Update server/src/lib/storage/StorageService.ts: import StorageProviderFactory, generateStoragePath from @alga-psa/storage",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-09"]
   },
   {
