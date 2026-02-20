@@ -792,7 +792,7 @@
   {
     "id": "T093",
     "description": "Default service-account patterns are excluded from sync candidate set.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F093"
     ]

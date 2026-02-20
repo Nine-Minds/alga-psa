@@ -604,3 +604,6 @@ EOF && git add ee/docs/plans/2026-02-20-entra-integration-phase-1/tests.json ee/
 - (2026-02-20) `T092` completed in `entraUserFilterPipeline` suite.
 - Missing-identity case verifies users without valid UPN/email identities are excluded with `missing_identity` reason.
 - Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraUserFilterPipeline.test.ts` (pass).
+- (2026-02-20) `T093` completed in `entraUserFilterPipeline` suite.
+- Default service-account pattern case verifies identities like `svc-*` are filtered from sync candidates with `service_account` reason.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraUserFilterPipeline.test.ts` (pass).
