@@ -293,3 +293,4 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - (2026-02-20) `F104` completed: added `reconcileEntraUserToContact(...)` orchestrator in `contactReconciler.ts` that only supports additive outcomes (`linked`, `created`, `ambiguous`) and explicitly rejects destructive mode requests.
 - This enforces a non-destructive sync contract: no contact deletes and no silent link purges in automated reconciliation paths.
 - Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
+- (2026-02-20) `F105` completed: confirmed reconciler contact metadata updates now always set `last_entra_sync_at` within link/create transaction path, so every processed linked/new contact receives a sync timestamp refresh.

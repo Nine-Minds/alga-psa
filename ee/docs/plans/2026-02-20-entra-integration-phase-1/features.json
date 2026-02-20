@@ -1169,7 +1169,7 @@
   {
     "id": "F105",
     "description": "Sync timestamp updates: set `last_entra_sync_at` on every processed linked/new contact.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements"
     ],
