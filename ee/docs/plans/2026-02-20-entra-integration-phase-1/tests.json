@@ -326,7 +326,7 @@
   {
     "id": "T038",
     "description": "Direct validation action succeeds with valid credentials and reachable tenant list.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F041",
       "F047"
