@@ -1144,7 +1144,7 @@
   {
     "id": "T135",
     "description": "EE docs include both direct and CIPP setup paths and decision guidance.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F120"
     ]
