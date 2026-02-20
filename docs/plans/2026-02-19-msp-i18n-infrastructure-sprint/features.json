@@ -86,7 +86,7 @@
   {
     "id": "F015",
     "description": "Add pseudo-locales xx and yy to LOCALE_CONFIG.supportedLocales",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR14"]
   },
   {
