@@ -603,7 +603,7 @@
   {
     "id": "T071",
     "description": "`entraInitialSyncWorkflow` loads mapped tenants then processes each tenant sync.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F073",
       "F077",
