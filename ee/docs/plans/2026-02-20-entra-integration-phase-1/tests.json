@@ -45,7 +45,7 @@
   {
     "id": "T006",
     "description": "`entra-integration-ui` disabled hides Entra settings surface.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F006",
       "F007"

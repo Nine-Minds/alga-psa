@@ -359,3 +359,6 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - (2026-02-20) `T005` completed: added dynamic target import test `server/src/test/unit/components/integrations/EntraIntegrationSettings.dynamicImport.test.tsx`.
 - Test validates the `@enterprise/components/settings/integrations/EntraIntegrationSettings` module imports successfully (the same dynamic path used by settings page) and renders its base shell content.
 - Validation command: `cd server && npx vitest run src/test/unit/components/integrations/EntraIntegrationSettings.dynamicImport.test.tsx` (pass).
+- (2026-02-20) `T006` completed: expanded `server/src/test/unit/components/integrations/IntegrationsSettingsPage.entra.test.tsx` with a flag-off scenario.
+- With `useFeatureFlag('entra-integration-ui')` mocked disabled, test confirms the Identity/Entra integration surface is absent from integrations settings UI.
+- Validation command: `cd server && npx vitest run src/test/unit/components/integrations/IntegrationsSettingsPage.entra.test.tsx` (pass).

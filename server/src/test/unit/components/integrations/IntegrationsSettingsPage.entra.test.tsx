@@ -109,4 +109,23 @@ describe('IntegrationsSettingsPage Entra placement', () => {
     expect(screen.getByText('Identity Integrations')).toBeInTheDocument();
     expect(screen.getByText('Loading Entra integration settings...')).toBeInTheDocument();
   });
+
+  it('hides Entra settings surface when entra-integration-ui flag is disabled', async () => {
+    useFeatureFlagMock.mockReturnValue({
+      enabled: false,
+      isLoading: false,
+      error: null,
+      value: false,
+    });
+
+    const { default: IntegrationsSettingsPage } = await import(
+      '@alga-psa/integrations/components/settings/integrations/IntegrationsSettingsPage'
+    );
+
+    render(<IntegrationsSettingsPage />);
+
+    expect(screen.queryByText('Identity')).not.toBeInTheDocument();
+    expect(screen.queryByText('Identity Integrations')).not.toBeInTheDocument();
+    expect(screen.queryByText('Loading Entra integration settings...')).not.toBeInTheDocument();
+  });
 });
