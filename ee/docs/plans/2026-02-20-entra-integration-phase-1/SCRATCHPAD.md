@@ -595,3 +595,6 @@ EOF && git add ee/docs/plans/2026-02-20-entra-integration-phase-1/tests.json ee/
 - (2026-02-20) `T089` completed in Temporal workflow/activity contract suite.
 - Added no-mapped-tenant assertions for initial/all-tenants workflows to ensure zero-initialized summaries and completed status path when nothing is processed.
 - Validation command: `cd server && npx vitest run src/test/unit/temporal/entraWorkflowActivityContracts.test.ts --coverage.enabled=false` (pass).
+- (2026-02-20) `T090` completed in Temporal workflow/activity contract suite.
+- Failure-path assertions verify per-tenant catch blocks emit failed tenant results and parent run status rolls up to `partial`/`failed` according to succeeded-vs-failed counts.
+- Validation command: `cd server && npx vitest run src/test/unit/temporal/entraWorkflowActivityContracts.test.ts --coverage.enabled=false` (pass).

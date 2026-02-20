@@ -139,4 +139,23 @@ describe('Entra Temporal workflow/activity contracts', () => {
     expect(allTenantsWorkflow).toContain("? 'completed'");
     expect(allTenantsWorkflow).toContain('processedTenants: 0');
   });
+
+  it('T090: tenant sync adapter failures are recorded as failed tenant results and drive parent run status', () => {
+    const initialWorkflow = readRepoFile('ee/temporal-workflows/src/workflows/entra-initial-sync-workflow.ts');
+    const allTenantsWorkflow = readRepoFile('ee/temporal-workflows/src/workflows/entra-all-tenants-sync-workflow.ts');
+
+    expect(initialWorkflow).toContain('catch (error: unknown)');
+    expect(initialWorkflow).toContain("status: 'failed'");
+    expect(initialWorkflow).toContain('errorMessage = error instanceof Error ? error.message : \'Tenant sync failed.\'');
+    expect(initialWorkflow).toContain("summary.succeededTenants > 0");
+    expect(initialWorkflow).toContain("? 'partial'");
+    expect(initialWorkflow).toContain(": 'failed'");
+
+    expect(allTenantsWorkflow).toContain('catch (error: unknown)');
+    expect(allTenantsWorkflow).toContain("status: 'failed'");
+    expect(allTenantsWorkflow).toContain("errorMessage: error instanceof Error ? error.message : 'Tenant sync failed.'");
+    expect(allTenantsWorkflow).toContain("summary.succeededTenants > 0");
+    expect(allTenantsWorkflow).toContain("? 'partial'");
+    expect(allTenantsWorkflow).toContain(": 'failed'");
+  });
 });

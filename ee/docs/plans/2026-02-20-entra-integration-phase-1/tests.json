@@ -766,7 +766,7 @@
   {
     "id": "T090",
     "description": "Adapter failure in tenant sync marks tenant result failed and parent run failed/partial as designed.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F078",
       "F080",
