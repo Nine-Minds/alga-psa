@@ -102,25 +102,36 @@ const defaultRegistry: SSOProviderRegistry = {
   },
 };
 
-let registry: SSOProviderRegistry = { ...defaultRegistry };
+declare global {
+  // eslint-disable-next-line no-var
+  var __algaSSOProviderRegistry: SSOProviderRegistry | undefined;
+}
+
+function getOrCreateRegistry(): SSOProviderRegistry {
+  if (!globalThis.__algaSSOProviderRegistry) {
+    globalThis.__algaSSOProviderRegistry = { ...defaultRegistry };
+  }
+  return globalThis.__algaSSOProviderRegistry;
+}
 
 /**
  * Register SSO provider implementations (called by EE at startup)
  */
 export function registerSSOProvider(impl: Partial<SSOProviderRegistry>): void {
-  registry = { ...registry, ...impl };
+  const current = getOrCreateRegistry();
+  globalThis.__algaSSOProviderRegistry = { ...current, ...impl };
 }
 
 /**
  * Get the current SSO registry (used by auth code)
  */
 export function getSSORegistry(): SSOProviderRegistry {
-  return registry;
+  return getOrCreateRegistry();
 }
 
 /**
  * Reset to default registry (for testing)
  */
 export function resetSSORegistry(): void {
-  registry = { ...defaultRegistry };
+  globalThis.__algaSSOProviderRegistry = { ...defaultRegistry };
 }

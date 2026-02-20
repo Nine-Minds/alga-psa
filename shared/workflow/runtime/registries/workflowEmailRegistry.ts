@@ -38,28 +38,31 @@ export interface WorkflowEmailProvider {
   };
 }
 
-let provider: WorkflowEmailProvider | null = null;
+declare global {
+  // eslint-disable-next-line no-var
+  var __algaWorkflowEmailProvider: WorkflowEmailProvider | null | undefined;
+}
 
 /**
  * Register email provider implementations (called at app startup)
  */
 export function registerWorkflowEmailProvider(impl: WorkflowEmailProvider): void {
-  provider = impl;
+  globalThis.__algaWorkflowEmailProvider = impl;
 }
 
 /**
  * Get the current email provider (used by workflow actions)
  */
 export function getWorkflowEmailProvider(): WorkflowEmailProvider {
-  if (!provider) {
+  if (!globalThis.__algaWorkflowEmailProvider) {
     throw new Error('Workflow email provider not registered. Ensure registerWorkflowEmailProvider() is called at app startup.');
   }
-  return provider;
+  return globalThis.__algaWorkflowEmailProvider;
 }
 
 /**
  * Reset to default (for testing)
  */
 export function resetWorkflowEmailProvider(): void {
-  provider = null;
+  globalThis.__algaWorkflowEmailProvider = null;
 }
