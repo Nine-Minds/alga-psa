@@ -5,7 +5,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
-import { getEntraIntegrationStatus, type EntraStatusResponse } from '@alga-psa/integrations/actions';
+import {
+  getEntraIntegrationStatus,
+  startEntraSync,
+  type EntraStatusResponse,
+} from '@alga-psa/integrations/actions';
 import {
   EntraTenantMappingTable,
   type EntraMappingSummary,
@@ -34,6 +38,8 @@ export default function EntraIntegrationSettings() {
     needsReview: 0,
   });
   const [skippedTenants, setSkippedTenants] = React.useState<EntraSkippedTenant[]>([]);
+  const [syncAllLoading, setSyncAllLoading] = React.useState(false);
+  const [syncAllMessage, setSyncAllMessage] = React.useState<string | null>(null);
 
   const loadStatus = React.useCallback(async () => {
     setStatusLoading(true);
@@ -84,6 +90,25 @@ export default function EntraIntegrationSettings() {
       : []),
   ];
   const hasConfirmedMappings = (status?.mappedTenantCount || 0) > 0;
+
+  const handleSyncAllTenants = React.useCallback(async () => {
+    setSyncAllLoading(true);
+    setSyncAllMessage(null);
+    try {
+      const result = await startEntraSync({ scope: 'all-tenants' });
+      if ('error' in result) {
+        setSyncAllMessage(result.error || 'Failed to start full Entra sync.');
+        return;
+      }
+
+      setSyncAllMessage(
+        result.data?.runId ? `Sync started. Run ID: ${result.data.runId}` : 'Sync start request accepted.'
+      );
+      await loadStatus();
+    } finally {
+      setSyncAllLoading(false);
+    }
+  }, [loadStatus]);
 
   if (!uiFlag.enabled) {
     return (
@@ -244,10 +269,21 @@ export default function EntraIntegrationSettings() {
             >
               Run Initial Sync
             </Button>
-            <Button id="entra-sync-all-tenants" type="button" variant="outline" disabled={!hasConfirmedMappings}>
-              Sync All Tenants Now
+            <Button
+              id="entra-sync-all-tenants"
+              type="button"
+              variant="outline"
+              disabled={!hasConfirmedMappings || syncAllLoading}
+              onClick={() => void handleSyncAllTenants()}
+            >
+              {syncAllLoading ? 'Starting…' : 'Sync All Tenants Now'}
             </Button>
           </div>
+          {syncAllMessage ? (
+            <p className="text-sm text-muted-foreground" id="entra-sync-all-tenants-feedback">
+              {syncAllMessage}
+            </p>
+          ) : null}
 
           <EntraSyncHistoryPanel />
         </CardContent>

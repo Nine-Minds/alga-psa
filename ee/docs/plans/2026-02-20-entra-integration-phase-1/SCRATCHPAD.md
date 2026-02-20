@@ -314,3 +314,6 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - (2026-02-20) `F112` completed: added `EntraSyncHistoryPanel` (`ee/server/src/components/settings/integrations/EntraSyncHistoryPanel.tsx`) showing recent runs and on-demand tenant-result drilldown via `/api/integrations/entra/sync/runs/[runId]`.
 - Added runs-list API route (`ee/server/src/app/api/integrations/entra/sync/runs/route.ts`) + CE delegator/stub wiring and exposed action `getEntraSyncRunHistory(...)` for UI consumption.
 - Validation commands: `npx tsc --noEmit -p ee/server/tsconfig.json`, `npx tsc --noEmit -p packages/integrations/tsconfig.json`, `npx tsc --noEmit -p server/tsconfig.json` (pass).
+- (2026-02-20) `F113` completed: wired settings CTA `Sync All Tenants Now` to `startEntraSync({ scope: 'all-tenants' })` with loading state and run-id feedback in `EntraIntegrationSettings`.
+- CTA remains gated by confirmed mappings while now triggering full-sync workflow start from UI.
+- Validation commands: `npx tsc --noEmit -p ee/server/tsconfig.json` and `npx tsc --noEmit -p packages/integrations/tsconfig.json` (pass).

@@ -1258,7 +1258,7 @@
   {
     "id": "F113",
     "description": "Manual full sync UX: add `Sync All Tenants Now` button wired to Temporal full sync workflow.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows"
     ],
