@@ -498,3 +498,6 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - (2026-02-20) `T057` completed in `entraMappingPreviewService` unit suite.
 - Fuzzy candidate case verifies candidates are score-sorted descending and remain non-auto-confirmed (`autoMatch=false`), ensuring fuzzy suggestions never silently map.
 - Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraMappingPreviewService.test.ts` (pass).
+- (2026-02-20) `T058` completed in `entraMappingPreviewService` unit suite.
+- No-match case confirms tenants are returned in `unmatched` when neither domain nor fuzzy thresholds produce candidates.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraMappingPreviewService.test.ts` (pass).

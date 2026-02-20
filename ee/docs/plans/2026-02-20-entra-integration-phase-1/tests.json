@@ -496,7 +496,7 @@
   {
     "id": "T058",
     "description": "Preview returns unmatched list when no candidate crosses threshold.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F056"
     ]
