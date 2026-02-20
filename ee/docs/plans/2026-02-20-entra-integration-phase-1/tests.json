@@ -1171,7 +1171,7 @@
   {
     "id": "T138",
     "description": "EE docs describe feature-flag rollout order for pilot tenants.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F010",
       "F120"
