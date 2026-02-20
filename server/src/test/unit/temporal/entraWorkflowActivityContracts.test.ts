@@ -100,4 +100,28 @@ describe('Entra Temporal workflow/activity contracts', () => {
     expect(activityIndex).toContain('export * from "./entra-discovery-activities";');
     expect(activityIndex).toContain('export * from "./entra-sync-activities";');
   });
+
+  it('T086: schedule setup creates tenant-scoped Entra recurring schedules when enabled and connected', () => {
+    const scheduleSource = readRepoFile('ee/temporal-workflows/src/schedules/setupSchedules.ts');
+
+    expect(scheduleSource).toContain('const ENTRA_SCHEDULE_ID_PREFIX = \'entra-all-tenants-sync-schedule\'');
+    expect(scheduleSource).toContain('const entraConfigs = await loadEntraScheduleConfigs();');
+    expect(scheduleSource).toContain('for (const config of entraConfigs)');
+    expect(scheduleSource).toContain('if (!config.syncEnabled || !config.hasActiveConnection)');
+    expect(scheduleSource).toContain('await upsertSchedule(client, tenantScheduleId, {');
+    expect(scheduleSource).toContain('workflowType: entraAllTenantsSyncWorkflow');
+    expect(scheduleSource).toContain("trigger: 'scheduled'");
+  });
+
+  it('T087: schedule setup updates existing Entra schedule definitions when schedule already exists', () => {
+    const scheduleSource = readRepoFile('ee/temporal-workflows/src/schedules/setupSchedules.ts');
+
+    expect(scheduleSource).toContain('async function upsertSchedule(client: Client, scheduleId: string, input: any)');
+    expect(scheduleSource).toContain('await client.schedule.create({');
+    expect(scheduleSource).toContain('if (!isAlreadyExistsError(error))');
+    expect(scheduleSource).toContain('const handle = client.schedule.getHandle(scheduleId);');
+    expect(scheduleSource).toContain('await handle.update((prev) => ({');
+    expect(scheduleSource).toContain('spec: input.spec');
+    expect(scheduleSource).toContain('action: input.action');
+  });
 });

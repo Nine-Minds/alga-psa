@@ -583,3 +583,6 @@ EOF && git add ee/docs/plans/2026-02-20-entra-integration-phase-1/tests.json ee/
 - (2026-02-20) `T085` completed in `entraActions.startSync` unit suite.
 - Single-client case verifies `startEntraSync({scope:'single-client'})` resolves mapped tenant context then dispatches `startEntraTenantSyncWorkflow` with expected identifiers.
 - Validation command: `cd server && npx vitest run src/test/unit/integrations/entraActions.startSync.test.ts --coverage.enabled=false` (pass).
+- (2026-02-20) `T086` completed in Temporal workflow/activity contract suite.
+- Schedule assertions verify tenant-scoped Entra recurring schedule creation path for enabled tenants with active connections, using scheduled all-tenants workflow trigger config.
+- Validation command: `cd server && npx vitest run src/test/unit/temporal/entraWorkflowActivityContracts.test.ts --coverage.enabled=false` (pass).

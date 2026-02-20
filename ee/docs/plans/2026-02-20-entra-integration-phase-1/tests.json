@@ -733,7 +733,7 @@
   {
     "id": "T086",
     "description": "Schedule setup creates Entra recurring sync schedule when not present.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F089"
     ]
