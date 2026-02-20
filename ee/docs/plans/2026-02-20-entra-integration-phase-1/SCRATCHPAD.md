@@ -514,3 +514,6 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - (2026-02-20) `T062` completed: extended `server/src/test/unit/api/entraMappingAndDisconnectContracts.test.ts` with confirm/preview write-path contract assertions.
 - Coverage asserts confirm route only processes explicit `body.mappings` input and confirm service iterates `params.mappings`; preview route remains read-only (`buildEntraMappingPreview` only, no insert/update).
 - Validation command: `cd server && npx vitest run src/test/unit/api/entraMappingAndDisconnectContracts.test.ts` (pass).
+- (2026-02-20) `T063` completed: added service-level unit test `ee/server/src/__tests__/unit/confirmEntraMappingsService.clientLink.test.ts`.
+- Test executes `confirmEntraMappings` with a mapped selection and verifies client row update writes `entra_tenant_id` + `entra_primary_domain` from managed-tenant lookup.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/confirmEntraMappingsService.clientLink.test.ts` (pass).

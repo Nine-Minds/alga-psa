@@ -537,7 +537,7 @@
   {
     "id": "T063",
     "description": "Confirm mappings updates mapped client rows with Entra tenant id and primary domain.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F062"
     ]
