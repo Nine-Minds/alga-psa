@@ -987,7 +987,7 @@
   {
     "id": "T117",
     "description": "Resolve queue -> new contact creates contact/link and marks queue item resolved.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F117"
     ]
