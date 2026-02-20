@@ -709,7 +709,7 @@
   {
     "id": "F064",
     "description": "Unmap action: add API/action to remove active tenant-client mapping safely.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements"
     ],

@@ -110,6 +110,7 @@ export {
   getEntraMappingPreview,
   confirmEntraMappings,
   skipEntraTenantMapping,
+  unmapEntraTenant,
   startEntraSync,
   type EntraConnectionType,
   type EntraSyncScope,
