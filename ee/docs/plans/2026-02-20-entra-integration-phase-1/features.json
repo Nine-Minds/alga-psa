@@ -183,7 +183,7 @@
   {
     "id": "F017",
     "description": "Schema: create `entra_client_tenant_mappings` table for confirmed mapping state (mapped/skipped/review).",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data / API / Integrations"
     ],

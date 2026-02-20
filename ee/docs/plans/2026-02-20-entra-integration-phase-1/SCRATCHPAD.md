@@ -94,3 +94,4 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - (2026-02-20) `F014` completed: added unique partial index `ux_entra_partner_connections_active_per_tenant` to enforce at most one active partner connection per tenant.
 - (2026-02-20) `F015` completed: migration creates `entra_managed_tenants` for persisted discovered tenant records per MSP tenant.
 - (2026-02-20) `F016` completed: added managed-tenant lookup indexes for recency and case-insensitive primary-domain matching.
+- (2026-02-20) `F017` completed: migration adds `entra_client_tenant_mappings` to persist mapped/skipped/review decisions.
