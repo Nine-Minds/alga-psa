@@ -39,6 +39,12 @@ export interface EntraMappingSummary {
   needsReview: number;
 }
 
+export interface EntraSkippedTenant {
+  managedTenantId: string;
+  displayName: string | null;
+  primaryDomain: string | null;
+}
+
 function formatConfidence(score: number): string {
   return `${Math.round(score * 100)}%`;
 }
@@ -117,6 +123,7 @@ function reasonLabel(reason: MatchReason): string {
 
 export function EntraTenantMappingTable(props: {
   onSummaryChange?: (summary: EntraMappingSummary) => void;
+  onSkippedTenantsChange?: (rows: EntraSkippedTenant[]) => void;
 }) {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
@@ -176,6 +183,15 @@ export function EntraTenantMappingTable(props: {
     };
 
     props.onSummaryChange?.(summary);
+    props.onSkippedTenantsChange?.(
+      rows
+        .filter((row) => row.isSkipped)
+        .map((row) => ({
+          managedTenantId: row.managedTenantId,
+          displayName: row.displayName,
+          primaryDomain: row.primaryDomain,
+        }))
+    );
   }, [rows, props]);
 
   const updateSelection = React.useCallback((managedTenantId: string, selectedClientId: string) => {

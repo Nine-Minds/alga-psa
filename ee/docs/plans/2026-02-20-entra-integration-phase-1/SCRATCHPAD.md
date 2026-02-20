@@ -202,3 +202,5 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
 - (2026-02-20) `F068` completed: added `Run Initial Sync` CTA and bound enablement to confirmed mapping count (`status.mappedTenantCount > 0`) so initial sync can only be started when at least one mapping exists.
 - Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
+- (2026-02-20) `F069` completed: added skipped-tenants panel in settings with per-tenant `Remap` entry controls and wired skipped-row state propagation from `EntraTenantMappingTable`.
+- Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).

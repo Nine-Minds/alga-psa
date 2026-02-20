@@ -766,7 +766,7 @@
   {
     "id": "F069",
     "description": "Skipped-tenants panel: show skipped tenants and provide quick remap entry point.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes"
     ],

@@ -6,7 +6,11 @@ import { Badge } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { getEntraIntegrationStatus, type EntraStatusResponse } from '@alga-psa/integrations/actions';
-import { EntraTenantMappingTable, type EntraMappingSummary } from './EntraTenantMappingTable';
+import {
+  EntraTenantMappingTable,
+  type EntraMappingSummary,
+  type EntraSkippedTenant,
+} from './EntraTenantMappingTable';
 
 const WIZARD_STEPS = [
   { id: 1, title: 'Connect', description: 'Choose Direct Microsoft partner auth or CIPP.' },
@@ -27,6 +31,7 @@ export default function EntraIntegrationSettings() {
     skipped: 0,
     needsReview: 0,
   });
+  const [skippedTenants, setSkippedTenants] = React.useState<EntraSkippedTenant[]>([]);
 
   const loadStatus = React.useCallback(async () => {
     setStatusLoading(true);
@@ -127,7 +132,39 @@ export default function EntraIntegrationSettings() {
               <p><span className="font-medium text-foreground">Skipped:</span> {mappingSummary.skipped}</p>
               <p><span className="font-medium text-foreground">Needs Review:</span> {mappingSummary.needsReview}</p>
             </div>
-            <EntraTenantMappingTable onSummaryChange={setMappingSummary} />
+            <EntraTenantMappingTable
+              onSummaryChange={setMappingSummary}
+              onSkippedTenantsChange={setSkippedTenants}
+            />
+          </div>
+
+          <div className="rounded-lg border border-border/70 bg-background p-4" id="entra-skipped-tenants-panel">
+            <p className="text-sm font-semibold">Skipped Tenants</p>
+            {skippedTenants.length === 0 ? (
+              <p className="mt-1 text-sm text-muted-foreground">No tenants are currently marked as skipped.</p>
+            ) : (
+              <div className="mt-2 space-y-2">
+                {skippedTenants.map((tenant) => (
+                  <div
+                    key={tenant.managedTenantId}
+                    className="flex items-center justify-between rounded-md border border-border/60 p-2"
+                  >
+                    <div>
+                      <p className="text-sm font-medium">{tenant.displayName || tenant.managedTenantId}</p>
+                      <p className="text-xs text-muted-foreground">{tenant.primaryDomain || 'No primary domain'}</p>
+                    </div>
+                    <Button
+                      id={`entra-remap-skipped-${tenant.managedTenantId}`}
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                    >
+                      Remap
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="rounded-lg border border-dashed border-border/70 bg-muted/20 p-4" id="entra-connection-status-panel">
