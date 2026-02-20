@@ -810,7 +810,7 @@
   {
     "id": "F073",
     "description": "Workflow: implement `entraInitialSyncWorkflow` for first-run mapped-tenant sync.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements"
     ],
