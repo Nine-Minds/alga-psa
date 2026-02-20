@@ -348,7 +348,7 @@
   {
     "id": "F032",
     "description": "Types/models: add EE TypeScript interfaces and row mappers for all Entra tables.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data / API / Integrations"
     ],

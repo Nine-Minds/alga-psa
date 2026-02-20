@@ -109,3 +109,5 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - (2026-02-20) `F029` completed: added contact traceability columns `entra_user_principal_name` and `entra_account_enabled`.
 - (2026-02-20) `F030` completed: added `entra_sync_status` and `entra_sync_status_reason` columns to support disabled/deleted-state UX messaging.
 - (2026-02-20) `F031` completed: migration seeds one `entra_sync_settings` row per existing tenant with default `sync_interval_minutes=1440` and enabled sync.
+- (2026-02-20) `F032` completed: added `ee/server/src/interfaces/entra.interfaces.ts` and typed row mappers in `ee/server/src/lib/integrations/entra/entraRowMappers.ts` for all Entra tables.
+- Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
