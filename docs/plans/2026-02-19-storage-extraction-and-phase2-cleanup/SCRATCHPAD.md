@@ -78,3 +78,4 @@ grep -r "from '../lib/email'" server/ --include="*.ts" --include="*.tsx"
 - F016: Moved `StorageProviderFactory.ts` into `packages/storage/src/StorageProviderFactory.ts`.
 - F017: Moved `StorageService.ts` to `packages/storage/src/StorageService.ts`.
 - F018: Fixed relative imports inside storage package files (`StorageProviderFactory`, `StorageService`, provider classes) after move.
+- F019: Added `packages/storage/src/index.ts` barrel exporting storage services, models, config, and types.
