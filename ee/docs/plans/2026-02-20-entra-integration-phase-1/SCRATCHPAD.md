@@ -155,3 +155,5 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - Adapter behavior: loads CIPP creds from tenant secret store, probes common tenant-list endpoints, normalizes tenant id/display/domain/user-count, and deduplicates by tenant id.
 - Note: `listUsersForTenant` remains a deliberate not-implemented throw until `F050`.
 - Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
+- (2026-02-20) `F050` completed: implemented CIPP per-tenant user enumeration in `CippProviderAdapter.listUsersForTenant(...)` with endpoint fallback patterns and normalized user model parity (id/UPN/email/name/account-enabled/phones/job title).
+- Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).

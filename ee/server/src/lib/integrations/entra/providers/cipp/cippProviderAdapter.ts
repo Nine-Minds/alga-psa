@@ -33,6 +33,36 @@ function toNumber(value: unknown): number {
   return 0;
 }
 
+function toBoolean(value: unknown, fallback = false): boolean {
+  if (typeof value === 'boolean') {
+    return value;
+  }
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase();
+    if (normalized === 'true' || normalized === '1') return true;
+    if (normalized === 'false' || normalized === '0') return false;
+  }
+  if (typeof value === 'number') {
+    if (value === 1) return true;
+    if (value === 0) return false;
+  }
+  return fallback;
+}
+
+function toStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  const output: string[] = [];
+  for (const item of value) {
+    if (typeof item === 'string' && item.trim().length > 0) {
+      output.push(item.trim());
+    }
+  }
+  return output;
+}
+
 function extractCollection(payload: unknown): unknown[] {
   if (Array.isArray(payload)) {
     return payload;
@@ -162,9 +192,71 @@ export class CippProviderAdapter implements EntraProviderAdapter {
   }
 
   public async listUsersForTenant(
-    _input: EntraListUsersForTenantInput
+    input: EntraListUsersForTenantInput
   ): Promise<EntraManagedUserRecord[]> {
-    throw new Error('CippProviderAdapter.listUsersForTenant is not implemented yet.');
+    const credentials = await getEntraCippCredentials(input.tenant);
+    if (!credentials) {
+      throw new Error('CIPP credentials are not configured.');
+    }
+
+    const tenantId = encodeURIComponent(input.managedTenantId);
+    const payload = await this.requestFromCandidates(credentials.baseUrl, credentials.apiToken, [
+      `/api/listusers?tenantId=${tenantId}`,
+      `/api/users?tenantId=${tenantId}`,
+      `/api/tenant/${tenantId}/users`,
+      `/api/tenants/${tenantId}/users`,
+    ]);
+    const rows = extractCollection(payload);
+
+    const users: EntraManagedUserRecord[] = [];
+    const seen = new Set<string>();
+
+    for (const row of rows) {
+      const raw = toObject(row);
+      const entraObjectId =
+        toStringOrNull(raw.id) ||
+        toStringOrNull(raw.objectId) ||
+        toStringOrNull(raw.userId);
+      if (!entraObjectId || seen.has(entraObjectId)) {
+        continue;
+      }
+
+      seen.add(entraObjectId);
+
+      const userPrincipalName =
+        toStringOrNull(raw.userPrincipalName) ||
+        toStringOrNull(raw.upn);
+      const email =
+        toStringOrNull(raw.mail) ||
+        toStringOrNull(raw.email) ||
+        userPrincipalName;
+
+      users.push({
+        entraTenantId:
+          toStringOrNull(raw.tenantId) ||
+          toStringOrNull(raw.customerTenantId) ||
+          input.managedTenantId,
+        entraObjectId,
+        userPrincipalName,
+        email,
+        displayName: toStringOrNull(raw.displayName) || toStringOrNull(raw.name),
+        givenName: toStringOrNull(raw.givenName),
+        surname: toStringOrNull(raw.surname),
+        accountEnabled:
+          toBoolean(raw.accountEnabled, true) &&
+          toBoolean(raw.enabled, true) &&
+          toBoolean(raw.isEnabled, true),
+        jobTitle: toStringOrNull(raw.jobTitle) || toStringOrNull(raw.title),
+        mobilePhone: toStringOrNull(raw.mobilePhone) || toStringOrNull(raw.phoneNumber),
+        businessPhones:
+          toStringArray(raw.businessPhones).length > 0
+            ? toStringArray(raw.businessPhones)
+            : toStringArray(raw.phones),
+        raw,
+      });
+    }
+
+    return users;
   }
 }
 

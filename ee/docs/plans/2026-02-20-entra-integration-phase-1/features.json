@@ -552,7 +552,7 @@
   {
     "id": "F050",
     "description": "CIPP adapter (users): implement per-tenant user enumeration with normalized model parity to direct adapter.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements"
     ],
