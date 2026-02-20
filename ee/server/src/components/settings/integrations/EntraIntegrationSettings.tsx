@@ -8,6 +8,9 @@ import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import {
   getEntraIntegrationStatus,
   startEntraSync,
+  initiateEntraDirectOAuth,
+  disconnectEntraIntegration,
+  unmapEntraTenant,
   type EntraStatusResponse,
 } from '@alga-psa/integrations/actions';
 import {
@@ -22,6 +25,7 @@ import {
   shouldShowAmbiguousQueue,
   shouldShowFieldSyncControls,
 } from './entraIntegrationSettingsGates';
+import { EntraCippConnectDialog } from './EntraCippConnectDialog';
 
 const WIZARD_STEPS = [
   { id: 1, title: 'Connect', description: 'Choose Direct Microsoft partner auth or CIPP.' },
@@ -47,6 +51,13 @@ export default function EntraIntegrationSettings() {
   const [syncAllLoading, setSyncAllLoading] = React.useState(false);
   const [syncAllMessage, setSyncAllMessage] = React.useState<string | null>(null);
 
+  const [cippDialogOpen, setCippDialogOpen] = React.useState(false);
+  const [directLoading, setDirectLoading] = React.useState(false);
+  const [directError, setDirectError] = React.useState<string | null>(null);
+  const [disconnectLoading, setDisconnectLoading] = React.useState(false);
+  const [remappingRows, setRemappingRows] = React.useState<Record<string, boolean>>({});
+  const [tableRefreshKey, setTableRefreshKey] = React.useState(0);
+
   const loadStatus = React.useCallback(async () => {
     setStatusLoading(true);
     setStatusError(null);
@@ -71,6 +82,18 @@ export default function EntraIntegrationSettings() {
     status?.lastValidationError && typeof status.lastValidationError === 'object'
       ? String((status.lastValidationError as { message?: unknown }).message || '')
       : '';
+  const cippBaseUrl =
+    status?.connectionType === 'cipp'
+      ? status.connectionDetails?.cippBaseUrl || null
+      : null;
+  const directTenantIdLabel =
+    status?.connectionType === 'direct'
+      ? status.connectionDetails?.directTenantId || 'common (multi-tenant)'
+      : null;
+  const directCredentialSourceLabel =
+    status?.connectionType === 'direct'
+      ? status.connectionDetails?.directCredentialSource || 'unknown'
+      : null;
 
   const formatDateTime = (value: string | null | undefined): string => {
     if (!value) return 'Never';
@@ -100,6 +123,47 @@ export default function EntraIntegrationSettings() {
       setSyncAllLoading(false);
     }
   }, [loadStatus]);
+
+  const handleConnectionOptionClick = async (optionId: string) => {
+    if (optionId === 'cipp') {
+      setCippDialogOpen(true);
+    } else if (optionId === 'direct') {
+      setDirectLoading(true);
+      setDirectError(null);
+      try {
+        const result = await initiateEntraDirectOAuth();
+        if ('error' in result) {
+          setDirectError(result.error);
+        } else if (result.success && result.data?.authUrl) {
+          window.location.href = result.data.authUrl;
+        }
+      } catch (err: unknown) {
+        setDirectError(err instanceof Error ? err.message : 'Unknown error');
+      } finally {
+        setDirectLoading(false);
+      }
+    }
+  };
+
+  const handleDisconnect = async () => {
+    setDisconnectLoading(true);
+    try {
+      await disconnectEntraIntegration();
+      await loadStatus();
+    } finally {
+      setDisconnectLoading(false);
+    }
+  };
+
+  const handleRemapSkipped = async (managedTenantId: string) => {
+    setRemappingRows((curr) => ({ ...curr, [managedTenantId]: true }));
+    try {
+      await unmapEntraTenant({ managedTenantId });
+      setTableRefreshKey((curr) => curr + 1);
+    } finally {
+      setRemappingRows((curr) => ({ ...curr, [managedTenantId]: false }));
+    }
+  };
 
   if (!uiFlag.enabled) {
     return (
@@ -143,21 +207,30 @@ export default function EntraIntegrationSettings() {
             ))}
           </div>
 
-          <div className="space-y-3 rounded-lg border border-border/70 bg-background p-4">
-            <p className="text-sm font-semibold">Connection Options</p>
-            <div className="grid gap-3 md:grid-cols-2">
-              {connectionOptions.map((option) => (
-                <div
-                  key={option.id}
-                  className="rounded-lg border border-border/60 bg-muted/20 p-3"
-                  id={`entra-connection-option-${option.id}`}
-                >
-                  <p className="text-sm font-medium">{option.title}</p>
-                  <p className="mt-1 text-sm text-muted-foreground">{option.description}</p>
-                </div>
-              ))}
+          {status?.status !== 'connected' ? (
+            <div className="space-y-3 rounded-lg border border-border/70 bg-background p-4">
+              <p className="text-sm font-semibold">Connection Options</p>
+              {directError ? (
+                <p className="text-sm text-destructive">{directError}</p>
+              ) : null}
+              <div className="grid gap-3 md:grid-cols-2">
+                {connectionOptions.map((option) => (
+                  <div
+                    key={option.id}
+                    className="cursor-pointer rounded-lg border border-border/60 bg-muted/20 p-3 transition-colors hover:border-primary/50 hover:bg-muted/40"
+                    id={`entra-connection-option-${option.id}`}
+                    onClick={() => !directLoading && handleConnectionOptionClick(option.id)}
+                  >
+                    <p className="text-sm font-medium">
+                      {option.title}
+                      {option.id === 'direct' && directLoading && ' (Connecting...)'}
+                    </p>
+                    <p className="mt-1 text-sm text-muted-foreground">{option.description}</p>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
+          ) : null}
 
           <div className="rounded-lg border border-border/70 bg-background p-4">
             <div className="mb-3 grid gap-2 text-sm text-muted-foreground sm:grid-cols-3">
@@ -168,6 +241,8 @@ export default function EntraIntegrationSettings() {
             <EntraTenantMappingTable
               onSummaryChange={setMappingSummary}
               onSkippedTenantsChange={setSkippedTenants}
+              onPersistedMappingChange={loadStatus}
+              refreshKey={tableRefreshKey}
             />
           </div>
 
@@ -191,6 +266,8 @@ export default function EntraIntegrationSettings() {
                       type="button"
                       size="sm"
                       variant="outline"
+                      onClick={() => void handleRemapSkipped(tenant.managedTenantId)}
+                      disabled={remappingRows[tenant.managedTenantId]}
                     >
                       Remap
                     </Button>
@@ -203,13 +280,36 @@ export default function EntraIntegrationSettings() {
           <div className="rounded-lg border border-dashed border-border/70 bg-muted/20 p-4" id="entra-connection-status-panel">
             <div className="flex items-center justify-between gap-2">
               <p className="text-sm font-medium">Status</p>
-              <Button id="entra-refresh-status" type="button" size="sm" variant="ghost" onClick={loadStatus} disabled={statusLoading}>
-                Refresh
-              </Button>
+              <div className="flex gap-2">
+                {status?.status === 'connected' ? (
+                  <Button
+                    id="entra-disconnect"
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => void handleDisconnect()}
+                    disabled={disconnectLoading || statusLoading}
+                  >
+                    Disconnect
+                  </Button>
+                ) : null}
+                <Button id="entra-refresh-status" type="button" size="sm" variant="ghost" onClick={loadStatus} disabled={statusLoading}>
+                  Refresh
+                </Button>
+              </div>
             </div>
             <div className="mt-2 grid gap-1 text-sm text-muted-foreground">
               <p><span className="font-medium text-foreground">Connection:</span> {status?.status || 'not_connected'}</p>
               <p><span className="font-medium text-foreground">Connection Type:</span> {status?.connectionType || 'Not configured'}</p>
+              {status?.connectionType === 'cipp' ? (
+                <p><span className="font-medium text-foreground">CIPP Server:</span> {cippBaseUrl || 'Not available'}</p>
+              ) : null}
+              {status?.connectionType === 'direct' ? (
+                <p><span className="font-medium text-foreground">Microsoft Tenant:</span> {directTenantIdLabel}</p>
+              ) : null}
+              {status?.connectionType === 'direct' ? (
+                <p><span className="font-medium text-foreground">Credential Source:</span> {directCredentialSourceLabel}</p>
+              ) : null}
               <p><span className="font-medium text-foreground">Last Discovery:</span> {formatDateTime(status?.lastDiscoveryAt)}</p>
               <p><span className="font-medium text-foreground">Mapped Tenants:</span> {status?.mappedTenantCount ?? 0}</p>
               <p>
@@ -271,6 +371,12 @@ export default function EntraIntegrationSettings() {
           <EntraSyncHistoryPanel />
         </CardContent>
       </Card>
+
+      <EntraCippConnectDialog
+        open={cippDialogOpen}
+        onOpenChange={setCippDialogOpen}
+        onSuccess={loadStatus}
+      />
     </div>
   );
 }

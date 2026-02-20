@@ -175,6 +175,11 @@ describe('EntraIntegrationSettings initial sync CTA', () => {
         availableConnectionTypes: ['direct', 'cipp'],
         lastValidatedAt: null,
         lastValidationError: null,
+        connectionDetails: {
+          cippBaseUrl: 'https://cipp.example.com',
+          directTenantId: null,
+          directCredentialSource: null,
+        },
       },
     });
 
@@ -185,9 +190,45 @@ describe('EntraIntegrationSettings initial sync CTA', () => {
     expect(panel).not.toBeNull();
     expect(panel?.textContent).toContain('Connection: connected');
     expect(panel?.textContent).toContain('Connection Type: cipp');
+    expect(panel?.textContent).toContain('CIPP Server: https://cipp.example.com');
     expect(panel?.textContent).toContain('Last Discovery: Never');
     expect(panel?.textContent).toContain('Mapped Tenants: 7');
     expect(panel?.textContent).toContain('Next Sync Interval: Every 30 minutes');
+  });
+
+  it('T132: status panel shows direct Microsoft tenant and credential source details', async () => {
+    mappingTableState.summary = { mapped: 1, skipped: 0, needsReview: 0 };
+    mappingTableState.skippedTenants = [];
+    useFeatureFlagMock.mockImplementation((name: string) => ({
+      enabled: name === 'entra-integration-ui',
+    }));
+    getEntraIntegrationStatusMock.mockResolvedValue({
+      success: true,
+      data: {
+        status: 'connected',
+        connectionType: 'direct',
+        lastDiscoveryAt: null,
+        mappedTenantCount: 1,
+        nextSyncIntervalMinutes: 60,
+        availableConnectionTypes: ['direct', 'cipp'],
+        lastValidatedAt: null,
+        lastValidationError: null,
+        connectionDetails: {
+          cippBaseUrl: null,
+          directTenantId: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
+          directCredentialSource: 'tenant-secret',
+        },
+      },
+    });
+
+    render(<EntraIntegrationSettings />);
+
+    await screen.findByText('Status');
+    const panel = document.getElementById('entra-connection-status-panel');
+    expect(panel).not.toBeNull();
+    expect(panel?.textContent).toContain('Connection Type: direct');
+    expect(panel?.textContent).toContain('Microsoft Tenant: aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee');
+    expect(panel?.textContent).toContain('Credential Source: tenant-secret');
   });
 
   it('T124: Sync All Tenants Now button is disabled when there are no active mappings', async () => {

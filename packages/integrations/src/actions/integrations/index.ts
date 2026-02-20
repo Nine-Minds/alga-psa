@@ -17,6 +17,7 @@ export {
   getEntraMappingPreview,
   confirmEntraMappings,
   skipEntraTenantMapping,
+  importEntraTenantAsClient,
   unmapEntraTenant,
   remapEntraTenant,
   startEntraSync,

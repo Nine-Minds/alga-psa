@@ -6,6 +6,7 @@ import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { routes } from '@alga-psa/integrations/entra/routes/entry';
 import { createTenantKnex } from '@alga-psa/db';
 import { generateMicrosoftAuthUrl, generateNonce } from '../../utils/email/oauthHelpers';
+import { createClient } from '@alga-psa/clients/actions/clientActions';
 
 const isEnterpriseEdition =
   (process.env.EDITION ?? '').toLowerCase() === 'ee' ||
@@ -181,6 +182,11 @@ export type EntraStatusResponse = {
   availableConnectionTypes: EntraConnectionType[];
   lastValidatedAt: string | null;
   lastValidationError: Record<string, unknown> | null;
+  connectionDetails?: {
+    cippBaseUrl: string | null;
+    directTenantId: string | null;
+    directCredentialSource: 'tenant-secret' | 'env' | 'app-secret' | null;
+  } | null;
 };
 
 export type EntraMappingPreviewResponse = {
@@ -832,6 +838,71 @@ export const skipEntraTenantMapping = withAuth(async (
       mappingState: 'skip_for_now',
     },
   } as const;
+});
+
+export const importEntraTenantAsClient = withAuth(async (
+  user,
+  { tenant },
+  input: { managedTenantId: string }
+) => {
+  if (isClientPortalUser(user)) {
+    return { success: false, error: 'Forbidden' } as const;
+  }
+
+  const canUpdate = await hasPermission(user as any, 'system_settings', 'update');
+  if (!canUpdate) {
+    return { success: false, error: 'Forbidden: insufficient permissions to configure Entra integration' } as const;
+  }
+
+  const enabled = await isEntraUiEnabledForTenant({
+    tenantId: tenant,
+    userId: (user as { user_id?: string } | undefined)?.user_id,
+  });
+  if (!enabled) {
+    return flagDisabledResult<{ managedTenantId: string; }>();
+  }
+
+  const { knex } = await createTenantKnex();
+
+  const managedTenant = await knex('entra_managed_tenants')
+    .where({ tenant, managed_tenant_id: input.managedTenantId })
+    .first(['display_name', 'primary_domain']);
+
+  if (!managedTenant) {
+    return { success: false, error: 'Managed tenant not found' } as const;
+  }
+
+  const newClientResult = await createClient(
+    {
+      client_name: managedTenant.display_name || 'Imported Entra Tenant',
+      url: managedTenant.primary_domain || undefined,
+    } as any
+  );
+
+  if ('error' in newClientResult && newClientResult.error) {
+    return { success: false, error: newClientResult.error } as const;
+  }
+
+  if (!newClientResult.success || !newClientResult.data) {
+    return { success: false, error: 'Failed to create client.' } as const;
+  }
+
+  const newClientId = newClientResult.data.client_id;
+  if (!newClientId) {
+    return { success: false, error: 'Failed to extract created client ID' } as const;
+  }
+
+  // Chain into the existing remap functionality to map the new Client ID over to the Tenant mapping
+  const remapResult = await remapEntraTenant({
+    managedTenantId: input.managedTenantId,
+    targetClientId: newClientId,
+  });
+
+  if ('error' in remapResult && remapResult.error) {
+    return { success: false, error: `Client created but mapping failed: ${remapResult.error}` } as const;
+  }
+
+  return { success: true, data: { clientId: newClientId, managedTenantId: input.managedTenantId } } as const;
 });
 
 export const unmapEntraTenant = withAuth(async (

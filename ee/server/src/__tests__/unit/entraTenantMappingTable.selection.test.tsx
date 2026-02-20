@@ -1,22 +1,28 @@
 // @vitest-environment jsdom
 import React from 'react';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { EntraTenantMappingTable } from '@ee/components/settings/integrations/EntraTenantMappingTable';
 
 const {
   getEntraMappingPreviewMock,
+  confirmEntraMappingsMock,
   skipEntraTenantMappingMock,
+  importEntraTenantAsClientMock,
   getAllClientsMock,
 } = vi.hoisted(() => ({
   getEntraMappingPreviewMock: vi.fn(),
+  confirmEntraMappingsMock: vi.fn(),
   skipEntraTenantMappingMock: vi.fn(),
+  importEntraTenantAsClientMock: vi.fn(),
   getAllClientsMock: vi.fn(),
 }));
 
 vi.mock('@alga-psa/integrations/actions', () => ({
   getEntraMappingPreview: getEntraMappingPreviewMock,
+  confirmEntraMappings: confirmEntraMappingsMock,
   skipEntraTenantMapping: skipEntraTenantMappingMock,
+  importEntraTenantAsClient: importEntraTenantAsClientMock,
 }));
 
 vi.mock('@alga-psa/clients/actions', () => ({
@@ -33,7 +39,51 @@ vi.mock('@alga-psa/ui/components/Button', () => ({
   ),
 }));
 
+vi.mock('@alga-psa/ui/components/ClientPicker', () => ({
+  __esModule: true,
+  ClientPicker: ({
+    id,
+    clients = [],
+    selectedClientId,
+    onSelect,
+    placeholder,
+  }: {
+    id: string;
+    clients?: Array<{ client_id?: string; id?: string; client_name?: string; name?: string }>;
+    selectedClientId?: string | null;
+    onSelect: (value: string | null) => void;
+    placeholder?: string;
+  }) => (
+    <select
+      id={id}
+      data-testid={`client-picker-${id}`}
+      value={selectedClientId || ''}
+      onChange={(event) => onSelect(event.target.value || null)}
+    >
+      <option value="">{placeholder ?? 'Select client...'}</option>
+      {clients.map((client) => (
+        <option key={client.client_id || client.id} value={client.client_id || client.id}>
+          {client.client_name || client.name}
+        </option>
+      ))}
+    </select>
+  ),
+}));
+
 describe('EntraTenantMappingTable client selection', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    confirmEntraMappingsMock.mockResolvedValue({
+      success: true,
+      data: { confirmedMappings: 1 },
+    });
+    skipEntraTenantMappingMock.mockResolvedValue({ data: { skipped: true } });
+    importEntraTenantAsClientMock.mockResolvedValue({
+      success: true,
+      data: { clientId: 'client-import-default', managedTenantId: 'managed-import-default' },
+    });
+  });
+
   it('T059: supports selecting candidate clients for fuzzy and unmatched rows', async () => {
     getEntraMappingPreviewMock.mockResolvedValue({
       data: {
@@ -70,7 +120,6 @@ describe('EntraTenantMappingTable client selection', () => {
       { client_id: 'client-alpha', client_name: 'Alpha MSP' },
       { client_id: 'client-beta', client_name: 'Beta MSP' },
     ]);
-    skipEntraTenantMappingMock.mockResolvedValue({ data: { skipped: true } });
 
     const onSummaryChange = vi.fn();
     render(<EntraTenantMappingTable onSummaryChange={onSummaryChange} />);
@@ -140,7 +189,6 @@ describe('EntraTenantMappingTable client selection', () => {
       { client_id: 'client-one', client_name: 'Client One' },
       { client_id: 'client-two', client_name: 'Client Two' },
     ]);
-    skipEntraTenantMappingMock.mockResolvedValue({ data: { skipped: true } });
 
     render(<EntraTenantMappingTable />);
 
@@ -156,6 +204,103 @@ describe('EntraTenantMappingTable client selection', () => {
 
     expect(selectOne.value).toBe('client-one');
     expect(selectTwo.value).toBe('client-two');
+  });
+
+  it('T130: importing an unmapped tenant updates status badge to Imported rather than Auto-matched', async () => {
+    getEntraMappingPreviewMock.mockResolvedValue({
+      data: {
+        autoMatched: [],
+        fuzzyCandidates: [],
+        unmatched: [
+          {
+            managedTenantId: 'managed-unmapped-130',
+            entraTenantId: 'entra-unmapped-130',
+            displayName: 'Unmapped Import Tenant',
+            primaryDomain: 'tenant130.unmapped.example.invalid',
+            sourceUserCount: 3,
+          },
+        ],
+      },
+    });
+    getAllClientsMock
+      .mockResolvedValueOnce([{ client_id: 'client-existing', client_name: 'Existing Client' }])
+      .mockResolvedValueOnce([
+        { client_id: 'client-existing', client_name: 'Existing Client' },
+        { client_id: 'client-imported-130', client_name: 'Unmapped Import Tenant' },
+      ]);
+    importEntraTenantAsClientMock.mockResolvedValue({
+      success: true,
+      data: { managedTenantId: 'managed-unmapped-130', clientId: 'client-imported-130' },
+    });
+
+    render(<EntraTenantMappingTable />);
+
+    await screen.findByText('Unmapped Import Tenant');
+    const initialRow = screen.getByText('Unmapped Import Tenant').closest('tr') as HTMLElement;
+    expect(within(initialRow).getByText('Unmatched')).toBeTruthy();
+
+    fireEvent.click(within(initialRow).getByRole('button', { name: 'Import as new client' }));
+
+    await waitFor(() => {
+      expect(importEntraTenantAsClientMock).toHaveBeenCalledWith({
+        managedTenantId: 'managed-unmapped-130',
+      });
+    });
+
+    await waitFor(() => {
+      const updatedRow = screen.getByText('Unmapped Import Tenant').closest('tr') as HTMLElement;
+      expect(within(updatedRow).getByText('Imported')).toBeTruthy();
+      expect(within(updatedRow).queryByText('Auto-matched')).toBeNull();
+      const updatedSelect = within(updatedRow).getByRole('combobox') as HTMLSelectElement;
+      expect(updatedSelect.value).toBe('client-imported-130');
+    });
+  });
+
+  it('T131: confirming selected mappings persists manual unmatched selections', async () => {
+    getEntraMappingPreviewMock.mockResolvedValue({
+      data: {
+        autoMatched: [],
+        fuzzyCandidates: [],
+        unmatched: [
+          {
+            managedTenantId: 'managed-unmatched-131',
+            entraTenantId: 'entra-unmatched-131',
+            displayName: 'Unmatched Confirm Tenant',
+            primaryDomain: 'unmatched131.example.invalid',
+            sourceUserCount: 2,
+          },
+        ],
+      },
+    });
+    getAllClientsMock.mockResolvedValue([
+      { client_id: 'client-131', client_name: 'Client 131' },
+    ]);
+    confirmEntraMappingsMock.mockResolvedValue({
+      success: true,
+      data: { confirmedMappings: 1 },
+    });
+
+    render(<EntraTenantMappingTable />);
+
+    await screen.findByText('Unmatched Confirm Tenant');
+    const row = screen.getByText('Unmatched Confirm Tenant').closest('tr') as HTMLElement;
+    const select = within(row).getByRole('combobox') as HTMLSelectElement;
+    fireEvent.change(select, { target: { value: 'client-131' } });
+
+    const confirmButton = screen.getByRole('button', { name: 'Confirm Selected Mappings' });
+    fireEvent.click(confirmButton);
+
+    await waitFor(() => {
+      expect(confirmEntraMappingsMock).toHaveBeenCalledWith({
+        mappings: [
+          expect.objectContaining({
+            managedTenantId: 'managed-unmatched-131',
+            clientId: 'client-131',
+            mappingState: 'mapped',
+          }),
+        ],
+      });
+    });
   });
 
   it('T065: summary counters reflect mapped, skipped, and needs-review totals after row changes', async () => {
@@ -200,7 +345,6 @@ describe('EntraTenantMappingTable client selection', () => {
       { client_id: 'client-auto-65', client_name: 'Auto Client 65' },
       { client_id: 'client-review-65', client_name: 'Review Client 65' },
     ]);
-    skipEntraTenantMappingMock.mockResolvedValue({ data: { skipped: true } });
 
     const onSummaryChange = vi.fn();
     render(<EntraTenantMappingTable onSummaryChange={onSummaryChange} />);
@@ -218,7 +362,7 @@ describe('EntraTenantMappingTable client selection', () => {
       );
     });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Skip for now' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Skip' }));
 
     await waitFor(() => {
       expect(onSummaryChange).toHaveBeenCalledWith(

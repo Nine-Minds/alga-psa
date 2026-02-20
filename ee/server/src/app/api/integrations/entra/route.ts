@@ -2,6 +2,8 @@ import { dynamic, ok, runtime } from './_responses';
 import { requireEntraUiFlagEnabled } from './_guards';
 import { createTenantKnex, runWithTenant } from '@enterprise/lib/db';
 import { getActiveEntraPartnerConnection } from '@enterprise/lib/integrations/entra/connectionRepository';
+import { getEntraCippCredentials } from '@enterprise/lib/integrations/entra/providers/cipp/cippSecretStore';
+import { resolveMicrosoftCredentialsForTenant } from '@enterprise/lib/integrations/entra/auth/microsoftCredentialResolver';
 
 export { dynamic, runtime };
 
@@ -37,6 +39,28 @@ export async function GET(): Promise<Response> {
     };
   });
 
+  let connectionDetails: {
+    cippBaseUrl: string | null;
+    directTenantId: string | null;
+    directCredentialSource: 'tenant-secret' | 'env' | 'app-secret' | null;
+  } | null = null;
+
+  if (connection?.connection_type === 'cipp') {
+    const credentials = await getEntraCippCredentials(flagGate.tenantId).catch(() => null);
+    connectionDetails = {
+      cippBaseUrl: credentials?.baseUrl || null,
+      directTenantId: null,
+      directCredentialSource: null,
+    };
+  } else if (connection?.connection_type === 'direct') {
+    const credentials = await resolveMicrosoftCredentialsForTenant(flagGate.tenantId).catch(() => null);
+    connectionDetails = {
+      cippBaseUrl: null,
+      directTenantId: credentials?.tenantId || null,
+      directCredentialSource: credentials?.source || null,
+    };
+  }
+
   return ok({
     status: connection?.status || 'not_connected',
     connectionType: connection?.connection_type || null,
@@ -49,5 +73,6 @@ export async function GET(): Promise<Response> {
       connection && connection.last_validation_error && Object.keys(connection.last_validation_error).length > 0
         ? connection.last_validation_error
         : null,
+    connectionDetails,
   });
 }

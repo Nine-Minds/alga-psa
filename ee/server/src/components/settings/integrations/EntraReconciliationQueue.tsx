@@ -8,7 +8,9 @@ import {
   resolveEntraQueueToNew,
   type EntraReconciliationQueueItem,
 } from '@alga-psa/integrations/actions';
-import { Input } from '@alga-psa/ui/components/Input';
+import { getAllContacts } from '@alga-psa/clients/actions';
+import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
+import type { IContact } from '@alga-psa/types';
 
 function formatDateTime(value: string): string {
   const parsed = Date.parse(value);
@@ -21,6 +23,7 @@ export default function EntraReconciliationQueue() {
   const [error, setError] = React.useState<string | null>(null);
   const [successMessage, setSuccessMessage] = React.useState<string | null>(null);
   const [items, setItems] = React.useState<EntraReconciliationQueueItem[]>([]);
+  const [allContacts, setAllContacts] = React.useState<IContact[]>([]);
   const [resolvingItemId, setResolvingItemId] = React.useState<string | null>(null);
   const [existingContactIdByItem, setExistingContactIdByItem] = React.useState<Record<string, string>>({});
 
@@ -44,6 +47,33 @@ export default function EntraReconciliationQueue() {
   React.useEffect(() => {
     void loadQueue();
   }, [loadQueue]);
+
+  React.useEffect(() => {
+    const loadContacts = async () => {
+      try {
+        const result = await getAllContacts('active');
+        const normalized = (Array.isArray(result) ? result : []) as IContact[];
+        setAllContacts(normalized);
+      } catch {
+        setAllContacts([]);
+      }
+    };
+    void loadContacts();
+  }, []);
+
+  const contactsByClient = React.useMemo(() => {
+    const grouped = new Map<string, IContact[]>();
+    for (const contact of allContacts) {
+      const clientId = typeof contact.client_id === 'string' ? contact.client_id : null;
+      if (!clientId) {
+        continue;
+      }
+      const bucket = grouped.get(clientId) || [];
+      bucket.push(contact);
+      grouped.set(clientId, bucket);
+    }
+    return grouped;
+  }, [allContacts]);
 
   const handleResolveExisting = React.useCallback(async (item: EntraReconciliationQueueItem) => {
     const contactNameId = String(existingContactIdByItem[item.queueItemId] || '').trim();
@@ -131,17 +161,24 @@ export default function EntraReconciliationQueue() {
                 </ul>
               ) : null}
               <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_auto_auto]">
-                <Input
+                {item.clientId ? (
+                  <p className="text-xs text-muted-foreground sm:col-span-3">
+                    Existing contact options are limited to this mapped client.
+                  </p>
+                ) : null}
+                <ContactPicker
                   id={`entra-queue-existing-contact-${item.queueItemId}`}
-                  placeholder="Existing contact ID"
+                  contacts={item.clientId ? (contactsByClient.get(item.clientId) || []) : allContacts}
                   value={existingContactIdByItem[item.queueItemId] || ''}
-                  onChange={(event) => {
-                    const value = event.target.value;
+                  onValueChange={(val) => {
                     setExistingContactIdByItem((current) => ({
                       ...current,
-                      [item.queueItemId]: value,
+                      [item.queueItemId]: val,
                     }));
                   }}
+                  placeholder="Select existing contact..."
+                  label="Existing Contact"
+                  buttonWidth="full"
                 />
                 <Button
                   id={`entra-queue-resolve-existing-${item.queueItemId}`}

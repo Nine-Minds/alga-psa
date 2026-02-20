@@ -1,0 +1,96 @@
+[
+  {
+    "id": "T001",
+    "description": "Existing status-panel tests continue to validate connection diagnostics render correctly in new layout context.",
+    "implemented": false,
+    "featureIds": [
+      "F009"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "When not connected, guided flow marks Connect as current and hides/locks discovery and sync onboarding CTAs.",
+    "implemented": false,
+    "featureIds": [
+      "F001",
+      "F002",
+      "F003",
+      "F004"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "When connected with no `lastDiscoveryAt`, guided flow marks Discover as current and primary CTA triggers `discoverEntraManagedTenants`.",
+    "implemented": false,
+    "featureIds": [
+      "F001",
+      "F003",
+      "F005"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "When discovery is complete but mapped count is zero, guided flow marks Map as current and emphasizes mapping-table confirmation path.",
+    "implemented": false,
+    "featureIds": [
+      "F001",
+      "F003",
+      "F008"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "When mapped tenants exist, guided flow marks Sync as current and primary CTA triggers `startEntraSync({ scope: 'initial' })`.",
+    "implemented": false,
+    "featureIds": [
+      "F001",
+      "F003",
+      "F006"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "`Sync All Tenants Now` appears in Ongoing Operations section and retains existing enable/disable behavior based on mapped tenant count.",
+    "implemented": false,
+    "featureIds": [
+      "F007"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "Field-sync and ambiguous-queue sections remain controlled by existing flags after layout changes.",
+    "implemented": false,
+    "featureIds": [
+      "F010"
+    ]
+  },
+  {
+    "id": "T008",
+    "description": "When sync history is empty, page remains in onboarding mode and continues to show current-step guidance.",
+    "implemented": false,
+    "featureIds": [
+      "F012",
+      "F014"
+    ]
+  },
+  {
+    "id": "T009",
+    "description": "When at least one initial/all-tenants sync run exists, page switches to maintenance mode and prioritizes operations layout.",
+    "implemented": false,
+    "featureIds": [
+      "F012",
+      "F013",
+      "F014"
+    ]
+  },
+  {
+    "id": "T010",
+    "description": "Maintenance mode still exposes mapping and queue/history sections without re-promoting onboarding CTAs to primary actions.",
+    "implemented": false,
+    "featureIds": [
+      "F013",
+      "F014",
+      "F008"
+    ]
+  }
+]

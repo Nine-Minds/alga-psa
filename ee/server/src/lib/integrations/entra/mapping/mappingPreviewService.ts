@@ -120,6 +120,8 @@ export async function buildEntraMappingPreview(
   const { managedTenants, clients, inboundDomains } = await runWithTenant(tenant, async () => {
     const { knex } = await createTenantKnex();
 
+
+
     const [managedTenantRows, clientRows, inboundDomainRows] = await Promise.all([
       knex('entra_managed_tenants')
         .where({ tenant })

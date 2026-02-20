@@ -3,9 +3,11 @@
 import React from 'react';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
-import { getEntraMappingPreview } from '@alga-psa/integrations/actions';
-import { skipEntraTenantMapping } from '@alga-psa/integrations/actions';
+import { getEntraMappingPreview, confirmEntraMappings } from '@alga-psa/integrations/actions';
+import { skipEntraTenantMapping, importEntraTenantAsClient } from '@alga-psa/integrations/actions';
 import { getAllClients } from '@alga-psa/clients/actions';
+import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
+import type { IClient } from '@alga-psa/types';
 
 type MatchReason = 'exact_domain' | 'secondary_domain' | 'fuzzy_name';
 
@@ -22,15 +24,10 @@ interface MappingTenantRow {
   displayName: string | null;
   primaryDomain: string | null;
   sourceUserCount: number;
-  state: 'auto_matched' | 'needs_review' | 'unmatched';
+  state: 'auto_matched' | 'needs_review' | 'unmatched' | 'imported';
   candidates: MappingCandidate[];
   selectedClientId: string | null;
   isSkipped: boolean;
-}
-
-interface ClientOption {
-  clientId: string;
-  clientName: string;
 }
 
 export interface EntraMappingSummary {
@@ -121,16 +118,25 @@ function reasonLabel(reason: MatchReason): string {
   return 'Fuzzy name';
 }
 
-export function EntraTenantMappingTable(props: {
+export function EntraTenantMappingTable({
+  onSummaryChange,
+  onSkippedTenantsChange,
+  onPersistedMappingChange,
+  refreshKey,
+}: {
   onSummaryChange?: (summary: EntraMappingSummary) => void;
   onSkippedTenantsChange?: (rows: EntraSkippedTenant[]) => void;
+  onPersistedMappingChange?: () => void;
+  refreshKey?: number;
 }) {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [rows, setRows] = React.useState<MappingTenantRow[]>([]);
-  const [allClients, setAllClients] = React.useState<ClientOption[]>([]);
-  const [searchByRow, setSearchByRow] = React.useState<Record<string, string>>({});
+  const [allClients, setAllClients] = React.useState<IClient[]>([]);
   const [skippingByRow, setSkippingByRow] = React.useState<Record<string, boolean>>({});
+  const [importingByRow, setImportingByRow] = React.useState<Record<string, boolean>>({});
+  const [confirmingMappings, setConfirmingMappings] = React.useState(false);
+  const [confirmFeedback, setConfirmFeedback] = React.useState<string | null>(null);
 
   const loadPreview = React.useCallback(async () => {
     setLoading(true);
@@ -151,19 +157,14 @@ export function EntraTenantMappingTable(props: {
 
   React.useEffect(() => {
     void loadPreview();
-  }, [loadPreview]);
+  }, [loadPreview, refreshKey]);
 
   React.useEffect(() => {
     const loadClients = async () => {
       try {
         const result = await getAllClients();
-        const normalized: ClientOption[] = (Array.isArray(result) ? result : [])
-          .map((row: any) => ({
-            clientId: String(row?.client_id || ''),
-            clientName: String(row?.client_name || 'Unknown client'),
-          }))
-          .filter((row) => Boolean(row.clientId))
-          .sort((a, b) => a.clientName.localeCompare(b.clientName));
+        const normalized = (Array.isArray(result) ? result : []) as IClient[];
+        normalized.sort((a, b) => (a.client_name || '').localeCompare(b.client_name || ''));
         setAllClients(normalized);
       } catch {
         setAllClients([]);
@@ -173,26 +174,52 @@ export function EntraTenantMappingTable(props: {
     void loadClients();
   }, []);
 
-  React.useEffect(() => {
-    const summary: EntraMappingSummary = {
-      mapped: rows.filter((row) => !row.isSkipped && Boolean(row.selectedClientId)).length,
-      skipped: rows.filter((row) => row.isSkipped).length,
-      needsReview: rows.filter(
-        (row) => !row.isSkipped && row.state === 'needs_review'
-      ).length,
-    };
+  const summary = React.useMemo<EntraMappingSummary>(() => ({
+    mapped: rows.filter((row) => !row.isSkipped && Boolean(row.selectedClientId)).length,
+    skipped: rows.filter((row) => row.isSkipped).length,
+    needsReview: rows.filter((row) => !row.isSkipped && row.state === 'needs_review').length,
+  }), [rows]);
 
-    props.onSummaryChange?.(summary);
-    props.onSkippedTenantsChange?.(
+  const skippedTenants = React.useMemo<EntraSkippedTenant[]>(() => (
+    rows
+      .filter((row) => row.isSkipped)
+      .map((row) => ({
+        managedTenantId: row.managedTenantId,
+        displayName: row.displayName,
+        primaryDomain: row.primaryDomain,
+      }))
+  ), [rows]);
+
+  // Use refs to keep track of what was last reported, to avoid unnecessary state up- propagation
+  const lastSummaryRef = React.useRef<typeof summary | null>(null);
+  const lastSkippedRef = React.useRef<typeof skippedTenants | null>(null);
+
+  React.useEffect(() => {
+    if (lastSummaryRef.current !== summary) {
+      lastSummaryRef.current = summary;
+      onSummaryChange?.(summary);
+    }
+  }, [summary, onSummaryChange]);
+
+  React.useEffect(() => {
+    if (lastSkippedRef.current !== skippedTenants) {
+      lastSkippedRef.current = skippedTenants;
+      onSkippedTenantsChange?.(skippedTenants);
+    }
+  }, [skippedTenants, onSkippedTenantsChange]);
+
+  const mappingsToConfirm = React.useMemo(
+    () =>
       rows
-        .filter((row) => row.isSkipped)
+        .filter((row) => !row.isSkipped && row.state !== 'imported' && Boolean(row.selectedClientId))
         .map((row) => ({
           managedTenantId: row.managedTenantId,
-          displayName: row.displayName,
-          primaryDomain: row.primaryDomain,
-        }))
-    );
-  }, [rows, props]);
+          clientId: String(row.selectedClientId),
+          mappingState: 'mapped' as const,
+          confidenceScore: row.candidates[0]?.confidenceScore ?? null,
+        })),
+    [rows]
+  );
 
   const updateSelection = React.useCallback((managedTenantId: string, selectedClientId: string) => {
     setRows((currentRows) =>
@@ -204,47 +231,12 @@ export function EntraTenantMappingTable(props: {
     );
   }, []);
 
-  const updateSearch = React.useCallback((managedTenantId: string, searchValue: string) => {
-    setSearchByRow((current) => ({
-      ...current,
-      [managedTenantId]: searchValue,
-    }));
-  }, []);
-
-  const buildClientOptions = React.useCallback((row: MappingTenantRow): ClientOption[] => {
-    const options = new Map<string, ClientOption>();
-
-    for (const candidate of row.candidates) {
-      options.set(candidate.clientId, {
-        clientId: candidate.clientId,
-        clientName: candidate.clientName,
-      });
-    }
-
-    const searchValue = (searchByRow[row.managedTenantId] || '').trim().toLowerCase();
-    const includeAllClients = row.state !== 'auto_matched';
-    if (includeAllClients) {
-      for (const client of allClients) {
-        if (
-          searchValue &&
-          !client.clientName.toLowerCase().includes(searchValue)
-        ) {
-          continue;
-        }
-        options.set(client.clientId, client);
-      }
-    }
-
-    return Array.from(options.values())
-      .sort((a, b) => a.clientName.localeCompare(b.clientName))
-      .slice(0, 50);
-  }, [allClients, searchByRow]);
-
   const handleSkip = React.useCallback(async (row: MappingTenantRow) => {
     if (!row.managedTenantId) {
       return;
     }
 
+    setConfirmFeedback(null);
     setSkippingByRow((current) => ({ ...current, [row.managedTenantId]: true }));
     try {
       const result = await skipEntraTenantMapping({
@@ -263,10 +255,76 @@ export function EntraTenantMappingTable(props: {
             : currentRow
         )
       );
+      onPersistedMappingChange?.();
     } finally {
       setSkippingByRow((current) => ({ ...current, [row.managedTenantId]: false }));
     }
-  }, []);
+  }, [onPersistedMappingChange]);
+
+  const handleImportAsClient = React.useCallback(async (row: MappingTenantRow) => {
+    if (!row.managedTenantId) {
+      return;
+    }
+
+    setConfirmFeedback(null);
+    setImportingByRow((current) => ({ ...current, [row.managedTenantId]: true }));
+    try {
+      const result = await importEntraTenantAsClient({
+        managedTenantId: row.managedTenantId,
+      });
+
+      if ('error' in result) {
+        setError(result.error || 'Failed to import tenant as client.');
+        return;
+      }
+
+      // Update the row state locally so the table visually marks it as imported, and update the client picker
+      const clientResult = await getAllClients();
+      if (Array.isArray(clientResult)) {
+        const normalized = clientResult as IClient[];
+        normalized.sort((a, b) => (a.client_name || '').localeCompare(b.client_name || ''));
+        setAllClients(normalized);
+      }
+
+      setRows((currentRows) =>
+        currentRows.map((r) =>
+          r.managedTenantId === row.managedTenantId && 'clientId' in result.data
+            ? { ...r, state: 'imported', selectedClientId: result.data.clientId, isSkipped: false }
+            : r
+        )
+      );
+      onPersistedMappingChange?.();
+    } finally {
+      setImportingByRow((current) => ({ ...current, [row.managedTenantId]: false }));
+    }
+  }, [onPersistedMappingChange]);
+
+  const handleConfirmSelectedMappings = React.useCallback(async () => {
+    if (mappingsToConfirm.length === 0) {
+      setConfirmFeedback('Select at least one client to confirm a mapping.');
+      return;
+    }
+
+    setConfirmFeedback(null);
+    setConfirmingMappings(true);
+    try {
+      const result = await confirmEntraMappings({
+        mappings: mappingsToConfirm,
+      });
+
+      if ('error' in result) {
+        setError(result.error || 'Failed to confirm selected mappings.');
+        return;
+      }
+
+      setError(null);
+      const confirmed = Number(result.data?.confirmedMappings || 0);
+      setConfirmFeedback(`Confirmed ${confirmed} mapping${confirmed === 1 ? '' : 's'}.`);
+      onPersistedMappingChange?.();
+    } finally {
+      setConfirmingMappings(false);
+    }
+  }, [mappingsToConfirm, onPersistedMappingChange]);
 
   const handlePreselectExactMatches = React.useCallback(() => {
     setRows((currentRows) =>
@@ -294,6 +352,16 @@ export function EntraTenantMappingTable(props: {
         <p className="text-sm font-semibold">Tenant Mapping Preview</p>
         <div className="flex gap-2">
           <Button
+            id="entra-confirm-selected-mappings"
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => void handleConfirmSelectedMappings()}
+            disabled={loading || confirmingMappings || mappingsToConfirm.length === 0}
+          >
+            {confirmingMappings ? 'Confirming…' : 'Confirm Selected Mappings'}
+          </Button>
+          <Button
             id="entra-preselect-exact-matches"
             type="button"
             variant="outline"
@@ -310,12 +378,13 @@ export function EntraTenantMappingTable(props: {
       </div>
 
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
+      {confirmFeedback ? <p className="text-sm text-muted-foreground">{confirmFeedback}</p> : null}
 
       <div className="overflow-x-auto rounded-lg border border-border/70">
         <table className="min-w-full text-sm">
           <thead className="bg-muted/30 text-left">
             <tr>
-              <th className="px-3 py-2 font-medium">Tenant</th>
+              <th className="px-3 py-2 font-medium">Entra Tenant</th>
               <th className="px-3 py-2 font-medium">Primary Domain</th>
               <th className="px-3 py-2 font-medium">Status</th>
               <th className="px-3 py-2 font-medium">Suggested Client</th>
@@ -327,7 +396,6 @@ export function EntraTenantMappingTable(props: {
           <tbody>
             {rows.map((row) => {
               const topCandidate = row.candidates[0];
-              const clientOptions = buildClientOptions(row);
               return (
                 <tr key={row.managedTenantId} className="border-t border-border/60">
                   <td className="px-3 py-2">
@@ -340,6 +408,8 @@ export function EntraTenantMappingTable(props: {
                       <Badge variant="outline">Skipped</Badge>
                     ) : row.state === 'auto_matched' ? (
                       <Badge variant="secondary">Auto-matched</Badge>
+                    ) : row.state === 'imported' ? (
+                      <Badge variant="secondary">Imported</Badge>
                     ) : row.state === 'needs_review' ? (
                       <Badge variant="outline">Needs review</Badge>
                     ) : (
@@ -360,42 +430,47 @@ export function EntraTenantMappingTable(props: {
                     {topCandidate ? formatConfidence(topCandidate.confidenceScore) : '—'}
                   </td>
                   <td className="px-3 py-2">
-                    {row.state !== 'auto_matched' ? (
-                      <input
-                        id={`entra-manual-client-search-${row.managedTenantId}`}
-                        className="mb-1 h-8 w-full rounded-md border border-input bg-background px-2 text-xs"
-                        placeholder="Search clients..."
-                        value={searchByRow[row.managedTenantId] || ''}
-                        onChange={(event) => updateSearch(row.managedTenantId, event.target.value)}
-                        disabled={loading}
+                    <div className={loading || row.isSkipped ? 'opacity-50 pointer-events-none' : ''}>
+                      <ClientPicker
+                        id={`entra-client-picker-${row.managedTenantId}`}
+                        clients={allClients}
+                        selectedClientId={row.selectedClientId}
+                        onSelect={(val) => updateSelection(row.managedTenantId, val || '')}
+                        filterState="active"
+                        onFilterStateChange={() => { }}
+                        clientTypeFilter="all"
+                        onClientTypeFilterChange={() => { }}
+                        triggerButtonClassName="h-9 w-full bg-background font-normal"
+                        placeholder="Select client..."
+                        modal={true}
+                        fitContent={false}
                       />
-                    ) : null}
-                    <select
-                      className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
-                      value={row.selectedClientId || ''}
-                      onChange={(event) => updateSelection(row.managedTenantId, event.target.value)}
-                      disabled={loading || row.isSkipped || clientOptions.length === 0}
-                    >
-                      <option value="">Select client...</option>
-                      {clientOptions.map((option) => (
-                        <option key={`${row.managedTenantId}-${option.clientId}`} value={option.clientId}>
-                          {option.clientName}
-                        </option>
-                      ))}
-                    </select>
+                    </div>
                   </td>
                   <td className="px-3 py-2">
-                    {row.state !== 'auto_matched' ? (
-                      <Button
-                        id={`entra-skip-row-${row.managedTenantId}`}
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        onClick={() => void handleSkip(row)}
-                        disabled={loading || row.isSkipped || Boolean(skippingByRow[row.managedTenantId])}
-                      >
-                        {row.isSkipped ? 'Skipped' : 'Skip for now'}
-                      </Button>
+                    {row.state !== 'auto_matched' && row.state !== 'imported' ? (
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Button
+                          id={`entra-import-row-${row.managedTenantId}`}
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={() => void handleImportAsClient(row)}
+                          disabled={loading || row.isSkipped || Boolean(importingByRow[row.managedTenantId])}
+                        >
+                          {importingByRow[row.managedTenantId] ? 'Importing…' : 'Import as new client'}
+                        </Button>
+                        <Button
+                          id={`entra-skip-row-${row.managedTenantId}`}
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={() => void handleSkip(row)}
+                          disabled={loading || row.isSkipped || Boolean(skippingByRow[row.managedTenantId])}
+                        >
+                          {row.isSkipped ? 'Skipped' : 'Skip'}
+                        </Button>
+                      </div>
                     ) : (
                       <span className="text-muted-foreground">—</span>
                     )}

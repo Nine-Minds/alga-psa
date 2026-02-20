@@ -1,0 +1,177 @@
+[
+  {
+    "id": "F001",
+    "description": "Define guided onboarding step-state model (Connect, Discover, Map, Sync) in `EntraIntegrationSettings` from existing status and mapping summary signals.",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "UX / UI Notes"
+    ],
+    "locations": [
+      "ee/server/src/components/settings/integrations/EntraIntegrationSettings.tsx"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "Add step-progress header with per-step state labels (current, complete, locked) to communicate onboarding progression.",
+    "implemented": false,
+    "prdRefs": [
+      "UX / UI Notes"
+    ],
+    "locations": [
+      "ee/server/src/components/settings/integrations/EntraIntegrationSettings.tsx"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "Replace equal-tier action row with a single `Current Step` primary CTA area that reflects the active onboarding phase.",
+    "implemented": false,
+    "prdRefs": [
+      "Problem",
+      "Goals",
+      "Requirements > Functional Requirements"
+    ],
+    "locations": [
+      "ee/server/src/components/settings/integrations/EntraIntegrationSettings.tsx"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "Apply hard-gated progression: non-current onboarding actions are hidden or disabled until prerequisites are met.",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements"
+    ],
+    "locations": [
+      "ee/server/src/components/settings/integrations/EntraIntegrationSettings.tsx"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "Wire guided `Run Discovery` CTA to `discoverEntraManagedTenants` with loading, feedback, and status refresh behavior.",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations"
+    ],
+    "locations": [
+      "ee/server/src/components/settings/integrations/EntraIntegrationSettings.tsx",
+      "packages/integrations/src/actions/integrations/entraActions.ts"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "Wire guided `Run Initial Sync` CTA to `startEntraSync({ scope: 'initial' })` with run feedback and refresh behavior.",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations"
+    ],
+    "locations": [
+      "ee/server/src/components/settings/integrations/EntraIntegrationSettings.tsx",
+      "packages/integrations/src/actions/integrations/entraActions.ts"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "Move `Sync All Tenants Now` into an `Ongoing Operations` section while preserving existing behavior.",
+    "implemented": false,
+    "prdRefs": [
+      "Goals",
+      "UX / UI Notes",
+      "Requirements > Functional Requirements"
+    ],
+    "locations": [
+      "ee/server/src/components/settings/integrations/EntraIntegrationSettings.tsx"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "Contextualize the mapping table as Step 3 with concise instructional copy and no regression in existing mapping table interactions.",
+    "implemented": false,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements > Functional Requirements"
+    ],
+    "locations": [
+      "ee/server/src/components/settings/integrations/EntraIntegrationSettings.tsx",
+      "ee/server/src/components/settings/integrations/EntraTenantMappingTable.tsx"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "Preserve status diagnostics panel content (including CIPP server/direct Microsoft fields) and existing refresh/disconnect controls.",
+    "implemented": false,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements > Functional Requirements"
+    ],
+    "locations": [
+      "ee/server/src/components/settings/integrations/EntraIntegrationSettings.tsx"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "Keep existing advanced section flag behavior unchanged (`entra-integration-field-sync`, `entra-integration-ambiguous-queue`) within the new layout.",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements"
+    ],
+    "locations": [
+      "ee/server/src/components/settings/integrations/EntraIntegrationSettings.tsx",
+      "ee/server/src/components/settings/integrations/entraIntegrationSettingsGates.ts"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "Add minimal focused unit tests for guided step gating and CTA routing, leaning on existing Entra tests for broad regression coverage.",
+    "implemented": false,
+    "prdRefs": [
+      "Goals",
+      "Acceptance Criteria (Definition of Done)"
+    ],
+    "locations": [
+      "ee/server/src/__tests__/unit/entraIntegrationSettings.initialSyncCta.test.tsx"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "Introduce explicit settings-page mode switch (`onboarding` vs `maintenance`) based on existing sync history signals (no schema/API additions).",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations"
+    ],
+    "locations": [
+      "ee/server/src/components/settings/integrations/EntraIntegrationSettings.tsx",
+      "packages/integrations/src/actions/integrations/entraActions.ts"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "In maintenance mode, de-emphasize onboarding CTA treatment and render operations-first layout blocks (health summary, ongoing actions, history/queue access).",
+    "implemented": false,
+    "prdRefs": [
+      "Goals",
+      "UX / UI Notes",
+      "Requirements > Functional Requirements"
+    ],
+    "locations": [
+      "ee/server/src/components/settings/integrations/EntraIntegrationSettings.tsx",
+      "ee/server/src/components/settings/integrations/EntraSyncHistoryPanel.tsx",
+      "ee/server/src/components/settings/integrations/EntraReconciliationQueue.tsx"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "Add clear mode-level headings/copy so users can distinguish initial setup flow from ongoing maintenance operations.",
+    "implemented": false,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Acceptance Criteria (Definition of Done)"
+    ],
+    "locations": [
+      "ee/server/src/components/settings/integrations/EntraIntegrationSettings.tsx"
+    ]
+  }
+]
