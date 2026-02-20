@@ -631,3 +631,6 @@ EOF && git add ee/docs/plans/2026-02-20-entra-integration-phase-1/tests.json ee/
 - (2026-02-20) `T101` completed in `entraContactFieldSync` test suite.
 - Toggle-on case verifies `displayName=true` includes `full_name` overwrite patch from Entra display name.
 - Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraContactFieldSync.test.ts` (pass).
+- (2026-02-20) `T102` completed in `entraContactFieldSync` test suite.
+- Toggle-on UPN case verifies `upn=true` includes `entra_user_principal_name` overwrite patch generation for linked contacts.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraContactFieldSync.test.ts` (pass).

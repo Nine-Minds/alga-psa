@@ -865,7 +865,7 @@
   {
     "id": "T102",
     "description": "Field sync toggle ON allows UPN overwrite for linked contacts.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F101"
     ]
