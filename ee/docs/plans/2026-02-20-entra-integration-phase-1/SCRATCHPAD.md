@@ -414,3 +414,6 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - Validation command: `cd server && npx vitest run src/test/unit/api/entraMappingAndDisconnectContracts.test.ts` (pass).
 - (2026-02-20) `T029` completed: extended migration coverage to assert Entra contact metadata columns are added via `ensureColumn` definitions without new non-null constraints.
 - Validation command: `cd server && npx vitest run src/test/unit/migrations/entraPhase1Migration.test.ts` (pass).
+- (2026-02-20) `T030` completed: added query/index alignment regression test `server/src/test/unit/integrations/entraMappingQueryIndexAlignment.test.ts`.
+- Test enforces tenant-scoped managed-tenant preview query shape and active mapping lookup predicates that align with migration indexes (`idx_entra_managed_tenants_*`, `ux_entra_client_tenant_mappings_active`).
+- Validation command: `cd server && npx vitest run src/test/unit/integrations/entraMappingQueryIndexAlignment.test.ts` (pass).

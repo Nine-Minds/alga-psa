@@ -256,7 +256,7 @@
   {
     "id": "T030",
     "description": "Lookup indexes on discovered tenants and mappings are used by mapping preview queries.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F016",
       "F018",
