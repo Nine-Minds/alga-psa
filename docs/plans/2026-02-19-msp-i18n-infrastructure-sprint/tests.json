@@ -43,7 +43,7 @@
   {
     "id": "T006",
     "description": "ROUTE_NAMESPACES maps '/msp' to ['common', 'msp/core'] (at minimum)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F002",
       "F018"
