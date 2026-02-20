@@ -113,7 +113,7 @@
   {
     "id": "T014",
     "description": "Migration creates `entra_client_tenant_mappings` and enforces unique active mapping per discovered tenant.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F017",
       "F018"

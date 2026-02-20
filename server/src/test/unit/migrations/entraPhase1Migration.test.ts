@@ -34,4 +34,12 @@ describe('Entra Phase 1 migration', () => {
     expect(migration).toContain('CREATE INDEX IF NOT EXISTS idx_entra_managed_tenants_tenant_last_seen');
     expect(migration).toContain('CREATE INDEX IF NOT EXISTS idx_entra_managed_tenants_tenant_primary_domain');
   });
+
+  it('T014: creates tenant mappings table with unique active mapping per discovered tenant', () => {
+    expect(migration).toContain("createTable('entra_client_tenant_mappings'");
+    expect(migration).toContain("table.text('mapping_state').notNullable().defaultTo('needs_review')");
+    expect(migration).toContain('CREATE UNIQUE INDEX IF NOT EXISTS ux_entra_client_tenant_mappings_active');
+    expect(migration).toContain('ON entra_client_tenant_mappings (tenant, managed_tenant_id)');
+    expect(migration).toContain('WHERE is_active = true');
+  });
 });

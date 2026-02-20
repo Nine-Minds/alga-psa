@@ -381,3 +381,5 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - Validation command: `cd server && npx vitest run src/test/unit/migrations/entraPhase1Migration.test.ts` (pass).
 - (2026-02-20) `T013` completed: extended `entraPhase1Migration.test.ts` with `entra_managed_tenants` table/column checks plus discovery/matching index assertions.
 - Validation command: `cd server && npx vitest run src/test/unit/migrations/entraPhase1Migration.test.ts` (pass).
+- (2026-02-20) `T014` completed: extended migration tests for `entra_client_tenant_mappings` table and unique-active mapping constraint index (`ux_entra_client_tenant_mappings_active`).
+- Validation command: `cd server && npx vitest run src/test/unit/migrations/entraPhase1Migration.test.ts` (pass).
