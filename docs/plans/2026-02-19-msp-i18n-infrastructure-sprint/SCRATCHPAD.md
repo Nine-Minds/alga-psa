@@ -195,3 +195,4 @@ ls server/public/locales/*/msp.json  # should fail (files removed)
 - 2026-02-20: Verified pseudo-locale output directories are gitignored (T053).
 - 2026-02-20: Validated client portal namespace routing via Phase 0 tests (F020).
 - 2026-02-20: Confirmed MSP flag-off behavior remains unchanged via Phase 1 layout checks (F021).
+- 2026-02-20: Verified MSP flag-on namespace routing loads `msp/core` and feature namespaces (F022).

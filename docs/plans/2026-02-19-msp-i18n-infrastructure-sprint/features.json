@@ -128,7 +128,7 @@
   {
     "id": "F022",
     "description": "MSP portal with flag ON loads msp/core namespace correctly via lazy loading",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR22"]
   },
   {
