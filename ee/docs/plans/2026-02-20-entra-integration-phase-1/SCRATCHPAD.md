@@ -212,3 +212,5 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - Validation command: `npx tsc --noEmit -p ee/temporal-workflows/tsconfig.json` (pass).
 - (2026-02-20) `F073` completed: implemented `entraInitialSyncWorkflow` (`ee/temporal-workflows/src/workflows/entra-initial-sync-workflow.ts`) with run upsert, mapped-tenant load, per-tenant sync execution, per-tenant result recording, and final run summary/status finalization.
 - Validation command: `npx tsc --noEmit -p ee/temporal-workflows/tsconfig.json` (pass).
+- (2026-02-20) `F074` completed: implemented `entraTenantSyncWorkflow` (`ee/temporal-workflows/src/workflows/entra-tenant-sync-workflow.ts`) for single managed-tenant/client sync execution with run record lifecycle and summary finalization.
+- Validation command: `npx tsc --noEmit -p ee/temporal-workflows/tsconfig.json` (pass).

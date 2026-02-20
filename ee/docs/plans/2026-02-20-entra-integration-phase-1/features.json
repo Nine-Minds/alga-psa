@@ -821,7 +821,7 @@
   {
     "id": "F074",
     "description": "Workflow: implement `entraTenantSyncWorkflow` for single mapped tenant/client sync.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements"
     ],
