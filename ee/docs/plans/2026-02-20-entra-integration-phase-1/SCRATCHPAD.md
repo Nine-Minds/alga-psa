@@ -649,3 +649,6 @@ EOF && git add ee/docs/plans/2026-02-20-entra-integration-phase-1/tests.json ee/
 - (2026-02-20) `T107` completed: added `ee/server/src/__tests__/unit/entraContactLinkRepository.test.ts`.
 - Upsert contract assertions verify link rows refresh `last_seen_at` and remain `link_status='active'`/`is_active=true` on each sync merge.
 - Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraContactLinkRepository.test.ts` (pass).
+- (2026-02-20) `T108` completed: added `ee/server/src/__tests__/unit/entraSyncResultAggregator.test.ts`.
+- Created-counter assertions verify aggregation correctness across `increment` + `add`, and ignore non-positive deltas.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraSyncResultAggregator.test.ts` (pass).
