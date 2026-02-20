@@ -478,7 +478,7 @@
   {
     "id": "T056",
     "description": "Secondary-domain match path contributes candidate confidence values.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F054",
       "F056"
