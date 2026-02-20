@@ -887,7 +887,7 @@
   {
     "id": "F080",
     "description": "Activity: `finalizeSyncRunActivity` writes terminal run status and summary counts.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements"
     ],

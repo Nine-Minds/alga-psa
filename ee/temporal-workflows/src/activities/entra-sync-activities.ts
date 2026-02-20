@@ -10,6 +10,7 @@ import type {
   EntraTenantSyncResult,
   UpsertEntraSyncRunActivityInput,
   UpsertEntraSyncRunActivityOutput,
+  FinalizeSyncRunActivityInput,
 } from '../types/entra-sync';
 
 async function getActiveConnectionType(tenantId: string): Promise<EntraConnectionType> {
@@ -163,5 +164,37 @@ export async function upsertSyncRunActivity(
     });
 
     return { runId };
+  });
+}
+
+export async function finalizeSyncRunActivity(
+  input: FinalizeSyncRunActivityInput
+): Promise<void> {
+  logger.info('Running finalizeSyncRunActivity', {
+    tenantId: input.tenantId,
+    runId: input.runId,
+    status: input.status,
+    summary: input.summary,
+  });
+
+  await runWithTenant(input.tenantId, async () => {
+    const { knex } = await createTenantKnex();
+    const now = knex.fn.now();
+
+    await knex('entra_sync_runs')
+      .where({
+        tenant: input.tenantId,
+        run_id: input.runId,
+      })
+      .update({
+        status: input.status,
+        completed_at: now,
+        total_tenants: input.summary.totalTenants,
+        processed_tenants: input.summary.processedTenants,
+        succeeded_tenants: input.summary.succeededTenants,
+        failed_tenants: input.summary.failedTenants,
+        summary: knex.raw('?::jsonb', [JSON.stringify(input.summary)]),
+        updated_at: now,
+      });
   });
 }
