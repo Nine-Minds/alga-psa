@@ -220,3 +220,5 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - Validation command: `npx tsc --noEmit -p ee/temporal-workflows/tsconfig.json` (pass).
 - (2026-02-20) `F077` completed: added `loadMappedTenantsActivity` in `ee/temporal-workflows/src/activities/entra-sync-activities.ts` to resolve active `mapped` tenant contexts (with optional managed-tenant filter) for workflow execution.
 - Validation command: `npx tsc --noEmit -p ee/temporal-workflows/tsconfig.json` (pass).
+- (2026-02-20) `F078` completed: implemented `syncTenantUsersActivity` in `ee/temporal-workflows/src/activities/entra-sync-activities.ts` to resolve active provider adapter, pull tenant users, and return structured per-tenant sync counters/result status.
+- Validation command: `npx tsc --noEmit -p ee/temporal-workflows/tsconfig.json` (pass).

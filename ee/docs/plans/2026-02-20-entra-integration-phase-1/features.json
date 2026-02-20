@@ -865,7 +865,7 @@
   {
     "id": "F078",
     "description": "Activity: `syncTenantUsersActivity` performs per-tenant user pull + reconciliation pipeline.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements"
     ],

@@ -1,6 +1,32 @@
 import logger from '@alga-psa/core/logger';
 import { createTenantKnex, runWithTenant } from '@alga-psa/db/tenant';
-import type { LoadMappedTenantsActivityInput, LoadMappedTenantsActivityOutput } from '../types/entra-sync';
+import { getEntraProviderAdapter } from '@ee/lib/integrations/entra/providers';
+import type { EntraConnectionType } from '@ee/interfaces/entra.interfaces';
+import type {
+  LoadMappedTenantsActivityInput,
+  LoadMappedTenantsActivityOutput,
+  SyncTenantUsersActivityInput,
+  EntraTenantSyncResult,
+} from '../types/entra-sync';
+
+async function getActiveConnectionType(tenantId: string): Promise<EntraConnectionType> {
+  const activeConnection = await runWithTenant(tenantId, async () => {
+    const { knex } = await createTenantKnex();
+    return knex('entra_partner_connections')
+      .where({
+        tenant: tenantId,
+        is_active: true,
+      })
+      .orderBy('updated_at', 'desc')
+      .first(['connection_type']);
+  });
+
+  if (!activeConnection?.connection_type) {
+    throw new Error('No active Entra connection exists for this tenant.');
+  }
+
+  return activeConnection.connection_type as EntraConnectionType;
+}
 
 export async function loadMappedTenantsActivity(
   input: LoadMappedTenantsActivityInput
@@ -41,5 +67,40 @@ export async function loadMappedTenantsActivity(
       entraTenantId: String(row.entra_tenant_id),
       clientId: row.client_id ? String(row.client_id) : null,
     })),
+  };
+}
+
+export async function syncTenantUsersActivity(
+  input: SyncTenantUsersActivityInput
+): Promise<EntraTenantSyncResult> {
+  logger.info('Running syncTenantUsersActivity', {
+    tenantId: input.tenantId,
+    runId: input.runId,
+    managedTenantId: input.mapping.managedTenantId,
+    clientId: input.mapping.clientId,
+  });
+
+  const connectionType = await getActiveConnectionType(input.tenantId);
+  const adapter = getEntraProviderAdapter(connectionType);
+
+  const users = await adapter.listUsersForTenant({
+    tenant: input.tenantId,
+    managedTenantId: input.mapping.managedTenantId,
+  });
+
+  // Phase-1 activity pipeline currently tracks per-tenant pull + aggregate counters.
+  // Contact-level reconciliation is implemented in later sync features.
+  const processedCount = users.length;
+
+  return {
+    managedTenantId: input.mapping.managedTenantId,
+    clientId: input.mapping.clientId || null,
+    status: 'completed',
+    created: 0,
+    linked: processedCount,
+    updated: 0,
+    ambiguous: 0,
+    inactivated: 0,
+    errorMessage: null,
   };
 }
