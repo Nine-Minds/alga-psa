@@ -51,4 +51,14 @@ describe('Entra Phase 1 migration', () => {
     expect(migration).toContain("table.jsonb('user_filter_config').notNullable().defaultTo(knex.raw(`'{}'::jsonb`))");
     expect(migration).toContain('CREATE UNIQUE INDEX IF NOT EXISTS ux_entra_sync_settings_tenant');
   });
+
+  it('T016: creates entra_sync_runs with run status and counter fields', () => {
+    expect(migration).toContain("createTable('entra_sync_runs'");
+    expect(migration).toContain("table.text('status').notNullable().defaultTo('queued')");
+    expect(migration).toContain("table.integer('total_tenants').notNullable().defaultTo(0)");
+    expect(migration).toContain("table.integer('processed_tenants').notNullable().defaultTo(0)");
+    expect(migration).toContain("table.integer('succeeded_tenants').notNullable().defaultTo(0)");
+    expect(migration).toContain("table.integer('failed_tenants').notNullable().defaultTo(0)");
+    expect(migration).toContain("table.jsonb('summary').notNullable().defaultTo(knex.raw(`'{}'::jsonb`))");
+  });
 });

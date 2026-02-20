@@ -131,7 +131,7 @@
   {
     "id": "T016",
     "description": "Migration creates `entra_sync_runs` and expected status/count fields.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F020"
     ]

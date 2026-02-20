@@ -385,3 +385,5 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - Validation command: `cd server && npx vitest run src/test/unit/migrations/entraPhase1Migration.test.ts` (pass).
 - (2026-02-20) `T015` completed: added migration assertions for `entra_sync_settings` defaults (`sync_enabled=true`, `sync_interval_minutes=1440`) and JSON config fields/index.
 - Validation command: `cd server && npx vitest run src/test/unit/migrations/entraPhase1Migration.test.ts` (pass).
+- (2026-02-20) `T016` completed: extended migration coverage for `entra_sync_runs` status defaults and summary counters (`total/processed/succeeded/failed`).
+- Validation command: `cd server && npx vitest run src/test/unit/migrations/entraPhase1Migration.test.ts` (pass).
