@@ -75,7 +75,7 @@
   {
     "id": "F007",
     "description": "Move `Sync All Tenants Now` into an `Ongoing Operations` section while preserving existing behavior.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Goals",
       "UX / UI Notes",

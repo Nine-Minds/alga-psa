@@ -73,3 +73,6 @@ Focused planning log for guided-layout improvements in Entra integration setting
 - (2026-02-20) F006 implemented in `ee/server/src/components/settings/integrations/EntraIntegrationSettings.tsx`.
   - Wired guided `Run Initial Sync` CTA to `startEntraSync({ scope: 'initial' })`.
   - Added initial-sync loading and feedback state (`#entra-run-initial-sync-feedback`) and status refresh after start.
+- (2026-02-20) F007 implemented in `ee/server/src/components/settings/integrations/EntraIntegrationSettings.tsx`.
+  - Moved `Sync All Tenants Now` into a dedicated `Ongoing Operations` panel (`#entra-ongoing-operations-panel`).
+  - Preserved existing enable/disable logic, action wiring, and feedback message behavior.

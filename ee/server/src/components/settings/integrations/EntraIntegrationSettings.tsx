@@ -534,22 +534,28 @@ export default function EntraIntegrationSettings() {
             <EntraReconciliationQueue />
           ) : null}
 
-          <div className="flex flex-wrap gap-2">
-            <Button
-              id="entra-sync-all-tenants"
-              type="button"
-              variant="outline"
-              disabled={!hasConfirmedMappings || syncAllLoading}
-              onClick={() => void handleSyncAllTenants()}
-            >
-              {syncAllLoading ? 'Starting…' : 'Sync All Tenants Now'}
-            </Button>
-          </div>
-          {syncAllMessage ? (
-            <p className="text-sm text-muted-foreground" id="entra-sync-all-tenants-feedback">
-              {syncAllMessage}
+          <div className="rounded-lg border border-border/70 bg-background p-4" id="entra-ongoing-operations-panel">
+            <p className="text-sm font-semibold">Ongoing Operations</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Use these controls for manual sync operations after onboarding steps are complete.
             </p>
-          ) : null}
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Button
+                id="entra-sync-all-tenants"
+                type="button"
+                variant="outline"
+                disabled={!hasConfirmedMappings || syncAllLoading}
+                onClick={() => void handleSyncAllTenants()}
+              >
+                {syncAllLoading ? 'Starting…' : 'Sync All Tenants Now'}
+              </Button>
+            </div>
+            {syncAllMessage ? (
+              <p className="mt-2 text-sm text-muted-foreground" id="entra-sync-all-tenants-feedback">
+                {syncAllMessage}
+              </p>
+            ) : null}
+          </div>
 
           <EntraSyncHistoryPanel />
         </CardContent>
