@@ -14,7 +14,7 @@
   {
     "id": "F002",
     "description": "Add step-progress header with per-step state labels (current, complete, locked) to communicate onboarding progression.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes"
     ],

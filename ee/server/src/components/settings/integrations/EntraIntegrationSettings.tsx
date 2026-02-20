@@ -28,6 +28,7 @@ import {
 import { EntraCippConnectDialog } from './EntraCippConnectDialog';
 
 type GuidedStepId = 'connect' | 'discover' | 'map' | 'sync';
+type GuidedStepVisualState = 'current' | 'complete' | 'locked';
 
 const WIZARD_STEPS = [
   { id: 'connect' as const, title: 'Connect', description: 'Choose Direct Microsoft partner auth or CIPP.' },
@@ -139,6 +140,21 @@ export default function EntraIntegrationSettings() {
     mappedCount: mappedTenantCount,
   });
   const hasConfirmedMappings = guidedStepState.hasConfirmedMappings;
+  const currentStepIndex = WIZARD_STEPS.findIndex((step) => step.id === guidedStepState.currentStep);
+  const stepStates = WIZARD_STEPS.map((step, index) => {
+    let state: GuidedStepVisualState = 'locked';
+    if (index < currentStepIndex) {
+      state = 'complete';
+    } else if (index === currentStepIndex) {
+      state = 'current';
+    }
+
+    return {
+      ...step,
+      stepNumber: index + 1,
+      visualState: state,
+    };
+  });
 
   const handleSyncAllTenants = React.useCallback(async () => {
     setSyncAllLoading(true);
@@ -229,13 +245,18 @@ export default function EntraIntegrationSettings() {
         </CardHeader>
         <CardContent className="space-y-5">
           <div className="grid gap-3 md:grid-cols-2">
-            {WIZARD_STEPS.map((step) => (
+            {stepStates.map((step) => (
               <div
-                key={step.id}
+                key={step.stepNumber}
                 className="rounded-lg border border-border/60 bg-muted/30 p-4"
-                id={`entra-step-${step.id}`}
+                id={`entra-step-${step.stepNumber}`}
               >
-                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Step {step.id}</p>
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Step {step.stepNumber}</p>
+                  <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    {step.visualState}
+                  </span>
+                </div>
                 <p className="mt-1 text-sm font-semibold">{step.title}</p>
                 <p className="mt-1 text-sm text-muted-foreground">{step.description}</p>
               </div>

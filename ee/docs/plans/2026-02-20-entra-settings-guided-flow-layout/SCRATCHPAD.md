@@ -56,3 +56,6 @@ Focused planning log for guided-layout improvements in Entra integration setting
 ## Gotchas
 
 - Running `npm -w sebastian-ee run test:unit -- src/__tests__/unit/entraIntegrationSettings.initialSyncCta.test.tsx` still executes the full unit suite because of the workspace script shape; several unrelated baseline tests fail in this worktree due missing `@enterprise/*` resolution and pre-existing duplicated-render test issues.
+- (2026-02-20) F002 implemented in `ee/server/src/components/settings/integrations/EntraIntegrationSettings.tsx`.
+  - Added computed per-step visual state (`current`, `complete`, `locked`) based on guided-step index.
+  - Step cards now show explicit status labels in the progress header while preserving existing step descriptions.
