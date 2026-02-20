@@ -462,3 +462,6 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - (2026-02-20) `T045` completed: added `ee/server/src/__tests__/unit/entraSecretKeys.test.ts` validating canonical Entra secret key constants.
 - Test verifies shared/direct/CIPP secret key names are stable and fully represented exactly once in `ENTRA_ALL_SECRET_KEYS`.
 - Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraSecretKeys.test.ts` (pass).
+- (2026-02-20) `T046` completed: added provider-factory unit coverage in `ee/server/src/__tests__/unit/entraProviderFactory.test.ts`.
+- Direct selection case asserts `getEntraProviderAdapter('direct')` delegates to `createDirectProviderAdapter()` and returns its adapter instance.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraProviderFactory.test.ts` (pass).
