@@ -78,7 +78,7 @@
   {
     "id": "T010",
     "description": "getNamespacesForRoute is exported from packages/ui/src/lib/i18n/config.ts",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F003"
     ]
