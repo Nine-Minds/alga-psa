@@ -251,3 +251,6 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - Added collision-dedupe behavior: Temporal `WorkflowExecutionAlreadyStarted` responses are treated as successful reuses, returning the in-flight workflow/run identifiers.
 - Updated Entra workflow logging (`entra-*.ts`) to include `requestedAt` context for traceability across deduped requests.
 - Validation commands: `npx tsc --noEmit -p ee/server/tsconfig.json` and `npx tsc --noEmit -p ee/temporal-workflows/tsconfig.json` (pass).
+- (2026-02-20) `F091` completed: added canonical sync-domain Entra user model in `ee/server/src/lib/integrations/entra/sync/types.ts` with `normalizeEntraSyncUser(...)` utility.
+- Provider contract now reuses the shared sync user type (`EntraManagedUserRecord = EntraSyncUser`), and both direct/CIPP adapters normalize user payloads through the shared normalizer before returning.
+- Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).

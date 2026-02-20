@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { getEntraCippCredentials } from './cippSecretStore';
+import { normalizeEntraSyncUser } from '../../sync/types';
 import type {
   EntraListManagedTenantsInput,
   EntraListUsersForTenantInput,
@@ -231,7 +232,7 @@ export class CippProviderAdapter implements EntraProviderAdapter {
         toStringOrNull(raw.email) ||
         userPrincipalName;
 
-      users.push({
+      users.push(normalizeEntraSyncUser({
         entraTenantId:
           toStringOrNull(raw.tenantId) ||
           toStringOrNull(raw.customerTenantId) ||
@@ -253,7 +254,7 @@ export class CippProviderAdapter implements EntraProviderAdapter {
             ? toStringArray(raw.businessPhones)
             : toStringArray(raw.phones),
         raw,
-      });
+      }));
     }
 
     return users;

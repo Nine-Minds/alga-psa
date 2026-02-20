@@ -2,6 +2,7 @@ import axios, { AxiosError } from 'axios';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { refreshEntraDirectToken } from '../../auth/refreshDirectToken';
 import { ENTRA_DIRECT_SECRET_KEYS } from '../../secrets';
+import { normalizeEntraSyncUser } from '../../sync/types';
 import type {
   EntraListManagedTenantsInput,
   EntraListUsersForTenantInput,
@@ -237,7 +238,7 @@ export class DirectProviderAdapter implements EntraProviderAdapter {
         const email = getNullableString(raw.mail) || userPrincipalName;
         const entraTenantId = getNullableString(raw.tenantId) || input.managedTenantId;
 
-        users.push({
+        users.push(normalizeEntraSyncUser({
           entraTenantId,
           entraObjectId,
           userPrincipalName,
@@ -250,7 +251,7 @@ export class DirectProviderAdapter implements EntraProviderAdapter {
           mobilePhone: getNullableString(raw.mobilePhone),
           businessPhones: getStringArray(raw.businessPhones),
           raw,
-        });
+        }));
       }
 
       const candidateNextLink = getNullableString(payload['@odata.nextLink']);

@@ -1012,7 +1012,7 @@
   {
     "id": "F091",
     "description": "Sync domain model: define normalized Entra user shape used by all providers and sync logic.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data / API / Integrations"
     ],
