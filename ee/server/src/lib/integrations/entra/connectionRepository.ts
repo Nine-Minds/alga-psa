@@ -53,3 +53,26 @@ export async function updateEntraConnectionValidation(
       });
   });
 }
+
+export async function disconnectActiveEntraConnection(
+  params: {
+    tenant: string;
+    userId?: string | null;
+  }
+): Promise<void> {
+  await runWithTenant(params.tenant, async () => {
+    const { knex } = await createTenantKnex();
+    await knex('entra_partner_connections')
+      .where({
+        tenant: params.tenant,
+        is_active: true,
+      })
+      .update({
+        is_active: false,
+        status: 'disconnected',
+        disconnected_at: knex.fn.now(),
+        updated_at: knex.fn.now(),
+        updated_by: params.userId || null,
+      });
+  });
+}

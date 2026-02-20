@@ -44,24 +44,11 @@ export async function getEntraDirectRefreshToken(tenant: string): Promise<string
 export async function clearEntraDirectTokenSet(tenant: string): Promise<void> {
   const secretProvider = await getSecretProviderInstance();
 
-  await secretProvider.setTenantSecret(
-    tenant,
-    ENTRA_DIRECT_SECRET_KEYS.accessToken,
-    ''
-  );
-  await secretProvider.setTenantSecret(
-    tenant,
-    ENTRA_DIRECT_SECRET_KEYS.refreshToken,
-    ''
-  );
-  await secretProvider.setTenantSecret(
-    tenant,
-    ENTRA_DIRECT_SECRET_KEYS.tokenExpiresAt,
-    ''
-  );
-  await secretProvider.setTenantSecret(
-    tenant,
-    ENTRA_DIRECT_SECRET_KEYS.tokenScope,
-    ''
-  );
+  await Promise.all([
+    secretProvider.deleteTenantSecret(tenant, ENTRA_DIRECT_SECRET_KEYS.accessToken).catch(() => undefined),
+    secretProvider.deleteTenantSecret(tenant, ENTRA_DIRECT_SECRET_KEYS.refreshToken).catch(() => undefined),
+    secretProvider.deleteTenantSecret(tenant, ENTRA_DIRECT_SECRET_KEYS.tokenExpiresAt).catch(() => undefined),
+    secretProvider.deleteTenantSecret(tenant, ENTRA_DIRECT_SECRET_KEYS.partnerTenantId).catch(() => undefined),
+    secretProvider.deleteTenantSecret(tenant, ENTRA_DIRECT_SECRET_KEYS.tokenScope).catch(() => undefined),
+  ]);
 }

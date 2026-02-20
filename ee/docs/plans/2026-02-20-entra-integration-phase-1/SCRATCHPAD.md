@@ -135,3 +135,6 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - (2026-02-20) `F043` completed: added `ee/server/src/lib/integrations/entra/connectionRepository.ts` and wired validation routes to persist `status`, `last_validated_at`, and JSON validation snapshots to `entra_partner_connections`.
 - Updated `GET /api/integrations/entra` to read active connection state + validation fields from DB, and updated `EntraIntegrationSettings` status panel to render connection status/type, last validation timestamp, and validation error message.
 - Validation commands: `npx tsc --noEmit -p ee/server/tsconfig.json`, `npx tsc --noEmit -p packages/integrations/tsconfig.json`, `npx tsc --noEmit -p server/tsconfig.json` (pass).
+- (2026-02-20) `F044` completed: disconnect flow now clears direct+CIPP tenant secrets and marks active `entra_partner_connections` rows disconnected via repository update (history rows are retained; no sync-run deletion).
+- Updates: `disconnectEntraIntegration` now enforces update permission before route call; `clearEntraDirectTokenSet` now deletes stored token secrets instead of writing empty-string placeholders.
+- Validation commands: `npx tsc --noEmit -p ee/server/tsconfig.json`, `npx tsc --noEmit -p packages/integrations/tsconfig.json`, `npx tsc --noEmit -p server/tsconfig.json` (pass).

@@ -485,7 +485,7 @@
   {
     "id": "F044",
     "description": "Disconnect flow: remove provider secrets and mark connection disconnected without deleting historical runs.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements"
     ],
