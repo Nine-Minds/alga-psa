@@ -124,3 +124,6 @@ Focused planning log for guided-layout improvements in Entra integration setting
 - (2026-02-20) T007 completed.
   - Added explicit `T007` coverage for field-sync + ambiguous-queue flag gating and revalidated queue-specific tests.
   - Command: `cd ee/server && npx vitest run src/__tests__/unit/entraIntegrationSettings.initialSyncCta.test.tsx -t "T007|T128|T129"`.
+- (2026-02-20) T008 completed.
+  - Added onboarding-mode assertion for empty sync history (`T008`) and validated with targeted run including maintenance tests.
+  - Command: `cd ee/server && npx vitest run src/__tests__/unit/entraIntegrationSettings.initialSyncCta.test.tsx -t "T008|T009|T010"`.

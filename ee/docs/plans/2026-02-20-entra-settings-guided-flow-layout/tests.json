@@ -67,7 +67,7 @@
   {
     "id": "T008",
     "description": "When sync history is empty, page remains in onboarding mode and continues to show current-step guidance.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F012",
       "F014"

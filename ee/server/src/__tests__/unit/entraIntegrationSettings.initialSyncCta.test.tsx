@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import React from 'react';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import EntraIntegrationSettings from '@ee/components/settings/integrations/EntraIntegrationSettings';
 
@@ -397,5 +397,105 @@ describe('EntraIntegrationSettings guided flow', () => {
     await screen.findByText('Current Step');
     expect(document.getElementById('entra-field-sync-controls-panel')).not.toBeNull();
     expect(document.getElementById('entra-reconciliation-queue-stub')).not.toBeNull();
+  });
+
+  it('T008: empty sync history keeps page in onboarding mode with guided current-step card', async () => {
+    getEntraSyncRunHistoryMock.mockResolvedValue({ success: true, data: { runs: [] } });
+    getEntraIntegrationStatusMock.mockResolvedValue({
+      success: true,
+      data: buildStatus({
+        status: 'connected',
+        lastDiscoveryAt: null,
+        mappedTenantCount: 0,
+      }),
+    });
+
+    render(<EntraIntegrationSettings />);
+
+    await screen.findByText('Setup Mode');
+    const root = document.getElementById('entra-integration-settings');
+    expect(root?.getAttribute('data-entra-mode')).toBe('onboarding');
+    expect(document.getElementById('entra-current-step-card')).not.toBeNull();
+  });
+
+  it('T009: existing initial/all-tenants sync history switches page to maintenance mode', async () => {
+    getEntraSyncRunHistoryMock.mockResolvedValue({
+      success: true,
+      data: {
+        runs: [
+          {
+            runId: 'run-maintenance-1',
+            status: 'completed',
+            runType: 'initial',
+            startedAt: '2026-02-20T12:00:00.000Z',
+            completedAt: '2026-02-20T12:02:00.000Z',
+            totalTenants: 2,
+            processedTenants: 2,
+            succeededTenants: 2,
+            failedTenants: 0,
+          },
+        ],
+      },
+    });
+    getEntraIntegrationStatusMock.mockResolvedValue({
+      success: true,
+      data: buildStatus({
+        status: 'connected',
+        lastDiscoveryAt: '2026-02-20T11:00:00.000Z',
+        mappedTenantCount: 2,
+      }),
+    });
+
+    render(<EntraIntegrationSettings />);
+
+    await waitFor(() => {
+      const root = document.getElementById('entra-integration-settings');
+      expect(root?.getAttribute('data-entra-mode')).toBe('maintenance');
+    });
+    expect(screen.getByText('Ongoing Operations Mode')).toBeInTheDocument();
+    expect(document.getElementById('entra-maintenance-health-summary')).not.toBeNull();
+    expect(document.getElementById('entra-current-step-card')).toBeNull();
+  });
+
+  it('T010: maintenance mode keeps mapping/history/queue visible without onboarding CTA prominence', async () => {
+    applyFlags(['entra-integration-ui', 'entra-integration-ambiguous-queue']);
+    getEntraSyncRunHistoryMock.mockResolvedValue({
+      success: true,
+      data: {
+        runs: [
+          {
+            runId: 'run-maintenance-2',
+            status: 'completed',
+            runType: 'all-tenants',
+            startedAt: '2026-02-20T13:00:00.000Z',
+            completedAt: '2026-02-20T13:10:00.000Z',
+            totalTenants: 3,
+            processedTenants: 3,
+            succeededTenants: 3,
+            failedTenants: 0,
+          },
+        ],
+      },
+    });
+    getEntraIntegrationStatusMock.mockResolvedValue({
+      success: true,
+      data: buildStatus({
+        status: 'connected',
+        lastDiscoveryAt: '2026-02-20T11:00:00.000Z',
+        mappedTenantCount: 3,
+      }),
+    });
+
+    render(<EntraIntegrationSettings />);
+
+    await waitFor(() => {
+      const root = document.getElementById('entra-integration-settings');
+      expect(root?.getAttribute('data-entra-mode')).toBe('maintenance');
+    });
+    expect(document.getElementById('entra-mapping-step-panel')).not.toBeNull();
+    expect(document.getElementById('entra-sync-history-panel-stub')).not.toBeNull();
+    expect(document.getElementById('entra-reconciliation-queue-stub')).not.toBeNull();
+    expect(document.getElementById('entra-current-step-card')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Run Initial Sync' })).not.toBeInTheDocument();
   });
 });
