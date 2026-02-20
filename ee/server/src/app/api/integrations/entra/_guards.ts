@@ -15,6 +15,16 @@ export async function requireEntraUiFlagEnabled(): Promise<Response | { tenantId
     );
   }
 
+  if (user.user_type === 'client') {
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'Forbidden',
+      },
+      { status: 403 }
+    );
+  }
+
   const enabled = await featureFlags.isEnabled('entra-integration-ui', {
     userId: user.user_id,
     tenantId: user.tenant,

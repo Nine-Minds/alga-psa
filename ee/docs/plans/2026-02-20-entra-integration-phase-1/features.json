@@ -1317,7 +1317,7 @@
   {
     "id": "F118",
     "description": "User-type enforcement: deny all Entra setup/sync actions for `user_type='client'` callers.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Security / Permissions"
     ],

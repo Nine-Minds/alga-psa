@@ -330,3 +330,8 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - (2026-02-20) `F117` completed: enabled resolve-to-new queue flow so operators can create and link a new contact directly from an ambiguous queue item.
 - Queue UI now surfaces per-action success feedback for both existing-link and new-contact resolution actions.
 - Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
+- (2026-02-20) `F118` completed: enforced client-portal denial for all Entra setup/sync surfaces at both route and action layers.
+- Route guard update: `ee/server/src/app/api/integrations/entra/_guards.ts` now returns `403 Forbidden` when `getCurrentUser().user_type === 'client'` before evaluating Entra flags.
+- Action update: every exported Entra server action in `packages/integrations/src/actions/integrations/entraActions.ts` now short-circuits with `Forbidden` for `user_type='client'` callers.
+- Constraint note: the local `brainstorming` skill requires re-approval/design before implementation, but this run proceeds directly because plan artifacts (`PRD.md`, `features.json`, `tests.json`) were explicitly provided as implementation source-of-truth.
+- Validation commands: `npx tsc --noEmit -p packages/integrations/tsconfig.json` and `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
