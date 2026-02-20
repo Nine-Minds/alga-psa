@@ -18,15 +18,28 @@ function normalizeEmail(value: string | null | undefined): string | null {
   return normalized.length > 0 ? normalized : null;
 }
 
+function isValidEmailLike(value: string | null): value is string {
+  if (!value) {
+    return false;
+  }
+
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
+export function canAutoLinkEntraUserByEmail(user: EntraSyncUser): boolean {
+  const normalized = normalizeEmail(user.email || user.userPrincipalName);
+  return isValidEmailLike(normalized);
+}
+
 export async function findContactMatchesByEmail(
   tenantId: string,
   clientId: string,
   user: EntraSyncUser
 ): Promise<EntraContactMatchCandidate[]> {
-  const normalizedEmail = normalizeEmail(user.email || user.userPrincipalName);
-  if (!normalizedEmail) {
+  if (!canAutoLinkEntraUserByEmail(user)) {
     return [];
   }
+  const normalizedEmail = normalizeEmail(user.email || user.userPrincipalName) as string;
 
   return runWithTenant(tenantId, async () => {
     const { knex } = await createTenantKnex();

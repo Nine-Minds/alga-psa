@@ -266,3 +266,6 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - (2026-02-20) `F095` completed: added `ee/server/src/lib/integrations/entra/sync/contactMatcher.ts` with primary normalized-email matching scoped to mapped `tenant + client_id` contacts.
 - Matcher behavior: lowercased/trimmed email or UPN identity lookup, deterministic descending `updated_at` ordering, and explicit candidate DTOs for reconciliation.
 - Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
+- (2026-02-20) `F099` completed: added explicit `canAutoLinkEntraUserByEmail(...)` guard in `contactMatcher.ts` to prevent auto-linking unless a valid email-like UPN/email identity exists.
+- Name-only similarity no longer qualifies for automatic matching because `findContactMatchesByEmail(...)` short-circuits to no matches when email identity is absent/invalid.
+- Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).

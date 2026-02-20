@@ -1103,7 +1103,7 @@
   {
     "id": "F099",
     "description": "No name-only auto-linking: explicitly block automatic linking when email match is absent.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements"
     ],
