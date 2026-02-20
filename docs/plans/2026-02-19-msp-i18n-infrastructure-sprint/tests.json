@@ -338,7 +338,7 @@
   {
     "id": "T042",
     "description": "packages/core/src/lib/i18n/config.ts I18N_CONFIG.ns is synced to ['common']",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F019"
     ]
