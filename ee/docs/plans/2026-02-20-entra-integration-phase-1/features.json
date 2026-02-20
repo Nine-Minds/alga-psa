@@ -652,7 +652,7 @@
   {
     "id": "F059",
     "description": "Skip flow: allow tenant rows to be marked `skip_for_now` without losing discovery data.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes"
     ],

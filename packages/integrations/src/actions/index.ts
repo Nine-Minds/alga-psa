@@ -100,12 +100,16 @@ export {
 } from './integrations/googleActions';
 export {
   initiateEntraDirectOAuth,
+  connectEntraCipp,
   getEntraIntegrationStatus,
   connectEntraIntegration,
+  validateEntraDirectConnection,
+  validateEntraCippConnection,
   disconnectEntraIntegration,
   discoverEntraManagedTenants,
   getEntraMappingPreview,
   confirmEntraMappings,
+  skipEntraTenantMapping,
   startEntraSync,
   type EntraConnectionType,
   type EntraSyncScope,

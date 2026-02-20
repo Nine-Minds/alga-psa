@@ -4,6 +4,7 @@ import React from 'react';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
 import { getEntraMappingPreview } from '@alga-psa/integrations/actions';
+import { skipEntraTenantMapping } from '@alga-psa/integrations/actions';
 import { getAllClients } from '@alga-psa/clients/actions';
 
 type MatchReason = 'exact_domain' | 'secondary_domain' | 'fuzzy_name';
@@ -24,6 +25,7 @@ interface MappingTenantRow {
   state: 'auto_matched' | 'needs_review' | 'unmatched';
   candidates: MappingCandidate[];
   selectedClientId: string | null;
+  isSkipped: boolean;
 }
 
 interface ClientOption {
@@ -60,6 +62,7 @@ function mapPreviewToRows(payload: any): MappingTenantRow[] {
         },
       ],
       selectedClientId: String(match.clientId || '') || null,
+      isSkipped: false,
     });
   }
 
@@ -79,6 +82,7 @@ function mapPreviewToRows(payload: any): MappingTenantRow[] {
         reason: (candidate?.reason || 'fuzzy_name') as MatchReason,
       })),
       selectedClientId: null,
+      isSkipped: false,
     });
   }
 
@@ -92,6 +96,7 @@ function mapPreviewToRows(payload: any): MappingTenantRow[] {
       state: 'unmatched',
       candidates: [],
       selectedClientId: null,
+      isSkipped: false,
     });
   }
 
@@ -110,6 +115,7 @@ export function EntraTenantMappingTable() {
   const [rows, setRows] = React.useState<MappingTenantRow[]>([]);
   const [allClients, setAllClients] = React.useState<ClientOption[]>([]);
   const [searchByRow, setSearchByRow] = React.useState<Record<string, string>>({});
+  const [skippingByRow, setSkippingByRow] = React.useState<Record<string, boolean>>({});
 
   const loadPreview = React.useCallback(async () => {
     setLoading(true);
@@ -198,6 +204,34 @@ export function EntraTenantMappingTable() {
       .slice(0, 50);
   }, [allClients, searchByRow]);
 
+  const handleSkip = React.useCallback(async (row: MappingTenantRow) => {
+    if (!row.managedTenantId) {
+      return;
+    }
+
+    setSkippingByRow((current) => ({ ...current, [row.managedTenantId]: true }));
+    try {
+      const result = await skipEntraTenantMapping({
+        managedTenantId: row.managedTenantId,
+      });
+
+      if ('error' in result) {
+        setError(result.error || 'Failed to skip this tenant mapping.');
+        return;
+      }
+
+      setRows((currentRows) =>
+        currentRows.map((currentRow) =>
+          currentRow.managedTenantId === row.managedTenantId
+            ? { ...currentRow, isSkipped: true, selectedClientId: null }
+            : currentRow
+        )
+      );
+    } finally {
+      setSkippingByRow((current) => ({ ...current, [row.managedTenantId]: false }));
+    }
+  }, []);
+
   return (
     <div className="space-y-3" id="entra-mapping-table">
       <div className="flex items-center justify-between gap-2">
@@ -219,6 +253,7 @@ export function EntraTenantMappingTable() {
               <th className="px-3 py-2 font-medium">Suggested Client</th>
               <th className="px-3 py-2 font-medium">Confidence</th>
               <th className="px-3 py-2 font-medium">Select Client</th>
+              <th className="px-3 py-2 font-medium">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -233,7 +268,9 @@ export function EntraTenantMappingTable() {
                   </td>
                   <td className="px-3 py-2">{row.primaryDomain || '—'}</td>
                   <td className="px-3 py-2">
-                    {row.state === 'auto_matched' ? (
+                    {row.isSkipped ? (
+                      <Badge variant="outline">Skipped</Badge>
+                    ) : row.state === 'auto_matched' ? (
                       <Badge variant="secondary">Auto-matched</Badge>
                     ) : row.state === 'needs_review' ? (
                       <Badge variant="outline">Needs review</Badge>
@@ -269,7 +306,7 @@ export function EntraTenantMappingTable() {
                       className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
                       value={row.selectedClientId || ''}
                       onChange={(event) => updateSelection(row.managedTenantId, event.target.value)}
-                      disabled={loading || clientOptions.length === 0}
+                      disabled={loading || row.isSkipped || clientOptions.length === 0}
                     >
                       <option value="">Select client...</option>
                       {clientOptions.map((option) => (
@@ -279,13 +316,29 @@ export function EntraTenantMappingTable() {
                       ))}
                     </select>
                   </td>
+                  <td className="px-3 py-2">
+                    {row.state !== 'auto_matched' ? (
+                      <Button
+                        id={`entra-skip-row-${row.managedTenantId}`}
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => void handleSkip(row)}
+                        disabled={loading || row.isSkipped || Boolean(skippingByRow[row.managedTenantId])}
+                      >
+                        {row.isSkipped ? 'Skipped' : 'Skip for now'}
+                      </Button>
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
+                  </td>
                 </tr>
               );
             })}
 
             {!loading && rows.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-3 py-6 text-center text-muted-foreground">
+                <td colSpan={7} className="px-3 py-6 text-center text-muted-foreground">
                   No discovered tenants available for mapping preview.
                 </td>
               </tr>

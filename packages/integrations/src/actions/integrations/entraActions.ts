@@ -463,6 +463,68 @@ export const confirmEntraMappings = withAuth(async (
   });
 });
 
+export const skipEntraTenantMapping = withAuth(async (
+  user,
+  { tenant },
+  input: { managedTenantId: string }
+) => {
+  const canUpdate = await hasPermission(user as any, 'system_settings', 'update');
+  if (!canUpdate) {
+    return { success: false, error: 'Forbidden: insufficient permissions to configure Entra integration' } as const;
+  }
+
+  const enabled = await isEntraUiEnabledForTenant({
+    tenantId: tenant,
+    userId: (user as { user_id?: string } | undefined)?.user_id,
+  });
+  if (!enabled) {
+    return flagDisabledResult<{ managedTenantId: string; mappingState: string }>();
+  }
+
+  const managedTenantId = String(input.managedTenantId || '').trim();
+  if (!managedTenantId) {
+    return { success: false, error: 'managedTenantId is required.' } as const;
+  }
+
+  const { knex } = await createTenantKnex();
+  const now = knex.fn.now();
+  const userId = String((user as { user_id?: string } | undefined)?.user_id || '') || null;
+
+  await knex.transaction(async (trx) => {
+    await trx('entra_client_tenant_mappings')
+      .where({
+        tenant,
+        managed_tenant_id: managedTenantId,
+        is_active: true,
+      })
+      .update({
+        is_active: false,
+        updated_at: now,
+      });
+
+    await trx('entra_client_tenant_mappings').insert({
+      tenant,
+      managed_tenant_id: managedTenantId,
+      client_id: null,
+      mapping_state: 'skip_for_now',
+      confidence_score: null,
+      is_active: true,
+      decided_by: userId,
+      decided_at: now,
+      created_at: now,
+      updated_at: now,
+    });
+  });
+
+  return {
+    success: true,
+    data: {
+      managedTenantId,
+      mappingState: 'skip_for_now',
+    },
+  } as const;
+});
+
 export const startEntraSync = withAuth(async (
   user,
   { tenant },
