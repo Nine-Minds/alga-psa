@@ -333,4 +333,105 @@ describe('reconcileEntraUserToContact', () => {
       })
     );
   });
+
+  it('T114: retrying same Entra identity avoids duplicate contact creation and links existing contact', async () => {
+    const linkStore = new Map<string, string>();
+    const makeLinkKey = (tenant: string, entraTenantId: string, entraObjectId: string) =>
+      `${tenant}|${entraTenantId}|${entraObjectId}`;
+
+    const contactsUpdateMock = vi.fn(async () => 1);
+    const trxMock = vi.fn((table: string) => {
+      if (table === 'entra_contact_links') {
+        return {
+          where: vi.fn((whereInput: {
+            tenant: string;
+            entra_tenant_id: string;
+            entra_object_id: string;
+          }) => ({
+            orderBy: vi.fn(() => ({
+              first: vi.fn(async () => {
+                const key = makeLinkKey(
+                  String(whereInput.tenant),
+                  String(whereInput.entra_tenant_id),
+                  String(whereInput.entra_object_id)
+                );
+                const contactId = linkStore.get(key);
+                return contactId ? { contact_name_id: contactId } : null;
+              }),
+            })),
+          })),
+        };
+      }
+
+      if (table === 'contacts') {
+        return {
+          where: vi.fn(() => ({
+            andWhereRaw: vi.fn(() => ({
+              orderBy: vi.fn(() => ({
+                first: vi.fn(async () => null),
+              })),
+            })),
+            update: contactsUpdateMock,
+          })),
+        };
+      }
+
+      throw new Error(`Unexpected table ${table}`);
+    }) as any;
+    trxMock.fn = { now: vi.fn(() => 'db-now') };
+    trxMock.raw = vi.fn(() => 'RAW');
+
+    createTenantKnexMock.mockResolvedValue({
+      knex: {
+        fn: { now: vi.fn(() => 'db-now') },
+        transaction: vi.fn(async (cb: (trx: typeof trxMock) => Promise<unknown>) => cb(trxMock)),
+      },
+    });
+
+    upsertEntraContactLinkActiveMock.mockImplementation(
+      async (_trx: unknown, input: { tenantId: string; contactNameId: string; user: EntraSyncUser }) => {
+        linkStore.set(
+          makeLinkKey(input.tenantId, input.user.entraTenantId, input.user.entraObjectId),
+          input.contactNameId
+        );
+      }
+    );
+    createContactMock.mockResolvedValueOnce({ contact_name_id: 'contact-114' });
+
+    const { createContactForEntraUser } = await import(
+      '@ee/lib/integrations/entra/sync/contactReconciler'
+    );
+
+    const first = await createContactForEntraUser(
+      'tenant-114',
+      'client-114',
+      buildUser({
+        entraTenantId: 'entra-tenant-114',
+        entraObjectId: 'entra-object-114',
+        userPrincipalName: 'retry114@example.com',
+        email: 'retry114@example.com',
+      })
+    );
+    const second = await createContactForEntraUser(
+      'tenant-114',
+      'client-114',
+      buildUser({
+        entraTenantId: 'entra-tenant-114',
+        entraObjectId: 'entra-object-114',
+        userPrincipalName: 'retry114@example.com',
+        email: 'retry114@example.com',
+      })
+    );
+
+    expect(createContactMock).toHaveBeenCalledTimes(1);
+    expect(first).toMatchObject({
+      action: 'created',
+      contactNameId: 'contact-114',
+    });
+    expect(second).toMatchObject({
+      action: 'linked',
+      contactNameId: 'contact-114',
+    });
+    expect(contactsUpdateMock).toHaveBeenCalled();
+  });
 });

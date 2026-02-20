@@ -961,7 +961,7 @@
   {
     "id": "T114",
     "description": "Retry of same tenant sync does not duplicate contact creation for same Entra identity.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F110"
     ]
