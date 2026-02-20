@@ -288,7 +288,7 @@
   {
     "id": "T036",
     "description": "server/public/locales/en/msp/core.json exists with same content as old msp.json",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F016"
     ]
