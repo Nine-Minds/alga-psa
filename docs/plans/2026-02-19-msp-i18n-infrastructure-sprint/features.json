@@ -80,7 +80,7 @@
   {
     "id": "F014",
     "description": "Pseudo-locale script preserves JSON key structure exactly (nested objects maintained)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR13"]
   },
   {

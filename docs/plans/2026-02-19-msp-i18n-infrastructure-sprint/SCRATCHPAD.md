@@ -131,3 +131,4 @@ ls server/public/locales/*/msp.json  # should fail (files removed)
 - 2026-02-20: Pseudo-locale output preserves directory structure under `server/public/locales/<locale>/` (F011).
 - 2026-02-20: Pseudo-locale generator replaces all leaf string values with the fill token (F012).
 - 2026-02-20: Pseudo-locale generator preserves `{{variables}}` in transformed strings (F013).
+- 2026-02-20: Pseudo-locale generator preserves JSON key structure (nested objects/arrays) (F014).
