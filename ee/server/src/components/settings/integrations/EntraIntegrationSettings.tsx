@@ -76,6 +76,7 @@ export default function EntraIntegrationSettings() {
         ]
       : []),
   ];
+  const hasConfirmedMappings = (status?.mappedTenantCount || 0) > 0;
 
   return (
     <div className="space-y-6" id="entra-integration-settings">
@@ -177,7 +178,15 @@ export default function EntraIntegrationSettings() {
             <Button id="entra-run-discovery" type="button" variant="outline" disabled>
               Run Discovery
             </Button>
-            <Button id="entra-sync-all-tenants" type="button" variant="outline" disabled>
+            <Button
+              id="entra-run-initial-sync"
+              type="button"
+              variant="outline"
+              disabled={!hasConfirmedMappings}
+            >
+              Run Initial Sync
+            </Button>
+            <Button id="entra-sync-all-tenants" type="button" variant="outline" disabled={!hasConfirmedMappings}>
               Sync All Tenants Now
             </Button>
           </div>

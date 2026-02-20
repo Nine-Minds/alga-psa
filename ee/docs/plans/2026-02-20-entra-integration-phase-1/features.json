@@ -755,7 +755,7 @@
   {
     "id": "F068",
     "description": "Initial sync CTA: enable `Run Initial Sync` only when at least one mapping is confirmed.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes"
     ],

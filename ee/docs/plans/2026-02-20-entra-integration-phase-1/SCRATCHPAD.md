@@ -200,3 +200,5 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
 - (2026-02-20) `F067` completed: mapping summary counts are now computed from table state (`mapped`, `skipped`, `needsReview`) and displayed in `EntraIntegrationSettings` above the mapping table.
 - Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
+- (2026-02-20) `F068` completed: added `Run Initial Sync` CTA and bound enablement to confirmed mapping count (`status.mappedTenantCount > 0`) so initial sync can only be started when at least one mapping exists.
+- Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
