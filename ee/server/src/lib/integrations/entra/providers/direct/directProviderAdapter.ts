@@ -46,6 +46,36 @@ function getNumber(value: unknown): number {
   return 0;
 }
 
+function getBoolean(value: unknown, fallback = false): boolean {
+  if (typeof value === 'boolean') {
+    return value;
+  }
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase();
+    if (normalized === 'true' || normalized === '1') return true;
+    if (normalized === 'false' || normalized === '0') return false;
+  }
+  if (typeof value === 'number') {
+    if (value === 1) return true;
+    if (value === 0) return false;
+  }
+  return fallback;
+}
+
+function getStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  const output: string[] = [];
+  for (const item of value) {
+    if (typeof item === 'string' && item.trim().length > 0) {
+      output.push(item.trim());
+    }
+  }
+  return output;
+}
+
 function extractPrimaryDomain(raw: Record<string, unknown>): string | null {
   const explicitDomain =
     getNullableString(raw.defaultDomainName) ||
@@ -167,9 +197,67 @@ export class DirectProviderAdapter implements EntraProviderAdapter {
   }
 
   public async listUsersForTenant(
-    _input: EntraListUsersForTenantInput
+    input: EntraListUsersForTenantInput
   ): Promise<EntraManagedUserRecord[]> {
-    throw new Error('DirectProviderAdapter.listUsersForTenant is not implemented yet.');
+    const users: EntraManagedUserRecord[] = [];
+    const seenObjectIds = new Set<string>();
+    const encodedTenant = encodeURIComponent(input.managedTenantId);
+    const select = [
+      'id',
+      'tenantId',
+      'displayName',
+      'givenName',
+      'surname',
+      'mail',
+      'userPrincipalName',
+      'accountEnabled',
+      'jobTitle',
+      'mobilePhone',
+      'businessPhones',
+    ].join(',');
+
+    let nextUrl =
+      `${GRAPH_BASE_URL}/tenantRelationships/managedTenants/users` +
+      `?$filter=tenantId eq '${encodedTenant}'&$select=${select}&$top=999`;
+
+    while (nextUrl) {
+      const payload = await this.graphGet(input.tenant, nextUrl);
+      const rows = Array.isArray(payload.value) ? payload.value : [];
+
+      for (const row of rows) {
+        const raw = toObject(row);
+        const entraObjectId = getFirstString(raw.id);
+        if (!entraObjectId || seenObjectIds.has(entraObjectId)) {
+          continue;
+        }
+
+        seenObjectIds.add(entraObjectId);
+
+        const userPrincipalName = getNullableString(raw.userPrincipalName);
+        const email = getNullableString(raw.mail) || userPrincipalName;
+        const entraTenantId = getNullableString(raw.tenantId) || input.managedTenantId;
+
+        users.push({
+          entraTenantId,
+          entraObjectId,
+          userPrincipalName,
+          email,
+          displayName: getNullableString(raw.displayName),
+          givenName: getNullableString(raw.givenName),
+          surname: getNullableString(raw.surname),
+          accountEnabled: getBoolean(raw.accountEnabled, true),
+          jobTitle: getNullableString(raw.jobTitle),
+          mobilePhone: getNullableString(raw.mobilePhone),
+          businessPhones: getStringArray(raw.businessPhones),
+          raw,
+        });
+      }
+
+      const candidateNextLink = getNullableString(payload['@odata.nextLink']);
+      nextUrl = candidateNextLink || '';
+    }
+
+    return users;
   }
 }
 

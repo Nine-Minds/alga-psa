@@ -530,7 +530,7 @@
   {
     "id": "F048",
     "description": "Direct adapter (users): implement per-tenant user enumeration with normalized user payload fields.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements"
     ],

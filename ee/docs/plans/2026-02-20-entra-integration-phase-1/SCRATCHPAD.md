@@ -148,3 +148,6 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - Adapter behavior: tenant-scoped access-token resolution, auto-refresh on expiry/401, pagination via `@odata.nextLink`, normalization to canonical tenant DTO (`entraTenantId`, displayName, primaryDomain, sourceUserCount).
 - Note: `listUsersForTenant` intentionally left for `F048` and currently throws a clear not-implemented error.
 - Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
+- (2026-02-20) `F048` completed: implemented direct adapter per-tenant user enumeration in `listUsersForTenant(...)` using managed-users Graph endpoint with pagination and normalized user DTO mapping.
+- Normalized fields include object id, UPN/email, name fields, accountEnabled, job/mobile/business phones, and raw payload passthrough for downstream reconciliation.
+- Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
