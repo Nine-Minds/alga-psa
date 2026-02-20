@@ -3,6 +3,7 @@
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
+import { createTenantKnex } from '@alga-psa/db';
 import { generateMicrosoftAuthUrl, generateNonce } from '../../utils/email/oauthHelpers';
 
 const isEnterpriseEdition =
@@ -20,6 +21,29 @@ type EntraRoutePayload<T> = {
   data?: T;
   error?: string;
 };
+
+function normalizeCippBaseUrl(input: string): string | null {
+  const raw = input.trim();
+  if (!raw) {
+    return null;
+  }
+
+  const candidate = raw.startsWith('http://') || raw.startsWith('https://')
+    ? raw
+    : `https://${raw}`;
+
+  try {
+    const parsed = new URL(candidate);
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+      return null;
+    }
+
+    const pathname = parsed.pathname.replace(/\/+$/, '');
+    return `${parsed.protocol}//${parsed.host}${pathname}`;
+  } catch {
+    return null;
+  }
+}
 
 async function isEntraUiEnabledForTenant(params: {
   tenantId: string;
@@ -212,6 +236,79 @@ export const connectEntraIntegration = withAuth(async (
     method: 'POST',
     body: input,
   });
+});
+
+export const connectEntraCipp = withAuth(async (
+  user,
+  { tenant },
+  input: { baseUrl: string; apiToken: string }
+) => {
+  const canUpdate = await hasPermission(user as any, 'system_settings', 'update');
+  if (!canUpdate) {
+    return { success: false, error: 'Forbidden: insufficient permissions to configure Entra integration' } as const;
+  }
+
+  const enabled = await isEntraUiEnabledForTenant({
+    tenantId: tenant,
+    userId: (user as { user_id?: string } | undefined)?.user_id,
+  });
+  if (!enabled) {
+    return flagDisabledResult<{ status: string; connectionType: EntraConnectionType; baseUrl: string }>();
+  }
+
+  const normalizedBaseUrl = normalizeCippBaseUrl(input.baseUrl);
+  if (!normalizedBaseUrl) {
+    return { success: false, error: 'CIPP base URL must be a valid http(s) URL.' } as const;
+  }
+
+  const apiToken = String(input.apiToken || '').trim();
+  if (!apiToken) {
+    return { success: false, error: 'CIPP API token is required.' } as const;
+  }
+
+  const secretProvider = await getSecretProviderInstance();
+  await secretProvider.setTenantSecret(tenant, 'entra_cipp_base_url', normalizedBaseUrl);
+  await secretProvider.setTenantSecret(tenant, 'entra_cipp_api_token', apiToken);
+
+  const { knex } = await createTenantKnex();
+  const now = knex.fn.now();
+  const userId = String((user as { user_id?: string } | undefined)?.user_id || '');
+
+  await knex('entra_partner_connections')
+    .where({ tenant, is_active: true })
+    .update({
+      is_active: false,
+      status: 'disconnected',
+      disconnected_at: now,
+      updated_at: now,
+      updated_by: userId || null,
+    });
+
+  await knex('entra_partner_connections').insert({
+    tenant,
+    connection_type: 'cipp',
+    status: 'connected',
+    is_active: true,
+    cipp_base_url: normalizedBaseUrl,
+    token_secret_ref: 'entra_cipp',
+    connected_at: now,
+    disconnected_at: null,
+    last_validated_at: null,
+    last_validation_error: knex.raw(`'{}'::jsonb`),
+    created_by: userId || null,
+    updated_by: userId || null,
+    created_at: now,
+    updated_at: now,
+  });
+
+  return {
+    success: true,
+    data: {
+      status: 'connected',
+      connectionType: 'cipp' as const,
+      baseUrl: normalizedBaseUrl,
+    },
+  } as const;
 });
 
 export const disconnectEntraIntegration = withAuth(async (user, { tenant }) => {

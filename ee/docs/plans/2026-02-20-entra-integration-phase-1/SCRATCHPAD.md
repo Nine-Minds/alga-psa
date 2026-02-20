@@ -121,3 +121,5 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - (2026-02-20) `F038` completed: centralized direct OAuth token persistence/rotation in `ee/server/src/lib/integrations/entra/auth/tokenStore.ts` using `getSecretProviderInstance()` tenant secrets.
 - Refactor: EE Entra callback and refresh helper now both call `saveEntraDirectTokenSet(...)` / `getEntraDirectRefreshToken(...)` to keep secret writes consistent and vault-compatible.
 - Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
+- (2026-02-20) `F039` completed: added `connectEntraCipp` action in `packages/integrations/src/actions/integrations/entraActions.ts` with base URL normalization/validation, required token checks, tenant-secret persistence, and active CIPP connection-row upsert.
+- Validation command: `npx tsc --noEmit -p packages/integrations/tsconfig.json` (pass).

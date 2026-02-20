@@ -427,7 +427,7 @@
   {
     "id": "F039",
     "description": "CIPP connect action: add settings action to save CIPP base URL and token for tenant.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements"
     ],
