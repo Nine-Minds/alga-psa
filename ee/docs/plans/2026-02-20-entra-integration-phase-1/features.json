@@ -989,7 +989,7 @@
   {
     "id": "F089",
     "description": "Temporal schedule setup: create/update recurring Entra sync schedule using tenant sync interval settings.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements"
     ],

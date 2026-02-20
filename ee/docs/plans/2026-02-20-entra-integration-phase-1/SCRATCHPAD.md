@@ -244,3 +244,6 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - (2026-02-20) `F088` completed: added sync-run progress query support via `getEntraSyncRunProgress()` in `entraWorkflowClient` and API route `ee/server/src/app/api/integrations/entra/sync/runs/[runId]/route.ts` returning run + per-tenant status payloads.
 - Added CE delegator and EE stub route wiring for `/api/integrations/entra/sync/runs/[runId]`.
 - Validation commands: `npx tsc --noEmit -p ee/server/tsconfig.json`, `npx tsc --noEmit -p server/tsconfig.json`, `npx tsc --noEmit -p packages/integrations/tsconfig.json`, `npx tsc --noEmit -p ee/temporal-workflows/tsconfig.json` (pass).
+- (2026-02-20) `F089` completed: extended `ee/temporal-workflows/src/schedules/setupSchedules.ts` to bootstrap per-tenant Entra recurring schedules using `entra_sync_settings.sync_interval_minutes`.
+- Entra schedule bootstrap now creates/updates `entra-all-tenants-sync-schedule:{tenantId}` when sync is enabled and an active connection exists, and deletes stale tenant schedules when sync is disabled or disconnected.
+- Validation command: `npx tsc --noEmit -p ee/temporal-workflows/tsconfig.json` (pass).
