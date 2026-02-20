@@ -215,7 +215,7 @@
   {
     "id": "T027",
     "description": "Pseudo-locale script output preserves directory structure (e.g., features/tickets.json -> xx/features/tickets.json)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F011"
     ]

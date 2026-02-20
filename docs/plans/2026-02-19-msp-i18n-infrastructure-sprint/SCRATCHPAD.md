@@ -166,3 +166,4 @@ ls server/public/locales/*/msp.json  # should fail (files removed)
 - 2026-02-20: Completed T024 checklist entry — Pseudo-locale script accepts --locale and --fill CLI arguments
 - 2026-02-20: Completed T025 checklist entry — Pseudo-locale script with --locale xx --fill 1111 generates files under server/public/locales/xx/
 - 2026-02-20: Completed T026 checklist entry — Pseudo-locale script reads all English namespace JSON files including nested features/ and msp/ directories
+- 2026-02-20: Completed T027 checklist entry — Pseudo-locale script output preserves directory structure (e.g., features/tickets.json -> xx/features/tickets.json)
