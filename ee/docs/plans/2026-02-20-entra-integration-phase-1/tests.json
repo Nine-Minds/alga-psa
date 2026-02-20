@@ -707,7 +707,7 @@
   {
     "id": "T083",
     "description": "Mapping confirm action can optionally start initial sync workflow and persist run id.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F085"
     ]

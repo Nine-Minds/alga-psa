@@ -574,3 +574,6 @@ EOF && git add ee/docs/plans/2026-02-20-entra-integration-phase-1/tests.json ee/
 - (2026-02-20) `T082` completed: added route unit test `ee/server/src/__tests__/unit/entraSyncRunProgressRoute.test.ts`.
 - Test verifies sync run polling endpoint returns serialized run-level status plus tenant-level result rows and calls workflow progress reader with tenant-scoped context.
 - Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraSyncRunProgressRoute.test.ts` (pass).
+- (2026-02-20) `T083` completed: added contract test `server/src/test/unit/integrations/entraConfirmMappingsInitialSyncContract.test.ts`.
+- Test verifies `confirmEntraMappings` optional-start branch, workflow trigger invocation path, and response payload propagation of `initialSync.workflowId/runId`.
+- Validation commands: `cd server && npx vitest run src/test/unit/integrations/entraConfirmMappingsInitialSyncContract.test.ts --coverage.enabled=false` (pass), `cd server && npx vitest run src/test/unit/integrations/entraActions.directConnect.test.ts --coverage.enabled=false` (pass).
