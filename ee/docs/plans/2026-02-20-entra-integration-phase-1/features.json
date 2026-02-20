@@ -249,7 +249,7 @@
   {
     "id": "F023",
     "description": "Schema constraint: enforce unique (`tenant`, `entra_tenant_id`, `entra_object_id`) in contact links.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data / API / Integrations"
     ],
