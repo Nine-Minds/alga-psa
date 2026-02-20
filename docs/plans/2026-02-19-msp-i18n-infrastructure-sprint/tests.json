@@ -354,7 +354,7 @@
   {
     "id": "T044",
     "description": "Client portal at /client-portal loads common and client-portal namespaces correctly",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F020"
     ]

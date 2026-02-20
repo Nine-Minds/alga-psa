@@ -183,3 +183,4 @@ ls server/public/locales/*/msp.json  # should fail (files removed)
 - 2026-02-20: Completed T041 checklist entry — i18next.t('nav.home', { ns: 'msp/core' }) returns correct English translation after namespace rename
 - 2026-02-20: Completed T042 checklist entry — packages/core/src/lib/i18n/config.ts I18N_CONFIG.ns is synced to ['common']
 - 2026-02-20: Completed T043 checklist entry — packages/core/src/lib/i18n/config.ts LOCALE_CONFIG matches packages/ui/src/lib/i18n/config.ts (including any pseudo-locale changes)
+- 2026-02-20: Completed T044 checklist entry — Client portal at /client-portal loads common and client-portal namespaces correctly
