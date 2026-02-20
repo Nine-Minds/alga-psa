@@ -1022,7 +1022,7 @@
   {
     "id": "T121",
     "description": "Settings status panel shows connection type/status, last discovery, mapping counts, and interval.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F111"
     ]

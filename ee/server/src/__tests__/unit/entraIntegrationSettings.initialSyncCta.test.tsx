@@ -157,4 +157,36 @@ describe('EntraIntegrationSettings initial sync CTA', () => {
     expect(screen.queryByText('Map Tenants to Clients')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Run Initial Sync' })).not.toBeInTheDocument();
   });
+
+  it('T121: settings status panel shows connection, discovery, mapping count, and sync interval details', async () => {
+    mappingTableState.summary = { mapped: 7, skipped: 1, needsReview: 0 };
+    mappingTableState.skippedTenants = [];
+    useFeatureFlagMock.mockImplementation((name: string) => ({
+      enabled: name === 'entra-integration-ui',
+    }));
+    getEntraIntegrationStatusMock.mockResolvedValue({
+      success: true,
+      data: {
+        status: 'connected',
+        connectionType: 'cipp',
+        lastDiscoveryAt: null,
+        mappedTenantCount: 7,
+        nextSyncIntervalMinutes: 30,
+        availableConnectionTypes: ['direct', 'cipp'],
+        lastValidatedAt: null,
+        lastValidationError: null,
+      },
+    });
+
+    render(<EntraIntegrationSettings />);
+
+    await screen.findByText('Status');
+    const panel = document.getElementById('entra-connection-status-panel');
+    expect(panel).not.toBeNull();
+    expect(panel?.textContent).toContain('Connection: connected');
+    expect(panel?.textContent).toContain('Connection Type: cipp');
+    expect(panel?.textContent).toContain('Last Discovery: Never');
+    expect(panel?.textContent).toContain('Mapped Tenants: 7');
+    expect(panel?.textContent).toContain('Next Sync Interval: Every 30 minutes');
+  });
 });
