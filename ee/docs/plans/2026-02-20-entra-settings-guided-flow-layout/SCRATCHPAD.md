@@ -45,3 +45,14 @@ Focused planning log for guided-layout improvements in Entra integration setting
 - Should Step 3 include a dedicated top-level CTA (`Review Mappings`) that scrolls/focuses the table, or should copy-only guidance be used?
 - Should mapping confirmation continue to optionally start initial sync from table flow, or should guided Step 4 become the single canonical trigger?
 - In maintenance mode, should `Run Discovery` be a visible secondary action by default or placed behind a details/overflow affordance?
+
+## Execution Log
+
+- (2026-02-20) F001 implemented in `ee/server/src/components/settings/integrations/EntraIntegrationSettings.tsx`.
+  - Added explicit guided-step derivation helper (`deriveGuidedStepState`) with `connect|discover|map|sync` current-step output.
+  - Step derivation now uses existing status signals plus mapping summary via `mappedTenantCount = max(status.mappedTenantCount, mappingSummary.mapped)`.
+  - Rationale: deterministic step progression based only on existing UI-loaded state, no API/schema changes.
+
+## Gotchas
+
+- Running `npm -w sebastian-ee run test:unit -- src/__tests__/unit/entraIntegrationSettings.initialSyncCta.test.tsx` still executes the full unit suite because of the workspace script shape; several unrelated baseline tests fail in this worktree due missing `@enterprise/*` resolution and pre-existing duplicated-render test issues.

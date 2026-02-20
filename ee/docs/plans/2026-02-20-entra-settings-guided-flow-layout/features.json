@@ -2,7 +2,7 @@
   {
     "id": "F001",
     "description": "Define guided onboarding step-state model (Connect, Discover, Map, Sync) in `EntraIntegrationSettings` from existing status and mapping summary signals.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "UX / UI Notes"

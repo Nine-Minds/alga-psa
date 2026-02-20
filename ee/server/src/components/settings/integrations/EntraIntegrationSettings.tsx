@@ -27,12 +27,42 @@ import {
 } from './entraIntegrationSettingsGates';
 import { EntraCippConnectDialog } from './EntraCippConnectDialog';
 
+type GuidedStepId = 'connect' | 'discover' | 'map' | 'sync';
+
 const WIZARD_STEPS = [
-  { id: 1, title: 'Connect', description: 'Choose Direct Microsoft partner auth or CIPP.' },
-  { id: 2, title: 'Discover Tenants', description: 'Load and persist managed Entra tenants for this MSP tenant.' },
-  { id: 3, title: 'Map Tenants to Clients', description: 'Review auto-match suggestions and confirm mappings.' },
-  { id: 4, title: 'Initial Sync', description: 'Start the first sync run for confirmed mappings.' },
+  { id: 'connect' as const, title: 'Connect', description: 'Choose Direct Microsoft partner auth or CIPP.' },
+  { id: 'discover' as const, title: 'Discover Tenants', description: 'Load and persist managed Entra tenants for this MSP tenant.' },
+  { id: 'map' as const, title: 'Map Tenants to Clients', description: 'Review auto-match suggestions and confirm mappings.' },
+  { id: 'sync' as const, title: 'Initial Sync', description: 'Start the first sync run for confirmed mappings.' },
 ] as const;
+
+function deriveGuidedStepState(params: {
+  status: EntraStatusResponse | null;
+  mappedCount: number;
+}): {
+  currentStep: GuidedStepId;
+  isConnected: boolean;
+  hasDiscovery: boolean;
+  hasConfirmedMappings: boolean;
+} {
+  const isConnected = params.status?.status === 'connected';
+  const hasDiscovery = Boolean(params.status?.lastDiscoveryAt);
+  const hasConfirmedMappings = params.mappedCount > 0;
+
+  if (!isConnected) {
+    return { currentStep: 'connect', isConnected, hasDiscovery, hasConfirmedMappings };
+  }
+
+  if (!hasDiscovery) {
+    return { currentStep: 'discover', isConnected, hasDiscovery, hasConfirmedMappings };
+  }
+
+  if (!hasConfirmedMappings) {
+    return { currentStep: 'map', isConnected, hasDiscovery, hasConfirmedMappings };
+  }
+
+  return { currentStep: 'sync', isConnected, hasDiscovery, hasConfirmedMappings };
+}
 
 export default function EntraIntegrationSettings() {
   const uiFlag = useFeatureFlag('entra-integration-ui', { defaultValue: false });
@@ -103,7 +133,12 @@ export default function EntraIntegrationSettings() {
   };
 
   const connectionOptions = buildEntraConnectionOptions(cippFlag.enabled);
-  const hasConfirmedMappings = (status?.mappedTenantCount || 0) > 0;
+  const mappedTenantCount = Math.max(status?.mappedTenantCount ?? 0, mappingSummary.mapped);
+  const guidedStepState = deriveGuidedStepState({
+    status,
+    mappedCount: mappedTenantCount,
+  });
+  const hasConfirmedMappings = guidedStepState.hasConfirmedMappings;
 
   const handleSyncAllTenants = React.useCallback(async () => {
     setSyncAllLoading(true);
