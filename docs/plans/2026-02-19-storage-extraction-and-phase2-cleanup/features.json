@@ -62,7 +62,7 @@
   {
     "id": "F011",
     "description": "Move types/storage.ts from documents to packages/storage/src/types/storage.ts",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-05"]
   },
   {

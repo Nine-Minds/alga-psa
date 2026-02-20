@@ -70,3 +70,4 @@ grep -r "from '../lib/email'" server/ --include="*.ts" --include="*.tsx"
 - F008: Created `packages/storage/package.json` scaffold with required dependencies and build/typecheck scripts.
 - F009: Added `packages/storage/project.json` with `scope:storage` + `type:horizontal` tags.
 - F010: Added `packages/storage/tsconfig.json` extending the root config.
+- F011: Moved `packages/documents/src/types/storage.ts` to `packages/storage/src/types/storage.ts`.
