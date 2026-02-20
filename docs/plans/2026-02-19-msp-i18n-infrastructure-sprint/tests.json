@@ -14,7 +14,7 @@
   {
     "id": "T003",
     "description": "ROUTE_NAMESPACES constant is exported from packages/ui/src/lib/i18n/config.ts",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F002"]
   },
   {
