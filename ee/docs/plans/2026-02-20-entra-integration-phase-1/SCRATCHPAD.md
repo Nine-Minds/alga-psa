@@ -568,3 +568,6 @@ EOF && git add ee/docs/plans/2026-02-20-entra-integration-phase-1/tests.json ee/
 - (2026-02-20) `T080` completed in `entraWorkflowClient.start` unit suite.
 - All-tenants case verifies Temporal start wrapper returns workflow/run IDs and includes trigger-scoped all-tenants workflow-id prefix.
 - Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraWorkflowClient.start.test.ts` (pass).
+- (2026-02-20) `T081` completed in `entraWorkflowClient.start` unit suite.
+- Single-tenant case verifies Temporal start wrapper returns workflow/run IDs and composes tenant+managed-tenant+client workflow-id prefix.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraWorkflowClient.start.test.ts` (pass).

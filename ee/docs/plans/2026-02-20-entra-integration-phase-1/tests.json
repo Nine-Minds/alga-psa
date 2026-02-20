@@ -690,7 +690,7 @@
   {
     "id": "T081",
     "description": "EE workflow client can start single-client sync and returns workflow/run IDs.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F084",
       "F087"
