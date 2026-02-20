@@ -264,7 +264,7 @@
   {
     "id": "T033",
     "description": "Pseudo-locales xx and yy are added to LOCALE_CONFIG.supportedLocales",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F015"
     ]
