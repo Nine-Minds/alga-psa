@@ -447,3 +447,6 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - (2026-02-20) `T040` completed: added EE disconnect route unit test `ee/server/src/__tests__/unit/entraDisconnectRoute.test.ts`.
 - Test verifies both provider secret clear operations execute and active connection is marked disconnected (`disconnectActiveEntraConnection`) with expected response payload.
 - Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraDisconnectRoute.test.ts` (pass).
+- (2026-02-20) `T041` completed: expanded Entra action tests for connection-type switching cleanup behavior.
+- Test verifies direct initiation clears stale CIPP credentials and CIPP connect clears stale direct token secrets before persisting new mode configuration.
+- Validation command: `cd server && npx vitest run src/test/unit/integrations/entraActions.directConnect.test.ts` (pass).

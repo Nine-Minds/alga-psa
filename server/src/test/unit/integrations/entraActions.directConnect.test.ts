@@ -209,4 +209,52 @@ describe('Entra direct connect action permissions', () => {
     expect(insertedRow).not.toHaveProperty('apiToken');
     expect(Object.values(insertedRow)).not.toContain('cipp-token-37');
   });
+
+  it('T041: switching direct<->CIPP clears stale credentials from the previous mode', async () => {
+    hasPermissionMock.mockResolvedValue(true);
+    featureFlagIsEnabledMock.mockResolvedValue(true);
+
+    resolveMicrosoftCredentialsForTenantMock.mockResolvedValue({
+      clientId: 'client-id-41',
+      clientSecret: 'client-secret-41',
+      tenantId: null,
+      source: 'tenant-secret',
+    });
+    getSecretProviderInstanceMock.mockResolvedValue({
+      getAppSecret: vi.fn(async () => null),
+    });
+
+    const { initiateEntraDirectOAuth, connectEntraCipp } = await import(
+      '@alga-psa/integrations/actions/integrations/entraActions'
+    );
+
+    await initiateEntraDirectOAuth(
+      { user_id: 'user-41a', user_type: 'internal' } as any,
+      { tenant: 'tenant-41a' }
+    );
+    expect(clearEntraCippCredentialsMock).toHaveBeenCalledWith('tenant-41a');
+
+    clearEntraDirectTokenSetMock.mockResolvedValue(undefined);
+    saveEntraCippCredentialsMock.mockResolvedValue(undefined);
+
+    const whereMock = vi.fn().mockReturnThis();
+    const updateMock = vi.fn(async () => 1);
+    const insertMock = vi.fn(async () => [1]);
+    const knexMock = vi.fn(() => ({
+      where: whereMock,
+      update: updateMock,
+      insert: insertMock,
+    })) as any;
+    knexMock.fn = { now: vi.fn(() => 'db-now') };
+    knexMock.raw = vi.fn((value: string) => `RAW(${value})`);
+    createTenantKnexMock.mockResolvedValue({ knex: knexMock });
+
+    await connectEntraCipp(
+      { user_id: 'user-41b', user_type: 'internal' } as any,
+      { tenant: 'tenant-41b' },
+      { baseUrl: 'https://cipp.example.com', apiToken: 'token-41b' }
+    );
+
+    expect(clearEntraDirectTokenSetMock).toHaveBeenCalledWith('tenant-41b');
+  });
 });

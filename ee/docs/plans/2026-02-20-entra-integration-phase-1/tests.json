@@ -352,7 +352,7 @@
   {
     "id": "T041",
     "description": "Switching direct->CIPP removes stale direct tokens and vice versa.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F045"
     ]
