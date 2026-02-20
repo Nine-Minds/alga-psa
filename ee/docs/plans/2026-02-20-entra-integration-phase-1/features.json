@@ -920,7 +920,7 @@
   {
     "id": "F083",
     "description": "Temporal registration: export new Entra activities in worker activity index.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data / API / Integrations"
     ],
