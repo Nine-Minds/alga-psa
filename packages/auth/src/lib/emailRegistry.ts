@@ -6,6 +6,10 @@
  *
  * Default stubs throw "email not configured" errors.
  * App startup registers real implementations.
+ *
+ * Uses globalThis to ensure the registry is a true process-wide singleton,
+ * surviving Next.js webpack chunk boundaries that can create separate
+ * module instances for instrumentation vs server action contexts.
  */
 
 export interface AuthEmailProvider {
@@ -48,25 +52,36 @@ const defaultRegistry: AuthEmailProvider = {
   },
 };
 
-let registry: AuthEmailProvider = { ...defaultRegistry };
+declare global {
+  // eslint-disable-next-line no-var
+  var __algaAuthEmailRegistry: AuthEmailProvider | undefined;
+}
+
+function getOrCreateRegistry(): AuthEmailProvider {
+  if (!globalThis.__algaAuthEmailRegistry) {
+    globalThis.__algaAuthEmailRegistry = { ...defaultRegistry };
+  }
+  return globalThis.__algaAuthEmailRegistry;
+}
 
 /**
  * Register email provider implementations (called at app startup)
  */
 export function registerAuthEmailProvider(impl: Partial<AuthEmailProvider>): void {
-  registry = { ...registry, ...impl };
+  const current = getOrCreateRegistry();
+  globalThis.__algaAuthEmailRegistry = { ...current, ...impl };
 }
 
 /**
  * Get the current email registry (used by auth code)
  */
 export function getAuthEmailRegistry(): AuthEmailProvider {
-  return registry;
+  return getOrCreateRegistry();
 }
 
 /**
  * Reset to default registry (for testing)
  */
 export function resetAuthEmailRegistry(): void {
-  registry = { ...defaultRegistry };
+  globalThis.__algaAuthEmailRegistry = { ...defaultRegistry };
 }
