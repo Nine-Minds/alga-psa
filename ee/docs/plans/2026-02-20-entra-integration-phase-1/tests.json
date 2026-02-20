@@ -412,7 +412,7 @@
   {
     "id": "T048",
     "description": "Direct adapter tenant responses normalize into canonical managed-tenant DTO fields.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F047"
     ]
