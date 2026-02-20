@@ -1082,7 +1082,7 @@
   {
     "id": "T128",
     "description": "Ambiguous queue panel hidden when `entra-integration-ambiguous-queue` is disabled.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F012",
       "F115"

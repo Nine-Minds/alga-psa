@@ -709,3 +709,6 @@ EOF && git add ee/docs/plans/2026-02-20-entra-integration-phase-1/tests.json ee/
 - (2026-02-20) `T127` completed by extending `clientDetailsEntraSyncAction` helpers and wiring in `ClientDetails.tsx`.
 - Added tested run-id state resolution (`queued` + polling) and terminal-status detection to keep client sync status feedback/polling behavior deterministic.
 - Validation command: `cd packages/clients && npx vitest run src/components/clients/clientDetailsEntraSyncAction.test.ts` (pass).
+- (2026-02-20) `T128` completed in `ee/server/src/__tests__/unit/entraIntegrationSettings.initialSyncCta.test.tsx`.
+- Flag-gate assertion verifies ambiguous reconciliation queue panel stays hidden when `entra-integration-ambiguous-queue` is disabled.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraIntegrationSettings.initialSyncCta.test.tsx` (pass).
