@@ -152,7 +152,7 @@
   {
     "id": "F026",
     "description": "Update server/src/services/pdf-generation.service.ts: import StorageProviderFactory, generateStoragePath from @alga-psa/storage",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-09"]
   },
   {
