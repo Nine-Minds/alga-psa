@@ -368,7 +368,7 @@
   {
     "id": "T043",
     "description": "Credential resolver falls back to env credentials when tenant pair is absent.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F034"
     ]

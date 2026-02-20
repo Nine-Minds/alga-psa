@@ -453,3 +453,6 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - (2026-02-20) `T042` completed: added resolver precedence unit coverage in `ee/server/src/__tests__/unit/microsoftCredentialResolver.precedence.test.ts`.
 - Tenant-secret preference case asserts tenant credential pair is selected over env/app fallbacks when present.
 - Validation command: `cd ee/server && npx vitest run src/__tests__/unit/microsoftCredentialResolver.precedence.test.ts` (pass).
+- (2026-02-20) `T043` completed within `microsoftCredentialResolver.precedence` tests.
+- Env-fallback case asserts resolver returns env credentials when tenant secret pair is absent and does not query app-secret fallback.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/microsoftCredentialResolver.precedence.test.ts` (pass).
