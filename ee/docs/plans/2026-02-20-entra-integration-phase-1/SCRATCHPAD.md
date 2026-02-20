@@ -77,3 +77,6 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - (2026-02-20) `F005` completed: implemented EE shell component at `ee/server/src/components/settings/integrations/EntraIntegrationSettings.tsx` with a 4-step wizard scaffold (Connect, Discover, Map, Initial Sync) and placeholder status/actions.
 - (2026-02-20) `F006` completed: gated the Entra `Identity` settings surface with `useFeatureFlag('entra-integration-ui')`; the tab/card renders only when EE mode and flag enabled.
 - Decision: kept `useFeatureFlag` hook unchanged; existing default/forced-flag behavior already supports this gate without additional hook work.
+- (2026-02-20) `F007` completed: enforced `entra-integration-ui` checks server-side in both EE Entra routes (`ee/server/src/app/api/integrations/entra/*`) and Entra server actions (`packages/integrations/src/actions/integrations/entraActions.ts`).
+- Added shared EE guard `requireEntraUiFlagEnabled()` in `ee/server/src/app/api/integrations/entra/_guards.ts` using authenticated user + tenant-aware PostHog evaluation through `featureFlags.isEnabled(...)`.
+- Validation commands: `npx tsc --noEmit -p packages/integrations/tsconfig.json` and `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).

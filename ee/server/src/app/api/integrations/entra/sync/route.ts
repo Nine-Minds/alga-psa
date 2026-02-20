@@ -1,10 +1,16 @@
 import { badRequest, dynamic, ok, parseJsonBody, runtime } from '../_responses';
+import { requireEntraUiFlagEnabled } from '../_guards';
 
 export { dynamic, runtime };
 
 const SUPPORTED_SYNC_SCOPES = new Set(['initial', 'all-tenants', 'single-client']);
 
 export async function POST(request: Request): Promise<Response> {
+  const flagGate = await requireEntraUiFlagEnabled();
+  if (flagGate instanceof Response) {
+    return flagGate;
+  }
+
   const body = await parseJsonBody(request);
   const scope = typeof body.scope === 'string' ? body.scope : null;
 

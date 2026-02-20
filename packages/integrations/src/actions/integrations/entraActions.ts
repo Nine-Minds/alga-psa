@@ -18,10 +18,28 @@ type EntraRoutePayload<T> = {
   error?: string;
 };
 
+async function isEntraUiEnabledForTenant(params: {
+  tenantId: string;
+  userId?: string;
+}): Promise<boolean> {
+  const { featureFlags } = await import('server/src/lib/feature-flags/featureFlags');
+  return featureFlags.isEnabled('entra-integration-ui', {
+    tenantId: params.tenantId,
+    userId: params.userId,
+  });
+}
+
 function eeUnavailableResult<T>(): EntraActionResult<T> {
   return {
     success: false,
     error: 'Microsoft Entra integration is only available in Enterprise Edition.',
+  };
+}
+
+function flagDisabledResult<T>(): EntraActionResult<T> {
+  return {
+    success: false,
+    error: 'Microsoft Entra integration is disabled for this tenant.',
   };
 }
 
@@ -90,7 +108,16 @@ export type EntraMappingPreviewResponse = {
   unmatched: unknown[];
 };
 
-export const getEntraIntegrationStatus = withAuth(async () => {
+export const getEntraIntegrationStatus = withAuth(async (user, { tenant }) => {
+  const enabled = await isEntraUiEnabledForTenant({
+    tenantId: tenant,
+    userId: (user as { user_id?: string } | undefined)?.user_id,
+  });
+
+  if (!enabled) {
+    return flagDisabledResult<EntraStatusResponse>();
+  }
+
   return callEeRoute<EntraStatusResponse>({
     importPath: '@enterprise/app/api/integrations/entra/route',
     method: 'GET',
@@ -98,10 +125,18 @@ export const getEntraIntegrationStatus = withAuth(async () => {
 });
 
 export const connectEntraIntegration = withAuth(async (
-  _user,
-  _session,
+  user,
+  { tenant },
   input: { connectionType: EntraConnectionType }
 ) => {
+  const enabled = await isEntraUiEnabledForTenant({
+    tenantId: tenant,
+    userId: (user as { user_id?: string } | undefined)?.user_id,
+  });
+  if (!enabled) {
+    return flagDisabledResult<{ status: string; connectionType: EntraConnectionType }>();
+  }
+
   return callEeRoute<{ status: string; connectionType: EntraConnectionType }>({
     importPath: '@enterprise/app/api/integrations/entra/connect/route',
     method: 'POST',
@@ -109,21 +144,45 @@ export const connectEntraIntegration = withAuth(async (
   });
 });
 
-export const disconnectEntraIntegration = withAuth(async () => {
+export const disconnectEntraIntegration = withAuth(async (user, { tenant }) => {
+  const enabled = await isEntraUiEnabledForTenant({
+    tenantId: tenant,
+    userId: (user as { user_id?: string } | undefined)?.user_id,
+  });
+  if (!enabled) {
+    return flagDisabledResult<{ status: string }>();
+  }
+
   return callEeRoute<{ status: string }>({
     importPath: '@enterprise/app/api/integrations/entra/disconnect/route',
     method: 'POST',
   });
 });
 
-export const discoverEntraManagedTenants = withAuth(async () => {
+export const discoverEntraManagedTenants = withAuth(async (user, { tenant }) => {
+  const enabled = await isEntraUiEnabledForTenant({
+    tenantId: tenant,
+    userId: (user as { user_id?: string } | undefined)?.user_id,
+  });
+  if (!enabled) {
+    return flagDisabledResult<{ discoveredTenantCount: number; discoveredTenants: unknown[] }>();
+  }
+
   return callEeRoute<{ discoveredTenantCount: number; discoveredTenants: unknown[] }>({
     importPath: '@enterprise/app/api/integrations/entra/discovery/route',
     method: 'POST',
   });
 });
 
-export const getEntraMappingPreview = withAuth(async () => {
+export const getEntraMappingPreview = withAuth(async (user, { tenant }) => {
+  const enabled = await isEntraUiEnabledForTenant({
+    tenantId: tenant,
+    userId: (user as { user_id?: string } | undefined)?.user_id,
+  });
+  if (!enabled) {
+    return flagDisabledResult<EntraMappingPreviewResponse>();
+  }
+
   return callEeRoute<EntraMappingPreviewResponse>({
     importPath: '@enterprise/app/api/integrations/entra/mappings/preview/route',
     method: 'GET',
@@ -131,10 +190,18 @@ export const getEntraMappingPreview = withAuth(async () => {
 });
 
 export const confirmEntraMappings = withAuth(async (
-  _user,
-  _session,
+  user,
+  { tenant },
   input: { mappings: Array<Record<string, unknown>> }
 ) => {
+  const enabled = await isEntraUiEnabledForTenant({
+    tenantId: tenant,
+    userId: (user as { user_id?: string } | undefined)?.user_id,
+  });
+  if (!enabled) {
+    return flagDisabledResult<{ confirmedMappings: number }>();
+  }
+
   return callEeRoute<{ confirmedMappings: number }>({
     importPath: '@enterprise/app/api/integrations/entra/mappings/confirm/route',
     method: 'POST',
@@ -143,10 +210,18 @@ export const confirmEntraMappings = withAuth(async (
 });
 
 export const startEntraSync = withAuth(async (
-  _user,
-  _session,
+  user,
+  { tenant },
   input: { scope: EntraSyncScope; clientId?: string }
 ) => {
+  const enabled = await isEntraUiEnabledForTenant({
+    tenantId: tenant,
+    userId: (user as { user_id?: string } | undefined)?.user_id,
+  });
+  if (!enabled) {
+    return flagDisabledResult<{ accepted: boolean; scope: EntraSyncScope; runId: string | null }>();
+  }
+
   return callEeRoute<{ accepted: boolean; scope: EntraSyncScope; runId: string | null }>({
     importPath: '@enterprise/app/api/integrations/entra/sync/route',
     method: 'POST',
