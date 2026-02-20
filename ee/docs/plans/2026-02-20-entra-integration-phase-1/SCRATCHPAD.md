@@ -74,3 +74,4 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - (2026-02-20) `F004` completed: added an EE Entra entry to Integrations settings in a new `Identity` tab/category and wired it to dynamic-load `@enterprise/components/settings/integrations/EntraIntegrationSettings`.
 - Discovery: `@enterprise/*` resolution in shared packages requires matching CE stub files under `packages/ee/src/*`; added Entra stub there to keep CE builds/typecheck valid.
 - Validation commands: `npx tsc --noEmit -p packages/integrations/tsconfig.json` and `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
+- (2026-02-20) `F005` completed: implemented EE shell component at `ee/server/src/components/settings/integrations/EntraIntegrationSettings.tsx` with a 4-step wizard scaffold (Connect, Discover, Map, Initial Sync) and placeholder status/actions.
