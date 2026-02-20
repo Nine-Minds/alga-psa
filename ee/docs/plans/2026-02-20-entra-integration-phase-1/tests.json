@@ -757,7 +757,7 @@
   {
     "id": "T089",
     "description": "Workflow run with no mapped tenants completes gracefully with zero-processed summary.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F073",
       "F075"

@@ -124,4 +124,19 @@ describe('Entra Temporal workflow/activity contracts', () => {
     expect(scheduleSource).toContain('spec: input.spec');
     expect(scheduleSource).toContain('action: input.action');
   });
+
+  it('T089: no-mapped-tenant workflow paths complete with zero-processed summaries', () => {
+    const initialWorkflow = readRepoFile('ee/temporal-workflows/src/workflows/entra-initial-sync-workflow.ts');
+    const allTenantsWorkflow = readRepoFile('ee/temporal-workflows/src/workflows/entra-all-tenants-sync-workflow.ts');
+
+    expect(initialWorkflow).toContain('const summary = createEmptySummary(mappedTenants.mappings.length);');
+    expect(initialWorkflow).toContain('summary.failedTenants === 0');
+    expect(initialWorkflow).toContain("? 'completed'");
+    expect(initialWorkflow).toContain('processedTenants: 0');
+
+    expect(allTenantsWorkflow).toContain('const summary = createEmptySummary(mappedTenants.mappings.length);');
+    expect(allTenantsWorkflow).toContain('summary.failedTenants === 0');
+    expect(allTenantsWorkflow).toContain("? 'completed'");
+    expect(allTenantsWorkflow).toContain('processedTenants: 0');
+  });
 });
