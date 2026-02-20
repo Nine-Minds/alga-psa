@@ -438,7 +438,7 @@
   {
     "id": "F040",
     "description": "CIPP token secret persistence: save/remove CIPP token via tenant secret provider (vault-compatible).",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Security / Permissions"
     ],

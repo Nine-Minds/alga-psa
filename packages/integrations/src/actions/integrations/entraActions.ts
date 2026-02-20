@@ -266,9 +266,11 @@ export const connectEntraCipp = withAuth(async (
     return { success: false, error: 'CIPP API token is required.' } as const;
   }
 
-  const secretProvider = await getSecretProviderInstance();
-  await secretProvider.setTenantSecret(tenant, 'entra_cipp_base_url', normalizedBaseUrl);
-  await secretProvider.setTenantSecret(tenant, 'entra_cipp_api_token', apiToken);
+  const cippSecretStore = await import('@enterprise/lib/integrations/entra/providers/cipp/cippSecretStore');
+  await cippSecretStore.saveEntraCippCredentials(tenant, {
+    baseUrl: normalizedBaseUrl,
+    apiToken,
+  });
 
   const { knex } = await createTenantKnex();
   const now = knex.fn.now();

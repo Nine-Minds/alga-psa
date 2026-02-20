@@ -123,3 +123,6 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
 - (2026-02-20) `F039` completed: added `connectEntraCipp` action in `packages/integrations/src/actions/integrations/entraActions.ts` with base URL normalization/validation, required token checks, tenant-secret persistence, and active CIPP connection-row upsert.
 - Validation command: `npx tsc --noEmit -p packages/integrations/tsconfig.json` (pass).
+- (2026-02-20) `F040` completed: added `ee/server/src/lib/integrations/entra/providers/cipp/cippSecretStore.ts` with save/get/clear helpers using tenant secret provider APIs (vault/filesystem/env chain compatible).
+- Refactor: `connectEntraCipp` now uses `saveEntraCippCredentials(...)` instead of writing CIPP secrets inline.
+- Validation commands: `npx tsc --noEmit -p packages/integrations/tsconfig.json` and `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
