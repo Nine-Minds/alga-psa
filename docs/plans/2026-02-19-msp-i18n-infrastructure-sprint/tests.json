@@ -378,7 +378,7 @@
   {
     "id": "T047",
     "description": "MSP portal with flag OFF: no I18nWrapper rendered, no namespace HTTP requests for msp/core",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F021"
     ]
