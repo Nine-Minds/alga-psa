@@ -126,3 +126,4 @@ ls server/public/locales/*/msp.json  # should fail (files removed)
 - 2026-02-20: `I18nWrapper` now reads the current route via `usePathname()` (F006).
 - 2026-02-20: `I18nWrapper` now resolves namespaces with `getNamespacesForRoute()` and passes them to `I18nProvider` (F007).
 - 2026-02-20: `I18nWrapper` memoizes namespace resolution to update on pathname changes (F008).
+- 2026-02-20: Added `scripts/generate-pseudo-locale.ts` with CLI args parsing for pseudo-locale generation (F009).

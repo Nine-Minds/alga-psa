@@ -50,7 +50,7 @@
   {
     "id": "F009",
     "description": "Create scripts/generate-pseudo-locale.ts with --locale and --fill CLI arguments",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR7", "FR8"]
   },
   {
