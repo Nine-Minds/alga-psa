@@ -137,3 +137,12 @@ grep -r "from '../lib/email'" server/ --include="*.ts" --include="*.tsx"
 - T036: Confirmed original storage implementation files are removed from documents package (only compatibility shims remain).
 - T037: Verified tsconfig path mappings include `@alga-psa/storage`.
 - Added F040/T041: Next.js build failed resolving `@alga-psa/storage/StorageService` because server tsconfig paths lacked storage mapping; adding explicit path mapping to server/tsconfig.json.
+- F040: Added @alga-psa/storage path mappings to `server/tsconfig.json` to satisfy Next.js module resolution.
+- T041: Verified server tsconfig now maps `@alga-psa/storage` paths.
+- Added F041/T042: Next build exposed `VideoDocumentHandler` still importing storage factory from deleted path; update to storage package.
+- F041: Updated `VideoDocumentHandler` to import `StorageProviderFactory` from `@alga-psa/storage`.
+- T042: Verified VideoDocumentHandler now imports StorageProviderFactory from storage package.
+- Build attempt: `npm run build` timed out after 240s during Next.js build (no error before timeout).
+- T039: Confirmed no source files reference `server/src/models/document-association`.
+- T040: Confirmed no source files reference `lib/models/PortalDomainSessionToken`.
+- Build attempt: `npm run build` progressed to Next.js build, then failed with OOM (heap out of memory) after warnings about workflow export conflicts and webpack critical deps.
