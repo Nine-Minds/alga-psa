@@ -231,7 +231,7 @@
   {
     "id": "T029",
     "description": "Pseudo-locale script preserves {{variables}} within fill strings (e.g., '1111 {{name}} 1111' for a value containing {{name}})",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F013"
     ]
