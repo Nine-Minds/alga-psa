@@ -80,7 +80,7 @@
   {
     "id": "T010",
     "description": "Field-sync and reconciliation queue UI sections are hidden when their flags are disabled.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F012"
     ]

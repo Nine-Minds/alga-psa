@@ -371,3 +371,6 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - (2026-02-20) `T009` completed: extracted Entra settings gate helpers in `ee/server/src/components/settings/integrations/entraIntegrationSettingsGates.ts` and wired `EntraIntegrationSettings` to use helper-based connection option composition.
 - Added test `server/src/test/unit/components/integrations/entraIntegrationSettingsGates.test.ts` asserting CIPP option is omitted when `entra-integration-cipp` is disabled and included when enabled.
 - Validation commands: `cd server && npx vitest run src/test/unit/components/integrations/entraIntegrationSettingsGates.test.ts` and `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
+- (2026-02-20) `T010` completed: extended `entraIntegrationSettingsGates` test coverage to verify `shouldShowFieldSyncControls(false)` and `shouldShowAmbiguousQueue(false)` both return false.
+- This covers the advanced Entra UI gating behavior for field-sync and ambiguous-queue sections when their flags are disabled.
+- Validation command: `cd server && npx vitest run src/test/unit/components/integrations/entraIntegrationSettingsGates.test.ts` (pass).
