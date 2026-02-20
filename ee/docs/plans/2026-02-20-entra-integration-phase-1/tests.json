@@ -672,7 +672,7 @@
   {
     "id": "T079",
     "description": "EE workflow client can start initial sync and returns workflow/run IDs.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F084",
       "F085"
