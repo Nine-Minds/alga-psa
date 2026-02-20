@@ -207,7 +207,7 @@
   {
     "id": "T026",
     "description": "Pseudo-locale script reads all English namespace JSON files including nested features/ and msp/ directories",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F010"
     ]
