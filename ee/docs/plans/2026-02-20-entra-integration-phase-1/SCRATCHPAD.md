@@ -673,3 +673,6 @@ EOF && git add ee/docs/plans/2026-02-20-entra-integration-phase-1/tests.json ee/
 - (2026-02-20) `T115` completed: added `ee/server/src/__tests__/unit/entraReconciliationQueueService.queue.test.ts`.
 - Queue insert assertions validate tenant/client/managed-tenant context plus serialized candidate-contact details and ambiguity payload (`reason`, `candidateCount`).
 - Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraReconciliationQueueService.queue.test.ts` (pass).
+- (2026-02-20) `T116` completed: added `ee/server/src/__tests__/unit/entraReconciliationQueueService.resolve.test.ts`.
+- Resolve-to-existing assertions verify Entra identity linking and queue state transition to `resolved` with `resolution_action='link_existing'`.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraReconciliationQueueService.resolve.test.ts` (pass).

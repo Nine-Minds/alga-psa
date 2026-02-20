@@ -979,7 +979,7 @@
   {
     "id": "T116",
     "description": "Resolve queue -> existing contact links identity and marks queue item resolved.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F116"
     ]
