@@ -99,6 +99,19 @@ export {
   resetGoogleProvidersToDisconnected
 } from './integrations/googleActions';
 export {
+  getEntraIntegrationStatus,
+  connectEntraIntegration,
+  disconnectEntraIntegration,
+  discoverEntraManagedTenants,
+  getEntraMappingPreview,
+  confirmEntraMappings,
+  startEntraSync,
+  type EntraConnectionType,
+  type EntraSyncScope,
+  type EntraStatusResponse,
+  type EntraMappingPreviewResponse,
+} from './integrations/entraActions';
+export {
   getTacticalRmmSettings,
   saveTacticalRmmConfiguration,
   testTacticalRmmConnection,

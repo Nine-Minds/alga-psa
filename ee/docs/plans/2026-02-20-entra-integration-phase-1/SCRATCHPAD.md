@@ -68,3 +68,6 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - Validation command: `cd server && npx vitest run src/test/unit/enterpriseAliasEnvSwitch.unit.test.ts` (pass).
 - (2026-02-20) `F002` completed: added EE route handlers for Entra root/connect/disconnect/discovery/mappings-preview/mappings-confirm/sync under `ee/server/src/app/api/integrations/entra/*`.
 - Decision: created `ee/server/src/app/api/integrations/entra/_responses.ts` as a shared response/JSON-body parser helper to keep early route contracts stable while deeper business logic lands in later features.
+- (2026-02-20) `F003` completed: created `packages/integrations/src/actions/integrations/entraActions.ts` and exported the new action surface from both `packages/integrations/src/actions/integrations/index.ts` and `packages/integrations/src/actions/index.ts`.
+- Decision: Entra actions currently call EE route modules through a shared `callEeRoute` helper to keep action and API contracts aligned during phased implementation.
+- Validation command: `npx tsc --noEmit -p packages/integrations/tsconfig.json` (pass).
