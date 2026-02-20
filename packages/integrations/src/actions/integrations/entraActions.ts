@@ -613,12 +613,37 @@ export const startEntraSync = withAuth(async (
   { tenant },
   input: { scope: EntraSyncScope; clientId?: string }
 ) => {
+  const canUpdate = await hasPermission(user as any, 'system_settings', 'update');
+  if (!canUpdate) {
+    return { success: false, error: 'Forbidden: insufficient permissions to configure Entra integration' } as const;
+  }
+
   const enabled = await isEntraUiEnabledForTenant({
     tenantId: tenant,
     userId: (user as { user_id?: string } | undefined)?.user_id,
   });
   if (!enabled) {
     return flagDisabledResult<{ accepted: boolean; scope: EntraSyncScope; runId: string | null }>();
+  }
+
+  if (input.scope === 'all-tenants') {
+    const workflowClient = await import('@enterprise/lib/integrations/entra/entraWorkflowClient');
+    const workflowStart = await workflowClient.startEntraAllTenantsSyncWorkflow({
+      tenantId: tenant,
+      actor: { userId: (user as { user_id?: string } | undefined)?.user_id },
+      trigger: 'manual',
+    });
+
+    return {
+      success: true,
+      data: {
+        accepted: workflowStart.available,
+        scope: input.scope,
+        runId: workflowStart.runId || null,
+        workflowId: workflowStart.workflowId || null,
+        error: workflowStart.error || null,
+      },
+    } as const;
   }
 
   return callEeRoute<{ accepted: boolean; scope: EntraSyncScope; runId: string | null }>({

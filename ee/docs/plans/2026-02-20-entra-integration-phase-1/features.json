@@ -954,7 +954,7 @@
   {
     "id": "F086",
     "description": "Trigger path: settings UI `Sync All Tenants Now` starts `entraAllTenantsSyncWorkflow`.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows"
     ],
