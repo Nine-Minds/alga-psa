@@ -706,3 +706,6 @@ EOF && git add ee/docs/plans/2026-02-20-entra-integration-phase-1/tests.json ee/
 - (2026-02-20) `T126` completed via `packages/clients/src/components/clients/clientDetailsEntraSyncAction.ts` and `ClientDetails.tsx` wiring.
 - Visibility logic now requires enterprise edition + client-sync flag + mapped client (`entra_tenant_id` present); unmapped clients do not see `Sync Entra Now`.
 - Validation command: `cd packages/clients && npx vitest run src/components/clients/clientDetailsEntraSyncAction.test.ts` (pass).
+- (2026-02-20) `T127` completed by extending `clientDetailsEntraSyncAction` helpers and wiring in `ClientDetails.tsx`.
+- Added tested run-id state resolution (`queued` + polling) and terminal-status detection to keep client sync status feedback/polling behavior deterministic.
+- Validation command: `cd packages/clients && npx vitest run src/components/clients/clientDetailsEntraSyncAction.test.ts` (pass).

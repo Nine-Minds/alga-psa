@@ -1073,7 +1073,7 @@
   {
     "id": "T127",
     "description": "Client-level sync action returns run id and begins status polling successfully.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F114",
       "F088"

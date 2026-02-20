@@ -73,7 +73,11 @@ import { ClientLanguagePreference } from './ClientLanguagePreference';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import ClientSurveySummaryCard from '@alga-psa/surveys/components/ClientSurveySummaryCard';
 import type { SurveyClientSatisfactionSummary } from '@alga-psa/types';
-import { shouldShowEntraSyncAction } from './clientDetailsEntraSyncAction';
+import {
+  isTerminalEntraRunStatus,
+  resolveEntraClientSyncStartState,
+  shouldShowEntraSyncAction,
+} from './clientDetailsEntraSyncAction';
 
 
 const SwitchDetailItem: React.FC<{
@@ -279,7 +283,6 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     }
 
     let cancelled = false;
-    const terminalStatuses = new Set(['completed', 'failed', 'partial']);
 
     const poll = async () => {
       try {
@@ -289,7 +292,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
         }
 
         setEntraSyncStatus(`Run ${entraSyncRunId}: ${nextStatus}`);
-        if (terminalStatuses.has(nextStatus.toLowerCase())) {
+        if (isTerminalEntraRunStatus(nextStatus)) {
           setEntraSyncRunId(null);
         }
       } catch {
@@ -823,14 +826,14 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
         return;
       }
 
-      const runId = result.data?.runId;
-      if (runId) {
-        setEntraSyncRunId(runId);
-        setEntraSyncStatus(`Run ${runId}: queued`);
-        toast.success(`Entra sync started. Run ID: ${runId}`);
+      const syncState = resolveEntraClientSyncStartState(result.data?.runId);
+      if (syncState.shouldPoll && syncState.runId) {
+        setEntraSyncRunId(syncState.runId);
+        setEntraSyncStatus(syncState.statusMessage);
+        toast.success(`Entra sync started. Run ID: ${syncState.runId}`);
       } else {
-        setEntraSyncStatus('Entra sync started for this client.');
-        toast.success('Entra sync started for this client.');
+        setEntraSyncStatus(syncState.statusMessage);
+        toast.success(syncState.statusMessage);
       }
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Failed to start Entra sync.';

@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { shouldShowEntraSyncAction } from './clientDetailsEntraSyncAction';
+import {
+  isTerminalEntraRunStatus,
+  resolveEntraClientSyncStartState,
+  shouldShowEntraSyncAction,
+} from './clientDetailsEntraSyncAction';
 
 describe('shouldShowEntraSyncAction', () => {
   it('returns false when client sync flag is disabled', () => {
@@ -17,5 +21,23 @@ describe('shouldShowEntraSyncAction', () => {
     expect(shouldShowEntraSyncAction('enterprise', true, { entra_tenant_id: '' })).toBe(false);
     expect(shouldShowEntraSyncAction('enterprise', true, { entra_tenant_id: null })).toBe(false);
     expect(shouldShowEntraSyncAction('enterprise', true, null)).toBe(false);
+  });
+
+  it('T127: resolves run-id state and non-terminal polling status for client-level sync feedback', () => {
+    expect(resolveEntraClientSyncStartState('run-127')).toEqual({
+      runId: 'run-127',
+      statusMessage: 'Run run-127: queued',
+      shouldPoll: true,
+    });
+    expect(resolveEntraClientSyncStartState(null)).toEqual({
+      runId: null,
+      statusMessage: 'Entra sync started for this client.',
+      shouldPoll: false,
+    });
+
+    expect(isTerminalEntraRunStatus('running')).toBe(false);
+    expect(isTerminalEntraRunStatus('completed')).toBe(true);
+    expect(isTerminalEntraRunStatus('failed')).toBe(true);
+    expect(isTerminalEntraRunStatus('partial')).toBe(true);
   });
 });
