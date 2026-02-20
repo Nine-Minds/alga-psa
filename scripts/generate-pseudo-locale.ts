@@ -1,7 +1,9 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const repoRoot = path.resolve(__dirname, '..');
+const currentDir = path.dirname(fileURLToPath(import.meta.url));
+const repoRoot = path.resolve(currentDir, '..');
 const sourceRoot = path.join(repoRoot, 'server/public/locales/en');
 
 const parseArgs = (argv: string[]) => {

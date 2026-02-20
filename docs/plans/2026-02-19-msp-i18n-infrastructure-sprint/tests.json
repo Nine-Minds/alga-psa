@@ -2,7 +2,7 @@
   {
     "id": "T001",
     "description": "I18N_CONFIG.ns in packages/ui/src/lib/i18n/config.ts is ['common'] (not ['common', 'client-portal', 'msp'])",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F001"]
   },
   {
