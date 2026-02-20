@@ -329,7 +329,7 @@
   {
     "id": "T041",
     "description": "i18next.t('nav.home', { ns: 'msp/core' }) returns correct English translation after namespace rename",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F017",
       "F022"
