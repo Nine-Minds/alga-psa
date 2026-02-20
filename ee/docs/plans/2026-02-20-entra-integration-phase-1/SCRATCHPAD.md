@@ -601,3 +601,6 @@ EOF && git add ee/docs/plans/2026-02-20-entra-integration-phase-1/tests.json ee/
 - (2026-02-20) `T091` completed: added user-filter pipeline unit suite `ee/server/src/__tests__/unit/entraUserFilterPipeline.test.ts`.
 - Disabled-user case verifies `accountEnabled=false` identities are excluded with reason `account_disabled`.
 - Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraUserFilterPipeline.test.ts` (pass).
+- (2026-02-20) `T092` completed in `entraUserFilterPipeline` suite.
+- Missing-identity case verifies users without valid UPN/email identities are excluded with `missing_identity` reason.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraUserFilterPipeline.test.ts` (pass).

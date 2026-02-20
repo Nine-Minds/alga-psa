@@ -784,7 +784,7 @@
   {
     "id": "T092",
     "description": "Sync filter excludes users missing valid UPN/email identity.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F092"
     ]
