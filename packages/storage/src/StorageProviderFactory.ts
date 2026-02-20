@@ -1,6 +1,6 @@
 import { StorageProviderInterface, StorageError } from './providers/StorageProvider';
-import { LocalProviderConfig, S3ProviderConfig } from '../types/storage';
-import { getStorageConfig } from '../config/storage';
+import { LocalProviderConfig, S3ProviderConfig } from './types/storage';
+import { getStorageConfig } from './config/storage';
 import { LocalStorageProvider } from './providers/LocalStorageProvider';
 // Type-only import for S3 provider
 // import type { S3StorageProvider } from 'ee/lib/storage/providers/S3StorageProvider';

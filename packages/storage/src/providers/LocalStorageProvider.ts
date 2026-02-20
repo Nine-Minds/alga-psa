@@ -4,7 +4,7 @@ import path from 'path';
 import { promises as fs } from 'fs';
 import { createWriteStream, createReadStream } from 'fs';
 import { Buffer } from 'buffer';
-import { LocalProviderConfig, StorageCapabilities } from '../../types/storage';
+import { LocalProviderConfig, StorageCapabilities } from '../types/storage';
 import { BaseStorageProvider, UploadResult, StorageError, RangeOptions } from './StorageProvider';
 
 export class LocalStorageProvider extends BaseStorageProvider {

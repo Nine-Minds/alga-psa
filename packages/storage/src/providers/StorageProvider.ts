@@ -1,5 +1,5 @@
 import { Readable } from 'stream';
-import { StorageCapabilities, LocalProviderConfig, S3ProviderConfig } from '../../types/storage';
+import { StorageCapabilities, LocalProviderConfig, S3ProviderConfig } from '../types/storage';
 
 export interface UploadResult {
     path: string;

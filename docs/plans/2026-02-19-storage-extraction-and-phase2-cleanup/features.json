@@ -104,7 +104,7 @@
   {
     "id": "F018",
     "description": "Update all internal imports within moved files to use correct relative paths within packages/storage/",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-06"]
   },
   {

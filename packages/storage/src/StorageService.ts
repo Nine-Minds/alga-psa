@@ -14,8 +14,8 @@ import { fileTypeFromBuffer } from 'file-type';
 import { Readable } from 'stream';
 import { v4 as uuidv4 } from 'uuid';
 import { StorageProviderFactory, generateStoragePath } from './StorageProviderFactory';
-import { FileStoreModel } from '../models/storage';
-import type { FileStore } from '../types/storage';
+import { FileStoreModel } from './models/storage';
+import type { FileStore } from './types/storage';
 import { StorageError } from './providers/StorageProvider';
 import fs from 'fs';
 
@@ -23,8 +23,8 @@ import {
     getProviderConfig,
     getStorageConfig,
     validateFileUpload as validateFileConfig
-} from '../config/storage';
-import { LocalProviderConfig, S3ProviderConfig } from '../types/storage';
+} from './config/storage';
+import { LocalProviderConfig, S3ProviderConfig } from './types/storage';
 import { createTenantKnex } from '@alga-psa/db';
 import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
