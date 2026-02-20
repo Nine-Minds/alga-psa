@@ -151,3 +151,7 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - (2026-02-20) `F048` completed: implemented direct adapter per-tenant user enumeration in `listUsersForTenant(...)` using managed-users Graph endpoint with pagination and normalized user DTO mapping.
 - Normalized fields include object id, UPN/email, name fields, accountEnabled, job/mobile/business phones, and raw payload passthrough for downstream reconciliation.
 - Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
+- (2026-02-20) `F049` completed: added CIPP provider adapter at `ee/server/src/lib/integrations/entra/providers/cipp/cippProviderAdapter.ts` with managed-tenant enumeration and normalization.
+- Adapter behavior: loads CIPP creds from tenant secret store, probes common tenant-list endpoints, normalizes tenant id/display/domain/user-count, and deduplicates by tenant id.
+- Note: `listUsersForTenant` remains a deliberate not-implemented throw until `F050`.
+- Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).

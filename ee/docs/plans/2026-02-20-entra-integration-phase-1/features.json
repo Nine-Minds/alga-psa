@@ -541,7 +541,7 @@
   {
     "id": "F049",
     "description": "CIPP adapter (tenants): implement managed tenant enumeration against configured CIPP endpoint.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements"
     ],
