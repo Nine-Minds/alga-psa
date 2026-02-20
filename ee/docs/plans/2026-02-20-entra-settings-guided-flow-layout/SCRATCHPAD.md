@@ -111,3 +111,6 @@ Focused planning log for guided-layout improvements in Entra integration setting
 - (2026-02-20) T003 completed.
   - `T003` confirms connected/no-discovery state selects Discover step and routes CTA click to `discoverEntraManagedTenants`.
   - Command: `cd ee/server && npx vitest run src/__tests__/unit/entraIntegrationSettings.initialSyncCta.test.tsx -t "T003"`.
+- (2026-02-20) T004 completed.
+  - `T004` validates discovered/no-mapped state shifts current step to Map and highlights mapping guidance path (`Review Mappings`).
+  - Command: `cd ee/server && npx vitest run src/__tests__/unit/entraIntegrationSettings.initialSyncCta.test.tsx -t "T004"`.

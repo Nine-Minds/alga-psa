@@ -31,7 +31,7 @@
   {
     "id": "T004",
     "description": "When discovery is complete but mapped count is zero, guided flow marks Map as current and emphasizes mapping-table confirmation path.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F001",
       "F003",
