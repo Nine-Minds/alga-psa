@@ -37,7 +37,7 @@
   {
     "id": "T005",
     "description": "`EntraIntegrationSettings` dynamic import loads successfully and renders base shell.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F005"
     ]

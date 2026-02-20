@@ -356,3 +356,6 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - Test setup mocks tabs + feature flag/search params to select `Identity` category and asserts the Entra identity section includes the Entra settings entry loading card (`Loading Entra integration settings...`).
 - Added Vitest alias stub for `@product/billing/entry` in `server/vitest.config.ts` plus stub module `server/src/test/stubs/product-billing-entry.tsx` to keep settings-page imports resolvable during unit tests.
 - Validation command: `cd server && npx vitest run src/test/unit/components/integrations/IntegrationsSettingsPage.entra.test.tsx` (pass).
+- (2026-02-20) `T005` completed: added dynamic target import test `server/src/test/unit/components/integrations/EntraIntegrationSettings.dynamicImport.test.tsx`.
+- Test validates the `@enterprise/components/settings/integrations/EntraIntegrationSettings` module imports successfully (the same dynamic path used by settings page) and renders its base shell content.
+- Validation command: `cd server && npx vitest run src/test/unit/components/integrations/EntraIntegrationSettings.dynamicImport.test.tsx` (pass).
