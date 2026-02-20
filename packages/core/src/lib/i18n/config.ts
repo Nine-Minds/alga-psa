@@ -103,6 +103,22 @@ export const I18N_CONFIG = {
 };
 
 /**
+ * Pseudo-locale codes used for QA testing only
+ */
+export const PSEUDO_LOCALES: ReadonlyArray<SupportedLocale> = ['xx', 'yy'];
+
+/**
+ * Filter pseudo-locales from a locale list based on a toggle.
+ */
+export function filterPseudoLocales(
+  locales: readonly SupportedLocale[],
+  includePseudo: boolean,
+): SupportedLocale[] {
+  if (includePseudo) return [...locales];
+  return locales.filter((l) => !(PSEUDO_LOCALES as readonly string[]).includes(l));
+}
+
+/**
  * Route prefixes mapped to their required namespaces
  */
 export const ROUTE_NAMESPACES = {
@@ -131,7 +147,7 @@ export function getNamespacesForRoute(pathname: string): string[] {
 
   let bestMatch: keyof typeof ROUTE_NAMESPACES | null = null;
   for (const route of Object.keys(ROUTE_NAMESPACES) as Array<keyof typeof ROUTE_NAMESPACES>) {
-    if (pathname.startsWith(route)) {
+    if (pathname === route || pathname.startsWith(route + '/')) {
       if (!bestMatch || route.length > bestMatch.length) {
         bestMatch = route;
       }

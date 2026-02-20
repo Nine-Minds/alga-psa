@@ -3,7 +3,7 @@
 import { createTenantKnex } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
-import { SupportedLocale, isSupportedLocale } from '@alga-psa/ui/lib/i18n/config';
+import { SupportedLocale, isSupportedLocale } from '@alga-psa/core/i18n/config';
 import { withAuth, withOptionalAuth } from '@alga-psa/auth';
 
 /**

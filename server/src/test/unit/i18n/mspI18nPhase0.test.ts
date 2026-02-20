@@ -299,19 +299,32 @@ describe('MSP i18n Phase 0 - namespace files and references', () => {
   });
 
   it('T039-T040: no legacy msp namespace usage remains in source', () => {
-    let rgOutput = '';
-    try {
-      rgOutput = execFileSync('rg', ['-n', "useTranslation\\('msp'\\)", 'server', 'packages', 'ee'], {
-        cwd: repoRoot,
-        stdio: 'pipe',
-      }).toString();
-    } catch (error: any) {
-      // rg exits with code 1 when no matches are found
-      if (typeof error?.status === 'number' && error.status !== 1) {
-        throw error;
+    const pattern = /useTranslation\('msp'\)/;
+    const dirsToScan = ['server/src', 'packages', 'ee'].map((d) => path.join(repoRoot, d));
+    const matches: string[] = [];
+
+    const scanDir = (dir: string) => {
+      if (!fs.existsSync(dir)) return;
+      const entries = fs.readdirSync(dir, { withFileTypes: true });
+      for (const entry of entries) {
+        const fullPath = path.join(dir, entry.name);
+        if (entry.isDirectory()) {
+          if (entry.name === 'node_modules' || entry.name === '.git' || entry.name === 'dist') continue;
+          scanDir(fullPath);
+        } else if (entry.isFile() && /\.(ts|tsx)$/.test(entry.name)) {
+          const content = fs.readFileSync(fullPath, 'utf8');
+          if (pattern.test(content)) {
+            matches.push(path.relative(repoRoot, fullPath));
+          }
+        }
       }
+    };
+
+    for (const dir of dirsToScan) {
+      scanDir(dir);
     }
-    expect(rgOutput.trim()).toBe('');
+
+    expect(matches).toEqual([]);
 
     const phase1Test = readRepoFile('server/src/test/unit/i18n/mspI18nPhase1.test.ts');
     expect(phase1Test).toContain("ns: 'msp/core'");

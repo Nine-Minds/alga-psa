@@ -87,6 +87,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@alga-psa/core": "*",
     "@alga-psa/db": "*",
     "@alga-psa/types": "*",
     "@blocknote/core": "^0.22.0",

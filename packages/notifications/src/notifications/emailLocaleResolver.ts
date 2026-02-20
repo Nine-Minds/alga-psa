@@ -5,7 +5,7 @@
  */
 
 import { getConnection } from '@alga-psa/db';
-import { SupportedLocale, isSupportedLocale, LOCALE_CONFIG } from '@alga-psa/ui/lib/i18n/config';
+import { SupportedLocale, isSupportedLocale, LOCALE_CONFIG } from '@alga-psa/core/i18n/config';
 import logger from '@alga-psa/core/logger';
 
 export interface EmailRecipient {

@@ -2,7 +2,7 @@
 
 import { withAuth, withOptionalAuth } from '@alga-psa/auth';
 import { createTenantKnex } from '@alga-psa/db';
-import { SupportedLocale, isSupportedLocale } from '@alga-psa/ui/lib/i18n/config';
+import { SupportedLocale, isSupportedLocale } from '@alga-psa/core/i18n/config';
 
 export const updateUserLocaleAction = withAuth(async (
   user,

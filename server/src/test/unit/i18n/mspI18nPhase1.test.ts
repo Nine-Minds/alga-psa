@@ -173,8 +173,11 @@ describe('MSP i18n Phase 1', () => {
   });
 
   it('T017: i18n loadPath supports nested namespaces', () => {
-    const src = readRepoFile('packages/ui/src/lib/i18n/config.ts');
+    const src = readRepoFile('packages/core/src/lib/i18n/config.ts');
     expect(src).toContain('/locales/{{lng}}/{{ns}}.json');
+    // Also verify the re-export in packages/ui re-exports TRANSLATION_PATHS
+    const uiSrc = readRepoFile('packages/ui/src/lib/i18n/config.ts');
+    expect(uiSrc).toContain('TRANSLATION_PATHS');
   });
 
   it('T018-T020: client-portal namespace file exists and includes required top-level keys', () => {

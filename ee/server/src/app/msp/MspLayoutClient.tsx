@@ -6,7 +6,7 @@ import { TenantProvider } from "@alga-psa/ui/components/providers/TenantProvider
 import { ClientUIStateProvider } from "@alga-psa/ui/ui-reflection/ClientUIStateProvider";
 import type { Session } from "next-auth";
 import { I18nWrapper } from "@alga-psa/tenancy/components";
-import type { SupportedLocale } from "@alga-psa/ui/lib/i18n/config";
+import type { SupportedLocale } from "@alga-psa/core/i18n/config";
 
 interface Props {
   children: React.ReactNode;
@@ -42,7 +42,7 @@ export function MspLayoutClient({
   }
 
   return (
-    <I18nWrapper portal="msp" initialLocale={initialLocale || undefined}>
+    <I18nWrapper portal="msp" initialLocale={initialLocale || undefined} showPseudoLocales={i18nEnabled}>
       {content}
     </I18nWrapper>
   );

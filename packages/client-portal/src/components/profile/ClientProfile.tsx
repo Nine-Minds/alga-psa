@@ -25,7 +25,7 @@ import { SessionManagement } from '@alga-psa/auth/components';
 import { toast } from 'react-hot-toast';
 import ContactAvatarUpload from '../contacts/ContactAvatarUpload';
 import { LanguagePreference } from '@alga-psa/ui/components/LanguagePreference';
-import { SupportedLocale } from '@alga-psa/ui/lib/i18n/config';
+import { SupportedLocale } from '@alga-psa/core/i18n/config';
 import { updateUserLocaleAction, getUserLocaleAction } from '@alga-psa/users/actions';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { ClientNotificationsList } from '../notifications/ClientNotificationsList';

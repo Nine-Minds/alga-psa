@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { LOCALE_CONFIG, type SupportedLocale } from '../lib/i18n/config';
+import { LOCALE_CONFIG, filterPseudoLocales, type SupportedLocale } from '../lib/i18n/config';
 import { useI18n, useTranslation } from '../lib/i18n/client';
+import { useFeatureFlag } from '../hooks';
 import CustomSelect, { SelectOption } from './CustomSelect';
 import { toast } from 'react-hot-toast';
 
@@ -46,6 +47,11 @@ export function LanguagePreference({
 }: LanguagePreferenceProps) {
   const { locale: currentLocale, setLocale } = useI18n();
   const { t } = useTranslation('common');
+  const { enabled: isMspI18nEnabled } = useFeatureFlag('msp-i18n-enabled', { defaultValue: false });
+  const visibleLocales = useMemo(
+    () => filterPseudoLocales(LOCALE_CONFIG.supportedLocales, !!isMspI18nEnabled),
+    [isMspI18nEnabled],
+  );
   const fieldLabel = label ?? t('language.preference.label', 'Language Preference');
   const fieldHelperText = helperText ?? t('language.preference.helper', 'Select your preferred language for the interface and email notifications');
   const effectiveLocale = currentEffectiveLocale || currentLocale;
@@ -86,7 +92,7 @@ export function LanguagePreference({
     }
 
     // Add supported locales
-    LOCALE_CONFIG.supportedLocales.forEach((locale) => {
+    visibleLocales.forEach((locale) => {
       options.push({
         value: locale,
         label: `${LOCALE_CONFIG.localeNames[locale]} (${locale.toUpperCase()})`,
@@ -94,7 +100,7 @@ export function LanguagePreference({
     });
 
     return options;
-  }, [showNoneOption, currentEffectiveLocale, inheritedSource, t]);
+  }, [showNoneOption, currentEffectiveLocale, inheritedSource, t, visibleLocales]);
 
   useEffect(() => {
     if (value !== undefined) {

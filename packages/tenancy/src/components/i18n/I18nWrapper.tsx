@@ -1,7 +1,7 @@
 'use client';
 
 import { I18nProvider } from '@alga-psa/ui/lib/i18n/client';
-import { SupportedLocale, LOCALE_CONFIG, getNamespacesForRoute } from '@alga-psa/ui/lib/i18n/config';
+import { SupportedLocale, LOCALE_CONFIG, getNamespacesForRoute } from '@alga-psa/core/i18n/config';
 import { ReactNode, useEffect, useMemo, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { getHierarchicalLocaleAction } from '../../actions';
@@ -10,12 +10,14 @@ interface I18nWrapperProps {
   children: ReactNode;
   initialLocale?: SupportedLocale;
   portal?: 'msp' | 'client';
+  showPseudoLocales?: boolean;
 }
 
 export function I18nWrapper({
   children,
   initialLocale,
-  portal = 'msp'
+  portal = 'msp',
+  showPseudoLocales = false,
 }: I18nWrapperProps) {
   const [locale, setLocale] = useState<SupportedLocale>(
     initialLocale || (LOCALE_CONFIG.defaultLocale as SupportedLocale)
@@ -51,7 +53,7 @@ export function I18nWrapper({
   }
 
   return (
-    <I18nProvider initialLocale={locale} portal={portal} namespaces={namespaces}>
+    <I18nProvider initialLocale={locale} portal={portal} namespaces={namespaces} showPseudoLocales={showPseudoLocales}>
       {children}
     </I18nProvider>
   );

@@ -33,7 +33,7 @@ import { TenantEmailService } from '@alga-psa/email';
 import { StaticTemplateProcessor } from '@alga-psa/email';
 import { getConnection } from '../db/db';
 import { resolveEmailLocale } from './emailLocaleResolver';
-import { SupportedLocale } from '@alga-psa/ui/lib/i18n/config';
+import { SupportedLocale } from '@alga-psa/core/i18n/config';
 export class EmailNotificationService implements NotificationService {
   /**
    * Get tenant email settings from database

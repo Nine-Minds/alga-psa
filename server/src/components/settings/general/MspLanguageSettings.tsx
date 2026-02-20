@@ -7,13 +7,19 @@ import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { Globe } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import { LOCALE_CONFIG, type SupportedLocale } from '@alga-psa/ui/lib/i18n/config';
+import { LOCALE_CONFIG, filterPseudoLocales, type SupportedLocale } from '@alga-psa/core/i18n/config';
+import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import {
   getTenantMspLocaleSettingsAction,
   updateTenantMspLocaleSettingsAction,
 } from '@alga-psa/tenancy/actions';
 
 const MspLanguageSettings = () => {
+  const { enabled: isMspI18nEnabled } = useFeatureFlag('msp-i18n-enabled', { defaultValue: false });
+  const visibleLocales = useMemo(
+    () => filterPseudoLocales(LOCALE_CONFIG.supportedLocales, !!isMspI18nEnabled),
+    [isMspI18nEnabled],
+  );
   const [defaultLocale, setDefaultLocale] = useState<SupportedLocale>(
     LOCALE_CONFIG.defaultLocale as SupportedLocale
   );
@@ -24,11 +30,11 @@ const MspLanguageSettings = () => {
   const [saving, setSaving] = useState(false);
 
   const languageOptions = useMemo((): SelectOption[] => {
-    return LOCALE_CONFIG.supportedLocales.map((locale) => ({
+    return visibleLocales.map((locale) => ({
       value: locale,
       label: `${LOCALE_CONFIG.localeNames[locale]} (${locale.toUpperCase()})`,
     }));
-  }, []);
+  }, [visibleLocales]);
 
   useEffect(() => {
     const loadSettings = async () => {
@@ -129,7 +135,7 @@ const MspLanguageSettings = () => {
               Select which languages are available for MSP users to choose from
             </p>
             <div className="space-y-2">
-              {LOCALE_CONFIG.supportedLocales.map((locale) => (
+              {visibleLocales.map((locale) => (
                 <Checkbox
                   key={locale}
                   id={`msp-locale-${locale}`}
