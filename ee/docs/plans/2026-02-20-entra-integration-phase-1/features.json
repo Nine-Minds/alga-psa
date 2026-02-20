@@ -843,7 +843,7 @@
   {
     "id": "F076",
     "description": "Activity: `discoverManagedTenantsActivity` fetches and normalizes tenant list from selected adapter.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements"
     ],

@@ -38,7 +38,7 @@ export async function saveEntraDirectTokenSet(
 
 export async function getEntraDirectRefreshToken(tenant: string): Promise<string | null> {
   const secretProvider = await getSecretProviderInstance();
-  return secretProvider.getTenantSecret(tenant, ENTRA_DIRECT_SECRET_KEYS.refreshToken);
+  return (await secretProvider.getTenantSecret(tenant, ENTRA_DIRECT_SECRET_KEYS.refreshToken)) ?? null;
 }
 
 export async function clearEntraDirectTokenSet(tenant: string): Promise<void> {
