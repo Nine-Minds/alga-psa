@@ -473,7 +473,7 @@
   {
     "id": "F043",
     "description": "Connection status persistence: store and display `status`, `last_validated_at`, and validation error snapshot.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes"
     ],

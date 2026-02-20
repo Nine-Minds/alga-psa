@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
+import { getEntraIntegrationStatus, type EntraStatusResponse } from '@alga-psa/integrations/actions';
 
 const WIZARD_STEPS = [
   { id: 1, title: 'Connect', description: 'Choose Direct Microsoft partner auth or CIPP.' },
@@ -17,6 +18,42 @@ export default function EntraIntegrationSettings() {
   const cippFlag = useFeatureFlag('entra-integration-cipp', { defaultValue: false });
   const fieldSyncFlag = useFeatureFlag('entra-integration-field-sync', { defaultValue: false });
   const ambiguousQueueFlag = useFeatureFlag('entra-integration-ambiguous-queue', { defaultValue: false });
+  const [statusLoading, setStatusLoading] = React.useState(true);
+  const [statusError, setStatusError] = React.useState<string | null>(null);
+  const [status, setStatus] = React.useState<EntraStatusResponse | null>(null);
+
+  const loadStatus = React.useCallback(async () => {
+    setStatusLoading(true);
+    setStatusError(null);
+    try {
+      const result = await getEntraIntegrationStatus();
+      if ('error' in result) {
+        setStatus(null);
+        setStatusError(result.error || 'Failed to load Entra connection status.');
+      } else {
+        setStatus(result.data || null);
+      }
+    } finally {
+      setStatusLoading(false);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    void loadStatus();
+  }, [loadStatus]);
+
+  const validationMessage =
+    status?.lastValidationError && typeof status.lastValidationError === 'object'
+      ? String((status.lastValidationError as { message?: unknown }).message || '')
+      : '';
+
+  const formatDateTime = (value: string | null | undefined): string => {
+    if (!value) return 'Never';
+    const parsed = Date.parse(value);
+    if (Number.isNaN(parsed)) return value;
+    return new Date(parsed).toLocaleString();
+  };
+
   const connectionOptions = [
     {
       id: 'direct',
@@ -77,11 +114,24 @@ export default function EntraIntegrationSettings() {
             </div>
           </div>
 
-          <div className="rounded-lg border border-dashed border-border/70 bg-muted/20 p-4">
-            <p className="text-sm font-medium">Status</p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Entra integration shell is ready. Connect/discovery/mapping/sync data wiring is implemented in subsequent plan items.
-            </p>
+          <div className="rounded-lg border border-dashed border-border/70 bg-muted/20 p-4" id="entra-connection-status-panel">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-sm font-medium">Status</p>
+              <Button id="entra-refresh-status" type="button" size="sm" variant="ghost" onClick={loadStatus} disabled={statusLoading}>
+                Refresh
+              </Button>
+            </div>
+            <div className="mt-2 grid gap-1 text-sm text-muted-foreground">
+              <p><span className="font-medium text-foreground">Connection:</span> {status?.status || 'not_connected'}</p>
+              <p><span className="font-medium text-foreground">Connection Type:</span> {status?.connectionType || 'Not configured'}</p>
+              <p><span className="font-medium text-foreground">Last Discovery:</span> {formatDateTime(status?.lastDiscoveryAt)}</p>
+              <p><span className="font-medium text-foreground">Mapped Tenants:</span> {status?.mappedTenantCount ?? 0}</p>
+              <p><span className="font-medium text-foreground">Last Validated:</span> {formatDateTime(status?.lastValidatedAt)}</p>
+              <p><span className="font-medium text-foreground">Validation Error:</span> {validationMessage || 'None'}</p>
+            </div>
+            {statusError ? (
+              <p className="mt-2 text-sm text-destructive">{statusError}</p>
+            ) : null}
           </div>
 
           {fieldSyncFlag.enabled ? (

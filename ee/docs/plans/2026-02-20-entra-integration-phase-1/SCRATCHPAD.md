@@ -132,3 +132,6 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - (2026-02-20) `F042` completed: added EE `validate-cipp` route (`ee/server/src/app/api/integrations/entra/validate-cipp/route.ts`) that loads CIPP credentials from tenant secrets and validates tenant-list access via CIPP API probing.
 - Added `validateEntraCippConnection` server action plus CE/EE route wiring stubs for `/api/integrations/entra/validate-cipp`.
 - Validation commands: `npx tsc --noEmit -p packages/integrations/tsconfig.json`, `npx tsc --noEmit -p ee/server/tsconfig.json`, `npx tsc --noEmit -p server/tsconfig.json` (pass).
+- (2026-02-20) `F043` completed: added `ee/server/src/lib/integrations/entra/connectionRepository.ts` and wired validation routes to persist `status`, `last_validated_at`, and JSON validation snapshots to `entra_partner_connections`.
+- Updated `GET /api/integrations/entra` to read active connection state + validation fields from DB, and updated `EntraIntegrationSettings` status panel to render connection status/type, last validation timestamp, and validation error message.
+- Validation commands: `npx tsc --noEmit -p ee/server/tsconfig.json`, `npx tsc --noEmit -p packages/integrations/tsconfig.json`, `npx tsc --noEmit -p server/tsconfig.json` (pass).

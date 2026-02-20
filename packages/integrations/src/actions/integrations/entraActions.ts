@@ -132,11 +132,13 @@ export type EntraDirectConnectState = {
 };
 
 export type EntraStatusResponse = {
-  status: 'connected' | 'not_connected';
+  status: string;
   connectionType: EntraConnectionType | null;
   lastDiscoveryAt: string | null;
   mappedTenantCount: number;
   availableConnectionTypes: EntraConnectionType[];
+  lastValidatedAt: string | null;
+  lastValidationError: Record<string, unknown> | null;
 };
 
 export type EntraMappingPreviewResponse = {

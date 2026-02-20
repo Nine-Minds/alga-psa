@@ -2,6 +2,7 @@ import axios from 'axios';
 import { badRequest, dynamic, ok, runtime } from '../_responses';
 import { requireEntraUiFlagEnabled } from '../_guards';
 import { getEntraCippCredentials } from '@/lib/integrations/entra/providers/cipp/cippSecretStore';
+import { updateEntraConnectionValidation } from '@/lib/integrations/entra/connectionRepository';
 
 export { dynamic, runtime };
 
@@ -45,6 +46,16 @@ export async function POST(): Promise<Response> {
 
   const credentials = await getEntraCippCredentials(flagGate.tenantId);
   if (!credentials) {
+    await updateEntraConnectionValidation({
+      tenant: flagGate.tenantId,
+      connectionType: 'cipp',
+      status: 'validation_failed',
+      snapshot: {
+        message: 'CIPP credentials are not configured.',
+        code: 'missing_credentials',
+        checkedAt: new Date().toISOString(),
+      },
+    });
     return badRequest('CIPP credentials are not configured.');
   }
 
@@ -63,6 +74,12 @@ export async function POST(): Promise<Response> {
 
       const tenantCount = extractTenantCount(response.data);
       if (tenantCount !== null) {
+        await updateEntraConnectionValidation({
+          tenant: flagGate.tenantId,
+          connectionType: 'cipp',
+          status: 'connected',
+          snapshot: null,
+        });
         return ok({
           valid: true,
           checkedAt: new Date().toISOString(),
@@ -81,6 +98,16 @@ export async function POST(): Promise<Response> {
         }
 
         if (status === 401 || status === 403) {
+          await updateEntraConnectionValidation({
+            tenant: flagGate.tenantId,
+            connectionType: 'cipp',
+            status: 'validation_failed',
+            snapshot: {
+              message: 'CIPP credentials were rejected by the remote API.',
+              code: 'auth_rejected',
+              checkedAt: new Date().toISOString(),
+            },
+          });
           return badRequest('CIPP credentials were rejected by the remote API.');
         }
 
@@ -92,5 +119,15 @@ export async function POST(): Promise<Response> {
     }
   }
 
+  await updateEntraConnectionValidation({
+    tenant: flagGate.tenantId,
+    connectionType: 'cipp',
+    status: 'validation_failed',
+    snapshot: {
+      message: lastError || 'Unable to validate CIPP tenant list access.',
+      code: 'validation_failed',
+      checkedAt: new Date().toISOString(),
+    },
+  });
   return badRequest(lastError || 'Unable to validate CIPP tenant list access.');
 }
