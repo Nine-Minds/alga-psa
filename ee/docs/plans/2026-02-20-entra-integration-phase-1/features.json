@@ -393,7 +393,7 @@
   {
     "id": "F036",
     "description": "OAuth callback: add `/api/auth/microsoft/entra/callback` handler to exchange code and persist partner token references.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data / API / Integrations"
     ],

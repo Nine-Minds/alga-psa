@@ -115,3 +115,5 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - (2026-02-20) `F034` completed: implemented `resolveMicrosoftCredentialsForTenant()` with explicit tenant-pair -> env-pair -> app-secret-pair precedence in `ee/server/src/lib/integrations/entra/auth/microsoftCredentialResolver.ts`.
 - (2026-02-20) `F035` completed: added `initiateEntraDirectOAuth` action with `system_settings.update` permission enforcement and Entra-specific OAuth state payload (tenant/user/nonce/timestamp/redirect).
 - Validation commands: `npx tsc --noEmit -p packages/integrations/tsconfig.json` and `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
+- (2026-02-20) `F036` completed: added `/api/auth/microsoft/entra/callback` server entry with EE branch delegation and EE callback handler that validates state, exchanges code, stores direct tokens in tenant secrets, and marks `entra_partner_connections` active.
+- Added matching `packages/ee` route stubs for new Entra/auth callback paths so CE/server alias typechecking resolves cleanly.
