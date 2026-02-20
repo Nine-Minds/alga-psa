@@ -66,3 +66,5 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - Decision: used the existing EE lazy-import stub pattern with edition checks and a consistent 501 JSON payload (`Microsoft Entra integration is only available in Enterprise Edition.`) for CE/non-EE behavior.
 - Added shared CE helper at `server/src/app/api/integrations/entra/_ceStub.ts` to avoid copy/paste drift in runtime/dynamic/exported fallback response behavior.
 - Validation command: `cd server && npx vitest run src/test/unit/enterpriseAliasEnvSwitch.unit.test.ts` (pass).
+- (2026-02-20) `F002` completed: added EE route handlers for Entra root/connect/disconnect/discovery/mappings-preview/mappings-confirm/sync under `ee/server/src/app/api/integrations/entra/*`.
+- Decision: created `ee/server/src/app/api/integrations/entra/_responses.ts` as a shared response/JSON-body parser helper to keep early route contracts stable while deeper business logic lands in later features.
