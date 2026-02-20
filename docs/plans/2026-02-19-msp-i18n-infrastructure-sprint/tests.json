@@ -312,7 +312,7 @@
   {
     "id": "T039",
     "description": "No useTranslation('msp') references remain in source code (only 'msp/core')",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F017"
     ]
