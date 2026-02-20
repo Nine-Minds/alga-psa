@@ -144,3 +144,7 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - Validation commands: `npx tsc --noEmit -p packages/integrations/tsconfig.json`, `npx tsc --noEmit -p ee/server/tsconfig.json`, `npx tsc --noEmit -p server/tsconfig.json` (pass).
 - (2026-02-20) `F046` completed: introduced provider abstraction types at `ee/server/src/lib/integrations/entra/providers/types.ts` including `EntraProviderAdapter` contract and normalized managed-tenant/user DTOs shared by direct and CIPP adapters.
 - Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
+- (2026-02-20) `F047` completed: added direct provider adapter at `ee/server/src/lib/integrations/entra/providers/direct/directProviderAdapter.ts` with managed-tenant enumeration via Microsoft Graph `tenantRelationships/managedTenants/tenants`.
+- Adapter behavior: tenant-scoped access-token resolution, auto-refresh on expiry/401, pagination via `@odata.nextLink`, normalization to canonical tenant DTO (`entraTenantId`, displayName, primaryDomain, sourceUserCount).
+- Note: `listUsersForTenant` intentionally left for `F048` and currently throws a clear not-implemented error.
+- Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).

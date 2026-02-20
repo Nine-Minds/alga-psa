@@ -519,7 +519,7 @@
   {
     "id": "F047",
     "description": "Direct adapter (tenants): implement tenant enumeration via Microsoft APIs with normalized output.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements"
     ],
