@@ -1,6 +1,8 @@
 export const shouldShowEntraSyncAction = (
   edition: string | undefined,
-  isClientSyncFlagEnabled: boolean
+  isClientSyncFlagEnabled: boolean,
+  client?: { entra_tenant_id?: string | null } | null
 ): boolean => {
-  return edition === 'enterprise' && isClientSyncFlagEnabled;
+  const mappedTenantId = String(client?.entra_tenant_id || '').trim();
+  return edition === 'enterprise' && isClientSyncFlagEnabled && mappedTenantId.length > 0;
 };

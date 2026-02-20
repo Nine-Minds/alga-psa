@@ -249,7 +249,8 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   });
   const showEntraSyncAction = shouldShowEntraSyncAction(
     isEEAvailable ? 'enterprise' : process.env.NEXT_PUBLIC_EDITION,
-    entraClientSyncFlag.enabled
+    entraClientSyncFlag.enabled,
+    editedClient
   );
 
   const fetchEntraSyncRunStatus = useCallback(async (runId: string): Promise<string | null> => {

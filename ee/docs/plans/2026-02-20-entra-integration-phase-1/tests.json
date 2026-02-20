@@ -1065,7 +1065,7 @@
   {
     "id": "T126",
     "description": "Client-level sync action is shown for mapped clients and hidden for unmapped clients.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F114"
     ]

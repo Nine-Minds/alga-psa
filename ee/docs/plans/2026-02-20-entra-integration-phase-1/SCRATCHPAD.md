@@ -703,3 +703,6 @@ EOF && git add ee/docs/plans/2026-02-20-entra-integration-phase-1/tests.json ee/
 - (2026-02-20) `T125` completed in `ee/server/src/__tests__/unit/entraIntegrationSettings.initialSyncCta.test.tsx`.
 - Complementary CTA assertion verifies `Sync All Tenants Now` is enabled when at least one active mapping is present.
 - Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraIntegrationSettings.initialSyncCta.test.tsx` (pass).
+- (2026-02-20) `T126` completed via `packages/clients/src/components/clients/clientDetailsEntraSyncAction.ts` and `ClientDetails.tsx` wiring.
+- Visibility logic now requires enterprise edition + client-sync flag + mapped client (`entra_tenant_id` present); unmapped clients do not see `Sync Entra Now`.
+- Validation command: `cd packages/clients && npx vitest run src/components/clients/clientDetailsEntraSyncAction.test.ts` (pass).
