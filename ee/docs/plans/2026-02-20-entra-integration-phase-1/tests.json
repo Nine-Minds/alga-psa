@@ -291,7 +291,7 @@
   {
     "id": "T034",
     "description": "Entra OAuth callback persists token references and marks connection active.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F036",
       "F043"
