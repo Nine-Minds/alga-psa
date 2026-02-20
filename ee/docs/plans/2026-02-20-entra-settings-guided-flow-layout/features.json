@@ -62,7 +62,7 @@
   {
     "id": "F006",
     "description": "Wire guided `Run Initial Sync` CTA to `startEntraSync({ scope: 'initial' })` with run feedback and refresh behavior.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations"

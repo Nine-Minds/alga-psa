@@ -70,3 +70,6 @@ Focused planning log for guided-layout improvements in Entra integration setting
   - Wired guided `Run Discovery` CTA to `discoverEntraManagedTenants`.
   - Added discovery loading state and feedback message (`#entra-run-discovery-feedback`).
   - On success, refreshes status and bumps mapping table refresh key so mapping context updates immediately.
+- (2026-02-20) F006 implemented in `ee/server/src/components/settings/integrations/EntraIntegrationSettings.tsx`.
+  - Wired guided `Run Initial Sync` CTA to `startEntraSync({ scope: 'initial' })`.
+  - Added initial-sync loading and feedback state (`#entra-run-initial-sync-feedback`) and status refresh after start.

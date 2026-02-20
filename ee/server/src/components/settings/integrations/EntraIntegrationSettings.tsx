@@ -84,6 +84,8 @@ export default function EntraIntegrationSettings() {
   const [syncAllMessage, setSyncAllMessage] = React.useState<string | null>(null);
   const [discoveryLoading, setDiscoveryLoading] = React.useState(false);
   const [discoveryMessage, setDiscoveryMessage] = React.useState<string | null>(null);
+  const [initialSyncLoading, setInitialSyncLoading] = React.useState(false);
+  const [initialSyncMessage, setInitialSyncMessage] = React.useState<string | null>(null);
 
   const [cippDialogOpen, setCippDialogOpen] = React.useState(false);
   const [directLoading, setDirectLoading] = React.useState(false);
@@ -233,6 +235,27 @@ export default function EntraIntegrationSettings() {
     }
   }, [loadStatus]);
 
+  const handleRunInitialSync = React.useCallback(async () => {
+    setInitialSyncLoading(true);
+    setInitialSyncMessage(null);
+    try {
+      const result = await startEntraSync({ scope: 'initial' });
+      if ('error' in result) {
+        setInitialSyncMessage(result.error || 'Failed to start initial Entra sync.');
+        return;
+      }
+
+      setInitialSyncMessage(
+        result.data?.runId
+          ? `Initial sync started. Run ID: ${result.data.runId}`
+          : 'Initial sync start request accepted.'
+      );
+      await loadStatus();
+    } finally {
+      setInitialSyncLoading(false);
+    }
+  }, [loadStatus]);
+
   const handleConnectionOptionClick = async (optionId: string) => {
     if (!isConnectStepCurrent) {
       return;
@@ -359,13 +382,21 @@ export default function EntraIntegrationSettings() {
                 </Button>
               ) : null}
               {isSyncStepCurrent ? (
-                <Button
-                  id="entra-run-initial-sync"
-                  type="button"
-                  disabled={!hasConfirmedMappings}
-                >
-                  Run Initial Sync
-                </Button>
+                <div className="space-y-2">
+                  <Button
+                    id="entra-run-initial-sync"
+                    type="button"
+                    onClick={() => void handleRunInitialSync()}
+                    disabled={!hasConfirmedMappings || initialSyncLoading}
+                  >
+                    {initialSyncLoading ? 'Starting Initial Sync…' : 'Run Initial Sync'}
+                  </Button>
+                  {initialSyncMessage ? (
+                    <p className="text-sm text-muted-foreground" id="entra-run-initial-sync-feedback">
+                      {initialSyncMessage}
+                    </p>
+                  ) : null}
+                </div>
               ) : null}
             </div>
           </div>
