@@ -15,6 +15,8 @@ const WIZARD_STEPS = [
 
 export default function EntraIntegrationSettings() {
   const cippFlag = useFeatureFlag('entra-integration-cipp', { defaultValue: false });
+  const fieldSyncFlag = useFeatureFlag('entra-integration-field-sync', { defaultValue: false });
+  const ambiguousQueueFlag = useFeatureFlag('entra-integration-ambiguous-queue', { defaultValue: false });
   const connectionOptions = [
     {
       id: 'direct',
@@ -81,6 +83,30 @@ export default function EntraIntegrationSettings() {
               Entra integration shell is ready. Connect/discovery/mapping/sync data wiring is implemented in subsequent plan items.
             </p>
           </div>
+
+          {fieldSyncFlag.enabled ? (
+            <div
+              className="rounded-lg border border-border/70 bg-background p-4"
+              id="entra-field-sync-controls-panel"
+            >
+              <p className="text-sm font-semibold">Field Sync Controls</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Choose which Entra profile fields may overwrite local contact fields during sync.
+              </p>
+            </div>
+          ) : null}
+
+          {ambiguousQueueFlag.enabled ? (
+            <div
+              className="rounded-lg border border-border/70 bg-background p-4"
+              id="entra-ambiguous-queue-panel"
+            >
+              <p className="text-sm font-semibold">Ambiguous Match Queue</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Review and resolve Entra users that matched multiple contacts or require manual linking.
+              </p>
+            </div>
+          ) : null}
 
           <div className="flex flex-wrap gap-2">
             <Button id="entra-run-discovery" type="button" variant="outline" disabled>

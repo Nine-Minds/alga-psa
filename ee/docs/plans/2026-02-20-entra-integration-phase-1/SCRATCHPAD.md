@@ -88,3 +88,4 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - Validation commands: `npx tsc --noEmit -p ee/server/tsconfig.json` and `npx tsc --noEmit -p packages/clients/tsconfig.json` (pass).
 - (2026-02-20) `F011` completed: added explicit Entra connection option cards in settings and gated CIPP visibility behind `useFeatureFlag('entra-integration-cipp')`.
 - Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
+- (2026-02-20) `F012` completed: added field-sync controls and ambiguous queue panels to Entra settings, each gated by their dedicated flags (`entra-integration-field-sync`, `entra-integration-ambiguous-queue`).
