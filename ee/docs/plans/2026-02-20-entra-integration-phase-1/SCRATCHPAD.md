@@ -349,3 +349,6 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - (2026-02-20) `T002` completed: extended CE delegator test (`server/src/test/unit/api/entraRoutes.delegator.test.ts`) to validate enterprise forwarding.
 - Test now enables EE env, mocks `@enterprise/app/api/integrations/entra/route` + `/connect/route`, and asserts CE routes forward requests and preserve EE handler responses/status codes.
 - Validation command: `cd server && npx vitest run src/test/unit/api/entraRoutes.delegator.test.ts` (pass).
+- (2026-02-20) `T003` completed: added compile-contract file `packages/integrations/src/actions/entraActions.barrel.typecheck.ts` to assert Entra actions/types are re-exported from `actions/index.ts` with matching signatures to `integrations/entraActions.ts`.
+- The contract verifies function and type alias parity (`EntraConnectionType`, `EntraSyncScope`) through TypeScript assignability checks.
+- Validation command: `npx tsc --noEmit -p packages/integrations/tsconfig.json` (pass).

@@ -20,7 +20,7 @@
   {
     "id": "T003",
     "description": "`entraActions` exports compile and are available from integrations actions barrel.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F003"
     ]
