@@ -161,7 +161,7 @@
   {
     "id": "F015",
     "description": "Schema: create `entra_managed_tenants` table storing discovered tenant metadata per MSP tenant.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data / API / Integrations"
     ],
