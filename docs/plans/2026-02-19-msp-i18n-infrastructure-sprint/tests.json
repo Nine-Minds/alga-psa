@@ -370,7 +370,7 @@
   {
     "id": "T046",
     "description": "Client portal translations continue displaying correctly after config changes (no regressions)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F020"
     ]

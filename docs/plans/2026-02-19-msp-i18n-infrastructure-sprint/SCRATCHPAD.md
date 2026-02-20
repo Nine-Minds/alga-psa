@@ -185,3 +185,4 @@ ls server/public/locales/*/msp.json  # should fail (files removed)
 - 2026-02-20: Completed T043 checklist entry — packages/core/src/lib/i18n/config.ts LOCALE_CONFIG matches packages/ui/src/lib/i18n/config.ts (including any pseudo-locale changes)
 - 2026-02-20: Completed T044 checklist entry — Client portal at /client-portal loads common and client-portal namespaces correctly
 - 2026-02-20: Completed T045 checklist entry — Client portal at /client-portal/tickets loads features/tickets namespace in addition to common and client-portal
+- 2026-02-20: Completed T046 checklist entry — Client portal translations continue displaying correctly after config changes (no regressions)
