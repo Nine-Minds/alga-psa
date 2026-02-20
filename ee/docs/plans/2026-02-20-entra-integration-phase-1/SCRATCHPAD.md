@@ -401,3 +401,6 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - Validation command: `cd server && npx vitest run src/test/unit/migrations/entraPhase1Migration.test.ts` (pass).
 - (2026-02-20) `T023` completed: extended migration coverage for tenant backfill of default `entra_sync_settings` rows (`INSERT ... SELECT FROM tenants WHERE NOT EXISTS`).
 - Validation command: `cd server && npx vitest run src/test/unit/migrations/entraPhase1Migration.test.ts` (pass).
+- (2026-02-20) `T024` completed: added interface/schema alignment test `server/src/test/unit/integrations/entraInterfacesSchemaAlignment.test.ts`.
+- Test validates Entra row mappers produce all typed interface shapes and cross-checks representative interface-backed columns against migration schema text.
+- Validation command: `cd server && npx vitest run src/test/unit/integrations/entraInterfacesSchemaAlignment.test.ts` (pass).
