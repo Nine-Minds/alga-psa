@@ -216,7 +216,7 @@
   {
     "id": "F020",
     "description": "Schema: create `entra_sync_runs` table for parent sync execution records.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data / API / Integrations"
     ],
