@@ -550,3 +550,6 @@ EOF && git add ee/docs/plans/2026-02-20-entra-integration-phase-1/tests.json ee/
 - (2026-02-20) `T074` completed in Temporal workflow/activity contract suite.
 - Upsert-run activity assertions verify parent sync run writes include initiating user attribution and run mode fields (`run_type`, `initiated_by`).
 - Validation command: `cd server && npx vitest run src/test/unit/temporal/entraWorkflowActivityContracts.test.ts --coverage.enabled=false` (pass).
+- (2026-02-20) `T075` completed in Temporal workflow/activity contract suite.
+- Record-tenant-result assertions verify per-tenant run row persistence includes status + all sync counters (`created/linked/updated/ambiguous/inactivated`).
+- Validation command: `cd server && npx vitest run src/test/unit/temporal/entraWorkflowActivityContracts.test.ts --coverage.enabled=false` (pass).

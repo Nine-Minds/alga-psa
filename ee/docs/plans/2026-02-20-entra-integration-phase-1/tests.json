@@ -640,7 +640,7 @@
   {
     "id": "T075",
     "description": "`recordSyncTenantResultActivity` writes per-tenant result rows and counters.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F081"
     ]
