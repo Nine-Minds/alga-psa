@@ -304,7 +304,7 @@
   {
     "id": "T038",
     "description": "Old server/public/locales/{lang}/msp.json files are removed for all 7 languages",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F016"
     ]
