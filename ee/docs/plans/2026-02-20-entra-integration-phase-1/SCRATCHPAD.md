@@ -520,3 +520,6 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - (2026-02-20) `T064` completed in `confirmEntraMappingsService.clientLink` unit suite.
 - Remap scenario asserts existing active mapping is deactivated (`is_active=false`) before inserting one new active mapped row for the target client.
 - Validation command: `cd ee/server && npx vitest run src/__tests__/unit/confirmEntraMappingsService.clientLink.test.ts` (pass).
+- (2026-02-20) `T065` completed: expanded `entraTenantMappingTable.selection` component tests with summary counter assertions.
+- Mixed-state scenario verifies `onSummaryChange` transitions from `{mapped:1, skipped:0, needsReview:1}` to `{mapped:1, skipped:1, needsReview:0}` after skip action.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraTenantMappingTable.selection.test.tsx` (pass).

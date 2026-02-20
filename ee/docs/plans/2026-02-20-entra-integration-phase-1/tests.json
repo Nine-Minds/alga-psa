@@ -554,7 +554,7 @@
   {
     "id": "T065",
     "description": "Mapping summary counters reflect mapped/skipped/review counts after confirm.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F067"
     ]

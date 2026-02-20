@@ -157,4 +157,77 @@ describe('EntraTenantMappingTable client selection', () => {
     expect(selectOne.value).toBe('client-one');
     expect(selectTwo.value).toBe('client-two');
   });
+
+  it('T065: summary counters reflect mapped, skipped, and needs-review totals after row changes', async () => {
+    getEntraMappingPreviewMock.mockResolvedValue({
+      data: {
+        autoMatched: [
+          {
+            managedTenantId: 'managed-auto-65',
+            entraTenantId: 'entra-auto-65',
+            displayName: 'Auto 65',
+            primaryDomain: 'auto65.example.com',
+            sourceUserCount: 1,
+            match: {
+              clientId: 'client-auto-65',
+              clientName: 'Auto Client 65',
+              confidenceScore: 1,
+              reason: 'exact_domain',
+            },
+          },
+        ],
+        fuzzyCandidates: [
+          {
+            managedTenantId: 'managed-review-65',
+            entraTenantId: 'entra-review-65',
+            displayName: 'Review 65',
+            primaryDomain: null,
+            sourceUserCount: 1,
+            candidates: [
+              {
+                clientId: 'client-review-65',
+                clientName: 'Review Client 65',
+                confidenceScore: 0.72,
+                reason: 'fuzzy_name',
+              },
+            ],
+          },
+        ],
+        unmatched: [],
+      },
+    });
+    getAllClientsMock.mockResolvedValue([
+      { client_id: 'client-auto-65', client_name: 'Auto Client 65' },
+      { client_id: 'client-review-65', client_name: 'Review Client 65' },
+    ]);
+    skipEntraTenantMappingMock.mockResolvedValue({ data: { skipped: true } });
+
+    const onSummaryChange = vi.fn();
+    render(<EntraTenantMappingTable onSummaryChange={onSummaryChange} />);
+
+    await screen.findByText('Auto 65');
+    await screen.findByText('Review 65');
+
+    await waitFor(() => {
+      expect(onSummaryChange).toHaveBeenCalledWith(
+        expect.objectContaining({
+          mapped: 1,
+          skipped: 0,
+          needsReview: 1,
+        })
+      );
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Skip for now' }));
+
+    await waitFor(() => {
+      expect(onSummaryChange).toHaveBeenCalledWith(
+        expect.objectContaining({
+          mapped: 1,
+          skipped: 1,
+          needsReview: 0,
+        })
+      );
+    });
+  });
 });
