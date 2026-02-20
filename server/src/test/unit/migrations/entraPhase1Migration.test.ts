@@ -61,4 +61,13 @@ describe('Entra Phase 1 migration', () => {
     expect(migration).toContain("table.integer('failed_tenants').notNullable().defaultTo(0)");
     expect(migration).toContain("table.jsonb('summary').notNullable().defaultTo(knex.raw(`'{}'::jsonb`))");
   });
+
+  it('T017: creates entra_sync_run_tenants with tenant-scoped FK to parent sync runs', () => {
+    expect(migration).toContain("createTable('entra_sync_run_tenants'");
+    expect(migration).toContain("table.uuid('run_id').notNullable()");
+    expect(migration).toContain("table.integer('created_count').notNullable().defaultTo(0)");
+    expect(migration).toContain(".foreign(['tenant', 'run_id'])");
+    expect(migration).toContain(".references(['tenant', 'run_id'])");
+    expect(migration).toContain(".inTable('entra_sync_runs')");
+  });
 });

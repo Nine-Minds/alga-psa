@@ -387,3 +387,5 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - Validation command: `cd server && npx vitest run src/test/unit/migrations/entraPhase1Migration.test.ts` (pass).
 - (2026-02-20) `T016` completed: extended migration coverage for `entra_sync_runs` status defaults and summary counters (`total/processed/succeeded/failed`).
 - Validation command: `cd server && npx vitest run src/test/unit/migrations/entraPhase1Migration.test.ts` (pass).
+- (2026-02-20) `T017` completed: extended migration coverage for `entra_sync_run_tenants` and tenant-scoped FK linkage to parent `entra_sync_runs`.
+- Validation command: `cd server && npx vitest run src/test/unit/migrations/entraPhase1Migration.test.ts` (pass).

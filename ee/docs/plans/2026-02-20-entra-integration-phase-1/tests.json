@@ -139,7 +139,7 @@
   {
     "id": "T017",
     "description": "Migration creates `entra_sync_run_tenants` with valid foreign keys to parent sync runs.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F021"
     ]
