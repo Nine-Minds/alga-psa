@@ -116,7 +116,7 @@
   {
     "id": "F020",
     "description": "Client portal loads correct namespaces per route with no regressions",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR20"]
   },
   {

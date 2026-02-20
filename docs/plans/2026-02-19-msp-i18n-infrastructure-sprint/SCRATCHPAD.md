@@ -193,3 +193,4 @@ ls server/public/locales/*/msp.json  # should fail (files removed)
 - 2026-02-20: Aligned client-portal and appointments locale keys across languages and updated Phase 1 i18n expectations; Phase 1 vitest now passes (T051).
 - 2026-02-20: Added pseudo-locale fallback mappings to date-fns locale utilities and confirmed `npm run build` succeeds (T052).
 - 2026-02-20: Verified pseudo-locale output directories are gitignored (T053).
+- 2026-02-20: Validated client portal namespace routing via Phase 0 tests (F020).
