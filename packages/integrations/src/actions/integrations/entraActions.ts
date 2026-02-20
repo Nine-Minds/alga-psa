@@ -446,7 +446,7 @@ export const getEntraMappingPreview = withAuth(async (user, { tenant }) => {
 export const confirmEntraMappings = withAuth(async (
   user,
   { tenant },
-  input: { mappings: Array<Record<string, unknown>> }
+  input: { mappings: Array<Record<string, unknown>>; startInitialSync?: boolean }
 ) => {
   const canUpdate = await hasPermission(user as any, 'system_settings', 'update');
   if (!canUpdate) {
@@ -461,11 +461,39 @@ export const confirmEntraMappings = withAuth(async (
     return flagDisabledResult<{ confirmedMappings: number }>();
   }
 
-  return callEeRoute<{ confirmedMappings: number }>({
+  const confirmResult = await callEeRoute<{ confirmedMappings: number }>({
     importPath: '@enterprise/app/api/integrations/entra/mappings/confirm/route',
     method: 'POST',
-    body: input,
+    body: { mappings: input.mappings },
   });
+
+  if ('error' in confirmResult) {
+    return confirmResult;
+  }
+
+  if (!input.startInitialSync || (confirmResult.data?.confirmedMappings || 0) === 0) {
+    return confirmResult;
+  }
+
+  const workflowClient = await import('@enterprise/lib/integrations/entra/entraWorkflowClient');
+  const workflowStart = await workflowClient.startEntraInitialSyncWorkflow({
+    tenantId: tenant,
+    actor: { userId: (user as { user_id?: string } | undefined)?.user_id },
+    startImmediately: true,
+  });
+
+  return {
+    success: true,
+    data: {
+      ...confirmResult.data,
+      initialSync: {
+        started: workflowStart.available,
+        workflowId: workflowStart.workflowId || null,
+        runId: workflowStart.runId || null,
+        error: workflowStart.error || null,
+      },
+    },
+  } as const;
 });
 
 export const skipEntraTenantMapping = withAuth(async (
