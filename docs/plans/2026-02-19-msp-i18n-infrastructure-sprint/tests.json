@@ -198,7 +198,7 @@
   {
     "id": "T025",
     "description": "Pseudo-locale script with --locale xx --fill 1111 generates files under server/public/locales/xx/",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F009",
       "F011"
