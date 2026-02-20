@@ -64,6 +64,10 @@ export type { SkeletonProps } from './components/Skeleton';
 
 // Hooks
 export { useTheme, applyThemeVars } from './hooks/useTheme';
+export type { ThemeMode } from './hooks/useTheme';
+
+// Theme token maps (JS values matching tokens.css)
+export { lightTokens, darkTokens } from './theme/tokens';
 
 // Tokens
 export const tokens = {

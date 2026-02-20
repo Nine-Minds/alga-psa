@@ -1,11 +1,20 @@
 import { useCallback, useEffect, useState } from 'react';
+import { lightTokens, darkTokens } from '../theme/tokens';
 
 export type ThemeMode = 'light' | 'dark';
 
 export function useTheme() {
   const setMode = useCallback((mode: ThemeMode) => {
     if (typeof document === 'undefined') return;
-    document.documentElement.setAttribute('data-theme', mode === 'dark' ? 'dark' : 'light');
+    const root = document.documentElement;
+    root.setAttribute('data-theme', mode === 'dark' ? 'dark' : 'light');
+    // Apply CSS custom properties as inline styles so the visual theme
+    // actually changes — this overrides both tokens.css rules and any
+    // host-provided inline styles from the theme bridge.
+    const tokens = mode === 'dark' ? darkTokens : lightTokens;
+    for (const [key, value] of Object.entries(tokens)) {
+      root.style.setProperty(key, value);
+    }
   }, []);
 
   const getMode = useCallback<() => ThemeMode>(() => {
