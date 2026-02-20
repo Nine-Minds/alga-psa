@@ -40,4 +40,16 @@ describe('shouldShowEntraSyncAction', () => {
     expect(isTerminalEntraRunStatus('failed')).toBe(true);
     expect(isTerminalEntraRunStatus('partial')).toBe(true);
   });
+
+  it('T140: disabling client sync action flag hides entrypoint while preserving existing run-id status representation', () => {
+    expect(
+      shouldShowEntraSyncAction('enterprise', false, { entra_tenant_id: 'entra-tenant-140' })
+    ).toBe(false);
+
+    expect(resolveEntraClientSyncStartState('run-140-history')).toEqual({
+      runId: 'run-140-history',
+      statusMessage: 'Run run-140-history: queued',
+      shouldPoll: true,
+    });
+  });
 });

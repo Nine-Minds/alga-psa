@@ -745,3 +745,6 @@ EOF && git add ee/docs/plans/2026-02-20-entra-integration-phase-1/tests.json ee/
 - (2026-02-20) `T139` completed in `server/src/test/unit/integrations/entraActions.directConnect.test.ts`.
 - Added flag-off assertion showing settings read path exits early with disabled response and does not touch Entra status/data route paths.
 - Validation command: `cd server && npx vitest run src/test/unit/integrations/entraActions.directConnect.test.ts --coverage.enabled=false` (pass).
+- (2026-02-20) `T140` completed in `packages/clients/src/components/clients/clientDetailsEntraSyncAction.test.ts`.
+- Added client-flag-off contract assertion for hidden sync entrypoint and preserved run-id status representation helper behavior (non-destructive UI toggle path).
+- Validation command: `cd packages/clients && npx vitest run src/components/clients/clientDetailsEntraSyncAction.test.ts` (pass).

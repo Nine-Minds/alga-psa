@@ -1189,7 +1189,7 @@
   {
     "id": "T140",
     "description": "Disabling `entra-integration-client-sync-action` hides client action while preserving server-side run history.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F009",
       "F020",
