@@ -162,3 +162,6 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - Validation commands: `npx tsc --noEmit -p ee/server/tsconfig.json`, `npx tsc --noEmit -p packages/integrations/tsconfig.json`, `npx tsc --noEmit -p server/tsconfig.json` (pass).
 - (2026-02-20) `F052` completed: discovery persistence now writes required managed-tenant fields (`entra_tenant_id`, `display_name`, `primary_domain`, `source_user_count`) during upsert in `discoverManagedTenantsForTenant()`.
 - Source user counts are normalized in both direct and CIPP adapters before persistence.
+- (2026-02-20) `F053` completed: added exact-domain matcher utilities in `ee/server/src/lib/integrations/entra/mapping/matchers/exactDomainMatcher.ts`.
+- Includes domain normalization + email/url domain extraction and deterministic exact-domain candidate generation (`reason: exact_domain`, confidence `1.0`).
+- Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).

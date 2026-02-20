@@ -586,7 +586,7 @@
   {
     "id": "F053",
     "description": "Auto-match rule: exact domain match against client domain/email-domain data.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements"
     ],
