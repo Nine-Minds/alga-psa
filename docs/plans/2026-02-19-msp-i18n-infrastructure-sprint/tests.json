@@ -61,7 +61,7 @@
   {
     "id": "T008",
     "description": "ROUTE_NAMESPACES maps '/msp/settings' to ['common', 'msp/core']",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F002",
       "F018"
