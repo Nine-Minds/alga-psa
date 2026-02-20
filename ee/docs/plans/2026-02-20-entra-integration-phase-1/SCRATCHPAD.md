@@ -171,3 +171,6 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - (2026-02-20) `F055` completed: added fuzzy matcher in `ee/server/src/lib/integrations/entra/mapping/matchers/fuzzyMatcher.ts` using normalized bigram similarity.
 - Fuzzy candidates are sorted by score and explicitly marked `autoMatch: false` to prevent automatic confirmation.
 - Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
+- (2026-02-20) `F056` completed: implemented `buildEntraMappingPreview()` in `ee/server/src/lib/integrations/entra/mapping/mappingPreviewService.ts` and wired preview route to return grouped `autoMatched`, `fuzzyCandidates`, and `unmatched` sets.
+- Preview now combines exact-domain, secondary-domain, and fuzzy-name scoring against persisted discovered tenants and tenant client/domain data.
+- Validation commands: `npx tsc --noEmit -p ee/server/tsconfig.json`, `npx tsc --noEmit -p packages/integrations/tsconfig.json`, `npx tsc --noEmit -p server/tsconfig.json` (pass).

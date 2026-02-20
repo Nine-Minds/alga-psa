@@ -619,7 +619,7 @@
   {
     "id": "F056",
     "description": "Preview grouping: return `autoMatched`, `fuzzyCandidates`, and `unmatched` sets for UI rendering.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes"
     ],
