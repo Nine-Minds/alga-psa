@@ -207,7 +207,7 @@
   {
     "id": "T025",
     "description": "Mapping validation blocks duplicate assignment of one discovered tenant to multiple clients.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F018",
       "F066"
