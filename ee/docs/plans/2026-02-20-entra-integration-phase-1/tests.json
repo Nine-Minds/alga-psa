@@ -889,7 +889,7 @@
   {
     "id": "T105",
     "description": "Disabled/deleted handling never deletes contact rows.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F104"
     ]

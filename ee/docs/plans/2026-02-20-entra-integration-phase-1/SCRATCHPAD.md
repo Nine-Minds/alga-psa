@@ -640,3 +640,6 @@ EOF && git add ee/docs/plans/2026-02-20-entra-integration-phase-1/tests.json ee/
 - (2026-02-20) `T104` completed in `ee/server/src/__tests__/unit/entraDisableHandler.test.ts`.
 - Deleted-user handling assertion verifies linked contacts are marked inactive with `entra_sync_status_reason='deleted_upstream'`.
 - Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraDisableHandler.test.ts` (pass).
+- (2026-02-20) `T105` completed in `ee/server/src/__tests__/unit/entraDisableHandler.test.ts`.
+- Non-destructive handling assertion verifies disabled/deleted paths only issue update operations and never delete contact or link rows.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraDisableHandler.test.ts` (pass).

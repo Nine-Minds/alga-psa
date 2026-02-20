@@ -12,46 +12,58 @@ function buildDbMocks() {
   const linksSelectMock = vi.fn(async () => [{ contact_name_id: 'contact-103' }]);
   const contactsUpdateMock = vi.fn(async () => 1);
   const linkUpdateMock = vi.fn(async () => 1);
+  const contactsDeleteMock = vi.fn(async () => 0);
+  const linksDeleteMock = vi.fn(async () => 0);
 
-  let linkTableCalls = 0;
-  const trxMock = Object.assign(
-    vi.fn((table: string) => {
-      if (table === 'entra_contact_links') {
-        return {
-          where: vi.fn(() => {
-            linkTableCalls += 1;
-            return linkTableCalls === 1 ? { select: linksSelectMock } : { update: linkUpdateMock };
-          }),
-        };
-      }
+  const createTrxMock = () => {
+    let linkTableCalls = 0;
+    return Object.assign(
+      vi.fn((table: string) => {
+        if (table === 'entra_contact_links') {
+          return {
+            where: vi.fn(() => {
+              linkTableCalls += 1;
+              return linkTableCalls === 1
+                ? { select: linksSelectMock, del: linksDeleteMock, delete: linksDeleteMock }
+                : { update: linkUpdateMock, del: linksDeleteMock, delete: linksDeleteMock };
+            }),
+          };
+        }
 
-      if (table === 'contacts') {
-        return {
-          where: vi.fn(() => ({
-            whereIn: vi.fn(() => ({
-              update: contactsUpdateMock,
+        if (table === 'contacts') {
+          return {
+            where: vi.fn(() => ({
+              whereIn: vi.fn(() => ({
+                update: contactsUpdateMock,
+                del: contactsDeleteMock,
+                delete: contactsDeleteMock,
+              })),
             })),
-          })),
-        };
-      }
+          };
+        }
 
-      throw new Error(`Unexpected table ${table}`);
-    }),
-    {
-      fn: {
-        now: vi.fn(() => 'db-now'),
-      },
-    }
-  );
+        throw new Error(`Unexpected table ${table}`);
+      }),
+      {
+        fn: {
+          now: vi.fn(() => 'db-now'),
+        },
+      }
+    );
+  };
 
   const knexMock = {
-    transaction: vi.fn(async (callback: (trx: typeof trxMock) => Promise<unknown>) => callback(trxMock)),
+    transaction: vi.fn(async (callback: (trx: ReturnType<typeof createTrxMock>) => Promise<unknown>) =>
+      callback(createTrxMock())
+    ),
   };
 
   return {
     createTenantKnexValue: { knex: knexMock },
     contactsUpdateMock,
     linkUpdateMock,
+    contactsDeleteMock,
+    linksDeleteMock,
   };
 }
 
@@ -119,5 +131,30 @@ describe('disableHandler', () => {
         entra_sync_status: 'inactive',
       })
     );
+  });
+
+  it('T105: disabled/deleted handlers never delete contacts or contact-link rows', async () => {
+    const { createTenantKnexValue, contactsDeleteMock, linksDeleteMock } = buildDbMocks();
+    createTenantKnexMock.mockResolvedValue(createTenantKnexValue);
+
+    const { markDisabledEntraUsersInactive, markDeletedEntraUsersInactive } = await import(
+      '@ee/lib/integrations/entra/sync/disableHandler'
+    );
+
+    await markDisabledEntraUsersInactive('tenant-105', [
+      {
+        entraTenantId: 'entra-tenant-105',
+        entraObjectId: 'entra-object-105-a',
+      },
+    ]);
+    await markDeletedEntraUsersInactive('tenant-105', [
+      {
+        entraTenantId: 'entra-tenant-105',
+        entraObjectId: 'entra-object-105-b',
+      },
+    ]);
+
+    expect(contactsDeleteMock).not.toHaveBeenCalled();
+    expect(linksDeleteMock).not.toHaveBeenCalled();
   });
 });
