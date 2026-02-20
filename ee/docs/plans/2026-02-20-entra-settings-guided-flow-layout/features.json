@@ -125,7 +125,7 @@
   {
     "id": "F011",
     "description": "Add minimal focused unit tests for guided step gating and CTA routing, leaning on existing Entra tests for broad regression coverage.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Goals",
       "Acceptance Criteria (Definition of Done)"

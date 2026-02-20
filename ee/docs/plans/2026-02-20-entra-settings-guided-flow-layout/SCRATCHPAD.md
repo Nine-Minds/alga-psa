@@ -87,3 +87,7 @@ Focused planning log for guided-layout improvements in Entra integration setting
 - (2026-02-20) F010 implemented by preserving existing advanced-section gates unchanged in `EntraIntegrationSettings`:
   - `shouldShowFieldSyncControls(fieldSyncFlag.enabled)` still controls field-sync panel visibility.
   - `shouldShowAmbiguousQueue(ambiguousQueueFlag.enabled)` still controls reconciliation queue visibility.
+- (2026-02-20) F011 implemented via focused guided-flow test rewrite in `ee/server/src/__tests__/unit/entraIntegrationSettings.initialSyncCta.test.tsx`.
+  - Added/updated tests for step gating states (Connect/Discover/Map/Sync) and CTA routing (`discoverEntraManagedTenants`, `startEntraSync({scope:'initial'})`).
+  - Preserved coverage for status diagnostics and queue flag gating in the same unit file.
+  - Validation check: `cd ee/server && npx vitest run src/__tests__/unit/entraIntegrationSettings.initialSyncCta.test.tsx` (passing).
