@@ -423,3 +423,6 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - (2026-02-20) `T032` completed: extended `server/src/test/unit/integrations/entraActions.directConnect.test.ts` with success-path OAuth initiation assertions.
 - Test validates returned auth URL shape and verifies base64 `state` payload includes tenant/user, nonce, timestamp, and Entra direct integration markers.
 - Validation command: `cd server && npx vitest run src/test/unit/integrations/entraActions.directConnect.test.ts` (pass).
+- (2026-02-20) `T033` completed: added EE callback validation test `ee/server/src/__tests__/unit/entraOAuthCallback.validation.test.ts` covering missing params and invalid state payload handling.
+- Added `NextResponse.redirect(...)` support to shared Next.js test stub (`server/src/test/stubs/next-server.ts`) so callback routes can be asserted via redirect `location` headers in unit tests.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraOAuthCallback.validation.test.ts` (pass).

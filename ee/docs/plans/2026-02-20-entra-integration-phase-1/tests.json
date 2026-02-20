@@ -283,7 +283,7 @@
   {
     "id": "T033",
     "description": "Entra OAuth callback rejects missing/invalid code-state requests.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F036"
     ]
