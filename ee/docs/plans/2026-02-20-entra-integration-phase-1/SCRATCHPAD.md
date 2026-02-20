@@ -733,3 +733,6 @@ EOF && git add ee/docs/plans/2026-02-20-entra-integration-phase-1/tests.json ee/
 - (2026-02-20) `T135` completed via docs contract test `server/src/test/unit/docs/entraIntegrationGuide.contract.test.ts`.
 - Verified guide includes both direct and CIPP setup paths plus explicit decision guidance for choosing connection type.
 - Validation command: `cd server && npx vitest run src/test/unit/docs/entraIntegrationGuide.contract.test.ts --coverage.enabled=false` (pass).
+- (2026-02-20) `T136` completed in docs contract suite `server/src/test/unit/docs/entraIntegrationGuide.contract.test.ts`.
+- Verified documentation enumerates Entra secret names and explicitly notes secret-provider chain compatibility (env/filesystem/vault).
+- Validation command: `cd server && npx vitest run src/test/unit/docs/entraIntegrationGuide.contract.test.ts --coverage.enabled=false` (pass).

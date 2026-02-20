@@ -1152,7 +1152,7 @@
   {
     "id": "T136",
     "description": "EE docs include Entra secret names and note secret-provider/vault compatibility.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F033",
       "F120"
