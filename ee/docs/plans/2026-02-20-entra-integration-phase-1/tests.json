@@ -487,7 +487,7 @@
   {
     "id": "T057",
     "description": "Fuzzy match candidates are sorted by score and never auto-confirmed.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F055",
       "F056"

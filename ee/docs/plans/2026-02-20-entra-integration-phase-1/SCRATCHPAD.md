@@ -495,3 +495,6 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - (2026-02-20) `T056` completed in `entraMappingPreviewService` unit suite.
 - Secondary-domain case asserts candidate generation uses `reason='secondary_domain'` and confidence score `0.88` for non-primary domain matches.
 - Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraMappingPreviewService.test.ts` (pass).
+- (2026-02-20) `T057` completed in `entraMappingPreviewService` unit suite.
+- Fuzzy candidate case verifies candidates are score-sorted descending and remain non-auto-confirmed (`autoMatch=false`), ensuring fuzzy suggestions never silently map.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraMappingPreviewService.test.ts` (pass).
