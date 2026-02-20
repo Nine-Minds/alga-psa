@@ -238,7 +238,7 @@
   {
     "id": "F022",
     "description": "Schema: create `entra_contact_links` table mapping Entra identities to Alga contacts.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data / API / Integrations"
     ],
