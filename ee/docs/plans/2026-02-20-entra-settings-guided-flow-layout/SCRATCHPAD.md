@@ -102,3 +102,6 @@ Focused planning log for guided-layout improvements in Entra integration setting
 - (2026-02-20) F014 implemented in `ee/server/src/components/settings/integrations/EntraIntegrationSettings.tsx`.
   - Added explicit mode heading/copy banner at top of settings content (`Setup Mode` vs `Ongoing Operations Mode`).
   - Copy now clearly distinguishes guided setup from post-setup maintenance behavior.
+- (2026-02-20) T001 completed.
+  - Verified existing diagnostics coverage still passes in new layout context (`T121`, `T132` in `entraIntegrationSettings.initialSyncCta.test.tsx`).
+  - Command: `cd ee/server && npx vitest run src/__tests__/unit/entraIntegrationSettings.initialSyncCta.test.tsx -t "T121|T132"`.
