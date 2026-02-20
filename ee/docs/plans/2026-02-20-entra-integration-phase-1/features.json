@@ -1125,7 +1125,7 @@
   {
     "id": "F101",
     "description": "Field overwrite guard: only sync mutable fields enabled in `entra_sync_settings.field_sync_config`.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements"
     ],

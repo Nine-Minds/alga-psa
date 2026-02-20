@@ -281,3 +281,6 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - (2026-02-20) `F100` completed: reconciler link upsert now writes Entra metadata onto linked/new contacts (`entra_object_id`, `entra_sync_source`, `last_entra_sync_at`, `entra_user_principal_name`, `entra_account_enabled`).
 - Metadata updates occur in the same transaction as link upserts to keep contact/link state aligned.
 - Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
+- (2026-02-20) `F101` completed: added `ee/server/src/lib/integrations/entra/sync/contactFieldSync.ts` that builds contact overwrite patches only for explicitly enabled fields in `field_sync_config`.
+- Reconciler now applies `buildContactFieldSyncPatch(...)` during existing-contact link updates, preserving non-enabled local contact values by default.
+- Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).

@@ -4,6 +4,7 @@ import type { Knex } from 'knex';
 import { queueAmbiguousEntraMatch } from '../reconciliationQueueService';
 import type { EntraSyncUser } from './types';
 import type { EntraContactMatchCandidate } from './contactMatcher';
+import { buildContactFieldSyncPatch } from './contactFieldSync';
 
 export interface EntraLinkedContactResult {
   action: 'linked';
@@ -49,7 +50,8 @@ async function upsertContactLink(
   tenantId: string,
   clientId: string,
   contactNameId: string,
-  user: EntraSyncUser
+  user: EntraSyncUser,
+  fieldSyncConfig?: Record<string, unknown>
 ): Promise<void> {
   const now = trx.fn.now();
 
@@ -79,6 +81,7 @@ async function upsertContactLink(
       updated_at: now,
     });
 
+  const syncedFieldPatch = buildContactFieldSyncPatch(user, fieldSyncConfig || {});
   await trx('contacts')
     .where({
       tenant: tenantId,
@@ -90,6 +93,7 @@ async function upsertContactLink(
       last_entra_sync_at: now,
       entra_user_principal_name: user.userPrincipalName,
       entra_account_enabled: user.accountEnabled,
+      ...syncedFieldPatch,
       updated_at: now,
     });
 }
@@ -98,12 +102,20 @@ export async function linkExistingMatchedContact(
   tenantId: string,
   clientId: string,
   matchedContact: EntraContactMatchCandidate,
-  user: EntraSyncUser
+  user: EntraSyncUser,
+  fieldSyncConfig?: Record<string, unknown>
 ): Promise<EntraLinkedContactResult> {
   await runWithTenant(tenantId, async () => {
     const { knex } = await createTenantKnex();
     await knex.transaction(async (trx) => {
-      await upsertContactLink(trx, tenantId, clientId, matchedContact.contactNameId, user);
+      await upsertContactLink(
+        trx,
+        tenantId,
+        clientId,
+        matchedContact.contactNameId,
+        user,
+        fieldSyncConfig
+      );
     });
   });
 
@@ -144,7 +156,7 @@ export async function createContactForEntraUser(
         trx
       );
 
-      await upsertContactLink(trx, tenantId, clientId, String(created.contact_name_id), user);
+      await upsertContactLink(trx, tenantId, clientId, String(created.contact_name_id), user, {});
       return String(created.contact_name_id);
     });
   });
