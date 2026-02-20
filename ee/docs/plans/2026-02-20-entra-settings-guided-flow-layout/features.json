@@ -101,7 +101,7 @@
   {
     "id": "F009",
     "description": "Preserve status diagnostics panel content (including CIPP server/direct Microsoft fields) and existing refresh/disconnect controls.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Requirements > Functional Requirements"
