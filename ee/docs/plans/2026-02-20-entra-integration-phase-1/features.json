@@ -832,7 +832,7 @@
   {
     "id": "F075",
     "description": "Workflow: implement `entraAllTenantsSyncWorkflow` for recurring/manual full syncs.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements"
     ],
