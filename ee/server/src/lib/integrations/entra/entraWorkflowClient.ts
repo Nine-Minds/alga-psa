@@ -4,6 +4,7 @@ import type {
   EntraInitialSyncWorkflowInput,
   EntraTenantSyncWorkflowInput,
 } from '../../../../../temporal-workflows/src/types/entra-sync';
+import { createTenantKnex, runWithTenant } from '@/lib/db';
 
 const DEFAULT_TEMPORAL_ADDRESS = 'temporal-frontend.temporal.svc.cluster.local:7233';
 const DEFAULT_TEMPORAL_NAMESPACE = 'default';
@@ -21,6 +22,34 @@ export interface EntraWorkflowQueryResult {
   workflowId: string;
   status?: string;
   error?: string;
+}
+
+export interface EntraSyncRunProgressResult {
+  run: {
+    runId: string;
+    status: string;
+    runType: string;
+    startedAt: string;
+    completedAt: string | null;
+    totalTenants: number;
+    processedTenants: number;
+    succeededTenants: number;
+    failedTenants: number;
+    summary: Record<string, unknown>;
+  } | null;
+  tenantResults: Array<{
+    managedTenantId: string | null;
+    clientId: string | null;
+    status: string;
+    created: number;
+    linked: number;
+    updated: number;
+    ambiguous: number;
+    inactivated: number;
+    errorMessage: string | null;
+    startedAt: string | null;
+    completedAt: string | null;
+  }>;
 }
 
 function generateWorkflowId(prefix: string, tenantId: string): string {
@@ -130,4 +159,70 @@ export async function queryEntraWorkflowStatus(
       error: error instanceof Error ? error.message : 'Failed to query workflow status',
     };
   }
+}
+
+export async function getEntraSyncRunProgress(
+  tenantId: string,
+  runId: string
+): Promise<EntraSyncRunProgressResult> {
+  return runWithTenant(tenantId, async () => {
+    const { knex } = await createTenantKnex();
+
+    const [runRow, tenantRows] = await Promise.all([
+      knex('entra_sync_runs')
+        .where({
+          tenant: tenantId,
+          run_id: runId,
+        })
+        .first(),
+      knex('entra_sync_run_tenants')
+        .where({
+          tenant: tenantId,
+          run_id: runId,
+        })
+        .orderBy('created_at', 'asc')
+        .select('*'),
+    ]);
+
+    return {
+      run: runRow
+        ? {
+            runId: String(runRow.run_id),
+            status: String(runRow.status),
+            runType: String(runRow.run_type),
+            startedAt:
+              runRow.started_at instanceof Date
+                ? runRow.started_at.toISOString()
+                : String(runRow.started_at),
+            completedAt:
+              runRow.completed_at instanceof Date
+                ? runRow.completed_at.toISOString()
+                : runRow.completed_at
+                  ? String(runRow.completed_at)
+                  : null,
+            totalTenants: Number(runRow.total_tenants || 0),
+            processedTenants: Number(runRow.processed_tenants || 0),
+            succeededTenants: Number(runRow.succeeded_tenants || 0),
+            failedTenants: Number(runRow.failed_tenants || 0),
+            summary:
+              runRow.summary && typeof runRow.summary === 'object' && !Array.isArray(runRow.summary)
+                ? (runRow.summary as Record<string, unknown>)
+                : {},
+          }
+        : null,
+      tenantResults: (tenantRows || []).map((row: any) => ({
+        managedTenantId: row.managed_tenant_id ? String(row.managed_tenant_id) : null,
+        clientId: row.client_id ? String(row.client_id) : null,
+        status: String(row.status),
+        created: Number(row.created_count || 0),
+        linked: Number(row.linked_count || 0),
+        updated: Number(row.updated_count || 0),
+        ambiguous: Number(row.ambiguous_count || 0),
+        inactivated: Number(row.inactivated_count || 0),
+        errorMessage: row.error_message ? String(row.error_message) : null,
+        startedAt: row.started_at ? String(row.started_at) : null,
+        completedAt: row.completed_at ? String(row.completed_at) : null,
+      })),
+    };
+  });
 }

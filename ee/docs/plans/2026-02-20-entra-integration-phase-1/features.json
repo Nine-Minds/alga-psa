@@ -977,7 +977,7 @@
   {
     "id": "F088",
     "description": "Workflow progress queries: expose run progress/state for UI polling and status rendering.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes"
     ],

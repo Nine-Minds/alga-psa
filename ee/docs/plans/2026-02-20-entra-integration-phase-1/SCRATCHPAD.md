@@ -241,3 +241,6 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - Validation commands: `npx tsc --noEmit -p packages/integrations/tsconfig.json`, `npx tsc --noEmit -p ee/server/tsconfig.json`, `npx tsc --noEmit -p server/tsconfig.json` (pass).
 - (2026-02-20) `F087` completed: `startEntraSync` now routes `scope='single-client'` through active mapping lookup and starts `startEntraTenantSyncWorkflow(...)`, returning run/workflow ids for client-level sync feedback.
 - Validation commands: `npx tsc --noEmit -p packages/integrations/tsconfig.json`, `npx tsc --noEmit -p ee/server/tsconfig.json`, `npx tsc --noEmit -p server/tsconfig.json` (pass).
+- (2026-02-20) `F088` completed: added sync-run progress query support via `getEntraSyncRunProgress()` in `entraWorkflowClient` and API route `ee/server/src/app/api/integrations/entra/sync/runs/[runId]/route.ts` returning run + per-tenant status payloads.
+- Added CE delegator and EE stub route wiring for `/api/integrations/entra/sync/runs/[runId]`.
+- Validation commands: `npx tsc --noEmit -p ee/server/tsconfig.json`, `npx tsc --noEmit -p server/tsconfig.json`, `npx tsc --noEmit -p packages/integrations/tsconfig.json`, `npx tsc --noEmit -p ee/temporal-workflows/tsconfig.json` (pass).
