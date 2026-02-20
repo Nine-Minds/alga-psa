@@ -841,7 +841,7 @@
   {
     "id": "T099",
     "description": "Linking/new-contact paths persist Entra object id/source metadata fields.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F100"
     ]

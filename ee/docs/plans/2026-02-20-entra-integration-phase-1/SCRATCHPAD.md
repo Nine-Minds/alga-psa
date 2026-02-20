@@ -622,3 +622,6 @@ EOF && git add ee/docs/plans/2026-02-20-entra-integration-phase-1/tests.json ee/
 - (2026-02-20) `T098` completed in `entraContactMatcher.noEmailAutoLink` test.
 - Name-only identity case verifies missing valid email/UPN cannot auto-link contacts.
 - Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraContactMatcher.noEmailAutoLink.test.ts` (pass).
+- (2026-02-20) `T099` completed in `entraContactReconciler` unit suite.
+- Metadata-write assertions verify contact update patches include Entra identity/source fields during link/create reconciliation paths.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraContactReconciler.test.ts` (pass).
