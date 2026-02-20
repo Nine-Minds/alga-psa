@@ -1079,7 +1079,7 @@
   {
     "id": "F097",
     "description": "Create-contact path: when no match exists, create a new client contact from allowed Entra fields.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements"
     ],

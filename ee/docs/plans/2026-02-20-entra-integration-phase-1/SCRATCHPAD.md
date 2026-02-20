@@ -272,3 +272,6 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - (2026-02-20) `F096` completed: added existing-contact link reconciliation helper `linkExistingMatchedContact(...)` in `ee/server/src/lib/integrations/entra/sync/contactReconciler.ts`.
 - Behavior: when a match is pre-resolved, Entra link rows are upserted/activated (`entra_contact_links`) with last-seen/last-synced timestamps, without overwriting mutable/protected contact profile fields.
 - Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
+- (2026-02-20) `F097` completed: added `createContactForEntraUser(...)` in `contactReconciler.ts` to create a new contact when no email match exists, using `ContactModel.createContact` inside a tenant transaction.
+- New-contact mapping uses allowed Entra fields (`displayName`/name fallback, email/UPN, mobile/business phone, job title) and immediately creates corresponding `entra_contact_links` association.
+- Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).

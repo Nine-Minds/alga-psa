@@ -1,4 +1,6 @@
 import { createTenantKnex, runWithTenant } from '@/lib/db';
+import { ContactModel } from '@alga-psa/shared/models/contactModel';
+import type { Knex } from 'knex';
 import type { EntraSyncUser } from './types';
 import type { EntraContactMatchCandidate } from './contactMatcher';
 
@@ -11,6 +13,67 @@ export interface EntraLinkedContactResult {
   };
 }
 
+export interface EntraCreatedContactResult {
+  action: 'created';
+  contactNameId: string;
+  linkIdentity: {
+    entraTenantId: string;
+    entraObjectId: string;
+  };
+}
+
+function fallbackDisplayName(user: EntraSyncUser): string {
+  if (user.displayName && user.displayName.trim()) {
+    return user.displayName.trim();
+  }
+
+  const givenName = user.givenName?.trim() || '';
+  const surname = user.surname?.trim() || '';
+  const fullName = `${givenName} ${surname}`.trim();
+  if (fullName) {
+    return fullName;
+  }
+
+  const emailIdentity = user.email || user.userPrincipalName || 'Entra Contact';
+  return emailIdentity.split('@')[0] || emailIdentity;
+}
+
+async function upsertContactLink(
+  trx: Knex.Transaction,
+  tenantId: string,
+  clientId: string,
+  contactNameId: string,
+  user: EntraSyncUser
+): Promise<void> {
+  const now = trx.fn.now();
+
+  await trx('entra_contact_links')
+    .insert({
+      tenant: tenantId,
+      contact_name_id: contactNameId,
+      client_id: clientId,
+      entra_tenant_id: user.entraTenantId,
+      entra_object_id: user.entraObjectId,
+      link_status: 'active',
+      is_active: true,
+      last_seen_at: now,
+      last_synced_at: now,
+      metadata: trx.raw(`'{}'::jsonb`),
+      created_at: now,
+      updated_at: now,
+    })
+    .onConflict(['tenant', 'entra_tenant_id', 'entra_object_id'])
+    .merge({
+      contact_name_id: contactNameId,
+      client_id: clientId,
+      link_status: 'active',
+      is_active: true,
+      last_seen_at: now,
+      last_synced_at: now,
+      updated_at: now,
+    });
+}
+
 export async function linkExistingMatchedContact(
   tenantId: string,
   clientId: string,
@@ -19,38 +82,56 @@ export async function linkExistingMatchedContact(
 ): Promise<EntraLinkedContactResult> {
   await runWithTenant(tenantId, async () => {
     const { knex } = await createTenantKnex();
-    const now = knex.fn.now();
-
-    await knex('entra_contact_links')
-      .insert({
-        tenant: tenantId,
-        contact_name_id: matchedContact.contactNameId,
-        client_id: clientId,
-        entra_tenant_id: user.entraTenantId,
-        entra_object_id: user.entraObjectId,
-        link_status: 'active',
-        is_active: true,
-        last_seen_at: now,
-        last_synced_at: now,
-        metadata: knex.raw(`'{}'::jsonb`),
-        created_at: now,
-        updated_at: now,
-      })
-      .onConflict(['tenant', 'entra_tenant_id', 'entra_object_id'])
-      .merge({
-        contact_name_id: matchedContact.contactNameId,
-        client_id: clientId,
-        link_status: 'active',
-        is_active: true,
-        last_seen_at: now,
-        last_synced_at: now,
-        updated_at: now,
-      });
+    await knex.transaction(async (trx) => {
+      await upsertContactLink(trx, tenantId, clientId, matchedContact.contactNameId, user);
+    });
   });
 
   return {
     action: 'linked',
     contactNameId: matchedContact.contactNameId,
+    linkIdentity: {
+      entraTenantId: user.entraTenantId,
+      entraObjectId: user.entraObjectId,
+    },
+  };
+}
+
+export async function createContactForEntraUser(
+  tenantId: string,
+  clientId: string,
+  user: EntraSyncUser
+): Promise<EntraCreatedContactResult> {
+  const email = user.email || user.userPrincipalName;
+  if (!email) {
+    throw new Error('Cannot create contact for Entra user without email/UPN.');
+  }
+
+  const createdContactNameId = await runWithTenant(tenantId, async () => {
+    const { knex } = await createTenantKnex();
+
+    return knex.transaction(async (trx) => {
+      const created = await ContactModel.createContact(
+        {
+          full_name: fallbackDisplayName(user),
+          email,
+          client_id: clientId,
+          phone_number: user.mobilePhone || user.businessPhones[0] || undefined,
+          role: user.jobTitle || undefined,
+          is_inactive: false,
+        },
+        tenantId,
+        trx
+      );
+
+      await upsertContactLink(trx, tenantId, clientId, String(created.contact_name_id), user);
+      return String(created.contact_name_id);
+    });
+  });
+
+  return {
+    action: 'created',
+    contactNameId: createdContactNameId,
     linkIdentity: {
       entraTenantId: user.entraTenantId,
       entraObjectId: user.entraObjectId,
