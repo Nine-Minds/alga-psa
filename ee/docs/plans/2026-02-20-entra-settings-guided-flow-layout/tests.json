@@ -21,7 +21,7 @@
   {
     "id": "T003",
     "description": "When connected with no `lastDiscoveryAt`, guided flow marks Discover as current and primary CTA triggers `discoverEntraManagedTenants`.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F001",
       "F003",

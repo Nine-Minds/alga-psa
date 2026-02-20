@@ -108,3 +108,6 @@ Focused planning log for guided-layout improvements in Entra integration setting
 - (2026-02-20) T002 completed.
   - Validated not-connected gating state in `T002` test: Connect is current, later steps are locked, discovery/initial CTAs are hidden.
   - Command: `cd ee/server && npx vitest run src/__tests__/unit/entraIntegrationSettings.initialSyncCta.test.tsx -t "T002"`.
+- (2026-02-20) T003 completed.
+  - `T003` confirms connected/no-discovery state selects Discover step and routes CTA click to `discoverEntraManagedTenants`.
+  - Command: `cd ee/server && npx vitest run src/__tests__/unit/entraIntegrationSettings.initialSyncCta.test.tsx -t "T003"`.
