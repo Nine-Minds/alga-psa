@@ -1,6 +1,6 @@
 import { badRequest, dynamic, ok, parseJsonBody, runtime } from '../../_responses';
 import { requireEntraUiFlagEnabled } from '../../_guards';
-import { createTenantKnex, runWithTenant } from '@/lib/db';
+import { createTenantKnex, runWithTenant } from '@enterprise/lib/db';
 
 export { dynamic, runtime };
 

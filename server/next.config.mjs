@@ -65,7 +65,7 @@ class LogModuleResolutionPlugin {
               context: data.context,
             });
           }
-        } catch {}
+        } catch { }
       });
       nmf.hooks.afterResolve.tap('LogModuleResolutionPlugin', (result) => {
         try {
@@ -83,7 +83,7 @@ class LogModuleResolutionPlugin {
             issuer: result.createData?.issuer || result.contextInfo?.issuer,
             descriptionFilePath: result.resourceResolveData?.descriptionFilePath,
           });
-        } catch {}
+        } catch { }
       });
     });
   }
@@ -177,96 +177,96 @@ const nextConfig = {
       // Base app alias
       '@': './src',
       'server/src': './src', // Add explicit alias for server/src imports
-	      '@alga-psa/ui': '../packages/ui/src',
-	      '@alga-psa/ui/': '../packages/ui/src/',
-	      '@alga-psa/clients': '../packages/clients/src',
-	      '@alga-psa/clients/': '../packages/clients/src/',
-	      '@alga-psa/auth': '../packages/auth/src',
-	      '@alga-psa/auth/': '../packages/auth/src/',
-	      '@alga-psa/auth/getCurrentUser': '../packages/auth/src/lib/getCurrentUser.ts',
-	      '@alga-psa/auth/session-bridge': '../packages/auth/src/lib/session-bridge.ts',
-	      '@alga-psa/auth/withAuth': '../packages/auth/src/lib/withAuth.ts',
-	      '@alga-psa/auth/nextAuthOptions': '../packages/auth/src/lib/nextAuthOptions.ts',
-	      '@alga-psa/auth/actions': '../packages/auth/src/actions/index.ts',
-	      '@alga-psa/auth/components': '../packages/auth/src/components/index.ts',
-	      // SSO provider buttons - swap between CE stub and EE implementation
-	      '@alga-psa/auth/sso/entry': isEE
-	        ? '../ee/server/src/components/auth/SsoProviderButtons.tsx'
-	        : '../packages/auth/src/components/SsoProviderButtons.tsx',
-	      // Notifications package
-	      '@alga-psa/notifications': '../packages/notifications/src',
-	      '@alga-psa/notifications/': '../packages/notifications/src/',
-	      '@alga-psa/notifications/actions': '../packages/notifications/src/actions/index.ts',
-	      '@alga-psa/notifications/components': '../packages/notifications/src/components/index.ts',
-	      '@alga-psa/notifications/hooks': '../packages/notifications/src/hooks/index.ts',
-	      '@alga-psa/scheduling': '../packages/scheduling/src',
-	      '@alga-psa/scheduling/': '../packages/scheduling/src/',
-	      '@alga-psa/tags': '../packages/tags/src',
-	      '@alga-psa/tags/': '../packages/tags/src/',
-	      '@alga-psa/users': '../packages/users/src',
-	      '@alga-psa/users/': '../packages/users/src/',
-	      '@alga-psa/users/actions': '../packages/users/src/actions/index.ts',
-	      '@alga-psa/users/components': '../packages/users/src/components/index.ts',
-	      '@alga-psa/users/hooks': '../packages/users/src/hooks/index.ts',
-	      '@alga-psa/teams': '../packages/teams/src',
-	      '@alga-psa/teams/': '../packages/teams/src/',
-	      '@alga-psa/tenancy': '../packages/tenancy/src',
-	      '@alga-psa/tenancy/': '../packages/tenancy/src/',
-	      '@alga-psa/event-schemas': '../packages/event-schemas/src',
-	      '@alga-psa/event-schemas/': '../packages/event-schemas/src/',
-	      // Documents package
-	      '@alga-psa/documents': '../packages/documents/src',
-	      '@alga-psa/documents/': '../packages/documents/src/',
-	      '@alga-psa/documents/storage/StorageService': '../packages/documents/src/storage/StorageService.ts',
-	      '@alga-psa/documents/actions': '../packages/documents/src/actions/index.ts',
-	      // Reference data package
-	      '@alga-psa/reference-data': '../packages/reference-data/src',
-	      '@alga-psa/reference-data/': '../packages/reference-data/src/',
-	      '@alga-psa/reference-data/actions': '../packages/reference-data/src/actions/index.ts',
-	      '@alga-psa/reference-data/components': '../packages/reference-data/src/components/index.ts',
-	      // Billing package
-	      '@alga-psa/billing': '../packages/billing/src',
-	      '@alga-psa/billing/': '../packages/billing/src/',
-	      '@alga-psa/billing/actions': '../packages/billing/src/actions/index.ts',
-	      '@alga-psa/billing/components': '../packages/billing/src/components/index.ts',
-	      '@alga-psa/billing/models': '../packages/billing/src/models/index.ts',
-	      '@alga-psa/billing/services': '../packages/billing/src/services/index.ts',
-	      // Projects package
-	      '@alga-psa/projects': '../packages/projects/src',
-	      '@alga-psa/projects/': '../packages/projects/src/',
-	      '@alga-psa/projects/actions': '../packages/projects/src/actions/index.ts',
-	      '@alga-psa/projects/components': '../packages/projects/src/components/index.ts',
-	      // DB package (use source files for Turbopack dev/HMR)
-	      '@alga-psa/db': '../packages/db/src/index.ts',
-	      '@alga-psa/db/admin': '../packages/db/src/lib/admin.ts',
-	      '@alga-psa/db/connection': '../packages/db/src/lib/connection.ts',
-	      '@alga-psa/db/tenant': '../packages/db/src/lib/tenant.ts',
-	      '@alga-psa/db/models': '../packages/db/src/models/index.ts',
-	      '@alga-psa/db/models/user': '../packages/db/src/models/user.ts',
-	      '@alga-psa/db/models/userPreferences': '../packages/db/src/models/userPreferences.ts',
-	      '@alga-psa/db/models/tenant': '../packages/db/src/models/tenant.ts',
-	      '@alga-psa/db/models/UserSession': '../packages/db/src/models/UserSession.ts',
-	      // Surveys package
-	      '@alga-psa/surveys': '../packages/surveys/src',
-	      '@alga-psa/surveys/': '../packages/surveys/src/',
-	      '@alga-psa/surveys/actions': '../packages/surveys/src/actions/index.ts',
-	      '@alga-psa/surveys/actions/surveyResponseActions': '../packages/surveys/src/actions/surveyResponseActions.ts',
-	      '@alga-psa/surveys/actions/surveyTokenService': '../packages/surveys/src/actions/surveyTokenService.ts',
-	      '@alga-psa/surveys/components': '../packages/surveys/src/components/index.ts',
-	      '@alga-psa/surveys/components/public/SurveyResponsePage': '../packages/surveys/src/components/public/SurveyResponsePage.tsx',
-	      // Client Portal package
-	      '@alga-psa/client-portal': '../packages/client-portal/src',
-	      '@alga-psa/client-portal/': '../packages/client-portal/src/',
-	      '@alga-psa/client-portal/actions': '../packages/client-portal/src/actions/index.ts',
-	      '@alga-psa/client-portal/components': '../packages/client-portal/src/components/index.ts',
-	      // Portal shared package
-	      '@alga-psa/portal-shared': '../packages/portal-shared/src',
-	      '@alga-psa/portal-shared/': '../packages/portal-shared/src/',
-	      '@alga-psa/portal-shared/actions': '../packages/portal-shared/src/actions/index.ts',
-	      '@alga-psa/portal-shared/types': '../packages/portal-shared/src/types/index.ts',
-	      // Media package
-	      '@alga-psa/media': '../packages/media/src',
-	      '@alga-psa/media/': '../packages/media/src/',
+      '@alga-psa/ui': '../packages/ui/src',
+      '@alga-psa/ui/': '../packages/ui/src/',
+      '@alga-psa/clients': '../packages/clients/src',
+      '@alga-psa/clients/': '../packages/clients/src/',
+      '@alga-psa/auth': '../packages/auth/src',
+      '@alga-psa/auth/': '../packages/auth/src/',
+      '@alga-psa/auth/getCurrentUser': '../packages/auth/src/lib/getCurrentUser.ts',
+      '@alga-psa/auth/session-bridge': '../packages/auth/src/lib/session-bridge.ts',
+      '@alga-psa/auth/withAuth': '../packages/auth/src/lib/withAuth.ts',
+      '@alga-psa/auth/nextAuthOptions': '../packages/auth/src/lib/nextAuthOptions.ts',
+      '@alga-psa/auth/actions': '../packages/auth/src/actions/index.ts',
+      '@alga-psa/auth/components': '../packages/auth/src/components/index.ts',
+      // SSO provider buttons - swap between CE stub and EE implementation
+      '@alga-psa/auth/sso/entry': isEE
+        ? '../ee/server/src/components/auth/SsoProviderButtons.tsx'
+        : '../packages/auth/src/components/SsoProviderButtons.tsx',
+      // Notifications package
+      '@alga-psa/notifications': '../packages/notifications/src',
+      '@alga-psa/notifications/': '../packages/notifications/src/',
+      '@alga-psa/notifications/actions': '../packages/notifications/src/actions/index.ts',
+      '@alga-psa/notifications/components': '../packages/notifications/src/components/index.ts',
+      '@alga-psa/notifications/hooks': '../packages/notifications/src/hooks/index.ts',
+      '@alga-psa/scheduling': '../packages/scheduling/src',
+      '@alga-psa/scheduling/': '../packages/scheduling/src/',
+      '@alga-psa/tags': '../packages/tags/src',
+      '@alga-psa/tags/': '../packages/tags/src/',
+      '@alga-psa/users': '../packages/users/src',
+      '@alga-psa/users/': '../packages/users/src/',
+      '@alga-psa/users/actions': '../packages/users/src/actions/index.ts',
+      '@alga-psa/users/components': '../packages/users/src/components/index.ts',
+      '@alga-psa/users/hooks': '../packages/users/src/hooks/index.ts',
+      '@alga-psa/teams': '../packages/teams/src',
+      '@alga-psa/teams/': '../packages/teams/src/',
+      '@alga-psa/tenancy': '../packages/tenancy/src',
+      '@alga-psa/tenancy/': '../packages/tenancy/src/',
+      '@alga-psa/event-schemas': '../packages/event-schemas/src',
+      '@alga-psa/event-schemas/': '../packages/event-schemas/src/',
+      // Documents package
+      '@alga-psa/documents': '../packages/documents/src',
+      '@alga-psa/documents/': '../packages/documents/src/',
+      '@alga-psa/documents/storage/StorageService': '../packages/documents/src/storage/StorageService.ts',
+      '@alga-psa/documents/actions': '../packages/documents/src/actions/index.ts',
+      // Reference data package
+      '@alga-psa/reference-data': '../packages/reference-data/src',
+      '@alga-psa/reference-data/': '../packages/reference-data/src/',
+      '@alga-psa/reference-data/actions': '../packages/reference-data/src/actions/index.ts',
+      '@alga-psa/reference-data/components': '../packages/reference-data/src/components/index.ts',
+      // Billing package
+      '@alga-psa/billing': '../packages/billing/src',
+      '@alga-psa/billing/': '../packages/billing/src/',
+      '@alga-psa/billing/actions': '../packages/billing/src/actions/index.ts',
+      '@alga-psa/billing/components': '../packages/billing/src/components/index.ts',
+      '@alga-psa/billing/models': '../packages/billing/src/models/index.ts',
+      '@alga-psa/billing/services': '../packages/billing/src/services/index.ts',
+      // Projects package
+      '@alga-psa/projects': '../packages/projects/src',
+      '@alga-psa/projects/': '../packages/projects/src/',
+      '@alga-psa/projects/actions': '../packages/projects/src/actions/index.ts',
+      '@alga-psa/projects/components': '../packages/projects/src/components/index.ts',
+      // DB package (use source files for Turbopack dev/HMR)
+      '@alga-psa/db': '../packages/db/src/index.ts',
+      '@alga-psa/db/admin': '../packages/db/src/lib/admin.ts',
+      '@alga-psa/db/connection': '../packages/db/src/lib/connection.ts',
+      '@alga-psa/db/tenant': '../packages/db/src/lib/tenant.ts',
+      '@alga-psa/db/models': '../packages/db/src/models/index.ts',
+      '@alga-psa/db/models/user': '../packages/db/src/models/user.ts',
+      '@alga-psa/db/models/userPreferences': '../packages/db/src/models/userPreferences.ts',
+      '@alga-psa/db/models/tenant': '../packages/db/src/models/tenant.ts',
+      '@alga-psa/db/models/UserSession': '../packages/db/src/models/UserSession.ts',
+      // Surveys package
+      '@alga-psa/surveys': '../packages/surveys/src',
+      '@alga-psa/surveys/': '../packages/surveys/src/',
+      '@alga-psa/surveys/actions': '../packages/surveys/src/actions/index.ts',
+      '@alga-psa/surveys/actions/surveyResponseActions': '../packages/surveys/src/actions/surveyResponseActions.ts',
+      '@alga-psa/surveys/actions/surveyTokenService': '../packages/surveys/src/actions/surveyTokenService.ts',
+      '@alga-psa/surveys/components': '../packages/surveys/src/components/index.ts',
+      '@alga-psa/surveys/components/public/SurveyResponsePage': '../packages/surveys/src/components/public/SurveyResponsePage.tsx',
+      // Client Portal package
+      '@alga-psa/client-portal': '../packages/client-portal/src',
+      '@alga-psa/client-portal/': '../packages/client-portal/src/',
+      '@alga-psa/client-portal/actions': '../packages/client-portal/src/actions/index.ts',
+      '@alga-psa/client-portal/components': '../packages/client-portal/src/components/index.ts',
+      // Portal shared package
+      '@alga-psa/portal-shared': '../packages/portal-shared/src',
+      '@alga-psa/portal-shared/': '../packages/portal-shared/src/',
+      '@alga-psa/portal-shared/actions': '../packages/portal-shared/src/actions/index.ts',
+      '@alga-psa/portal-shared/types': '../packages/portal-shared/src/types/index.ts',
+      // Media package
+      '@alga-psa/media': '../packages/media/src',
+      '@alga-psa/media/': '../packages/media/src/',
       '@/empty': isEE ? '../ee/server/src' : './src/empty',
       '@/empty/': isEE ? '../ee/server/src/' : './src/empty/',
       './src/empty': isEE ? '../ee/server/src' : './src/empty',
@@ -336,6 +336,12 @@ const nextConfig = {
       '@alga-psa/integrations/email/domains/entry': isEE
         ? '@alga-psa/integrations/email/domains/ee/entry'
         : '@alga-psa/integrations/email/domains/oss/entry',
+      '@alga-psa/integrations/entra/components/entry': isEE
+        ? '../packages/integrations/src/entra/components/ee/entry'
+        : '../packages/integrations/src/entra/components/oss/entry',
+      '@alga-psa/integrations/entra/routes/entry': isEE
+        ? '../packages/integrations/src/entra/routes/ee/entry'
+        : '../packages/integrations/src/entra/routes/oss/entry',
       '@alga-psa/client-portal/domain-settings/entry': isEE
         ? '@alga-psa/client-portal/domain-settings/ee/entry'
         : '@alga-psa/client-portal/domain-settings/oss/entry',
@@ -350,7 +356,7 @@ const nextConfig = {
         : '@product/auth-ee/oss/entry',
       '@product/extension-actions': isEE
         ? '@product/extension-actions/ee'
-        : '@product/extension-actions/oss',        
+        : '@product/extension-actions/oss',
       '@product/extension-actions/entry': isEE
         ? '@product/extension-actions/ee/entry'
         : '@product/extension-actions/oss/entry',
@@ -367,34 +373,34 @@ const nextConfig = {
     },
   },
   reactStrictMode: false, // Disabled to prevent double rendering in development
-	  transpilePackages: [
-	    '@blocknote/core',
-	    '@blocknote/react',
-	    '@blocknote/mantine',
-	    '@emoji-mart/data',
-	    '@alga-psa/core',
-	    '@alga-psa/auth',
-	    '@alga-psa/tags',
-	    '@alga-psa/ui',
-	    '@alga-psa/clients',
-	    '@alga-psa/scheduling',
-	    '@alga-psa/users',
-	    '@alga-psa/notifications',
-	    '@alga-psa/email',
-	    '@alga-psa/teams',
-	    '@alga-psa/tenancy',
-	    '@alga-psa/integrations',
-	    '@alga-psa/client-portal',
-	    '@alga-psa/portal-shared',
-	    '@alga-psa/event-schemas',
-	    '@alga-psa/documents',
-	    '@alga-psa/media',
-	    '@alga-psa/reference-data',
-	    '@alga-psa/billing',
-	    '@alga-psa/projects',
-	    '@alga-psa/surveys',
-	    // Product feature packages (only those needed in this app)
-	    '@product/extensions',
+  transpilePackages: [
+    '@blocknote/core',
+    '@blocknote/react',
+    '@blocknote/mantine',
+    '@emoji-mart/data',
+    '@alga-psa/core',
+    '@alga-psa/auth',
+    '@alga-psa/tags',
+    '@alga-psa/ui',
+    '@alga-psa/clients',
+    '@alga-psa/scheduling',
+    '@alga-psa/users',
+    '@alga-psa/notifications',
+    '@alga-psa/email',
+    '@alga-psa/teams',
+    '@alga-psa/tenancy',
+    '@alga-psa/integrations',
+    '@alga-psa/client-portal',
+    '@alga-psa/portal-shared',
+    '@alga-psa/event-schemas',
+    '@alga-psa/documents',
+    '@alga-psa/media',
+    '@alga-psa/reference-data',
+    '@alga-psa/billing',
+    '@alga-psa/projects',
+    '@alga-psa/surveys',
+    // Product feature packages (only those needed in this app)
+    '@product/extensions',
     '@product/settings-extensions',
     '@product/billing',
     '@alga-psa/workflows',
@@ -503,6 +509,12 @@ const nextConfig = {
       '@alga-psa/integrations/email/domains/entry': isEE
         ? path.join(__dirname, '../packages/integrations/src/email/domains/ee/entry.ts')
         : path.join(__dirname, '../packages/integrations/src/email/domains/oss/entry.ts'),
+      '@alga-psa/integrations/entra/components/entry': isEE
+        ? path.join(__dirname, '../packages/integrations/src/entra/components/ee/entry.tsx')
+        : path.join(__dirname, '../packages/integrations/src/entra/components/oss/entry.tsx'),
+      '@alga-psa/integrations/entra/routes/entry': isEE
+        ? path.join(__dirname, '../packages/integrations/src/entra/routes/ee/entry.ts')
+        : path.join(__dirname, '../packages/integrations/src/entra/routes/oss/entry.ts'),
       '@alga-psa/client-portal/domain-settings/entry': isEE
         ? path.join(__dirname, '../packages/client-portal/src/domain-settings/ee/entry.tsx')
         : path.join(__dirname, '../packages/client-portal/src/domain-settings/oss/entry.tsx'),
@@ -607,6 +619,20 @@ const nextConfig = {
           fromCandidates: [
             path.join(__dirname, '../packages/integrations/src/email/domains/entry.ts'),
             path.join(__dirname, '../packages/integrations/src/email/domains/oss/entry.ts'),
+          ],
+        },
+        {
+          to: path.join(__dirname, '../packages/integrations/src/entra/components/ee/entry.tsx'),
+          fromCandidates: [
+            path.join(__dirname, '../packages/integrations/src/entra/components/entry.ts'),
+            path.join(__dirname, '../packages/integrations/src/entra/components/oss/entry.tsx'),
+          ],
+        },
+        {
+          to: path.join(__dirname, '../packages/integrations/src/entra/routes/ee/entry.ts'),
+          fromCandidates: [
+            path.join(__dirname, '../packages/integrations/src/entra/routes/entry.ts'),
+            path.join(__dirname, '../packages/integrations/src/entra/routes/oss/entry.ts'),
           ],
         },
         {
@@ -795,85 +821,85 @@ const nextConfig = {
         );
       }
     }
-    
-	    // In enterprise builds, remap any CE-stub absolute paths to their EE equivalents.
-	    // This ensures tsconfig path mapping that points to src/empty is overridden at webpack stage.
-	    if (isEE) {
-	      if (!webpack) {
-	        console.warn('[next.config] Skipping EE empty-stub replacement plugin because webpack is unavailable in the current runtime.');
-	      } else {
-	        const ceEmptyPrefix = path.join(__dirname, 'src', 'empty') + path.sep;
-	        const ceEmptyRegex = new RegExp(ceEmptyPrefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
-	        // Also handle packages/ee/src CE stubs (used by workspace package dynamic imports)
-	        const cePackagesEePrefix = path.join(__dirname, '../packages/ee/src') + path.sep;
-	        const cePackagesEeRegex = new RegExp(cePackagesEePrefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
-	        const eeSrcRoot = path.join(__dirname, '../ee/server/src') + path.sep;
-	        const workflowsEeEntry = path.join(__dirname, '../ee/server/src/workflows/entry.tsx');
-	        const authSsoButtonsEeEntry = path.join(
-	          __dirname,
-	          '../ee/server/src/components/auth/SsoProviderButtons.tsx',
-	        );
-	        config.plugins = config.plugins || [];
-	        config.plugins.push(new webpack.NormalModuleReplacementPlugin(/.*/, (resource) => {
-	          try {
-	            const req = resource.request || '';
-	            // Next.js adds a JsConfigPathsPlugin based on tsconfig "paths".
-	            // If the workflows entry specifier gets resolved via tsconfig `paths` before webpack aliasing, an enterprise build
-	            // can accidentally bundle the CE/OSS workflow stub UI ("hybrid" build).
-	            //
-	            // Force consistency by rewriting the workflows entry specifier to the canonical EE source file *before* resolution.
-	            if (req === '@alga-psa/workflows/entry') {
-	              resource.request = workflowsEeEntry;
-	              return;
-	            }
-	            // Same issue for auth SSO provider buttons: tsconfig may point `@alga-psa/auth/sso/entry`
-	            // at the CE stub. Force the EE implementation for enterprise builds.
-	            if (req === '@alga-psa/auth/sso/entry') {
-	              resource.request = authSsoButtonsEeEntry;
-	              return;
-	            }
-	            // IMPORTANT:
-	            // Next.js adds a JsConfigPathsPlugin based on tsconfig "paths".
-	            // Our tsconfig maps `@ee/* -> packages/ee/src/*` (CE stubs) and relies on webpack to override
-	            // to `ee/server/src` in EE builds.
-	            //
-	            // In practice, JsConfigPathsPlugin can resolve the stub path first when the stub file exists,
-	            // producing "hybrid" EE builds where some `@ee/*` imports fall back to real EE code (when no
-	            // stub exists), but many resolve to CE stubs (when the stub does exist).
-	            //
-	            // To force consistency, rewrite `@ee/*` specifiers to the EE source root *before* resolution.
-	            if (req === '@ee') {
-	              resource.request = eeSrcRoot.slice(0, -path.sep.length);
-	              return;
-	            }
-	            if (req.startsWith('@ee/')) {
-	              const rel = req.substring('@ee/'.length);
-	              const mapped = path.join(eeSrcRoot, rel);
-	              if (process.env.LOG_MODULE_RESOLUTION === '1') {
-	                console.log('[replace:EE:@ee]', { from: req, to: mapped });
-	              }
-	              resource.request = mapped;
-	              return;
-	            }
-	            // Prefer @enterprise imports for CE/EE separation; rewrite to EE sources in enterprise builds.
-	            if (req === '@enterprise') {
-	              resource.request = eeSrcRoot.slice(0, -path.sep.length);
-	              return;
-	            }
-	            if (req.startsWith('@enterprise/')) {
-	              const rel = req.substring('@enterprise/'.length);
-	              const mapped = path.join(eeSrcRoot, rel);
-	              if (process.env.LOG_MODULE_RESOLUTION === '1') {
-	                console.log('[replace:EE:@enterprise]', { from: req, to: mapped });
-	              }
-	              resource.request = mapped;
-	              return;
-	            }
-	            // Replace src/empty paths
-	            if (ceEmptyRegex.test(req)) {
-	              const rel = req.substring(ceEmptyPrefix.length);
-	              const mapped = path.join(eeSrcRoot, rel);
-	              if (process.env.LOG_MODULE_RESOLUTION === '1') {
+
+    // In enterprise builds, remap any CE-stub absolute paths to their EE equivalents.
+    // This ensures tsconfig path mapping that points to src/empty is overridden at webpack stage.
+    if (isEE) {
+      if (!webpack) {
+        console.warn('[next.config] Skipping EE empty-stub replacement plugin because webpack is unavailable in the current runtime.');
+      } else {
+        const ceEmptyPrefix = path.join(__dirname, 'src', 'empty') + path.sep;
+        const ceEmptyRegex = new RegExp(ceEmptyPrefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+        // Also handle packages/ee/src CE stubs (used by workspace package dynamic imports)
+        const cePackagesEePrefix = path.join(__dirname, '../packages/ee/src') + path.sep;
+        const cePackagesEeRegex = new RegExp(cePackagesEePrefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+        const eeSrcRoot = path.join(__dirname, '../ee/server/src') + path.sep;
+        const workflowsEeEntry = path.join(__dirname, '../ee/server/src/workflows/entry.tsx');
+        const authSsoButtonsEeEntry = path.join(
+          __dirname,
+          '../ee/server/src/components/auth/SsoProviderButtons.tsx',
+        );
+        config.plugins = config.plugins || [];
+        config.plugins.push(new webpack.NormalModuleReplacementPlugin(/.*/, (resource) => {
+          try {
+            const req = resource.request || '';
+            // Next.js adds a JsConfigPathsPlugin based on tsconfig "paths".
+            // If the workflows entry specifier gets resolved via tsconfig `paths` before webpack aliasing, an enterprise build
+            // can accidentally bundle the CE/OSS workflow stub UI ("hybrid" build).
+            //
+            // Force consistency by rewriting the workflows entry specifier to the canonical EE source file *before* resolution.
+            if (req === '@alga-psa/workflows/entry') {
+              resource.request = workflowsEeEntry;
+              return;
+            }
+            // Same issue for auth SSO provider buttons: tsconfig may point `@alga-psa/auth/sso/entry`
+            // at the CE stub. Force the EE implementation for enterprise builds.
+            if (req === '@alga-psa/auth/sso/entry') {
+              resource.request = authSsoButtonsEeEntry;
+              return;
+            }
+            // IMPORTANT:
+            // Next.js adds a JsConfigPathsPlugin based on tsconfig "paths".
+            // Our tsconfig maps `@ee/* -> packages/ee/src/*` (CE stubs) and relies on webpack to override
+            // to `ee/server/src` in EE builds.
+            //
+            // In practice, JsConfigPathsPlugin can resolve the stub path first when the stub file exists,
+            // producing "hybrid" EE builds where some `@ee/*` imports fall back to real EE code (when no
+            // stub exists), but many resolve to CE stubs (when the stub does exist).
+            //
+            // To force consistency, rewrite `@ee/*` specifiers to the EE source root *before* resolution.
+            if (req === '@ee') {
+              resource.request = eeSrcRoot.slice(0, -path.sep.length);
+              return;
+            }
+            if (req.startsWith('@ee/')) {
+              const rel = req.substring('@ee/'.length);
+              const mapped = path.join(eeSrcRoot, rel);
+              if (process.env.LOG_MODULE_RESOLUTION === '1') {
+                console.log('[replace:EE:@ee]', { from: req, to: mapped });
+              }
+              resource.request = mapped;
+              return;
+            }
+            // Prefer @enterprise imports for CE/EE separation; rewrite to EE sources in enterprise builds.
+            if (req === '@enterprise') {
+              resource.request = eeSrcRoot.slice(0, -path.sep.length);
+              return;
+            }
+            if (req.startsWith('@enterprise/')) {
+              const rel = req.substring('@enterprise/'.length);
+              const mapped = path.join(eeSrcRoot, rel);
+              if (process.env.LOG_MODULE_RESOLUTION === '1') {
+                console.log('[replace:EE:@enterprise]', { from: req, to: mapped });
+              }
+              resource.request = mapped;
+              return;
+            }
+            // Replace src/empty paths
+            if (ceEmptyRegex.test(req)) {
+              const rel = req.substring(ceEmptyPrefix.length);
+              const mapped = path.join(eeSrcRoot, rel);
+              if (process.env.LOG_MODULE_RESOLUTION === '1') {
                 console.log('[replace:EE:empty]', { from: req, to: mapped });
               }
               resource.request = mapped;
@@ -885,15 +911,15 @@ const nextConfig = {
               if (process.env.LOG_MODULE_RESOLUTION === '1') {
                 console.log('[replace:EE:packages]', { from: req, to: mapped });
               }
-	              resource.request = mapped;
-	            }
-	          } catch {}
-	        }));
-	      }
-	    }
+              resource.request = mapped;
+            }
+          } catch { }
+        }));
+      }
+    }
 
-  // Conditionally enable verbose resolution logging for EE/CE module paths
-  if (process.env.LOG_MODULE_RESOLUTION === '1') {
+    // Conditionally enable verbose resolution logging for EE/CE module paths
+    if (process.env.LOG_MODULE_RESOLUTION === '1') {
       config.plugins = config.plugins || [];
       config.plugins.push(new LogModuleResolutionPlugin());
 
@@ -912,7 +938,7 @@ const nextConfig = {
                       context: request.context?.issuer || ctx.issuer,
                     });
                   }
-                } catch {}
+                } catch { }
                 done();
               });
               resolver.hooks.result.tap('LogResolverPlugin', (result) => {
@@ -927,7 +953,7 @@ const nextConfig = {
                     resolvedPath: resPath,
                     mappedTo: resPath.includes('/ee/server/src/') ? 'EE' : (resPath.includes('/server/src/empty/') ? 'CE-stub' : 'unknown'),
                   });
-                } catch {}
+                } catch { }
               });
             });
             console.log('[next.config] LogModuleResolutionPlugin enabled');
@@ -937,7 +963,7 @@ const nextConfig = {
         }
       }
       config.plugins.push(new LogResolverPlugin());
-  }
+    }
 
     return config;
   },

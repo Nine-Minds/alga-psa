@@ -3,6 +3,7 @@
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
+import { routes } from '@alga-psa/integrations/entra/routes/entry';
 import { createTenantKnex } from '@alga-psa/db';
 import { generateMicrosoftAuthUrl, generateNonce } from '../../utils/email/oauthHelpers';
 
@@ -100,7 +101,7 @@ function isClientPortalUser(user: unknown): boolean {
 }
 
 async function callEeRoute<T>(params: {
-  importPath: string;
+  importFn: any;
   method: 'GET' | 'POST';
   body?: unknown;
   query?: Record<string, string | number | boolean | undefined>;
@@ -110,14 +111,14 @@ async function callEeRoute<T>(params: {
   }
 
   try {
-    const eeRouteModule = await import(params.importPath);
+    const eeRouteModule = params.importFn;
     const routeHandler = eeRouteModule[params.method] as RouteHandler | undefined;
 
     if (!routeHandler) {
       return eeUnavailableResult<T>();
     }
 
-    const url = new URL(`https://localhost/internal/entra${params.importPath}`);
+    const url = new URL(`https://localhost/internal/entra/ee-route`);
     if (params.query) {
       for (const [key, value] of Object.entries(params.query)) {
         if (value === undefined || value === null) {
@@ -323,7 +324,7 @@ export const getEntraIntegrationStatus = withAuth(async (user, { tenant }) => {
   }
 
   return callEeRoute<EntraStatusResponse>({
-    importPath: '@enterprise/app/api/integrations/entra/route',
+    importFn: routes.route,
     method: 'GET',
   });
 });
@@ -353,7 +354,7 @@ export const connectEntraIntegration = withAuth(async (
   await clearStaleCredentialsForConnectionType(tenant, input.connectionType);
 
   return callEeRoute<{ status: string; connectionType: EntraConnectionType }>({
-    importPath: '@enterprise/app/api/integrations/entra/connect/route',
+    importFn: routes.connectRoute,
     method: 'POST',
     body: input,
   });
@@ -459,7 +460,7 @@ export const validateEntraDirectConnection = withAuth(async (user, { tenant }) =
   }
 
   return callEeRoute<EntraDirectValidationResponse>({
-    importPath: '@enterprise/app/api/integrations/entra/validate-direct/route',
+    importFn: routes.validateDirectRoute,
     method: 'POST',
   });
 });
@@ -483,7 +484,7 @@ export const validateEntraCippConnection = withAuth(async (user, { tenant }) => 
   }
 
   return callEeRoute<EntraCippValidationResponse>({
-    importPath: '@enterprise/app/api/integrations/entra/validate-cipp/route',
+    importFn: routes.validateCippRoute,
     method: 'POST',
   });
 });
@@ -507,7 +508,7 @@ export const disconnectEntraIntegration = withAuth(async (user, { tenant }) => {
   }
 
   return callEeRoute<{ status: string }>({
-    importPath: '@enterprise/app/api/integrations/entra/disconnect/route',
+    importFn: routes.disconnectRoute,
     method: 'POST',
   });
 });
@@ -532,7 +533,7 @@ export const getEntraSyncRunHistory = withAuth(async (user, { tenant }, limit: n
 
   const safeLimit = Number.isFinite(limit) ? Math.max(1, Math.min(50, Math.floor(limit))) : 10;
   return callEeRoute<EntraSyncHistoryResponse>({
-    importPath: '@enterprise/app/api/integrations/entra/sync/runs/route',
+    importFn: routes.syncRunsRoute,
     method: 'GET',
     query: { limit: safeLimit },
   }).then((result) => {
@@ -580,7 +581,7 @@ export const getEntraReconciliationQueue = withAuth(async (user, { tenant }, lim
 
   const safeLimit = Number.isFinite(limit) ? Math.max(1, Math.min(200, Math.floor(limit))) : 50;
   return callEeRoute<EntraReconciliationQueueResponse>({
-    importPath: '@enterprise/app/api/integrations/entra/reconciliation-queue/route',
+    importFn: routes.reconciliationQueueRoute,
     method: 'GET',
     query: { limit: safeLimit },
   });
@@ -618,7 +619,7 @@ export const resolveEntraQueueToExisting = withAuth(async (
   }
 
   return callEeRoute<EntraQueueResolutionResponse>({
-    importPath: '@enterprise/app/api/integrations/entra/reconciliation-queue/resolve-existing/route',
+    importFn: routes.resolveExistingRoute,
     method: 'POST',
     body: input,
   });
@@ -656,7 +657,7 @@ export const resolveEntraQueueToNew = withAuth(async (
   }
 
   return callEeRoute<EntraQueueResolutionResponse>({
-    importPath: '@enterprise/app/api/integrations/entra/reconciliation-queue/resolve-new/route',
+    importFn: routes.resolveNewRoute,
     method: 'POST',
     body: input,
   });
@@ -681,7 +682,7 @@ export const discoverEntraManagedTenants = withAuth(async (user, { tenant }) => 
   }
 
   return callEeRoute<{ discoveredTenantCount: number; discoveredTenants: unknown[] }>({
-    importPath: '@enterprise/app/api/integrations/entra/discovery/route',
+    importFn: routes.discoveryRoute,
     method: 'POST',
   });
 });
@@ -705,7 +706,7 @@ export const getEntraMappingPreview = withAuth(async (user, { tenant }) => {
   }
 
   return callEeRoute<EntraMappingPreviewResponse>({
-    importPath: '@enterprise/app/api/integrations/entra/mappings/preview/route',
+    importFn: routes.mappingsPreviewRoute,
     method: 'GET',
   });
 });
@@ -733,7 +734,7 @@ export const confirmEntraMappings = withAuth(async (
   }
 
   const confirmResult = await callEeRoute<{ confirmedMappings: number }>({
-    importPath: '@enterprise/app/api/integrations/entra/mappings/confirm/route',
+    importFn: routes.mappingsConfirmRoute,
     method: 'POST',
     body: { mappings: input.mappings },
   });
@@ -856,7 +857,7 @@ export const unmapEntraTenant = withAuth(async (
   }
 
   return callEeRoute<{ managedTenantId: string; status: string }>({
-    importPath: '@enterprise/app/api/integrations/entra/mappings/unmap/route',
+    importFn: routes.mappingsUnmapRoute,
     method: 'POST',
     body: input,
   });
@@ -885,7 +886,7 @@ export const remapEntraTenant = withAuth(async (
   }
 
   return callEeRoute<{ managedTenantId: string; targetClientId: string; status: string }>({
-    importPath: '@enterprise/app/api/integrations/entra/mappings/remap/route',
+    importFn: routes.mappingsRemapRoute,
     method: 'POST',
     body: input,
   });
@@ -977,7 +978,7 @@ export const startEntraSync = withAuth(async (
   }
 
   return callEeRoute<{ accepted: boolean; scope: EntraSyncScope; runId: string | null }>({
-    importPath: '@enterprise/app/api/integrations/entra/sync/route',
+    importFn: routes.syncRoute,
     method: 'POST',
     body: input,
   });

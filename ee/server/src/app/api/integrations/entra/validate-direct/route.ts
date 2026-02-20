@@ -2,10 +2,10 @@ import axios from 'axios';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { badRequest, dynamic, ok, runtime } from '../_responses';
 import { requireEntraUiFlagEnabled } from '../_guards';
-import { resolveMicrosoftCredentialsForTenant } from '@/lib/integrations/entra/auth/microsoftCredentialResolver';
-import { refreshEntraDirectToken } from '@/lib/integrations/entra/auth/refreshDirectToken';
-import { ENTRA_DIRECT_SECRET_KEYS } from '@/lib/integrations/entra/secrets';
-import { updateEntraConnectionValidation } from '@/lib/integrations/entra/connectionRepository';
+import { resolveMicrosoftCredentialsForTenant } from '@enterprise/lib/integrations/entra/auth/microsoftCredentialResolver';
+import { refreshEntraDirectToken } from '@enterprise/lib/integrations/entra/auth/refreshDirectToken';
+import { ENTRA_DIRECT_SECRET_KEYS } from '@enterprise/lib/integrations/entra/secrets';
+import { updateEntraConnectionValidation } from '@enterprise/lib/integrations/entra/connectionRepository';
 
 export { dynamic, runtime };
 

@@ -1,6 +1,6 @@
 import { badRequest, dynamic, ok, parseJsonBody, runtime } from '../../_responses';
 import { requireEntraUiFlagEnabled } from '../../_guards';
-import { confirmEntraMappings } from '@/lib/integrations/entra/mapping/confirmMappingsService';
+import { confirmEntraMappings } from '@enterprise/lib/integrations/entra/mapping/confirmMappingsService';
 
 export { dynamic, runtime };
 

@@ -1,6 +1,6 @@
 import { badRequest, dynamic, ok, runtime } from '../../_responses';
 import { requireEntraUiFlagEnabled } from '../../_guards';
-import { buildEntraMappingPreview } from '@/lib/integrations/entra/mapping/mappingPreviewService';
+import { buildEntraMappingPreview } from '@enterprise/lib/integrations/entra/mapping/mappingPreviewService';
 
 export { dynamic, runtime };
 

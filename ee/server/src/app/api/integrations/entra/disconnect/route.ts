@@ -1,8 +1,8 @@
 import { dynamic, ok, runtime } from '../_responses';
 import { requireEntraUiFlagEnabled } from '../_guards';
-import { clearEntraDirectTokenSet } from '@/lib/integrations/entra/auth/tokenStore';
-import { clearEntraCippCredentials } from '@/lib/integrations/entra/providers/cipp/cippSecretStore';
-import { disconnectActiveEntraConnection } from '@/lib/integrations/entra/connectionRepository';
+import { clearEntraDirectTokenSet } from '@enterprise/lib/integrations/entra/auth/tokenStore';
+import { clearEntraCippCredentials } from '@enterprise/lib/integrations/entra/providers/cipp/cippSecretStore';
+import { disconnectActiveEntraConnection } from '@enterprise/lib/integrations/entra/connectionRepository';
 
 export { dynamic, runtime };
 

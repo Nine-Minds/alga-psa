@@ -1,0 +1,17 @@
+export const routes = {
+    route: null,
+    connectRoute: null,
+    disconnectRoute: null,
+    validateDirectRoute: null,
+    validateCippRoute: null,
+    discoveryRoute: null,
+    syncRoute: null,
+    syncRunsRoute: null,
+    mappingsPreviewRoute: null,
+    mappingsConfirmRoute: null,
+    mappingsUnmapRoute: null,
+    mappingsRemapRoute: null,
+    reconciliationQueueRoute: null,
+    resolveExistingRoute: null,
+    resolveNewRoute: null,
+};

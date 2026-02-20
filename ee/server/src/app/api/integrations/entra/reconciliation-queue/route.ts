@@ -1,6 +1,6 @@
 import { badRequest, dynamic, ok, runtime } from '../_responses';
 import { requireEntraUiFlagEnabled } from '../_guards';
-import { listOpenEntraReconciliationQueue } from '@/lib/integrations/entra/reconciliationQueueService';
+import { listOpenEntraReconciliationQueue } from '@enterprise/lib/integrations/entra/reconciliationQueueService';
 
 export { dynamic, runtime };
 

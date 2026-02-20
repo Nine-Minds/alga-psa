@@ -1,7 +1,7 @@
 import { dynamic, ok, runtime } from './_responses';
 import { requireEntraUiFlagEnabled } from './_guards';
-import { createTenantKnex, runWithTenant } from '@/lib/db';
-import { getActiveEntraPartnerConnection } from '@/lib/integrations/entra/connectionRepository';
+import { createTenantKnex, runWithTenant } from '@enterprise/lib/db';
+import { getActiveEntraPartnerConnection } from '@enterprise/lib/integrations/entra/connectionRepository';
 
 export { dynamic, runtime };
 

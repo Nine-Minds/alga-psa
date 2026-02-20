@@ -49,26 +49,7 @@ const StripeConnectionSettings = dynamic(
   }
 );
 
-const EntraIntegrationSettings = dynamic(
-  () =>
-    import('@enterprise/components/settings/integrations/EntraIntegrationSettings').then(
-      (mod) =>
-        (mod as unknown as { default: React.ComponentType }).default
-    ),
-  {
-    loading: () => (
-      <Card>
-        <CardContent className="py-8">
-          <div className="flex flex-col items-center justify-center gap-2">
-            <Spinner size="md" />
-            <span className="text-sm text-muted-foreground">Loading Entra integration settings...</span>
-          </div>
-        </CardContent>
-      </Card>
-    ),
-    ssr: false,
-  }
-);
+import { EntraIntegrationSettings } from '@alga-psa/integrations/entra/components/entry';
 
 // Integration category definitions
 interface IntegrationCategory {
@@ -93,7 +74,7 @@ const IntegrationsSettingsPage: React.FC = () => {
   const isEntraUiEnabled = isEEAvailable && entraUiFlag.enabled;
   const searchParams = useSearchParams();
   const categoryParam = searchParams?.get('category');
-  
+
   // Initialize selected category from URL param or default to 'accounting'
   const [selectedCategory, setSelectedCategory] = useState<string>(
     categoryParam && ['accounting', 'rmm', 'communication', 'calendar', 'providers', 'identity', 'payments'].includes(categoryParam)

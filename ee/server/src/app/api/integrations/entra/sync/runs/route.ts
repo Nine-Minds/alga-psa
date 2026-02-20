@@ -1,6 +1,6 @@
 import { badRequest, dynamic, ok, runtime } from '../../_responses';
 import { requireEntraUiFlagEnabled } from '../../_guards';
-import { getEntraSyncRunHistory } from '@/lib/integrations/entra/entraWorkflowClient';
+import { getEntraSyncRunHistory } from '@enterprise/lib/integrations/entra/entraWorkflowClient';
 
 export { dynamic, runtime };
 

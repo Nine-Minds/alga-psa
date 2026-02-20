@@ -1,6 +1,6 @@
 import { badRequest, dynamic, ok, runtime } from '../_responses';
 import { requireEntraUiFlagEnabled } from '../_guards';
-import { discoverManagedTenantsForTenant } from '@/lib/integrations/entra/discoveryService';
+import { discoverManagedTenantsForTenant } from '@enterprise/lib/integrations/entra/discoveryService';
 
 export { dynamic, runtime };
 

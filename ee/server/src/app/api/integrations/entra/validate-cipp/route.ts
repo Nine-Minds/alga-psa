@@ -1,8 +1,8 @@
 import axios from 'axios';
 import { badRequest, dynamic, ok, runtime } from '../_responses';
 import { requireEntraUiFlagEnabled } from '../_guards';
-import { getEntraCippCredentials } from '@/lib/integrations/entra/providers/cipp/cippSecretStore';
-import { updateEntraConnectionValidation } from '@/lib/integrations/entra/connectionRepository';
+import { getEntraCippCredentials } from '@enterprise/lib/integrations/entra/providers/cipp/cippSecretStore';
+import { updateEntraConnectionValidation } from '@enterprise/lib/integrations/entra/connectionRepository';
 
 export { dynamic, runtime };
 

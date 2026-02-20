@@ -1,7 +1,7 @@
 import { badRequest, dynamic, ok, parseJsonBody, runtime } from '../../_responses';
 import { requireEntraUiFlagEnabled } from '../../_guards';
-import { confirmEntraMappings, type ConfirmEntraMappingInput } from '@/lib/integrations/entra/mapping/confirmMappingsService';
-import { findManagedTenantAssignmentConflicts } from '@/lib/integrations/entra/mapping/validation';
+import { confirmEntraMappings, type ConfirmEntraMappingInput } from '@enterprise/lib/integrations/entra/mapping/confirmMappingsService';
+import { findManagedTenantAssignmentConflicts } from '@enterprise/lib/integrations/entra/mapping/validation';
 
 export { dynamic, runtime };
 

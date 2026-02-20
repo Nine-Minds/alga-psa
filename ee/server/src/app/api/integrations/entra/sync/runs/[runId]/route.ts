@@ -1,7 +1,7 @@
 import { badRequest, dynamic, ok, runtime } from '../../../_responses';
 import { requireEntraUiFlagEnabled } from '../../../_guards';
-import { getEntraSyncRunProgress } from '@/lib/integrations/entra/entraWorkflowClient';
-import { serializeEntraSyncRunProgress } from '@/lib/integrations/entra/sync/syncResultSerializer';
+import { getEntraSyncRunProgress } from '@enterprise/lib/integrations/entra/entraWorkflowClient';
+import { serializeEntraSyncRunProgress } from '@enterprise/lib/integrations/entra/sync/syncResultSerializer';
 
 export { dynamic, runtime };
 
