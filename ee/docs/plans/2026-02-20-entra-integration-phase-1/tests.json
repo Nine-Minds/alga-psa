@@ -945,7 +945,7 @@
   {
     "id": "T112",
     "description": "Sync result serializer output remains stable across success/failure run states.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F109"
     ]
