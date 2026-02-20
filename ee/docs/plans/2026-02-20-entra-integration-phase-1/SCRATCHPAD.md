@@ -379,3 +379,5 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - Validation command: `cd server && npx vitest run src/test/unit/migrations/entraPhase1Migration.test.ts` (pass).
 - (2026-02-20) `T012` completed: extended `entraPhase1Migration.test.ts` to assert the partial unique index enforcing one active partner connection per tenant.
 - Validation command: `cd server && npx vitest run src/test/unit/migrations/entraPhase1Migration.test.ts` (pass).
+- (2026-02-20) `T013` completed: extended `entraPhase1Migration.test.ts` with `entra_managed_tenants` table/column checks plus discovery/matching index assertions.
+- Validation command: `cd server && npx vitest run src/test/unit/migrations/entraPhase1Migration.test.ts` (pass).

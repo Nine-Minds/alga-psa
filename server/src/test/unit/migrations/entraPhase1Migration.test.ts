@@ -25,4 +25,13 @@ describe('Entra Phase 1 migration', () => {
     expect(migration).toContain('ON entra_partner_connections (tenant)');
     expect(migration).toContain('WHERE is_active = true');
   });
+
+  it('T013: creates entra_managed_tenants and lookup indexes for discovery/mapping', () => {
+    expect(migration).toContain("createTable('entra_managed_tenants'");
+    expect(migration).toContain("table.text('entra_tenant_id').notNullable()");
+    expect(migration).toContain("table.text('primary_domain')");
+    expect(migration).toContain("table.integer('source_user_count').notNullable().defaultTo(0)");
+    expect(migration).toContain('CREATE INDEX IF NOT EXISTS idx_entra_managed_tenants_tenant_last_seen');
+    expect(migration).toContain('CREATE INDEX IF NOT EXISTS idx_entra_managed_tenants_tenant_primary_domain');
+  });
 });

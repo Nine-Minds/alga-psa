@@ -104,7 +104,7 @@
   {
     "id": "T013",
     "description": "Migration creates `entra_managed_tenants` plus indexes used by discovery/mapping queries.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F015",
       "F016"
