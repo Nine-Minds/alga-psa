@@ -1057,7 +1057,7 @@
   {
     "id": "F095",
     "description": "Match strategy: perform primary contact matching by normalized email within mapped client scope.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements"
     ],

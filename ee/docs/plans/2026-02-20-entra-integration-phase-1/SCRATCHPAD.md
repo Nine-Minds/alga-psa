@@ -263,3 +263,6 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - (2026-02-20) `F094` completed: added tenant filter settings loader in `ee/server/src/lib/integrations/entra/settingsService.ts` that parses custom exclusion regex arrays from `entra_sync_settings.user_filter_config`.
 - `userFilterPipeline.filterEntraUsers(...)` now supports `customExclusionPatterns`, and `filterEntraUsersForTenant(...)` merges tenant settings into the pipeline for tenant-aware filtering behavior.
 - Validation commands: `npx tsc --noEmit -p ee/server/tsconfig.json` and `npx tsc --noEmit -p ee/temporal-workflows/tsconfig.json` (pass).
+- (2026-02-20) `F095` completed: added `ee/server/src/lib/integrations/entra/sync/contactMatcher.ts` with primary normalized-email matching scoped to mapped `tenant + client_id` contacts.
+- Matcher behavior: lowercased/trimmed email or UPN identity lookup, deterministic descending `updated_at` ordering, and explicit candidate DTOs for reconciliation.
+- Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
