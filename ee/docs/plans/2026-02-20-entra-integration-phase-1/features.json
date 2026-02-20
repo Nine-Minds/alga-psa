@@ -799,7 +799,7 @@
   {
     "id": "F072",
     "description": "Workflow: implement `entraDiscoveryWorkflow` orchestration for provider discovery persistence.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements"
     ],

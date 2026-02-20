@@ -208,3 +208,5 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
 - (2026-02-20) `F071` completed: added Temporal Entra sync/discovery shared contracts in `ee/temporal-workflows/src/types/entra-sync.ts` (workflow inputs, activity inputs, run/tenant result summaries).
 - Validation command: `npx tsc --noEmit -p ee/temporal-workflows/tsconfig.json` (pass).
+- (2026-02-20) `F072` completed: added `entraDiscoveryWorkflow` in `ee/temporal-workflows/src/workflows/entra-discovery-workflow.ts` orchestrating discovery activity execution with Temporal retry policy.
+- Validation command: `npx tsc --noEmit -p ee/temporal-workflows/tsconfig.json` (pass).
