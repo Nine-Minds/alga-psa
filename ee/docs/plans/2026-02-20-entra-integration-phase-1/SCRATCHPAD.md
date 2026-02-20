@@ -441,3 +441,6 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - (2026-02-20) `T038` completed: added EE route unit test `ee/server/src/__tests__/unit/entraValidateDirectRoute.test.ts` for direct validation success path.
 - Test verifies valid credential/token context yields managed-tenant probe success, returns `valid=true`, and updates connection validation status to `connected`.
 - Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraValidateDirectRoute.test.ts` (pass).
+- (2026-02-20) `T039` completed: added EE route unit test `ee/server/src/__tests__/unit/entraValidateCippRoute.test.ts` for CIPP validation success path.
+- Test verifies successful tenant endpoint probe with valid CIPP token returns `valid=true`/tenant sample count and marks connection validation status `connected`.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraValidateCippRoute.test.ts` (pass).

@@ -335,7 +335,7 @@
   {
     "id": "T039",
     "description": "CIPP validation action succeeds with valid CIPP token and tenant endpoint response.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F042",
       "F049"
