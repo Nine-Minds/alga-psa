@@ -808,7 +808,7 @@
   {
     "id": "T095",
     "description": "Exact email match links to existing contact and does not create duplicate contact.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F095",
       "F096"
