@@ -459,3 +459,6 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - (2026-02-20) `T044` completed within `microsoftCredentialResolver.precedence` tests.
 - App-secret fallback case asserts resolver returns app-secret credentials when neither tenant secrets nor env credentials are available.
 - Validation command: `cd ee/server && npx vitest run src/__tests__/unit/microsoftCredentialResolver.precedence.test.ts` (pass).
+- (2026-02-20) `T045` completed: added `ee/server/src/__tests__/unit/entraSecretKeys.test.ts` validating canonical Entra secret key constants.
+- Test verifies shared/direct/CIPP secret key names are stable and fully represented exactly once in `ENTRA_ALL_SECRET_KEYS`.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraSecretKeys.test.ts` (pass).

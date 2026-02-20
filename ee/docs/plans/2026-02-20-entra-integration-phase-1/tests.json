@@ -384,7 +384,7 @@
   {
     "id": "T045",
     "description": "Secret key constants map all required direct/CIPP secret names consistently.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F033"
     ]
