@@ -622,7 +622,7 @@
   {
     "id": "T073",
     "description": "`entraAllTenantsSyncWorkflow` processes all active mapped tenants.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F075",
       "F077",
