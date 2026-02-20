@@ -420,3 +420,6 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - (2026-02-20) `T031` completed: added action permission unit test `server/src/test/unit/integrations/entraActions.directConnect.test.ts` for `initiateEntraDirectOAuth`.
 - Test asserts callers lacking `system_settings.update` receive explicit forbidden response and verifies RBAC check invocation.
 - Validation command: `cd server && npx vitest run src/test/unit/integrations/entraActions.directConnect.test.ts` (pass).
+- (2026-02-20) `T032` completed: extended `server/src/test/unit/integrations/entraActions.directConnect.test.ts` with success-path OAuth initiation assertions.
+- Test validates returned auth URL shape and verifies base64 `state` payload includes tenant/user, nonce, timestamp, and Entra direct integration markers.
+- Validation command: `cd server && npx vitest run src/test/unit/integrations/entraActions.directConnect.test.ts` (pass).

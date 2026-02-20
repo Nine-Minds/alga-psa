@@ -275,7 +275,7 @@
   {
     "id": "T032",
     "description": "Direct connect initiation returns OAuth URL with encoded nonce/state.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F035"
     ]
