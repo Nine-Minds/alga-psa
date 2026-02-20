@@ -76,3 +76,7 @@ Focused planning log for guided-layout improvements in Entra integration setting
 - (2026-02-20) F007 implemented in `ee/server/src/components/settings/integrations/EntraIntegrationSettings.tsx`.
   - Moved `Sync All Tenants Now` into a dedicated `Ongoing Operations` panel (`#entra-ongoing-operations-panel`).
   - Preserved existing enable/disable logic, action wiring, and feedback message behavior.
+- (2026-02-20) F008 implemented in `ee/server/src/components/settings/integrations/EntraIntegrationSettings.tsx`.
+  - Added explicit Step 3 heading and instructional mapping guidance copy above `EntraTenantMappingTable`.
+  - Added current-step cue text when map phase is active; kept `EntraTenantMappingTable` wiring unchanged to avoid behavior regression.
+- (2026-02-20) Mapping table unit test `src/__tests__/unit/entraTenantMappingTable.selection.test.tsx` has a pre-existing flaky assertion (`getByText('Unmapped Import Tenant')`) that now collides with same text in picker options; failure is unrelated to F008 logic (table internals unchanged).

@@ -427,7 +427,15 @@ export default function EntraIntegrationSettings() {
           ) : null}
 
           <div className="rounded-lg border border-border/70 bg-background p-4" id="entra-mapping-step-panel">
-            <div className="mb-3 grid gap-2 text-sm text-muted-foreground sm:grid-cols-3">
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Step 3</p>
+            <p className="mt-1 text-sm font-semibold">Map Tenants to Clients</p>
+            <p className="mt-1 text-sm text-muted-foreground" id="entra-mapping-step-guidance">
+              Review suggested matches, choose the correct client for each tenant, and confirm mappings before initial sync.
+            </p>
+            {isMapStepCurrent ? (
+              <p className="mt-2 text-xs text-muted-foreground">This is your current onboarding step.</p>
+            ) : null}
+            <div className="mb-3 mt-3 grid gap-2 text-sm text-muted-foreground sm:grid-cols-3">
               <p><span className="font-medium text-foreground">Mapped:</span> {mappingSummary.mapped}</p>
               <p><span className="font-medium text-foreground">Skipped:</span> {mappingSummary.skipped}</p>
               <p><span className="font-medium text-foreground">Needs Review:</span> {mappingSummary.needsReview}</p>

@@ -88,7 +88,7 @@
   {
     "id": "F008",
     "description": "Contextualize the mapping table as Step 3 with concise instructional copy and no regression in existing mapping table interactions.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Requirements > Functional Requirements"
