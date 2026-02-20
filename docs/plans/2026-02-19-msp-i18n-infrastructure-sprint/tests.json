@@ -110,7 +110,7 @@
   {
     "id": "T014",
     "description": "getNamespacesForRoute uses longest prefix match when no exact match (e.g., '/msp/tickets/123' matches '/msp/tickets' entry)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F003"
     ]

@@ -153,3 +153,4 @@ ls server/public/locales/*/msp.json  # should fail (files removed)
 - 2026-02-20: Completed T011 checklist entry — getNamespacesForRoute('/msp/tickets') returns namespaces including 'msp/core' and 'features/tickets'
 - 2026-02-20: Completed T012 checklist entry — getNamespacesForRoute('/client-portal/billing') returns namespaces including 'client-portal' and 'features/billing'
 - 2026-02-20: Completed T013 checklist entry — getNamespacesForRoute exact match takes priority over prefix match (e.g., '/msp/tickets' exact entry wins over '/msp' prefix)
+- 2026-02-20: Completed T014 checklist entry — getNamespacesForRoute uses longest prefix match when no exact match (e.g., '/msp/tickets/123' matches '/msp/tickets' entry)
