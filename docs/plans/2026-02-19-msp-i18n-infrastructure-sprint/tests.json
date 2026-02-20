@@ -182,7 +182,7 @@
   {
     "id": "T023",
     "description": "scripts/generate-pseudo-locale.ts exists and is runnable",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F009"
     ]
