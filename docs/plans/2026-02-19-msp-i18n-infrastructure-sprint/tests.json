@@ -118,7 +118,7 @@
   {
     "id": "T015",
     "description": "getNamespacesForRoute falls back to ['common'] for unknown routes",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F003"
     ]
