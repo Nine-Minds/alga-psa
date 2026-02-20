@@ -1147,7 +1147,7 @@
   {
     "id": "F103",
     "description": "Deleted-user handling: mark linked contacts inactive when upstream user is removed.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements"
     ],

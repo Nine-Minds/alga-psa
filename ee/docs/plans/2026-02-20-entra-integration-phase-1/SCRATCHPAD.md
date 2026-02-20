@@ -287,3 +287,6 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - (2026-02-20) `F102` completed: added `markDisabledEntraUsersInactive(...)` in `ee/server/src/lib/integrations/entra/sync/disableHandler.ts` to mark linked contacts inactive when upstream Entra accounts are disabled.
 - Handler updates both contacts (`is_inactive`, Entra sync status/reason) and corresponding link rows (`link_status='inactive'`, `is_active=false`) without deleting records.
 - Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
+- (2026-02-20) `F103` completed: added `markDeletedEntraUsersInactive(...)` in `disableHandler.ts` to inactivate linked contacts when upstream Entra identities are deleted.
+- Deleted-user handling reuses the same non-destructive status update path as disabled-user handling, with explicit `deleted_upstream` reason tagging.
+- Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
