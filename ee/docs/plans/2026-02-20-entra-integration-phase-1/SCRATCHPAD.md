@@ -306,3 +306,6 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - (2026-02-20) `F109` completed: added stable sync result serializer `ee/server/src/lib/integrations/entra/sync/syncResultSerializer.ts` and wired run-progress route to return normalized DTOs.
 - Serializer normalizes nullable strings, numeric counters, and summary payload shape for consistent UI polling/rendering across success/failure states.
 - Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
+- (2026-02-20) `F110` completed: hardened `createContactForEntraUser(...)` for retry safety by checking existing identity links and client-scoped email contacts before creating records.
+- Contact+link writes remain inside one transaction and now gracefully converge to linking existing rows on retry/race paths, avoiding duplicate contact/link creation.
+- Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).

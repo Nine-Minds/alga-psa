@@ -1225,7 +1225,7 @@
   {
     "id": "F110",
     "description": "Retry-safe upserts: enforce transaction-safe link/contact upsert semantics for workflow retries.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Non-functional Requirements"
     ],

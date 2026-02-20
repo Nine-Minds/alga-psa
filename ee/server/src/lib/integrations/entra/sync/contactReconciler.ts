@@ -18,7 +18,7 @@ export interface EntraLinkedContactResult {
 }
 
 export interface EntraCreatedContactResult {
-  action: 'created';
+  action: 'created' | 'linked';
   contactNameId: string;
   linkIdentity: {
     entraTenantId: string;
@@ -94,6 +94,41 @@ async function upsertContactLink(
     });
 }
 
+async function findExistingLinkedContactId(
+  trx: Knex.Transaction,
+  tenantId: string,
+  user: EntraSyncUser
+): Promise<string | null> {
+  const existing = await trx('entra_contact_links')
+    .where({
+      tenant: tenantId,
+      entra_tenant_id: user.entraTenantId,
+      entra_object_id: user.entraObjectId,
+    })
+    .orderBy('updated_at', 'desc')
+    .first(['contact_name_id']);
+
+  return existing?.contact_name_id ? String(existing.contact_name_id) : null;
+}
+
+async function findExistingClientContactByEmail(
+  trx: Knex.Transaction,
+  tenantId: string,
+  clientId: string,
+  email: string
+): Promise<string | null> {
+  const existing = await trx('contacts')
+    .where({
+      tenant: tenantId,
+      client_id: clientId,
+    })
+    .andWhereRaw('lower(email) = ?', [email.trim().toLowerCase()])
+    .orderBy('updated_at', 'desc')
+    .first(['contact_name_id']);
+
+  return existing?.contact_name_id ? String(existing.contact_name_id) : null;
+}
+
 export async function linkExistingMatchedContact(
   tenantId: string,
   clientId: string,
@@ -135,14 +170,33 @@ export async function createContactForEntraUser(
     throw new Error('Cannot create contact for Entra user without email/UPN.');
   }
 
-  const createdContactNameId = await runWithTenant(tenantId, async () => {
+  const createdContact = await runWithTenant(tenantId, async () => {
     const { knex } = await createTenantKnex();
+    const normalizedEmail = email.trim().toLowerCase();
 
     return knex.transaction(async (trx) => {
+      const linkedContactId = await findExistingLinkedContactId(trx, tenantId, user);
+      if (linkedContactId) {
+        await upsertContactLink(trx, tenantId, clientId, linkedContactId, user, {});
+        return { contactNameId: linkedContactId, action: 'linked' as const };
+      }
+
+      const existingClientContactId = await findExistingClientContactByEmail(
+        trx,
+        tenantId,
+        clientId,
+        normalizedEmail
+      );
+      if (existingClientContactId) {
+        await upsertContactLink(trx, tenantId, clientId, existingClientContactId, user, {});
+        return { contactNameId: existingClientContactId, action: 'linked' as const };
+      }
+
+      let createdContactNameId: string | null = null;
       const created = await ContactModel.createContact(
         {
           full_name: fallbackDisplayName(user),
-          email,
+          email: normalizedEmail,
           client_id: clientId,
           phone_number: user.mobilePhone || user.businessPhones[0] || undefined,
           role: user.jobTitle || undefined,
@@ -151,15 +205,16 @@ export async function createContactForEntraUser(
         tenantId,
         trx
       );
+      createdContactNameId = String(created.contact_name_id);
 
-      await upsertContactLink(trx, tenantId, clientId, String(created.contact_name_id), user, {});
-      return String(created.contact_name_id);
+      await upsertContactLink(trx, tenantId, clientId, createdContactNameId, user, {});
+      return { contactNameId: createdContactNameId, action: 'created' as const };
     });
   });
 
   return {
-    action: 'created',
-    contactNameId: createdContactNameId,
+    action: createdContact.action,
+    contactNameId: createdContact.contactNameId,
     linkIdentity: {
       entraTenantId: user.entraTenantId,
       entraObjectId: user.entraObjectId,
