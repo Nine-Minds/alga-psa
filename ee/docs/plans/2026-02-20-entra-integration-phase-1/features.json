@@ -497,7 +497,7 @@
   {
     "id": "F045",
     "description": "Connection type switching: enforce cleanup of stale direct/CIPP credentials when switching connection type.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements"
     ],

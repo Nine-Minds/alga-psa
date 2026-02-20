@@ -138,3 +138,7 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - (2026-02-20) `F044` completed: disconnect flow now clears direct+CIPP tenant secrets and marks active `entra_partner_connections` rows disconnected via repository update (history rows are retained; no sync-run deletion).
 - Updates: `disconnectEntraIntegration` now enforces update permission before route call; `clearEntraDirectTokenSet` now deletes stored token secrets instead of writing empty-string placeholders.
 - Validation commands: `npx tsc --noEmit -p ee/server/tsconfig.json`, `npx tsc --noEmit -p packages/integrations/tsconfig.json`, `npx tsc --noEmit -p server/tsconfig.json` (pass).
+- (2026-02-20) `F045` completed: enforced connection-type credential cleanup in Entra actions via `clearStaleCredentialsForConnectionType(...)`.
+- Behavior: starting direct flow clears CIPP credentials; selecting/connecting CIPP clears direct OAuth token secrets, preventing stale dual-provider secret state.
+- Added CE stub for `@enterprise/lib/integrations/entra/auth/tokenStore` to keep non-EE alias builds type-safe.
+- Validation commands: `npx tsc --noEmit -p packages/integrations/tsconfig.json`, `npx tsc --noEmit -p ee/server/tsconfig.json`, `npx tsc --noEmit -p server/tsconfig.json` (pass).

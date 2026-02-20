@@ -22,6 +22,20 @@ type EntraRoutePayload<T> = {
   error?: string;
 };
 
+async function clearStaleCredentialsForConnectionType(
+  tenant: string,
+  targetConnectionType: EntraConnectionType
+): Promise<void> {
+  if (targetConnectionType === 'direct') {
+    const cippSecretStore = await import('@enterprise/lib/integrations/entra/providers/cipp/cippSecretStore');
+    await cippSecretStore.clearEntraCippCredentials(tenant);
+    return;
+  }
+
+  const tokenStore = await import('@enterprise/lib/integrations/entra/auth/tokenStore');
+  await tokenStore.clearEntraDirectTokenSet(tenant);
+}
+
 function normalizeCippBaseUrl(input: string): string | null {
   const raw = input.trim();
   if (!raw) {
@@ -180,6 +194,8 @@ export const initiateEntraDirectOAuth = withAuth(async (user, { tenant }) => {
     return { success: false, error: 'Microsoft OAuth credentials are not configured for Entra direct connection' } as const;
   }
 
+  await clearStaleCredentialsForConnectionType(tenant, 'direct');
+
   const secretProvider = await getSecretProviderInstance();
   const baseUrl =
     process.env.NEXT_PUBLIC_BASE_URL ||
@@ -246,6 +262,8 @@ export const connectEntraIntegration = withAuth(async (
     return flagDisabledResult<{ status: string; connectionType: EntraConnectionType }>();
   }
 
+  await clearStaleCredentialsForConnectionType(tenant, input.connectionType);
+
   return callEeRoute<{ status: string; connectionType: EntraConnectionType }>({
     importPath: '@enterprise/app/api/integrations/entra/connect/route',
     method: 'POST',
@@ -280,6 +298,8 @@ export const connectEntraCipp = withAuth(async (
   if (!apiToken) {
     return { success: false, error: 'CIPP API token is required.' } as const;
   }
+
+  await clearStaleCredentialsForConnectionType(tenant, 'cipp');
 
   const cippSecretStore = await import('@enterprise/lib/integrations/entra/providers/cipp/cippSecretStore');
   await cippSecretStore.saveEntraCippCredentials(tenant, {
