@@ -181,7 +181,7 @@
   {
     "id": "T022",
     "description": "`contacts` table contains Entra identity and sync metadata columns post-migration.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F028",
       "F029",

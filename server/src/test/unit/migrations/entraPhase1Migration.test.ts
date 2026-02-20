@@ -101,4 +101,17 @@ describe('Entra Phase 1 migration', () => {
     expect(migration).toContain('CREATE INDEX IF NOT EXISTS idx_clients_entra_tenant');
     expect(migration).toContain('ON clients (tenant, entra_tenant_id)');
   });
+
+  it('T022: adds Entra identity and sync metadata columns to contacts table', () => {
+    expect(migration).toContain("ensureColumn(knex, 'contacts', 'entra_object_id'");
+    expect(migration).toContain("ensureColumn(knex, 'contacts', 'entra_sync_source'");
+    expect(migration).toContain("ensureColumn(knex, 'contacts', 'last_entra_sync_at'");
+    expect(migration).toContain("ensureColumn(knex, 'contacts', 'entra_user_principal_name'");
+    expect(migration).toContain("ensureColumn(knex, 'contacts', 'entra_account_enabled'");
+    expect(migration).toContain("ensureColumn(knex, 'contacts', 'entra_sync_status'");
+    expect(migration).toContain("ensureColumn(knex, 'contacts', 'entra_sync_status_reason'");
+    expect(migration).toContain("table.text('entra_object_id')");
+    expect(migration).toContain("table.timestamp('last_entra_sync_at', { useTz: true })");
+    expect(migration).toContain("table.boolean('entra_account_enabled')");
+  });
 });
