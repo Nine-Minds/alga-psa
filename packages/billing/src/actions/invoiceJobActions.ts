@@ -5,7 +5,7 @@ import { createTenantKnex } from '@alga-psa/db';
 import { JobService, type JobData } from '@alga-psa/jobs';
 import { getInvoiceForRendering } from './invoiceQueries';
 import { createPDFGenerationService } from '../services/pdfGenerationService';
-import { StorageService } from '@alga-psa/documents/storage/StorageService';
+import { StorageService } from '@alga-psa/storage/StorageService';
 import { SystemEmailProviderFactory } from '@alga-psa/email';
 import { EmailMessage, EmailAddress } from '@alga-psa/types';
 import { formatCurrency, dateValueToDate, isValidEmail } from '@alga-psa/core';
