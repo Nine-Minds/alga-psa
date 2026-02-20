@@ -5,7 +5,13 @@ const { computeDomain, ensureDomainMapping, updateInstallStatus } = proxyActivit
   ensureDomainMapping: typeof import('../activities/extension-domain-activities.js').ensureDomainMapping,
   updateInstallStatus: typeof import('../activities/extension-domain-activities.js').updateInstallStatus,
 }>({
-  startToCloseTimeout: '1 minute',
+  startToCloseTimeout: '2 minutes',
+  retry: {
+    initialInterval: '2s',
+    backoffCoefficient: 2,
+    maximumInterval: '30s',
+    maximumAttempts: 5,
+  },
 });
 
 export interface ProvisionDomainInput {

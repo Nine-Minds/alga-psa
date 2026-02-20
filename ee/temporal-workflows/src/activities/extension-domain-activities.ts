@@ -2,6 +2,8 @@ import { getAdminConnection } from '@alga-psa/db/admin.js';
 import { computeDomain as sharedComputeDomain } from '@alga-psa/shared/extensions/domain.js';
 import type { Knex } from 'knex';
 import { KubeConfig, CustomObjectsApi } from '@kubernetes/client-node';
+import { ApiException } from '@kubernetes/client-node/dist/gen/apis/exception.js';
+import { ApplicationFailure } from '@temporalio/activity';
 
 export interface ComputeDomainInput {
   tenantId: string;
@@ -38,10 +40,11 @@ export async function computeDomain(input: ComputeDomainInput): Promise<{ domain
 }
 
 export async function ensureDomainMapping(input: EnsureDomainMappingInput): Promise<{ applied: boolean; ref?: any }> {
-  // Helper to format HttpError details consistently
+  // Helper to format error details consistently.
+  // Supports both v1 ApiException (e.code, e.body) and legacy HttpError (e.response.status, e.response.body).
   const formatHttpError = (e: any) => {
-    const status = e?.response?.status ?? e?.status;
-    const body = e?.response?.body ?? e?.body;
+    const status = e?.code ?? e?.response?.status ?? e?.status;
+    const body = e?.body ?? e?.response?.body;
     const reason = body?.reason;
     const message = typeof body === 'string' ? body : (body?.message ?? '');
     const asJson = typeof body === 'string' ? body : JSON.stringify(body);
@@ -90,20 +93,29 @@ export async function ensureDomainMapping(input: EnsureDomainMappingInput): Prom
       throw new Error('Failed to load Kubernetes config');
     }
     const co = kc.makeApiClient(CustomObjectsApi);
-    const coAny = co as any;
 
     // Preflight: Ensure target KService exists (serving.knative.dev/v1 services)
+    // Only fail permanently on 404 (service doesn't exist); transient errors are retried by Temporal.
     try {
-      await coAny.getNamespacedCustomObject(
-        'serving.knative.dev',
-        'v1',
+      await co.getNamespacedCustomObject({
+        group: 'serving.knative.dev',
+        version: 'v1',
         namespace,
-        'services',
-        kservice,
-      );
+        plural: 'services',
+        name: kservice,
+      });
     } catch (e: any) {
-      const { status, body } = formatHttpError(e);
-      throw new Error(`runner kservice check failed: namespace=${namespace} name=${kservice}; status=${status} body=${body}`);
+      const { status, reason, message, body } = formatHttpError(e);
+      const isNotFound = status === 404 || reason === 'NotFound' || /not\s*found/i.test(message);
+      if (isNotFound) {
+        throw new ApplicationFailure(`runner kservice not found: namespace=${namespace} name=${kservice}`, 'KServiceNotFound', true);
+      }
+      // Transient failure (network, timeout, unhealthy revision) — throw non-permanent error so Temporal retries
+      throw new ApplicationFailure(
+        `runner kservice check failed (transient): namespace=${namespace} name=${kservice}; status=${status} body=${body}`,
+        'KServiceCheckTransient',
+        false,
+      );
     }
 
     // Preflight: Ensure ClusterDomainClaim exists or auto-create if allowed
@@ -111,12 +123,12 @@ export async function ensureDomainMapping(input: EnsureDomainMappingInput): Prom
     const cdcVersion = 'v1alpha1';
     const cdcPlural = 'clusterdomainclaims';
     try {
-      await coAny.getClusterCustomObject(
-        cdcGroup,
-        cdcVersion,
-        cdcPlural,
-        domainName,
-      );
+      await co.getClusterCustomObject({
+        group: cdcGroup,
+        version: cdcVersion,
+        plural: cdcPlural,
+        name: domainName,
+      });
     } catch (e: any) {
       const { status, reason, message, body } = formatHttpError(e);
       const isNotFound = status === 404 || reason === 'NotFound' || /not\s*found/i.test(message);
@@ -131,12 +143,12 @@ export async function ensureDomainMapping(input: EnsureDomainMappingInput): Prom
           spec: { namespace },
         };
         try {
-          await coAny.createClusterCustomObject(
-            cdcGroup,
-            cdcVersion,
-            cdcPlural,
-            cdcBody as any,
-          );
+          await co.createClusterCustomObject({
+            group: cdcGroup,
+            version: cdcVersion,
+            plural: cdcPlural,
+            body: cdcBody,
+          });
         } catch (e2: any) {
           const { status: s2, body: b2 } = formatHttpError(e2);
           throw new Error(`failed to create ClusterDomainClaim for ${domainName}: status=${s2} body=${b2}`);
@@ -153,12 +165,12 @@ export async function ensureDomainMapping(input: EnsureDomainMappingInput): Prom
     let version: 'v1' | 'v1beta1' | undefined;
     for (const v of ['v1', 'v1beta1'] as const) {
       try {
-        await coAny.listNamespacedCustomObject(
+        await co.listNamespacedCustomObject({
           group,
-          v,
+          version: v,
           namespace,
           plural,
-        );
+        });
         version = v;
         break;
       } catch (e: any) {
@@ -194,13 +206,13 @@ export async function ensureDomainMapping(input: EnsureDomainMappingInput): Prom
     // Check if exists
     let exists = false;
     try {
-      await coAny.getNamespacedCustomObject(
+      await co.getNamespacedCustomObject({
         group,
         version,
         namespace,
         plural,
         name,
-      );
+      });
       exists = true;
     } catch (e: any) {
       const { status, reason, message, body } = formatHttpError(e);
@@ -214,13 +226,13 @@ export async function ensureDomainMapping(input: EnsureDomainMappingInput): Prom
 
     if (!exists) {
       try {
-        await coAny.createNamespacedCustomObject(
+        await co.createNamespacedCustomObject({
           group,
           version,
           namespace,
           plural,
-          desired,
-        );
+          body: desired,
+        });
       } catch (e: any) {
         const { status, body } = formatHttpError(e);
         throw new Error(`domainmapping.create failed: status=${status} body=${body}`);
@@ -228,28 +240,30 @@ export async function ensureDomainMapping(input: EnsureDomainMappingInput): Prom
       return { applied: true, ref: { namespace, name, kind: 'DomainMapping', group, version } };
     }
 
-    // Replace object if exists to ensure correct ref while keeping APIs compatible
-    // across kubernetes client versions with differing patch signatures.
+    // Replace object if exists to ensure correct ref
     try {
-      await coAny.replaceNamespacedCustomObject(
+      await co.replaceNamespacedCustomObject({
         group,
         version,
         namespace,
         plural,
         name,
-        desired,
-      );
+        body: desired,
+      });
     } catch (e: any) {
       const { status, body } = formatHttpError(e);
       throw new Error(`domainmapping.replace failed: status=${status} body=${body}`);
     }
     return { applied: true, ref: { namespace, name, kind: 'DomainMapping', group, version } };
   } catch (e: any) {
-    // As a last resort, unwrap HttpError to avoid opaque "HTTP request failed" messages
-    const status = e?.response?.status ?? e?.status;
-    const body = e?.response?.body ?? e?.body;
+    // Unwrap ApiException / HttpError to avoid opaque "HTTP request failed" messages
+    if (e instanceof ApiException) {
+      throw new Error(`ensureDomainMapping http error: status=${e.code} body=${JSON.stringify(e.body)}`);
+    }
+    const status = e?.code ?? e?.response?.status ?? e?.status;
+    const body = e?.body ?? e?.response?.body;
     const msg = typeof body === 'string' ? body : (body ? JSON.stringify(body) : e?.message);
-    if (e?.name === 'HttpError' || e?.response) {
+    if (status !== undefined) {
       throw new Error(`ensureDomainMapping http error: status=${status} body=${msg}`);
     }
     throw e;
