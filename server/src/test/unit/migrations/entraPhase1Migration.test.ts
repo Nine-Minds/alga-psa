@@ -114,4 +114,14 @@ describe('Entra Phase 1 migration', () => {
     expect(migration).toContain("table.timestamp('last_entra_sync_at', { useTz: true })");
     expect(migration).toContain("table.boolean('entra_account_enabled')");
   });
+
+  it('T023: backfills one default entra_sync_settings row per existing tenant', () => {
+    expect(migration).toContain('INSERT INTO entra_sync_settings');
+    expect(migration).toContain('SELECT');
+    expect(migration).toContain('FROM tenants');
+    expect(migration).toContain('WHERE NOT EXISTS');
+    expect(migration).toContain('FROM entra_sync_settings');
+    expect(migration).toContain('entra_sync_settings.tenant = tenants.tenant');
+    expect(migration).toContain('1440');
+  });
 });

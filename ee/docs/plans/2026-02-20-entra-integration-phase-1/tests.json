@@ -191,7 +191,7 @@
   {
     "id": "T023",
     "description": "Existing tenants receive one default `entra_sync_settings` row during backfill migration.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F031"
     ]

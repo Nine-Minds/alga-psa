@@ -399,3 +399,5 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - Validation command: `cd server && npx vitest run src/test/unit/migrations/entraPhase1Migration.test.ts` (pass).
 - (2026-02-20) `T022` completed: extended migration coverage for all Entra contact identity/sync metadata columns (`entra_object_id`, sync source/status fields, account-enabled flag, and last sync timestamp).
 - Validation command: `cd server && npx vitest run src/test/unit/migrations/entraPhase1Migration.test.ts` (pass).
+- (2026-02-20) `T023` completed: extended migration coverage for tenant backfill of default `entra_sync_settings` rows (`INSERT ... SELECT FROM tenants WHERE NOT EXISTS`).
+- Validation command: `cd server && npx vitest run src/test/unit/migrations/entraPhase1Migration.test.ts` (pass).
