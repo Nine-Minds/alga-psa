@@ -206,3 +206,5 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
 - (2026-02-20) `F070` completed: added explicit `entra-integration-ui` guard inside `EntraIntegrationSettings` so mapping wizard content is inaccessible and replaced by a disabled-state message when the flag is off.
 - Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
+- (2026-02-20) `F071` completed: added Temporal Entra sync/discovery shared contracts in `ee/temporal-workflows/src/types/entra-sync.ts` (workflow inputs, activity inputs, run/tenant result summaries).
+- Validation command: `npx tsc --noEmit -p ee/temporal-workflows/tsconfig.json` (pass).
