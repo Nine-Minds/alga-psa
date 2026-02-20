@@ -284,3 +284,6 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - (2026-02-20) `F101` completed: added `ee/server/src/lib/integrations/entra/sync/contactFieldSync.ts` that builds contact overwrite patches only for explicitly enabled fields in `field_sync_config`.
 - Reconciler now applies `buildContactFieldSyncPatch(...)` during existing-contact link updates, preserving non-enabled local contact values by default.
 - Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
+- (2026-02-20) `F102` completed: added `markDisabledEntraUsersInactive(...)` in `ee/server/src/lib/integrations/entra/sync/disableHandler.ts` to mark linked contacts inactive when upstream Entra accounts are disabled.
+- Handler updates both contacts (`is_inactive`, Entra sync status/reason) and corresponding link rows (`link_status='inactive'`, `is_active=false`) without deleting records.
+- Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).

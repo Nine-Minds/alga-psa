@@ -1136,7 +1136,7 @@
   {
     "id": "F102",
     "description": "Disabled-user handling: mark linked contacts inactive when Entra user becomes disabled.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements"
     ],
