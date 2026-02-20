@@ -216,7 +216,7 @@
   {
     "id": "T026",
     "description": "Unmap action updates mapping state without deleting historical sync run data.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F064",
       "F020",

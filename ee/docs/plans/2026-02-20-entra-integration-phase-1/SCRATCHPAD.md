@@ -406,3 +406,5 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - Validation command: `cd server && npx vitest run src/test/unit/integrations/entraInterfacesSchemaAlignment.test.ts` (pass).
 - (2026-02-20) `T025` completed: added `server/src/test/unit/integrations/entraMappingValidation.test.ts` for duplicate managed-tenant assignment conflict detection.
 - Validation command: `cd server && npx vitest run src/test/unit/integrations/entraMappingValidation.test.ts` (pass).
+- (2026-02-20) `T026` completed: added route contract test `server/src/test/unit/api/entraMappingAndDisconnectContracts.test.ts` asserting unmap path deactivates/reinserts mapping state and does not touch sync run history tables.
+- Validation command: `cd server && npx vitest run src/test/unit/api/entraMappingAndDisconnectContracts.test.ts` (pass).
