@@ -303,3 +303,6 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - (2026-02-20) `F108` completed: added `executeEntraSync(...)` in `ee/server/src/lib/integrations/entra/sync/syncEngine.ts` with explicit `dryRun` support.
 - Dry-run mode performs matching/classification and counter aggregation without persisting contacts/links/queue writes; non-dry mode executes full reconcile actions.
 - Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
+- (2026-02-20) `F109` completed: added stable sync result serializer `ee/server/src/lib/integrations/entra/sync/syncResultSerializer.ts` and wired run-progress route to return normalized DTOs.
+- Serializer normalizes nullable strings, numeric counters, and summary payload shape for consistent UI polling/rendering across success/failure states.
+- Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).

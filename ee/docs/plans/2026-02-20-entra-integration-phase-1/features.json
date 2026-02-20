@@ -1214,7 +1214,7 @@
   {
     "id": "F109",
     "description": "Sync result serializer: expose stable result DTO for settings and client UI summaries.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes"
     ],

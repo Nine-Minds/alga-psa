@@ -1,6 +1,7 @@
 import { badRequest, dynamic, ok, runtime } from '../../../_responses';
 import { requireEntraUiFlagEnabled } from '../../../_guards';
 import { getEntraSyncRunProgress } from '@/lib/integrations/entra/entraWorkflowClient';
+import { serializeEntraSyncRunProgress } from '@/lib/integrations/entra/sync/syncResultSerializer';
 
 export { dynamic, runtime };
 
@@ -23,5 +24,5 @@ export async function GET(
     return badRequest('Sync run not found.');
   }
 
-  return ok(result);
+  return ok(serializeEntraSyncRunProgress(result));
 }
