@@ -136,3 +136,4 @@ ls server/public/locales/*/msp.json  # should fail (files removed)
 - 2026-02-20: Renamed `server/public/locales/{lang}/msp.json` to `server/public/locales/{lang}/msp/core.json` for all locales (F016).
 - 2026-02-20: Confirmed no `useTranslation('msp')` references in code; remaining namespace updates handled in Phase 1 tests (F017).
 - 2026-02-20: ROUTE_NAMESPACES entries use `msp/core` for MSP routes (F018).
+- 2026-02-20: Synced `packages/core/src/lib/i18n/config.ts` with UI config (namespaces, route mapping, pseudo-locales) (F019).

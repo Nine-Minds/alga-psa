@@ -110,7 +110,7 @@
   {
     "id": "F019",
     "description": "Sync packages/core/src/lib/i18n/config.ts with any locale config changes from packages/ui/src/lib/i18n/config.ts",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR19"]
   },
   {
