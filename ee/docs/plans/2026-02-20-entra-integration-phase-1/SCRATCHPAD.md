@@ -126,3 +126,6 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - (2026-02-20) `F040` completed: added `ee/server/src/lib/integrations/entra/providers/cipp/cippSecretStore.ts` with save/get/clear helpers using tenant secret provider APIs (vault/filesystem/env chain compatible).
 - Refactor: `connectEntraCipp` now uses `saveEntraCippCredentials(...)` instead of writing CIPP secrets inline.
 - Validation commands: `npx tsc --noEmit -p packages/integrations/tsconfig.json` and `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
+- (2026-02-20) `F041` completed: added EE `validate-direct` route (`ee/server/src/app/api/integrations/entra/validate-direct/route.ts`) that verifies direct credentials/token and probes Microsoft managed-tenant discovery access, with refresh retry on 401.
+- Added server action `validateEntraDirectConnection` and CE/EE route wiring stubs for `/api/integrations/entra/validate-direct`.
+- Validation commands: `npx tsc --noEmit -p packages/integrations/tsconfig.json`, `npx tsc --noEmit -p ee/server/tsconfig.json`, `npx tsc --noEmit -p server/tsconfig.json` (pass).

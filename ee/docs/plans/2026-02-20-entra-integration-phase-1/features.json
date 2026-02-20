@@ -449,7 +449,7 @@
   {
     "id": "F041",
     "description": "Connection validation (direct): add server-side check endpoint/action confirming tenant discovery access.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements"
     ],
