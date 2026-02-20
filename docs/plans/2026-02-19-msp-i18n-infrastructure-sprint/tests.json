@@ -247,7 +247,7 @@
   {
     "id": "T031",
     "description": "Pseudo-locale script preserves JSON key structure exactly (nested objects maintained, no flattening)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F014"
     ]
