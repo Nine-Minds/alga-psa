@@ -16,6 +16,8 @@ const DATE_FNS_LOCALES: Record<SupportedLocale, Locale> = {
   nl,
   it,
   pl,
+  xx: enUS,
+  yy: enUS,
 };
 
 export function getDateFnsLocale(language?: string): Locale {
