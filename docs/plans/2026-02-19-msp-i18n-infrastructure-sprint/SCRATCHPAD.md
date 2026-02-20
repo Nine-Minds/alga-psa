@@ -129,3 +129,4 @@ ls server/public/locales/*/msp.json  # should fail (files removed)
 - 2026-02-20: Added `scripts/generate-pseudo-locale.ts` with CLI args parsing for pseudo-locale generation (F009).
 - 2026-02-20: Pseudo-locale script now walks all English JSON namespaces recursively (including nested `features/` and `msp/`) (F010).
 - 2026-02-20: Pseudo-locale output preserves directory structure under `server/public/locales/<locale>/` (F011).
+- 2026-02-20: Pseudo-locale generator replaces all leaf string values with the fill token (F012).
