@@ -158,7 +158,7 @@
   {
     "id": "T020",
     "description": "I18nWrapper uses usePathname() to read the current route",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F006"
     ]
