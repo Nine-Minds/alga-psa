@@ -700,3 +700,6 @@ EOF && git add ee/docs/plans/2026-02-20-entra-integration-phase-1/tests.json ee/
 - (2026-02-20) `T124` completed in `ee/server/src/__tests__/unit/entraIntegrationSettings.initialSyncCta.test.tsx`.
 - UI assertion verifies `Sync All Tenants Now` remains disabled when `mappedTenantCount` is zero.
 - Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraIntegrationSettings.initialSyncCta.test.tsx` (pass).
+- (2026-02-20) `T125` completed in `ee/server/src/__tests__/unit/entraIntegrationSettings.initialSyncCta.test.tsx`.
+- Complementary CTA assertion verifies `Sync All Tenants Now` is enabled when at least one active mapping is present.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraIntegrationSettings.initialSyncCta.test.tsx` (pass).

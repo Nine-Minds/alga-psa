@@ -1056,7 +1056,7 @@
   {
     "id": "T125",
     "description": "`Sync All Tenants Now` button enabled once at least one active mapping exists.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F113",
       "F068"

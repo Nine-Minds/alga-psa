@@ -215,4 +215,30 @@ describe('EntraIntegrationSettings initial sync CTA', () => {
     const syncAllButton = await screen.findByRole('button', { name: 'Sync All Tenants Now' });
     expect(syncAllButton).toBeDisabled();
   });
+
+  it('T125: Sync All Tenants Now button is enabled when active mappings exist', async () => {
+    mappingTableState.summary = { mapped: 2, skipped: 0, needsReview: 0 };
+    mappingTableState.skippedTenants = [];
+    useFeatureFlagMock.mockImplementation((name: string) => ({
+      enabled: name === 'entra-integration-ui',
+    }));
+    getEntraIntegrationStatusMock.mockResolvedValue({
+      success: true,
+      data: {
+        status: 'connected',
+        connectionType: 'direct',
+        lastDiscoveryAt: null,
+        mappedTenantCount: 2,
+        nextSyncIntervalMinutes: 60,
+        availableConnectionTypes: ['direct', 'cipp'],
+        lastValidatedAt: null,
+        lastValidationError: null,
+      },
+    });
+
+    render(<EntraIntegrationSettings />);
+
+    const syncAllButton = await screen.findByRole('button', { name: 'Sync All Tenants Now' });
+    expect(syncAllButton).toBeEnabled();
+  });
 });
