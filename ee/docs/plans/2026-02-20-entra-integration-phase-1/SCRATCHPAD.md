@@ -343,3 +343,6 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - (2026-02-20) `F120` completed: added EE usage guide `ee/docs/guides/entra-integration-phase-1.md` covering setup and operating model.
 - Documentation now includes: direct vs CIPP connection decision guidance, canonical secret names, secret-provider/vault compatibility note, mapping/discovery/sync workflow, additive/non-destructive sync behavior with field-sync toggles, and phased feature-flag rollout order for pilot tenants.
 - Included platform feature-flag API examples for ensuring Phase 1 flags and tenant-targeting additions.
+- (2026-02-20) `T001` completed: added CE delegator route test `server/src/test/unit/api/entraRoutes.delegator.test.ts` covering non-enterprise behavior.
+- Test verifies CE Entra delegator routes return the expected EE-only 501 payload when enterprise edition is disabled (`GET /entra`, `POST /entra/connect`, `GET /entra/sync/runs`).
+- Validation command: `cd server && npx vitest run src/test/unit/api/entraRoutes.delegator.test.ts` (pass).
