@@ -151,6 +151,13 @@ export type EntraDirectValidationResponse = {
   managedTenantSampleCount: number;
 };
 
+export type EntraCippValidationResponse = {
+  valid: boolean;
+  checkedAt: string;
+  tenantCountSample: number;
+  endpoint: string;
+};
+
 export const initiateEntraDirectOAuth = withAuth(async (user, { tenant }) => {
   const canUpdate = await hasPermission(user as any, 'system_settings', 'update');
   if (!canUpdate) {
@@ -335,6 +342,26 @@ export const validateEntraDirectConnection = withAuth(async (user, { tenant }) =
 
   return callEeRoute<EntraDirectValidationResponse>({
     importPath: '@enterprise/app/api/integrations/entra/validate-direct/route',
+    method: 'POST',
+  });
+});
+
+export const validateEntraCippConnection = withAuth(async (user, { tenant }) => {
+  const canUpdate = await hasPermission(user as any, 'system_settings', 'update');
+  if (!canUpdate) {
+    return { success: false, error: 'Forbidden: insufficient permissions to validate Entra integration' } as const;
+  }
+
+  const enabled = await isEntraUiEnabledForTenant({
+    tenantId: tenant,
+    userId: (user as { user_id?: string } | undefined)?.user_id,
+  });
+  if (!enabled) {
+    return flagDisabledResult<EntraCippValidationResponse>();
+  }
+
+  return callEeRoute<EntraCippValidationResponse>({
+    importPath: '@enterprise/app/api/integrations/entra/validate-cipp/route',
     method: 'POST',
   });
 });

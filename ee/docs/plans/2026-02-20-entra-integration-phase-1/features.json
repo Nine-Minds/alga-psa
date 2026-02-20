@@ -461,7 +461,7 @@
   {
     "id": "F042",
     "description": "Connection validation (CIPP): add endpoint/action confirming CIPP tenant list access.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements"
     ],
