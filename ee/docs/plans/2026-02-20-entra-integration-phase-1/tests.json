@@ -420,7 +420,7 @@
   {
     "id": "T049",
     "description": "Direct adapter user responses normalize into canonical sync-user DTO fields.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F048"
     ]

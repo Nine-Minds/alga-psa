@@ -471,3 +471,6 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - (2026-02-20) `T048` completed: added direct adapter normalization tests in `ee/server/src/__tests__/unit/directProviderAdapter.normalization.test.ts`.
 - Managed-tenant case verifies Graph payload normalization into canonical fields (`entraTenantId`, `displayName`, `primaryDomain`, `sourceUserCount`).
 - Validation command: `cd ee/server && npx vitest run src/__tests__/unit/directProviderAdapter.normalization.test.ts` (pass).
+- (2026-02-20) `T049` completed in direct adapter normalization tests.
+- User-list case verifies canonical sync-user mapping (UPN/email fallback, trimmed identity fields, boolean normalization, and business phone filtering).
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/directProviderAdapter.normalization.test.ts` (pass).
