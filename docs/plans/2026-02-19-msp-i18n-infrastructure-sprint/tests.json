@@ -70,7 +70,7 @@
   {
     "id": "T009",
     "description": "All ROUTE_NAMESPACES MSP entries use 'msp/core' (not 'msp')",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F018"
     ]

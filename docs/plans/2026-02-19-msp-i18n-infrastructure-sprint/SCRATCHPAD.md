@@ -148,3 +148,4 @@ ls server/public/locales/*/msp.json  # should fail (files removed)
 - 2026-02-20: Completed T006 checklist entry — ROUTE_NAMESPACES maps '/msp' to ['common', 'msp/core'] (at minimum)
 - 2026-02-20: Completed T007 checklist entry — ROUTE_NAMESPACES maps '/msp/tickets' to ['common', 'msp/core', 'features/tickets']
 - 2026-02-20: Completed T008 checklist entry — ROUTE_NAMESPACES maps '/msp/settings' to ['common', 'msp/core']
+- 2026-02-20: Completed T009 checklist entry — All ROUTE_NAMESPACES MSP entries use 'msp/core' (not 'msp')
