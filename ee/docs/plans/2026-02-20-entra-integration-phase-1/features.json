@@ -876,7 +876,7 @@
   {
     "id": "F079",
     "description": "Activity: `upsertSyncRunActivity` creates/updates parent sync run records.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data / API / Integrations"
     ],
