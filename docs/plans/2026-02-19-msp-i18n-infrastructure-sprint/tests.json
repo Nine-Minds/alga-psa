@@ -126,7 +126,7 @@
   {
     "id": "T016",
     "description": "I18nProvider accepts optional namespaces prop (string[])",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F004"
     ]
