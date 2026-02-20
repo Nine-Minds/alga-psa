@@ -825,7 +825,7 @@
   {
     "id": "T097",
     "description": "Multiple plausible matches generate reconciliation queue item instead of auto-link.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F098"
     ]

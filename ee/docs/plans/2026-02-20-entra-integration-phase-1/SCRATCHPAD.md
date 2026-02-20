@@ -616,3 +616,6 @@ EOF && git add ee/docs/plans/2026-02-20-entra-integration-phase-1/tests.json ee/
 - (2026-02-20) `T096` completed in `entraContactReconciler` unit suite.
 - No-match case verifies reconcile flow creates a new contact under the mapped client before linking Entra identity metadata.
 - Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraContactReconciler.test.ts` (pass).
+- (2026-02-20) `T097` completed in `entraContactReconciler` unit suite.
+- Ambiguous-match case verifies multiple candidates queue reconciliation items instead of auto-linking/creation.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraContactReconciler.test.ts` (pass).
