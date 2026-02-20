@@ -320,7 +320,7 @@
   {
     "id": "T040",
     "description": "Phase 1 test file references updated from 'msp' to 'msp/core' namespace",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F017",
       "F023"

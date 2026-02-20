@@ -179,3 +179,4 @@ ls server/public/locales/*/msp.json  # should fail (files removed)
 - 2026-02-20: Completed T037 checklist entry — server/public/locales/{lang}/msp/core.json exists for all 7 languages (en, fr, es, de, nl, it, pl)
 - 2026-02-20: Completed T038 checklist entry — Old server/public/locales/{lang}/msp.json files are removed for all 7 languages
 - 2026-02-20: Completed T039 checklist entry — No useTranslation('msp') references remain in source code (only 'msp/core')
+- 2026-02-20: Completed T040 checklist entry — Phase 1 test file references updated from 'msp' to 'msp/core' namespace
