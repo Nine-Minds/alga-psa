@@ -694,3 +694,6 @@ EOF && git add ee/docs/plans/2026-02-20-entra-integration-phase-1/tests.json ee/
 - (2026-02-20) `T122` completed: added `ee/server/src/__tests__/unit/entraSyncHistoryPanel.test.tsx`.
 - History list assertions verify run cards are rendered in descending `startedAt` order regardless of API return order.
 - Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraSyncHistoryPanel.test.tsx` (pass).
+- (2026-02-20) `T123` completed in `ee/server/src/__tests__/unit/entraSyncHistoryPanel.test.tsx`.
+- Drilldown test validates fetching run detail and rendering per-tenant outcome rows with created/linked/updated/ambiguous/inactivated counters.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraSyncHistoryPanel.test.tsx` (pass).

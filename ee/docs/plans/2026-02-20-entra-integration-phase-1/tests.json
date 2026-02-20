@@ -1038,7 +1038,7 @@
   {
     "id": "T123",
     "description": "Sync history drilldown displays per-tenant outcome rows and counts.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F112",
       "F021"
