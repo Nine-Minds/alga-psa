@@ -360,7 +360,7 @@
   {
     "id": "T042",
     "description": "Credential resolver prefers tenant Microsoft credentials when both tenant id/secret are present.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F034"
     ]

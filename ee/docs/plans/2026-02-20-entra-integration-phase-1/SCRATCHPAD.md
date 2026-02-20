@@ -450,3 +450,6 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - (2026-02-20) `T041` completed: expanded Entra action tests for connection-type switching cleanup behavior.
 - Test verifies direct initiation clears stale CIPP credentials and CIPP connect clears stale direct token secrets before persisting new mode configuration.
 - Validation command: `cd server && npx vitest run src/test/unit/integrations/entraActions.directConnect.test.ts` (pass).
+- (2026-02-20) `T042` completed: added resolver precedence unit coverage in `ee/server/src/__tests__/unit/microsoftCredentialResolver.precedence.test.ts`.
+- Tenant-secret preference case asserts tenant credential pair is selected over env/app fallbacks when present.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/microsoftCredentialResolver.precedence.test.ts` (pass).
