@@ -176,7 +176,7 @@
   {
     "id": "F030",
     "description": "Update 4 documents handler files to import StorageService from @alga-psa/storage/StorageService",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-11"]
   },
   {

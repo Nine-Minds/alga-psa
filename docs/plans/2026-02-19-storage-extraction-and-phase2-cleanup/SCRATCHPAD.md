@@ -89,3 +89,4 @@ grep -r "from '../lib/email'" server/ --include="*.ts" --include="*.tsx"
 - F027: Updated documents view API route to import `StorageProviderFactory` from `@alga-psa/storage`.
 - F028: Updated server wrapper `StorageService` to import storage helpers from `@alga-psa/storage`.
 - F029: Updated billing `pdfGenerationService.ts` to import `FileStore` from `@alga-psa/storage/types/storage`.
+- F030: Updated document handlers to import `StorageService` from `@alga-psa/storage/StorageService`.
