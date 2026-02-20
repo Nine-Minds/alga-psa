@@ -415,7 +415,7 @@
   {
     "id": "F038",
     "description": "Token secret persistence: store and rotate direct OAuth tokens through `getSecretProviderInstance()` tenant secrets.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Security / Permissions"
     ],

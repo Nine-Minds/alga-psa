@@ -1,7 +1,6 @@
 import axios from 'axios';
-import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { resolveMicrosoftCredentialsForTenant } from './microsoftCredentialResolver';
-import { ENTRA_DIRECT_SECRET_KEYS } from '../secrets';
+import { getEntraDirectRefreshToken, saveEntraDirectTokenSet } from './tokenStore';
 
 export interface RefreshDirectTokenResult {
   accessToken: string;
@@ -13,17 +12,13 @@ export interface RefreshDirectTokenResult {
 export async function refreshEntraDirectToken(
   tenant: string
 ): Promise<RefreshDirectTokenResult> {
-  const secretProvider = await getSecretProviderInstance();
   const credentials = await resolveMicrosoftCredentialsForTenant(tenant);
 
   if (!credentials) {
     throw new Error('Microsoft credentials are not configured for direct Entra token refresh.');
   }
 
-  const refreshToken = await secretProvider.getTenantSecret(
-    tenant,
-    ENTRA_DIRECT_SECRET_KEYS.refreshToken
-  );
+  const refreshToken = await getEntraDirectRefreshToken(tenant);
 
   if (!refreshToken) {
     throw new Error('No direct Entra refresh token is stored for this tenant.');
@@ -57,26 +52,12 @@ export async function refreshEntraDirectToken(
 
   const expiresAt = new Date(Date.now() + expiresIn * 1000).toISOString();
 
-  await secretProvider.setTenantSecret(
-    tenant,
-    ENTRA_DIRECT_SECRET_KEYS.accessToken,
-    accessToken
-  );
-  await secretProvider.setTenantSecret(
-    tenant,
-    ENTRA_DIRECT_SECRET_KEYS.refreshToken,
-    newRefreshToken
-  );
-  await secretProvider.setTenantSecret(
-    tenant,
-    ENTRA_DIRECT_SECRET_KEYS.tokenExpiresAt,
-    expiresAt
-  );
-  await secretProvider.setTenantSecret(
-    tenant,
-    ENTRA_DIRECT_SECRET_KEYS.tokenScope,
-    scope || ''
-  );
+  await saveEntraDirectTokenSet(tenant, {
+    accessToken,
+    refreshToken: newRefreshToken,
+    expiresAt,
+    scope,
+  });
 
   return {
     accessToken,

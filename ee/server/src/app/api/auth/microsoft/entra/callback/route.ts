@@ -1,9 +1,8 @@
 import axios from 'axios';
 import { NextRequest, NextResponse } from 'next/server';
-import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { createTenantKnex, runWithTenant } from '@/lib/db';
-import { ENTRA_DIRECT_SECRET_KEYS } from '@/lib/integrations/entra/secrets';
 import { resolveMicrosoftCredentialsForTenant } from '@/lib/integrations/entra/auth/microsoftCredentialResolver';
+import { saveEntraDirectTokenSet } from '@/lib/integrations/entra/auth/tokenStore';
 
 export const dynamic = 'force-dynamic';
 
@@ -105,13 +104,13 @@ export async function GET(request: NextRequest) {
       return failureRedirect('token_exchange_failed', 'Token exchange response missing required fields.');
     }
 
-    const secretProvider = await getSecretProviderInstance();
     const expiresAt = new Date(Date.now() + expiresIn * 1000).toISOString();
-
-    await secretProvider.setTenantSecret(state.tenant, ENTRA_DIRECT_SECRET_KEYS.accessToken, accessToken);
-    await secretProvider.setTenantSecret(state.tenant, ENTRA_DIRECT_SECRET_KEYS.refreshToken, refreshToken);
-    await secretProvider.setTenantSecret(state.tenant, ENTRA_DIRECT_SECRET_KEYS.tokenExpiresAt, expiresAt);
-    await secretProvider.setTenantSecret(state.tenant, ENTRA_DIRECT_SECRET_KEYS.tokenScope, scope || '');
+    await saveEntraDirectTokenSet(state.tenant, {
+      accessToken,
+      refreshToken,
+      expiresAt,
+      scope: scope || null,
+    });
 
     await runWithTenant(state.tenant, async () => {
       const { knex } = await createTenantKnex();
