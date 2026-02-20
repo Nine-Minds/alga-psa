@@ -7,6 +7,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import {
   getEntraIntegrationStatus,
+  discoverEntraManagedTenants,
   startEntraSync,
   initiateEntraDirectOAuth,
   disconnectEntraIntegration,
@@ -81,6 +82,8 @@ export default function EntraIntegrationSettings() {
   const [skippedTenants, setSkippedTenants] = React.useState<EntraSkippedTenant[]>([]);
   const [syncAllLoading, setSyncAllLoading] = React.useState(false);
   const [syncAllMessage, setSyncAllMessage] = React.useState<string | null>(null);
+  const [discoveryLoading, setDiscoveryLoading] = React.useState(false);
+  const [discoveryMessage, setDiscoveryMessage] = React.useState<string | null>(null);
 
   const [cippDialogOpen, setCippDialogOpen] = React.useState(false);
   const [directLoading, setDirectLoading] = React.useState(false);
@@ -209,6 +212,27 @@ export default function EntraIntegrationSettings() {
     }
   }, [loadStatus]);
 
+  const handleRunDiscovery = React.useCallback(async () => {
+    setDiscoveryLoading(true);
+    setDiscoveryMessage(null);
+    try {
+      const result = await discoverEntraManagedTenants();
+      if ('error' in result) {
+        setDiscoveryMessage(result.error || 'Failed to run tenant discovery.');
+        return;
+      }
+
+      const discoveredCount = Number(result.data?.discoveredTenantCount || 0);
+      setDiscoveryMessage(
+        `Discovery completed. ${discoveredCount} tenant${discoveredCount === 1 ? '' : 's'} discovered.`
+      );
+      setTableRefreshKey((current) => current + 1);
+      await loadStatus();
+    } finally {
+      setDiscoveryLoading(false);
+    }
+  }, [loadStatus]);
+
   const handleConnectionOptionClick = async (optionId: string) => {
     if (!isConnectStepCurrent) {
       return;
@@ -313,9 +337,21 @@ export default function EntraIntegrationSettings() {
                 </p>
               ) : null}
               {isDiscoverStepCurrent ? (
-                <Button id="entra-run-discovery" type="button">
-                  Run Discovery
-                </Button>
+                <div className="space-y-2">
+                  <Button
+                    id="entra-run-discovery"
+                    type="button"
+                    onClick={() => void handleRunDiscovery()}
+                    disabled={discoveryLoading}
+                  >
+                    {discoveryLoading ? 'Running Discovery…' : 'Run Discovery'}
+                  </Button>
+                  {discoveryMessage ? (
+                    <p className="text-sm text-muted-foreground" id="entra-run-discovery-feedback">
+                      {discoveryMessage}
+                    </p>
+                  ) : null}
+                </div>
               ) : null}
               {isMapStepCurrent ? (
                 <Button id="entra-review-mappings" type="button" onClick={() => handleScrollToMapping()}>

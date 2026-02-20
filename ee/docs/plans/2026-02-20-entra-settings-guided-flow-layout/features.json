@@ -49,7 +49,7 @@
   {
     "id": "F005",
     "description": "Wire guided `Run Discovery` CTA to `discoverEntraManagedTenants` with loading, feedback, and status refresh behavior.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations"

@@ -66,3 +66,7 @@ Focused planning log for guided-layout improvements in Entra integration setting
 - (2026-02-20) F004 implemented in `ee/server/src/components/settings/integrations/EntraIntegrationSettings.tsx`.
   - Added explicit current-step booleans and gated onboarding action rendering to current step only.
   - Added guard in connection-option click handler to no-op if Connect is not the active step.
+- (2026-02-20) F005 implemented in `ee/server/src/components/settings/integrations/EntraIntegrationSettings.tsx`.
+  - Wired guided `Run Discovery` CTA to `discoverEntraManagedTenants`.
+  - Added discovery loading state and feedback message (`#entra-run-discovery-feedback`).
+  - On success, refreshes status and bumps mapping table refresh key so mapping context updates immediately.
