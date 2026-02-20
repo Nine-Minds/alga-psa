@@ -873,7 +873,7 @@
   {
     "id": "T103",
     "description": "Disabled upstream user marks linked contact inactive with sync reason.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F102"
     ]
