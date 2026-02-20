@@ -227,7 +227,7 @@
   {
     "id": "F021",
     "description": "Schema: create `entra_sync_run_tenants` table for per-tenant sync outcomes within each run.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data / API / Integrations"
     ],

@@ -98,3 +98,4 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - (2026-02-20) `F018` completed: added unique partial index `ux_entra_client_tenant_mappings_active` to prevent duplicate active mappings per discovered Entra tenant.
 - (2026-02-20) `F019` completed: migration creates `entra_sync_settings` for cadence, filters, and field-sync JSON config.
 - (2026-02-20) `F020` completed: migration adds parent sync run table `entra_sync_runs` with workflow/status/summary columns.
+- (2026-02-20) `F021` completed: migration adds `entra_sync_run_tenants` with FK linkage to parent run rows and per-tenant counters.
