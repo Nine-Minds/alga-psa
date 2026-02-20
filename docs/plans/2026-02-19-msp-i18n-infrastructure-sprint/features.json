@@ -14,7 +14,7 @@
   {
     "id": "F003",
     "description": "Add getNamespacesForRoute(pathname) function to packages/ui/src/lib/i18n/config.ts — exact match first, then longest prefix match, fallback to ['common']",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR3"]
   },
   {

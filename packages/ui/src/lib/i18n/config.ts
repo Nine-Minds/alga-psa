@@ -113,6 +113,34 @@ export const ROUTE_NAMESPACES = {
 } as const;
 
 /**
+ * Resolve namespaces for a given route, preferring exact match, then longest prefix match.
+ */
+export function getNamespacesForRoute(pathname: string): string[] {
+  if (!pathname) {
+    return ['common'];
+  }
+
+  if (Object.prototype.hasOwnProperty.call(ROUTE_NAMESPACES, pathname)) {
+    return [...ROUTE_NAMESPACES[pathname as keyof typeof ROUTE_NAMESPACES]];
+  }
+
+  let bestMatch: keyof typeof ROUTE_NAMESPACES | null = null;
+  for (const route of Object.keys(ROUTE_NAMESPACES) as Array<keyof typeof ROUTE_NAMESPACES>) {
+    if (pathname.startsWith(route)) {
+      if (!bestMatch || route.length > bestMatch.length) {
+        bestMatch = route;
+      }
+    }
+  }
+
+  if (bestMatch) {
+    return [...ROUTE_NAMESPACES[bestMatch]];
+  }
+
+  return ['common'];
+}
+
+/**
  * Paths for translation resources
  */
 export const TRANSLATION_PATHS = {
