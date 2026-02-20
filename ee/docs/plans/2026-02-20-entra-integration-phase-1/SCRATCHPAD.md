@@ -362,3 +362,6 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - (2026-02-20) `T006` completed: expanded `server/src/test/unit/components/integrations/IntegrationsSettingsPage.entra.test.tsx` with a flag-off scenario.
 - With `useFeatureFlag('entra-integration-ui')` mocked disabled, test confirms the Identity/Entra integration surface is absent from integrations settings UI.
 - Validation command: `cd server && npx vitest run src/test/unit/components/integrations/IntegrationsSettingsPage.entra.test.tsx` (pass).
+- (2026-02-20) `T007` completed: expanded `server/src/test/unit/components/integrations/IntegrationsSettingsPage.entra.test.tsx` with a flag-on scenario.
+- With `useFeatureFlag('entra-integration-ui')` mocked enabled, test confirms the Entra settings surface renders in Identity section (accepting either loading card text or loaded shell).
+- Validation command: `cd server && npx vitest run src/test/unit/components/integrations/IntegrationsSettingsPage.entra.test.tsx` (pass).

@@ -54,7 +54,7 @@
   {
     "id": "T007",
     "description": "`entra-integration-ui` enabled shows Entra settings surface.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F006",
       "F007"
