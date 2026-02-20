@@ -1161,7 +1161,7 @@
   {
     "id": "T137",
     "description": "EE docs describe additive sync and non-overwrite behavior with field-sync toggles.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F101",
       "F104",
