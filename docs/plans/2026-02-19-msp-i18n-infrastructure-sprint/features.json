@@ -142,5 +142,11 @@
     "description": "npm run build succeeds with no TypeScript errors after all changes",
     "implemented": false,
     "prdRefs": ["FR23"]
+  },
+  {
+    "id": "F025",
+    "description": "Add pseudo-locale output directories (server/public/locales/xx, server/public/locales/yy) to .gitignore",
+    "implemented": false,
+    "prdRefs": ["FR14"]
   }
 ]

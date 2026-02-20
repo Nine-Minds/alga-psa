@@ -310,5 +310,11 @@
     "description": "npm run build succeeds with no TypeScript errors after all changes",
     "implemented": false,
     "featureIds": ["F024"]
+  },
+  {
+    "id": "T053",
+    "description": ".gitignore excludes server/public/locales/xx/ and server/public/locales/yy/ pseudo-locale outputs",
+    "implemented": false,
+    "featureIds": ["F025"]
   }
 ]
