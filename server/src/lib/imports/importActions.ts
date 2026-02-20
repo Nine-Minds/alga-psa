@@ -10,7 +10,7 @@ import { CsvImporter } from '@/lib/imports/CsvImporter';
 import { getAssetFieldDefinitions } from '@/lib/imports/assetFieldDefinitions';
 import { DuplicateDetector } from '@/lib/imports/DuplicateDetector';
 import { registerDefaultImporters } from '@/lib/imports/registerDefaultImporters';
-import { StorageService } from '@alga-psa/documents/storage/StorageService';
+import { StorageService } from '@alga-psa/storage/StorageService';
 import { AssetImportJobContext } from '@/lib/imports/importJobContext';
 import { JobService } from '@alga-psa/jobs';
 import { addDocument, associateDocumentWithClient, deleteDocument } from '@alga-psa/documents/actions/documentActions';
@@ -406,4 +406,3 @@ export async function approveImport(importJobId: string) {
     throw error instanceof Error ? error : new Error('Failed to queue asset import job');
   }
 }
-

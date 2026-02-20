@@ -30,6 +30,7 @@
     "@alga-psa/validation": "*",
     "@alga-psa/clients": "*",
     "@alga-psa/tickets": "*",
+    "@alga-psa/storage": "*",
     "@alga-psa/projects": "*",
     "zod": "^3.22.4"
   },

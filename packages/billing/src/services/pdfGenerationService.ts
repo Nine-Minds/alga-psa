@@ -2,7 +2,7 @@ import { v4 as uuidv4 } from 'uuid';
 import puppeteer, { Page } from 'puppeteer';
 
 import { createTenantKnex, runWithTenant } from '@alga-psa/db';
-import type { FileStore } from '@alga-psa/documents/types/storage';
+import type { FileStore } from '@alga-psa/storage/types/storage';
 import { getStorageProviderFactoryAsync, getFileStoreModelAsync } from '../lib/documentsHelpers';
 
 import { getInvoiceForRendering } from '../actions/invoiceQueries';
@@ -141,4 +141,3 @@ export class PDFGenerationService {
 export function createPDFGenerationService(tenant: string): PDFGenerationService {
   return new PDFGenerationService(tenant);
 }
-

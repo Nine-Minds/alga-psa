@@ -3,7 +3,7 @@ import { TestContext } from '../../../test-utils/testContext';
 import { setupCommonMocks } from '../../../test-utils/testMocks';
 import { addDocument } from '@alga-psa/documents/actions/documentActions';
 import { createContract } from '@alga-psa/billing/actions';
-import DocumentAssociation from 'server/src/models/document-association';
+import DocumentAssociation from '@alga-psa/documents/models/documentAssociation';
 import {
   canAccessDocument,
   filterAccessibleDocuments

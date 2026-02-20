@@ -1,0 +1,275 @@
+[
+  {
+    "id": "T001",
+    "description": "Build: portal-domain-sessions-prune.ts compiles without errors after import fix",
+    "implemented": true,
+    "featureIds": ["F001"]
+  },
+  {
+    "id": "T002",
+    "description": "Build: DocumentAssociation is exported from @alga-psa/documents/models barrel",
+    "implemented": true,
+    "featureIds": ["F002"]
+  },
+  {
+    "id": "T003",
+    "description": "Test: documentActions.upload.test.ts passes with updated DocumentAssociation mock path",
+    "implemented": true,
+    "featureIds": ["F003"]
+  },
+  {
+    "id": "T004",
+    "description": "Test: documentPermissionsIntegration.test.ts passes with updated DocumentAssociation import",
+    "implemented": true,
+    "featureIds": ["F004"]
+  },
+  {
+    "id": "T005",
+    "description": "Verify: server/src/models/document-association.ts no longer exists",
+    "implemented": true,
+    "featureIds": ["F005"]
+  },
+  {
+    "id": "T006",
+    "description": "Build: surveyService.ts compiles with @alga-psa/email import",
+    "implemented": true,
+    "featureIds": ["F006"]
+  },
+  {
+    "id": "T007",
+    "description": "Verify: server/src/lib/email/index.ts no longer exists",
+    "implemented": true,
+    "featureIds": ["F007"]
+  },
+  {
+    "id": "T008",
+    "description": "Verify: no source files (excluding docs/README) import from @/lib/email or ../lib/email",
+    "implemented": true,
+    "featureIds": ["F006", "F007"]
+  },
+  {
+    "id": "T009",
+    "description": "Build: packages/storage/package.json has correct name, dependencies, and exports field",
+    "implemented": true,
+    "featureIds": ["F008", "F020"]
+  },
+  {
+    "id": "T010",
+    "description": "Build: packages/storage/project.json has type:horizontal tag",
+    "implemented": true,
+    "featureIds": ["F009"]
+  },
+  {
+    "id": "T011",
+    "description": "Build: packages/storage/tsconfig.json extends root config",
+    "implemented": true,
+    "featureIds": ["F010"]
+  },
+  {
+    "id": "T012",
+    "description": "Build: StorageService class is importable from @alga-psa/storage/StorageService",
+    "implemented": true,
+    "featureIds": ["F017", "F019"]
+  },
+  {
+    "id": "T013",
+    "description": "Build: StorageProviderFactory and generateStoragePath are importable from @alga-psa/storage",
+    "implemented": true,
+    "featureIds": ["F016", "F019"]
+  },
+  {
+    "id": "T014",
+    "description": "Build: FileStore type is importable from @alga-psa/storage/types/storage",
+    "implemented": true,
+    "featureIds": ["F011", "F020"]
+  },
+  {
+    "id": "T015",
+    "description": "Build: FileStoreModel is importable from @alga-psa/storage",
+    "implemented": true,
+    "featureIds": ["F015", "F019"]
+  },
+  {
+    "id": "T016",
+    "description": "Build: StorageError is importable from @alga-psa/storage/providers/StorageProvider",
+    "implemented": true,
+    "featureIds": ["F013", "F020"]
+  },
+  {
+    "id": "T017",
+    "description": "Build: All internal imports within storage package files resolve correctly (no broken relative paths)",
+    "implemented": true,
+    "featureIds": ["F018"]
+  },
+  {
+    "id": "T018",
+    "description": "Build: packages/billing/src/actions/invoiceJobActions.ts compiles with @alga-psa/storage import",
+    "implemented": true,
+    "featureIds": ["F021"]
+  },
+  {
+    "id": "T019",
+    "description": "Build: packages/client-portal/src/actions/client-portal-actions/client-project-details.ts compiles with @alga-psa/storage import",
+    "implemented": true,
+    "featureIds": ["F022"]
+  },
+  {
+    "id": "T020",
+    "description": "Build: packages/jobs/src/lib/jobService.ts compiles with @alga-psa/storage import",
+    "implemented": true,
+    "featureIds": ["F023"]
+  },
+  {
+    "id": "T021",
+    "description": "Build: packages/jobs/src/lib/jobs/jobScheduler.ts compiles with @alga-psa/storage import",
+    "implemented": true,
+    "featureIds": ["F024"]
+  },
+  {
+    "id": "T022",
+    "description": "Build: server/src/lib/imports/importActions.ts compiles with @alga-psa/storage import",
+    "implemented": true,
+    "featureIds": ["F025"]
+  },
+  {
+    "id": "T023",
+    "description": "Build: server/src/services/pdf-generation.service.ts compiles with @alga-psa/storage imports",
+    "implemented": true,
+    "featureIds": ["F026"]
+  },
+  {
+    "id": "T024",
+    "description": "Build: server/src/app/api/documents/view/[fileId]/route.ts compiles with @alga-psa/storage import",
+    "implemented": true,
+    "featureIds": ["F027"]
+  },
+  {
+    "id": "T025",
+    "description": "Build: server/src/lib/storage/StorageService.ts compiles with @alga-psa/storage imports",
+    "implemented": true,
+    "featureIds": ["F028"]
+  },
+  {
+    "id": "T026",
+    "description": "Build: packages/billing/src/services/pdfGenerationService.ts compiles with @alga-psa/storage type import",
+    "implemented": true,
+    "featureIds": ["F029"]
+  },
+  {
+    "id": "T027",
+    "description": "Build: All 4 documents handler files compile with @alga-psa/storage/StorageService import",
+    "implemented": true,
+    "featureIds": ["F030"]
+  },
+  {
+    "id": "T028",
+    "description": "Build: packages/documents/src/actions/file-actions/fileActions.ts compiles with @alga-psa/storage import",
+    "implemented": true,
+    "featureIds": ["F031"]
+  },
+  {
+    "id": "T029",
+    "description": "Build: packages/documents/src/actions/documentActions.ts compiles with @alga-psa/storage import",
+    "implemented": true,
+    "featureIds": ["F032"]
+  },
+  {
+    "id": "T030",
+    "description": "Build: packages/documents/src/lib/entityImageService.ts compiles with @alga-psa/storage import",
+    "implemented": true,
+    "featureIds": ["F033"]
+  },
+  {
+    "id": "T031",
+    "description": "Backwards compat: StorageProviderFactory is still importable from @alga-psa/documents (re-export)",
+    "implemented": true,
+    "featureIds": ["F034"]
+  },
+  {
+    "id": "T032",
+    "description": "Backwards compat: generateStoragePath is still importable from @alga-psa/documents (re-export)",
+    "implemented": true,
+    "featureIds": ["F034"]
+  },
+  {
+    "id": "T033",
+    "description": "Backwards compat: StorageService is still importable from @alga-psa/documents/storage/StorageService (re-export)",
+    "implemented": true,
+    "featureIds": ["F035"]
+  },
+  {
+    "id": "T034",
+    "description": "Backwards compat: FileStore type is still importable from @alga-psa/documents/types/storage (re-export)",
+    "implemented": true,
+    "featureIds": ["F035"]
+  },
+  {
+    "id": "T035",
+    "description": "Build: @alga-psa/storage is listed as dependency in documents, billing, client-portal, and jobs package.json files",
+    "implemented": true,
+    "featureIds": ["F036", "F037"]
+  },
+  {
+    "id": "T036",
+    "description": "Verify: Original storage files are removed from packages/documents/src/ (no duplicates)",
+    "implemented": true,
+    "featureIds": ["F038"]
+  },
+  {
+    "id": "T037",
+    "description": "Build: @alga-psa/storage is registered in workspace tsconfig paths",
+    "implemented": true,
+    "featureIds": ["F039"]
+  },
+  {
+    "id": "T038",
+    "description": "Build: Full npm run build passes with zero errors",
+    "implemented": true,
+    "featureIds": ["F001", "F005", "F007", "F038"]
+  },
+  {
+    "id": "T039",
+    "description": "Verify: grep for 'from.*server/src/models/document-association' returns 0 matches in source files",
+    "implemented": true,
+    "featureIds": ["F005"]
+  },
+  {
+    "id": "T040",
+    "description": "Verify: grep for 'lib/models/PortalDomainSessionToken' returns 0 matches in source files",
+    "implemented": true,
+    "featureIds": ["F001"]
+  },
+  {
+    "id": "T041",
+    "description": "Build: server/tsconfig.json includes @alga-psa/storage path mappings for Next.js resolution",
+    "implemented": true,
+    "featureIds": ["F040"]
+<<<<<<< HEAD
+<<<<<<< HEAD
+=======
+=======
+>>>>>>> 37006a786 (feat(F041): update VideoDocumentHandler storage import)
+  },
+  {
+    "id": "T042",
+    "description": "Build: VideoDocumentHandler imports StorageProviderFactory from @alga-psa/storage",
+<<<<<<< HEAD
+<<<<<<< HEAD
+    "implemented": true,
+    "featureIds": ["F041"]
+  },
+  {
+    "id": "T043",
+    "description": "Build: fileActions imports FileStoreModel/FileStore from @alga-psa/storage",
+    "implemented": true,
+    "featureIds": ["F042"]
+>>>>>>> 9f28a270c (feat(F042): update fileActions storage model imports)
+=======
+    "implemented": false,
+=======
+    "implemented": true,
+>>>>>>> 738e4318d (test(T042): verify VideoDocumentHandler import)
+    "featureIds": ["F041"]
+>>>>>>> 37006a786 (feat(F041): update VideoDocumentHandler storage import)
+  }
+]

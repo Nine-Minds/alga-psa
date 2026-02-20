@@ -28,7 +28,7 @@ vi.mock('server/src/lib/auth/rbac', () => ({
   hasPermission: vi.fn(),
 }));
 
-vi.mock('server/src/models/document-association', () => ({
+vi.mock('@alga-psa/documents/models/documentAssociation', () => ({
   default: {
     create: vi.fn(),
   },
@@ -47,7 +47,7 @@ import { createTenantKnex } from 'server/src/lib/db';
 import { withTransaction } from '@alga-psa/db';
 import { getCurrentUser } from '@alga-psa/users/actions';
 import { hasPermission } from 'server/src/lib/auth/rbac';
-import DocumentAssociation from 'server/src/models/document-association';
+import DocumentAssociation from '@alga-psa/documents/models/documentAssociation';
 import { v4 as uuidv4 } from 'uuid';
 import { generateDocumentPreviews } from 'server/src/lib/utils/documentPreviewGenerator';
 import * as documentActions from '@/lib/actions/document-actions/documentActions';

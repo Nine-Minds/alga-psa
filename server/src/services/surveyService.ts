@@ -8,7 +8,7 @@ import logger from '@alga-psa/core/logger';
 
 import { createTenantKnex, runWithTenant } from '../lib/db';
 import { issueSurveyToken } from '@alga-psa/surveys/actions/surveyTokenService';
-import { TenantEmailService } from '../lib/email';
+import { TenantEmailService } from '@alga-psa/email';
 import { isValidEmail } from '@alga-psa/core';
 import { DatabaseTemplateProcessor } from '@alga-psa/email';
 import { publishWorkflowEvent } from '../lib/eventBus/publishers';

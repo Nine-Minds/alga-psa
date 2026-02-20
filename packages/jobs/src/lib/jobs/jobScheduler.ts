@@ -1,7 +1,7 @@
 import PgBoss, { Job, WorkHandler } from 'pg-boss';
 import logger from '@alga-psa/core/logger';
 import { getPostgresConnection } from '@alga-psa/db';
-import { StorageService } from '@alga-psa/documents/storage/StorageService';
+import { StorageService } from '@alga-psa/storage/StorageService';
 import { JobService } from '../jobService';
 import { JobStatus } from '../../types/job';
 

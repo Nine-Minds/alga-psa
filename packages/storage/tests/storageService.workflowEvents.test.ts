@@ -21,7 +21,7 @@ vi.mock('../src/config/storage', () => ({
   validateFileUpload: vi.fn(async () => {}),
 }));
 
-vi.mock('../src/storage/StorageProviderFactory', () => ({
+vi.mock('../src/StorageProviderFactory', () => ({
   StorageProviderFactory: {
     createProvider: vi.fn(),
   },
@@ -36,12 +36,30 @@ vi.mock('../src/models/storage', () => ({
   },
 }));
 
+vi.mock('@alga-psa/shared/workflow/streams/domainEventBuilders/documentStorageEventBuilders', () => ({
+  buildDocumentDeletedPayload: vi.fn((args: Record<string, unknown>) => args),
+  buildDocumentUploadedPayload: vi.fn((args: Record<string, unknown>) => args),
+}));
+
+vi.mock('@alga-psa/shared/workflow/streams/domainEventBuilders/mediaEventBuilders', () => ({
+  buildFileUploadedPayload: vi.fn((args: Record<string, unknown>) => args),
+  buildMediaProcessingSucceededPayload: vi.fn((args: Record<string, unknown>) => args),
+}));
+
+vi.mock('@alga-psa/validation', () => ({
+  isValidUUID: vi.fn(() => true),
+}));
+
+vi.mock('file-type', () => ({
+  fileTypeFromBuffer: vi.fn(async () => undefined),
+}));
+
 import { createTenantKnex } from '@alga-psa/db';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
-import { StorageProviderFactory } from '../src/storage/StorageProviderFactory';
+import { StorageProviderFactory } from '../src/StorageProviderFactory';
 import { getProviderConfig, getStorageConfig } from '../src/config/storage';
 import { FileStoreModel } from '../src/models/storage';
-import { StorageService } from '../src/storage/StorageService';
+import { StorageService } from '../src/StorageService';
 
 describe('StorageService.uploadFile workflow events', () => {
   const createTenantKnexMock = vi.mocked(createTenantKnex);
@@ -125,7 +143,7 @@ describe('StorageService.uploadFile workflow events', () => {
       delete: vi.fn(async () => {}),
     } as any);
 
-    createTenantKnexMock.mockResolvedValue({ knex: {} } as any);
+    createTenantKnexMock.mockResolvedValue({ knex: {}, tenant: 'tenant-1' } as any);
 
     fileFindByIdMock
       .mockResolvedValueOnce({
