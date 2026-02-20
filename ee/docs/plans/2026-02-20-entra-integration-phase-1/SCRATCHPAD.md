@@ -483,3 +483,6 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - (2026-02-20) `T052` completed: added discovery upsert unit coverage in `ee/server/src/__tests__/unit/entraDiscoveryService.upsert.test.ts`.
 - Test verifies discovery persists managed-tenant rows via tenant-scoped upsert (`onConflict(['tenant','entra_tenant_id']).merge(...)`) and returns idempotent discovered tenant results.
 - Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraDiscoveryService.upsert.test.ts` (pass).
+- (2026-02-20) `T053` completed in `ee/server/src/__tests__/unit/entraDiscoveryService.upsert.test.ts`.
+- Merge-update case asserts discovery upsert writes `display_name` and `primary_domain` from `EXCLUDED` values, covering changed tenant metadata refresh behavior.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraDiscoveryService.upsert.test.ts` (pass).

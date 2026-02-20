@@ -453,7 +453,7 @@
   {
     "id": "T053",
     "description": "Discovery action updates changed display name/domain for previously discovered tenant rows.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F052"
     ]
