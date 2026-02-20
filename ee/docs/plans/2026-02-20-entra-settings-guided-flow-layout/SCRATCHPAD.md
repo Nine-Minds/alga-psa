@@ -59,3 +59,7 @@ Focused planning log for guided-layout improvements in Entra integration setting
 - (2026-02-20) F002 implemented in `ee/server/src/components/settings/integrations/EntraIntegrationSettings.tsx`.
   - Added computed per-step visual state (`current`, `complete`, `locked`) based on guided-step index.
   - Step cards now show explicit status labels in the progress header while preserving existing step descriptions.
+- (2026-02-20) F003 implemented in `ee/server/src/components/settings/integrations/EntraIntegrationSettings.tsx`.
+  - Added `Current Step` card that renders one onboarding primary action at a time (`connect` guidance, `Run Discovery`, `Review Mappings`, or `Run Initial Sync`).
+  - Removed discovery/initial actions from the old shared action row, leaving no same-tier onboarding multi-action group.
+- (2026-02-20) Post-F003 targeted settings test run now fails in old assertions that expected always-visible `Run Initial Sync`; this is expected and will be resolved by F011/T00x guided-flow test updates.

@@ -156,6 +156,36 @@ export default function EntraIntegrationSettings() {
     };
   });
 
+  const currentStepMeta = React.useMemo(() => {
+    if (guidedStepState.currentStep === 'connect') {
+      return {
+        title: 'Step 1: Connect',
+        guidance: 'Select a connection option to continue onboarding.',
+      };
+    }
+    if (guidedStepState.currentStep === 'discover') {
+      return {
+        title: 'Step 2: Discover',
+        guidance: 'Run discovery to load managed Entra tenants before mapping.',
+      };
+    }
+    if (guidedStepState.currentStep === 'map') {
+      return {
+        title: 'Step 3: Map',
+        guidance: 'Confirm or adjust tenant mappings to unlock initial sync.',
+      };
+    }
+    return {
+      title: 'Step 4: Initial Sync',
+      guidance: 'Start the first sync run for confirmed mappings.',
+    };
+  }, [guidedStepState.currentStep]);
+
+  const handleScrollToMapping = React.useCallback(() => {
+    const mappingPanel = document.getElementById('entra-mapping-step-panel');
+    mappingPanel?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, []);
+
   const handleSyncAllTenants = React.useCallback(async () => {
     setSyncAllLoading(true);
     setSyncAllMessage(null);
@@ -263,6 +293,39 @@ export default function EntraIntegrationSettings() {
             ))}
           </div>
 
+          <div className="rounded-lg border border-border/70 bg-background p-4" id="entra-current-step-card">
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Current Step</p>
+            <p className="mt-1 text-sm font-semibold">{currentStepMeta.title}</p>
+            <p className="mt-1 text-sm text-muted-foreground">{currentStepMeta.guidance}</p>
+
+            <div className="mt-3">
+              {guidedStepState.currentStep === 'connect' ? (
+                <p className="text-sm text-muted-foreground">
+                  Connection options appear below.
+                </p>
+              ) : null}
+              {guidedStepState.currentStep === 'discover' ? (
+                <Button id="entra-run-discovery" type="button">
+                  Run Discovery
+                </Button>
+              ) : null}
+              {guidedStepState.currentStep === 'map' ? (
+                <Button id="entra-review-mappings" type="button" onClick={() => handleScrollToMapping()}>
+                  Review Mappings
+                </Button>
+              ) : null}
+              {guidedStepState.currentStep === 'sync' ? (
+                <Button
+                  id="entra-run-initial-sync"
+                  type="button"
+                  disabled={!hasConfirmedMappings}
+                >
+                  Run Initial Sync
+                </Button>
+              ) : null}
+            </div>
+          </div>
+
           {status?.status !== 'connected' ? (
             <div className="space-y-3 rounded-lg border border-border/70 bg-background p-4">
               <p className="text-sm font-semibold">Connection Options</p>
@@ -288,7 +351,7 @@ export default function EntraIntegrationSettings() {
             </div>
           ) : null}
 
-          <div className="rounded-lg border border-border/70 bg-background p-4">
+          <div className="rounded-lg border border-border/70 bg-background p-4" id="entra-mapping-step-panel">
             <div className="mb-3 grid gap-2 text-sm text-muted-foreground sm:grid-cols-3">
               <p><span className="font-medium text-foreground">Mapped:</span> {mappingSummary.mapped}</p>
               <p><span className="font-medium text-foreground">Skipped:</span> {mappingSummary.skipped}</p>
@@ -397,17 +460,6 @@ export default function EntraIntegrationSettings() {
           ) : null}
 
           <div className="flex flex-wrap gap-2">
-            <Button id="entra-run-discovery" type="button" variant="outline" disabled>
-              Run Discovery
-            </Button>
-            <Button
-              id="entra-run-initial-sync"
-              type="button"
-              variant="outline"
-              disabled={!hasConfirmedMappings}
-            >
-              Run Initial Sync
-            </Button>
             <Button
               id="entra-sync-all-tenants"
               type="button"

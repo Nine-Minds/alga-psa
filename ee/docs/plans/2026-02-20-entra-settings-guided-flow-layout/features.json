@@ -25,7 +25,7 @@
   {
     "id": "F003",
     "description": "Replace equal-tier action row with a single `Current Step` primary CTA area that reflects the active onboarding phase.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Problem",
       "Goals",
