@@ -300,7 +300,7 @@
   {
     "id": "T035",
     "description": "Direct token refresh updates stored access token and expiry fields.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F037",
       "F038"
