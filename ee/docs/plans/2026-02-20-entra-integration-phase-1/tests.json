@@ -513,7 +513,7 @@
   {
     "id": "T060",
     "description": "Skip control marks tenant mapping row as skipped without creating active mapping.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F059"
     ]

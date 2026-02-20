@@ -505,3 +505,6 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - Test renders `EntraTenantMappingTable`, loads fuzzy + unmatched preview rows, and verifies client selection updates both row comboboxes (`needs_review` and `unmatched`) with mapped summary callback updates.
 - Added EE Vitest alias coverage for `@alga-psa/integrations/*` and `@alga-psa/clients/*` in `ee/server/vitest.config.ts` so component imports resolve consistently in unit tests.
 - Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraTenantMappingTable.selection.test.tsx` (pass).
+- (2026-02-20) `T060` completed: extended `server/src/test/unit/integrations/entraActions.directConnect.test.ts` with skip-mapping action coverage.
+- Test validates `skipEntraTenantMapping` deactivates prior active rows, inserts active `skip_for_now` row with `client_id: null`, and returns expected skip state payload (no active client mapping created).
+- Validation command: `cd server && npx vitest run src/test/unit/integrations/entraActions.directConnect.test.ts` (pass).

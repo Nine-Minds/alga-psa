@@ -257,4 +257,65 @@ describe('Entra direct connect action permissions', () => {
 
     expect(clearEntraDirectTokenSetMock).toHaveBeenCalledWith('tenant-41b');
   });
+
+  it('T060: skip control marks tenant mapping as skipped without creating an active client mapping', async () => {
+    hasPermissionMock.mockResolvedValue(true);
+    featureFlagIsEnabledMock.mockResolvedValue(true);
+
+    const whereMock = vi.fn().mockReturnThis();
+    const updateMock = vi.fn(async () => 1);
+    const insertMock = vi.fn(async () => [1]);
+    const trxMock = vi.fn(() => ({
+      where: whereMock,
+      update: updateMock,
+      insert: insertMock,
+    }));
+
+    const nowValue = 'db-now';
+    const transactionMock = vi.fn(async (cb: (trx: typeof trxMock) => Promise<void>) => cb(trxMock));
+    const knexMock = {
+      fn: { now: vi.fn(() => nowValue) },
+      transaction: transactionMock,
+    };
+    createTenantKnexMock.mockResolvedValue({ knex: knexMock });
+
+    const { skipEntraTenantMapping } = await import(
+      '@alga-psa/integrations/actions/integrations/entraActions'
+    );
+
+    const result = await skipEntraTenantMapping(
+      { user_id: 'user-60', user_type: 'internal' } as any,
+      { tenant: 'tenant-60' },
+      { managedTenantId: 'managed-60' }
+    );
+
+    expect(result).toEqual({
+      success: true,
+      data: {
+        managedTenantId: 'managed-60',
+        mappingState: 'skip_for_now',
+      },
+    });
+
+    expect(whereMock).toHaveBeenCalledWith({
+      tenant: 'tenant-60',
+      managed_tenant_id: 'managed-60',
+      is_active: true,
+    });
+    expect(updateMock).toHaveBeenCalledWith({
+      is_active: false,
+      updated_at: nowValue,
+    });
+
+    const insertedRow = insertMock.mock.calls[0]?.[0] as Record<string, unknown>;
+    expect(insertedRow).toMatchObject({
+      tenant: 'tenant-60',
+      managed_tenant_id: 'managed-60',
+      client_id: null,
+      mapping_state: 'skip_for_now',
+      is_active: true,
+      decided_by: 'user-60',
+      decided_at: nowValue,
+    });
+  });
 });
