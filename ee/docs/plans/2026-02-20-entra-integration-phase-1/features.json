@@ -744,7 +744,7 @@
   {
     "id": "F067",
     "description": "Mapping summary counts: compute and display totals for mapped/skipped/review categories.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes"
     ],

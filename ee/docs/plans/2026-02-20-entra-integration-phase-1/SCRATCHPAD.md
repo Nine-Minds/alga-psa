@@ -198,3 +198,5 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - (2026-02-20) `F066` completed: added mapping conflict validator (`ee/server/src/lib/integrations/entra/mapping/validation.ts`) and enforced it in mappings confirm route.
 - Confirm now rejects requests that assign one discovered managed tenant to multiple client IDs in the same payload.
 - Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
+- (2026-02-20) `F067` completed: mapping summary counts are now computed from table state (`mapped`, `skipped`, `needsReview`) and displayed in `EntraIntegrationSettings` above the mapping table.
+- Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).

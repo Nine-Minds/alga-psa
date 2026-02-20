@@ -33,6 +33,12 @@ interface ClientOption {
   clientName: string;
 }
 
+export interface EntraMappingSummary {
+  mapped: number;
+  skipped: number;
+  needsReview: number;
+}
+
 function formatConfidence(score: number): string {
   return `${Math.round(score * 100)}%`;
 }
@@ -109,7 +115,9 @@ function reasonLabel(reason: MatchReason): string {
   return 'Fuzzy name';
 }
 
-export function EntraTenantMappingTable() {
+export function EntraTenantMappingTable(props: {
+  onSummaryChange?: (summary: EntraMappingSummary) => void;
+}) {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [rows, setRows] = React.useState<MappingTenantRow[]>([]);
@@ -157,6 +165,18 @@ export function EntraTenantMappingTable() {
 
     void loadClients();
   }, []);
+
+  React.useEffect(() => {
+    const summary: EntraMappingSummary = {
+      mapped: rows.filter((row) => !row.isSkipped && Boolean(row.selectedClientId)).length,
+      skipped: rows.filter((row) => row.isSkipped).length,
+      needsReview: rows.filter(
+        (row) => !row.isSkipped && row.state === 'needs_review'
+      ).length,
+    };
+
+    props.onSummaryChange?.(summary);
+  }, [rows, props]);
 
   const updateSelection = React.useCallback((managedTenantId: string, selectedClientId: string) => {
     setRows((currentRows) =>

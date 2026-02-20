@@ -6,7 +6,7 @@ import { Badge } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { getEntraIntegrationStatus, type EntraStatusResponse } from '@alga-psa/integrations/actions';
-import { EntraTenantMappingTable } from './EntraTenantMappingTable';
+import { EntraTenantMappingTable, type EntraMappingSummary } from './EntraTenantMappingTable';
 
 const WIZARD_STEPS = [
   { id: 1, title: 'Connect', description: 'Choose Direct Microsoft partner auth or CIPP.' },
@@ -22,6 +22,11 @@ export default function EntraIntegrationSettings() {
   const [statusLoading, setStatusLoading] = React.useState(true);
   const [statusError, setStatusError] = React.useState<string | null>(null);
   const [status, setStatus] = React.useState<EntraStatusResponse | null>(null);
+  const [mappingSummary, setMappingSummary] = React.useState<EntraMappingSummary>({
+    mapped: 0,
+    skipped: 0,
+    needsReview: 0,
+  });
 
   const loadStatus = React.useCallback(async () => {
     setStatusLoading(true);
@@ -116,7 +121,12 @@ export default function EntraIntegrationSettings() {
           </div>
 
           <div className="rounded-lg border border-border/70 bg-background p-4">
-            <EntraTenantMappingTable />
+            <div className="mb-3 grid gap-2 text-sm text-muted-foreground sm:grid-cols-3">
+              <p><span className="font-medium text-foreground">Mapped:</span> {mappingSummary.mapped}</p>
+              <p><span className="font-medium text-foreground">Skipped:</span> {mappingSummary.skipped}</p>
+              <p><span className="font-medium text-foreground">Needs Review:</span> {mappingSummary.needsReview}</p>
+            </div>
+            <EntraTenantMappingTable onSummaryChange={setMappingSummary} />
           </div>
 
           <div className="rounded-lg border border-dashed border-border/70 bg-muted/20 p-4" id="entra-connection-status-panel">
