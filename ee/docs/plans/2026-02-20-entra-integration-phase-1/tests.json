@@ -800,7 +800,7 @@
   {
     "id": "T094",
     "description": "Tenant custom exclusion patterns are applied on top of default filters.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F094"
     ]

@@ -607,3 +607,6 @@ EOF && git add ee/docs/plans/2026-02-20-entra-integration-phase-1/tests.json ee/
 - (2026-02-20) `T093` completed in `entraUserFilterPipeline` suite.
 - Default service-account pattern case verifies identities like `svc-*` are filtered from sync candidates with `service_account` reason.
 - Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraUserFilterPipeline.test.ts` (pass).
+- (2026-02-20) `T094` completed in `entraUserFilterPipeline` suite.
+- Tenant custom pattern case verifies configured exclusions are applied on top of defaults and produce `tenant_custom_pattern` filtered results.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraUserFilterPipeline.test.ts` (pass).
