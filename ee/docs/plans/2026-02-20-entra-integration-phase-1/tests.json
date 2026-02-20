@@ -317,7 +317,7 @@
   {
     "id": "T037",
     "description": "CIPP connect action stores API token via tenant secret provider (not plaintext DB field).",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F039",
       "F040"

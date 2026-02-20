@@ -435,3 +435,6 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - (2026-02-20) `T036` completed: extended `server/src/test/unit/integrations/entraActions.directConnect.test.ts` with CIPP base-URL validation coverage.
 - Test verifies invalid CIPP URL input is rejected with explicit validation error before credential cleanup/persistence side effects.
 - Validation command: `cd server && npx vitest run src/test/unit/integrations/entraActions.directConnect.test.ts` (pass).
+- (2026-02-20) `T037` completed: expanded CIPP connect action tests to validate secret storage behavior.
+- Success-path test verifies API token is saved via `saveEntraCippCredentials(...)` and DB insert stores only `token_secret_ref='entra_cipp'` (no plaintext token value).
+- Validation command: `cd server && npx vitest run src/test/unit/integrations/entraActions.directConnect.test.ts` (pass).
