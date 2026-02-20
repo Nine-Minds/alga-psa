@@ -68,7 +68,7 @@
   {
     "id": "F012",
     "description": "Move config/storage.ts from documents to packages/storage/src/config/storage.ts",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-05"]
   },
   {

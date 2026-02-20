@@ -71,3 +71,4 @@ grep -r "from '../lib/email'" server/ --include="*.ts" --include="*.tsx"
 - F009: Added `packages/storage/project.json` with `scope:storage` + `type:horizontal` tags.
 - F010: Added `packages/storage/tsconfig.json` extending the root config.
 - F011: Moved `packages/documents/src/types/storage.ts` to `packages/storage/src/types/storage.ts`.
+- F012: Moved `packages/documents/src/config/storage.ts` to `packages/storage/src/config/storage.ts`.
