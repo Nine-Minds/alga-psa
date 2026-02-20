@@ -112,3 +112,4 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - (2026-02-20) `F032` completed: added `ee/server/src/interfaces/entra.interfaces.ts` and typed row mappers in `ee/server/src/lib/integrations/entra/entraRowMappers.ts` for all Entra tables.
 - Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
 - (2026-02-20) `F033` completed: added canonical Entra secret key constants in `ee/server/src/lib/integrations/entra/secrets.ts` for shared Microsoft app secrets plus direct/CIPP token keys.
+- (2026-02-20) `F034` completed: implemented `resolveMicrosoftCredentialsForTenant()` with explicit tenant-pair -> env-pair -> app-secret-pair precedence in `ee/server/src/lib/integrations/entra/auth/microsoftCredentialResolver.ts`.

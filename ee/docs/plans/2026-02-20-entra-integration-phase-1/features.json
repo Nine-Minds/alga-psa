@@ -371,7 +371,7 @@
   {
     "id": "F034",
     "description": "Credential resolver: implement Microsoft app credential resolution reusing existing secret precedence (tenant/env/app).",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Security / Permissions"
     ],
