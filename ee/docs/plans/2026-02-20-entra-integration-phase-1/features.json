@@ -608,7 +608,7 @@
   {
     "id": "F055",
     "description": "Fuzzy matcher: implement normalized string similarity for candidate suggestions (not auto-commit).",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements"
     ],

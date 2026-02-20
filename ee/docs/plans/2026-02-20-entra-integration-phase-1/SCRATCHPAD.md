@@ -168,3 +168,6 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - (2026-02-20) `F054` completed: added secondary-domain matcher in `ee/server/src/lib/integrations/entra/mapping/matchers/secondaryDomainMatcher.ts`.
 - Secondary matches are normalized and scored below exact matches (`0.88`) so they contribute confidence/candidates without auto-promoting over exact-domain hits.
 - Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
+- (2026-02-20) `F055` completed: added fuzzy matcher in `ee/server/src/lib/integrations/entra/mapping/matchers/fuzzyMatcher.ts` using normalized bigram similarity.
+- Fuzzy candidates are sorted by score and explicitly marked `autoMatch: false` to prevent automatic confirmation.
+- Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
