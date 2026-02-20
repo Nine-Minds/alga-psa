@@ -1180,7 +1180,7 @@
   {
     "id": "F106",
     "description": "Link health updates: maintain `entra_contact_links` last-seen and status fields per sync.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements"
     ],

@@ -3,6 +3,7 @@ import { ContactModel } from '@alga-psa/shared/models/contactModel';
 import type { Knex } from 'knex';
 import { queueAmbiguousEntraMatch } from '../reconciliationQueueService';
 import { findContactMatchesByEmail } from './contactMatcher';
+import { upsertEntraContactLinkActive } from './contactLinkRepository';
 import type { EntraSyncUser } from './types';
 import type { EntraContactMatchCandidate } from './contactMatcher';
 import { buildContactFieldSyncPatch } from './contactFieldSync';
@@ -69,32 +70,12 @@ async function upsertContactLink(
   fieldSyncConfig?: Record<string, unknown>
 ): Promise<void> {
   const now = trx.fn.now();
-
-  await trx('entra_contact_links')
-    .insert({
-      tenant: tenantId,
-      contact_name_id: contactNameId,
-      client_id: clientId,
-      entra_tenant_id: user.entraTenantId,
-      entra_object_id: user.entraObjectId,
-      link_status: 'active',
-      is_active: true,
-      last_seen_at: now,
-      last_synced_at: now,
-      metadata: trx.raw(`'{}'::jsonb`),
-      created_at: now,
-      updated_at: now,
-    })
-    .onConflict(['tenant', 'entra_tenant_id', 'entra_object_id'])
-    .merge({
-      contact_name_id: contactNameId,
-      client_id: clientId,
-      link_status: 'active',
-      is_active: true,
-      last_seen_at: now,
-      last_synced_at: now,
-      updated_at: now,
-    });
+  await upsertEntraContactLinkActive(trx, {
+    tenantId,
+    clientId,
+    contactNameId,
+    user,
+  });
 
   const syncedFieldPatch = buildContactFieldSyncPatch(user, fieldSyncConfig || {});
   await trx('contacts')
