@@ -776,7 +776,7 @@
   {
     "id": "T091",
     "description": "Sync filter excludes disabled Entra users (`accountEnabled=false`).",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F092"
     ]

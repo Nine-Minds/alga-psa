@@ -598,3 +598,6 @@ EOF && git add ee/docs/plans/2026-02-20-entra-integration-phase-1/tests.json ee/
 - (2026-02-20) `T090` completed in Temporal workflow/activity contract suite.
 - Failure-path assertions verify per-tenant catch blocks emit failed tenant results and parent run status rolls up to `partial`/`failed` according to succeeded-vs-failed counts.
 - Validation command: `cd server && npx vitest run src/test/unit/temporal/entraWorkflowActivityContracts.test.ts --coverage.enabled=false` (pass).
+- (2026-02-20) `T091` completed: added user-filter pipeline unit suite `ee/server/src/__tests__/unit/entraUserFilterPipeline.test.ts`.
+- Disabled-user case verifies `accountEnabled=false` identities are excluded with reason `account_disabled`.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraUserFilterPipeline.test.ts` (pass).
