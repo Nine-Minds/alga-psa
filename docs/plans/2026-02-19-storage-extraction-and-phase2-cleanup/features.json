@@ -146,7 +146,7 @@
   {
     "id": "F025",
     "description": "Update server/src/lib/imports/importActions.ts: import StorageService from @alga-psa/storage",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-08"]
   },
   {
