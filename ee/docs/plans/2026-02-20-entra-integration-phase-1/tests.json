@@ -937,7 +937,7 @@
   {
     "id": "T111",
     "description": "Dry-run sync mode performs no DB writes while returning preview counters.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F108"
     ]

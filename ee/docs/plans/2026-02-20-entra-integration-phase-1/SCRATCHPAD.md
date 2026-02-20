@@ -658,3 +658,6 @@ EOF && git add ee/docs/plans/2026-02-20-entra-integration-phase-1/tests.json ee/
 - (2026-02-20) `T110` completed in `ee/server/src/__tests__/unit/entraSyncResultAggregator.test.ts`.
 - Ambiguous-counter assertions verify per-tenant accumulation semantics and counter isolation from unrelated totals.
 - Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraSyncResultAggregator.test.ts` (pass).
+- (2026-02-20) `T111` completed: added `ee/server/src/__tests__/unit/entraSyncEngine.dryRun.test.ts`.
+- Dry-run engine assertions verify ambiguous/linked/created preview counters while ensuring no write-path reconciliation methods execute.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraSyncEngine.dryRun.test.ts` (pass).
