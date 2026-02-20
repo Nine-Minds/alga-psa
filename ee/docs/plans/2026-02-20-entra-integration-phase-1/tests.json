@@ -436,7 +436,7 @@
   {
     "id": "T051",
     "description": "CIPP adapter user responses normalize into canonical sync-user DTO fields.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F050"
     ]

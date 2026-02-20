@@ -477,3 +477,6 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - (2026-02-20) `T050` completed: added CIPP adapter normalization coverage in `ee/server/src/__tests__/unit/cippProviderAdapter.normalization.test.ts`.
 - Tenant-list case verifies CIPP tenant payloads normalize into canonical managed-tenant DTO fields with expected auth header usage.
 - Validation command: `cd ee/server && npx vitest run src/__tests__/unit/cippProviderAdapter.normalization.test.ts` (pass).
+- (2026-02-20) `T051` completed in CIPP adapter normalization tests.
+- User-list case verifies canonical sync-user normalization (identity fields, booleans, trimmed strings, and phone filtering) for CIPP responses.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/cippProviderAdapter.normalization.test.ts` (pass).
