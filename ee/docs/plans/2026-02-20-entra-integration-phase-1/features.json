@@ -1091,7 +1091,7 @@
   {
     "id": "F098",
     "description": "Ambiguous queue path: if multiple plausible matches exist, queue item for manual reconciliation.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements"
     ],

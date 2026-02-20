@@ -275,3 +275,6 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - (2026-02-20) `F097` completed: added `createContactForEntraUser(...)` in `contactReconciler.ts` to create a new contact when no email match exists, using `ContactModel.createContact` inside a tenant transaction.
 - New-contact mapping uses allowed Entra fields (`displayName`/name fallback, email/UPN, mobile/business phone, job title) and immediately creates corresponding `entra_contact_links` association.
 - Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
+- (2026-02-20) `F098` completed: added reconciliation queue service `ee/server/src/lib/integrations/entra/reconciliationQueueService.ts` for ambiguous contact matches.
+- Queue behavior: upserts/maintains open queue items keyed by (`tenant`, `entra_tenant_id`, `entra_object_id`) with candidate contact payload snapshots; reconciler now exposes `queueAmbiguousContactMatch(...)` helper.
+- Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).

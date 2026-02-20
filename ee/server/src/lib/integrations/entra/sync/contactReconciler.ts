@@ -1,6 +1,7 @@
 import { createTenantKnex, runWithTenant } from '@/lib/db';
 import { ContactModel } from '@alga-psa/shared/models/contactModel';
 import type { Knex } from 'knex';
+import { queueAmbiguousEntraMatch } from '../reconciliationQueueService';
 import type { EntraSyncUser } from './types';
 import type { EntraContactMatchCandidate } from './contactMatcher';
 
@@ -20,6 +21,11 @@ export interface EntraCreatedContactResult {
     entraTenantId: string;
     entraObjectId: string;
   };
+}
+
+export interface EntraAmbiguousContactResult {
+  action: 'ambiguous';
+  queueItemId: string;
 }
 
 function fallbackDisplayName(user: EntraSyncUser): string {
@@ -136,5 +142,26 @@ export async function createContactForEntraUser(
       entraTenantId: user.entraTenantId,
       entraObjectId: user.entraObjectId,
     },
+  };
+}
+
+export async function queueAmbiguousContactMatch(
+  tenantId: string,
+  clientId: string,
+  managedTenantId: string | null,
+  user: EntraSyncUser,
+  candidates: EntraContactMatchCandidate[]
+): Promise<EntraAmbiguousContactResult> {
+  const queued = await queueAmbiguousEntraMatch({
+    tenantId,
+    clientId,
+    managedTenantId,
+    user,
+    candidates,
+  });
+
+  return {
+    action: 'ambiguous',
+    queueItemId: queued.queueItemId,
   };
 }
