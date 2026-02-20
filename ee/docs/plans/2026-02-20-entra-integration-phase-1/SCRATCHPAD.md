@@ -535,3 +535,6 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - (2026-02-20) `T069` completed: added Entra Temporal type-contract test `server/src/test/unit/temporal/entraTemporalTypeContracts.test.ts` and tightened Entra activity typing.
 - Removed `any` leak in `ee/temporal-workflows/src/activities/entra-sync-activities.ts` by introducing typed row mapping; discovery workflow/activity now consume shared `types/entra-sync` interfaces (`DiscoverManagedTenants*`, `EntraDiscoveryWorkflowResult`).
 - Validation commands: `cd server && npx vitest run src/test/unit/temporal/entraTemporalTypeContracts.test.ts --coverage.enabled=false` (pass), `cd ee/temporal-workflows && npm run type-check` (pass).
+- (2026-02-20) `T070` completed: added Temporal contract suite `server/src/test/unit/temporal/entraWorkflowActivityContracts.test.ts`.
+- Discovery workflow assertion verifies start-log -> `discoverManagedTenantsActivity` -> completion-log ordering.
+- Validation command: `cd server && npx vitest run src/test/unit/temporal/entraWorkflowActivityContracts.test.ts --coverage.enabled=false` (pass).

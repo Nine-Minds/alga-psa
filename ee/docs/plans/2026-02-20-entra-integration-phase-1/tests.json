@@ -594,7 +594,7 @@
   {
     "id": "T070",
     "description": "`entraDiscoveryWorkflow` executes discovery activities in expected order.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F072",
       "F076"
