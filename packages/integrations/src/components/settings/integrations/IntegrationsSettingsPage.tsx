@@ -19,6 +19,7 @@ import {
   Calendar,
   CreditCard,
   Cloud,
+  Shield,
 } from 'lucide-react';
 import AccountingIntegrationsSetup from './AccountingIntegrationsSetup';
 import RmmIntegrationsSetup from './RmmIntegrationsSetup';
@@ -39,6 +40,27 @@ const StripeConnectionSettings = dynamic(
           <div className="flex flex-col items-center justify-center gap-2">
             <Spinner size="md" />
             <span className="text-sm text-muted-foreground">Loading payment settings...</span>
+          </div>
+        </CardContent>
+      </Card>
+    ),
+    ssr: false,
+  }
+);
+
+const EntraIntegrationSettings = dynamic(
+  () =>
+    import('@enterprise/components/settings/integrations/EntraIntegrationSettings').then(
+      (mod) =>
+        (mod as unknown as { default: React.ComponentType }).default
+    ),
+  {
+    loading: () => (
+      <Card>
+        <CardContent className="py-8">
+          <div className="flex flex-col items-center justify-center gap-2">
+            <Spinner size="md" />
+            <span className="text-sm text-muted-foreground">Loading Entra integration settings...</span>
           </div>
         </CardContent>
       </Card>
@@ -71,14 +93,14 @@ const IntegrationsSettingsPage: React.FC = () => {
   
   // Initialize selected category from URL param or default to 'accounting'
   const [selectedCategory, setSelectedCategory] = useState<string>(
-    categoryParam && ['accounting', 'rmm', 'communication', 'calendar', 'providers', 'payments'].includes(categoryParam)
+    categoryParam && ['accounting', 'rmm', 'communication', 'calendar', 'providers', 'identity', 'payments'].includes(categoryParam)
       ? categoryParam
       : 'accounting'
   );
 
   // Update selected category when URL param changes
   useEffect(() => {
-    if (categoryParam && ['accounting', 'rmm', 'communication', 'calendar', 'providers', 'payments'].includes(categoryParam)) {
+    if (categoryParam && ['accounting', 'rmm', 'communication', 'calendar', 'providers', 'identity', 'payments'].includes(categoryParam)) {
       setSelectedCategory(categoryParam);
     }
   }, [categoryParam]);
@@ -189,6 +211,21 @@ const IntegrationsSettingsPage: React.FC = () => {
             </div>
           ),
         },
+      ],
+    },
+    {
+      id: 'identity',
+      label: 'Identity',
+      description: 'Connect identity providers for tenant discovery and contact synchronization.',
+      icon: Shield,
+      integrations: [
+        ...(isEEAvailable ? [{
+          id: 'entra',
+          name: 'Microsoft Entra',
+          description: 'Discover managed Microsoft tenants and sync users to contacts',
+          component: EntraIntegrationSettings,
+          isEE: true,
+        }] : []),
       ],
     },
     {

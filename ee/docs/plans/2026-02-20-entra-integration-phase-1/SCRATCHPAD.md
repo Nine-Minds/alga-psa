@@ -71,3 +71,6 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - (2026-02-20) `F003` completed: created `packages/integrations/src/actions/integrations/entraActions.ts` and exported the new action surface from both `packages/integrations/src/actions/integrations/index.ts` and `packages/integrations/src/actions/index.ts`.
 - Decision: Entra actions currently call EE route modules through a shared `callEeRoute` helper to keep action and API contracts aligned during phased implementation.
 - Validation command: `npx tsc --noEmit -p packages/integrations/tsconfig.json` (pass).
+- (2026-02-20) `F004` completed: added an EE Entra entry to Integrations settings in a new `Identity` tab/category and wired it to dynamic-load `@enterprise/components/settings/integrations/EntraIntegrationSettings`.
+- Discovery: `@enterprise/*` resolution in shared packages requires matching CE stub files under `packages/ee/src/*`; added Entra stub there to keep CE builds/typecheck valid.
+- Validation commands: `npx tsc --noEmit -p packages/integrations/tsconfig.json` and `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
