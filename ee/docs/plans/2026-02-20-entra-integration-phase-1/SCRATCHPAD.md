@@ -691,3 +691,6 @@ EOF && git add ee/docs/plans/2026-02-20-entra-integration-phase-1/tests.json ee/
 - (2026-02-20) `T121` completed in `ee/server/src/__tests__/unit/entraIntegrationSettings.initialSyncCta.test.tsx`.
 - Status-panel UI assertions verify rendering of connection state/type, last discovery, mapped tenant count, and configured sync interval text.
 - Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraIntegrationSettings.initialSyncCta.test.tsx` (pass).
+- (2026-02-20) `T122` completed: added `ee/server/src/__tests__/unit/entraSyncHistoryPanel.test.tsx`.
+- History list assertions verify run cards are rendered in descending `startedAt` order regardless of API return order.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraSyncHistoryPanel.test.tsx` (pass).

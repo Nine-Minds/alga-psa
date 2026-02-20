@@ -1030,7 +1030,7 @@
   {
     "id": "T122",
     "description": "Sync history panel renders latest run list sorted by started time.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F112"
     ]
