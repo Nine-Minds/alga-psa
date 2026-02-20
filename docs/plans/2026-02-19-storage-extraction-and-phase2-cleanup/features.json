@@ -230,7 +230,7 @@
   {
     "id": "F039",
     "description": "Register @alga-psa/storage in workspace tsconfig paths and NX workspace configuration",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-04"]
   }
 ]

@@ -98,3 +98,4 @@ grep -r "from '../lib/email'" server/ --include="*.ts" --include="*.tsx"
 - F036: Added `@alga-psa/storage` dependency to `packages/documents/package.json`.
 - F037: Added `@alga-psa/storage` dependency to billing, client-portal, and jobs package.json files.
 - F038: Verified original storage implementation files removed from documents package; only thin re-export shims remain for compatibility.
+- F039: Registered `@alga-psa/storage` path mappings in `tsconfig.base.json` (project.json already added earlier).

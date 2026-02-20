@@ -75,6 +75,8 @@
       "@alga-psa/workflows/*": ["packages/workflows/src/*"],
       "@alga-psa/documents": ["packages/documents/src"],
       "@alga-psa/documents/*": ["packages/documents/src/*"],
+      "@alga-psa/storage": ["packages/storage/src"],
+      "@alga-psa/storage/*": ["packages/storage/src/*"],
       "@alga-psa/assets": ["packages/assets/src"],
       "@alga-psa/assets/*": ["packages/assets/src/*"],
       "@alga-psa/surveys": ["packages/surveys/src"],
