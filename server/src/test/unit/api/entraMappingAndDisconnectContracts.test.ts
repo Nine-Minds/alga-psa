@@ -18,4 +18,20 @@ describe('Entra mapping/disconnect contract checks', () => {
     expect(unmapRoute).not.toContain('entra_sync_run_tenants');
     expect(unmapRoute.toLowerCase()).not.toContain('delete from');
   });
+
+  it('T027: remap route delegates mapped target client and client linkage update path exists', () => {
+    const remapRoute = readRepoFile('ee/server/src/app/api/integrations/entra/mappings/remap/route.ts');
+    const confirmMappingsService = readRepoFile(
+      'ee/server/src/lib/integrations/entra/mapping/confirmMappingsService.ts'
+    );
+
+    expect(remapRoute).toContain('confirmEntraMappings');
+    expect(remapRoute).toContain('mappingState: \'mapped\'');
+    expect(remapRoute).toContain('clientId: targetClientId');
+
+    expect(confirmMappingsService).toContain("if (mappingState === 'mapped' && clientId)");
+    expect(confirmMappingsService).toContain("await trx('clients')");
+    expect(confirmMappingsService).toContain('entra_tenant_id: managedTenant.entra_tenant_id');
+    expect(confirmMappingsService).toContain('entra_primary_domain: managedTenant.primary_domain || null');
+  });
 });

@@ -408,3 +408,5 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - Validation command: `cd server && npx vitest run src/test/unit/integrations/entraMappingValidation.test.ts` (pass).
 - (2026-02-20) `T026` completed: added route contract test `server/src/test/unit/api/entraMappingAndDisconnectContracts.test.ts` asserting unmap path deactivates/reinserts mapping state and does not touch sync run history tables.
 - Validation command: `cd server && npx vitest run src/test/unit/api/entraMappingAndDisconnectContracts.test.ts` (pass).
+- (2026-02-20) `T027` completed: extended route contract coverage to assert remap delegates `mappingState='mapped'` to confirm service and that confirm service updates client Entra linkage fields.
+- Validation command: `cd server && npx vitest run src/test/unit/api/entraMappingAndDisconnectContracts.test.ts` (pass).

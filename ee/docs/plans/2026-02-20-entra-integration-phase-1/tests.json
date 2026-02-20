@@ -226,7 +226,7 @@
   {
     "id": "T027",
     "description": "Remap action updates active mapping to target client and refreshes client linkage fields.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F065",
       "F062",
