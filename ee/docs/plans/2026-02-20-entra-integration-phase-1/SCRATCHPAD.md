@@ -715,3 +715,6 @@ EOF && git add ee/docs/plans/2026-02-20-entra-integration-phase-1/tests.json ee/
 - (2026-02-20) `T129` completed in `ee/server/src/__tests__/unit/entraIntegrationSettings.initialSyncCta.test.tsx`.
 - Complementary flag test verifies ambiguous reconciliation queue panel renders when `entra-integration-ambiguous-queue` is enabled.
 - Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraIntegrationSettings.initialSyncCta.test.tsx` (pass).
+- (2026-02-20) `T130` completed in `server/src/test/unit/integrations/entraActions.directConnect.test.ts`.
+- Added client-portal denial assertion for Entra settings status action (`Forbidden`) to enforce non-internal access boundaries.
+- Validation command: `cd server && npx vitest run src/test/unit/integrations/entraActions.directConnect.test.ts --coverage.enabled=false` (pass).

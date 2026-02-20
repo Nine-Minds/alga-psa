@@ -83,6 +83,23 @@ describe('Entra direct connect action permissions', () => {
     );
   });
 
+  it('T130: client-portal users cannot access Entra settings actions', async () => {
+    const { getEntraIntegrationStatus } = await import(
+      '@alga-psa/integrations/actions/integrations/entraActions'
+    );
+
+    const result = await getEntraIntegrationStatus(
+      { user_id: 'user-130', user_type: 'client' } as any,
+      { tenant: 'tenant-130' }
+    );
+
+    expect(result).toEqual({
+      success: false,
+      error: 'Forbidden',
+    });
+    expect(hasPermissionMock).not.toHaveBeenCalled();
+  });
+
   it('T032: direct connect initiation returns OAuth URL with encoded nonce/state', async () => {
     hasPermissionMock.mockResolvedValue(true);
     featureFlagIsEnabledMock.mockResolvedValue(true);

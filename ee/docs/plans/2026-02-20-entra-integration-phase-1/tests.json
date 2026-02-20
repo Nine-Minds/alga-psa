@@ -1100,7 +1100,7 @@
   {
     "id": "T130",
     "description": "Client portal user cannot access Entra settings actions/routes (403/forbidden response).",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F118"
     ]
