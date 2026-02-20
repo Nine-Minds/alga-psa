@@ -293,7 +293,7 @@
   {
     "id": "F027",
     "description": "Client model indexes: add query/index support for `clients.entra_tenant_id` lookups.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data / API / Integrations"
     ],
