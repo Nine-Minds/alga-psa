@@ -562,7 +562,7 @@
   {
     "id": "T066",
     "description": "`Run Initial Sync` CTA remains disabled when there are zero confirmed mappings.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F068"
     ]

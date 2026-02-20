@@ -523,3 +523,6 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - (2026-02-20) `T065` completed: expanded `entraTenantMappingTable.selection` component tests with summary counter assertions.
 - Mixed-state scenario verifies `onSummaryChange` transitions from `{mapped:1, skipped:0, needsReview:1}` to `{mapped:1, skipped:1, needsReview:0}` after skip action.
 - Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraTenantMappingTable.selection.test.tsx` (pass).
+- (2026-02-20) `T066` completed: added `ee/server/src/__tests__/unit/entraIntegrationSettings.initialSyncCta.test.tsx`.
+- jsdom test mocks feature flags/status actions and asserts `Run Initial Sync` remains disabled when `mappedTenantCount=0`.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraIntegrationSettings.initialSyncCta.test.tsx` (pass).
