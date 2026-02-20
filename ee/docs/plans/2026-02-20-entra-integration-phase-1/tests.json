@@ -817,7 +817,7 @@
   {
     "id": "T096",
     "description": "No email match creates a new contact under the mapped client.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F097"
     ]

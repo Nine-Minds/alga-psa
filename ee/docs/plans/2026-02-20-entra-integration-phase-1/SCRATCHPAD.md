@@ -613,3 +613,6 @@ EOF && git add ee/docs/plans/2026-02-20-entra-integration-phase-1/tests.json ee/
 - (2026-02-20) `T095` completed: added reconciler/matcher unit suites (`ee/server/src/__tests__/unit/entraContactReconciler.test.ts`, `ee/server/src/__tests__/unit/entraContactMatcher.noEmailAutoLink.test.ts`).
 - Exact-email-match case verifies reconcile flow links existing contact and avoids duplicate contact creation.
 - Validation commands: `cd ee/server && npx vitest run src/__tests__/unit/entraContactReconciler.test.ts` (pass), `cd ee/server && npx vitest run src/__tests__/unit/entraContactMatcher.noEmailAutoLink.test.ts` (pass).
+- (2026-02-20) `T096` completed in `entraContactReconciler` unit suite.
+- No-match case verifies reconcile flow creates a new contact under the mapped client before linking Entra identity metadata.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraContactReconciler.test.ts` (pass).
