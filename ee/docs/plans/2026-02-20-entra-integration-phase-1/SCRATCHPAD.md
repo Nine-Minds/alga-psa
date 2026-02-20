@@ -508,3 +508,6 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - (2026-02-20) `T060` completed: extended `server/src/test/unit/integrations/entraActions.directConnect.test.ts` with skip-mapping action coverage.
 - Test validates `skipEntraTenantMapping` deactivates prior active rows, inserts active `skip_for_now` row with `client_id: null`, and returns expected skip state payload (no active client mapping created).
 - Validation command: `cd server && npx vitest run src/test/unit/integrations/entraActions.directConnect.test.ts` (pass).
+- (2026-02-20) `T061` completed in `ee/server/src/__tests__/unit/entraTenantMappingTable.selection.test.tsx`.
+- Bulk preselect test clicks `Preselect Exact Matches` and verifies each `auto_matched` row select is populated with its exact-domain candidate client ID.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraTenantMappingTable.selection.test.tsx` (pass).

@@ -521,7 +521,7 @@
   {
     "id": "T061",
     "description": "Bulk accept marks all exact auto matches as selected pending confirm.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F060"
     ]

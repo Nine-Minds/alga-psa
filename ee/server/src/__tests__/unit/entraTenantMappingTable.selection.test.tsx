@@ -100,4 +100,61 @@ describe('EntraTenantMappingTable client selection', () => {
       );
     });
   });
+
+  it('T061: bulk preselect marks exact auto matches as selected pending confirm', async () => {
+    getEntraMappingPreviewMock.mockResolvedValue({
+      data: {
+        autoMatched: [
+          {
+            managedTenantId: 'managed-auto-1',
+            entraTenantId: 'entra-auto-1',
+            displayName: 'Auto Tenant One',
+            primaryDomain: 'one.example.com',
+            sourceUserCount: 5,
+            match: {
+              clientId: 'client-one',
+              clientName: 'Client One',
+              confidenceScore: 1,
+              reason: 'exact_domain',
+            },
+          },
+          {
+            managedTenantId: 'managed-auto-2',
+            entraTenantId: 'entra-auto-2',
+            displayName: 'Auto Tenant Two',
+            primaryDomain: 'two.example.com',
+            sourceUserCount: 8,
+            match: {
+              clientId: 'client-two',
+              clientName: 'Client Two',
+              confidenceScore: 1,
+              reason: 'exact_domain',
+            },
+          },
+        ],
+        fuzzyCandidates: [],
+        unmatched: [],
+      },
+    });
+    getAllClientsMock.mockResolvedValue([
+      { client_id: 'client-one', client_name: 'Client One' },
+      { client_id: 'client-two', client_name: 'Client Two' },
+    ]);
+    skipEntraTenantMappingMock.mockResolvedValue({ data: { skipped: true } });
+
+    render(<EntraTenantMappingTable />);
+
+    await screen.findByText('Auto Tenant One');
+    await screen.findByText('Auto Tenant Two');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Preselect Exact Matches' }));
+
+    const rowOne = screen.getByText('Auto Tenant One').closest('tr') as HTMLElement;
+    const rowTwo = screen.getByText('Auto Tenant Two').closest('tr') as HTMLElement;
+    const selectOne = within(rowOne).getByRole('combobox') as HTMLSelectElement;
+    const selectTwo = within(rowTwo).getByRole('combobox') as HTMLSelectElement;
+
+    expect(selectOne.value).toBe('client-one');
+    expect(selectTwo.value).toBe('client-two');
+  });
 });
