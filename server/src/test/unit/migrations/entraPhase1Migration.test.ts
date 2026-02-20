@@ -78,4 +78,10 @@ describe('Entra Phase 1 migration', () => {
     expect(migration).toContain('CREATE UNIQUE INDEX IF NOT EXISTS ux_entra_contact_links_entra_identity');
     expect(migration).toContain('ON entra_contact_links (tenant, entra_tenant_id, entra_object_id)');
   });
+
+  it('T019: enforces one active Entra link per contact', () => {
+    expect(migration).toContain('CREATE UNIQUE INDEX IF NOT EXISTS ux_entra_contact_links_active_contact');
+    expect(migration).toContain('ON entra_contact_links (tenant, contact_name_id)');
+    expect(migration).toContain('WHERE is_active = true');
+  });
 });

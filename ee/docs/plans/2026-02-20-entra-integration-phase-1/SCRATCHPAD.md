@@ -391,3 +391,5 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - Validation command: `cd server && npx vitest run src/test/unit/migrations/entraPhase1Migration.test.ts` (pass).
 - (2026-02-20) `T018` completed: extended migration coverage for `entra_contact_links` and its unique Entra identity index (`tenant`, `entra_tenant_id`, `entra_object_id`).
 - Validation command: `cd server && npx vitest run src/test/unit/migrations/entraPhase1Migration.test.ts` (pass).
+- (2026-02-20) `T019` completed: extended migration coverage for the partial unique index enforcing one active Entra link per contact (`ux_entra_contact_links_active_contact`).
+- Validation command: `cd server && npx vitest run src/test/unit/migrations/entraPhase1Migration.test.ts` (pass).

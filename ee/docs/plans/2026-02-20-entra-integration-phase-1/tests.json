@@ -156,7 +156,7 @@
   {
     "id": "T019",
     "description": "Migration enforces one active Entra link per contact.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F024"
     ]
