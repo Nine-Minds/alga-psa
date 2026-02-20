@@ -150,7 +150,7 @@
   {
     "id": "F013",
     "description": "In maintenance mode, de-emphasize onboarding CTA treatment and render operations-first layout blocks (health summary, ongoing actions, history/queue access).",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Goals",
       "UX / UI Notes",

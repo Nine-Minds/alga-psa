@@ -326,6 +326,63 @@ export default function EntraIntegrationSettings() {
     }
   };
 
+  const mappingAndSkippedSection = (
+    <>
+      <div className="rounded-lg border border-border/70 bg-background p-4" id="entra-mapping-step-panel">
+        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Step 3</p>
+        <p className="mt-1 text-sm font-semibold">Map Tenants to Clients</p>
+        <p className="mt-1 text-sm text-muted-foreground" id="entra-mapping-step-guidance">
+          Review suggested matches, choose the correct client for each tenant, and confirm mappings before initial sync.
+        </p>
+        {isMapStepCurrent ? (
+          <p className="mt-2 text-xs text-muted-foreground">This is your current onboarding step.</p>
+        ) : null}
+        <div className="mb-3 mt-3 grid gap-2 text-sm text-muted-foreground sm:grid-cols-3">
+          <p><span className="font-medium text-foreground">Mapped:</span> {mappingSummary.mapped}</p>
+          <p><span className="font-medium text-foreground">Skipped:</span> {mappingSummary.skipped}</p>
+          <p><span className="font-medium text-foreground">Needs Review:</span> {mappingSummary.needsReview}</p>
+        </div>
+        <EntraTenantMappingTable
+          onSummaryChange={setMappingSummary}
+          onSkippedTenantsChange={setSkippedTenants}
+          onPersistedMappingChange={loadStatus}
+          refreshKey={tableRefreshKey}
+        />
+      </div>
+
+      <div className="rounded-lg border border-border/70 bg-background p-4" id="entra-skipped-tenants-panel">
+        <p className="text-sm font-semibold">Skipped Tenants</p>
+        {skippedTenants.length === 0 ? (
+          <p className="mt-1 text-sm text-muted-foreground">No tenants are currently marked as skipped.</p>
+        ) : (
+          <div className="mt-2 space-y-2">
+            {skippedTenants.map((tenant) => (
+              <div
+                key={tenant.managedTenantId}
+                className="flex items-center justify-between rounded-md border border-border/60 p-2"
+              >
+                <div>
+                  <p className="text-sm font-medium">{tenant.displayName || tenant.managedTenantId}</p>
+                  <p className="text-xs text-muted-foreground">{tenant.primaryDomain || 'No primary domain'}</p>
+                </div>
+                <Button
+                  id={`entra-remap-skipped-${tenant.managedTenantId}`}
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => void handleRemapSkipped(tenant.managedTenantId)}
+                  disabled={remappingRows[tenant.managedTenantId]}
+                >
+                  Remap
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </>
+  );
+
   if (!uiFlag.enabled) {
     return (
       <div className="space-y-6" id="entra-integration-settings-disabled">
@@ -359,155 +416,115 @@ export default function EntraIntegrationSettings() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-5">
-          <div className="grid gap-3 md:grid-cols-2">
-            {stepStates.map((step) => (
-              <div
-                key={step.stepNumber}
-                className="rounded-lg border border-border/60 bg-muted/30 p-4"
-                id={`entra-step-${step.stepNumber}`}
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Step {step.stepNumber}</p>
-                  <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                    {step.visualState}
-                  </span>
-                </div>
-                <p className="mt-1 text-sm font-semibold">{step.title}</p>
-                <p className="mt-1 text-sm text-muted-foreground">{step.description}</p>
-              </div>
-            ))}
-          </div>
-
-          <div className="rounded-lg border border-border/70 bg-background p-4" id="entra-current-step-card">
-            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Current Step</p>
-            <p className="mt-1 text-sm font-semibold">{currentStepMeta.title}</p>
-            <p className="mt-1 text-sm text-muted-foreground">{currentStepMeta.guidance}</p>
-
-            <div className="mt-3">
-              {isConnectStepCurrent ? (
-                <p className="text-sm text-muted-foreground">
-                  Connection options appear below.
-                </p>
-              ) : null}
-              {isDiscoverStepCurrent ? (
-                <div className="space-y-2">
-                  <Button
-                    id="entra-run-discovery"
-                    type="button"
-                    onClick={() => void handleRunDiscovery()}
-                    disabled={discoveryLoading}
-                  >
-                    {discoveryLoading ? 'Running Discovery…' : 'Run Discovery'}
-                  </Button>
-                  {discoveryMessage ? (
-                    <p className="text-sm text-muted-foreground" id="entra-run-discovery-feedback">
-                      {discoveryMessage}
-                    </p>
-                  ) : null}
-                </div>
-              ) : null}
-              {isMapStepCurrent ? (
-                <Button id="entra-review-mappings" type="button" onClick={() => handleScrollToMapping()}>
-                  Review Mappings
-                </Button>
-              ) : null}
-              {isSyncStepCurrent ? (
-                <div className="space-y-2">
-                  <Button
-                    id="entra-run-initial-sync"
-                    type="button"
-                    onClick={() => void handleRunInitialSync()}
-                    disabled={!hasConfirmedMappings || initialSyncLoading}
-                  >
-                    {initialSyncLoading ? 'Starting Initial Sync…' : 'Run Initial Sync'}
-                  </Button>
-                  {initialSyncMessage ? (
-                    <p className="text-sm text-muted-foreground" id="entra-run-initial-sync-feedback">
-                      {initialSyncMessage}
-                    </p>
-                  ) : null}
-                </div>
-              ) : null}
-            </div>
-          </div>
-
-          {isConnectStepCurrent ? (
-            <div className="space-y-3 rounded-lg border border-border/70 bg-background p-4">
-              <p className="text-sm font-semibold">Connection Options</p>
-              {directError ? (
-                <p className="text-sm text-destructive">{directError}</p>
-              ) : null}
+          {settingsMode === 'onboarding' ? (
+            <>
               <div className="grid gap-3 md:grid-cols-2">
-                {connectionOptions.map((option) => (
+                {stepStates.map((step) => (
                   <div
-                    key={option.id}
-                    className="cursor-pointer rounded-lg border border-border/60 bg-muted/20 p-3 transition-colors hover:border-primary/50 hover:bg-muted/40"
-                    id={`entra-connection-option-${option.id}`}
-                    onClick={() => !directLoading && handleConnectionOptionClick(option.id)}
+                    key={step.stepNumber}
+                    className="rounded-lg border border-border/60 bg-muted/30 p-4"
+                    id={`entra-step-${step.stepNumber}`}
                   >
-                    <p className="text-sm font-medium">
-                      {option.title}
-                      {option.id === 'direct' && directLoading && ' (Connecting...)'}
-                    </p>
-                    <p className="mt-1 text-sm text-muted-foreground">{option.description}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ) : null}
-
-          <div className="rounded-lg border border-border/70 bg-background p-4" id="entra-mapping-step-panel">
-            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Step 3</p>
-            <p className="mt-1 text-sm font-semibold">Map Tenants to Clients</p>
-            <p className="mt-1 text-sm text-muted-foreground" id="entra-mapping-step-guidance">
-              Review suggested matches, choose the correct client for each tenant, and confirm mappings before initial sync.
-            </p>
-            {isMapStepCurrent ? (
-              <p className="mt-2 text-xs text-muted-foreground">This is your current onboarding step.</p>
-            ) : null}
-            <div className="mb-3 mt-3 grid gap-2 text-sm text-muted-foreground sm:grid-cols-3">
-              <p><span className="font-medium text-foreground">Mapped:</span> {mappingSummary.mapped}</p>
-              <p><span className="font-medium text-foreground">Skipped:</span> {mappingSummary.skipped}</p>
-              <p><span className="font-medium text-foreground">Needs Review:</span> {mappingSummary.needsReview}</p>
-            </div>
-            <EntraTenantMappingTable
-              onSummaryChange={setMappingSummary}
-              onSkippedTenantsChange={setSkippedTenants}
-              onPersistedMappingChange={loadStatus}
-              refreshKey={tableRefreshKey}
-            />
-          </div>
-
-          <div className="rounded-lg border border-border/70 bg-background p-4" id="entra-skipped-tenants-panel">
-            <p className="text-sm font-semibold">Skipped Tenants</p>
-            {skippedTenants.length === 0 ? (
-              <p className="mt-1 text-sm text-muted-foreground">No tenants are currently marked as skipped.</p>
-            ) : (
-              <div className="mt-2 space-y-2">
-                {skippedTenants.map((tenant) => (
-                  <div
-                    key={tenant.managedTenantId}
-                    className="flex items-center justify-between rounded-md border border-border/60 p-2"
-                  >
-                    <div>
-                      <p className="text-sm font-medium">{tenant.displayName || tenant.managedTenantId}</p>
-                      <p className="text-xs text-muted-foreground">{tenant.primaryDomain || 'No primary domain'}</p>
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Step {step.stepNumber}</p>
+                      <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                        {step.visualState}
+                      </span>
                     </div>
-                    <Button
-                      id={`entra-remap-skipped-${tenant.managedTenantId}`}
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      onClick={() => void handleRemapSkipped(tenant.managedTenantId)}
-                      disabled={remappingRows[tenant.managedTenantId]}
-                    >
-                      Remap
-                    </Button>
+                    <p className="mt-1 text-sm font-semibold">{step.title}</p>
+                    <p className="mt-1 text-sm text-muted-foreground">{step.description}</p>
                   </div>
                 ))}
               </div>
-            )}
-          </div>
+
+              <div className="rounded-lg border border-border/70 bg-background p-4" id="entra-current-step-card">
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Current Step</p>
+                <p className="mt-1 text-sm font-semibold">{currentStepMeta.title}</p>
+                <p className="mt-1 text-sm text-muted-foreground">{currentStepMeta.guidance}</p>
+
+                <div className="mt-3">
+                  {isConnectStepCurrent ? (
+                    <p className="text-sm text-muted-foreground">
+                      Connection options appear below.
+                    </p>
+                  ) : null}
+                  {isDiscoverStepCurrent ? (
+                    <div className="space-y-2">
+                      <Button
+                        id="entra-run-discovery"
+                        type="button"
+                        onClick={() => void handleRunDiscovery()}
+                        disabled={discoveryLoading}
+                      >
+                        {discoveryLoading ? 'Running Discovery…' : 'Run Discovery'}
+                      </Button>
+                      {discoveryMessage ? (
+                        <p className="text-sm text-muted-foreground" id="entra-run-discovery-feedback">
+                          {discoveryMessage}
+                        </p>
+                      ) : null}
+                    </div>
+                  ) : null}
+                  {isMapStepCurrent ? (
+                    <Button id="entra-review-mappings" type="button" onClick={() => handleScrollToMapping()}>
+                      Review Mappings
+                    </Button>
+                  ) : null}
+                  {isSyncStepCurrent ? (
+                    <div className="space-y-2">
+                      <Button
+                        id="entra-run-initial-sync"
+                        type="button"
+                        onClick={() => void handleRunInitialSync()}
+                        disabled={!hasConfirmedMappings || initialSyncLoading}
+                      >
+                        {initialSyncLoading ? 'Starting Initial Sync…' : 'Run Initial Sync'}
+                      </Button>
+                      {initialSyncMessage ? (
+                        <p className="text-sm text-muted-foreground" id="entra-run-initial-sync-feedback">
+                          {initialSyncMessage}
+                        </p>
+                      ) : null}
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+
+              {isConnectStepCurrent ? (
+                <div className="space-y-3 rounded-lg border border-border/70 bg-background p-4">
+                  <p className="text-sm font-semibold">Connection Options</p>
+                  {directError ? (
+                    <p className="text-sm text-destructive">{directError}</p>
+                  ) : null}
+                  <div className="grid gap-3 md:grid-cols-2">
+                    {connectionOptions.map((option) => (
+                      <div
+                        key={option.id}
+                        className="cursor-pointer rounded-lg border border-border/60 bg-muted/20 p-3 transition-colors hover:border-primary/50 hover:bg-muted/40"
+                        id={`entra-connection-option-${option.id}`}
+                        onClick={() => !directLoading && handleConnectionOptionClick(option.id)}
+                      >
+                        <p className="text-sm font-medium">
+                          {option.title}
+                          {option.id === 'direct' && directLoading && ' (Connecting...)'}
+                        </p>
+                        <p className="mt-1 text-sm text-muted-foreground">{option.description}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+            </>
+          ) : (
+            <div className="rounded-lg border border-border/70 bg-background p-4" id="entra-maintenance-health-summary">
+              <p className="text-sm font-semibold">Health Summary</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Review connection health, run maintenance operations, and monitor sync activity.
+              </p>
+            </div>
+          )}
+
+          {settingsMode === 'onboarding' ? mappingAndSkippedSection : null}
 
           <div className="rounded-lg border border-dashed border-border/70 bg-muted/20 p-4" id="entra-connection-status-panel">
             <div className="flex items-center justify-between gap-2">
@@ -568,16 +585,23 @@ export default function EntraIntegrationSettings() {
             </div>
           ) : null}
 
-          {shouldShowAmbiguousQueue(ambiguousQueueFlag.enabled) ? (
-            <EntraReconciliationQueue />
-          ) : null}
-
           <div className="rounded-lg border border-border/70 bg-background p-4" id="entra-ongoing-operations-panel">
             <p className="text-sm font-semibold">Ongoing Operations</p>
             <p className="mt-1 text-sm text-muted-foreground">
               Use these controls for manual sync operations after onboarding steps are complete.
             </p>
             <div className="mt-3 flex flex-wrap gap-2">
+              {settingsMode === 'maintenance' ? (
+                <Button
+                  id="entra-run-discovery-maintenance"
+                  type="button"
+                  variant="outline"
+                  onClick={() => void handleRunDiscovery()}
+                  disabled={discoveryLoading}
+                >
+                  {discoveryLoading ? 'Running Discovery…' : 'Run Discovery Again'}
+                </Button>
+              ) : null}
               <Button
                 id="entra-sync-all-tenants"
                 type="button"
@@ -588,6 +612,11 @@ export default function EntraIntegrationSettings() {
                 {syncAllLoading ? 'Starting…' : 'Sync All Tenants Now'}
               </Button>
             </div>
+            {settingsMode === 'maintenance' && discoveryMessage ? (
+              <p className="mt-2 text-sm text-muted-foreground" id="entra-run-discovery-maintenance-feedback">
+                {discoveryMessage}
+              </p>
+            ) : null}
             {syncAllMessage ? (
               <p className="mt-2 text-sm text-muted-foreground" id="entra-sync-all-tenants-feedback">
                 {syncAllMessage}
@@ -596,6 +625,12 @@ export default function EntraIntegrationSettings() {
           </div>
 
           <EntraSyncHistoryPanel />
+
+          {shouldShowAmbiguousQueue(ambiguousQueueFlag.enabled) ? (
+            <EntraReconciliationQueue />
+          ) : null}
+
+          {settingsMode === 'maintenance' ? mappingAndSkippedSection : null}
         </CardContent>
       </Card>
 

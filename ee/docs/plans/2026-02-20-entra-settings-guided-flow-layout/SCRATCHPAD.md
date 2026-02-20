@@ -95,3 +95,7 @@ Focused planning log for guided-layout improvements in Entra integration setting
   - Added explicit mode signal fetch via `getEntraSyncRunHistory(10)` and derived page mode (`onboarding` vs `maintenance`) from presence of `initial`/`all-tenants` runs.
   - Exposed mode metadata on root container (`data-entra-mode`, `data-entra-mode-ready`).
   - Refreshes maintenance signal after manual sync starts to keep mode transition deterministic.
+- (2026-02-20) F013 implemented in `ee/server/src/components/settings/integrations/EntraIntegrationSettings.tsx`.
+  - Maintenance mode now suppresses onboarding step-progress/current-step cards.
+  - Added operations-first maintenance sequencing: health summary + status, ongoing operations, sync history/queue, then mapping/skipped review blocks.
+  - Added maintenance-only secondary discovery action (`Run Discovery Again`) in ongoing operations.
