@@ -74,7 +74,7 @@
   {
     "id": "F013",
     "description": "Pseudo-locale script preserves {{variables}} within fill strings (e.g., '1111 {{name}} 1111')",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR12"]
   },
   {
