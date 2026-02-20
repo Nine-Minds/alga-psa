@@ -130,3 +130,6 @@ Focused planning log for guided-layout improvements in Entra integration setting
 - (2026-02-20) T009 completed.
   - `T009` confirms presence of initial/all-tenants run history flips mode to maintenance and shows operations-first treatment.
   - Command: `cd ee/server && npx vitest run src/__tests__/unit/entraIntegrationSettings.initialSyncCta.test.tsx -t "T009"`.
+- (2026-02-20) T010 completed.
+  - `T010` verifies maintenance mode still exposes mapping + history/queue sections while onboarding CTA card stays suppressed.
+  - Command: `cd ee/server && npx vitest run src/__tests__/unit/entraIntegrationSettings.initialSyncCta.test.tsx -t "T010"`.

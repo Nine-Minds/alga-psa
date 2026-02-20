@@ -86,7 +86,7 @@
   {
     "id": "T010",
     "description": "Maintenance mode still exposes mapping and queue/history sections without re-promoting onboarding CTAs to primary actions.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F013",
       "F014",
