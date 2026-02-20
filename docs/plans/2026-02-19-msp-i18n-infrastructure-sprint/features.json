@@ -20,7 +20,7 @@
   {
     "id": "F004",
     "description": "I18nProvider in packages/ui/src/lib/i18n/client.tsx accepts optional namespaces prop (string[])",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR6"]
   },
   {

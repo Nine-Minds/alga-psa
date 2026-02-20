@@ -69,12 +69,14 @@ interface I18nProviderProps {
   children: ReactNode;
   initialLocale?: SupportedLocale;
   portal?: 'msp' | 'client';
+  namespaces?: string[];
 }
 
 export function I18nProvider({
   children,
   initialLocale,
   portal = 'client',
+  namespaces,
 }: I18nProviderProps) {
   const [locale, setLocaleState] = useState<SupportedLocale>(
     initialLocale || (LOCALE_CONFIG.defaultLocale as SupportedLocale)
