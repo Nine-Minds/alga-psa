@@ -148,3 +148,5 @@ grep -r "from '../lib/email'" server/ --include="*.ts" --include="*.tsx"
 - Build attempt: `npm run build` progressed to Next.js build, then failed with OOM (heap out of memory) after warnings about workflow export conflicts and webpack critical deps.
 - Added F042/T043: Next build failed because fileActions still referenced removed documents storage model/type paths; updated to storage package.
 - F042: Updated `fileActions.ts` to pull FileStoreModel and FileStore from the storage package.
+- T043: Verified fileActions imports storage model and type from `@alga-psa/storage`.
+- Build attempt: `NODE_OPTIONS=--max-old-space-size=8192 npm run build` ran through Next build with warnings and static page generation, but command timed out at 6m (no success signal).
