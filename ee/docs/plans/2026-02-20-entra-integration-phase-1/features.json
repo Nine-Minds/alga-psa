@@ -909,7 +909,7 @@
   {
     "id": "F082",
     "description": "Temporal registration: export new Entra workflows in worker workflow index.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data / API / Integrations"
     ],
