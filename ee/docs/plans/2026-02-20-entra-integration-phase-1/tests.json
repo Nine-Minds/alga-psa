@@ -905,7 +905,7 @@
   {
     "id": "T107",
     "description": "Contact link records refresh `last_seen_at` and status per sync.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F106"
     ]
