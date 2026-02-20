@@ -142,3 +142,5 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - Behavior: starting direct flow clears CIPP credentials; selecting/connecting CIPP clears direct OAuth token secrets, preventing stale dual-provider secret state.
 - Added CE stub for `@enterprise/lib/integrations/entra/auth/tokenStore` to keep non-EE alias builds type-safe.
 - Validation commands: `npx tsc --noEmit -p packages/integrations/tsconfig.json`, `npx tsc --noEmit -p ee/server/tsconfig.json`, `npx tsc --noEmit -p server/tsconfig.json` (pass).
+- (2026-02-20) `F046` completed: introduced provider abstraction types at `ee/server/src/lib/integrations/entra/providers/types.ts` including `EntraProviderAdapter` contract and normalized managed-tenant/user DTOs shared by direct and CIPP adapters.
+- Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).

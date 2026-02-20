@@ -508,7 +508,7 @@
   {
     "id": "F046",
     "description": "Provider abstraction: define `EntraProviderAdapter` interface for `listManagedTenants` and `listUsersForTenant`.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data / API / Integrations"
     ],
