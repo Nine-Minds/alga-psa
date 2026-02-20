@@ -84,3 +84,6 @@ Focused planning log for guided-layout improvements in Entra integration setting
   - Status diagnostics block (`#entra-connection-status-panel`) was preserved intact across layout refactor, including CIPP server and direct tenant/credential-source rows.
   - Existing Refresh and Disconnect controls remained in place and unchanged.
   - Validation check: `cd ee/server && npx vitest run src/__tests__/unit/entraIntegrationSettings.initialSyncCta.test.tsx -t "T121|T132"`.
+- (2026-02-20) F010 implemented by preserving existing advanced-section gates unchanged in `EntraIntegrationSettings`:
+  - `shouldShowFieldSyncControls(fieldSyncFlag.enabled)` still controls field-sync panel visibility.
+  - `shouldShowAmbiguousQueue(ambiguousQueueFlag.enabled)` still controls reconciliation queue visibility.

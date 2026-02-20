@@ -113,7 +113,7 @@
   {
     "id": "F010",
     "description": "Keep existing advanced section flag behavior unchanged (`entra-integration-field-sync`, `entra-integration-ambiguous-queue`) within the new layout.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements"
     ],
