@@ -346,3 +346,6 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - (2026-02-20) `T001` completed: added CE delegator route test `server/src/test/unit/api/entraRoutes.delegator.test.ts` covering non-enterprise behavior.
 - Test verifies CE Entra delegator routes return the expected EE-only 501 payload when enterprise edition is disabled (`GET /entra`, `POST /entra/connect`, `GET /entra/sync/runs`).
 - Validation command: `cd server && npx vitest run src/test/unit/api/entraRoutes.delegator.test.ts` (pass).
+- (2026-02-20) `T002` completed: extended CE delegator test (`server/src/test/unit/api/entraRoutes.delegator.test.ts`) to validate enterprise forwarding.
+- Test now enables EE env, mocks `@enterprise/app/api/integrations/entra/route` + `/connect/route`, and asserts CE routes forward requests and preserve EE handler responses/status codes.
+- Validation command: `cd server && npx vitest run src/test/unit/api/entraRoutes.delegator.test.ts` (pass).

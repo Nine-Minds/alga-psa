@@ -11,7 +11,7 @@
   {
     "id": "T002",
     "description": "EE delegator forwards Entra route methods to EE handlers when enterprise edition is enabled.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F001",
       "F002"

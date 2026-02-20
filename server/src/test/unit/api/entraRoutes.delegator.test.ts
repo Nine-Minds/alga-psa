@@ -62,4 +62,59 @@ describe('CE Entra route delegators', () => {
     expect(runsResponse.status).toBe(501);
     await expect(runsResponse.json()).resolves.toEqual(EE_ONLY_ERROR);
   });
+
+  it('forwards requests to EE handlers when enterprise edition is enabled', async () => {
+    process.env.EDITION = 'ee';
+    process.env.NEXT_PUBLIC_EDITION = 'enterprise';
+
+    const eeStatusGet = vi.fn(async () => {
+      return new Response(JSON.stringify({ success: true, data: { status: 'connected' } }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      });
+    });
+
+    const eeConnectPost = vi.fn(async () => {
+      return new Response(JSON.stringify({ success: true, data: { connectionType: 'direct' } }), {
+        status: 201,
+        headers: { 'content-type': 'application/json' },
+      });
+    });
+
+    vi.doMock('@enterprise/app/api/integrations/entra/route', () => ({
+      GET: eeStatusGet,
+    }));
+    vi.doMock('@enterprise/app/api/integrations/entra/connect/route', () => ({
+      POST: eeConnectPost,
+    }));
+
+    const statusRequest = new Request('http://localhost/api/integrations/entra', { method: 'GET' });
+    const connectRequest = new Request('http://localhost/api/integrations/entra/connect', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ connectionType: 'direct' }),
+    });
+
+    const entraStatusRoute = await import('@/app/api/integrations/entra/route');
+    const entraConnectRoute = await import('@/app/api/integrations/entra/connect/route');
+
+    const statusResponse = await entraStatusRoute.GET(statusRequest);
+    const connectResponse = await entraConnectRoute.POST(connectRequest);
+
+    expect(eeStatusGet).toHaveBeenCalledTimes(1);
+    expect(eeStatusGet).toHaveBeenCalledWith(statusRequest);
+    expect(statusResponse.status).toBe(200);
+    await expect(statusResponse.json()).resolves.toEqual({
+      success: true,
+      data: { status: 'connected' },
+    });
+
+    expect(eeConnectPost).toHaveBeenCalledTimes(1);
+    expect(eeConnectPost).toHaveBeenCalledWith(connectRequest);
+    expect(connectResponse.status).toBe(201);
+    await expect(connectResponse.json()).resolves.toEqual({
+      success: true,
+      data: { connectionType: 'direct' },
+    });
+  });
 });
