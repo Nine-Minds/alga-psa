@@ -368,3 +368,6 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - (2026-02-20) `T008` completed: extracted `shouldShowEntraSyncAction(...)` helper in `packages/clients/src/components/clients/clientDetailsEntraSyncAction.ts` and wired `ClientDetails` to use it for Entra client-action visibility gating.
 - Added unit test `packages/clients/src/components/clients/clientDetailsEntraSyncAction.test.ts` verifying the Entra client action is hidden when `entra-integration-client-sync-action` is disabled.
 - Validation commands: `cd packages/clients && npx vitest run src/components/clients/clientDetailsEntraSyncAction.test.ts` and `npx tsc --noEmit -p packages/clients/tsconfig.json` (pass).
+- (2026-02-20) `T009` completed: extracted Entra settings gate helpers in `ee/server/src/components/settings/integrations/entraIntegrationSettingsGates.ts` and wired `EntraIntegrationSettings` to use helper-based connection option composition.
+- Added test `server/src/test/unit/components/integrations/entraIntegrationSettingsGates.test.ts` asserting CIPP option is omitted when `entra-integration-cipp` is disabled and included when enabled.
+- Validation commands: `cd server && npx vitest run src/test/unit/components/integrations/entraIntegrationSettingsGates.test.ts` and `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).

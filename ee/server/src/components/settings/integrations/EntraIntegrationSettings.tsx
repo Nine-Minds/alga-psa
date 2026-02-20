@@ -17,6 +17,11 @@ import {
 } from './EntraTenantMappingTable';
 import EntraSyncHistoryPanel from './EntraSyncHistoryPanel';
 import EntraReconciliationQueue from './EntraReconciliationQueue';
+import {
+  buildEntraConnectionOptions,
+  shouldShowAmbiguousQueue,
+  shouldShowFieldSyncControls,
+} from './entraIntegrationSettingsGates';
 
 const WIZARD_STEPS = [
   { id: 1, title: 'Connect', description: 'Choose Direct Microsoft partner auth or CIPP.' },
@@ -74,22 +79,7 @@ export default function EntraIntegrationSettings() {
     return new Date(parsed).toLocaleString();
   };
 
-  const connectionOptions = [
-    {
-      id: 'direct',
-      title: 'Direct Microsoft Partner',
-      description: 'Use Microsoft delegated partner access with the configured OAuth app credentials.',
-    },
-    ...(cippFlag.enabled
-      ? [
-          {
-            id: 'cipp',
-            title: 'CIPP',
-            description: 'Use a CIPP endpoint/token as the Entra data source for discovery and sync.',
-          },
-        ]
-      : []),
-  ];
+  const connectionOptions = buildEntraConnectionOptions(cippFlag.enabled);
   const hasConfirmedMappings = (status?.mappedTenantCount || 0) > 0;
 
   const handleSyncAllTenants = React.useCallback(async () => {
@@ -234,7 +224,7 @@ export default function EntraIntegrationSettings() {
             ) : null}
           </div>
 
-          {fieldSyncFlag.enabled ? (
+          {shouldShowFieldSyncControls(fieldSyncFlag.enabled) ? (
             <div
               className="rounded-lg border border-border/70 bg-background p-4"
               id="entra-field-sync-controls-panel"
@@ -246,7 +236,7 @@ export default function EntraIntegrationSettings() {
             </div>
           ) : null}
 
-          {ambiguousQueueFlag.enabled ? (
+          {shouldShowAmbiguousQueue(ambiguousQueueFlag.enabled) ? (
             <EntraReconciliationQueue />
           ) : null}
 

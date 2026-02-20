@@ -72,7 +72,7 @@
   {
     "id": "T009",
     "description": "CIPP connection option is hidden when `entra-integration-cipp` is disabled.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F011"
     ]
