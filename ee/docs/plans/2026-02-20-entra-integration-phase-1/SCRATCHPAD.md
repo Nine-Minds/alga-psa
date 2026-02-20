@@ -327,3 +327,6 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - (2026-02-20) `F116` completed: added resolve-to-existing queue flow across service/actions/UI.
 - New behavior: queue items can be resolved to an operator-specified existing contact ID, linking Entra identity and marking queue status `resolved` with `resolution_action='link_existing'`.
 - Validation commands: `npx tsc --noEmit -p ee/server/tsconfig.json`, `npx tsc --noEmit -p packages/integrations/tsconfig.json`, `npx tsc --noEmit -p server/tsconfig.json` (pass).
+- (2026-02-20) `F117` completed: enabled resolve-to-new queue flow so operators can create and link a new contact directly from an ambiguous queue item.
+- Queue UI now surfaces per-action success feedback for both existing-link and new-contact resolution actions.
+- Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).

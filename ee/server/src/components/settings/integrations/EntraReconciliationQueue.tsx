@@ -19,6 +19,7 @@ function formatDateTime(value: string): string {
 export default function EntraReconciliationQueue() {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = React.useState<string | null>(null);
   const [items, setItems] = React.useState<EntraReconciliationQueueItem[]>([]);
   const [resolvingItemId, setResolvingItemId] = React.useState<string | null>(null);
   const [existingContactIdByItem, setExistingContactIdByItem] = React.useState<Record<string, string>>({});
@@ -26,6 +27,7 @@ export default function EntraReconciliationQueue() {
   const loadQueue = React.useCallback(async () => {
     setLoading(true);
     setError(null);
+    setSuccessMessage(null);
     try {
       const result = await getEntraReconciliationQueue(50);
       if ('error' in result) {
@@ -52,6 +54,7 @@ export default function EntraReconciliationQueue() {
 
     setResolvingItemId(item.queueItemId);
     setError(null);
+    setSuccessMessage(null);
     try {
       const result = await resolveEntraQueueToExisting({
         queueItemId: item.queueItemId,
@@ -60,6 +63,7 @@ export default function EntraReconciliationQueue() {
       if ('error' in result) {
         setError(result.error || 'Failed to resolve queue item.');
       } else {
+        setSuccessMessage(`Resolved queue item ${item.queueItemId} to existing contact ${contactNameId}.`);
         await loadQueue();
       }
     } finally {
@@ -70,11 +74,13 @@ export default function EntraReconciliationQueue() {
   const handleResolveNew = React.useCallback(async (item: EntraReconciliationQueueItem) => {
     setResolvingItemId(item.queueItemId);
     setError(null);
+    setSuccessMessage(null);
     try {
       const result = await resolveEntraQueueToNew({ queueItemId: item.queueItemId });
       if ('error' in result) {
         setError(result.error || 'Failed to resolve queue item.');
       } else {
+        setSuccessMessage(`Resolved queue item ${item.queueItemId} by creating contact ${result.data?.contactNameId || ''}.`);
         await loadQueue();
       }
     } finally {
@@ -96,6 +102,7 @@ export default function EntraReconciliationQueue() {
         <p className="text-sm text-muted-foreground">No ambiguous matches are waiting for review.</p>
       ) : null}
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
+      {successMessage ? <p className="text-sm text-emerald-600">{successMessage}</p> : null}
 
       {items.length > 0 ? (
         <div className="space-y-2">

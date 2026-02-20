@@ -1305,7 +1305,7 @@
   {
     "id": "F117",
     "description": "Resolve-to-new action: allow MSP to create and link a new contact from queued ambiguous item.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements"
     ],
