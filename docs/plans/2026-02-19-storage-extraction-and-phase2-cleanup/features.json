@@ -170,7 +170,7 @@
   {
     "id": "F029",
     "description": "Update packages/billing/src/services/pdfGenerationService.ts: import FileStore type from @alga-psa/storage/types/storage",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-10"]
   },
   {
