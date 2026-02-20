@@ -1341,7 +1341,7 @@
   {
     "id": "F120",
     "description": "Documentation deliverable: add EE Entra setup/use docs covering connection types, required secrets, and mapping/sync workflow.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Acceptance Criteria"
     ],

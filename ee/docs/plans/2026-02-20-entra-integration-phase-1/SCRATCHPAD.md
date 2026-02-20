@@ -340,3 +340,6 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - Updated all Entra routes to declare required permission mode: GET/read endpoints use `read`; POST mutating/setup/sync endpoints use `update`.
 - Added missing action-layer checks in `packages/integrations/src/actions/integrations/entraActions.ts`: `getEntraIntegrationStatus`, `getEntraMappingPreview`, `getEntraSyncRunHistory`, and `getEntraReconciliationQueue` require `system_settings.read`; `connectEntraIntegration` requires `system_settings.update`.
 - Validation commands: `npx tsc --noEmit -p packages/integrations/tsconfig.json`, `npx tsc --noEmit -p ee/server/tsconfig.json`, and `npx tsc --noEmit -p server/tsconfig.json` (pass).
+- (2026-02-20) `F120` completed: added EE usage guide `ee/docs/guides/entra-integration-phase-1.md` covering setup and operating model.
+- Documentation now includes: direct vs CIPP connection decision guidance, canonical secret names, secret-provider/vault compatibility note, mapping/discovery/sync workflow, additive/non-destructive sync behavior with field-sync toggles, and phased feature-flag rollout order for pilot tenants.
+- Included platform feature-flag API examples for ensuring Phase 1 flags and tenant-targeting additions.
