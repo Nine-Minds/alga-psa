@@ -589,3 +589,6 @@ EOF && git add ee/docs/plans/2026-02-20-entra-integration-phase-1/tests.json ee/
 - (2026-02-20) `T087` completed in Temporal workflow/activity contract suite.
 - `upsertSchedule` assertions verify already-existing schedules are updated via `handle.update(...)` with refreshed spec/action/policy definitions.
 - Validation command: `cd server && npx vitest run src/test/unit/temporal/entraWorkflowActivityContracts.test.ts --coverage.enabled=false` (pass).
+- (2026-02-20) `T088` completed in `entraWorkflowClient.start` unit suite.
+- Added collision test verifying repeated manual trigger inputs generate identical workflow IDs and that `WorkflowExecutionAlreadyStartedError` resolves to existing run identifiers via handle describe.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraWorkflowClient.start.test.ts` (pass).

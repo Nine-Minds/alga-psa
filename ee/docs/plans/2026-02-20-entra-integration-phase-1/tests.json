@@ -749,7 +749,7 @@
   {
     "id": "T088",
     "description": "Workflow IDs are deterministic/deduplicated for repeated manual trigger collisions.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F090"
     ]

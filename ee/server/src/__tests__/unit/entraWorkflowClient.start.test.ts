@@ -138,4 +138,50 @@ describe('entraWorkflowClient start helpers', () => {
     );
     expect(closeMock).toHaveBeenCalledTimes(1);
   });
+
+  it('T088: repeated manual triggers reuse deterministic workflow IDs and dedupe already-started collisions', async () => {
+    startMock
+      .mockResolvedValueOnce({
+        workflowId: 'wf-88',
+        firstExecutionRunId: 'run-88',
+      })
+      .mockRejectedValueOnce({
+        name: 'WorkflowExecutionAlreadyStartedError',
+        message: 'Workflow execution already started',
+      });
+    getHandleMock.mockReturnValue({
+      describe: vi.fn(async () => ({
+        execution: { runId: 'run-88' },
+      })),
+    });
+
+    const { startEntraAllTenantsSyncWorkflow } = await import(
+      '@ee/lib/integrations/entra/entraWorkflowClient'
+    );
+
+    const input = {
+      tenantId: 'tenant-88',
+      trigger: 'manual' as const,
+      requestedAt: '2026-02-20T12:00:00.000Z',
+      actor: { userId: 'user-88' },
+    };
+    const firstResult = await startEntraAllTenantsSyncWorkflow(input);
+    const secondResult = await startEntraAllTenantsSyncWorkflow(input);
+
+    const firstWorkflowId = startMock.mock.calls[0][1]?.workflowId as string;
+    const secondWorkflowId = startMock.mock.calls[1][1]?.workflowId as string;
+
+    expect(firstWorkflowId).toBe(secondWorkflowId);
+    expect(firstResult).toMatchObject({
+      available: true,
+      runId: 'run-88',
+    });
+    expect(secondResult).toEqual({
+      available: true,
+      workflowId: firstWorkflowId,
+      runId: 'run-88',
+    });
+    expect(getHandleMock).toHaveBeenCalledWith(firstWorkflowId);
+    expect(closeMock).toHaveBeenCalledTimes(2);
+  });
 });
