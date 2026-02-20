@@ -898,7 +898,7 @@
   {
     "id": "F081",
     "description": "Activity: `recordSyncTenantResultActivity` persists per-tenant success/failure and count details.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements"
     ],

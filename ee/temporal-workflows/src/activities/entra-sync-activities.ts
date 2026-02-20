@@ -11,6 +11,7 @@ import type {
   UpsertEntraSyncRunActivityInput,
   UpsertEntraSyncRunActivityOutput,
   FinalizeSyncRunActivityInput,
+  RecordSyncTenantResultActivityInput,
 } from '../types/entra-sync';
 
 async function getActiveConnectionType(tenantId: string): Promise<EntraConnectionType> {
@@ -196,5 +197,62 @@ export async function finalizeSyncRunActivity(
         summary: knex.raw('?::jsonb', [JSON.stringify(input.summary)]),
         updated_at: now,
       });
+  });
+}
+
+export async function recordSyncTenantResultActivity(
+  input: RecordSyncTenantResultActivityInput
+): Promise<void> {
+  logger.info('Running recordSyncTenantResultActivity', {
+    tenantId: input.tenantId,
+    runId: input.runId,
+    managedTenantId: input.result.managedTenantId,
+    status: input.result.status,
+  });
+
+  await runWithTenant(input.tenantId, async () => {
+    const { knex } = await createTenantKnex();
+    const now = knex.fn.now();
+
+    const existing = await knex('entra_sync_run_tenants')
+      .where({
+        tenant: input.tenantId,
+        run_id: input.runId,
+        managed_tenant_id: input.result.managedTenantId,
+      })
+      .first(['run_tenant_id']);
+
+    const row = {
+      tenant: input.tenantId,
+      run_id: input.runId,
+      managed_tenant_id: input.result.managedTenantId,
+      client_id: input.result.clientId || null,
+      status: input.result.status,
+      created_count: input.result.created,
+      linked_count: input.result.linked,
+      updated_count: input.result.updated,
+      ambiguous_count: input.result.ambiguous,
+      inactivated_count: input.result.inactivated,
+      error_message: input.result.errorMessage || null,
+      started_at: now,
+      completed_at: now,
+      updated_at: now,
+    };
+
+    if (existing?.run_tenant_id) {
+      await knex('entra_sync_run_tenants')
+        .where({
+          tenant: input.tenantId,
+          run_tenant_id: existing.run_tenant_id,
+        })
+        .update(row);
+      return;
+    }
+
+    await knex('entra_sync_run_tenants').insert({
+      ...row,
+      run_tenant_id: randomUUID(),
+      created_at: now,
+    });
   });
 }

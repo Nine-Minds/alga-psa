@@ -226,3 +226,5 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - Validation command: `npx tsc --noEmit -p ee/temporal-workflows/tsconfig.json` (pass).
 - (2026-02-20) `F080` completed: added `finalizeSyncRunActivity` in `ee/temporal-workflows/src/activities/entra-sync-activities.ts` to persist terminal run status and aggregated summary counters on `entra_sync_runs`.
 - Validation command: `npx tsc --noEmit -p ee/temporal-workflows/tsconfig.json` (pass).
+- (2026-02-20) `F081` completed: added `recordSyncTenantResultActivity` in `ee/temporal-workflows/src/activities/entra-sync-activities.ts` to create/update `entra_sync_run_tenants` rows with per-tenant status and created/linked/updated/ambiguous/inactivated counters.
+- Validation command: `npx tsc --noEmit -p ee/temporal-workflows/tsconfig.json` (pass).
