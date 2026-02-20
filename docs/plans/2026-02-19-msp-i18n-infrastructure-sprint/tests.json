@@ -102,7 +102,7 @@
   {
     "id": "T013",
     "description": "getNamespacesForRoute exact match takes priority over prefix match (e.g., '/msp/tickets' exact entry wins over '/msp' prefix)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F003"
     ]
