@@ -670,3 +670,6 @@ EOF && git add ee/docs/plans/2026-02-20-entra-integration-phase-1/tests.json ee/
 - (2026-02-20) `T114` completed in `ee/server/src/__tests__/unit/entraContactReconciler.test.ts`.
 - Retry-idempotency case simulates two sync passes for the same Entra identity and verifies only one contact is created; second pass links existing contact.
 - Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraContactReconciler.test.ts` (pass).
+- (2026-02-20) `T115` completed: added `ee/server/src/__tests__/unit/entraReconciliationQueueService.queue.test.ts`.
+- Queue insert assertions validate tenant/client/managed-tenant context plus serialized candidate-contact details and ambiguity payload (`reason`, `candidateCount`).
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraReconciliationQueueService.queue.test.ts` (pass).

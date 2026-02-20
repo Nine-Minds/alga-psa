@@ -969,7 +969,7 @@
   {
     "id": "T115",
     "description": "Reconciliation queue item stores tenant/client context and candidate detail payload.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F025",
       "F098",
