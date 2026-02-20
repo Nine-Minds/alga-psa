@@ -570,7 +570,7 @@
   {
     "id": "T067",
     "description": "Skipped tenants panel lists skipped entries and allows remap entry.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F069"
     ]

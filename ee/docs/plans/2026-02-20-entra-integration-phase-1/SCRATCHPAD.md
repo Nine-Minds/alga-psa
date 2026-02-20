@@ -526,3 +526,6 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - (2026-02-20) `T066` completed: added `ee/server/src/__tests__/unit/entraIntegrationSettings.initialSyncCta.test.tsx`.
 - jsdom test mocks feature flags/status actions and asserts `Run Initial Sync` remains disabled when `mappedTenantCount=0`.
 - Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraIntegrationSettings.initialSyncCta.test.tsx` (pass).
+- (2026-02-20) `T067` completed in `entraIntegrationSettings.initialSyncCta` unit suite.
+- Mocked mapping-table callback state drives skipped-tenant panel rendering; test verifies skipped entries appear with `Remap` controls.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraIntegrationSettings.initialSyncCta.test.tsx` (pass).

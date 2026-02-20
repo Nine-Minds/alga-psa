@@ -8,10 +8,19 @@ const {
   useFeatureFlagMock,
   getEntraIntegrationStatusMock,
   startEntraSyncMock,
+  mappingTableState,
 } = vi.hoisted(() => ({
   useFeatureFlagMock: vi.fn(),
   getEntraIntegrationStatusMock: vi.fn(),
   startEntraSyncMock: vi.fn(),
+  mappingTableState: {
+    summary: { mapped: 0, skipped: 0, needsReview: 0 },
+    skippedTenants: [] as Array<{
+      managedTenantId: string;
+      displayName: string | null;
+      primaryDomain: string | null;
+    }>,
+  },
 }));
 
 vi.mock('@alga-psa/ui/hooks', () => ({
@@ -44,7 +53,18 @@ vi.mock('@alga-psa/ui/components/Button', () => ({
 vi.mock(
   '@ee/components/settings/integrations/EntraTenantMappingTable',
   () => ({
-    EntraTenantMappingTable: () => <div id="entra-tenant-mapping-table-stub" />,
+    EntraTenantMappingTable: (props: {
+      onSummaryChange?: (summary: { mapped: number; skipped: number; needsReview: number }) => void;
+      onSkippedTenantsChange?: (
+        rows: Array<{ managedTenantId: string; displayName: string | null; primaryDomain: string | null }>
+      ) => void;
+    }) => {
+      React.useEffect(() => {
+        props.onSummaryChange?.(mappingTableState.summary);
+        props.onSkippedTenantsChange?.(mappingTableState.skippedTenants);
+      }, [props]);
+      return <div id="entra-tenant-mapping-table-stub" />;
+    },
   })
 );
 
@@ -58,6 +78,8 @@ vi.mock('@ee/components/settings/integrations/EntraReconciliationQueue', () => (
 
 describe('EntraIntegrationSettings initial sync CTA', () => {
   it('T066: Run Initial Sync is disabled when there are zero confirmed mappings', async () => {
+    mappingTableState.summary = { mapped: 0, skipped: 0, needsReview: 0 };
+    mappingTableState.skippedTenants = [];
     useFeatureFlagMock.mockImplementation((name: string) => ({
       enabled: name === 'entra-integration-ui',
     }));
@@ -80,5 +102,43 @@ describe('EntraIntegrationSettings initial sync CTA', () => {
 
     const initialSyncButton = await screen.findByRole('button', { name: 'Run Initial Sync' });
     expect(initialSyncButton).toBeDisabled();
+  });
+
+  it('T067: skipped tenants panel renders skipped entries and exposes remap controls', async () => {
+    mappingTableState.summary = { mapped: 1, skipped: 2, needsReview: 0 };
+    mappingTableState.skippedTenants = [
+      {
+        managedTenantId: 'managed-skipped-1',
+        displayName: 'Skipped Tenant One',
+        primaryDomain: 'one.skipped.example.com',
+      },
+      {
+        managedTenantId: 'managed-skipped-2',
+        displayName: 'Skipped Tenant Two',
+        primaryDomain: null,
+      },
+    ];
+    useFeatureFlagMock.mockImplementation((name: string) => ({
+      enabled: name === 'entra-integration-ui',
+    }));
+    getEntraIntegrationStatusMock.mockResolvedValue({
+      success: true,
+      data: {
+        status: 'connected',
+        connectionType: 'direct',
+        lastDiscoveryAt: null,
+        mappedTenantCount: 1,
+        nextSyncIntervalMinutes: null,
+        availableConnectionTypes: ['direct', 'cipp'],
+        lastValidatedAt: null,
+        lastValidationError: null,
+      },
+    });
+
+    render(<EntraIntegrationSettings />);
+
+    await screen.findByText('Skipped Tenant One');
+    await screen.findByText('Skipped Tenant Two');
+    expect(screen.getAllByRole('button', { name: 'Remap' })).toHaveLength(2);
   });
 });
