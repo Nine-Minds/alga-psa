@@ -146,3 +146,5 @@ grep -r "from '../lib/email'" server/ --include="*.ts" --include="*.tsx"
 - T039: Confirmed no source files reference `server/src/models/document-association`.
 - T040: Confirmed no source files reference `lib/models/PortalDomainSessionToken`.
 - Build attempt: `npm run build` progressed to Next.js build, then failed with OOM (heap out of memory) after warnings about workflow export conflicts and webpack critical deps.
+- Added F042/T043: Next build failed because fileActions still referenced removed documents storage model/type paths; updated to storage package.
+- F042: Updated `fileActions.ts` to pull FileStoreModel and FileStore from the storage package.

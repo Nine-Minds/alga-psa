@@ -5,8 +5,8 @@ import { withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { Knex } from 'knex';
 import { StorageService } from '@alga-psa/storage/StorageService';
-import { FileStoreModel } from '../../models/storage';
-import { FileStore } from '../../types/storage';
+import { FileStoreModel } from '@alga-psa/storage';
+import type { FileStore } from '@alga-psa/storage/types/storage';
 
 export const uploadFile = withAuth(async (
     _user,
