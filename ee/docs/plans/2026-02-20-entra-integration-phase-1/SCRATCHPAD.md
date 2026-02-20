@@ -679,3 +679,6 @@ EOF && git add ee/docs/plans/2026-02-20-entra-integration-phase-1/tests.json ee/
 - (2026-02-20) `T117` completed in `ee/server/src/__tests__/unit/entraReconciliationQueueService.resolve.test.ts`.
 - Resolve-to-new assertions verify normalized contact creation, Entra link upsert, and queue transition to `resolved` with `resolution_action='create_new'`.
 - Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraReconciliationQueueService.resolve.test.ts` (pass).
+- (2026-02-20) `T118` completed in `ee/server/src/__tests__/unit/entraReconciliationQueueService.resolve.test.ts`.
+- Guard-rail assertions verify resolve-to-existing rejects cross-client targets and rejects contacts outside tenant scope before link writes.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraReconciliationQueueService.resolve.test.ts` (pass).

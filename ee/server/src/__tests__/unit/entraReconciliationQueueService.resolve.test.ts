@@ -205,4 +205,129 @@ describe('reconciliationQueueService resolve flows', () => {
       })
     );
   });
+
+  it('T118: resolve-to-existing rejects cross-client and cross-tenant contact targets', async () => {
+    const queueFirstCrossClientMock = vi.fn(async () => ({
+      queue_item_id: 'queue-118-a',
+      managed_tenant_id: 'managed-118',
+      client_id: 'client-a',
+      entra_tenant_id: 'entra-tenant-118',
+      entra_object_id: 'entra-object-118',
+      user_principal_name: 'user118@example.com',
+      display_name: 'User 118',
+      email: 'user118@example.com',
+      status: 'open',
+    }));
+    const contactFirstCrossClientMock = vi.fn(async () => ({
+      contact_name_id: 'contact-118',
+      client_id: 'client-b',
+    }));
+
+    const crossClientTrxMock = Object.assign(
+      vi.fn((table: string) => {
+        if (table === 'entra_contact_reconciliation_queue') {
+          return {
+            where: vi.fn(() => ({
+              first: queueFirstCrossClientMock,
+              update: vi.fn(async () => 1),
+            })),
+          };
+        }
+
+        if (table === 'contacts') {
+          return {
+            where: vi.fn(() => ({
+              first: contactFirstCrossClientMock,
+            })),
+          };
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      }),
+      {
+        fn: {
+          now: vi.fn(() => 'db-now'),
+        },
+      }
+    ) as any;
+
+    createTenantKnexMock.mockResolvedValue({
+      knex: {
+        transaction: vi.fn(async (cb: (trx: typeof crossClientTrxMock) => Promise<unknown>) =>
+          cb(crossClientTrxMock)
+        ),
+      },
+    });
+
+    const { resolveEntraQueueToExistingContact } = await import(
+      '@ee/lib/integrations/entra/reconciliationQueueService'
+    );
+
+    await expect(
+      resolveEntraQueueToExistingContact({
+        tenantId: 'tenant-118',
+        queueItemId: 'queue-118-a',
+        contactNameId: 'contact-118',
+      })
+    ).rejects.toThrow('Queue item and contact belong to different clients.');
+
+    const queueFirstCrossTenantMock = vi.fn(async () => ({
+      queue_item_id: 'queue-118-b',
+      managed_tenant_id: 'managed-118',
+      client_id: 'client-118',
+      entra_tenant_id: 'entra-tenant-118',
+      entra_object_id: 'entra-object-118',
+      user_principal_name: 'user118@example.com',
+      display_name: 'User 118',
+      email: 'user118@example.com',
+      status: 'open',
+    }));
+    const contactFirstCrossTenantMock = vi.fn(async () => null);
+
+    const crossTenantTrxMock = Object.assign(
+      vi.fn((table: string) => {
+        if (table === 'entra_contact_reconciliation_queue') {
+          return {
+            where: vi.fn(() => ({
+              first: queueFirstCrossTenantMock,
+              update: vi.fn(async () => 1),
+            })),
+          };
+        }
+
+        if (table === 'contacts') {
+          return {
+            where: vi.fn(() => ({
+              first: contactFirstCrossTenantMock,
+            })),
+          };
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      }),
+      {
+        fn: {
+          now: vi.fn(() => 'db-now'),
+        },
+      }
+    ) as any;
+
+    createTenantKnexMock.mockResolvedValue({
+      knex: {
+        transaction: vi.fn(async (cb: (trx: typeof crossTenantTrxMock) => Promise<unknown>) =>
+          cb(crossTenantTrxMock)
+        ),
+      },
+    });
+
+    await expect(
+      resolveEntraQueueToExistingContact({
+        tenantId: 'tenant-118',
+        queueItemId: 'queue-118-b',
+        contactNameId: 'contact-other-tenant',
+      })
+    ).rejects.toThrow('Contact does not exist for this tenant.');
+
+    expect(upsertEntraContactLinkActiveMock).not.toHaveBeenCalled();
+  });
 });

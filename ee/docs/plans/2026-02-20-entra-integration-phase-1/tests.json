@@ -995,7 +995,7 @@
   {
     "id": "T118",
     "description": "Queue resolve rejects cross-client or cross-tenant contact targets.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F116",
       "F117"
