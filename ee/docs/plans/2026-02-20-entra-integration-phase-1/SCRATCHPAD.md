@@ -412,3 +412,5 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - Validation command: `cd server && npx vitest run src/test/unit/api/entraMappingAndDisconnectContracts.test.ts` (pass).
 - (2026-02-20) `T028` completed: extended route contract coverage for disconnect path to assert credential clearing + connection status update without touching sync history tables.
 - Validation command: `cd server && npx vitest run src/test/unit/api/entraMappingAndDisconnectContracts.test.ts` (pass).
+- (2026-02-20) `T029` completed: extended migration coverage to assert Entra contact metadata columns are added via `ensureColumn` definitions without new non-null constraints.
+- Validation command: `cd server && npx vitest run src/test/unit/migrations/entraPhase1Migration.test.ts` (pass).

@@ -124,4 +124,28 @@ describe('Entra Phase 1 migration', () => {
     expect(migration).toContain('entra_sync_settings.tenant = tenants.tenant');
     expect(migration).toContain('1440');
   });
+
+  it('T029: keeps Entra contact metadata columns nullable for backward compatibility', () => {
+    expect(migration).toContain(
+      "await ensureColumn(knex, 'contacts', 'entra_object_id', (table) => {\n    table.text('entra_object_id');\n  });"
+    );
+    expect(migration).toContain(
+      "await ensureColumn(knex, 'contacts', 'entra_sync_source', (table) => {\n    table.text('entra_sync_source');\n  });"
+    );
+    expect(migration).toContain(
+      "await ensureColumn(knex, 'contacts', 'last_entra_sync_at', (table) => {\n    table.timestamp('last_entra_sync_at', { useTz: true });\n  });"
+    );
+    expect(migration).toContain(
+      "await ensureColumn(knex, 'contacts', 'entra_user_principal_name', (table) => {\n    table.text('entra_user_principal_name');\n  });"
+    );
+    expect(migration).toContain(
+      "await ensureColumn(knex, 'contacts', 'entra_account_enabled', (table) => {\n    table.boolean('entra_account_enabled');\n  });"
+    );
+    expect(migration).toContain(
+      "await ensureColumn(knex, 'contacts', 'entra_sync_status', (table) => {\n    table.text('entra_sync_status');\n  });"
+    );
+    expect(migration).toContain(
+      "await ensureColumn(knex, 'contacts', 'entra_sync_status_reason', (table) => {\n    table.text('entra_sync_status_reason');\n  });"
+    );
+  });
 });

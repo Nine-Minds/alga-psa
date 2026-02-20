@@ -246,7 +246,7 @@
   {
     "id": "T029",
     "description": "Schema defaults keep Entra sync metadata columns nullable for backward-compatible contact rows.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F028",
       "F029",
