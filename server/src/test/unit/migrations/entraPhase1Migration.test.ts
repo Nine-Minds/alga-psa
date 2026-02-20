@@ -19,4 +19,10 @@ describe('Entra Phase 1 migration', () => {
     expect(migration).toContain("table.timestamp('created_at', { useTz: true }).notNullable().defaultTo(knex.fn.now())");
     expect(migration).toContain("table.timestamp('updated_at', { useTz: true }).notNullable().defaultTo(knex.fn.now())");
   });
+
+  it('T012: enforces unique active Entra connection per tenant', () => {
+    expect(migration).toContain('CREATE UNIQUE INDEX IF NOT EXISTS ux_entra_partner_connections_active_per_tenant');
+    expect(migration).toContain('ON entra_partner_connections (tenant)');
+    expect(migration).toContain('WHERE is_active = true');
+  });
 });

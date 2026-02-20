@@ -377,3 +377,5 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - (2026-02-20) `T011` completed: added migration coverage file `server/src/test/unit/migrations/entraPhase1Migration.test.ts` with table/column assertions for `entra_partner_connections`.
 - Test validates required Entra partner-connection columns and defaults exist in `ee/server/migrations/20260220143000_create_entra_phase1_schema.cjs`.
 - Validation command: `cd server && npx vitest run src/test/unit/migrations/entraPhase1Migration.test.ts` (pass).
+- (2026-02-20) `T012` completed: extended `entraPhase1Migration.test.ts` to assert the partial unique index enforcing one active partner connection per tenant.
+- Validation command: `cd server && npx vitest run src/test/unit/migrations/entraPhase1Migration.test.ts` (pass).
