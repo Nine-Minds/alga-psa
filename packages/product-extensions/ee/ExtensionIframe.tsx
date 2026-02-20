@@ -31,24 +31,26 @@ function extractThemeVariables(): Record<string, string> {
   // Helper to get a CSS variable value
   const getVar = (name: string): string => computed.getPropertyValue(name).trim();
 
-  // Map host variables to extension-friendly names
+  // Map host variables to extension-friendly names.
+  // These mappings must match the --alga-* definitions in globals.css
+  // (.light,.dark block) so extensions see the same resolved values.
   return {
     // Primary (Purple)
     '--alga-primary': rgbToHex(getVar('--color-primary-500')),
-    '--alga-primary-foreground': '#ffffff',
-    '--alga-primary-light': rgbToHex(getVar('--color-primary-400')),
+    '--alga-primary-foreground': rgbToHex(getVar('--color-primary-50')),
+    '--alga-primary-light': rgbToHex(getVar('--color-primary-200')),
     '--alga-primary-dark': rgbToHex(getVar('--color-primary-600')),
     '--alga-primary-50': rgbToHex(getVar('--color-primary-50')),
     '--alga-primary-100': rgbToHex(getVar('--color-primary-100')),
 
     // Secondary (Blue)
     '--alga-secondary': rgbToHex(getVar('--color-secondary-500')),
-    '--alga-secondary-foreground': '#ffffff',
+    '--alga-secondary-foreground': rgbToHex(getVar('--color-secondary-50')),
     '--alga-secondary-light': rgbToHex(getVar('--color-secondary-400')),
 
     // Accent (Orange)
     '--alga-accent': rgbToHex(getVar('--color-accent-500')),
-    '--alga-accent-foreground': '#ffffff',
+    '--alga-accent-foreground': rgbToHex(getVar('--color-accent-50')),
 
     // Destructive / Status
     '--alga-danger': rgbToHex(getVar('--color-status-error')),
@@ -65,7 +67,7 @@ function extractThemeVariables(): Record<string, string> {
     // Backgrounds
     '--alga-bg': rgbToHex(getVar('--color-background') || getVar('--background') || '255 255 255'),
     '--alga-card-bg': rgbToHex(getVar('--color-card') || getVar('--color-border-50')),
-    '--alga-muted': rgbToHex(getVar('--color-border-100')),
+    '--alga-muted': rgbToHex(getVar('--color-border-50')),
 
     // Table row colors
     '--alga-row-even': rgbToHex(getVar('--color-border-50') || '249 250 251'),
@@ -74,9 +76,9 @@ function extractThemeVariables(): Record<string, string> {
 
     // Soft variants (for outline/ghost/soft/dashed button hovers)
     '--alga-primary-soft': rgbToHex(getVar('--color-primary-50')),
-    '--alga-primary-soft-fg': rgbToHex(getVar('--color-primary-600')),
+    '--alga-primary-soft-fg': rgbToHex(getVar('--color-primary-700')),
     '--alga-primary-soft-hover': rgbToHex(getVar('--color-primary-100')),
-    '--alga-primary-border': rgbToHex(getVar('--color-primary-400')),
+    '--alga-primary-border': rgbToHex(getVar('--color-primary-300')),
 
     // Success/Warning
     '--alga-success': rgbToHex(getVar('--color-status-success')),
