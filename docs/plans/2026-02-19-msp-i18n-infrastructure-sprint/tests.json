@@ -255,7 +255,7 @@
   {
     "id": "T032",
     "description": "Pseudo-locale output for common.json has same key structure as en/common.json but all leaf values replaced",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F012",
       "F014"
