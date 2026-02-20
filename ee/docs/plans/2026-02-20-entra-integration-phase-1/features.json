@@ -854,7 +854,7 @@
   {
     "id": "F077",
     "description": "Activity: `loadMappedTenantsActivity` resolves active mapped tenants for sync execution.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements"
     ],
