@@ -428,7 +428,7 @@
   {
     "id": "T050",
     "description": "CIPP adapter tenant responses normalize into canonical managed-tenant DTO fields.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F049"
     ]
