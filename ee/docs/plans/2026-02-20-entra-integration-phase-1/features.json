@@ -1282,7 +1282,7 @@
   {
     "id": "F115",
     "description": "Ambiguous queue UI: render reconciliation queue table with item details and resolve actions.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements"
     ],

@@ -70,6 +70,17 @@ async function isEntraUiEnabledForTenant(params: {
   });
 }
 
+async function isEntraAmbiguousQueueEnabledForTenant(params: {
+  tenantId: string;
+  userId?: string;
+}): Promise<boolean> {
+  const { featureFlags } = await import('server/src/lib/feature-flags/featureFlags');
+  return featureFlags.isEnabled('entra-integration-ambiguous-queue', {
+    tenantId: params.tenantId,
+    userId: params.userId,
+  });
+}
+
 function eeUnavailableResult<T>(): EntraActionResult<T> {
   return {
     success: false,
@@ -200,6 +211,24 @@ export type EntraSyncHistoryRun = {
 
 export type EntraSyncHistoryResponse = {
   runs: EntraSyncHistoryRun[];
+};
+
+export type EntraReconciliationQueueItem = {
+  queueItemId: string;
+  managedTenantId: string | null;
+  clientId: string | null;
+  entraTenantId: string;
+  entraObjectId: string;
+  userPrincipalName: string | null;
+  displayName: string | null;
+  email: string | null;
+  candidateContacts: Array<Record<string, unknown>>;
+  status: string;
+  createdAt: string;
+};
+
+export type EntraReconciliationQueueResponse = {
+  items: EntraReconciliationQueueItem[];
 };
 
 export const initiateEntraDirectOAuth = withAuth(async (user, { tenant }) => {
@@ -463,6 +492,32 @@ export const getEntraSyncRunHistory = withAuth(async (user, { tenant }, limit: n
         runs: runs.slice(0, safeLimit),
       },
     } as const;
+  });
+});
+
+export const getEntraReconciliationQueue = withAuth(async (user, { tenant }, limit: number = 50) => {
+  const userId = (user as { user_id?: string } | undefined)?.user_id;
+  const enabled = await isEntraUiEnabledForTenant({
+    tenantId: tenant,
+    userId,
+  });
+  if (!enabled) {
+    return flagDisabledResult<EntraReconciliationQueueResponse>();
+  }
+
+  const queueFlagEnabled = await isEntraAmbiguousQueueEnabledForTenant({
+    tenantId: tenant,
+    userId,
+  });
+  if (!queueFlagEnabled) {
+    return flagDisabledResult<EntraReconciliationQueueResponse>();
+  }
+
+  const safeLimit = Number.isFinite(limit) ? Math.max(1, Math.min(200, Math.floor(limit))) : 50;
+  return callEeRoute<EntraReconciliationQueueResponse>({
+    importPath: '@enterprise/app/api/integrations/entra/reconciliation-queue/route',
+    method: 'GET',
+    query: { limit: safeLimit },
   });
 });
 

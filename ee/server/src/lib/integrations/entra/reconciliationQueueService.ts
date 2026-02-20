@@ -11,6 +11,20 @@ export interface QueueAmbiguousEntraMatchInput {
   candidates: EntraContactMatchCandidate[];
 }
 
+export interface EntraReconciliationQueueItem {
+  queueItemId: string;
+  managedTenantId: string | null;
+  clientId: string | null;
+  entraTenantId: string;
+  entraObjectId: string;
+  userPrincipalName: string | null;
+  displayName: string | null;
+  email: string | null;
+  candidateContacts: Array<Record<string, unknown>>;
+  status: string;
+  createdAt: string;
+}
+
 function serializeCandidates(candidates: EntraContactMatchCandidate[]): Array<Record<string, unknown>> {
   return candidates.map((candidate) => ({
     contactNameId: candidate.contactNameId,
@@ -81,5 +95,36 @@ export async function queueAmbiguousEntraMatch(
     });
 
     return { queueItemId };
+  });
+}
+
+export async function listOpenEntraReconciliationQueue(
+  tenantId: string,
+  limit = 50
+): Promise<EntraReconciliationQueueItem[]> {
+  return runWithTenant(tenantId, async () => {
+    const { knex } = await createTenantKnex();
+    const rows = await knex('entra_contact_reconciliation_queue')
+      .where({ tenant: tenantId, status: 'open' })
+      .orderBy('created_at', 'desc')
+      .limit(Math.max(1, Math.min(200, Math.floor(limit || 50))))
+      .select('*');
+
+    return rows.map((row: any) => ({
+      queueItemId: String(row.queue_item_id),
+      managedTenantId: row.managed_tenant_id ? String(row.managed_tenant_id) : null,
+      clientId: row.client_id ? String(row.client_id) : null,
+      entraTenantId: String(row.entra_tenant_id),
+      entraObjectId: String(row.entra_object_id),
+      userPrincipalName: row.user_principal_name ? String(row.user_principal_name) : null,
+      displayName: row.display_name ? String(row.display_name) : null,
+      email: row.email ? String(row.email) : null,
+      candidateContacts: Array.isArray(row.candidate_contacts)
+        ? row.candidate_contacts
+        : [],
+      status: String(row.status),
+      createdAt:
+        row.created_at instanceof Date ? row.created_at.toISOString() : String(row.created_at),
+    }));
   });
 }

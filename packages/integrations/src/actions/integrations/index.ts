@@ -5,6 +5,7 @@ export {
   initiateEntraDirectOAuth,
   connectEntraCipp,
   getEntraIntegrationStatus,
+  getEntraReconciliationQueue,
   connectEntraIntegration,
   validateEntraDirectConnection,
   validateEntraCippConnection,
@@ -23,4 +24,6 @@ export {
   type EntraMappingPreviewResponse,
   type EntraSyncHistoryRun,
   type EntraSyncHistoryResponse,
+  type EntraReconciliationQueueItem,
+  type EntraReconciliationQueueResponse,
 } from './entraActions';

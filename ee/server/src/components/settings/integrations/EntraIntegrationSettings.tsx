@@ -16,6 +16,7 @@ import {
   type EntraSkippedTenant,
 } from './EntraTenantMappingTable';
 import EntraSyncHistoryPanel from './EntraSyncHistoryPanel';
+import EntraReconciliationQueue from './EntraReconciliationQueue';
 
 const WIZARD_STEPS = [
   { id: 1, title: 'Connect', description: 'Choose Direct Microsoft partner auth or CIPP.' },
@@ -246,15 +247,7 @@ export default function EntraIntegrationSettings() {
           ) : null}
 
           {ambiguousQueueFlag.enabled ? (
-            <div
-              className="rounded-lg border border-border/70 bg-background p-4"
-              id="entra-ambiguous-queue-panel"
-            >
-              <p className="text-sm font-semibold">Ambiguous Match Queue</p>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Review and resolve Entra users that matched multiple contacts or require manual linking.
-              </p>
-            </div>
+            <EntraReconciliationQueue />
           ) : null}
 
           <div className="flex flex-wrap gap-2">

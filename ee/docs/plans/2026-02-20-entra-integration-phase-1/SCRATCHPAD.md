@@ -320,3 +320,7 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - (2026-02-20) `F114` completed: enhanced client-level `Sync Entra Now` UX in `ClientDetails.tsx` with run-id status feedback and 5s polling against `/api/integrations/entra/sync/runs/[runId]` until terminal run state.
 - Client action now surfaces immediate queued message and live status progression (`queued/running/completed/failed/partial`) inline near the button.
 - Validation commands: `npx tsc --noEmit -p packages/clients/tsconfig.json` and `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
+- (2026-02-20) `F115` completed: added `EntraReconciliationQueue` UI component and replaced ambiguous queue placeholder panel in settings with live queue rendering.
+- Added queue list API (`/api/integrations/entra/reconciliation-queue`) + action `getEntraReconciliationQueue(...)` backed by `listOpenEntraReconciliationQueue(...)` service query.
+- Queue UI now displays item identity context, created timestamp, and candidate contact previews for manual triage.
+- Validation commands: `npx tsc --noEmit -p ee/server/tsconfig.json`, `npx tsc --noEmit -p packages/integrations/tsconfig.json`, `npx tsc --noEmit -p server/tsconfig.json` (pass).
