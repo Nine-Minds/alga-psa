@@ -44,7 +44,7 @@
   {
     "id": "F008",
     "description": "Create packages/storage/ directory with package.json (name: @alga-psa/storage, dependencies: @alga-psa/db, @alga-psa/core, @alga-psa/auth, @alga-psa/event-bus, @alga-psa/shared, @alga-psa/validation)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-04"]
   },
   {
