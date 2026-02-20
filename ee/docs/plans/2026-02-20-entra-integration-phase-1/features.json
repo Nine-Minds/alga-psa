@@ -1191,7 +1191,7 @@
   {
     "id": "F107",
     "description": "Per-tenant sync counters: track created/linked/updated/ambiguous/inactivated in tenant run rows.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements"
     ],

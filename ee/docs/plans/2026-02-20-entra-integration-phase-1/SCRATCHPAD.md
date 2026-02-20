@@ -297,3 +297,6 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - (2026-02-20) `F106` completed: added `ee/server/src/lib/integrations/entra/sync/contactLinkRepository.ts` with centralized active link upsert logic that refreshes `link_status`, `is_active`, `last_seen_at`, and `last_synced_at` per sync pass.
 - Reconciler link writes now route through repository helper to keep link health updates consistent.
 - Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
+- (2026-02-20) `F107` completed: added `EntraSyncResultAggregator` (`ee/server/src/lib/integrations/entra/sync/syncResultAggregator.ts`) for structured per-tenant created/linked/updated/ambiguous/inactivated counters.
+- Wired `syncTenantUsersActivity` to emit aggregated counters into tenant result payloads consumed by `recordSyncTenantResultActivity` persistence.
+- Validation commands: `npx tsc --noEmit -p ee/server/tsconfig.json` and `npx tsc --noEmit -p ee/temporal-workflows/tsconfig.json` (pass).

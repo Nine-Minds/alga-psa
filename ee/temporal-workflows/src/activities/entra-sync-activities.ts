@@ -2,6 +2,7 @@ import logger from '@alga-psa/core/logger';
 import { randomUUID } from 'crypto';
 import { createTenantKnex, runWithTenant } from '@alga-psa/db/tenant';
 import { getEntraProviderAdapter } from '@ee/lib/integrations/entra/providers';
+import { EntraSyncResultAggregator } from '@ee/lib/integrations/entra/sync/syncResultAggregator';
 import { filterEntraUsers } from '@ee/lib/integrations/entra/sync/userFilterPipeline';
 import type { EntraConnectionType } from '@ee/interfaces/entra.interfaces';
 import type {
@@ -94,20 +95,22 @@ export async function syncTenantUsersActivity(
     managedTenantId: input.mapping.managedTenantId,
   });
   const filteredUsers = filterEntraUsers(users);
+  const counters = new EntraSyncResultAggregator();
+  counters.increment('linked', filteredUsers.included.length);
 
   // Phase-1 activity pipeline currently tracks per-tenant pull + aggregate counters.
   // Contact-level reconciliation is implemented in later sync features.
-  const processedCount = filteredUsers.included.length;
+  const aggregated = counters.toJSON();
 
   return {
     managedTenantId: input.mapping.managedTenantId,
     clientId: input.mapping.clientId || null,
     status: 'completed',
-    created: 0,
-    linked: processedCount,
-    updated: 0,
-    ambiguous: 0,
-    inactivated: 0,
+    created: aggregated.created,
+    linked: aggregated.linked,
+    updated: aggregated.updated,
+    ambiguous: aggregated.ambiguous,
+    inactivated: aggregated.inactivated,
     errorMessage: null,
   };
 }
