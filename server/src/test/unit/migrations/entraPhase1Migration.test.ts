@@ -84,4 +84,12 @@ describe('Entra Phase 1 migration', () => {
     expect(migration).toContain('ON entra_contact_links (tenant, contact_name_id)');
     expect(migration).toContain('WHERE is_active = true');
   });
+
+  it('T020: creates reconciliation queue table with status and identity lookup indexes', () => {
+    expect(migration).toContain("createTable('entra_contact_reconciliation_queue'");
+    expect(migration).toContain("table.text('status').notNullable().defaultTo('open')");
+    expect(migration).toContain("table.jsonb('candidate_contacts').notNullable().defaultTo(knex.raw(`'[]'::jsonb`))");
+    expect(migration).toContain('CREATE INDEX IF NOT EXISTS idx_entra_reconciliation_queue_status');
+    expect(migration).toContain('CREATE INDEX IF NOT EXISTS idx_entra_reconciliation_queue_identity');
+  });
 });

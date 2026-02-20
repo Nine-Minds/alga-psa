@@ -164,7 +164,7 @@
   {
     "id": "T020",
     "description": "Migration creates `entra_contact_reconciliation_queue` and lookup indexes.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F025"
     ]
