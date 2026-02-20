@@ -664,7 +664,7 @@
   {
     "id": "T078",
     "description": "Activity registration index exports all new Entra activities.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F083"
     ]
