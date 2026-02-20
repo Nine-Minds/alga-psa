@@ -102,3 +102,4 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - (2026-02-20) `F022` completed: migration adds `entra_contact_links` for Entra identity to contact mapping state.
 - (2026-02-20) `F023` completed: unique index `ux_entra_contact_links_entra_identity` enforces (`tenant`,`entra_tenant_id`,`entra_object_id`) uniqueness.
 - (2026-02-20) `F024` completed: partial unique index `ux_entra_contact_links_active_contact` enforces one active Entra link per contact.
+- (2026-02-20) `F025` completed: migration creates `entra_contact_reconciliation_queue` plus status/identity indexes for ambiguous match review.

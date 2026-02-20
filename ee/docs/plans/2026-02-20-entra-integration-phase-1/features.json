@@ -271,7 +271,7 @@
   {
     "id": "F025",
     "description": "Schema: create `entra_contact_reconciliation_queue` for ambiguous match items requiring MSP action.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements"
     ],
