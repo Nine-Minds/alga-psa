@@ -183,3 +183,5 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - (2026-02-20) `F059` completed: added `skipEntraTenantMapping` action to persist `skip_for_now` active mapping state in `entra_client_tenant_mappings` while preserving discovered tenant records.
 - Mapping table now includes per-row `Skip for now` action and local skipped-state rendering so skipped rows are clearly marked and excluded from selection edits.
 - Validation commands: `npx tsc --noEmit -p packages/integrations/tsconfig.json`, `npx tsc --noEmit -p ee/server/tsconfig.json`, `npx tsc --noEmit -p server/tsconfig.json` (pass).
+- (2026-02-20) `F060` completed: added bulk helper button `Preselect Exact Matches` in `EntraTenantMappingTable` to set selections for all non-skipped auto-matched rows in one action.
+- Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).

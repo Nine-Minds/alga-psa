@@ -664,7 +664,7 @@
   {
     "id": "F060",
     "description": "Bulk-accept helper: add UI action to preselect all exact-domain auto matches.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes"
     ],

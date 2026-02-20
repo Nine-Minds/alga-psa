@@ -232,13 +232,45 @@ export function EntraTenantMappingTable() {
     }
   }, []);
 
+  const handlePreselectExactMatches = React.useCallback(() => {
+    setRows((currentRows) =>
+      currentRows.map((row) => {
+        if (row.state !== 'auto_matched' || row.isSkipped) {
+          return row;
+        }
+
+        const topCandidate = row.candidates[0];
+        if (!topCandidate?.clientId) {
+          return row;
+        }
+
+        return {
+          ...row,
+          selectedClientId: topCandidate.clientId,
+        };
+      })
+    );
+  }, []);
+
   return (
     <div className="space-y-3" id="entra-mapping-table">
       <div className="flex items-center justify-between gap-2">
         <p className="text-sm font-semibold">Tenant Mapping Preview</p>
-        <Button id="entra-mapping-refresh" type="button" variant="outline" size="sm" onClick={loadPreview} disabled={loading}>
-          Refresh Preview
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            id="entra-preselect-exact-matches"
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handlePreselectExactMatches}
+            disabled={loading}
+          >
+            Preselect Exact Matches
+          </Button>
+          <Button id="entra-mapping-refresh" type="button" variant="outline" size="sm" onClick={loadPreview} disabled={loading}>
+            Refresh Preview
+          </Button>
+        </div>
       </div>
 
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
