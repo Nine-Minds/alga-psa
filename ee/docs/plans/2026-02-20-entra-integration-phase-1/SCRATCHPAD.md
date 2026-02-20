@@ -577,3 +577,6 @@ EOF && git add ee/docs/plans/2026-02-20-entra-integration-phase-1/tests.json ee/
 - (2026-02-20) `T083` completed: added contract test `server/src/test/unit/integrations/entraConfirmMappingsInitialSyncContract.test.ts`.
 - Test verifies `confirmEntraMappings` optional-start branch, workflow trigger invocation path, and response payload propagation of `initialSync.workflowId/runId`.
 - Validation commands: `cd server && npx vitest run src/test/unit/integrations/entraConfirmMappingsInitialSyncContract.test.ts --coverage.enabled=false` (pass), `cd server && npx vitest run src/test/unit/integrations/entraActions.directConnect.test.ts --coverage.enabled=false` (pass).
+- (2026-02-20) `T084` completed: added `server/src/test/unit/integrations/entraActions.startSync.test.ts`.
+- All-tenants case verifies manual `startEntraSync({scope:'all-tenants'})` dispatches `startEntraAllTenantsSyncWorkflow` with trigger=`manual` and returns workflow/run IDs.
+- Validation command: `cd server && npx vitest run src/test/unit/integrations/entraActions.startSync.test.ts --coverage.enabled=false` (pass).

@@ -715,7 +715,7 @@
   {
     "id": "T084",
     "description": "Manual `Sync All Tenants Now` action starts expected workflow type.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F086",
       "F113"
