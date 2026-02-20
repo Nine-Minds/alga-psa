@@ -698,7 +698,7 @@
   {
     "id": "F063",
     "description": "Idempotent remap behavior: remapping updates mapping state/history without duplicate active rows.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements"
     ],
