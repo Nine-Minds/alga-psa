@@ -32,7 +32,7 @@
   {
     "id": "F006",
     "description": "I18nWrapper in packages/tenancy/src/components/i18n/I18nWrapper.tsx uses usePathname() to get current route",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR4"]
   },
   {

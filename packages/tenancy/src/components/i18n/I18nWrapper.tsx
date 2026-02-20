@@ -3,6 +3,7 @@
 import { I18nProvider } from '@alga-psa/ui/lib/i18n/client';
 import { SupportedLocale, LOCALE_CONFIG } from '@alga-psa/ui/lib/i18n/config';
 import { ReactNode, useEffect, useState } from 'react';
+import { usePathname } from 'next/navigation';
 import { getHierarchicalLocaleAction } from '../../actions';
 
 interface I18nWrapperProps {
@@ -20,6 +21,7 @@ export function I18nWrapper({
     initialLocale || (LOCALE_CONFIG.defaultLocale as SupportedLocale)
   );
   const [isLoading, setIsLoading] = useState(!initialLocale);
+  const pathname = usePathname();
 
   useEffect(() => {
     if (!initialLocale) {
