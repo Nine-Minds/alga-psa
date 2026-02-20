@@ -95,3 +95,4 @@ grep -r "from '../lib/email'" server/ --include="*.ts" --include="*.tsx"
 - F033: Updated `entityImageService.ts` to import `StorageService` from `@alga-psa/storage/StorageService`.
 - F034: Re-exported `StorageProviderFactory` and `generateStoragePath` from `@alga-psa/storage` in documents index.
 - F035: Added documents package export for `./types/storage` and added thin re-export stubs for `StorageService` and storage types.
+- F036: Added `@alga-psa/storage` dependency to `packages/documents/package.json`.

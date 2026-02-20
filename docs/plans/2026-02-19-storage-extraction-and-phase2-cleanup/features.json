@@ -212,7 +212,7 @@
   {
     "id": "F036",
     "description": "Add @alga-psa/storage as dependency in packages/documents/package.json",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-14"]
   },
   {
