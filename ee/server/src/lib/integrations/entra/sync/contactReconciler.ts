@@ -2,6 +2,7 @@ import { createTenantKnex, runWithTenant } from '@/lib/db';
 import { ContactModel } from '@alga-psa/shared/models/contactModel';
 import type { Knex } from 'knex';
 import { queueAmbiguousEntraMatch } from '../reconciliationQueueService';
+import { findContactMatchesByEmail } from './contactMatcher';
 import type { EntraSyncUser } from './types';
 import type { EntraContactMatchCandidate } from './contactMatcher';
 import { buildContactFieldSyncPatch } from './contactFieldSync';
@@ -27,6 +28,20 @@ export interface EntraCreatedContactResult {
 export interface EntraAmbiguousContactResult {
   action: 'ambiguous';
   queueItemId: string;
+}
+
+export type EntraReconcileContactResult =
+  | EntraLinkedContactResult
+  | EntraCreatedContactResult
+  | EntraAmbiguousContactResult;
+
+export interface ReconcileEntraUserInput {
+  tenantId: string;
+  clientId: string;
+  managedTenantId: string | null;
+  user: EntraSyncUser;
+  fieldSyncConfig?: Record<string, unknown>;
+  allowDestructiveOperations?: boolean;
 }
 
 function fallbackDisplayName(user: EntraSyncUser): string {
@@ -190,4 +205,35 @@ export async function queueAmbiguousContactMatch(
     action: 'ambiguous',
     queueItemId: queued.queueItemId,
   };
+}
+
+export async function reconcileEntraUserToContact(
+  input: ReconcileEntraUserInput
+): Promise<EntraReconcileContactResult> {
+  if (input.allowDestructiveOperations) {
+    throw new Error('Entra sync is non-destructive: delete/purge operations are not allowed.');
+  }
+
+  const candidates = await findContactMatchesByEmail(input.tenantId, input.clientId, input.user);
+  if (candidates.length > 1) {
+    return queueAmbiguousContactMatch(
+      input.tenantId,
+      input.clientId,
+      input.managedTenantId,
+      input.user,
+      candidates
+    );
+  }
+
+  if (candidates.length === 1) {
+    return linkExistingMatchedContact(
+      input.tenantId,
+      input.clientId,
+      candidates[0],
+      input.user,
+      input.fieldSyncConfig
+    );
+  }
+
+  return createContactForEntraUser(input.tenantId, input.clientId, input.user);
 }

@@ -290,3 +290,6 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - (2026-02-20) `F103` completed: added `markDeletedEntraUsersInactive(...)` in `disableHandler.ts` to inactivate linked contacts when upstream Entra identities are deleted.
 - Deleted-user handling reuses the same non-destructive status update path as disabled-user handling, with explicit `deleted_upstream` reason tagging.
 - Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
+- (2026-02-20) `F104` completed: added `reconcileEntraUserToContact(...)` orchestrator in `contactReconciler.ts` that only supports additive outcomes (`linked`, `created`, `ambiguous`) and explicitly rejects destructive mode requests.
+- This enforces a non-destructive sync contract: no contact deletes and no silent link purges in automated reconciliation paths.
+- Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).

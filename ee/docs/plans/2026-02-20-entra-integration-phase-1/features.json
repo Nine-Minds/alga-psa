@@ -1158,7 +1158,7 @@
   {
     "id": "F104",
     "description": "Non-destructive rule enforcement: never delete contacts or silently purge contact links during sync.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements"
     ],
