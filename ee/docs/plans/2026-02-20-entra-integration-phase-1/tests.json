@@ -833,7 +833,7 @@
   {
     "id": "T098",
     "description": "Name-only similarity without email never auto-links a contact.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F099"
     ]

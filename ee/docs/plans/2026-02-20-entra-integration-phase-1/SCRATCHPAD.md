@@ -619,3 +619,6 @@ EOF && git add ee/docs/plans/2026-02-20-entra-integration-phase-1/tests.json ee/
 - (2026-02-20) `T097` completed in `entraContactReconciler` unit suite.
 - Ambiguous-match case verifies multiple candidates queue reconciliation items instead of auto-linking/creation.
 - Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraContactReconciler.test.ts` (pass).
+- (2026-02-20) `T098` completed in `entraContactMatcher.noEmailAutoLink` test.
+- Name-only identity case verifies missing valid email/UPN cannot auto-link contacts.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraContactMatcher.noEmailAutoLink.test.ts` (pass).
