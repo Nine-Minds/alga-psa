@@ -448,6 +448,11 @@ export const confirmEntraMappings = withAuth(async (
   { tenant },
   input: { mappings: Array<Record<string, unknown>> }
 ) => {
+  const canUpdate = await hasPermission(user as any, 'system_settings', 'update');
+  if (!canUpdate) {
+    return { success: false, error: 'Forbidden: insufficient permissions to configure Entra integration' } as const;
+  }
+
   const enabled = await isEntraUiEnabledForTenant({
     tenantId: tenant,
     userId: (user as { user_id?: string } | undefined)?.user_id,

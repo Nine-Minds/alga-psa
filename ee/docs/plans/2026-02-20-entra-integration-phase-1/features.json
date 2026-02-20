@@ -675,7 +675,7 @@
   {
     "id": "F061",
     "description": "Confirm endpoint: persist selected tenant-client mappings only after explicit confirmation step.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements"
     ],
