@@ -724,7 +724,7 @@
   {
     "id": "T085",
     "description": "Manual client-level sync action starts expected single-tenant workflow type.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F087",
       "F114"

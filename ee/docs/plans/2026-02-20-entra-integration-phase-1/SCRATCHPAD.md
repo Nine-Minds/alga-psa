@@ -580,3 +580,6 @@ EOF && git add ee/docs/plans/2026-02-20-entra-integration-phase-1/tests.json ee/
 - (2026-02-20) `T084` completed: added `server/src/test/unit/integrations/entraActions.startSync.test.ts`.
 - All-tenants case verifies manual `startEntraSync({scope:'all-tenants'})` dispatches `startEntraAllTenantsSyncWorkflow` with trigger=`manual` and returns workflow/run IDs.
 - Validation command: `cd server && npx vitest run src/test/unit/integrations/entraActions.startSync.test.ts --coverage.enabled=false` (pass).
+- (2026-02-20) `T085` completed in `entraActions.startSync` unit suite.
+- Single-client case verifies `startEntraSync({scope:'single-client'})` resolves mapped tenant context then dispatches `startEntraTenantSyncWorkflow` with expected identifiers.
+- Validation command: `cd server && npx vitest run src/test/unit/integrations/entraActions.startSync.test.ts --coverage.enabled=false` (pass).
