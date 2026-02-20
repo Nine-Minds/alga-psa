@@ -92,7 +92,7 @@
   {
     "id": "F016",
     "description": "Move StorageProviderFactory.ts from documents to packages/storage/src/StorageProviderFactory.ts",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-05"]
   },
   {

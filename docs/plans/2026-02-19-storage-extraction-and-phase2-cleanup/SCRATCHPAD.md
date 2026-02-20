@@ -75,3 +75,4 @@ grep -r "from '../lib/email'" server/ --include="*.ts" --include="*.tsx"
 - F013: Moved `StorageProvider` base class to `packages/storage/src/providers/StorageProvider.ts`.
 - F014: Moved `LocalStorageProvider` to `packages/storage/src/providers/LocalStorageProvider.ts`.
 - F015: Moved FileStoreModel (`models/storage.ts`) into `packages/storage/src/models/storage.ts`.
+- F016: Moved `StorageProviderFactory.ts` into `packages/storage/src/StorageProviderFactory.ts`.
