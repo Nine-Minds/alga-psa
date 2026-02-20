@@ -111,3 +111,4 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - (2026-02-20) `F031` completed: migration seeds one `entra_sync_settings` row per existing tenant with default `sync_interval_minutes=1440` and enabled sync.
 - (2026-02-20) `F032` completed: added `ee/server/src/interfaces/entra.interfaces.ts` and typed row mappers in `ee/server/src/lib/integrations/entra/entraRowMappers.ts` for all Entra tables.
 - Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
+- (2026-02-20) `F033` completed: added canonical Entra secret key constants in `ee/server/src/lib/integrations/entra/secrets.ts` for shared Microsoft app secrets plus direct/CIPP token keys.

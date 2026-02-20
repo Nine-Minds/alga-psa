@@ -360,7 +360,7 @@
   {
     "id": "F033",
     "description": "Secret constants: define canonical tenant secret keys for Entra direct/CIPP credentials and tokens.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Security / Permissions"
     ],
