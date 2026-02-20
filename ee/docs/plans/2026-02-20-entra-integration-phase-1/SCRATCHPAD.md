@@ -188,3 +188,4 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - (2026-02-20) `F061` completed: `POST /api/integrations/entra/mappings/confirm` now persists mappings via `confirmEntraMappings()` service only when explicitly called with selected mapping payload.
 - Added route payload normalization (`managedTenantId`, `clientId`, optional mapping state/score) and action-side update-permission check before confirm execution.
 - Validation commands: `npx tsc --noEmit -p ee/server/tsconfig.json`, `npx tsc --noEmit -p packages/integrations/tsconfig.json`, `npx tsc --noEmit -p server/tsconfig.json` (pass).
+- (2026-02-20) `F062` completed: mapping confirm service now writes mapped client linkage fields (`clients.entra_tenant_id`, `clients.entra_primary_domain`) from selected managed-tenant records during confirm.

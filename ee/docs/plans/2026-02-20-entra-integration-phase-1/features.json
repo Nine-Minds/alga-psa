@@ -687,7 +687,7 @@
   {
     "id": "F062",
     "description": "Client linkage write: update mapped client records with `entra_tenant_id` and `entra_primary_domain` on confirm.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements"
     ],
