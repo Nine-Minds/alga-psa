@@ -205,7 +205,7 @@
   {
     "id": "F019",
     "description": "Schema: create `entra_sync_settings` table for interval, filters, and field-sync toggles.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data / API / Integrations"
     ],

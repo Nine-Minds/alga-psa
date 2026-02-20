@@ -96,3 +96,4 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - (2026-02-20) `F016` completed: added managed-tenant lookup indexes for recency and case-insensitive primary-domain matching.
 - (2026-02-20) `F017` completed: migration adds `entra_client_tenant_mappings` to persist mapped/skipped/review decisions.
 - (2026-02-20) `F018` completed: added unique partial index `ux_entra_client_tenant_mappings_active` to prevent duplicate active mappings per discovered Entra tenant.
+- (2026-02-20) `F019` completed: migration creates `entra_sync_settings` for cadence, filters, and field-sync JSON config.
