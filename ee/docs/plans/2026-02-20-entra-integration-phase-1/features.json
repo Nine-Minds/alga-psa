@@ -1114,7 +1114,7 @@
   {
     "id": "F100",
     "description": "Contact metadata write: persist Entra object id/source/last sync markers on linked/new contacts.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements"
     ],

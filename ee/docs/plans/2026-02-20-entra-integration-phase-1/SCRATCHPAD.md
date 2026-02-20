@@ -278,3 +278,6 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - (2026-02-20) `F098` completed: added reconciliation queue service `ee/server/src/lib/integrations/entra/reconciliationQueueService.ts` for ambiguous contact matches.
 - Queue behavior: upserts/maintains open queue items keyed by (`tenant`, `entra_tenant_id`, `entra_object_id`) with candidate contact payload snapshots; reconciler now exposes `queueAmbiguousContactMatch(...)` helper.
 - Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
+- (2026-02-20) `F100` completed: reconciler link upsert now writes Entra metadata onto linked/new contacts (`entra_object_id`, `entra_sync_source`, `last_entra_sync_at`, `entra_user_principal_name`, `entra_account_enabled`).
+- Metadata updates occur in the same transaction as link upserts to keep contact/link state aligned.
+- Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).

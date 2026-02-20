@@ -78,6 +78,20 @@ async function upsertContactLink(
       last_synced_at: now,
       updated_at: now,
     });
+
+  await trx('contacts')
+    .where({
+      tenant: tenantId,
+      contact_name_id: contactNameId,
+    })
+    .update({
+      entra_object_id: user.entraObjectId,
+      entra_sync_source: 'entra_sync',
+      last_entra_sync_at: now,
+      entra_user_principal_name: user.userPrincipalName,
+      entra_account_enabled: user.accountEnabled,
+      updated_at: now,
+    });
 }
 
 export async function linkExistingMatchedContact(
