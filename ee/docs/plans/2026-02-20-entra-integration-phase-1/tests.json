@@ -376,7 +376,7 @@
   {
     "id": "T044",
     "description": "Credential resolver falls back to app secrets when tenant/env are absent.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F034"
     ]

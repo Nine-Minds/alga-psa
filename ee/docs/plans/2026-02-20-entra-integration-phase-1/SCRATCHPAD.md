@@ -456,3 +456,6 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - (2026-02-20) `T043` completed within `microsoftCredentialResolver.precedence` tests.
 - Env-fallback case asserts resolver returns env credentials when tenant secret pair is absent and does not query app-secret fallback.
 - Validation command: `cd ee/server && npx vitest run src/__tests__/unit/microsoftCredentialResolver.precedence.test.ts` (pass).
+- (2026-02-20) `T044` completed within `microsoftCredentialResolver.precedence` tests.
+- App-secret fallback case asserts resolver returns app-secret credentials when neither tenant secrets nor env credentials are available.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/microsoftCredentialResolver.precedence.test.ts` (pass).
