@@ -81,3 +81,4 @@ grep -r "from '../lib/email'" server/ --include="*.ts" --include="*.tsx"
 - F019: Added `packages/storage/src/index.ts` barrel exporting storage services, models, config, and types.
 - F020: Added `exports` map to `packages/storage/package.json` for storage subpath entrypoints.
 - F021: Updated billing `invoiceJobActions.ts` to import `StorageService` from `@alga-psa/storage`.
+- F022: Updated client portal `client-project-details.ts` to import `StorageService` from `@alga-psa/storage`.

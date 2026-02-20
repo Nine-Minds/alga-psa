@@ -4,7 +4,7 @@ import { createTenantKnex } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { DEFAULT_CLIENT_PORTAL_CONFIG, IClientPortalConfig } from '@alga-psa/types';
-import { StorageService } from '@alga-psa/documents/storage/StorageService';
+import { StorageService } from '@alga-psa/storage/StorageService';
 import { v4 as uuidv4 } from 'uuid';
 import { getEntityImageUrlsBatch } from '@alga-psa/documents/lib/avatarUtils';
 import { withAuth, type AuthContext } from '@alga-psa/auth';
