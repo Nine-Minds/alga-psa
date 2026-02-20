@@ -232,5 +232,11 @@
     "description": "Register @alga-psa/storage in workspace tsconfig paths and NX workspace configuration",
     "implemented": true,
     "prdRefs": ["FR-04"]
+  },
+  {
+    "id": "F040",
+    "description": "Add @alga-psa/storage path mappings to server/tsconfig.json for Next.js resolution",
+    "implemented": true,
+    "prdRefs": ["FR-04"]
   }
 ]

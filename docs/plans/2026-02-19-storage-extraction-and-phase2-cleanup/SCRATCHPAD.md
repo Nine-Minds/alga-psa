@@ -99,3 +99,42 @@ grep -r "from '../lib/email'" server/ --include="*.ts" --include="*.tsx"
 - F037: Added `@alga-psa/storage` dependency to billing, client-portal, and jobs package.json files.
 - F038: Verified original storage implementation files removed from documents package; only thin re-export shims remain for compatibility.
 - F039: Registered `@alga-psa/storage` path mappings in `tsconfig.base.json` (project.json already added earlier).
+- T001: Verified portal-domain-sessions-prune import now points to `@alga-psa/auth`.
+- T002: Confirmed `DocumentAssociation` is exported from documents models barrel.
+- T003: Verified documentActions upload test imports DocumentAssociation from documents package.
+- T004: Verified documentPermissions integration test now imports DocumentAssociation from documents package.
+- T005: Confirmed `server/src/models/document-association.ts` has been removed.
+- T006: Verified `surveyService.ts` imports `TenantEmailService` from `@alga-psa/email`.
+- T007: Confirmed `server/src/lib/email/index.ts` removed.
+- T008: `rg` found no remaining `@/lib/email` or `../lib/email` imports in server source files.
+- T009: Checked `packages/storage/package.json` for name, required deps, and exports entries.
+- T010: Verified storage project tags include `type:horizontal`.
+- T011: Confirmed storage tsconfig extends root tsconfig.
+- T012: Confirmed `./StorageService` export exists and source file is present in storage package.
+- T013: Verified storage barrel exports `StorageProviderFactory` and `generateStoragePath`.
+- T014: Confirmed `./types/storage` export and source file exist in storage package.
+- T015: Verified storage barrel exports `FileStoreModel`.
+- T016: Confirmed storage providers export entry and source file for `StorageError`.
+- T017: Ran `npx tsc --noEmit -p packages/storage/tsconfig.json` to confirm storage package imports resolve.
+- T018: Verified billing invoiceJobActions imports StorageService from `@alga-psa/storage`.
+- T019: Verified client portal project details action imports StorageService from `@alga-psa/storage`.
+- T020: Verified jobs jobService imports StorageService from `@alga-psa/storage`.
+- T021: Verified jobs jobScheduler imports StorageService from `@alga-psa/storage`.
+- T022: Verified server importActions imports StorageService from `@alga-psa/storage`.
+- T023: Verified pdf-generation service uses storage package imports.
+- T024: Verified documents view route imports `StorageProviderFactory` from storage package.
+- T025: Verified server StorageService wrapper imports storage helpers from `@alga-psa/storage`.
+- T026: Verified billing pdfGenerationService imports `FileStore` from storage types.
+- T027: Verified all document handlers import StorageService from `@alga-psa/storage`.
+- T028: Verified fileActions imports StorageService from `@alga-psa/storage`.
+- T029: Verified documentActions imports StorageService from `@alga-psa/storage`.
+- T030: Verified entityImageService imports StorageService from `@alga-psa/storage`.
+- T031: Confirmed documents index re-exports `StorageProviderFactory` from storage package.
+- T032: Confirmed documents index re-exports `generateStoragePath` from storage package.
+- T033: Verified documents exports include `./storage/StorageService` shim and file exists.
+- T034: Verified documents exports include `./types/storage` shim and file exists.
+- T035: Confirmed storage dependency present in documents, billing, client-portal, and jobs package.json files.
+- T036: Confirmed original storage implementation files are removed from documents package (only compatibility shims remain).
+- T037: Verified tsconfig path mappings include `@alga-psa/storage`.
+- Added F040/T041: Next.js build failed resolving `@alga-psa/storage/StorageService` because server tsconfig paths lacked storage mapping; adding explicit path mapping to server/tsconfig.json.
+- F040: Added @alga-psa/storage path mappings to `server/tsconfig.json` to satisfy Next.js module resolution.
