@@ -218,7 +218,7 @@
   {
     "id": "F037",
     "description": "Add @alga-psa/storage as dependency in packages that consume it: billing, client-portal, jobs",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-08", "FR-10"]
   },
   {

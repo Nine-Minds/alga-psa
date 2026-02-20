@@ -96,3 +96,4 @@ grep -r "from '../lib/email'" server/ --include="*.ts" --include="*.tsx"
 - F034: Re-exported `StorageProviderFactory` and `generateStoragePath` from `@alga-psa/storage` in documents index.
 - F035: Added documents package export for `./types/storage` and added thin re-export stubs for `StorageService` and storage types.
 - F036: Added `@alga-psa/storage` dependency to `packages/documents/package.json`.
+- F037: Added `@alga-psa/storage` dependency to billing, client-portal, and jobs package.json files.
