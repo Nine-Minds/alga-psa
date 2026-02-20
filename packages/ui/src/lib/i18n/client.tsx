@@ -90,6 +90,24 @@ export function I18nProvider({
     });
   }, [locale]);
 
+  useEffect(() => {
+    if (!isInitialized || !namespaces || namespaces.length === 0) {
+      return;
+    }
+
+    const missing = namespaces.filter(
+      (namespace) => !i18next.hasResourceBundle(locale, namespace)
+    );
+
+    if (missing.length === 0) {
+      return;
+    }
+
+    i18next.loadNamespaces(missing).catch((error) => {
+      console.error('Failed to load namespaces:', error);
+    });
+  }, [isInitialized, locale, namespaces]);
+
   const setLocale = async (newLocale: SupportedLocale) => {
     if (!isSupportedLocale(newLocale)) {
       console.error(`Unsupported locale: ${newLocale}`);

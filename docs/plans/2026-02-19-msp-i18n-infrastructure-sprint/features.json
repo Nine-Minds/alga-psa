@@ -26,7 +26,7 @@
   {
     "id": "F005",
     "description": "I18nProvider calls i18next.loadNamespaces() for namespaces not yet loaded when namespaces prop changes",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR5"]
   },
   {
