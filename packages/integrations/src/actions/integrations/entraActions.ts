@@ -231,6 +231,11 @@ export type EntraReconciliationQueueResponse = {
   items: EntraReconciliationQueueItem[];
 };
 
+export type EntraQueueResolutionResponse = {
+  queueItemId: string;
+  contactNameId: string;
+};
+
 export const initiateEntraDirectOAuth = withAuth(async (user, { tenant }) => {
   const canUpdate = await hasPermission(user as any, 'system_settings', 'update');
   if (!canUpdate) {
@@ -518,6 +523,74 @@ export const getEntraReconciliationQueue = withAuth(async (user, { tenant }, lim
     importPath: '@enterprise/app/api/integrations/entra/reconciliation-queue/route',
     method: 'GET',
     query: { limit: safeLimit },
+  });
+});
+
+export const resolveEntraQueueToExisting = withAuth(async (
+  user,
+  { tenant },
+  input: { queueItemId: string; contactNameId: string }
+) => {
+  const canUpdate = await hasPermission(user as any, 'system_settings', 'update');
+  if (!canUpdate) {
+    return { success: false, error: 'Forbidden: insufficient permissions to resolve queue items' } as const;
+  }
+
+  const userId = (user as { user_id?: string } | undefined)?.user_id;
+  const enabled = await isEntraUiEnabledForTenant({
+    tenantId: tenant,
+    userId,
+  });
+  if (!enabled) {
+    return flagDisabledResult<EntraQueueResolutionResponse>();
+  }
+
+  const queueFlagEnabled = await isEntraAmbiguousQueueEnabledForTenant({
+    tenantId: tenant,
+    userId,
+  });
+  if (!queueFlagEnabled) {
+    return flagDisabledResult<EntraQueueResolutionResponse>();
+  }
+
+  return callEeRoute<EntraQueueResolutionResponse>({
+    importPath: '@enterprise/app/api/integrations/entra/reconciliation-queue/resolve-existing/route',
+    method: 'POST',
+    body: input,
+  });
+});
+
+export const resolveEntraQueueToNew = withAuth(async (
+  user,
+  { tenant },
+  input: { queueItemId: string }
+) => {
+  const canUpdate = await hasPermission(user as any, 'system_settings', 'update');
+  if (!canUpdate) {
+    return { success: false, error: 'Forbidden: insufficient permissions to resolve queue items' } as const;
+  }
+
+  const userId = (user as { user_id?: string } | undefined)?.user_id;
+  const enabled = await isEntraUiEnabledForTenant({
+    tenantId: tenant,
+    userId,
+  });
+  if (!enabled) {
+    return flagDisabledResult<EntraQueueResolutionResponse>();
+  }
+
+  const queueFlagEnabled = await isEntraAmbiguousQueueEnabledForTenant({
+    tenantId: tenant,
+    userId,
+  });
+  if (!queueFlagEnabled) {
+    return flagDisabledResult<EntraQueueResolutionResponse>();
+  }
+
+  return callEeRoute<EntraQueueResolutionResponse>({
+    importPath: '@enterprise/app/api/integrations/entra/reconciliation-queue/resolve-new/route',
+    method: 'POST',
+    body: input,
   });
 });
 

@@ -3,7 +3,7 @@ import type { EntraSyncUser } from './types';
 
 export interface UpsertEntraContactLinkInput {
   tenantId: string;
-  clientId: string;
+  clientId: string | null;
   contactNameId: string;
   user: EntraSyncUser;
 }

@@ -1293,7 +1293,7 @@
   {
     "id": "F116",
     "description": "Resolve-to-existing action: allow MSP to link queue item to selected existing contact.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements"
     ],

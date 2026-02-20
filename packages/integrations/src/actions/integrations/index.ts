@@ -6,6 +6,8 @@ export {
   connectEntraCipp,
   getEntraIntegrationStatus,
   getEntraReconciliationQueue,
+  resolveEntraQueueToExisting,
+  resolveEntraQueueToNew,
   connectEntraIntegration,
   validateEntraDirectConnection,
   validateEntraCippConnection,
@@ -26,4 +28,5 @@ export {
   type EntraSyncHistoryResponse,
   type EntraReconciliationQueueItem,
   type EntraReconciliationQueueResponse,
+  type EntraQueueResolutionResponse,
 } from './entraActions';

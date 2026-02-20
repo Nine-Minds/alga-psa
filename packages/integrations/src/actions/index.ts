@@ -104,6 +104,8 @@ export {
   getEntraIntegrationStatus,
   connectEntraIntegration,
   getEntraReconciliationQueue,
+  resolveEntraQueueToExisting,
+  resolveEntraQueueToNew,
   validateEntraDirectConnection,
   validateEntraCippConnection,
   disconnectEntraIntegration,
@@ -123,6 +125,7 @@ export {
   type EntraSyncHistoryResponse,
   type EntraReconciliationQueueItem,
   type EntraReconciliationQueueResponse,
+  type EntraQueueResolutionResponse,
 } from './integrations/entraActions';
 export {
   getTacticalRmmSettings,

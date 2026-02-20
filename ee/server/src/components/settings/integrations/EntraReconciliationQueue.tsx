@@ -4,8 +4,11 @@ import React from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
 import {
   getEntraReconciliationQueue,
+  resolveEntraQueueToExisting,
+  resolveEntraQueueToNew,
   type EntraReconciliationQueueItem,
 } from '@alga-psa/integrations/actions';
+import { Input } from '@alga-psa/ui/components/Input';
 
 function formatDateTime(value: string): string {
   const parsed = Date.parse(value);
@@ -17,6 +20,8 @@ export default function EntraReconciliationQueue() {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [items, setItems] = React.useState<EntraReconciliationQueueItem[]>([]);
+  const [resolvingItemId, setResolvingItemId] = React.useState<string | null>(null);
+  const [existingContactIdByItem, setExistingContactIdByItem] = React.useState<Record<string, string>>({});
 
   const loadQueue = React.useCallback(async () => {
     setLoading(true);
@@ -36,6 +41,45 @@ export default function EntraReconciliationQueue() {
 
   React.useEffect(() => {
     void loadQueue();
+  }, [loadQueue]);
+
+  const handleResolveExisting = React.useCallback(async (item: EntraReconciliationQueueItem) => {
+    const contactNameId = String(existingContactIdByItem[item.queueItemId] || '').trim();
+    if (!contactNameId) {
+      setError('Enter a contact ID to resolve to existing contact.');
+      return;
+    }
+
+    setResolvingItemId(item.queueItemId);
+    setError(null);
+    try {
+      const result = await resolveEntraQueueToExisting({
+        queueItemId: item.queueItemId,
+        contactNameId,
+      });
+      if ('error' in result) {
+        setError(result.error || 'Failed to resolve queue item.');
+      } else {
+        await loadQueue();
+      }
+    } finally {
+      setResolvingItemId(null);
+    }
+  }, [existingContactIdByItem, loadQueue]);
+
+  const handleResolveNew = React.useCallback(async (item: EntraReconciliationQueueItem) => {
+    setResolvingItemId(item.queueItemId);
+    setError(null);
+    try {
+      const result = await resolveEntraQueueToNew({ queueItemId: item.queueItemId });
+      if ('error' in result) {
+        setError(result.error || 'Failed to resolve queue item.');
+      } else {
+        await loadQueue();
+      }
+    } finally {
+      setResolvingItemId(null);
+    }
   }, [loadQueue]);
 
   return (
@@ -79,6 +123,40 @@ export default function EntraReconciliationQueue() {
                   ))}
                 </ul>
               ) : null}
+              <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_auto_auto]">
+                <Input
+                  id={`entra-queue-existing-contact-${item.queueItemId}`}
+                  placeholder="Existing contact ID"
+                  value={existingContactIdByItem[item.queueItemId] || ''}
+                  onChange={(event) => {
+                    const value = event.target.value;
+                    setExistingContactIdByItem((current) => ({
+                      ...current,
+                      [item.queueItemId]: value,
+                    }));
+                  }}
+                />
+                <Button
+                  id={`entra-queue-resolve-existing-${item.queueItemId}`}
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={resolvingItemId === item.queueItemId}
+                  onClick={() => void handleResolveExisting(item)}
+                >
+                  Resolve to Existing
+                </Button>
+                <Button
+                  id={`entra-queue-resolve-new-${item.queueItemId}`}
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={resolvingItemId === item.queueItemId}
+                  onClick={() => void handleResolveNew(item)}
+                >
+                  Resolve to New
+                </Button>
+              </div>
             </div>
           ))}
         </div>

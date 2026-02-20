@@ -324,3 +324,6 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - Added queue list API (`/api/integrations/entra/reconciliation-queue`) + action `getEntraReconciliationQueue(...)` backed by `listOpenEntraReconciliationQueue(...)` service query.
 - Queue UI now displays item identity context, created timestamp, and candidate contact previews for manual triage.
 - Validation commands: `npx tsc --noEmit -p ee/server/tsconfig.json`, `npx tsc --noEmit -p packages/integrations/tsconfig.json`, `npx tsc --noEmit -p server/tsconfig.json` (pass).
+- (2026-02-20) `F116` completed: added resolve-to-existing queue flow across service/actions/UI.
+- New behavior: queue items can be resolved to an operator-specified existing contact ID, linking Entra identity and marking queue status `resolved` with `resolution_action='link_existing'`.
+- Validation commands: `npx tsc --noEmit -p ee/server/tsconfig.json`, `npx tsc --noEmit -p packages/integrations/tsconfig.json`, `npx tsc --noEmit -p server/tsconfig.json` (pass).
