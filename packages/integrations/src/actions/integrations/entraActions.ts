@@ -646,6 +646,49 @@ export const startEntraSync = withAuth(async (
     } as const;
   }
 
+  if (input.scope === 'single-client') {
+    const clientId = String(input.clientId || '').trim();
+    if (!clientId) {
+      return { success: false, error: 'clientId is required for single-client sync.' } as const;
+    }
+
+    const { knex } = await createTenantKnex();
+    const mapping = await knex('entra_client_tenant_mappings as m')
+      .join('entra_managed_tenants as t', function joinManagedTenants() {
+        this.on('m.tenant', '=', 't.tenant').andOn('m.managed_tenant_id', '=', 't.managed_tenant_id');
+      })
+      .where({
+        'm.tenant': tenant,
+        'm.client_id': clientId,
+        'm.is_active': true,
+        'm.mapping_state': 'mapped',
+      })
+      .first(['m.managed_tenant_id']);
+
+    if (!mapping?.managed_tenant_id) {
+      return { success: false, error: 'No active Entra mapping exists for this client.' } as const;
+    }
+
+    const workflowClient = await import('@enterprise/lib/integrations/entra/entraWorkflowClient');
+    const workflowStart = await workflowClient.startEntraTenantSyncWorkflow({
+      tenantId: tenant,
+      managedTenantId: String(mapping.managed_tenant_id),
+      clientId,
+      actor: { userId: (user as { user_id?: string } | undefined)?.user_id },
+    });
+
+    return {
+      success: true,
+      data: {
+        accepted: workflowStart.available,
+        scope: input.scope,
+        runId: workflowStart.runId || null,
+        workflowId: workflowStart.workflowId || null,
+        error: workflowStart.error || null,
+      },
+    } as const;
+  }
+
   return callEeRoute<{ accepted: boolean; scope: EntraSyncScope; runId: string | null }>({
     importPath: '@enterprise/app/api/integrations/entra/sync/route',
     method: 'POST',

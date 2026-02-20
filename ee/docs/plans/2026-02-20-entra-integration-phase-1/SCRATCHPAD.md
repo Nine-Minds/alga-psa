@@ -239,3 +239,5 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - Validation commands: `npx tsc --noEmit -p packages/integrations/tsconfig.json`, `npx tsc --noEmit -p ee/server/tsconfig.json`, `npx tsc --noEmit -p server/tsconfig.json` (pass).
 - (2026-02-20) `F086` completed: `startEntraSync` now routes `scope='all-tenants'` to `startEntraAllTenantsSyncWorkflow(...)` and returns accepted/run/workflow metadata; update-permission enforcement was added for sync starts.
 - Validation commands: `npx tsc --noEmit -p packages/integrations/tsconfig.json`, `npx tsc --noEmit -p ee/server/tsconfig.json`, `npx tsc --noEmit -p server/tsconfig.json` (pass).
+- (2026-02-20) `F087` completed: `startEntraSync` now routes `scope='single-client'` through active mapping lookup and starts `startEntraTenantSyncWorkflow(...)`, returning run/workflow ids for client-level sync feedback.
+- Validation commands: `npx tsc --noEmit -p packages/integrations/tsconfig.json`, `npx tsc --noEmit -p ee/server/tsconfig.json`, `npx tsc --noEmit -p server/tsconfig.json` (pass).

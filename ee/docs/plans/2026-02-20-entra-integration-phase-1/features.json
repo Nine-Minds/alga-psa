@@ -965,7 +965,7 @@
   {
     "id": "F087",
     "description": "Trigger path: client-level `Sync Entra Now` starts `entraTenantSyncWorkflow` for mapped client tenant.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows"
     ],
