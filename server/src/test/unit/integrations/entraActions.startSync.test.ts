@@ -158,4 +158,22 @@ describe('startEntraSync action workflow triggers', () => {
     });
     expect(startEntraTenantSyncWorkflowMock).not.toHaveBeenCalled();
   });
+
+  it('T131: client-portal user cannot trigger manual sync actions', async () => {
+    const { startEntraSync } = await import(
+      '@alga-psa/integrations/actions/integrations/entraActions'
+    );
+    const result = await startEntraSync(
+      { user_id: 'user-131', user_type: 'client' } as any,
+      { tenant: 'tenant-131' },
+      { scope: 'all-tenants' }
+    );
+
+    expect(result).toEqual({
+      success: false,
+      error: 'Forbidden',
+    });
+    expect(startEntraAllTenantsSyncWorkflowMock).not.toHaveBeenCalled();
+    expect(startEntraTenantSyncWorkflowMock).not.toHaveBeenCalled();
+  });
 });

@@ -1108,7 +1108,7 @@
   {
     "id": "T131",
     "description": "Client portal user cannot trigger manual sync endpoints/actions.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F118"
     ]

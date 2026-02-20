@@ -718,3 +718,6 @@ EOF && git add ee/docs/plans/2026-02-20-entra-integration-phase-1/tests.json ee/
 - (2026-02-20) `T130` completed in `server/src/test/unit/integrations/entraActions.directConnect.test.ts`.
 - Added client-portal denial assertion for Entra settings status action (`Forbidden`) to enforce non-internal access boundaries.
 - Validation command: `cd server && npx vitest run src/test/unit/integrations/entraActions.directConnect.test.ts --coverage.enabled=false` (pass).
+- (2026-02-20) `T131` completed in `server/src/test/unit/integrations/entraActions.startSync.test.ts`.
+- Added explicit client-portal rejection assertion for manual sync action entrypoint (`startEntraSync`) with no workflow trigger side effects.
+- Validation command: `cd server && npx vitest run src/test/unit/integrations/entraActions.startSync.test.ts --coverage.enabled=false` (pass).
