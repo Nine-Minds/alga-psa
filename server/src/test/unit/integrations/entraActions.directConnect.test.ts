@@ -12,6 +12,7 @@ const discoveryRoutePostMock = vi.fn();
 const confirmMappingsRoutePostMock = vi.fn();
 const startEntraInitialSyncWorkflowMock = vi.fn();
 const startEntraAllTenantsSyncWorkflowMock = vi.fn();
+const statusRouteGetMock = vi.fn();
 
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (fn: unknown) => fn,
@@ -60,6 +61,10 @@ vi.mock('@enterprise/app/api/integrations/entra/mappings/confirm/route', () => (
   POST: confirmMappingsRoutePostMock,
 }));
 
+vi.mock('@enterprise/app/api/integrations/entra/status/route', () => ({
+  GET: statusRouteGetMock,
+}));
+
 vi.mock('@enterprise/lib/integrations/entra/entraWorkflowClient', () => ({
   startEntraInitialSyncWorkflow: startEntraInitialSyncWorkflowMock,
   startEntraAllTenantsSyncWorkflow: startEntraAllTenantsSyncWorkflowMock,
@@ -79,6 +84,7 @@ describe('Entra direct connect action permissions', () => {
     confirmMappingsRoutePostMock.mockReset();
     startEntraInitialSyncWorkflowMock.mockReset();
     startEntraAllTenantsSyncWorkflowMock.mockReset();
+    statusRouteGetMock.mockReset();
   });
 
   it('T031: direct connect initiation rejects users lacking update permission', async () => {
@@ -175,6 +181,26 @@ describe('Entra direct connect action permissions', () => {
       'system_settings',
       'update'
     );
+  });
+
+  it('T139: disabling entra-integration-ui hides settings reads without touching persisted Entra data paths', async () => {
+    hasPermissionMock.mockResolvedValue(true);
+    featureFlagIsEnabledMock.mockResolvedValue(false);
+
+    const { getEntraIntegrationStatus } = await import(
+      '@alga-psa/integrations/actions/integrations/entraActions'
+    );
+    const result = await getEntraIntegrationStatus(
+      { user_id: 'user-139', user_type: 'internal' } as any,
+      { tenant: 'tenant-139' }
+    );
+
+    expect(result).toEqual({
+      success: false,
+      error: 'Microsoft Entra integration is disabled for this tenant.',
+    });
+    expect(statusRouteGetMock).not.toHaveBeenCalled();
+    expect(createTenantKnexMock).not.toHaveBeenCalled();
   });
 
   it('T032: direct connect initiation returns OAuth URL with encoded nonce/state', async () => {

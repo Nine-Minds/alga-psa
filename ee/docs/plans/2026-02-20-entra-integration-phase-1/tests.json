@@ -1180,7 +1180,7 @@
   {
     "id": "T139",
     "description": "Disabling `entra-integration-ui` hides settings UI without deleting connection/mapping data.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F006",
       "F007"

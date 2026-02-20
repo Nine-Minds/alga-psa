@@ -742,3 +742,6 @@ EOF && git add ee/docs/plans/2026-02-20-entra-integration-phase-1/tests.json ee/
 - (2026-02-20) `T138` completed in docs contract suite `server/src/test/unit/docs/entraIntegrationGuide.contract.test.ts`.
 - Verified documentation includes recommended feature-flag rollout ordering for pilot/internal tenants before broad enablement.
 - Validation command: `cd server && npx vitest run src/test/unit/docs/entraIntegrationGuide.contract.test.ts --coverage.enabled=false` (pass).
+- (2026-02-20) `T139` completed in `server/src/test/unit/integrations/entraActions.directConnect.test.ts`.
+- Added flag-off assertion showing settings read path exits early with disabled response and does not touch Entra status/data route paths.
+- Validation command: `cd server && npx vitest run src/test/unit/integrations/entraActions.directConnect.test.ts --coverage.enabled=false` (pass).
