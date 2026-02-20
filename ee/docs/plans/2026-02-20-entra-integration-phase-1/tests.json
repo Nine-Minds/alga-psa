@@ -344,7 +344,7 @@
   {
     "id": "T040",
     "description": "Disconnect action clears provider-specific secrets and marks status disconnected.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F044"
     ]
