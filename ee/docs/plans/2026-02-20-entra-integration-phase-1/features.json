@@ -326,7 +326,7 @@
   {
     "id": "F030",
     "description": "Contact status metadata: add optional sync status/reason fields to support disabled/deleted handling UX.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements"
     ],
