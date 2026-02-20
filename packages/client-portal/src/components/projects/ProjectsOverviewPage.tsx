@@ -140,44 +140,46 @@ export default function ProjectsOverviewPage() {
       </div>
       
       {/* Filters */}
-      <div className="flex flex-wrap gap-4">
-        <div className="relative w-64">
-          <Input
-            id="project-search-input"
-            type="text"
-            placeholder={t('searchPlaceholder')}
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
-          />
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-        </div>
-        
-        <select
-          id="project-status-filter"
-          className="border border-gray-300 rounded-md px-3 py-2 text-sm"
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-        >
-          <option value="all">{t('allStatuses')}</option>
-          <option value="open">All Open Projects</option>
-          <option value="closed">All Closed Projects</option>
-          <option value="planning">Planning</option>
-          <option value="in progress">In Progress</option>
-          <option value="on hold">On Hold</option>
-          <option value="completed">Completed</option>
-          <option value="cancelled">Cancelled</option>
-        </select>
-        
-        <Button
-          id="reset-filters-button"
-          variant="outline"
-          onClick={handleResetFilters}
-          className="whitespace-nowrap flex items-center gap-2 ml-auto"
-        >
-          <XCircle className="h-4 w-4" />
-          {t('resetFilters')}
-        </Button>
+      <div className="flex items-center gap-4">
+          <div className="relative w-64 shrink-0">
+            <Input
+              id="project-search-input"
+              type="text"
+              placeholder={t('searchPlaceholder')}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+          </div>
+
+          <select
+            id="project-status-filter"
+            className="border border-gray-300 rounded-md px-3 py-2 text-sm shrink-0"
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+          >
+            <option value="all">{t('allStatuses')}</option>
+            <option value="open">All Open Projects</option>
+            <option value="closed">All Closed Projects</option>
+            <option value="planning">Planning</option>
+            <option value="in progress">In Progress</option>
+            <option value="on hold">On Hold</option>
+            <option value="completed">Completed</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+
+          <Button
+            id="reset-filters-button"
+            variant="ghost"
+            size="sm"
+            onClick={handleResetFilters}
+            className={`shrink-0 flex items-center gap-1 ${(searchQuery || statusFilter !== 'all') ? 'text-gray-500 hover:text-gray-700' : 'invisible'}`}
+            disabled={!(searchQuery || statusFilter !== 'all')}
+          >
+            <XCircle className="h-4 w-4" />
+            {t('resetFilters')}
+          </Button>
       </div>
       
       {/* Projects Table */}

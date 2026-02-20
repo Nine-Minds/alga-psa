@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/component
 import { ProjectTaskCard } from './ActivityCard';
 import { fetchProjectActivities } from '@alga-psa/workflows/actions';
 import { ProjectSectionFiltersDialog } from './filters/ProjectSectionFiltersDialog';
-import { Filter, XCircleIcon } from 'lucide-react';
+import { Filter, XCircle } from 'lucide-react';
 import type { IProject, IProjectPhase } from '@alga-psa/types';
 import { getProjects } from '@alga-psa/projects/actions/projectActions';
 import { useActivityDrawer } from './ActivityDrawerProvider';
@@ -151,8 +151,8 @@ export function ProjectsSection({ limit = 5, onViewAll }: ProjectsSectionProps) 
                disabled={loading}
                className="gap-1"
              >
-              <XCircleIcon className="h-4 w-4" />
-              Reset Filters
+              <XCircle className="h-4 w-4" />
+              Reset
             </Button>
 
            ) : (

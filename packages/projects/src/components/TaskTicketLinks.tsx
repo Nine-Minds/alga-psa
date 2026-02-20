@@ -744,7 +744,7 @@ const TaskTicketLinks = forwardRef<TaskTicketLinksRef, TaskTicketLinksProps>(fun
                             onClick={clearAllFilters}
                             className="text-sm text-gray-500"
                           >
-                            Clear all
+                            Reset
                           </Button>
                         </div>
                       )}

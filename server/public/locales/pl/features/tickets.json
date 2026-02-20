@@ -6,7 +6,7 @@
   "createButton": "Utwórz zgłoszenie wsparcia",
   "viewAll": "Zobacz wszystkie zgłoszenia",
   "myTickets": "Moje zgłoszenia",
-  "resetFilters": "Resetuj filtry",
+  "resetFilters": "Resetuj",
   "filters": {
     "allStatuses": "Wszystkie statusy",
     "allOpen": "Wszystkie otwarte zgłoszenia",

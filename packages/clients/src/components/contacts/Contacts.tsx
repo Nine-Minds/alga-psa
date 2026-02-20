@@ -761,8 +761,7 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
         </div>
         <div className="bg-white shadow rounded-lg p-4">
           <ReflectionContainer id='filters'>
-            <div className="flex justify-between items-center mb-4">
-              <div className="flex items-center gap-4">
+            <div className="flex items-center mb-4 gap-4">
                 <SearchInput
                   id='filter-contacts'
                   placeholder="Search contacts"
@@ -800,25 +799,22 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
                   options={statusOptions}
                   className="min-w-[180px]"
                 />
-                
-                {isFiltered && (
-                  <Button
-                    id="reset-filters-button"
-                    variant="outline"
-                    size="sm"
-                    className="whitespace-nowrap flex items-center gap-2 ml-auto"
-                    onClick={() => {
-                      setSearchTerm('');
-                      setSelectedTags([]);
-                      setFilterStatus('active');
-                      setIsFiltered(false);
-                    }}
-                  >
-                    <XCircle className="h-4 w-4" />
-                    Reset Filters
-                  </Button>
-                )}
-              </div>
+                <Button
+                  id="reset-filters-button"
+                  variant="ghost"
+                  size="sm"
+                  className={`shrink-0 flex items-center gap-1 ${isFiltered ? 'text-gray-500 hover:text-gray-700' : 'invisible'}`}
+                  onClick={() => {
+                    setSearchTerm('');
+                    setSelectedTags([]);
+                    setFilterStatus('active');
+                    setIsFiltered(false);
+                  }}
+                  disabled={!isFiltered}
+                >
+                  <XCircle className="h-4 w-4" />
+                  Reset
+                </Button>
             </div>
           </ReflectionContainer>
           <DataTable

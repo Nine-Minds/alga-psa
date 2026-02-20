@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/component
 import { ScheduleCard } from './ActivityCard';
 import { fetchScheduleActivities } from '@alga-psa/workflows/actions';
 import { ScheduleSectionFiltersDialog } from './filters/ScheduleSectionFiltersDialog';
-import { FilterIcon, XCircleIcon } from 'lucide-react';
+import { FilterIcon, XCircle } from 'lucide-react';
 import { useActivityDrawer } from './ActivityDrawerProvider';
 
 interface ScheduleSectionProps {
@@ -168,8 +168,8 @@ export function ScheduleSection({ limit = 5, onViewAll, noCard = false }: Schedu
             onClick={handleResetFilters}
             className="gap-1"
           >
-            <XCircleIcon className="h-4 w-4" />
-            Reset Filters
+            <XCircle className="h-4 w-4" />
+            Reset
           </Button>
         ) : (
           <Button
@@ -261,8 +261,8 @@ export function ScheduleSection({ limit = 5, onViewAll, noCard = false }: Schedu
               onClick={handleResetFilters}
               className="gap-1"
             >
-              <XCircleIcon className="h-4 w-4" />
-              Reset Filters
+              <XCircle className="h-4 w-4" />
+              Reset
             </Button>
           ) : (
             <Button

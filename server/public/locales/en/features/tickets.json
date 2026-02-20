@@ -6,7 +6,7 @@
   "createButton": "Create Support Ticket",
   "viewAll": "View All Tickets",
   "myTickets": "My Tickets",
-  "resetFilters": "Reset Filters",
+  "resetFilters": "Reset",
   "filters": {
     "allStatuses": "All Statuses",
     "allOpen": "All Open Tickets",

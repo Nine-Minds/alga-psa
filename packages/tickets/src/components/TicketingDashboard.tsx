@@ -199,6 +199,20 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const prevInitialTagsRef = useRef<string[] | undefined>(initialFilterValues.tags);
   const [tagsVersion, setTagsVersion] = useState(0); // Used to force re-render when tags are fetched
 
+  const isFiltered = useMemo(() => {
+    return selectedBoard !== null ||
+      selectedClient !== null ||
+      selectedStatus !== 'open' ||
+      selectedPriority !== 'all' ||
+      selectedCategories.length > 0 ||
+      searchQuery !== '' ||
+      selectedTags.length > 0 ||
+      selectedAssignees.length > 0 ||
+      includeUnassigned ||
+      selectedDueDateFilter !== 'all' ||
+      selectedResponseState !== 'all';
+  }, [selectedBoard, selectedClient, selectedStatus, selectedPriority, selectedCategories, searchQuery, selectedTags, selectedAssignees, includeUnassigned, selectedDueDateFilter, selectedResponseState]);
+
   const handleTableSortChange = useCallback((columnId: string, direction: 'asc' | 'desc') => {
     if (columnId === sortBy && direction === sortDirection) {
       return;
@@ -345,7 +359,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     if (ticketListDensityLevel <= 15) {
       return {
         filterPadding: 'p-4',
-        filterGap: 'gap-3',
+        filterGap: 'gap-4',
         bodyPadding: 'p-4',
         tableRowDensity: '[&>td]:!py-1.5 [&>td]:!text-[13px]',
       };
@@ -353,8 +367,8 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
 
     if (ticketListDensityLevel >= 85) {
       return {
-        filterPadding: 'p-7',
-        filterGap: 'gap-5',
+        filterPadding: 'p-6',
+        filterGap: 'gap-4',
         bodyPadding: 'p-7',
         tableRowDensity: '[&>td]:!py-4 [&>td]:!text-[15px]',
       };
@@ -1308,180 +1322,177 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       <div className="bg-white dark:bg-[rgb(var(--color-card))] shadow rounded-lg">
         <div className={`sticky top-0 z-40 bg-white dark:bg-[rgb(var(--color-card))] rounded-t-lg border-b border-gray-100 dark:border-[rgb(var(--color-border-200))] ${densityClasses.filterPadding}`}>
           <ReflectionContainer id={`${id}-filters`} label="Ticket DashboardFilters">
-            <div className={`flex items-center flex-wrap ${densityClasses.filterGap}`}>
-            <BoardPicker
-              id={`${id}-board-picker`}
-              boards={boards}
-              onSelect={handleBoardSelect}
-              selectedBoardId={selectedBoard}
-              filterState={boardFilterState}
-              onFilterStateChange={setBoardFilterState}
-            />
-            <ClientPicker
-              id='client-picker'
-              data-automation-id={`${id}-client-picker`}
-              clients={clients}
-              onSelect={handleClientSelect}
-              selectedClientId={selectedClient}
-              filterState={clientFilterState}
-              onFilterStateChange={handleClientFilterStateChange}
-              clientTypeFilter={clientTypeFilter}
-              onClientTypeFilterChange={handleClientTypeFilterChange}
-              fitContent={true}
-            />
-            <MultiUserPicker
-              id={`${id}-assignee-filter`}
-              users={initialUsers}
-              values={selectedAssignees}
-              onValuesChange={setSelectedAssignees}
-              getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
-              filterMode={true}
-              includeUnassigned={includeUnassigned}
-              onUnassignedChange={setIncludeUnassigned}
-              placeholder="All Assignees"
-              showSearch={true}
-              compactDisplay={true}
-            />
-
-            <div className="h-6 w-px bg-gray-200 mx-1 shrink-0" />
-
-            <CustomSelect
-              data-automation-id={`${id}-status-select`}
-              options={statusOptions}
-              value={selectedStatus}
-              onValueChange={(value) => setSelectedStatus(value)}
-              placeholder="Select Status"
-            />
-            <CustomSelect
-              data-automation-id={`${id}-response-state-select`}
-              options={[
-                { value: 'all', label: 'All Response States' },
-                { value: 'awaiting_client', label: 'Awaiting Client' },
-                { value: 'awaiting_internal', label: 'Awaiting Internal' },
-                { value: 'none', label: 'No Response State' },
-              ]}
-              value={selectedResponseState}
-              onValueChange={(value) => setSelectedResponseState(value as 'awaiting_client' | 'awaiting_internal' | 'none' | 'all')}
-              placeholder="Response State"
-            />
-            <PrioritySelect
-              id={`${id}-priority-select`}
-              options={priorityOptions}
-              value={selectedPriority}
-              onValueChange={(value) => setSelectedPriority(value)}
-              placeholder="All Priorities"
-            />
-            <div className="flex items-center gap-1">
-              <CustomSelect
-                data-automation-id={`${id}-due-date-filter`}
-                options={[
-                  { value: 'all', label: 'All Due Dates' },
-                  { value: 'overdue', label: 'Overdue' },
-                  { value: 'today', label: 'Due Today' },
-                  { value: 'upcoming', label: 'Due Next 7 Days' },
-                  { value: 'before', label: dueDateFilterValue && selectedDueDateFilter === 'before'
-                    ? `Before ${dueDateFilterValue.toLocaleDateString()}`
-                    : 'Before Date...' },
-                  { value: 'after', label: dueDateFilterValue && selectedDueDateFilter === 'after'
-                    ? `After ${dueDateFilterValue.toLocaleDateString()}`
-                    : 'After Date...' },
-                  { value: 'no_due_date', label: 'No Due Date' },
-                ]}
-                value={selectedDueDateFilter}
-                onValueChange={(value) => {
-                  setSelectedDueDateFilter(value);
-                  if (value !== 'before' && value !== 'after') {
-                    setDueDateFilterValue(undefined);
-                  }
-                }}
-                placeholder="Due Date"
-                className="w-fit min-w-[140px]"
-              />
-              {(selectedDueDateFilter === 'before' || selectedDueDateFilter === 'after') && (
-                <DatePicker
-                  id={`${id}-due-date-filter-value`}
-                  value={dueDateFilterValue}
-                  onChange={setDueDateFilterValue}
-                  placeholder="Pick date"
+            <div className={`space-y-3`}>
+              {/* Row 1: Primary filters */}
+              <div className={`flex items-center ${densityClasses.filterGap}`}>
+                <BoardPicker
+                  id={`${id}-board-picker`}
+                  boards={boards}
+                  onSelect={handleBoardSelect}
+                  selectedBoardId={selectedBoard}
+                  filterState={boardFilterState}
+                  onFilterStateChange={setBoardFilterState}
                 />
-              )}
-            </div>
+                <ClientPicker
+                  id='client-picker'
+                  data-automation-id={`${id}-client-picker`}
+                  clients={clients}
+                  onSelect={handleClientSelect}
+                  selectedClientId={selectedClient}
+                  filterState={clientFilterState}
+                  onFilterStateChange={handleClientFilterStateChange}
+                  clientTypeFilter={clientTypeFilter}
+                  onClientTypeFilterChange={handleClientTypeFilterChange}
+                  fitContent={true}
+                />
+                <MultiUserPicker
+                  id={`${id}-assignee-filter`}
+                  users={initialUsers}
+                  values={selectedAssignees}
+                  onValuesChange={setSelectedAssignees}
+                  getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
+                  filterMode={true}
+                  includeUnassigned={includeUnassigned}
+                  onUnassignedChange={setIncludeUnassigned}
+                  placeholder="All Assignees"
+                  showSearch={true}
+                  compactDisplay={true}
+                />
+                <CustomSelect
+                  data-automation-id={`${id}-status-select`}
+                  options={statusOptions}
+                  value={selectedStatus}
+                  onValueChange={(value) => setSelectedStatus(value)}
+                  placeholder="Select Status"
+                />
+                <CustomSelect
+                  data-automation-id={`${id}-response-state-select`}
+                  options={[
+                    { value: 'all', label: 'All Response States' },
+                    { value: 'awaiting_client', label: 'Awaiting Client' },
+                    { value: 'awaiting_internal', label: 'Awaiting Internal' },
+                    { value: 'none', label: 'No Response State' },
+                  ]}
+                  value={selectedResponseState}
+                  onValueChange={(value) => setSelectedResponseState(value as 'awaiting_client' | 'awaiting_internal' | 'none' | 'all')}
+                  placeholder="Response State"
+                />
+                <PrioritySelect
+                  id={`${id}-priority-select`}
+                  options={priorityOptions}
+                  value={selectedPriority}
+                  onValueChange={(value) => setSelectedPriority(value)}
+                  placeholder="All Priorities"
+                />
+                <div className="flex items-center gap-1">
+                  <CustomSelect
+                    data-automation-id={`${id}-due-date-filter`}
+                    options={[
+                      { value: 'all', label: 'All Due Dates' },
+                      { value: 'overdue', label: 'Overdue' },
+                      { value: 'today', label: 'Due Today' },
+                      { value: 'upcoming', label: 'Due Next 7 Days' },
+                      { value: 'before', label: dueDateFilterValue && selectedDueDateFilter === 'before'
+                        ? `Before ${dueDateFilterValue.toLocaleDateString()}`
+                        : 'Before Date...' },
+                      { value: 'after', label: dueDateFilterValue && selectedDueDateFilter === 'after'
+                        ? `After ${dueDateFilterValue.toLocaleDateString()}`
+                        : 'After Date...' },
+                      { value: 'no_due_date', label: 'No Due Date' },
+                    ]}
+                    value={selectedDueDateFilter}
+                    onValueChange={(value) => {
+                      setSelectedDueDateFilter(value);
+                      if (value !== 'before' && value !== 'after') {
+                        setDueDateFilterValue(undefined);
+                      }
+                    }}
+                    placeholder="Due Date"
+                    className="w-fit min-w-[140px]"
+                  />
+                  {(selectedDueDateFilter === 'before' || selectedDueDateFilter === 'after') && (
+                    <DatePicker
+                      id={`${id}-due-date-filter-value`}
+                      value={dueDateFilterValue}
+                      onChange={setDueDateFilterValue}
+                      placeholder="Pick date"
+                    />
+                  )}
+                </div>
+              </div>
 
-            <div className="h-6 w-px bg-gray-200 mx-1 shrink-0" />
-
-            <CategoryPicker
-              id={`${id}-category-picker`}
-              categories={categories}
-              selectedCategories={selectedCategories}
-              excludedCategories={excludedCategories}
-              onSelect={handleCategorySelect}
-              placeholder="Filter by category"
-              multiSelect={true}
-              showExclude={true}
-              showReset={true}
-              allowEmpty={true}
-              className="text-sm min-w-[200px]"
-            />
-            <Input
-              id={`${id}-search-tickets-input`}
-              placeholder="Search tickets..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="h-[38px] min-w-[350px] text-sm"
-              containerClassName=""
-            />
-            <TagFilter
-              tags={allUniqueTags}
-              selectedTags={selectedTags}
-              onToggleTag={(tag: string) => {
-                setSelectedTags(prev =>
-                  prev.includes(tag)
-                    ? prev.filter(t => t !== tag)
-                    : [...prev, tag]
-                );
-              }}
-              onClearTags={() => setSelectedTags([])}
-            />
-
-            <div className="h-6 w-px bg-gray-200 mx-1 shrink-0" />
-
-            <div className="flex items-center gap-2 shrink-0">
-              <Label htmlFor={`${id}-bundle-view-toggle`} className="text-sm text-gray-600">
-                Bundled
-              </Label>
-              <Switch
-                id={`${id}-bundle-view-toggle`}
-                checked={bundleView === 'bundled'}
-                onCheckedChange={(checked) => setBundleView(checked ? 'bundled' : 'individual')}
-              />
-            </div>
-
-            <div className="h-6 w-px bg-gray-200 mx-1 shrink-0" />
-
-            <div className="shrink-0">
-              <ViewDensityControl
-                idPrefix={`${id}-list-density`}
-                value={ticketListDensityLevel}
-                onChange={setTicketListDensityLevel}
-                step={50}
-                compactLabel="Compact"
-                spaciousLabel="Spacious"
-                decreaseTitle="Decrease ticket list spacing"
-                increaseTitle="Increase ticket list spacing"
-                resetTitle="Reset ticket list spacing"
-              />
-            </div>
-
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleResetFilters}
-              className="text-gray-500 hover:text-gray-700 shrink-0"
-              id='reset-filters'
-            >
-              <XCircle className="h-4 w-4 mr-1" />
-              Reset
-            </Button>
+              {/* Row 2: Category, search, tags, reset, bundled, density */}
+              <div className={`flex items-center ${densityClasses.filterGap}`}>
+                <CategoryPicker
+                  id={`${id}-category-picker`}
+                  categories={categories}
+                  selectedCategories={selectedCategories}
+                  excludedCategories={excludedCategories}
+                  onSelect={handleCategorySelect}
+                  placeholder="Filter by category"
+                  multiSelect={true}
+                  showExclude={true}
+                  showReset={true}
+                  allowEmpty={true}
+                  className="text-sm min-w-[200px]"
+                />
+                <Input
+                  id={`${id}-search-tickets-input`}
+                  placeholder="Search tickets..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="h-[38px] min-w-[350px] text-sm"
+                  containerClassName=""
+                />
+                <TagFilter
+                  tags={allUniqueTags}
+                  selectedTags={selectedTags}
+                  onToggleTag={(tag: string) => {
+                    setSelectedTags(prev =>
+                      prev.includes(tag)
+                        ? prev.filter(t => t !== tag)
+                        : [...prev, tag]
+                    );
+                  }}
+                  onClearTags={() => setSelectedTags([])}
+                />
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleResetFilters}
+                  className={`shrink-0 flex items-center gap-1 ${isFiltered ? 'text-gray-500 hover:text-gray-700' : 'invisible'}`}
+                  id='reset-filters'
+                  disabled={!isFiltered}
+                >
+                  <XCircle className="h-4 w-4" />
+                  Reset
+                </Button>
+                <div className="h-6 w-px bg-gray-200 mx-1 shrink-0" />
+                <div className="flex items-center gap-2 shrink-0">
+                  <Label htmlFor={`${id}-bundle-view-toggle`} className="text-sm text-gray-600">
+                    Bundled
+                  </Label>
+                  <Switch
+                    id={`${id}-bundle-view-toggle`}
+                    checked={bundleView === 'bundled'}
+                    onCheckedChange={(checked) => setBundleView(checked ? 'bundled' : 'individual')}
+                  />
+                </div>
+                <div className="h-6 w-px bg-gray-200 mx-1 shrink-0" />
+                <div className="shrink-0">
+                  <ViewDensityControl
+                    idPrefix={`${id}-list-density`}
+                    value={ticketListDensityLevel}
+                    onChange={setTicketListDensityLevel}
+                    step={50}
+                    compactLabel="Compact"
+                    spaciousLabel="Spacious"
+                    decreaseTitle="Decrease ticket list spacing"
+                    increaseTitle="Increase ticket list spacing"
+                    resetTitle="Reset ticket list spacing"
+                  />
+                </div>
+              </div>
             </div>
           </ReflectionContainer>
         </div>

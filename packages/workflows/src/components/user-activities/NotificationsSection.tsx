@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@alga-psa/ui/component
 import { NotificationCard } from "./NotificationCard";
 import { fetchNotificationActivities } from "@alga-psa/workflows/actions";
 import { NotificationSectionFiltersDialog } from "./filters/NotificationSectionFiltersDialog";
-import { Filter, XCircleIcon } from 'lucide-react';
+import { Filter, XCircle } from 'lucide-react';
 import { useActivityDrawer } from "./ActivityDrawerProvider";
 import { getCurrentUser } from "@alga-psa/users/actions";
 import { Badge } from "@alga-psa/ui/components/Badge";
@@ -242,8 +242,8 @@ export function NotificationsSection({ limit = 5, onViewAll, noCard = false }: N
             disabled={loading}
             className="gap-1"
           >
-            <XCircleIcon className="h-4 w-4" />
-            Reset Filters
+            <XCircle className="h-4 w-4" />
+            Reset
           </Button>
         ) : (
           <Button
@@ -388,8 +388,8 @@ export function NotificationsSection({ limit = 5, onViewAll, noCard = false }: N
               disabled={loading}
               className="gap-1"
             >
-              <XCircleIcon className="h-4 w-4" />
-              Reset Filters
+              <XCircle className="h-4 w-4" />
+              Reset
             </Button>
           ) : (
             <Button

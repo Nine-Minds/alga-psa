@@ -10,7 +10,7 @@ import {
 } from '@alga-psa/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
-import { RefreshCw, Filter, XCircleIcon } from 'lucide-react';
+import { RefreshCw, Filter, XCircle } from 'lucide-react';
 import { fetchActivities } from '@alga-psa/workflows/actions';
 import { ActivitiesDataTable } from './ActivitiesDataTable';
 import { ActivitiesTableFilters, ActivitiesTableFiltersRef } from './filters/ActivitiesTableFilters';
@@ -170,8 +170,8 @@ export function ActivitiesDataTableSection({
               onClick={handleResetFilters}
               disabled={isLoading}
             >
-              <XCircleIcon className="h-4 w-4 mr-2" />
-              Reset Filters
+              <XCircle className="h-4 w-4 mr-2" />
+              Reset
             </Button>
           ) : (
             <Button

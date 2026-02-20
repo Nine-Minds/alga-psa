@@ -918,7 +918,7 @@ export default function WorkflowList({ onSelectWorkflow, onCreateNew, onOpenEven
                 updateUrlParams({ search: null, status: null, trigger: null });
               }}
             >
-              Clear all filters
+              Reset
             </button>
           </div>
         ) : (

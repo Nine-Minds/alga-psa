@@ -10,7 +10,7 @@ import { fetchDashboardWorkflowTasks } from '@alga-psa/workflows/actions';
 import { WorkflowTaskListDrawer } from './WorkflowTaskListDrawer';
 import { useDrawer } from '@alga-psa/ui';
 import { WorkflowTasksSectionFiltersDialog } from './filters/WorkflowTasksSectionFiltersDialog';
-import { Filter, XCircleIcon } from 'lucide-react';
+import { Filter, XCircle } from 'lucide-react';
 import { useActivityDrawer } from './ActivityDrawerProvider';
 
 interface WorkflowTasksSectionProps {
@@ -166,8 +166,8 @@ export function WorkflowTasksSection({ limit = 5, onViewAll }: WorkflowTasksSect
               disabled={loading}
               className="gap-1"
             >
-              <XCircleIcon className="h-4 w-4" />
-              Reset Filters
+              <XCircle className="h-4 w-4" />
+              Reset
             </Button>
           ) : (
             <Button

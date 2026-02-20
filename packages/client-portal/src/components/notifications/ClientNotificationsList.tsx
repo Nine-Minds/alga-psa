@@ -8,7 +8,7 @@ import { Card } from "@alga-psa/ui/components/Card";
 import { NotificationCard } from "@alga-psa/workflows/components";
 import { fetchNotificationActivities } from "@alga-psa/workflows/actions";
 import { NotificationSectionFiltersDialog } from "@alga-psa/workflows/components";
-import { Filter, XCircleIcon } from 'lucide-react';
+import { Filter, XCircle } from 'lucide-react';
 import { useActivityDrawer } from "@alga-psa/workflows/components";
 import { getUnreadCountAction } from "@alga-psa/notifications/actions";
 import { getCurrentUser } from "@alga-psa/users/actions";
@@ -316,8 +316,8 @@ export function ClientNotificationsList() {
                 disabled={loading}
                 className="gap-1"
               >
-                <XCircleIcon className="h-4 w-4" />
-                {tCommon('common.resetFilters', 'Reset Filters')}
+                <XCircle className="h-4 w-4" />
+                {tCommon('common.resetFilters', 'Reset')}
               </Button>
             ) : (
               <Button

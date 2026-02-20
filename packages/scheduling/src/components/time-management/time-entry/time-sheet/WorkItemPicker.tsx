@@ -452,7 +452,7 @@ export function WorkItemPicker({ onSelect, availableWorkItems, timePeriod }: Wor
                   id="reset-filters"
                 >
                   <XCircle className="h-4 w-4" />
-                  Reset Filters
+                  Reset
                 </Button>
               </div>
               </div>

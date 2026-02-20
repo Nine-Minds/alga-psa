@@ -252,7 +252,7 @@ const ContractLinesOverview: React.FC = () => {
               className="flex items-center gap-1 bg-card"
             >
               <XCircle className="h-4 w-4" />
-              <span>Clear filters</span>
+              <span>Reset</span>
             </Button>
           )}
         </div>

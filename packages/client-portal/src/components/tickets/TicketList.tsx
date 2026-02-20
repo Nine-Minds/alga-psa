@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import toast from 'react-hot-toast';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -281,6 +281,15 @@ export function TicketList() {
     setCurrentPage(1);
   };
 
+  const isFiltered = useMemo(() => {
+    return selectedStatus !== 'all' ||
+      selectedResponseStatus !== 'all' ||
+      selectedPriority !== 'all' ||
+      selectedCategories.length > 0 ||
+      excludedCategories.length > 0 ||
+      searchQuery !== '';
+  }, [selectedStatus, selectedResponseStatus, selectedPriority, selectedCategories, excludedCategories, searchQuery]);
+
   const handleResetFilters = useCallback(() => {
     setSelectedStatus('all');
     setSelectedResponseStatus('all');
@@ -533,7 +542,7 @@ export function TicketList() {
             {t('createButton')}
           </Button>
         </div>
-        <div className="flex items-center gap-4 flex-wrap">
+        <div className="flex items-center gap-4">
           <CustomSelect
             options={statusOptions}
             value={selectedStatus}
@@ -602,16 +611,18 @@ export function TicketList() {
             containerClassName=""
           />
 
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleResetFilters}
-            className="text-gray-500 hover:text-gray-700 shrink-0"
-            id="reset-filters-button"
-          >
-            <XCircle className="h-4 w-4 mr-1" />
-            Reset
-          </Button>
+
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleResetFilters}
+              className={`shrink-0 flex items-center gap-1 ${isFiltered ? 'text-gray-500 hover:text-gray-700' : 'invisible'}`}
+              disabled={!isFiltered}
+              id="reset-filters-button"
+            >
+              <XCircle className="h-4 w-4" />
+              Reset
+            </Button>
         </div>
       </div>
 

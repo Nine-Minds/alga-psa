@@ -19,7 +19,7 @@ import { IClient } from '@alga-psa/types';
 import { createClientContractForBilling, getAllClientsForBilling } from '@alga-psa/billing/actions/billingClientsActions';
 import { BILLING_FREQUENCY_OPTIONS, CONTRACT_LINE_TYPE_DISPLAY } from '@alga-psa/billing/constants/billing';
 import { CURRENCY_OPTIONS } from '@alga-psa/core';
-import { HelpCircle, Info, Plus, X, ChevronDown, ChevronUp, Search, Coins } from 'lucide-react';
+import { HelpCircle, Info, Plus, XCircle, ChevronDown, ChevronUp, Search, Coins } from 'lucide-react';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Badge } from '@alga-psa/ui/components/Badge';
@@ -678,8 +678,8 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
                           setContractLinePresetTypeFilter('all');
                         }}
                       >
-                        <X className="h-4 w-4 mr-1" />
-                        Clear
+                        <XCircle className="h-4 w-4 mr-1" />
+                        Reset
                       </Button>
                     )}
                   </div>

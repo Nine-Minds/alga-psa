@@ -177,7 +177,7 @@ export function ScheduleSectionFiltersDialog({
         </div>
         <DialogFooter>
           <div className="flex justify-between w-full">
-            <Button id="schedule-filter-clear" variant="outline" onClick={handleClear}>Clear Filters</Button>
+            <Button id="schedule-filter-clear" variant="outline" onClick={handleClear}>Reset</Button>
             <div>
               <Button id="schedule-filter-cancel" variant="ghost" className="mr-2" onClick={() => onOpenChange(false)}>Cancel</Button>
               <Button id="schedule-filter-apply" onClick={handleApply}>Apply Filters</Button>

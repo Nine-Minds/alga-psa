@@ -996,20 +996,81 @@ const Clients: React.FC = () => {
           onClientAdded={handleClientAdded}
         />
 
-        <div className="flex justify-between items-start mb-4 flex-wrap gap-4">
-          {/* Left side - Search and Filters */}
-          <div className="flex items-center gap-4 flex-wrap">
-            {/* Search */}
+        {/* Actions row */}
+        <div className="flex justify-end items-center mb-4 gap-4">
+          <div className="flex gap-2">
+            <Button
+              id="create-client-button"
+              onClick={() => setIsDialogOpen(true)}
+            >
+              + Create Client
+            </Button>
+
+            <DropdownMenu.Root>
+              <DropdownMenu.Trigger asChild>
+                <Button
+                  id="clients-actions-button"
+                  variant="outline"
+                  className="flex items-center gap-2"
+                >
+                  <MoreVertical size={16} />
+                  Actions
+                </Button>
+              </DropdownMenu.Trigger>
+              <DropdownMenu.Content className="bg-white rounded-md shadow-lg p-1">
+                <DropdownMenu.Item
+                  className="px-2 py-1 text-sm cursor-pointer hover:bg-gray-100 flex items-center"
+                  onSelect={() => setIsImportDialogOpen(true)}
+                >
+                  <Upload size={14} className="mr-2" />
+                  Upload CSV
+                </DropdownMenu.Item>
+                <DropdownMenu.Item
+                  className="px-2 py-1 text-sm cursor-pointer hover:bg-gray-100 flex items-center"
+                  onSelect={() => void handleExportToCSV()}
+                >
+                  <CloudDownload size={14} className="mr-2" />
+                  Download CSV
+                </DropdownMenu.Item>
+                <DropdownMenu.Separator className="h-px bg-gray-200 my-1" />
+                <DropdownMenu.Item
+                  className={`px-2 py-1 text-sm cursor-pointer hover:bg-gray-100 flex items-center ${selectedClients.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  onSelect={() => selectedClients.length > 0 && void handleBulkMarkInactive()}
+                  disabled={selectedClients.length === 0}
+                >
+                  <Power size={14} className="mr-2" />
+                  Mark as Inactive
+                </DropdownMenu.Item>
+                <DropdownMenu.Item
+                  className={`px-2 py-1 text-sm cursor-pointer hover:bg-gray-100 flex items-center ${selectedClients.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  onSelect={() => selectedClients.length > 0 && void handleBulkReactivate()}
+                  disabled={selectedClients.length === 0}
+                >
+                  <RotateCcw size={14} className="mr-2" />
+                  Reactivate
+                </DropdownMenu.Item>
+              </DropdownMenu.Content>
+            </DropdownMenu.Root>
+          </div>
+
+          <ViewSwitcher
+            currentView={viewMode}
+            onChange={(mode) => void handleViewModeChange(mode)}
+            options={viewOptions}
+          />
+        </div>
+
+        {/* Filter row */}
+        <div className="flex items-center mb-4 gap-4">
             <SearchInput value={searchInput} onChange={handleSearchInputChange} />
 
-            {/* Status Filter */}
-            <div className="w-48">
+            <div className="w-48 shrink-0">
               <CustomSelect
                 id="status-filter"
                 value={filterStatus}
                 onValueChange={(value) => {
                   setFilterStatus(value as 'all' | 'active' | 'inactive');
-                  setCurrentPage(1); // Reset to first page when changing filter
+                  setCurrentPage(1);
                 }}
                 options={[
                   { value: 'active', label: 'Active Clients' },
@@ -1021,14 +1082,13 @@ const Clients: React.FC = () => {
               />
             </div>
 
-            {/* Client Type Filter */}
-            <div className="w-48">
+            <div className="w-48 shrink-0">
               <CustomSelect
                 id="client-type-filter"
                 value={clientTypeFilter}
                 onValueChange={(value) => {
                   setClientTypeFilter(value as 'all' | 'company' | 'individual');
-                  setCurrentPage(1); // Reset to first page when changing filter
+                  setCurrentPage(1);
                 }}
                 options={[
                   { value: 'all', label: 'All Types' },
@@ -1040,7 +1100,6 @@ const Clients: React.FC = () => {
               />
             </div>
 
-            {/* Tag Filter */}
             <TagFilter
               tags={allUniqueTags}
               selectedTags={selectedTags}
@@ -1050,91 +1109,22 @@ const Clients: React.FC = () => {
                     ? prev.filter(t => t !== tag)
                     : [...prev, tag]
                 );
-                setCurrentPage(1); // Reset to first page when changing filter
+                setCurrentPage(1);
               }}
               onClearTags={() => setSelectedTags([])}
             />
 
-            {/* Reset Filters Button */}
-            {isFiltered && (
-              <Button
-                id="reset-filters-button"
-                variant="outline"
-                size="sm"
-                className="whitespace-nowrap flex items-center gap-2"
-                onClick={handleResetFilters}
-              >
-                <XCircle className="h-4 w-4" />
-                Reset Filters
-              </Button>
-            )}
-          </div>
-
-          {/* Right side - Actions and View Switcher */}
-          <div className="flex items-center gap-4">
-            {/* Actions */}
-            <div className="flex gap-2">
-              <Button
-                id="create-client-button"
-                onClick={() => setIsDialogOpen(true)}
-              >
-                + Create Client
-              </Button>
-
-              <DropdownMenu.Root>
-                <DropdownMenu.Trigger asChild>
-                  <Button
-                    id="clients-actions-button"
-                    variant="outline"
-                    className="flex items-center gap-2"
-                  >
-                    <MoreVertical size={16} />
-                    Actions
-                  </Button>
-                </DropdownMenu.Trigger>
-                <DropdownMenu.Content className="bg-white rounded-md shadow-lg p-1">
-                  <DropdownMenu.Item
-                    className="px-2 py-1 text-sm cursor-pointer hover:bg-gray-100 flex items-center"
-                    onSelect={() => setIsImportDialogOpen(true)}
-                  >
-                    <Upload size={14} className="mr-2" />
-                    Upload CSV
-                  </DropdownMenu.Item>
-                  <DropdownMenu.Item
-                    className="px-2 py-1 text-sm cursor-pointer hover:bg-gray-100 flex items-center"
-                    onSelect={() => void handleExportToCSV()}
-                  >
-                    <CloudDownload size={14} className="mr-2" />
-                    Download CSV
-                  </DropdownMenu.Item>
-                  <DropdownMenu.Separator className="h-px bg-gray-200 my-1" />
-                  <DropdownMenu.Item
-                    className={`px-2 py-1 text-sm cursor-pointer hover:bg-gray-100 flex items-center ${selectedClients.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
-                    onSelect={() => selectedClients.length > 0 && void handleBulkMarkInactive()}
-                    disabled={selectedClients.length === 0}
-                  >
-                    <Power size={14} className="mr-2" />
-                    Mark as Inactive
-                  </DropdownMenu.Item>
-                  <DropdownMenu.Item
-                    className={`px-2 py-1 text-sm cursor-pointer hover:bg-gray-100 flex items-center ${selectedClients.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
-                    onSelect={() => selectedClients.length > 0 && void handleBulkReactivate()}
-                    disabled={selectedClients.length === 0}
-                  >
-                    <RotateCcw size={14} className="mr-2" />
-                    Reactivate
-                  </DropdownMenu.Item>
-                </DropdownMenu.Content>
-              </DropdownMenu.Root>
-            </div>
-
-            {/* View Switcher */}
-            <ViewSwitcher
-              currentView={viewMode}
-              onChange={(mode) => void handleViewModeChange(mode)}
-              options={viewOptions}
-            />
-          </div>
+            <Button
+              id="reset-filters-button"
+              variant="ghost"
+              size="sm"
+              className={`shrink-0 flex items-center gap-1 ${isFiltered ? 'text-gray-500 hover:text-gray-700' : 'invisible'}`}
+              onClick={handleResetFilters}
+              disabled={!isFiltered}
+            >
+              <XCircle className="h-4 w-4" />
+              Reset
+            </Button>
         </div>
 
       {/* Delete */}

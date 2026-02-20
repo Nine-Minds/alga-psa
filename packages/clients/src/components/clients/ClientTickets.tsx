@@ -305,6 +305,18 @@ const ClientTickets: React.FC<ClientTicketsProps> = ({
       id: ticket.ticket_id 
     })), [filteredTickets]);
 
+  const isFiltered = useMemo(() => {
+    return selectedBoard !== null ||
+      selectedStatus !== 'open' ||
+      selectedPriority !== 'all' ||
+      selectedCategories.length > 0 ||
+      excludedCategories.length > 0 ||
+      searchQuery !== '' ||
+      selectedTags.length > 0 ||
+      selectedAssignees.length > 0 ||
+      includeUnassigned;
+  }, [selectedBoard, selectedStatus, selectedPriority, selectedCategories, excludedCategories, searchQuery, selectedTags, selectedAssignees, includeUnassigned]);
+
   const handleResetFilters = useCallback(() => {
     setSelectedBoard(null);
     setSelectedStatus('open');
@@ -359,7 +371,7 @@ const ClientTickets: React.FC<ClientTicketsProps> = ({
         </div>
 
         {/* Filters */}
-        <div className="flex items-center gap-4 flex-wrap">
+        <div className="flex items-center gap-4">
           {initialBoards.length > 0 && (
             <BoardPicker
               id="client-tickets-board-picker"
@@ -450,18 +462,17 @@ const ClientTickets: React.FC<ClientTicketsProps> = ({
             />
           )}
 
-          <div className="h-6 w-px bg-gray-200 mx-1 shrink-0" />
-
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleResetFilters}
-            className="text-gray-500 hover:text-gray-700 shrink-0"
-            id="client-tickets-reset-filters-btn"
-          >
-            <XCircle className="h-4 w-4 mr-1" />
-            Reset
-          </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleResetFilters}
+              className={`shrink-0 flex items-center gap-1 ${isFiltered ? 'text-gray-500 hover:text-gray-700' : 'invisible'}`}
+              disabled={!isFiltered}
+              id="client-tickets-reset-filters-btn"
+            >
+              <XCircle className="h-4 w-4" />
+              Reset
+            </Button>
         </div>
       </div>
 

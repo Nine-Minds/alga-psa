@@ -236,7 +236,7 @@ export default function DocumentFilters({
             variant="outline"
             className="w-full"
           >
-            {t('documents.filters.clear', 'Clear Filters')}
+            {t('documents.filters.clear', 'Reset')}
           </Button>
         </div>
       </div>

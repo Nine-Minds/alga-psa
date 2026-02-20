@@ -6,7 +6,7 @@ import { IInteraction, IInteractionType } from '@alga-psa/types';
 import { IUser } from '@shared/interfaces/user.interfaces';
 import { IContact } from '@alga-psa/types';
 import type { IClient } from '@alga-psa/types';
-import { Filter, RefreshCw, ChevronRight, ChevronLeft } from 'lucide-react';
+import { Filter, XCircle, ChevronRight, ChevronLeft } from 'lucide-react';
 import Link from 'next/link';
 import { getRecentInteractions, getInteractionStatuses, getAllContacts } from '@alga-psa/clients/actions';
 import { getAllInteractionTypes } from '@alga-psa/clients/actions';
@@ -78,7 +78,7 @@ const OverallInteractionsFeed: React.FC<OverallInteractionsFeedProps> = ({
   const { automationIdProps: resetButtonProps } = useAutomationIdAndRegister<ButtonComponent>({
     id: 'overall-interactions-reset-button',
     type: 'button',
-    label: 'Reset Filters',
+    label: 'Reset',
     helperText: 'Clear all applied filters'
   });
 
@@ -344,7 +344,7 @@ const OverallInteractionsFeed: React.FC<OverallInteractionsFeedProps> = ({
             variant="outline"
             className="flex-shrink-0 whitespace-nowrap"
           >
-            <RefreshCw className="mr-2 h-4 w-4" />
+            <XCircle className="mr-2 h-4 w-4" />
             Reset
           </Button>
         ) : (
@@ -440,14 +440,15 @@ const OverallInteractionsFeed: React.FC<OverallInteractionsFeedProps> = ({
               </div>
             </div>
             <div className="flex justify-between">
-              <Button 
+              <Button
                 id="reset-filters-button"
-                onClick={resetFilters} 
-                variant="outline" 
-                className="flex items-center"
+                onClick={resetFilters}
+                variant="ghost"
+                size="sm"
+                className="text-gray-500 hover:text-gray-700 flex items-center gap-1"
               >
-                <RefreshCw className="mr-2 h-4 w-4" />
-                Reset Filters
+                <XCircle className="h-4 w-4" />
+                Reset
               </Button>
               <Button 
                 id="apply-filters-button"

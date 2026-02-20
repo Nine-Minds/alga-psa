@@ -781,7 +781,7 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
                   onClick={clearFilters}
                   disabled={!searchTerm && statusFilters.length === 0 && typeFilters.length === 0 && clientFilters.length === 0}
                 >
-                  Clear filters
+                  Reset
                 </Button>
               </div>
               <div className="flex flex-wrap items-center gap-2">

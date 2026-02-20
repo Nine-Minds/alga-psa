@@ -14,7 +14,7 @@ import { getAllClients } from "@alga-psa/clients/actions";
 import { getAllContacts } from "@alga-psa/clients/actions";
 import { getTicketStatuses } from "@alga-psa/reference-data/actions";
 import { TicketSectionFiltersDialog } from "./filters/TicketSectionFiltersDialog";
-import { Filter, XCircleIcon } from 'lucide-react';
+import { Filter, XCircle } from 'lucide-react';
 import { useActivityDrawer } from "./ActivityDrawerProvider";
 interface TicketsSectionProps {
   limit?: number;
@@ -163,8 +163,8 @@ export function TicketsSection({ limit = 5, onViewAll }: TicketsSectionProps) {
                disabled={loading}
                className="gap-1"
              >
-              <XCircleIcon className="h-4 w-4" />
-              Reset Filters
+              <XCircle className="h-4 w-4" />
+              Reset
             </Button>
            ) : (
              <Button

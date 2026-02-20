@@ -10,7 +10,7 @@ import { Label } from "@alga-psa/ui/components/Label";
 import { TextArea } from "@alga-psa/ui/components/TextArea";
 import { DataTable } from "@alga-psa/ui/components/DataTable";
 import { ColumnDefinition } from "@alga-psa/types";
-import { ChevronDown, ChevronRight, CornerDownRight, MoreVertical, Filter, Check, X } from "lucide-react";
+import { ChevronDown, ChevronRight, CornerDownRight, MoreVertical, Filter, Check, XCircle } from "lucide-react";
 import { useUserPreference } from "@alga-psa/users/hooks";
 import {
   getTemplatesAction,
@@ -473,8 +473,8 @@ export function EmailTemplates() {
                   }}
                   className="flex items-center gap-2 text-gray-600 cursor-pointer"
                 >
-                  <X className="h-4 w-4" />
-                  Clear filter
+                  <XCircle className="h-4 w-4" />
+                  Reset
                 </DropdownMenuItem>
               </>
             )}
