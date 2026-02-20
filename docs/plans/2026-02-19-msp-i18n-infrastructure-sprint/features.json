@@ -134,7 +134,7 @@
   {
     "id": "F023",
     "description": "Phase 1 tests updated to reference msp/core instead of msp and continue passing",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR23"]
   },
   {

@@ -245,9 +245,9 @@ describe('MSP i18n Phase 1', () => {
     }
   });
 
-  it('T031-T033: msp.json exists for all locales with required sections', () => {
+  it('T031-T033: msp/core.json exists for all locales with required sections', () => {
     for (const locale of locales) {
-      const file = readJson(`server/public/locales/${locale}/msp.json`);
+      const file = readJson(`server/public/locales/${locale}/msp/core.json`);
       expect(file).toHaveProperty('nav');
       expect(file).toHaveProperty('sidebar');
       expect(file).toHaveProperty('settings');
@@ -255,8 +255,8 @@ describe('MSP i18n Phase 1', () => {
     }
   });
 
-  it('T032: msp.json nav items match menuConfig entries', () => {
-    const mspCore = readJson('server/public/locales/en/msp.json');
+  it('T032: msp/core.json nav items match menuConfig entries', () => {
+    const mspCore = readJson('server/public/locales/en/msp/core.json');
     const nav = mspCore.nav;
     expect(nav.home).toBe('Home');
     expect(nav.tickets).toBe('Tickets');
@@ -274,15 +274,15 @@ describe('MSP i18n Phase 1', () => {
   });
 
   it('T034: msp translations resolve correctly for English', async () => {
-    const mspCore = readJson('server/public/locales/en/msp.json');
+    const mspCore = readJson('server/public/locales/en/msp/core.json');
     await i18next.init({
       lng: 'en',
-      resources: { en: { 'msp': mspCore } },
+      resources: { en: { 'msp/core': mspCore } },
       interpolation: { escapeValue: false },
     });
 
-    expect(i18next.t('nav.home', { ns: 'msp' })).toBe('Home');
-    expect(i18next.t('header.signOut', { ns: 'msp' })).toBe('Sign out');
+    expect(i18next.t('nav.home', { ns: 'msp/core' })).toBe('Home');
+    expect(i18next.t('header.signOut', { ns: 'msp/core' })).toBe('Sign out');
   });
 
   it('T035-T041: MSP profile language preference is gated and uses LanguagePreference behavior', () => {
@@ -334,7 +334,7 @@ describe('MSP i18n Phase 1', () => {
         namespacePaths.push(`server/public/locales/${locale}/features/${ns}.json`);
       }
       namespacePaths.push(`server/public/locales/${locale}/client-portal.json`);
-      namespacePaths.push(`server/public/locales/${locale}/msp.json`);
+      namespacePaths.push(`server/public/locales/${locale}/msp/core.json`);
     }
 
     for (const file of namespacePaths) {
