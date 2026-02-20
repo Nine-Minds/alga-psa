@@ -91,3 +91,7 @@ Focused planning log for guided-layout improvements in Entra integration setting
   - Added/updated tests for step gating states (Connect/Discover/Map/Sync) and CTA routing (`discoverEntraManagedTenants`, `startEntraSync({scope:'initial'})`).
   - Preserved coverage for status diagnostics and queue flag gating in the same unit file.
   - Validation check: `cd ee/server && npx vitest run src/__tests__/unit/entraIntegrationSettings.initialSyncCta.test.tsx` (passing).
+- (2026-02-20) F012 implemented in `ee/server/src/components/settings/integrations/EntraIntegrationSettings.tsx`.
+  - Added explicit mode signal fetch via `getEntraSyncRunHistory(10)` and derived page mode (`onboarding` vs `maintenance`) from presence of `initial`/`all-tenants` runs.
+  - Exposed mode metadata on root container (`data-entra-mode`, `data-entra-mode-ready`).
+  - Refreshes maintenance signal after manual sync starts to keep mode transition deterministic.

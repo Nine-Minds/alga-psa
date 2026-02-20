@@ -137,7 +137,7 @@
   {
     "id": "F012",
     "description": "Introduce explicit settings-page mode switch (`onboarding` vs `maintenance`) based on existing sync history signals (no schema/API additions).",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations"

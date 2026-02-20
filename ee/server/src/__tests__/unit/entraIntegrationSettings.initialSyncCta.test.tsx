@@ -7,6 +7,7 @@ import EntraIntegrationSettings from '@ee/components/settings/integrations/Entra
 const {
   useFeatureFlagMock,
   getEntraIntegrationStatusMock,
+  getEntraSyncRunHistoryMock,
   discoverEntraManagedTenantsMock,
   startEntraSyncMock,
   initiateEntraDirectOAuthMock,
@@ -16,6 +17,7 @@ const {
 } = vi.hoisted(() => ({
   useFeatureFlagMock: vi.fn(),
   getEntraIntegrationStatusMock: vi.fn(),
+  getEntraSyncRunHistoryMock: vi.fn(),
   discoverEntraManagedTenantsMock: vi.fn(),
   startEntraSyncMock: vi.fn(),
   initiateEntraDirectOAuthMock: vi.fn(),
@@ -37,6 +39,7 @@ vi.mock('@alga-psa/ui/hooks', () => ({
 
 vi.mock('@alga-psa/integrations/actions', () => ({
   getEntraIntegrationStatus: getEntraIntegrationStatusMock,
+  getEntraSyncRunHistory: getEntraSyncRunHistoryMock,
   discoverEntraManagedTenants: discoverEntraManagedTenantsMock,
   startEntraSync: startEntraSyncMock,
   initiateEntraDirectOAuth: initiateEntraDirectOAuthMock,
@@ -110,6 +113,7 @@ describe('EntraIntegrationSettings guided flow', () => {
   beforeEach(() => {
     useFeatureFlagMock.mockReset();
     getEntraIntegrationStatusMock.mockReset();
+    getEntraSyncRunHistoryMock.mockReset();
     discoverEntraManagedTenantsMock.mockReset();
     startEntraSyncMock.mockReset();
     initiateEntraDirectOAuthMock.mockReset();
@@ -120,6 +124,7 @@ describe('EntraIntegrationSettings guided flow', () => {
     mappingTableState.skippedTenants = [];
 
     applyFlags(['entra-integration-ui']);
+    getEntraSyncRunHistoryMock.mockResolvedValue({ success: true, data: { runs: [] } });
     discoverEntraManagedTenantsMock.mockResolvedValue({
       success: true,
       data: {

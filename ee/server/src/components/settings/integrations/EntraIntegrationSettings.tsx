@@ -7,6 +7,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import {
   getEntraIntegrationStatus,
+  getEntraSyncRunHistory,
   discoverEntraManagedTenants,
   startEntraSync,
   initiateEntraDirectOAuth,
@@ -86,6 +87,8 @@ export default function EntraIntegrationSettings() {
   const [discoveryMessage, setDiscoveryMessage] = React.useState<string | null>(null);
   const [initialSyncLoading, setInitialSyncLoading] = React.useState(false);
   const [initialSyncMessage, setInitialSyncMessage] = React.useState<string | null>(null);
+  const [hasMaintenanceSyncRun, setHasMaintenanceSyncRun] = React.useState(false);
+  const [maintenanceSignalLoaded, setMaintenanceSignalLoaded] = React.useState(false);
 
   const [cippDialogOpen, setCippDialogOpen] = React.useState(false);
   const [directLoading, setDirectLoading] = React.useState(false);
@@ -110,9 +113,28 @@ export default function EntraIntegrationSettings() {
     }
   }, []);
 
+  const loadMaintenanceSignal = React.useCallback(async () => {
+    try {
+      const result = await getEntraSyncRunHistory(10);
+      if ('error' in result) {
+        return;
+      }
+
+      const runs = Array.isArray(result.data?.runs) ? result.data.runs : [];
+      const hasOperationalRun = runs.some((run) => run?.runType === 'initial' || run?.runType === 'all-tenants');
+      setHasMaintenanceSyncRun(hasOperationalRun);
+    } finally {
+      setMaintenanceSignalLoaded(true);
+    }
+  }, []);
+
   React.useEffect(() => {
     void loadStatus();
   }, [loadStatus]);
+
+  React.useEffect(() => {
+    void loadMaintenanceSignal();
+  }, [loadMaintenanceSignal]);
 
   const validationMessage =
     status?.lastValidationError && typeof status.lastValidationError === 'object'
@@ -149,6 +171,7 @@ export default function EntraIntegrationSettings() {
   const isDiscoverStepCurrent = guidedStepState.currentStep === 'discover';
   const isMapStepCurrent = guidedStepState.currentStep === 'map';
   const isSyncStepCurrent = guidedStepState.currentStep === 'sync';
+  const settingsMode: 'onboarding' | 'maintenance' = hasMaintenanceSyncRun ? 'maintenance' : 'onboarding';
   const currentStepIndex = WIZARD_STEPS.findIndex((step) => step.id === guidedStepState.currentStep);
   const stepStates = WIZARD_STEPS.map((step, index) => {
     let state: GuidedStepVisualState = 'locked';
@@ -209,10 +232,11 @@ export default function EntraIntegrationSettings() {
         result.data?.runId ? `Sync started. Run ID: ${result.data.runId}` : 'Sync start request accepted.'
       );
       await loadStatus();
+      await loadMaintenanceSignal();
     } finally {
       setSyncAllLoading(false);
     }
-  }, [loadStatus]);
+  }, [loadMaintenanceSignal, loadStatus]);
 
   const handleRunDiscovery = React.useCallback(async () => {
     setDiscoveryLoading(true);
@@ -251,10 +275,11 @@ export default function EntraIntegrationSettings() {
           : 'Initial sync start request accepted.'
       );
       await loadStatus();
+      await loadMaintenanceSignal();
     } finally {
       setInitialSyncLoading(false);
     }
-  }, [loadStatus]);
+  }, [loadMaintenanceSignal, loadStatus]);
 
   const handleConnectionOptionClick = async (optionId: string) => {
     if (!isConnectStepCurrent) {
@@ -317,7 +342,12 @@ export default function EntraIntegrationSettings() {
   }
 
   return (
-    <div className="space-y-6" id="entra-integration-settings">
+    <div
+      className="space-y-6"
+      id="entra-integration-settings"
+      data-entra-mode={settingsMode}
+      data-entra-mode-ready={maintenanceSignalLoaded ? 'true' : 'false'}
+    >
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between gap-2">
