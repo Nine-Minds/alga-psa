@@ -386,7 +386,7 @@
   {
     "id": "T048",
     "description": "MSP portal with flag OFF: layout renders identically to before changes (zero behavior change)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F021"
     ]

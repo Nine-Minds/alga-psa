@@ -187,3 +187,4 @@ ls server/public/locales/*/msp.json  # should fail (files removed)
 - 2026-02-20: Completed T045 checklist entry — Client portal at /client-portal/tickets loads features/tickets namespace in addition to common and client-portal
 - 2026-02-20: Completed T046 checklist entry — Client portal translations continue displaying correctly after config changes (no regressions)
 - 2026-02-20: Completed T047 checklist entry — MSP portal with flag OFF: no I18nWrapper rendered, no namespace HTTP requests for msp/core
+- 2026-02-20: Completed T048 checklist entry — MSP portal with flag OFF: layout renders identically to before changes (zero behavior change)
