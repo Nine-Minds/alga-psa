@@ -315,7 +315,7 @@
   {
     "id": "F029",
     "description": "Contact sync metadata: add fields for UPN/account-enabled state on contacts for sync traceability.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements"
     ],
