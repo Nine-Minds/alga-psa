@@ -25,6 +25,8 @@ interface TaskDependenciesProps {
   phases?: any[];
   onUnsavedChanges?: (hasUnsaved: boolean) => void;
   pendingMode?: boolean;
+  currentPhaseId?: string;
+  onDependencyAdded?: (dependencyLabel: string) => void;
 }
 
 export interface PendingDependency {
@@ -51,7 +53,9 @@ export const TaskDependencies = React.forwardRef<TaskDependenciesRef, TaskDepend
   users = [],
   phases = [],
   onUnsavedChanges,
-  pendingMode = false
+  pendingMode = false,
+  currentPhaseId,
+  onDependencyAdded
 }, ref) => {
   const [selectedTaskId, setSelectedTaskId] = useState('');
   const [selectedType, setSelectedType] = useState<DependencyType>('blocked_by');
@@ -165,6 +169,15 @@ export const TaskDependencies = React.forwardRef<TaskDependenciesRef, TaskDepend
     return getDependencyTypeInfo(dependency_type);
   }, [getDependencyTypeInfo]);
 
+  const getDependencyChecklistLabel = (type: DependencyType, taskName: string): string => {
+    switch (type) {
+      case 'blocked_by': return `Blocked by: ${taskName}`;
+      case 'blocks': return `Blocks: ${taskName}`;
+      case 'related_to': return `Related to: ${taskName}`;
+      default: return `Dependency: ${taskName}`;
+    }
+  };
+
   const handleAdd = async () => {
     if (!selectedTaskId) return;
 
@@ -178,6 +191,9 @@ export const TaskDependencies = React.forwardRef<TaskDependenciesRef, TaskDepend
           targetTaskTypeKey: targetTask.task_type_key || 'task',
           dependencyType: selectedType,
         }]);
+        if (onDependencyAdded) {
+          onDependencyAdded(getDependencyChecklistLabel(selectedType, targetTask.task_name));
+        }
       }
       setSelectedTaskId('');
       setSelectedType('blocked_by');
@@ -192,6 +208,10 @@ export const TaskDependencies = React.forwardRef<TaskDependenciesRef, TaskDepend
       // Always pass current task as predecessor and selected task as successor.
       // addTaskDependency handles the swap for 'blocked_by' internally.
       await addTaskDependency(task.task_id, selectedTaskId, selectedType, 0, undefined);
+      const targetTask = allTasksInProject.find(t => t.task_id === selectedTaskId);
+      if (targetTask && onDependencyAdded) {
+        onDependencyAdded(getDependencyChecklistLabel(selectedType, targetTask.task_name));
+      }
       setSelectedTaskId('');
       selectedTaskIdRef.current = '';
       setSelectedType('blocked_by');
@@ -312,10 +332,27 @@ export const TaskDependencies = React.forwardRef<TaskDependenciesRef, TaskDepend
     { value: 'related_to', label: 'Related to' },
   ]), []);
 
-  const availableTaskOptions = useMemo(() => availableTasks.map(t => ({
-    value: t.task_id,
-    label: t.task_name,
-  })), [availableTasks]);
+  const resolvedPhaseId = currentPhaseId || task?.phase_id;
+
+  const availableTaskOptions = useMemo(() => {
+    const sorted = [...availableTasks].sort((a, b) => {
+      if (!resolvedPhaseId) return 0;
+      const aInPhase = a.phase_id === resolvedPhaseId;
+      const bInPhase = b.phase_id === resolvedPhaseId;
+      if (aInPhase && !bInPhase) return -1;
+      if (!aInPhase && bInPhase) return 1;
+      return 0;
+    });
+
+    return sorted.map(t => {
+      const taskPhase = phases?.find((p: any) => p.phase_id === t.phase_id);
+      const isCurrentPhase = resolvedPhaseId && t.phase_id === resolvedPhaseId;
+      const label = taskPhase && !isCurrentPhase
+        ? `${t.task_name}  ·  ${taskPhase.phase_name}`
+        : t.task_name;
+      return { value: t.task_id, label };
+    });
+  }, [availableTasks, resolvedPhaseId, phases]);
 
   const handleTypeChange = useCallback((v: string) => {
     setSelectedType(v as DependencyType);

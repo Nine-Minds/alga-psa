@@ -1532,6 +1532,22 @@ export default function TaskForm({
               initialSuccessors={taskDependencies.successors}
               users={users}
               phases={phases}
+              currentPhaseId={task.phase_id}
+              onDependencyAdded={(label) => {
+                const newItem: Omit<ITaskChecklistItem, 'tenant'> = {
+                  checklist_item_id: `temp-${Date.now()}`,
+                  task_id: task.task_id,
+                  item_name: label,
+                  description: null,
+                  assigned_to: null,
+                  completed: false,
+                  due_date: null,
+                  created_at: new Date(),
+                  updated_at: new Date(),
+                  order_number: checklistItems.length + 1,
+                };
+                setChecklistItems(items => [...items, newItem]);
+              }}
               refreshDependencies={async () => {
                 try {
                   const dependencies = await getTaskDependencies(task.task_id);
@@ -1548,6 +1564,22 @@ export default function TaskForm({
               taskTypes={taskTypes}
               users={users}
               phases={phases}
+              currentPhaseId={phase.phase_id}
+              onDependencyAdded={(label) => {
+                const newItem: Omit<ITaskChecklistItem, 'tenant'> = {
+                  checklist_item_id: `temp-${Date.now()}`,
+                  task_id: tempTaskId,
+                  item_name: label,
+                  description: null,
+                  assigned_to: null,
+                  completed: false,
+                  due_date: null,
+                  created_at: new Date(),
+                  updated_at: new Date(),
+                  order_number: checklistItems.length + 1,
+                };
+                setChecklistItems(items => [...items, newItem]);
+              }}
               pendingMode
             />
           )}
