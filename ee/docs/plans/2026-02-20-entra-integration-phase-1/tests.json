@@ -469,7 +469,7 @@
   {
     "id": "T055",
     "description": "Exact domain match appears in `autoMatched` preview group.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F053",
       "F056"
