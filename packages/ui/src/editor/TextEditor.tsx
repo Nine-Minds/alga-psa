@@ -160,31 +160,7 @@ export default function TextEditor({
     _tiptapOptions: {
       editorProps: {
         handlePaste: (view, event, slice) => {
-          const plainText = event.clipboardData?.getData('text/plain');
-          const htmlText = event.clipboardData?.getData('text/html');
-
-          // Intercept plain text pastes that look like markdown (no HTML means source is plain text)
-          if (plainText && !htmlText) {
-            const markdownPattern = /^#{1,6}\s|^\*\s|^-\s|^\d+\.\s|\*\*[^*]+\*\*|\[.+\]\(.+\)|^```/m;
-            if (markdownPattern.test(plainText)) {
-              // Return true immediately to claim the paste, then handle async
-              (async () => {
-                try {
-                  const blocks = await editor.tryParseMarkdownToBlocks(plainText);
-                  if (blocks && blocks.length > 0) {
-                    const currentBlock = editor.getTextCursorPosition().block;
-                    editor.replaceBlocks([currentBlock.id], blocks);
-                  }
-                } catch (e) {
-                  // Fallback: insert as plain text
-                  editor.insertInlineContent([{ type: "text", text: plainText, styles: {} }]);
-                }
-              })();
-              return true;
-            }
-          }
-
-          // Handle pasting into empty blocks (existing behavior)
+          // Handle pasting into empty blocks
           const { state, dispatch } = view;
           const { selection } = state;
           const $pos = selection.$anchor;
@@ -263,6 +239,43 @@ export default function TextEditor({
     }
   };
 
+  // Intercept paste events to detect and convert markdown
+  useEffect(() => {
+    if (!editor) return;
+
+    const domElement = editor.domElement;
+    if (!domElement) return;
+
+    const markdownPattern = /^#{1,6}\s|^\*\s|^-\s|^\d+\.\s|\*\*[^*]+\*\*|\[.+\]\(.+\)|^```/m;
+
+    const handlePaste = (event: ClipboardEvent) => {
+      const plainText = event.clipboardData?.getData('text/plain');
+      if (!plainText || !markdownPattern.test(plainText)) return;
+
+      // Prevent default paste — we'll handle it
+      event.preventDefault();
+      event.stopPropagation();
+
+      (async () => {
+        try {
+          const blocks = await editor.tryParseMarkdownToBlocks(plainText);
+          if (blocks && blocks.length > 0) {
+            const currentBlock = editor.getTextCursorPosition().block;
+            editor.replaceBlocks([currentBlock.id], blocks);
+          }
+        } catch (e) {
+          // Fallback: insert as plain text
+          editor.insertInlineContent([{ type: "text", text: plainText, styles: {} }]);
+        }
+      })();
+    };
+
+    domElement.addEventListener('paste', handlePaste, { capture: true });
+    return () => {
+      domElement.removeEventListener('paste', handlePaste, { capture: true });
+    };
+  }, [editor]);
+
   // Update editorRef when editor is created
   useEffect(() => {
     if (editorRef) {
@@ -311,7 +324,7 @@ export default function TextEditor({
         <BlockNoteView
           editor={editor}
           theme={blockNoteTheme}
-          className="w-full min-w-0 [&_.ProseMirror]:break-words [&_.ProseMirror]:max-w-full [&_.ProseMirror]:min-w-0 [&_.bn-block-outer_[data-drag-handle]]:!hidden [&_[draggable='true']]:!hidden"
+          className="w-full min-w-0 [&_.ProseMirror]:break-words [&_.ProseMirror]:max-w-full [&_.ProseMirror]:min-w-0 [&_.bn-block-outer_[data-drag-handle]]:!hidden [&_[draggable='true']]:!hidden [&_.ProseMirror_a]:text-[rgb(var(--badge-info-text))] [&_.ProseMirror_a]:font-medium [&_.ProseMirror_a]:underline [&_.ProseMirror_a]:decoration-[rgb(var(--badge-info-text)/0.4)] [&_.ProseMirror_a]:underline-offset-2 [&_.ProseMirror_a:hover]:decoration-[rgb(var(--badge-info-text))]"
           editable={true}
           style={{
             overflowWrap: 'break-word',

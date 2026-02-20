@@ -5,3 +5,16 @@
   pointer-events: none;
   height: 0;
 }
+
+.editorContainer :global(.ProseMirror) a {
+  color: rgb(var(--badge-info-text));
+  font-weight: 500;
+  text-decoration: underline;
+  text-decoration-color: rgb(var(--badge-info-text) / 0.4);
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.editorContainer :global(.ProseMirror) a:hover {
+  text-decoration-color: rgb(var(--badge-info-text));
+}
