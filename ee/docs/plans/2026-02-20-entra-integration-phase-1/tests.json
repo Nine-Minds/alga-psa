@@ -236,7 +236,7 @@
   {
     "id": "T028",
     "description": "Disconnect flow does not remove existing sync run history rows.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F044",
       "F020",

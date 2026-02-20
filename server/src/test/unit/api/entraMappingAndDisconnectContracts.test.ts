@@ -34,4 +34,22 @@ describe('Entra mapping/disconnect contract checks', () => {
     expect(confirmMappingsService).toContain('entra_tenant_id: managedTenant.entra_tenant_id');
     expect(confirmMappingsService).toContain('entra_primary_domain: managedTenant.primary_domain || null');
   });
+
+  it('T028: disconnect flow clears credentials/connection status without deleting sync run history', () => {
+    const disconnectRoute = readRepoFile('ee/server/src/app/api/integrations/entra/disconnect/route.ts');
+    const connectionRepository = readRepoFile(
+      'ee/server/src/lib/integrations/entra/connectionRepository.ts'
+    );
+
+    expect(disconnectRoute).toContain('clearEntraDirectTokenSet');
+    expect(disconnectRoute).toContain('clearEntraCippCredentials');
+    expect(disconnectRoute).toContain('disconnectActiveEntraConnection');
+    expect(connectionRepository).toContain("status: 'disconnected'");
+
+    const combined = `${disconnectRoute}\n${connectionRepository}`.toLowerCase();
+    expect(combined).not.toContain('entra_sync_runs');
+    expect(combined).not.toContain('entra_sync_run_tenants');
+    expect(combined).not.toContain('delete from entra_sync_runs');
+    expect(combined).not.toContain('delete from entra_sync_run_tenants');
+  });
 });
