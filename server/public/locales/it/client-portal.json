@@ -28,7 +28,15 @@
     "quickActions": {
       "title": "Azioni rapide",
       "createTicket": "Crea ticket di supporto",
+      "requestAppointment": "Request Appointment",
       "viewLatestInvoice": "Visualizza l'ultima fattura"
+    },
+    "appointments": {
+      "title": "Upcoming Appointments",
+      "noUpcoming": "No upcoming appointments. Request one now!",
+      "requestButton": "Request Appointment",
+      "viewAll": "View all appointments →",
+      "technician": "Technician"
     },
     "recentActivity": {
       "title": "Attività recente"
@@ -45,7 +53,6 @@
     "signingIn": "Accesso in corso...",
     "rememberMe": "Ricordami",
     "forgotPasswordLink": "Hai dimenticato la password?",
-    "forgotPassword": "Hai dimenticato la password?",
     "forgotPasswordPage": {
       "title": "Password dimenticata?",
       "subtitle": "Nessun problema, ti invieremo le istruzioni per il reset.",
@@ -127,7 +134,8 @@
         "title": "Accesso alla documentazione",
         "description": "Consulta documenti e risorse condivise"
       }
-    }
+    },
+    "forgotPassword": "Hai dimenticato la password?"
   },
   "account": {
     "title": "Account",
@@ -285,12 +293,12 @@
     "notifications": {
       "title": "Impostazioni notifiche",
       "email": "Notifiche email",
-      "emailPreferences": "Email",
-      "internalPreferences": "Interne",
       "ticketUpdates": "Aggiornamenti ticket",
       "projectUpdates": "Aggiornamenti progetto",
       "invoices": "Notifiche sulle fatture",
-      "announcements": "Annunci di sistema"
+      "announcements": "Annunci di sistema",
+      "emailPreferences": "Email",
+      "internalPreferences": "Interne"
     },
     "actions": {
       "save": "Salva modifiche",
@@ -432,13 +440,6 @@
       "all": "Tutte",
       "read": "Lette"
     },
-    "categories": {
-      "tickets": "Ticket",
-      "invoices": "Fatture",
-      "messages": "Messaggi",
-      "projects": "Progetti",
-      "system": "Sistema"
-    },
     "preferences": {
       "title": "Preferenze notifiche",
       "description": "Gestisci quali notifiche interne ricevi",
@@ -448,6 +449,13 @@
       "noCategories": "Nessuna categoria di notifica disponibile",
       "emailPreferences": "Email",
       "internalPreferences": "Interne"
+    },
+    "categories": {
+      "tickets": "Ticket",
+      "invoices": "Fatture",
+      "messages": "Messaggi",
+      "projects": "Progetti",
+      "system": "Sistema"
     }
   }
 }

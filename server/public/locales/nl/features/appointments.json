@@ -19,7 +19,9 @@
     "ticketLabel": "Koppelen aan bestaand ticket (Optioneel)",
     "selectTicket": "Selecteer een ticket",
     "noTicket": "Geen ticket",
-    "ticketHint": "Koppel deze afspraak optioneel aan een bestaand supportticket"
+    "ticketHint": "Koppel deze afspraak optioneel aan een bestaand supportticket",
+    "noTicketsFound": "No tickets found matching your search",
+    "searchTickets": "Search tickets..."
   },
   "step2": {
     "title": "Kies datum",
@@ -35,7 +37,8 @@
     "technicianLabel": "Voorkeurstechnicus",
     "selectTechnician": "Selecteer een technicus",
     "noPreference": "Geen voorkeur",
-    "technicianHint": "Dit is een voorkeur en kan worden aangepast op basis van beschikbaarheid"
+    "technicianHint": "Dit is een voorkeur en kan worden aangepast op basis van beschikbaarheid",
+    "noTimeSlotsAvailable": "No time slots available for this date. Please select a different date."
   },
   "step4": {
     "title": "Controleren en bevestigen",

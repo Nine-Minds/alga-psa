@@ -28,7 +28,15 @@
     "quickActions": {
       "title": "Actions rapides",
       "createTicket": "Créer un ticket d'assistance",
+      "requestAppointment": "Request Appointment",
       "viewLatestInvoice": "Voir la dernière facture"
+    },
+    "appointments": {
+      "title": "Upcoming Appointments",
+      "noUpcoming": "No upcoming appointments. Request one now!",
+      "requestButton": "Request Appointment",
+      "viewAll": "View all appointments →",
+      "technician": "Technician"
     },
     "recentActivity": {
       "title": "Activité récente"
@@ -65,6 +73,8 @@
     "welcomeTitle": "Bienvenue sur votre portail client",
     "welcomeSubtitle": "Gérez vos tickets d'assistance et restez connecté",
     "signInDescription": "Veuillez saisir vos identifiants pour accéder à votre compte.",
+    "clientLogin": "Connexion client",
+    "mspStaffLogin": "Personnel MSP ? Connectez-vous ici →",
     "accessDeniedTitle": "Accès refusé",
     "accessDeniedMessage": "Vous n'avez pas l'autorisation d'accéder au portail client.",
     "registrationSuccessTitle": "Inscription réussie",
@@ -125,8 +135,7 @@
         "description": "Consultez les documents et ressources partagés"
       }
     },
-    "clientLogin": "Connexion client",
-    "mspStaffLogin": "Personnel MSP ? Connectez-vous ici →"
+    "forgotPassword": "Forgot password?"
   },
   "account": {
     "title": "Compte",
@@ -192,12 +201,6 @@
       "addPaymentError": "Échec de l'ajout du moyen de paiement",
       "removePaymentError": "Échec de la suppression du moyen de paiement",
       "setDefaultError": "Échec de la définition du moyen de paiement par défaut",
-      "validation": {
-        "cardNumber": "Veuillez saisir un numéro de carte valide à 16 chiffres",
-        "expMonth": "Veuillez saisir un mois valide (01-12)",
-        "expYear": "Veuillez saisir une année valide (2024-2099)",
-        "cvv": "Veuillez saisir un code CVV valide"
-      },
       "loadingBillingInfo": "Chargement des informations de facturation...",
       "overviewTitle": "Vue d’ensemble de la facturation",
       "paymentMethodsTitle": "Méthodes de paiement",
@@ -229,6 +232,12 @@
         "endDate": "Date de fin",
         "status": "Statut",
         "empty": "Aucun historique de facturation disponible"
+      },
+      "validation": {
+        "cardNumber": "Veuillez saisir un numéro de carte valide à 16 chiffres",
+        "expMonth": "Veuillez saisir un mois valide (01-12)",
+        "expYear": "Veuillez saisir une année valide (2024-2099)",
+        "cvv": "Veuillez saisir un code CVV valide"
       }
     }
   },
@@ -305,8 +314,8 @@
       "photoRemoved": "Photo retirée avec succès",
       "userNotFound": "Utilisateur introuvable",
       "loadError": "Échec du chargement du profil",
-      "avatarDescription": "Cet avatar est affiché au personnel MSP lorsqu'il consulte vos informations de contact.",
-      "loading": "Chargement du profil..."
+      "loading": "Chargement du profil...",
+      "avatarDescription": "Cet avatar est affiché au personnel MSP lorsqu'il consulte vos informations de contact."
     },
     "imageUpload": {
       "uploadAvatar": "Téléverser un avatar",

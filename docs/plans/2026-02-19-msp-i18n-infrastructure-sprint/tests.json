@@ -410,7 +410,7 @@
   {
     "id": "T051",
     "description": "Phase 1 tests pass with updated namespace reference msp/core instead of msp",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F023"
     ]

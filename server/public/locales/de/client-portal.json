@@ -28,7 +28,15 @@
     "quickActions": {
       "title": "Schnellaktionen",
       "createTicket": "Support-Ticket erstellen",
+      "requestAppointment": "Request Appointment",
       "viewLatestInvoice": "Neueste Rechnung anzeigen"
+    },
+    "appointments": {
+      "title": "Upcoming Appointments",
+      "noUpcoming": "No upcoming appointments. Request one now!",
+      "requestButton": "Request Appointment",
+      "viewAll": "View all appointments →",
+      "technician": "Technician"
     },
     "recentActivity": {
       "title": "Neueste Aktivitäten"
@@ -65,6 +73,8 @@
     "welcomeTitle": "Willkommen in deinem Kundenportal",
     "welcomeSubtitle": "Verwalte deine Support-Tickets und bleibe in Verbindung",
     "signInDescription": "Bitte gib deine Zugangsdaten ein, um auf dein Konto zuzugreifen.",
+    "clientLogin": "Kundenanmeldung",
+    "mspStaffLogin": "MSP-Mitarbeitende? Hier anmelden →",
     "accessDeniedTitle": "Zugriff verweigert",
     "accessDeniedMessage": "Du hast keine Berechtigung, auf das Kundenportal zuzugreifen.",
     "registrationSuccessTitle": "Registrierung erfolgreich",
@@ -125,8 +135,7 @@
         "description": "Sieh dir geteilte Dokumente und Ressourcen an"
       }
     },
-    "clientLogin": "Kundenanmeldung",
-    "mspStaffLogin": "MSP-Mitarbeitende? Hier anmelden →"
+    "forgotPassword": "Forgot password?"
   },
   "account": {
     "title": "Konto",
@@ -192,12 +201,6 @@
       "addPaymentError": "Zahlungsmethode konnte nicht hinzugefügt werden",
       "removePaymentError": "Zahlungsmethode konnte nicht entfernt werden",
       "setDefaultError": "Standard-Zahlungsmethode konnte nicht festgelegt werden",
-      "validation": {
-        "cardNumber": "Bitte gib eine gültige 16-stellige Kartennummer ein",
-        "expMonth": "Bitte gib einen gültigen Monat ein (01-12)",
-        "expYear": "Bitte gib ein gültiges Jahr ein (2024-2099)",
-        "cvv": "Bitte gib eine gültige Prüfziffer (CVV) ein"
-      },
       "loadingBillingInfo": "Abrechnungsinformationen werden geladen...",
       "overviewTitle": "Abrechnungsübersicht",
       "paymentMethodsTitle": "Zahlungsmethoden",
@@ -229,6 +232,12 @@
         "endDate": "Enddatum",
         "status": "Status",
         "empty": "Keine Abrechnungshistorie verfügbar"
+      },
+      "validation": {
+        "cardNumber": "Bitte gib eine gültige 16-stellige Kartennummer ein",
+        "expMonth": "Bitte gib einen gültigen Monat ein (01-12)",
+        "expYear": "Bitte gib ein gültiges Jahr ein (2024-2099)",
+        "cvv": "Bitte gib eine gültige Prüfziffer (CVV) ein"
       }
     }
   },
@@ -305,8 +314,8 @@
       "photoRemoved": "Foto erfolgreich entfernt",
       "userNotFound": "Benutzer nicht gefunden",
       "loadError": "Profil konnte nicht geladen werden",
-      "avatarDescription": "Dieses Avatar wird dem MSP-Team angezeigt, wenn es deine Kontaktinformationen ansieht.",
-      "loading": "Profil wird geladen..."
+      "loading": "Profil wird geladen...",
+      "avatarDescription": "Dieses Avatar wird dem MSP-Team angezeigt, wenn es deine Kontaktinformationen ansieht."
     },
     "imageUpload": {
       "uploadAvatar": "Avatar hochladen",

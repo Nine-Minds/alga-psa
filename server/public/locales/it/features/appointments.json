@@ -19,7 +19,9 @@
     "ticketLabel": "Collega a ticket esistente (Opzionale)",
     "selectTicket": "Seleziona un ticket",
     "noTicket": "Nessun ticket",
-    "ticketHint": "Collega facoltativamente questo appuntamento a un ticket di supporto esistente"
+    "ticketHint": "Collega facoltativamente questo appuntamento a un ticket di supporto esistente",
+    "noTicketsFound": "No tickets found matching your search",
+    "searchTickets": "Search tickets..."
   },
   "step2": {
     "title": "Scegli data",
@@ -35,7 +37,8 @@
     "technicianLabel": "Tecnico preferito",
     "selectTechnician": "Seleziona un tecnico",
     "noPreference": "Nessuna preferenza",
-    "technicianHint": "Questa è una preferenza e può essere modificata in base alla disponibilità"
+    "technicianHint": "Questa è una preferenza e può essere modificata in base alla disponibilità",
+    "noTimeSlotsAvailable": "No time slots available for this date. Please select a different date."
   },
   "step4": {
     "title": "Rivedi e conferma",

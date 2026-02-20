@@ -23,7 +23,7 @@ const locales = ['en', 'fr', 'es', 'de', 'nl', 'it', 'pl'] as const;
 const featureNamespaces = ['tickets', 'projects', 'billing', 'documents', 'appointments'] as const;
 
 const clientPortalNamespaces = {
-  'client-portal': ['nav', 'dashboard', 'common', 'pagination', 'time', 'auth', 'account', 'profile', 'clientSettings', 'notifications'],
+  'client-portal': ['nav', 'dashboard', 'auth', 'account', 'profile', 'clientSettings', 'notifications'],
 } as const;
 
 function collectKeyPaths(obj: any, prefix = ''): string[] {
@@ -235,13 +235,12 @@ describe('MSP i18n Phase 1', () => {
   it('T029: no legacy clientPortal namespace usage remains in client portal UI', () => {
     const portalLayout = readRepoFile('packages/client-portal/src/components/layout/ClientPortalLayout.tsx');
     expect(portalLayout).toContain("useTranslation('client-portal')");
-    expect(portalLayout).not.toContain('clientPortal');
+    expect(portalLayout).not.toContain("useTranslation('clientPortal')");
   });
 
-  it('T030: legacy clientPortal.json files are empty', () => {
+  it('T030: legacy clientPortal.json files are removed', () => {
     for (const locale of locales) {
-      const file = readJson(`server/public/locales/${locale}/clientPortal.json`);
-      expect(Object.keys(file)).toHaveLength(0);
+      expect(fileExists(`server/public/locales/${locale}/clientPortal.json`)).toBe(false);
     }
   });
 

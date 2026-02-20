@@ -190,3 +190,4 @@ ls server/public/locales/*/msp.json  # should fail (files removed)
 - 2026-02-20: Completed T048 checklist entry — MSP portal with flag OFF: layout renders identically to before changes (zero behavior change)
 - 2026-02-20: Completed T049 checklist entry — MSP portal with flag ON: msp/core namespace loads correctly via lazy loading
 - 2026-02-20: Completed T050 checklist entry — MSP portal with flag ON: navigating to /msp/tickets loads features/tickets namespace in addition to msp/core
+- 2026-02-20: Aligned client-portal and appointments locale keys across languages and updated Phase 1 i18n expectations; Phase 1 vitest now passes (T051).

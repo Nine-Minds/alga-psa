@@ -19,7 +19,9 @@
     "ticketLabel": "Vincular a ticket existente (Opcional)",
     "selectTicket": "Seleccione un ticket",
     "noTicket": "Sin ticket",
-    "ticketHint": "Opcionalmente vincule esta cita a un ticket de soporte existente"
+    "ticketHint": "Opcionalmente vincule esta cita a un ticket de soporte existente",
+    "noTicketsFound": "No tickets found matching your search",
+    "searchTickets": "Search tickets..."
   },
   "step2": {
     "title": "Elegir fecha",
@@ -35,7 +37,8 @@
     "technicianLabel": "Técnico preferido",
     "selectTechnician": "Seleccione un técnico",
     "noPreference": "Sin preferencia",
-    "technicianHint": "Esta es una preferencia y puede ajustarse según la disponibilidad"
+    "technicianHint": "Esta es una preferencia y puede ajustarse según la disponibilidad",
+    "noTimeSlotsAvailable": "No time slots available for this date. Please select a different date."
   },
   "step4": {
     "title": "Revisar y confirmar",
