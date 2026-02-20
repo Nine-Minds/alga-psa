@@ -56,7 +56,7 @@
   {
     "id": "F010",
     "description": "Create packages/storage/tsconfig.json extending root tsconfig",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-04"]
   },
   {
