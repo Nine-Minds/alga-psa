@@ -1116,7 +1116,7 @@
   {
     "id": "T132",
     "description": "Internal user without `system_settings.read` cannot read Entra status/mapping views.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F119"
     ]

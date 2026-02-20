@@ -100,6 +100,37 @@ describe('Entra direct connect action permissions', () => {
     expect(hasPermissionMock).not.toHaveBeenCalled();
   });
 
+  it('T132: internal users without read permission cannot access Entra status or mapping preview reads', async () => {
+    hasPermissionMock.mockResolvedValue(false);
+
+    const { getEntraIntegrationStatus, getEntraMappingPreview } = await import(
+      '@alga-psa/integrations/actions/integrations/entraActions'
+    );
+
+    const statusResult = await getEntraIntegrationStatus(
+      { user_id: 'user-132', user_type: 'internal' } as any,
+      { tenant: 'tenant-132' }
+    );
+    const mappingResult = await getEntraMappingPreview(
+      { user_id: 'user-132', user_type: 'internal' } as any,
+      { tenant: 'tenant-132' }
+    );
+
+    expect(statusResult).toEqual({
+      success: false,
+      error: 'Forbidden: insufficient permissions to view Entra integration',
+    });
+    expect(mappingResult).toEqual({
+      success: false,
+      error: 'Forbidden: insufficient permissions to view Entra integration',
+    });
+    expect(hasPermissionMock).toHaveBeenCalledWith(
+      expect.objectContaining({ user_id: 'user-132' }),
+      'system_settings',
+      'read'
+    );
+  });
+
   it('T032: direct connect initiation returns OAuth URL with encoded nonce/state', async () => {
     hasPermissionMock.mockResolvedValue(true);
     featureFlagIsEnabledMock.mockResolvedValue(true);
