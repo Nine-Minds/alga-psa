@@ -8,7 +8,7 @@
   {
     "id": "F002",
     "description": "Add DocumentAssociation export to packages/documents/src/models/index.ts barrel",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-02"]
   },
   {

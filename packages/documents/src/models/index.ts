@@ -3,3 +3,4 @@
  */
 
 export { default as Document } from './document';
+export { default as DocumentAssociation } from './documentAssociation';
