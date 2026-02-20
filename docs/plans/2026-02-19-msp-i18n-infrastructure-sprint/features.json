@@ -92,7 +92,7 @@
   {
     "id": "F016",
     "description": "Rename server/public/locales/{lang}/msp.json to server/public/locales/{lang}/msp/core.json for all 7 languages",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR15"]
   },
   {

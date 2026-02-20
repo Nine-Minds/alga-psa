@@ -133,3 +133,4 @@ ls server/public/locales/*/msp.json  # should fail (files removed)
 - 2026-02-20: Pseudo-locale generator preserves `{{variables}}` in transformed strings (F013).
 - 2026-02-20: Pseudo-locale generator preserves JSON key structure (nested objects/arrays) (F014).
 - 2026-02-20: Added pseudo-locales `xx` and `yy` to `LOCALE_CONFIG.supportedLocales` in UI config (F015).
+- 2026-02-20: Renamed `server/public/locales/{lang}/msp.json` to `server/public/locales/{lang}/msp/core.json` for all locales (F016).
