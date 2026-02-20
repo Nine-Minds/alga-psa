@@ -721,7 +721,7 @@
   {
     "id": "F065",
     "description": "Remap action: move mapping from one client to another with conflict validation.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements"
     ],

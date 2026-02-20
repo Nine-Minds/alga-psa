@@ -192,3 +192,6 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - (2026-02-20) `F063` completed: confirm mapping service applies idempotent remap behavior by updating in-place when active mapping is unchanged and otherwise deactivating prior active row before inserting the next active mapping row.
 - (2026-02-20) `F064` completed: added unmap API/action (`/api/integrations/entra/mappings/unmap`, `unmapEntraTenant`) that safely deactivates active mapping rows, records active `unmapped` state, and clears previous mapped client Entra linkage fields.
 - Validation commands: `npx tsc --noEmit -p packages/integrations/tsconfig.json`, `npx tsc --noEmit -p ee/server/tsconfig.json`, `npx tsc --noEmit -p server/tsconfig.json` (pass).
+- (2026-02-20) `F065` completed: added remap API/action (`/api/integrations/entra/mappings/remap`, `remapEntraTenant`) to move a discovered managed tenant mapping to a target client using confirm-mapping persistence flow.
+- Includes CE delegator + EE stub route wiring for remap endpoint parity.
+- Validation commands: `npx tsc --noEmit -p ee/server/tsconfig.json`, `npx tsc --noEmit -p packages/integrations/tsconfig.json`, `npx tsc --noEmit -p server/tsconfig.json` (pass).

@@ -555,6 +555,31 @@ export const unmapEntraTenant = withAuth(async (
   });
 });
 
+export const remapEntraTenant = withAuth(async (
+  user,
+  { tenant },
+  input: { managedTenantId: string; targetClientId: string }
+) => {
+  const canUpdate = await hasPermission(user as any, 'system_settings', 'update');
+  if (!canUpdate) {
+    return { success: false, error: 'Forbidden: insufficient permissions to configure Entra integration' } as const;
+  }
+
+  const enabled = await isEntraUiEnabledForTenant({
+    tenantId: tenant,
+    userId: (user as { user_id?: string } | undefined)?.user_id,
+  });
+  if (!enabled) {
+    return flagDisabledResult<{ managedTenantId: string; targetClientId: string; status: string }>();
+  }
+
+  return callEeRoute<{ managedTenantId: string; targetClientId: string; status: string }>({
+    importPath: '@enterprise/app/api/integrations/entra/mappings/remap/route',
+    method: 'POST',
+    body: input,
+  });
+});
+
 export const startEntraSync = withAuth(async (
   user,
   { tenant },

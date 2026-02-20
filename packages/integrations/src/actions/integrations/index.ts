@@ -14,6 +14,7 @@ export {
   confirmEntraMappings,
   skipEntraTenantMapping,
   unmapEntraTenant,
+  remapEntraTenant,
   startEntraSync,
   type EntraConnectionType,
   type EntraSyncScope,
