@@ -98,7 +98,7 @@
   {
     "id": "F017",
     "description": "Update all useTranslation('msp') references in codebase to useTranslation('msp/core')",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR16"]
   },
   {
