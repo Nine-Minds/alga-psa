@@ -117,3 +117,7 @@ Focused planning log for guided-layout improvements in Entra integration setting
 - (2026-02-20) T005 completed.
   - `T005` verifies mapped-tenant state makes Sync current and routes CTA to `startEntraSync({ scope: 'initial' })`.
   - Command: `cd ee/server && npx vitest run src/__tests__/unit/entraIntegrationSettings.initialSyncCta.test.tsx -t "T005"`.
+- (2026-02-20) T006 completed.
+  - Added `T006` assertion that `Sync All Tenants Now` is rendered under `#entra-ongoing-operations-panel` and remains gated by mapped-tenant count.
+  - Revalidated related enable/disable tests (`T124`, `T125`).
+  - Command: `cd ee/server && npx vitest run src/__tests__/unit/entraIntegrationSettings.initialSyncCta.test.tsx -t "T006|T124|T125"`.

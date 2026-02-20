@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import EntraIntegrationSettings from '@ee/components/settings/integrations/EntraIntegrationSettings';
 
@@ -283,6 +283,25 @@ describe('EntraIntegrationSettings guided flow', () => {
     render(<EntraIntegrationSettings />);
 
     const syncAllButton = await screen.findByRole('button', { name: 'Sync All Tenants Now' });
+    expect(syncAllButton).toBeDisabled();
+  });
+
+  it('T006: Sync All Tenants Now renders in Ongoing Operations and follows mapped-tenant gating', async () => {
+    mappingTableState.summary = { mapped: 0, skipped: 0, needsReview: 0 };
+    getEntraIntegrationStatusMock.mockResolvedValue({
+      success: true,
+      data: buildStatus({
+        status: 'connected',
+        mappedTenantCount: 0,
+      }),
+    });
+
+    render(<EntraIntegrationSettings />);
+
+    const operationsPanel = await screen.findByText('Ongoing Operations');
+    const panelContainer = operationsPanel.closest('div');
+    expect(panelContainer?.id).toBe('entra-ongoing-operations-panel');
+    const syncAllButton = within(panelContainer as HTMLElement).getByRole('button', { name: 'Sync All Tenants Now' });
     expect(syncAllButton).toBeDisabled();
   });
 

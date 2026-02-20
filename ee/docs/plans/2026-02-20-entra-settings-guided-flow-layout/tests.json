@@ -51,7 +51,7 @@
   {
     "id": "T006",
     "description": "`Sync All Tenants Now` appears in Ongoing Operations section and retains existing enable/disable behavior based on mapped tenant count.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F007"
     ]
