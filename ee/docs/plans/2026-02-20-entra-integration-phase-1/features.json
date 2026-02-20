@@ -1068,7 +1068,7 @@
   {
     "id": "F096",
     "description": "Existing-contact link path: when email matches, attach/update Entra link without overriding protected fields.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements"
     ],

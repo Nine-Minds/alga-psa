@@ -269,3 +269,6 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - (2026-02-20) `F099` completed: added explicit `canAutoLinkEntraUserByEmail(...)` guard in `contactMatcher.ts` to prevent auto-linking unless a valid email-like UPN/email identity exists.
 - Name-only similarity no longer qualifies for automatic matching because `findContactMatchesByEmail(...)` short-circuits to no matches when email identity is absent/invalid.
 - Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
+- (2026-02-20) `F096` completed: added existing-contact link reconciliation helper `linkExistingMatchedContact(...)` in `ee/server/src/lib/integrations/entra/sync/contactReconciler.ts`.
+- Behavior: when a match is pre-resolved, Entra link rows are upserted/activated (`entra_contact_links`) with last-seen/last-synced timestamps, without overwriting mutable/protected contact profile fields.
+- Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
