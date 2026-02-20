@@ -655,3 +655,6 @@ EOF && git add ee/docs/plans/2026-02-20-entra-integration-phase-1/tests.json ee/
 - (2026-02-20) `T109` completed in `ee/server/src/__tests__/unit/entraSyncResultAggregator.test.ts`.
 - Linked-counter assertions verify accurate totals from `increment` and `add`, while ignoring invalid numeric deltas.
 - Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraSyncResultAggregator.test.ts` (pass).
+- (2026-02-20) `T110` completed in `ee/server/src/__tests__/unit/entraSyncResultAggregator.test.ts`.
+- Ambiguous-counter assertions verify per-tenant accumulation semantics and counter isolation from unrelated totals.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraSyncResultAggregator.test.ts` (pass).

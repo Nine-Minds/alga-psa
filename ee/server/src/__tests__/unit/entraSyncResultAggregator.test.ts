@@ -36,4 +36,20 @@ describe('EntraSyncResultAggregator', () => {
       inactivated: 0,
     });
   });
+
+  it('T110: tracks ambiguous counter accurately per tenant run accumulation', () => {
+    const aggregator = new EntraSyncResultAggregator();
+
+    aggregator.increment('ambiguous');
+    aggregator.add({ ambiguous: 2, created: 1 });
+    aggregator.increment('ambiguous', 3);
+
+    expect(aggregator.toJSON()).toEqual({
+      created: 1,
+      linked: 0,
+      updated: 0,
+      ambiguous: 6,
+      inactivated: 0,
+    });
+  });
 });
