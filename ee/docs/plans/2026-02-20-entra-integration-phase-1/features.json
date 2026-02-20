@@ -575,7 +575,7 @@
   {
     "id": "F052",
     "description": "Discovery persistence fields: store tenant id, display name, primary domain, and source user count.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements"
     ],
