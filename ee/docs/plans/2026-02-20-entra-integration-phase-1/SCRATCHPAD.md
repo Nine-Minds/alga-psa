@@ -117,3 +117,4 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - Validation commands: `npx tsc --noEmit -p packages/integrations/tsconfig.json` and `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
 - (2026-02-20) `F036` completed: added `/api/auth/microsoft/entra/callback` server entry with EE branch delegation and EE callback handler that validates state, exchanges code, stores direct tokens in tenant secrets, and marks `entra_partner_connections` active.
 - Added matching `packages/ee` route stubs for new Entra/auth callback paths so CE/server alias typechecking resolves cleanly.
+- (2026-02-20) `F037` completed: added `refreshEntraDirectToken()` helper to refresh direct OAuth access using stored refresh token and Microsoft credential resolver, then persist rotated token metadata.

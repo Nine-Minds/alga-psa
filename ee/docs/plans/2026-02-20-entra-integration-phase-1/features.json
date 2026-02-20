@@ -404,7 +404,7 @@
   {
     "id": "F037",
     "description": "Direct token refresh: implement reusable refresh helper for Entra direct provider sessions.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements"
     ],
