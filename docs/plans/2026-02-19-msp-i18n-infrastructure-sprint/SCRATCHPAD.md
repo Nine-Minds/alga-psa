@@ -141,3 +141,4 @@ ls server/public/locales/*/msp.json  # should fail (files removed)
 - 2026-02-20: Added tracking items F025/T053 to ensure pseudo-locale outputs are gitignored per PRD rollout guidance.
 - 2026-02-20: Ignored pseudo-locale outputs in `.gitignore` (`server/public/locales/xx/`, `server/public/locales/yy/`) (F025).
 - 2026-02-20: Added Phase 0 i18n test suite and made pseudo-locale generator ESM-safe; validated UI `I18N_CONFIG.ns` via tests (T001).
+- 2026-02-20: Verified core `I18N_CONFIG.ns` via Phase 0 test coverage (T002).

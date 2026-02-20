@@ -8,7 +8,7 @@
   {
     "id": "T002",
     "description": "I18N_CONFIG.ns in packages/core/src/lib/i18n/config.ts is ['common'] (synced with ui config)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F001", "F019"]
   },
   {
