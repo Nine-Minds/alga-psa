@@ -1,0 +1,314 @@
+[
+  {
+    "id": "T001",
+    "description": "I18N_CONFIG.ns in packages/ui/src/lib/i18n/config.ts is ['common'] (not ['common', 'client-portal', 'msp'])",
+    "implemented": false,
+    "featureIds": ["F001"]
+  },
+  {
+    "id": "T002",
+    "description": "I18N_CONFIG.ns in packages/core/src/lib/i18n/config.ts is ['common'] (synced with ui config)",
+    "implemented": false,
+    "featureIds": ["F001", "F019"]
+  },
+  {
+    "id": "T003",
+    "description": "ROUTE_NAMESPACES constant is exported from packages/ui/src/lib/i18n/config.ts",
+    "implemented": false,
+    "featureIds": ["F002"]
+  },
+  {
+    "id": "T004",
+    "description": "ROUTE_NAMESPACES maps '/client-portal' to ['common', 'client-portal']",
+    "implemented": false,
+    "featureIds": ["F002"]
+  },
+  {
+    "id": "T005",
+    "description": "ROUTE_NAMESPACES maps '/client-portal/tickets' to ['common', 'client-portal', 'features/tickets']",
+    "implemented": false,
+    "featureIds": ["F002"]
+  },
+  {
+    "id": "T006",
+    "description": "ROUTE_NAMESPACES maps '/msp' to ['common', 'msp/core'] (at minimum)",
+    "implemented": false,
+    "featureIds": ["F002", "F018"]
+  },
+  {
+    "id": "T007",
+    "description": "ROUTE_NAMESPACES maps '/msp/tickets' to ['common', 'msp/core', 'features/tickets']",
+    "implemented": false,
+    "featureIds": ["F002", "F018"]
+  },
+  {
+    "id": "T008",
+    "description": "ROUTE_NAMESPACES maps '/msp/settings' to ['common', 'msp/core']",
+    "implemented": false,
+    "featureIds": ["F002", "F018"]
+  },
+  {
+    "id": "T009",
+    "description": "All ROUTE_NAMESPACES MSP entries use 'msp/core' (not 'msp')",
+    "implemented": false,
+    "featureIds": ["F018"]
+  },
+  {
+    "id": "T010",
+    "description": "getNamespacesForRoute is exported from packages/ui/src/lib/i18n/config.ts",
+    "implemented": false,
+    "featureIds": ["F003"]
+  },
+  {
+    "id": "T011",
+    "description": "getNamespacesForRoute('/msp/tickets') returns namespaces including 'msp/core' and 'features/tickets'",
+    "implemented": false,
+    "featureIds": ["F003"]
+  },
+  {
+    "id": "T012",
+    "description": "getNamespacesForRoute('/client-portal/billing') returns namespaces including 'client-portal' and 'features/billing'",
+    "implemented": false,
+    "featureIds": ["F003"]
+  },
+  {
+    "id": "T013",
+    "description": "getNamespacesForRoute exact match takes priority over prefix match (e.g., '/msp/tickets' exact entry wins over '/msp' prefix)",
+    "implemented": false,
+    "featureIds": ["F003"]
+  },
+  {
+    "id": "T014",
+    "description": "getNamespacesForRoute uses longest prefix match when no exact match (e.g., '/msp/tickets/123' matches '/msp/tickets' entry)",
+    "implemented": false,
+    "featureIds": ["F003"]
+  },
+  {
+    "id": "T015",
+    "description": "getNamespacesForRoute falls back to ['common'] for unknown routes",
+    "implemented": false,
+    "featureIds": ["F003"]
+  },
+  {
+    "id": "T016",
+    "description": "I18nProvider accepts optional namespaces prop (string[])",
+    "implemented": false,
+    "featureIds": ["F004"]
+  },
+  {
+    "id": "T017",
+    "description": "I18nProvider calls i18next.loadNamespaces() for namespaces not yet loaded when namespaces prop is provided",
+    "implemented": false,
+    "featureIds": ["F005"]
+  },
+  {
+    "id": "T018",
+    "description": "I18nProvider loads new namespaces when namespaces prop changes (simulating route navigation)",
+    "implemented": false,
+    "featureIds": ["F005"]
+  },
+  {
+    "id": "T019",
+    "description": "I18nProvider does not re-load namespaces that are already loaded",
+    "implemented": false,
+    "featureIds": ["F005"]
+  },
+  {
+    "id": "T020",
+    "description": "I18nWrapper uses usePathname() to read the current route",
+    "implemented": false,
+    "featureIds": ["F006"]
+  },
+  {
+    "id": "T021",
+    "description": "I18nWrapper calls getNamespacesForRoute(pathname) and passes result as namespaces prop to I18nProvider",
+    "implemented": false,
+    "featureIds": ["F007"]
+  },
+  {
+    "id": "T022",
+    "description": "I18nWrapper re-resolves namespaces when pathname changes (route navigation triggers new namespace resolution)",
+    "implemented": false,
+    "featureIds": ["F008"]
+  },
+  {
+    "id": "T023",
+    "description": "scripts/generate-pseudo-locale.ts exists and is runnable",
+    "implemented": false,
+    "featureIds": ["F009"]
+  },
+  {
+    "id": "T024",
+    "description": "Pseudo-locale script accepts --locale and --fill CLI arguments",
+    "implemented": false,
+    "featureIds": ["F009"]
+  },
+  {
+    "id": "T025",
+    "description": "Pseudo-locale script with --locale xx --fill 1111 generates files under server/public/locales/xx/",
+    "implemented": false,
+    "featureIds": ["F009", "F011"]
+  },
+  {
+    "id": "T026",
+    "description": "Pseudo-locale script reads all English namespace JSON files including nested features/ and msp/ directories",
+    "implemented": false,
+    "featureIds": ["F010"]
+  },
+  {
+    "id": "T027",
+    "description": "Pseudo-locale script output preserves directory structure (e.g., features/tickets.json -> xx/features/tickets.json)",
+    "implemented": false,
+    "featureIds": ["F011"]
+  },
+  {
+    "id": "T028",
+    "description": "Pseudo-locale script replaces all leaf string values with the fill string",
+    "implemented": false,
+    "featureIds": ["F012"]
+  },
+  {
+    "id": "T029",
+    "description": "Pseudo-locale script preserves {{variables}} within fill strings (e.g., '1111 {{name}} 1111' for a value containing {{name}})",
+    "implemented": false,
+    "featureIds": ["F013"]
+  },
+  {
+    "id": "T030",
+    "description": "Pseudo-locale script preserves multiple {{variables}} in a single value (e.g., 'Page {{current}} of {{total}}')",
+    "implemented": false,
+    "featureIds": ["F013"]
+  },
+  {
+    "id": "T031",
+    "description": "Pseudo-locale script preserves JSON key structure exactly (nested objects maintained, no flattening)",
+    "implemented": false,
+    "featureIds": ["F014"]
+  },
+  {
+    "id": "T032",
+    "description": "Pseudo-locale output for common.json has same key structure as en/common.json but all leaf values replaced",
+    "implemented": false,
+    "featureIds": ["F012", "F014"]
+  },
+  {
+    "id": "T033",
+    "description": "Pseudo-locales xx and yy are added to LOCALE_CONFIG.supportedLocales when NODE_ENV === 'development'",
+    "implemented": false,
+    "featureIds": ["F015"]
+  },
+  {
+    "id": "T034",
+    "description": "Pseudo-locales xx and yy are NOT in LOCALE_CONFIG.supportedLocales when NODE_ENV === 'production'",
+    "implemented": false,
+    "featureIds": ["F015"]
+  },
+  {
+    "id": "T035",
+    "description": "Pseudo-locales xx and yy are added to I18N_CONFIG.supportedLngs when NODE_ENV === 'development'",
+    "implemented": false,
+    "featureIds": ["F015"]
+  },
+  {
+    "id": "T036",
+    "description": "server/public/locales/en/msp/core.json exists with same content as old msp.json",
+    "implemented": false,
+    "featureIds": ["F016"]
+  },
+  {
+    "id": "T037",
+    "description": "server/public/locales/{lang}/msp/core.json exists for all 7 languages (en, fr, es, de, nl, it, pl)",
+    "implemented": false,
+    "featureIds": ["F016"]
+  },
+  {
+    "id": "T038",
+    "description": "Old server/public/locales/{lang}/msp.json files are removed for all 7 languages",
+    "implemented": false,
+    "featureIds": ["F016"]
+  },
+  {
+    "id": "T039",
+    "description": "No useTranslation('msp') references remain in source code (only 'msp/core')",
+    "implemented": false,
+    "featureIds": ["F017"]
+  },
+  {
+    "id": "T040",
+    "description": "Phase 1 test file references updated from 'msp' to 'msp/core' namespace",
+    "implemented": false,
+    "featureIds": ["F017", "F023"]
+  },
+  {
+    "id": "T041",
+    "description": "i18next.t('nav.home', { ns: 'msp/core' }) returns correct English translation after namespace rename",
+    "implemented": false,
+    "featureIds": ["F017", "F022"]
+  },
+  {
+    "id": "T042",
+    "description": "packages/core/src/lib/i18n/config.ts I18N_CONFIG.ns is synced to ['common']",
+    "implemented": false,
+    "featureIds": ["F019"]
+  },
+  {
+    "id": "T043",
+    "description": "packages/core/src/lib/i18n/config.ts LOCALE_CONFIG matches packages/ui/src/lib/i18n/config.ts (including any pseudo-locale changes)",
+    "implemented": false,
+    "featureIds": ["F019"]
+  },
+  {
+    "id": "T044",
+    "description": "Client portal at /client-portal loads common and client-portal namespaces correctly",
+    "implemented": false,
+    "featureIds": ["F020"]
+  },
+  {
+    "id": "T045",
+    "description": "Client portal at /client-portal/tickets loads features/tickets namespace in addition to common and client-portal",
+    "implemented": false,
+    "featureIds": ["F020"]
+  },
+  {
+    "id": "T046",
+    "description": "Client portal translations continue displaying correctly after config changes (no regressions)",
+    "implemented": false,
+    "featureIds": ["F020"]
+  },
+  {
+    "id": "T047",
+    "description": "MSP portal with flag OFF: no I18nWrapper rendered, no namespace HTTP requests for msp/core",
+    "implemented": false,
+    "featureIds": ["F021"]
+  },
+  {
+    "id": "T048",
+    "description": "MSP portal with flag OFF: layout renders identically to before changes (zero behavior change)",
+    "implemented": false,
+    "featureIds": ["F021"]
+  },
+  {
+    "id": "T049",
+    "description": "MSP portal with flag ON: msp/core namespace loads correctly via lazy loading",
+    "implemented": false,
+    "featureIds": ["F022"]
+  },
+  {
+    "id": "T050",
+    "description": "MSP portal with flag ON: navigating to /msp/tickets loads features/tickets namespace in addition to msp/core",
+    "implemented": false,
+    "featureIds": ["F022"]
+  },
+  {
+    "id": "T051",
+    "description": "Phase 1 tests pass with updated namespace reference msp/core instead of msp",
+    "implemented": false,
+    "featureIds": ["F023"]
+  },
+  {
+    "id": "T052",
+    "description": "npm run build succeeds with no TypeScript errors after all changes",
+    "implemented": false,
+    "featureIds": ["F024"]
+  }
+]

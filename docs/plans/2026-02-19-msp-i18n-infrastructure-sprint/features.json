@@ -1,0 +1,146 @@
+[
+  {
+    "id": "F001",
+    "description": "Change I18N_CONFIG.ns from ['common', 'client-portal', 'msp'] to ['common'] in packages/ui/src/lib/i18n/config.ts",
+    "implemented": false,
+    "prdRefs": ["FR1"]
+  },
+  {
+    "id": "F002",
+    "description": "Add ROUTE_NAMESPACES constant to packages/ui/src/lib/i18n/config.ts mapping route prefixes to namespace arrays for both MSP and client portal routes",
+    "implemented": false,
+    "prdRefs": ["FR2"]
+  },
+  {
+    "id": "F003",
+    "description": "Add getNamespacesForRoute(pathname) function to packages/ui/src/lib/i18n/config.ts — exact match first, then longest prefix match, fallback to ['common']",
+    "implemented": false,
+    "prdRefs": ["FR3"]
+  },
+  {
+    "id": "F004",
+    "description": "I18nProvider in packages/ui/src/lib/i18n/client.tsx accepts optional namespaces prop (string[])",
+    "implemented": false,
+    "prdRefs": ["FR6"]
+  },
+  {
+    "id": "F005",
+    "description": "I18nProvider calls i18next.loadNamespaces() for namespaces not yet loaded when namespaces prop changes",
+    "implemented": false,
+    "prdRefs": ["FR5"]
+  },
+  {
+    "id": "F006",
+    "description": "I18nWrapper in packages/tenancy/src/components/i18n/I18nWrapper.tsx uses usePathname() to get current route",
+    "implemented": false,
+    "prdRefs": ["FR4"]
+  },
+  {
+    "id": "F007",
+    "description": "I18nWrapper calls getNamespacesForRoute(pathname) and passes result as namespaces prop to I18nProvider",
+    "implemented": false,
+    "prdRefs": ["FR4"]
+  },
+  {
+    "id": "F008",
+    "description": "I18nWrapper re-resolves namespaces when pathname changes (route navigation)",
+    "implemented": false,
+    "prdRefs": ["FR4", "FR5"]
+  },
+  {
+    "id": "F009",
+    "description": "Create scripts/generate-pseudo-locale.ts with --locale and --fill CLI arguments",
+    "implemented": false,
+    "prdRefs": ["FR7", "FR8"]
+  },
+  {
+    "id": "F010",
+    "description": "Pseudo-locale script reads all English namespace JSON files including nested features/ and msp/ directories",
+    "implemented": false,
+    "prdRefs": ["FR9"]
+  },
+  {
+    "id": "F011",
+    "description": "Pseudo-locale script outputs files under server/public/locales/<locale>/ preserving directory structure",
+    "implemented": false,
+    "prdRefs": ["FR10"]
+  },
+  {
+    "id": "F012",
+    "description": "Pseudo-locale script replaces all leaf string values with the fill string",
+    "implemented": false,
+    "prdRefs": ["FR11"]
+  },
+  {
+    "id": "F013",
+    "description": "Pseudo-locale script preserves {{variables}} within fill strings (e.g., '1111 {{name}} 1111')",
+    "implemented": false,
+    "prdRefs": ["FR12"]
+  },
+  {
+    "id": "F014",
+    "description": "Pseudo-locale script preserves JSON key structure exactly (nested objects maintained)",
+    "implemented": false,
+    "prdRefs": ["FR13"]
+  },
+  {
+    "id": "F015",
+    "description": "Add pseudo-locales xx and yy to LOCALE_CONFIG.supportedLocales only when NODE_ENV === 'development'",
+    "implemented": false,
+    "prdRefs": ["FR14"]
+  },
+  {
+    "id": "F016",
+    "description": "Rename server/public/locales/{lang}/msp.json to server/public/locales/{lang}/msp/core.json for all 7 languages",
+    "implemented": false,
+    "prdRefs": ["FR15"]
+  },
+  {
+    "id": "F017",
+    "description": "Update all useTranslation('msp') references in codebase to useTranslation('msp/core')",
+    "implemented": false,
+    "prdRefs": ["FR16"]
+  },
+  {
+    "id": "F018",
+    "description": "ROUTE_NAMESPACES uses 'msp/core' (not 'msp') for all MSP routes",
+    "implemented": false,
+    "prdRefs": ["FR18"]
+  },
+  {
+    "id": "F019",
+    "description": "Sync packages/core/src/lib/i18n/config.ts with any locale config changes from packages/ui/src/lib/i18n/config.ts",
+    "implemented": false,
+    "prdRefs": ["FR19"]
+  },
+  {
+    "id": "F020",
+    "description": "Client portal loads correct namespaces per route with no regressions",
+    "implemented": false,
+    "prdRefs": ["FR20"]
+  },
+  {
+    "id": "F021",
+    "description": "MSP portal with flag OFF has zero behavior change (no namespace loading, no I18nWrapper)",
+    "implemented": false,
+    "prdRefs": ["FR21"]
+  },
+  {
+    "id": "F022",
+    "description": "MSP portal with flag ON loads msp/core namespace correctly via lazy loading",
+    "implemented": false,
+    "prdRefs": ["FR22"]
+  },
+  {
+    "id": "F023",
+    "description": "Phase 1 tests updated to reference msp/core instead of msp and continue passing",
+    "implemented": false,
+    "prdRefs": ["FR23"]
+  },
+  {
+    "id": "F024",
+    "description": "npm run build succeeds with no TypeScript errors after all changes",
+    "implemented": false,
+    "prdRefs": ["FR23"]
+  }
+]
