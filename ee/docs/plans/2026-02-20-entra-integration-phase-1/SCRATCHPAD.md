@@ -517,3 +517,6 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - (2026-02-20) `T063` completed: added service-level unit test `ee/server/src/__tests__/unit/confirmEntraMappingsService.clientLink.test.ts`.
 - Test executes `confirmEntraMappings` with a mapped selection and verifies client row update writes `entra_tenant_id` + `entra_primary_domain` from managed-tenant lookup.
 - Validation command: `cd ee/server && npx vitest run src/__tests__/unit/confirmEntraMappingsService.clientLink.test.ts` (pass).
+- (2026-02-20) `T064` completed in `confirmEntraMappingsService.clientLink` unit suite.
+- Remap scenario asserts existing active mapping is deactivated (`is_active=false`) before inserting one new active mapped row for the target client.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/confirmEntraMappingsService.clientLink.test.ts` (pass).

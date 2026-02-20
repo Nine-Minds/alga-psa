@@ -545,7 +545,7 @@
   {
     "id": "T064",
     "description": "Remap operation preserves one active mapping row and updates previous mapping state.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F063",
       "F065"
