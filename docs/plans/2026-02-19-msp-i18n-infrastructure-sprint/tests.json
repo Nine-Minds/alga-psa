@@ -272,7 +272,7 @@
   {
     "id": "T034",
     "description": "Pseudo-locales xx and yy are present in LOCALE_CONFIG.supportedLocales in all environments",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F015"
     ]

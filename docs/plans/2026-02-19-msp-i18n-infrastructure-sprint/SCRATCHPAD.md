@@ -173,3 +173,4 @@ ls server/public/locales/*/msp.json  # should fail (files removed)
 - 2026-02-20: Completed T031 checklist entry — Pseudo-locale script preserves JSON key structure exactly (nested objects maintained, no flattening)
 - 2026-02-20: Completed T032 checklist entry — Pseudo-locale output for common.json has same key structure as en/common.json but all leaf values replaced
 - 2026-02-20: Completed T033 checklist entry — Pseudo-locales xx and yy are added to LOCALE_CONFIG.supportedLocales
+- 2026-02-20: Completed T034 checklist entry — Pseudo-locales xx and yy are present in LOCALE_CONFIG.supportedLocales in all environments
