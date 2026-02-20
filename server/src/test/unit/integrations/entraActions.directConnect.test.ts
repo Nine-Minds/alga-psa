@@ -131,6 +131,31 @@ describe('Entra direct connect action permissions', () => {
     );
   });
 
+  it('T133: internal users without update permission cannot confirm Entra mappings', async () => {
+    hasPermissionMock.mockResolvedValue(false);
+
+    const { confirmEntraMappings } = await import(
+      '@alga-psa/integrations/actions/integrations/entraActions'
+    );
+    const result = await confirmEntraMappings(
+      { user_id: 'user-133-map', user_type: 'internal' } as any,
+      { tenant: 'tenant-133' },
+      {
+        mappings: [{ managedTenantId: 'managed-133', clientId: 'client-133' }],
+      }
+    );
+
+    expect(result).toEqual({
+      success: false,
+      error: 'Forbidden: insufficient permissions to configure Entra integration',
+    });
+    expect(hasPermissionMock).toHaveBeenCalledWith(
+      expect.objectContaining({ user_id: 'user-133-map' }),
+      'system_settings',
+      'update'
+    );
+  });
+
   it('T032: direct connect initiation returns OAuth URL with encoded nonce/state', async () => {
     hasPermissionMock.mockResolvedValue(true);
     featureFlagIsEnabledMock.mockResolvedValue(true);

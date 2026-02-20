@@ -1124,7 +1124,7 @@
   {
     "id": "T133",
     "description": "Internal user without `system_settings.update` cannot connect, map, or start sync.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F119"
     ]

@@ -176,4 +176,24 @@ describe('startEntraSync action workflow triggers', () => {
     expect(startEntraAllTenantsSyncWorkflowMock).not.toHaveBeenCalled();
     expect(startEntraTenantSyncWorkflowMock).not.toHaveBeenCalled();
   });
+
+  it('T133: internal users without update permission cannot start Entra sync workflows', async () => {
+    hasPermissionMock.mockResolvedValue(false);
+
+    const { startEntraSync } = await import(
+      '@alga-psa/integrations/actions/integrations/entraActions'
+    );
+    const result = await startEntraSync(
+      { user_id: 'user-133-sync', user_type: 'internal' } as any,
+      { tenant: 'tenant-133' },
+      { scope: 'all-tenants' }
+    );
+
+    expect(result).toEqual({
+      success: false,
+      error: 'Forbidden: insufficient permissions to configure Entra integration',
+    });
+    expect(startEntraAllTenantsSyncWorkflowMock).not.toHaveBeenCalled();
+    expect(startEntraTenantSyncWorkflowMock).not.toHaveBeenCalled();
+  });
 });
