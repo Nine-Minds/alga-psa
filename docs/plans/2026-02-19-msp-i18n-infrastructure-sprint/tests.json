@@ -346,7 +346,7 @@
   {
     "id": "T043",
     "description": "packages/core/src/lib/i18n/config.ts LOCALE_CONFIG matches packages/ui/src/lib/i18n/config.ts (including any pseudo-locale changes)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F019"
     ]
