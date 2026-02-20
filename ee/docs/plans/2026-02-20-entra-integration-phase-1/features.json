@@ -1270,7 +1270,7 @@
   {
     "id": "F114",
     "description": "Manual client sync UX: add client-level action with run id feedback and progress polling.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows"
     ],

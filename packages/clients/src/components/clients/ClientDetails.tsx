@@ -220,6 +220,8 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   const [isEditingLogo, setIsEditingLogo] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isSyncingEntra, setIsSyncingEntra] = useState(false);
+  const [entraSyncRunId, setEntraSyncRunId] = useState<string | null>(null);
+  const [entraSyncStatus, setEntraSyncStatus] = useState<string | null>(null);
   const [ticketFormOptions, setTicketFormOptions] = useState<{
     statusOptions: SelectOption[];
     priorityOptions: SelectOption[];
@@ -245,6 +247,61 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     defaultValue: false,
   });
   const showEntraSyncAction = isEEAvailable && entraClientSyncFlag.enabled;
+
+  const fetchEntraSyncRunStatus = useCallback(async (runId: string): Promise<string | null> => {
+    const response = await fetch(`/api/integrations/entra/sync/runs/${runId}`, {
+      method: 'GET',
+      credentials: 'same-origin',
+      cache: 'no-store',
+    });
+    const payload = (await response.json().catch(() => null)) as {
+      success?: boolean;
+      data?: { run?: { status?: string } | null };
+      error?: string;
+    } | null;
+
+    if (!response.ok || !payload?.success) {
+      return null;
+    }
+
+    const status = payload.data?.run?.status ? String(payload.data.run.status) : null;
+    return status;
+  }, []);
+
+  useEffect(() => {
+    if (!entraSyncRunId) {
+      return;
+    }
+
+    let cancelled = false;
+    const terminalStatuses = new Set(['completed', 'failed', 'partial']);
+
+    const poll = async () => {
+      try {
+        const nextStatus = await fetchEntraSyncRunStatus(entraSyncRunId);
+        if (!nextStatus || cancelled) {
+          return;
+        }
+
+        setEntraSyncStatus(`Run ${entraSyncRunId}: ${nextStatus}`);
+        if (terminalStatuses.has(nextStatus.toLowerCase())) {
+          setEntraSyncRunId(null);
+        }
+      } catch {
+        // Keep polling resilient and avoid noisy UI errors on transient failures.
+      }
+    };
+
+    void poll();
+    const intervalId = window.setInterval(() => {
+      void poll();
+    }, 5000);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+    };
+  }, [entraSyncRunId, fetchEntraSyncRunStatus]);
 
 
   const runDeleteValidation = useCallback(async () => {
@@ -763,8 +820,11 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
 
       const runId = result.data?.runId;
       if (runId) {
+        setEntraSyncRunId(runId);
+        setEntraSyncStatus(`Run ${runId}: queued`);
         toast.success(`Entra sync started. Run ID: ${runId}`);
       } else {
+        setEntraSyncStatus('Entra sync started for this client.');
         toast.success('Entra sync started for this client.');
       }
     } catch (error: unknown) {
@@ -1416,21 +1476,28 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
 
           <div className="flex items-center gap-2 mr-8">
             {showEntraSyncAction && (
-              <Button
-                id={`${id}-sync-entra-now-button`}
-                onClick={handleSyncEntraNow}
-                variant="outline"
-                size="sm"
-                className="flex items-center"
-                disabled={isSyncingEntra}
-              >
-                {isSyncingEntra ? (
-                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <RefreshCw className="h-4 w-4 mr-2" />
-                )}
-                Sync Entra Now
-              </Button>
+              <div className="flex flex-col items-end gap-1">
+                <Button
+                  id={`${id}-sync-entra-now-button`}
+                  onClick={handleSyncEntraNow}
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center"
+                  disabled={isSyncingEntra}
+                >
+                  {isSyncingEntra ? (
+                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                  )}
+                  Sync Entra Now
+                </Button>
+                {entraSyncStatus ? (
+                  <p className="text-xs text-muted-foreground" id={`${id}-sync-entra-status`}>
+                    {entraSyncStatus}
+                  </p>
+                ) : null}
+              </div>
             )}
             <Button
               id={`${id}-delete-client-button`}

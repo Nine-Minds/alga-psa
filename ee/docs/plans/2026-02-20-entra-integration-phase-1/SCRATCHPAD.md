@@ -317,3 +317,6 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - (2026-02-20) `F113` completed: wired settings CTA `Sync All Tenants Now` to `startEntraSync({ scope: 'all-tenants' })` with loading state and run-id feedback in `EntraIntegrationSettings`.
 - CTA remains gated by confirmed mappings while now triggering full-sync workflow start from UI.
 - Validation commands: `npx tsc --noEmit -p ee/server/tsconfig.json` and `npx tsc --noEmit -p packages/integrations/tsconfig.json` (pass).
+- (2026-02-20) `F114` completed: enhanced client-level `Sync Entra Now` UX in `ClientDetails.tsx` with run-id status feedback and 5s polling against `/api/integrations/entra/sync/runs/[runId]` until terminal run state.
+- Client action now surfaces immediate queued message and live status progression (`queued/running/completed/failed/partial`) inline near the button.
+- Validation commands: `npx tsc --noEmit -p packages/clients/tsconfig.json` and `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
