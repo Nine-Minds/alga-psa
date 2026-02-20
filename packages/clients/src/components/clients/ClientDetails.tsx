@@ -751,8 +751,13 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
         clientId: editedClient.client_id,
       });
 
-      if (!result.success) {
+      if ('error' in result) {
         toast.error(result.error || 'Failed to start Entra sync.');
+        return;
+      }
+
+      if (!result.success) {
+        toast.error('Failed to start Entra sync.');
         return;
       }
 

@@ -83,3 +83,6 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - (2026-02-20) `F008` completed: added a client-level `Sync Entra Now` action button in `packages/clients/src/components/clients/ClientDetails.tsx`, wired to `startEntraSync({ scope: 'single-client', clientId })` with success/error toast feedback.
 - Validation command: `npx tsc --noEmit -p packages/clients/tsconfig.json` (pass).
 - (2026-02-20) `F009` completed: gated the client-level Entra action button with `useFeatureFlag('entra-integration-client-sync-action')`; button now only renders when both EE mode and tenant flag are enabled.
+- (2026-02-20) `F010` completed: added canonical Entra Phase 1 flag definitions and an idempotent ensure workflow in `PostHogFeatureFlagService.ensureEntraPhase1Flags()`.
+- API workflow update: `POST /api/v1/platform-feature-flags` now supports `{"__action":"ensure_entra_phase1_flags"}` for creating missing Entra flags, and `GET` supports `?includeEntraPhase1Defaults=true` to return definitions alongside current flags.
+- Validation commands: `npx tsc --noEmit -p ee/server/tsconfig.json` and `npx tsc --noEmit -p packages/clients/tsconfig.json` (pass).

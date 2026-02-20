@@ -10,7 +10,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@alga-psa/users/actions';
 import { ApiKeyServiceForApi } from '@/lib/services/apiKeyServiceForApi';
-import { PostHogFeatureFlagService } from '@ee/lib/platformFeatureFlags';
+import { ENTRA_PHASE1_FLAG_DEFINITIONS, PostHogFeatureFlagService } from '@ee/lib/platformFeatureFlags';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -65,7 +65,20 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const service = new PostHogFeatureFlagService();
     const flags = await service.listFlags();
 
-    return NextResponse.json({ success: true, data: flags });
+    const includeEntraDefaults =
+      request.nextUrl.searchParams.get('includeEntraPhase1Defaults') === 'true';
+
+    if (!includeEntraDefaults) {
+      return NextResponse.json({ success: true, data: flags });
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: flags,
+      defaults: {
+        entraPhase1: ENTRA_PHASE1_FLAG_DEFINITIONS,
+      },
+    });
   } catch (error) {
     console.error('[platform-feature-flags] GET error:', error);
 
@@ -91,12 +104,17 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     await assertMasterTenantAccess(request);
 
     const body = await request.json();
+    const service = new PostHogFeatureFlagService();
+
+    if (body?.__action === 'ensure_entra_phase1_flags') {
+      const ensured = await service.ensureEntraPhase1Flags();
+      return NextResponse.json({ success: true, data: ensured });
+    }
 
     if (!body.key || typeof body.key !== 'string') {
       return NextResponse.json({ success: false, error: 'key is required' }, { status: 400 });
     }
 
-    const service = new PostHogFeatureFlagService();
     const flag = await service.createFlag({
       key: body.key,
       name: body.name,
