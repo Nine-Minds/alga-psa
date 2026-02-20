@@ -409,6 +409,11 @@ export const disconnectEntraIntegration = withAuth(async (user, { tenant }) => {
 });
 
 export const discoverEntraManagedTenants = withAuth(async (user, { tenant }) => {
+  const canUpdate = await hasPermission(user as any, 'system_settings', 'update');
+  if (!canUpdate) {
+    return { success: false, error: 'Forbidden: insufficient permissions to configure Entra integration' } as const;
+  }
+
   const enabled = await isEntraUiEnabledForTenant({
     tenantId: tenant,
     userId: (user as { user_id?: string } | undefined)?.user_id,

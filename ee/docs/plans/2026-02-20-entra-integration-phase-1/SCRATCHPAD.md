@@ -157,3 +157,6 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
 - (2026-02-20) `F050` completed: implemented CIPP per-tenant user enumeration in `CippProviderAdapter.listUsersForTenant(...)` with endpoint fallback patterns and normalized user model parity (id/UPN/email/name/account-enabled/phones/job title).
 - Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
+- (2026-02-20) `F051` completed: added discovery execution path via `discoverManagedTenantsForTenant()` (`ee/server/src/lib/integrations/entra/discoveryService.ts`) and wired `POST /api/integrations/entra/discovery` to run provider discovery + DB upsert.
+- Added provider factory selector `getEntraProviderAdapter(connectionType)` (`ee/server/src/lib/integrations/entra/providers/index.ts`) and discovery action permission check for mutation flow.
+- Validation commands: `npx tsc --noEmit -p ee/server/tsconfig.json`, `npx tsc --noEmit -p packages/integrations/tsconfig.json`, `npx tsc --noEmit -p server/tsconfig.json` (pass).

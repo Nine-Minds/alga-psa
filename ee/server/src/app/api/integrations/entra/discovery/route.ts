@@ -1,5 +1,6 @@
-import { dynamic, ok, runtime } from '../_responses';
+import { badRequest, dynamic, ok, runtime } from '../_responses';
 import { requireEntraUiFlagEnabled } from '../_guards';
+import { discoverManagedTenantsForTenant } from '@/lib/integrations/entra/discoveryService';
 
 export { dynamic, runtime };
 
@@ -9,8 +10,11 @@ export async function POST(): Promise<Response> {
     return flagGate;
   }
 
-  return ok({
-    discoveredTenantCount: 0,
-    discoveredTenants: [],
-  });
+  try {
+    const discovered = await discoverManagedTenantsForTenant(flagGate.tenantId);
+    return ok(discovered);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Failed to discover managed Entra tenants.';
+    return badRequest(message);
+  }
 }

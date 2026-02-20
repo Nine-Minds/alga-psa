@@ -563,7 +563,7 @@
   {
     "id": "F051",
     "description": "Discovery action: run provider tenant fetch and upsert into `entra_managed_tenants`.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements"
     ],
