@@ -613,7 +613,7 @@
   {
     "id": "T072",
     "description": "`entraTenantSyncWorkflow` only syncs requested tenant mapping context.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F074",
       "F078"

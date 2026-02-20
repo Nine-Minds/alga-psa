@@ -541,4 +541,6 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - (2026-02-20) `T071` completed in Temporal workflow/activity contract suite.
 - Initial-sync assertion verifies mapped-tenant load precedes per-tenant loop and tenant sync activity invocation.
 - Validation command: `cd server && npx vitest run src/test/unit/temporal/entraWorkflowActivityContracts.test.ts --coverage.enabled=false` (pass).
-EOF && git add ee/docs/plans/2026-02-20-entra-integration-phase-1/tests.json ee/docs/plans/2026-02-20-entra-integration-phase-1/SCRATCHPAD.md && git commit -m "test(T071): verify initial-sync workflow load-and-process order"
+EOF && git add ee/docs/plans/2026-02-20-entra-integration-phase-1/tests.json ee/docs/plans/2026-02-20-entra-integration-phase-1/SCRATCHPAD.md && git commit -m "test(T071): verify initial-sync workflow load-and-process order"- (2026-02-20) `T072` completed in Temporal workflow/activity contract suite.
+- Tenant-sync assertion verifies workflow filters selected mapping by requested `managedTenantId` and optional `clientId` scope before processing.
+- Validation command: `cd server && npx vitest run src/test/unit/temporal/entraWorkflowActivityContracts.test.ts --coverage.enabled=false` (pass).
