@@ -267,4 +267,30 @@ describe('EntraIntegrationSettings initial sync CTA', () => {
     await screen.findByRole('button', { name: 'Run Initial Sync' });
     expect(document.getElementById('entra-reconciliation-queue-stub')).toBeNull();
   });
+
+  it('T129: ambiguous reconciliation queue panel is visible when flag is enabled', async () => {
+    mappingTableState.summary = { mapped: 1, skipped: 0, needsReview: 0 };
+    mappingTableState.skippedTenants = [];
+    useFeatureFlagMock.mockImplementation((name: string) => ({
+      enabled: name === 'entra-integration-ui' || name === 'entra-integration-ambiguous-queue',
+    }));
+    getEntraIntegrationStatusMock.mockResolvedValue({
+      success: true,
+      data: {
+        status: 'connected',
+        connectionType: 'direct',
+        lastDiscoveryAt: null,
+        mappedTenantCount: 1,
+        nextSyncIntervalMinutes: null,
+        availableConnectionTypes: ['direct', 'cipp'],
+        lastValidatedAt: null,
+        lastValidationError: null,
+      },
+    });
+
+    render(<EntraIntegrationSettings />);
+
+    await screen.findByRole('button', { name: 'Run Initial Sync' });
+    expect(document.getElementById('entra-reconciliation-queue-stub')).not.toBeNull();
+  });
 });

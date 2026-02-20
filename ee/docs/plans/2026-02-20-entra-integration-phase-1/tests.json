@@ -1091,7 +1091,7 @@
   {
     "id": "T129",
     "description": "Ambiguous queue panel visible when `entra-integration-ambiguous-queue` is enabled.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F012",
       "F115"
