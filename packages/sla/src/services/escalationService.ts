@@ -11,6 +11,7 @@
 
 import { Knex } from 'knex';
 import { IEscalationManagerWithUser } from '../types';
+import { getEmailNotificationService } from '@alga-psa/notifications/notifications/email';
 
 /**
  * Result of escalating a ticket
@@ -390,11 +391,6 @@ async function sendEscalationEmailNotification(
   level: number
 ): Promise<boolean> {
   try {
-    // Import the email notification service
-    const { getEmailNotificationService } = await import(
-      '@alga-psa/notifications/notifications/email'
-    );
-
     const emailService = getEmailNotificationService();
 
     // Get the SLA Escalation notification subtype ID

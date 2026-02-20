@@ -54,6 +54,7 @@
       "@alga-psa/db/admin.js": ["../../packages/db/src/lib/admin.ts"],
       "@alga-psa/sla": ["../../packages/sla/src"],
       "@alga-psa/sla/*": ["../../packages/sla/src/*"],
+      "@alga-psa/notifications/*": ["./src/typings/notifications/*"],
       "@temporalio/activity": ["../../node_modules/@temporalio/activity"],
       "@temporalio/workflow": ["../../node_modules/@temporalio/workflow"],
       "@temporalio/worker": ["../../node_modules/@temporalio/worker"],

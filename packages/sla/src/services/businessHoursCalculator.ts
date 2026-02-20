@@ -14,6 +14,7 @@
  * - SLA deadline calculations
  */
 
+import { toZonedTime, fromZonedTime } from 'date-fns-tz';
 import { IBusinessHoursScheduleWithEntries, IBusinessHoursEntry, IHoliday } from '../types';
 
 /**
@@ -290,32 +291,11 @@ function isHoliday(holidays: IHoliday[], date: Date): boolean {
 
 /**
  * Convert a Date to a different timezone.
- * Returns a new Date object representing the same instant in the target timezone.
+ * Returns a new Date object whose wall-clock getters (getHours, getDay, etc.)
+ * reflect the target timezone.
  */
 function convertToTimezone(date: Date, timezone: string): Date {
-  // Get the offset for the target timezone
-  const formatter = new Intl.DateTimeFormat('en-US', {
-    timeZone: timezone,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false
-  });
-
-  const parts = formatter.formatToParts(date);
-  const get = (type: string) => parts.find(p => p.type === type)?.value || '0';
-
-  return new Date(
-    parseInt(get('year')),
-    parseInt(get('month')) - 1,
-    parseInt(get('day')),
-    parseInt(get('hour')),
-    parseInt(get('minute')),
-    parseInt(get('second'))
-  );
+  return toZonedTime(date, timezone);
 }
 
 /**
@@ -323,22 +303,7 @@ function convertToTimezone(date: Date, timezone: string): Date {
  * This is the inverse of convertToTimezone.
  */
 function convertFromTimezone(localDate: Date, timezone: string): Date {
-  // Create a date string in the local timezone
-  const dateStr = `${localDate.getFullYear()}-${String(localDate.getMonth() + 1).padStart(2, '0')}-${String(localDate.getDate()).padStart(2, '0')}T${String(localDate.getHours()).padStart(2, '0')}:${String(localDate.getMinutes()).padStart(2, '0')}:${String(localDate.getSeconds()).padStart(2, '0')}`;
-
-  // Parse it as if it's in the target timezone
-  // This is a simplification - for production, consider using a library like date-fns-tz
-  const options: Intl.DateTimeFormatOptions = { timeZone: timezone };
-  const utcDate = new Date(dateStr);
-
-  // Adjust for the timezone offset
-  const utcString = utcDate.toLocaleString('en-US', { timeZone: 'UTC' });
-  const tzString = utcDate.toLocaleString('en-US', options);
-  const utcTime = new Date(utcString).getTime();
-  const tzTime = new Date(tzString).getTime();
-  const offset = tzTime - utcTime;
-
-  return new Date(localDate.getTime() - offset);
+  return fromZonedTime(localDate, timezone);
 }
 
 /**

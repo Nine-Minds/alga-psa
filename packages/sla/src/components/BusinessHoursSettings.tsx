@@ -11,7 +11,7 @@ import { Label } from '@alga-psa/ui/components/Label';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Switch } from '@alga-psa/ui/components/Switch';
-import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import TimezonePicker from '@alga-psa/ui/components/TimezonePicker';
 import GenericDialog from '@alga-psa/ui/components/GenericDialog';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
@@ -41,22 +41,10 @@ import {
   upsertBusinessHoursEntries,
   createHoliday,
   deleteHoliday,
-  createDefaultBusinessHoursSchedule
+  createDefaultBusinessHoursSchedule,
+  getTenantTimezoneForSla
 } from '../actions';
 import { ColumnDefinition } from '@alga-psa/types';
-
-// Common timezones
-const TIMEZONES = [
-  { value: 'America/New_York', label: 'Eastern Time (America/New_York)' },
-  { value: 'America/Chicago', label: 'Central Time (America/Chicago)' },
-  { value: 'America/Denver', label: 'Mountain Time (America/Denver)' },
-  { value: 'America/Los_Angeles', label: 'Pacific Time (America/Los_Angeles)' },
-  { value: 'Europe/London', label: 'London (Europe/London)' },
-  { value: 'Europe/Paris', label: 'Paris (Europe/Paris)' },
-  { value: 'Asia/Tokyo', label: 'Tokyo (Asia/Tokyo)' },
-  { value: 'Australia/Sydney', label: 'Sydney (Australia/Sydney)' },
-  { value: 'UTC', label: 'UTC' },
-];
 
 // Day names with Sunday = 0
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -87,6 +75,9 @@ interface HolidayFormData {
 }
 
 export function BusinessHoursSettings() {
+  // Tenant timezone for defaulting new schedules
+  const [tenantTimezone, setTenantTimezone] = useState<string>('UTC');
+
   // Main state
   const [schedules, setSchedules] = useState<IBusinessHoursSchedule[]>([]);
   const [selectedSchedule, setSelectedSchedule] = useState<IBusinessHoursScheduleWithEntries | null>(null);
@@ -98,7 +89,7 @@ export function BusinessHoursSettings() {
   const [editingScheduleId, setEditingScheduleId] = useState<string | null>(null);
   const [scheduleFormData, setScheduleFormData] = useState<ScheduleFormData>({
     schedule_name: '',
-    timezone: 'America/New_York',
+    timezone: 'UTC',
     is_default: false,
     is_24x7: false,
     entries: getDefaultEntries(),
@@ -165,6 +156,7 @@ export function BusinessHoursSettings() {
 
   useEffect(() => {
     fetchSchedules();
+    getTenantTimezoneForSla().then(tz => setTenantTimezone(tz)).catch(() => {});
   }, [fetchSchedules]);
 
   // Open schedule dialog for creating
@@ -172,7 +164,7 @@ export function BusinessHoursSettings() {
     setEditingScheduleId(null);
     setScheduleFormData({
       schedule_name: '',
-      timezone: 'America/New_York',
+      timezone: tenantTimezone,
       is_default: schedules.length === 0,
       is_24x7: false,
       entries: getDefaultEntries(),
@@ -751,13 +743,9 @@ export function BusinessHoursSettings() {
           {/* Timezone */}
           <div className="space-y-1">
             <Label>Timezone *</Label>
-            <CustomSelect
-              id="schedule-timezone-field"
-              options={TIMEZONES}
+            <TimezonePicker
               value={scheduleFormData.timezone}
-              onValueChange={(value) => setScheduleFormData(prev => ({ ...prev, timezone: value }))}
-              placeholder="Select timezone"
-              disabled={isSavingSchedule}
+              onValueChange={(value: string) => setScheduleFormData(prev => ({ ...prev, timezone: value }))}
             />
           </div>
 

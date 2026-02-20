@@ -1,6 +1,6 @@
 'use server';
 
-import { createTenantKnex, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, withTransaction, normalizeIanaTimeZone } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
@@ -13,6 +13,10 @@ import {
   IHolidayInput,
   IBusinessHoursScheduleWithEntries
 } from '../types';
+import {
+  isWithinBusinessHours as calculatorIsWithinBusinessHours,
+  getNextBusinessHoursStart as calculatorGetNextBusinessHoursStart
+} from '../services/businessHoursCalculator';
 
 // ============================================================================
 // Business Hours Schedules
@@ -529,6 +533,14 @@ export const createDefaultBusinessHoursSchedule = withAuth(async (_user, { tenan
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     const scheduleId = uuidv4();
 
+    // Resolve tenant timezone (falls back to UTC)
+    const settingsRow = await trx('tenant_settings')
+      .where({ tenant })
+      .select('settings')
+      .first();
+    const rawTz = settingsRow?.settings?.timezone;
+    const timezone = normalizeIanaTimeZone(typeof rawTz === 'string' ? rawTz : null);
+
     // Unset any existing default
     await trx('business_hours_schedules')
       .where({ tenant, is_default: true })
@@ -540,7 +552,7 @@ export const createDefaultBusinessHoursSchedule = withAuth(async (_user, { tenan
         tenant,
         schedule_id: scheduleId,
         schedule_name: 'Standard Business Hours',
-        timezone: 'America/New_York',
+        timezone,
         is_default: true,
         is_24x7: false,
         created_at: trx.fn.now(),
@@ -578,7 +590,6 @@ export const isWithinBusinessHours = withAuth(async (_user, { tenant }, schedule
   const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
-    // Get the schedule
     const schedule = await trx('business_hours_schedules')
       .where({ tenant, schedule_id: scheduleId })
       .first();
@@ -587,63 +598,23 @@ export const isWithinBusinessHours = withAuth(async (_user, { tenant }, schedule
       throw new Error('Business hours schedule not found');
     }
 
-    // If 24x7, always return true
-    if (schedule.is_24x7) {
-      return true;
-    }
+    const entries = await trx('business_hours_entries')
+      .where({ tenant, schedule_id: scheduleId })
+      .orderBy('day_of_week', 'asc');
 
-    // Convert datetime to the schedule's timezone
-    const scheduleTimezone = schedule.timezone;
-    const localDate = new Date(datetime.toLocaleString('en-US', { timeZone: scheduleTimezone }));
-    const dateString = datetime.toLocaleDateString('en-CA', { timeZone: scheduleTimezone }); // YYYY-MM-DD format
-
-    // Check if the date is a holiday
-    // Check for exact date match
-    const exactHoliday = await trx('holidays')
+    const holidays = await trx('holidays')
       .where({ tenant })
       .where(function() {
         this.where({ schedule_id: scheduleId }).orWhereNull('schedule_id');
-      })
-      .where({ holiday_date: dateString, is_recurring: false })
-      .first();
+      });
 
-    if (exactHoliday) {
-      return false;
-    }
+    const scheduleWithEntries: IBusinessHoursScheduleWithEntries = {
+      ...schedule,
+      entries,
+      holidays
+    };
 
-    // Check for recurring holiday (same month and day)
-    const month = localDate.getMonth() + 1;
-    const day = localDate.getDate();
-    const recurringHoliday = await trx('holidays')
-      .where({ tenant, is_recurring: true })
-      .where(function() {
-        this.where({ schedule_id: scheduleId }).orWhereNull('schedule_id');
-      })
-      .whereRaw('EXTRACT(MONTH FROM holiday_date) = ?', [month])
-      .whereRaw('EXTRACT(DAY FROM holiday_date) = ?', [day])
-      .first();
-
-    if (recurringHoliday) {
-      return false;
-    }
-
-    // Get the day of week (0=Sunday, 6=Saturday)
-    const dayOfWeek = localDate.getDay();
-
-    // Get the entry for this day
-    const entry = await trx('business_hours_entries')
-      .where({ tenant, schedule_id: scheduleId, day_of_week: dayOfWeek })
-      .first();
-
-    // If no entry for this day, not within business hours
-    if (!entry || !entry.is_enabled) {
-      return false;
-    }
-
-    // Check if the time is within the entry's hours
-    const timeString = localDate.toTimeString().slice(0, 5); // HH:MM format
-
-    return timeString >= entry.start_time && timeString < entry.end_time;
+    return calculatorIsWithinBusinessHours(scheduleWithEntries, datetime);
   });
 });
 
@@ -654,7 +625,6 @@ export const getNextBusinessHourStart = withAuth(async (_user, { tenant }, sched
   const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
-    // Get the schedule
     const schedule = await trx('business_hours_schedules')
       .where({ tenant, schedule_id: scheduleId })
       .first();
@@ -663,100 +633,35 @@ export const getNextBusinessHourStart = withAuth(async (_user, { tenant }, sched
       throw new Error('Business hours schedule not found');
     }
 
-    // If 24x7, return the input datetime
-    if (schedule.is_24x7) {
-      return datetime;
-    }
-
-    // Get all entries for the schedule
     const entries = await trx('business_hours_entries')
-      .where({ tenant, schedule_id: scheduleId, is_enabled: true })
+      .where({ tenant, schedule_id: scheduleId })
       .orderBy('day_of_week', 'asc');
 
-    if (entries.length === 0) {
-      throw new Error('No business hours entries defined for this schedule');
-    }
-
-    // Get all holidays for the schedule
     const holidays = await trx('holidays')
       .where({ tenant })
       .where(function() {
         this.where({ schedule_id: scheduleId }).orWhereNull('schedule_id');
       });
 
-    const scheduleTimezone = schedule.timezone;
-
-    // Helper to check if a date is a holiday
-    const isHoliday = (date: Date): boolean => {
-      const dateString = date.toLocaleDateString('en-CA', { timeZone: scheduleTimezone });
-      const month = parseInt(dateString.slice(5, 7), 10);
-      const day = parseInt(dateString.slice(8, 10), 10);
-
-      return holidays.some(h => {
-        if (h.is_recurring) {
-          const hMonth = parseInt(h.holiday_date.slice(5, 7), 10);
-          const hDay = parseInt(h.holiday_date.slice(8, 10), 10);
-          return month === hMonth && day === hDay;
-        }
-        return h.holiday_date === dateString;
-      });
+    const scheduleWithEntries: IBusinessHoursScheduleWithEntries = {
+      ...schedule,
+      entries,
+      holidays
     };
 
-    // Search up to 14 days ahead
-    const maxDays = 14;
-    let currentDate = new Date(datetime);
+    return calculatorGetNextBusinessHoursStart(scheduleWithEntries, datetime);
+  });
+});
 
-    for (let i = 0; i < maxDays; i++) {
-      // Convert to schedule timezone
-      const localDateStr = currentDate.toLocaleString('en-US', { timeZone: scheduleTimezone });
-      const localDate = new Date(localDateStr);
-      const dayOfWeek = localDate.getDay();
-
-      // Find entry for this day
-      const entry = entries.find(e => e.day_of_week === dayOfWeek);
-
-      if (entry && !isHoliday(currentDate)) {
-        // Get the start time for this day
-        const [startHour, startMinute] = entry.start_time.split(':').map(Number);
-        const [endHour, endMinute] = entry.end_time.split(':').map(Number);
-
-        // Create datetime for start of business hours on this day
-        const startOfBusiness = new Date(localDate);
-        startOfBusiness.setHours(startHour, startMinute, 0, 0);
-
-        const endOfBusiness = new Date(localDate);
-        endOfBusiness.setHours(endHour, endMinute, 0, 0);
-
-        // If we're on the first day and current time is before end of business
-        if (i === 0) {
-          const currentTimeStr = localDate.toTimeString().slice(0, 5);
-
-          // If current time is before start, return start time
-          if (currentTimeStr < entry.start_time) {
-            // Convert back to original timezone/UTC
-            const resultDate = new Date(datetime);
-            resultDate.setHours(startHour, startMinute, 0, 0);
-            return resultDate;
-          }
-
-          // If current time is within business hours, return current time
-          if (currentTimeStr >= entry.start_time && currentTimeStr < entry.end_time) {
-            return datetime;
-          }
-        } else {
-          // For subsequent days, return the start of business hours
-          const resultDate = new Date(currentDate);
-          resultDate.setHours(startHour, startMinute, 0, 0);
-          return resultDate;
-        }
-      }
-
-      // Move to the next day
-      currentDate = new Date(currentDate);
-      currentDate.setDate(currentDate.getDate() + 1);
-      currentDate.setHours(0, 0, 0, 0);
-    }
-
-    throw new Error('Could not find next business hour within 14 days');
+/**
+ * Get the tenant's configured timezone for SLA defaults
+ */
+export const getTenantTimezoneForSla = withAuth(async (_user, { tenant }): Promise<string> => {
+  const { knex } = await createTenantKnex();
+  return withTransaction(knex, async (trx) => {
+    const settingsRow = await trx('tenant_settings')
+      .where({ tenant }).select('settings').first();
+    const rawTz = settingsRow?.settings?.timezone;
+    return normalizeIanaTimeZone(typeof rawTz === 'string' ? rawTz : null);
   });
 });

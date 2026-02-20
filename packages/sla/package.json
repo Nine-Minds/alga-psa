@@ -37,12 +37,14 @@
     "@alga-psa/auth": "*",
     "@alga-psa/core": "*",
     "@alga-psa/db": "*",
+    "@alga-psa/notifications": "*",
     "@alga-psa/shared": "*",
     "@alga-psa/reference-data": "*",
     "@alga-psa/types": "*",
     "@alga-psa/ui": "*",
     "lucide-react": "^0.454.0",
     "react-hot-toast": "^2.4.1",
+    "date-fns-tz": "^3.2.0",
     "zod": "^3.22.4"
   },
   "peerDependencies": {

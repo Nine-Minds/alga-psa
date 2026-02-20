@@ -3,8 +3,8 @@ import { createTenantKnex, withTransaction } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import type {
   IBusinessHoursScheduleWithEntries,
-  SlaNotificationContext,
 } from '@alga-psa/sla/types';
+import type { SlaNotificationContext } from '@alga-psa/sla/services/slaNotificationService';
 import {
   calculateDeadline,
 } from '@alga-psa/sla/services/businessHoursCalculator';

@@ -500,4 +500,83 @@ describe('businessHoursCalculator', () => {
       expect(formatRemainingTime(14400)).toBe('10d'); // 10 days
     });
   });
+
+  describe('DST handling', () => {
+    // Helper: Mon-Fri 9am-5pm in a specific timezone
+    function createScheduleInTz(timezone: string): IBusinessHoursScheduleWithEntries {
+      return createStandardSchedule(timezone);
+    }
+
+    describe('US Eastern spring forward (2024-03-10)', () => {
+      // 2024-03-10 at 2:00 AM EST clocks spring forward to 3:00 AM EDT
+
+      it('should correctly identify 9am EDT as within business hours on the Monday after', () => {
+        const schedule = createScheduleInTz('America/New_York');
+        // Monday 2024-03-11 at 9am EDT = 13:00 UTC (EDT is UTC-4)
+        const datetime = new Date('2024-03-11T13:00:00Z');
+        expect(isWithinBusinessHours(schedule, datetime)).toBe(true);
+      });
+
+      it('should calculate deadline crossing spring-forward correctly', () => {
+        const schedule = createScheduleInTz('America/New_York');
+        // Friday 2024-03-08 at 4pm EST = 21:00 UTC (EST is UTC-5)
+        const startTime = new Date('2024-03-08T21:00:00Z');
+        // 120 business minutes = 2 hours
+        // Fri 4pm-5pm EST = 60 min, then next business day is Mon 2024-03-11 (after DST)
+        // Mon 9am-10am EDT = 60 min → deadline = Mon 10am EDT = 14:00 UTC
+        const deadline = calculateDeadline(schedule, startTime, 120);
+        expect(deadline.toISOString()).toBe('2024-03-11T14:00:00.000Z');
+      });
+    });
+
+    describe('US Eastern fall back (2024-11-03)', () => {
+      // 2024-11-03 at 2:00 AM EDT clocks fall back to 1:00 AM EST
+
+      it('should not double-count elapsed minutes across fall-back', () => {
+        const schedule = createScheduleInTz('America/New_York');
+        // Friday 2024-11-01 at 4pm EDT = 20:00 UTC
+        const startTime = new Date('2024-11-01T20:00:00Z');
+        // Monday 2024-11-04 at 10am EST = 15:00 UTC (EST is UTC-5, DST ended)
+        const endTime = new Date('2024-11-04T15:00:00Z');
+        const result = calculateElapsedBusinessMinutes(schedule, startTime, endTime);
+        // Fri 4pm-5pm EDT = 60 min + Mon 9am-10am EST = 60 min = 120 min
+        expect(result.businessMinutes).toBe(120);
+      });
+    });
+
+    describe('deadline crossing DST boundary', () => {
+      it('should produce correct UTC deadline: Friday before DST → Monday after DST', () => {
+        const schedule = createScheduleInTz('America/New_York');
+        // Friday 2024-03-08 at 3pm EST = 20:00 UTC
+        const startTime = new Date('2024-03-08T20:00:00Z');
+        // 180 business minutes = 3 hours
+        // Fri 3pm-5pm EST = 120 min, Mon 9am-10am EDT = 60 min
+        // Mon 10am EDT = 14:00 UTC
+        const deadline = calculateDeadline(schedule, startTime, 180);
+        expect(deadline.toISOString()).toBe('2024-03-11T14:00:00.000Z');
+      });
+    });
+
+    describe('Europe/London BST transition (2024-03-31)', () => {
+      // 2024-03-31 at 1:00 AM GMT clocks spring forward to 2:00 AM BST
+
+      it('should handle BST spring forward correctly', () => {
+        const schedule = createScheduleInTz('Europe/London');
+        // Friday 2024-03-29 at 4pm GMT = 16:00 UTC
+        const startTime = new Date('2024-03-29T16:00:00Z');
+        // 120 business minutes
+        // Fri 4pm-5pm GMT = 60 min, Mon 2024-04-01 9am BST = 08:00 UTC
+        // Mon 9am-10am BST = 60 min → deadline = 10am BST = 09:00 UTC
+        const deadline = calculateDeadline(schedule, startTime, 120);
+        expect(deadline.toISOString()).toBe('2024-04-01T09:00:00.000Z');
+      });
+
+      it('should correctly check business hours after BST transition', () => {
+        const schedule = createScheduleInTz('Europe/London');
+        // Monday 2024-04-01 at 9am BST = 08:00 UTC
+        const datetime = new Date('2024-04-01T08:00:00Z');
+        expect(isWithinBusinessHours(schedule, datetime)).toBe(true);
+      });
+    });
+  });
 });

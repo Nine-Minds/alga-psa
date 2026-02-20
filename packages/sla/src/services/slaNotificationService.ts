@@ -20,6 +20,8 @@
 import { Knex } from 'knex';
 import { SlaNotificationChannel, SlaNotificationType } from '../types';
 import { formatRemainingTime } from './businessHoursCalculator';
+import { createNotificationFromTemplateInternal } from '@alga-psa/notifications/actions/internal-notification-actions/internalNotificationActions';
+import { getEmailNotificationService } from '@alga-psa/notifications/notifications/email';
 
 /**
  * Notification recipient information
@@ -467,11 +469,6 @@ async function sendInAppNotification(
   ticketId: string
 ): Promise<boolean> {
   try {
-    // Import the internal notification action
-    const { createNotificationFromTemplateInternal } = await import(
-      '@alga-psa/notifications/actions/internal-notification-actions/internalNotificationActions'
-    );
-
     const notification = await createNotificationFromTemplateInternal(trx, {
       tenant,
       user_id: userId,
@@ -507,11 +504,6 @@ async function sendEmailNotification(
     if (!recipient.email) {
       return false;
     }
-
-    // Import the email notification service
-    const { getEmailNotificationService } = await import(
-      '@alga-psa/notifications/notifications/email'
-    );
 
     const emailService = getEmailNotificationService();
 

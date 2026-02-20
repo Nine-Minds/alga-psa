@@ -1457,7 +1457,6 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     client.client_name,
     handleBillingConfigSave,
     contacts,
-    defaultContactOptions,
     handleDefaultContactChange,
     currentUser,
     documents,
