@@ -282,7 +282,7 @@
   {
     "id": "F026",
     "description": "Client model extension: add `clients.entra_tenant_id` and `clients.entra_primary_domain` columns.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data / API / Integrations"
     ],
