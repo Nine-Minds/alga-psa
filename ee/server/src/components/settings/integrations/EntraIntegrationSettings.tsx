@@ -6,6 +6,7 @@ import { Badge } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { getEntraIntegrationStatus, type EntraStatusResponse } from '@alga-psa/integrations/actions';
+import { EntraTenantMappingTable } from './EntraTenantMappingTable';
 
 const WIZARD_STEPS = [
   { id: 1, title: 'Connect', description: 'Choose Direct Microsoft partner auth or CIPP.' },
@@ -112,6 +113,10 @@ export default function EntraIntegrationSettings() {
                 </div>
               ))}
             </div>
+          </div>
+
+          <div className="rounded-lg border border-border/70 bg-background p-4">
+            <EntraTenantMappingTable />
           </div>
 
           <div className="rounded-lg border border-dashed border-border/70 bg-muted/20 p-4" id="entra-connection-status-panel">

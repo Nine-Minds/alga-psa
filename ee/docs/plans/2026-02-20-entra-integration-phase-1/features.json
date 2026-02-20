@@ -630,7 +630,7 @@
   {
     "id": "F057",
     "description": "Mapping UI list: render discovered tenants with confidence and candidate selection controls.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes"
     ],

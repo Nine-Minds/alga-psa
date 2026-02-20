@@ -174,3 +174,6 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - (2026-02-20) `F056` completed: implemented `buildEntraMappingPreview()` in `ee/server/src/lib/integrations/entra/mapping/mappingPreviewService.ts` and wired preview route to return grouped `autoMatched`, `fuzzyCandidates`, and `unmatched` sets.
 - Preview now combines exact-domain, secondary-domain, and fuzzy-name scoring against persisted discovered tenants and tenant client/domain data.
 - Validation commands: `npx tsc --noEmit -p ee/server/tsconfig.json`, `npx tsc --noEmit -p packages/integrations/tsconfig.json`, `npx tsc --noEmit -p server/tsconfig.json` (pass).
+- (2026-02-20) `F057` completed: added `EntraTenantMappingTable` (`ee/server/src/components/settings/integrations/EntraTenantMappingTable.tsx`) and embedded it in `EntraIntegrationSettings`.
+- UI now renders discovered tenants with status badges, suggestion reason, confidence score, and per-row candidate selection controls for mapping review.
+- Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
