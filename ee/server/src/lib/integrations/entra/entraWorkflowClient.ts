@@ -9,6 +9,7 @@ import { createTenantKnex, runWithTenant } from '@/lib/db';
 const DEFAULT_TEMPORAL_ADDRESS = 'temporal-frontend.temporal.svc.cluster.local:7233';
 const DEFAULT_TEMPORAL_NAMESPACE = 'default';
 const DEFAULT_TEMPORAL_TASK_QUEUE = 'tenant-workflows';
+const MANUAL_WORKFLOW_DEDUPE_WINDOW_MS = 5 * 60 * 1000;
 
 export interface EntraWorkflowStartResult {
   available: boolean;
@@ -52,8 +53,39 @@ export interface EntraSyncRunProgressResult {
   }>;
 }
 
-function generateWorkflowId(prefix: string, tenantId: string): string {
-  return `${prefix}:${tenantId}:${Date.now()}:${Math.random().toString(36).slice(2, 8)}`;
+function sanitizeWorkflowIdSegment(value: string): string {
+  return value.replace(/[^a-zA-Z0-9_-]/g, '-');
+}
+
+function resolveIdempotencyBucket(requestedAt?: string): string {
+  const requestedMs = requestedAt ? Date.parse(requestedAt) : Number.NaN;
+  const baseMs = Number.isFinite(requestedMs) ? requestedMs : Date.now();
+  const bucketMs = Math.floor(baseMs / MANUAL_WORKFLOW_DEDUPE_WINDOW_MS) * MANUAL_WORKFLOW_DEDUPE_WINDOW_MS;
+  const bucketIso = new Date(bucketMs).toISOString();
+  return bucketIso.replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z');
+}
+
+function generateWorkflowId(parts: string[], requestedAt?: string): string {
+  const normalizedParts = parts.map((part) => sanitizeWorkflowIdSegment(part));
+  const bucket = resolveIdempotencyBucket(requestedAt);
+  return [...normalizedParts, `bucket-${bucket}`].join(':');
+}
+
+function isWorkflowAlreadyStartedError(error: unknown): boolean {
+  if (!error || typeof error !== 'object') {
+    return false;
+  }
+
+  const maybeError = error as Record<string, unknown>;
+  const name = typeof maybeError.name === 'string' ? maybeError.name : '';
+  const message = typeof maybeError.message === 'string' ? maybeError.message : '';
+  const code = typeof maybeError.code === 'string' ? maybeError.code : '';
+
+  return (
+    name.includes('WorkflowExecutionAlreadyStartedError') ||
+    message.includes('Workflow execution already started') ||
+    code === 'ALREADY_EXISTS'
+  );
 }
 
 async function getTemporalClient(): Promise<any | null> {
@@ -74,8 +106,9 @@ async function startWorkflow(
   workflowId: string,
   input: unknown
 ): Promise<EntraWorkflowStartResult> {
+  let temporal: any | null = null;
   try {
-    const temporal = await getTemporalClient();
+    temporal = await getTemporalClient();
     if (!temporal) {
       return { available: false, error: 'Temporal client not available' };
     }
@@ -88,39 +121,66 @@ async function startWorkflow(
       workflowTaskTimeout: '1m',
     });
 
-    await temporal.connection.close().catch(() => undefined);
-
     return {
       available: true,
       workflowId: handle.workflowId,
       runId: handle.firstExecutionRunId,
     };
   } catch (error: unknown) {
+    if (temporal && isWorkflowAlreadyStartedError(error)) {
+      try {
+        const handle = temporal.client.workflow.getHandle(workflowId);
+        const description = await handle.describe();
+        const describedRunId =
+          (description as any)?.execution?.runId ||
+          (description as any)?.runId ||
+          undefined;
+
+        return {
+          available: true,
+          workflowId,
+          runId: describedRunId,
+        };
+      } catch {
+        return {
+          available: true,
+          workflowId,
+        };
+      }
+    }
+
     return {
       available: false,
       error: error instanceof Error ? error.message : 'Failed to start workflow',
     };
+  } finally {
+    if (temporal?.connection) {
+      await temporal.connection.close().catch(() => undefined);
+    }
   }
 }
 
 export async function startEntraDiscoveryWorkflow(
   input: EntraDiscoveryWorkflowInput
 ): Promise<EntraWorkflowStartResult> {
-  const workflowId = generateWorkflowId('entra-discovery', input.tenantId);
+  const workflowId = generateWorkflowId(['entra-discovery', input.tenantId], input.requestedAt);
   return startWorkflow('entraDiscoveryWorkflow', workflowId, input);
 }
 
 export async function startEntraInitialSyncWorkflow(
   input: EntraInitialSyncWorkflowInput
 ): Promise<EntraWorkflowStartResult> {
-  const workflowId = generateWorkflowId('entra-initial-sync', input.tenantId);
+  const workflowId = generateWorkflowId(['entra-initial-sync', input.tenantId], input.requestedAt);
   return startWorkflow('entraInitialSyncWorkflow', workflowId, input);
 }
 
 export async function startEntraAllTenantsSyncWorkflow(
   input: EntraAllTenantsSyncWorkflowInput
 ): Promise<EntraWorkflowStartResult> {
-  const workflowId = generateWorkflowId('entra-all-tenants-sync', input.tenantId);
+  const workflowId = generateWorkflowId(
+    ['entra-all-tenants-sync', input.tenantId, input.trigger],
+    input.requestedAt
+  );
   return startWorkflow('entraAllTenantsSyncWorkflow', workflowId, input);
 }
 
@@ -128,8 +188,8 @@ export async function startEntraTenantSyncWorkflow(
   input: EntraTenantSyncWorkflowInput
 ): Promise<EntraWorkflowStartResult> {
   const workflowId = generateWorkflowId(
-    `entra-tenant-sync:${input.managedTenantId}`,
-    input.tenantId
+    ['entra-tenant-sync', input.tenantId, input.managedTenantId, input.clientId || ''],
+    input.requestedAt
   );
   return startWorkflow('entraTenantSyncWorkflow', workflowId, input);
 }

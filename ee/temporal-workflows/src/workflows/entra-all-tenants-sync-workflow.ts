@@ -65,6 +65,7 @@ export async function entraAllTenantsSyncWorkflow(
     trigger: input.trigger,
     workflowId,
     actorUserId: input.actor?.userId,
+    requestedAt: input.requestedAt || null,
   });
 
   const run = await activities.upsertSyncRunActivity({

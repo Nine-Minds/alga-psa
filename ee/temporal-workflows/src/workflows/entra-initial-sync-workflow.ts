@@ -64,6 +64,7 @@ export async function entraInitialSyncWorkflow(
     tenantId: input.tenantId,
     workflowId,
     actorUserId: input.actor?.userId,
+    requestedAt: input.requestedAt || null,
   });
 
   const run = await activities.upsertSyncRunActivity({

@@ -74,6 +74,7 @@ export async function entraTenantSyncWorkflow(
     runId: run.runId,
     managedTenantId: input.managedTenantId,
     clientId: input.clientId,
+    requestedAt: input.requestedAt || null,
   });
 
   const mappedTenants = await activities.loadMappedTenantsActivity({

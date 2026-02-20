@@ -247,3 +247,7 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - (2026-02-20) `F089` completed: extended `ee/temporal-workflows/src/schedules/setupSchedules.ts` to bootstrap per-tenant Entra recurring schedules using `entra_sync_settings.sync_interval_minutes`.
 - Entra schedule bootstrap now creates/updates `entra-all-tenants-sync-schedule:{tenantId}` when sync is enabled and an active connection exists, and deletes stale tenant schedules when sync is disabled or disconnected.
 - Validation command: `npx tsc --noEmit -p ee/temporal-workflows/tsconfig.json` (pass).
+- (2026-02-20) `F090` completed: Entra workflow client now generates deterministic, bucketed workflow IDs (5-minute idempotency windows) instead of random IDs.
+- Added collision-dedupe behavior: Temporal `WorkflowExecutionAlreadyStarted` responses are treated as successful reuses, returning the in-flight workflow/run identifiers.
+- Updated Entra workflow logging (`entra-*.ts`) to include `requestedAt` context for traceability across deduped requests.
+- Validation commands: `npx tsc --noEmit -p ee/server/tsconfig.json` and `npx tsc --noEmit -p ee/temporal-workflows/tsconfig.json` (pass).

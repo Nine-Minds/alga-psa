@@ -1000,7 +1000,7 @@
   {
     "id": "F090",
     "description": "Workflow idempotency: enforce deterministic workflow IDs and dedupe for repeated manual requests.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Non-functional Requirements"
     ],

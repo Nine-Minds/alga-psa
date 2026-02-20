@@ -9,6 +9,7 @@ export interface EntraWorkflowActor {
 export interface EntraDiscoveryWorkflowInput {
   tenantId: string;
   actor?: EntraWorkflowActor;
+  requestedAt?: string;
 }
 
 export interface EntraManagedTenantRef {
