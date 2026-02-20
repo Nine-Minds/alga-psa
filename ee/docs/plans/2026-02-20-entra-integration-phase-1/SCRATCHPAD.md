@@ -257,3 +257,6 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - (2026-02-20) `F092` completed: added `ee/server/src/lib/integrations/entra/sync/userFilterPipeline.ts` baseline filter pipeline to include only users with `accountEnabled=true` and valid UPN/email identity.
 - `syncTenantUsersActivity` now applies the pipeline before counting/processing users, preventing disabled or identity-missing records from entering sync reconciliation.
 - Validation commands: `npx tsc --noEmit -p ee/server/tsconfig.json` and `npx tsc --noEmit -p ee/temporal-workflows/tsconfig.json` (pass).
+- (2026-02-20) `F093` completed: expanded `userFilterPipeline` with default service-account noise filters (e.g., `svc-`, `system-`, no-reply/shared mailbox/automation patterns) to exclude likely non-human identities by default.
+- Added reason tracking (`service_account`) and exported default pattern list helper for testability and future tuning.
+- Validation commands: `npx tsc --noEmit -p ee/server/tsconfig.json` and `npx tsc --noEmit -p ee/temporal-workflows/tsconfig.json` (pass).

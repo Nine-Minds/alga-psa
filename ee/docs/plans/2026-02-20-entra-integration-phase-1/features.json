@@ -1034,7 +1034,7 @@
   {
     "id": "F093",
     "description": "Default noise filter: exclude service-account-like UPN/name patterns out of the box.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements"
     ],
