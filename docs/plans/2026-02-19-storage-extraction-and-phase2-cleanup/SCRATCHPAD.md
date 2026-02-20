@@ -86,3 +86,4 @@ grep -r "from '../lib/email'" server/ --include="*.ts" --include="*.tsx"
 - F024: Updated jobs `jobScheduler.ts` to import `StorageService` from `@alga-psa/storage`.
 - F025: Updated `server/src/lib/imports/importActions.ts` to import `StorageService` from `@alga-psa/storage`.
 - F026: Updated `server/src/services/pdf-generation.service.ts` to import storage helpers from `@alga-psa/storage`.
+- F027: Updated documents view API route to import `StorageProviderFactory` from `@alga-psa/storage`.
