@@ -1,6 +1,6 @@
 import { Knex } from 'knex';
 import { JobScheduler } from '../lib/jobs/jobScheduler';
-import { StorageService } from '@alga-psa/documents/storage/StorageService';
+import { StorageService } from '@alga-psa/storage/StorageService';
 import { JobStatus } from '../types/job';
 import { createTenantKnex, runWithTenant } from '@alga-psa/db';
 
