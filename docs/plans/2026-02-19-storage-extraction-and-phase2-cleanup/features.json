@@ -2,7 +2,7 @@
   {
     "id": "F001",
     "description": "Fix broken import in portal-domain-sessions-prune.ts: change 'server/src/lib/models/PortalDomainSessionToken' to '@alga-psa/auth'",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-01"]
   },
   {

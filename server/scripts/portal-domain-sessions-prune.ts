@@ -1,5 +1,5 @@
 #!/usr/bin/env tsx
-import { pruneExpiredPortalDomainOtts } from 'server/src/lib/models/PortalDomainSessionToken';
+import { pruneExpiredPortalDomainOtts } from '@alga-psa/auth';
 import { getAdminConnection } from '@alga-psa/db/admin';
 
 interface CliOptions {

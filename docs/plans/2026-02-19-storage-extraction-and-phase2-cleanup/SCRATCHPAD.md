@@ -58,3 +58,6 @@ grep -r "from '../lib/email'" server/ --include="*.ts" --include="*.tsx"
 ## Open Questions
 
 - Should `server/src/lib/storage/StorageService.ts` (server-side wrapper around documents' StorageProviderFactory) also be updated or moved? It's a different file from the package StorageService. For this PR: just update its import from `@alga-psa/documents` to `@alga-psa/storage`.
+
+## 2026-02-20 Updates
+- F001: Updated `server/scripts/portal-domain-sessions-prune.ts` to import `pruneExpiredPortalDomainOtts` from `@alga-psa/auth` to fix broken path.
