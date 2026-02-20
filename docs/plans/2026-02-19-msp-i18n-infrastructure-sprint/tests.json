@@ -174,7 +174,7 @@
   {
     "id": "T022",
     "description": "I18nWrapper re-resolves namespaces when pathname changes (route navigation triggers new namespace resolution)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F008"
     ]
