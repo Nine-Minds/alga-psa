@@ -127,3 +127,6 @@ Focused planning log for guided-layout improvements in Entra integration setting
 - (2026-02-20) T008 completed.
   - Added onboarding-mode assertion for empty sync history (`T008`) and validated with targeted run including maintenance tests.
   - Command: `cd ee/server && npx vitest run src/__tests__/unit/entraIntegrationSettings.initialSyncCta.test.tsx -t "T008|T009|T010"`.
+- (2026-02-20) T009 completed.
+  - `T009` confirms presence of initial/all-tenants run history flips mode to maintenance and shows operations-first treatment.
+  - Command: `cd ee/server && npx vitest run src/__tests__/unit/entraIntegrationSettings.initialSyncCta.test.tsx -t "T009"`.

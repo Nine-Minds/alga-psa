@@ -76,7 +76,7 @@
   {
     "id": "T009",
     "description": "When at least one initial/all-tenants sync run exists, page switches to maintenance mode and prioritizes operations layout.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F012",
       "F013",
