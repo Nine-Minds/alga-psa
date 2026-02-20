@@ -8,7 +8,7 @@ vi.mock('@alga-psa/core/secrets', () => ({
 
 import { clearCachedStorageConfig, getStorageConfig, validateFileUpload } from '../src/config/storage';
 
-describe('documents storage config', () => {
+describe('storage config', () => {
   beforeEach(() => {
     clearCachedStorageConfig();
 
@@ -38,4 +38,3 @@ describe('documents storage config', () => {
     await expect(validateFileUpload('application/pdf', 1)).rejects.toThrow('File type not allowed');
   });
 });
-
