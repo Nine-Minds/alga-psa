@@ -2,10 +2,14 @@ import logger from '@alga-psa/core/logger';
 import { createTenantKnex, runWithTenant } from '@alga-psa/db/tenant';
 import { getEntraProviderAdapter } from '@ee/lib/integrations/entra/providers';
 import type { EntraConnectionType } from '@ee/interfaces/entra.interfaces';
+import type {
+  DiscoverManagedTenantsActivityInput,
+  DiscoverManagedTenantsActivityOutput,
+} from '../types/entra-sync';
 
-export async function discoverManagedTenantsActivity(input: {
-  tenantId: string;
-}): Promise<{ discoveredTenantCount: number }> {
+export async function discoverManagedTenantsActivity(
+  input: DiscoverManagedTenantsActivityInput
+): Promise<DiscoverManagedTenantsActivityOutput> {
   logger.info('Running discoverManagedTenantsActivity', {
     tenantId: input.tenantId,
   });

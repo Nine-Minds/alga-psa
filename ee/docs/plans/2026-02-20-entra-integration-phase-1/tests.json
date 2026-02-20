@@ -586,7 +586,7 @@
   {
     "id": "T069",
     "description": "Entra Temporal types compile and are consumed by workflows/activities without `any` leakage.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F071"
     ]

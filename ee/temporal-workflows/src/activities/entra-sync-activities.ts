@@ -68,8 +68,14 @@ export async function loadMappedTenantsActivity(
     return query;
   });
 
+  type MappingRow = {
+    managed_tenant_id: string;
+    entra_tenant_id: string;
+    client_id: string | null;
+  };
+
   return {
-    mappings: mappings.map((row: any) => ({
+    mappings: (mappings as MappingRow[]).map((row) => ({
       managedTenantId: String(row.managed_tenant_id),
       entraTenantId: String(row.entra_tenant_id),
       clientId: row.client_id ? String(row.client_id) : null,

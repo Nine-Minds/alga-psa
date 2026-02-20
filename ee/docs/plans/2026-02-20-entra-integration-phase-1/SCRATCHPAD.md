@@ -532,3 +532,6 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - (2026-02-20) `T068` completed in `entraIntegrationSettings.initialSyncCta` tests.
 - Flag-off scenario verifies disabled-state messaging renders while wizard content (`Map Tenants to Clients`) and sync CTA controls are absent.
 - Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraIntegrationSettings.initialSyncCta.test.tsx` (pass).
+- (2026-02-20) `T069` completed: added Entra Temporal type-contract test `server/src/test/unit/temporal/entraTemporalTypeContracts.test.ts` and tightened Entra activity typing.
+- Removed `any` leak in `ee/temporal-workflows/src/activities/entra-sync-activities.ts` by introducing typed row mapping; discovery workflow/activity now consume shared `types/entra-sync` interfaces (`DiscoverManagedTenants*`, `EntraDiscoveryWorkflowResult`).
+- Validation commands: `cd server && npx vitest run src/test/unit/temporal/entraTemporalTypeContracts.test.ts --coverage.enabled=false` (pass), `cd ee/temporal-workflows && npm run type-check` (pass).

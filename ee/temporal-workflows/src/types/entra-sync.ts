@@ -12,6 +12,10 @@ export interface EntraDiscoveryWorkflowInput {
   requestedAt?: string;
 }
 
+export interface EntraDiscoveryWorkflowResult {
+  discoveredTenantCount: number;
+}
+
 export interface EntraManagedTenantRef {
   managedTenantId: string;
   entraTenantId: string;
@@ -73,6 +77,14 @@ export interface UpsertEntraSyncRunActivityInput {
   workflowId: string;
   runType: EntraSyncScope;
   initiatedBy?: string;
+}
+
+export interface DiscoverManagedTenantsActivityInput {
+  tenantId: string;
+}
+
+export interface DiscoverManagedTenantsActivityOutput {
+  discoveredTenantCount: number;
 }
 
 export interface UpsertEntraSyncRunActivityOutput {

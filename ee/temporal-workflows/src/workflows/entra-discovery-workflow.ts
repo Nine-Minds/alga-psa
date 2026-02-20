@@ -1,10 +1,15 @@
 import { log, proxyActivities } from '@temporalio/workflow';
-import type { EntraDiscoveryWorkflowInput } from '../types/entra-sync';
+import type {
+  DiscoverManagedTenantsActivityInput,
+  DiscoverManagedTenantsActivityOutput,
+  EntraDiscoveryWorkflowInput,
+  EntraDiscoveryWorkflowResult,
+} from '../types/entra-sync';
 
 const activities = proxyActivities<{
-  discoverManagedTenantsActivity(input: {
-    tenantId: string;
-  }): Promise<{ discoveredTenantCount: number }>;
+  discoverManagedTenantsActivity(
+    input: DiscoverManagedTenantsActivityInput
+  ): Promise<DiscoverManagedTenantsActivityOutput>;
 }>({
   startToCloseTimeout: '20m',
   retry: {
@@ -17,7 +22,7 @@ const activities = proxyActivities<{
 
 export async function entraDiscoveryWorkflow(
   input: EntraDiscoveryWorkflowInput
-): Promise<{ discoveredTenantCount: number }> {
+): Promise<EntraDiscoveryWorkflowResult> {
   log.info('Starting Entra discovery workflow', {
     tenantId: input.tenantId,
     actorUserId: input.actor?.userId,
