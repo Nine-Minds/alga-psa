@@ -4,7 +4,7 @@ import { createTenantKnex } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { Knex } from 'knex';
-import { StorageService } from '@alga-psa/documents/storage/StorageService';
+import { StorageService } from '@alga-psa/storage/StorageService';
 import { FileStoreModel } from '../../models/storage';
 import { FileStore } from '../../types/storage';
 
