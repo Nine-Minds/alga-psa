@@ -94,7 +94,7 @@
   {
     "id": "T012",
     "description": "getNamespacesForRoute('/client-portal/billing') returns namespaces including 'client-portal' and 'features/billing'",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F003"
     ]
