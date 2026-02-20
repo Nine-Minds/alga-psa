@@ -195,6 +195,10 @@ export default function EntraIntegrationSettings() {
               <p><span className="font-medium text-foreground">Connection Type:</span> {status?.connectionType || 'Not configured'}</p>
               <p><span className="font-medium text-foreground">Last Discovery:</span> {formatDateTime(status?.lastDiscoveryAt)}</p>
               <p><span className="font-medium text-foreground">Mapped Tenants:</span> {status?.mappedTenantCount ?? 0}</p>
+              <p>
+                <span className="font-medium text-foreground">Next Sync Interval:</span>{' '}
+                {status?.nextSyncIntervalMinutes ? `Every ${status.nextSyncIntervalMinutes} minutes` : 'Not configured'}
+              </p>
               <p><span className="font-medium text-foreground">Last Validated:</span> {formatDateTime(status?.lastValidatedAt)}</p>
               <p><span className="font-medium text-foreground">Validation Error:</span> {validationMessage || 'None'}</p>
             </div>

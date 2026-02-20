@@ -1236,7 +1236,7 @@
   {
     "id": "F111",
     "description": "Settings status panel: show connection state, last discovery, mapped tenant count, and next sync interval.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes"
     ],

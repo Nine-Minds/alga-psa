@@ -309,3 +309,5 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - (2026-02-20) `F110` completed: hardened `createContactForEntraUser(...)` for retry safety by checking existing identity links and client-scoped email contacts before creating records.
 - Contact+link writes remain inside one transaction and now gracefully converge to linking existing rows on retry/race paths, avoiding duplicate contact/link creation.
 - Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
+- (2026-02-20) `F111` completed: extended Entra status API payload to include `nextSyncIntervalMinutes` from `entra_sync_settings`, and updated settings status panel to display next sync cadence alongside connection/discovery/mapping state.
+- Validation commands: `npx tsc --noEmit -p ee/server/tsconfig.json` and `npx tsc --noEmit -p packages/integrations/tsconfig.json` (pass).

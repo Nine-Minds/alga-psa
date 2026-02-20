@@ -150,6 +150,7 @@ export type EntraStatusResponse = {
   connectionType: EntraConnectionType | null;
   lastDiscoveryAt: string | null;
   mappedTenantCount: number;
+  nextSyncIntervalMinutes: number | null;
   availableConnectionTypes: EntraConnectionType[];
   lastValidatedAt: string | null;
   lastValidationError: Record<string, unknown> | null;
