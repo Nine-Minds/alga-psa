@@ -597,7 +597,7 @@
   {
     "id": "F054",
     "description": "Secondary domain match rule: support alternative client domain fields for confidence scoring.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements"
     ],

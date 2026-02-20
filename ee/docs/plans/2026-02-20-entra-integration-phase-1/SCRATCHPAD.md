@@ -165,3 +165,6 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - (2026-02-20) `F053` completed: added exact-domain matcher utilities in `ee/server/src/lib/integrations/entra/mapping/matchers/exactDomainMatcher.ts`.
 - Includes domain normalization + email/url domain extraction and deterministic exact-domain candidate generation (`reason: exact_domain`, confidence `1.0`).
 - Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
+- (2026-02-20) `F054` completed: added secondary-domain matcher in `ee/server/src/lib/integrations/entra/mapping/matchers/secondaryDomainMatcher.ts`.
+- Secondary matches are normalized and scored below exact matches (`0.88`) so they contribute confidence/candidates without auto-promoting over exact-domain hits.
+- Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
