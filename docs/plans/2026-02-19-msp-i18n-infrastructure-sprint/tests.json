@@ -394,7 +394,7 @@
   {
     "id": "T049",
     "description": "MSP portal with flag ON: msp/core namespace loads correctly via lazy loading",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F022"
     ]
