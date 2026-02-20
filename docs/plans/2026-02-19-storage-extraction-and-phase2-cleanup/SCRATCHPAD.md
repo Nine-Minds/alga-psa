@@ -66,3 +66,4 @@ grep -r "from '../lib/email'" server/ --include="*.ts" --include="*.tsx"
 - F004: Switched `documentPermissionsIntegration.test.ts` to import `DocumentAssociation` from the documents package model path.
 - F005: Removed obsolete `server/src/models/document-association.ts` after test imports migrated.
 - F006: Updated `server/src/services/surveyService.ts` to import `TenantEmailService` from `@alga-psa/email`.
+- F007: Deleted `server/src/lib/email/index.ts` shim after confirming no source imports remain.

@@ -38,7 +38,7 @@
   {
     "id": "F007",
     "description": "Delete server/src/lib/email/index.ts re-export shim (verify no remaining source callers first)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-03"]
   },
   {
