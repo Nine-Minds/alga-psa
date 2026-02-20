@@ -953,7 +953,7 @@
   {
     "id": "T113",
     "description": "Retry of same tenant sync does not duplicate `entra_contact_links` rows.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F110"
     ]

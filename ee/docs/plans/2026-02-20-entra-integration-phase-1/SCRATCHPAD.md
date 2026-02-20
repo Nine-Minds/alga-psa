@@ -664,3 +664,6 @@ EOF && git add ee/docs/plans/2026-02-20-entra-integration-phase-1/tests.json ee/
 - (2026-02-20) `T112` completed: added `ee/server/src/__tests__/unit/entraSyncResultSerializer.test.ts`.
 - Serializer stability assertions compare key-shape parity for success vs failure runs and verify numeric/null normalization for tenant result DTOs.
 - Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraSyncResultSerializer.test.ts` (pass).
+- (2026-02-20) `T113` completed in `ee/server/src/__tests__/unit/entraContactLinkRepository.test.ts`.
+- Retry/idempotency assertion uses a conflict-aware fake transaction store to verify repeated sync upserts keep one row per (`tenant`,`entra_tenant_id`,`entra_object_id`) identity key.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraContactLinkRepository.test.ts` (pass).
