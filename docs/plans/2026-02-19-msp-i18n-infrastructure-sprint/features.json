@@ -62,7 +62,7 @@
   {
     "id": "F011",
     "description": "Pseudo-locale script outputs files under server/public/locales/<locale>/ preserving directory structure",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR10"]
   },
   {
