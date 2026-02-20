@@ -20,6 +20,7 @@ const WIZARD_STEPS = [
 ] as const;
 
 export default function EntraIntegrationSettings() {
+  const uiFlag = useFeatureFlag('entra-integration-ui', { defaultValue: false });
   const cippFlag = useFeatureFlag('entra-integration-cipp', { defaultValue: false });
   const fieldSyncFlag = useFeatureFlag('entra-integration-field-sync', { defaultValue: false });
   const ambiguousQueueFlag = useFeatureFlag('entra-integration-ambiguous-queue', { defaultValue: false });
@@ -82,6 +83,21 @@ export default function EntraIntegrationSettings() {
       : []),
   ];
   const hasConfirmedMappings = (status?.mappedTenantCount || 0) > 0;
+
+  if (!uiFlag.enabled) {
+    return (
+      <div className="space-y-6" id="entra-integration-settings-disabled">
+        <Card>
+          <CardHeader>
+            <CardTitle>Microsoft Entra Integration</CardTitle>
+            <CardDescription>
+              Entra integration UI is currently disabled for this tenant.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6" id="entra-integration-settings">

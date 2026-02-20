@@ -777,7 +777,7 @@
   {
     "id": "F070",
     "description": "Mapping-step feature gating: keep mapping wizard inaccessible when `entra-integration-ui` is disabled.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Feature Flags / Rollout"
     ],

@@ -204,3 +204,5 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
 - (2026-02-20) `F069` completed: added skipped-tenants panel in settings with per-tenant `Remap` entry controls and wired skipped-row state propagation from `EntraTenantMappingTable`.
 - Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
+- (2026-02-20) `F070` completed: added explicit `entra-integration-ui` guard inside `EntraIntegrationSettings` so mapping wizard content is inaccessible and replaced by a disabled-state message when the flag is off.
+- Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
