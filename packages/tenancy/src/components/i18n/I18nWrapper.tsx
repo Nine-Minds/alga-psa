@@ -2,7 +2,7 @@
 
 import { I18nProvider } from '@alga-psa/ui/lib/i18n/client';
 import { SupportedLocale, LOCALE_CONFIG, getNamespacesForRoute } from '@alga-psa/ui/lib/i18n/config';
-import { ReactNode, useEffect, useState } from 'react';
+import { ReactNode, useEffect, useMemo, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { getHierarchicalLocaleAction } from '../../actions';
 
@@ -22,7 +22,10 @@ export function I18nWrapper({
   );
   const [isLoading, setIsLoading] = useState(!initialLocale);
   const pathname = usePathname();
-  const namespaces = getNamespacesForRoute(pathname);
+  const namespaces = useMemo(
+    () => getNamespacesForRoute(pathname),
+    [pathname]
+  );
 
   useEffect(() => {
     if (!initialLocale) {

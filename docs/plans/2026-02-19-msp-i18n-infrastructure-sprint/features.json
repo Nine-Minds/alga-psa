@@ -44,7 +44,7 @@
   {
     "id": "F008",
     "description": "I18nWrapper re-resolves namespaces when pathname changes (route navigation)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR4", "FR5"]
   },
   {
