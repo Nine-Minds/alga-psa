@@ -857,7 +857,7 @@
   {
     "id": "T101",
     "description": "Field sync toggle ON allows display-name overwrite for linked contacts.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F101"
     ]
