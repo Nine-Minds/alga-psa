@@ -11,6 +11,7 @@ import {
   type EntraMappingSummary,
   type EntraSkippedTenant,
 } from './EntraTenantMappingTable';
+import EntraSyncHistoryPanel from './EntraSyncHistoryPanel';
 
 const WIZARD_STEPS = [
   { id: 1, title: 'Connect', description: 'Choose Direct Microsoft partner auth or CIPP.' },
@@ -247,6 +248,8 @@ export default function EntraIntegrationSettings() {
               Sync All Tenants Now
             </Button>
           </div>
+
+          <EntraSyncHistoryPanel />
         </CardContent>
       </Card>
     </div>

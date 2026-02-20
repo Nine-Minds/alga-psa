@@ -106,6 +106,7 @@ export {
   validateEntraDirectConnection,
   validateEntraCippConnection,
   disconnectEntraIntegration,
+  getEntraSyncRunHistory,
   discoverEntraManagedTenants,
   getEntraMappingPreview,
   confirmEntraMappings,
@@ -117,6 +118,8 @@ export {
   type EntraSyncScope,
   type EntraStatusResponse,
   type EntraMappingPreviewResponse,
+  type EntraSyncHistoryRun,
+  type EntraSyncHistoryResponse,
 } from './integrations/entraActions';
 export {
   getTacticalRmmSettings,

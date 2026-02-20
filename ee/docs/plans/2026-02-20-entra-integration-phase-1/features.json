@@ -1247,7 +1247,7 @@
   {
     "id": "F112",
     "description": "Sync history panel: render recent sync runs with per-tenant drilldown in settings UI.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes"
     ],

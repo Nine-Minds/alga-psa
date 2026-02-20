@@ -53,6 +53,18 @@ export interface EntraSyncRunProgressResult {
   }>;
 }
 
+export interface EntraSyncRunHistoryItem {
+  runId: string;
+  status: string;
+  runType: string;
+  startedAt: string;
+  completedAt: string | null;
+  totalTenants: number;
+  processedTenants: number;
+  succeededTenants: number;
+  failedTenants: number;
+}
+
 function sanitizeWorkflowIdSegment(value: string): string {
   return value.replace(/[^a-zA-Z0-9_-]/g, '-');
 }
@@ -284,5 +296,39 @@ export async function getEntraSyncRunProgress(
         completedAt: row.completed_at ? String(row.completed_at) : null,
       })),
     };
+  });
+}
+
+export async function getEntraSyncRunHistory(
+  tenantId: string,
+  limit = 10
+): Promise<EntraSyncRunHistoryItem[]> {
+  return runWithTenant(tenantId, async () => {
+    const { knex } = await createTenantKnex();
+    const rows = await knex('entra_sync_runs')
+      .where({ tenant: tenantId })
+      .orderBy('started_at', 'desc')
+      .limit(Math.max(1, Math.min(50, Math.floor(limit || 10))))
+      .select('*');
+
+    return rows.map((row: any) => ({
+      runId: String(row.run_id),
+      status: String(row.status),
+      runType: String(row.run_type),
+      startedAt:
+        row.started_at instanceof Date
+          ? row.started_at.toISOString()
+          : String(row.started_at),
+      completedAt:
+        row.completed_at instanceof Date
+          ? row.completed_at.toISOString()
+          : row.completed_at
+            ? String(row.completed_at)
+            : null,
+      totalTenants: Number(row.total_tenants || 0),
+      processedTenants: Number(row.processed_tenants || 0),
+      succeededTenants: Number(row.succeeded_tenants || 0),
+      failedTenants: Number(row.failed_tenants || 0),
+    }));
   });
 }

@@ -88,6 +88,7 @@ async function callEeRoute<T>(params: {
   importPath: string;
   method: 'GET' | 'POST';
   body?: unknown;
+  query?: Record<string, string | number | boolean | undefined>;
 }): Promise<EntraActionResult<T>> {
   if (!isEnterpriseEdition) {
     return eeUnavailableResult<T>();
@@ -101,7 +102,17 @@ async function callEeRoute<T>(params: {
       return eeUnavailableResult<T>();
     }
 
-    const request = new Request(`https://localhost/internal/entra${params.importPath}`, {
+    const url = new URL(`https://localhost/internal/entra${params.importPath}`);
+    if (params.query) {
+      for (const [key, value] of Object.entries(params.query)) {
+        if (value === undefined || value === null) {
+          continue;
+        }
+        url.searchParams.set(key, String(value));
+      }
+    }
+
+    const request = new Request(url.toString(), {
       method: params.method,
       headers: { 'content-type': 'application/json' },
       body: params.body === undefined ? undefined : JSON.stringify(params.body),
@@ -173,6 +184,22 @@ export type EntraCippValidationResponse = {
   checkedAt: string;
   tenantCountSample: number;
   endpoint: string;
+};
+
+export type EntraSyncHistoryRun = {
+  runId: string;
+  status: string;
+  runType: string;
+  startedAt: string;
+  completedAt: string | null;
+  totalTenants: number;
+  processedTenants: number;
+  succeededTenants: number;
+  failedTenants: number;
+};
+
+export type EntraSyncHistoryResponse = {
+  runs: EntraSyncHistoryRun[];
 };
 
 export const initiateEntraDirectOAuth = withAuth(async (user, { tenant }) => {
@@ -406,6 +433,36 @@ export const disconnectEntraIntegration = withAuth(async (user, { tenant }) => {
   return callEeRoute<{ status: string }>({
     importPath: '@enterprise/app/api/integrations/entra/disconnect/route',
     method: 'POST',
+  });
+});
+
+export const getEntraSyncRunHistory = withAuth(async (user, { tenant }, limit: number = 10) => {
+  const enabled = await isEntraUiEnabledForTenant({
+    tenantId: tenant,
+    userId: (user as { user_id?: string } | undefined)?.user_id,
+  });
+  if (!enabled) {
+    return flagDisabledResult<EntraSyncHistoryResponse>();
+  }
+
+  const safeLimit = Number.isFinite(limit) ? Math.max(1, Math.min(50, Math.floor(limit))) : 10;
+  return callEeRoute<EntraSyncHistoryResponse>({
+    importPath: '@enterprise/app/api/integrations/entra/sync/runs/route',
+    method: 'GET',
+    query: { limit: safeLimit },
+  }).then((result) => {
+    if (!result.success) {
+      return result;
+    }
+
+    const payload = result.data || { runs: [] };
+    const runs = Array.isArray((payload as any).runs) ? (payload as any).runs : [];
+    return {
+      success: true,
+      data: {
+        runs: runs.slice(0, safeLimit),
+      },
+    } as const;
   });
 });
 
