@@ -28,6 +28,7 @@ import { CalendarIntegrationsSettings } from '@alga-psa/integrations/components'
 import { GoogleIntegrationSettings } from './GoogleIntegrationSettings';
 import dynamic from 'next/dynamic';
 import Spinner from '@alga-psa/ui/components/Spinner';
+import { useFeatureFlag } from '@alga-psa/ui/hooks';
 
 // Dynamic import for StripeConnectionSettings (EE/OSS modular pattern)
 // Uses dynamic import with type assertion due to TypeScript bundler mode resolution issues
@@ -88,6 +89,8 @@ interface IntegrationItem {
 
 const IntegrationsSettingsPage: React.FC = () => {
   const isEEAvailable = process.env.NEXT_PUBLIC_EDITION === 'enterprise';
+  const entraUiFlag = useFeatureFlag('entra-integration-ui', { defaultValue: false });
+  const isEntraUiEnabled = isEEAvailable && entraUiFlag.enabled;
   const searchParams = useSearchParams();
   const categoryParam = searchParams?.get('category');
   
@@ -219,7 +222,7 @@ const IntegrationsSettingsPage: React.FC = () => {
       description: 'Connect identity providers for tenant discovery and contact synchronization.',
       icon: Shield,
       integrations: [
-        ...(isEEAvailable ? [{
+        ...(isEntraUiEnabled ? [{
           id: 'entra',
           name: 'Microsoft Entra',
           description: 'Discover managed Microsoft tenants and sync users to contacts',
@@ -243,7 +246,7 @@ const IntegrationsSettingsPage: React.FC = () => {
         }] : []),
       ],
     },
-  ], [isEEAvailable]);
+  ], [isEEAvailable, isEntraUiEnabled]);
 
   // Filter out empty categories
   const visibleCategories = categories.filter(cat => cat.integrations.length > 0);

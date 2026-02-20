@@ -75,3 +75,5 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - Discovery: `@enterprise/*` resolution in shared packages requires matching CE stub files under `packages/ee/src/*`; added Entra stub there to keep CE builds/typecheck valid.
 - Validation commands: `npx tsc --noEmit -p packages/integrations/tsconfig.json` and `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
 - (2026-02-20) `F005` completed: implemented EE shell component at `ee/server/src/components/settings/integrations/EntraIntegrationSettings.tsx` with a 4-step wizard scaffold (Connect, Discover, Map, Initial Sync) and placeholder status/actions.
+- (2026-02-20) `F006` completed: gated the Entra `Identity` settings surface with `useFeatureFlag('entra-integration-ui')`; the tab/card renders only when EE mode and flag enabled.
+- Decision: kept `useFeatureFlag` hook unchanged; existing default/forced-flag behavior already supports this gate without additional hook work.
