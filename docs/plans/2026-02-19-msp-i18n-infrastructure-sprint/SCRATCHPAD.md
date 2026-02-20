@@ -158,3 +158,4 @@ ls server/public/locales/*/msp.json  # should fail (files removed)
 - 2026-02-20: Completed T016 checklist entry — I18nProvider accepts optional namespaces prop (string[])
 - 2026-02-20: Completed T017 checklist entry — I18nProvider calls i18next.loadNamespaces() for namespaces not yet loaded when namespaces prop is provided
 - 2026-02-20: Completed T018 checklist entry — I18nProvider loads new namespaces when namespaces prop changes (simulating route navigation)
+- 2026-02-20: Completed T019 checklist entry — I18nProvider does not re-load namespaces that are already loaded

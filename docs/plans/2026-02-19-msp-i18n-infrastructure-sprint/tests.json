@@ -150,7 +150,7 @@
   {
     "id": "T019",
     "description": "I18nProvider does not re-load namespaces that are already loaded",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F005"
     ]
