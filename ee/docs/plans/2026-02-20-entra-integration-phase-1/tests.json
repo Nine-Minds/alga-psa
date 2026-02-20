@@ -699,7 +699,7 @@
   {
     "id": "T082",
     "description": "Progress query endpoint returns run-level and tenant-level status data for polling.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F088"
     ]

@@ -571,3 +571,6 @@ EOF && git add ee/docs/plans/2026-02-20-entra-integration-phase-1/tests.json ee/
 - (2026-02-20) `T081` completed in `entraWorkflowClient.start` unit suite.
 - Single-tenant case verifies Temporal start wrapper returns workflow/run IDs and composes tenant+managed-tenant+client workflow-id prefix.
 - Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraWorkflowClient.start.test.ts` (pass).
+- (2026-02-20) `T082` completed: added route unit test `ee/server/src/__tests__/unit/entraSyncRunProgressRoute.test.ts`.
+- Test verifies sync run polling endpoint returns serialized run-level status plus tenant-level result rows and calls workflow progress reader with tenant-scoped context.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraSyncRunProgressRoute.test.ts` (pass).
