@@ -2,7 +2,6 @@
  * @alga-psa/documents - Components
  */
 
-export { BlockEditor } from './BlockEditor';
 export { DocumentEditor } from './DocumentEditor';
 
 export { default as DocumentCard } from './DocumentCard';

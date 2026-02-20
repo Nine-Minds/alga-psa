@@ -32,7 +32,7 @@ import type { PendingTag } from '@alga-psa/types';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
-import { ListChecks, Trash2, Clock, Ticket } from 'lucide-react';
+import { ListChecks, Plus, Trash2, Clock, Ticket } from 'lucide-react';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import MultiUserPicker from '@alga-psa/ui/components/MultiUserPicker';
@@ -1452,15 +1452,21 @@ export default function TaskForm({
           {/* Full width Checklist section */}
           <div>
             <div className="flex items-center gap-2 mb-2">
+              <ListChecks className="h-5 w-5 text-gray-500" />
               <h3 className='font-semibold'>Checklist</h3>
-              <button
-                onClick={toggleEditChecklist}
-                className="text-gray-500 hover:text-gray-700"
+              <Button
+                id="add-checklist-item-header"
                 type="button"
-                title={isEditingChecklist ? "Done editing" : "Edit checklist"}
+                variant="soft"
+                size="sm"
+                onClick={() => {
+                  const newId = addChecklistItem();
+                  setEditingChecklistItemId(newId);
+                  setIsEditingChecklist(true);
+                }}
               >
-                <ListChecks className="h-5 w-5" />
-              </button>
+                <Plus className="h-4 w-4" />
+              </Button>
             </div>
 
                 <div className="flex flex-col space-y-2">
@@ -1514,11 +1520,6 @@ export default function TaskForm({
                   ))}
                 </div>
 
-            {isEditingChecklist && (
-              <Button id='add-checklist-item-button' type="button" variant="soft" onClick={addChecklistItem}>
-                Add an item
-              </Button>
-            )}
           </div>
 
           {/* Full width Dependencies section */}
@@ -1532,6 +1533,7 @@ export default function TaskForm({
               initialSuccessors={taskDependencies.successors}
               users={users}
               phases={phases}
+              currentPhaseId={task.phase_id}
               refreshDependencies={async () => {
                 try {
                   const dependencies = await getTaskDependencies(task.task_id);
@@ -1548,6 +1550,7 @@ export default function TaskForm({
               taskTypes={taskTypes}
               users={users}
               phases={phases}
+              currentPhaseId={phase.phase_id}
               pendingMode
             />
           )}

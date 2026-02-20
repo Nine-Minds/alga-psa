@@ -19,6 +19,7 @@ export interface TextEditorProps {
   children?: React.ReactNode;
   editorRef?: MutableRefObject<BlockNoteEditor | null>;
   documentId?: string;
+  placeholder?: string;
 }
 
 export const DEFAULT_BLOCK: PartialBlock[] = [{

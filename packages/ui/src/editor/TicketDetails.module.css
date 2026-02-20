@@ -136,10 +136,20 @@
     white-space: pre-wrap !important;
 }
 
-.forceTextBreak .ProseMirror a {
+.forceTextBreak :global(.ProseMirror) a {
     overflow-wrap: break-word !important;
     word-break: break-word !important;
     white-space: pre-wrap !important;
+    color: rgb(var(--badge-info-text));
+    font-weight: 500;
+    text-decoration: underline;
+    text-decoration-color: rgb(var(--badge-info-text) / 0.4);
+    text-underline-offset: 2px;
+    cursor: pointer;
+}
+
+.forceTextBreak :global(.ProseMirror) a:hover {
+    text-decoration-color: rgb(var(--badge-info-text));
 }
 
 .forceTextBreak .ProseMirror span {

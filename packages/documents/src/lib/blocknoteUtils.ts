@@ -229,8 +229,20 @@ function extractStyledTextFromContent(content: any[]): string {
   }
 
   return content
-    .filter((item: any) => item && (item.type === 'text' || item.type === 'mention'))
+    .filter((item: any) => item && (item.type === 'text' || item.type === 'mention' || item.type === 'link'))
     .map((item: any) => {
+      // Handle link inline content
+      if (item.type === 'link') {
+        const href = item.href || '';
+        const linkText = Array.isArray(item.content)
+          ? item.content
+              .filter((c: any) => c.type === 'text')
+              .map((c: any) => c.text || '')
+              .join('')
+          : '';
+        return `[${linkText}](${href})`;
+      }
+
       // Handle mention inline content
       if (item.type === 'mention') {
         const { userId, username, displayName } = item.props || {};
@@ -473,8 +485,30 @@ function extractStyledTextToHTML(content: any[]): string {
   if (content.length === 0) return '<br>';
 
   return content
-    .filter((item: any) => item && (item.type === 'text' || item.type === 'mention'))
+    .filter((item: any) => item && (item.type === 'text' || item.type === 'mention' || item.type === 'link'))
     .map((item: any) => {
+      // Handle link inline content
+      if (item.type === 'link') {
+        const href = (item.href || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+        const linkText = Array.isArray(item.content)
+          ? item.content
+              .filter((c: any) => c.type === 'text')
+              .map((c: any) => {
+                let text = (c.text || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                if (c.styles) {
+                  if (c.styles.code) text = `<code>${text}</code>`;
+                  if (c.styles.strike) text = `<s>${text}</s>`;
+                  if (c.styles.underline) text = `<u>${text}</u>`;
+                  if (c.styles.italic) text = `<em>${text}</em>`;
+                  if (c.styles.bold) text = `<strong>${text}</strong>`;
+                }
+                return text;
+              })
+              .join('')
+          : '';
+        return `<a href="${href}" target="_blank" rel="noopener noreferrer">${linkText}</a>`;
+      }
+
       // Handle mention inline content
       if (item.type === 'mention') {
         const { userId, username, displayName } = item.props || {};

@@ -20,7 +20,7 @@ import {
 import { Mention } from './Mention';
 
 // Debug flag
-const DEBUG = true;
+const DEBUG = false;
 
 export interface MentionUser {
   user_id: string;
@@ -38,6 +38,7 @@ interface TextEditorProps {
   editorRef?: MutableRefObject<BlockNoteEditor<any, any, any> | null>;
   documentId?: string;
   searchMentions?: (query: string) => Promise<MentionUser[]>;
+  placeholder?: string;
 }
 
 export const DEFAULT_BLOCK: PartialBlock[] = [{
@@ -71,6 +72,7 @@ export default function TextEditor({
   editorRef,
   documentId,
   searchMentions,
+  placeholder,
 }: TextEditorProps) {
   const { resolvedTheme } = useTheme();
   const blockNoteTheme = resolvedTheme === 'dark' ? 'dark' : 'light';
@@ -146,6 +148,9 @@ export default function TextEditor({
   const editor = useCreateBlockNote({
     schema,
     initialContent,
+    placeholders: {
+      default: placeholder || "Start typing...",
+    },
     domAttributes: {
       editor: {
         class: 'block-note-editor',
@@ -155,26 +160,20 @@ export default function TextEditor({
     _tiptapOptions: {
       editorProps: {
         handlePaste: (view, event, slice) => {
+          // Handle pasting into empty blocks
           const { state, dispatch } = view;
           const { selection } = state;
-
-          // Check if we're pasting into an empty block
           const $pos = selection.$anchor;
           const parent = $pos.parent;
 
-          // If the current block is empty and we have slice content
           if (parent.content.size === 0 && slice.content.size > 0) {
             try {
               const tr = state.tr;
-
-              // Use the correct ProseMirror replace method
               tr.replace(selection.from, selection.to, slice);
-
               dispatch(tr);
               return true;
             } catch (error) {
               console.error('Paste error:', error);
-              // Fall back to default behavior if our custom handling fails
               return false;
             }
           }
@@ -188,11 +187,8 @@ export default function TextEditor({
 
   // Get mention menu items based on search query
   const getMentionMenuItems = async (query: string): Promise<DefaultReactSuggestionItem[]> => {
-    console.log('[TextEditor] getMentionMenuItems called with query:', query);
-
     try {
       const users = await (searchMentions ? searchMentions(query) : Promise.resolve([]));
-      console.log('[TextEditor] Received users:', users.length);
 
       const items: DefaultReactSuggestionItem[] = [];
 
@@ -202,7 +198,6 @@ export default function TextEditor({
           title: 'Everyone',
           subtext: '@everyone - Mention all internal users',
           onItemClick: () => {
-            console.log('[TextEditor] @everyone selected');
             editor.insertInlineContent([
               {
                 type: "mention",
@@ -223,7 +218,6 @@ export default function TextEditor({
         title: user.display_name,
         subtext: user.username ? `@${user.username}` : user.email,
         onItemClick: () => {
-          console.log('[TextEditor] User selected:', user);
           editor.insertInlineContent([
             {
               type: "mention",
@@ -238,13 +232,49 @@ export default function TextEditor({
         },
       })));
 
-      console.log('[TextEditor] Returning items:', items.length);
       return items;
     } catch (error) {
       console.error('[TextEditor] Error fetching mention users:', error);
       return [];
     }
   };
+
+  // Intercept paste events to detect and convert markdown
+  useEffect(() => {
+    if (!editor) return;
+
+    const domElement = editor.domElement;
+    if (!domElement) return;
+
+    const markdownPattern = /^#{1,6}\s|^\*\s|^-\s|^\d+\.\s|\*\*[^*]+\*\*|\[.+\]\(.+\)|^```/m;
+
+    const handlePaste = (event: ClipboardEvent) => {
+      const plainText = event.clipboardData?.getData('text/plain');
+      if (!plainText || !markdownPattern.test(plainText)) return;
+
+      // Prevent default paste — we'll handle it
+      event.preventDefault();
+      event.stopPropagation();
+
+      (async () => {
+        try {
+          const blocks = await editor.tryParseMarkdownToBlocks(plainText);
+          if (blocks && blocks.length > 0) {
+            const currentBlock = editor.getTextCursorPosition().block;
+            editor.replaceBlocks([currentBlock.id], blocks);
+          }
+        } catch (e) {
+          // Fallback: insert as plain text
+          editor.insertInlineContent([{ type: "text", text: plainText, styles: {} }]);
+        }
+      })();
+    };
+
+    domElement.addEventListener('paste', handlePaste, { capture: true });
+    return () => {
+      domElement.removeEventListener('paste', handlePaste, { capture: true });
+    };
+  }, [editor]);
 
   // Update editorRef when editor is created
   useEffect(() => {
@@ -294,7 +324,7 @@ export default function TextEditor({
         <BlockNoteView
           editor={editor}
           theme={blockNoteTheme}
-          className="w-full min-w-0 [&_.ProseMirror]:break-words [&_.ProseMirror]:max-w-full [&_.ProseMirror]:min-w-0 [&_.bn-block-outer_[data-drag-handle]]:!hidden [&_[draggable='true']]:!hidden"
+          className="w-full min-w-0 [&_.ProseMirror]:break-words [&_.ProseMirror]:max-w-full [&_.ProseMirror]:min-w-0 [&_.bn-block-outer_[data-drag-handle]]:!hidden [&_[draggable='true']]:!hidden [&_.ProseMirror_a]:text-[rgb(var(--badge-info-text))] [&_.ProseMirror_a]:font-medium [&_.ProseMirror_a]:underline [&_.ProseMirror_a]:decoration-[rgb(var(--badge-info-text)/0.4)] [&_.ProseMirror_a]:underline-offset-2 [&_.ProseMirror_a:hover]:decoration-[rgb(var(--badge-info-text))]"
           editable={true}
           style={{
             overflowWrap: 'break-word',
