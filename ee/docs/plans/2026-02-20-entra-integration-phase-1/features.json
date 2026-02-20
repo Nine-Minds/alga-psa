@@ -337,7 +337,7 @@
   {
     "id": "F031",
     "description": "Default settings migration: seed one `entra_sync_settings` row per tenant with 24h cadence defaults.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements"
     ],
