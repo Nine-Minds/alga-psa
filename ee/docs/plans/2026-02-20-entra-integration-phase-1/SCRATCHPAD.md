@@ -374,3 +374,6 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - (2026-02-20) `T010` completed: extended `entraIntegrationSettingsGates` test coverage to verify `shouldShowFieldSyncControls(false)` and `shouldShowAmbiguousQueue(false)` both return false.
 - This covers the advanced Entra UI gating behavior for field-sync and ambiguous-queue sections when their flags are disabled.
 - Validation command: `cd server && npx vitest run src/test/unit/components/integrations/entraIntegrationSettingsGates.test.ts` (pass).
+- (2026-02-20) `T011` completed: added migration coverage file `server/src/test/unit/migrations/entraPhase1Migration.test.ts` with table/column assertions for `entra_partner_connections`.
+- Test validates required Entra partner-connection columns and defaults exist in `ee/server/migrations/20260220143000_create_entra_phase1_schema.cjs`.
+- Validation command: `cd server && npx vitest run src/test/unit/migrations/entraPhase1Migration.test.ts` (pass).
