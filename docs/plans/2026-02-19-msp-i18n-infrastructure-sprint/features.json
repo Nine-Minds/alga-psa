@@ -2,7 +2,7 @@
   {
     "id": "F001",
     "description": "Change I18N_CONFIG.ns from ['common', 'client-portal', 'msp'] to ['common'] in packages/ui/src/lib/i18n/config.ts",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR1"]
   },
   {
@@ -85,7 +85,7 @@
   },
   {
     "id": "F015",
-    "description": "Add pseudo-locales xx and yy to LOCALE_CONFIG.supportedLocales only when NODE_ENV === 'development'",
+    "description": "Add pseudo-locales xx and yy to LOCALE_CONFIG.supportedLocales",
     "implemented": false,
     "prdRefs": ["FR14"]
   },

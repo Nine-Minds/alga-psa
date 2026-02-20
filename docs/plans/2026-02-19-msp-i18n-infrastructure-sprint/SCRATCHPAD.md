@@ -46,7 +46,7 @@ This means F017 ("Update all useTranslation('msp') references") only affects the
 | `ns: ['common']` — only common on init | Future-proof; as 12+ MSP namespaces are added, eager loading would be 20+ HTTP requests per page |
 | Route-based lazy loading via `ROUTE_NAMESPACES` | Deterministic — developer adds route entry, namespaces auto-load. No guessing. |
 | `getNamespacesForRoute()` uses exact → longest prefix → fallback | Handles both exact routes (`/msp/tickets`) and sub-routes (`/msp/tickets/123`) |
-| Pseudo-locales `xx`/`yy` dev-only | Visual QA for extraction completeness without polluting production |
+| Pseudo-locales `xx`/`yy` available in all environments | Visual QA for extraction completeness; useful in staging/production for verification |
 | Pseudo-locale files NOT committed to git | They're generated artifacts; add `server/public/locales/xx/` and `yy/` to .gitignore |
 | `msp.json` → `msp/core.json` rename now | Establishes the `msp/` directory convention before batch 1 adds `msp/settings.json` |
 | `I18nWrapper` uses `usePathname()` from `next/navigation` | Standard Next.js hook; re-renders on route change, triggering namespace re-resolution |
@@ -61,7 +61,7 @@ Recommended order to minimize breakage:
 4. **Update I18nProvider** (F004, F005) — accept `namespaces` prop, add `loadNamespaces()` effect
 5. **Update I18nWrapper** (F006, F007, F008) — `usePathname()` + pass namespaces to I18nProvider
 6. **Sync core config** (F019) — copy changes to packages/core
-7. **Add pseudo-locale support** (F009-F015) — script + dev-only config
+7. **Add pseudo-locale support** (F009-F015) — script + config
 8. **Verify** (F020-F024) — client portal, MSP flag off, MSP flag on, tests, build
 
 ## Key File Paths
@@ -118,4 +118,4 @@ ls server/public/locales/*/msp.json  # should fail (files removed)
 
 ## Updates
 
-(Will be appended as implementation progresses)
+- 2026-02-20: Updated `I18N_CONFIG.ns` in `packages/ui/src/lib/i18n/config.ts` to `['common']` for lazy namespace loading (F001).

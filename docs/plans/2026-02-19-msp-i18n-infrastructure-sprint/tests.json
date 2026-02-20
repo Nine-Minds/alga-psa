@@ -193,19 +193,19 @@
   },
   {
     "id": "T033",
-    "description": "Pseudo-locales xx and yy are added to LOCALE_CONFIG.supportedLocales when NODE_ENV === 'development'",
+    "description": "Pseudo-locales xx and yy are added to LOCALE_CONFIG.supportedLocales",
     "implemented": false,
     "featureIds": ["F015"]
   },
   {
     "id": "T034",
-    "description": "Pseudo-locales xx and yy are NOT in LOCALE_CONFIG.supportedLocales when NODE_ENV === 'production'",
+    "description": "Pseudo-locales xx and yy are present in LOCALE_CONFIG.supportedLocales in all environments",
     "implemented": false,
     "featureIds": ["F015"]
   },
   {
     "id": "T035",
-    "description": "Pseudo-locales xx and yy are added to I18N_CONFIG.supportedLngs when NODE_ENV === 'development'",
+    "description": "Pseudo-locales xx and yy are added to I18N_CONFIG.supportedLngs",
     "implemented": false,
     "featureIds": ["F015"]
   },

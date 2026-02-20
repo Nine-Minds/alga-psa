@@ -150,13 +150,11 @@ Create two test locales for visual QA:
 // npx ts-node scripts/generate-pseudo-locale.ts --locale yy --fill "5555"
 ```
 
-Add pseudo-locales to config in development only:
+Add pseudo-locales to config:
 
 ```typescript
 // packages/ui/src/lib/i18n/config.ts
-const devLocales = process.env.NODE_ENV === 'development'
-  ? ['xx', 'yy'] as const
-  : [] as const;
+const pseudoLocales = ['xx', 'yy'] as const;
 ```
 
 ### 0c. Formatting Migration Pattern

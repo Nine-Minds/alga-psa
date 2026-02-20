@@ -20,7 +20,7 @@ Phase 1 established the MSP i18n foundation (feature flag, I18nWrapper, namespac
 - **G2**: Add `ROUTE_NAMESPACES` mapping and `getNamespacesForRoute()` helper to config
 - **G3**: Update `I18nWrapper` to use `usePathname()` and load route-appropriate namespaces
 - **G4**: Create `scripts/generate-pseudo-locale.ts` that generates `xx` and `yy` pseudo-locale files
-- **G5**: Add pseudo-locales (`xx`, `yy`) to config in development mode only
+- **G5**: Add pseudo-locales (`xx`, `yy`) to config
 - **G6**: Rename `msp.json` to `msp/core.json` for all 7 languages
 - **G7**: Update all references from `useTranslation('msp')` to `useTranslation('msp/core')`
 - **G8**: Keep `packages/core/src/lib/i18n/config.ts` in sync with `packages/ui/src/lib/i18n/config.ts`
@@ -92,7 +92,7 @@ No user-facing UI changes in this sprint. All changes are developer-facing infra
 - **FR11**: Script replaces all leaf string values with the fill string
 - **FR12**: Script preserves `{{variables}}` within the fill string (e.g., `"1111 {{name}} 1111"`)
 - **FR13**: Script preserves JSON key structure exactly
-- **FR14**: Pseudo-locales `xx` and `yy` added to `LOCALE_CONFIG.supportedLocales` only when `NODE_ENV === 'development'`
+- **FR14**: Pseudo-locales `xx` and `yy` added to `LOCALE_CONFIG.supportedLocales`
 
 #### Namespace Rename (msp.json → msp/core.json)
 - **FR15**: `server/public/locales/{lang}/msp.json` renamed to `server/public/locales/{lang}/msp/core.json` for all 7 languages
@@ -117,7 +117,7 @@ No database changes. No new API endpoints. Translation files served as static JS
 
 | File | Change |
 |------|--------|
-| `packages/ui/src/lib/i18n/config.ts` | Add `ROUTE_NAMESPACES`, `getNamespacesForRoute()`, change `ns` to `['common']`, add dev pseudo-locales |
+| `packages/ui/src/lib/i18n/config.ts` | Add `ROUTE_NAMESPACES`, `getNamespacesForRoute()`, change `ns` to `['common']`, add pseudo-locales |
 | `packages/core/src/lib/i18n/config.ts` | Sync locale config changes |
 | `packages/ui/src/lib/i18n/client.tsx` | `I18nProvider` accepts `namespaces` prop, calls `loadNamespaces()` on route change |
 | `packages/tenancy/src/components/i18n/I18nWrapper.tsx` | Use `usePathname()` + `getNamespacesForRoute()` to pass namespaces to `I18nProvider` |
