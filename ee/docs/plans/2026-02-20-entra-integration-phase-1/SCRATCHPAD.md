@@ -727,3 +727,6 @@ EOF && git add ee/docs/plans/2026-02-20-entra-integration-phase-1/tests.json ee/
 - (2026-02-20) `T133` completed across `entraActions.directConnect.test.ts` and `entraActions.startSync.test.ts`.
 - Added update-permission denial assertions for mapping confirmation and manual sync starts; direct-connect update-permission denial remains covered by `T031`.
 - Validation commands: `cd server && npx vitest run src/test/unit/integrations/entraActions.directConnect.test.ts --coverage.enabled=false` (pass), `cd server && npx vitest run src/test/unit/integrations/entraActions.startSync.test.ts --coverage.enabled=false` (pass).
+- (2026-02-20) `T134` completed in `server/src/test/unit/integrations/entraActions.directConnect.test.ts`.
+- Added a full authorized-action contract flow covering direct connect, discovery route, mapping confirm (+optional initial sync start), and manual all-tenants sync start.
+- Validation command: `cd server && npx vitest run src/test/unit/integrations/entraActions.directConnect.test.ts --coverage.enabled=false` (pass).

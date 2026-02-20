@@ -8,6 +8,10 @@ const saveEntraCippCredentialsMock = vi.fn();
 const clearEntraDirectTokenSetMock = vi.fn();
 const getSecretProviderInstanceMock = vi.fn();
 const createTenantKnexMock = vi.fn();
+const discoveryRoutePostMock = vi.fn();
+const confirmMappingsRoutePostMock = vi.fn();
+const startEntraInitialSyncWorkflowMock = vi.fn();
+const startEntraAllTenantsSyncWorkflowMock = vi.fn();
 
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (fn: unknown) => fn,
@@ -48,6 +52,19 @@ vi.mock('@alga-psa/db', () => ({
   createTenantKnex: createTenantKnexMock,
 }));
 
+vi.mock('@enterprise/app/api/integrations/entra/discovery/route', () => ({
+  POST: discoveryRoutePostMock,
+}));
+
+vi.mock('@enterprise/app/api/integrations/entra/mappings/confirm/route', () => ({
+  POST: confirmMappingsRoutePostMock,
+}));
+
+vi.mock('@enterprise/lib/integrations/entra/entraWorkflowClient', () => ({
+  startEntraInitialSyncWorkflow: startEntraInitialSyncWorkflowMock,
+  startEntraAllTenantsSyncWorkflow: startEntraAllTenantsSyncWorkflowMock,
+}));
+
 describe('Entra direct connect action permissions', () => {
   beforeEach(() => {
     hasPermissionMock.mockReset();
@@ -58,6 +75,10 @@ describe('Entra direct connect action permissions', () => {
     clearEntraDirectTokenSetMock.mockReset();
     getSecretProviderInstanceMock.mockReset();
     createTenantKnexMock.mockReset();
+    discoveryRoutePostMock.mockReset();
+    confirmMappingsRoutePostMock.mockReset();
+    startEntraInitialSyncWorkflowMock.mockReset();
+    startEntraAllTenantsSyncWorkflowMock.mockReset();
   });
 
   it('T031: direct connect initiation rejects users lacking update permission', async () => {
@@ -329,6 +350,136 @@ describe('Entra direct connect action permissions', () => {
     );
 
     expect(clearEntraDirectTokenSetMock).toHaveBeenCalledWith('tenant-41b');
+  });
+
+  it('T134: internal user with required permissions can complete connect -> discover -> map -> sync flow', async () => {
+    const previousEdition = process.env.NEXT_PUBLIC_EDITION;
+    const previousServerEdition = process.env.EDITION;
+    process.env.NEXT_PUBLIC_EDITION = 'enterprise';
+    process.env.EDITION = 'ee';
+    vi.resetModules();
+
+    hasPermissionMock.mockResolvedValue(true);
+    featureFlagIsEnabledMock.mockResolvedValue(true);
+    resolveMicrosoftCredentialsForTenantMock.mockResolvedValue({
+      clientId: 'client-id-134',
+      clientSecret: 'client-secret-134',
+      tenantId: null,
+      source: 'tenant-secret',
+    });
+    clearEntraCippCredentialsMock.mockResolvedValue(undefined);
+    getSecretProviderInstanceMock.mockResolvedValue({
+      getAppSecret: vi.fn(async () => null),
+    });
+
+    discoveryRoutePostMock.mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          success: true,
+          data: {
+            discoveredTenantCount: 1,
+            discoveredTenants: [{ managedTenantId: 'managed-134', displayName: 'Managed 134' }],
+          },
+        }),
+        {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        }
+      )
+    );
+    confirmMappingsRoutePostMock.mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          success: true,
+          data: {
+            confirmedMappings: 1,
+          },
+        }),
+        {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        }
+      )
+    );
+    startEntraInitialSyncWorkflowMock.mockResolvedValue({
+      available: true,
+      workflowId: 'wf-134-initial',
+      runId: 'run-134-initial',
+      error: null,
+    });
+    startEntraAllTenantsSyncWorkflowMock.mockResolvedValue({
+      available: true,
+      workflowId: 'wf-134-all',
+      runId: 'run-134-all',
+      error: null,
+    });
+
+    try {
+      const {
+        initiateEntraDirectOAuth,
+        discoverEntraManagedTenants,
+        confirmEntraMappings,
+        startEntraSync,
+      } = await import('@alga-psa/integrations/actions/integrations/entraActions');
+
+      const connectResult = await initiateEntraDirectOAuth(
+        { user_id: 'user-134', user_type: 'internal' } as any,
+        { tenant: 'tenant-134' }
+      );
+      expect(connectResult.success).toBe(true);
+
+      const discoveryResult = await discoverEntraManagedTenants(
+        { user_id: 'user-134', user_type: 'internal' } as any,
+        { tenant: 'tenant-134' }
+      );
+      expect(discoveryResult).toEqual({
+        success: true,
+        data: {
+          discoveredTenantCount: 1,
+          discoveredTenants: [{ managedTenantId: 'managed-134', displayName: 'Managed 134' }],
+        },
+      });
+
+      const confirmResult = await confirmEntraMappings(
+        { user_id: 'user-134', user_type: 'internal' } as any,
+        { tenant: 'tenant-134' },
+        {
+          mappings: [{ managedTenantId: 'managed-134', clientId: 'client-134' }],
+          startInitialSync: true,
+        }
+      );
+      expect(confirmResult).toEqual({
+        success: true,
+        data: {
+          confirmedMappings: 1,
+          initialSync: {
+            started: true,
+            workflowId: 'wf-134-initial',
+            runId: 'run-134-initial',
+            error: null,
+          },
+        },
+      });
+
+      const syncResult = await startEntraSync(
+        { user_id: 'user-134', user_type: 'internal' } as any,
+        { tenant: 'tenant-134' },
+        { scope: 'all-tenants' }
+      );
+      expect(syncResult).toEqual({
+        success: true,
+        data: {
+          accepted: true,
+          scope: 'all-tenants',
+          runId: 'run-134-all',
+          workflowId: 'wf-134-all',
+          error: null,
+        },
+      });
+    } finally {
+      process.env.NEXT_PUBLIC_EDITION = previousEdition;
+      process.env.EDITION = previousServerEdition;
+    }
   });
 
   it('T060: skip control marks tenant mapping as skipped without creating an active client mapping', async () => {

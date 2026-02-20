@@ -1132,7 +1132,7 @@
   {
     "id": "T134",
     "description": "Internal user with required permissions can complete connect -> discover -> map -> sync flow.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F035",
       "F051",
