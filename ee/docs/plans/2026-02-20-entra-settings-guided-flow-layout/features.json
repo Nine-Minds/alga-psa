@@ -38,7 +38,7 @@
   {
     "id": "F004",
     "description": "Apply hard-gated progression: non-current onboarding actions are hidden or disabled until prerequisites are met.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements"
     ],

@@ -140,6 +140,10 @@ export default function EntraIntegrationSettings() {
     mappedCount: mappedTenantCount,
   });
   const hasConfirmedMappings = guidedStepState.hasConfirmedMappings;
+  const isConnectStepCurrent = guidedStepState.currentStep === 'connect';
+  const isDiscoverStepCurrent = guidedStepState.currentStep === 'discover';
+  const isMapStepCurrent = guidedStepState.currentStep === 'map';
+  const isSyncStepCurrent = guidedStepState.currentStep === 'sync';
   const currentStepIndex = WIZARD_STEPS.findIndex((step) => step.id === guidedStepState.currentStep);
   const stepStates = WIZARD_STEPS.map((step, index) => {
     let state: GuidedStepVisualState = 'locked';
@@ -206,6 +210,10 @@ export default function EntraIntegrationSettings() {
   }, [loadStatus]);
 
   const handleConnectionOptionClick = async (optionId: string) => {
+    if (!isConnectStepCurrent) {
+      return;
+    }
+
     if (optionId === 'cipp') {
       setCippDialogOpen(true);
     } else if (optionId === 'direct') {
@@ -299,22 +307,22 @@ export default function EntraIntegrationSettings() {
             <p className="mt-1 text-sm text-muted-foreground">{currentStepMeta.guidance}</p>
 
             <div className="mt-3">
-              {guidedStepState.currentStep === 'connect' ? (
+              {isConnectStepCurrent ? (
                 <p className="text-sm text-muted-foreground">
                   Connection options appear below.
                 </p>
               ) : null}
-              {guidedStepState.currentStep === 'discover' ? (
+              {isDiscoverStepCurrent ? (
                 <Button id="entra-run-discovery" type="button">
                   Run Discovery
                 </Button>
               ) : null}
-              {guidedStepState.currentStep === 'map' ? (
+              {isMapStepCurrent ? (
                 <Button id="entra-review-mappings" type="button" onClick={() => handleScrollToMapping()}>
                   Review Mappings
                 </Button>
               ) : null}
-              {guidedStepState.currentStep === 'sync' ? (
+              {isSyncStepCurrent ? (
                 <Button
                   id="entra-run-initial-sync"
                   type="button"
@@ -326,7 +334,7 @@ export default function EntraIntegrationSettings() {
             </div>
           </div>
 
-          {status?.status !== 'connected' ? (
+          {isConnectStepCurrent ? (
             <div className="space-y-3 rounded-lg border border-border/70 bg-background p-4">
               <p className="text-sm font-semibold">Connection Options</p>
               {directError ? (

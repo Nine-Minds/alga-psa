@@ -63,3 +63,6 @@ Focused planning log for guided-layout improvements in Entra integration setting
   - Added `Current Step` card that renders one onboarding primary action at a time (`connect` guidance, `Run Discovery`, `Review Mappings`, or `Run Initial Sync`).
   - Removed discovery/initial actions from the old shared action row, leaving no same-tier onboarding multi-action group.
 - (2026-02-20) Post-F003 targeted settings test run now fails in old assertions that expected always-visible `Run Initial Sync`; this is expected and will be resolved by F011/T00x guided-flow test updates.
+- (2026-02-20) F004 implemented in `ee/server/src/components/settings/integrations/EntraIntegrationSettings.tsx`.
+  - Added explicit current-step booleans and gated onboarding action rendering to current step only.
+  - Added guard in connection-option click handler to no-op if Connect is not the active step.
