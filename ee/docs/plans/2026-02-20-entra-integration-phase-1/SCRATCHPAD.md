@@ -529,3 +529,6 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - (2026-02-20) `T067` completed in `entraIntegrationSettings.initialSyncCta` unit suite.
 - Mocked mapping-table callback state drives skipped-tenant panel rendering; test verifies skipped entries appear with `Remap` controls.
 - Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraIntegrationSettings.initialSyncCta.test.tsx` (pass).
+- (2026-02-20) `T068` completed in `entraIntegrationSettings.initialSyncCta` tests.
+- Flag-off scenario verifies disabled-state messaging renders while wizard content (`Map Tenants to Clients`) and sync CTA controls are absent.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraIntegrationSettings.initialSyncCta.test.tsx` (pass).

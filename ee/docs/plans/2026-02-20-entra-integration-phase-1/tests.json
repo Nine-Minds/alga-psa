@@ -578,7 +578,7 @@
   {
     "id": "T068",
     "description": "Mapping wizard remains inaccessible while `entra-integration-ui` flag is off.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F070"
     ]

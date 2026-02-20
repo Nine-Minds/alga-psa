@@ -141,4 +141,20 @@ describe('EntraIntegrationSettings initial sync CTA', () => {
     await screen.findByText('Skipped Tenant Two');
     expect(screen.getAllByRole('button', { name: 'Remap' })).toHaveLength(2);
   });
+
+  it('T068: mapping wizard content is inaccessible when the Entra UI flag is disabled', async () => {
+    mappingTableState.summary = { mapped: 0, skipped: 0, needsReview: 0 };
+    mappingTableState.skippedTenants = [];
+    useFeatureFlagMock.mockReturnValue({ enabled: false });
+    getEntraIntegrationStatusMock.mockResolvedValue({
+      success: true,
+      data: null,
+    });
+
+    render(<EntraIntegrationSettings />);
+
+    await screen.findByText('Entra integration UI is currently disabled for this tenant.');
+    expect(screen.queryByText('Map Tenants to Clients')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Run Initial Sync' })).not.toBeInTheDocument();
+  });
 });
