@@ -195,3 +195,6 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - (2026-02-20) `F065` completed: added remap API/action (`/api/integrations/entra/mappings/remap`, `remapEntraTenant`) to move a discovered managed tenant mapping to a target client using confirm-mapping persistence flow.
 - Includes CE delegator + EE stub route wiring for remap endpoint parity.
 - Validation commands: `npx tsc --noEmit -p ee/server/tsconfig.json`, `npx tsc --noEmit -p packages/integrations/tsconfig.json`, `npx tsc --noEmit -p server/tsconfig.json` (pass).
+- (2026-02-20) `F066` completed: added mapping conflict validator (`ee/server/src/lib/integrations/entra/mapping/validation.ts`) and enforced it in mappings confirm route.
+- Confirm now rejects requests that assign one discovered managed tenant to multiple client IDs in the same payload.
+- Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).

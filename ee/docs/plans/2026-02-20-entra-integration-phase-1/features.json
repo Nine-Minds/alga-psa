@@ -733,7 +733,7 @@
   {
     "id": "F066",
     "description": "Mapping conflict validation: block confirmation when same discovered tenant is assigned to multiple clients.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements"
     ],
