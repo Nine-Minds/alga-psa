@@ -66,6 +66,7 @@ import { ClientNotesPanel } from './panels/ClientNotesPanel';
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui';
 import EntityImageUpload from '@alga-psa/ui/components/EntityImageUpload';
+import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { getTicketFormOptions } from '@alga-psa/tickets/actions/optimizedTicketActions';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { ClientLanguagePreference } from './ClientLanguagePreference';
@@ -240,6 +241,10 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const drawer = useDrawer();
   const isEEAvailable = process.env.NEXT_PUBLIC_EDITION === 'enterprise';
+  const entraClientSyncFlag = useFeatureFlag('entra-integration-client-sync-action', {
+    defaultValue: false,
+  });
+  const showEntraSyncAction = isEEAvailable && entraClientSyncFlag.enabled;
 
 
   const runDeleteValidation = useCallback(async () => {
@@ -1405,7 +1410,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
           )}
 
           <div className="flex items-center gap-2 mr-8">
-            {isEEAvailable && (
+            {showEntraSyncAction && (
               <Button
                 id={`${id}-sync-entra-now-button`}
                 onClick={handleSyncEntraNow}

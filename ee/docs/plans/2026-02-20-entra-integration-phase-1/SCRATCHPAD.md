@@ -82,3 +82,4 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - Validation commands: `npx tsc --noEmit -p packages/integrations/tsconfig.json` and `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
 - (2026-02-20) `F008` completed: added a client-level `Sync Entra Now` action button in `packages/clients/src/components/clients/ClientDetails.tsx`, wired to `startEntraSync({ scope: 'single-client', clientId })` with success/error toast feedback.
 - Validation command: `npx tsc --noEmit -p packages/clients/tsconfig.json` (pass).
+- (2026-02-20) `F009` completed: gated the client-level Entra action button with `useFeatureFlag('entra-integration-client-sync-action')`; button now only renders when both EE mode and tenant flag are enabled.
