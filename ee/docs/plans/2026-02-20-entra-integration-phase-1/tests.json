@@ -402,7 +402,7 @@
   {
     "id": "T047",
     "description": "Provider factory returns CIPP adapter when connection type is cipp.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F046",
       "F049",

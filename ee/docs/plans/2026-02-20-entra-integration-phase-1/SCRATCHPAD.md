@@ -465,3 +465,6 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - (2026-02-20) `T046` completed: added provider-factory unit coverage in `ee/server/src/__tests__/unit/entraProviderFactory.test.ts`.
 - Direct selection case asserts `getEntraProviderAdapter('direct')` delegates to `createDirectProviderAdapter()` and returns its adapter instance.
 - Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraProviderFactory.test.ts` (pass).
+- (2026-02-20) `T047` completed in `entraProviderFactory` tests.
+- CIPP selection case asserts `getEntraProviderAdapter('cipp')` delegates to `createCippProviderAdapter()` and returns its adapter instance.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraProviderFactory.test.ts` (pass).
