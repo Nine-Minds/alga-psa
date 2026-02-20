@@ -119,3 +119,4 @@ ls server/public/locales/*/msp.json  # should fail (files removed)
 ## Updates
 
 - 2026-02-20: Updated `I18N_CONFIG.ns` in `packages/ui/src/lib/i18n/config.ts` to `['common']` for lazy namespace loading (F001).
+- 2026-02-20: Added `ROUTE_NAMESPACES` mapping in `packages/ui/src/lib/i18n/config.ts` for client portal and MSP routes (F002).

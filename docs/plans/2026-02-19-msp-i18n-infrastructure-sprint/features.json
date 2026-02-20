@@ -8,7 +8,7 @@
   {
     "id": "F002",
     "description": "Add ROUTE_NAMESPACES constant to packages/ui/src/lib/i18n/config.ts mapping route prefixes to namespace arrays for both MSP and client portal routes",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR2"]
   },
   {

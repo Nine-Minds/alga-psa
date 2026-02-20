@@ -98,6 +98,21 @@ export const I18N_CONFIG = {
 };
 
 /**
+ * Route prefixes mapped to their required namespaces
+ */
+export const ROUTE_NAMESPACES = {
+  '/client-portal': ['common', 'client-portal'],
+  '/client-portal/tickets': ['common', 'client-portal', 'features/tickets'],
+  '/client-portal/projects': ['common', 'client-portal', 'features/projects'],
+  '/client-portal/billing': ['common', 'client-portal', 'features/billing'],
+  '/client-portal/documents': ['common', 'client-portal', 'features/documents'],
+  '/client-portal/appointments': ['common', 'client-portal', 'features/appointments'],
+  '/msp': ['common', 'msp/core'],
+  '/msp/tickets': ['common', 'msp/core', 'features/tickets'],
+  '/msp/settings': ['common', 'msp/core'],
+} as const;
+
+/**
  * Paths for translation resources
  */
 export const TRANSLATION_PATHS = {
