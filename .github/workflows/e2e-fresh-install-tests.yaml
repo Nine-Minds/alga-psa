@@ -358,7 +358,7 @@ jobs:
           # Start CE services needed for e2e tests (images already built earlier)
           # Use --no-recreate to avoid restarting setup which already completed
           # Use --no-deps to avoid waiting on setup dependency again
-          docker-compose -p alga-e2e-test -f docker-compose.base.yaml -f docker-compose.ce.yaml -f docker-compose.prod.yaml up -d \
+          docker-compose -p alga-e2e-test -f docker-compose.base.yaml -f docker-compose.ce.yaml -f docker-compose.prod.yaml -f docker-compose.imap-test.yaml up -d \
             --no-recreate --no-deps \
             server imap-service imap-test-server hocuspocus
         shell: bash
