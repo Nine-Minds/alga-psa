@@ -160,3 +160,4 @@ ls server/public/locales/*/msp.json  # should fail (files removed)
 - 2026-02-20: Completed T018 checklist entry — I18nProvider loads new namespaces when namespaces prop changes (simulating route navigation)
 - 2026-02-20: Completed T019 checklist entry — I18nProvider does not re-load namespaces that are already loaded
 - 2026-02-20: Completed T020 checklist entry — I18nWrapper uses usePathname() to read the current route
+- 2026-02-20: Completed T021 checklist entry — I18nWrapper calls getNamespacesForRoute(pathname) and passes result as namespaces prop to I18nProvider
