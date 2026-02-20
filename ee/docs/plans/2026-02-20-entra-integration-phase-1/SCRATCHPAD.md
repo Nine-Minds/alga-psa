@@ -586,3 +586,6 @@ EOF && git add ee/docs/plans/2026-02-20-entra-integration-phase-1/tests.json ee/
 - (2026-02-20) `T086` completed in Temporal workflow/activity contract suite.
 - Schedule assertions verify tenant-scoped Entra recurring schedule creation path for enabled tenants with active connections, using scheduled all-tenants workflow trigger config.
 - Validation command: `cd server && npx vitest run src/test/unit/temporal/entraWorkflowActivityContracts.test.ts --coverage.enabled=false` (pass).
+- (2026-02-20) `T087` completed in Temporal workflow/activity contract suite.
+- `upsertSchedule` assertions verify already-existing schedules are updated via `handle.update(...)` with refreshed spec/action/policy definitions.
+- Validation command: `cd server && npx vitest run src/test/unit/temporal/entraWorkflowActivityContracts.test.ts --coverage.enabled=false` (pass).

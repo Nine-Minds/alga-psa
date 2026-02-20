@@ -741,7 +741,7 @@
   {
     "id": "T087",
     "description": "Schedule setup updates existing Entra schedule definition when already present.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F089"
     ]
