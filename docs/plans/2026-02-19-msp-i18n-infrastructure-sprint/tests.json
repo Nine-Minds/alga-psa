@@ -223,7 +223,7 @@
   {
     "id": "T028",
     "description": "Pseudo-locale script replaces all leaf string values with the fill string",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F012"
     ]
