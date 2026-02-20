@@ -1,6 +1,9 @@
 'use server';
 
 import { withAuth } from '@alga-psa/auth';
+import { hasPermission } from '@alga-psa/auth/rbac';
+import { getSecretProviderInstance } from '@alga-psa/core/secrets';
+import { generateMicrosoftAuthUrl, generateNonce } from '../../utils/email/oauthHelpers';
 
 const isEnterpriseEdition =
   (process.env.EDITION ?? '').toLowerCase() === 'ee' ||
@@ -93,6 +96,16 @@ async function callEeRoute<T>(params: {
 
 export type EntraConnectionType = 'direct' | 'cipp';
 export type EntraSyncScope = 'initial' | 'all-tenants' | 'single-client';
+export type EntraDirectConnectState = {
+  tenant: string;
+  userId: string;
+  nonce: string;
+  timestamp: number;
+  redirectUri: string;
+  provider: 'microsoft';
+  integration: 'entra';
+  connectionType: 'direct';
+};
 
 export type EntraStatusResponse = {
   status: 'connected' | 'not_connected';
@@ -107,6 +120,63 @@ export type EntraMappingPreviewResponse = {
   fuzzyCandidates: unknown[];
   unmatched: unknown[];
 };
+
+export const initiateEntraDirectOAuth = withAuth(async (user, { tenant }) => {
+  const canUpdate = await hasPermission(user as any, 'system_settings', 'update');
+  if (!canUpdate) {
+    return { success: false, error: 'Forbidden: insufficient permissions to configure Entra integration' } as const;
+  }
+
+  const enabled = await isEntraUiEnabledForTenant({
+    tenantId: tenant,
+    userId: (user as { user_id?: string } | undefined)?.user_id,
+  });
+  if (!enabled) {
+    return flagDisabledResult<{ authUrl: string; state: string }>();
+  }
+
+  const resolverModule = await import('@enterprise/lib/integrations/entra/auth/microsoftCredentialResolver');
+  const credentials = await resolverModule.resolveMicrosoftCredentialsForTenant(tenant);
+  if (!credentials) {
+    return { success: false, error: 'Microsoft OAuth credentials are not configured for Entra direct connection' } as const;
+  }
+
+  const secretProvider = await getSecretProviderInstance();
+  const baseUrl =
+    process.env.NEXT_PUBLIC_BASE_URL ||
+    (await secretProvider.getAppSecret('NEXT_PUBLIC_BASE_URL')) ||
+    process.env.NEXTAUTH_URL ||
+    (await secretProvider.getAppSecret('NEXTAUTH_URL')) ||
+    'http://localhost:3000';
+
+  const redirectUri = `${baseUrl.replace(/\/+$/, '')}/api/auth/microsoft/entra/callback`;
+  const statePayload: EntraDirectConnectState = {
+    tenant,
+    userId: String((user as { user_id?: string } | undefined)?.user_id || ''),
+    nonce: generateNonce(),
+    timestamp: Date.now(),
+    redirectUri,
+    provider: 'microsoft',
+    integration: 'entra',
+    connectionType: 'direct',
+  };
+
+  const authUrl = generateMicrosoftAuthUrl(
+    credentials.clientId,
+    redirectUri,
+    statePayload as any,
+    ['https://graph.microsoft.com/User.Read', 'offline_access'],
+    'common'
+  );
+
+  return {
+    success: true,
+    data: {
+      authUrl,
+      state: Buffer.from(JSON.stringify(statePayload)).toString('base64'),
+    },
+  } as const;
+});
 
 export const getEntraIntegrationStatus = withAuth(async (user, { tenant }) => {
   const enabled = await isEntraUiEnabledForTenant({

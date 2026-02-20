@@ -2,6 +2,7 @@ export { getGoogleIntegrationStatus, saveGoogleIntegrationSettings, resetGoogleP
 export { getXeroConnectionStatus, getXeroIntegrationStatus, disconnectXero } from './xeroActions';
 export { getXeroCsvSettings, saveXeroCsvSettings } from './xeroCsvActions';
 export {
+  initiateEntraDirectOAuth,
   getEntraIntegrationStatus,
   connectEntraIntegration,
   disconnectEntraIntegration,

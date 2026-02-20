@@ -113,3 +113,5 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
 - (2026-02-20) `F033` completed: added canonical Entra secret key constants in `ee/server/src/lib/integrations/entra/secrets.ts` for shared Microsoft app secrets plus direct/CIPP token keys.
 - (2026-02-20) `F034` completed: implemented `resolveMicrosoftCredentialsForTenant()` with explicit tenant-pair -> env-pair -> app-secret-pair precedence in `ee/server/src/lib/integrations/entra/auth/microsoftCredentialResolver.ts`.
+- (2026-02-20) `F035` completed: added `initiateEntraDirectOAuth` action with `system_settings.update` permission enforcement and Entra-specific OAuth state payload (tenant/user/nonce/timestamp/redirect).
+- Validation commands: `npx tsc --noEmit -p packages/integrations/tsconfig.json` and `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).

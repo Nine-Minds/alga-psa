@@ -99,6 +99,7 @@ export {
   resetGoogleProvidersToDisconnected
 } from './integrations/googleActions';
 export {
+  initiateEntraDirectOAuth,
   getEntraIntegrationStatus,
   connectEntraIntegration,
   disconnectEntraIntegration,

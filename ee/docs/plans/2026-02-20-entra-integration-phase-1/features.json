@@ -382,7 +382,7 @@
   {
     "id": "F035",
     "description": "Direct connect initiation: add server action to start partner OAuth flow with Entra-specific state payload.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements"
     ],
