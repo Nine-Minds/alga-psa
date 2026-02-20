@@ -65,3 +65,4 @@ grep -r "from '../lib/email'" server/ --include="*.ts" --include="*.tsx"
 - F003: Updated `documentActions.upload.test.ts` to mock/import `DocumentAssociation` from `@alga-psa/documents/models/documentAssociation`.
 - F004: Switched `documentPermissionsIntegration.test.ts` to import `DocumentAssociation` from the documents package model path.
 - F005: Removed obsolete `server/src/models/document-association.ts` after test imports migrated.
+- F006: Updated `server/src/services/surveyService.ts` to import `TenantEmailService` from `@alga-psa/email`.

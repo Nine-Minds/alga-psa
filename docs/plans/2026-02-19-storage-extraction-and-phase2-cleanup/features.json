@@ -32,7 +32,7 @@
   {
     "id": "F006",
     "description": "Update surveyService.ts to import from @alga-psa/email instead of ../lib/email",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-03"]
   },
   {
