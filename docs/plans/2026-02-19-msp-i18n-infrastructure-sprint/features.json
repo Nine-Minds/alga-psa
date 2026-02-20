@@ -56,7 +56,7 @@
   {
     "id": "F010",
     "description": "Pseudo-locale script reads all English namespace JSON files including nested features/ and msp/ directories",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR9"]
   },
   {
