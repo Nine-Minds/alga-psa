@@ -176,3 +176,4 @@ ls server/public/locales/*/msp.json  # should fail (files removed)
 - 2026-02-20: Completed T034 checklist entry — Pseudo-locales xx and yy are present in LOCALE_CONFIG.supportedLocales in all environments
 - 2026-02-20: Completed T035 checklist entry — Pseudo-locales xx and yy are added to I18N_CONFIG.supportedLngs
 - 2026-02-20: Completed T036 checklist entry — server/public/locales/en/msp/core.json exists with same content as old msp.json
+- 2026-02-20: Completed T037 checklist entry — server/public/locales/{lang}/msp/core.json exists for all 7 languages (en, fr, es, de, nl, it, pl)

@@ -296,7 +296,7 @@
   {
     "id": "T037",
     "description": "server/public/locales/{lang}/msp/core.json exists for all 7 languages (en, fr, es, de, nl, it, pl)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F016"
     ]
