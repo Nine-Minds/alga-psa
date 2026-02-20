@@ -140,7 +140,7 @@
   {
     "id": "F024",
     "description": "npm run build succeeds with no TypeScript errors after all changes",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR23"]
   },
   {
