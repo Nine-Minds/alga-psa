@@ -41,7 +41,7 @@
   {
     "id": "T005",
     "description": "When mapped tenants exist, guided flow marks Sync as current and primary CTA triggers `startEntraSync({ scope: 'initial' })`.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F001",
       "F003",
