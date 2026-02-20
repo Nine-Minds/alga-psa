@@ -42,4 +42,13 @@ describe('Entra Phase 1 migration', () => {
     expect(migration).toContain('ON entra_client_tenant_mappings (tenant, managed_tenant_id)');
     expect(migration).toContain('WHERE is_active = true');
   });
+
+  it('T015: creates entra_sync_settings with default cadence and sync toggle fields', () => {
+    expect(migration).toContain("createTable('entra_sync_settings'");
+    expect(migration).toContain("table.boolean('sync_enabled').notNullable().defaultTo(true)");
+    expect(migration).toContain("table.integer('sync_interval_minutes').notNullable().defaultTo(1440)");
+    expect(migration).toContain("table.jsonb('field_sync_config').notNullable().defaultTo(knex.raw(`'{}'::jsonb`))");
+    expect(migration).toContain("table.jsonb('user_filter_config').notNullable().defaultTo(knex.raw(`'{}'::jsonb`))");
+    expect(migration).toContain('CREATE UNIQUE INDEX IF NOT EXISTS ux_entra_sync_settings_tenant');
+  });
 });

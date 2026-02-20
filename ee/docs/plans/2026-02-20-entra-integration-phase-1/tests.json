@@ -122,7 +122,7 @@
   {
     "id": "T015",
     "description": "Migration creates `entra_sync_settings` with default cadence and toggle fields.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F019",
       "F031"
