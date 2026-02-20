@@ -62,3 +62,4 @@ grep -r "from '../lib/email'" server/ --include="*.ts" --include="*.tsx"
 ## 2026-02-20 Updates
 - F001: Updated `server/scripts/portal-domain-sessions-prune.ts` to import `pruneExpiredPortalDomainOtts` from `@alga-psa/auth` to fix broken path.
 - F002: Exported `DocumentAssociation` from `packages/documents/src/models/index.ts` barrel for package consumers.
+- F003: Updated `documentActions.upload.test.ts` to mock/import `DocumentAssociation` from `@alga-psa/documents/models/documentAssociation`.
