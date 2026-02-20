@@ -12,4 +12,4 @@ export * from './lib/avatarUtils';
 export * from './lib/entityImageService';
 
 // Storage utilities
-export { StorageProviderFactory, generateStoragePath } from './storage/StorageProviderFactory';
+export { StorageProviderFactory, generateStoragePath } from '@alga-psa/storage';

@@ -93,3 +93,4 @@ grep -r "from '../lib/email'" server/ --include="*.ts" --include="*.tsx"
 - F031: Updated `fileActions.ts` to import `StorageService` from `@alga-psa/storage/StorageService`.
 - F032: Updated `documentActions.ts` to import `StorageService` from `@alga-psa/storage/StorageService`.
 - F033: Updated `entityImageService.ts` to import `StorageService` from `@alga-psa/storage/StorageService`.
+- F034: Re-exported `StorageProviderFactory` and `generateStoragePath` from `@alga-psa/storage` in documents index.

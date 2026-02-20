@@ -200,7 +200,7 @@
   {
     "id": "F034",
     "description": "Add re-exports to packages/documents/src/index.ts: re-export StorageProviderFactory and generateStoragePath from @alga-psa/storage",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-13"]
   },
   {
