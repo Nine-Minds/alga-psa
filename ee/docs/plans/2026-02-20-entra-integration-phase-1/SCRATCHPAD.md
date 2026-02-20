@@ -486,3 +486,6 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - (2026-02-20) `T053` completed in `ee/server/src/__tests__/unit/entraDiscoveryService.upsert.test.ts`.
 - Merge-update case asserts discovery upsert writes `display_name` and `primary_domain` from `EXCLUDED` values, covering changed tenant metadata refresh behavior.
 - Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraDiscoveryService.upsert.test.ts` (pass).
+- (2026-02-20) `T054` completed in `ee/server/src/__tests__/unit/entraDiscoveryService.upsert.test.ts`.
+- Source-user-count coverage asserts discovery writes `source_user_count` on insert rows and merge updates so provider-reported tenant user totals stay current.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraDiscoveryService.upsert.test.ts` (pass).

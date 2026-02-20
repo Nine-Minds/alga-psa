@@ -461,7 +461,7 @@
   {
     "id": "T054",
     "description": "Discovery action persists provider user counts per managed tenant.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F052"
     ]
