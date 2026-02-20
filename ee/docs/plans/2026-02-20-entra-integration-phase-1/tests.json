@@ -648,7 +648,7 @@
   {
     "id": "T076",
     "description": "`finalizeSyncRunActivity` marks run terminal state and summary totals.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F080"
     ]
