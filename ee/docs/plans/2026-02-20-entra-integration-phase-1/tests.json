@@ -309,7 +309,7 @@
   {
     "id": "T036",
     "description": "CIPP connect action validates base URL format and rejects invalid values.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F039"
     ]

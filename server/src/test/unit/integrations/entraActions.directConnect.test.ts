@@ -121,4 +121,25 @@ describe('Entra direct connect action permissions', () => {
     expect(typeof decodedState.redirectUri).toBe('string');
     expect(decodedState.redirectUri).toContain('/api/auth/microsoft/entra/callback');
   });
+
+  it('T036: CIPP connect validates base URL format and rejects invalid values', async () => {
+    hasPermissionMock.mockResolvedValue(true);
+    featureFlagIsEnabledMock.mockResolvedValue(true);
+
+    const { connectEntraCipp } = await import(
+      '@alga-psa/integrations/actions/integrations/entraActions'
+    );
+
+    const result = await connectEntraCipp(
+      { user_id: 'user-36', user_type: 'internal' } as any,
+      { tenant: 'tenant-36' },
+      { baseUrl: 'not a valid url', apiToken: 'token-36' }
+    );
+
+    expect(result).toEqual({
+      success: false,
+      error: 'CIPP base URL must be a valid http(s) URL.',
+    });
+    expect(clearEntraCippCredentialsMock).not.toHaveBeenCalled();
+  });
 });

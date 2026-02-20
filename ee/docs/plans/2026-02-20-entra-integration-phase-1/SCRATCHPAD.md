@@ -432,3 +432,6 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - (2026-02-20) `T035` completed: added `ee/server/src/__tests__/unit/entraDirectTokenRefresh.test.ts` for direct refresh persistence behavior.
 - Test freezes time and verifies refreshed access token + computed expiry timestamp are persisted through `saveEntraDirectTokenSet(...)` after token endpoint response.
 - Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraDirectTokenRefresh.test.ts` (pass).
+- (2026-02-20) `T036` completed: extended `server/src/test/unit/integrations/entraActions.directConnect.test.ts` with CIPP base-URL validation coverage.
+- Test verifies invalid CIPP URL input is rejected with explicit validation error before credential cleanup/persistence side effects.
+- Validation command: `cd server && npx vitest run src/test/unit/integrations/entraActions.directConnect.test.ts` (pass).
