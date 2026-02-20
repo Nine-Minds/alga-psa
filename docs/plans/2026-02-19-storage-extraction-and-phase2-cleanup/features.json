@@ -236,7 +236,7 @@
   {
     "id": "F040",
     "description": "Add @alga-psa/storage path mappings to server/tsconfig.json for Next.js resolution",
-    "implemented": true,
+    "implemented": false,
     "prdRefs": ["FR-04"]
   }
 ]

@@ -137,4 +137,3 @@ grep -r "from '../lib/email'" server/ --include="*.ts" --include="*.tsx"
 - T036: Confirmed original storage implementation files are removed from documents package (only compatibility shims remain).
 - T037: Verified tsconfig path mappings include `@alga-psa/storage`.
 - Added F040/T041: Next.js build failed resolving `@alga-psa/storage/StorageService` because server tsconfig paths lacked storage mapping; adding explicit path mapping to server/tsconfig.json.
-- F040: Added @alga-psa/storage path mappings to `server/tsconfig.json` to satisfy Next.js module resolution.

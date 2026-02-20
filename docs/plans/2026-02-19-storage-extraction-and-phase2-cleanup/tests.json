@@ -238,5 +238,11 @@
     "description": "Verify: grep for 'lib/models/PortalDomainSessionToken' returns 0 matches in source files",
     "implemented": false,
     "featureIds": ["F001"]
+  },
+  {
+    "id": "T041",
+    "description": "Build: server/tsconfig.json includes @alga-psa/storage path mappings for Next.js resolution",
+    "implemented": false,
+    "featureIds": ["F040"]
   }
 ]
