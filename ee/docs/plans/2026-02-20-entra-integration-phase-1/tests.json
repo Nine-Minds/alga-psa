@@ -656,7 +656,7 @@
   {
     "id": "T077",
     "description": "Workflow registration index exports all new Entra workflows.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F082"
     ]

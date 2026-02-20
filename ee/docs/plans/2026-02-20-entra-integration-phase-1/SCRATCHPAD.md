@@ -556,3 +556,6 @@ EOF && git add ee/docs/plans/2026-02-20-entra-integration-phase-1/tests.json ee/
 - (2026-02-20) `T076` completed in Temporal workflow/activity contract suite.
 - Finalize-run assertions verify terminal status and summary totals are written back to parent `entra_sync_runs` rows.
 - Validation command: `cd server && npx vitest run src/test/unit/temporal/entraWorkflowActivityContracts.test.ts --coverage.enabled=false` (pass).
+- (2026-02-20) `T077` completed in Temporal workflow/activity contract suite.
+- Workflow index assertions verify Entra workflow exports are present in `ee/temporal-workflows/src/workflows/index.ts` for worker registration.
+- Validation command: `cd server && npx vitest run src/test/unit/temporal/entraWorkflowActivityContracts.test.ts --coverage.enabled=false` (pass).
