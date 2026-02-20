@@ -2,6 +2,7 @@ import logger from '@alga-psa/core/logger';
 import { randomUUID } from 'crypto';
 import { createTenantKnex, runWithTenant } from '@alga-psa/db/tenant';
 import { getEntraProviderAdapter } from '@ee/lib/integrations/entra/providers';
+import { filterEntraUsers } from '@ee/lib/integrations/entra/sync/userFilterPipeline';
 import type { EntraConnectionType } from '@ee/interfaces/entra.interfaces';
 import type {
   LoadMappedTenantsActivityInput,
@@ -92,10 +93,11 @@ export async function syncTenantUsersActivity(
     tenant: input.tenantId,
     managedTenantId: input.mapping.managedTenantId,
   });
+  const filteredUsers = filterEntraUsers(users);
 
   // Phase-1 activity pipeline currently tracks per-tenant pull + aggregate counters.
   // Contact-level reconciliation is implemented in later sync features.
-  const processedCount = users.length;
+  const processedCount = filteredUsers.included.length;
 
   return {
     managedTenantId: input.mapping.managedTenantId,

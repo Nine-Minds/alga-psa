@@ -1023,7 +1023,7 @@
   {
     "id": "F092",
     "description": "Filtering pipeline: include only users with `accountEnabled=true` and valid UPN by default.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements"
     ],

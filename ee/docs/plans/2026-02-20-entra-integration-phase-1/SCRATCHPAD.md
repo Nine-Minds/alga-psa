@@ -254,3 +254,6 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - (2026-02-20) `F091` completed: added canonical sync-domain Entra user model in `ee/server/src/lib/integrations/entra/sync/types.ts` with `normalizeEntraSyncUser(...)` utility.
 - Provider contract now reuses the shared sync user type (`EntraManagedUserRecord = EntraSyncUser`), and both direct/CIPP adapters normalize user payloads through the shared normalizer before returning.
 - Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
+- (2026-02-20) `F092` completed: added `ee/server/src/lib/integrations/entra/sync/userFilterPipeline.ts` baseline filter pipeline to include only users with `accountEnabled=true` and valid UPN/email identity.
+- `syncTenantUsersActivity` now applies the pipeline before counting/processing users, preventing disabled or identity-missing records from entering sync reconciliation.
+- Validation commands: `npx tsc --noEmit -p ee/server/tsconfig.json` and `npx tsc --noEmit -p ee/temporal-workflows/tsconfig.json` (pass).
