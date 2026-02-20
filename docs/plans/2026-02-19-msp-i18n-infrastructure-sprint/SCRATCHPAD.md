@@ -139,3 +139,4 @@ ls server/public/locales/*/msp.json  # should fail (files removed)
 - 2026-02-20: Synced `packages/core/src/lib/i18n/config.ts` with UI config (namespaces, route mapping, pseudo-locales) (F019).
 - 2026-02-20: Updated Phase 1 i18n tests to use `msp/core` namespace and file paths (F023).
 - 2026-02-20: Added tracking items F025/T053 to ensure pseudo-locale outputs are gitignored per PRD rollout guidance.
+- 2026-02-20: Ignored pseudo-locale outputs in `.gitignore` (`server/public/locales/xx/`, `server/public/locales/yy/`) (F025).

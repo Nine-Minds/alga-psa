@@ -146,7 +146,7 @@
   {
     "id": "F025",
     "description": "Add pseudo-locale output directories (server/public/locales/xx, server/public/locales/yy) to .gitignore",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR14"]
   }
 ]
