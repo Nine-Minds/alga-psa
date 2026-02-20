@@ -54,6 +54,10 @@
       "import": "./src/storage/StorageService.ts",
       "types": "./src/storage/StorageService.ts"
     },
+    "./types/storage": {
+      "import": "./src/types/storage.ts",
+      "types": "./src/types/storage.ts"
+    },
     "./models": {
       "import": "./src/models/index.ts",
       "types": "./src/models/index.ts"

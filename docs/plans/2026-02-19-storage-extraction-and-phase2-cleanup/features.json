@@ -206,7 +206,7 @@
   {
     "id": "F035",
     "description": "Update packages/documents/package.json exports to re-export ./storage/StorageService and ./types/storage from @alga-psa/storage equivalents",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-13"]
   },
   {
