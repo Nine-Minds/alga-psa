@@ -80,3 +80,5 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - (2026-02-20) `F007` completed: enforced `entra-integration-ui` checks server-side in both EE Entra routes (`ee/server/src/app/api/integrations/entra/*`) and Entra server actions (`packages/integrations/src/actions/integrations/entraActions.ts`).
 - Added shared EE guard `requireEntraUiFlagEnabled()` in `ee/server/src/app/api/integrations/entra/_guards.ts` using authenticated user + tenant-aware PostHog evaluation through `featureFlags.isEnabled(...)`.
 - Validation commands: `npx tsc --noEmit -p packages/integrations/tsconfig.json` and `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
+- (2026-02-20) `F008` completed: added a client-level `Sync Entra Now` action button in `packages/clients/src/components/clients/ClientDetails.tsx`, wired to `startEntraSync({ scope: 'single-client', clientId })` with success/error toast feedback.
+- Validation command: `npx tsc --noEmit -p packages/clients/tsconfig.json` (pass).

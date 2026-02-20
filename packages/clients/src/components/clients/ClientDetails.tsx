@@ -33,13 +33,14 @@ import {
   addClientInboundEmailDomain,
   removeClientInboundEmailDomain,
 } from '@alga-psa/clients/actions';
+import { startEntraSync } from '@alga-psa/integrations/actions';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { DeleteEntityDialog } from '@alga-psa/ui';
 import CustomTabs from '@alga-psa/ui/components/CustomTabs';
 import { QuickAddTicket } from '@alga-psa/tickets/components/QuickAddTicket';
 import { Button } from '@alga-psa/ui/components/Button';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
-import { ExternalLink, Trash2 } from 'lucide-react';
+import { ExternalLink, RefreshCw, Trash2 } from 'lucide-react';
 import BackNav from '@alga-psa/ui/components/BackNav';
 import InteractionsFeed from '../interactions/InteractionsFeed';
 import { IInteraction } from '@alga-psa/types';
@@ -217,6 +218,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   const [activeContactsToDeactivate, setActiveContactsToDeactivate] = useState<IContact[]>([]);
   const [isEditingLogo, setIsEditingLogo] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isSyncingEntra, setIsSyncingEntra] = useState(false);
   const [ticketFormOptions, setTicketFormOptions] = useState<{
     statusOptions: SelectOption[];
     priorityOptions: SelectOption[];
@@ -237,6 +239,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   const searchParams = useSearchParams();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const drawer = useDrawer();
+  const isEEAvailable = process.env.NEXT_PUBLIC_EDITION === 'enterprise';
 
 
   const runDeleteValidation = useCallback(async () => {
@@ -730,6 +733,35 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       toast.error("Failed to save client details. Please try again.");
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleSyncEntraNow = async () => {
+    if (isSyncingEntra) return;
+
+    setIsSyncingEntra(true);
+    try {
+      const result = await startEntraSync({
+        scope: 'single-client',
+        clientId: editedClient.client_id,
+      });
+
+      if (!result.success) {
+        toast.error(result.error || 'Failed to start Entra sync.');
+        return;
+      }
+
+      const runId = result.data?.runId;
+      if (runId) {
+        toast.success(`Entra sync started. Run ID: ${runId}`);
+      } else {
+        toast.success('Entra sync started for this client.');
+      }
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Failed to start Entra sync.';
+      toast.error(message);
+    } finally {
+      setIsSyncingEntra(false);
     }
   };
 
@@ -1373,6 +1405,23 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
           )}
 
           <div className="flex items-center gap-2 mr-8">
+            {isEEAvailable && (
+              <Button
+                id={`${id}-sync-entra-now-button`}
+                onClick={handleSyncEntraNow}
+                variant="outline"
+                size="sm"
+                className="flex items-center"
+                disabled={isSyncingEntra}
+              >
+                {isSyncingEntra ? (
+                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                )}
+                Sync Entra Now
+              </Button>
+            )}
             <Button
               id={`${id}-delete-client-button`}
               onClick={handleDeleteClient}
