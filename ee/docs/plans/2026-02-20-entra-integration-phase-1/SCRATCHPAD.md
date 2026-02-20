@@ -637,3 +637,6 @@ EOF && git add ee/docs/plans/2026-02-20-entra-integration-phase-1/tests.json ee/
 - (2026-02-20) `T103` completed: added `ee/server/src/__tests__/unit/entraDisableHandler.test.ts`.
 - Disabled-user handling assertion verifies linked contacts are marked inactive with `entra_sync_status_reason='disabled_upstream'` and link status is set inactive.
 - Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraDisableHandler.test.ts` (pass).
+- (2026-02-20) `T104` completed in `ee/server/src/__tests__/unit/entraDisableHandler.test.ts`.
+- Deleted-user handling assertion verifies linked contacts are marked inactive with `entra_sync_status_reason='deleted_upstream'`.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraDisableHandler.test.ts` (pass).

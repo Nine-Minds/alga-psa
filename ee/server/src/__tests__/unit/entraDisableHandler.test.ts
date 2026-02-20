@@ -95,4 +95,29 @@ describe('disableHandler', () => {
       })
     );
   });
+
+  it('T104: deleted upstream users mark linked contacts inactive with deleted reason', async () => {
+    const { createTenantKnexValue, contactsUpdateMock } = buildDbMocks();
+    createTenantKnexMock.mockResolvedValue(createTenantKnexValue);
+
+    const { markDeletedEntraUsersInactive } = await import(
+      '@ee/lib/integrations/entra/sync/disableHandler'
+    );
+
+    const updated = await markDeletedEntraUsersInactive('tenant-104', [
+      {
+        entraTenantId: 'entra-tenant-104',
+        entraObjectId: 'entra-object-104',
+      },
+    ]);
+
+    expect(updated).toBe(1);
+    expect(contactsUpdateMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        is_inactive: true,
+        entra_sync_status_reason: 'deleted_upstream',
+        entra_sync_status: 'inactive',
+      })
+    );
+  });
 });

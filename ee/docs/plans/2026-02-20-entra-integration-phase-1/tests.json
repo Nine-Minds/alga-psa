@@ -881,7 +881,7 @@
   {
     "id": "T104",
     "description": "Deleted upstream user marks linked contact inactive with sync reason.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F103"
     ]
