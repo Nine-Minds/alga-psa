@@ -504,7 +504,7 @@
   {
     "id": "T059",
     "description": "Mapping table UI supports selecting candidate client for fuzzy/unmatched entries.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F057",
       "F058"

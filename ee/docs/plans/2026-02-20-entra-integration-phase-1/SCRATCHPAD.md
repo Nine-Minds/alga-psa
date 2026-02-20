@@ -501,3 +501,7 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - (2026-02-20) `T058` completed in `entraMappingPreviewService` unit suite.
 - No-match case confirms tenants are returned in `unmatched` when neither domain nor fuzzy thresholds produce candidates.
 - Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraMappingPreviewService.test.ts` (pass).
+- (2026-02-20) `T059` completed: added jsdom component test `ee/server/src/__tests__/unit/entraTenantMappingTable.selection.test.tsx`.
+- Test renders `EntraTenantMappingTable`, loads fuzzy + unmatched preview rows, and verifies client selection updates both row comboboxes (`needs_review` and `unmatched`) with mapped summary callback updates.
+- Added EE Vitest alias coverage for `@alga-psa/integrations/*` and `@alga-psa/clients/*` in `ee/server/vitest.config.ts` so component imports resolve consistently in unit tests.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraTenantMappingTable.selection.test.tsx` (pass).
