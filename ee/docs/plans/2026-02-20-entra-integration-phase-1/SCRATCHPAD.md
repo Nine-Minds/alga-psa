@@ -685,3 +685,6 @@ EOF && git add ee/docs/plans/2026-02-20-entra-integration-phase-1/tests.json ee/
 - (2026-02-20) `T119` completed in `server/src/test/unit/integrations/entraActions.startSync.test.ts`.
 - Single-client sync guard test verifies query scoping to active `mapped` rows for requested client and rejects workflow start when no qualifying mapping exists.
 - Validation command: `cd server && npx vitest run src/test/unit/integrations/entraActions.startSync.test.ts --coverage.enabled=false` (pass).
+- (2026-02-20) `T120` completed in `server/src/test/unit/temporal/entraWorkflowActivityContracts.test.ts`.
+- Contract assertion confirms `loadMappedTenantsActivity` filters to active `mapped` rows, which excludes `skip_for_now` mappings from all-tenant sync.
+- Validation command: `cd server && npx vitest run src/test/unit/temporal/entraWorkflowActivityContracts.test.ts --coverage.enabled=false` (pass).

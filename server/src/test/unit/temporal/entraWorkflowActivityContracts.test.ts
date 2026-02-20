@@ -158,4 +158,13 @@ describe('Entra Temporal workflow/activity contracts', () => {
     expect(allTenantsWorkflow).toContain("? 'partial'");
     expect(allTenantsWorkflow).toContain(": 'failed'");
   });
+
+  it('T120: all-tenants sync tenant loader scopes to active mapped rows and excludes skipped mappings', () => {
+    const activity = readRepoFile('ee/temporal-workflows/src/activities/entra-sync-activities.ts');
+
+    expect(activity).toContain('export async function loadMappedTenantsActivity');
+    expect(activity).toContain("'m.is_active': true");
+    expect(activity).toContain("'m.mapping_state': 'mapped'");
+    expect(activity).not.toContain("'m.mapping_state': 'skip_for_now'");
+  });
 });

@@ -1013,7 +1013,7 @@
   {
     "id": "T120",
     "description": "All-tenant sync skips entries currently marked as skipped mappings.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F059",
       "F075"
