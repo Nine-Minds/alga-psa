@@ -260,7 +260,7 @@
   {
     "id": "F024",
     "description": "Schema constraint: enforce one active Entra link per contact.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data / API / Integrations"
     ],
