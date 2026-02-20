@@ -116,7 +116,7 @@
   {
     "id": "F020",
     "description": "Set up package.json exports field for @alga-psa/storage with subpaths: ., ./StorageService, ./types/storage, ./providers/StorageProvider, ./config/storage",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-07"]
   },
   {

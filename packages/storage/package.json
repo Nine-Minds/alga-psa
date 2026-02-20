@@ -5,6 +5,28 @@
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./src/index.ts",
+      "types": "./src/index.ts"
+    },
+    "./StorageService": {
+      "import": "./src/StorageService.ts",
+      "types": "./src/StorageService.ts"
+    },
+    "./types/storage": {
+      "import": "./src/types/storage.ts",
+      "types": "./src/types/storage.ts"
+    },
+    "./providers/StorageProvider": {
+      "import": "./src/providers/StorageProvider.ts",
+      "types": "./src/providers/StorageProvider.ts"
+    },
+    "./config/storage": {
+      "import": "./src/config/storage.ts",
+      "types": "./src/config/storage.ts"
+    }
+  },
   "scripts": {
     "build": "tsup",
     "typecheck": "tsc --noEmit"
