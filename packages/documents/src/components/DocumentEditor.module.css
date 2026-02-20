@@ -1,0 +1,7 @@
+.editorContainer :global(.ProseMirror) p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: rgb(var(--color-text-400));
+  pointer-events: none;
+  height: 0;
+}

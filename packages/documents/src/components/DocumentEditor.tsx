@@ -3,17 +3,23 @@
 import { useEffect, useState, useRef } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
+import Link from '@tiptap/extension-link';
+import Underline from '@tiptap/extension-underline';
+import { marked } from 'marked';
 import { getBlockContent, updateBlockContent } from '../actions/documentBlockContentActions';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card } from '@alga-psa/ui/components/Card';
 import { useRegisterUnsavedChanges } from '@alga-psa/ui/context';
+import { EditorToolbar } from './EditorToolbar';
+import styles from './DocumentEditor.module.css';
 
 interface DocumentEditorProps {
   documentId: string;
   userId: string;
+  placeholder?: string;
 }
 
-export function DocumentEditor({ documentId, userId }: DocumentEditorProps) {
+export function DocumentEditor({ documentId, userId, placeholder }: DocumentEditorProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -28,11 +34,45 @@ export function DocumentEditor({ documentId, userId }: DocumentEditorProps) {
   const editor = useEditor({
     extensions: [
       StarterKit,
+      Link.configure({
+        openOnClick: false,
+        autolink: true,
+        linkOnPaste: true,
+        HTMLAttributes: {
+          target: '_blank',
+          rel: 'noopener noreferrer',
+        },
+      }),
+      Underline,
     ],
     content: '<p></p>',
     editorProps: {
       attributes: {
         class: 'prose prose-sm sm:prose lg:prose-lg xl:prose-2xl mx-auto focus:outline-none',
+      },
+      handlePaste: (view, event, slice) => {
+        const plainText = event.clipboardData?.getData('text/plain');
+        const htmlText = event.clipboardData?.getData('text/html');
+
+        // Intercept plain text pastes that look like markdown
+        if (plainText && !htmlText) {
+          const markdownPattern = /^#{1,6}\s|^\*\s|^-\s|^\d+\.\s|\*\*[^*]+\*\*|\[.+\]\(.+\)|^```/m;
+          if (markdownPattern.test(plainText)) {
+            try {
+              const html = marked.parse(plainText, { async: false }) as string;
+              if (html && html !== `<p>${plainText}</p>\n`) {
+                editor?.commands.insertContent(html, {
+                  parseOptions: { preserveWhitespace: false },
+                });
+                return true;
+              }
+            } catch (e) {
+              console.error('Markdown paste conversion failed:', e);
+            }
+          }
+        }
+
+        return false;
       },
     },
     onCreate: () => {
@@ -92,7 +132,7 @@ export function DocumentEditor({ documentId, userId }: DocumentEditorProps) {
       setIsSaving(true);
       // Get the current editor content as JSON
       const content = editor.getJSON();
-      
+
       await updateBlockContent(documentId, {
         block_data: JSON.stringify(content),
         user_id: userId
@@ -140,7 +180,13 @@ export function DocumentEditor({ documentId, userId }: DocumentEditorProps) {
         </div>
       ) : (
         editor && editorReady && !editor.isDestroyed ? (
-          <EditorContent editor={editor} />
+          <div
+            className={styles.editorContainer}
+            data-placeholder={placeholder || 'Start writing...'}
+          >
+            <EditorToolbar editor={editor} />
+            <EditorContent editor={editor} />
+          </div>
         ) : (
           <div className="flex justify-center items-center h-64">
             Initializing editor...

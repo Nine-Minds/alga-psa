@@ -20,7 +20,7 @@ import {
 import { Mention } from './Mention';
 
 // Debug flag
-const DEBUG = true;
+const DEBUG = false;
 
 export interface MentionUser {
   user_id: string;
@@ -38,6 +38,7 @@ interface TextEditorProps {
   editorRef?: MutableRefObject<BlockNoteEditor<any, any, any> | null>;
   documentId?: string;
   searchMentions?: (query: string) => Promise<MentionUser[]>;
+  placeholder?: string;
 }
 
 export const DEFAULT_BLOCK: PartialBlock[] = [{
@@ -71,6 +72,7 @@ export default function TextEditor({
   editorRef,
   documentId,
   searchMentions,
+  placeholder,
 }: TextEditorProps) {
   const { resolvedTheme } = useTheme();
   const blockNoteTheme = resolvedTheme === 'dark' ? 'dark' : 'light';
@@ -146,6 +148,9 @@ export default function TextEditor({
   const editor = useCreateBlockNote({
     schema,
     initialContent,
+    placeholders: {
+      default: placeholder || "Start typing...",
+    },
     domAttributes: {
       editor: {
         class: 'block-note-editor',
@@ -155,26 +160,44 @@ export default function TextEditor({
     _tiptapOptions: {
       editorProps: {
         handlePaste: (view, event, slice) => {
+          const plainText = event.clipboardData?.getData('text/plain');
+          const htmlText = event.clipboardData?.getData('text/html');
+
+          // Intercept plain text pastes that look like markdown (no HTML means source is plain text)
+          if (plainText && !htmlText) {
+            const markdownPattern = /^#{1,6}\s|^\*\s|^-\s|^\d+\.\s|\*\*[^*]+\*\*|\[.+\]\(.+\)|^```/m;
+            if (markdownPattern.test(plainText)) {
+              // Return true immediately to claim the paste, then handle async
+              (async () => {
+                try {
+                  const blocks = await editor.tryParseMarkdownToBlocks(plainText);
+                  if (blocks && blocks.length > 0) {
+                    const currentBlock = editor.getTextCursorPosition().block;
+                    editor.replaceBlocks([currentBlock.id], blocks);
+                  }
+                } catch (e) {
+                  // Fallback: insert as plain text
+                  editor.insertInlineContent([{ type: "text", text: plainText, styles: {} }]);
+                }
+              })();
+              return true;
+            }
+          }
+
+          // Handle pasting into empty blocks (existing behavior)
           const { state, dispatch } = view;
           const { selection } = state;
-
-          // Check if we're pasting into an empty block
           const $pos = selection.$anchor;
           const parent = $pos.parent;
 
-          // If the current block is empty and we have slice content
           if (parent.content.size === 0 && slice.content.size > 0) {
             try {
               const tr = state.tr;
-
-              // Use the correct ProseMirror replace method
               tr.replace(selection.from, selection.to, slice);
-
               dispatch(tr);
               return true;
             } catch (error) {
               console.error('Paste error:', error);
-              // Fall back to default behavior if our custom handling fails
               return false;
             }
           }
@@ -188,11 +211,8 @@ export default function TextEditor({
 
   // Get mention menu items based on search query
   const getMentionMenuItems = async (query: string): Promise<DefaultReactSuggestionItem[]> => {
-    console.log('[TextEditor] getMentionMenuItems called with query:', query);
-
     try {
       const users = await (searchMentions ? searchMentions(query) : Promise.resolve([]));
-      console.log('[TextEditor] Received users:', users.length);
 
       const items: DefaultReactSuggestionItem[] = [];
 
@@ -202,7 +222,6 @@ export default function TextEditor({
           title: 'Everyone',
           subtext: '@everyone - Mention all internal users',
           onItemClick: () => {
-            console.log('[TextEditor] @everyone selected');
             editor.insertInlineContent([
               {
                 type: "mention",
@@ -223,7 +242,6 @@ export default function TextEditor({
         title: user.display_name,
         subtext: user.username ? `@${user.username}` : user.email,
         onItemClick: () => {
-          console.log('[TextEditor] User selected:', user);
           editor.insertInlineContent([
             {
               type: "mention",
@@ -238,7 +256,6 @@ export default function TextEditor({
         },
       })));
 
-      console.log('[TextEditor] Returning items:', items.length);
       return items;
     } catch (error) {
       console.error('[TextEditor] Error fetching mention users:', error);
