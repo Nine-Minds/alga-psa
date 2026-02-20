@@ -480,3 +480,6 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - (2026-02-20) `T051` completed in CIPP adapter normalization tests.
 - User-list case verifies canonical sync-user normalization (identity fields, booleans, trimmed strings, and phone filtering) for CIPP responses.
 - Validation command: `cd ee/server && npx vitest run src/__tests__/unit/cippProviderAdapter.normalization.test.ts` (pass).
+- (2026-02-20) `T052` completed: added discovery upsert unit coverage in `ee/server/src/__tests__/unit/entraDiscoveryService.upsert.test.ts`.
+- Test verifies discovery persists managed-tenant rows via tenant-scoped upsert (`onConflict(['tenant','entra_tenant_id']).merge(...)`) and returns idempotent discovered tenant results.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraDiscoveryService.upsert.test.ts` (pass).

@@ -444,7 +444,7 @@
   {
     "id": "T052",
     "description": "Discovery action inserts new managed tenants and updates existing rows idempotently.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F051",
       "F052"
