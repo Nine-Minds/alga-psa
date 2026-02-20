@@ -93,3 +93,4 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - Validation command: `node --check ee/server/migrations/20260220143000_create_entra_phase1_schema.cjs` (pass).
 - (2026-02-20) `F014` completed: added unique partial index `ux_entra_partner_connections_active_per_tenant` to enforce at most one active partner connection per tenant.
 - (2026-02-20) `F015` completed: migration creates `entra_managed_tenants` for persisted discovered tenant records per MSP tenant.
+- (2026-02-20) `F016` completed: added managed-tenant lookup indexes for recency and case-insensitive primary-domain matching.

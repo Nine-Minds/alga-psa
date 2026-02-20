@@ -172,7 +172,7 @@
   {
     "id": "F016",
     "description": "Schema index: add efficient lookup indexes for managed tenant discovery and domain matching.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data / API / Integrations"
     ],
