@@ -70,4 +70,12 @@ describe('Entra Phase 1 migration', () => {
     expect(migration).toContain(".references(['tenant', 'run_id'])");
     expect(migration).toContain(".inTable('entra_sync_runs')");
   });
+
+  it('T018: creates entra_contact_links with unique Entra identity constraint', () => {
+    expect(migration).toContain("createTable('entra_contact_links'");
+    expect(migration).toContain("table.text('entra_tenant_id').notNullable()");
+    expect(migration).toContain("table.text('entra_object_id').notNullable()");
+    expect(migration).toContain('CREATE UNIQUE INDEX IF NOT EXISTS ux_entra_contact_links_entra_identity');
+    expect(migration).toContain('ON entra_contact_links (tenant, entra_tenant_id, entra_object_id)');
+  });
 });

@@ -147,7 +147,7 @@
   {
     "id": "T018",
     "description": "Migration creates `entra_contact_links` with unique (`tenant`,`entra_tenant_id`,`entra_object_id`) constraint.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F022",
       "F023"
