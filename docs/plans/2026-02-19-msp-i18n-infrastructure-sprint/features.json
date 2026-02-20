@@ -104,7 +104,7 @@
   {
     "id": "F018",
     "description": "ROUTE_NAMESPACES uses 'msp/core' (not 'msp') for all MSP routes",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR18"]
   },
   {
