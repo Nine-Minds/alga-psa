@@ -163,3 +163,4 @@ ls server/public/locales/*/msp.json  # should fail (files removed)
 - 2026-02-20: Completed T021 checklist entry — I18nWrapper calls getNamespacesForRoute(pathname) and passes result as namespaces prop to I18nProvider
 - 2026-02-20: Completed T022 checklist entry — I18nWrapper re-resolves namespaces when pathname changes (route navigation triggers new namespace resolution)
 - 2026-02-20: Completed T023 checklist entry — scripts/generate-pseudo-locale.ts exists and is runnable
+- 2026-02-20: Completed T024 checklist entry — Pseudo-locale script accepts --locale and --fill CLI arguments

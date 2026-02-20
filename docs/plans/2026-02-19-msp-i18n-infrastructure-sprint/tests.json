@@ -190,7 +190,7 @@
   {
     "id": "T024",
     "description": "Pseudo-locale script accepts --locale and --fill CLI arguments",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F009"
     ]
