@@ -74,7 +74,7 @@
   {
     "id": "F013",
     "description": "Move providers/StorageProvider.ts from documents to packages/storage/src/providers/StorageProvider.ts",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-05"]
   },
   {

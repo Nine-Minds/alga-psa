@@ -72,3 +72,4 @@ grep -r "from '../lib/email'" server/ --include="*.ts" --include="*.tsx"
 - F010: Added `packages/storage/tsconfig.json` extending the root config.
 - F011: Moved `packages/documents/src/types/storage.ts` to `packages/storage/src/types/storage.ts`.
 - F012: Moved `packages/documents/src/config/storage.ts` to `packages/storage/src/config/storage.ts`.
+- F013: Moved `StorageProvider` base class to `packages/storage/src/providers/StorageProvider.ts`.
