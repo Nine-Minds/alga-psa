@@ -91,3 +91,4 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - (2026-02-20) `F012` completed: added field-sync controls and ambiguous queue panels to Entra settings, each gated by their dedicated flags (`entra-integration-field-sync`, `entra-integration-ambiguous-queue`).
 - (2026-02-20) `F013` completed via migration `ee/server/migrations/20260220143000_create_entra_phase1_schema.cjs`: created `entra_partner_connections` with tenant-scoped connection metadata and lifecycle timestamps.
 - Validation command: `node --check ee/server/migrations/20260220143000_create_entra_phase1_schema.cjs` (pass).
+- (2026-02-20) `F014` completed: added unique partial index `ux_entra_partner_connections_active_per_tenant` to enforce at most one active partner connection per tenant.
