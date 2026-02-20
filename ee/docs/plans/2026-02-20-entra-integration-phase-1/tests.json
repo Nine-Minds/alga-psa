@@ -632,7 +632,7 @@
   {
     "id": "T074",
     "description": "`upsertSyncRunActivity` creates parent sync run with initiating user and mode.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F079"
     ]
