@@ -28,7 +28,7 @@
   {
     "id": "T004",
     "description": "Integrations settings page renders Entra entry card in EE mode.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F004",
       "F005"

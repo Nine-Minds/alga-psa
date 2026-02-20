@@ -120,6 +120,7 @@ export default defineConfig({
       { find: 'next/server', replacement: path.resolve(__dirname, './src/test/stubs/next-server.ts') },
       { find: '@product/settings-extensions/entry', replacement: path.resolve(__dirname, './src/test/stubs/product-settings-extensions-entry.ts') },
       { find: '@product/chat/entry', replacement: path.resolve(__dirname, './src/test/stubs/product-chat-entry.ts') },
+      { find: '@product/billing/entry', replacement: path.resolve(__dirname, './src/test/stubs/product-billing-entry.tsx') },
       { find: 'pdf-lib', replacement: 'empty-module' },
     ],
   },

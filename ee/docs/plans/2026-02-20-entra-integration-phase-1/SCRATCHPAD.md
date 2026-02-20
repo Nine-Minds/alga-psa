@@ -352,3 +352,7 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - (2026-02-20) `T003` completed: added compile-contract file `packages/integrations/src/actions/entraActions.barrel.typecheck.ts` to assert Entra actions/types are re-exported from `actions/index.ts` with matching signatures to `integrations/entraActions.ts`.
 - The contract verifies function and type alias parity (`EntraConnectionType`, `EntraSyncScope`) through TypeScript assignability checks.
 - Validation command: `npx tsc --noEmit -p packages/integrations/tsconfig.json` (pass).
+- (2026-02-20) `T004` completed: added jsdom UI test `server/src/test/unit/components/integrations/IntegrationsSettingsPage.entra.test.tsx` for Entra entry placement in EE mode.
+- Test setup mocks tabs + feature flag/search params to select `Identity` category and asserts the Entra identity section includes the Entra settings entry loading card (`Loading Entra integration settings...`).
+- Added Vitest alias stub for `@product/billing/entry` in `server/vitest.config.ts` plus stub module `server/src/test/stubs/product-billing-entry.tsx` to keep settings-page imports resolvable during unit tests.
+- Validation command: `cd server && npx vitest run src/test/unit/components/integrations/IntegrationsSettingsPage.entra.test.tsx` (pass).
