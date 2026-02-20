@@ -4,6 +4,7 @@ import React from 'react';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
 import { getEntraMappingPreview } from '@alga-psa/integrations/actions';
+import { getAllClients } from '@alga-psa/clients/actions';
 
 type MatchReason = 'exact_domain' | 'secondary_domain' | 'fuzzy_name';
 
@@ -23,6 +24,11 @@ interface MappingTenantRow {
   state: 'auto_matched' | 'needs_review' | 'unmatched';
   candidates: MappingCandidate[];
   selectedClientId: string | null;
+}
+
+interface ClientOption {
+  clientId: string;
+  clientName: string;
 }
 
 function formatConfidence(score: number): string {
@@ -102,6 +108,8 @@ export function EntraTenantMappingTable() {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [rows, setRows] = React.useState<MappingTenantRow[]>([]);
+  const [allClients, setAllClients] = React.useState<ClientOption[]>([]);
+  const [searchByRow, setSearchByRow] = React.useState<Record<string, string>>({});
 
   const loadPreview = React.useCallback(async () => {
     setLoading(true);
@@ -124,6 +132,26 @@ export function EntraTenantMappingTable() {
     void loadPreview();
   }, [loadPreview]);
 
+  React.useEffect(() => {
+    const loadClients = async () => {
+      try {
+        const result = await getAllClients();
+        const normalized: ClientOption[] = (Array.isArray(result) ? result : [])
+          .map((row: any) => ({
+            clientId: String(row?.client_id || ''),
+            clientName: String(row?.client_name || 'Unknown client'),
+          }))
+          .filter((row) => Boolean(row.clientId))
+          .sort((a, b) => a.clientName.localeCompare(b.clientName));
+        setAllClients(normalized);
+      } catch {
+        setAllClients([]);
+      }
+    };
+
+    void loadClients();
+  }, []);
+
   const updateSelection = React.useCallback((managedTenantId: string, selectedClientId: string) => {
     setRows((currentRows) =>
       currentRows.map((row) =>
@@ -133,6 +161,42 @@ export function EntraTenantMappingTable() {
       )
     );
   }, []);
+
+  const updateSearch = React.useCallback((managedTenantId: string, searchValue: string) => {
+    setSearchByRow((current) => ({
+      ...current,
+      [managedTenantId]: searchValue,
+    }));
+  }, []);
+
+  const buildClientOptions = React.useCallback((row: MappingTenantRow): ClientOption[] => {
+    const options = new Map<string, ClientOption>();
+
+    for (const candidate of row.candidates) {
+      options.set(candidate.clientId, {
+        clientId: candidate.clientId,
+        clientName: candidate.clientName,
+      });
+    }
+
+    const searchValue = (searchByRow[row.managedTenantId] || '').trim().toLowerCase();
+    const includeAllClients = row.state !== 'auto_matched';
+    if (includeAllClients) {
+      for (const client of allClients) {
+        if (
+          searchValue &&
+          !client.clientName.toLowerCase().includes(searchValue)
+        ) {
+          continue;
+        }
+        options.set(client.clientId, client);
+      }
+    }
+
+    return Array.from(options.values())
+      .sort((a, b) => a.clientName.localeCompare(b.clientName))
+      .slice(0, 50);
+  }, [allClients, searchByRow]);
 
   return (
     <div className="space-y-3" id="entra-mapping-table">
@@ -160,6 +224,7 @@ export function EntraTenantMappingTable() {
           <tbody>
             {rows.map((row) => {
               const topCandidate = row.candidates[0];
+              const clientOptions = buildClientOptions(row);
               return (
                 <tr key={row.managedTenantId} className="border-t border-border/60">
                   <td className="px-3 py-2">
@@ -190,16 +255,26 @@ export function EntraTenantMappingTable() {
                     {topCandidate ? formatConfidence(topCandidate.confidenceScore) : '—'}
                   </td>
                   <td className="px-3 py-2">
+                    {row.state !== 'auto_matched' ? (
+                      <input
+                        id={`entra-manual-client-search-${row.managedTenantId}`}
+                        className="mb-1 h-8 w-full rounded-md border border-input bg-background px-2 text-xs"
+                        placeholder="Search clients..."
+                        value={searchByRow[row.managedTenantId] || ''}
+                        onChange={(event) => updateSearch(row.managedTenantId, event.target.value)}
+                        disabled={loading}
+                      />
+                    ) : null}
                     <select
                       className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
                       value={row.selectedClientId || ''}
                       onChange={(event) => updateSelection(row.managedTenantId, event.target.value)}
-                      disabled={loading || row.candidates.length === 0}
+                      disabled={loading || clientOptions.length === 0}
                     >
                       <option value="">Select client...</option>
-                      {row.candidates.map((candidate) => (
-                        <option key={`${row.managedTenantId}-${candidate.clientId}`} value={candidate.clientId}>
-                          {candidate.clientName}
+                      {clientOptions.map((option) => (
+                        <option key={`${row.managedTenantId}-${option.clientId}`} value={option.clientId}>
+                          {option.clientName}
                         </option>
                       ))}
                     </select>

@@ -177,3 +177,6 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - (2026-02-20) `F057` completed: added `EntraTenantMappingTable` (`ee/server/src/components/settings/integrations/EntraTenantMappingTable.tsx`) and embedded it in `EntraIntegrationSettings`.
 - UI now renders discovered tenants with status badges, suggestion reason, confidence score, and per-row candidate selection controls for mapping review.
 - Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
+- (2026-02-20) `F058` completed: extended `EntraTenantMappingTable` with a searchable manual client selector for fuzzy/unmatched rows.
+- Table now loads tenant client list via `getAllClients()`, supports per-row search input, and merges manual options with suggested candidates for explicit assignment selection.
+- Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).

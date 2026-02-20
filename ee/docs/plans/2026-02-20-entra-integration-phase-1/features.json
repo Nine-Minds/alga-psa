@@ -641,7 +641,7 @@
   {
     "id": "F058",
     "description": "Manual client selector: provide searchable client picker for fuzzy/unmatched tenant rows.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes"
     ],
