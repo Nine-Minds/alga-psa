@@ -73,6 +73,7 @@ import { ClientLanguagePreference } from './ClientLanguagePreference';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import ClientSurveySummaryCard from '@alga-psa/surveys/components/ClientSurveySummaryCard';
 import type { SurveyClientSatisfactionSummary } from '@alga-psa/types';
+import { shouldShowEntraSyncAction } from './clientDetailsEntraSyncAction';
 
 
 const SwitchDetailItem: React.FC<{
@@ -246,7 +247,10 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   const entraClientSyncFlag = useFeatureFlag('entra-integration-client-sync-action', {
     defaultValue: false,
   });
-  const showEntraSyncAction = isEEAvailable && entraClientSyncFlag.enabled;
+  const showEntraSyncAction = shouldShowEntraSyncAction(
+    isEEAvailable ? 'enterprise' : process.env.NEXT_PUBLIC_EDITION,
+    entraClientSyncFlag.enabled
+  );
 
   const fetchEntraSyncRunStatus = useCallback(async (runId: string): Promise<string | null> => {
     const response = await fetch(`/api/integrations/entra/sync/runs/${runId}`, {

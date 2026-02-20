@@ -63,7 +63,7 @@
   {
     "id": "T008",
     "description": "Client details Entra sync action is hidden when `entra-integration-client-sync-action` is disabled.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F008",
       "F009"

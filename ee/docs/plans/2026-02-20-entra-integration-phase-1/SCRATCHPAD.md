@@ -365,3 +365,6 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - (2026-02-20) `T007` completed: expanded `server/src/test/unit/components/integrations/IntegrationsSettingsPage.entra.test.tsx` with a flag-on scenario.
 - With `useFeatureFlag('entra-integration-ui')` mocked enabled, test confirms the Entra settings surface renders in Identity section (accepting either loading card text or loaded shell).
 - Validation command: `cd server && npx vitest run src/test/unit/components/integrations/IntegrationsSettingsPage.entra.test.tsx` (pass).
+- (2026-02-20) `T008` completed: extracted `shouldShowEntraSyncAction(...)` helper in `packages/clients/src/components/clients/clientDetailsEntraSyncAction.ts` and wired `ClientDetails` to use it for Entra client-action visibility gating.
+- Added unit test `packages/clients/src/components/clients/clientDetailsEntraSyncAction.test.ts` verifying the Entra client action is hidden when `entra-integration-client-sync-action` is disabled.
+- Validation commands: `cd packages/clients && npx vitest run src/components/clients/clientDetailsEntraSyncAction.test.ts` and `npx tsc --noEmit -p packages/clients/tsconfig.json` (pass).
