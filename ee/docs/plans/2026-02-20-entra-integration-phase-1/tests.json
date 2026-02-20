@@ -849,7 +849,7 @@
   {
     "id": "T100",
     "description": "Field sync toggle OFF prevents display-name overwrite on existing contacts.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F101"
     ]

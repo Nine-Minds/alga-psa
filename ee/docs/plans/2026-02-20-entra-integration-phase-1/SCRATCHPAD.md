@@ -625,3 +625,6 @@ EOF && git add ee/docs/plans/2026-02-20-entra-integration-phase-1/tests.json ee/
 - (2026-02-20) `T099` completed in `entraContactReconciler` unit suite.
 - Metadata-write assertions verify contact update patches include Entra identity/source fields during link/create reconciliation paths.
 - Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraContactReconciler.test.ts` (pass).
+- (2026-02-20) `T100` completed: added `ee/server/src/__tests__/unit/entraContactFieldSync.test.ts`.
+- Toggle-off case verifies `displayName=false` prevents `full_name` overwrite patch generation.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraContactFieldSync.test.ts` (pass).
