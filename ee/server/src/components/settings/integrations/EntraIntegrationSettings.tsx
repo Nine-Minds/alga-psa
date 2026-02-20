@@ -416,6 +416,20 @@ export default function EntraIntegrationSettings() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-5">
+          <div
+            className="rounded-lg border border-border/70 bg-background p-4"
+            id={settingsMode === 'onboarding' ? 'entra-mode-heading-onboarding' : 'entra-mode-heading-maintenance'}
+          >
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              {settingsMode === 'onboarding' ? 'Setup Mode' : 'Ongoing Operations Mode'}
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {settingsMode === 'onboarding'
+                ? 'Complete each onboarding step in order: connect, discover, map, then run your first sync.'
+                : 'Initial setup is complete. Focus here on sync operations, health checks, and maintenance reviews.'}
+            </p>
+          </div>
+
           {settingsMode === 'onboarding' ? (
             <>
               <div className="grid gap-3 md:grid-cols-2">

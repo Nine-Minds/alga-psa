@@ -99,3 +99,6 @@ Focused planning log for guided-layout improvements in Entra integration setting
   - Maintenance mode now suppresses onboarding step-progress/current-step cards.
   - Added operations-first maintenance sequencing: health summary + status, ongoing operations, sync history/queue, then mapping/skipped review blocks.
   - Added maintenance-only secondary discovery action (`Run Discovery Again`) in ongoing operations.
+- (2026-02-20) F014 implemented in `ee/server/src/components/settings/integrations/EntraIntegrationSettings.tsx`.
+  - Added explicit mode heading/copy banner at top of settings content (`Setup Mode` vs `Ongoing Operations Mode`).
+  - Copy now clearly distinguishes guided setup from post-setup maintenance behavior.

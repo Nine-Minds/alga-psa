@@ -165,7 +165,7 @@
   {
     "id": "F014",
     "description": "Add clear mode-level headings/copy so users can distinguish initial setup flow from ongoing maintenance operations.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Acceptance Criteria (Definition of Done)"
