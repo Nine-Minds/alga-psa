@@ -92,4 +92,13 @@ describe('Entra Phase 1 migration', () => {
     expect(migration).toContain('CREATE INDEX IF NOT EXISTS idx_entra_reconciliation_queue_status');
     expect(migration).toContain('CREATE INDEX IF NOT EXISTS idx_entra_reconciliation_queue_identity');
   });
+
+  it('T021: adds Entra linkage columns to clients table and lookup index', () => {
+    expect(migration).toContain("ensureColumn(knex, 'clients', 'entra_tenant_id'");
+    expect(migration).toContain("table.text('entra_tenant_id')");
+    expect(migration).toContain("ensureColumn(knex, 'clients', 'entra_primary_domain'");
+    expect(migration).toContain("table.text('entra_primary_domain')");
+    expect(migration).toContain('CREATE INDEX IF NOT EXISTS idx_clients_entra_tenant');
+    expect(migration).toContain('ON clients (tenant, entra_tenant_id)');
+  });
 });

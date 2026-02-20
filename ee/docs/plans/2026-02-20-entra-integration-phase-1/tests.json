@@ -172,7 +172,7 @@
   {
     "id": "T021",
     "description": "`clients` table contains `entra_tenant_id` and `entra_primary_domain` columns post-migration.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F026",
       "F027"

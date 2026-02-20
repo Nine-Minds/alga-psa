@@ -395,3 +395,5 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - Validation command: `cd server && npx vitest run src/test/unit/migrations/entraPhase1Migration.test.ts` (pass).
 - (2026-02-20) `T020` completed: extended migration coverage for `entra_contact_reconciliation_queue` table defaults and status/identity lookup indexes.
 - Validation command: `cd server && npx vitest run src/test/unit/migrations/entraPhase1Migration.test.ts` (pass).
+- (2026-02-20) `T021` completed: extended migration coverage for `clients.entra_tenant_id` / `clients.entra_primary_domain` columns and `idx_clients_entra_tenant`.
+- Validation command: `cd server && npx vitest run src/test/unit/migrations/entraPhase1Migration.test.ts` (pass).
