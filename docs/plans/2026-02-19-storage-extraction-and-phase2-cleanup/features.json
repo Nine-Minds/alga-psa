@@ -1,0 +1,236 @@
+[
+  {
+    "id": "F001",
+    "description": "Fix broken import in portal-domain-sessions-prune.ts: change 'server/src/lib/models/PortalDomainSessionToken' to '@alga-psa/auth'",
+    "implemented": false,
+    "prdRefs": ["FR-01"]
+  },
+  {
+    "id": "F002",
+    "description": "Add DocumentAssociation export to packages/documents/src/models/index.ts barrel",
+    "implemented": false,
+    "prdRefs": ["FR-02"]
+  },
+  {
+    "id": "F003",
+    "description": "Update documentActions.upload.test.ts to mock DocumentAssociation from @alga-psa/documents/models/documentAssociation instead of server/src/models/document-association",
+    "implemented": false,
+    "prdRefs": ["FR-02"]
+  },
+  {
+    "id": "F004",
+    "description": "Update documentPermissionsIntegration.test.ts to import DocumentAssociation from @alga-psa/documents/models/documentAssociation instead of server/src/models/document-association",
+    "implemented": false,
+    "prdRefs": ["FR-02"]
+  },
+  {
+    "id": "F005",
+    "description": "Delete server/src/models/document-association.ts after all callers migrated",
+    "implemented": false,
+    "prdRefs": ["FR-02"]
+  },
+  {
+    "id": "F006",
+    "description": "Update surveyService.ts to import from @alga-psa/email instead of ../lib/email",
+    "implemented": false,
+    "prdRefs": ["FR-03"]
+  },
+  {
+    "id": "F007",
+    "description": "Delete server/src/lib/email/index.ts re-export shim (verify no remaining source callers first)",
+    "implemented": false,
+    "prdRefs": ["FR-03"]
+  },
+  {
+    "id": "F008",
+    "description": "Create packages/storage/ directory with package.json (name: @alga-psa/storage, dependencies: @alga-psa/db, @alga-psa/core, @alga-psa/auth, @alga-psa/event-bus, @alga-psa/shared, @alga-psa/validation)",
+    "implemented": false,
+    "prdRefs": ["FR-04"]
+  },
+  {
+    "id": "F009",
+    "description": "Create packages/storage/project.json with tags [scope:storage, type:horizontal]",
+    "implemented": false,
+    "prdRefs": ["FR-04"]
+  },
+  {
+    "id": "F010",
+    "description": "Create packages/storage/tsconfig.json extending root tsconfig",
+    "implemented": false,
+    "prdRefs": ["FR-04"]
+  },
+  {
+    "id": "F011",
+    "description": "Move types/storage.ts from documents to packages/storage/src/types/storage.ts",
+    "implemented": false,
+    "prdRefs": ["FR-05"]
+  },
+  {
+    "id": "F012",
+    "description": "Move config/storage.ts from documents to packages/storage/src/config/storage.ts",
+    "implemented": false,
+    "prdRefs": ["FR-05"]
+  },
+  {
+    "id": "F013",
+    "description": "Move providers/StorageProvider.ts from documents to packages/storage/src/providers/StorageProvider.ts",
+    "implemented": false,
+    "prdRefs": ["FR-05"]
+  },
+  {
+    "id": "F014",
+    "description": "Move providers/LocalStorageProvider.ts from documents to packages/storage/src/providers/LocalStorageProvider.ts",
+    "implemented": false,
+    "prdRefs": ["FR-05"]
+  },
+  {
+    "id": "F015",
+    "description": "Move models/storage.ts (FileStoreModel) from documents to packages/storage/src/models/storage.ts",
+    "implemented": false,
+    "prdRefs": ["FR-05"]
+  },
+  {
+    "id": "F016",
+    "description": "Move StorageProviderFactory.ts from documents to packages/storage/src/StorageProviderFactory.ts",
+    "implemented": false,
+    "prdRefs": ["FR-05"]
+  },
+  {
+    "id": "F017",
+    "description": "Move StorageService.ts from documents to packages/storage/src/StorageService.ts",
+    "implemented": false,
+    "prdRefs": ["FR-05"]
+  },
+  {
+    "id": "F018",
+    "description": "Update all internal imports within moved files to use correct relative paths within packages/storage/",
+    "implemented": false,
+    "prdRefs": ["FR-06"]
+  },
+  {
+    "id": "F019",
+    "description": "Create packages/storage/src/index.ts barrel exporting StorageService, StorageProviderFactory, generateStoragePath, FileStoreModel, FileStore type, StorageError, storage config functions",
+    "implemented": false,
+    "prdRefs": ["FR-07"]
+  },
+  {
+    "id": "F020",
+    "description": "Set up package.json exports field for @alga-psa/storage with subpaths: ., ./StorageService, ./types/storage, ./providers/StorageProvider, ./config/storage",
+    "implemented": false,
+    "prdRefs": ["FR-07"]
+  },
+  {
+    "id": "F021",
+    "description": "Update packages/billing/src/actions/invoiceJobActions.ts: import StorageService from @alga-psa/storage",
+    "implemented": false,
+    "prdRefs": ["FR-08"]
+  },
+  {
+    "id": "F022",
+    "description": "Update packages/client-portal/src/actions/client-portal-actions/client-project-details.ts: import StorageService from @alga-psa/storage",
+    "implemented": false,
+    "prdRefs": ["FR-08"]
+  },
+  {
+    "id": "F023",
+    "description": "Update packages/jobs/src/lib/jobService.ts: import StorageService from @alga-psa/storage",
+    "implemented": false,
+    "prdRefs": ["FR-08"]
+  },
+  {
+    "id": "F024",
+    "description": "Update packages/jobs/src/lib/jobs/jobScheduler.ts: import StorageService from @alga-psa/storage",
+    "implemented": false,
+    "prdRefs": ["FR-08"]
+  },
+  {
+    "id": "F025",
+    "description": "Update server/src/lib/imports/importActions.ts: import StorageService from @alga-psa/storage",
+    "implemented": false,
+    "prdRefs": ["FR-08"]
+  },
+  {
+    "id": "F026",
+    "description": "Update server/src/services/pdf-generation.service.ts: import StorageProviderFactory, generateStoragePath from @alga-psa/storage",
+    "implemented": false,
+    "prdRefs": ["FR-09"]
+  },
+  {
+    "id": "F027",
+    "description": "Update server/src/app/api/documents/view/[fileId]/route.ts: import StorageProviderFactory from @alga-psa/storage",
+    "implemented": false,
+    "prdRefs": ["FR-09"]
+  },
+  {
+    "id": "F028",
+    "description": "Update server/src/lib/storage/StorageService.ts: import StorageProviderFactory, generateStoragePath from @alga-psa/storage",
+    "implemented": false,
+    "prdRefs": ["FR-09"]
+  },
+  {
+    "id": "F029",
+    "description": "Update packages/billing/src/services/pdfGenerationService.ts: import FileStore type from @alga-psa/storage/types/storage",
+    "implemented": false,
+    "prdRefs": ["FR-10"]
+  },
+  {
+    "id": "F030",
+    "description": "Update 4 documents handler files to import StorageService from @alga-psa/storage/StorageService",
+    "implemented": false,
+    "prdRefs": ["FR-11"]
+  },
+  {
+    "id": "F031",
+    "description": "Update packages/documents/src/actions/file-actions/fileActions.ts to import StorageService from @alga-psa/storage/StorageService",
+    "implemented": false,
+    "prdRefs": ["FR-11"]
+  },
+  {
+    "id": "F032",
+    "description": "Update packages/documents/src/actions/documentActions.ts to import StorageService from @alga-psa/storage/StorageService",
+    "implemented": false,
+    "prdRefs": ["FR-11"]
+  },
+  {
+    "id": "F033",
+    "description": "Update packages/documents/src/lib/entityImageService.ts to import StorageService from @alga-psa/storage/StorageService",
+    "implemented": false,
+    "prdRefs": ["FR-12"]
+  },
+  {
+    "id": "F034",
+    "description": "Add re-exports to packages/documents/src/index.ts: re-export StorageProviderFactory and generateStoragePath from @alga-psa/storage",
+    "implemented": false,
+    "prdRefs": ["FR-13"]
+  },
+  {
+    "id": "F035",
+    "description": "Update packages/documents/package.json exports to re-export ./storage/StorageService and ./types/storage from @alga-psa/storage equivalents",
+    "implemented": false,
+    "prdRefs": ["FR-13"]
+  },
+  {
+    "id": "F036",
+    "description": "Add @alga-psa/storage as dependency in packages/documents/package.json",
+    "implemented": false,
+    "prdRefs": ["FR-14"]
+  },
+  {
+    "id": "F037",
+    "description": "Add @alga-psa/storage as dependency in packages that consume it: billing, client-portal, jobs",
+    "implemented": false,
+    "prdRefs": ["FR-08", "FR-10"]
+  },
+  {
+    "id": "F038",
+    "description": "Remove storage-related source files from packages/documents/src/ (storage/StorageService.ts, storage/StorageProviderFactory.ts, storage/providers/*, config/storage.ts, types/storage.ts, models/storage.ts)",
+    "implemented": false,
+    "prdRefs": ["FR-05"]
+  },
+  {
+    "id": "F039",
+    "description": "Register @alga-psa/storage in workspace tsconfig paths and NX workspace configuration",
+    "implemented": false,
+    "prdRefs": ["FR-04"]
+  }
+]
