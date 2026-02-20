@@ -511,3 +511,6 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - (2026-02-20) `T061` completed in `ee/server/src/__tests__/unit/entraTenantMappingTable.selection.test.tsx`.
 - Bulk preselect test clicks `Preselect Exact Matches` and verifies each `auto_matched` row select is populated with its exact-domain candidate client ID.
 - Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraTenantMappingTable.selection.test.tsx` (pass).
+- (2026-02-20) `T062` completed: extended `server/src/test/unit/api/entraMappingAndDisconnectContracts.test.ts` with confirm/preview write-path contract assertions.
+- Coverage asserts confirm route only processes explicit `body.mappings` input and confirm service iterates `params.mappings`; preview route remains read-only (`buildEntraMappingPreview` only, no insert/update).
+- Validation command: `cd server && npx vitest run src/test/unit/api/entraMappingAndDisconnectContracts.test.ts` (pass).

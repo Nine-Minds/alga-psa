@@ -529,7 +529,7 @@
   {
     "id": "T062",
     "description": "Confirm mappings persists only selected mappings and does not write during preview stage.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F061"
     ]
