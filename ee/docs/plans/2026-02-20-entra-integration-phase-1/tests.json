@@ -1004,7 +1004,7 @@
   {
     "id": "T119",
     "description": "Single-client sync only processes identities belonging to that mapped client tenant.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F087",
       "F118"
