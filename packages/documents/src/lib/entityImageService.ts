@@ -2,7 +2,7 @@ import { createTenantKnex, withTransaction } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { getEntityImageUrl, EntityType } from './avatarUtils';
-import { StorageService } from '../storage/StorageService';
+import { StorageService } from '@alga-psa/storage/StorageService';
 import { deleteDocument, getDocumentTypeId } from '../actions/documentActions';
 
 // Re-export EntityType for external consumers
