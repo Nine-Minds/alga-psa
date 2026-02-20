@@ -5,7 +5,7 @@ import { confirmEntraMappings } from '@/lib/integrations/entra/mapping/confirmMa
 export { dynamic, runtime };
 
 export async function POST(request: Request): Promise<Response> {
-  const flagGate = await requireEntraUiFlagEnabled();
+  const flagGate = await requireEntraUiFlagEnabled('update');
   if (flagGate instanceof Response) {
     return flagGate;
   }

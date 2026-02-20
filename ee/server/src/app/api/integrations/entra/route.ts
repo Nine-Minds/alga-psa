@@ -6,7 +6,7 @@ import { getActiveEntraPartnerConnection } from '@/lib/integrations/entra/connec
 export { dynamic, runtime };
 
 export async function GET(): Promise<Response> {
-  const flagGate = await requireEntraUiFlagEnabled();
+  const flagGate = await requireEntraUiFlagEnabled('read');
   if (flagGate instanceof Response) {
     return flagGate;
   }

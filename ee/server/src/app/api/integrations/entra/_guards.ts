@@ -1,8 +1,13 @@
 import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@alga-psa/users/actions';
+import { hasPermission } from '@alga-psa/auth/rbac';
 import { featureFlags } from 'server/src/lib/feature-flags/featureFlags';
 
-export async function requireEntraUiFlagEnabled(): Promise<Response | { tenantId: string; userId: string }> {
+type EntraGuardPermission = 'read' | 'update';
+
+export async function requireEntraUiFlagEnabled(
+  requiredPermission: EntraGuardPermission = 'read'
+): Promise<Response | { tenantId: string; userId: string }> {
   const user = await getCurrentUser();
 
   if (!user || !user.user_id || !user.tenant) {
@@ -20,6 +25,17 @@ export async function requireEntraUiFlagEnabled(): Promise<Response | { tenantId
       {
         success: false,
         error: 'Forbidden',
+      },
+      { status: 403 }
+    );
+  }
+
+  const allowed = await hasPermission(user, 'system_settings', requiredPermission);
+  if (!allowed) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: `Forbidden: insufficient permissions (${requiredPermission})`,
       },
       { status: 403 }
     );

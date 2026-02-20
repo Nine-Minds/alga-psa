@@ -335,3 +335,8 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - Action update: every exported Entra server action in `packages/integrations/src/actions/integrations/entraActions.ts` now short-circuits with `Forbidden` for `user_type='client'` callers.
 - Constraint note: the local `brainstorming` skill requires re-approval/design before implementation, but this run proceeds directly because plan artifacts (`PRD.md`, `features.json`, `tests.json`) were explicitly provided as implementation source-of-truth.
 - Validation commands: `npx tsc --noEmit -p packages/integrations/tsconfig.json` and `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
+- (2026-02-20) `F119` completed: enforced `system_settings` RBAC split by read/update across Entra route and action surfaces.
+- Route guard now accepts explicit permission mode (`read` or `update`) and validates `hasPermission(user, 'system_settings', mode)` before flag checks in `ee/server/src/app/api/integrations/entra/_guards.ts`.
+- Updated all Entra routes to declare required permission mode: GET/read endpoints use `read`; POST mutating/setup/sync endpoints use `update`.
+- Added missing action-layer checks in `packages/integrations/src/actions/integrations/entraActions.ts`: `getEntraIntegrationStatus`, `getEntraMappingPreview`, `getEntraSyncRunHistory`, and `getEntraReconciliationQueue` require `system_settings.read`; `connectEntraIntegration` requires `system_settings.update`.
+- Validation commands: `npx tsc --noEmit -p packages/integrations/tsconfig.json`, `npx tsc --noEmit -p ee/server/tsconfig.json`, and `npx tsc --noEmit -p server/tsconfig.json` (pass).

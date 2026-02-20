@@ -1329,7 +1329,7 @@
   {
     "id": "F119",
     "description": "RBAC enforcement: require `system_settings.read` for view and `system_settings.update` for mutate/start-sync actions.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Security / Permissions"
     ],

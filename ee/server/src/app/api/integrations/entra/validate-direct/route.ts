@@ -23,7 +23,7 @@ async function listManagedTenants(accessToken: string): Promise<number> {
 }
 
 export async function POST(): Promise<Response> {
-  const flagGate = await requireEntraUiFlagEnabled();
+  const flagGate = await requireEntraUiFlagEnabled('update');
   if (flagGate instanceof Response) {
     return flagGate;
   }

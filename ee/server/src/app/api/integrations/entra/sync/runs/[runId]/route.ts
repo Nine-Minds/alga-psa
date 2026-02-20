@@ -9,7 +9,7 @@ export async function GET(
   _request: Request,
   context: { params: Promise<{ runId: string }> }
 ): Promise<Response> {
-  const flagGate = await requireEntraUiFlagEnabled();
+  const flagGate = await requireEntraUiFlagEnabled('read');
   if (flagGate instanceof Response) {
     return flagGate;
   }

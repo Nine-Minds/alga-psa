@@ -5,7 +5,7 @@ import { listOpenEntraReconciliationQueue } from '@/lib/integrations/entra/recon
 export { dynamic, runtime };
 
 export async function GET(request: Request): Promise<Response> {
-  const flagGate = await requireEntraUiFlagEnabled();
+  const flagGate = await requireEntraUiFlagEnabled('read');
   if (flagGate instanceof Response) {
     return flagGate;
   }

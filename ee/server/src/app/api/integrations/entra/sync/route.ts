@@ -6,7 +6,7 @@ export { dynamic, runtime };
 const SUPPORTED_SYNC_SCOPES = new Set(['initial', 'all-tenants', 'single-client']);
 
 export async function POST(request: Request): Promise<Response> {
-  const flagGate = await requireEntraUiFlagEnabled();
+  const flagGate = await requireEntraUiFlagEnabled('update');
   if (flagGate instanceof Response) {
     return flagGate;
   }
