@@ -194,7 +194,7 @@
   {
     "id": "F018",
     "description": "Schema constraint: enforce unique active mapping for each discovered Entra tenant per MSP tenant.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data / API / Integrations"
     ],
