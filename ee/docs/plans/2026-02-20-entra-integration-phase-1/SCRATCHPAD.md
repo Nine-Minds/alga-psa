@@ -643,3 +643,6 @@ EOF && git add ee/docs/plans/2026-02-20-entra-integration-phase-1/tests.json ee/
 - (2026-02-20) `T105` completed in `ee/server/src/__tests__/unit/entraDisableHandler.test.ts`.
 - Non-destructive handling assertion verifies disabled/deleted paths only issue update operations and never delete contact or link rows.
 - Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraDisableHandler.test.ts` (pass).
+- (2026-02-20) `T106` completed in `ee/server/src/__tests__/unit/entraContactReconciler.test.ts`.
+- Added assertions for both linked and created reconcile paths to verify `last_entra_sync_at` is refreshed on every processed contact row.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraContactReconciler.test.ts` (pass).

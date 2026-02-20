@@ -897,7 +897,7 @@
   {
     "id": "T106",
     "description": "Every processed contact gets `last_entra_sync_at` refreshed.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F105"
     ]

@@ -281,4 +281,56 @@ describe('reconcileEntraUserToContact', () => {
       })
     );
   });
+
+  it('T106: every processed contact refreshes last_entra_sync_at in linked and created paths', async () => {
+    const linkedHarness = setupReconcilerKnexHarness();
+    findContactMatchesByEmailMock.mockResolvedValueOnce([
+      {
+        contactNameId: 'contact-106-linked',
+        clientId: 'client-106',
+        email: 'user106@example.com',
+        fullName: 'User 106 Linked',
+        isInactive: false,
+      },
+    ]);
+
+    const { reconcileEntraUserToContact } = await import(
+      '@ee/lib/integrations/entra/sync/contactReconciler'
+    );
+    await reconcileEntraUserToContact({
+      tenantId: 'tenant-106',
+      clientId: 'client-106',
+      managedTenantId: 'managed-106',
+      user: buildUser({
+        entraObjectId: 'entra-106-linked',
+        userPrincipalName: 'user106@example.com',
+        email: 'user106@example.com',
+      }),
+    });
+
+    const createdHarness = setupReconcilerKnexHarness();
+    findContactMatchesByEmailMock.mockResolvedValueOnce([]);
+    createContactMock.mockResolvedValueOnce({ contact_name_id: 'contact-106-created' });
+    await reconcileEntraUserToContact({
+      tenantId: 'tenant-106',
+      clientId: 'client-106',
+      managedTenantId: 'managed-106',
+      user: buildUser({
+        entraObjectId: 'entra-106-created',
+        userPrincipalName: 'new106@example.com',
+        email: 'new106@example.com',
+      }),
+    });
+
+    expect(linkedHarness.contactsUpdateMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        last_entra_sync_at: 'db-now',
+      })
+    );
+    expect(createdHarness.contactsUpdateMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        last_entra_sync_at: 'db-now',
+      })
+    );
+  });
 });
