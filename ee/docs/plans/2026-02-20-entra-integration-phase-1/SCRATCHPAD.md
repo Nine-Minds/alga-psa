@@ -260,3 +260,6 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - (2026-02-20) `F093` completed: expanded `userFilterPipeline` with default service-account noise filters (e.g., `svc-`, `system-`, no-reply/shared mailbox/automation patterns) to exclude likely non-human identities by default.
 - Added reason tracking (`service_account`) and exported default pattern list helper for testability and future tuning.
 - Validation commands: `npx tsc --noEmit -p ee/server/tsconfig.json` and `npx tsc --noEmit -p ee/temporal-workflows/tsconfig.json` (pass).
+- (2026-02-20) `F094` completed: added tenant filter settings loader in `ee/server/src/lib/integrations/entra/settingsService.ts` that parses custom exclusion regex arrays from `entra_sync_settings.user_filter_config`.
+- `userFilterPipeline.filterEntraUsers(...)` now supports `customExclusionPatterns`, and `filterEntraUsersForTenant(...)` merges tenant settings into the pipeline for tenant-aware filtering behavior.
+- Validation commands: `npx tsc --noEmit -p ee/server/tsconfig.json` and `npx tsc --noEmit -p ee/temporal-workflows/tsconfig.json` (pass).

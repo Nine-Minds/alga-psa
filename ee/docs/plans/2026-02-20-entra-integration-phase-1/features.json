@@ -1045,7 +1045,7 @@
   {
     "id": "F094",
     "description": "Tenant custom filters: merge tenant-configured exclusion patterns into filtering pipeline.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements"
     ],

@@ -10,9 +10,13 @@ const DEFAULT_SERVICE_ACCOUNT_PATTERNS = [
   'automation|automated|daemon|bot',
 ];
 
+export interface EntraUserFilterOptions {
+  customExclusionPatterns?: string[];
+}
+
 export interface EntraFilteredOutUser {
   user: EntraSyncUser;
-  reason: 'account_disabled' | 'missing_identity' | 'service_account';
+  reason: 'account_disabled' | 'missing_identity' | 'service_account' | 'tenant_custom_pattern';
 }
 
 export interface EntraUserFilterResult {
@@ -64,8 +68,12 @@ function userMatchesPatterns(user: EntraSyncUser, patterns: RegExp[]): boolean {
   return patterns.some((pattern) => haystacks.some((value) => pattern.test(value)));
 }
 
-export function filterEntraUsers(users: EntraSyncUser[]): EntraUserFilterResult {
+export function filterEntraUsers(
+  users: EntraSyncUser[],
+  options: EntraUserFilterOptions = {}
+): EntraUserFilterResult {
   const serviceAccountPatterns = compilePatterns(DEFAULT_SERVICE_ACCOUNT_PATTERNS);
+  const tenantCustomPatterns = compilePatterns(options.customExclusionPatterns || []);
   const included: EntraSyncUser[] = [];
   const excluded: EntraFilteredOutUser[] = [];
 
@@ -83,6 +91,11 @@ export function filterEntraUsers(users: EntraSyncUser[]): EntraUserFilterResult 
 
     if (userMatchesPatterns(user, serviceAccountPatterns)) {
       excluded.push({ user, reason: 'service_account' });
+      continue;
+    }
+
+    if (userMatchesPatterns(user, tenantCustomPatterns)) {
+      excluded.push({ user, reason: 'tenant_custom_pattern' });
       continue;
     }
 
