@@ -105,3 +105,4 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - (2026-02-20) `F025` completed: migration creates `entra_contact_reconciliation_queue` plus status/identity indexes for ambiguous match review.
 - (2026-02-20) `F026` completed: altered `clients` with `entra_tenant_id` and `entra_primary_domain` columns for mapping write-through.
 - (2026-02-20) `F027` completed: added `idx_clients_entra_tenant` for tenant-scoped `clients.entra_tenant_id` lookups.
+- (2026-02-20) `F028` completed: altered `contacts` with `entra_object_id`, `entra_sync_source`, and `last_entra_sync_at` metadata fields.

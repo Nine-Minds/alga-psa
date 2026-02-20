@@ -304,7 +304,7 @@
   {
     "id": "F028",
     "description": "Contact model extension: add `contacts.entra_object_id`, `contacts.entra_sync_source`, and `contacts.last_entra_sync_at` columns.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data / API / Integrations"
     ],
