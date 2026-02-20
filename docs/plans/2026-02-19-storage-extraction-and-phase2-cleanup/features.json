@@ -140,7 +140,7 @@
   {
     "id": "F024",
     "description": "Update packages/jobs/src/lib/jobs/jobScheduler.ts: import StorageService from @alga-psa/storage",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-08"]
   },
   {
