@@ -681,7 +681,7 @@
   {
     "id": "T080",
     "description": "EE workflow client can start all-tenant sync and returns workflow/run IDs.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F084",
       "F086"
