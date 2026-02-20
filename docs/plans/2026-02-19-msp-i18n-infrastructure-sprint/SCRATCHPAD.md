@@ -146,3 +146,4 @@ ls server/public/locales/*/msp.json  # should fail (files removed)
 - 2026-02-20: Verified `/client-portal` route namespace mapping in Phase 0 tests (T004).
 - 2026-02-20: Completed T005 checklist entry — ROUTE_NAMESPACES maps '/client-portal/tickets' to ['common', 'client-portal', 'features/tickets']
 - 2026-02-20: Completed T006 checklist entry — ROUTE_NAMESPACES maps '/msp' to ['common', 'msp/core'] (at minimum)
+- 2026-02-20: Completed T007 checklist entry — ROUTE_NAMESPACES maps '/msp/tickets' to ['common', 'msp/core', 'features/tickets']

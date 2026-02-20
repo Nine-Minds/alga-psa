@@ -52,7 +52,7 @@
   {
     "id": "T007",
     "description": "ROUTE_NAMESPACES maps '/msp/tickets' to ['common', 'msp/core', 'features/tickets']",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F002",
       "F018"
