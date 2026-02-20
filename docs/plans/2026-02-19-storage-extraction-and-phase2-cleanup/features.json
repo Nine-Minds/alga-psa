@@ -50,7 +50,7 @@
   {
     "id": "F009",
     "description": "Create packages/storage/project.json with tags [scope:storage, type:horizontal]",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-04"]
   },
   {

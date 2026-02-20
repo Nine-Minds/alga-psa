@@ -68,3 +68,4 @@ grep -r "from '../lib/email'" server/ --include="*.ts" --include="*.tsx"
 - F006: Updated `server/src/services/surveyService.ts` to import `TenantEmailService` from `@alga-psa/email`.
 - F007: Deleted `server/src/lib/email/index.ts` shim after confirming no source imports remain.
 - F008: Created `packages/storage/package.json` scaffold with required dependencies and build/typecheck scripts.
+- F009: Added `packages/storage/project.json` with `scope:storage` + `type:horizontal` tags.
