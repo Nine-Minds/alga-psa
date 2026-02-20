@@ -266,7 +266,7 @@
   {
     "id": "T031",
     "description": "Direct connect initiation rejects users lacking update permission.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F035",
       "F119"

@@ -417,3 +417,6 @@ Working notes for design and implementation decisions tied to the EE Entra integ
 - (2026-02-20) `T030` completed: added query/index alignment regression test `server/src/test/unit/integrations/entraMappingQueryIndexAlignment.test.ts`.
 - Test enforces tenant-scoped managed-tenant preview query shape and active mapping lookup predicates that align with migration indexes (`idx_entra_managed_tenants_*`, `ux_entra_client_tenant_mappings_active`).
 - Validation command: `cd server && npx vitest run src/test/unit/integrations/entraMappingQueryIndexAlignment.test.ts` (pass).
+- (2026-02-20) `T031` completed: added action permission unit test `server/src/test/unit/integrations/entraActions.directConnect.test.ts` for `initiateEntraDirectOAuth`.
+- Test asserts callers lacking `system_settings.update` receive explicit forbidden response and verifies RBAC check invocation.
+- Validation command: `cd server && npx vitest run src/test/unit/integrations/entraActions.directConnect.test.ts` (pass).
