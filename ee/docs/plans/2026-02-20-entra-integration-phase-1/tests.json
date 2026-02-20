@@ -921,7 +921,7 @@
   {
     "id": "T109",
     "description": "Per-tenant counters include linked count accurately.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F107"
     ]

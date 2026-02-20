@@ -19,4 +19,21 @@ describe('EntraSyncResultAggregator', () => {
       inactivated: 0,
     });
   });
+
+  it('T109: tracks linked counter accurately across increment and add operations', () => {
+    const aggregator = new EntraSyncResultAggregator();
+
+    aggregator.increment('linked', 2);
+    aggregator.add({ linked: 4 });
+    aggregator.increment('linked');
+    aggregator.increment('linked', NaN);
+
+    expect(aggregator.toJSON()).toEqual({
+      created: 0,
+      linked: 7,
+      updated: 0,
+      ambiguous: 0,
+      inactivated: 0,
+    });
+  });
 });
