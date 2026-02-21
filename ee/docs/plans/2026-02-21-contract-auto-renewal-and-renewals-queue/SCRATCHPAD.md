@@ -1899,3 +1899,9 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
     - `npm -w @alga-psa/billing exec vitest run tests/renewalsQueueActions.schemaReadiness.integration.test.ts --coverage=false`
   - Constraint note:
     - runtime-import action tests currently hit workspace package entry-resolution failures for `@alga-psa/db`; migration/strict-schema integration coverage is therefore implemented via source-level wiring assertions (same style as existing renewal wiring suites).
+- (2026-02-21) Completed `T250`.
+  - Extended strict-schema integration wiring coverage for snooze mutation in:
+    - `packages/billing/tests/renewalsQueueActions.schemaReadiness.integration.test.ts`
+  - Assertions verify migrated-schema snooze path writes `status='snoozed'`, `snoozed_until`, and action audit metadata (`last_action`/actor/timestamp/note chain).
+  - Validation:
+    - `npm -w @alga-psa/billing exec vitest run tests/renewalsQueueActions.schemaReadiness.integration.test.ts --coverage=false`

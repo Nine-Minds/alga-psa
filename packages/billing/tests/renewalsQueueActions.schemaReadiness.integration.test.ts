@@ -16,4 +16,17 @@ describe('renewalsQueueActions strict-schema integration wiring', () => {
     expect(source).toContain(".where({ 'cc.tenant': tenant, 'cc.is_active': true })");
     expect(source).toContain("Run the latest server database migrations, then retry this renewals operation.");
   });
+
+  it('T250: snoozeRenewalQueueItem persists status/snoozed_until plus last_action audit metadata', () => {
+    expect(source).toContain('export const snoozeRenewalQueueItem = withAuth(async (');
+    expect(source).toContain('await assertRenewalSchemaReady(knex);');
+    expect(source).toContain("status: 'snoozed',");
+    expect(source).toContain('snoozed_until: normalizedSnoozedUntil,');
+    expect(source).toContain('withActionLabel({');
+    expect(source).toContain("}, 'snooze'), actorUserId");
+    expect(source).toContain('withActionTimestamp(');
+    expect(source).toContain('withActionNote(');
+    expect(source).toContain('withActionActor(');
+    expect(source).toContain("throw new Error('Snooze target date must be in the future');");
+  });
 });

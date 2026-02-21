@@ -2009,7 +2009,7 @@
   {
     "id": "T250",
     "description": "Integration: snoozeRenewalQueueItem updates status/snoozed_until and persists last_action audit fields for migrated rows.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F136",
       "F139"
