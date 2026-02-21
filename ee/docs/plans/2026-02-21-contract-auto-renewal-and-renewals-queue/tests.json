@@ -1362,7 +1362,7 @@
   {
     "id": "T171",
     "description": "Date constraint: snooze action rejects non-future dates for 'Implement unsnooze transition back to pending when snooze period elapses.'",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F070"
     ]
