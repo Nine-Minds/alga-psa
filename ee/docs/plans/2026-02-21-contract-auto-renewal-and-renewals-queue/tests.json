@@ -1706,7 +1706,7 @@
   {
     "id": "T214",
     "description": "Cycle rollover: evergreen behavior remains correct across year boundary for 'Include evergreen entries in upcoming renewals widget counts.'",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F109"
     ]
