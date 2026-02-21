@@ -1610,7 +1610,7 @@
   {
     "id": "T202",
     "description": "UI behavior: Show evergreen cycle anchor date in queue row details. persists after refresh/navigation",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F102"
     ]
