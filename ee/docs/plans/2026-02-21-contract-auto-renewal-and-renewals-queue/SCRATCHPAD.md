@@ -928,6 +928,19 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
   - Validation:
     - `npm -w @alga-psa/billing run typecheck`
     - `npm -w @alga-psa/billing exec vitest run tests/renewalsQueueActions.retryTicket.wiring.test.ts tests/renewalsQueueActions.wiring.test.ts`
+- (2026-02-21) Completed `F098`.
+  - Queue-only policy behavior is enforced in both automation paths:
+    - scheduled processor only enters ticket-create path when `effectiveDueDateActionPolicy === 'create_ticket'`
+    - manual retry action returns without creating tickets when effective policy is `queue_only`
+  - This preserves queue visibility/workflow without forcing ticket side effects.
+  - Updated coverage:
+    - `server/src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts`
+    - `packages/billing/tests/renewalsQueueActions.retryTicket.wiring.test.ts`
+  - Validation:
+    - `cd server && npm run typecheck`
+    - `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`
+    - `npm -w @alga-psa/billing run typecheck`
+    - `npm -w @alga-psa/billing exec vitest run tests/renewalsQueueActions.retryTicket.wiring.test.ts tests/renewalsQueueActions.wiring.test.ts`
 
 ## Open Questions
 - Should renewal ticket defaults be a brand-new billing settings card, or an extension of existing default ticket settings patterns?

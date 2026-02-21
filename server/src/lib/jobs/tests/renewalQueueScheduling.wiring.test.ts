@@ -151,6 +151,12 @@ describe('renewal queue scheduling wiring', () => {
     expect(renewalHandlerSource).toContain('updates.automation_error = null;');
   });
 
+  it('supports queue-only due-date policy by skipping ticket creation', () => {
+    expect(renewalHandlerSource).toContain("if (effectiveDueDateActionPolicy === 'queue_only') {");
+    expect(renewalHandlerSource).toContain('queueOnlyPolicyCount += 1;');
+    expect(renewalHandlerSource).toContain("&& effectiveDueDateActionPolicy === 'create_ticket'");
+  });
+
   it('registers and schedules renewal queue processing in the jobs module', () => {
     expect(jobsIndexSource).toContain("import { processRenewalQueueHandler, RenewalQueueProcessorJobData } from './handlers/processRenewalQueueHandler';");
     expect(jobsIndexSource).toContain("jobScheduler.registerJobHandler<RenewalQueueProcessorJobData>(");

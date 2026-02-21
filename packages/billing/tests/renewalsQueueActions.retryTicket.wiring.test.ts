@@ -19,5 +19,7 @@ describe('renewalsQueueActions retry renewal ticket wiring', () => {
     expect(source).toContain('created_ticket_id: createdTicket.ticket_id,');
     expect(source).toContain('automation_error: null,');
     expect(source).toContain('automation_error: errorMessage,');
+    expect(source).toContain("if (effectivePolicy !== 'create_ticket') {");
+    expect(source).toContain('retried: false,');
   });
 });
