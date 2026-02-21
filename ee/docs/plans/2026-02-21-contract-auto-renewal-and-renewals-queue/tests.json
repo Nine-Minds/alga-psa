@@ -1250,7 +1250,7 @@
   {
     "id": "T157",
     "description": "UI behavior: Render owner filter for assigned user in Renewals queue. persists after refresh/navigation",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F054"
     ]
