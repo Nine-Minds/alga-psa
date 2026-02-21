@@ -1618,7 +1618,7 @@
   {
     "id": "T203",
     "description": "Cycle rollover: evergreen behavior remains correct across year boundary for 'Show evergreen cycle anchor date in queue row details.'",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F102"
     ]
