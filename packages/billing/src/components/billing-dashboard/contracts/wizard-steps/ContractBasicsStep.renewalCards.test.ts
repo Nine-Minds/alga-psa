@@ -43,4 +43,10 @@ describe('ContractBasicsStep renewal card rendering', () => {
     expect(source).toContain("const isAutoRenew = effectiveRenewalMode === 'auto';");
     expect(source).toContain('{isAutoRenew && (');
   });
+
+  it('includes renewal fields in the contract summary preview', () => {
+    expect(source).toContain('<strong>Renewal Mode:</strong>');
+    expect(source).toContain('<strong>Notice Period:</strong>');
+    expect(source).toContain('<strong>Renewal Term:</strong>');
+  });
 });

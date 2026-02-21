@@ -175,6 +175,8 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
 - (2026-02-21) Completed `F018`.
   - Updated `createClientContractFromWizard` insert path for `client_contracts` to persist renewal fields.
   - Added schema-compat guards (`hasColumn`) so renewal columns are written when available without breaking pre-migration environments.
+- (2026-02-21) Completed `T015`.
+  - Extended `ContractBasicsStep.renewalCards.test.ts` to assert renewal mode/notice/term rows are present in the Contract Basics summary preview.
 
 ## Open Questions
 - Should renewal ticket defaults be a brand-new billing settings card, or an extension of existing default ticket settings patterns?
