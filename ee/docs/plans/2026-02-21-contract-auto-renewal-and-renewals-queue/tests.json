@@ -1290,7 +1290,7 @@
   {
     "id": "T162",
     "description": "Cycle rollover: evergreen behavior remains correct across year boundary for 'Render contract type filter for fixed-term versus evergreen entries.'",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F057"
     ]
