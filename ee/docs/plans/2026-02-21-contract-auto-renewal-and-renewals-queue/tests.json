@@ -1346,7 +1346,7 @@
   {
     "id": "T169",
     "description": "Linkage correctness: 'Implement create-renewal-draft action for eligible queue entries.' stores created draft contract id on work item",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F067"
     ]
