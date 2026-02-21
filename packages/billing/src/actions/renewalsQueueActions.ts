@@ -1,5 +1,6 @@
 'use server';
 
+import { randomUUID } from 'node:crypto';
 import { createTenantKnex } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import type { RenewalWorkItemStatus } from '@alga-psa/types';
@@ -39,6 +40,12 @@ export type RenewalQueueMutationResult = {
   previous_status: RenewalWorkItemStatus;
   status: RenewalWorkItemStatus;
   updated_at: string;
+};
+
+export type RenewalDraftCreationResult = {
+  client_contract_id: string;
+  created_draft_contract_id: string;
+  draft_client_contract_id: string;
 };
 
 export const listRenewalQueueRows = withAuth(async (
@@ -224,6 +231,170 @@ export const markRenewalQueueItemNonRenewing = withAuth(async (
       previous_status: previousStatus,
       status: 'non_renewing',
       updated_at: updatedAt,
+    };
+  });
+});
+
+export const createRenewalDraftForQueueItem = withAuth(async (
+  _user,
+  { tenant },
+  clientContractId: string
+): Promise<RenewalDraftCreationResult> => {
+  if (typeof clientContractId !== 'string' || clientContractId.trim().length === 0) {
+    throw new Error('Client contract id is required');
+  }
+
+  const { knex } = await createTenantKnex();
+  const schema = knex.schema as any;
+  const [
+    hasStatusColumn,
+    hasCreatedDraftColumn,
+    hasTemplateContractIdColumn,
+    hasRenewalModeColumn,
+    hasNoticePeriodColumn,
+    hasRenewalTermColumn,
+    hasUseTenantDefaultsColumn,
+  ] = await Promise.all([
+    schema?.hasColumn?.('client_contracts', 'status') ?? false,
+    schema?.hasColumn?.('client_contracts', 'created_draft_contract_id') ?? false,
+    schema?.hasColumn?.('client_contracts', 'template_contract_id') ?? false,
+    schema?.hasColumn?.('client_contracts', 'renewal_mode') ?? false,
+    schema?.hasColumn?.('client_contracts', 'notice_period_days') ?? false,
+    schema?.hasColumn?.('client_contracts', 'renewal_term_months') ?? false,
+    schema?.hasColumn?.('client_contracts', 'use_tenant_renewal_defaults') ?? false,
+  ]);
+
+  return knex.transaction(async (trx) => {
+    const source = await trx('client_contracts as cc')
+      .join('contracts as c', function joinContract() {
+        this.on('cc.contract_id', '=', 'c.contract_id').andOn('cc.tenant', '=', 'c.tenant');
+      })
+      .where({
+        'cc.tenant': tenant,
+        'cc.client_contract_id': clientContractId,
+        'cc.is_active': true,
+      })
+      .select([
+        'cc.client_contract_id',
+        'cc.client_id',
+        'cc.contract_id',
+        'cc.start_date',
+        'cc.end_date',
+        ...(hasStatusColumn ? ['cc.status'] : []),
+        ...(hasCreatedDraftColumn ? ['cc.created_draft_contract_id'] : []),
+        ...(hasTemplateContractIdColumn ? ['cc.template_contract_id'] : []),
+        ...(hasRenewalModeColumn ? ['cc.renewal_mode'] : []),
+        ...(hasNoticePeriodColumn ? ['cc.notice_period_days'] : []),
+        ...(hasRenewalTermColumn ? ['cc.renewal_term_months'] : []),
+        ...(hasUseTenantDefaultsColumn ? ['cc.use_tenant_renewal_defaults'] : []),
+        'c.contract_name',
+        'c.contract_description',
+        'c.billing_frequency',
+        'c.currency_code',
+      ])
+      .first();
+
+    if (!source) {
+      throw new Error('Renewal work item not found');
+    }
+
+    const currentStatus = toRenewalWorkItemStatus((source as any).status);
+    if (currentStatus !== 'pending' && currentStatus !== 'renewing') {
+      throw new Error(`Renewal draft can only be created for pending or renewing work items (current: ${currentStatus})`);
+    }
+
+    if (hasCreatedDraftColumn && typeof (source as any).created_draft_contract_id === 'string' && (source as any).created_draft_contract_id.length > 0) {
+      const existingDraft = await trx('contracts')
+        .where({
+          tenant,
+          contract_id: (source as any).created_draft_contract_id,
+          status: 'draft',
+        })
+        .first('contract_id');
+
+      if (existingDraft) {
+        const existingDraftAssignment = await trx('client_contracts')
+          .where({
+            tenant,
+            contract_id: existingDraft.contract_id,
+          })
+          .first('client_contract_id');
+
+        return {
+          client_contract_id: clientContractId,
+          created_draft_contract_id: existingDraft.contract_id,
+          draft_client_contract_id: existingDraftAssignment?.client_contract_id ?? '',
+        };
+      }
+    }
+
+    const nowIso = new Date().toISOString();
+    const draftContractId = randomUUID();
+    const draftClientContractId = randomUUID();
+
+    await trx('contracts').insert({
+      tenant,
+      contract_id: draftContractId,
+      contract_name: `${(source as any).contract_name ?? (source as any).contract_id} (Renewal Draft)`,
+      contract_description: (source as any).contract_description ?? null,
+      billing_frequency: (source as any).billing_frequency ?? 'monthly',
+      currency_code: (source as any).currency_code ?? 'USD',
+      is_active: false,
+      status: 'draft',
+      is_template: false,
+      created_at: nowIso,
+      updated_at: nowIso,
+    });
+
+    const clientContractInsert: Record<string, unknown> = {
+      tenant,
+      client_contract_id: draftClientContractId,
+      client_id: (source as any).client_id,
+      contract_id: draftContractId,
+      start_date: (source as any).end_date ?? (source as any).start_date,
+      end_date: (source as any).end_date ?? null,
+      is_active: false,
+      created_at: nowIso,
+      updated_at: nowIso,
+      po_required: false,
+      po_number: null,
+      po_amount: null,
+    };
+
+    if (hasTemplateContractIdColumn) {
+      clientContractInsert.template_contract_id = (source as any).template_contract_id ?? null;
+    }
+    if (hasRenewalModeColumn) {
+      clientContractInsert.renewal_mode = (source as any).renewal_mode ?? null;
+    }
+    if (hasNoticePeriodColumn) {
+      clientContractInsert.notice_period_days = (source as any).notice_period_days ?? null;
+    }
+    if (hasRenewalTermColumn) {
+      clientContractInsert.renewal_term_months = (source as any).renewal_term_months ?? null;
+    }
+    if (hasUseTenantDefaultsColumn) {
+      clientContractInsert.use_tenant_renewal_defaults = (source as any).use_tenant_renewal_defaults ?? true;
+    }
+
+    await trx('client_contracts').insert(clientContractInsert);
+
+    if (hasCreatedDraftColumn) {
+      await trx('client_contracts')
+        .where({
+          tenant,
+          client_contract_id: clientContractId,
+        })
+        .update({
+          created_draft_contract_id: draftContractId,
+          updated_at: nowIso,
+        });
+    }
+
+    return {
+      client_contract_id: clientContractId,
+      created_draft_contract_id: draftContractId,
+      draft_client_contract_id: draftClientContractId,
     };
   });
 });

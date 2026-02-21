@@ -530,7 +530,7 @@
   {
     "id": "F067",
     "description": "Implement create-renewal-draft action for eligible queue entries.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > FR5 — Queue Actions and Renewal Workflow"
     ]
