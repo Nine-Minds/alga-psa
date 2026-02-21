@@ -1148,6 +1148,16 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
   - Validation:
     - `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`
     - `cd server && npm run typecheck`
+- (2026-02-21) Completed `F119`.
+  - Added Temporal runner coverage proving renewal scheduled processing can be registered as a recurring Temporal workflow:
+    - schedules `process-renewal-queue` with tenant + horizon payload
+    - validates Temporal schedule action carries renewal job name/data
+  - Updated coverage:
+    - `ee/server/src/__tests__/unit/temporalJobRunner.scheduleRecurringJob.test.ts`
+  - Validation:
+    - `cd ee/server && npx vitest run src/__tests__/unit/temporalJobRunner.scheduleRecurringJob.test.ts`
+  - Note:
+    - `npm --prefix ee/server run test:unit -- src/__tests__/unit/temporalJobRunner.scheduleRecurringJob.test.ts` executes the full unit suite in this workspace and currently surfaces unrelated pre-existing failures in other unit files; targeted execution of the modified test passes.
 
 ## Open Questions
 - Should renewal ticket defaults be a brand-new billing settings card, or an extension of existing default ticket settings patterns?

@@ -91,4 +91,40 @@ describe('TemporalJobRunner.scheduleRecurringJob', () => {
     expect(out.externalId).toBe('extsched:install-1:sched-2');
     expect(client.schedule.create).not.toHaveBeenCalled();
   });
+
+  it('registers renewal scheduled processing as a Temporal recurring workflow payload', async () => {
+    const { TemporalJobRunner } = await import('@ee/lib/jobs/runners/TemporalJobRunner');
+    TemporalJobRunner.reset();
+
+    const { Client } = await import('@temporalio/client');
+    const runner = await TemporalJobRunner.create({
+      address: 'temporal.test:7233',
+      namespace: 'default',
+      taskQueue: 'alga-jobs',
+    });
+    const client = (Client as any).mock.results.at(-1)?.value;
+    client.schedule.create.mockClear();
+    client.schedule.getHandle.mockClear();
+
+    (runner as any).createJobRecord = vi.fn(async () => ({ jobId: 'job-renewal-1' }));
+    (runner as any).updateJobExternalIds = vi.fn(async () => undefined);
+    (runner as any).updateJobStatus = vi.fn(async () => undefined);
+
+    const handle = { describe: vi.fn(async () => { throw new Error('not found'); }) };
+    client.schedule.getHandle.mockReturnValue(handle);
+
+    await runner.scheduleRecurringJob(
+      'process-renewal-queue',
+      { tenantId: 'tenant-1', horizonDays: 90 } as any,
+      '0 5 * * *',
+      { singletonKey: 'process-renewal-queue:tenant-1' }
+    );
+
+    expect(client.schedule.create).toHaveBeenCalledTimes(1);
+    const arg = client.schedule.create.mock.calls[0][0];
+    expect(arg.scheduleId).toBe('process-renewal-queue:tenant-1');
+    expect(arg.action?.workflowType).toBe('genericJobWorkflow');
+    expect(arg.action?.args?.[0]?.jobName).toBe('process-renewal-queue');
+    expect(arg.action?.args?.[0]?.data).toEqual({ tenantId: 'tenant-1', horizonDays: 90 });
+  });
 });

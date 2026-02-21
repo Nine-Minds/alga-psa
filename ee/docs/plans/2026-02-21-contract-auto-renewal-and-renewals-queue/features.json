@@ -946,7 +946,7 @@
   {
     "id": "F119",
     "description": "Register renewal scheduled processing workflow in Temporal hosted/EE scheduling path.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > FR9 — Runtime Compatibility (On-prem PG Boss vs Hosted/EE Temporal)"
     ]
