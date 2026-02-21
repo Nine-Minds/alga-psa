@@ -13,7 +13,6 @@
   "invoices": "Facturen",
   "payments": "Betalingen",
   "contractLines": "Service-abonnementen",
-  "plans": "Service-abonnementen",
   "usage": "Verbruiksstatistieken",
   "hoursByService": "Uren per dienst",
   "invoice": {

@@ -5,7 +5,7 @@ import logger from '@alga-psa/core/logger';
 import { TenantEmailService } from '@alga-psa/email';
 import { StaticTemplateProcessor } from '@alga-psa/email';
 import { getUserInfoForEmail, resolveEmailLocale } from './emailLocaleResolver';
-import { SupportedLocale } from '@alga-psa/ui/lib/i18n/config';
+import { SupportedLocale } from '@alga-psa/core/i18n/config';
 import Handlebars from 'handlebars';
 import { EmailAddress } from '../../types/email.types';
 

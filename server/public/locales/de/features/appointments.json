@@ -19,7 +19,9 @@
     "ticketLabel": "Mit bestehendem Ticket verknüpfen (Optional)",
     "selectTicket": "Wählen Sie ein Ticket",
     "noTicket": "Kein Ticket",
-    "ticketHint": "Optional können Sie diesen Termin mit einem bestehenden Support-Ticket verknüpfen"
+    "ticketHint": "Optional können Sie diesen Termin mit einem bestehenden Support-Ticket verknüpfen",
+    "noTicketsFound": "Keine Tickets gefunden, die Ihrer Suche entsprechen",
+    "searchTickets": "Tickets suchen..."
   },
   "step2": {
     "title": "Datum wählen",
@@ -35,7 +37,8 @@
     "technicianLabel": "Bevorzugter Techniker",
     "selectTechnician": "Wählen Sie einen Techniker",
     "noPreference": "Keine Präferenz",
-    "technicianHint": "Dies ist eine Präferenz und kann je nach Verfügbarkeit angepasst werden"
+    "technicianHint": "Dies ist eine Präferenz und kann je nach Verfügbarkeit angepasst werden",
+    "noTimeSlotsAvailable": "Keine Zeitfenster für dieses Datum verfügbar. Bitte wählen Sie ein anderes Datum."
   },
   "step4": {
     "title": "Überprüfen & Bestätigen",

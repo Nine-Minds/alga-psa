@@ -7,7 +7,7 @@
 
 import React, { useState } from 'react';
 import { useI18n } from '@alga-psa/ui/lib/i18n/client';
-import type { SupportedLocale } from '@alga-psa/ui/lib/i18n/config';
+import type { SupportedLocale } from '@alga-psa/core/i18n/config';
 
 interface LanguageSwitcherProps {
   /** Visual variant of the switcher */

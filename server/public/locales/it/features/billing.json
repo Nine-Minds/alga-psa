@@ -13,7 +13,6 @@
   "invoices": "Fatture",
   "payments": "Pagamenti",
   "contractLines": "Linee di contratto servizio",
-  "plans": "Piani di servizio",
   "usage": "Metriche di utilizzo",
   "hoursByService": "Ore per servizio",
   "invoice": {

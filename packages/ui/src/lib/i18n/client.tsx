@@ -15,6 +15,7 @@ import {
   I18N_CONFIG,
   SupportedLocale,
   isSupportedLocale,
+  filterPseudoLocales,
 } from './config';
 
 /**
@@ -69,12 +70,16 @@ interface I18nProviderProps {
   children: ReactNode;
   initialLocale?: SupportedLocale;
   portal?: 'msp' | 'client';
+  namespaces?: string[];
+  showPseudoLocales?: boolean;
 }
 
 export function I18nProvider({
   children,
   initialLocale,
   portal = 'client',
+  namespaces,
+  showPseudoLocales = false,
 }: I18nProviderProps) {
   const [locale, setLocaleState] = useState<SupportedLocale>(
     initialLocale || (LOCALE_CONFIG.defaultLocale as SupportedLocale)
@@ -87,6 +92,24 @@ export function I18nProvider({
       setIsInitialized(true);
     });
   }, [locale]);
+
+  useEffect(() => {
+    if (!isInitialized || !namespaces || namespaces.length === 0) {
+      return;
+    }
+
+    const missing = namespaces.filter(
+      (namespace) => !i18next.hasResourceBundle(locale, namespace)
+    );
+
+    if (missing.length === 0) {
+      return;
+    }
+
+    i18next.loadNamespaces(missing).catch((error) => {
+      console.error('Failed to load namespaces:', error);
+    });
+  }, [isInitialized, locale, namespaces]);
 
   const setLocale = async (newLocale: SupportedLocale) => {
     if (!isSupportedLocale(newLocale)) {
@@ -135,7 +158,7 @@ export function I18nProvider({
   const value: I18nContextValue = {
     locale,
     setLocale,
-    supportedLocales: LOCALE_CONFIG.supportedLocales,
+    supportedLocales: filterPseudoLocales(LOCALE_CONFIG.supportedLocales, showPseudoLocales),
     localeNames: LOCALE_CONFIG.localeNames,
     isRTL: LOCALE_CONFIG.rtlLocales.includes(locale),
   };

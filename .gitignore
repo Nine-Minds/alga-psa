@@ -151,6 +151,8 @@ check-*.sql
 check_*.sql
 update-*.sql
 server/.alga-ext-cache/
+server/public/locales/xx/
+server/public/locales/yy/
 
 *draft*.md
 *draft*.txt

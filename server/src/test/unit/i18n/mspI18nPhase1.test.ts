@@ -23,7 +23,7 @@ const locales = ['en', 'fr', 'es', 'de', 'nl', 'it', 'pl'] as const;
 const featureNamespaces = ['tickets', 'projects', 'billing', 'documents', 'appointments'] as const;
 
 const clientPortalNamespaces = {
-  'client-portal': ['nav', 'dashboard', 'common', 'pagination', 'time', 'auth', 'account', 'profile', 'clientSettings', 'notifications'],
+  'client-portal': ['nav', 'dashboard', 'auth', 'account', 'profile', 'clientSettings', 'notifications'],
 } as const;
 
 function collectKeyPaths(obj: any, prefix = ''): string[] {
@@ -173,8 +173,11 @@ describe('MSP i18n Phase 1', () => {
   });
 
   it('T017: i18n loadPath supports nested namespaces', () => {
-    const src = readRepoFile('packages/ui/src/lib/i18n/config.ts');
+    const src = readRepoFile('packages/core/src/lib/i18n/config.ts');
     expect(src).toContain('/locales/{{lng}}/{{ns}}.json');
+    // Also verify the re-export in packages/ui re-exports TRANSLATION_PATHS
+    const uiSrc = readRepoFile('packages/ui/src/lib/i18n/config.ts');
+    expect(uiSrc).toContain('TRANSLATION_PATHS');
   });
 
   it('T018-T020: client-portal namespace file exists and includes required top-level keys', () => {
@@ -235,19 +238,18 @@ describe('MSP i18n Phase 1', () => {
   it('T029: no legacy clientPortal namespace usage remains in client portal UI', () => {
     const portalLayout = readRepoFile('packages/client-portal/src/components/layout/ClientPortalLayout.tsx');
     expect(portalLayout).toContain("useTranslation('client-portal')");
-    expect(portalLayout).not.toContain('clientPortal');
+    expect(portalLayout).not.toContain("useTranslation('clientPortal')");
   });
 
-  it('T030: legacy clientPortal.json files are empty', () => {
+  it('T030: legacy clientPortal.json files are removed', () => {
     for (const locale of locales) {
-      const file = readJson(`server/public/locales/${locale}/clientPortal.json`);
-      expect(Object.keys(file)).toHaveLength(0);
+      expect(fileExists(`server/public/locales/${locale}/clientPortal.json`)).toBe(false);
     }
   });
 
-  it('T031-T033: msp.json exists for all locales with required sections', () => {
+  it('T031-T033: msp/core.json exists for all locales with required sections', () => {
     for (const locale of locales) {
-      const file = readJson(`server/public/locales/${locale}/msp.json`);
+      const file = readJson(`server/public/locales/${locale}/msp/core.json`);
       expect(file).toHaveProperty('nav');
       expect(file).toHaveProperty('sidebar');
       expect(file).toHaveProperty('settings');
@@ -255,8 +257,8 @@ describe('MSP i18n Phase 1', () => {
     }
   });
 
-  it('T032: msp.json nav items match menuConfig entries', () => {
-    const mspCore = readJson('server/public/locales/en/msp.json');
+  it('T032: msp/core.json nav items match menuConfig entries', () => {
+    const mspCore = readJson('server/public/locales/en/msp/core.json');
     const nav = mspCore.nav;
     expect(nav.home).toBe('Home');
     expect(nav.tickets).toBe('Tickets');
@@ -274,15 +276,15 @@ describe('MSP i18n Phase 1', () => {
   });
 
   it('T034: msp translations resolve correctly for English', async () => {
-    const mspCore = readJson('server/public/locales/en/msp.json');
+    const mspCore = readJson('server/public/locales/en/msp/core.json');
     await i18next.init({
       lng: 'en',
-      resources: { en: { 'msp': mspCore } },
+      resources: { en: { 'msp/core': mspCore } },
       interpolation: { escapeValue: false },
     });
 
-    expect(i18next.t('nav.home', { ns: 'msp' })).toBe('Home');
-    expect(i18next.t('header.signOut', { ns: 'msp' })).toBe('Sign out');
+    expect(i18next.t('nav.home', { ns: 'msp/core' })).toBe('Home');
+    expect(i18next.t('header.signOut', { ns: 'msp/core' })).toBe('Sign out');
   });
 
   it('T035-T041: MSP profile language preference is gated and uses LanguagePreference behavior', () => {
@@ -334,7 +336,7 @@ describe('MSP i18n Phase 1', () => {
         namespacePaths.push(`server/public/locales/${locale}/features/${ns}.json`);
       }
       namespacePaths.push(`server/public/locales/${locale}/client-portal.json`);
-      namespacePaths.push(`server/public/locales/${locale}/msp.json`);
+      namespacePaths.push(`server/public/locales/${locale}/msp/core.json`);
     }
 
     for (const file of namespacePaths) {

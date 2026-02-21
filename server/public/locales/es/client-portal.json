@@ -28,7 +28,15 @@
     "quickActions": {
       "title": "Acciones rápidas",
       "createTicket": "Crear ticket de soporte",
+      "requestAppointment": "Solicitar cita",
       "viewLatestInvoice": "Ver la última factura"
+    },
+    "appointments": {
+      "title": "Próximas citas",
+      "noUpcoming": "No hay citas próximas. ¡Solicita una ahora!",
+      "requestButton": "Solicitar cita",
+      "viewAll": "Ver todas las citas →",
+      "technician": "Técnico"
     },
     "recentActivity": {
       "title": "Actividad reciente"
@@ -126,7 +134,8 @@
         "title": "Acceso a documentación",
         "description": "Consulta los documentos y recursos compartidos"
       }
-    }
+    },
+    "forgotPassword": "¿Olvidaste tu contraseña?"
   },
   "account": {
     "title": "Cuenta",

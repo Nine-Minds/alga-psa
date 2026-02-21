@@ -7,7 +7,7 @@ import { PostHogUserIdentifier } from "@alga-psa/ui/components/analytics/PostHog
 import { BrandingProvider } from "@alga-psa/tenancy/components";
 import type { Session } from "next-auth";
 import type { TenantBranding } from "@alga-psa/tenancy/actions";
-import type { SupportedLocale } from "@alga-psa/ui/lib/i18n/config";
+import type { SupportedLocale } from "@alga-psa/core/i18n/config";
 
 interface Props {
   children: React.ReactNode;

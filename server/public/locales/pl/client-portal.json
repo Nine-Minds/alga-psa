@@ -11,7 +11,8 @@
     "account": "Konto",
     "signOut": "Wyloguj się",
     "clientPortal": "Portal klienta",
-    "portal": "Portal"
+    "portal": "Portal",
+    "notifications": "Powiadomienia"
   },
   "dashboard": {
     "title": "Panel",
@@ -133,7 +134,8 @@
         "title": "Dostęp do dokumentacji",
         "description": "Przeglądaj udostępnione dokumenty i zasoby"
       }
-    }
+    },
+    "forgotPassword": "Nie pamiętasz hasła?"
   },
   "account": {
     "title": "Konto",
@@ -444,7 +446,9 @@
       "loading": "Ładowanie preferencji...",
       "loadError": "Nie udało się wczytać preferencji",
       "saveError": "Nie udało się zapisać preferencji",
-      "noCategories": "Brak dostępnych kategorii powiadomień"
+      "noCategories": "Brak dostępnych kategorii powiadomień",
+      "emailPreferences": "E-mail",
+      "internalPreferences": "Wewnętrzne"
     },
     "categories": {
       "tickets": "Zgłoszenia",

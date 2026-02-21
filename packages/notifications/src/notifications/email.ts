@@ -18,7 +18,7 @@ import type {
 import { TenantEmailService, StaticTemplateProcessor } from '@alga-psa/email';
 import type { TenantEmailSettings } from '@alga-psa/types';
 import { resolveEmailLocale } from './emailLocaleResolver';
-import type { SupportedLocale } from '@alga-psa/ui/lib/i18n/config';
+import type { SupportedLocale } from '@alga-psa/core/i18n/config';
 
 export class EmailNotificationService implements NotificationService {
   private async getTenantEmailSettings(tenantId: string): Promise<TenantEmailSettings | null> {

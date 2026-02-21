@@ -16,7 +16,7 @@ export const LOCALE_CONFIG = {
    * Array of supported locales
    * Add new languages here to enable them throughout the application
    */
-  supportedLocales: ['en', 'fr', 'es', 'de', 'nl', 'it', 'pl'] as const,
+  supportedLocales: ['en', 'fr', 'es', 'de', 'nl', 'it', 'pl', 'xx', 'yy'] as const,
 
   /**
    * Human-readable names for each locale
@@ -30,6 +30,8 @@ export const LOCALE_CONFIG = {
     nl: 'Nederlands',
     it: 'Italiano',
     pl: 'Polski',
+    xx: 'Pseudo (xx)',
+    yy: 'Pseudo (yy)',
   } as const,
 
   /**
@@ -91,7 +93,7 @@ export const I18N_CONFIG = {
   fallbackLng: LOCALE_CONFIG.defaultLocale,
   supportedLngs: [...LOCALE_CONFIG.supportedLocales],
   defaultNS: 'common',
-  ns: ['common', 'client-portal', 'msp'],
+  ns: ['common'],
   interpolation: {
     escapeValue: false, // React already escapes values
   },
@@ -99,6 +101,65 @@ export const I18N_CONFIG = {
   cleanCode: true,
   nonExplicitSupportedLngs: true,
 };
+
+/**
+ * Pseudo-locale codes used for QA testing only
+ */
+export const PSEUDO_LOCALES: ReadonlyArray<SupportedLocale> = ['xx', 'yy'];
+
+/**
+ * Filter pseudo-locales from a locale list based on a toggle.
+ */
+export function filterPseudoLocales(
+  locales: readonly SupportedLocale[],
+  includePseudo: boolean,
+): SupportedLocale[] {
+  if (includePseudo) return [...locales];
+  return locales.filter((l) => !(PSEUDO_LOCALES as readonly string[]).includes(l));
+}
+
+/**
+ * Route prefixes mapped to their required namespaces
+ */
+export const ROUTE_NAMESPACES = {
+  '/client-portal': ['common', 'client-portal'],
+  '/client-portal/tickets': ['common', 'client-portal', 'features/tickets'],
+  '/client-portal/projects': ['common', 'client-portal', 'features/projects'],
+  '/client-portal/billing': ['common', 'client-portal', 'features/billing'],
+  '/client-portal/documents': ['common', 'client-portal', 'features/documents'],
+  '/client-portal/appointments': ['common', 'client-portal', 'features/appointments'],
+  '/msp': ['common', 'msp/core'],
+  '/msp/tickets': ['common', 'msp/core', 'features/tickets'],
+  '/msp/settings': ['common', 'msp/core'],
+} as const;
+
+/**
+ * Resolve namespaces for a given route, preferring exact match, then longest prefix match.
+ */
+export function getNamespacesForRoute(pathname: string): string[] {
+  if (!pathname) {
+    return ['common'];
+  }
+
+  if (Object.prototype.hasOwnProperty.call(ROUTE_NAMESPACES, pathname)) {
+    return [...ROUTE_NAMESPACES[pathname as keyof typeof ROUTE_NAMESPACES]];
+  }
+
+  let bestMatch: keyof typeof ROUTE_NAMESPACES | null = null;
+  for (const route of Object.keys(ROUTE_NAMESPACES) as Array<keyof typeof ROUTE_NAMESPACES>) {
+    if (pathname === route || pathname.startsWith(route + '/')) {
+      if (!bestMatch || route.length > bestMatch.length) {
+        bestMatch = route;
+      }
+    }
+  }
+
+  if (bestMatch) {
+    return [...ROUTE_NAMESPACES[bestMatch]];
+  }
+
+  return ['common'];
+}
 
 /**
  * Paths for translation resources
