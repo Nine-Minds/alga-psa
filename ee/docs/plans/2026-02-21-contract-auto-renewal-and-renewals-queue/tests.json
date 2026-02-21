@@ -1626,7 +1626,7 @@
   {
     "id": "T204",
     "description": "UI behavior: Support mark-renewing action for evergreen queue entries. persists after refresh/navigation",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F103"
     ]
