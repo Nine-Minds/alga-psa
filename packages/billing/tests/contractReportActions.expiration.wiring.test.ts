@@ -27,4 +27,10 @@ describe('contractReportActions expiration report wiring', () => {
     expect(source).toContain("'cc.status as queue_status',");
     expect(source).toContain('queue_status: row.queue_status ?? null,');
   });
+
+  it('keeps fixed-term expiration rows even when renewal fields are unset', () => {
+    expect(source).toContain(".whereNotNull('cc.end_date')");
+    expect(source).not.toContain(".whereNotNull('cc.renewal_mode')");
+    expect(source).toContain('renewal_mode: row.renewal_mode ?? null,');
+  });
 });

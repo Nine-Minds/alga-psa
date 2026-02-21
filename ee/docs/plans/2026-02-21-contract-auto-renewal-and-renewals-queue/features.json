@@ -898,7 +898,7 @@
   {
     "id": "F113",
     "description": "Keep existing expiration report rows for fixed-term contracts without renewal config.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > FR8 — Reporting and Existing Surface Alignment"
     ]
