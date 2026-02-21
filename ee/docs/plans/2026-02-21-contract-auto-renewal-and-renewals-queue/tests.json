@@ -1154,7 +1154,7 @@
   {
     "id": "T145",
     "description": "Idempotency: repeated execution of 'Add tenant default renewal ticket assignee field to default billing settings model.' does not create duplicate tickets",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F025"
     ]
