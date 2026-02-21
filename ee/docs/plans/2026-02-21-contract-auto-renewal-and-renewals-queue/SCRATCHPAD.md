@@ -1905,3 +1905,9 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
   - Assertions verify migrated-schema snooze path writes `status='snoozed'`, `snoozed_until`, and action audit metadata (`last_action`/actor/timestamp/note chain).
   - Validation:
     - `npm -w @alga-psa/billing exec vitest run tests/renewalsQueueActions.schemaReadiness.integration.test.ts --coverage=false`
+- (2026-02-21) Completed `T251`.
+  - Extended strict-schema integration wiring coverage for mark-renewing mutation in:
+    - `packages/billing/tests/renewalsQueueActions.schemaReadiness.integration.test.ts`
+  - Assertions verify pending-only transition to `renewing` plus actor/timestamp audit persistence in migrated-schema path.
+  - Validation:
+    - `npm -w @alga-psa/billing exec vitest run tests/renewalsQueueActions.schemaReadiness.integration.test.ts --coverage=false`

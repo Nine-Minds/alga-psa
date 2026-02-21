@@ -2018,7 +2018,7 @@
   {
     "id": "T251",
     "description": "Integration: markRenewalQueueItemRenewing transitions pending->renewing and persists actor/timestamp metadata.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F136"
     ]

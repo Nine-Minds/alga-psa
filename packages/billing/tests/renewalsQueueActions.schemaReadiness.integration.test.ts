@@ -29,4 +29,16 @@ describe('renewalsQueueActions strict-schema integration wiring', () => {
     expect(source).toContain('withActionActor(');
     expect(source).toContain("throw new Error('Snooze target date must be in the future');");
   });
+
+  it('T251: markRenewalQueueItemRenewing transitions pending->renewing and persists actor/timestamp metadata', () => {
+    expect(source).toContain('export const markRenewalQueueItemRenewing = withAuth(async (');
+    expect(source).toContain('await assertRenewalSchemaReady(knex);');
+    expect(source).toContain("if (previousStatus !== 'pending') {");
+    expect(source).toContain("status: 'renewing',");
+    expect(source).toContain("}, 'mark_renewing'), actorUserId");
+    expect(source).toContain('withActionTimestamp(');
+    expect(source).toContain('withActionActor(');
+    expect(source).toContain('previous_status: previousStatus,');
+    expect(source).toContain("status: 'renewing',");
+  });
 });
