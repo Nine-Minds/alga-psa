@@ -786,7 +786,7 @@
   {
     "id": "T099",
     "description": "Functional: Publish/emit renewal-upcoming domain event payloads compatible with queue creation semantics.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F099"
     ]
