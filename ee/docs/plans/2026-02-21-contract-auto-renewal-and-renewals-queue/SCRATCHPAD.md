@@ -427,6 +427,12 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
   - Filter operates on queue row `contract_type`.
   - Extended component wiring coverage in:
     - `packages/billing/tests/RenewalsQueueTab.component.test.ts`
+- (2026-02-21) Completed `F058`.
+  - Enforced default queue sort by `decision_due_date` ascending in renewals list action.
+  - Sorting now occurs after normalization/horizon filtering in:
+    - `packages/billing/src/actions/renewalsQueueActions.ts`
+  - Added wiring coverage update in:
+    - `packages/billing/tests/renewalsQueueActions.wiring.test.ts`
 
 ## Open Questions
 - Should renewal ticket defaults be a brand-new billing settings card, or an extension of existing default ticket settings patterns?

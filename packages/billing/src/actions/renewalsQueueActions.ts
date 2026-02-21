@@ -94,10 +94,11 @@ export const listRenewalQueueRows = withAuth(async (
         (row as any).status === 'completed'
           ? (row as any).status
           : 'pending',
-      contract_type: row.end_date ? 'fixed-term' : 'evergreen',
+      contract_type: row.end_date ? ('fixed-term' as const) : ('evergreen' as const),
       effective_renewal_mode: row.effective_renewal_mode,
       decision_due_date: row.decision_due_date ?? undefined,
       days_until_due: row.days_until_due,
       renewal_cycle_key: row.renewal_cycle_key,
-    }));
+    }))
+    .sort((a, b) => (a.decision_due_date ?? '').localeCompare(b.decision_due_date ?? ''));
 });

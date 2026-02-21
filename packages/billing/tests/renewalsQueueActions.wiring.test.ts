@@ -22,5 +22,6 @@ describe('renewalsQueueActions wiring', () => {
     expect(source).toContain("(row as any).status === 'renewing' ||");
     expect(source).toContain("status:\n        (row as any).status === 'pending'");
     expect(source).toContain("contract_type: row.end_date ? 'fixed-term' : 'evergreen'");
+    expect(source).toContain(".sort((a, b) => (a.decision_due_date ?? '').localeCompare(b.decision_due_date ?? ''));");
   });
 });

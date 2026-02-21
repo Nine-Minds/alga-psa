@@ -458,7 +458,7 @@
   {
     "id": "F058",
     "description": "Sort queue by decision_due_date ascending by default.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > FR4 — Renewals Queue and Dashboard Entry Points"
     ]
