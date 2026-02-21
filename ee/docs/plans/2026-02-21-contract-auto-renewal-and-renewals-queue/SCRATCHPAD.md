@@ -220,6 +220,8 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
   - Covered by existing `billingSettingsActions.renewalDefaultsWiring.test.ts` assertions for `getDefaultBillingSettings` renewal default response mapping.
 - (2026-02-21) Completed `T027`.
   - Covered by existing `billingSettingsActions.renewalDefaultsWiring.test.ts` assertions for schema-guarded renewal default persistence in update writes.
+- (2026-02-21) Completed `F028`.
+  - Added explicit `Use Tenant Renewal Defaults` toggle controls to both fixed-term and evergreen renewal settings cards in `ContractBasicsStep.tsx`, bound to `use_tenant_renewal_defaults`.
 
 ## Open Questions
 - Should renewal ticket defaults be a brand-new billing settings card, or an extension of existing default ticket settings patterns?

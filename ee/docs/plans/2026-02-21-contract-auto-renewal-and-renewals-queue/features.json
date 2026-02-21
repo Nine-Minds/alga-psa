@@ -218,7 +218,7 @@
   {
     "id": "F028",
     "description": "Add use-tenant-defaults toggle to contract renewal settings payload.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > FR2 — Tenant Defaults and Contract-Level Overrides"
     ]

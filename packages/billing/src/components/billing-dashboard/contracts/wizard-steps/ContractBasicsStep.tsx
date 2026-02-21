@@ -145,6 +145,7 @@ export function ContractBasicsStep({
   const effectiveRenewalMode = data.renewal_mode ?? 'manual';
   const isRenewalEnabled = effectiveRenewalMode !== 'none';
   const isAutoRenew = effectiveRenewalMode === 'auto';
+  const useTenantRenewalDefaults = data.use_tenant_renewal_defaults ?? true;
 
   return (
     <div className="space-y-6" data-automation-id="contract-basics-step">
@@ -344,6 +345,23 @@ export function ContractBasicsStep({
           <p className="text-xs text-[rgb(var(--color-text-500))]">
             This contract has a fixed end date. Configure renewal behavior and notice timing.
           </p>
+          <div className="flex items-center justify-between rounded-md border border-[rgb(var(--color-border-200))] p-3">
+            <div className="space-y-1">
+              <Label htmlFor="use-tenant-renewal-defaults-fixed" className="text-xs font-medium">
+                Use Tenant Renewal Defaults
+              </Label>
+              <p className="text-xs text-[rgb(var(--color-text-500))]">
+                Apply organization-level renewal settings unless explicitly overridden.
+              </p>
+            </div>
+            <Switch
+              id="use-tenant-renewal-defaults-fixed"
+              checked={useTenantRenewalDefaults}
+              onCheckedChange={(checked) =>
+                updateData({ use_tenant_renewal_defaults: checked })
+              }
+            />
+          </div>
           <div className="space-y-2">
             <Label htmlFor="renewal-mode-fixed" className="text-xs font-medium">
               Renewal Mode
@@ -431,6 +449,23 @@ export function ContractBasicsStep({
           <p className="text-xs text-[rgb(var(--color-text-500))]">
             This contract is ongoing. Configure annual review cadence and notice timing.
           </p>
+          <div className="flex items-center justify-between rounded-md border border-[rgb(var(--color-border-200))] p-3">
+            <div className="space-y-1">
+              <Label htmlFor="use-tenant-renewal-defaults-evergreen" className="text-xs font-medium">
+                Use Tenant Renewal Defaults
+              </Label>
+              <p className="text-xs text-[rgb(var(--color-text-500))]">
+                Apply organization-level renewal settings unless explicitly overridden.
+              </p>
+            </div>
+            <Switch
+              id="use-tenant-renewal-defaults-evergreen"
+              checked={useTenantRenewalDefaults}
+              onCheckedChange={(checked) =>
+                updateData({ use_tenant_renewal_defaults: checked })
+              }
+            />
+          </div>
           <div className="space-y-2">
             <Label htmlFor="renewal-mode-evergreen" className="text-xs font-medium">
               Renewal Mode
