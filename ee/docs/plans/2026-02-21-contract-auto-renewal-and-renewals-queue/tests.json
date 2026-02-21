@@ -1026,7 +1026,7 @@
   {
     "id": "T129",
     "description": "Functional: Apply tenant filter to all renewal work-item reads by default.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F129"
     ]
