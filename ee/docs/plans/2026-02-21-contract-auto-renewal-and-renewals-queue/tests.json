@@ -1974,7 +1974,7 @@
   {
     "id": "T246",
     "description": "Integration: latest migrations create required renewal automation/policy columns on client_contracts.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F138"
     ]

@@ -37,4 +37,22 @@ describe('contract renewal migrations', () => {
     expect(migration).toContain("table.dropColumn('renewal_cycle_start')");
     expect(migration).toContain("table.dropColumn('decision_due_date')");
   });
+
+  it('T246: creates required renewal automation/policy columns on client_contracts', () => {
+    const migration = readRepoFile(
+      'server/migrations/202602211110_add_contract_renewal_automation_columns.cjs'
+    );
+
+    expect(migration).toContain("table.uuid('created_ticket_id').nullable()");
+    expect(migration).toContain("table.text('automation_error').nullable()");
+    expect(migration).toContain("table.text('renewal_due_date_action_policy').nullable()");
+    expect(migration).toContain("table.uuid('renewal_ticket_board_id').nullable()");
+    expect(migration).toContain("table.uuid('renewal_ticket_status_id').nullable()");
+    expect(migration).toContain("table.uuid('renewal_ticket_priority').nullable()");
+    expect(migration).toContain("table.uuid('renewal_ticket_assignee_id').nullable()");
+    expect(migration).toContain("table.uuid('created_draft_contract_id').nullable()");
+    expect(migration).toContain(
+      "CHECK (renewal_due_date_action_policy IN ('queue_only', 'create_ticket'))"
+    );
+  });
 });
