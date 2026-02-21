@@ -1226,7 +1226,7 @@
   {
     "id": "T154",
     "description": "UI behavior: Load renewal queue rows from server action on Renewals page mount. persists after refresh/navigation",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F051"
     ]
