@@ -1102,7 +1102,7 @@
   {
     "id": "F138",
     "description": "Add migration adding renewal automation linkage/policy columns on client_contracts (created_ticket_id, automation_error, renewal_due_date_action_policy, renewal_ticket_board_id, renewal_ticket_status_id, renewal_ticket_priority, renewal_ticket_assignee_id, created_draft_contract_id).",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Rollout / Migration",
       "Requirements > Functional Requirements > FR6 — Automation and Ticket Creation"

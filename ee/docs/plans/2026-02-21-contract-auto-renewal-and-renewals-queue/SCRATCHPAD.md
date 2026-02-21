@@ -1764,3 +1764,15 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
   - Migration remains idempotent and Citus-safe with guarded column checks.
   - Validation:
     - `node -c server/migrations/202602211105_add_contract_renewal_cycle_columns.cjs`
+- (2026-02-21) Completed `F138`.
+  - Added migration:
+    - `server/migrations/202602211110_add_contract_renewal_automation_columns.cjs`
+  - Migration adds renewal automation linkage/policy columns on `client_contracts`:
+    - `created_ticket_id`, `automation_error`, `renewal_due_date_action_policy`
+    - `renewal_ticket_board_id`, `renewal_ticket_status_id`, `renewal_ticket_priority`, `renewal_ticket_assignee_id`
+    - `created_draft_contract_id`
+  - Added policy check constraint:
+    - `client_contracts_renewal_due_date_action_policy_check` (`queue_only|create_ticket`)
+  - Migration remains idempotent and Citus-safe with guarded column/constraint checks.
+  - Validation:
+    - `node -c server/migrations/202602211110_add_contract_renewal_automation_columns.cjs`
