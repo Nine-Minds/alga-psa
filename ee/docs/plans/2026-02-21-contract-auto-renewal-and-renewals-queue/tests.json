@@ -330,7 +330,7 @@
   {
     "id": "T042",
     "description": "Functional: Skip decision_due_date generation when renewal mode is none and no evergreen review is configured.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F042"
     ]
