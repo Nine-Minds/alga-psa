@@ -58,11 +58,19 @@ const withActionTimestamp = (
     ? { ...updateData, last_action_at: actionAt }
     : updateData
 );
+const sanitizeActionNoteText = (value: string): string => (
+  value
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/[<>]/g, '')
+    .replace(/[\u0000-\u001F\u007F]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+);
 const normalizeActionNote = (note: string | null | undefined): string | null => {
   if (typeof note !== 'string') {
     return null;
   }
-  const trimmed = note.trim();
+  const trimmed = sanitizeActionNoteText(note);
   return trimmed.length > 0 ? trimmed : null;
 };
 const withActionNote = (

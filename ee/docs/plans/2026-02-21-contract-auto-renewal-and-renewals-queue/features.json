@@ -1074,7 +1074,7 @@
   {
     "id": "F135",
     "description": "Sanitize user-provided action notes before persistence and render.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > FR10 \u2014 Permissions, Security, and Auditability"
     ]

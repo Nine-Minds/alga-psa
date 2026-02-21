@@ -1306,3 +1306,11 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
     - `packages/billing/tests/renewalsQueueActions.crossTenantValidation.wiring.test.ts`
   - Validation:
     - `npm -w @alga-psa/billing exec vitest run tests/renewalsQueueActions.crossTenantValidation.wiring.test.ts tests/renewalsQueueActions.assignOwner.wiring.test.ts tests/renewalsQueueActions.completeOnActivation.wiring.test.ts --coverage=false`
+- (2026-02-21) Completed `F135`.
+  - Added note sanitization prior to persistence/render for renewal queue action notes.
+  - `normalizeActionNote` now sanitizes input by stripping HTML tags, removing angle brackets/control chars, normalizing whitespace, and trimming.
+  - Updated files:
+    - `packages/billing/src/actions/renewalsQueueActions.ts`
+    - `packages/billing/tests/renewalsQueueActions.noteSanitization.wiring.test.ts`
+  - Validation:
+    - `npm -w @alga-psa/billing exec vitest run tests/renewalsQueueActions.noteAudit.wiring.test.ts tests/renewalsQueueActions.noteSanitization.wiring.test.ts --coverage=false`
