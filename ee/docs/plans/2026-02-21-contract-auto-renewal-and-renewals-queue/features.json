@@ -330,7 +330,7 @@
   {
     "id": "F042",
     "description": "Skip decision_due_date generation when renewal mode is none and no evergreen review is configured.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > FR3 — Renewal Decision Date Engine"
     ]
