@@ -29,6 +29,8 @@ const STEPS = [
 ] as const;
 
 const REQUIRED_STEPS = [0, 5];
+const MIN_NOTICE_PERIOD_DAYS = 0;
+const MAX_NOTICE_PERIOD_DAYS = 3650;
 
 function isEqual(a: unknown, b: unknown): boolean {
   if (a === b) return true;
@@ -397,6 +399,24 @@ export function ContractWizard({
             [stepIndex]: 'Renewal mode is required when an end date is set',
           }));
           return false;
+        }
+        if (wizardData.renewal_mode && wizardData.renewal_mode !== 'none') {
+          if (!Number.isInteger(wizardData.notice_period_days)) {
+            setErrors((prev) => ({
+              ...prev,
+              [stepIndex]: 'Notice period must be a whole number of days',
+            }));
+            return false;
+          }
+
+          const noticePeriod = wizardData.notice_period_days as number;
+          if (noticePeriod < MIN_NOTICE_PERIOD_DAYS || noticePeriod > MAX_NOTICE_PERIOD_DAYS) {
+            setErrors((prev) => ({
+              ...prev,
+              [stepIndex]: `Notice period must be between ${MIN_NOTICE_PERIOD_DAYS} and ${MAX_NOTICE_PERIOD_DAYS} days`,
+            }));
+            return false;
+          }
         }
         return true;
       case 1:

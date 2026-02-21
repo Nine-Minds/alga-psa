@@ -90,7 +90,7 @@
   {
     "id": "F012",
     "description": "Validate notice period is a non-negative integer within configured bounds.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > FR1 — Contract Setup and Renewal Configuration"
     ]

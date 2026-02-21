@@ -144,6 +144,9 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
 - (2026-02-21) Completed `F011`.
   - Added step-0 wizard validation in `packages/billing/src/components/billing-dashboard/contracts/ContractWizard.tsx`:
     - if `end_date` is set and `renewal_mode` is missing, progression is blocked with inline error.
+- (2026-02-21) Completed `F012`.
+  - Added notice-period validation bounds in `ContractWizard.tsx` (`MIN_NOTICE_PERIOD_DAYS=0`, `MAX_NOTICE_PERIOD_DAYS=3650`).
+  - Step-0 validation now requires notice period to be an integer and within bounds whenever renewal mode is enabled.
 
 ## Open Questions
 - Should renewal ticket defaults be a brand-new billing settings card, or an extension of existing default ticket settings patterns?
