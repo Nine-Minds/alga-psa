@@ -1434,7 +1434,7 @@
   {
     "id": "T180",
     "description": "UI behavior: Include linked draft contract id in queue row once renewal draft is created. persists after refresh/navigation",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F080"
     ]
