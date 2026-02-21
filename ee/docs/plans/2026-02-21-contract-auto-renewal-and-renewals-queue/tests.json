@@ -130,7 +130,7 @@
   {
     "id": "T017",
     "description": "Functional: Persist renewal fields in ClientContractWizardSubmission payload builder.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F017"
     ]

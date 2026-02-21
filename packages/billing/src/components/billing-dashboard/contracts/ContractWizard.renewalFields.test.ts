@@ -66,4 +66,13 @@ describe('ContractWizardData renewal fields', () => {
     expect(wizardSource).toContain('{errors[currentStep] && (');
     expect(wizardSource).toContain("text-[rgb(var(--color-destructive))] text-sm");
   });
+
+  it('includes renewal fields in the wizard submission payload builder', () => {
+    expect(wizardSource).toContain('renewal_mode: wizardData.renewal_mode');
+    expect(wizardSource).toContain('notice_period_days: wizardData.notice_period_days');
+    expect(wizardSource).toContain('renewal_term_months: wizardData.renewal_term_months');
+    expect(wizardSource).toContain(
+      'use_tenant_renewal_defaults: wizardData.use_tenant_renewal_defaults'
+    );
+  });
 });
