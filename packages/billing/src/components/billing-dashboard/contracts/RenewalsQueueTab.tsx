@@ -10,6 +10,7 @@ const DEFAULT_HORIZON_DAYS = 90;
 type RenewalBucket = 'all' | '0-30' | '31-60' | '61-90';
 type RenewalStatus = 'all' | 'pending' | 'renewing' | 'non_renewing' | 'snoozed' | 'completed';
 type RenewalModeFilter = 'all' | 'none' | 'manual' | 'auto';
+type ContractTypeFilter = 'all' | 'fixed-term' | 'evergreen';
 
 export default function RenewalsQueueTab() {
   const [rows, setRows] = useState<RenewalQueueRow[]>([]);
@@ -19,6 +20,7 @@ export default function RenewalsQueueTab() {
   const [ownerFilter, setOwnerFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<RenewalStatus>('all');
   const [renewalModeFilter, setRenewalModeFilter] = useState<RenewalModeFilter>('all');
+  const [contractTypeFilter, setContractTypeFilter] = useState<ContractTypeFilter>('all');
 
   useEffect(() => {
     let cancelled = false;
@@ -68,6 +70,9 @@ export default function RenewalsQueueTab() {
       if (renewalModeFilter !== 'all' && row.effective_renewal_mode !== renewalModeFilter) {
         return false;
       }
+      if (contractTypeFilter !== 'all' && row.contract_type !== contractTypeFilter) {
+        return false;
+      }
 
       if (bucket === 'all') {
         return true;
@@ -78,7 +83,7 @@ export default function RenewalsQueueTab() {
       if (bucket === '31-60') return row.days_until_due >= 31 && row.days_until_due <= 60;
       return row.days_until_due >= 61 && row.days_until_due <= 90;
     });
-  }, [bucket, ownerFilter, renewalModeFilter, rows, statusFilter]);
+  }, [bucket, contractTypeFilter, ownerFilter, renewalModeFilter, rows, statusFilter]);
 
   return (
     <section
@@ -155,6 +160,21 @@ export default function RenewalsQueueTab() {
               {(['all', 'none', 'manual', 'auto'] as const).map((mode) => (
                 <option key={mode} value={mode}>
                   {mode === 'all' ? 'All Modes' : mode}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="flex items-center gap-2 text-xs text-[rgb(var(--color-text-500))]">
+            Contract Type
+            <select
+              value={contractTypeFilter}
+              onChange={(event) => setContractTypeFilter(event.target.value as ContractTypeFilter)}
+              data-testid="renewals-contract-type-filter"
+              className="rounded border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-bg-0))] px-2 py-1 text-xs"
+            >
+              {(['all', 'fixed-term', 'evergreen'] as const).map((type) => (
+                <option key={type} value={type}>
+                  {type === 'all' ? 'All Contract Types' : type}
                 </option>
               ))}
             </select>

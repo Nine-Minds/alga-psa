@@ -54,4 +54,12 @@ describe('RenewalsQueueTab component', () => {
     expect(source).toContain("(['all', 'none', 'manual', 'auto'] as const)");
     expect(source).toContain("if (renewalModeFilter !== 'all' && row.effective_renewal_mode !== renewalModeFilter) {");
   });
+
+  it('renders a contract type filter for fixed-term versus evergreen entries', () => {
+    expect(source).toContain("type ContractTypeFilter = 'all' | 'fixed-term' | 'evergreen';");
+    expect(source).toContain('const [contractTypeFilter, setContractTypeFilter] = useState<ContractTypeFilter>(\'all\');');
+    expect(source).toContain('data-testid="renewals-contract-type-filter"');
+    expect(source).toContain("(['all', 'fixed-term', 'evergreen'] as const)");
+    expect(source).toContain("if (contractTypeFilter !== 'all' && row.contract_type !== contractTypeFilter) {");
+  });
 });
