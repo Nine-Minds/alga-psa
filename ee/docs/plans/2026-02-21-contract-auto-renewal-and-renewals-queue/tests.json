@@ -874,7 +874,7 @@
   {
     "id": "T110",
     "description": "Functional: Extend contract expiration report action to expose decision_due_date alongside end_date where available.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F110"
     ]
