@@ -1410,7 +1410,7 @@
   {
     "id": "T177",
     "description": "UI behavior: Expose queue row action availability based on current status. persists after refresh/navigation",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F077"
     ]
