@@ -1010,7 +1010,7 @@
   {
     "id": "T127",
     "description": "Functional: Enforce billing update permission on queue mutation endpoints.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F127"
     ]
