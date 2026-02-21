@@ -1845,3 +1845,19 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
     - `cd server && npm run typecheck`
     - `npm -w @alga-psa/billing exec vitest run tests/renewalsQueueActions.wiring.test.ts --coverage=false`
     - `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`
+- (2026-02-21) Completed `F144`.
+  - Removed required-column compatibility branching in strict migrated-schema paths:
+    - `packages/billing/src/actions/renewalsQueueActions.ts`
+      - queue list/load now uses direct migrated-schema fields for unsnooze + tenant-default joins.
+      - queue mutation/update helpers now write action audit fields directly (no per-column optional branch).
+      - retry-ticket flow now uses direct migrated-schema policy/routing fields.
+    - `server/src/lib/jobs/handlers/processRenewalQueueHandler.ts`
+      - post-guard processing now assumes migrated columns exist and applies direct policy/cycle/ticket updates.
+      - direct tenant-default selection list + default settings join used in all renewal processor reads.
+  - Updated strict-mode wiring assertions:
+    - `server/src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts`
+  - Validation:
+    - `npm -w @alga-psa/billing run typecheck`
+    - `cd server && npm run typecheck`
+    - `npm -w @alga-psa/billing exec vitest run tests/renewalsQueueActions.wiring.test.ts --coverage=false`
+    - `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`

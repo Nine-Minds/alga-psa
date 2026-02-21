@@ -1160,7 +1160,7 @@
   {
     "id": "F144",
     "description": "After migrations ship, remove required-column compatibility branches in renewal queue actions/jobs and run in strict migrated-schema mode.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Rollout / Migration",
       "Requirements > Functional Requirements > FR5 — Queue Actions and Renewal Workflow",

@@ -60,7 +60,7 @@ describe('renewal queue scheduling wiring', () => {
     expect(renewalHandlerSource).toContain('const DEFAULT_RENEWAL_DUE_DATE_ACTION_POLICY = \'create_ticket\' as const;');
     expect(renewalHandlerSource).toContain('const resolveRenewalDueDateActionPolicy = (value: unknown): \'queue_only\' | \'create_ticket\' => (');
     expect(renewalHandlerSource).toContain("schema?.hasColumn?.('default_billing_settings', 'renewal_due_date_action_policy') ?? false");
-    expect(renewalHandlerSource).toContain("defaultSelections.push('dbs.renewal_due_date_action_policy as tenant_renewal_due_date_action_policy');");
+    expect(renewalHandlerSource).toContain("'dbs.renewal_due_date_action_policy as tenant_renewal_due_date_action_policy'");
     expect(renewalHandlerSource).toContain('const tenantDueDateActionPolicy = resolveRenewalDueDateActionPolicy(');
     expect(renewalHandlerSource).toContain('const effectiveDueDateActionPolicy = useTenantRenewalDefaults');
     expect(renewalHandlerSource).toContain('queueOnlyPolicyCount += 1;');
@@ -71,8 +71,8 @@ describe('renewal queue scheduling wiring', () => {
     expect(renewalHandlerSource).toContain("schema?.hasColumn?.('client_contracts', 'use_tenant_renewal_defaults') ?? false");
     expect(renewalHandlerSource).toContain('const resolveUseTenantRenewalDefaults = (value: unknown): boolean => (');
     expect(renewalHandlerSource).toContain('const resolveOptionalRenewalDueDateActionPolicy = (value: unknown): \'queue_only\' | \'create_ticket\' | null => (');
-    expect(renewalHandlerSource).toContain('const useTenantRenewalDefaults = hasUseTenantRenewalDefaultsColumn');
-    expect(renewalHandlerSource).toContain('const contractOverrideDueDateActionPolicy = hasContractDueDateActionPolicyColumn');
+    expect(renewalHandlerSource).toContain('const useTenantRenewalDefaults = resolveUseTenantRenewalDefaults((row as any).use_tenant_renewal_defaults);');
+    expect(renewalHandlerSource).toContain('const contractOverrideDueDateActionPolicy =');
     expect(renewalHandlerSource).toContain('const effectiveDueDateActionPolicy = useTenantRenewalDefaults');
     expect(renewalHandlerSource).toContain('contractOverrideDueDateActionPolicy ?? tenantDueDateActionPolicy;');
     expect(renewalHandlerSource).toContain('contractOverridePolicyCount += 1;');

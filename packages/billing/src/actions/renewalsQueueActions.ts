@@ -78,21 +78,15 @@ const resolveActorUserId = (user: unknown): string | null => {
 };
 const withActionActor = (
   updateData: Record<string, unknown>,
-  hasLastActionByColumn: boolean,
   actorUserId: string | null
 ): Record<string, unknown> => (
-  hasLastActionByColumn
-    ? { ...updateData, last_action_by: actorUserId }
-    : updateData
+  { ...updateData, last_action_by: actorUserId }
 );
 const withActionTimestamp = (
   updateData: Record<string, unknown>,
-  hasLastActionAtColumn: boolean,
   actionAt: string
 ): Record<string, unknown> => (
-  hasLastActionAtColumn
-    ? { ...updateData, last_action_at: actionAt }
-    : updateData
+  { ...updateData, last_action_at: actionAt }
 );
 const sanitizeActionNoteText = (value: string): string => (
   value
@@ -111,21 +105,17 @@ const normalizeActionNote = (note: string | null | undefined): string | null => 
 };
 const withActionNote = (
   updateData: Record<string, unknown>,
-  hasLastActionNoteColumn: boolean,
   note: string | null
 ): Record<string, unknown> => (
-  hasLastActionNoteColumn && note
+  note
     ? { ...updateData, last_action_note: note }
     : updateData
 );
 const withActionLabel = (
   updateData: Record<string, unknown>,
-  hasLastActionColumn: boolean,
   actionLabel: string
 ): Record<string, unknown> => (
-  hasLastActionColumn
-    ? { ...updateData, last_action: actionLabel }
-    : updateData
+  { ...updateData, last_action: actionLabel }
 );
 const normalizeOptionalUuid = (value: unknown): string | null => (
   typeof value === 'string' && UUID_PATTERN.test(value)
@@ -310,43 +300,25 @@ export const listRenewalQueueRows = withAuth(async (
       ? Math.trunc(horizonDays)
       : DEFAULT_RENEWALS_HORIZON_DAYS;
 
-  const schema = knex.schema as any;
-  const [
-    hasDefaultRenewalModeColumn,
-    hasDefaultNoticePeriodColumn,
-    hasStatusColumn,
-    hasSnoozedUntilColumn,
-  ] = await Promise.all([
-    schema?.hasColumn?.('default_billing_settings', 'default_renewal_mode') ?? false,
-    schema?.hasColumn?.('default_billing_settings', 'default_notice_period_days') ?? false,
-    schema?.hasColumn?.('client_contracts', 'status') ?? false,
-    schema?.hasColumn?.('client_contracts', 'snoozed_until') ?? false,
-  ]);
+  await knex('client_contracts')
+    .where({
+      tenant,
+      is_active: true,
+      status: 'snoozed',
+    })
+    .andWhereNot('status', 'completed')
+    .whereNotNull('snoozed_until')
+    .andWhere('snoozed_until', '<=', getTodayDateOnly())
+    .update({
+      status: 'pending',
+      snoozed_until: null,
+      updated_at: new Date().toISOString(),
+    });
 
-  if (hasStatusColumn && hasSnoozedUntilColumn) {
-    await knex('client_contracts')
-      .where({
-        tenant,
-        is_active: true,
-        status: 'snoozed',
-      })
-      .andWhereNot('status', 'completed')
-      .whereNotNull('snoozed_until')
-      .andWhere('snoozed_until', '<=', getTodayDateOnly())
-      .update({
-        status: 'pending',
-        snoozed_until: null,
-        updated_at: new Date().toISOString(),
-      });
-  }
-
-  const defaultSelections: string[] = [];
-  if (hasDefaultRenewalModeColumn) {
-    defaultSelections.push('dbs.default_renewal_mode as tenant_default_renewal_mode');
-  }
-  if (hasDefaultNoticePeriodColumn) {
-    defaultSelections.push('dbs.default_notice_period_days as tenant_default_notice_period_days');
-  }
+  const defaultSelections: string[] = [
+    'dbs.default_renewal_mode as tenant_default_renewal_mode',
+    'dbs.default_notice_period_days as tenant_default_notice_period_days',
+  ];
 
   let query = knex('client_contracts as cc')
     .leftJoin('contracts as c', function joinContracts() {
@@ -364,11 +336,9 @@ export const listRenewalQueueRows = withAuth(async (
       ...defaultSelections,
     ]);
 
-  if (defaultSelections.length > 0) {
-    query = query.leftJoin('default_billing_settings as dbs', function joinDefaultBillingSettings() {
-      this.on('cc.tenant', '=', 'dbs.tenant');
-    });
-  }
+  query = query.leftJoin('default_billing_settings as dbs', function joinDefaultBillingSettings() {
+    this.on('cc.tenant', '=', 'dbs.tenant');
+  });
 
   const rows = await query;
 
@@ -420,20 +390,8 @@ export const markRenewalQueueItemRenewing = withAuth(async (
 
   const { knex } = await createTenantKnex();
   await assertRenewalSchemaReady(knex);
-  const schema = knex.schema as any;
-  const [hasStatusColumn, hasLastActionColumn, hasLastActionByColumn, hasLastActionAtColumn, hasLastActionNoteColumn] = await Promise.all([
-    schema?.hasColumn?.('client_contracts', 'status') ?? false,
-    schema?.hasColumn?.('client_contracts', 'last_action') ?? false,
-    schema?.hasColumn?.('client_contracts', 'last_action_by') ?? false,
-    schema?.hasColumn?.('client_contracts', 'last_action_at') ?? false,
-    schema?.hasColumn?.('client_contracts', 'last_action_note') ?? false,
-  ]);
   const actorUserId = resolveActorUserId(user);
   const normalizedNote = normalizeActionNote(note);
-
-  if (!hasStatusColumn) {
-    throw new Error('Renewals queue status column is not available');
-  }
 
   return knex.transaction(async (trx) => {
     const row = await trx('client_contracts')
@@ -470,15 +428,9 @@ export const markRenewalQueueItemRenewing = withAuth(async (
               withActionLabel({
                 status: 'renewing',
                 updated_at: updatedAt,
-              }, hasLastActionColumn, 'mark_renewing'),
-              hasLastActionByColumn,
-              actorUserId
-            ),
-            hasLastActionNoteColumn,
-            normalizedNote
-          ),
-          hasLastActionAtColumn,
-          updatedAt
+              }, 'mark_renewing'), actorUserId
+            ), normalizedNote
+          ), updatedAt
         )
       );
 
@@ -505,20 +457,8 @@ export const markRenewalQueueItemNonRenewing = withAuth(async (
 
   const { knex } = await createTenantKnex();
   await assertRenewalSchemaReady(knex);
-  const schema = knex.schema as any;
-  const [hasStatusColumn, hasLastActionColumn, hasLastActionByColumn, hasLastActionAtColumn, hasLastActionNoteColumn] = await Promise.all([
-    schema?.hasColumn?.('client_contracts', 'status') ?? false,
-    schema?.hasColumn?.('client_contracts', 'last_action') ?? false,
-    schema?.hasColumn?.('client_contracts', 'last_action_by') ?? false,
-    schema?.hasColumn?.('client_contracts', 'last_action_at') ?? false,
-    schema?.hasColumn?.('client_contracts', 'last_action_note') ?? false,
-  ]);
   const actorUserId = resolveActorUserId(user);
   const normalizedNote = normalizeActionNote(note);
-
-  if (!hasStatusColumn) {
-    throw new Error('Renewals queue status column is not available');
-  }
 
   return knex.transaction(async (trx) => {
     const row = await trx('client_contracts')
@@ -552,15 +492,9 @@ export const markRenewalQueueItemNonRenewing = withAuth(async (
               withActionLabel({
                 status: 'non_renewing',
                 updated_at: updatedAt,
-              }, hasLastActionColumn, 'mark_non_renewing'),
-              hasLastActionByColumn,
-              actorUserId
-            ),
-            hasLastActionNoteColumn,
-            normalizedNote
-          ),
-          hasLastActionAtColumn,
-          updatedAt
+              }, 'mark_non_renewing'), actorUserId
+            ), normalizedNote
+          ), updatedAt
         )
       );
 
@@ -588,31 +522,7 @@ export const createRenewalDraftForQueueItem = withAuth(async (
   const { knex } = await createTenantKnex();
   await assertRenewalSchemaReady(knex);
   const schema = knex.schema as any;
-  const [
-    hasStatusColumn,
-    hasLastActionColumn,
-    hasLastActionByColumn,
-    hasLastActionAtColumn,
-    hasLastActionNoteColumn,
-    hasCreatedDraftColumn,
-    hasTemplateContractIdColumn,
-    hasRenewalModeColumn,
-    hasNoticePeriodColumn,
-    hasRenewalTermColumn,
-    hasUseTenantDefaultsColumn,
-  ] = await Promise.all([
-    schema?.hasColumn?.('client_contracts', 'status') ?? false,
-    schema?.hasColumn?.('client_contracts', 'last_action') ?? false,
-    schema?.hasColumn?.('client_contracts', 'last_action_by') ?? false,
-    schema?.hasColumn?.('client_contracts', 'last_action_at') ?? false,
-    schema?.hasColumn?.('client_contracts', 'last_action_note') ?? false,
-    schema?.hasColumn?.('client_contracts', 'created_draft_contract_id') ?? false,
-    schema?.hasColumn?.('client_contracts', 'template_contract_id') ?? false,
-    schema?.hasColumn?.('client_contracts', 'renewal_mode') ?? false,
-    schema?.hasColumn?.('client_contracts', 'notice_period_days') ?? false,
-    schema?.hasColumn?.('client_contracts', 'renewal_term_months') ?? false,
-    schema?.hasColumn?.('client_contracts', 'use_tenant_renewal_defaults') ?? false,
-  ]);
+  const hasTemplateContractIdColumn = await (schema?.hasColumn?.('client_contracts', 'template_contract_id') ?? false);
   const actorUserId = resolveActorUserId(user);
   const normalizedNote = normalizeActionNote(note);
 
@@ -632,13 +542,13 @@ export const createRenewalDraftForQueueItem = withAuth(async (
         'cc.contract_id',
         'cc.start_date',
         'cc.end_date',
-        ...(hasStatusColumn ? ['cc.status'] : []),
-        ...(hasCreatedDraftColumn ? ['cc.created_draft_contract_id'] : []),
+        'cc.status',
+        'cc.created_draft_contract_id',
         ...(hasTemplateContractIdColumn ? ['cc.template_contract_id'] : []),
-        ...(hasRenewalModeColumn ? ['cc.renewal_mode'] : []),
-        ...(hasNoticePeriodColumn ? ['cc.notice_period_days'] : []),
-        ...(hasRenewalTermColumn ? ['cc.renewal_term_months'] : []),
-        ...(hasUseTenantDefaultsColumn ? ['cc.use_tenant_renewal_defaults'] : []),
+        'cc.renewal_mode',
+        'cc.notice_period_days',
+        'cc.renewal_term_months',
+        'cc.use_tenant_renewal_defaults',
         'c.contract_name',
         'c.contract_description',
         'c.billing_frequency',
@@ -655,7 +565,7 @@ export const createRenewalDraftForQueueItem = withAuth(async (
       throw new Error(`Renewal draft can only be created for pending or renewing work items (current: ${currentStatus})`);
     }
 
-    if (hasCreatedDraftColumn && typeof (source as any).created_draft_contract_id === 'string' && (source as any).created_draft_contract_id.length > 0) {
+    if (typeof (source as any).created_draft_contract_id === 'string' && (source as any).created_draft_contract_id.length > 0) {
       const existingDraft = await trx('contracts')
         .where({
           tenant,
@@ -716,27 +626,17 @@ export const createRenewalDraftForQueueItem = withAuth(async (
     if (hasTemplateContractIdColumn) {
       clientContractInsert.template_contract_id = (source as any).template_contract_id ?? null;
     }
-    if (hasRenewalModeColumn) {
-      clientContractInsert.renewal_mode = (source as any).renewal_mode ?? null;
-    }
-    if (hasNoticePeriodColumn) {
-      clientContractInsert.notice_period_days = (source as any).notice_period_days ?? null;
-    }
-    if (hasRenewalTermColumn) {
-      clientContractInsert.renewal_term_months = (source as any).renewal_term_months ?? null;
-    }
-    if (hasUseTenantDefaultsColumn) {
-      clientContractInsert.use_tenant_renewal_defaults = (source as any).use_tenant_renewal_defaults ?? true;
-    }
+    clientContractInsert.renewal_mode = (source as any).renewal_mode ?? null;
+    clientContractInsert.notice_period_days = (source as any).notice_period_days ?? null;
+    clientContractInsert.renewal_term_months = (source as any).renewal_term_months ?? null;
+    clientContractInsert.use_tenant_renewal_defaults = (source as any).use_tenant_renewal_defaults ?? true;
 
     await trx('client_contracts').insert(clientContractInsert);
 
     const sourceWorkItemUpdate: Record<string, unknown> = {
       updated_at: nowIso,
     };
-    if (hasCreatedDraftColumn) {
-      sourceWorkItemUpdate.created_draft_contract_id = draftContractId;
-    }
+    sourceWorkItemUpdate.created_draft_contract_id = draftContractId;
 
     await trx('client_contracts')
       .where({
@@ -747,15 +647,9 @@ export const createRenewalDraftForQueueItem = withAuth(async (
         withActionTimestamp(
           withActionNote(
             withActionActor(
-              withActionLabel(sourceWorkItemUpdate, hasLastActionColumn, 'create_renewal_draft'),
-              hasLastActionByColumn,
-              actorUserId
-            ),
-            hasLastActionNoteColumn,
-            normalizedNote
-          ),
-          hasLastActionAtColumn,
-          nowIso
+              withActionLabel(sourceWorkItemUpdate, 'create_renewal_draft'), actorUserId
+            ), normalizedNote
+          ), nowIso
         )
       );
 
@@ -785,21 +679,8 @@ export const snoozeRenewalQueueItem = withAuth(async (
 
   const { knex } = await createTenantKnex();
   await assertRenewalSchemaReady(knex);
-  const schema = knex.schema as any;
-  const [hasStatusColumn, hasSnoozedUntilColumn, hasLastActionColumn, hasLastActionByColumn, hasLastActionAtColumn, hasLastActionNoteColumn] = await Promise.all([
-    schema?.hasColumn?.('client_contracts', 'status') ?? false,
-    schema?.hasColumn?.('client_contracts', 'snoozed_until') ?? false,
-    schema?.hasColumn?.('client_contracts', 'last_action') ?? false,
-    schema?.hasColumn?.('client_contracts', 'last_action_by') ?? false,
-    schema?.hasColumn?.('client_contracts', 'last_action_at') ?? false,
-    schema?.hasColumn?.('client_contracts', 'last_action_note') ?? false,
-  ]);
   const actorUserId = resolveActorUserId(user);
   const normalizedNote = normalizeActionNote(note);
-
-  if (!hasStatusColumn || !hasSnoozedUntilColumn) {
-    throw new Error('Renewals queue snooze columns are not available');
-  }
 
   const normalizedSnoozedUntil = snoozedUntil.trim().slice(0, 10);
   const parsedSnoozeDate = new Date(normalizedSnoozedUntil);
@@ -843,15 +724,9 @@ export const snoozeRenewalQueueItem = withAuth(async (
                 status: 'snoozed',
                 snoozed_until: normalizedSnoozedUntil,
                 updated_at: updatedAt,
-              }, hasLastActionColumn, 'snooze'),
-              hasLastActionByColumn,
-              actorUserId
-            ),
-            hasLastActionNoteColumn,
-            normalizedNote
-          ),
-          hasLastActionAtColumn,
-          updatedAt
+              }, 'snooze'), actorUserId
+            ), normalizedNote
+          ), updatedAt
         )
       );
 
@@ -883,21 +758,8 @@ export const assignRenewalQueueItemOwner = withAuth(async (
 
   const { knex } = await createTenantKnex();
   await assertRenewalSchemaReady(knex);
-  const schema = knex.schema as any;
-  const [hasStatusColumn, hasAssignedToColumn, hasLastActionColumn, hasLastActionByColumn, hasLastActionAtColumn, hasLastActionNoteColumn] = await Promise.all([
-    schema?.hasColumn?.('client_contracts', 'status') ?? false,
-    schema?.hasColumn?.('client_contracts', 'assigned_to') ?? false,
-    schema?.hasColumn?.('client_contracts', 'last_action') ?? false,
-    schema?.hasColumn?.('client_contracts', 'last_action_by') ?? false,
-    schema?.hasColumn?.('client_contracts', 'last_action_at') ?? false,
-    schema?.hasColumn?.('client_contracts', 'last_action_note') ?? false,
-  ]);
   const actorUserId = resolveActorUserId(user);
   const normalizedNote = normalizeActionNote(note);
-
-  if (!hasStatusColumn || !hasAssignedToColumn) {
-    throw new Error('Renewals queue assignment columns are not available');
-  }
 
   const normalizedAssignedTo = typeof assignedTo === 'string' && assignedTo.trim().length > 0
     ? assignedTo.trim()
@@ -950,15 +812,9 @@ export const assignRenewalQueueItemOwner = withAuth(async (
               withActionLabel({
                 assigned_to: normalizedAssignedTo,
                 updated_at: updatedAt,
-              }, hasLastActionColumn, 'assign_owner'),
-              hasLastActionByColumn,
-              actorUserId
-            ),
-            hasLastActionNoteColumn,
-            normalizedNote
-          ),
-          hasLastActionAtColumn,
-          updatedAt
+              }, 'assign_owner'), actorUserId
+            ), normalizedNote
+          ), updatedAt
         )
       );
 
@@ -986,28 +842,8 @@ export const completeRenewalQueueItemForActivation = withAuth(async (
 
   const { knex } = await createTenantKnex();
   await assertRenewalSchemaReady(knex);
-  const schema = knex.schema as any;
-  const [
-    hasStatusColumn,
-    hasLastActionColumn,
-    hasLastActionByColumn,
-    hasLastActionAtColumn,
-    hasLastActionNoteColumn,
-    hasCreatedDraftColumn,
-  ] = await Promise.all([
-    schema?.hasColumn?.('client_contracts', 'status') ?? false,
-    schema?.hasColumn?.('client_contracts', 'last_action') ?? false,
-    schema?.hasColumn?.('client_contracts', 'last_action_by') ?? false,
-    schema?.hasColumn?.('client_contracts', 'last_action_at') ?? false,
-    schema?.hasColumn?.('client_contracts', 'last_action_note') ?? false,
-    schema?.hasColumn?.('client_contracts', 'created_draft_contract_id') ?? false,
-  ]);
   const actorUserId = resolveActorUserId(user);
   const normalizedNote = normalizeActionNote(note);
-
-  if (!hasStatusColumn) {
-    throw new Error('Renewals queue status column is not available');
-  }
 
   return knex.transaction(async (trx) => {
     const sourceRow = await trx('client_contracts')
@@ -1019,7 +855,7 @@ export const completeRenewalQueueItemForActivation = withAuth(async (
       .select([
         'client_contract_id',
         'status',
-        ...(hasCreatedDraftColumn ? ['created_draft_contract_id'] : []),
+        'created_draft_contract_id',
       ])
       .first();
 
@@ -1035,7 +871,7 @@ export const completeRenewalQueueItemForActivation = withAuth(async (
     const resolvedActivatedContractId =
       typeof activatedContractId === 'string' && activatedContractId.trim().length > 0
         ? activatedContractId.trim()
-        : (hasCreatedDraftColumn ? (sourceRow as any).created_draft_contract_id : null);
+        : (sourceRow as any).created_draft_contract_id;
 
     if (typeof resolvedActivatedContractId !== 'string' || resolvedActivatedContractId.length === 0) {
       throw new Error('Activated renewal contract id is required');
@@ -1078,15 +914,9 @@ export const completeRenewalQueueItemForActivation = withAuth(async (
               withActionLabel({
                 status: 'completed',
                 updated_at: updatedAt,
-              }, hasLastActionColumn, 'complete_after_activation'),
-              hasLastActionByColumn,
-              actorUserId
-            ),
-            hasLastActionNoteColumn,
-            normalizedNote
-          ),
-          hasLastActionAtColumn,
-          updatedAt
+              }, 'complete_after_activation'), actorUserId
+            ), normalizedNote
+          ), updatedAt
         )
       );
 
@@ -1114,20 +944,8 @@ export const completeRenewalQueueItemForNonRenewal = withAuth(async (
 
   const { knex } = await createTenantKnex();
   await assertRenewalSchemaReady(knex);
-  const schema = knex.schema as any;
-  const [hasStatusColumn, hasLastActionColumn, hasLastActionByColumn, hasLastActionAtColumn, hasLastActionNoteColumn] = await Promise.all([
-    schema?.hasColumn?.('client_contracts', 'status') ?? false,
-    schema?.hasColumn?.('client_contracts', 'last_action') ?? false,
-    schema?.hasColumn?.('client_contracts', 'last_action_by') ?? false,
-    schema?.hasColumn?.('client_contracts', 'last_action_at') ?? false,
-    schema?.hasColumn?.('client_contracts', 'last_action_note') ?? false,
-  ]);
   const actorUserId = resolveActorUserId(user);
   const normalizedNote = normalizeActionNote(note);
-
-  if (!hasStatusColumn) {
-    throw new Error('Renewals queue status column is not available');
-  }
 
   return knex.transaction(async (trx) => {
     const sourceRow = await trx('client_contracts')
@@ -1161,15 +979,9 @@ export const completeRenewalQueueItemForNonRenewal = withAuth(async (
               withActionLabel({
                 status: 'completed',
                 updated_at: updatedAt,
-              }, hasLastActionColumn, 'complete_after_non_renewal'),
-              hasLastActionByColumn,
-              actorUserId
-            ),
-            hasLastActionNoteColumn,
-            normalizedNote
-          ),
-          hasLastActionAtColumn,
-          updatedAt
+              }, 'complete_after_non_renewal'), actorUserId
+            ), normalizedNote
+          ), updatedAt
         )
       );
 
@@ -1195,58 +1007,15 @@ export const retryRenewalQueueTicketCreation = withAuth(async (
 
   const { knex } = await createTenantKnex();
   await assertRenewalSchemaReady(knex);
-  const schema = knex.schema as any;
-  const [
-    hasCreatedTicketColumn,
-    hasAutomationErrorColumn,
-    hasUseTenantDefaultsColumn,
-    hasContractPolicyColumn,
-    hasContractBoardColumn,
-    hasContractStatusColumn,
-    hasContractPriorityColumn,
-    hasContractAssigneeColumn,
-    hasTenantPolicyColumn,
-    hasTenantBoardColumn,
-    hasTenantStatusColumn,
-    hasTenantPriorityColumn,
-    hasTenantAssigneeColumn,
-  ] = await Promise.all([
-    schema?.hasColumn?.('client_contracts', 'created_ticket_id') ?? false,
-    schema?.hasColumn?.('client_contracts', 'automation_error') ?? false,
-    schema?.hasColumn?.('client_contracts', 'use_tenant_renewal_defaults') ?? false,
-    schema?.hasColumn?.('client_contracts', 'renewal_due_date_action_policy') ?? false,
-    schema?.hasColumn?.('client_contracts', 'renewal_ticket_board_id') ?? false,
-    schema?.hasColumn?.('client_contracts', 'renewal_ticket_status_id') ?? false,
-    schema?.hasColumn?.('client_contracts', 'renewal_ticket_priority') ?? false,
-    schema?.hasColumn?.('client_contracts', 'renewal_ticket_assignee_id') ?? false,
-    schema?.hasColumn?.('default_billing_settings', 'renewal_due_date_action_policy') ?? false,
-    schema?.hasColumn?.('default_billing_settings', 'renewal_ticket_board_id') ?? false,
-    schema?.hasColumn?.('default_billing_settings', 'renewal_ticket_status_id') ?? false,
-    schema?.hasColumn?.('default_billing_settings', 'renewal_ticket_priority') ?? false,
-    schema?.hasColumn?.('default_billing_settings', 'renewal_ticket_assignee_id') ?? false,
-  ]);
-
-  if (!hasCreatedTicketColumn || !hasAutomationErrorColumn) {
-    throw new Error('Renewal ticket automation columns are not available');
-  }
 
   return knex.transaction(async (trx) => {
-    const defaultSelections: string[] = [];
-    if (hasTenantPolicyColumn) {
-      defaultSelections.push('dbs.renewal_due_date_action_policy as tenant_renewal_due_date_action_policy');
-    }
-    if (hasTenantBoardColumn) {
-      defaultSelections.push('dbs.renewal_ticket_board_id as tenant_renewal_ticket_board_id');
-    }
-    if (hasTenantStatusColumn) {
-      defaultSelections.push('dbs.renewal_ticket_status_id as tenant_renewal_ticket_status_id');
-    }
-    if (hasTenantPriorityColumn) {
-      defaultSelections.push('dbs.renewal_ticket_priority as tenant_renewal_ticket_priority');
-    }
-    if (hasTenantAssigneeColumn) {
-      defaultSelections.push('dbs.renewal_ticket_assignee_id as tenant_renewal_ticket_assignee_id');
-    }
+    const defaultSelections: string[] = [
+      'dbs.renewal_due_date_action_policy as tenant_renewal_due_date_action_policy',
+      'dbs.renewal_ticket_board_id as tenant_renewal_ticket_board_id',
+      'dbs.renewal_ticket_status_id as tenant_renewal_ticket_status_id',
+      'dbs.renewal_ticket_priority as tenant_renewal_ticket_priority',
+      'dbs.renewal_ticket_assignee_id as tenant_renewal_ticket_assignee_id',
+    ];
 
     let rowQuery = trx('client_contracts as cc')
       .leftJoin('contracts as c', function joinContracts() {
@@ -1269,11 +1038,9 @@ export const retryRenewalQueueTicketCreation = withAuth(async (
         ...defaultSelections,
       ]);
 
-    if (defaultSelections.length > 0) {
-      rowQuery = rowQuery.leftJoin('default_billing_settings as dbs', function joinDefaults() {
-        this.on('cc.tenant', '=', 'dbs.tenant');
-      });
-    }
+    rowQuery = rowQuery.leftJoin('default_billing_settings as dbs', function joinDefaults() {
+      this.on('cc.tenant', '=', 'dbs.tenant');
+    });
 
     const sourceRow = await rowQuery.first();
     if (!sourceRow) {
@@ -1296,13 +1063,9 @@ export const retryRenewalQueueTicketCreation = withAuth(async (
       throw new Error('Manual retry is only available for due renewal cycles');
     }
 
-    const useTenantRenewalDefaults = hasUseTenantDefaultsColumn
-      ? ((sourceRow as any).use_tenant_renewal_defaults !== false)
-      : true;
+    const useTenantRenewalDefaults = (sourceRow as any).use_tenant_renewal_defaults !== false;
     const tenantPolicy = resolveRenewalDueDateActionPolicy((sourceRow as any).tenant_renewal_due_date_action_policy);
-    const contractPolicy = hasContractPolicyColumn
-      ? resolveOptionalRenewalDueDateActionPolicy((sourceRow as any).renewal_due_date_action_policy)
-      : null;
+    const contractPolicy = resolveOptionalRenewalDueDateActionPolicy((sourceRow as any).renewal_due_date_action_policy);
     const effectivePolicy = useTenantRenewalDefaults ? tenantPolicy : (contractPolicy ?? tenantPolicy);
 
     if (effectivePolicy !== 'create_ticket') {
@@ -1318,10 +1081,10 @@ export const retryRenewalQueueTicketCreation = withAuth(async (
     const tenantStatusId = normalizeOptionalUuid((sourceRow as any).tenant_renewal_ticket_status_id);
     const tenantPriorityId = normalizeOptionalUuid((sourceRow as any).tenant_renewal_ticket_priority);
     const tenantAssignedTo = normalizeOptionalUuid((sourceRow as any).tenant_renewal_ticket_assignee_id);
-    const contractBoardId = hasContractBoardColumn ? normalizeOptionalUuid((sourceRow as any).renewal_ticket_board_id) : null;
-    const contractStatusId = hasContractStatusColumn ? normalizeOptionalUuid((sourceRow as any).renewal_ticket_status_id) : null;
-    const contractPriorityId = hasContractPriorityColumn ? normalizeOptionalUuid((sourceRow as any).renewal_ticket_priority) : null;
-    const contractAssignedTo = hasContractAssigneeColumn ? normalizeOptionalUuid((sourceRow as any).renewal_ticket_assignee_id) : null;
+    const contractBoardId = normalizeOptionalUuid((sourceRow as any).renewal_ticket_board_id);
+    const contractStatusId = normalizeOptionalUuid((sourceRow as any).renewal_ticket_status_id);
+    const contractPriorityId = normalizeOptionalUuid((sourceRow as any).renewal_ticket_priority);
+    const contractAssignedTo = normalizeOptionalUuid((sourceRow as any).renewal_ticket_assignee_id);
 
     const boardId = useTenantRenewalDefaults ? tenantBoardId : (contractBoardId ?? tenantBoardId);
     const statusId = useTenantRenewalDefaults ? tenantStatusId : (contractStatusId ?? tenantStatusId);

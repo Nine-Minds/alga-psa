@@ -299,35 +299,25 @@ export async function processRenewalQueueHandler(data: RenewalQueueProcessorJobD
 
   const today = toDateOnly(new Date());
   const horizonDate = toDateOnly(addDays(new Date(), horizonDays));
-  const defaultSelections: string[] = [];
-  if (hasDefaultRenewalModeColumn) {
-    defaultSelections.push('dbs.default_renewal_mode as tenant_default_renewal_mode');
-  }
-  if (hasDefaultNoticePeriodColumn) {
-    defaultSelections.push('dbs.default_notice_period_days as tenant_default_notice_period_days');
-  }
-  if (hasTenantDueDateActionPolicyColumn) {
-    defaultSelections.push('dbs.renewal_due_date_action_policy as tenant_renewal_due_date_action_policy');
-  }
-  if (hasTenantRenewalTicketBoardColumn) {
-    defaultSelections.push('dbs.renewal_ticket_board_id as tenant_renewal_ticket_board_id');
-  }
-  if (hasTenantRenewalTicketStatusColumn) {
-    defaultSelections.push('dbs.renewal_ticket_status_id as tenant_renewal_ticket_status_id');
-  }
-  if (hasTenantRenewalTicketPriorityColumn) {
-    defaultSelections.push('dbs.renewal_ticket_priority as tenant_renewal_ticket_priority');
-  }
-  if (hasTenantRenewalTicketAssigneeColumn) {
-    defaultSelections.push('dbs.renewal_ticket_assignee_id as tenant_renewal_ticket_assignee_id');
-  }
+  const defaultSelections: string[] = [
+    'dbs.default_renewal_mode as tenant_default_renewal_mode',
+    'dbs.default_notice_period_days as tenant_default_notice_period_days',
+    'dbs.renewal_due_date_action_policy as tenant_renewal_due_date_action_policy',
+    'dbs.renewal_ticket_board_id as tenant_renewal_ticket_board_id',
+    'dbs.renewal_ticket_status_id as tenant_renewal_ticket_status_id',
+    'dbs.renewal_ticket_priority as tenant_renewal_ticket_priority',
+    'dbs.renewal_ticket_assignee_id as tenant_renewal_ticket_assignee_id',
+  ];
 
-  let contractQuery = knex('client_contracts as cc')
+  const contractQuery = knex('client_contracts as cc')
     .join('contracts as c', function joinContracts() {
       this.on('cc.contract_id', '=', 'c.contract_id').andOn('cc.tenant', '=', 'c.tenant');
     })
     .leftJoin('clients as cl', function joinClients() {
       this.on('cc.client_id', '=', 'cl.client_id').andOn('cc.tenant', '=', 'cl.tenant');
+    })
+    .leftJoin('default_billing_settings as dbs', function joinDefaultBillingSettings() {
+      this.on('cc.tenant', '=', 'dbs.tenant');
     })
     .where({
       'cc.tenant': tenantId,
@@ -335,12 +325,6 @@ export async function processRenewalQueueHandler(data: RenewalQueueProcessorJobD
       'c.status': 'active',
     })
     .select(['cc.*', 'c.status as contract_status', 'c.contract_name', 'cl.client_name', ...defaultSelections]);
-
-  if (defaultSelections.length > 0) {
-    contractQuery = contractQuery.leftJoin('default_billing_settings as dbs', function joinDefaultBillingSettings() {
-      this.on('cc.tenant', '=', 'dbs.tenant');
-    });
-  }
 
   const candidateRows = await contractQuery;
   const workflowRunIdForTenant = hasWorkflowRunsTable
@@ -380,12 +364,9 @@ export async function processRenewalQueueHandler(data: RenewalQueueProcessorJobD
     const tenantDueDateActionPolicy = resolveRenewalDueDateActionPolicy(
       (row as any).tenant_renewal_due_date_action_policy
     );
-    const useTenantRenewalDefaults = hasUseTenantRenewalDefaultsColumn
-      ? resolveUseTenantRenewalDefaults((row as any).use_tenant_renewal_defaults)
-      : true;
-    const contractOverrideDueDateActionPolicy = hasContractDueDateActionPolicyColumn
-      ? resolveOptionalRenewalDueDateActionPolicy((row as any).renewal_due_date_action_policy)
-      : null;
+    const useTenantRenewalDefaults = resolveUseTenantRenewalDefaults((row as any).use_tenant_renewal_defaults);
+    const contractOverrideDueDateActionPolicy =
+      resolveOptionalRenewalDueDateActionPolicy((row as any).renewal_due_date_action_policy);
     const effectiveDueDateActionPolicy = useTenantRenewalDefaults
       ? tenantDueDateActionPolicy
       : contractOverrideDueDateActionPolicy ?? tenantDueDateActionPolicy;
@@ -401,15 +382,14 @@ export async function processRenewalQueueHandler(data: RenewalQueueProcessorJobD
 
     const currentStatus = (row as any).status;
     const previousCycleKey =
-      hasRenewalCycleKeyColumn && typeof (row as any).renewal_cycle_key === 'string'
+      typeof (row as any).renewal_cycle_key === 'string'
         ? ((row as any).renewal_cycle_key as string)
         : null;
     const nextCycleKey =
-      hasRenewalCycleKeyColumn && typeof normalized.renewal_cycle_key === 'string'
+      typeof normalized.renewal_cycle_key === 'string'
         ? (normalized.renewal_cycle_key as string)
         : null;
     const cycleChanged =
-      hasRenewalCycleKeyColumn &&
       typeof nextCycleKey === 'string' &&
       nextCycleKey.length > 0 &&
       previousCycleKey !== nextCycleKey;
@@ -427,55 +407,41 @@ export async function processRenewalQueueHandler(data: RenewalQueueProcessorJobD
     if ((row as any).decision_due_date !== decisionDueDate) {
       updates.decision_due_date = decisionDueDate;
     }
-    if (hasRenewalCycleStartColumn) {
-      const nextCycleStart = normalizeOptionalDateOnly(normalized.renewal_cycle_start);
-      const previousCycleStart = normalizeOptionalDateOnly((row as any).renewal_cycle_start);
-      if (nextCycleStart !== previousCycleStart) {
-        updates.renewal_cycle_start = nextCycleStart;
-      }
+    const nextCycleStart = normalizeOptionalDateOnly(normalized.renewal_cycle_start);
+    const previousCycleStart = normalizeOptionalDateOnly((row as any).renewal_cycle_start);
+    if (nextCycleStart !== previousCycleStart) {
+      updates.renewal_cycle_start = nextCycleStart;
     }
-    if (hasRenewalCycleEndColumn) {
-      const nextCycleEnd = normalizeOptionalDateOnly(normalized.renewal_cycle_end);
-      const previousCycleEnd = normalizeOptionalDateOnly((row as any).renewal_cycle_end);
-      if (nextCycleEnd !== previousCycleEnd) {
-        updates.renewal_cycle_end = nextCycleEnd;
-      }
+    const nextCycleEnd = normalizeOptionalDateOnly(normalized.renewal_cycle_end);
+    const previousCycleEnd = normalizeOptionalDateOnly((row as any).renewal_cycle_end);
+    if (nextCycleEnd !== previousCycleEnd) {
+      updates.renewal_cycle_end = nextCycleEnd;
     }
-    if (hasRenewalCycleKeyColumn && nextCycleKey !== previousCycleKey) {
+    if (nextCycleKey !== previousCycleKey) {
       updates.renewal_cycle_key = nextCycleKey;
     }
-    if (hasContractDueDateActionPolicyColumn) {
-      const existingPolicy = resolveOptionalRenewalDueDateActionPolicy((row as any).renewal_due_date_action_policy);
-      if (existingPolicy !== effectiveDueDateActionPolicy) {
-        updates.renewal_due_date_action_policy = effectiveDueDateActionPolicy;
-      }
+    const existingPolicy = resolveOptionalRenewalDueDateActionPolicy((row as any).renewal_due_date_action_policy);
+    if (existingPolicy !== effectiveDueDateActionPolicy) {
+      updates.renewal_due_date_action_policy = effectiveDueDateActionPolicy;
     }
 
     if (shouldNormalizeStatus) {
       updates.status = 'pending';
-      if (hasSnoozedUntilColumn) {
-        updates.snoozed_until = null;
-      }
+      updates.snoozed_until = null;
       if (!isKnownRenewalStatus(currentStatus) || currentStatus !== 'pending') {
         normalizedStatusCount += 1;
       }
     }
 
     if (cycleChanged) {
-      if (hasCreatedTicketIdColumn) {
-        updates.created_ticket_id = null;
-      }
-      if (hasCreatedDraftContractIdColumn) {
-        updates.created_draft_contract_id = null;
-      }
+      updates.created_ticket_id = null;
+      updates.created_draft_contract_id = null;
       newCycleCount += 1;
     }
 
-    const hasExistingLinkedTicket = hasCreatedTicketIdColumn
-      && Boolean(normalizeOptionalUuid((row as any).created_ticket_id));
+    const hasExistingLinkedTicket = Boolean(normalizeOptionalUuid((row as any).created_ticket_id));
     const shouldCreateTicketAtDueDate =
-      hasCreatedTicketIdColumn
-      && !hasExistingLinkedTicket
+      !hasExistingLinkedTicket
       && effectiveDueDateActionPolicy === 'create_ticket'
       && decisionDueDate <= today;
     if (shouldCreateTicketAtDueDate) {
@@ -485,18 +451,10 @@ export async function processRenewalQueueHandler(data: RenewalQueueProcessorJobD
       const tenantStatusId = normalizeOptionalUuid((row as any).tenant_renewal_ticket_status_id);
       const tenantPriorityId = normalizeOptionalUuid((row as any).tenant_renewal_ticket_priority);
       const tenantAssignedTo = normalizeOptionalUuid((row as any).tenant_renewal_ticket_assignee_id);
-      const contractBoardId = hasContractRenewalTicketBoardColumn
-        ? normalizeOptionalUuid((row as any).renewal_ticket_board_id)
-        : null;
-      const contractStatusId = hasContractRenewalTicketStatusColumn
-        ? normalizeOptionalUuid((row as any).renewal_ticket_status_id)
-        : null;
-      const contractPriorityId = hasContractRenewalTicketPriorityColumn
-        ? normalizeOptionalUuid((row as any).renewal_ticket_priority)
-        : null;
-      const contractAssignedTo = hasContractRenewalTicketAssigneeColumn
-        ? normalizeOptionalUuid((row as any).renewal_ticket_assignee_id)
-        : null;
+      const contractBoardId = normalizeOptionalUuid((row as any).renewal_ticket_board_id);
+      const contractStatusId = normalizeOptionalUuid((row as any).renewal_ticket_status_id);
+      const contractPriorityId = normalizeOptionalUuid((row as any).renewal_ticket_priority);
+      const contractAssignedTo = normalizeOptionalUuid((row as any).renewal_ticket_assignee_id);
       const boardId = useTenantRenewalDefaults ? tenantBoardId : (contractBoardId ?? tenantBoardId);
       const statusId = useTenantRenewalDefaults ? tenantStatusId : (contractStatusId ?? tenantStatusId);
       const priorityId = useTenantRenewalDefaults ? tenantPriorityId : (contractPriorityId ?? tenantPriorityId);
@@ -536,25 +494,23 @@ export async function processRenewalQueueHandler(data: RenewalQueueProcessorJobD
         } as Record<string, unknown>;
 
         let createdTicketId: string | null = null;
-        if (hasTicketsTable) {
-          try {
-            const existingTicket = await knex('tickets')
-              .where({ tenant: tenantId })
-              .whereRaw("(attributes::jsonb ->> 'idempotency_key') = ?", [idempotencyKey])
-              .first('ticket_id');
-            const existingTicketId = normalizeOptionalUuid(existingTicket?.ticket_id);
-            if (existingTicketId) {
-              createdTicketId = existingTicketId;
-              duplicateTicketSkipCount += 1;
-            }
-          } catch (error) {
-            logger.warn('Failed idempotency lookup before renewal ticket creation', {
-              tenantId,
-              clientContractId: (row as any).client_contract_id,
-              idempotencyKey,
-              error: error instanceof Error ? error.message : String(error),
-            });
+        try {
+          const existingTicket = await knex('tickets')
+            .where({ tenant: tenantId })
+            .whereRaw("(attributes::jsonb ->> 'idempotency_key') = ?", [idempotencyKey])
+            .first('ticket_id');
+          const existingTicketId = normalizeOptionalUuid(existingTicket?.ticket_id);
+          if (existingTicketId) {
+            createdTicketId = existingTicketId;
+            duplicateTicketSkipCount += 1;
           }
+        } catch (error) {
+          logger.warn('Failed idempotency lookup before renewal ticket creation', {
+            tenantId,
+            clientContractId: (row as any).client_contract_id,
+            idempotencyKey,
+            error: error instanceof Error ? error.message : String(error),
+          });
         }
 
         if (!createdTicketId) {
@@ -619,29 +575,19 @@ export async function processRenewalQueueHandler(data: RenewalQueueProcessorJobD
 
         if (createdTicketId) {
           updates.created_ticket_id = createdTicketId;
-          if (hasAutomationErrorColumn) {
-            updates.automation_error = null;
-          }
-          if (hasLastActionColumn) {
-            updates.last_action = 'system_ticket_automation_linked';
-          }
-          if (hasLastActionByColumn) {
-            updates.last_action_by = null;
-          }
-          if (hasLastActionAtColumn) {
-            updates.last_action_at = nowIso;
-          }
+          updates.automation_error = null;
+          updates.last_action = 'system_ticket_automation_linked';
+          updates.last_action_by = null;
+          updates.last_action_at = nowIso;
           createdTicketCount += 1;
-        } else if (hasAutomationErrorColumn) {
+        } else {
           updates.automation_error = ticketAutomationError ?? 'Renewal ticket automation failed';
           automationErrorCount += 1;
         }
       } else {
         ticketCreationSkippedMissingDefaultsCount += 1;
-        if (hasAutomationErrorColumn) {
-          updates.automation_error = 'Missing renewal ticket routing defaults for create_ticket policy';
-          automationErrorCount += 1;
-        }
+        updates.automation_error = 'Missing renewal ticket routing defaults for create_ticket policy';
+        automationErrorCount += 1;
       }
     }
 
