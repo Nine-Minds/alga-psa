@@ -985,6 +985,18 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
   - Validation:
     - `npm -w @alga-psa/billing exec vitest run tests/RenewalsQueueTab.component.test.ts --coverage=false`
     - `npm -w @alga-psa/billing run typecheck`
+- (2026-02-21) Completed `F102`.
+  - Added evergreen cycle anchor detail to renewal queue rows.
+  - Queue row model now surfaces:
+    - `evergreen_cycle_anchor_date` (from `evergreen_review_anchor_date`, fallback `renewal_cycle_end`)
+  - UI now renders evergreen-only row detail:
+    - `Evergreen anchor: <date>`
+  - Updated wiring coverage:
+    - `packages/billing/tests/RenewalsQueueTab.component.test.ts`
+    - `packages/billing/tests/renewalsQueueActions.wiring.test.ts`
+  - Validation:
+    - `npm -w @alga-psa/billing exec vitest run tests/RenewalsQueueTab.component.test.ts tests/renewalsQueueActions.wiring.test.ts --coverage=false`
+    - `npm -w @alga-psa/billing run typecheck`
 
 ## Open Questions
 - Should renewal ticket defaults be a brand-new billing settings card, or an extension of existing default ticket settings patterns?

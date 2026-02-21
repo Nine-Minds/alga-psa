@@ -27,6 +27,8 @@ describe('renewalsQueueActions wiring', () => {
     expect(source).toContain('status: toRenewalWorkItemStatus((row as any).status),');
     expect(source).toContain('created_draft_contract_id: (row as any).created_draft_contract_id ?? null,');
     expect(source).toContain('created_ticket_id: (row as any).created_ticket_id ?? null,');
+    expect(source).toContain('evergreen_cycle_anchor_date:');
+    expect(source).toContain('(row as any).evergreen_review_anchor_date ?? row.renewal_cycle_end ?? undefined');
     expect(source).toContain('available_actions: getAvailableActionsForStatus(toRenewalWorkItemStatus((row as any).status)),');
     expect(source).toContain("contract_type: row.end_date ? ('fixed-term' as const) : ('evergreen' as const)");
     expect(source).toContain(".sort((a, b) => (a.decision_due_date ?? '').localeCompare(b.decision_due_date ?? ''));");

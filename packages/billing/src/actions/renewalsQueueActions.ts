@@ -129,6 +129,7 @@ export type RenewalQueueRow = {
   decision_due_date?: string;
   days_until_due?: number;
   renewal_cycle_key?: string;
+  evergreen_cycle_anchor_date?: string;
   created_draft_contract_id?: string | null;
   created_ticket_id?: string | null;
   automation_error?: string | null;
@@ -285,6 +286,10 @@ export const listRenewalQueueRows = withAuth(async (
       decision_due_date: row.decision_due_date ?? undefined,
       days_until_due: row.days_until_due,
       renewal_cycle_key: row.renewal_cycle_key,
+      evergreen_cycle_anchor_date:
+        row.end_date
+          ? undefined
+          : (row as any).evergreen_review_anchor_date ?? row.renewal_cycle_end ?? undefined,
       created_draft_contract_id: (row as any).created_draft_contract_id ?? null,
       created_ticket_id: (row as any).created_ticket_id ?? null,
       automation_error: (row as any).automation_error ?? null,

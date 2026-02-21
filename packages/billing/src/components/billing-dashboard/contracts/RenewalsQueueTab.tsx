@@ -371,6 +371,14 @@ export default function RenewalsQueueTab({ onQueueMutationComplete }: RenewalsQu
                 <p className="text-xs text-[rgb(var(--color-text-500))]">
                   {row.client_name ?? row.client_id} • due {row.decision_due_date ?? 'n/a'}
                 </p>
+                {row.contract_type === 'evergreen' && row.evergreen_cycle_anchor_date && (
+                  <p
+                    data-testid="renewals-evergreen-cycle-anchor"
+                    className="text-xs text-[rgb(var(--color-text-500))]"
+                  >
+                    Evergreen anchor: {row.evergreen_cycle_anchor_date}
+                  </p>
+                )}
                 <p
                   data-testid="renewals-queue-row-available-actions"
                   className="mt-1 text-[11px] text-[rgb(var(--color-text-400))]"

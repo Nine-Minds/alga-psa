@@ -72,6 +72,8 @@ describe('RenewalsQueueTab component', () => {
     expect(source).toContain('data-testid="renewals-contract-type-badge"');
     expect(source).toContain('data-contract-type={row.contract_type}');
     expect(source).toContain("{row.contract_type === 'evergreen' ? 'Evergreen' : 'Fixed-term'}");
+    expect(source).toContain('data-testid="renewals-evergreen-cycle-anchor"');
+    expect(source).toContain('Evergreen anchor: {row.evergreen_cycle_anchor_date}');
   });
 
   it('shows days-remaining visual states for due-soon and overdue entries', () => {
