@@ -222,6 +222,8 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
   - Covered by existing `billingSettingsActions.renewalDefaultsWiring.test.ts` assertions for schema-guarded renewal default persistence in update writes.
 - (2026-02-21) Completed `T028`.
   - Extended renewal UI/source tests to assert `Use Tenant Renewal Defaults` toggle controls and payload field wiring (`use_tenant_renewal_defaults`).
+- (2026-02-21) Completed `T029`.
+  - Covered by `ContractWizard.renewalFields.test.ts` assertions that tenant defaults are applied in submission resolution when toggle is enabled.
 - (2026-02-21) Completed `F028`.
   - Added explicit `Use Tenant Renewal Defaults` toggle controls to both fixed-term and evergreen renewal settings cards in `ContractBasicsStep.tsx`, bound to `use_tenant_renewal_defaults`.
 - (2026-02-21) Completed `F029`.
