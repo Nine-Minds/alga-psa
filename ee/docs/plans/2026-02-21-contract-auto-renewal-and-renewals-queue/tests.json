@@ -882,7 +882,7 @@
   {
     "id": "T111",
     "description": "Functional: Include renewal mode in expiration report row payload.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F111"
     ]
