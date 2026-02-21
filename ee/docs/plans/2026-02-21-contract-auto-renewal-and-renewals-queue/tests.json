@@ -754,7 +754,7 @@
   {
     "id": "T095",
     "description": "Functional: Skip duplicate ticket creation when idempotent renewal cycle already has linked ticket.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F095"
     ]
