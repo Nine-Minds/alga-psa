@@ -15,4 +15,12 @@ describe('ContractBasicsStep renewal card rendering', () => {
     expect(source).toContain('data-automation-id="renewal-settings-evergreen-card"');
     expect(source).toContain('Evergreen Review Settings');
   });
+
+  it('defines renewal mode selector options for none/manual/auto', () => {
+    expect(source).toContain("const renewalModeOptions = [");
+    expect(source).toContain("{ value: 'none', label: 'No Renewal' }");
+    expect(source).toContain("{ value: 'manual', label: 'Manual Renewal' }");
+    expect(source).toContain("{ value: 'auto', label: 'Auto Renew' }");
+    expect(source).toContain('renewal_mode: value as NonNullable<ContractWizardData');
+  });
 });
