@@ -568,6 +568,9 @@ export const snoozeRenewalQueueItem = withAuth(async (
   if (Number.isNaN(parsedSnoozeDate.getTime())) {
     throw new Error('Snooze target date is invalid');
   }
+  if (normalizedSnoozedUntil <= getTodayDateOnly()) {
+    throw new Error('Snooze target date must be in the future');
+  }
 
   return knex.transaction(async (trx) => {
     const row = await trx('client_contracts')

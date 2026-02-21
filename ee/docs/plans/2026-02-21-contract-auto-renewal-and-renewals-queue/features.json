@@ -602,7 +602,7 @@
   {
     "id": "F076",
     "description": "Enforce snooze date must be in the future on action validation.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > FR5 — Queue Actions and Renewal Workflow"
     ]

@@ -647,6 +647,16 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
   - Validation:
     - `npm -w @alga-psa/billing run typecheck`
     - `npm -w @alga-psa/billing exec vitest run tests/renewalsQueueActions.markRenewing.wiring.test.ts tests/renewalsQueueActions.markNonRenewing.wiring.test.ts`
+- (2026-02-21) Completed `F076`.
+  - Added future-date enforcement for snooze action validation:
+    - `snoozeRenewalQueueItem` now rejects `snoozedUntil <= today`
+  - Added explicit error path:
+    - `Snooze target date must be in the future`
+  - Updated wiring coverage:
+    - `packages/billing/tests/renewalsQueueActions.snooze.wiring.test.ts`
+  - Validation:
+    - `npm -w @alga-psa/billing run typecheck`
+    - `npm -w @alga-psa/billing exec vitest run tests/renewalsQueueActions.snooze.wiring.test.ts tests/renewalsQueueActions.unsnooze.wiring.test.ts`
 
 ## Open Questions
 - Should renewal ticket defaults be a brand-new billing settings card, or an extension of existing default ticket settings patterns?

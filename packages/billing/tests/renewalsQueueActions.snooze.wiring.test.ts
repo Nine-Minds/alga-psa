@@ -16,6 +16,8 @@ describe('renewalsQueueActions snooze wiring', () => {
     expect(source).toContain("throw new Error('Renewals queue snooze columns are not available');");
     expect(source).toContain('const normalizedSnoozedUntil = snoozedUntil.trim().slice(0, 10);');
     expect(source).toContain("throw new Error('Snooze target date is invalid');");
+    expect(source).toContain('if (normalizedSnoozedUntil <= getTodayDateOnly()) {');
+    expect(source).toContain("throw new Error('Snooze target date must be in the future');");
     expect(source).toContain("if (previousStatus === 'completed' || previousStatus === 'non_renewing') {");
     expect(source).toContain('Cannot snooze renewal work item from status');
     expect(source).toContain("status: 'snoozed',");
