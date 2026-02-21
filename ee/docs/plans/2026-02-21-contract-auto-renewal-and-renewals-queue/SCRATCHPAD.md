@@ -463,6 +463,19 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
   - Validation:
     - `npm -w @alga-psa/billing run typecheck`
     - `npm -w @alga-psa/billing exec vitest run tests/ClientContractsTab.upcomingRenewalsWidget.test.ts tests/RenewalsQueueTab.component.test.ts`
+- (2026-02-21) Completed `F063`.
+  - Added queue-to-widget refresh wiring in billing dashboard:
+    - `packages/billing/src/components/billing-dashboard/BillingDashboard.tsx`
+  - `BillingDashboard` now increments `renewalsQueueRefreshTrigger` when renewals queue refreshes after mutation pathways.
+  - Passed refresh trigger into `ClientContractsTab` so upcoming renewals bucket counts are recomputed.
+  - `RenewalsQueueTab` now accepts `onQueueMutationComplete` and emits it after successful queue row reloads:
+    - `packages/billing/src/components/billing-dashboard/contracts/RenewalsQueueTab.tsx`
+  - Added wiring coverage in:
+    - `packages/billing/tests/BillingDashboard.renewalsRoute.test.ts`
+    - `packages/billing/tests/RenewalsQueueTab.component.test.ts`
+  - Validation:
+    - `npm -w @alga-psa/billing run typecheck`
+    - `npm -w @alga-psa/billing exec vitest run tests/BillingDashboard.renewalsRoute.test.ts tests/RenewalsQueueTab.component.test.ts tests/ClientContractsTab.upcomingRenewalsWidget.test.ts`
 
 ## Open Questions
 - Should renewal ticket defaults be a brand-new billing settings card, or an extension of existing default ticket settings patterns?

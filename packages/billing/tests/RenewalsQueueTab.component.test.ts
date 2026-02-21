@@ -8,7 +8,9 @@ const source = readFileSync(
 
 describe('RenewalsQueueTab component', () => {
   it('exists as a standalone billing dashboard component', () => {
-    expect(source).toContain('export default function RenewalsQueueTab()');
+    expect(source).toContain('interface RenewalsQueueTabProps {');
+    expect(source).toContain('onQueueMutationComplete?: () => void;');
+    expect(source).toContain('export default function RenewalsQueueTab({ onQueueMutationComplete }: RenewalsQueueTabProps) {');
     expect(source).toContain('const DEFAULT_HORIZON_DAYS = 90;');
     expect(source).toContain("type RenewalBucket = 'all' | '0-30' | '31-60' | '61-90';");
     expect(source).toContain('data-testid="renewals-queue-page"');
@@ -23,6 +25,7 @@ describe('RenewalsQueueTab component', () => {
     expect(source).toContain('useEffect(() => {');
     expect(source).toContain('const result = await listRenewalQueueRows();');
     expect(source).toContain('setRows(result);');
+    expect(source).toContain('onQueueMutationComplete?.();');
     expect(source).toContain('Loading renewal queue...');
     expect(source).toContain('const bucketParam = searchParams?.get(\'bucket\');');
     expect(source).toContain("if (bucketParam === '0-30' || bucketParam === '31-60' || bucketParam === '61-90' || bucketParam === 'all') {");

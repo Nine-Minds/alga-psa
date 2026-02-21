@@ -13,7 +13,11 @@ type RenewalStatus = 'all' | 'pending' | 'renewing' | 'non_renewing' | 'snoozed'
 type RenewalModeFilter = 'all' | 'none' | 'manual' | 'auto';
 type ContractTypeFilter = 'all' | 'fixed-term' | 'evergreen';
 
-export default function RenewalsQueueTab() {
+interface RenewalsQueueTabProps {
+  onQueueMutationComplete?: () => void;
+}
+
+export default function RenewalsQueueTab({ onQueueMutationComplete }: RenewalsQueueTabProps) {
   const searchParams = useSearchParams();
   const [rows, setRows] = useState<RenewalQueueRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -41,6 +45,7 @@ export default function RenewalsQueueTab() {
         const result = await listRenewalQueueRows();
         if (!cancelled) {
           setRows(result);
+          onQueueMutationComplete?.();
         }
       } catch (loadError) {
         if (!cancelled) {

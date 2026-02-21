@@ -498,7 +498,7 @@
   {
     "id": "F063",
     "description": "Refresh widget counts after queue action mutations complete.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > FR4 — Renewals Queue and Dashboard Entry Points"
     ]
