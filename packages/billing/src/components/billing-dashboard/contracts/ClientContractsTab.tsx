@@ -75,13 +75,16 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
       setIsLoading(true);
       const fetchedAssignments = await getContractsWithClients();
       const renewalRows = await listRenewalQueueRows();
+      const renewalRowsForWidget = renewalRows.filter(
+        (row) => row.contract_type === 'fixed-term' || row.contract_type === 'evergreen'
+      );
       setClientContracts(fetchedAssignments.filter((assignment) => Boolean(assignment.client_id)));
       setUpcomingRenewalBuckets({
-        days0to30: renewalRows.filter((row) => (row.days_until_due ?? Number.MAX_SAFE_INTEGER) <= 30).length,
-        days31to60: renewalRows.filter(
+        days0to30: renewalRowsForWidget.filter((row) => (row.days_until_due ?? Number.MAX_SAFE_INTEGER) <= 30).length,
+        days31to60: renewalRowsForWidget.filter(
           (row) => (row.days_until_due ?? Number.MAX_SAFE_INTEGER) >= 31 && (row.days_until_due ?? 0) <= 60
         ).length,
-        days61to90: renewalRows.filter(
+        days61to90: renewalRowsForWidget.filter(
           (row) => (row.days_until_due ?? Number.MAX_SAFE_INTEGER) >= 61 && (row.days_until_due ?? 0) <= 90
         ).length,
       });

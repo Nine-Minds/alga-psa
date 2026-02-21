@@ -866,7 +866,7 @@
   {
     "id": "F109",
     "description": "Include evergreen entries in upcoming renewals widget counts.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > FR7 — Evergreen Annual Review Flow"
     ]

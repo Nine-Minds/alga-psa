@@ -23,8 +23,10 @@ describe('ClientContractsTab upcoming renewals widget', () => {
     expect(source).toContain("import { listRenewalQueueRows } from '@alga-psa/billing/actions/renewalsQueueActions';");
     expect(source).toContain('const [upcomingRenewalBuckets, setUpcomingRenewalBuckets] = useState<UpcomingRenewalBucketCounts>({');
     expect(source).toContain('const renewalRows = await listRenewalQueueRows();');
+    expect(source).toContain('const renewalRowsForWidget = renewalRows.filter(');
+    expect(source).toContain("row.contract_type === 'fixed-term' || row.contract_type === 'evergreen'");
     expect(source).toContain('setUpcomingRenewalBuckets({');
-    expect(source).toContain('days0to30: renewalRows.filter((row) => (row.days_until_due ?? Number.MAX_SAFE_INTEGER) <= 30).length');
+    expect(source).toContain('days0to30: renewalRowsForWidget.filter((row) => (row.days_until_due ?? Number.MAX_SAFE_INTEGER) <= 30).length');
   });
 
   it('navigates to renewals tab while preserving bucket filter context', () => {

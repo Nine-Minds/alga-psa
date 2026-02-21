@@ -1054,6 +1054,17 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
   - Validation:
     - `npm -w @alga-psa/billing exec vitest run tests/clientContractEffectiveRenewalSettings.test.ts --coverage=false`
     - `npm -w @alga-psa/billing run typecheck`
+- (2026-02-21) Completed `F109`.
+  - Updated `ClientContractsTab` upcoming-renewals widget bucketing to explicitly include both contract types:
+    - `fixed-term`
+    - `evergreen`
+  - Added explicit widget wiring coverage to ensure evergreen entries are included in bucket counts.
+  - Updated files:
+    - `packages/billing/src/components/billing-dashboard/contracts/ClientContractsTab.tsx`
+    - `packages/billing/tests/ClientContractsTab.upcomingRenewalsWidget.test.ts`
+  - Validation:
+    - `npm -w @alga-psa/billing exec vitest run tests/ClientContractsTab.upcomingRenewalsWidget.test.ts --coverage=false`
+    - `npm -w @alga-psa/billing run typecheck`
 
 ## Open Questions
 - Should renewal ticket defaults be a brand-new billing settings card, or an extension of existing default ticket settings patterns?
