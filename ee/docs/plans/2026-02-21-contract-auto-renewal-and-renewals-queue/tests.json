@@ -1586,7 +1586,7 @@
   {
     "id": "T199",
     "description": "Cycle rollover: evergreen behavior remains correct across year boundary for 'Generate renewal queue entries for evergreen contracts based on annual review cycle.'",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F100"
     ]
