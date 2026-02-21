@@ -14,6 +14,8 @@ describe('renewalsQueueActions mark-renewing wiring', () => {
     expect(source).toContain("const [hasStatusColumn, hasLastActionByColumn, hasLastActionAtColumn, hasLastActionNoteColumn] = await Promise.all([");
     expect(source).toContain("throw new Error('Renewals queue status column is not available');");
     expect(source).toContain("throw new Error('Renewal work item not found');");
+    expect(source).toContain("if (previousStatus === 'non_renewing') {");
+    expect(source).toContain('Cannot transition non_renewing work item to renewing without explicit override action');
     expect(source).toContain("if (previousStatus !== 'pending') {");
     expect(source).toContain('Only pending renewal work items can transition to renewing');
     expect(source).toContain("status: 'renewing',");

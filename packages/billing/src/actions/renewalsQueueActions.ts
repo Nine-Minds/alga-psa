@@ -237,6 +237,9 @@ export const markRenewalQueueItemRenewing = withAuth(async (
     }
 
     const previousStatus = toRenewalWorkItemStatus((row as any).status);
+    if (previousStatus === 'non_renewing') {
+      throw new Error('Cannot transition non_renewing work item to renewing without explicit override action');
+    }
     if (previousStatus !== 'pending') {
       throw new Error(`Only pending renewal work items can transition to renewing (current: ${previousStatus})`);
     }

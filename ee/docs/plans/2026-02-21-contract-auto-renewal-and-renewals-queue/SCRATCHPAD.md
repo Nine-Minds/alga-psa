@@ -638,6 +638,15 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
   - Validation:
     - `npm -w @alga-psa/billing run typecheck`
     - `npm -w @alga-psa/billing exec vitest run tests/renewalsQueueActions.unsnooze.wiring.test.ts tests/renewalsQueueActions.noteAudit.wiring.test.ts tests/renewalsQueueActions.timestampAudit.wiring.test.ts`
+- (2026-02-21) Completed `F075`.
+  - Added explicit override guard to renewing transition:
+    - `markRenewalQueueItemRenewing` now rejects `previousStatus === 'non_renewing'` with an override-required error.
+  - This preserves strict non-renewal intent unless a dedicated override flow is implemented.
+  - Updated wiring coverage:
+    - `packages/billing/tests/renewalsQueueActions.markRenewing.wiring.test.ts`
+  - Validation:
+    - `npm -w @alga-psa/billing run typecheck`
+    - `npm -w @alga-psa/billing exec vitest run tests/renewalsQueueActions.markRenewing.wiring.test.ts tests/renewalsQueueActions.markNonRenewing.wiring.test.ts`
 
 ## Open Questions
 - Should renewal ticket defaults be a brand-new billing settings card, or an extension of existing default ticket settings patterns?

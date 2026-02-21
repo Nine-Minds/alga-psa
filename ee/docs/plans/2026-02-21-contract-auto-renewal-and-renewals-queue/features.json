@@ -594,7 +594,7 @@
   {
     "id": "F075",
     "description": "Prevent invalid transition from non_renewing to renewing without explicit override action.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > FR5 — Queue Actions and Renewal Workflow"
     ]
