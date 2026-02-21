@@ -2,6 +2,7 @@
 
 import { createTenantKnex } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
+import type { RenewalWorkItemStatus } from '@alga-psa/types';
 
 
 // Type definitions for reports
@@ -19,6 +20,7 @@ export interface ContractExpiration {
   end_date: string;
   decision_due_date?: string | null;
   renewal_mode?: 'none' | 'manual' | 'auto' | null;
+  queue_status?: RenewalWorkItemStatus | null;
   days_until_expiration: number;
   monthly_value: number;
   auto_renew: boolean;
@@ -204,6 +206,7 @@ export const getContractExpirationReport = withAuth(async (user, { tenant }): Pr
         'cc.end_date',
         'cc.decision_due_date',
         'cc.renewal_mode',
+        'cc.status as queue_status',
         knex.raw('COALESCE(cln.custom_rate, 0) as monthly_value')
       )
       .orderBy('cc.end_date', 'asc');
@@ -218,6 +221,7 @@ export const getContractExpirationReport = withAuth(async (user, { tenant }): Pr
         end_date: endDate.toISOString().split('T')[0],
         decision_due_date: row.decision_due_date ? new Date(row.decision_due_date).toISOString().split('T')[0] : null,
         renewal_mode: row.renewal_mode ?? null,
+        queue_status: row.queue_status ?? null,
         days_until_expiration: Math.max(0, daysUntilExpiration),
         monthly_value: row.monthly_value || 0,
         auto_renew: false // This could be extended to check a flag in the database

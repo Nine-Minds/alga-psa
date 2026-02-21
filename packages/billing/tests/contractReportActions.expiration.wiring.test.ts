@@ -20,4 +20,11 @@ describe('contractReportActions expiration report wiring', () => {
     expect(source).toContain("'cc.renewal_mode',");
     expect(source).toContain('renewal_mode: row.renewal_mode ?? null,');
   });
+
+  it('includes queue status in expiration rows when work-item status exists', () => {
+    expect(source).toContain("import type { RenewalWorkItemStatus } from '@alga-psa/types';");
+    expect(source).toContain('queue_status?: RenewalWorkItemStatus | null;');
+    expect(source).toContain("'cc.status as queue_status',");
+    expect(source).toContain('queue_status: row.queue_status ?? null,');
+  });
 });
