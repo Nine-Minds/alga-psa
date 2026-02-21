@@ -666,7 +666,7 @@
   {
     "id": "F084",
     "description": "Create scheduled renewal processor that scans due decision windows for active contracts.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > FR6 — Automation and Ticket Creation"
     ]

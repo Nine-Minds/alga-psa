@@ -1,4 +1,4 @@
-import { initializeScheduler, scheduleExpiredCreditsJob, scheduleExpiringCreditsNotificationJob, scheduleCreditReconciliationJob, scheduleReconcileBucketUsageJob, scheduleCleanupTemporaryFormsJob, scheduleCleanupAiSessionKeysJob, scheduleMicrosoftWebhookRenewalJob, scheduleGooglePubSubVerificationJob, scheduleGoogleGmailWatchRenewalJob, scheduleEmailWebhookMaintenanceJob } from './index';
+import { initializeScheduler, scheduleExpiredCreditsJob, scheduleExpiringCreditsNotificationJob, scheduleCreditReconciliationJob, scheduleReconcileBucketUsageJob, scheduleCleanupTemporaryFormsJob, scheduleCleanupAiSessionKeysJob, scheduleMicrosoftWebhookRenewalJob, scheduleGooglePubSubVerificationJob, scheduleGoogleGmailWatchRenewalJob, scheduleEmailWebhookMaintenanceJob, scheduleRenewalQueueProcessingJob } from './index';
 import logger from '@alga-psa/core/logger';
 import { getConnection } from 'server/src/lib/db/db';
 
@@ -160,6 +160,23 @@ export async function initializeScheduledJobs(): Promise<void> {
         }
       } catch (error) {
         logger.error(`Failed to schedule email webhook maintenance job for tenant ${tenantId}`, error);
+      }
+
+      // Schedule renewal queue processing (daily at 5:00 AM)
+      try {
+        const cron = '0 5 * * *';
+        const renewalQueueJobId = await scheduleRenewalQueueProcessingJob(tenantId, 90, cron);
+        if (renewalQueueJobId) {
+          logger.info(`Scheduled renewal queue processing job for tenant ${tenantId} with job ID ${renewalQueueJobId}`);
+        } else {
+          logger.info('Renewal queue processing job already scheduled (singleton active)', {
+            tenantId,
+            cron,
+            returnedJobId: renewalQueueJobId
+          });
+        }
+      } catch (error) {
+        logger.error(`Failed to schedule renewal queue processing job for tenant ${tenantId}`, error);
       }
 
    }

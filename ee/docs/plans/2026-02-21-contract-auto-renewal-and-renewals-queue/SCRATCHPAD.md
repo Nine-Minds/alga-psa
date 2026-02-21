@@ -751,6 +751,21 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
   - Validation:
     - `npm -w @alga-psa/billing run typecheck`
     - `npm -w @alga-psa/billing exec vitest run tests/renewalsQueueActions.completeNonRenewal.wiring.test.ts tests/renewalsQueueActions.completeOnActivation.wiring.test.ts`
+- (2026-02-21) Completed `F084`.
+  - Added a scheduled renewal queue processor job handler:
+    - `processRenewalQueueHandler(data)` in `server/src/lib/jobs/handlers/processRenewalQueueHandler.ts`
+    - scans active contracts whose `decision_due_date` falls within `today..horizonDays`
+    - defaults horizon to `90` days and validates `tenantId`
+  - Registered new job name and scheduling helpers:
+    - pg-boss handler registration in `server/src/lib/jobs/index.ts`
+    - recurring scheduling helper `scheduleRenewalQueueProcessingJob(...)`
+    - tenant startup scheduling hook in `server/src/lib/jobs/initializeScheduledJobs.ts` (daily at `0 5 * * *`)
+    - abstraction-layer handler registration + available handler list in `server/src/lib/jobs/registerAllHandlers.ts`
+  - Added wiring test under included Vitest paths:
+    - `server/src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts`
+  - Validation:
+    - `cd server && npm run typecheck`
+    - `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`
 
 ## Open Questions
 - Should renewal ticket defaults be a brand-new billing settings card, or an extension of existing default ticket settings patterns?
