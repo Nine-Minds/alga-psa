@@ -106,7 +106,7 @@
   {
     "id": "T014",
     "description": "Functional: Show inline validation errors for invalid renewal settings before wizard progression.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F014"
     ]
