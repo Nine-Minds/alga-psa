@@ -169,6 +169,43 @@ export function ReviewContractStep({ data }: ReviewContractStepProps) {
               <p className="font-medium">{data.end_date ? formatDate(data.end_date) : 'Ongoing'}</p>
             </div>
           </div>
+          {data.renewal_mode && (
+            <div className="flex items-start gap-2">
+              <Repeat className="h-4 w-4 mt-0.5 text-[rgb(var(--color-text-300))]" />
+              <div>
+                <p className="text-[rgb(var(--color-text-500))]">Renewal Mode</p>
+                <p className="font-medium">
+                  {data.renewal_mode === 'none'
+                    ? 'No Renewal'
+                    : data.renewal_mode === 'manual'
+                      ? 'Manual Renewal'
+                      : 'Auto Renew'}
+                </p>
+              </div>
+            </div>
+          )}
+          {data.renewal_mode && data.renewal_mode !== 'none' && data.notice_period_days !== undefined && (
+            <div className="flex items-start gap-2">
+              <Clock className="h-4 w-4 mt-0.5 text-[rgb(var(--color-text-300))]" />
+              <div>
+                <p className="text-[rgb(var(--color-text-500))]">Notice Period</p>
+                <p className="font-medium">
+                  {data.notice_period_days} day{data.notice_period_days === 1 ? '' : 's'}
+                </p>
+              </div>
+            </div>
+          )}
+          {data.renewal_mode === 'auto' && data.renewal_term_months !== undefined && (
+            <div className="flex items-start gap-2">
+              <Calendar className="h-4 w-4 mt-0.5 text-[rgb(var(--color-text-300))]" />
+              <div>
+                <p className="text-[rgb(var(--color-text-500))]">Renewal Term</p>
+                <p className="font-medium">
+                  {data.renewal_term_months} month{data.renewal_term_months === 1 ? '' : 's'}
+                </p>
+              </div>
+            </div>
+          )}
         </div>
       </Card>
 

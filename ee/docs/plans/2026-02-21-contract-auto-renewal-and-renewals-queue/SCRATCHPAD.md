@@ -164,6 +164,11 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
     - renewal mode label,
     - notice period (for renewal-enabled modes),
     - renewal term months (auto-renew mode).
+- (2026-02-21) Completed `F016`.
+  - Extended `ReviewContractStep` “Contract Basics” card to preview renewal fields before submit:
+    - renewal mode,
+    - notice period,
+    - renewal term (auto mode).
 
 ## Open Questions
 - Should renewal ticket defaults be a brand-new billing settings card, or an extension of existing default ticket settings patterns?

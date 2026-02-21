@@ -122,7 +122,7 @@
   {
     "id": "F016",
     "description": "Include renewal fields in review step payload preview before submit.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > FR1 — Contract Setup and Renewal Configuration"
     ]
