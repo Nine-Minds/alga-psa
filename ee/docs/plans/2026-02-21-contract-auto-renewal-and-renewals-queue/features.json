@@ -834,7 +834,7 @@
   {
     "id": "F105",
     "description": "Support create-renewal-draft action for evergreen queue entries.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > FR7 — Evergreen Annual Review Flow"
     ]
