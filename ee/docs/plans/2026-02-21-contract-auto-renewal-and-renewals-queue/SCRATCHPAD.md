@@ -1776,3 +1776,15 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
   - Migration remains idempotent and Citus-safe with guarded column/constraint checks.
   - Validation:
     - `node -c server/migrations/202602211110_add_contract_renewal_automation_columns.cjs`
+- (2026-02-21) Completed `F139`.
+  - Added migration:
+    - `server/migrations/202602211115_add_contract_renewal_config_columns.cjs`
+  - Migration adds renewal configuration columns on `client_contracts`:
+    - `renewal_mode`, `notice_period_days`, `renewal_term_months`, `use_tenant_renewal_defaults`
+  - Added DB constraints aligned to wizard/server validation rules:
+    - `client_contracts_renewal_mode_check` (`none|manual|auto`)
+    - `client_contracts_notice_period_days_check` (`>= 0`)
+    - `client_contracts_renewal_term_months_check` (`NULL OR > 0`)
+  - Migration remains idempotent and Citus-safe with guarded column/constraint checks.
+  - Validation:
+    - `node -c server/migrations/202602211115_add_contract_renewal_config_columns.cjs`
