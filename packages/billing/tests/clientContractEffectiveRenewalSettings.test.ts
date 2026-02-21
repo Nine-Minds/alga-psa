@@ -219,6 +219,49 @@ describe('client contract effective renewal settings normalization', () => {
     expect(terminatedContract.evergreen_review_anchor_date).toBeUndefined();
   });
 
+  it('creates one renewal_cycle_key per computed contract cycle for deduplication', () => {
+    const fixedTerm = normalizeClientContract({
+      contract_id: 'contract-4h',
+      client_contract_id: 'cc-4h',
+      client_id: 'client-4h',
+      tenant: 'tenant-1',
+      start_date: '2026-01-01',
+      end_date: '2026-12-31',
+      is_active: true,
+      use_tenant_renewal_defaults: false,
+      renewal_mode: 'manual',
+      notice_period_days: 30,
+    });
+    const evergreen = normalizeClientContract({
+      contract_id: 'contract-4i',
+      client_contract_id: 'cc-4i',
+      client_id: 'client-4i',
+      tenant: 'tenant-1',
+      start_date: '2024-10-04',
+      end_date: null,
+      is_active: true,
+      use_tenant_renewal_defaults: true,
+      tenant_default_renewal_mode: 'manual',
+      tenant_default_notice_period_days: 30,
+    });
+    const noneMode = normalizeClientContract({
+      contract_id: 'contract-4j',
+      client_contract_id: 'cc-4j',
+      client_id: 'client-4j',
+      tenant: 'tenant-1',
+      start_date: '2026-01-01',
+      end_date: '2026-12-31',
+      is_active: true,
+      use_tenant_renewal_defaults: false,
+      renewal_mode: 'none',
+      notice_period_days: 30,
+    });
+
+    expect(fixedTerm.renewal_cycle_key).toBe('fixed-term:2026-12-31');
+    expect(evergreen.renewal_cycle_key).toMatch(/^evergreen:\d{4}-\d{2}-\d{2}$/);
+    expect(noneMode.renewal_cycle_key).toBeUndefined();
+  });
+
   it('computes next evergreen review anchor date using contract anniversary rules', () => {
     expect(
       computeNextEvergreenReviewAnchorDate({

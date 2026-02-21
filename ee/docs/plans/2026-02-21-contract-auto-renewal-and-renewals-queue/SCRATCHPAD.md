@@ -322,6 +322,13 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
   - Covered by existing regression test:
     - `recomputes decision_due_date when renewal mode changes between none/manual/auto`
     - in `packages/billing/tests/clientContractEffectiveRenewalSettings.test.ts`
+- (2026-02-21) Completed `F043`.
+  - Added derived per-cycle dedupe key in read normalization:
+    - `renewal_cycle_key` (`fixed-term:<end_date>` or `evergreen:<anchor_date>`)
+  - Exposed in both shared and clients assignment APIs plus contract interfaces.
+  - Added regression coverage:
+    - `creates one renewal_cycle_key per computed contract cycle for deduplication`
+    - in `packages/billing/tests/clientContractEffectiveRenewalSettings.test.ts`
 
 ## Open Questions
 - Should renewal ticket defaults be a brand-new billing settings card, or an extension of existing default ticket settings patterns?

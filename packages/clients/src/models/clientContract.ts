@@ -198,6 +198,13 @@ export const normalizeClientContract = (row: any): IClientContract => {
             noticePeriodDays: effectiveNoticePeriodDays,
           })
       : undefined;
+  normalized.renewal_cycle_key = normalized.decision_due_date
+    ? normalizedEndDate
+      ? `fixed-term:${normalizedEndDate}`
+      : normalized.evergreen_review_anchor_date
+        ? `evergreen:${normalized.evergreen_review_anchor_date as string}`
+        : undefined
+    : undefined;
 
   delete normalized.tenant_default_renewal_mode;
   delete normalized.tenant_default_notice_period_days;
