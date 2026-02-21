@@ -986,7 +986,7 @@
   {
     "id": "T124",
     "description": "Functional: Fallback gracefully to supported runner path when temporal bootstrap is unavailable.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F124"
     ]
