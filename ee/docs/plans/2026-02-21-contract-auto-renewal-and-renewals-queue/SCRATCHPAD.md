@@ -820,6 +820,17 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
   - Validation:
     - `cd server && npm run typecheck`
     - `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`
+- (2026-02-21) Completed `F089`.
+  - Integrated renewal ticket automation with workflow runtime business action path:
+    - initializes runtime v2 action registry (`initializeWorkflowRuntimeV2`)
+    - resolves and invokes `tickets.create@v1` from `getActionRegistryV2`
+    - validates both input and output schemas via registered action definitions
+  - Retained direct-ticket fallback path when runtime action execution is unavailable/fails to keep automation robust.
+  - Updated wiring coverage:
+    - `server/src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts`
+  - Validation:
+    - `cd server && npm run typecheck`
+    - `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`
 
 ## Open Questions
 - Should renewal ticket defaults be a brand-new billing settings card, or an extension of existing default ticket settings patterns?

@@ -76,6 +76,17 @@ describe('renewal queue scheduling wiring', () => {
     expect(renewalHandlerSource).toContain('createdTicketCount += 1;');
   });
 
+  it('calls workflow runtime tickets.create action for renewal ticket creation path', () => {
+    expect(renewalHandlerSource).toContain("import { initializeWorkflowRuntimeV2 } from '@shared/workflow/runtime/init';");
+    expect(renewalHandlerSource).toContain("import { getActionRegistryV2 } from '@shared/workflow/runtime/registries/actionRegistry';");
+    expect(renewalHandlerSource).toContain('const tryCreateRenewalTicketViaWorkflowAction = async (params: {');
+    expect(renewalHandlerSource).toContain('initializeWorkflowRuntimeV2();');
+    expect(renewalHandlerSource).toContain("const ticketCreateAction = getActionRegistryV2().get('tickets.create', 1);");
+    expect(renewalHandlerSource).toContain('const actionInput = ticketCreateAction.inputSchema.parse({');
+    expect(renewalHandlerSource).toContain('const actionResult = await ticketCreateAction.handler(actionInput, {');
+    expect(renewalHandlerSource).toContain("stepPath: RENEWAL_QUEUE_ACTION_STEP_PATH,");
+  });
+
   it('registers and schedules renewal queue processing in the jobs module', () => {
     expect(jobsIndexSource).toContain("import { processRenewalQueueHandler, RenewalQueueProcessorJobData } from './handlers/processRenewalQueueHandler';");
     expect(jobsIndexSource).toContain("jobScheduler.registerJobHandler<RenewalQueueProcessorJobData>(");
