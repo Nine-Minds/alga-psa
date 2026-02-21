@@ -418,7 +418,7 @@
   {
     "id": "F053",
     "description": "Render bucket quick filters for 0-30, 31-60, and 61-90 days.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > FR4 — Renewals Queue and Dashboard Entry Points"
     ]
