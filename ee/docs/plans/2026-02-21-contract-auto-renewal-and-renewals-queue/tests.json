@@ -610,7 +610,7 @@
   {
     "id": "T077",
     "description": "Functional: Expose queue row action availability based on current status.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F077"
     ]
