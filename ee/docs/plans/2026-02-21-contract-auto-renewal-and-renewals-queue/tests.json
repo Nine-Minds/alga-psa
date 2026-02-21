@@ -1186,7 +1186,7 @@
   {
     "id": "T149",
     "description": "Cycle rollover: evergreen behavior remains correct across year boundary for 'Recompute decision_due_date when evergreen anchor basis changes.'",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F040"
     ]
