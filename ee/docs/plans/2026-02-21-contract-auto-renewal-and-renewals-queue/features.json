@@ -650,7 +650,7 @@
   {
     "id": "F082",
     "description": "Mark work item completed when renewed contract activation is confirmed.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > FR5 — Queue Actions and Renewal Workflow"
     ]

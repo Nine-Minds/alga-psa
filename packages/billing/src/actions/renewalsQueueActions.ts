@@ -108,6 +108,10 @@ export type RenewalAssignmentResult = {
   updated_at: string;
 };
 
+export type RenewalCompletionResult = RenewalQueueMutationResult & {
+  activated_contract_id: string;
+};
+
 const getAvailableActionsForStatus = (status: RenewalWorkItemStatus): RenewalQueueAction[] => {
   if (status === 'pending') {
     return ['mark_renewing', 'mark_non_renewing', 'create_renewal_draft', 'snooze', 'assign_owner'];
@@ -724,6 +728,114 @@ export const assignRenewalQueueItemOwner = withAuth(async (
       status: currentStatus,
       assigned_to: normalizedAssignedTo,
       updated_at: updatedAt,
+    };
+  });
+});
+
+export const completeRenewalQueueItemForActivation = withAuth(async (
+  user,
+  { tenant },
+  clientContractId: string,
+  activatedContractId?: string,
+  note?: string
+): Promise<RenewalCompletionResult> => {
+  if (typeof clientContractId !== 'string' || clientContractId.trim().length === 0) {
+    throw new Error('Client contract id is required');
+  }
+
+  const { knex } = await createTenantKnex();
+  const schema = knex.schema as any;
+  const [
+    hasStatusColumn,
+    hasLastActionByColumn,
+    hasLastActionAtColumn,
+    hasLastActionNoteColumn,
+    hasCreatedDraftColumn,
+  ] = await Promise.all([
+    schema?.hasColumn?.('client_contracts', 'status') ?? false,
+    schema?.hasColumn?.('client_contracts', 'last_action_by') ?? false,
+    schema?.hasColumn?.('client_contracts', 'last_action_at') ?? false,
+    schema?.hasColumn?.('client_contracts', 'last_action_note') ?? false,
+    schema?.hasColumn?.('client_contracts', 'created_draft_contract_id') ?? false,
+  ]);
+  const actorUserId = resolveActorUserId(user);
+  const normalizedNote = normalizeActionNote(note);
+
+  if (!hasStatusColumn) {
+    throw new Error('Renewals queue status column is not available');
+  }
+
+  return knex.transaction(async (trx) => {
+    const sourceRow = await trx('client_contracts')
+      .where({
+        tenant,
+        client_contract_id: clientContractId,
+        is_active: true,
+      })
+      .select([
+        'client_contract_id',
+        'status',
+        ...(hasCreatedDraftColumn ? ['created_draft_contract_id'] : []),
+      ])
+      .first();
+
+    if (!sourceRow) {
+      throw new Error('Renewal work item not found');
+    }
+
+    const previousStatus = toRenewalWorkItemStatus((sourceRow as any).status);
+    if (previousStatus !== 'renewing') {
+      throw new Error(`Only renewing work items can be completed after activation (current: ${previousStatus})`);
+    }
+
+    const resolvedActivatedContractId =
+      typeof activatedContractId === 'string' && activatedContractId.trim().length > 0
+        ? activatedContractId.trim()
+        : (hasCreatedDraftColumn ? (sourceRow as any).created_draft_contract_id : null);
+
+    if (typeof resolvedActivatedContractId !== 'string' || resolvedActivatedContractId.length === 0) {
+      throw new Error('Activated renewal contract id is required');
+    }
+
+    const activeRenewalContract = await trx('contracts')
+      .where({
+        tenant,
+        contract_id: resolvedActivatedContractId,
+        status: 'active',
+      })
+      .first('contract_id');
+
+    if (!activeRenewalContract) {
+      throw new Error('Activated renewal contract was not found in active status');
+    }
+
+    const updatedAt = new Date().toISOString();
+    await trx('client_contracts')
+      .where({
+        tenant,
+        client_contract_id: clientContractId,
+      })
+      .update(
+        withActionTimestamp(
+          withActionNote(
+            withActionActor({
+              status: 'completed',
+              updated_at: updatedAt,
+            }, hasLastActionByColumn, actorUserId),
+            hasLastActionNoteColumn,
+            normalizedNote
+          ),
+          hasLastActionAtColumn,
+          updatedAt
+        )
+      );
+
+    return {
+      client_contract_id: clientContractId,
+      previous_status: previousStatus,
+      status: 'completed',
+      updated_at: updatedAt,
+      activated_contract_id: resolvedActivatedContractId,
     };
   });
 });

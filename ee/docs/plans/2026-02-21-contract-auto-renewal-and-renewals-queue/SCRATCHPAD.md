@@ -724,6 +724,21 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
   - Validation:
     - `npm -w @alga-psa/billing run typecheck`
     - `npm -w @alga-psa/billing exec vitest run tests/renewalsQueueActions.wiring.test.ts tests/RenewalsQueueTab.component.test.ts`
+- (2026-02-21) Completed `F082`.
+  - Added activation-confirmed completion action:
+    - `completeRenewalQueueItemForActivation(clientContractId, activatedContractId?, note?)`
+    - in `packages/billing/src/actions/renewalsQueueActions.ts`
+  - Completion rules:
+    - source work item must be `renewing`
+    - target renewal contract must exist with `status = active`
+    - on success, work item transitions to `completed` with audit metadata
+  - Added result type:
+    - `RenewalCompletionResult`
+  - Added wiring coverage:
+    - `packages/billing/tests/renewalsQueueActions.completeOnActivation.wiring.test.ts`
+  - Validation:
+    - `npm -w @alga-psa/billing run typecheck`
+    - `npm -w @alga-psa/billing exec vitest run tests/renewalsQueueActions.completeOnActivation.wiring.test.ts tests/renewalsQueueActions.markRenewing.wiring.test.ts tests/renewalsQueueActions.createDraft.wiring.test.ts`
 
 ## Open Questions
 - Should renewal ticket defaults be a brand-new billing settings card, or an extension of existing default ticket settings patterns?
