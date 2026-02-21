@@ -89,6 +89,24 @@ export default function RenewalsQueueTab({ onQueueMutationComplete }: RenewalsQu
     onQueueMutationComplete?.();
   };
 
+  const refreshQueueRowFromServer = async (clientContractId: string) => {
+    const result = await listRenewalQueueRows();
+    const refreshedRow = result.find((candidate) => candidate.client_contract_id === clientContractId);
+    if (refreshedRow) {
+      setRows((current) =>
+        current.map((candidate) =>
+          candidate.client_contract_id === clientContractId
+            ? refreshedRow
+            : candidate
+        )
+      );
+      onQueueMutationComplete?.();
+      return;
+    }
+
+    await refreshRowsAfterMutation();
+  };
+
   const handleMarkRenewing = async (row: RenewalQueueRow) => {
     const rowId = row.client_contract_id;
     setPendingRowActions((current) => ({ ...current, [rowId]: 'mark_renewing' }));
@@ -117,7 +135,7 @@ export default function RenewalsQueueTab({ onQueueMutationComplete }: RenewalsQu
             : candidate
         )
       );
-      await refreshRowsAfterMutation();
+      await refreshQueueRowFromServer(rowId);
     } catch (mutationError) {
       setError(mutationError instanceof Error ? mutationError.message : 'Failed to update renewal status');
       await refreshRowsAfterMutation();
@@ -154,7 +172,7 @@ export default function RenewalsQueueTab({ onQueueMutationComplete }: RenewalsQu
             : candidate
         )
       );
-      await refreshRowsAfterMutation();
+      await refreshQueueRowFromServer(rowId);
     } catch (mutationError) {
       setError(mutationError instanceof Error ? mutationError.message : 'Failed to update renewal status');
       await refreshRowsAfterMutation();

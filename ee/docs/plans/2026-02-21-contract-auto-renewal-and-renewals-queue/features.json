@@ -626,7 +626,7 @@
   {
     "id": "F079",
     "description": "Refresh affected queue row state after successful action response.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > FR5 — Queue Actions and Renewal Workflow"
     ]

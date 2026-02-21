@@ -687,6 +687,17 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
   - Validation:
     - `npm -w @alga-psa/billing run typecheck`
     - `npm -w @alga-psa/billing exec vitest run tests/RenewalsQueueTab.component.test.ts tests/renewalsQueueActions.wiring.test.ts`
+- (2026-02-21) Completed `F079`.
+  - Added targeted row refresh helper after successful mutation responses:
+    - `refreshQueueRowFromServer(clientContractId)` in `RenewalsQueueTab`
+  - Success path now refreshes only the affected row from server state:
+    - `await refreshQueueRowFromServer(rowId)`
+  - Fallback path still supports full refresh when row cannot be resolved.
+  - Updated coverage:
+    - `packages/billing/tests/RenewalsQueueTab.component.test.ts`
+  - Validation:
+    - `npm -w @alga-psa/billing run typecheck`
+    - `npm -w @alga-psa/billing exec vitest run tests/RenewalsQueueTab.component.test.ts`
 
 ## Open Questions
 - Should renewal ticket defaults be a brand-new billing settings card, or an extension of existing default ticket settings patterns?
