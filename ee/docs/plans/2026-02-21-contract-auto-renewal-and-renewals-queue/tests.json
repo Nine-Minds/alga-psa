@@ -618,7 +618,7 @@
   {
     "id": "T078",
     "description": "Functional: Show optimistic UI state while queue actions are in-flight.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F078"
     ]
