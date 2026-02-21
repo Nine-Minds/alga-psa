@@ -68,11 +68,28 @@ describe('ContractWizardData renewal fields', () => {
   });
 
   it('includes renewal fields in the wizard submission payload builder', () => {
-    expect(wizardSource).toContain('renewal_mode: wizardData.renewal_mode');
-    expect(wizardSource).toContain('notice_period_days: wizardData.notice_period_days');
+    expect(wizardSource).toContain('renewal_mode: resolvedRenewalMode');
+    expect(wizardSource).toContain('notice_period_days: resolvedNoticePeriodDays');
     expect(wizardSource).toContain('renewal_term_months: wizardData.renewal_term_months');
-    expect(wizardSource).toContain(
-      'use_tenant_renewal_defaults: wizardData.use_tenant_renewal_defaults'
-    );
+    expect(wizardSource).toContain('use_tenant_renewal_defaults: useTenantDefaults');
+  });
+
+  it('applies tenant defaults when use-tenant-defaults is enabled', () => {
+    expect(wizardSource).toContain('const useTenantDefaults = wizardData.use_tenant_renewal_defaults ?? true;');
+    expect(wizardSource).toContain('const tenantDefaults = await getDefaultBillingSettings();');
+    expect(wizardSource).toContain('? tenantDefaultRenewalMode ?? HARD_DEFAULT_RENEWAL_MODE');
+    expect(wizardSource).toContain('? tenantDefaultNoticePeriodDays ?? HARD_DEFAULT_NOTICE_PERIOD_DAYS');
+  });
+
+  it('prefers explicit contract override values when tenant defaults are disabled', () => {
+    expect(wizardSource).toContain(': wizardData.renewal_mode ?? tenantDefaultRenewalMode ?? HARD_DEFAULT_RENEWAL_MODE;');
+    expect(wizardSource).toContain(': wizardData.notice_period_days ??');
+  });
+
+  it('uses deterministic fallback precedence for partial override/default state', () => {
+    expect(wizardSource).toContain('HARD_DEFAULT_RENEWAL_MODE');
+    expect(wizardSource).toContain('HARD_DEFAULT_NOTICE_PERIOD_DAYS');
+    expect(wizardSource).toContain('tenantDefaultRenewalMode ?? HARD_DEFAULT_RENEWAL_MODE');
+    expect(wizardSource).toContain('tenantDefaultNoticePeriodDays ??');
   });
 });

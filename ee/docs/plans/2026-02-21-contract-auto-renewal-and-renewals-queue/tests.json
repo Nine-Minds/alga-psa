@@ -218,7 +218,7 @@
   {
     "id": "T028",
     "description": "Functional: Add use-tenant-defaults toggle to contract renewal settings payload.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F028"
     ]

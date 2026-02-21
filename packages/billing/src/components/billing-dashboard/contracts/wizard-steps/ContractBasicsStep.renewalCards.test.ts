@@ -49,4 +49,11 @@ describe('ContractBasicsStep renewal card rendering', () => {
     expect(source).toContain('<strong>Notice Period:</strong>');
     expect(source).toContain('<strong>Renewal Term:</strong>');
   });
+
+  it('includes use-tenant-defaults toggle wiring for renewal settings', () => {
+    expect(source).toContain('Use Tenant Renewal Defaults');
+    expect(source).toContain('use_tenant_renewal_defaults: checked');
+    expect(source).toContain('id="use-tenant-renewal-defaults-fixed"');
+    expect(source).toContain('id="use-tenant-renewal-defaults-evergreen"');
+  });
 });
