@@ -138,6 +138,9 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
 - (2026-02-21) Completed `T009`.
   - Extended `packages/billing/src/components/billing-dashboard/contracts/wizard-steps/ContractBasicsStep.renewalCards.test.ts` with auto-term wiring assertions.
   - Verifies both term input IDs and positive-integer assignment path for `renewal_term_months`.
+- (2026-02-21) Completed `T010`.
+  - Added explicit `isAutoRenew` gating assertions in `ContractBasicsStep.renewalCards.test.ts`.
+  - Verifies auto-specific term controls are conditionally rendered only in `auto` mode.
 
 ## Open Questions
 - Should renewal ticket defaults be a brand-new billing settings card, or an extension of existing default ticket settings patterns?

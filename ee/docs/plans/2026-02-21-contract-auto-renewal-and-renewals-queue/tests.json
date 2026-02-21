@@ -74,7 +74,7 @@
   {
     "id": "T010",
     "description": "Functional: Hide auto-renew-specific term controls when renewal mode is not auto.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F010"
     ]

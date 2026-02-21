@@ -38,4 +38,9 @@ describe('ContractBasicsStep renewal card rendering', () => {
     expect(source).toContain('renewal_term_months:');
     expect(source).toContain('Number.isFinite(parsed) && parsed > 0 ? parsed : undefined');
   });
+
+  it('hides auto-renew term controls when mode is not auto', () => {
+    expect(source).toContain("const isAutoRenew = effectiveRenewalMode === 'auto';");
+    expect(source).toContain('{isAutoRenew && (');
+  });
 });
