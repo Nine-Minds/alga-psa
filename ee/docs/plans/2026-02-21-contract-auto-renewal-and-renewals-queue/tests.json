@@ -458,7 +458,7 @@
   {
     "id": "T058",
     "description": "Functional: Sort queue by decision_due_date ascending by default.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F058"
     ]
