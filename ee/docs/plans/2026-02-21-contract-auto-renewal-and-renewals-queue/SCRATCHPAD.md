@@ -414,6 +414,13 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
   - Extended action/component wiring coverage in:
     - `packages/billing/tests/renewalsQueueActions.wiring.test.ts`
     - `packages/billing/tests/RenewalsQueueTab.component.test.ts`
+- (2026-02-21) Completed `F056`.
+  - Added renewal mode filter support in queue UI for:
+    - `none`, `manual`, `auto`
+  - Queue row mapping already includes `effective_renewal_mode`; UI filtering now applies this dimension.
+  - Extended action/component wiring coverage in:
+    - `packages/billing/tests/renewalsQueueActions.wiring.test.ts`
+    - `packages/billing/tests/RenewalsQueueTab.component.test.ts`
 
 ## Open Questions
 - Should renewal ticket defaults be a brand-new billing settings card, or an extension of existing default ticket settings patterns?

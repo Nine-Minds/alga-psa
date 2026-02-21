@@ -46,4 +46,12 @@ describe('RenewalsQueueTab component', () => {
     expect(source).toContain("(['all', 'pending', 'renewing', 'non_renewing', 'snoozed', 'completed'] as const)");
     expect(source).toContain("if (statusFilter !== 'all' && row.status !== statusFilter) {");
   });
+
+  it('renders a renewal mode filter for none/manual/auto', () => {
+    expect(source).toContain("type RenewalModeFilter = 'all' | 'none' | 'manual' | 'auto';");
+    expect(source).toContain('const [renewalModeFilter, setRenewalModeFilter] = useState<RenewalModeFilter>(\'all\');');
+    expect(source).toContain('data-testid="renewals-mode-filter"');
+    expect(source).toContain("(['all', 'none', 'manual', 'auto'] as const)");
+    expect(source).toContain("if (renewalModeFilter !== 'all' && row.effective_renewal_mode !== renewalModeFilter) {");
+  });
 });

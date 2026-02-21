@@ -9,6 +9,7 @@ import {
 const DEFAULT_HORIZON_DAYS = 90;
 type RenewalBucket = 'all' | '0-30' | '31-60' | '61-90';
 type RenewalStatus = 'all' | 'pending' | 'renewing' | 'non_renewing' | 'snoozed' | 'completed';
+type RenewalModeFilter = 'all' | 'none' | 'manual' | 'auto';
 
 export default function RenewalsQueueTab() {
   const [rows, setRows] = useState<RenewalQueueRow[]>([]);
@@ -17,6 +18,7 @@ export default function RenewalsQueueTab() {
   const [bucket, setBucket] = useState<RenewalBucket>('all');
   const [ownerFilter, setOwnerFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<RenewalStatus>('all');
+  const [renewalModeFilter, setRenewalModeFilter] = useState<RenewalModeFilter>('all');
 
   useEffect(() => {
     let cancelled = false;
@@ -63,6 +65,9 @@ export default function RenewalsQueueTab() {
       if (statusFilter !== 'all' && row.status !== statusFilter) {
         return false;
       }
+      if (renewalModeFilter !== 'all' && row.effective_renewal_mode !== renewalModeFilter) {
+        return false;
+      }
 
       if (bucket === 'all') {
         return true;
@@ -73,7 +78,7 @@ export default function RenewalsQueueTab() {
       if (bucket === '31-60') return row.days_until_due >= 31 && row.days_until_due <= 60;
       return row.days_until_due >= 61 && row.days_until_due <= 90;
     });
-  }, [bucket, ownerFilter, rows, statusFilter]);
+  }, [bucket, ownerFilter, renewalModeFilter, rows, statusFilter]);
 
   return (
     <section
@@ -135,6 +140,21 @@ export default function RenewalsQueueTab() {
               {(['all', 'pending', 'renewing', 'non_renewing', 'snoozed', 'completed'] as const).map((status) => (
                 <option key={status} value={status}>
                   {status === 'all' ? 'All Statuses' : status}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="flex items-center gap-2 text-xs text-[rgb(var(--color-text-500))]">
+            Renewal Mode
+            <select
+              value={renewalModeFilter}
+              onChange={(event) => setRenewalModeFilter(event.target.value as RenewalModeFilter)}
+              data-testid="renewals-mode-filter"
+              className="rounded border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-bg-0))] px-2 py-1 text-xs"
+            >
+              {(['all', 'none', 'manual', 'auto'] as const).map((mode) => (
+                <option key={mode} value={mode}>
+                  {mode === 'all' ? 'All Modes' : mode}
                 </option>
               ))}
             </select>
