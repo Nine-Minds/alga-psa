@@ -1006,6 +1006,15 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
   - Validation:
     - `npm -w @alga-psa/billing exec vitest run tests/renewalsQueueActions.markRenewing.wiring.test.ts tests/renewalsQueueActions.markRenewingEvergreen.wiring.test.ts --coverage=false`
     - `npm -w @alga-psa/billing run typecheck`
+- (2026-02-21) Completed `F104`.
+  - Confirmed evergreen entries share the same mark-non-renewing transition path as fixed-term entries:
+    - queue action availability remains status-driven
+    - mark-non-renewing mutation path has no contract-type/end-date gate
+  - Added dedicated wiring coverage:
+    - `packages/billing/tests/renewalsQueueActions.markNonRenewingEvergreen.wiring.test.ts`
+  - Validation:
+    - `npm -w @alga-psa/billing exec vitest run tests/renewalsQueueActions.markNonRenewing.wiring.test.ts tests/renewalsQueueActions.markNonRenewingEvergreen.wiring.test.ts --coverage=false`
+    - `npm -w @alga-psa/billing run typecheck`
 
 ## Open Questions
 - Should renewal ticket defaults be a brand-new billing settings card, or an extension of existing default ticket settings patterns?

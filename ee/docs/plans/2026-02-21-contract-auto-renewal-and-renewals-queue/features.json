@@ -826,7 +826,7 @@
   {
     "id": "F104",
     "description": "Support mark-non-renewing action for evergreen queue entries.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > FR7 — Evergreen Annual Review Flow"
     ]
