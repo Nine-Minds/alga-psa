@@ -722,7 +722,7 @@
   {
     "id": "F091",
     "description": "Populate renewal ticket description with due date and renewal settings context.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > FR6 — Automation and Ticket Creation"
     ]

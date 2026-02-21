@@ -95,6 +95,16 @@ describe('renewal queue scheduling wiring', () => {
     expect(renewalHandlerSource).toContain('const ticketTitle = buildRenewalTicketTitle(row as Record<string, unknown>, decisionDueDate);');
   });
 
+  it('populates renewal ticket description with due date and renewal settings context', () => {
+    expect(renewalHandlerSource).toContain('const buildRenewalTicketDescription = (');
+    expect(renewalHandlerSource).toContain("const renewalMode = typeof normalized.effective_renewal_mode === 'string'");
+    expect(renewalHandlerSource).toContain("const noticePeriod = typeof normalized.effective_notice_period_days === 'number'");
+    expect(renewalHandlerSource).toContain('`Decision due date: ${decisionDueDate}`');
+    expect(renewalHandlerSource).toContain('`Renewal mode: ${renewalMode}`');
+    expect(renewalHandlerSource).toContain('`Notice period (days): ${noticePeriod}`');
+    expect(renewalHandlerSource).toContain('const ticketDescription = buildRenewalTicketDescription(');
+  });
+
   it('registers and schedules renewal queue processing in the jobs module', () => {
     expect(jobsIndexSource).toContain("import { processRenewalQueueHandler, RenewalQueueProcessorJobData } from './handlers/processRenewalQueueHandler';");
     expect(jobsIndexSource).toContain("jobScheduler.registerJobHandler<RenewalQueueProcessorJobData>(");
