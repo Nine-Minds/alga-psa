@@ -1882,7 +1882,7 @@
   {
     "id": "T236",
     "description": "Validation negative-path: Reject cross-tenant identifiers during queue mutation validation.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F134"
     ]
