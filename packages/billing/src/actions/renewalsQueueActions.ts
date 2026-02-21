@@ -4,6 +4,8 @@ import { createTenantKnex } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { normalizeClientContract } from '@alga-psa/shared/billingClients/clientContracts';
 
+const DEFAULT_RENEWALS_HORIZON_DAYS = 90;
+
 export type RenewalQueueRow = {
   client_contract_id: string;
   contract_id: string;
@@ -19,9 +21,14 @@ export type RenewalQueueRow = {
 
 export const listRenewalQueueRows = withAuth(async (
   _user,
-  { tenant }
+  { tenant },
+  horizonDays: number = DEFAULT_RENEWALS_HORIZON_DAYS
 ): Promise<RenewalQueueRow[]> => {
   const { knex } = await createTenantKnex();
+  const resolvedHorizonDays =
+    Number.isInteger(horizonDays) && horizonDays > 0
+      ? Math.trunc(horizonDays)
+      : DEFAULT_RENEWALS_HORIZON_DAYS;
 
   const schema = knex.schema as any;
   const [hasDefaultRenewalModeColumn, hasDefaultNoticePeriodColumn] = await Promise.all([
@@ -63,7 +70,13 @@ export const listRenewalQueueRows = withAuth(async (
 
   return rows
     .map(normalizeClientContract)
-    .filter((row) => Boolean(row.decision_due_date))
+    .filter(
+      (row) =>
+        Boolean(row.decision_due_date) &&
+        typeof row.days_until_due === 'number' &&
+        row.days_until_due >= 0 &&
+        row.days_until_due <= resolvedHorizonDays
+    )
     .map((row) => ({
       client_contract_id: row.client_contract_id,
       contract_id: row.contract_id,

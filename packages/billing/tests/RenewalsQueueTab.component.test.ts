@@ -9,8 +9,10 @@ const source = readFileSync(
 describe('RenewalsQueueTab component', () => {
   it('exists as a standalone billing dashboard component', () => {
     expect(source).toContain('export default function RenewalsQueueTab()');
+    expect(source).toContain('const DEFAULT_HORIZON_DAYS = 90;');
     expect(source).toContain('data-testid="renewals-queue-page"');
     expect(source).toContain('data-testid="renewals-queue-content"');
+    expect(source).toContain('next {DEFAULT_HORIZON_DAYS} days');
   });
 
   it('loads renewal queue rows from a server action on mount', () => {

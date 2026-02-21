@@ -410,7 +410,7 @@
   {
     "id": "F052",
     "description": "Render default 90-day horizon rows in Renewals queue.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > FR4 — Renewals Queue and Dashboard Entry Points"
     ]

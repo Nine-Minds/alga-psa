@@ -386,6 +386,14 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
   - Added wiring coverage:
     - `packages/billing/tests/renewalsQueueActions.wiring.test.ts`
     - `packages/billing/tests/RenewalsQueueTab.component.test.ts`
+- (2026-02-21) Completed `F052`.
+  - Added default 90-day horizon behavior to renewals queue loading:
+    - `DEFAULT_RENEWALS_HORIZON_DAYS = 90` in `renewalsQueueActions.ts`
+    - server-side filtering for `days_until_due` in range `[0, horizonDays]`
+  - Updated renewals UI copy to indicate default horizon window.
+  - Extended wiring coverage in:
+    - `packages/billing/tests/renewalsQueueActions.wiring.test.ts`
+    - `packages/billing/tests/RenewalsQueueTab.component.test.ts`
 
 ## Open Questions
 - Should renewal ticket defaults be a brand-new billing settings card, or an extension of existing default ticket settings patterns?

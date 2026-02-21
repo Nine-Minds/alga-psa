@@ -6,6 +6,8 @@ import {
   type RenewalQueueRow,
 } from '@alga-psa/billing/actions/renewalsQueueActions';
 
+const DEFAULT_HORIZON_DAYS = 90;
+
 export default function RenewalsQueueTab() {
   const [rows, setRows] = useState<RenewalQueueRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -49,6 +51,9 @@ export default function RenewalsQueueTab() {
         <h2 className="text-xl font-semibold">Renewals</h2>
         <p className="text-sm text-[rgb(var(--color-text-500))]">
           Track upcoming contract renewal decisions and take action from a single queue.
+        </p>
+        <p className="text-xs text-[rgb(var(--color-text-400))]">
+          Showing contracts due within the next {DEFAULT_HORIZON_DAYS} days.
         </p>
       </header>
 
