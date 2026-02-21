@@ -239,4 +239,13 @@ describe('renewal queue scheduling wiring', () => {
     expect(temporalRunnerSource).toContain('data,');
     expect(temporalRunnerSource).toContain("workflowType: 'genericJobWorkflow',");
   });
+
+  it('keeps ticket idempotency behavior parity because both runners execute the same renewal handler core', () => {
+    expect(renewalHandlerSource).toContain('const buildRenewalTicketIdempotencyKey = (params: {');
+    expect(renewalHandlerSource).toContain("whereRaw(\"(attributes::jsonb ->> 'idempotency_key') = ?\", [idempotencyKey])");
+    expect(renewalHandlerSource).toContain('const existingTicketId = normalizeOptionalUuid(existingTicket?.ticket_id);');
+    expect(renewalHandlerSource).toContain('duplicateTicketSkipCount += 1;');
+    expect(registerHandlersSource).toContain('await processRenewalQueueHandler(data);');
+    expect(jobsIndexSource).toContain('await processRenewalQueueHandler(job.data);');
+  });
 });

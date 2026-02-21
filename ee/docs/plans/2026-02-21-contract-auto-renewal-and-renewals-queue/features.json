@@ -970,7 +970,7 @@
   {
     "id": "F122",
     "description": "Keep effective behavior parity for ticket creation idempotency between pg-boss and Temporal runners.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > FR9 — Runtime Compatibility (On-prem PG Boss vs Hosted/EE Temporal)"
     ]

@@ -1177,6 +1177,16 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
   - Validation:
     - `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`
     - `cd server && npm run typecheck`
+- (2026-02-21) Completed `F122`.
+  - Added runtime-parity coverage confirming ticket idempotency behavior is shared across runner paths because both execute the same renewal processor core:
+    - shared idempotency key construction
+    - duplicate-ticket lookup by idempotency attribute
+    - shared duplicate-skip semantics
+  - Updated coverage:
+    - `server/src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts`
+  - Validation:
+    - `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`
+    - `cd server && npm run typecheck`
 
 ## Open Questions
 - Should renewal ticket defaults be a brand-new billing settings card, or an extension of existing default ticket settings patterns?
