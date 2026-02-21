@@ -4,7 +4,7 @@ import type { DeletionValidationResult, IClient, IContact, ImportContactResult, 
 import { createTenantKnex } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
-import { deleteEntityWithValidation, unparseCSV } from '@alga-psa/core';
+import { deleteEntityWithValidation, isEnterprise, unparseCSV } from '@alga-psa/core';
 import { getContactAvatarUrlsBatchAsync } from '../../lib/documentsHelpers';
 import { createTag } from '@alga-psa/tags/actions';
 import { deleteEntityTags } from '@alga-psa/tags/lib/tagCleanup';
@@ -22,6 +22,31 @@ function maybeUserActor(user: any) {
   const userId = user?.user_id;
   if (typeof userId !== 'string' || !userId) return undefined;
   return { actorType: 'USER' as const, actorUserId: userId };
+}
+
+async function cleanupEntraReferencesBeforeContactDelete(
+  trx: Knex.Transaction,
+  tenantId: string,
+  contactId: string
+): Promise<void> {
+  if (!isEnterprise) {
+    return;
+  }
+
+  const queueTableExists = await trx('information_schema.tables')
+    .where({ table_schema: 'public', table_name: 'entra_contact_reconciliation_queue' })
+    .first('table_name');
+
+  if (!queueTableExists) {
+    return;
+  }
+
+  await trx('entra_contact_reconciliation_queue')
+    .where({ tenant: tenantId, resolved_contact_id: contactId })
+    .update({
+      resolved_contact_id: null,
+      updated_at: trx.fn.now(),
+    });
 }
 
 // Shared column mapping for contact sorting
@@ -150,6 +175,8 @@ export const deleteContact = withAuth(async (
           .where({ tenant: tenantId, document_id: contactRecord.notes_document_id })
           .delete();
       }
+
+      await cleanupEntraReferencesBeforeContactDelete(trx, tenantId, contactId);
 
       const deleted = await trx('contacts')
         .where({ contact_name_id: contactId, tenant: tenantId })

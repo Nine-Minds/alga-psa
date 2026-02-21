@@ -18,6 +18,56 @@ const ensureColumn = async (knex, tableName, columnName, alterFn) => {
   }
 };
 
+const ENTRA_DISTRIBUTED_TABLES = [
+  'entra_partner_connections',
+  'entra_managed_tenants',
+  'entra_client_tenant_mappings',
+  'entra_sync_settings',
+  'entra_sync_runs',
+  'entra_sync_run_tenants',
+  'entra_contact_links',
+  'entra_contact_reconciliation_queue',
+];
+
+const isCitusEnabled = async (knex) => {
+  const result = await knex.raw(`
+    SELECT EXISTS (
+      SELECT 1 FROM pg_extension WHERE extname = 'citus'
+    ) AS enabled
+  `);
+
+  return Boolean(result.rows?.[0]?.enabled);
+};
+
+const isTableDistributed = async (knex, tableName) => {
+  const result = await knex.raw(
+    `
+      SELECT EXISTS (
+        SELECT 1
+        FROM pg_dist_partition
+        WHERE logicalrelid = ?::regclass
+      ) AS distributed
+    `,
+    [tableName]
+  );
+
+  return Boolean(result.rows?.[0]?.distributed);
+};
+
+const ensureDistributedTable = async (knex, tableName) => {
+  const exists = await knex.schema.hasTable(tableName);
+  if (!exists) {
+    return;
+  }
+
+  const distributed = await isTableDistributed(knex, tableName);
+  if (distributed) {
+    return;
+  }
+
+  await knex.raw(`SELECT create_distributed_table('${tableName}', 'tenant', colocate_with => 'tenants')`);
+};
+
 exports.up = async function up(knex) {
   await ensureTable(knex, 'entra_partner_connections', async () => {
     await knex.schema.createTable('entra_partner_connections', (table) => {
@@ -96,7 +146,7 @@ exports.up = async function up(knex) {
         .foreign(['tenant', 'client_id'])
         .references(['tenant', 'client_id'])
         .inTable('clients')
-        .onDelete('SET NULL');
+        .onDelete('RESTRICT');
     });
   });
 
@@ -177,12 +227,12 @@ exports.up = async function up(knex) {
         .foreign(['tenant', 'managed_tenant_id'])
         .references(['tenant', 'managed_tenant_id'])
         .inTable('entra_managed_tenants')
-        .onDelete('SET NULL');
+        .onDelete('RESTRICT');
       table
         .foreign(['tenant', 'client_id'])
         .references(['tenant', 'client_id'])
         .inTable('clients')
-        .onDelete('SET NULL');
+        .onDelete('RESTRICT');
     });
   });
 
@@ -215,7 +265,7 @@ exports.up = async function up(knex) {
         .foreign(['tenant', 'client_id'])
         .references(['tenant', 'client_id'])
         .inTable('clients')
-        .onDelete('SET NULL');
+        .onDelete('RESTRICT');
     });
   });
 
@@ -248,17 +298,17 @@ exports.up = async function up(knex) {
         .foreign(['tenant', 'managed_tenant_id'])
         .references(['tenant', 'managed_tenant_id'])
         .inTable('entra_managed_tenants')
-        .onDelete('SET NULL');
+        .onDelete('RESTRICT');
       table
         .foreign(['tenant', 'client_id'])
         .references(['tenant', 'client_id'])
         .inTable('clients')
-        .onDelete('SET NULL');
+        .onDelete('RESTRICT');
       table
         .foreign(['tenant', 'resolved_contact_id'])
         .references(['tenant', 'contact_name_id'])
         .inTable('contacts')
-        .onDelete('SET NULL');
+        .onDelete('RESTRICT');
     });
   });
 
@@ -297,6 +347,13 @@ exports.up = async function up(knex) {
   await ensureColumn(knex, 'contacts', 'entra_sync_status_reason', (table) => {
     table.text('entra_sync_status_reason');
   });
+
+  const inRecovery = await knex.raw(`SELECT pg_is_in_recovery() AS in_recovery`);
+  if (!inRecovery.rows?.[0]?.in_recovery && await isCitusEnabled(knex)) {
+    for (const tableName of ENTRA_DISTRIBUTED_TABLES) {
+      await ensureDistributedTable(knex, tableName);
+    }
+  }
 
   await knex.schema.raw(`
     CREATE UNIQUE INDEX IF NOT EXISTS ux_entra_partner_connections_active_per_tenant
@@ -455,3 +512,5 @@ exports.down = async function down(knex) {
   await dropColumnIfExists('contacts', 'entra_sync_status');
   await dropColumnIfExists('contacts', 'entra_sync_status_reason');
 };
+
+exports.config = { transaction: false };
