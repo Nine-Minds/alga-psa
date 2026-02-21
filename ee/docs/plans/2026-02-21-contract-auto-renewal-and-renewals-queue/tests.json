@@ -306,7 +306,7 @@
   {
     "id": "T039",
     "description": "Functional: Recompute decision_due_date when renewal mode changes between none/manual/auto.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F039"
     ]
