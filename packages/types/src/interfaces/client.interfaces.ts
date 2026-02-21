@@ -69,6 +69,7 @@ export interface IClient extends TenantEntity, ITaggable {
   account_manager_full_name?: string;
   account_manager_id?: string | null;
   logoUrl?: string | null;
+  entra_tenant_id?: string | null;
 
   [key: string]: any;
 }

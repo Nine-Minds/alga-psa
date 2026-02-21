@@ -15,7 +15,7 @@ vi.mock('@/lib/db', () => ({
 
 vi.mock('@ee/lib/integrations/entra/sync/contactMatcher', async (importOriginal) => {
   const actual =
-    await importOriginal<typeof import('@ee/lib/integrations/entra/sync/contactMatcher')>();
+    (await importOriginal()) as typeof import('@ee/lib/integrations/entra/sync/contactMatcher');
   return {
     ...actual,
     findContactMatchesByEmail: findContactMatchesByEmailMock,

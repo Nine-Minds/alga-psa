@@ -10,7 +10,7 @@ vi.mock('@/lib/db', () => ({
 }));
 
 vi.mock('crypto', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('crypto')>();
+  const actual = (await importOriginal()) as typeof import('crypto');
   return {
     ...actual,
     randomUUID: randomUUIDMock,
