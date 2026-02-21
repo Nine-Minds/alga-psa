@@ -906,7 +906,7 @@
   {
     "id": "F114",
     "description": "Keep existing expiration report sort compatibility for existing report consumers.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > FR8 — Reporting and Existing Surface Alignment"
     ]

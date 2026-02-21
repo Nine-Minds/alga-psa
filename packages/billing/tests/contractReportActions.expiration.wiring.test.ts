@@ -33,4 +33,9 @@ describe('contractReportActions expiration report wiring', () => {
     expect(source).not.toContain(".whereNotNull('cc.renewal_mode')");
     expect(source).toContain('renewal_mode: row.renewal_mode ?? null,');
   });
+
+  it('keeps expiration-report sort semantics compatible with existing consumers', () => {
+    expect(source).toContain(".orderBy('cc.end_date', 'asc');");
+    expect(source).toContain("const key = `${item.contract_name}-${item.client_name}-${item.end_date}`;");
+  });
 });
