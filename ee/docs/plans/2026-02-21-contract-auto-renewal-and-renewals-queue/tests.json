@@ -1242,7 +1242,7 @@
   {
     "id": "T156",
     "description": "UI behavior: Render bucket quick filters for 0-30, 31-60, and 61-90 days. persists after refresh/navigation",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F053"
     ]
