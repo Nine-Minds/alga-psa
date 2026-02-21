@@ -1222,3 +1222,11 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
     - `server/src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts`
   - Validation:
     - `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`
+- (2026-02-21) Completed `F126`.
+  - Enforced billing read authorization on renewals queue list endpoint.
+  - `listRenewalQueueRows` now gates access via `hasPermission(user, 'billing', 'read')` and throws `Permission denied: Cannot read renewals queue` when unauthorized.
+  - Updated files:
+    - `packages/billing/src/actions/renewalsQueueActions.ts`
+    - `packages/billing/tests/renewalsQueueActions.wiring.test.ts`
+  - Validation:
+    - `npm -w @alga-psa/billing exec vitest run tests/renewalsQueueActions.wiring.test.ts --coverage=false`

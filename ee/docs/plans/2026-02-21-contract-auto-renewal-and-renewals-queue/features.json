@@ -1002,7 +1002,7 @@
   {
     "id": "F126",
     "description": "Enforce billing read permission on renewals queue list endpoints.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > FR10 \u2014 Permissions, Security, and Auditability"
     ]

@@ -3,6 +3,7 @@
 import { randomUUID } from 'node:crypto';
 import { createTenantKnex } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
+import { hasPermission } from '@alga-psa/auth/rbac';
 import type { RenewalWorkItemStatus } from '@alga-psa/types';
 import { normalizeClientContract } from '@alga-psa/shared/billingClients/clientContracts';
 import { TicketModel } from '@shared/models/ticketModel';
@@ -25,6 +26,11 @@ const isRenewalWorkItemStatus = (value: unknown): value is RenewalWorkItemStatus
 const toRenewalWorkItemStatus = (value: unknown): RenewalWorkItemStatus =>
   isRenewalWorkItemStatus(value) ? value : 'pending';
 const getTodayDateOnly = (): string => new Date().toISOString().slice(0, 10);
+const requireBillingReadPermission = (user: unknown): void => {
+  if (!hasPermission(user as any, 'billing', 'read')) {
+    throw new Error('Permission denied: Cannot read renewals queue');
+  }
+};
 const resolveActorUserId = (user: unknown): string | null => {
   const candidate = (user as { user_id?: unknown } | null | undefined)?.user_id;
   return typeof candidate === 'string' && candidate.trim().length > 0 ? candidate.trim() : null;
@@ -192,10 +198,12 @@ const getAvailableActionsForStatus = (status: RenewalWorkItemStatus): RenewalQue
 };
 
 export const listRenewalQueueRows = withAuth(async (
-  _user,
+  user,
   { tenant },
   horizonDays: number = DEFAULT_RENEWALS_HORIZON_DAYS
 ): Promise<RenewalQueueRow[]> => {
+  requireBillingReadPermission(user);
+
   const { knex } = await createTenantKnex();
   const resolvedHorizonDays =
     Number.isInteger(horizonDays) && horizonDays > 0
