@@ -682,7 +682,7 @@
   {
     "id": "F086",
     "description": "Respect tenant default due-date action policy during scheduled processing.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > FR6 — Automation and Ticket Creation"
     ]

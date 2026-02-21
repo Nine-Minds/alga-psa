@@ -777,6 +777,18 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
   - Validation:
     - `cd server && npm run typecheck`
     - `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`
+- (2026-02-21) Completed `F086`.
+  - Scheduled renewal processing now explicitly resolves tenant default due-date action policy:
+    - reads `default_billing_settings.renewal_due_date_action_policy` when available
+    - normalizes policy (`queue_only | create_ticket`) with deterministic fallback to `create_ticket`
+  - During upsert, processor applies tenant policy to work-item rows when contract-level policy column exists:
+    - updates `client_contracts.renewal_due_date_action_policy` to tenant effective value
+    - tracks policy distribution in logs (`queueOnlyPolicyCount`, `createTicketPolicyCount`)
+  - Updated wiring coverage:
+    - `server/src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts`
+  - Validation:
+    - `cd server && npm run typecheck`
+    - `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`
 
 ## Open Questions
 - Should renewal ticket defaults be a brand-new billing settings card, or an extension of existing default ticket settings patterns?

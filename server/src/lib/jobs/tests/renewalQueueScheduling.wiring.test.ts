@@ -44,6 +44,17 @@ describe('renewal queue scheduling wiring', () => {
     expect(renewalHandlerSource).toContain('upsertedCount += 1;');
   });
 
+  it('respects tenant default due-date action policy during scheduled processing', () => {
+    expect(renewalHandlerSource).toContain('const DEFAULT_RENEWAL_DUE_DATE_ACTION_POLICY = \'create_ticket\' as const;');
+    expect(renewalHandlerSource).toContain('const resolveRenewalDueDateActionPolicy = (value: unknown): \'queue_only\' | \'create_ticket\' => (');
+    expect(renewalHandlerSource).toContain("schema?.hasColumn?.('default_billing_settings', 'renewal_due_date_action_policy') ?? false");
+    expect(renewalHandlerSource).toContain("defaultSelections.push('dbs.renewal_due_date_action_policy as tenant_renewal_due_date_action_policy');");
+    expect(renewalHandlerSource).toContain('const tenantDueDateActionPolicy = resolveRenewalDueDateActionPolicy(');
+    expect(renewalHandlerSource).toContain('updates.renewal_due_date_action_policy = tenantDueDateActionPolicy;');
+    expect(renewalHandlerSource).toContain('queueOnlyPolicyCount += 1;');
+    expect(renewalHandlerSource).toContain('createTicketPolicyCount += 1;');
+  });
+
   it('registers and schedules renewal queue processing in the jobs module', () => {
     expect(jobsIndexSource).toContain("import { processRenewalQueueHandler, RenewalQueueProcessorJobData } from './handlers/processRenewalQueueHandler';");
     expect(jobsIndexSource).toContain("jobScheduler.registerJobHandler<RenewalQueueProcessorJobData>(");

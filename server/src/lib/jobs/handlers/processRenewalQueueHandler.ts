@@ -9,6 +9,7 @@ export interface RenewalQueueProcessorJobData extends Record<string, unknown> {
 }
 
 const DEFAULT_RENEWAL_PROCESSING_HORIZON_DAYS = 90;
+const DEFAULT_RENEWAL_DUE_DATE_ACTION_POLICY = 'create_ticket' as const;
 const KNOWN_RENEWAL_STATUSES: RenewalWorkItemStatus[] = [
   'pending',
   'renewing',
@@ -30,6 +31,11 @@ const normalizeOptionalDateOnly = (value: unknown): string | null => {
   if (!isDateOnly(value)) return null;
   return value;
 };
+const resolveRenewalDueDateActionPolicy = (value: unknown): 'queue_only' | 'create_ticket' => (
+  value === 'queue_only' || value === 'create_ticket'
+    ? value
+    : DEFAULT_RENEWAL_DUE_DATE_ACTION_POLICY
+);
 
 export async function processRenewalQueueHandler(data: RenewalQueueProcessorJobData): Promise<void> {
   const tenantId = typeof data.tenantId === 'string' ? data.tenantId : '';
@@ -55,6 +61,8 @@ export async function processRenewalQueueHandler(data: RenewalQueueProcessorJobD
     hasCreatedDraftContractIdColumn,
     hasDefaultRenewalModeColumn,
     hasDefaultNoticePeriodColumn,
+    hasTenantDueDateActionPolicyColumn,
+    hasContractDueDateActionPolicyColumn,
   ] = await Promise.all([
     schema?.hasColumn?.('client_contracts', 'decision_due_date') ?? false,
     schema?.hasColumn?.('client_contracts', 'status') ?? false,
@@ -66,6 +74,8 @@ export async function processRenewalQueueHandler(data: RenewalQueueProcessorJobD
     schema?.hasColumn?.('client_contracts', 'created_draft_contract_id') ?? false,
     schema?.hasColumn?.('default_billing_settings', 'default_renewal_mode') ?? false,
     schema?.hasColumn?.('default_billing_settings', 'default_notice_period_days') ?? false,
+    schema?.hasColumn?.('default_billing_settings', 'renewal_due_date_action_policy') ?? false,
+    schema?.hasColumn?.('client_contracts', 'renewal_due_date_action_policy') ?? false,
   ]);
 
   if (!hasDecisionDueDateColumn || !hasStatusColumn) {
@@ -85,6 +95,9 @@ export async function processRenewalQueueHandler(data: RenewalQueueProcessorJobD
   }
   if (hasDefaultNoticePeriodColumn) {
     defaultSelections.push('dbs.default_notice_period_days as tenant_default_notice_period_days');
+  }
+  if (hasTenantDueDateActionPolicyColumn) {
+    defaultSelections.push('dbs.renewal_due_date_action_policy as tenant_renewal_due_date_action_policy');
   }
 
   let contractQuery = knex('client_contracts as cc')
@@ -109,6 +122,8 @@ export async function processRenewalQueueHandler(data: RenewalQueueProcessorJobD
   let upsertedCount = 0;
   let normalizedStatusCount = 0;
   let newCycleCount = 0;
+  let queueOnlyPolicyCount = 0;
+  let createTicketPolicyCount = 0;
   const nowIso = new Date().toISOString();
 
   for (const row of candidateRows) {
@@ -118,6 +133,14 @@ export async function processRenewalQueueHandler(data: RenewalQueueProcessorJobD
       continue;
     }
     eligibleRows += 1;
+    const tenantDueDateActionPolicy = resolveRenewalDueDateActionPolicy(
+      (row as any).tenant_renewal_due_date_action_policy
+    );
+    if (tenantDueDateActionPolicy === 'queue_only') {
+      queueOnlyPolicyCount += 1;
+    } else {
+      createTicketPolicyCount += 1;
+    }
 
     const currentStatus = (row as any).status;
     const previousCycleKey =
@@ -156,6 +179,12 @@ export async function processRenewalQueueHandler(data: RenewalQueueProcessorJobD
     }
     if (hasRenewalCycleKeyColumn && nextCycleKey !== previousCycleKey) {
       updates.renewal_cycle_key = nextCycleKey;
+    }
+    if (hasContractDueDateActionPolicyColumn) {
+      const existingPolicy = resolveRenewalDueDateActionPolicy((row as any).renewal_due_date_action_policy);
+      if (existingPolicy !== tenantDueDateActionPolicy) {
+        updates.renewal_due_date_action_policy = tenantDueDateActionPolicy;
+      }
     }
 
     if (shouldNormalizeStatus) {
@@ -202,5 +231,7 @@ export async function processRenewalQueueHandler(data: RenewalQueueProcessorJobD
     upsertedCount,
     normalizedStatusCount,
     newCycleCount,
+    queueOnlyPolicyCount,
+    createTicketPolicyCount,
   });
 }
