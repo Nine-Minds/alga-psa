@@ -1482,7 +1482,7 @@
   {
     "id": "T186",
     "description": "Parity: 'Call workflow runtime tickets.create action for renewal ticket creation path.' behaves equivalently under pg-boss and Temporal paths",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F089"
     ]
