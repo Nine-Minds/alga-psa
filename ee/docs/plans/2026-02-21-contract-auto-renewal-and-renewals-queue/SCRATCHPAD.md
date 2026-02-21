@@ -1788,3 +1788,16 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
   - Migration remains idempotent and Citus-safe with guarded column/constraint checks.
   - Validation:
     - `node -c server/migrations/202602211115_add_contract_renewal_config_columns.cjs`
+- (2026-02-21) Completed `F140`.
+  - Added migration:
+    - `server/migrations/202602211120_add_default_billing_renewal_columns.cjs`
+  - Migration adds renewal defaults/policy columns on `default_billing_settings`:
+    - `default_renewal_mode`, `default_notice_period_days`, `renewal_due_date_action_policy`
+    - `renewal_ticket_board_id`, `renewal_ticket_status_id`, `renewal_ticket_priority`, `renewal_ticket_assignee_id`
+  - Added DB constraints for default value domains:
+    - `default_billing_settings_default_renewal_mode_check`
+    - `default_billing_settings_default_notice_period_days_check`
+    - `default_billing_settings_renewal_due_date_action_policy_check`
+  - Migration remains idempotent and Citus-safe with guarded column/constraint checks.
+  - Validation:
+    - `node -c server/migrations/202602211120_add_default_billing_renewal_columns.cjs`

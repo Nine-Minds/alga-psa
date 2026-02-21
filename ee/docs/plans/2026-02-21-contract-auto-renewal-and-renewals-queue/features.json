@@ -1121,7 +1121,7 @@
   {
     "id": "F140",
     "description": "Add migration adding renewal default/policy columns on default_billing_settings (default_renewal_mode, default_notice_period_days, renewal_due_date_action_policy, renewal_ticket_board_id, renewal_ticket_status_id, renewal_ticket_priority, renewal_ticket_assignee_id).",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Rollout / Migration",
       "Requirements > Functional Requirements > FR2 — Tenant Defaults and Contract-Level Overrides",
