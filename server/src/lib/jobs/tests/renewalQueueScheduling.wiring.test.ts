@@ -139,6 +139,15 @@ describe('renewal queue scheduling wiring', () => {
     expect(renewalHandlerSource).toContain('...updates,');
   });
 
+  it('audits ticket automation linkage with system actor metadata and timestamp', () => {
+    expect(renewalHandlerSource).toContain("schema?.hasColumn?.('client_contracts', 'last_action') ?? false");
+    expect(renewalHandlerSource).toContain("schema?.hasColumn?.('client_contracts', 'last_action_by') ?? false");
+    expect(renewalHandlerSource).toContain("schema?.hasColumn?.('client_contracts', 'last_action_at') ?? false");
+    expect(renewalHandlerSource).toContain("updates.last_action = 'system_ticket_automation_linked';");
+    expect(renewalHandlerSource).toContain('updates.last_action_by = null;');
+    expect(renewalHandlerSource).toContain('updates.last_action_at = nowIso;');
+  });
+
   it('uses tenant/client-contract/cycle idempotency key for renewal ticket creation', () => {
     expect(renewalHandlerSource).toContain('const buildRenewalTicketIdempotencyKey = (params: {');
     expect(renewalHandlerSource).toContain('): string => `renewal-ticket:${params.tenantId}:${params.clientContractId}:${params.cycleKey}`;');

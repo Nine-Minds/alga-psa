@@ -1278,3 +1278,14 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
     - `packages/billing/tests/renewalsQueueActions.actorAudit.wiring.test.ts`
   - Validation:
     - `npm -w @alga-psa/billing exec vitest run tests/renewalsQueueActions.transitionAudit.wiring.test.ts tests/renewalsQueueActions.actorAudit.wiring.test.ts tests/renewalsQueueActions.timestampAudit.wiring.test.ts tests/renewalsQueueActions.noteAudit.wiring.test.ts --coverage=false`
+- (2026-02-21) Completed `F132`.
+  - Added automation-linkage audit metadata in renewal processor when due-date ticket linkage succeeds.
+  - When a ticket is linked, handler now records (when columns exist):
+    - `last_action = 'system_ticket_automation_linked'`
+    - `last_action_by = null` (system actor)
+    - `last_action_at = nowIso`
+  - Updated files:
+    - `server/src/lib/jobs/handlers/processRenewalQueueHandler.ts`
+    - `server/src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts`
+  - Validation:
+    - `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`

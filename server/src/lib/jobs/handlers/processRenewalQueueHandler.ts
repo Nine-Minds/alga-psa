@@ -218,6 +218,9 @@ export async function processRenewalQueueHandler(data: RenewalQueueProcessorJobD
     hasContractRenewalTicketPriorityColumn,
     hasContractRenewalTicketAssigneeColumn,
     hasAutomationErrorColumn,
+    hasLastActionColumn,
+    hasLastActionByColumn,
+    hasLastActionAtColumn,
     hasTicketsTable,
     hasWorkflowRunsTable,
   ] = await Promise.all([
@@ -243,6 +246,9 @@ export async function processRenewalQueueHandler(data: RenewalQueueProcessorJobD
     schema?.hasColumn?.('client_contracts', 'renewal_ticket_priority') ?? false,
     schema?.hasColumn?.('client_contracts', 'renewal_ticket_assignee_id') ?? false,
     schema?.hasColumn?.('client_contracts', 'automation_error') ?? false,
+    schema?.hasColumn?.('client_contracts', 'last_action') ?? false,
+    schema?.hasColumn?.('client_contracts', 'last_action_by') ?? false,
+    schema?.hasColumn?.('client_contracts', 'last_action_at') ?? false,
     schema?.hasTable?.('tickets') ?? false,
     schema?.hasTable?.('workflow_runs') ?? false,
   ]);
@@ -580,6 +586,15 @@ export async function processRenewalQueueHandler(data: RenewalQueueProcessorJobD
           updates.created_ticket_id = createdTicketId;
           if (hasAutomationErrorColumn) {
             updates.automation_error = null;
+          }
+          if (hasLastActionColumn) {
+            updates.last_action = 'system_ticket_automation_linked';
+          }
+          if (hasLastActionByColumn) {
+            updates.last_action_by = null;
+          }
+          if (hasLastActionAtColumn) {
+            updates.last_action_at = nowIso;
           }
           createdTicketCount += 1;
         } else if (hasAutomationErrorColumn) {
