@@ -514,7 +514,7 @@
   {
     "id": "T065",
     "description": "Functional: Implement mark-renewing action that transitions pending entries to renewing.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F065"
     ]

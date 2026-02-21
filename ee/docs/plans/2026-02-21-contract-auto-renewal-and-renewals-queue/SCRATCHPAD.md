@@ -1382,3 +1382,5 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
   - Validation: `npm -w @alga-psa/billing exec vitest run tests/ClientContractsTab.upcomingRenewalsWidget.test.ts tests/BillingDashboard.renewalsRoute.test.ts --coverage=false`
 - (2026-02-21) Completed `T064`.
   - Validation: `cd packages/billing && npx vitest run $(rg --files tests | rg 'renewalsQueueActions') tests/RenewalsQueueTab.component.test.ts --coverage=false`
+- (2026-02-21) Completed `T065`.
+  - Validation: `cd packages/billing && npx vitest run $(rg --files tests | rg 'renewalsQueueActions') tests/RenewalsQueueTab.component.test.ts --coverage=false`
