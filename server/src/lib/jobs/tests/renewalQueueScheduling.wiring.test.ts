@@ -261,4 +261,18 @@ describe('renewal queue scheduling wiring', () => {
     expect(renewalHandlerSource).not.toContain('process.env.EDITION');
     expect(renewalHandlerSource).not.toContain('JOB_RUNNER_TYPE');
   });
+
+  it('falls back gracefully to pg-boss when temporal bootstrap is unavailable', () => {
+    expect(jobRunnerFactorySource).toContain("if (runnerType === 'temporal' && isEnterprise) {");
+    expect(jobRunnerFactorySource).toContain('return await this.createTemporalRunner(config);');
+    expect(jobRunnerFactorySource).toContain('if (');
+    expect(jobRunnerFactorySource).toContain("runnerType === 'temporal' &&");
+    expect(jobRunnerFactorySource).toContain('config?.fallbackToPgBoss !== false');
+    expect(jobRunnerFactorySource).toContain("logger.warn('Falling back to PG Boss job runner');");
+    expect(jobRunnerFactorySource).toContain('return await this.createPgBossRunner(config);');
+    expect(jobRunnerFactorySource).toContain("logger.error('Failed to load TemporalJobRunner:', error);");
+    expect(jobRunnerFactorySource).toContain(
+      "'TemporalJobRunner not available. Ensure EE modules are properly installed.'"
+    );
+  });
 });

@@ -1201,3 +1201,14 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
 - Should renewal ticket defaults be a brand-new billing settings card, or an extension of existing default ticket settings patterns?
 - Should evergreen annual review use contract start-date anniversary or configurable anchor date in v1?
 - Should renewal status transitions hard-lock contract activation behavior, or remain advisory with warnings in v1?
+- (2026-02-21) Completed `F124`.
+  - Added explicit runtime-fallback coverage confirming Temporal bootstrap failures gracefully fall back to pg-boss when fallback is enabled.
+  - Assertions verify:
+    - Temporal path attempted first for EE/runtime selection
+    - fallback gate checks `config?.fallbackToPgBoss !== false`
+    - fallback execution calls `createPgBossRunner(config)`
+    - Temporal bootstrap/import failures remain surfaced and handled by fallback branch
+  - Updated coverage:
+    - `server/src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts`
+  - Validation:
+    - `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`

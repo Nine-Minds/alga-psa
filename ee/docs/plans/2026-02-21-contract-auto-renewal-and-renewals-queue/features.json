@@ -4,7 +4,7 @@
     "description": "Extend ContractWizardData with renewal mode, notice period, term months, and override toggle fields.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR1 — Contract Setup and Renewal Configuration"
+      "Requirements > Functional Requirements > FR1 \u2014 Contract Setup and Renewal Configuration"
     ]
   },
   {
@@ -12,7 +12,7 @@
     "description": "Initialize renewal fields in ContractWizard default state for new contracts.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR1 — Contract Setup and Renewal Configuration"
+      "Requirements > Functional Requirements > FR1 \u2014 Contract Setup and Renewal Configuration"
     ]
   },
   {
@@ -20,7 +20,7 @@
     "description": "Hydrate renewal fields when resuming draft contracts in the wizard.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR1 — Contract Setup and Renewal Configuration"
+      "Requirements > Functional Requirements > FR1 \u2014 Contract Setup and Renewal Configuration"
     ]
   },
   {
@@ -28,7 +28,7 @@
     "description": "Hydrate renewal fields when editing existing contracts in the wizard.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR1 — Contract Setup and Renewal Configuration"
+      "Requirements > Functional Requirements > FR1 \u2014 Contract Setup and Renewal Configuration"
     ]
   },
   {
@@ -36,7 +36,7 @@
     "description": "Render Renewal Settings card in ContractBasicsStep when end date is present.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR1 — Contract Setup and Renewal Configuration"
+      "Requirements > Functional Requirements > FR1 \u2014 Contract Setup and Renewal Configuration"
     ]
   },
   {
@@ -44,7 +44,7 @@
     "description": "Render Evergreen Review settings card in ContractBasicsStep when end date is absent.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR1 — Contract Setup and Renewal Configuration"
+      "Requirements > Functional Requirements > FR1 \u2014 Contract Setup and Renewal Configuration"
     ]
   },
   {
@@ -52,7 +52,7 @@
     "description": "Show renewal mode selector with values none/manual/auto in ContractBasicsStep.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR1 — Contract Setup and Renewal Configuration"
+      "Requirements > Functional Requirements > FR1 \u2014 Contract Setup and Renewal Configuration"
     ]
   },
   {
@@ -60,7 +60,7 @@
     "description": "Show notice period selector/input in ContractBasicsStep for renewal-enabled modes.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR1 — Contract Setup and Renewal Configuration"
+      "Requirements > Functional Requirements > FR1 \u2014 Contract Setup and Renewal Configuration"
     ]
   },
   {
@@ -68,7 +68,7 @@
     "description": "Show renewal term behavior input in ContractBasicsStep for auto-renew mode.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR1 — Contract Setup and Renewal Configuration"
+      "Requirements > Functional Requirements > FR1 \u2014 Contract Setup and Renewal Configuration"
     ]
   },
   {
@@ -76,7 +76,7 @@
     "description": "Hide auto-renew-specific term controls when renewal mode is not auto.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR1 — Contract Setup and Renewal Configuration"
+      "Requirements > Functional Requirements > FR1 \u2014 Contract Setup and Renewal Configuration"
     ]
   },
   {
@@ -84,7 +84,7 @@
     "description": "Validate renewal mode is required when an end date is set.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR1 — Contract Setup and Renewal Configuration"
+      "Requirements > Functional Requirements > FR1 \u2014 Contract Setup and Renewal Configuration"
     ]
   },
   {
@@ -92,7 +92,7 @@
     "description": "Validate notice period is a non-negative integer within configured bounds.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR1 — Contract Setup and Renewal Configuration"
+      "Requirements > Functional Requirements > FR1 \u2014 Contract Setup and Renewal Configuration"
     ]
   },
   {
@@ -100,7 +100,7 @@
     "description": "Validate renewal term months is positive when explicitly provided.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR1 — Contract Setup and Renewal Configuration"
+      "Requirements > Functional Requirements > FR1 \u2014 Contract Setup and Renewal Configuration"
     ]
   },
   {
@@ -108,7 +108,7 @@
     "description": "Show inline validation errors for invalid renewal settings before wizard progression.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR1 — Contract Setup and Renewal Configuration"
+      "Requirements > Functional Requirements > FR1 \u2014 Contract Setup and Renewal Configuration"
     ]
   },
   {
@@ -116,7 +116,7 @@
     "description": "Include renewal fields in contract summary preview in ContractBasicsStep.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR1 — Contract Setup and Renewal Configuration"
+      "Requirements > Functional Requirements > FR1 \u2014 Contract Setup and Renewal Configuration"
     ]
   },
   {
@@ -124,7 +124,7 @@
     "description": "Include renewal fields in review step payload preview before submit.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR1 — Contract Setup and Renewal Configuration"
+      "Requirements > Functional Requirements > FR1 \u2014 Contract Setup and Renewal Configuration"
     ]
   },
   {
@@ -132,7 +132,7 @@
     "description": "Persist renewal fields in ClientContractWizardSubmission payload builder.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR1 — Contract Setup and Renewal Configuration"
+      "Requirements > Functional Requirements > FR1 \u2014 Contract Setup and Renewal Configuration"
     ]
   },
   {
@@ -140,7 +140,7 @@
     "description": "Persist renewal fields when saving draft contracts from wizard.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR1 — Contract Setup and Renewal Configuration"
+      "Requirements > Functional Requirements > FR1 \u2014 Contract Setup and Renewal Configuration"
     ]
   },
   {
@@ -148,7 +148,7 @@
     "description": "Add tenant default renewal mode field to default billing settings model.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR2 — Tenant Defaults and Contract-Level Overrides"
+      "Requirements > Functional Requirements > FR2 \u2014 Tenant Defaults and Contract-Level Overrides"
     ]
   },
   {
@@ -156,7 +156,7 @@
     "description": "Add tenant default notice period days field to default billing settings model.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR2 — Tenant Defaults and Contract-Level Overrides"
+      "Requirements > Functional Requirements > FR2 \u2014 Tenant Defaults and Contract-Level Overrides"
     ]
   },
   {
@@ -164,7 +164,7 @@
     "description": "Add tenant default due-date action policy field to default billing settings model.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR2 — Tenant Defaults and Contract-Level Overrides"
+      "Requirements > Functional Requirements > FR2 \u2014 Tenant Defaults and Contract-Level Overrides"
     ]
   },
   {
@@ -172,7 +172,7 @@
     "description": "Add tenant default renewal ticket board field to default billing settings model.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR2 — Tenant Defaults and Contract-Level Overrides"
+      "Requirements > Functional Requirements > FR2 \u2014 Tenant Defaults and Contract-Level Overrides"
     ]
   },
   {
@@ -180,7 +180,7 @@
     "description": "Add tenant default renewal ticket status field to default billing settings model.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR2 — Tenant Defaults and Contract-Level Overrides"
+      "Requirements > Functional Requirements > FR2 \u2014 Tenant Defaults and Contract-Level Overrides"
     ]
   },
   {
@@ -188,7 +188,7 @@
     "description": "Add tenant default renewal ticket priority field to default billing settings model.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR2 — Tenant Defaults and Contract-Level Overrides"
+      "Requirements > Functional Requirements > FR2 \u2014 Tenant Defaults and Contract-Level Overrides"
     ]
   },
   {
@@ -196,7 +196,7 @@
     "description": "Add tenant default renewal ticket assignee field to default billing settings model.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR2 — Tenant Defaults and Contract-Level Overrides"
+      "Requirements > Functional Requirements > FR2 \u2014 Tenant Defaults and Contract-Level Overrides"
     ]
   },
   {
@@ -204,7 +204,7 @@
     "description": "Expose renewal defaults in getDefaultBillingSettings action response.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR2 — Tenant Defaults and Contract-Level Overrides"
+      "Requirements > Functional Requirements > FR2 \u2014 Tenant Defaults and Contract-Level Overrides"
     ]
   },
   {
@@ -212,7 +212,7 @@
     "description": "Persist renewal defaults in updateDefaultBillingSettings action writes.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR2 — Tenant Defaults and Contract-Level Overrides"
+      "Requirements > Functional Requirements > FR2 \u2014 Tenant Defaults and Contract-Level Overrides"
     ]
   },
   {
@@ -220,7 +220,7 @@
     "description": "Add use-tenant-defaults toggle to contract renewal settings payload.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR2 — Tenant Defaults and Contract-Level Overrides"
+      "Requirements > Functional Requirements > FR2 \u2014 Tenant Defaults and Contract-Level Overrides"
     ]
   },
   {
@@ -228,7 +228,7 @@
     "description": "Apply tenant defaults to contract assignment when override toggle is enabled.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR2 — Tenant Defaults and Contract-Level Overrides"
+      "Requirements > Functional Requirements > FR2 \u2014 Tenant Defaults and Contract-Level Overrides"
     ]
   },
   {
@@ -236,7 +236,7 @@
     "description": "Apply explicit contract-level override values when override toggle is disabled.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR2 — Tenant Defaults and Contract-Level Overrides"
+      "Requirements > Functional Requirements > FR2 \u2014 Tenant Defaults and Contract-Level Overrides"
     ]
   },
   {
@@ -244,7 +244,7 @@
     "description": "Enforce deterministic fallback precedence when override fields are partially missing.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR2 — Tenant Defaults and Contract-Level Overrides"
+      "Requirements > Functional Requirements > FR2 \u2014 Tenant Defaults and Contract-Level Overrides"
     ]
   },
   {
@@ -252,7 +252,7 @@
     "description": "Expose effective renewal settings in contract assignment read APIs.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR2 — Tenant Defaults and Contract-Level Overrides"
+      "Requirements > Functional Requirements > FR2 \u2014 Tenant Defaults and Contract-Level Overrides"
     ]
   },
   {
@@ -260,7 +260,7 @@
     "description": "Compute decision_due_date for fixed-term assignments using end_date minus notice_period_days.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR3 — Renewal Decision Date Engine"
+      "Requirements > Functional Requirements > FR3 \u2014 Renewal Decision Date Engine"
     ]
   },
   {
@@ -268,7 +268,7 @@
     "description": "Compute next evergreen review anchor date from active contract anniversary rules.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR3 — Renewal Decision Date Engine"
+      "Requirements > Functional Requirements > FR3 \u2014 Renewal Decision Date Engine"
     ]
   },
   {
@@ -276,7 +276,7 @@
     "description": "Compute evergreen decision_due_date using anchor date minus notice_period_days.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR3 — Renewal Decision Date Engine"
+      "Requirements > Functional Requirements > FR3 \u2014 Renewal Decision Date Engine"
     ]
   },
   {
@@ -284,7 +284,7 @@
     "description": "Normalize decision_due_date calculations to date-only semantics used by client_contracts.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR3 — Renewal Decision Date Engine"
+      "Requirements > Functional Requirements > FR3 \u2014 Renewal Decision Date Engine"
     ]
   },
   {
@@ -292,7 +292,7 @@
     "description": "Recompute decision_due_date when contract end_date changes.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR3 — Renewal Decision Date Engine"
+      "Requirements > Functional Requirements > FR3 \u2014 Renewal Decision Date Engine"
     ]
   },
   {
@@ -300,7 +300,7 @@
     "description": "Recompute decision_due_date when notice period changes.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR3 — Renewal Decision Date Engine"
+      "Requirements > Functional Requirements > FR3 \u2014 Renewal Decision Date Engine"
     ]
   },
   {
@@ -308,7 +308,7 @@
     "description": "Recompute decision_due_date when renewal mode changes between none/manual/auto.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR3 — Renewal Decision Date Engine"
+      "Requirements > Functional Requirements > FR3 \u2014 Renewal Decision Date Engine"
     ]
   },
   {
@@ -316,7 +316,7 @@
     "description": "Recompute decision_due_date when evergreen anchor basis changes.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR3 — Renewal Decision Date Engine"
+      "Requirements > Functional Requirements > FR3 \u2014 Renewal Decision Date Engine"
     ]
   },
   {
@@ -324,7 +324,7 @@
     "description": "Skip decision_due_date generation for terminated/expired contract assignments.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR3 — Renewal Decision Date Engine"
+      "Requirements > Functional Requirements > FR3 \u2014 Renewal Decision Date Engine"
     ]
   },
   {
@@ -332,7 +332,7 @@
     "description": "Skip decision_due_date generation when renewal mode is none and no evergreen review is configured.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR3 — Renewal Decision Date Engine"
+      "Requirements > Functional Requirements > FR3 \u2014 Renewal Decision Date Engine"
     ]
   },
   {
@@ -340,7 +340,7 @@
     "description": "Create one renewal cycle key per contract assignment cycle for deduplication.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR3 — Renewal Decision Date Engine"
+      "Requirements > Functional Requirements > FR3 \u2014 Renewal Decision Date Engine"
     ]
   },
   {
@@ -348,7 +348,7 @@
     "description": "Prevent duplicate active renewal work items for same tenant/client_contract_id/cycle key.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR3 — Renewal Decision Date Engine"
+      "Requirements > Functional Requirements > FR3 \u2014 Renewal Decision Date Engine"
     ]
   },
   {
@@ -356,7 +356,7 @@
     "description": "Persist cycle_start and cycle_end boundaries for each generated renewal cycle.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR3 — Renewal Decision Date Engine"
+      "Requirements > Functional Requirements > FR3 \u2014 Renewal Decision Date Engine"
     ]
   },
   {
@@ -364,7 +364,7 @@
     "description": "Expose days_until_due as derived queue field for UI sorting and badges.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR3 — Renewal Decision Date Engine"
+      "Requirements > Functional Requirements > FR3 \u2014 Renewal Decision Date Engine"
     ]
   },
   {
@@ -372,7 +372,7 @@
     "description": "Clamp past-due decision calculations into queue visibility without negative date corruption.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR3 — Renewal Decision Date Engine"
+      "Requirements > Functional Requirements > FR3 \u2014 Renewal Decision Date Engine"
     ]
   },
   {
@@ -380,7 +380,7 @@
     "description": "Add renewals tab value and metadata to billing tab configuration.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR4 — Renewals Queue and Dashboard Entry Points"
+      "Requirements > Functional Requirements > FR4 \u2014 Renewals Queue and Dashboard Entry Points"
     ]
   },
   {
@@ -388,7 +388,7 @@
     "description": "Add Renewals Tabs.Content route to BillingDashboard tab host.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR4 — Renewals Queue and Dashboard Entry Points"
+      "Requirements > Functional Requirements > FR4 \u2014 Renewals Queue and Dashboard Entry Points"
     ]
   },
   {
@@ -396,7 +396,7 @@
     "description": "Add Renewals queue page component under billing dashboard components.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR4 — Renewals Queue and Dashboard Entry Points"
+      "Requirements > Functional Requirements > FR4 \u2014 Renewals Queue and Dashboard Entry Points"
     ]
   },
   {
@@ -404,7 +404,7 @@
     "description": "Load renewal queue rows from server action on Renewals page mount.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR4 — Renewals Queue and Dashboard Entry Points"
+      "Requirements > Functional Requirements > FR4 \u2014 Renewals Queue and Dashboard Entry Points"
     ]
   },
   {
@@ -412,7 +412,7 @@
     "description": "Render default 90-day horizon rows in Renewals queue.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR4 — Renewals Queue and Dashboard Entry Points"
+      "Requirements > Functional Requirements > FR4 \u2014 Renewals Queue and Dashboard Entry Points"
     ]
   },
   {
@@ -420,7 +420,7 @@
     "description": "Render bucket quick filters for 0-30, 31-60, and 61-90 days.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR4 — Renewals Queue and Dashboard Entry Points"
+      "Requirements > Functional Requirements > FR4 \u2014 Renewals Queue and Dashboard Entry Points"
     ]
   },
   {
@@ -428,7 +428,7 @@
     "description": "Render owner filter for assigned user in Renewals queue.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR4 — Renewals Queue and Dashboard Entry Points"
+      "Requirements > Functional Requirements > FR4 \u2014 Renewals Queue and Dashboard Entry Points"
     ]
   },
   {
@@ -436,7 +436,7 @@
     "description": "Render status filter for pending/renewing/non_renewing/snoozed/completed.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR4 — Renewals Queue and Dashboard Entry Points"
+      "Requirements > Functional Requirements > FR4 \u2014 Renewals Queue and Dashboard Entry Points"
     ]
   },
   {
@@ -444,7 +444,7 @@
     "description": "Render renewal mode filter for none/manual/auto.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR4 — Renewals Queue and Dashboard Entry Points"
+      "Requirements > Functional Requirements > FR4 \u2014 Renewals Queue and Dashboard Entry Points"
     ]
   },
   {
@@ -452,7 +452,7 @@
     "description": "Render contract type filter for fixed-term versus evergreen entries.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR4 — Renewals Queue and Dashboard Entry Points"
+      "Requirements > Functional Requirements > FR4 \u2014 Renewals Queue and Dashboard Entry Points"
     ]
   },
   {
@@ -460,7 +460,7 @@
     "description": "Sort queue by decision_due_date ascending by default.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR4 — Renewals Queue and Dashboard Entry Points"
+      "Requirements > Functional Requirements > FR4 \u2014 Renewals Queue and Dashboard Entry Points"
     ]
   },
   {
@@ -468,7 +468,7 @@
     "description": "Show days-remaining visual state for due-soon and overdue entries.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR4 — Renewals Queue and Dashboard Entry Points"
+      "Requirements > Functional Requirements > FR4 \u2014 Renewals Queue and Dashboard Entry Points"
     ]
   },
   {
@@ -476,7 +476,7 @@
     "description": "Add Upcoming Renewals summary widget to ClientContractsTab.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR4 — Renewals Queue and Dashboard Entry Points"
+      "Requirements > Functional Requirements > FR4 \u2014 Renewals Queue and Dashboard Entry Points"
     ]
   },
   {
@@ -484,7 +484,7 @@
     "description": "Show 90-day bucket counts in ClientContractsTab upcoming renewals widget.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR4 — Renewals Queue and Dashboard Entry Points"
+      "Requirements > Functional Requirements > FR4 \u2014 Renewals Queue and Dashboard Entry Points"
     ]
   },
   {
@@ -492,7 +492,7 @@
     "description": "Navigate from upcoming renewals widget to Renewals tab preserving filter context.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR4 — Renewals Queue and Dashboard Entry Points"
+      "Requirements > Functional Requirements > FR4 \u2014 Renewals Queue and Dashboard Entry Points"
     ]
   },
   {
@@ -500,7 +500,7 @@
     "description": "Refresh widget counts after queue action mutations complete.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR4 — Renewals Queue and Dashboard Entry Points"
+      "Requirements > Functional Requirements > FR4 \u2014 Renewals Queue and Dashboard Entry Points"
     ]
   },
   {
@@ -508,7 +508,7 @@
     "description": "Define queue status enum values pending/renewing/non_renewing/snoozed/completed in renewal work-item model.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR5 — Queue Actions and Renewal Workflow"
+      "Requirements > Functional Requirements > FR5 \u2014 Queue Actions and Renewal Workflow"
     ]
   },
   {
@@ -516,7 +516,7 @@
     "description": "Implement mark-renewing action that transitions pending entries to renewing.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR5 — Queue Actions and Renewal Workflow"
+      "Requirements > Functional Requirements > FR5 \u2014 Queue Actions and Renewal Workflow"
     ]
   },
   {
@@ -524,7 +524,7 @@
     "description": "Implement mark-non-renewing action that transitions pending entries to non_renewing.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR5 — Queue Actions and Renewal Workflow"
+      "Requirements > Functional Requirements > FR5 \u2014 Queue Actions and Renewal Workflow"
     ]
   },
   {
@@ -532,7 +532,7 @@
     "description": "Implement create-renewal-draft action for eligible queue entries.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR5 — Queue Actions and Renewal Workflow"
+      "Requirements > Functional Requirements > FR5 \u2014 Queue Actions and Renewal Workflow"
     ]
   },
   {
@@ -540,7 +540,7 @@
     "description": "Implement snooze action that sets status to snoozed with snoozed_until date.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR5 — Queue Actions and Renewal Workflow"
+      "Requirements > Functional Requirements > FR5 \u2014 Queue Actions and Renewal Workflow"
     ]
   },
   {
@@ -548,7 +548,7 @@
     "description": "Implement assign-owner action to set assigned_to on renewal work item.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR5 — Queue Actions and Renewal Workflow"
+      "Requirements > Functional Requirements > FR5 \u2014 Queue Actions and Renewal Workflow"
     ]
   },
   {
@@ -556,7 +556,7 @@
     "description": "Implement unsnooze transition back to pending when snooze period elapses.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR5 — Queue Actions and Renewal Workflow"
+      "Requirements > Functional Requirements > FR5 \u2014 Queue Actions and Renewal Workflow"
     ]
   },
   {
@@ -564,7 +564,7 @@
     "description": "Persist action actor user id on each queue mutation.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR5 — Queue Actions and Renewal Workflow"
+      "Requirements > Functional Requirements > FR5 \u2014 Queue Actions and Renewal Workflow"
     ]
   },
   {
@@ -572,7 +572,7 @@
     "description": "Persist action timestamp on each queue mutation.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR5 — Queue Actions and Renewal Workflow"
+      "Requirements > Functional Requirements > FR5 \u2014 Queue Actions and Renewal Workflow"
     ]
   },
   {
@@ -580,7 +580,7 @@
     "description": "Persist action reason/note text on queue mutation when provided.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR5 — Queue Actions and Renewal Workflow"
+      "Requirements > Functional Requirements > FR5 \u2014 Queue Actions and Renewal Workflow"
     ]
   },
   {
@@ -588,7 +588,7 @@
     "description": "Prevent invalid transition from completed back to pending without explicit reopen action.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR5 — Queue Actions and Renewal Workflow"
+      "Requirements > Functional Requirements > FR5 \u2014 Queue Actions and Renewal Workflow"
     ]
   },
   {
@@ -596,7 +596,7 @@
     "description": "Prevent invalid transition from non_renewing to renewing without explicit override action.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR5 — Queue Actions and Renewal Workflow"
+      "Requirements > Functional Requirements > FR5 \u2014 Queue Actions and Renewal Workflow"
     ]
   },
   {
@@ -604,7 +604,7 @@
     "description": "Enforce snooze date must be in the future on action validation.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR5 — Queue Actions and Renewal Workflow"
+      "Requirements > Functional Requirements > FR5 \u2014 Queue Actions and Renewal Workflow"
     ]
   },
   {
@@ -612,7 +612,7 @@
     "description": "Expose queue row action availability based on current status.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR5 — Queue Actions and Renewal Workflow"
+      "Requirements > Functional Requirements > FR5 \u2014 Queue Actions and Renewal Workflow"
     ]
   },
   {
@@ -620,7 +620,7 @@
     "description": "Show optimistic UI state while queue actions are in-flight.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR5 — Queue Actions and Renewal Workflow"
+      "Requirements > Functional Requirements > FR5 \u2014 Queue Actions and Renewal Workflow"
     ]
   },
   {
@@ -628,7 +628,7 @@
     "description": "Refresh affected queue row state after successful action response.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR5 — Queue Actions and Renewal Workflow"
+      "Requirements > Functional Requirements > FR5 \u2014 Queue Actions and Renewal Workflow"
     ]
   },
   {
@@ -636,7 +636,7 @@
     "description": "Include linked draft contract id in queue row once renewal draft is created.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR5 — Queue Actions and Renewal Workflow"
+      "Requirements > Functional Requirements > FR5 \u2014 Queue Actions and Renewal Workflow"
     ]
   },
   {
@@ -644,7 +644,7 @@
     "description": "Include linked ticket id in queue row once due-date ticket is created.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR5 — Queue Actions and Renewal Workflow"
+      "Requirements > Functional Requirements > FR5 \u2014 Queue Actions and Renewal Workflow"
     ]
   },
   {
@@ -652,7 +652,7 @@
     "description": "Mark work item completed when renewed contract activation is confirmed.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR5 — Queue Actions and Renewal Workflow"
+      "Requirements > Functional Requirements > FR5 \u2014 Queue Actions and Renewal Workflow"
     ]
   },
   {
@@ -660,7 +660,7 @@
     "description": "Mark work item completed when non-renewal finalization is confirmed.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR5 — Queue Actions and Renewal Workflow"
+      "Requirements > Functional Requirements > FR5 \u2014 Queue Actions and Renewal Workflow"
     ]
   },
   {
@@ -668,7 +668,7 @@
     "description": "Create scheduled renewal processor that scans due decision windows for active contracts.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR6 — Automation and Ticket Creation"
+      "Requirements > Functional Requirements > FR6 \u2014 Automation and Ticket Creation"
     ]
   },
   {
@@ -676,7 +676,7 @@
     "description": "Upsert renewal work items during scheduled processing for newly eligible cycles.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR6 — Automation and Ticket Creation"
+      "Requirements > Functional Requirements > FR6 \u2014 Automation and Ticket Creation"
     ]
   },
   {
@@ -684,7 +684,7 @@
     "description": "Respect tenant default due-date action policy during scheduled processing.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR6 — Automation and Ticket Creation"
+      "Requirements > Functional Requirements > FR6 \u2014 Automation and Ticket Creation"
     ]
   },
   {
@@ -692,7 +692,7 @@
     "description": "Respect contract-level override due-date action policy during scheduled processing.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR6 — Automation and Ticket Creation"
+      "Requirements > Functional Requirements > FR6 \u2014 Automation and Ticket Creation"
     ]
   },
   {
@@ -700,7 +700,7 @@
     "description": "Create internal ticket at decision due date when effective policy is create_ticket.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR6 — Automation and Ticket Creation"
+      "Requirements > Functional Requirements > FR6 \u2014 Automation and Ticket Creation"
     ]
   },
   {
@@ -708,7 +708,7 @@
     "description": "Call workflow runtime tickets.create action for renewal ticket creation path.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR6 — Automation and Ticket Creation"
+      "Requirements > Functional Requirements > FR6 \u2014 Automation and Ticket Creation"
     ]
   },
   {
@@ -716,7 +716,7 @@
     "description": "Populate renewal ticket title with client and contract context.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR6 — Automation and Ticket Creation"
+      "Requirements > Functional Requirements > FR6 \u2014 Automation and Ticket Creation"
     ]
   },
   {
@@ -724,7 +724,7 @@
     "description": "Populate renewal ticket description with due date and renewal settings context.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR6 — Automation and Ticket Creation"
+      "Requirements > Functional Requirements > FR6 \u2014 Automation and Ticket Creation"
     ]
   },
   {
@@ -732,7 +732,7 @@
     "description": "Populate renewal ticket routing fields from effective renewal ticket defaults.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR6 — Automation and Ticket Creation"
+      "Requirements > Functional Requirements > FR6 \u2014 Automation and Ticket Creation"
     ]
   },
   {
@@ -740,7 +740,7 @@
     "description": "Persist created ticket id on renewal work item after successful ticket creation.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR6 — Automation and Ticket Creation"
+      "Requirements > Functional Requirements > FR6 \u2014 Automation and Ticket Creation"
     ]
   },
   {
@@ -748,7 +748,7 @@
     "description": "Use idempotency key per tenant/client_contract_id/cycle key for ticket creation.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR6 — Automation and Ticket Creation"
+      "Requirements > Functional Requirements > FR6 \u2014 Automation and Ticket Creation"
     ]
   },
   {
@@ -756,7 +756,7 @@
     "description": "Skip duplicate ticket creation when idempotent renewal cycle already has linked ticket.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR6 — Automation and Ticket Creation"
+      "Requirements > Functional Requirements > FR6 \u2014 Automation and Ticket Creation"
     ]
   },
   {
@@ -764,7 +764,7 @@
     "description": "Record automation_error on work item when ticket creation fails.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR6 — Automation and Ticket Creation"
+      "Requirements > Functional Requirements > FR6 \u2014 Automation and Ticket Creation"
     ]
   },
   {
@@ -772,7 +772,7 @@
     "description": "Allow manual retry action to re-attempt ticket creation for failed work items.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR6 — Automation and Ticket Creation"
+      "Requirements > Functional Requirements > FR6 \u2014 Automation and Ticket Creation"
     ]
   },
   {
@@ -780,7 +780,7 @@
     "description": "Ensure due-date automation supports queue-only policy without creating tickets.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR6 — Automation and Ticket Creation"
+      "Requirements > Functional Requirements > FR6 \u2014 Automation and Ticket Creation"
     ]
   },
   {
@@ -788,7 +788,7 @@
     "description": "Publish/emit renewal-upcoming domain event payloads compatible with queue creation semantics.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR6 — Automation and Ticket Creation"
+      "Requirements > Functional Requirements > FR6 \u2014 Automation and Ticket Creation"
     ]
   },
   {
@@ -796,7 +796,7 @@
     "description": "Generate renewal queue entries for evergreen contracts based on annual review cycle.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR7 — Evergreen Annual Review Flow"
+      "Requirements > Functional Requirements > FR7 \u2014 Evergreen Annual Review Flow"
     ]
   },
   {
@@ -804,7 +804,7 @@
     "description": "Display evergreen contract type badge in queue rows.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR7 — Evergreen Annual Review Flow"
+      "Requirements > Functional Requirements > FR7 \u2014 Evergreen Annual Review Flow"
     ]
   },
   {
@@ -812,7 +812,7 @@
     "description": "Show evergreen cycle anchor date in queue row details.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR7 — Evergreen Annual Review Flow"
+      "Requirements > Functional Requirements > FR7 \u2014 Evergreen Annual Review Flow"
     ]
   },
   {
@@ -820,7 +820,7 @@
     "description": "Support mark-renewing action for evergreen queue entries.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR7 — Evergreen Annual Review Flow"
+      "Requirements > Functional Requirements > FR7 \u2014 Evergreen Annual Review Flow"
     ]
   },
   {
@@ -828,7 +828,7 @@
     "description": "Support mark-non-renewing action for evergreen queue entries.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR7 — Evergreen Annual Review Flow"
+      "Requirements > Functional Requirements > FR7 \u2014 Evergreen Annual Review Flow"
     ]
   },
   {
@@ -836,7 +836,7 @@
     "description": "Support create-renewal-draft action for evergreen queue entries.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR7 — Evergreen Annual Review Flow"
+      "Requirements > Functional Requirements > FR7 \u2014 Evergreen Annual Review Flow"
     ]
   },
   {
@@ -844,7 +844,7 @@
     "description": "Roll evergreen cycle forward to next annual window after completion.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR7 — Evergreen Annual Review Flow"
+      "Requirements > Functional Requirements > FR7 \u2014 Evergreen Annual Review Flow"
     ]
   },
   {
@@ -852,7 +852,7 @@
     "description": "Prevent duplicate evergreen cycle entries for the same annual period.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR7 — Evergreen Annual Review Flow"
+      "Requirements > Functional Requirements > FR7 \u2014 Evergreen Annual Review Flow"
     ]
   },
   {
@@ -860,7 +860,7 @@
     "description": "Respect evergreen-specific notice period overrides on decision date computation.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR7 — Evergreen Annual Review Flow"
+      "Requirements > Functional Requirements > FR7 \u2014 Evergreen Annual Review Flow"
     ]
   },
   {
@@ -868,7 +868,7 @@
     "description": "Include evergreen entries in upcoming renewals widget counts.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR7 — Evergreen Annual Review Flow"
+      "Requirements > Functional Requirements > FR7 \u2014 Evergreen Annual Review Flow"
     ]
   },
   {
@@ -876,7 +876,7 @@
     "description": "Extend contract expiration report action to expose decision_due_date alongside end_date where available.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR8 — Reporting and Existing Surface Alignment"
+      "Requirements > Functional Requirements > FR8 \u2014 Reporting and Existing Surface Alignment"
     ]
   },
   {
@@ -884,7 +884,7 @@
     "description": "Include renewal mode in expiration report row payload.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR8 — Reporting and Existing Surface Alignment"
+      "Requirements > Functional Requirements > FR8 \u2014 Reporting and Existing Surface Alignment"
     ]
   },
   {
@@ -892,7 +892,7 @@
     "description": "Include queue status in expiration report row payload when work item exists.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR8 — Reporting and Existing Surface Alignment"
+      "Requirements > Functional Requirements > FR8 \u2014 Reporting and Existing Surface Alignment"
     ]
   },
   {
@@ -900,7 +900,7 @@
     "description": "Keep existing expiration report rows for fixed-term contracts without renewal config.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR8 — Reporting and Existing Surface Alignment"
+      "Requirements > Functional Requirements > FR8 \u2014 Reporting and Existing Surface Alignment"
     ]
   },
   {
@@ -908,7 +908,7 @@
     "description": "Keep existing expiration report sort compatibility for existing report consumers.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR8 — Reporting and Existing Surface Alignment"
+      "Requirements > Functional Requirements > FR8 \u2014 Reporting and Existing Surface Alignment"
     ]
   },
   {
@@ -916,7 +916,7 @@
     "description": "Expose at-risk count based on decision_due_date windows for dashboard usage.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR8 — Reporting and Existing Surface Alignment"
+      "Requirements > Functional Requirements > FR8 \u2014 Reporting and Existing Surface Alignment"
     ]
   },
   {
@@ -924,7 +924,7 @@
     "description": "Align contract reports tab expiration copy to reference renewal decisions as well as expiration.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR8 — Reporting and Existing Surface Alignment"
+      "Requirements > Functional Requirements > FR8 \u2014 Reporting and Existing Surface Alignment"
     ]
   },
   {
@@ -932,7 +932,7 @@
     "description": "Ensure legacy auto_renew display derives from new renewal mode values.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR8 — Reporting and Existing Surface Alignment"
+      "Requirements > Functional Requirements > FR8 \u2014 Reporting and Existing Surface Alignment"
     ]
   },
   {
@@ -940,7 +940,7 @@
     "description": "Register renewal scheduled processing job in pg-boss on-prem scheduling path.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR9 — Runtime Compatibility (On-prem PG Boss vs Hosted/EE Temporal)"
+      "Requirements > Functional Requirements > FR9 \u2014 Runtime Compatibility (On-prem PG Boss vs Hosted/EE Temporal)"
     ]
   },
   {
@@ -948,7 +948,7 @@
     "description": "Register renewal scheduled processing workflow in Temporal hosted/EE scheduling path.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR9 — Runtime Compatibility (On-prem PG Boss vs Hosted/EE Temporal)"
+      "Requirements > Functional Requirements > FR9 \u2014 Runtime Compatibility (On-prem PG Boss vs Hosted/EE Temporal)"
     ]
   },
   {
@@ -956,7 +956,7 @@
     "description": "Use shared renewal processing core logic callable from both pg-boss and Temporal adapters.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR9 — Runtime Compatibility (On-prem PG Boss vs Hosted/EE Temporal)"
+      "Requirements > Functional Requirements > FR9 \u2014 Runtime Compatibility (On-prem PG Boss vs Hosted/EE Temporal)"
     ]
   },
   {
@@ -964,7 +964,7 @@
     "description": "Keep effective behavior parity for queue creation between pg-boss and Temporal runners.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR9 — Runtime Compatibility (On-prem PG Boss vs Hosted/EE Temporal)"
+      "Requirements > Functional Requirements > FR9 \u2014 Runtime Compatibility (On-prem PG Boss vs Hosted/EE Temporal)"
     ]
   },
   {
@@ -972,7 +972,7 @@
     "description": "Keep effective behavior parity for ticket creation idempotency between pg-boss and Temporal runners.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR9 — Runtime Compatibility (On-prem PG Boss vs Hosted/EE Temporal)"
+      "Requirements > Functional Requirements > FR9 \u2014 Runtime Compatibility (On-prem PG Boss vs Hosted/EE Temporal)"
     ]
   },
   {
@@ -980,15 +980,15 @@
     "description": "Honor existing JobRunnerFactory runtime selection without forcing edition-specific code forks in business logic.",
     "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR9 — Runtime Compatibility (On-prem PG Boss vs Hosted/EE Temporal)"
+      "Requirements > Functional Requirements > FR9 \u2014 Runtime Compatibility (On-prem PG Boss vs Hosted/EE Temporal)"
     ]
   },
   {
     "id": "F124",
     "description": "Fallback gracefully to supported runner path when temporal bootstrap is unavailable.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR9 — Runtime Compatibility (On-prem PG Boss vs Hosted/EE Temporal)"
+      "Requirements > Functional Requirements > FR9 \u2014 Runtime Compatibility (On-prem PG Boss vs Hosted/EE Temporal)"
     ]
   },
   {
@@ -996,7 +996,7 @@
     "description": "Preserve tenant-scoped execution semantics in both runtime paths.",
     "implemented": false,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR9 — Runtime Compatibility (On-prem PG Boss vs Hosted/EE Temporal)"
+      "Requirements > Functional Requirements > FR9 \u2014 Runtime Compatibility (On-prem PG Boss vs Hosted/EE Temporal)"
     ]
   },
   {
@@ -1004,7 +1004,7 @@
     "description": "Enforce billing read permission on renewals queue list endpoints.",
     "implemented": false,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR10 — Permissions, Security, and Auditability"
+      "Requirements > Functional Requirements > FR10 \u2014 Permissions, Security, and Auditability"
     ]
   },
   {
@@ -1012,7 +1012,7 @@
     "description": "Enforce billing update permission on queue mutation endpoints.",
     "implemented": false,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR10 — Permissions, Security, and Auditability"
+      "Requirements > Functional Requirements > FR10 \u2014 Permissions, Security, and Auditability"
     ]
   },
   {
@@ -1020,7 +1020,7 @@
     "description": "Enforce billing settings update permission on renewal defaults update endpoints.",
     "implemented": false,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR10 — Permissions, Security, and Auditability"
+      "Requirements > Functional Requirements > FR10 \u2014 Permissions, Security, and Auditability"
     ]
   },
   {
@@ -1028,7 +1028,7 @@
     "description": "Apply tenant filter to all renewal work-item reads by default.",
     "implemented": false,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR10 — Permissions, Security, and Auditability"
+      "Requirements > Functional Requirements > FR10 \u2014 Permissions, Security, and Auditability"
     ]
   },
   {
@@ -1036,7 +1036,7 @@
     "description": "Apply tenant filter to all renewal work-item writes by default.",
     "implemented": false,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR10 — Permissions, Security, and Auditability"
+      "Requirements > Functional Requirements > FR10 \u2014 Permissions, Security, and Auditability"
     ]
   },
   {
@@ -1044,7 +1044,7 @@
     "description": "Audit renewal state transitions with actor id and transition metadata.",
     "implemented": false,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR10 — Permissions, Security, and Auditability"
+      "Requirements > Functional Requirements > FR10 \u2014 Permissions, Security, and Auditability"
     ]
   },
   {
@@ -1052,7 +1052,7 @@
     "description": "Audit ticket automation linkage with actor type system and timestamp metadata.",
     "implemented": false,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR10 — Permissions, Security, and Auditability"
+      "Requirements > Functional Requirements > FR10 \u2014 Permissions, Security, and Auditability"
     ]
   },
   {
@@ -1060,7 +1060,7 @@
     "description": "Audit renewal draft creation linkage with actor id and timestamp metadata.",
     "implemented": false,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR10 — Permissions, Security, and Auditability"
+      "Requirements > Functional Requirements > FR10 \u2014 Permissions, Security, and Auditability"
     ]
   },
   {
@@ -1068,7 +1068,7 @@
     "description": "Reject cross-tenant identifiers during queue mutation validation.",
     "implemented": false,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR10 — Permissions, Security, and Auditability"
+      "Requirements > Functional Requirements > FR10 \u2014 Permissions, Security, and Auditability"
     ]
   },
   {
@@ -1076,7 +1076,7 @@
     "description": "Sanitize user-provided action notes before persistence and render.",
     "implemented": false,
     "prdRefs": [
-      "Requirements > Functional Requirements > FR10 — Permissions, Security, and Auditability"
+      "Requirements > Functional Requirements > FR10 \u2014 Permissions, Security, and Auditability"
     ]
   }
 ]
