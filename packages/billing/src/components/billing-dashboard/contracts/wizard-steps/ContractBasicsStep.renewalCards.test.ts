@@ -23,4 +23,12 @@ describe('ContractBasicsStep renewal card rendering', () => {
     expect(source).toContain("{ value: 'auto', label: 'Auto Renew' }");
     expect(source).toContain('renewal_mode: value as NonNullable<ContractWizardData');
   });
+
+  it('shows notice period input only for renewal-enabled modes', () => {
+    expect(source).toContain("const isRenewalEnabled = effectiveRenewalMode !== 'none';");
+    expect(source).toContain('{isRenewalEnabled && (');
+    expect(source).toContain('id="notice-period-fixed"');
+    expect(source).toContain('id="notice-period-evergreen"');
+    expect(source).toContain('notice_period_days: Number.isFinite(parsed)');
+  });
 });

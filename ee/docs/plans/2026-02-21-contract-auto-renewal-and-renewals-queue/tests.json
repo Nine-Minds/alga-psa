@@ -58,7 +58,7 @@
   {
     "id": "T008",
     "description": "Functional: Show notice period selector/input in ContractBasicsStep for renewal-enabled modes.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F008"
     ]
