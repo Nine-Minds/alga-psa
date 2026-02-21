@@ -682,7 +682,7 @@
   {
     "id": "T086",
     "description": "Functional: Respect tenant default due-date action policy during scheduled processing.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F086"
     ]
