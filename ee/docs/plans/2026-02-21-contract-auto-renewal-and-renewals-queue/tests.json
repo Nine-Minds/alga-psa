@@ -906,7 +906,7 @@
   {
     "id": "T114",
     "description": "Functional: Keep existing expiration report sort compatibility for existing report consumers.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F114"
     ]
