@@ -1890,7 +1890,7 @@
   {
     "id": "T237",
     "description": "UI behavior: Reject cross-tenant identifiers during queue mutation validation. persists after refresh/navigation",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F134"
     ]
