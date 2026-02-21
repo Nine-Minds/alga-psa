@@ -650,7 +650,7 @@
   {
     "id": "T082",
     "description": "Functional: Mark work item completed when renewed contract activation is confirmed.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F082"
     ]
