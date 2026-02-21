@@ -674,7 +674,7 @@
   {
     "id": "T085",
     "description": "Functional: Upsert renewal work items during scheduled processing for newly eligible cycles.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F085"
     ]
