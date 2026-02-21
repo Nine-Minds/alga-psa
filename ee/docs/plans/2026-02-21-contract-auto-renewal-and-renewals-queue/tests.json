@@ -1090,7 +1090,7 @@
   {
     "id": "T137",
     "description": "Cycle rollover: evergreen behavior remains correct across year boundary for 'Render Evergreen Review settings card in ContractBasicsStep when end date is absent.'",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F006"
     ]
