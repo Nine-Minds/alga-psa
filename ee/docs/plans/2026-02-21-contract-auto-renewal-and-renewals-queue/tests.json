@@ -858,7 +858,7 @@
   {
     "id": "T108",
     "description": "Functional: Respect evergreen-specific notice period overrides on decision date computation.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F108"
     ]
