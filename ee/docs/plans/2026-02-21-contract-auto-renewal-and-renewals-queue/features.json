@@ -674,7 +674,7 @@
   {
     "id": "F085",
     "description": "Upsert renewal work items during scheduled processing for newly eligible cycles.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > FR6 — Automation and Ticket Creation"
     ]

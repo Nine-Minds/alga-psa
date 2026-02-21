@@ -766,6 +766,17 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
   - Validation:
     - `cd server && npm run typecheck`
     - `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`
+- (2026-02-21) Completed `F085`.
+  - Extended renewal queue processor to upsert work-item state for newly eligible cycles:
+    - processor now loads active contract assignments, normalizes effective renewal state, and filters by computed `decision_due_date` within `today..horizon`
+    - upserts `decision_due_date`, `renewal_cycle_start`, `renewal_cycle_end`, and `renewal_cycle_key` when drift/new cycle is detected
+    - resets cycle-scoped linkage fields (`created_ticket_id`, `created_draft_contract_id`) when cycle key rolls
+    - normalizes unknown/invalid statuses (or cycle changes) back to `pending`
+  - Updated wiring coverage:
+    - `server/src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts`
+  - Validation:
+    - `cd server && npm run typecheck`
+    - `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`
 
 ## Open Questions
 - Should renewal ticket defaults be a brand-new billing settings card, or an extension of existing default ticket settings patterns?

@@ -26,8 +26,22 @@ describe('renewal queue scheduling wiring', () => {
     expect(renewalHandlerSource).toContain("throw new Error('Tenant ID is required for renewal queue processing job');");
     expect(renewalHandlerSource).toContain("schema?.hasColumn?.('client_contracts', 'decision_due_date') ?? false");
     expect(renewalHandlerSource).toContain("schema?.hasColumn?.('client_contracts', 'status') ?? false");
+    expect(renewalHandlerSource).toContain('normalizeClientContract');
     expect(renewalHandlerSource).toContain("'c.status': 'active',");
-    expect(renewalHandlerSource).toContain(".andWhere('cc.decision_due_date', '<=', horizonDate)");
+    expect(renewalHandlerSource).toContain('if (!decisionDueDate || decisionDueDate < today || decisionDueDate > horizonDate) {');
+  });
+
+  it('upserts eligible renewal-cycle work item state for newly due contracts', () => {
+    expect(renewalHandlerSource).toContain('const cycleChanged =');
+    expect(renewalHandlerSource).toContain('const updates: Record<string, unknown> = {};');
+    expect(renewalHandlerSource).toContain('updates.decision_due_date = decisionDueDate;');
+    expect(renewalHandlerSource).toContain("updates.status = 'pending';");
+    expect(renewalHandlerSource).toContain('updates.renewal_cycle_key = nextCycleKey;');
+    expect(renewalHandlerSource).toContain('updates.created_ticket_id = null;');
+    expect(renewalHandlerSource).toContain('updates.created_draft_contract_id = null;');
+    expect(renewalHandlerSource).toContain("await knex('client_contracts')");
+    expect(renewalHandlerSource).toContain('.update({');
+    expect(renewalHandlerSource).toContain('upsertedCount += 1;');
   });
 
   it('registers and schedules renewal queue processing in the jobs module', () => {
