@@ -52,6 +52,13 @@ export type RenewalSnoozeResult = RenewalQueueMutationResult & {
   snoozed_until: string;
 };
 
+export type RenewalAssignmentResult = {
+  client_contract_id: string;
+  status: RenewalWorkItemStatus;
+  assigned_to: string | null;
+  updated_at: string;
+};
+
 export const listRenewalQueueRows = withAuth(async (
   _user,
   { tenant },
@@ -470,6 +477,69 @@ export const snoozeRenewalQueueItem = withAuth(async (
       status: 'snoozed',
       updated_at: updatedAt,
       snoozed_until: normalizedSnoozedUntil,
+    };
+  });
+});
+
+export const assignRenewalQueueItemOwner = withAuth(async (
+  _user,
+  { tenant },
+  clientContractId: string,
+  assignedTo: string | null
+): Promise<RenewalAssignmentResult> => {
+  if (typeof clientContractId !== 'string' || clientContractId.trim().length === 0) {
+    throw new Error('Client contract id is required');
+  }
+  if (assignedTo !== null && typeof assignedTo !== 'string') {
+    throw new Error('Assigned owner must be a user id string or null');
+  }
+
+  const { knex } = await createTenantKnex();
+  const schema = knex.schema as any;
+  const [hasStatusColumn, hasAssignedToColumn] = await Promise.all([
+    schema?.hasColumn?.('client_contracts', 'status') ?? false,
+    schema?.hasColumn?.('client_contracts', 'assigned_to') ?? false,
+  ]);
+
+  if (!hasStatusColumn || !hasAssignedToColumn) {
+    throw new Error('Renewals queue assignment columns are not available');
+  }
+
+  const normalizedAssignedTo = typeof assignedTo === 'string' && assignedTo.trim().length > 0
+    ? assignedTo.trim()
+    : null;
+
+  return knex.transaction(async (trx) => {
+    const row = await trx('client_contracts')
+      .where({
+        tenant,
+        client_contract_id: clientContractId,
+        is_active: true,
+      })
+      .select('client_contract_id', 'status')
+      .first();
+
+    if (!row) {
+      throw new Error('Renewal work item not found');
+    }
+
+    const currentStatus = toRenewalWorkItemStatus((row as any).status);
+    const updatedAt = new Date().toISOString();
+    await trx('client_contracts')
+      .where({
+        tenant,
+        client_contract_id: clientContractId,
+      })
+      .update({
+        assigned_to: normalizedAssignedTo,
+        updated_at: updatedAt,
+      });
+
+    return {
+      client_contract_id: clientContractId,
+      status: currentStatus,
+      assigned_to: normalizedAssignedTo,
+      updated_at: updatedAt,
     };
   });
 });

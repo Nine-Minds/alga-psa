@@ -549,6 +549,20 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
   - Validation:
     - `npm -w @alga-psa/billing run typecheck`
     - `npm -w @alga-psa/billing exec vitest run tests/renewalsQueueActions.snooze.wiring.test.ts tests/renewalsQueueActions.markRenewing.wiring.test.ts tests/renewalsQueueActions.markNonRenewing.wiring.test.ts tests/renewalsQueueActions.createDraft.wiring.test.ts`
+- (2026-02-21) Completed `F069`.
+  - Added assign-owner mutation action:
+    - `assignRenewalQueueItemOwner(clientContractId, assignedTo)` in `packages/billing/src/actions/renewalsQueueActions.ts`
+  - Action behavior:
+    - validates required `clientContractId`
+    - allows `assignedTo` as user id string or `null` (unassign)
+    - verifies `status` + `assigned_to` columns exist
+    - updates `assigned_to` with tenant-scoped row filtering
+    - returns `RenewalAssignmentResult` with current status + updated timestamp
+  - Added wiring coverage:
+    - `packages/billing/tests/renewalsQueueActions.assignOwner.wiring.test.ts`
+  - Validation:
+    - `npm -w @alga-psa/billing run typecheck`
+    - `npm -w @alga-psa/billing exec vitest run tests/renewalsQueueActions.assignOwner.wiring.test.ts tests/renewalsQueueActions.snooze.wiring.test.ts tests/renewalsQueueActions.createDraft.wiring.test.ts`
 
 ## Open Questions
 - Should renewal ticket defaults be a brand-new billing settings card, or an extension of existing default ticket settings patterns?
