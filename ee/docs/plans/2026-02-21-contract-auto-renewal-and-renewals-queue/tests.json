@@ -1866,7 +1866,7 @@
   {
     "id": "T234",
     "description": "Idempotency: repeated execution of 'Audit ticket automation linkage with actor type system and timestamp metadata.' does not create duplicate tickets",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F132"
     ]
