@@ -242,7 +242,7 @@
   {
     "id": "F031",
     "description": "Enforce deterministic fallback precedence when override fields are partially missing.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > FR2 — Tenant Defaults and Contract-Level Overrides"
     ]

@@ -226,6 +226,11 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
   - Updated `buildSubmissionData()` in `ContractWizard.tsx` to resolve renewal mode + notice period from tenant defaults when `use_tenant_renewal_defaults` is enabled.
 - (2026-02-21) Completed `F030`.
   - Submission resolution now prefers explicit contract-level renewal values when `use_tenant_renewal_defaults` is disabled.
+- (2026-02-21) Completed `F031`.
+  - Implemented deterministic renewal fallback order in submission resolution:
+    - explicit contract values (when overrides enabled),
+    - tenant defaults,
+    - hard defaults (`manual`, `30`).
 
 ## Open Questions
 - Should renewal ticket defaults be a brand-new billing settings card, or an extension of existing default ticket settings patterns?
