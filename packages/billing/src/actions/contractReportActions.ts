@@ -49,6 +49,7 @@ export interface ContractReportSummary {
   totalMRR: number;
   totalYTD: number;
   activeContractCount: number;
+  atRiskDecisionCount: number;
 }
 
 /**
@@ -410,11 +411,32 @@ export const getContractReportSummary = withAuth(async (user, { tenant }): Promi
       .first() as { count: string } | undefined;
 
     const activeContractCount = Number(activeContracts?.count ?? 0);
+    const summaryTodayDateOnly = today.toISOString().slice(0, 10);
+    const inNinetyDays = new Date(today);
+    inNinetyDays.setUTCDate(inNinetyDays.getUTCDate() + 90);
+    const summaryNinetyDaysDateOnly = inNinetyDays.toISOString().slice(0, 10);
+
+    const atRiskDecisions = await knex('client_contracts as cc')
+      .join('contracts as c', function joinContracts() {
+        this.on('cc.contract_id', '=', 'c.contract_id').andOn('cc.tenant', '=', 'c.tenant');
+      })
+      .where({
+        'cc.tenant': tenant,
+        'cc.is_active': true,
+        'c.status': 'active',
+      })
+      .whereNotNull('cc.decision_due_date')
+      .andWhere('cc.decision_due_date', '>=', summaryTodayDateOnly)
+      .andWhere('cc.decision_due_date', '<=', summaryNinetyDaysDateOnly)
+      .countDistinct('cc.client_contract_id as count')
+      .first() as { count: string } | undefined;
+    const atRiskDecisionCount = Number(atRiskDecisions?.count ?? 0);
 
     return {
       totalMRR,
       totalYTD,
-      activeContractCount
+      activeContractCount,
+      atRiskDecisionCount
     };
   } catch (error) {
     console.error('Error fetching contract report summary:', error);
