@@ -109,6 +109,9 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
 - (2026-02-21) Completed `F005`.
   - Added a fixed-term renewal UI container to `packages/billing/src/components/billing-dashboard/contracts/wizard-steps/ContractBasicsStep.tsx`.
   - New `Renewal Settings` card renders only when `data.end_date` is present (`data-automation-id=\"renewal-settings-fixed-term-card\"`).
+- (2026-02-21) Completed `T005`.
+  - Added `packages/billing/src/components/billing-dashboard/contracts/wizard-steps/ContractBasicsStep.renewalCards.test.ts`.
+  - Test asserts fixed-term card conditional wiring on `data.end_date` and verifies the automation id/heading token.
 
 ## Open Questions
 - Should renewal ticket defaults be a brand-new billing settings card, or an extension of existing default ticket settings patterns?

@@ -34,7 +34,7 @@
   {
     "id": "T005",
     "description": "Functional: Render Renewal Settings card in ContractBasicsStep when end date is present.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F005"
     ]
