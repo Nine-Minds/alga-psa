@@ -234,7 +234,7 @@
   {
     "id": "T030",
     "description": "Functional: Apply explicit contract-level override values when override toggle is disabled.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F030"
     ]
