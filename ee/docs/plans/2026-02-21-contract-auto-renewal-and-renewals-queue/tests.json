@@ -1722,7 +1722,7 @@
   {
     "id": "T216",
     "description": "UI behavior: Keep existing expiration report sort compatibility for existing report consumers. persists after refresh/navigation",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F114"
     ]
