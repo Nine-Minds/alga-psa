@@ -690,7 +690,7 @@
   {
     "id": "T087",
     "description": "Functional: Respect contract-level override due-date action policy during scheduled processing.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F087"
     ]
