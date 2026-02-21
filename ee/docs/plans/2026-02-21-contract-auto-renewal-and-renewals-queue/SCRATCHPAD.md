@@ -913,6 +913,21 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
   - Validation:
     - `cd server && npm run typecheck`
     - `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`
+- (2026-02-21) Completed `F097`.
+  - Added manual retry queue action for failed renewal ticket automation:
+    - `retryRenewalQueueTicketCreation(clientContractId)` in `packages/billing/src/actions/renewalsQueueActions.ts`
+  - Retry action behavior:
+    - validates work item + due-date eligibility
+    - resolves effective due-date policy and routing defaults with tenant/contract precedence
+    - reuses cycle idempotency key to avoid duplicates
+    - links existing idempotent ticket when present
+    - otherwise re-attempts ticket creation and updates `created_ticket_id` / `automation_error`
+  - Exposed `automation_error` in renewal queue row payload model.
+  - Updated coverage:
+    - `packages/billing/tests/renewalsQueueActions.retryTicket.wiring.test.ts`
+  - Validation:
+    - `npm -w @alga-psa/billing run typecheck`
+    - `npm -w @alga-psa/billing exec vitest run tests/renewalsQueueActions.retryTicket.wiring.test.ts tests/renewalsQueueActions.wiring.test.ts`
 
 ## Open Questions
 - Should renewal ticket defaults be a brand-new billing settings card, or an extension of existing default ticket settings patterns?

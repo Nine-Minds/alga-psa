@@ -770,7 +770,7 @@
   {
     "id": "F097",
     "description": "Allow manual retry action to re-attempt ticket creation for failed work items.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > FR6 — Automation and Ticket Creation"
     ]
