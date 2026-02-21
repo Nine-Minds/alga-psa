@@ -1386,7 +1386,7 @@
   {
     "id": "T174",
     "description": "UI behavior: Persist action reason/note text on queue mutation when provided. persists after refresh/navigation",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F073"
     ]
