@@ -739,6 +739,18 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
   - Validation:
     - `npm -w @alga-psa/billing run typecheck`
     - `npm -w @alga-psa/billing exec vitest run tests/renewalsQueueActions.completeOnActivation.wiring.test.ts tests/renewalsQueueActions.markRenewing.wiring.test.ts tests/renewalsQueueActions.createDraft.wiring.test.ts`
+- (2026-02-21) Completed `F083`.
+  - Added non-renewal finalization completion action:
+    - `completeRenewalQueueItemForNonRenewal(clientContractId, note?)`
+    - in `packages/billing/src/actions/renewalsQueueActions.ts`
+  - Completion rules:
+    - source work item must be `non_renewing`
+    - on success, work item transitions to `completed` with audit metadata
+  - Added wiring coverage:
+    - `packages/billing/tests/renewalsQueueActions.completeNonRenewal.wiring.test.ts`
+  - Validation:
+    - `npm -w @alga-psa/billing run typecheck`
+    - `npm -w @alga-psa/billing exec vitest run tests/renewalsQueueActions.completeNonRenewal.wiring.test.ts tests/renewalsQueueActions.completeOnActivation.wiring.test.ts`
 
 ## Open Questions
 - Should renewal ticket defaults be a brand-new billing settings card, or an extension of existing default ticket settings patterns?

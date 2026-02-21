@@ -839,3 +839,77 @@ export const completeRenewalQueueItemForActivation = withAuth(async (
     };
   });
 });
+
+export const completeRenewalQueueItemForNonRenewal = withAuth(async (
+  user,
+  { tenant },
+  clientContractId: string,
+  note?: string
+): Promise<RenewalQueueMutationResult> => {
+  if (typeof clientContractId !== 'string' || clientContractId.trim().length === 0) {
+    throw new Error('Client contract id is required');
+  }
+
+  const { knex } = await createTenantKnex();
+  const schema = knex.schema as any;
+  const [hasStatusColumn, hasLastActionByColumn, hasLastActionAtColumn, hasLastActionNoteColumn] = await Promise.all([
+    schema?.hasColumn?.('client_contracts', 'status') ?? false,
+    schema?.hasColumn?.('client_contracts', 'last_action_by') ?? false,
+    schema?.hasColumn?.('client_contracts', 'last_action_at') ?? false,
+    schema?.hasColumn?.('client_contracts', 'last_action_note') ?? false,
+  ]);
+  const actorUserId = resolveActorUserId(user);
+  const normalizedNote = normalizeActionNote(note);
+
+  if (!hasStatusColumn) {
+    throw new Error('Renewals queue status column is not available');
+  }
+
+  return knex.transaction(async (trx) => {
+    const sourceRow = await trx('client_contracts')
+      .where({
+        tenant,
+        client_contract_id: clientContractId,
+        is_active: true,
+      })
+      .select('client_contract_id', 'status')
+      .first();
+
+    if (!sourceRow) {
+      throw new Error('Renewal work item not found');
+    }
+
+    const previousStatus = toRenewalWorkItemStatus((sourceRow as any).status);
+    if (previousStatus !== 'non_renewing') {
+      throw new Error(`Only non_renewing work items can be completed after non-renewal finalization (current: ${previousStatus})`);
+    }
+
+    const updatedAt = new Date().toISOString();
+    await trx('client_contracts')
+      .where({
+        tenant,
+        client_contract_id: clientContractId,
+      })
+      .update(
+        withActionTimestamp(
+          withActionNote(
+            withActionActor({
+              status: 'completed',
+              updated_at: updatedAt,
+            }, hasLastActionByColumn, actorUserId),
+            hasLastActionNoteColumn,
+            normalizedNote
+          ),
+          hasLastActionAtColumn,
+          updatedAt
+        )
+      );
+
+    return {
+      client_contract_id: clientContractId,
+      previous_status: previousStatus,
+      status: 'completed',
+      updated_at: updatedAt,
+    };
+  });
+});

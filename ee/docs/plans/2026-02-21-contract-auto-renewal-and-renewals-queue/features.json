@@ -658,7 +658,7 @@
   {
     "id": "F083",
     "description": "Mark work item completed when non-renewal finalization is confirmed.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > FR5 — Queue Actions and Renewal Workflow"
     ]
