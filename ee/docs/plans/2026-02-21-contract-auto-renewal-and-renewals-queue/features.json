@@ -514,7 +514,7 @@
   {
     "id": "F065",
     "description": "Implement mark-renewing action that transitions pending entries to renewing.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > FR5 — Queue Actions and Renewal Workflow"
     ]

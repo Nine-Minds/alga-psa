@@ -16,6 +16,8 @@ const RENEWAL_WORK_ITEM_STATUSES: RenewalWorkItemStatus[] = [
 
 const isRenewalWorkItemStatus = (value: unknown): value is RenewalWorkItemStatus =>
   typeof value === 'string' && RENEWAL_WORK_ITEM_STATUSES.includes(value as RenewalWorkItemStatus);
+const toRenewalWorkItemStatus = (value: unknown): RenewalWorkItemStatus =>
+  isRenewalWorkItemStatus(value) ? value : 'pending';
 
 export type RenewalQueueRow = {
   client_contract_id: string;
@@ -30,6 +32,13 @@ export type RenewalQueueRow = {
   decision_due_date?: string;
   days_until_due?: number;
   renewal_cycle_key?: string;
+};
+
+export type RenewalQueueMutationResult = {
+  client_contract_id: string;
+  previous_status: RenewalWorkItemStatus;
+  status: RenewalWorkItemStatus;
+  updated_at: string;
 };
 
 export const listRenewalQueueRows = withAuth(async (
@@ -97,7 +106,7 @@ export const listRenewalQueueRows = withAuth(async (
       client_id: row.client_id,
       client_name: (row as any).client_name ?? null,
       assigned_to: (row as any).assigned_to ?? null,
-      status: isRenewalWorkItemStatus((row as any).status) ? (row as any).status : 'pending',
+      status: toRenewalWorkItemStatus((row as any).status),
       contract_type: row.end_date ? ('fixed-term' as const) : ('evergreen' as const),
       effective_renewal_mode: row.effective_renewal_mode,
       decision_due_date: row.decision_due_date ?? undefined,
@@ -105,4 +114,60 @@ export const listRenewalQueueRows = withAuth(async (
       renewal_cycle_key: row.renewal_cycle_key,
     }))
     .sort((a, b) => (a.decision_due_date ?? '').localeCompare(b.decision_due_date ?? ''));
+});
+
+export const markRenewalQueueItemRenewing = withAuth(async (
+  _user,
+  { tenant },
+  clientContractId: string
+): Promise<RenewalQueueMutationResult> => {
+  if (typeof clientContractId !== 'string' || clientContractId.trim().length === 0) {
+    throw new Error('Client contract id is required');
+  }
+
+  const { knex } = await createTenantKnex();
+  const schema = knex.schema as any;
+  const hasStatusColumn = await (schema?.hasColumn?.('client_contracts', 'status') ?? false);
+
+  if (!hasStatusColumn) {
+    throw new Error('Renewals queue status column is not available');
+  }
+
+  return knex.transaction(async (trx) => {
+    const row = await trx('client_contracts')
+      .where({
+        tenant,
+        client_contract_id: clientContractId,
+        is_active: true,
+      })
+      .select('client_contract_id', 'status')
+      .first();
+
+    if (!row) {
+      throw new Error('Renewal work item not found');
+    }
+
+    const previousStatus = toRenewalWorkItemStatus((row as any).status);
+    if (previousStatus !== 'pending') {
+      throw new Error(`Only pending renewal work items can transition to renewing (current: ${previousStatus})`);
+    }
+
+    const updatedAt = new Date().toISOString();
+    await trx('client_contracts')
+      .where({
+        tenant,
+        client_contract_id: clientContractId,
+      })
+      .update({
+        status: 'renewing',
+        updated_at: updatedAt,
+      });
+
+    return {
+      client_contract_id: clientContractId,
+      previous_status: previousStatus,
+      status: 'renewing',
+      updated_at: updatedAt,
+    };
+  });
 });
