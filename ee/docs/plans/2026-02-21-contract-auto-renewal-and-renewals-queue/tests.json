@@ -1948,7 +1948,7 @@
   {
     "id": "T243",
     "description": "E2E defaults and overrides: tenant default create-ticket policy applies, then per-contract override to queue-only suppresses ticket creation.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F021",
       "F030",
