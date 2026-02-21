@@ -1954,5 +1954,110 @@
       "F030",
       "F098"
     ]
+  },
+  {
+    "id": "T244",
+    "description": "Integration: latest migrations create required renewal queue status/audit columns on client_contracts.",
+    "implemented": true,
+    "featureIds": [
+      "F136"
+    ]
+  },
+  {
+    "id": "T245",
+    "description": "Integration: latest migrations create required renewal-cycle columns on client_contracts.",
+    "implemented": false,
+    "featureIds": [
+      "F137"
+    ]
+  },
+  {
+    "id": "T246",
+    "description": "Integration: latest migrations create required renewal automation/policy columns on client_contracts.",
+    "implemented": false,
+    "featureIds": [
+      "F138"
+    ]
+  },
+  {
+    "id": "T247",
+    "description": "Integration: latest migrations create required renewal default/policy columns on default_billing_settings.",
+    "implemented": false,
+    "featureIds": [
+      "F140"
+    ]
+  },
+  {
+    "id": "T248",
+    "description": "Integration: migration backfill initializes deterministic renewal state for existing active client_contract rows.",
+    "implemented": false,
+    "featureIds": [
+      "F141"
+    ]
+  },
+  {
+    "id": "T249",
+    "description": "Integration: listRenewalQueueRows executes successfully against migrated schema and no longer throws missing-column SQL errors.",
+    "implemented": false,
+    "featureIds": [
+      "F136",
+      "F137",
+      "F139",
+      "F143"
+    ]
+  },
+  {
+    "id": "T250",
+    "description": "Integration: snoozeRenewalQueueItem updates status/snoozed_until and persists last_action audit fields for migrated rows.",
+    "implemented": false,
+    "featureIds": [
+      "F136",
+      "F139"
+    ]
+  },
+  {
+    "id": "T251",
+    "description": "Integration: markRenewalQueueItemRenewing transitions pending->renewing and persists actor/timestamp metadata.",
+    "implemented": false,
+    "featureIds": [
+      "F136"
+    ]
+  },
+  {
+    "id": "T252",
+    "description": "Integration: processRenewalQueueHandler computes and persists decision_due_date/cycle fields for eligible contracts.",
+    "implemented": false,
+    "featureIds": [
+      "F137",
+      "F139",
+      "F141"
+    ]
+  },
+  {
+    "id": "T253",
+    "description": "Integration: processRenewalQueueHandler creates/links at most one renewal ticket per tenant+client_contract+cycle key when policy=create_ticket.",
+    "implemented": false,
+    "featureIds": [
+      "F138",
+      "F140",
+      "F142"
+    ]
+  },
+  {
+    "id": "T254",
+    "description": "Integration (guard case): renewal schema readiness guard rejects access with actionable error when required columns are intentionally absent.",
+    "implemented": false,
+    "featureIds": [
+      "F143"
+    ]
+  },
+  {
+    "id": "T255",
+    "description": "Integration (happy path): renewal schema readiness guard passes after migrations and renewals queue endpoints remain operational.",
+    "implemented": false,
+    "featureIds": [
+      "F143",
+      "F144"
+    ]
   }
 ]

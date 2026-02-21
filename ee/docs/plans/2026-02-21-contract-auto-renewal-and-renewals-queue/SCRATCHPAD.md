@@ -1861,3 +1861,9 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
     - `cd server && npm run typecheck`
     - `npm -w @alga-psa/billing exec vitest run tests/renewalsQueueActions.wiring.test.ts --coverage=false`
     - `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`
+- (2026-02-21) Completed `T244`.
+  - Added migration coverage for renewal queue status/audit columns on `client_contracts` in:
+    - `server/src/test/unit/migrations/contractRenewalMigrations.test.ts`
+  - Assertions cover required status/audit columns and status domain constraint wiring from migration `202602211100_add_contract_renewal_queue_status_audit_columns.cjs`.
+  - Validation:
+    - `cd server && npx vitest run src/test/unit/migrations/contractRenewalMigrations.test.ts --coverage=false`
