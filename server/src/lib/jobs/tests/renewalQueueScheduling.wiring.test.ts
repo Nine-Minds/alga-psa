@@ -25,6 +25,10 @@ const temporalRunnerSource = readFileSync(
   new URL('../../../../../ee/server/src/lib/jobs/runners/TemporalJobRunner.ts', import.meta.url),
   'utf8'
 );
+const jobRunnerFactorySource = readFileSync(
+  new URL('../JobRunnerFactory.ts', import.meta.url),
+  'utf8'
+);
 
 describe('renewal queue scheduling wiring', () => {
   it('adds a scheduled renewal queue processor handler that scans active contracts in a due window', () => {
@@ -247,5 +251,14 @@ describe('renewal queue scheduling wiring', () => {
     expect(renewalHandlerSource).toContain('duplicateTicketSkipCount += 1;');
     expect(registerHandlersSource).toContain('await processRenewalQueueHandler(data);');
     expect(jobsIndexSource).toContain('await processRenewalQueueHandler(job.data);');
+  });
+
+  it('honors JobRunnerFactory runtime selection without adding edition-specific forks to renewal business logic', () => {
+    expect(jobRunnerFactorySource).toContain('private determineRunnerType(');
+    expect(jobRunnerFactorySource).toContain('const envType = process.env.JOB_RUNNER_TYPE?.toLowerCase();');
+    expect(jobRunnerFactorySource).toContain("if (envType === 'temporal' || envType === 'pgboss') {");
+    expect(jobRunnerFactorySource).toContain('if (runnerType === \'temporal\' && isEnterprise) {');
+    expect(renewalHandlerSource).not.toContain('process.env.EDITION');
+    expect(renewalHandlerSource).not.toContain('JOB_RUNNER_TYPE');
   });
 });

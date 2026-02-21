@@ -1187,6 +1187,15 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
   - Validation:
     - `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`
     - `cd server && npm run typecheck`
+- (2026-02-21) Completed `F123`.
+  - Added wiring coverage confirming runtime selection stays in `JobRunnerFactory` and renewal business logic remains runner/edition agnostic:
+    - runner type resolution via config/env (`JOB_RUNNER_TYPE`)
+    - renewal processor contains no edition/runtime branching
+  - Updated coverage:
+    - `server/src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts`
+  - Validation:
+    - `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`
+    - `cd server && npm run typecheck`
 
 ## Open Questions
 - Should renewal ticket defaults be a brand-new billing settings card, or an extension of existing default ticket settings patterns?

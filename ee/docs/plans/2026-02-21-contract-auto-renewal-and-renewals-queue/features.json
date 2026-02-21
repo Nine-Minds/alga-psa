@@ -978,7 +978,7 @@
   {
     "id": "F123",
     "description": "Honor existing JobRunnerFactory runtime selection without forcing edition-specific code forks in business logic.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > FR9 — Runtime Compatibility (On-prem PG Boss vs Hosted/EE Temporal)"
     ]
