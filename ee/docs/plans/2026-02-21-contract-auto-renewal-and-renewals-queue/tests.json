@@ -1658,7 +1658,7 @@
   {
     "id": "T208",
     "description": "UI behavior: Support create-renewal-draft action for evergreen queue entries. persists after refresh/navigation",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F105"
     ]
