@@ -56,6 +56,18 @@ describe('renewal queue scheduling wiring', () => {
     expect(renewalHandlerSource).toContain('upsertedCount += 1;');
   });
 
+  it('T252: computes and persists decision_due_date plus renewal cycle boundaries for eligible contracts', () => {
+    expect(renewalHandlerSource).toContain('const decisionDueDate = normalizeOptionalDateOnly(normalized.decision_due_date);');
+    expect(renewalHandlerSource).toContain('const nextCycleStart = normalizeOptionalDateOnly(normalized.renewal_cycle_start);');
+    expect(renewalHandlerSource).toContain('const nextCycleEnd = normalizeOptionalDateOnly(normalized.renewal_cycle_end);');
+    expect(renewalHandlerSource).toContain('updates.decision_due_date = decisionDueDate;');
+    expect(renewalHandlerSource).toContain('updates.renewal_cycle_start = nextCycleStart;');
+    expect(renewalHandlerSource).toContain('updates.renewal_cycle_end = nextCycleEnd;');
+    expect(renewalHandlerSource).toContain('updates.renewal_cycle_key = nextCycleKey;');
+    expect(renewalHandlerSource).toContain("await knex('client_contracts')");
+    expect(renewalHandlerSource).toContain('client_contract_id: (row as any).client_contract_id,');
+  });
+
   it('respects tenant default due-date action policy during scheduled processing', () => {
     expect(renewalHandlerSource).toContain('const DEFAULT_RENEWAL_DUE_DATE_ACTION_POLICY = \'create_ticket\' as const;');
     expect(renewalHandlerSource).toContain('const resolveRenewalDueDateActionPolicy = (value: unknown): \'queue_only\' | \'create_ticket\' => (');

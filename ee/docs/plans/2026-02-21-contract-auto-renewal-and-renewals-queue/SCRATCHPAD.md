@@ -1911,3 +1911,9 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
   - Assertions verify pending-only transition to `renewing` plus actor/timestamp audit persistence in migrated-schema path.
   - Validation:
     - `npm -w @alga-psa/billing exec vitest run tests/renewalsQueueActions.schemaReadiness.integration.test.ts --coverage=false`
+- (2026-02-21) Completed `T252`.
+  - Extended renewal job integration wiring coverage in:
+    - `server/src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts`
+  - Added assertions that `processRenewalQueueHandler` computes/persists `decision_due_date`, `renewal_cycle_start`, `renewal_cycle_end`, and `renewal_cycle_key` for eligible rows.
+  - Validation:
+    - `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`

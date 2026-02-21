@@ -2026,7 +2026,7 @@
   {
     "id": "T252",
     "description": "Integration: processRenewalQueueHandler computes and persists decision_due_date/cycle fields for eligible contracts.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F137",
       "F139",
