@@ -1546,7 +1546,7 @@
   {
     "id": "T194",
     "description": "Idempotency: repeated execution of 'Allow manual retry action to re-attempt ticket creation for failed work items.' does not create duplicate tickets",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F097"
     ]
