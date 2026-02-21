@@ -322,7 +322,7 @@
   {
     "id": "F041",
     "description": "Skip decision_due_date generation for terminated/expired contract assignments.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > FR3 — Renewal Decision Date Engine"
     ]

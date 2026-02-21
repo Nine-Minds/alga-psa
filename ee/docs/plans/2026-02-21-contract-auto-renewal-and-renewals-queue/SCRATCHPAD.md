@@ -310,6 +310,13 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
   - Added deterministic coverage:
     - `recomputes evergreen decision_due_date when anniversary anchor basis changes`
     - in `packages/billing/tests/clientContractEffectiveRenewalSettings.test.ts`
+- (2026-02-21) Completed `F041`.
+  - Added lifecycle suppression in due-date normalization:
+    - no `decision_due_date` generation for inactive, terminated, or expired assignment/contract lifecycle state.
+  - Included `contract_status` from joined contract reads in shared/clients assignment APIs to enforce lifecycle gating.
+  - Added regression test:
+    - `skips decision_due_date generation for inactive/terminated assignments`
+    - in `packages/billing/tests/clientContractEffectiveRenewalSettings.test.ts`
 
 ## Open Questions
 - Should renewal ticket defaults be a brand-new billing settings card, or an extension of existing default ticket settings patterns?

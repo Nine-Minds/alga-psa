@@ -186,6 +186,39 @@ describe('client contract effective renewal settings normalization', () => {
     expect(autoMode.decision_due_date).toBe('2026-12-01');
   });
 
+  it('skips decision_due_date generation for inactive/terminated assignments', () => {
+    const inactiveAssignment = normalizeClientContract({
+      contract_id: 'contract-4f',
+      client_contract_id: 'cc-4f',
+      client_id: 'client-4f',
+      tenant: 'tenant-1',
+      start_date: '2026-01-01',
+      end_date: '2026-12-31',
+      is_active: false,
+      use_tenant_renewal_defaults: false,
+      renewal_mode: 'manual',
+      notice_period_days: 30,
+    });
+    const terminatedContract = normalizeClientContract({
+      contract_id: 'contract-4g',
+      client_contract_id: 'cc-4g',
+      client_id: 'client-4g',
+      tenant: 'tenant-1',
+      start_date: '2026-01-01',
+      end_date: '2026-12-31',
+      is_active: true,
+      contract_status: 'terminated',
+      use_tenant_renewal_defaults: false,
+      renewal_mode: 'manual',
+      notice_period_days: 30,
+    });
+
+    expect(inactiveAssignment.decision_due_date).toBeUndefined();
+    expect(inactiveAssignment.evergreen_review_anchor_date).toBeUndefined();
+    expect(terminatedContract.decision_due_date).toBeUndefined();
+    expect(terminatedContract.evergreen_review_anchor_date).toBeUndefined();
+  });
+
   it('computes next evergreen review anchor date using contract anniversary rules', () => {
     expect(
       computeNextEvergreenReviewAnchorDate({

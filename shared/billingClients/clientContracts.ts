@@ -177,12 +177,16 @@ export const normalizeClientContract = (row: any): IClientContract => {
   const normalizedStartDate = normalizeDateOnly(normalized.start_date);
   const effectiveNoticePeriodDays = normalizeNonNegativeInteger(normalized.effective_notice_period_days);
   const effectiveRenewalMode = normalizeRenewalMode(normalized.effective_renewal_mode);
+  const contractStatus = typeof normalized.contract_status === 'string' ? normalized.contract_status : undefined;
+  const isInactiveByStatus = contractStatus === 'terminated' || contractStatus === 'expired';
+  const isInactiveAssignment = normalized.is_active !== true;
+  const shouldSkipForLifecycleState = isInactiveAssignment || isInactiveByStatus;
   normalized.evergreen_review_anchor_date =
-    !normalizedEndDate && normalizedStartDate && normalized.is_active === true
+    !shouldSkipForLifecycleState && !normalizedEndDate && normalizedStartDate
       ? computeNextEvergreenReviewAnchorDate({ startDate: normalizedStartDate })
       : undefined;
   const shouldSkipDecisionDueDate =
-    effectiveRenewalMode === 'none' && !normalized.evergreen_review_anchor_date;
+    shouldSkipForLifecycleState || (effectiveRenewalMode === 'none' && !normalized.evergreen_review_anchor_date);
   normalized.decision_due_date =
     shouldSkipDecisionDueDate
       ? undefined
@@ -218,6 +222,7 @@ export async function getClientContracts(
   const rows = await withRenewalDefaultsJoin(baseQuery, renewalDefaults.joinDefaultSettings).select([
     'cc.*',
     'c.billing_frequency as contract_billing_frequency',
+    'c.status as contract_status',
     ...renewalDefaults.defaultSelections,
   ]);
 
@@ -247,6 +252,7 @@ export async function getActiveClientContractsByClientIds(
   const rows = await withRenewalDefaultsJoin(baseQuery, renewalDefaults.joinDefaultSettings).select([
     'cc.*',
     'c.billing_frequency as contract_billing_frequency',
+    'c.status as contract_status',
     ...renewalDefaults.defaultSelections,
   ]);
 
@@ -270,6 +276,7 @@ export async function getClientContractById(
     .select([
       'cc.*',
       'c.billing_frequency as contract_billing_frequency',
+      'c.status as contract_status',
       ...renewalDefaults.defaultSelections,
     ])
     .first();
@@ -296,6 +303,7 @@ export async function getDetailedClientContract(
       'c.contract_name',
       'c.contract_description',
       'c.billing_frequency as contract_billing_frequency',
+      'c.status as contract_status',
       ...renewalDefaults.defaultSelections,
     ]
   )
