@@ -1514,7 +1514,7 @@
   {
     "id": "T190",
     "description": "Idempotency: repeated execution of 'Persist created ticket id on renewal work item after successful ticket creation.' does not create duplicate tickets",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F093"
     ]
