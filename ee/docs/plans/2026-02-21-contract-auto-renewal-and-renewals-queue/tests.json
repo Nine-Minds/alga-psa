@@ -1682,7 +1682,7 @@
   {
     "id": "T211",
     "description": "Cycle rollover: evergreen behavior remains correct across year boundary for 'Roll evergreen cycle forward to next annual window after completion.'",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F106"
     ]
