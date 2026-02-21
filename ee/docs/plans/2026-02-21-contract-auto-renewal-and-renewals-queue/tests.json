@@ -1506,7 +1506,7 @@
   {
     "id": "T189",
     "description": "Idempotency: repeated execution of 'Populate renewal ticket routing fields from effective renewal ticket defaults.' does not create duplicate tickets",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F092"
     ]
