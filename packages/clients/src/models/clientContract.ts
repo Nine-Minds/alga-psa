@@ -78,6 +78,23 @@ const computeNextEvergreenReviewAnchorDate = (params: {
   return nextAnchor.toISOString().slice(0, 10);
 };
 
+const computeEvergreenDecisionDueDate = (params: {
+  startDate: string;
+  noticePeriodDays: number;
+  now?: string | Date;
+}): string | undefined => {
+  const anchorDate = computeNextEvergreenReviewAnchorDate({
+    startDate: params.startDate,
+    now: params.now,
+  });
+  if (!anchorDate) return undefined;
+
+  const normalizedNoticePeriodDays = normalizeNonNegativeInteger(params.noticePeriodDays);
+  if (normalizedNoticePeriodDays === undefined) return undefined;
+
+  return subtractDaysFromDateOnly(anchorDate, normalizedNoticePeriodDays);
+};
+
 type RenewalDefaultSelectionConfig = {
   joinDefaultSettings: boolean;
   defaultSelections: string[];
@@ -166,6 +183,11 @@ export const normalizeClientContract = (row: any): IClientContract => {
   normalized.decision_due_date =
     normalizedEndDate && effectiveNoticePeriodDays !== undefined
       ? subtractDaysFromDateOnly(normalizedEndDate, effectiveNoticePeriodDays)
+      : !normalizedEndDate && normalizedStartDate && effectiveNoticePeriodDays !== undefined
+        ? computeEvergreenDecisionDueDate({
+            startDate: normalizedStartDate,
+            noticePeriodDays: effectiveNoticePeriodDays,
+          })
       : undefined;
 
   delete normalized.tenant_default_renewal_mode;

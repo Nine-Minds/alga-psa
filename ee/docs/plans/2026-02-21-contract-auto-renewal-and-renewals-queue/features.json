@@ -274,7 +274,7 @@
   {
     "id": "F035",
     "description": "Compute evergreen decision_due_date using anchor date minus notice_period_days.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > FR3 — Renewal Decision Date Engine"
     ]

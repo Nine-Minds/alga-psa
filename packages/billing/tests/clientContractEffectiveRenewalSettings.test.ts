@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  computeEvergreenDecisionDueDate,
   computeNextEvergreenReviewAnchorDate,
   normalizeClientContract,
 } from '../../../shared/billingClients/clientContracts';
@@ -101,6 +102,16 @@ describe('client contract effective renewal settings normalization', () => {
     ).toBe('2027-05-10');
   });
 
+  it('computes evergreen decision_due_date from annual anchor minus notice period', () => {
+    expect(
+      computeEvergreenDecisionDueDate({
+        startDate: '2024-05-10',
+        now: '2026-05-01',
+        noticePeriodDays: 20,
+      })
+    ).toBe('2026-04-20');
+  });
+
   it('exposes evergreen_review_anchor_date on active evergreen assignments', () => {
     const normalized = normalizeClientContract({
       contract_id: 'contract-5',
@@ -116,6 +127,6 @@ describe('client contract effective renewal settings normalization', () => {
     });
 
     expect(normalized.evergreen_review_anchor_date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
-    expect(normalized.decision_due_date).toBeUndefined();
+    expect(normalized.decision_due_date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
   });
 });
