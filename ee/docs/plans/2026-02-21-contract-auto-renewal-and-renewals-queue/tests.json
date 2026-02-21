@@ -898,7 +898,7 @@
   {
     "id": "T113",
     "description": "Functional: Keep existing expiration report rows for fixed-term contracts without renewal config.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F113"
     ]
