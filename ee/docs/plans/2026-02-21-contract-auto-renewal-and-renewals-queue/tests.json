@@ -1202,7 +1202,7 @@
   {
     "id": "T151",
     "description": "UI behavior: Expose days_until_due as derived queue field for UI sorting and badges. persists after refresh/navigation",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F046"
     ]
