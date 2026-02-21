@@ -562,7 +562,7 @@
   {
     "id": "T071",
     "description": "Functional: Persist action actor user id on each queue mutation.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F071"
     ]
