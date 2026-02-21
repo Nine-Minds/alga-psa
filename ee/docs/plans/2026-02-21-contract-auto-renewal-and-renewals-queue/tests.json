@@ -578,7 +578,7 @@
   {
     "id": "T073",
     "description": "Functional: Persist action reason/note text on queue mutation when provided.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F073"
     ]
