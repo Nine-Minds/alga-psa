@@ -28,6 +28,7 @@ import {
   getDraftContractForResume,
   type DraftContractWizardData,
 } from '@alga-psa/billing/actions/contractWizardActions';
+import { listRenewalQueueRows } from '@alga-psa/billing/actions/renewalsQueueActions';
 import { ContractWizard } from './ContractWizard';
 import { ContractDialog } from './ContractDialog';
 
@@ -44,6 +45,7 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [clientSearchTerm, setClientSearchTerm] = useState('');
+  const [upcomingRenewalTotal, setUpcomingRenewalTotal] = useState(0);
 
   useEffect(() => {
     void fetchClientContracts();
@@ -53,7 +55,9 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
     try {
       setIsLoading(true);
       const fetchedAssignments = await getContractsWithClients();
+      const renewalRows = await listRenewalQueueRows();
       setClientContracts(fetchedAssignments.filter((assignment) => Boolean(assignment.client_id)));
+      setUpcomingRenewalTotal(renewalRows.length);
       setError(null);
     } catch (err) {
       console.error('Error fetching client contracts:', err);
@@ -351,6 +355,21 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
     <>
       <Card size="2">
         <Box p="4">
+          <section
+            data-testid="upcoming-renewals-widget"
+            className="mb-4 rounded-md border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-bg-100))] p-4"
+          >
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-semibold">Upcoming Renewals</h3>
+                <p className="text-xs text-[rgb(var(--color-text-500))]">
+                  Contracts with renewal decisions due in the next 90 days.
+                </p>
+              </div>
+              <Badge variant="info">{upcomingRenewalTotal}</Badge>
+            </div>
+          </section>
+
           <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div className="relative max-w-md w-full">
               <Search

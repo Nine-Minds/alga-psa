@@ -474,7 +474,7 @@
   {
     "id": "F060",
     "description": "Add Upcoming Renewals summary widget to ClientContractsTab.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > FR4 — Renewals Queue and Dashboard Entry Points"
     ]

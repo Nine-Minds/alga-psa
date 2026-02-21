@@ -439,6 +439,11 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
   - Rendering now surfaces overdue and due-soon emphasis states via row badge styles.
   - Added component coverage update in:
     - `packages/billing/tests/RenewalsQueueTab.component.test.ts`
+- (2026-02-21) Completed `F060`.
+  - Added `Upcoming Renewals` summary widget to `ClientContractsTab` with queue-derived total count.
+  - Widget data source now loads via `listRenewalQueueRows()` during tab fetch flow.
+  - Added coverage:
+    - `packages/billing/tests/ClientContractsTab.upcomingRenewalsWidget.test.ts`
 
 ## Open Questions
 - Should renewal ticket defaults be a brand-new billing settings card, or an extension of existing default ticket settings patterns?
