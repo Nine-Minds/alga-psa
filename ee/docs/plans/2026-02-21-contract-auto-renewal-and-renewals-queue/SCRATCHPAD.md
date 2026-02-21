@@ -1261,3 +1261,10 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
     - `packages/billing/tests/renewalsQueueActions.tenantReads.wiring.test.ts`
   - Validation:
     - `npm -w @alga-psa/billing exec vitest run tests/renewalsQueueActions.tenantReads.wiring.test.ts --coverage=false`
+- (2026-02-21) Completed `F130`.
+  - Added wiring coverage that renewal work-item mutation/write paths remain tenant-filtered by default.
+  - Coverage checks tenant-scoped update/insert/lookup clauses in renewals queue action writes.
+  - Updated file:
+    - `packages/billing/tests/renewalsQueueActions.tenantWrites.wiring.test.ts`
+  - Validation:
+    - `npm -w @alga-psa/billing exec vitest run tests/renewalsQueueActions.tenantWrites.wiring.test.ts --coverage=false`

@@ -1034,7 +1034,7 @@
   {
     "id": "F130",
     "description": "Apply tenant filter to all renewal work-item writes by default.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > FR10 \u2014 Permissions, Security, and Auditability"
     ]
