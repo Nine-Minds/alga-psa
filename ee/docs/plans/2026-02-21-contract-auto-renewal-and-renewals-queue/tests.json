@@ -1562,7 +1562,7 @@
   {
     "id": "T196",
     "description": "Idempotency: repeated execution of 'Ensure due-date automation supports queue-only policy without creating tickets.' does not create duplicate tickets",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F098"
     ]
