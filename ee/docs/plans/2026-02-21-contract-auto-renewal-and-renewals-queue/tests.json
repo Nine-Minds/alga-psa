@@ -1834,7 +1834,7 @@
   {
     "id": "T230",
     "description": "UI behavior: Enforce billing update permission on queue mutation endpoints. persists after refresh/navigation",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F127"
     ]
