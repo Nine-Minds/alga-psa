@@ -1018,7 +1018,7 @@
   {
     "id": "T128",
     "description": "Functional: Enforce billing settings update permission on renewal defaults update endpoints.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F128"
     ]
