@@ -156,6 +156,50 @@ export const createDefaultContractWizardData = (): ContractWizardData => ({
   template_id: undefined,
 });
 
+const normalizeRenewalMode = (value: unknown): ContractWizardData['renewal_mode'] | undefined => {
+  return value === 'none' || value === 'manual' || value === 'auto' ? value : undefined;
+};
+
+const normalizeNonNegativeInteger = (value: unknown): number | undefined => {
+  if (value === null || value === undefined) return undefined;
+  const numeric = typeof value === 'string' ? Number(value) : value;
+  if (typeof numeric !== 'number' || !Number.isFinite(numeric)) return undefined;
+  return Math.max(0, Math.trunc(numeric));
+};
+
+const normalizePositiveInteger = (value: unknown): number | undefined => {
+  const normalized = normalizeNonNegativeInteger(value);
+  return normalized && normalized > 0 ? normalized : undefined;
+};
+
+export const buildInitialContractWizardData = (
+  editingContract: ContractWizardData | null = null
+): ContractWizardData => {
+  const initial: ContractWizardData = {
+    ...createDefaultContractWizardData(),
+    ...(editingContract ?? {}),
+  };
+
+  const renewalMode = normalizeRenewalMode(editingContract?.renewal_mode);
+  const noticePeriodDays = normalizeNonNegativeInteger(editingContract?.notice_period_days);
+  const renewalTermMonths = normalizePositiveInteger(editingContract?.renewal_term_months);
+
+  if (renewalMode !== undefined) {
+    initial.renewal_mode = renewalMode;
+  }
+  if (noticePeriodDays !== undefined) {
+    initial.notice_period_days = noticePeriodDays;
+  }
+  if (renewalTermMonths !== undefined) {
+    initial.renewal_term_months = renewalTermMonths;
+  }
+  if (typeof editingContract?.use_tenant_renewal_defaults === 'boolean') {
+    initial.use_tenant_renewal_defaults = editingContract.use_tenant_renewal_defaults;
+  }
+
+  return initial;
+};
+
 type TemplateOption = {
   contract_id: string;
   contract_name: string;
@@ -189,11 +233,8 @@ export function ContractWizard({
   const [templateError, setTemplateError] = useState<string | null>(null);
   const [isTemplateLoading, startTemplateTransition] = useTransition();
 
-  const defaultWizardData = createDefaultContractWizardData();
-
   const [wizardData, setWizardData] = useState<ContractWizardData>(() => ({
-    ...defaultWizardData,
-    ...(editingContract ?? {}),
+    ...buildInitialContractWizardData(editingContract),
   }));
 
   useEffect(() => {
@@ -208,7 +249,7 @@ export function ContractWizard({
     setCompletedSteps(new Set());
     setCurrentStep(0);
 
-    const initialWizardData = { ...createDefaultContractWizardData(), ...(editingContract ?? {}) };
+    const initialWizardData = buildInitialContractWizardData(editingContract);
     initialWizardDataRef.current = deepClone(initialWizardData);
 
     if (editingContract) {

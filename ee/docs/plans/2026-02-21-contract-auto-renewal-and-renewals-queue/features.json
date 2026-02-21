@@ -26,7 +26,7 @@
   {
     "id": "F004",
     "description": "Hydrate renewal fields when editing existing contracts in the wizard.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > FR1 — Contract Setup and Renewal Configuration"
     ]

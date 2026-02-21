@@ -95,6 +95,14 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
     - renewal fields are present on `DraftContractWizardData`,
     - `getDraftContractForResume` returns hydrated renewal values,
     - numeric renewal values are sanitized before payload return.
+- (2026-02-21) Completed `F004`.
+  - Added `buildInitialContractWizardData(editingContract)` in `packages/billing/src/components/billing-dashboard/contracts/ContractWizard.tsx`.
+  - Edit-mode initialization now explicitly normalizes renewal fields during hydration:
+    - validates `renewal_mode` domain,
+    - normalizes non-negative `notice_period_days`,
+    - normalizes positive `renewal_term_months`,
+    - preserves explicit boolean `use_tenant_renewal_defaults`.
+  - Wired both initial state and open-effect initialization to use this shared edit-hydration path.
 
 ## Open Questions
 - Should renewal ticket defaults be a brand-new billing settings card, or an extension of existing default ticket settings patterns?
