@@ -1024,6 +1024,16 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
   - Validation:
     - `npm -w @alga-psa/billing exec vitest run tests/renewalsQueueActions.createDraft.wiring.test.ts tests/renewalsQueueActions.createDraftEvergreen.wiring.test.ts --coverage=false`
     - `npm -w @alga-psa/billing run typecheck`
+- (2026-02-21) Completed `F106`.
+  - Confirmed evergreen cycle rollover semantics in scheduled renewal processing:
+    - when cycle key advances, processor treats it as a new cycle (`cycleChanged`)
+    - status normalization reopens work item to `pending`
+    - updated cycle key is persisted and cycle-change counters increment
+  - Added explicit rollover wiring coverage:
+    - `server/src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts`
+  - Validation:
+    - `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`
+    - `cd server && npm run typecheck`
 
 ## Open Questions
 - Should renewal ticket defaults be a brand-new billing settings card, or an extension of existing default ticket settings patterns?

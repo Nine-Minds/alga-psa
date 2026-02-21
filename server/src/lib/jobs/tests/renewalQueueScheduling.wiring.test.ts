@@ -165,6 +165,17 @@ describe('renewal queue scheduling wiring', () => {
     expect(renewalHandlerSource).toContain('if (!decisionDueDate || decisionDueDate < today || decisionDueDate > horizonDate) {');
   });
 
+  it('rolls evergreen cycles forward to the next annual window after completion when cycle key advances', () => {
+    expect(renewalHandlerSource).toContain('const previousCycleKey =');
+    expect(renewalHandlerSource).toContain('const nextCycleKey =');
+    expect(renewalHandlerSource).toContain('const cycleChanged =');
+    expect(renewalHandlerSource).toContain('const shouldNormalizeStatus = !isKnownRenewalStatus(currentStatus) || cycleChanged;');
+    expect(renewalHandlerSource).toContain("updates.status = 'pending';");
+    expect(renewalHandlerSource).toContain('updates.renewal_cycle_key = nextCycleKey;');
+    expect(renewalHandlerSource).toContain('if (cycleChanged) {');
+    expect(renewalHandlerSource).toContain('newCycleCount += 1;');
+  });
+
   it('registers and schedules renewal queue processing in the jobs module', () => {
     expect(jobsIndexSource).toContain("import { processRenewalQueueHandler, RenewalQueueProcessorJobData } from './handlers/processRenewalQueueHandler';");
     expect(jobsIndexSource).toContain("jobScheduler.registerJobHandler<RenewalQueueProcessorJobData>(");

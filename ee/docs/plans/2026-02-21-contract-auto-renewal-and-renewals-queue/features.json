@@ -842,7 +842,7 @@
   {
     "id": "F106",
     "description": "Roll evergreen cycle forward to next annual window after completion.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > FR7 — Evergreen Annual Review Flow"
     ]
