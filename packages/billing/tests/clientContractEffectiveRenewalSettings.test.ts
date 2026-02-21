@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   computeEvergreenDecisionDueDate,
   computeNextEvergreenReviewAnchorDate,
+  dedupeClientContractsByRenewalCycle,
   normalizeClientContract,
 } from '../../../shared/billingClients/clientContracts';
 
@@ -260,6 +261,47 @@ describe('client contract effective renewal settings normalization', () => {
     expect(fixedTerm.renewal_cycle_key).toBe('fixed-term:2026-12-31');
     expect(evergreen.renewal_cycle_key).toMatch(/^evergreen:\d{4}-\d{2}-\d{2}$/);
     expect(noneMode.renewal_cycle_key).toBeUndefined();
+  });
+
+  it('deduplicates active rows by tenant + client_contract_id + renewal_cycle_key', () => {
+    const duplicateRows = dedupeClientContractsByRenewalCycle([
+      {
+        tenant: 'tenant-1',
+        client_contract_id: 'cc-dup',
+        client_id: 'client-1',
+        contract_id: 'contract-1',
+        start_date: '2026-01-01',
+        end_date: '2026-12-31',
+        is_active: true,
+        renewal_cycle_key: 'fixed-term:2026-12-31',
+      },
+      {
+        tenant: 'tenant-1',
+        client_contract_id: 'cc-dup',
+        client_id: 'client-1',
+        contract_id: 'contract-1',
+        start_date: '2026-01-01',
+        end_date: '2026-12-31',
+        is_active: true,
+        renewal_cycle_key: 'fixed-term:2026-12-31',
+      },
+      {
+        tenant: 'tenant-1',
+        client_contract_id: 'cc-dup',
+        client_id: 'client-1',
+        contract_id: 'contract-1',
+        start_date: '2026-01-01',
+        end_date: '2027-12-31',
+        is_active: true,
+        renewal_cycle_key: 'fixed-term:2027-12-31',
+      },
+    ] as any);
+
+    expect(duplicateRows).toHaveLength(2);
+    expect(duplicateRows.map((row: any) => row.renewal_cycle_key)).toEqual([
+      'fixed-term:2026-12-31',
+      'fixed-term:2027-12-31',
+    ]);
   });
 
   it('computes next evergreen review anchor date using contract anniversary rules', () => {

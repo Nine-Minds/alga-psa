@@ -329,6 +329,15 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
   - Added regression coverage:
     - `creates one renewal_cycle_key per computed contract cycle for deduplication`
     - in `packages/billing/tests/clientContractEffectiveRenewalSettings.test.ts`
+- (2026-02-21) Completed `F044`.
+  - Added deterministic dedupe guard for active assignment rows by composite key:
+    - `tenant + client_contract_id + renewal_cycle_key`
+  - Applied dedupe in list read APIs:
+    - `shared/billingClients/clientContracts.ts`
+    - `packages/clients/src/models/clientContract.ts`
+  - Added regression test:
+    - `deduplicates active rows by tenant + client_contract_id + renewal_cycle_key`
+    - in `packages/billing/tests/clientContractEffectiveRenewalSettings.test.ts`
 
 ## Open Questions
 - Should renewal ticket defaults be a brand-new billing settings card, or an extension of existing default ticket settings patterns?

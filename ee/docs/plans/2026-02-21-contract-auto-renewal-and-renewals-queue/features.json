@@ -346,7 +346,7 @@
   {
     "id": "F044",
     "description": "Prevent duplicate active renewal work items for same tenant/client_contract_id/cycle key.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > FR3 — Renewal Decision Date Engine"
     ]

@@ -212,6 +212,25 @@ export const normalizeClientContract = (row: any): IClientContract => {
   return normalized as unknown as IClientContract;
 };
 
+const dedupeClientContractsByRenewalCycle = (rows: IClientContract[]): IClientContract[] => {
+  const deduped = new Map<string, IClientContract>();
+
+  for (const row of rows) {
+    const cycleKey = row.renewal_cycle_key;
+    if (!cycleKey) {
+      deduped.set(`${row.tenant}:${row.client_contract_id}`, row);
+      continue;
+    }
+
+    const dedupeKey = `${row.tenant}:${row.client_contract_id}:${cycleKey}`;
+    if (!deduped.has(dedupeKey)) {
+      deduped.set(dedupeKey, row);
+    }
+  }
+
+  return [...deduped.values()];
+};
+
 /**
  * Data access helpers for client contract assignments.
  */
@@ -239,7 +258,7 @@ const ClientContract = {
         ...renewalDefaults.defaultSelections,
       ]);
 
-      return rows.map(normalizeClientContract);
+      return dedupeClientContractsByRenewalCycle(rows.map(normalizeClientContract));
     } catch (error) {
       console.error(`Error fetching contracts for client ${clientId}:`, error);
       throw error;
@@ -277,7 +296,7 @@ const ClientContract = {
         ...renewalDefaults.defaultSelections,
       ]);
 
-      return rows.map(normalizeClientContract);
+      return dedupeClientContractsByRenewalCycle(rows.map(normalizeClientContract));
     } catch (error) {
       console.error('Error fetching contracts for clients:', error);
       throw error;
