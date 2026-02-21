@@ -314,7 +314,7 @@
   {
     "id": "F040",
     "description": "Recompute decision_due_date when evergreen anchor basis changes.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > FR3 — Renewal Decision Date Engine"
     ]

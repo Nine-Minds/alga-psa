@@ -305,6 +305,11 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
   - Added regression coverage for mode transitions:
     - `recomputes decision_due_date when renewal mode changes between none/manual/auto`
     - in `packages/billing/tests/clientContractEffectiveRenewalSettings.test.ts`
+- (2026-02-21) Completed `F040`.
+  - Confirmed evergreen `decision_due_date` recomputes when anniversary anchor basis changes (start-date basis change).
+  - Added deterministic coverage:
+    - `recomputes evergreen decision_due_date when anniversary anchor basis changes`
+    - in `packages/billing/tests/clientContractEffectiveRenewalSettings.test.ts`
 
 ## Open Questions
 - Should renewal ticket defaults be a brand-new billing settings card, or an extension of existing default ticket settings patterns?

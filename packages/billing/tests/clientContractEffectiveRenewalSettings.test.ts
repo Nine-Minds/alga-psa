@@ -212,6 +212,25 @@ describe('client contract effective renewal settings normalization', () => {
     ).toBe('2026-04-20');
   });
 
+  it('recomputes evergreen decision_due_date when anniversary anchor basis changes', () => {
+    const now = '2026-01-01';
+    const noticePeriodDays = 20;
+
+    const marchAnniversary = computeEvergreenDecisionDueDate({
+      startDate: '2024-03-10',
+      now,
+      noticePeriodDays,
+    });
+    const septemberAnniversary = computeEvergreenDecisionDueDate({
+      startDate: '2024-09-10',
+      now,
+      noticePeriodDays,
+    });
+
+    expect(marchAnniversary).toBe('2026-02-18');
+    expect(septemberAnniversary).toBe('2026-08-21');
+  });
+
   it('exposes evergreen_review_anchor_date on active evergreen assignments', () => {
     const normalized = normalizeClientContract({
       contract_id: 'contract-5',
