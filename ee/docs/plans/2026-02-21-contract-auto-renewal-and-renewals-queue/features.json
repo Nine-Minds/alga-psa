@@ -554,7 +554,7 @@
   {
     "id": "F070",
     "description": "Implement unsnooze transition back to pending when snooze period elapses.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > FR5 — Queue Actions and Renewal Workflow"
     ]

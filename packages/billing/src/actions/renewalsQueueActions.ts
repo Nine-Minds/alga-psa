@@ -19,6 +19,7 @@ const isRenewalWorkItemStatus = (value: unknown): value is RenewalWorkItemStatus
   typeof value === 'string' && RENEWAL_WORK_ITEM_STATUSES.includes(value as RenewalWorkItemStatus);
 const toRenewalWorkItemStatus = (value: unknown): RenewalWorkItemStatus =>
   isRenewalWorkItemStatus(value) ? value : 'pending';
+const getTodayDateOnly = (): string => new Date().toISOString().slice(0, 10);
 
 export type RenewalQueueRow = {
   client_contract_id: string;
@@ -71,10 +72,33 @@ export const listRenewalQueueRows = withAuth(async (
       : DEFAULT_RENEWALS_HORIZON_DAYS;
 
   const schema = knex.schema as any;
-  const [hasDefaultRenewalModeColumn, hasDefaultNoticePeriodColumn] = await Promise.all([
+  const [
+    hasDefaultRenewalModeColumn,
+    hasDefaultNoticePeriodColumn,
+    hasStatusColumn,
+    hasSnoozedUntilColumn,
+  ] = await Promise.all([
     schema?.hasColumn?.('default_billing_settings', 'default_renewal_mode') ?? false,
     schema?.hasColumn?.('default_billing_settings', 'default_notice_period_days') ?? false,
+    schema?.hasColumn?.('client_contracts', 'status') ?? false,
+    schema?.hasColumn?.('client_contracts', 'snoozed_until') ?? false,
   ]);
+
+  if (hasStatusColumn && hasSnoozedUntilColumn) {
+    await knex('client_contracts')
+      .where({
+        tenant,
+        is_active: true,
+        status: 'snoozed',
+      })
+      .whereNotNull('snoozed_until')
+      .andWhere('snoozed_until', '<=', getTodayDateOnly())
+      .update({
+        status: 'pending',
+        snoozed_until: null,
+        updated_at: new Date().toISOString(),
+      });
+  }
 
   const defaultSelections: string[] = [];
   if (hasDefaultRenewalModeColumn) {
