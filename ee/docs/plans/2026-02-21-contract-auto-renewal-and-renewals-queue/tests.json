@@ -810,7 +810,7 @@
   {
     "id": "T102",
     "description": "Functional: Show evergreen cycle anchor date in queue row details.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F102"
     ]
