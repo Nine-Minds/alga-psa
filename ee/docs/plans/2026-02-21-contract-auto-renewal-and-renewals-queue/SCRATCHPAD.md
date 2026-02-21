@@ -1289,3 +1289,10 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
     - `server/src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts`
   - Validation:
     - `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`
+- (2026-02-21) Completed `F133`.
+  - Added explicit draft-linkage audit coverage ensuring renewal draft creation linkage persists with actor/timestamp metadata.
+  - Coverage validates draft link persistence and action metadata chain (`withActionLabel` + `withActionActor` + `withActionTimestamp`).
+  - Updated file:
+    - `packages/billing/tests/renewalsQueueActions.createDraftAudit.wiring.test.ts`
+  - Validation:
+    - `npm -w @alga-psa/billing exec vitest run tests/renewalsQueueActions.createDraft.wiring.test.ts tests/renewalsQueueActions.createDraftAudit.wiring.test.ts --coverage=false`
