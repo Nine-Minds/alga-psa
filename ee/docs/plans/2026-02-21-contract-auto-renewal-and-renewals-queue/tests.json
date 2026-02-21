@@ -922,7 +922,7 @@
   {
     "id": "T116",
     "description": "Functional: Align contract reports tab expiration copy to reference renewal decisions as well as expiration.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F116"
     ]
