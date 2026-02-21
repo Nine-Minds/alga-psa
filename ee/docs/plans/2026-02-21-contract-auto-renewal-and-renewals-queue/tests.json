@@ -1698,7 +1698,7 @@
   {
     "id": "T213",
     "description": "Cycle rollover: evergreen behavior remains correct across year boundary for 'Respect evergreen-specific notice period overrides on decision date computation.'",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F108"
     ]
