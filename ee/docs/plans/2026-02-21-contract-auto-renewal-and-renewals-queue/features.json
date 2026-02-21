@@ -642,7 +642,7 @@
   {
     "id": "F081",
     "description": "Include linked ticket id in queue row once due-date ticket is created.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > FR5 — Queue Actions and Renewal Workflow"
     ]

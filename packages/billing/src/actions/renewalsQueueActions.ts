@@ -73,6 +73,7 @@ export type RenewalQueueRow = {
   days_until_due?: number;
   renewal_cycle_key?: string;
   created_draft_contract_id?: string | null;
+  created_ticket_id?: string | null;
   available_actions: RenewalQueueAction[];
 };
 
@@ -216,6 +217,7 @@ export const listRenewalQueueRows = withAuth(async (
       days_until_due: row.days_until_due,
       renewal_cycle_key: row.renewal_cycle_key,
       created_draft_contract_id: (row as any).created_draft_contract_id ?? null,
+      created_ticket_id: (row as any).created_ticket_id ?? null,
       available_actions: getAvailableActionsForStatus(toRenewalWorkItemStatus((row as any).status)),
     }))
     .sort((a, b) => (a.decision_due_date ?? '').localeCompare(b.decision_due_date ?? ''));

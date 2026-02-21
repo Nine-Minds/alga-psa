@@ -91,6 +91,8 @@ describe('RenewalsQueueTab component', () => {
     expect(source).toContain("Actions: {row.available_actions.join(', ')}");
     expect(source).toContain('data-testid="renewals-queue-row-draft-link"');
     expect(source).toContain('Draft contract: {row.created_draft_contract_id}');
+    expect(source).toContain('data-testid="renewals-queue-row-ticket-link"');
+    expect(source).toContain('Ticket: {row.created_ticket_id}');
     expect(source).toContain('data-testid="renewals-row-action-mark-renewing"');
     expect(source).toContain('data-testid="renewals-row-action-mark-non-renewing"');
     expect(source).toContain('data-testid="renewals-row-action-pending"');

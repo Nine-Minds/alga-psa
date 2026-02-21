@@ -370,6 +370,14 @@ export default function RenewalsQueueTab({ onQueueMutationComplete }: RenewalsQu
                     Draft contract: {row.created_draft_contract_id}
                   </p>
                 )}
+                {row.created_ticket_id && (
+                  <p
+                    data-testid="renewals-queue-row-ticket-link"
+                    className="mt-1 text-[11px] text-[rgb(var(--color-text-400))]"
+                  >
+                    Ticket: {row.created_ticket_id}
+                  </p>
+                )}
                 <div className="mt-2 flex items-center gap-2">
                   {row.available_actions.includes('mark_renewing') && (
                     <button
