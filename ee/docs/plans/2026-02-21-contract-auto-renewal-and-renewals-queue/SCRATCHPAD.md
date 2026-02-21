@@ -224,6 +224,8 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
   - Added explicit `Use Tenant Renewal Defaults` toggle controls to both fixed-term and evergreen renewal settings cards in `ContractBasicsStep.tsx`, bound to `use_tenant_renewal_defaults`.
 - (2026-02-21) Completed `F029`.
   - Updated `buildSubmissionData()` in `ContractWizard.tsx` to resolve renewal mode + notice period from tenant defaults when `use_tenant_renewal_defaults` is enabled.
+- (2026-02-21) Completed `F030`.
+  - Submission resolution now prefers explicit contract-level renewal values when `use_tenant_renewal_defaults` is disabled.
 
 ## Open Questions
 - Should renewal ticket defaults be a brand-new billing settings card, or an extension of existing default ticket settings patterns?
