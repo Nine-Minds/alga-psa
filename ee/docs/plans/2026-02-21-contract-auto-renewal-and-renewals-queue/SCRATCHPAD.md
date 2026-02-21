@@ -260,6 +260,16 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
     - `npm -w @alga-psa/clients run typecheck`
     - `npm -w @alga-psa/billing run typecheck`
     - `npm -w @alga-psa/billing exec vitest run tests/clientContractEffectiveRenewalSettings.test.ts`
+- (2026-02-21) Completed `F033`.
+  - Added fixed-term `decision_due_date` computation in assignment normalization paths:
+    - `shared/billingClients/clientContracts.ts`
+    - `packages/clients/src/models/clientContract.ts`
+  - Formula implemented with date-only semantics for fixed-term contracts:
+    - `decision_due_date = end_date - effective_notice_period_days`
+  - Added `decision_due_date` to contract interfaces:
+    - `packages/types/src/interfaces/contract.interfaces.ts`
+    - `server/src/interfaces/contract.interfaces.ts`
+  - Expanded test coverage in `packages/billing/tests/clientContractEffectiveRenewalSettings.test.ts`.
 
 ## Open Questions
 - Should renewal ticket defaults be a brand-new billing settings card, or an extension of existing default ticket settings patterns?

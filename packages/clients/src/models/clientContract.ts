@@ -7,6 +7,7 @@ type RenewalMode = NonNullable<IClientContract['renewal_mode']>;
 
 const DEFAULT_RENEWAL_MODE: RenewalMode = 'manual';
 const DEFAULT_NOTICE_PERIOD_DAYS = 30;
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 const normalizeRenewalMode = (value: unknown): RenewalMode | undefined => {
   return value === 'none' || value === 'manual' || value === 'auto' ? value : undefined;
@@ -22,6 +23,26 @@ const normalizeNonNegativeInteger = (value: unknown): number | undefined => {
 const normalizePositiveInteger = (value: unknown): number | undefined => {
   const normalized = normalizeNonNegativeInteger(value);
   return normalized !== undefined && normalized > 0 ? normalized : undefined;
+};
+
+const normalizeDateOnly = (value: unknown): string | undefined => {
+  if (value === null || value === undefined) return undefined;
+  if (typeof value !== 'string') return undefined;
+
+  const trimmed = value.trim();
+  if (!trimmed) return undefined;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return trimmed;
+  if (trimmed.includes('T')) {
+    return trimmed.slice(0, 10);
+  }
+  return undefined;
+};
+
+const subtractDaysFromDateOnly = (dateOnly: string, days: number): string | undefined => {
+  if (!Number.isInteger(days) || days < 0) return undefined;
+  const parsed = new Date(`${dateOnly}T00:00:00.000Z`);
+  if (Number.isNaN(parsed.getTime())) return undefined;
+  return new Date(parsed.getTime() - days * MS_PER_DAY).toISOString().slice(0, 10);
 };
 
 type RenewalDefaultSelectionConfig = {
@@ -101,6 +122,13 @@ export const normalizeClientContract = (row: any): IClientContract => {
   normalized.effective_notice_period_days = useTenantDefaults
     ? tenantDefaultNoticePeriodDays
     : noticePeriodDays ?? tenantDefaultNoticePeriodDays;
+
+  const normalizedEndDate = normalizeDateOnly(normalized.end_date);
+  const effectiveNoticePeriodDays = normalizeNonNegativeInteger(normalized.effective_notice_period_days);
+  normalized.decision_due_date =
+    normalizedEndDate && effectiveNoticePeriodDays !== undefined
+      ? subtractDaysFromDateOnly(normalizedEndDate, effectiveNoticePeriodDays)
+      : undefined;
 
   delete normalized.tenant_default_renewal_mode;
   delete normalized.tenant_default_notice_period_days;

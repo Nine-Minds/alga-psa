@@ -63,4 +63,22 @@ describe('client contract effective renewal settings normalization', () => {
     expect(normalized.effective_renewal_mode).toBe('manual');
     expect(normalized.effective_notice_period_days).toBe(20);
   });
+
+  it('computes fixed-term decision_due_date from end_date minus effective notice period', () => {
+    const normalized = normalizeClientContract({
+      contract_id: 'contract-4',
+      client_contract_id: 'cc-4',
+      client_id: 'client-4',
+      tenant: 'tenant-1',
+      start_date: '2026-01-01',
+      end_date: '2026-12-31',
+      is_active: true,
+      use_tenant_renewal_defaults: false,
+      renewal_mode: 'manual',
+      notice_period_days: 45,
+    });
+
+    expect(normalized.effective_notice_period_days).toBe(45);
+    expect(normalized.decision_due_date).toBe('2026-11-16');
+  });
 });
