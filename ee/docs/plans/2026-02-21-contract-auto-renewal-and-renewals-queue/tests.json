@@ -994,7 +994,7 @@
   {
     "id": "T125",
     "description": "Functional: Preserve tenant-scoped execution semantics in both runtime paths.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F125"
     ]
