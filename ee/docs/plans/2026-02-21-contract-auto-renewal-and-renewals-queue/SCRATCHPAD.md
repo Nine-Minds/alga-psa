@@ -1158,6 +1158,16 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
     - `cd ee/server && npx vitest run src/__tests__/unit/temporalJobRunner.scheduleRecurringJob.test.ts`
   - Note:
     - `npm --prefix ee/server run test:unit -- src/__tests__/unit/temporalJobRunner.scheduleRecurringJob.test.ts` executes the full unit suite in this workspace and currently surfaces unrelated pre-existing failures in other unit files; targeted execution of the modified test passes.
+- (2026-02-21) Completed `F120`.
+  - Confirmed renewal processing uses a shared core handler callable from both runtime adapters:
+    - legacy pg-boss registration path (`index.ts`) calls `processRenewalQueueHandler`
+    - centralized handler registry (`registerAllHandlers.ts`) also calls the same handler for Temporal/runner abstraction execution
+    - `initializeJobRunner.ts` bridges registered handlers into runner implementations
+  - Updated coverage:
+    - `server/src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts`
+  - Validation:
+    - `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`
+    - `cd server && npm run typecheck`
 
 ## Open Questions
 - Should renewal ticket defaults be a brand-new billing settings card, or an extension of existing default ticket settings patterns?

@@ -954,7 +954,7 @@
   {
     "id": "F120",
     "description": "Use shared renewal processing core logic callable from both pg-boss and Temporal adapters.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > FR9 — Runtime Compatibility (On-prem PG Boss vs Hosted/EE Temporal)"
     ]

@@ -13,6 +13,10 @@ const registerHandlersSource = readFileSync(
   new URL('../registerAllHandlers.ts', import.meta.url),
   'utf8'
 );
+const initializeJobRunnerSource = readFileSync(
+  new URL('../initializeJobRunner.ts', import.meta.url),
+  'utf8'
+);
 const renewalHandlerSource = readFileSync(
   new URL('../handlers/processRenewalQueueHandler.ts', import.meta.url),
   'utf8'
@@ -208,5 +212,17 @@ describe('renewal queue scheduling wiring', () => {
     expect(scheduledInitSource).toContain('const renewalQueueJobId = await scheduleRenewalQueueProcessingJob(tenantId, 90, cron);');
     expect(scheduledInitSource).toContain('logger.info(`Scheduled renewal queue processing job for tenant ${tenantId} with job ID ${renewalQueueJobId}`);');
     expect(scheduledInitSource).toContain("logger.info('Renewal queue processing job already scheduled (singleton active)', {");
+  });
+
+  it('uses shared renewal processing core logic in both pg-boss and Temporal adapter registration paths', () => {
+    expect(jobsIndexSource).toContain("import { processRenewalQueueHandler, RenewalQueueProcessorJobData } from './handlers/processRenewalQueueHandler';");
+    expect(jobsIndexSource).toContain("jobScheduler.registerJobHandler<RenewalQueueProcessorJobData>(");
+    expect(jobsIndexSource).toContain("'process-renewal-queue',");
+    expect(jobsIndexSource).toContain('await processRenewalQueueHandler(job.data);');
+    expect(registerHandlersSource).toContain("import {\n  processRenewalQueueHandler,\n  RenewalQueueProcessorJobData,\n} from './handlers/processRenewalQueueHandler';");
+    expect(registerHandlersSource).toContain("name: 'process-renewal-queue',");
+    expect(registerHandlersSource).toContain('await processRenewalQueueHandler(data);');
+    expect(initializeJobRunnerSource).toContain('await registerAllJobHandlers({');
+    expect(initializeJobRunnerSource).toContain('runner.registerHandler(registered.config);');
   });
 });
