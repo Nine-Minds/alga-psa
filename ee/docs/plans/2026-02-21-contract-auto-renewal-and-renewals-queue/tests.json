@@ -474,7 +474,7 @@
   {
     "id": "T060",
     "description": "Functional: Add Upcoming Renewals summary widget to ClientContractsTab.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F060"
     ]
