@@ -98,7 +98,7 @@
   {
     "id": "T013",
     "description": "Functional: Validate renewal term months is positive when explicitly provided.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F013"
     ]

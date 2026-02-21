@@ -155,6 +155,8 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
   - Extended `packages/billing/src/components/billing-dashboard/contracts/ContractWizard.renewalFields.test.ts` with assertions for required renewal mode when `end_date` is set.
 - (2026-02-21) Completed `T012`.
   - Marked covered by the same `ContractWizard.renewalFields.test.ts` additions that assert notice-period integer/bounds validation wiring.
+- (2026-02-21) Completed `T013`.
+  - Marked covered by existing `ContractWizard.renewalFields.test.ts` assertions for positive renewal-term validation when value is provided.
 
 ## Open Questions
 - Should renewal ticket defaults be a brand-new billing settings card, or an extension of existing default ticket settings patterns?
