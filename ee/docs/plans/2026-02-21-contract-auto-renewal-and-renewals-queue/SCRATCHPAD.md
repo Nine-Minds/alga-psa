@@ -867,6 +867,16 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
   - Validation:
     - `cd server && npm run typecheck`
     - `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`
+- (2026-02-21) Completed `F093`.
+  - Renewal processor now persists ticket linkage on successful automation:
+    - captures ticket id from workflow-action/direct-fallback creation result
+    - writes `created_ticket_id` on the client-contract renewal work item update payload
+  - This makes ticket linkage visible in queue APIs/UI and supports downstream idempotency checks.
+  - Updated wiring coverage:
+    - `server/src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts`
+  - Validation:
+    - `cd server && npm run typecheck`
+    - `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`
 
 ## Open Questions
 - Should renewal ticket defaults be a brand-new billing settings card, or an extension of existing default ticket settings patterns?

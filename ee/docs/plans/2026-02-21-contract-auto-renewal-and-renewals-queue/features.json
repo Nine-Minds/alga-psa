@@ -738,7 +738,7 @@
   {
     "id": "F093",
     "description": "Persist created ticket id on renewal work item after successful ticket creation.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > FR6 — Automation and Ticket Creation"
     ]

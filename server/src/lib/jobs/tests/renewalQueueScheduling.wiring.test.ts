@@ -120,6 +120,13 @@ describe('renewal queue scheduling wiring', () => {
     expect(renewalHandlerSource).toContain('const assignedTo = useTenantRenewalDefaults ? tenantAssignedTo : (contractAssignedTo ?? tenantAssignedTo);');
   });
 
+  it('persists created ticket id on renewal work item after successful ticket creation', () => {
+    expect(renewalHandlerSource).toContain("schema?.hasColumn?.('client_contracts', 'created_ticket_id') ?? false");
+    expect(renewalHandlerSource).toContain('updates.created_ticket_id = createdTicketId;');
+    expect(renewalHandlerSource).toContain("await knex('client_contracts')");
+    expect(renewalHandlerSource).toContain('...updates,');
+  });
+
   it('registers and schedules renewal queue processing in the jobs module', () => {
     expect(jobsIndexSource).toContain("import { processRenewalQueueHandler, RenewalQueueProcessorJobData } from './handlers/processRenewalQueueHandler';");
     expect(jobsIndexSource).toContain("jobScheduler.registerJobHandler<RenewalQueueProcessorJobData>(");
