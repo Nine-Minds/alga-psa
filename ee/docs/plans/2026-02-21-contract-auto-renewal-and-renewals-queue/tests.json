@@ -962,7 +962,7 @@
   {
     "id": "T121",
     "description": "Functional: Keep effective behavior parity for queue creation between pg-boss and Temporal runners.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F121"
     ]
