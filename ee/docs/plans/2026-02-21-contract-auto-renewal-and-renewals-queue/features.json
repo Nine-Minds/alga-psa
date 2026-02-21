@@ -178,7 +178,7 @@
   {
     "id": "F023",
     "description": "Add tenant default renewal ticket status field to default billing settings model.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > FR2 — Tenant Defaults and Contract-Level Overrides"
     ]
