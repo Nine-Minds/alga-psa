@@ -11,7 +11,7 @@ describe('renewalsQueueActions mark-non-renewing wiring', () => {
     expect(source).toContain('export const markRenewalQueueItemNonRenewing = withAuth(async (');
     expect(source).toContain("if (typeof clientContractId !== 'string' || clientContractId.trim().length === 0) {");
     expect(source).toContain("throw new Error('Client contract id is required');");
-    expect(source).toContain("const [hasStatusColumn, hasLastActionByColumn] = await Promise.all([");
+    expect(source).toContain("const [hasStatusColumn, hasLastActionByColumn, hasLastActionAtColumn] = await Promise.all([");
     expect(source).toContain("throw new Error('Renewals queue status column is not available');");
     expect(source).toContain("throw new Error('Renewal work item not found');");
     expect(source).toContain("if (previousStatus !== 'pending') {");

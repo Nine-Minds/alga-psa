@@ -13,6 +13,7 @@ describe('renewalsQueueActions actor audit wiring', () => {
     expect(source).toContain('last_action_by: actorUserId');
     expect(source).toContain("schema?.hasColumn?.('client_contracts', 'last_action_by') ?? false");
     expect(source).toContain('const actorUserId = resolveActorUserId(user);');
-    expect(source).toContain('.update(withActionActor({');
+    expect(source).toContain('withActionTimestamp(');
+    expect(source).toContain('withActionActor({');
   });
 });

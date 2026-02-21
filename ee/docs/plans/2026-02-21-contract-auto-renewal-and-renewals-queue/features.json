@@ -570,7 +570,7 @@
   {
     "id": "F072",
     "description": "Persist action timestamp on each queue mutation.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > FR5 — Queue Actions and Renewal Workflow"
     ]

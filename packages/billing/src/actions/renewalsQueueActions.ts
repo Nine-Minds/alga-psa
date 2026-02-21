@@ -33,6 +33,15 @@ const withActionActor = (
     ? { ...updateData, last_action_by: actorUserId }
     : updateData
 );
+const withActionTimestamp = (
+  updateData: Record<string, unknown>,
+  hasLastActionAtColumn: boolean,
+  actionAt: string
+): Record<string, unknown> => (
+  hasLastActionAtColumn
+    ? { ...updateData, last_action_at: actionAt }
+    : updateData
+);
 
 export type RenewalQueueRow = {
   client_contract_id: string;
@@ -182,9 +191,10 @@ export const markRenewalQueueItemRenewing = withAuth(async (
 
   const { knex } = await createTenantKnex();
   const schema = knex.schema as any;
-  const [hasStatusColumn, hasLastActionByColumn] = await Promise.all([
+  const [hasStatusColumn, hasLastActionByColumn, hasLastActionAtColumn] = await Promise.all([
     schema?.hasColumn?.('client_contracts', 'status') ?? false,
     schema?.hasColumn?.('client_contracts', 'last_action_by') ?? false,
+    schema?.hasColumn?.('client_contracts', 'last_action_at') ?? false,
   ]);
   const actorUserId = resolveActorUserId(user);
 
@@ -217,10 +227,16 @@ export const markRenewalQueueItemRenewing = withAuth(async (
         tenant,
         client_contract_id: clientContractId,
       })
-      .update(withActionActor({
-        status: 'renewing',
-        updated_at: updatedAt,
-      }, hasLastActionByColumn, actorUserId));
+      .update(
+        withActionTimestamp(
+          withActionActor({
+            status: 'renewing',
+            updated_at: updatedAt,
+          }, hasLastActionByColumn, actorUserId),
+          hasLastActionAtColumn,
+          updatedAt
+        )
+      );
 
     return {
       client_contract_id: clientContractId,
@@ -242,9 +258,10 @@ export const markRenewalQueueItemNonRenewing = withAuth(async (
 
   const { knex } = await createTenantKnex();
   const schema = knex.schema as any;
-  const [hasStatusColumn, hasLastActionByColumn] = await Promise.all([
+  const [hasStatusColumn, hasLastActionByColumn, hasLastActionAtColumn] = await Promise.all([
     schema?.hasColumn?.('client_contracts', 'status') ?? false,
     schema?.hasColumn?.('client_contracts', 'last_action_by') ?? false,
+    schema?.hasColumn?.('client_contracts', 'last_action_at') ?? false,
   ]);
   const actorUserId = resolveActorUserId(user);
 
@@ -277,10 +294,16 @@ export const markRenewalQueueItemNonRenewing = withAuth(async (
         tenant,
         client_contract_id: clientContractId,
       })
-      .update(withActionActor({
-        status: 'non_renewing',
-        updated_at: updatedAt,
-      }, hasLastActionByColumn, actorUserId));
+      .update(
+        withActionTimestamp(
+          withActionActor({
+            status: 'non_renewing',
+            updated_at: updatedAt,
+          }, hasLastActionByColumn, actorUserId),
+          hasLastActionAtColumn,
+          updatedAt
+        )
+      );
 
     return {
       client_contract_id: clientContractId,
@@ -305,6 +328,7 @@ export const createRenewalDraftForQueueItem = withAuth(async (
   const [
     hasStatusColumn,
     hasLastActionByColumn,
+    hasLastActionAtColumn,
     hasCreatedDraftColumn,
     hasTemplateContractIdColumn,
     hasRenewalModeColumn,
@@ -314,6 +338,7 @@ export const createRenewalDraftForQueueItem = withAuth(async (
   ] = await Promise.all([
     schema?.hasColumn?.('client_contracts', 'status') ?? false,
     schema?.hasColumn?.('client_contracts', 'last_action_by') ?? false,
+    schema?.hasColumn?.('client_contracts', 'last_action_at') ?? false,
     schema?.hasColumn?.('client_contracts', 'created_draft_contract_id') ?? false,
     schema?.hasColumn?.('client_contracts', 'template_contract_id') ?? false,
     schema?.hasColumn?.('client_contracts', 'renewal_mode') ?? false,
@@ -450,7 +475,13 @@ export const createRenewalDraftForQueueItem = withAuth(async (
         tenant,
         client_contract_id: clientContractId,
       })
-      .update(withActionActor(sourceWorkItemUpdate, hasLastActionByColumn, actorUserId));
+      .update(
+        withActionTimestamp(
+          withActionActor(sourceWorkItemUpdate, hasLastActionByColumn, actorUserId),
+          hasLastActionAtColumn,
+          nowIso
+        )
+      );
 
     return {
       client_contract_id: clientContractId,
@@ -475,10 +506,11 @@ export const snoozeRenewalQueueItem = withAuth(async (
 
   const { knex } = await createTenantKnex();
   const schema = knex.schema as any;
-  const [hasStatusColumn, hasSnoozedUntilColumn, hasLastActionByColumn] = await Promise.all([
+  const [hasStatusColumn, hasSnoozedUntilColumn, hasLastActionByColumn, hasLastActionAtColumn] = await Promise.all([
     schema?.hasColumn?.('client_contracts', 'status') ?? false,
     schema?.hasColumn?.('client_contracts', 'snoozed_until') ?? false,
     schema?.hasColumn?.('client_contracts', 'last_action_by') ?? false,
+    schema?.hasColumn?.('client_contracts', 'last_action_at') ?? false,
   ]);
   const actorUserId = resolveActorUserId(user);
 
@@ -517,11 +549,17 @@ export const snoozeRenewalQueueItem = withAuth(async (
         tenant,
         client_contract_id: clientContractId,
       })
-      .update(withActionActor({
-        status: 'snoozed',
-        snoozed_until: normalizedSnoozedUntil,
-        updated_at: updatedAt,
-      }, hasLastActionByColumn, actorUserId));
+      .update(
+        withActionTimestamp(
+          withActionActor({
+            status: 'snoozed',
+            snoozed_until: normalizedSnoozedUntil,
+            updated_at: updatedAt,
+          }, hasLastActionByColumn, actorUserId),
+          hasLastActionAtColumn,
+          updatedAt
+        )
+      );
 
     return {
       client_contract_id: clientContractId,
@@ -548,10 +586,11 @@ export const assignRenewalQueueItemOwner = withAuth(async (
 
   const { knex } = await createTenantKnex();
   const schema = knex.schema as any;
-  const [hasStatusColumn, hasAssignedToColumn, hasLastActionByColumn] = await Promise.all([
+  const [hasStatusColumn, hasAssignedToColumn, hasLastActionByColumn, hasLastActionAtColumn] = await Promise.all([
     schema?.hasColumn?.('client_contracts', 'status') ?? false,
     schema?.hasColumn?.('client_contracts', 'assigned_to') ?? false,
     schema?.hasColumn?.('client_contracts', 'last_action_by') ?? false,
+    schema?.hasColumn?.('client_contracts', 'last_action_at') ?? false,
   ]);
   const actorUserId = resolveActorUserId(user);
 
@@ -584,10 +623,16 @@ export const assignRenewalQueueItemOwner = withAuth(async (
         tenant,
         client_contract_id: clientContractId,
       })
-      .update(withActionActor({
-        assigned_to: normalizedAssignedTo,
-        updated_at: updatedAt,
-      }, hasLastActionByColumn, actorUserId));
+      .update(
+        withActionTimestamp(
+          withActionActor({
+            assigned_to: normalizedAssignedTo,
+            updated_at: updatedAt,
+          }, hasLastActionByColumn, actorUserId),
+          hasLastActionAtColumn,
+          updatedAt
+        )
+      );
 
     return {
       client_contract_id: clientContractId,
