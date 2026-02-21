@@ -346,7 +346,7 @@
   {
     "id": "T044",
     "description": "Functional: Prevent duplicate active renewal work items for same tenant/client_contract_id/cycle key.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F044"
     ]
