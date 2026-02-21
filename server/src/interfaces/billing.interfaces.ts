@@ -481,6 +481,13 @@ export interface IDefaultBillingSettings extends TenantEntity {
   enable_credit_expiration: boolean;
   credit_expiration_days: number;
   credit_expiration_notification_days: number[];
+  default_renewal_mode?: 'none' | 'manual' | 'auto';
+  default_notice_period_days?: number;
+  renewal_due_date_action_policy?: 'queue_only' | 'create_ticket';
+  renewal_ticket_board_id?: string | null;
+  renewal_ticket_status_id?: string | null;
+  renewal_ticket_priority?: string | null;
+  renewal_ticket_assignee_id?: string | null;
   created_at: ISO8601String;
   updated_at: ISO8601String;
 }

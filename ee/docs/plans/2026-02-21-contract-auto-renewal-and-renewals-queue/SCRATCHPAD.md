@@ -184,6 +184,8 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
   - Extended `ContractWizard.renewalFields.test.ts` to assert `buildSubmissionData()` includes all renewal fields in outgoing wizard payload.
 - (2026-02-21) Completed `T018`.
   - Extended `contractWizardActions.renewalDraftResumeWiring.test.ts` to assert draft/client save path writes renewal fields into `client_contracts` with schema-guarded `hasColumn` checks.
+- (2026-02-21) Completed `F019`.
+  - Extended tenant default billing settings model surface in `packages/billing/src/actions/billingSettingsActions.ts` and `server/src/interfaces/billing.interfaces.ts` with renewal-default fields (including default renewal mode) using schema-guarded writes for compatibility.
 
 ## Open Questions
 - Should renewal ticket defaults be a brand-new billing settings card, or an extension of existing default ticket settings patterns?
