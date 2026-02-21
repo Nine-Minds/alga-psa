@@ -1092,7 +1092,7 @@
   {
     "id": "F137",
     "description": "Add migration adding renewal-cycle columns on client_contracts (decision_due_date, renewal_cycle_start, renewal_cycle_end, renewal_cycle_key).",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Rollout / Migration",
       "Requirements > Functional Requirements > FR3 — Renewal Decision Date Engine",

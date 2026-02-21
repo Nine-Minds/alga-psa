@@ -1753,3 +1753,14 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
   - Migration is idempotent and Citus-safe (`ensureSequentialMode`, guarded column/constraint checks).
   - Validation:
     - `node -c server/migrations/202602211100_add_contract_renewal_queue_status_audit_columns.cjs`
+- (2026-02-21) Completed `F137`.
+  - Added migration:
+    - `server/migrations/202602211105_add_contract_renewal_cycle_columns.cjs`
+  - Migration adds renewal-cycle fields on `client_contracts`:
+    - `decision_due_date`
+    - `renewal_cycle_start`
+    - `renewal_cycle_end`
+    - `renewal_cycle_key`
+  - Migration remains idempotent and Citus-safe with guarded column checks.
+  - Validation:
+    - `node -c server/migrations/202602211105_add_contract_renewal_cycle_columns.cjs`
