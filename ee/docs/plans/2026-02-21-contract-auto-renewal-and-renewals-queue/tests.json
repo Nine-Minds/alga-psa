@@ -1762,7 +1762,7 @@
   {
     "id": "T221",
     "description": "Parity: 'Keep effective behavior parity for queue creation between pg-boss and Temporal runners.' behaves equivalently under pg-boss and Temporal paths",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F121"
     ]
