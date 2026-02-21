@@ -162,7 +162,7 @@
   {
     "id": "T021",
     "description": "Functional: Add tenant default due-date action policy field to default billing settings model.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F021"
     ]
