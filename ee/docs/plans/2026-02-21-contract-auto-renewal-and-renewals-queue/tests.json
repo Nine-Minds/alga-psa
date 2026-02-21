@@ -250,7 +250,7 @@
   {
     "id": "T032",
     "description": "Functional: Expose effective renewal settings in contract assignment read APIs.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F032"
     ]
