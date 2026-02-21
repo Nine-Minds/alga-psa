@@ -698,6 +698,19 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
   - Validation:
     - `npm -w @alga-psa/billing run typecheck`
     - `npm -w @alga-psa/billing exec vitest run tests/RenewalsQueueTab.component.test.ts`
+- (2026-02-21) Completed `F080`.
+  - Extended renewal queue row model with draft linkage:
+    - `created_draft_contract_id?: string | null` in `RenewalQueueRow`
+  - Queue list action now maps draft linkage field from row source:
+    - `created_draft_contract_id: (row as any).created_draft_contract_id ?? null`
+  - Renewals queue UI now shows linked draft id when present:
+    - `Draft contract: {row.created_draft_contract_id}`
+  - Updated coverage:
+    - `packages/billing/tests/renewalsQueueActions.wiring.test.ts`
+    - `packages/billing/tests/RenewalsQueueTab.component.test.ts`
+  - Validation:
+    - `npm -w @alga-psa/billing run typecheck`
+    - `npm -w @alga-psa/billing exec vitest run tests/renewalsQueueActions.wiring.test.ts tests/RenewalsQueueTab.component.test.ts tests/renewalsQueueActions.createDraft.wiring.test.ts`
 
 ## Open Questions
 - Should renewal ticket defaults be a brand-new billing settings card, or an extension of existing default ticket settings patterns?

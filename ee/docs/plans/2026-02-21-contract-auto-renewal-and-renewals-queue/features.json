@@ -634,7 +634,7 @@
   {
     "id": "F080",
     "description": "Include linked draft contract id in queue row once renewal draft is created.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > FR5 — Queue Actions and Renewal Workflow"
     ]
