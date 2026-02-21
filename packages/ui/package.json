@@ -80,6 +80,11 @@
       "types": "./src/editor/*.tsx",
       "import": "./dist/editor/*.mjs",
       "require": "./dist/editor/*.js"
+    },
+    "./services": {
+      "types": "./src/services/index.ts",
+      "import": "./dist/services/index.mjs",
+      "require": "./dist/services/index.js"
     }
   },
   "scripts": {
