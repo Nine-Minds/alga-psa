@@ -1338,7 +1338,7 @@
   {
     "id": "T168",
     "description": "UI behavior: Implement create-renewal-draft action for eligible queue entries. persists after refresh/navigation",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F067"
     ]
