@@ -176,12 +176,17 @@ export const normalizeClientContract = (row: any): IClientContract => {
   const normalizedEndDate = normalizeDateOnly(normalized.end_date);
   const normalizedStartDate = normalizeDateOnly(normalized.start_date);
   const effectiveNoticePeriodDays = normalizeNonNegativeInteger(normalized.effective_notice_period_days);
+  const effectiveRenewalMode = normalizeRenewalMode(normalized.effective_renewal_mode);
   normalized.evergreen_review_anchor_date =
     !normalizedEndDate && normalizedStartDate && normalized.is_active === true
       ? computeNextEvergreenReviewAnchorDate({ startDate: normalizedStartDate })
       : undefined;
+  const shouldSkipDecisionDueDate =
+    effectiveRenewalMode === 'none' && !normalized.evergreen_review_anchor_date;
   normalized.decision_due_date =
-    normalizedEndDate && effectiveNoticePeriodDays !== undefined
+    shouldSkipDecisionDueDate
+      ? undefined
+      : normalizedEndDate && effectiveNoticePeriodDays !== undefined
       ? subtractDaysFromDateOnly(normalizedEndDate, effectiveNoticePeriodDays)
       : !normalizedEndDate && normalizedStartDate && effectiveNoticePeriodDays !== undefined
         ? computeEvergreenDecisionDueDate({

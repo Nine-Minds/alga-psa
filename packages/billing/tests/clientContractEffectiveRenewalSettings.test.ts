@@ -155,6 +155,37 @@ describe('client contract effective renewal settings normalization', () => {
     expect(longNotice.decision_due_date).toBe('2026-11-16');
   });
 
+  it('recomputes decision_due_date when renewal mode changes between none/manual/auto', () => {
+    const baseAssignment = {
+      contract_id: 'contract-4e',
+      client_contract_id: 'cc-4e',
+      client_id: 'client-4e',
+      tenant: 'tenant-1',
+      start_date: '2026-01-01',
+      end_date: '2026-12-31',
+      is_active: true,
+      use_tenant_renewal_defaults: false,
+      notice_period_days: 30,
+    };
+
+    const noneMode = normalizeClientContract({
+      ...baseAssignment,
+      renewal_mode: 'none',
+    });
+    const manualMode = normalizeClientContract({
+      ...baseAssignment,
+      renewal_mode: 'manual',
+    });
+    const autoMode = normalizeClientContract({
+      ...baseAssignment,
+      renewal_mode: 'auto',
+    });
+
+    expect(noneMode.decision_due_date).toBeUndefined();
+    expect(manualMode.decision_due_date).toBe('2026-12-01');
+    expect(autoMode.decision_due_date).toBe('2026-12-01');
+  });
+
   it('computes next evergreen review anchor date using contract anniversary rules', () => {
     expect(
       computeNextEvergreenReviewAnchorDate({

@@ -306,7 +306,7 @@
   {
     "id": "F039",
     "description": "Recompute decision_due_date when renewal mode changes between none/manual/auto.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > FR3 — Renewal Decision Date Engine"
     ]
