@@ -877,6 +877,17 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
   - Validation:
     - `cd server && npm run typecheck`
     - `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`
+- (2026-02-21) Completed `F094`.
+  - Added deterministic renewal ticket idempotency key builder:
+    - shape: `renewal-ticket:{tenantId}:{clientContractId}:{cycleKey}`
+  - Processor now uses this idempotency key for:
+    - workflow runtime `tickets.create` invocation input (`idempotency_key`)
+    - direct fallback ticket attributes (`idempotency_key`) for duplicate-detection context
+  - Updated wiring coverage:
+    - `server/src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts`
+  - Validation:
+    - `cd server && npm run typecheck`
+    - `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`
 
 ## Open Questions
 - Should renewal ticket defaults be a brand-new billing settings card, or an extension of existing default ticket settings patterns?

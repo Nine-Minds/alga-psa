@@ -127,6 +127,14 @@ describe('renewal queue scheduling wiring', () => {
     expect(renewalHandlerSource).toContain('...updates,');
   });
 
+  it('uses tenant/client-contract/cycle idempotency key for renewal ticket creation', () => {
+    expect(renewalHandlerSource).toContain('const buildRenewalTicketIdempotencyKey = (params: {');
+    expect(renewalHandlerSource).toContain('): string => `renewal-ticket:${params.tenantId}:${params.clientContractId}:${params.cycleKey}`;');
+    expect(renewalHandlerSource).toContain('const idempotencyKey = buildRenewalTicketIdempotencyKey({');
+    expect(renewalHandlerSource).toContain('idempotency_key: params.idempotencyKey,');
+    expect(renewalHandlerSource).toContain('idempotency_key: params.idempotencyKey,');
+  });
+
   it('registers and schedules renewal queue processing in the jobs module', () => {
     expect(jobsIndexSource).toContain("import { processRenewalQueueHandler, RenewalQueueProcessorJobData } from './handlers/processRenewalQueueHandler';");
     expect(jobsIndexSource).toContain("jobScheduler.registerJobHandler<RenewalQueueProcessorJobData>(");
