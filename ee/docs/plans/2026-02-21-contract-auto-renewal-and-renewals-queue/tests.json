@@ -938,7 +938,7 @@
   {
     "id": "T118",
     "description": "Functional: Register renewal scheduled processing job in pg-boss on-prem scheduling path.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F118"
     ]
