@@ -28,15 +28,15 @@
     "quickActions": {
       "title": "Actions rapides",
       "createTicket": "Créer un ticket d'assistance",
-      "requestAppointment": "Request Appointment",
+      "requestAppointment": "Demander un rendez-vous",
       "viewLatestInvoice": "Voir la dernière facture"
     },
     "appointments": {
-      "title": "Upcoming Appointments",
-      "noUpcoming": "No upcoming appointments. Request one now!",
-      "requestButton": "Request Appointment",
-      "viewAll": "View all appointments →",
-      "technician": "Technician"
+      "title": "Rendez-vous à venir",
+      "noUpcoming": "Aucun rendez-vous à venir. Demandez-en un maintenant !",
+      "requestButton": "Demander un rendez-vous",
+      "viewAll": "Voir tous les rendez-vous →",
+      "technician": "Technicien"
     },
     "recentActivity": {
       "title": "Activité récente"
@@ -135,7 +135,7 @@
         "description": "Consultez les documents et ressources partagés"
       }
     },
-    "forgotPassword": "Forgot password?"
+    "forgotPassword": "Mot de passe oublié ?"
   },
   "account": {
     "title": "Compte",

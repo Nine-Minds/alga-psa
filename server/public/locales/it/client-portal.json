@@ -28,15 +28,15 @@
     "quickActions": {
       "title": "Azioni rapide",
       "createTicket": "Crea ticket di supporto",
-      "requestAppointment": "Request Appointment",
+      "requestAppointment": "Richiedi appuntamento",
       "viewLatestInvoice": "Visualizza l'ultima fattura"
     },
     "appointments": {
-      "title": "Upcoming Appointments",
-      "noUpcoming": "No upcoming appointments. Request one now!",
-      "requestButton": "Request Appointment",
-      "viewAll": "View all appointments →",
-      "technician": "Technician"
+      "title": "Prossimi appuntamenti",
+      "noUpcoming": "Nessun appuntamento in programma. Richiedine uno ora!",
+      "requestButton": "Richiedi appuntamento",
+      "viewAll": "Vedi tutti gli appuntamenti →",
+      "technician": "Tecnico"
     },
     "recentActivity": {
       "title": "Attività recente"

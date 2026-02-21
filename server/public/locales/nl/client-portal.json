@@ -28,15 +28,15 @@
     "quickActions": {
       "title": "Snelle acties",
       "createTicket": "Supportticket aanmaken",
-      "requestAppointment": "Request Appointment",
+      "requestAppointment": "Afspraak aanvragen",
       "viewLatestInvoice": "Laatste factuur bekijken"
     },
     "appointments": {
-      "title": "Upcoming Appointments",
-      "noUpcoming": "No upcoming appointments. Request one now!",
-      "requestButton": "Request Appointment",
-      "viewAll": "View all appointments →",
-      "technician": "Technician"
+      "title": "Komende afspraken",
+      "noUpcoming": "Geen komende afspraken. Vraag er nu een aan!",
+      "requestButton": "Afspraak aanvragen",
+      "viewAll": "Alle afspraken bekijken →",
+      "technician": "Technicus"
     },
     "recentActivity": {
       "title": "Recente activiteit"
@@ -135,7 +135,7 @@
         "description": "Bekijk gedeelde documenten en bronnen"
       }
     },
-    "forgotPassword": "Forgot password?"
+    "forgotPassword": "Wachtwoord vergeten?"
   },
   "account": {
     "title": "Account",

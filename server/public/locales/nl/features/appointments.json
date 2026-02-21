@@ -20,8 +20,8 @@
     "selectTicket": "Selecteer een ticket",
     "noTicket": "Geen ticket",
     "ticketHint": "Koppel deze afspraak optioneel aan een bestaand supportticket",
-    "noTicketsFound": "No tickets found matching your search",
-    "searchTickets": "Search tickets..."
+    "noTicketsFound": "Geen tickets gevonden die overeenkomen met uw zoekopdracht",
+    "searchTickets": "Tickets zoeken..."
   },
   "step2": {
     "title": "Kies datum",
@@ -38,7 +38,7 @@
     "selectTechnician": "Selecteer een technicus",
     "noPreference": "Geen voorkeur",
     "technicianHint": "Dit is een voorkeur en kan worden aangepast op basis van beschikbaarheid",
-    "noTimeSlotsAvailable": "No time slots available for this date. Please select a different date."
+    "noTimeSlotsAvailable": "Geen tijdsloten beschikbaar voor deze datum. Selecteer een andere datum."
   },
   "step4": {
     "title": "Controleren en bevestigen",

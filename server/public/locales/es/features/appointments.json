@@ -20,8 +20,8 @@
     "selectTicket": "Seleccione un ticket",
     "noTicket": "Sin ticket",
     "ticketHint": "Opcionalmente vincule esta cita a un ticket de soporte existente",
-    "noTicketsFound": "No tickets found matching your search",
-    "searchTickets": "Search tickets..."
+    "noTicketsFound": "No se encontraron tickets que coincidan con tu búsqueda",
+    "searchTickets": "Buscar tickets..."
   },
   "step2": {
     "title": "Elegir fecha",
@@ -38,7 +38,7 @@
     "selectTechnician": "Seleccione un técnico",
     "noPreference": "Sin preferencia",
     "technicianHint": "Esta es una preferencia y puede ajustarse según la disponibilidad",
-    "noTimeSlotsAvailable": "No time slots available for this date. Please select a different date."
+    "noTimeSlotsAvailable": "No hay horarios disponibles para esta fecha. Por favor, selecciona otra fecha."
   },
   "step4": {
     "title": "Revisar y confirmar",
