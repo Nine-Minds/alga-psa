@@ -1929,7 +1929,7 @@
   {
     "id": "T241",
     "description": "E2E queue action flow: mark renewing auto-creates draft, open editor, then complete work item after activation.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F065",
       "F067",
