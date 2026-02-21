@@ -1801,3 +1801,19 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
   - Migration remains idempotent and Citus-safe with guarded column/constraint checks.
   - Validation:
     - `node -c server/migrations/202602211120_add_default_billing_renewal_columns.cjs`
+- (2026-02-21) Completed `F141`.
+  - Added backfill migration:
+    - `server/migrations/202602211125_backfill_active_client_contract_renewal_defaults.cjs`
+  - Backfill scope:
+    - active fixed-term `client_contracts` rows (`is_active=true`, joined `contracts.status='active'`, `end_date IS NOT NULL`)
+  - Backfill behavior (only when target fields are missing):
+    - sets deterministic defaults: `renewal_mode='manual'`, `notice_period_days=30`, `use_tenant_renewal_defaults=true`
+    - computes initial fixed-term cycle fields:
+      - `decision_due_date = end_date - notice_period_days`
+      - `renewal_cycle_start = start_date::date`
+      - `renewal_cycle_end = end_date::date`
+      - `renewal_cycle_key = fixed-term:<end_date>`
+    - preserves existing non-null values via `COALESCE` to avoid overwriting already-migrated data
+  - Migration is intentionally non-reversible (data backfill).
+  - Validation:
+    - `node -c server/migrations/202602211125_backfill_active_client_contract_renewal_defaults.cjs`

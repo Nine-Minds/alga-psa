@@ -1131,7 +1131,7 @@
   {
     "id": "F141",
     "description": "Add migration/backfill for existing active client_contract rows to initialize deterministic renewal state/defaults and compute first decision_due_date/cycle fields.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Rollout / Migration",
       "Requirements > Functional Requirements > FR3 — Renewal Decision Date Engine"
