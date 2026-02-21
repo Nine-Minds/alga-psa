@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  computeDaysUntilDate,
   computeEvergreenDecisionDueDate,
   computeEvergreenCycleBounds,
   computeNextEvergreenReviewAnchorDate,
@@ -86,6 +87,7 @@ describe('client contract effective renewal settings normalization', () => {
 
     expect(normalized.effective_notice_period_days).toBe(45);
     expect(normalized.decision_due_date).toBe('2026-11-16');
+    expect(typeof normalized.days_until_due).toBe('number');
   });
 
   it('normalizes timestamp end_date to date-only semantics before fixed-term due-date math', () => {
@@ -364,6 +366,22 @@ describe('client contract effective renewal settings normalization', () => {
       cycleStart: '2025-05-10',
       cycleEnd: '2026-05-10',
     });
+  });
+
+  it('computes days_until_due as a date-only integer day delta', () => {
+    expect(
+      computeDaysUntilDate({
+        targetDate: '2026-05-10',
+        now: '2026-05-01',
+      })
+    ).toBe(9);
+
+    expect(
+      computeDaysUntilDate({
+        targetDate: '2026-05-01',
+        now: '2026-05-10',
+      })
+    ).toBe(-9);
   });
 
   it('exposes evergreen_review_anchor_date on active evergreen assignments', () => {

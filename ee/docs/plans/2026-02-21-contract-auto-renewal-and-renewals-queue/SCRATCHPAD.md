@@ -346,6 +346,12 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
   - Evergreen boundaries now use annual cycle bounds helper:
     - `computeEvergreenCycleBounds` in `shared/billingClients/clientContracts.ts`
   - Added deterministic coverage in `packages/billing/tests/clientContractEffectiveRenewalSettings.test.ts`.
+- (2026-02-21) Completed `F046`.
+  - Added derived `days_until_due` field to assignment normalization and contract interfaces.
+  - New date-only helper:
+    - `computeDaysUntilDate` in `shared/billingClients/clientContracts.ts`
+  - Added deterministic coverage for positive/negative day deltas and normalized row field presence in:
+    - `packages/billing/tests/clientContractEffectiveRenewalSettings.test.ts`
 
 ## Open Questions
 - Should renewal ticket defaults be a brand-new billing settings card, or an extension of existing default ticket settings patterns?

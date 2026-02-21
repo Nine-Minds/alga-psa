@@ -127,6 +127,25 @@ const computeEvergreenCycleBounds = (params: {
   };
 };
 
+const computeDaysUntilDate = (params: {
+  targetDate: string;
+  now?: string | Date;
+}): number | undefined => {
+  const normalizedTargetDate = normalizeDateOnly(params.targetDate);
+  if (!normalizedTargetDate) return undefined;
+
+  const target = new Date(`${normalizedTargetDate}T00:00:00.000Z`);
+  if (Number.isNaN(target.getTime())) return undefined;
+
+  const normalizedNow = normalizeDateOnly(params.now instanceof Date ? params.now.toISOString() : params.now);
+  const nowBase = normalizedNow
+    ? new Date(`${normalizedNow}T00:00:00.000Z`)
+    : new Date(new Date().toISOString().slice(0, 10) + 'T00:00:00.000Z');
+  if (Number.isNaN(nowBase.getTime())) return undefined;
+
+  return Math.round((target.getTime() - nowBase.getTime()) / MS_PER_DAY);
+};
+
 type RenewalDefaultSelectionConfig = {
   joinDefaultSettings: boolean;
   defaultSelections: string[];
@@ -249,6 +268,9 @@ export const normalizeClientContract = (row: any): IClientContract => {
       : normalized.renewal_cycle_end
         ? `evergreen:${normalized.renewal_cycle_end as string}`
         : undefined
+    : undefined;
+  normalized.days_until_due = normalized.decision_due_date
+    ? computeDaysUntilDate({ targetDate: normalized.decision_due_date as string })
     : undefined;
 
   delete normalized.tenant_default_renewal_mode;

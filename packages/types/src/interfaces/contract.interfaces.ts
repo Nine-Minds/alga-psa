@@ -74,6 +74,7 @@ export interface IClientContract extends TenantEntity {
   renewal_cycle_start?: ISO8601String | null;
   renewal_cycle_end?: ISO8601String | null;
   renewal_cycle_key?: string;
+  days_until_due?: number;
   is_active: boolean;
   po_required?: boolean;
   po_number?: string | null;

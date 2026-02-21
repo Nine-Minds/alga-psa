@@ -362,7 +362,7 @@
   {
     "id": "F046",
     "description": "Expose days_until_due as derived queue field for UI sorting and badges.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > FR3 — Renewal Decision Date Engine"
     ]
