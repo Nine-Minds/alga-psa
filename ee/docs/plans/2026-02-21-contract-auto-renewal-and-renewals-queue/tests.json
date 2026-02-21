@@ -1170,7 +1170,7 @@
   {
     "id": "T147",
     "description": "Cycle rollover: evergreen behavior remains correct across year boundary for 'Compute next evergreen review anchor date from active contract anniversary rules.'",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F034"
     ]
