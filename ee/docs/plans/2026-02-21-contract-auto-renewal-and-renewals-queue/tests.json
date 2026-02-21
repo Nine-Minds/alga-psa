@@ -1394,7 +1394,7 @@
   {
     "id": "T175",
     "description": "Validation negative-path: Enforce snooze date must be in the future on action validation.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F076"
     ]
