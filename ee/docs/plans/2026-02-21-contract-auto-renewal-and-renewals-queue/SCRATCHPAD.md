@@ -352,6 +352,12 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
     - `computeDaysUntilDate` in `shared/billingClients/clientContracts.ts`
   - Added deterministic coverage for positive/negative day deltas and normalized row field presence in:
     - `packages/billing/tests/clientContractEffectiveRenewalSettings.test.ts`
+- (2026-02-21) Completed `F047`.
+  - Added clamp bounds to `days_until_due` derivation to preserve overdue visibility while preventing extreme negative/positive corruption:
+    - `MAX_ABSOLUTE_DAYS_UNTIL_DUE = 36500`
+  - Applied in shared and clients normalization helpers.
+  - Added deterministic clamp coverage in:
+    - `packages/billing/tests/clientContractEffectiveRenewalSettings.test.ts`
 
 ## Open Questions
 - Should renewal ticket defaults be a brand-new billing settings card, or an extension of existing default ticket settings patterns?

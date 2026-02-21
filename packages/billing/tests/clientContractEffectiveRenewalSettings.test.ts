@@ -382,6 +382,20 @@ describe('client contract effective renewal settings normalization', () => {
         now: '2026-05-10',
       })
     ).toBe(-9);
+
+    expect(
+      computeDaysUntilDate({
+        targetDate: '1900-01-01',
+        now: '2026-05-10',
+      })
+    ).toBe(-36500);
+
+    expect(
+      computeDaysUntilDate({
+        targetDate: '2200-01-01',
+        now: '2026-05-10',
+      })
+    ).toBe(36500);
   });
 
   it('exposes evergreen_review_anchor_date on active evergreen assignments', () => {

@@ -370,7 +370,7 @@
   {
     "id": "F047",
     "description": "Clamp past-due decision calculations into queue visibility without negative date corruption.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > FR3 — Renewal Decision Date Engine"
     ]

@@ -8,6 +8,7 @@ type RenewalMode = NonNullable<IClientContract['renewal_mode']>;
 const DEFAULT_RENEWAL_MODE: RenewalMode = 'manual';
 const DEFAULT_NOTICE_PERIOD_DAYS = 30;
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
+const MAX_ABSOLUTE_DAYS_UNTIL_DUE = 36500;
 
 const normalizeRenewalMode = (value: unknown): RenewalMode | undefined => {
   return value === 'none' || value === 'manual' || value === 'auto' ? value : undefined;
@@ -143,7 +144,13 @@ export const computeDaysUntilDate = (params: {
     : new Date(new Date().toISOString().slice(0, 10) + 'T00:00:00.000Z');
   if (Number.isNaN(nowBase.getTime())) return undefined;
 
-  return Math.round((target.getTime() - nowBase.getTime()) / MS_PER_DAY);
+  const rawDaysUntilDue = Math.round((target.getTime() - nowBase.getTime()) / MS_PER_DAY);
+  if (!Number.isFinite(rawDaysUntilDue)) return undefined;
+
+  return Math.max(
+    -MAX_ABSOLUTE_DAYS_UNTIL_DUE,
+    Math.min(MAX_ABSOLUTE_DAYS_UNTIL_DUE, rawDaysUntilDue)
+  );
 };
 
 type RenewalDefaultSelectionConfig = {
