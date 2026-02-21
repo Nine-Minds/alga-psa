@@ -1794,7 +1794,7 @@
   {
     "id": "T225",
     "description": "Parity: 'Fallback gracefully to supported runner path when temporal bootstrap is unavailable.' behaves equivalently under pg-boss and Temporal paths",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F124"
     ]
