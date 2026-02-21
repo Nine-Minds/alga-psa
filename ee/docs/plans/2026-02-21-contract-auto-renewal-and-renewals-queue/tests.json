@@ -1650,7 +1650,7 @@
   {
     "id": "T207",
     "description": "Cycle rollover: evergreen behavior remains correct across year boundary for 'Support mark-non-renewing action for evergreen queue entries.'",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F104"
     ]
