@@ -1842,7 +1842,7 @@
   {
     "id": "T231",
     "description": "Validation negative-path: Enforce billing settings update permission on renewal defaults update endpoints.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F128"
     ]
