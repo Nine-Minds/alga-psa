@@ -1826,7 +1826,7 @@
   {
     "id": "T229",
     "description": "Validation negative-path: Enforce billing update permission on queue mutation endpoints.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F127"
     ]
