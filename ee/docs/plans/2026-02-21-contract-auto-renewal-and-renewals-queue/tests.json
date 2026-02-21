@@ -194,7 +194,7 @@
   {
     "id": "T025",
     "description": "Functional: Add tenant default renewal ticket assignee field to default billing settings model.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F025"
     ]

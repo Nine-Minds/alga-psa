@@ -214,6 +214,8 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
   - Covered by existing `billingSettingsActions.renewalDefaultsWiring.test.ts` assertions for `renewalTicketStatusId`.
 - (2026-02-21) Completed `T024`.
   - Covered by existing `billingSettingsActions.renewalDefaultsWiring.test.ts` assertions for `renewalTicketPriority`.
+- (2026-02-21) Completed `T025`.
+  - Covered by existing `billingSettingsActions.renewalDefaultsWiring.test.ts` assertions for `renewalTicketAssigneeId`.
 
 ## Open Questions
 - Should renewal ticket defaults be a brand-new billing settings card, or an extension of existing default ticket settings patterns?
