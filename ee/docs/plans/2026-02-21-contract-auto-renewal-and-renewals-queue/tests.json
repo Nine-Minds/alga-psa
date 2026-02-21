@@ -1490,7 +1490,7 @@
   {
     "id": "T187",
     "description": "Idempotency: repeated execution of 'Populate renewal ticket title with client and contract context.' does not create duplicate tickets",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F090"
     ]
