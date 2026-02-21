@@ -203,4 +203,10 @@ describe('renewal queue scheduling wiring', () => {
     expect(scheduledInitSource).toContain("const cron = '0 5 * * *';");
     expect(scheduledInitSource).toContain('const renewalQueueJobId = await scheduleRenewalQueueProcessingJob(tenantId, 90, cron);');
   });
+
+  it('registers renewal queue scheduling in the on-prem pg-boss initialization path', () => {
+    expect(scheduledInitSource).toContain('const renewalQueueJobId = await scheduleRenewalQueueProcessingJob(tenantId, 90, cron);');
+    expect(scheduledInitSource).toContain('logger.info(`Scheduled renewal queue processing job for tenant ${tenantId} with job ID ${renewalQueueJobId}`);');
+    expect(scheduledInitSource).toContain("logger.info('Renewal queue processing job already scheduled (singleton active)', {");
+  });
 });

@@ -1139,6 +1139,15 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
   - Validation:
     - `npm -w @alga-psa/billing exec vitest run tests/contractReportActions.expiration.wiring.test.ts tests/contractReportActions.summary.wiring.test.ts tests/ContractReports.expirationCopy.wiring.test.ts --coverage=false`
     - `npm -w @alga-psa/billing run typecheck`
+- (2026-02-21) Completed `F118`.
+  - Confirmed renewal scheduled processor registration in the on-prem pg-boss scheduled initialization path:
+    - tenant loop schedules `process-renewal-queue` via `scheduleRenewalQueueProcessingJob(tenantId, 90, cron)`
+    - includes both first-schedule and singleton-already-scheduled handling logs
+  - Updated coverage:
+    - `server/src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts`
+  - Validation:
+    - `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`
+    - `cd server && npm run typecheck`
 
 ## Open Questions
 - Should renewal ticket defaults be a brand-new billing settings card, or an extension of existing default ticket settings patterns?

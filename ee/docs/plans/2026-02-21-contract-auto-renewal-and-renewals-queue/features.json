@@ -938,7 +938,7 @@
   {
     "id": "F118",
     "description": "Register renewal scheduled processing job in pg-boss on-prem scheduling path.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > FR9 — Runtime Compatibility (On-prem PG Boss vs Hosted/EE Temporal)"
     ]
