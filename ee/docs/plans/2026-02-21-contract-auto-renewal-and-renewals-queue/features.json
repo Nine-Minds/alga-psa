@@ -34,7 +34,7 @@
   {
     "id": "F005",
     "description": "Render Renewal Settings card in ContractBasicsStep when end date is present.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > FR1 — Contract Setup and Renewal Configuration"
     ]

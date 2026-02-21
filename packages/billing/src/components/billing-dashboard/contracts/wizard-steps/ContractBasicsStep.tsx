@@ -324,6 +324,21 @@ export function ContractBasicsStep({
         )}
       </div>
 
+      {data.end_date && (
+        <div
+          className="border border-[rgb(var(--color-border-200))] rounded-md p-4 space-y-2 bg-[rgb(var(--color-surface-50))]"
+          data-automation-id="renewal-settings-fixed-term-card"
+        >
+          <div className="flex items-center gap-2">
+            <Repeat className="h-4 w-4 text-[rgb(var(--color-primary-600))]" />
+            <h4 className="text-sm font-semibold">Renewal Settings</h4>
+          </div>
+          <p className="text-xs text-[rgb(var(--color-text-500))]">
+            This contract has a fixed end date. Configure renewal behavior and notice timing.
+          </p>
+        </div>
+      )}
+
       <div className="space-y-2">
         <Label htmlFor="description">Description (Optional)</Label>
         <TextArea
