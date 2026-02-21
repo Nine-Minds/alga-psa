@@ -1378,7 +1378,7 @@
   {
     "id": "T173",
     "description": "UI behavior: Persist action timestamp on each queue mutation. persists after refresh/navigation",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F072"
     ]
