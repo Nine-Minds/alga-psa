@@ -1138,7 +1138,7 @@
   {
     "id": "T143",
     "description": "Idempotency: repeated execution of 'Add tenant default renewal ticket status field to default billing settings model.' does not create duplicate tickets",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F023"
     ]
