@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useMemo, useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import {
   listRenewalQueueRows,
   type RenewalQueueRow,
@@ -13,6 +14,7 @@ type RenewalModeFilter = 'all' | 'none' | 'manual' | 'auto';
 type ContractTypeFilter = 'all' | 'fixed-term' | 'evergreen';
 
 export default function RenewalsQueueTab() {
+  const searchParams = useSearchParams();
   const [rows, setRows] = useState<RenewalQueueRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -21,6 +23,13 @@ export default function RenewalsQueueTab() {
   const [statusFilter, setStatusFilter] = useState<RenewalStatus>('all');
   const [renewalModeFilter, setRenewalModeFilter] = useState<RenewalModeFilter>('all');
   const [contractTypeFilter, setContractTypeFilter] = useState<ContractTypeFilter>('all');
+
+  useEffect(() => {
+    const bucketParam = searchParams?.get('bucket');
+    if (bucketParam === '0-30' || bucketParam === '31-60' || bucketParam === '61-90' || bucketParam === 'all') {
+      setBucket(bucketParam);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     let cancelled = false;

@@ -450,6 +450,19 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
   - Counts now derive from renewal queue row `days_until_due`.
   - Added coverage update in:
     - `packages/billing/tests/ClientContractsTab.upcomingRenewalsWidget.test.ts`
+- (2026-02-21) Completed `F062`.
+  - Added widget-to-queue navigation with preserved bucket context in:
+    - `packages/billing/src/components/billing-dashboard/contracts/ClientContractsTab.tsx`
+  - Bucket count badges now route to:
+    - `/msp/billing?tab=renewals&bucket=0-30|31-60|61-90`
+  - Added queue hydration from URL bucket query param in:
+    - `packages/billing/src/components/billing-dashboard/contracts/RenewalsQueueTab.tsx`
+  - Added/updated coverage in:
+    - `packages/billing/tests/ClientContractsTab.upcomingRenewalsWidget.test.ts`
+    - `packages/billing/tests/RenewalsQueueTab.component.test.ts`
+  - Validation:
+    - `npm -w @alga-psa/billing run typecheck`
+    - `npm -w @alga-psa/billing exec vitest run tests/ClientContractsTab.upcomingRenewalsWidget.test.ts tests/RenewalsQueueTab.component.test.ts`
 
 ## Open Questions
 - Should renewal ticket defaults be a brand-new billing settings card, or an extension of existing default ticket settings patterns?

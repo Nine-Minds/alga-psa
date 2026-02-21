@@ -490,7 +490,7 @@
   {
     "id": "F062",
     "description": "Navigate from upcoming renewals widget to Renewals tab preserving filter context.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > FR4 — Renewals Queue and Dashboard Entry Points"
     ]

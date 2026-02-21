@@ -61,6 +61,15 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
     void fetchClientContracts();
   }, [refreshTrigger]);
 
+  const navigateToRenewals = (bucket: 'all' | '0-30' | '31-60' | '61-90') => {
+    const params = new URLSearchParams();
+    params.set('tab', 'renewals');
+    if (bucket !== 'all') {
+      params.set('bucket', bucket);
+    }
+    router.push(`/msp/billing?${params.toString()}`);
+  };
+
   const fetchClientContracts = async () => {
     try {
       setIsLoading(true);
@@ -385,9 +394,33 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
                 </p>
               </div>
               <div className="flex items-center gap-2 text-xs">
-                <Badge variant="info">0-30: {upcomingRenewalBuckets.days0to30}</Badge>
-                <Badge variant="default">31-60: {upcomingRenewalBuckets.days31to60}</Badge>
-                <Badge variant="default-muted">61-90: {upcomingRenewalBuckets.days61to90}</Badge>
+                <Button
+                  id="upcoming-renewals-nav-0-30"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => navigateToRenewals('0-30')}
+                  data-testid="upcoming-renewals-bucket-0-30"
+                >
+                  <Badge variant="info">0-30: {upcomingRenewalBuckets.days0to30}</Badge>
+                </Button>
+                <Button
+                  id="upcoming-renewals-nav-31-60"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => navigateToRenewals('31-60')}
+                  data-testid="upcoming-renewals-bucket-31-60"
+                >
+                  <Badge variant="default">31-60: {upcomingRenewalBuckets.days31to60}</Badge>
+                </Button>
+                <Button
+                  id="upcoming-renewals-nav-61-90"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => navigateToRenewals('61-90')}
+                  data-testid="upcoming-renewals-bucket-61-90"
+                >
+                  <Badge variant="default-muted">61-90: {upcomingRenewalBuckets.days61to90}</Badge>
+                </Button>
               </div>
             </div>
           </section>

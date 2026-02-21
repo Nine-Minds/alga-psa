@@ -14,6 +14,9 @@ describe('ClientContractsTab upcoming renewals widget', () => {
     expect(source).toContain('0-30: {upcomingRenewalBuckets.days0to30}');
     expect(source).toContain('31-60: {upcomingRenewalBuckets.days31to60}');
     expect(source).toContain('61-90: {upcomingRenewalBuckets.days61to90}');
+    expect(source).toContain('data-testid="upcoming-renewals-bucket-0-30"');
+    expect(source).toContain('data-testid="upcoming-renewals-bucket-31-60"');
+    expect(source).toContain('data-testid="upcoming-renewals-bucket-61-90"');
   });
 
   it('loads renewal queue summary data for the widget', () => {
@@ -22,5 +25,13 @@ describe('ClientContractsTab upcoming renewals widget', () => {
     expect(source).toContain('const renewalRows = await listRenewalQueueRows();');
     expect(source).toContain('setUpcomingRenewalBuckets({');
     expect(source).toContain('days0to30: renewalRows.filter((row) => (row.days_until_due ?? Number.MAX_SAFE_INTEGER) <= 30).length');
+  });
+
+  it('navigates to renewals tab while preserving bucket filter context', () => {
+    expect(source).toContain("const navigateToRenewals = (bucket: 'all' | '0-30' | '31-60' | '61-90') => {");
+    expect(source).toContain("params.set('tab', 'renewals');");
+    expect(source).toContain("if (bucket !== 'all') {");
+    expect(source).toContain("params.set('bucket', bucket);");
+    expect(source).toContain('router.push(`/msp/billing?${params.toString()}`);');
   });
 });

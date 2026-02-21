@@ -17,11 +17,16 @@ describe('RenewalsQueueTab component', () => {
   });
 
   it('loads renewal queue rows from a server action on mount', () => {
+    expect(source).toContain("import { useSearchParams } from 'next/navigation';");
+    expect(source).toContain('const searchParams = useSearchParams();');
     expect(source).toContain("listRenewalQueueRows,");
     expect(source).toContain('useEffect(() => {');
     expect(source).toContain('const result = await listRenewalQueueRows();');
     expect(source).toContain('setRows(result);');
     expect(source).toContain('Loading renewal queue...');
+    expect(source).toContain('const bucketParam = searchParams?.get(\'bucket\');');
+    expect(source).toContain("if (bucketParam === '0-30' || bucketParam === '31-60' || bucketParam === '61-90' || bucketParam === 'all') {");
+    expect(source).toContain('setBucket(bucketParam);');
   });
 
   it('renders quick bucket filters for 0-30, 31-60, and 61-90 day windows', () => {
