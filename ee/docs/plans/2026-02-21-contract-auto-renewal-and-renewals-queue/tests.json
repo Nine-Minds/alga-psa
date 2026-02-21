@@ -762,7 +762,7 @@
   {
     "id": "T096",
     "description": "Functional: Record automation_error on work item when ticket creation fails.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F096"
     ]
