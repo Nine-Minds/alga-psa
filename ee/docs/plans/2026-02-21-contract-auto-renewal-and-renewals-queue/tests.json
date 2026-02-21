@@ -1498,7 +1498,7 @@
   {
     "id": "T188",
     "description": "Idempotency: repeated execution of 'Populate renewal ticket description with due date and renewal settings context.' does not create duplicate tickets",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F091"
     ]
