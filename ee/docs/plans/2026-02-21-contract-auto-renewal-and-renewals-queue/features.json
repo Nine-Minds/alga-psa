@@ -386,7 +386,7 @@
   {
     "id": "F049",
     "description": "Add Renewals Tabs.Content route to BillingDashboard tab host.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > FR4 — Renewals Queue and Dashboard Entry Points"
     ]

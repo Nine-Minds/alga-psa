@@ -364,6 +364,12 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
   - Added tab definition (`label=Renewals`, `href=/msp/billing?tab=renewals`) and icon mapping.
   - Added coverage:
     - `packages/billing/tests/billingTabsConfig.renewals.test.ts`
+- (2026-02-21) Completed `F049`.
+  - Added `Tabs.Content value=\"renewals\"` route to billing dashboard tab host in:
+    - `packages/billing/src/components/billing-dashboard/BillingDashboard.tsx`
+  - Added initial placeholder content for the renewals route host.
+  - Added route-wiring coverage:
+    - `packages/billing/tests/BillingDashboard.renewalsRoute.test.ts`
 
 ## Open Questions
 - Should renewal ticket defaults be a brand-new billing settings card, or an extension of existing default ticket settings patterns?

@@ -140,6 +140,15 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
           )}
         </Tabs.Content>
 
+        <Tabs.Content value="renewals">
+          <div
+            data-testid="renewals-tab-content"
+            className="rounded-md border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-bg-100))] p-4 text-sm text-[rgb(var(--color-text-500))]"
+          >
+            Renewals queue coming soon.
+          </div>
+        </Tabs.Content>
+
         <Tabs.Content value="accounting-exports">
           <AccountingExportsTab />
         </Tabs.Content>
