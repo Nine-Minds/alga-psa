@@ -586,7 +586,7 @@
   {
     "id": "T074",
     "description": "Functional: Prevent invalid transition from completed back to pending without explicit reopen action.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F074"
     ]
