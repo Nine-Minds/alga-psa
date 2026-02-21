@@ -12,6 +12,7 @@ export type RenewalQueueRow = {
   contract_name?: string | null;
   client_id: string;
   client_name?: string | null;
+  assigned_to?: string | null;
   contract_type: 'fixed-term' | 'evergreen';
   effective_renewal_mode?: 'none' | 'manual' | 'auto';
   decision_due_date?: string;
@@ -83,6 +84,7 @@ export const listRenewalQueueRows = withAuth(async (
       contract_name: (row as any).contract_name ?? null,
       client_id: row.client_id,
       client_name: (row as any).client_name ?? null,
+      assigned_to: (row as any).assigned_to ?? null,
       contract_type: row.end_date ? 'fixed-term' : 'evergreen',
       effective_renewal_mode: row.effective_renewal_mode,
       decision_due_date: row.decision_due_date ?? undefined,

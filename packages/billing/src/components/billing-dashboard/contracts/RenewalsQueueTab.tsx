@@ -14,6 +14,7 @@ export default function RenewalsQueueTab() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [bucket, setBucket] = useState<RenewalBucket>('all');
+  const [ownerFilter, setOwnerFilter] = useState<string>('all');
 
   useEffect(() => {
     let cancelled = false;
@@ -44,18 +45,30 @@ export default function RenewalsQueueTab() {
     };
   }, []);
 
-  const filteredRows = useMemo(() => {
-    if (bucket === 'all') {
-      return rows;
-    }
+  const ownerOptions = useMemo(() => {
+    const uniqueOwners = Array.from(
+      new Set(rows.map((row) => row.assigned_to ?? 'unassigned'))
+    );
+    return ['all', ...uniqueOwners];
+  }, [rows]);
 
+  const filteredRows = useMemo(() => {
     return rows.filter((row) => {
+      const rowOwner = row.assigned_to ?? 'unassigned';
+      if (ownerFilter !== 'all' && rowOwner !== ownerFilter) {
+        return false;
+      }
+
+      if (bucket === 'all') {
+        return true;
+      }
+
       if (typeof row.days_until_due !== 'number') return false;
       if (bucket === '0-30') return row.days_until_due >= 0 && row.days_until_due <= 30;
       if (bucket === '31-60') return row.days_until_due >= 31 && row.days_until_due <= 60;
       return row.days_until_due >= 61 && row.days_until_due <= 90;
     });
-  }, [bucket, rows]);
+  }, [bucket, ownerFilter, rows]);
 
   return (
     <section
@@ -91,6 +104,21 @@ export default function RenewalsQueueTab() {
               {value === 'all' ? 'All' : `${value} Days`}
             </button>
           ))}
+          <label className="ml-auto flex items-center gap-2 text-xs text-[rgb(var(--color-text-500))]">
+            Owner
+            <select
+              value={ownerFilter}
+              onChange={(event) => setOwnerFilter(event.target.value)}
+              data-testid="renewals-owner-filter"
+              className="rounded border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-bg-0))] px-2 py-1 text-xs"
+            >
+              {ownerOptions.map((owner) => (
+                <option key={owner} value={owner}>
+                  {owner === 'all' ? 'All Owners' : owner}
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
         {isLoading && <p>Loading renewal queue...</p>}
         {!isLoading && error && <p>{error}</p>}

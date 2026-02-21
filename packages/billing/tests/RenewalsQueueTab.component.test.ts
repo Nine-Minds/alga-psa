@@ -31,4 +31,11 @@ describe('RenewalsQueueTab component', () => {
     expect(source).toContain("if (bucket === '31-60') return row.days_until_due >= 31 && row.days_until_due <= 60;");
     expect(source).toContain('return row.days_until_due >= 61 && row.days_until_due <= 90;');
   });
+
+  it('renders an owner filter for assigned users', () => {
+    expect(source).toContain('const [ownerFilter, setOwnerFilter] = useState<string>(\'all\');');
+    expect(source).toContain('data-testid="renewals-owner-filter"');
+    expect(source).toContain('const uniqueOwners = Array.from(');
+    expect(source).toContain('row.assigned_to ?? \'unassigned\'');
+  });
 });

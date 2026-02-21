@@ -400,6 +400,13 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
   - Implemented client-side bucket filtering against `days_until_due`.
   - Extended component coverage in:
     - `packages/billing/tests/RenewalsQueueTab.component.test.ts`
+- (2026-02-21) Completed `F054`.
+  - Added owner filter UI + behavior in `RenewalsQueueTab`:
+    - owner options derive from queue row `assigned_to` values with `unassigned` fallback.
+  - Extended queue row shape from server action with `assigned_to`.
+  - Added wiring coverage updates in:
+    - `packages/billing/tests/RenewalsQueueTab.component.test.ts`
+    - `packages/billing/tests/renewalsQueueActions.wiring.test.ts`
 
 ## Open Questions
 - Should renewal ticket defaults be a brand-new billing settings card, or an extension of existing default ticket settings patterns?

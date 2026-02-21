@@ -426,7 +426,7 @@
   {
     "id": "F054",
     "description": "Render owner filter for assigned user in Renewals queue.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > FR4 — Renewals Queue and Dashboard Entry Points"
     ]
