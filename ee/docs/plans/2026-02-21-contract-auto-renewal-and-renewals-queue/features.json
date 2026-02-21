@@ -266,7 +266,7 @@
   {
     "id": "F034",
     "description": "Compute next evergreen review anchor date from active contract anniversary rules.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > FR3 — Renewal Decision Date Engine"
     ]

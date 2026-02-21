@@ -68,6 +68,7 @@ export interface IClientContract extends TenantEntity {
   use_tenant_renewal_defaults?: boolean;
   effective_renewal_mode?: 'none' | 'manual' | 'auto';
   effective_notice_period_days?: number;
+  evergreen_review_anchor_date?: ISO8601String | null;
   decision_due_date?: ISO8601String | null;
   is_active: boolean;
   po_required?: boolean;

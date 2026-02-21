@@ -270,6 +270,15 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
     - `packages/types/src/interfaces/contract.interfaces.ts`
     - `server/src/interfaces/contract.interfaces.ts`
   - Expanded test coverage in `packages/billing/tests/clientContractEffectiveRenewalSettings.test.ts`.
+- (2026-02-21) Completed `F034`.
+  - Added evergreen annual-review anchor computation based on contract start-date anniversary rules.
+  - New shared helper:
+    - `computeNextEvergreenReviewAnchorDate` in `shared/billingClients/clientContracts.ts`
+  - Exposed normalized field on active evergreen assignments:
+    - `evergreen_review_anchor_date`
+  - Mirrored logic in clients model read normalization for parity:
+    - `packages/clients/src/models/clientContract.ts`
+  - Expanded tests in `packages/billing/tests/clientContractEffectiveRenewalSettings.test.ts`.
 
 ## Open Questions
 - Should renewal ticket defaults be a brand-new billing settings card, or an extension of existing default ticket settings patterns?

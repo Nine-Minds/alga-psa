@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { normalizeClientContract } from '../../../shared/billingClients/clientContracts';
+import {
+  computeNextEvergreenReviewAnchorDate,
+  normalizeClientContract,
+} from '../../../shared/billingClients/clientContracts';
 
 describe('client contract effective renewal settings normalization', () => {
   it('applies tenant defaults when use_tenant_renewal_defaults is true', () => {
@@ -80,5 +83,39 @@ describe('client contract effective renewal settings normalization', () => {
 
     expect(normalized.effective_notice_period_days).toBe(45);
     expect(normalized.decision_due_date).toBe('2026-11-16');
+  });
+
+  it('computes next evergreen review anchor date using contract anniversary rules', () => {
+    expect(
+      computeNextEvergreenReviewAnchorDate({
+        startDate: '2024-05-10',
+        now: '2026-05-01',
+      })
+    ).toBe('2026-05-10');
+
+    expect(
+      computeNextEvergreenReviewAnchorDate({
+        startDate: '2024-05-10',
+        now: '2026-05-11',
+      })
+    ).toBe('2027-05-10');
+  });
+
+  it('exposes evergreen_review_anchor_date on active evergreen assignments', () => {
+    const normalized = normalizeClientContract({
+      contract_id: 'contract-5',
+      client_contract_id: 'cc-5',
+      client_id: 'client-5',
+      tenant: 'tenant-1',
+      start_date: '2024-10-04',
+      end_date: null,
+      is_active: true,
+      use_tenant_renewal_defaults: true,
+      tenant_default_renewal_mode: 'manual',
+      tenant_default_notice_period_days: 30,
+    });
+
+    expect(normalized.evergreen_review_anchor_date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(normalized.decision_due_date).toBeUndefined();
   });
 });

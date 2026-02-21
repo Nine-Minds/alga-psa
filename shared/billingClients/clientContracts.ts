@@ -45,6 +45,39 @@ const subtractDaysFromDateOnly = (dateOnly: string, days: number): string | unde
   return new Date(parsed.getTime() - days * MS_PER_DAY).toISOString().slice(0, 10);
 };
 
+const createClampedUtcDate = (year: number, monthIndex: number, dayOfMonth: number): Date => {
+  const lastDayOfMonth = new Date(Date.UTC(year, monthIndex + 1, 0)).getUTCDate();
+  const clampedDay = Math.min(dayOfMonth, lastDayOfMonth);
+  return new Date(Date.UTC(year, monthIndex, clampedDay));
+};
+
+export const computeNextEvergreenReviewAnchorDate = (params: {
+  startDate: string;
+  now?: string | Date;
+}): string | undefined => {
+  const normalizedStartDate = normalizeDateOnly(params.startDate);
+  if (!normalizedStartDate) return undefined;
+
+  const start = new Date(`${normalizedStartDate}T00:00:00.000Z`);
+  if (Number.isNaN(start.getTime())) return undefined;
+
+  const normalizedNow = normalizeDateOnly(params.now instanceof Date ? params.now.toISOString() : params.now);
+  const nowBase = normalizedNow
+    ? new Date(`${normalizedNow}T00:00:00.000Z`)
+    : new Date(new Date().toISOString().slice(0, 10) + 'T00:00:00.000Z');
+  if (Number.isNaN(nowBase.getTime())) return undefined;
+
+  const month = start.getUTCMonth();
+  const day = start.getUTCDate();
+  const thisYearCandidate = createClampedUtcDate(nowBase.getUTCFullYear(), month, day);
+  const nextAnchor =
+    thisYearCandidate.getTime() >= nowBase.getTime()
+      ? thisYearCandidate
+      : createClampedUtcDate(nowBase.getUTCFullYear() + 1, month, day);
+
+  return nextAnchor.toISOString().slice(0, 10);
+};
+
 type RenewalDefaultSelectionConfig = {
   joinDefaultSettings: boolean;
   defaultSelections: string[];
@@ -124,7 +157,12 @@ export const normalizeClientContract = (row: any): IClientContract => {
     : noticePeriodDays ?? tenantDefaultNoticePeriodDays;
 
   const normalizedEndDate = normalizeDateOnly(normalized.end_date);
+  const normalizedStartDate = normalizeDateOnly(normalized.start_date);
   const effectiveNoticePeriodDays = normalizeNonNegativeInteger(normalized.effective_notice_period_days);
+  normalized.evergreen_review_anchor_date =
+    !normalizedEndDate && normalizedStartDate && normalized.is_active === true
+      ? computeNextEvergreenReviewAnchorDate({ startDate: normalizedStartDate })
+      : undefined;
   normalized.decision_due_date =
     normalizedEndDate && effectiveNoticePeriodDays !== undefined
       ? subtractDaysFromDateOnly(normalizedEndDate, effectiveNoticePeriodDays)
