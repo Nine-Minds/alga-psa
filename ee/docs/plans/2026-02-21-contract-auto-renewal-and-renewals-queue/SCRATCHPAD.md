@@ -1390,3 +1390,5 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
   - Validation: `cd packages/billing && npx vitest run $(rg --files tests | rg 'renewalsQueueActions') tests/RenewalsQueueTab.component.test.ts --coverage=false`
 - (2026-02-21) Completed `T068`.
   - Validation: `cd packages/billing && npx vitest run $(rg --files tests | rg 'renewalsQueueActions') tests/RenewalsQueueTab.component.test.ts --coverage=false`
+- (2026-02-21) Completed `T069`.
+  - Validation: `cd packages/billing && npx vitest run $(rg --files tests | rg 'renewalsQueueActions') tests/RenewalsQueueTab.component.test.ts --coverage=false`

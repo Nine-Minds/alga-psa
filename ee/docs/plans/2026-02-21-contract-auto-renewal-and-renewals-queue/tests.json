@@ -546,7 +546,7 @@
   {
     "id": "T069",
     "description": "Functional: Implement assign-owner action to set assigned_to on renewal work item.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F069"
     ]
