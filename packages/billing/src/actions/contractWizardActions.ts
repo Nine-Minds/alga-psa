@@ -1305,8 +1305,19 @@ export const createClientContractFromWizard = withAuth(async (
       actorUserId: typeof user?.user_id === 'string' ? user.user_id : undefined,
     };
 
+    const decisionDueAtForWorkflow =
+      endDate && Number.isInteger(submission.notice_period_days) && (submission.notice_period_days as number) >= 0
+        ? new Date(
+          new Date(`${endDate}T00:00:00.000Z`).getTime() -
+            Math.trunc(submission.notice_period_days as number) * 24 * 60 * 60 * 1000
+        ).toISOString().slice(0, 10)
+        : endDate;
     renewalForWorkflow = endDate
-      ? computeContractRenewalUpcoming({ renewalAt: endDate, now: now.toISOString() })
+      ? computeContractRenewalUpcoming({
+          renewalAt: endDate,
+          decisionDueAt: decisionDueAtForWorkflow ?? undefined,
+          now: now.toISOString(),
+        })
       : null;
 
     // NOTE: The legacy replicateContractLinesToClient call has been removed.
@@ -1353,14 +1364,23 @@ export const createClientContractFromWizard = withAuth(async (
     });
 
     if (renewalForWorkflow) {
-      const renewal: { renewalAt: string; daysUntilRenewal: number } = renewalForWorkflow;
+      const renewal: {
+        renewalAt: string;
+        decisionDueDate: string;
+        daysUntilRenewal: number;
+        daysUntilDecisionDue: number;
+        renewalCycleKey?: string;
+      } = renewalForWorkflow as any;
       await publishWorkflowEvent({
         eventType: 'CONTRACT_RENEWAL_UPCOMING',
         payload: buildContractRenewalUpcomingPayload({
           contractId: wfData.contractId,
           clientId: wfData.clientId,
           renewalAt: renewal.renewalAt,
+          decisionDueDate: renewal.decisionDueDate,
           daysUntilRenewal: renewal.daysUntilRenewal,
+          daysUntilDecisionDue: renewal.daysUntilDecisionDue,
+          renewalCycleKey: renewal.renewalCycleKey,
         }),
         ctx: {
           tenantId: tenant,
@@ -1369,7 +1389,7 @@ export const createClientContractFromWizard = withAuth(async (
             ? { actorType: 'USER' as const, actorUserId: wfData.actorUserId }
             : undefined,
         },
-        idempotencyKey: `contract_renewal_upcoming:${wfData.contractId}:${wfData.clientId}:${renewal.renewalAt}`,
+        idempotencyKey: `contract_renewal_upcoming:${wfData.contractId}:${wfData.clientId}:${renewal.renewalCycleKey ?? renewal.decisionDueDate ?? renewal.renewalAt}`,
       });
     }
   }

@@ -941,6 +941,26 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
     - `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`
     - `npm -w @alga-psa/billing run typecheck`
     - `npm -w @alga-psa/billing exec vitest run tests/renewalsQueueActions.retryTicket.wiring.test.ts tests/renewalsQueueActions.wiring.test.ts`
+- (2026-02-21) Completed `F099`.
+  - Updated contract renewal-upcoming domain-event builders/schemas for queue-compatible semantics:
+    - expanded default window from 30 to 90 days
+    - `computeContractRenewalUpcoming` now supports decision-due date and renewal cycle key inputs
+    - payload now includes:
+      - `decisionDueDate`
+      - `daysUntilDecisionDue`
+      - `renewalCycleKey`
+  - Updated event publishers in:
+    - `packages/billing/src/actions/contractWizardActions.ts`
+    - `packages/clients/src/actions/clientContractActions.ts`
+  - `CONTRACT_RENEWAL_UPCOMING` idempotency keys now prefer cycle-key/decision-due identity where available.
+  - Added wiring coverage:
+    - `packages/billing/tests/contractRenewalUpcomingEvent.wiring.test.ts`
+  - Validation:
+    - `npm -w @alga-psa/billing run typecheck`
+    - `npm -w @alga-psa/clients run typecheck`
+    - `npm -w @alga-psa/billing exec vitest run tests/contractRenewalUpcomingEvent.wiring.test.ts tests/renewalsQueueActions.retryTicket.wiring.test.ts`
+  - Note:
+    - direct execution of `shared/workflow/streams/domainEventBuilders/__tests__/contractEventBuilders.test.ts` under current Vitest include globs returned “No test files found”; wiring assertions were added in billing tests to cover this change.
 
 ## Open Questions
 - Should renewal ticket defaults be a brand-new billing settings card, or an extension of existing default ticket settings patterns?

@@ -786,7 +786,7 @@
   {
     "id": "F099",
     "description": "Publish/emit renewal-upcoming domain event payloads compatible with queue creation semantics.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > FR6 — Automation and Ticket Creation"
     ]

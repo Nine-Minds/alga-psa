@@ -157,7 +157,11 @@ export const assignContractToClient = withAuth(async (
     });
 
     const renewal = clientContract.end_date
-      ? computeContractRenewalUpcoming({ renewalAt: clientContract.end_date })
+      ? computeContractRenewalUpcoming({
+          renewalAt: clientContract.end_date,
+          decisionDueAt: (clientContract as any).decision_due_date ?? undefined,
+          renewalCycleKey: (clientContract as any).renewal_cycle_key ?? undefined,
+        })
       : null;
     if (renewal) {
       await publishWorkflowEvent({
@@ -166,14 +170,17 @@ export const assignContractToClient = withAuth(async (
           contractId: clientContract.contract_id,
           clientId: clientContract.client_id,
           renewalAt: renewal.renewalAt,
+          decisionDueDate: renewal.decisionDueDate,
           daysUntilRenewal: renewal.daysUntilRenewal,
+          daysUntilDecisionDue: renewal.daysUntilDecisionDue,
+          renewalCycleKey: renewal.renewalCycleKey,
         }),
         ctx: {
           tenantId: tenant,
           occurredAt: createdAt,
           actor: maybeUserActor(_user),
         },
-        idempotencyKey: `contract_renewal_upcoming:${clientContract.contract_id}:${clientContract.client_id}:${renewal.renewalAt}`,
+        idempotencyKey: `contract_renewal_upcoming:${clientContract.contract_id}:${clientContract.client_id}:${renewal.renewalCycleKey ?? renewal.decisionDueDate ?? renewal.renewalAt}`,
       });
     }
 
@@ -294,7 +301,11 @@ export const createClientContract = withAuth(async (
     });
 
     const renewal = createdForEvent.end_date
-      ? computeContractRenewalUpcoming({ renewalAt: createdForEvent.end_date })
+      ? computeContractRenewalUpcoming({
+          renewalAt: createdForEvent.end_date,
+          decisionDueAt: (createdForEvent as any).decision_due_date ?? undefined,
+          renewalCycleKey: (createdForEvent as any).renewal_cycle_key ?? undefined,
+        })
       : null;
     if (renewal) {
       await publishWorkflowEvent({
@@ -303,14 +314,17 @@ export const createClientContract = withAuth(async (
           contractId: createdForEvent.contract_id,
           clientId: createdForEvent.client_id,
           renewalAt: renewal.renewalAt,
+          decisionDueDate: renewal.decisionDueDate,
           daysUntilRenewal: renewal.daysUntilRenewal,
+          daysUntilDecisionDue: renewal.daysUntilDecisionDue,
+          renewalCycleKey: renewal.renewalCycleKey,
         }),
         ctx: {
           tenantId: tenant,
           occurredAt: createdAt,
           actor: maybeUserActor(_user),
         },
-        idempotencyKey: `contract_renewal_upcoming:${createdForEvent.contract_id}:${createdForEvent.client_id}:${renewal.renewalAt}`,
+        idempotencyKey: `contract_renewal_upcoming:${createdForEvent.contract_id}:${createdForEvent.client_id}:${renewal.renewalCycleKey ?? renewal.decisionDueDate ?? renewal.renewalAt}`,
       });
     }
   }
@@ -449,10 +463,20 @@ export const updateClientContract = withAuth(async (
     }
 
     const previousRenewal = beforeContract.end_date
-      ? computeContractRenewalUpcoming({ renewalAt: beforeContract.end_date, now: updatedAt })
+      ? computeContractRenewalUpcoming({
+          renewalAt: beforeContract.end_date,
+          decisionDueAt: (beforeContract as any).decision_due_date ?? undefined,
+          renewalCycleKey: (beforeContract as any).renewal_cycle_key ?? undefined,
+          now: updatedAt,
+        })
       : null;
     const nextRenewal = updatedClientContract.end_date
-      ? computeContractRenewalUpcoming({ renewalAt: updatedClientContract.end_date, now: updatedAt })
+      ? computeContractRenewalUpcoming({
+          renewalAt: updatedClientContract.end_date,
+          decisionDueAt: (updatedClientContract as any).decision_due_date ?? undefined,
+          renewalCycleKey: (updatedClientContract as any).renewal_cycle_key ?? undefined,
+          now: updatedAt,
+        })
       : null;
     if (nextRenewal && !previousRenewal) {
       await publishWorkflowEvent({
@@ -461,14 +485,17 @@ export const updateClientContract = withAuth(async (
           contractId: updatedClientContract.contract_id,
           clientId: updatedClientContract.client_id,
           renewalAt: nextRenewal.renewalAt,
+          decisionDueDate: nextRenewal.decisionDueDate,
           daysUntilRenewal: nextRenewal.daysUntilRenewal,
+          daysUntilDecisionDue: nextRenewal.daysUntilDecisionDue,
+          renewalCycleKey: nextRenewal.renewalCycleKey,
         }),
         ctx: {
           tenantId: tenant,
           occurredAt: updatedAt,
           actor: maybeUserActor(_user),
         },
-        idempotencyKey: `contract_renewal_upcoming:${updatedClientContract.contract_id}:${updatedClientContract.client_id}:${nextRenewal.renewalAt}:${updatedAt}`,
+        idempotencyKey: `contract_renewal_upcoming:${updatedClientContract.contract_id}:${updatedClientContract.client_id}:${nextRenewal.renewalCycleKey ?? nextRenewal.decisionDueDate ?? nextRenewal.renewalAt}:${updatedAt}`,
       });
     }
 
