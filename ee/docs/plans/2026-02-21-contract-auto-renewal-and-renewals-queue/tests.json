@@ -1066,7 +1066,7 @@
   {
     "id": "T134",
     "description": "Functional: Reject cross-tenant identifiers during queue mutation validation.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F134"
     ]
