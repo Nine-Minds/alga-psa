@@ -202,7 +202,7 @@
   {
     "id": "T026",
     "description": "Functional: Expose renewal defaults in getDefaultBillingSettings action response.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F026"
     ]
