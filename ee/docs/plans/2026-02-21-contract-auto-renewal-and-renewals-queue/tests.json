@@ -1919,7 +1919,7 @@
   {
     "id": "T240",
     "description": "E2E due-date automation ticketing: due entry creates exactly one ticket and links ticket id on renewal work item.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F088",
       "F093",
