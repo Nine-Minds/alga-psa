@@ -426,7 +426,7 @@
   {
     "id": "T054",
     "description": "Functional: Render owner filter for assigned user in Renewals queue.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F054"
     ]
