@@ -282,7 +282,7 @@
   {
     "id": "T036",
     "description": "Functional: Normalize decision_due_date calculations to date-only semantics used by client_contracts.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F036"
     ]
