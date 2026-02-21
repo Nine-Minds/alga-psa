@@ -43,4 +43,27 @@ describe('ContractWizardData renewal fields', () => {
     );
     expect(wizardSource).toContain('buildInitialContractWizardData(editingContract)');
   });
+
+  it('requires renewal mode when an end date is set', () => {
+    expect(wizardSource).toContain('if (wizardData.end_date && !wizardData.renewal_mode)');
+    expect(wizardSource).toContain('Renewal mode is required when an end date is set');
+  });
+
+  it('validates notice period as bounded non-negative integer', () => {
+    expect(wizardSource).toContain('const MIN_NOTICE_PERIOD_DAYS = 0;');
+    expect(wizardSource).toContain('const MAX_NOTICE_PERIOD_DAYS = 3650;');
+    expect(wizardSource).toContain("Notice period must be a whole number of days");
+    expect(wizardSource).toContain('Notice period must be between ${MIN_NOTICE_PERIOD_DAYS}');
+  });
+
+  it('validates renewal term months as positive integer when provided', () => {
+    expect(wizardSource).toContain('wizardData.renewal_term_months !== undefined');
+    expect(wizardSource).toContain('wizardData.renewal_term_months <= 0');
+    expect(wizardSource).toContain('Renewal term months must be a positive whole number');
+  });
+
+  it('renders validation messages inline for the current wizard step', () => {
+    expect(wizardSource).toContain('{errors[currentStep] && (');
+    expect(wizardSource).toContain("text-[rgb(var(--color-destructive))] text-sm");
+  });
 });

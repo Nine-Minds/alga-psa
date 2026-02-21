@@ -151,6 +151,8 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
   - Added step-0 validation rule in `ContractWizard.tsx` requiring `renewal_term_months` to be a positive integer when provided.
 - (2026-02-21) Completed `F014`.
   - Renewal validation errors from step-0 rules (`F011`-`F013`) now surface through the wizard’s existing inline step error panel before progression.
+- (2026-02-21) Completed `T011`.
+  - Extended `packages/billing/src/components/billing-dashboard/contracts/ContractWizard.renewalFields.test.ts` with assertions for required renewal mode when `end_date` is set.
 
 ## Open Questions
 - Should renewal ticket defaults be a brand-new billing settings card, or an extension of existing default ticket settings patterns?
