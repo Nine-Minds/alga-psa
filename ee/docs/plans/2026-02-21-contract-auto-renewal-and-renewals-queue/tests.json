@@ -1218,7 +1218,7 @@
   {
     "id": "T153",
     "description": "UI behavior: Add Renewals queue page component under billing dashboard components. persists after refresh/navigation",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F050"
     ]
