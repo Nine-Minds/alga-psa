@@ -72,7 +72,15 @@ export type RenewalQueueRow = {
   decision_due_date?: string;
   days_until_due?: number;
   renewal_cycle_key?: string;
+  available_actions: RenewalQueueAction[];
 };
+
+export type RenewalQueueAction =
+  | 'mark_renewing'
+  | 'mark_non_renewing'
+  | 'create_renewal_draft'
+  | 'snooze'
+  | 'assign_owner';
 
 export type RenewalQueueMutationResult = {
   client_contract_id: string;
@@ -96,6 +104,19 @@ export type RenewalAssignmentResult = {
   status: RenewalWorkItemStatus;
   assigned_to: string | null;
   updated_at: string;
+};
+
+const getAvailableActionsForStatus = (status: RenewalWorkItemStatus): RenewalQueueAction[] => {
+  if (status === 'pending') {
+    return ['mark_renewing', 'mark_non_renewing', 'create_renewal_draft', 'snooze', 'assign_owner'];
+  }
+  if (status === 'renewing') {
+    return ['create_renewal_draft', 'snooze', 'assign_owner'];
+  }
+  if (status === 'snoozed') {
+    return ['mark_renewing', 'mark_non_renewing', 'create_renewal_draft', 'assign_owner'];
+  }
+  return ['assign_owner'];
 };
 
 export const listRenewalQueueRows = withAuth(async (
@@ -193,6 +214,7 @@ export const listRenewalQueueRows = withAuth(async (
       decision_due_date: row.decision_due_date ?? undefined,
       days_until_due: row.days_until_due,
       renewal_cycle_key: row.renewal_cycle_key,
+      available_actions: getAvailableActionsForStatus(toRenewalWorkItemStatus((row as any).status)),
     }))
     .sort((a, b) => (a.decision_due_date ?? '').localeCompare(b.decision_due_date ?? ''));
 });

@@ -78,4 +78,9 @@ describe('RenewalsQueueTab component', () => {
     expect(source).toContain('data-testid="renewals-days-badge"');
     expect(source).toContain('Overdue by ${Math.abs(row.days_until_due ?? 0)}d');
   });
+
+  it('exposes row-level available actions based on queue status', () => {
+    expect(source).toContain('data-testid="renewals-queue-row-available-actions"');
+    expect(source).toContain("Actions: {row.available_actions.join(', ')}");
+  });
 });

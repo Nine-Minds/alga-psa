@@ -232,6 +232,12 @@ export default function RenewalsQueueTab({ onQueueMutationComplete }: RenewalsQu
                 <p className="text-xs text-[rgb(var(--color-text-500))]">
                   {row.client_name ?? row.client_id} • due {row.decision_due_date ?? 'n/a'}
                 </p>
+                <p
+                  data-testid="renewals-queue-row-available-actions"
+                  className="mt-1 text-[11px] text-[rgb(var(--color-text-400))]"
+                >
+                  Actions: {row.available_actions.join(', ')}
+                </p>
               </div>
             ))}
           </div>

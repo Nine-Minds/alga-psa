@@ -657,6 +657,19 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
   - Validation:
     - `npm -w @alga-psa/billing run typecheck`
     - `npm -w @alga-psa/billing exec vitest run tests/renewalsQueueActions.snooze.wiring.test.ts tests/renewalsQueueActions.unsnooze.wiring.test.ts`
+- (2026-02-21) Completed `F077`.
+  - Added row-level action availability model based on effective queue status:
+    - `RenewalQueueAction` union
+    - `getAvailableActionsForStatus(status)` in `packages/billing/src/actions/renewalsQueueActions.ts`
+  - `listRenewalQueueRows` now returns `available_actions` for each row.
+  - Renewals queue UI now surfaces available actions per row:
+    - `Actions: {row.available_actions.join(', ')}` in `packages/billing/src/components/billing-dashboard/contracts/RenewalsQueueTab.tsx`
+  - Updated coverage:
+    - `packages/billing/tests/renewalsQueueActions.wiring.test.ts`
+    - `packages/billing/tests/RenewalsQueueTab.component.test.ts`
+  - Validation:
+    - `npm -w @alga-psa/billing run typecheck`
+    - `npm -w @alga-psa/billing exec vitest run tests/renewalsQueueActions.wiring.test.ts tests/RenewalsQueueTab.component.test.ts`
 
 ## Open Questions
 - Should renewal ticket defaults be a brand-new billing settings card, or an extension of existing default ticket settings patterns?

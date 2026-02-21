@@ -610,7 +610,7 @@
   {
     "id": "F077",
     "description": "Expose queue row action availability based on current status.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > FR5 — Queue Actions and Renewal Workflow"
     ]
