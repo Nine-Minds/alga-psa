@@ -602,7 +602,7 @@
   {
     "id": "T076",
     "description": "Functional: Enforce snooze date must be in the future on action validation.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F076"
     ]
