@@ -970,7 +970,7 @@
   {
     "id": "T122",
     "description": "Functional: Keep effective behavior parity for ticket creation idempotency between pg-boss and Temporal runners.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F122"
     ]
