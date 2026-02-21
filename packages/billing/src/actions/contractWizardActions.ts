@@ -1235,7 +1235,19 @@ export const createClientContractFromWizard = withAuth(async (
 
     const clientContractId = uuidv4();
 
-    await trx('client_contracts').insert({
+    const [
+      hasRenewalModeColumn,
+      hasNoticePeriodColumn,
+      hasRenewalTermColumn,
+      hasUseTenantDefaultsColumn,
+    ] = await Promise.all([
+      trx.schema.hasColumn('client_contracts', 'renewal_mode'),
+      trx.schema.hasColumn('client_contracts', 'notice_period_days'),
+      trx.schema.hasColumn('client_contracts', 'renewal_term_months'),
+      trx.schema.hasColumn('client_contracts', 'use_tenant_renewal_defaults'),
+    ]);
+
+    const clientContractInsertData: Record<string, unknown> = {
       tenant,
       client_contract_id: clientContractId,
       client_id: submission.client_id,
@@ -1249,7 +1261,39 @@ export const createClientContractFromWizard = withAuth(async (
       created_at: now.toISOString(),
       updated_at: now.toISOString(),
       template_contract_id: submission.template_id ?? null,
-    });
+    };
+
+    if (hasRenewalModeColumn) {
+      clientContractInsertData.renewal_mode =
+        submission.renewal_mode === 'none' ||
+        submission.renewal_mode === 'manual' ||
+        submission.renewal_mode === 'auto'
+          ? submission.renewal_mode
+          : null;
+    }
+
+    if (hasNoticePeriodColumn) {
+      clientContractInsertData.notice_period_days =
+        Number.isInteger(submission.notice_period_days) && (submission.notice_period_days as number) >= 0
+          ? submission.notice_period_days
+          : null;
+    }
+
+    if (hasRenewalTermColumn) {
+      clientContractInsertData.renewal_term_months =
+        Number.isInteger(submission.renewal_term_months) && (submission.renewal_term_months as number) > 0
+          ? submission.renewal_term_months
+          : null;
+    }
+
+    if (hasUseTenantDefaultsColumn) {
+      clientContractInsertData.use_tenant_renewal_defaults =
+        typeof submission.use_tenant_renewal_defaults === 'boolean'
+          ? submission.use_tenant_renewal_defaults
+          : true;
+    }
+
+    await trx('client_contracts').insert(clientContractInsertData);
 
     createdForWorkflow = {
       contractId,
