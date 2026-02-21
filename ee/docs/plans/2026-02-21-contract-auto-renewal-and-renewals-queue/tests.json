@@ -1770,7 +1770,7 @@
   {
     "id": "T222",
     "description": "Idempotency: repeated execution of 'Keep effective behavior parity for ticket creation idempotency between pg-boss and Temporal runners.' does not create duplicate tickets",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F122"
     ]
