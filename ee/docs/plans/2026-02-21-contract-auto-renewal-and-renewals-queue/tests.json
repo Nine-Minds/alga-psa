@@ -66,7 +66,7 @@
   {
     "id": "T009",
     "description": "Functional: Show renewal term behavior input in ContractBasicsStep for auto-renew mode.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F009"
     ]

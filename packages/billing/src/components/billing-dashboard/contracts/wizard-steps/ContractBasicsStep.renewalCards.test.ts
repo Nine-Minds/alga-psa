@@ -31,4 +31,11 @@ describe('ContractBasicsStep renewal card rendering', () => {
     expect(source).toContain('id="notice-period-evergreen"');
     expect(source).toContain('notice_period_days: Number.isFinite(parsed)');
   });
+
+  it('shows renewal term input wiring for auto-renew mode', () => {
+    expect(source).toContain('id="renewal-term-fixed"');
+    expect(source).toContain('id="renewal-term-evergreen"');
+    expect(source).toContain('renewal_term_months:');
+    expect(source).toContain('Number.isFinite(parsed) && parsed > 0 ? parsed : undefined');
+  });
 });
