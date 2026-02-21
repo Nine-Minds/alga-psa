@@ -67,6 +67,15 @@ describe('renewal queue scheduling wiring', () => {
     expect(renewalHandlerSource).toContain('updates.renewal_due_date_action_policy = effectiveDueDateActionPolicy;');
   });
 
+  it('creates internal renewal tickets at due date when effective policy is create_ticket', () => {
+    expect(renewalHandlerSource).toContain('const shouldCreateTicketAtDueDate =');
+    expect(renewalHandlerSource).toContain("effectiveDueDateActionPolicy === 'create_ticket'");
+    expect(renewalHandlerSource).toContain('decisionDueDate <= today;');
+    expect(renewalHandlerSource).toContain('createRenewalTicketDirectly({');
+    expect(renewalHandlerSource).toContain('updates.created_ticket_id = createdTicketId;');
+    expect(renewalHandlerSource).toContain('createdTicketCount += 1;');
+  });
+
   it('registers and schedules renewal queue processing in the jobs module', () => {
     expect(jobsIndexSource).toContain("import { processRenewalQueueHandler, RenewalQueueProcessorJobData } from './handlers/processRenewalQueueHandler';");
     expect(jobsIndexSource).toContain("jobScheduler.registerJobHandler<RenewalQueueProcessorJobData>(");

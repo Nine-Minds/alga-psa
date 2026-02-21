@@ -804,6 +804,22 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
   - Validation:
     - `cd server && npm run typecheck`
     - `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`
+- (2026-02-21) Completed `F088`.
+  - Added due-date ticket automation execution in renewal processor:
+    - computes `shouldCreateTicketAtDueDate` for eligible rows where:
+      - effective policy is `create_ticket`
+      - decision due date is due (`<= today`)
+      - no `created_ticket_id` is already linked
+    - builds renewal-context title/description payloads
+    - uses configured renewal routing defaults (board/status/priority/assignee) when present
+  - Processor now persists ticket linkage on success:
+    - `updates.created_ticket_id = createdTicketId`
+  - Added direct ticket-creation fallback path for resilience when workflow action execution is unavailable.
+  - Updated wiring coverage:
+    - `server/src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts`
+  - Validation:
+    - `cd server && npm run typecheck`
+    - `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`
 
 ## Open Questions
 - Should renewal ticket defaults be a brand-new billing settings card, or an extension of existing default ticket settings patterns?

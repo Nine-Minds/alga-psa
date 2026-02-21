@@ -698,7 +698,7 @@
   {
     "id": "F088",
     "description": "Create internal ticket at decision due date when effective policy is create_ticket.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > FR6 — Automation and Ticket Creation"
     ]
