@@ -1194,7 +1194,7 @@
   {
     "id": "T150",
     "description": "Cycle rollover: evergreen behavior remains correct across year boundary for 'Skip decision_due_date generation when renewal mode is none and no evergreen review is configured.'",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F042"
     ]
