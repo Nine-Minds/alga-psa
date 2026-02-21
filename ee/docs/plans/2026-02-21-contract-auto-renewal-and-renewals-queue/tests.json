@@ -1298,7 +1298,7 @@
   {
     "id": "T163",
     "description": "UI behavior: Sort queue by decision_due_date ascending by default. persists after refresh/navigation",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F058"
     ]
