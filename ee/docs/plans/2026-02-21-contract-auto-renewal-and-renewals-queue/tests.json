@@ -1354,7 +1354,7 @@
   {
     "id": "T170",
     "description": "Date constraint: snooze action rejects non-future dates for 'Implement snooze action that sets status to snoozed with snoozed_until date.'",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F068"
     ]
