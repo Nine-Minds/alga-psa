@@ -82,7 +82,7 @@
   {
     "id": "F011",
     "description": "Validate renewal mode is required when an end date is set.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > FR1 — Contract Setup and Renewal Configuration"
     ]

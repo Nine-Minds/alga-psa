@@ -391,6 +391,13 @@ export function ContractWizard({
           setErrors((prev) => ({ ...prev, [stepIndex]: 'Start date is required' }));
           return false;
         }
+        if (wizardData.end_date && !wizardData.renewal_mode) {
+          setErrors((prev) => ({
+            ...prev,
+            [stepIndex]: 'Renewal mode is required when an end date is set',
+          }));
+          return false;
+        }
         return true;
       case 1:
         if (wizardData.fixed_services.length > 0 && !wizardData.fixed_base_rate) {
