@@ -258,7 +258,7 @@
   {
     "id": "T033",
     "description": "Functional: Compute decision_due_date for fixed-term assignments using end_date minus notice_period_days.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F033"
     ]
