@@ -554,7 +554,7 @@
   {
     "id": "T070",
     "description": "Functional: Implement unsnooze transition back to pending when snooze period elapses.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F070"
     ]
