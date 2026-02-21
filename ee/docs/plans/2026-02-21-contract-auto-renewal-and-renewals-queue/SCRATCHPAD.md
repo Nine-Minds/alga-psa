@@ -377,6 +377,15 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
   - Added component + wiring coverage:
     - `packages/billing/tests/RenewalsQueueTab.component.test.ts`
     - `packages/billing/tests/BillingDashboard.renewalsRoute.test.ts`
+- (2026-02-21) Completed `F051`.
+  - Added server action to load renewal queue rows:
+    - `packages/billing/src/actions/renewalsQueueActions.ts`
+  - Renewals page now calls `listRenewalQueueRows()` on mount via `useEffect` and renders loading/empty/error/data states.
+  - Exported renewals queue actions via:
+    - `packages/billing/src/actions/index.ts`
+  - Added wiring coverage:
+    - `packages/billing/tests/renewalsQueueActions.wiring.test.ts`
+    - `packages/billing/tests/RenewalsQueueTab.component.test.ts`
 
 ## Open Questions
 - Should renewal ticket defaults be a brand-new billing settings card, or an extension of existing default ticket settings patterns?

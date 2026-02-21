@@ -37,6 +37,7 @@ export * from './invoiceTemplates';
 export * from './manualInvoiceActions';
 export * from './materialActions';
 export * from './paymentActions';
+export * from './renewalsQueueActions';
 export * from './serviceActions';
 export * from './serviceRateTierActions';
 export * from './taxSettingsActions';

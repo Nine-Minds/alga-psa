@@ -402,7 +402,7 @@
   {
     "id": "F051",
     "description": "Load renewal queue rows from server action on Renewals page mount.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > FR4 — Renewals Queue and Dashboard Entry Points"
     ]
