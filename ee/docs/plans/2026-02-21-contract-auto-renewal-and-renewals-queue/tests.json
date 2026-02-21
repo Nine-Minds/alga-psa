@@ -1146,7 +1146,7 @@
   {
     "id": "T144",
     "description": "Idempotency: repeated execution of 'Add tenant default renewal ticket priority field to default billing settings model.' does not create duplicate tickets",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F024"
     ]
