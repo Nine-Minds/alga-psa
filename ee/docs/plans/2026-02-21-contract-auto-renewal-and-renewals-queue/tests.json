@@ -1530,7 +1530,7 @@
   {
     "id": "T192",
     "description": "Idempotency: repeated execution of 'Skip duplicate ticket creation when idempotent renewal cycle already has linked ticket.' does not create duplicate tickets",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F095"
     ]
