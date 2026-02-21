@@ -129,6 +129,32 @@ describe('client contract effective renewal settings normalization', () => {
     expect(after.decision_due_date).toBe('2027-01-01');
   });
 
+  it('recomputes fixed-term decision_due_date when notice period changes', () => {
+    const baseAssignment = {
+      contract_id: 'contract-4d',
+      client_contract_id: 'cc-4d',
+      client_id: 'client-4d',
+      tenant: 'tenant-1',
+      start_date: '2026-01-01',
+      end_date: '2026-12-31',
+      is_active: true,
+      use_tenant_renewal_defaults: false,
+      renewal_mode: 'manual',
+    };
+
+    const shortNotice = normalizeClientContract({
+      ...baseAssignment,
+      notice_period_days: 15,
+    });
+    const longNotice = normalizeClientContract({
+      ...baseAssignment,
+      notice_period_days: 45,
+    });
+
+    expect(shortNotice.decision_due_date).toBe('2026-12-16');
+    expect(longNotice.decision_due_date).toBe('2026-11-16');
+  });
+
   it('computes next evergreen review anchor date using contract anniversary rules', () => {
     expect(
       computeNextEvergreenReviewAnchorDate({

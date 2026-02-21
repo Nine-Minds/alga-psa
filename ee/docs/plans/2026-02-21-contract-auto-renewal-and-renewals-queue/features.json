@@ -298,7 +298,7 @@
   {
     "id": "F038",
     "description": "Recompute decision_due_date when notice period changes.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > FR3 — Renewal Decision Date Engine"
     ]
