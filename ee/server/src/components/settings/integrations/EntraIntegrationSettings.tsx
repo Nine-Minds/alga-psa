@@ -4,15 +4,18 @@ import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
+import { Switch } from '@alga-psa/ui/components/Switch';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import {
   getEntraIntegrationStatus,
   getEntraSyncRunHistory,
   discoverEntraManagedTenants,
   startEntraSync,
+  updateEntraFieldSyncConfig,
   initiateEntraDirectOAuth,
   disconnectEntraIntegration,
   unmapEntraTenant,
+  type EntraFieldSyncConfig,
   type EntraStatusResponse,
 } from '@alga-psa/integrations/actions';
 import {
@@ -38,6 +41,63 @@ const WIZARD_STEPS = [
   { id: 'map' as const, title: 'Map Tenants to Clients', description: 'Review auto-match suggestions and confirm mappings.' },
   { id: 'sync' as const, title: 'Initial Sync', description: 'Start the first sync run for confirmed mappings.' },
 ] as const;
+
+const DEFAULT_FIELD_SYNC_CONFIG: EntraFieldSyncConfig = {
+  displayName: false,
+  email: false,
+  phone: false,
+  role: false,
+  upn: false,
+};
+
+type FieldSyncOption = {
+  key: keyof EntraFieldSyncConfig;
+  label: string;
+  description: string;
+};
+
+const FIELD_SYNC_OPTIONS: FieldSyncOption[] = [
+  {
+    key: 'displayName',
+    label: 'Display Name',
+    description: 'Allow Entra display name to overwrite contact full name on linked contacts.',
+  },
+  {
+    key: 'email',
+    label: 'Email',
+    description: 'Allow Entra email/UPN to overwrite contact email on linked contacts.',
+  },
+  {
+    key: 'phone',
+    label: 'Phone',
+    description: 'Allow Entra phone values to overwrite contact phone number on linked contacts.',
+  },
+  {
+    key: 'role',
+    label: 'Role',
+    description: 'Allow Entra job title to overwrite contact role on linked contacts.',
+  },
+  {
+    key: 'upn',
+    label: 'UPN',
+    description: 'Allow Entra UPN to overwrite the stored Entra principal name on linked contacts.',
+  },
+];
+
+function normalizeFieldSyncConfig(value: unknown): EntraFieldSyncConfig {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return { ...DEFAULT_FIELD_SYNC_CONFIG };
+  }
+
+  const source = value as Record<string, unknown>;
+  return {
+    displayName: source.displayName === true,
+    email: source.email === true,
+    phone: source.phone === true,
+    role: source.role === true,
+    upn: source.upn === true,
+  };
+}
 
 function deriveGuidedStepState(params: {
   status: EntraStatusResponse | null;
@@ -89,6 +149,13 @@ export default function EntraIntegrationSettings() {
   const [initialSyncMessage, setInitialSyncMessage] = React.useState<string | null>(null);
   const [hasMaintenanceSyncRun, setHasMaintenanceSyncRun] = React.useState(false);
   const [maintenanceSignalLoaded, setMaintenanceSignalLoaded] = React.useState(false);
+  const [showMappingDetails, setShowMappingDetails] = React.useState(false);
+  const [fieldSyncConfig, setFieldSyncConfig] = React.useState<EntraFieldSyncConfig>({
+    ...DEFAULT_FIELD_SYNC_CONFIG,
+  });
+  const [fieldSyncDirty, setFieldSyncDirty] = React.useState(false);
+  const [fieldSyncSaving, setFieldSyncSaving] = React.useState(false);
+  const [fieldSyncMessage, setFieldSyncMessage] = React.useState<string | null>(null);
 
   const [cippDialogOpen, setCippDialogOpen] = React.useState(false);
   const [directLoading, setDirectLoading] = React.useState(false);
@@ -107,6 +174,8 @@ export default function EntraIntegrationSettings() {
         setStatusError(result.error || 'Failed to load Entra connection status.');
       } else {
         setStatus(result.data || null);
+        setFieldSyncConfig(normalizeFieldSyncConfig(result.data?.fieldSyncConfig));
+        setFieldSyncDirty(false);
       }
     } finally {
       setStatusLoading(false);
@@ -218,6 +287,25 @@ export default function EntraIntegrationSettings() {
     mappingPanel?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, []);
 
+  const handleOpenMappingDetails = React.useCallback(() => {
+    setShowMappingDetails(true);
+    requestAnimationFrame(() => {
+      handleScrollToMapping();
+    });
+  }, [handleScrollToMapping]);
+
+  const handleToggleMappingDetails = React.useCallback(() => {
+    setShowMappingDetails((current) => {
+      const next = !current;
+      if (next) {
+        requestAnimationFrame(() => {
+          handleScrollToMapping();
+        });
+      }
+      return next;
+    });
+  }, [handleScrollToMapping]);
+
   const handleSyncAllTenants = React.useCallback(async () => {
     setSyncAllLoading(true);
     setSyncAllMessage(null);
@@ -326,6 +414,49 @@ export default function EntraIntegrationSettings() {
     }
   };
 
+  const handleFieldSyncToggle = React.useCallback((key: keyof EntraFieldSyncConfig, checked: boolean) => {
+    setFieldSyncConfig((current) => ({
+      ...current,
+      [key]: checked,
+    }));
+    setFieldSyncDirty(true);
+    setFieldSyncMessage(null);
+  }, []);
+
+  const handleResetFieldSync = React.useCallback(() => {
+    setFieldSyncConfig(normalizeFieldSyncConfig(status?.fieldSyncConfig));
+    setFieldSyncDirty(false);
+    setFieldSyncMessage(null);
+  }, [status?.fieldSyncConfig]);
+
+  const handleSaveFieldSync = React.useCallback(async () => {
+    setFieldSyncSaving(true);
+    setFieldSyncMessage(null);
+    try {
+      const result = await updateEntraFieldSyncConfig(fieldSyncConfig);
+      if ('error' in result) {
+        setFieldSyncMessage(result.error || 'Failed to save field sync controls.');
+        return;
+      }
+
+      setFieldSyncConfig(normalizeFieldSyncConfig(result.data));
+      setFieldSyncDirty(false);
+      setFieldSyncMessage('Field sync controls saved.');
+      await loadStatus();
+    } finally {
+      setFieldSyncSaving(false);
+    }
+  }, [fieldSyncConfig, loadStatus]);
+
+  React.useEffect(() => {
+    if (settingsMode === 'maintenance' || isMapStepCurrent) {
+      setShowMappingDetails(true);
+      return;
+    }
+
+    setShowMappingDetails(false);
+  }, [isMapStepCurrent, settingsMode]);
+
   const mappingAndSkippedSection = (
     <>
       <div className="rounded-lg border border-border/70 bg-background p-4" id="entra-mapping-step-panel">
@@ -383,6 +514,165 @@ export default function EntraIntegrationSettings() {
     </>
   );
 
+  const statusPanel = (
+    <div className="entra-status-panel p-4" id="entra-connection-status-panel">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Connection Health</p>
+          <p className="mt-1 text-sm font-semibold">Status</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Badge
+            id="entra-status-connection-badge"
+            variant={status?.status === 'connected' ? 'secondary' : 'outline'}
+          >
+            {status?.status || 'not_connected'}
+          </Badge>
+          {status?.status === 'connected' ? (
+            <Button
+              id="entra-disconnect"
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => void handleDisconnect()}
+              disabled={disconnectLoading || statusLoading}
+            >
+              Disconnect
+            </Button>
+          ) : null}
+          <Button id="entra-refresh-status" type="button" size="sm" variant="ghost" onClick={loadStatus} disabled={statusLoading}>
+            Refresh
+          </Button>
+        </div>
+      </div>
+
+      <div className="entra-status-section mt-3">
+        <p className="text-xs uppercase tracking-wide text-muted-foreground">Overview</p>
+        <div className="mt-2 grid gap-x-6 gap-y-2 sm:grid-cols-2 xl:grid-cols-4">
+          <p className="text-sm text-muted-foreground">
+            <span className="font-medium text-foreground">Connection:</span> {status?.status || 'not_connected'}
+          </p>
+          <p className="text-sm text-muted-foreground">
+            <span className="font-medium text-foreground">Connection Type:</span> {status?.connectionType || 'Not configured'}
+          </p>
+          <p className="text-sm text-muted-foreground">
+            <span className="font-medium text-foreground">Mapped Tenants:</span> {status?.mappedTenantCount ?? 0}
+          </p>
+          <p className="text-sm text-muted-foreground">
+            <span className="font-medium text-foreground">Next Sync Interval:</span>{' '}
+            {status?.nextSyncIntervalMinutes ? `Every ${status.nextSyncIntervalMinutes} minutes` : 'Not configured'}
+          </p>
+        </div>
+      </div>
+
+      <div className="entra-status-section mt-3">
+        <div className="grid gap-4 md:grid-cols-2">
+          <div>
+          <p className="text-xs uppercase tracking-wide text-muted-foreground">Connection Details</p>
+          {status?.connectionType === 'cipp' ? (
+            <p className="mt-2 text-sm text-muted-foreground">
+              <span className="font-medium text-foreground">CIPP Server:</span> {cippBaseUrl || 'Not available'}
+            </p>
+          ) : null}
+          {status?.connectionType === 'direct' ? (
+            <p className="mt-2 text-sm text-muted-foreground">
+              <span className="font-medium text-foreground">Microsoft Tenant:</span> {directTenantIdLabel}
+            </p>
+          ) : null}
+          {status?.connectionType === 'direct' ? (
+            <p className="mt-1 text-sm text-muted-foreground">
+              <span className="font-medium text-foreground">Credential Source:</span> {directCredentialSourceLabel}
+            </p>
+          ) : null}
+          {!status?.connectionType ? (
+            <p className="mt-2 text-sm text-muted-foreground">Connect Entra to populate provider details.</p>
+          ) : null}
+          </div>
+
+          <div>
+          <p className="text-xs uppercase tracking-wide text-muted-foreground">Validation & Discovery</p>
+          <p className="mt-2 text-sm text-muted-foreground">
+            <span className="font-medium text-foreground">Last Discovery:</span> {formatDateTime(status?.lastDiscoveryAt)}
+          </p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            <span className="font-medium text-foreground">Last Validated:</span> {formatDateTime(status?.lastValidatedAt)}
+          </p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            <span className="font-medium text-foreground">Validation Error:</span> {validationMessage || 'None'}
+          </p>
+          </div>
+        </div>
+      </div>
+      {statusError ? (
+        <p className="mt-2 text-sm text-destructive">{statusError}</p>
+      ) : null}
+    </div>
+  );
+
+  const fieldSyncControlsPanel = shouldShowFieldSyncControls(fieldSyncFlag.enabled) ? (
+    <div
+      className="rounded-lg border border-border/70 bg-background p-4"
+      id="entra-field-sync-controls-panel"
+    >
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="text-sm font-semibold">Field Sync Controls</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Choose which Entra profile fields may overwrite local contact fields during sync.
+          </p>
+        </div>
+        {settingsMode === 'onboarding' && isSyncStepCurrent ? (
+          <Badge variant="outline">Review Before Initial Sync</Badge>
+        ) : null}
+      </div>
+      <div className="mt-3 space-y-3">
+        {FIELD_SYNC_OPTIONS.map((option) => (
+          <div
+            key={option.key}
+            className="flex items-start justify-between gap-3 rounded-md border border-border/50 p-3"
+          >
+            <div>
+              <p className="text-sm font-medium">{option.label}</p>
+              <p className="text-xs text-muted-foreground">{option.description}</p>
+            </div>
+            <Switch
+              id={`entra-field-sync-${option.key}`}
+              checked={fieldSyncConfig[option.key]}
+              onCheckedChange={(value) => handleFieldSyncToggle(option.key, value)}
+              disabled={fieldSyncSaving}
+            />
+          </div>
+        ))}
+      </div>
+      <div className="mt-3 flex flex-wrap gap-2">
+        <Button
+          id="entra-field-sync-save"
+          type="button"
+          size="sm"
+          onClick={() => void handleSaveFieldSync()}
+          disabled={!fieldSyncDirty || fieldSyncSaving}
+        >
+          {fieldSyncSaving ? 'Saving…' : 'Save Field Sync Controls'}
+        </Button>
+        <Button
+          id="entra-field-sync-reset"
+          type="button"
+          size="sm"
+          variant="outline"
+          onClick={() => void handleResetFieldSync()}
+          disabled={!fieldSyncDirty || fieldSyncSaving}
+        >
+          Reset
+        </Button>
+      </div>
+      {fieldSyncMessage ? (
+        <p className="mt-2 text-sm text-muted-foreground" id="entra-field-sync-feedback">
+          {fieldSyncMessage}
+        </p>
+      ) : null}
+    </div>
+  ) : null;
+
   if (!uiFlag.enabled) {
     return (
       <div className="space-y-6" id="entra-integration-settings-disabled">
@@ -430,6 +720,8 @@ export default function EntraIntegrationSettings() {
             </p>
           </div>
 
+          {statusPanel}
+
           {settingsMode === 'onboarding' ? (
             <>
               <div className="grid gap-3 md:grid-cols-2">
@@ -447,6 +739,18 @@ export default function EntraIntegrationSettings() {
                     </div>
                     <p className="mt-1 text-sm font-semibold">{step.title}</p>
                     <p className="mt-1 text-sm text-muted-foreground">{step.description}</p>
+                    {step.id === 'map' && step.visualState === 'complete' ? (
+                      <Button
+                        id="entra-step-3-review-remap"
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="mt-3"
+                        onClick={() => void handleToggleMappingDetails()}
+                      >
+                        {showMappingDetails ? 'Hide Review / Remap' : 'Review / Remap'}
+                      </Button>
+                    ) : null}
                   </div>
                 ))}
               </div>
@@ -480,7 +784,7 @@ export default function EntraIntegrationSettings() {
                     </div>
                   ) : null}
                   {isMapStepCurrent ? (
-                    <Button id="entra-review-mappings" type="button" onClick={() => handleScrollToMapping()}>
+                    <Button id="entra-review-mappings" type="button" onClick={() => void handleOpenMappingDetails()}>
                       Review Mappings
                     </Button>
                   ) : null}
@@ -503,6 +807,8 @@ export default function EntraIntegrationSettings() {
                   ) : null}
                 </div>
               </div>
+
+              {fieldSyncControlsPanel}
 
               {isConnectStepCurrent ? (
                 <div className="space-y-3 rounded-lg border border-border/70 bg-background p-4">
@@ -538,66 +844,9 @@ export default function EntraIntegrationSettings() {
             </div>
           )}
 
-          {settingsMode === 'onboarding' ? mappingAndSkippedSection : null}
+          {settingsMode === 'maintenance' ? fieldSyncControlsPanel : null}
 
-          <div className="rounded-lg border border-dashed border-border/70 bg-muted/20 p-4" id="entra-connection-status-panel">
-            <div className="flex items-center justify-between gap-2">
-              <p className="text-sm font-medium">Status</p>
-              <div className="flex gap-2">
-                {status?.status === 'connected' ? (
-                  <Button
-                    id="entra-disconnect"
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    onClick={() => void handleDisconnect()}
-                    disabled={disconnectLoading || statusLoading}
-                  >
-                    Disconnect
-                  </Button>
-                ) : null}
-                <Button id="entra-refresh-status" type="button" size="sm" variant="ghost" onClick={loadStatus} disabled={statusLoading}>
-                  Refresh
-                </Button>
-              </div>
-            </div>
-            <div className="mt-2 grid gap-1 text-sm text-muted-foreground">
-              <p><span className="font-medium text-foreground">Connection:</span> {status?.status || 'not_connected'}</p>
-              <p><span className="font-medium text-foreground">Connection Type:</span> {status?.connectionType || 'Not configured'}</p>
-              {status?.connectionType === 'cipp' ? (
-                <p><span className="font-medium text-foreground">CIPP Server:</span> {cippBaseUrl || 'Not available'}</p>
-              ) : null}
-              {status?.connectionType === 'direct' ? (
-                <p><span className="font-medium text-foreground">Microsoft Tenant:</span> {directTenantIdLabel}</p>
-              ) : null}
-              {status?.connectionType === 'direct' ? (
-                <p><span className="font-medium text-foreground">Credential Source:</span> {directCredentialSourceLabel}</p>
-              ) : null}
-              <p><span className="font-medium text-foreground">Last Discovery:</span> {formatDateTime(status?.lastDiscoveryAt)}</p>
-              <p><span className="font-medium text-foreground">Mapped Tenants:</span> {status?.mappedTenantCount ?? 0}</p>
-              <p>
-                <span className="font-medium text-foreground">Next Sync Interval:</span>{' '}
-                {status?.nextSyncIntervalMinutes ? `Every ${status.nextSyncIntervalMinutes} minutes` : 'Not configured'}
-              </p>
-              <p><span className="font-medium text-foreground">Last Validated:</span> {formatDateTime(status?.lastValidatedAt)}</p>
-              <p><span className="font-medium text-foreground">Validation Error:</span> {validationMessage || 'None'}</p>
-            </div>
-            {statusError ? (
-              <p className="mt-2 text-sm text-destructive">{statusError}</p>
-            ) : null}
-          </div>
-
-          {shouldShowFieldSyncControls(fieldSyncFlag.enabled) ? (
-            <div
-              className="rounded-lg border border-border/70 bg-background p-4"
-              id="entra-field-sync-controls-panel"
-            >
-              <p className="text-sm font-semibold">Field Sync Controls</p>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Choose which Entra profile fields may overwrite local contact fields during sync.
-              </p>
-            </div>
-          ) : null}
+          {settingsMode === 'onboarding' && showMappingDetails ? mappingAndSkippedSection : null}
 
           <div className="rounded-lg border border-border/70 bg-background p-4" id="entra-ongoing-operations-panel">
             <p className="text-sm font-semibold">Ongoing Operations</p>

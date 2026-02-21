@@ -10,6 +10,7 @@ const {
   getEntraSyncRunHistoryMock,
   discoverEntraManagedTenantsMock,
   startEntraSyncMock,
+  updateEntraFieldSyncConfigMock,
   initiateEntraDirectOAuthMock,
   disconnectEntraIntegrationMock,
   unmapEntraTenantMock,
@@ -20,6 +21,7 @@ const {
   getEntraSyncRunHistoryMock: vi.fn(),
   discoverEntraManagedTenantsMock: vi.fn(),
   startEntraSyncMock: vi.fn(),
+  updateEntraFieldSyncConfigMock: vi.fn(),
   initiateEntraDirectOAuthMock: vi.fn(),
   disconnectEntraIntegrationMock: vi.fn(),
   unmapEntraTenantMock: vi.fn(),
@@ -42,6 +44,7 @@ vi.mock('@alga-psa/integrations/actions', () => ({
   getEntraSyncRunHistory: getEntraSyncRunHistoryMock,
   discoverEntraManagedTenants: discoverEntraManagedTenantsMock,
   startEntraSync: startEntraSyncMock,
+  updateEntraFieldSyncConfig: updateEntraFieldSyncConfigMock,
   initiateEntraDirectOAuth: initiateEntraDirectOAuthMock,
   disconnectEntraIntegration: disconnectEntraIntegrationMock,
   unmapEntraTenant: unmapEntraTenantMock,
@@ -62,6 +65,28 @@ vi.mock('@alga-psa/ui/components/Badge', () => ({
 vi.mock('@alga-psa/ui/components/Button', () => ({
   Button: ({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) => (
     <button {...props}>{children}</button>
+  ),
+}));
+
+vi.mock('@alga-psa/ui/components/Switch', () => ({
+  Switch: ({
+    id,
+    checked,
+    onCheckedChange,
+    disabled,
+  }: {
+    id?: string;
+    checked?: boolean;
+    onCheckedChange?: (value: boolean) => void;
+    disabled?: boolean;
+  }) => (
+    <input
+      id={id}
+      type="checkbox"
+      checked={Boolean(checked)}
+      disabled={disabled}
+      onChange={(event) => onCheckedChange?.(event.target.checked)}
+    />
   ),
 }));
 
@@ -116,6 +141,7 @@ describe('EntraIntegrationSettings guided flow', () => {
     getEntraSyncRunHistoryMock.mockReset();
     discoverEntraManagedTenantsMock.mockReset();
     startEntraSyncMock.mockReset();
+    updateEntraFieldSyncConfigMock.mockReset();
     initiateEntraDirectOAuthMock.mockReset();
     disconnectEntraIntegrationMock.mockReset();
     unmapEntraTenantMock.mockReset();
@@ -133,6 +159,16 @@ describe('EntraIntegrationSettings guided flow', () => {
       },
     });
     startEntraSyncMock.mockResolvedValue({ success: true, data: { runId: 'run-123' } });
+    updateEntraFieldSyncConfigMock.mockResolvedValue({
+      success: true,
+      data: {
+        displayName: false,
+        email: false,
+        phone: false,
+        role: false,
+        upn: false,
+      },
+    });
     initiateEntraDirectOAuthMock.mockResolvedValue({ success: true, data: { authUrl: '/auth' } });
     disconnectEntraIntegrationMock.mockResolvedValue({ success: true, data: { status: 'disconnected' } });
     unmapEntraTenantMock.mockResolvedValue({ success: true, data: {} });
@@ -212,6 +248,40 @@ describe('EntraIntegrationSettings guided flow', () => {
 
     expect(startEntraSyncMock).toHaveBeenCalledWith({ scope: 'initial' });
     await screen.findByText('Initial sync started. Run ID: run-123');
+  });
+
+  it('T135: step 3 complete state collapses mapping details until Review / Remap is clicked', async () => {
+    getEntraIntegrationStatusMock.mockResolvedValue({
+      success: true,
+      data: buildStatus({
+        status: 'connected',
+        lastDiscoveryAt: '2026-02-20T12:00:00.000Z',
+        mappedTenantCount: 2,
+      }),
+    });
+    mappingTableState.summary = { mapped: 2, skipped: 1, needsReview: 0 };
+    mappingTableState.skippedTenants = [
+      {
+        managedTenantId: 'managed-skipped-135',
+        displayName: 'Skipped Tenant 135',
+        primaryDomain: 'tenant135.example.invalid',
+      },
+    ];
+
+    render(<EntraIntegrationSettings />);
+
+    await screen.findByText('Step 4: Initial Sync');
+    expect(document.getElementById('entra-mapping-step-panel')).toBeNull();
+    expect(document.getElementById('entra-skipped-tenants-panel')).toBeNull();
+
+    const reviewButton = await screen.findByRole('button', { name: 'Review / Remap' });
+    fireEvent.click(reviewButton);
+
+    await waitFor(() => {
+      expect(document.getElementById('entra-mapping-step-panel')).not.toBeNull();
+      expect(document.getElementById('entra-skipped-tenants-panel')).not.toBeNull();
+    });
+    expect(screen.getByText('Skipped Tenant 135')).toBeInTheDocument();
   });
 
   it('T121: status panel shows connection, discovery, mapping count, and sync interval details', async () => {
@@ -397,6 +467,59 @@ describe('EntraIntegrationSettings guided flow', () => {
     await screen.findByText('Current Step');
     expect(document.getElementById('entra-field-sync-controls-panel')).not.toBeNull();
     expect(document.getElementById('entra-reconciliation-queue-stub')).not.toBeNull();
+  });
+
+  it('T136: field sync controls persist selected overwrite toggles', async () => {
+    applyFlags(['entra-integration-ui', 'entra-integration-field-sync']);
+    getEntraIntegrationStatusMock.mockResolvedValue({
+      success: true,
+      data: buildStatus({
+        status: 'connected',
+        lastDiscoveryAt: '2026-02-20T12:00:00.000Z',
+        mappedTenantCount: 1,
+        fieldSyncConfig: {
+          displayName: false,
+          email: false,
+          phone: false,
+          role: false,
+          upn: false,
+        },
+      }),
+    });
+    updateEntraFieldSyncConfigMock.mockResolvedValue({
+      success: true,
+      data: {
+        displayName: true,
+        email: false,
+        phone: false,
+        role: false,
+        upn: false,
+      },
+    });
+
+    render(<EntraIntegrationSettings />);
+    await screen.findByText('Field Sync Controls');
+
+    const displayNameToggle = document.getElementById('entra-field-sync-displayName') as HTMLInputElement | null;
+    expect(displayNameToggle).not.toBeNull();
+    if (!displayNameToggle) {
+      throw new Error('Expected display name toggle to be rendered.');
+    }
+    fireEvent.click(displayNameToggle);
+
+    const saveButton = screen.getByRole('button', { name: 'Save Field Sync Controls' });
+    fireEvent.click(saveButton);
+
+    await waitFor(() => {
+      expect(updateEntraFieldSyncConfigMock).toHaveBeenCalledWith({
+        displayName: true,
+        email: false,
+        phone: false,
+        role: false,
+        upn: false,
+      });
+    });
+    expect(await screen.findByText('Field sync controls saved.')).toBeInTheDocument();
   });
 
   it('T008: empty sync history keeps page in onboarding mode with guided current-step card', async () => {

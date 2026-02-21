@@ -83,6 +83,17 @@ async function isEntraAmbiguousQueueEnabledForTenant(params: {
   });
 }
 
+async function isEntraFieldSyncEnabledForTenant(params: {
+  tenantId: string;
+  userId?: string;
+}): Promise<boolean> {
+  const { featureFlags } = await import('server/src/lib/feature-flags/featureFlags');
+  return featureFlags.isEnabled('entra-integration-field-sync', {
+    tenantId: params.tenantId,
+    userId: params.userId,
+  });
+}
+
 function eeUnavailableResult<T>(): EntraActionResult<T> {
   return {
     success: false,
@@ -187,6 +198,7 @@ export type EntraStatusResponse = {
     directTenantId: string | null;
     directCredentialSource: 'tenant-secret' | 'env' | 'app-secret' | null;
   } | null;
+  fieldSyncConfig?: EntraFieldSyncConfig;
 };
 
 export type EntraMappingPreviewResponse = {
@@ -246,6 +258,55 @@ export type EntraQueueResolutionResponse = {
   queueItemId: string;
   contactNameId: string;
 };
+
+export type EntraFieldSyncConfig = {
+  displayName: boolean;
+  email: boolean;
+  phone: boolean;
+  role: boolean;
+  upn: boolean;
+};
+
+const DEFAULT_ENTRA_FIELD_SYNC_CONFIG: EntraFieldSyncConfig = {
+  displayName: false,
+  email: false,
+  phone: false,
+  role: false,
+  upn: false,
+};
+
+const ENTRA_FIELD_SYNC_ALIASES: Record<keyof EntraFieldSyncConfig, string[]> = {
+  displayName: ['displayName', 'display_name', 'fullName', 'full_name'],
+  email: ['email', 'mail'],
+  phone: ['phone', 'phoneNumber', 'phone_number', 'mobilePhone', 'mobile_phone'],
+  role: ['role', 'jobTitle', 'job_title'],
+  upn: ['upn', 'userPrincipalName', 'user_principal_name'],
+};
+
+function isTruthyFlagValue(value: unknown): boolean {
+  return value === true || value === 'true' || value === 1 || value === '1';
+}
+
+function normalizeEntraFieldSyncConfig(input: unknown): EntraFieldSyncConfig {
+  if (!input || typeof input !== 'object' || Array.isArray(input)) {
+    return { ...DEFAULT_ENTRA_FIELD_SYNC_CONFIG };
+  }
+
+  const source = input as Record<string, unknown>;
+  const normalized = { ...DEFAULT_ENTRA_FIELD_SYNC_CONFIG };
+  (Object.keys(ENTRA_FIELD_SYNC_ALIASES) as Array<keyof EntraFieldSyncConfig>).forEach((key) => {
+    normalized[key] = ENTRA_FIELD_SYNC_ALIASES[key].some((alias) => isTruthyFlagValue(source[alias]));
+  });
+  return normalized;
+}
+
+async function getTenantFieldSyncConfig(tenant: string): Promise<EntraFieldSyncConfig> {
+  const { knex } = await createTenantKnex();
+  const row = await knex('entra_sync_settings')
+    .where({ tenant })
+    .first(['field_sync_config']);
+  return normalizeEntraFieldSyncConfig(row?.field_sync_config);
+}
 
 export const initiateEntraDirectOAuth = withAuth(async (user, { tenant }) => {
   if (isClientPortalUser(user)) {
@@ -329,10 +390,80 @@ export const getEntraIntegrationStatus = withAuth(async (user, { tenant }) => {
     return flagDisabledResult<EntraStatusResponse>();
   }
 
-  return callEeRoute<EntraStatusResponse>({
+  const routeResult = await callEeRoute<EntraStatusResponse>({
     importFn: routes.route,
     method: 'GET',
   });
+
+  if (!routeResult.success) {
+    return routeResult;
+  }
+
+  const fieldSyncConfig = await getTenantFieldSyncConfig(tenant);
+  return {
+    success: true,
+    data: {
+      ...routeResult.data,
+      fieldSyncConfig,
+    },
+  } as const;
+});
+
+export const updateEntraFieldSyncConfig = withAuth(async (
+  user,
+  { tenant },
+  input: EntraFieldSyncConfig
+) => {
+  if (!isEnterpriseEdition) {
+    return eeUnavailableResult<EntraFieldSyncConfig>();
+  }
+
+  if (isClientPortalUser(user)) {
+    return { success: false, error: 'Forbidden' } as const;
+  }
+
+  const canUpdate = await hasPermission(user as any, 'system_settings', 'update');
+  if (!canUpdate) {
+    return { success: false, error: 'Forbidden: insufficient permissions to configure Entra integration' } as const;
+  }
+
+  const userId = (user as { user_id?: string } | undefined)?.user_id;
+  const enabled = await isEntraUiEnabledForTenant({
+    tenantId: tenant,
+    userId,
+  });
+  if (!enabled) {
+    return flagDisabledResult<EntraFieldSyncConfig>();
+  }
+
+  const fieldSyncEnabled = await isEntraFieldSyncEnabledForTenant({
+    tenantId: tenant,
+    userId,
+  });
+  if (!fieldSyncEnabled) {
+    return flagDisabledResult<EntraFieldSyncConfig>();
+  }
+
+  const normalizedConfig = normalizeEntraFieldSyncConfig(input);
+  const { knex } = await createTenantKnex();
+  const now = knex.fn.now();
+
+  await knex('entra_sync_settings')
+    .insert({
+      tenant,
+      field_sync_config: knex.raw('?::jsonb', [JSON.stringify(normalizedConfig)]),
+      updated_at: now,
+    })
+    .onConflict('tenant')
+    .merge({
+      field_sync_config: knex.raw('?::jsonb', [JSON.stringify(normalizedConfig)]),
+      updated_at: now,
+    });
+
+  return {
+    success: true,
+    data: normalizedConfig,
+  } as const;
 });
 
 export const connectEntraIntegration = withAuth(async (

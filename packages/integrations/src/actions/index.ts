@@ -102,6 +102,7 @@ export {
   initiateEntraDirectOAuth,
   connectEntraCipp,
   getEntraIntegrationStatus,
+  updateEntraFieldSyncConfig,
   connectEntraIntegration,
   getEntraReconciliationQueue,
   resolveEntraQueueToExisting,
@@ -127,6 +128,7 @@ export {
   type EntraReconciliationQueueItem,
   type EntraReconciliationQueueResponse,
   type EntraQueueResolutionResponse,
+  type EntraFieldSyncConfig,
 } from './integrations/entraActions';
 export {
   getTacticalRmmSettings,

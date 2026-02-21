@@ -5,6 +5,7 @@ export {
   initiateEntraDirectOAuth,
   connectEntraCipp,
   getEntraIntegrationStatus,
+  updateEntraFieldSyncConfig,
   getEntraReconciliationQueue,
   resolveEntraQueueToExisting,
   resolveEntraQueueToNew,
@@ -30,4 +31,5 @@ export {
   type EntraReconciliationQueueItem,
   type EntraReconciliationQueueResponse,
   type EntraQueueResolutionResponse,
+  type EntraFieldSyncConfig,
 } from './entraActions';
