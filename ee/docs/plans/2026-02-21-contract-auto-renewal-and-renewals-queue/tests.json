@@ -570,7 +570,7 @@
   {
     "id": "T072",
     "description": "Functional: Persist action timestamp on each queue mutation.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F072"
     ]
