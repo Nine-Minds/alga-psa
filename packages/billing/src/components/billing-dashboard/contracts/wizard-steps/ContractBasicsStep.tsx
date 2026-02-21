@@ -144,6 +144,7 @@ export function ContractBasicsStep({
     : undefined;
   const effectiveRenewalMode = data.renewal_mode ?? 'manual';
   const isRenewalEnabled = effectiveRenewalMode !== 'none';
+  const isAutoRenew = effectiveRenewalMode === 'auto';
 
   return (
     <div className="space-y-6" data-automation-id="contract-basics-step">
@@ -387,6 +388,34 @@ export function ContractBasicsStep({
               />
             </div>
           )}
+          {isAutoRenew && (
+            <div className="space-y-2">
+              <Label htmlFor="renewal-term-fixed" className="text-xs font-medium">
+                Renewal Term (Months)
+              </Label>
+              <Input
+                id="renewal-term-fixed"
+                type="number"
+                min={1}
+                step={1}
+                value={data.renewal_term_months ?? ''}
+                onChange={(e) => {
+                  const nextValue = e.target.value.trim();
+                  if (!nextValue) {
+                    updateData({ renewal_term_months: undefined });
+                    return;
+                  }
+                  const parsed = Number.parseInt(nextValue, 10);
+                  updateData({
+                    renewal_term_months:
+                      Number.isFinite(parsed) && parsed > 0 ? parsed : undefined,
+                  });
+                }}
+                placeholder="e.g., 12"
+                className="w-full"
+              />
+            </div>
+          )}
         </div>
       )}
 
@@ -442,6 +471,34 @@ export function ContractBasicsStep({
                   });
                 }}
                 placeholder="e.g., 30"
+                className="w-full"
+              />
+            </div>
+          )}
+          {isAutoRenew && (
+            <div className="space-y-2">
+              <Label htmlFor="renewal-term-evergreen" className="text-xs font-medium">
+                Renewal Term (Months)
+              </Label>
+              <Input
+                id="renewal-term-evergreen"
+                type="number"
+                min={1}
+                step={1}
+                value={data.renewal_term_months ?? ''}
+                onChange={(e) => {
+                  const nextValue = e.target.value.trim();
+                  if (!nextValue) {
+                    updateData({ renewal_term_months: undefined });
+                    return;
+                  }
+                  const parsed = Number.parseInt(nextValue, 10);
+                  updateData({
+                    renewal_term_months:
+                      Number.isFinite(parsed) && parsed > 0 ? parsed : undefined,
+                  });
+                }}
+                placeholder="e.g., 12"
                 className="w-full"
               />
             </div>

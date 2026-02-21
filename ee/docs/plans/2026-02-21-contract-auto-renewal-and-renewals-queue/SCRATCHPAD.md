@@ -130,6 +130,9 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
 - (2026-02-21) Completed `T008`.
   - Extended `packages/billing/src/components/billing-dashboard/contracts/wizard-steps/ContractBasicsStep.renewalCards.test.ts` with notice-period assertions.
   - Confirms `isRenewalEnabled` gate and both notice input IDs (`fixed` and `evergreen`) are present in the renewal-enabled branch.
+- (2026-02-21) Completed `F009`.
+  - Added auto-renew specific `Renewal Term (Months)` inputs to fixed-term and evergreen renewal cards in `packages/billing/src/components/billing-dashboard/contracts/wizard-steps/ContractBasicsStep.tsx`.
+  - Input is gated by `isAutoRenew` and writes sanitized positive integer values to `renewal_term_months`.
 
 ## Open Questions
 - Should renewal ticket defaults be a brand-new billing settings card, or an extension of existing default ticket settings patterns?
