@@ -1162,7 +1162,7 @@
   {
     "id": "T146",
     "description": "Validation negative-path: Enforce deterministic fallback precedence when override fields are partially missing.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F031"
     ]
