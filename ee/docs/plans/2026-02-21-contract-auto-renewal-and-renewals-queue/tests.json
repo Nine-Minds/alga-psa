@@ -1909,7 +1909,7 @@
   {
     "id": "T239",
     "description": "E2E evergreen renewal: create evergreen contract with annual review settings, verify queue entry generation and annual cycle rollover after completion.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F006",
       "F100",
