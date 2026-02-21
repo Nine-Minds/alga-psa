@@ -530,7 +530,7 @@
   {
     "id": "T067",
     "description": "Functional: Implement create-renewal-draft action for eligible queue entries.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F067"
     ]
