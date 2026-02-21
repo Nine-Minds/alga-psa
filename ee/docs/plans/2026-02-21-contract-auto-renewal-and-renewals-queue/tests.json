@@ -842,7 +842,7 @@
   {
     "id": "T106",
     "description": "Functional: Roll evergreen cycle forward to next annual window after completion.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F106"
     ]
