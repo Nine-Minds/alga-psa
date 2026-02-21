@@ -1266,7 +1266,7 @@
   {
     "id": "T159",
     "description": "Date constraint: snooze action rejects non-future dates for 'Render status filter for pending/renewing/non_renewing/snoozed/completed.'",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F055"
     ]
