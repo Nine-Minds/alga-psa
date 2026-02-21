@@ -1674,7 +1674,7 @@
   {
     "id": "T210",
     "description": "Linkage correctness: 'Support create-renewal-draft action for evergreen queue entries.' stores created draft contract id on work item",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F105"
     ]
