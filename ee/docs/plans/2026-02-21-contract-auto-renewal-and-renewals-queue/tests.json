@@ -1074,7 +1074,7 @@
   {
     "id": "T135",
     "description": "Functional: Sanitize user-provided action notes before persistence and render.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F135"
     ]
