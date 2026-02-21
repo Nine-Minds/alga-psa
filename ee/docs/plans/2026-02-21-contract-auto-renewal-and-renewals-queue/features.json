@@ -882,7 +882,7 @@
   {
     "id": "F111",
     "description": "Include renewal mode in expiration report row payload.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > FR8 — Reporting and Existing Surface Alignment"
     ]

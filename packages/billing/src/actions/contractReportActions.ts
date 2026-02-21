@@ -18,6 +18,7 @@ export interface ContractExpiration {
   client_name: string;
   end_date: string;
   decision_due_date?: string | null;
+  renewal_mode?: 'none' | 'manual' | 'auto' | null;
   days_until_expiration: number;
   monthly_value: number;
   auto_renew: boolean;
@@ -202,6 +203,7 @@ export const getContractExpirationReport = withAuth(async (user, { tenant }): Pr
         'cl.client_name',
         'cc.end_date',
         'cc.decision_due_date',
+        'cc.renewal_mode',
         knex.raw('COALESCE(cln.custom_rate, 0) as monthly_value')
       )
       .orderBy('cc.end_date', 'asc');
@@ -215,6 +217,7 @@ export const getContractExpirationReport = withAuth(async (user, { tenant }): Pr
         client_name: row.client_name || 'Unknown Client',
         end_date: endDate.toISOString().split('T')[0],
         decision_due_date: row.decision_due_date ? new Date(row.decision_due_date).toISOString().split('T')[0] : null,
+        renewal_mode: row.renewal_mode ?? null,
         days_until_expiration: Math.max(0, daysUntilExpiration),
         monthly_value: row.monthly_value || 0,
         auto_renew: false // This could be extended to check a flag in the database

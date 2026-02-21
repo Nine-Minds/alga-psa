@@ -14,4 +14,10 @@ describe('contractReportActions expiration report wiring', () => {
     expect(source).toContain("decision_due_date: row.decision_due_date ? new Date(row.decision_due_date).toISOString().split('T')[0] : null,");
     expect(source).toContain('end_date: endDate.toISOString().split(\'T\')[0],');
   });
+
+  it('includes renewal_mode in expiration report row payloads', () => {
+    expect(source).toContain("renewal_mode?: 'none' | 'manual' | 'auto' | null;");
+    expect(source).toContain("'cc.renewal_mode',");
+    expect(source).toContain('renewal_mode: row.renewal_mode ?? null,');
+  });
 });

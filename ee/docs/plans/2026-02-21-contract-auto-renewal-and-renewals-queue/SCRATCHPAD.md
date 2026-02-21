@@ -1074,6 +1074,15 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
   - Validation:
     - `npm -w @alga-psa/billing exec vitest run tests/contractReportActions.expiration.wiring.test.ts --coverage=false`
     - `npm -w @alga-psa/billing run typecheck`
+- (2026-02-21) Completed `F111`.
+  - Extended expiration-report rows to include `renewal_mode`.
+  - Updated report contract type in:
+    - `packages/billing/src/actions/contractReportActions.ts`
+  - Expanded wiring coverage:
+    - `packages/billing/tests/contractReportActions.expiration.wiring.test.ts`
+  - Validation:
+    - `npm -w @alga-psa/billing exec vitest run tests/contractReportActions.expiration.wiring.test.ts --coverage=false`
+    - `npm -w @alga-psa/billing run typecheck`
 
 ## Open Questions
 - Should renewal ticket defaults be a brand-new billing settings card, or an extension of existing default ticket settings patterns?
