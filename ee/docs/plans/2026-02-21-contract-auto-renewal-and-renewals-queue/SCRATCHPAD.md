@@ -65,6 +65,11 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
     - `renewal_term_months?: number`
     - `use_tenant_renewal_defaults?: boolean`
   - Rationale: establish typed wizard-state shape early so subsequent UI rendering, defaults/hydration, validation, and submission features can build on stable field names.
+- (2026-02-21) Completed `T001`.
+  - Added `packages/billing/src/components/billing-dashboard/contracts/ContractWizard.renewalFields.test.ts`.
+  - Test covers type-level contract for the four renewal fields and validates the allowed `renewal_mode` domain values.
+  - Runbook:
+    - `npx vitest run packages/billing/src/components/billing-dashboard/contracts/ContractWizard.renewalFields.test.ts`
 
 ## Open Questions
 - Should renewal ticket defaults be a brand-new billing settings card, or an extension of existing default ticket settings patterns?
