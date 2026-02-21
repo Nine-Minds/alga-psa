@@ -1330,7 +1330,7 @@
   {
     "id": "T167",
     "description": "Date constraint: snooze action rejects non-future dates for 'Define queue status enum values pending/renewing/non_renewing/snoozed/completed in renewal work-item model.'",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F064"
     ]
