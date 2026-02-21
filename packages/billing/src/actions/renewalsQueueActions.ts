@@ -129,6 +129,7 @@ export const listRenewalQueueRows = withAuth(async (
         is_active: true,
         status: 'snoozed',
       })
+      .andWhereNot('status', 'completed')
       .whereNotNull('snoozed_until')
       .andWhere('snoozed_until', '<=', getTodayDateOnly())
       .update({

@@ -13,6 +13,7 @@ describe('renewalsQueueActions unsnooze wiring', () => {
     expect(source).toContain("schema?.hasColumn?.('client_contracts', 'snoozed_until') ?? false");
     expect(source).toContain('if (hasStatusColumn && hasSnoozedUntilColumn) {');
     expect(source).toContain("status: 'snoozed',");
+    expect(source).toContain(".andWhereNot('status', 'completed')");
     expect(source).toContain(".andWhere('snoozed_until', '<=', getTodayDateOnly())");
     expect(source).toContain("status: 'pending',");
     expect(source).toContain('snoozed_until: null,');

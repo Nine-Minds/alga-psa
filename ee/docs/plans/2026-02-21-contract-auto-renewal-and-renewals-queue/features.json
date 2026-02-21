@@ -586,7 +586,7 @@
   {
     "id": "F074",
     "description": "Prevent invalid transition from completed back to pending without explicit reopen action.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > FR5 — Queue Actions and Renewal Workflow"
     ]
