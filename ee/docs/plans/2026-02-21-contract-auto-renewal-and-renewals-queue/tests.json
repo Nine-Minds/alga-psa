@@ -1466,7 +1466,7 @@
   {
     "id": "T184",
     "description": "Idempotency: repeated execution of 'Create internal ticket at decision due date when effective policy is create_ticket.' does not create duplicate tickets",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F088"
     ]
