@@ -1150,7 +1150,7 @@
   {
     "id": "F143",
     "description": "Add server-side renewal schema readiness guard that fails fast with actionable error when required renewal columns are missing.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Rollout / Migration",
       "Requirements > Functional Requirements > FR4 — Renewals Queue and Dashboard Entry Points",

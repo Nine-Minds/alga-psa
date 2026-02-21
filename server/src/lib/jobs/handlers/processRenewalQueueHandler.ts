@@ -198,6 +198,9 @@ export async function processRenewalQueueHandler(data: RenewalQueueProcessorJobD
   const [
     hasDecisionDueDateColumn,
     hasStatusColumn,
+    hasRenewalModeColumn,
+    hasNoticePeriodDaysColumn,
+    hasRenewalTermMonthsColumn,
     hasRenewalCycleStartColumn,
     hasRenewalCycleEndColumn,
     hasRenewalCycleKeyColumn,
@@ -226,6 +229,9 @@ export async function processRenewalQueueHandler(data: RenewalQueueProcessorJobD
   ] = await Promise.all([
     schema?.hasColumn?.('client_contracts', 'decision_due_date') ?? false,
     schema?.hasColumn?.('client_contracts', 'status') ?? false,
+    schema?.hasColumn?.('client_contracts', 'renewal_mode') ?? false,
+    schema?.hasColumn?.('client_contracts', 'notice_period_days') ?? false,
+    schema?.hasColumn?.('client_contracts', 'renewal_term_months') ?? false,
     schema?.hasColumn?.('client_contracts', 'renewal_cycle_start') ?? false,
     schema?.hasColumn?.('client_contracts', 'renewal_cycle_end') ?? false,
     schema?.hasColumn?.('client_contracts', 'renewal_cycle_key') ?? false,
@@ -253,13 +259,42 @@ export async function processRenewalQueueHandler(data: RenewalQueueProcessorJobD
     schema?.hasTable?.('workflow_runs') ?? false,
   ]);
 
-  if (!hasDecisionDueDateColumn || !hasStatusColumn) {
-    logger.info('Skipping renewal queue processing because required columns are unavailable', {
-      tenantId,
-      hasDecisionDueDateColumn,
-      hasStatusColumn,
-    });
-    return;
+  const missingRenewalSchema: string[] = [];
+  if (!hasDecisionDueDateColumn) missingRenewalSchema.push('client_contracts.decision_due_date');
+  if (!hasStatusColumn) missingRenewalSchema.push('client_contracts.status');
+  if (!hasRenewalModeColumn) missingRenewalSchema.push('client_contracts.renewal_mode');
+  if (!hasNoticePeriodDaysColumn) missingRenewalSchema.push('client_contracts.notice_period_days');
+  if (!hasRenewalTermMonthsColumn) missingRenewalSchema.push('client_contracts.renewal_term_months');
+  if (!hasRenewalCycleStartColumn) missingRenewalSchema.push('client_contracts.renewal_cycle_start');
+  if (!hasRenewalCycleEndColumn) missingRenewalSchema.push('client_contracts.renewal_cycle_end');
+  if (!hasRenewalCycleKeyColumn) missingRenewalSchema.push('client_contracts.renewal_cycle_key');
+  if (!hasSnoozedUntilColumn) missingRenewalSchema.push('client_contracts.snoozed_until');
+  if (!hasCreatedTicketIdColumn) missingRenewalSchema.push('client_contracts.created_ticket_id');
+  if (!hasCreatedDraftContractIdColumn) missingRenewalSchema.push('client_contracts.created_draft_contract_id');
+  if (!hasTenantDueDateActionPolicyColumn) missingRenewalSchema.push('default_billing_settings.renewal_due_date_action_policy');
+  if (!hasContractDueDateActionPolicyColumn) missingRenewalSchema.push('client_contracts.renewal_due_date_action_policy');
+  if (!hasUseTenantRenewalDefaultsColumn) missingRenewalSchema.push('client_contracts.use_tenant_renewal_defaults');
+  if (!hasDefaultRenewalModeColumn) missingRenewalSchema.push('default_billing_settings.default_renewal_mode');
+  if (!hasDefaultNoticePeriodColumn) missingRenewalSchema.push('default_billing_settings.default_notice_period_days');
+  if (!hasTenantRenewalTicketBoardColumn) missingRenewalSchema.push('default_billing_settings.renewal_ticket_board_id');
+  if (!hasTenantRenewalTicketStatusColumn) missingRenewalSchema.push('default_billing_settings.renewal_ticket_status_id');
+  if (!hasTenantRenewalTicketPriorityColumn) missingRenewalSchema.push('default_billing_settings.renewal_ticket_priority');
+  if (!hasTenantRenewalTicketAssigneeColumn) missingRenewalSchema.push('default_billing_settings.renewal_ticket_assignee_id');
+  if (!hasContractRenewalTicketBoardColumn) missingRenewalSchema.push('client_contracts.renewal_ticket_board_id');
+  if (!hasContractRenewalTicketStatusColumn) missingRenewalSchema.push('client_contracts.renewal_ticket_status_id');
+  if (!hasContractRenewalTicketPriorityColumn) missingRenewalSchema.push('client_contracts.renewal_ticket_priority');
+  if (!hasContractRenewalTicketAssigneeColumn) missingRenewalSchema.push('client_contracts.renewal_ticket_assignee_id');
+  if (!hasAutomationErrorColumn) missingRenewalSchema.push('client_contracts.automation_error');
+  if (!hasLastActionColumn) missingRenewalSchema.push('client_contracts.last_action');
+  if (!hasLastActionByColumn) missingRenewalSchema.push('client_contracts.last_action_by');
+  if (!hasLastActionAtColumn) missingRenewalSchema.push('client_contracts.last_action_at');
+  if (!hasTicketsTable) missingRenewalSchema.push('tickets (table)');
+
+  if (missingRenewalSchema.length > 0) {
+    throw new Error(
+      `Renewal schema is not ready. Missing required columns: ${missingRenewalSchema.join(', ')}. ` +
+      'Run the latest server database migrations, then retry renewal queue processing.'
+    );
   }
 
   const today = toDateOnly(new Date());

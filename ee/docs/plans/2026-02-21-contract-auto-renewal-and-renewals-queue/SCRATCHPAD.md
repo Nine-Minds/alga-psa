@@ -1830,3 +1830,18 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
   - Migration remains Citus-safe and guarded by column existence checks.
   - Validation:
     - `node -c server/migrations/202602211130_add_contract_renewal_indexes_constraints.cjs`
+- (2026-02-21) Completed `F143`.
+  - Added renewal schema-readiness guard in queue actions:
+    - `packages/billing/src/actions/renewalsQueueActions.ts`
+    - `assertRenewalSchemaReady(knex)` now validates required renewal columns on:
+      - `client_contracts`
+      - `default_billing_settings`
+    - all renewals queue endpoints now fail fast with actionable migration guidance when required schema is missing.
+  - Added renewal schema-readiness enforcement in scheduled automation:
+    - `server/src/lib/jobs/handlers/processRenewalQueueHandler.ts`
+    - processor now throws actionable error listing missing renewal columns/tables instead of silently skipping.
+  - Validation:
+    - `npm -w @alga-psa/billing run typecheck`
+    - `cd server && npm run typecheck`
+    - `npm -w @alga-psa/billing exec vitest run tests/renewalsQueueActions.wiring.test.ts --coverage=false`
+    - `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`
