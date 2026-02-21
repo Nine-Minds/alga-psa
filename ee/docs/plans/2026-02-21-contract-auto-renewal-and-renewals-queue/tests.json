@@ -450,7 +450,7 @@
   {
     "id": "T057",
     "description": "Functional: Render contract type filter for fixed-term versus evergreen entries.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F057"
     ]
