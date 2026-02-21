@@ -444,6 +444,12 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
   - Widget data source now loads via `listRenewalQueueRows()` during tab fetch flow.
   - Added coverage:
     - `packages/billing/tests/ClientContractsTab.upcomingRenewalsWidget.test.ts`
+- (2026-02-21) Completed `F061`.
+  - Updated `Upcoming Renewals` widget to display 90-day bucket counts:
+    - `0-30`, `31-60`, `61-90`
+  - Counts now derive from renewal queue row `days_until_due`.
+  - Added coverage update in:
+    - `packages/billing/tests/ClientContractsTab.upcomingRenewalsWidget.test.ts`
 
 ## Open Questions
 - Should renewal ticket defaults be a brand-new billing settings card, or an extension of existing default ticket settings patterns?

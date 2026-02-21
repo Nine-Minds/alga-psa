@@ -37,6 +37,12 @@ interface ClientContractsTabProps {
   refreshTrigger?: number;
 }
 
+type UpcomingRenewalBucketCounts = {
+  days0to30: number;
+  days31to60: number;
+  days61to90: number;
+};
+
 const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded, refreshTrigger }) => {
   const router = useRouter();
   const [clientContracts, setClientContracts] = useState<IContractWithClient[]>([]);
@@ -45,7 +51,11 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [clientSearchTerm, setClientSearchTerm] = useState('');
-  const [upcomingRenewalTotal, setUpcomingRenewalTotal] = useState(0);
+  const [upcomingRenewalBuckets, setUpcomingRenewalBuckets] = useState<UpcomingRenewalBucketCounts>({
+    days0to30: 0,
+    days31to60: 0,
+    days61to90: 0,
+  });
 
   useEffect(() => {
     void fetchClientContracts();
@@ -57,7 +67,15 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
       const fetchedAssignments = await getContractsWithClients();
       const renewalRows = await listRenewalQueueRows();
       setClientContracts(fetchedAssignments.filter((assignment) => Boolean(assignment.client_id)));
-      setUpcomingRenewalTotal(renewalRows.length);
+      setUpcomingRenewalBuckets({
+        days0to30: renewalRows.filter((row) => (row.days_until_due ?? Number.MAX_SAFE_INTEGER) <= 30).length,
+        days31to60: renewalRows.filter(
+          (row) => (row.days_until_due ?? Number.MAX_SAFE_INTEGER) >= 31 && (row.days_until_due ?? 0) <= 60
+        ).length,
+        days61to90: renewalRows.filter(
+          (row) => (row.days_until_due ?? Number.MAX_SAFE_INTEGER) >= 61 && (row.days_until_due ?? 0) <= 90
+        ).length,
+      });
       setError(null);
     } catch (err) {
       console.error('Error fetching client contracts:', err);
@@ -366,7 +384,11 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
                   Contracts with renewal decisions due in the next 90 days.
                 </p>
               </div>
-              <Badge variant="info">{upcomingRenewalTotal}</Badge>
+              <div className="flex items-center gap-2 text-xs">
+                <Badge variant="info">0-30: {upcomingRenewalBuckets.days0to30}</Badge>
+                <Badge variant="default">31-60: {upcomingRenewalBuckets.days31to60}</Badge>
+                <Badge variant="default-muted">61-90: {upcomingRenewalBuckets.days61to90}</Badge>
+              </div>
             </div>
           </section>
 
