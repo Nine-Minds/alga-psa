@@ -290,7 +290,7 @@
   {
     "id": "T037",
     "description": "Functional: Recompute decision_due_date when contract end_date changes.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F037"
     ]
