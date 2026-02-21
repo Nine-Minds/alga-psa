@@ -714,7 +714,7 @@
   {
     "id": "T090",
     "description": "Functional: Populate renewal ticket title with client and contract context.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F090"
     ]
