@@ -1879,3 +1879,9 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
   - Assertions verify ticket link, routing override, automation error, and policy-check constraint wiring from `202602211110_add_contract_renewal_automation_columns.cjs`.
   - Validation:
     - `cd server && npx vitest run src/test/unit/migrations/contractRenewalMigrations.test.ts --coverage=false`
+- (2026-02-21) Completed `T247`.
+  - Extended migration coverage for renewal default/policy columns on `default_billing_settings` in:
+    - `server/src/test/unit/migrations/contractRenewalMigrations.test.ts`
+  - Assertions verify default renewal mode/notice/policy columns, ticket-routing default fields, and policy/validation constraints from `202602211120_add_default_billing_renewal_columns.cjs`.
+  - Validation:
+    - `cd server && npx vitest run src/test/unit/migrations/contractRenewalMigrations.test.ts --coverage=false`

@@ -55,4 +55,25 @@ describe('contract renewal migrations', () => {
       "CHECK (renewal_due_date_action_policy IN ('queue_only', 'create_ticket'))"
     );
   });
+
+  it('T247: creates required renewal default/policy columns on default_billing_settings', () => {
+    const migration = readRepoFile(
+      'server/migrations/202602211120_add_default_billing_renewal_columns.cjs'
+    );
+
+    expect(migration).toContain("table.text('default_renewal_mode').notNullable().defaultTo('manual')");
+    expect(migration).toContain("table.integer('default_notice_period_days').notNullable().defaultTo(30)");
+    expect(migration).toContain(
+      "table.text('renewal_due_date_action_policy').notNullable().defaultTo('create_ticket')"
+    );
+    expect(migration).toContain("table.uuid('renewal_ticket_board_id').nullable()");
+    expect(migration).toContain("table.uuid('renewal_ticket_status_id').nullable()");
+    expect(migration).toContain("table.uuid('renewal_ticket_priority').nullable()");
+    expect(migration).toContain("table.uuid('renewal_ticket_assignee_id').nullable()");
+    expect(migration).toContain("CHECK (default_renewal_mode IN ('none', 'manual', 'auto'))");
+    expect(migration).toContain('CHECK (default_notice_period_days >= 0)');
+    expect(migration).toContain(
+      "CHECK (renewal_due_date_action_policy IN ('queue_only', 'create_ticket'))"
+    );
+  });
 });
