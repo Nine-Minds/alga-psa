@@ -1786,7 +1786,7 @@
   {
     "id": "T224",
     "description": "Parity: 'Honor existing JobRunnerFactory runtime selection without forcing edition-specific code forks in business logic.' behaves equivalently under pg-boss and Temporal paths",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F123"
     ]
