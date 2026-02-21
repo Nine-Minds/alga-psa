@@ -12,11 +12,11 @@ vi.mock('axios', () => ({
   post: axiosPostMock,
 }));
 
-vi.mock('@/lib/integrations/entra/auth/microsoftCredentialResolver', () => ({
+vi.mock('@ee/lib/integrations/entra/auth/microsoftCredentialResolver', () => ({
   resolveMicrosoftCredentialsForTenant: resolveMicrosoftCredentialsForTenantMock,
 }));
 
-vi.mock('@/lib/integrations/entra/auth/tokenStore', () => ({
+vi.mock('@ee/lib/integrations/entra/auth/tokenStore', () => ({
   saveEntraDirectTokenSet: saveEntraDirectTokenSetMock,
 }));
 

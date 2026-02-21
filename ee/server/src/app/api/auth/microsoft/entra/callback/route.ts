@@ -1,8 +1,8 @@
 import axios from 'axios';
 import { NextRequest, NextResponse } from 'next/server';
 import { createTenantKnex, runWithTenant } from '@/lib/db';
-import { resolveMicrosoftCredentialsForTenant } from '@/lib/integrations/entra/auth/microsoftCredentialResolver';
-import { saveEntraDirectTokenSet } from '@/lib/integrations/entra/auth/tokenStore';
+import { resolveMicrosoftCredentialsForTenant } from '@ee/lib/integrations/entra/auth/microsoftCredentialResolver';
+import { saveEntraDirectTokenSet } from '@ee/lib/integrations/entra/auth/tokenStore';
 
 export const dynamic = 'force-dynamic';
 
