@@ -722,7 +722,7 @@
   {
     "id": "T091",
     "description": "Functional: Populate renewal ticket description with due date and renewal settings context.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F091"
     ]
