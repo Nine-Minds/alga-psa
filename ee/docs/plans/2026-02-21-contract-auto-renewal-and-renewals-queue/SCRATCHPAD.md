@@ -188,6 +188,8 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
   - Extended tenant default billing settings model surface in `packages/billing/src/actions/billingSettingsActions.ts` and `server/src/interfaces/billing.interfaces.ts` with renewal-default fields (including default renewal mode) using schema-guarded writes for compatibility.
 - (2026-02-21) Completed `F020`.
   - Included `defaultNoticePeriodDays` mapping (`default_notice_period_days`) in tenant default billing settings model and guarded write path.
+- (2026-02-21) Completed `F021`.
+  - Included `renewalDueDateActionPolicy` mapping (`renewal_due_date_action_policy`) with normalized fallback in tenant billing settings model.
 
 ## Open Questions
 - Should renewal ticket defaults be a brand-new billing settings card, or an extension of existing default ticket settings patterns?
