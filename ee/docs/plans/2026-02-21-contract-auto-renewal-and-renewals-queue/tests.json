@@ -1418,7 +1418,7 @@
   {
     "id": "T178",
     "description": "UI behavior: Show optimistic UI state while queue actions are in-flight. persists after refresh/navigation",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F078"
     ]
