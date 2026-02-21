@@ -482,7 +482,7 @@
   {
     "id": "T061",
     "description": "Functional: Show 90-day bucket counts in ClientContractsTab upcoming renewals widget.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F061"
     ]
