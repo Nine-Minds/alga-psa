@@ -1874,7 +1874,7 @@
   {
     "id": "T235",
     "description": "Linkage correctness: 'Audit renewal draft creation linkage with actor id and timestamp metadata.' stores created draft contract id on work item",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F133"
     ]
