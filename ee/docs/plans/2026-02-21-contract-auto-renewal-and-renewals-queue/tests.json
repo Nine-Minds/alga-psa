@@ -1858,7 +1858,7 @@
   {
     "id": "T233",
     "description": "UI behavior: Apply tenant filter to all renewal work-item writes by default. persists after refresh/navigation",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F130"
     ]
