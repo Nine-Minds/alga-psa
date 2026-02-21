@@ -922,7 +922,7 @@
   {
     "id": "F116",
     "description": "Align contract reports tab expiration copy to reference renewal decisions as well as expiration.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > FR8 — Reporting and Existing Surface Alignment"
     ]
