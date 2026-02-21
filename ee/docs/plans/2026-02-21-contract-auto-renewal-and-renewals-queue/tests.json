@@ -1966,7 +1966,7 @@
   {
     "id": "T245",
     "description": "Integration: latest migrations create required renewal-cycle columns on client_contracts.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F137"
     ]

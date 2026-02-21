@@ -22,4 +22,19 @@ describe('contract renewal migrations', () => {
     expect(migration).toContain("table.text('last_action_note').nullable()");
     expect(migration).toContain("CHECK (status IN ('pending', 'renewing', 'non_renewing', 'snoozed', 'completed'))");
   });
+
+  it('T245: creates required renewal-cycle columns on client_contracts', () => {
+    const migration = readRepoFile(
+      'server/migrations/202602211105_add_contract_renewal_cycle_columns.cjs'
+    );
+
+    expect(migration).toContain("table.date('decision_due_date').nullable()");
+    expect(migration).toContain("table.date('renewal_cycle_start').nullable()");
+    expect(migration).toContain("table.date('renewal_cycle_end').nullable()");
+    expect(migration).toContain("table.text('renewal_cycle_key').nullable()");
+    expect(migration).toContain("table.dropColumn('renewal_cycle_key')");
+    expect(migration).toContain("table.dropColumn('renewal_cycle_end')");
+    expect(migration).toContain("table.dropColumn('renewal_cycle_start')");
+    expect(migration).toContain("table.dropColumn('decision_due_date')");
+  });
 });

@@ -1867,3 +1867,9 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
   - Assertions cover required status/audit columns and status domain constraint wiring from migration `202602211100_add_contract_renewal_queue_status_audit_columns.cjs`.
   - Validation:
     - `cd server && npx vitest run src/test/unit/migrations/contractRenewalMigrations.test.ts --coverage=false`
+- (2026-02-21) Completed `T245`.
+  - Extended migration coverage for renewal-cycle columns in:
+    - `server/src/test/unit/migrations/contractRenewalMigrations.test.ts`
+  - Assertions verify `decision_due_date`, `renewal_cycle_start`, `renewal_cycle_end`, and `renewal_cycle_key` add/drop wiring in migration `202602211105_add_contract_renewal_cycle_columns.cjs`.
+  - Validation:
+    - `cd server && npx vitest run src/test/unit/migrations/contractRenewalMigrations.test.ts --coverage=false`
