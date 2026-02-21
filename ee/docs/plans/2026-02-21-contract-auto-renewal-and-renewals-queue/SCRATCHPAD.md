@@ -169,6 +169,9 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
     - renewal mode,
     - notice period,
     - renewal term (auto mode).
+- (2026-02-21) Completed `F017`.
+  - Added renewal fields to `ClientContractWizardSubmission` (`packages/billing/src/actions/contractWizardActions.ts`).
+  - Updated `buildSubmissionData()` in `ContractWizard.tsx` to include renewal mode, notice period, renewal term, and tenant-default toggle in outgoing wizard payload.
 
 ## Open Questions
 - Should renewal ticket defaults be a brand-new billing settings card, or an extension of existing default ticket settings patterns?

@@ -130,7 +130,7 @@
   {
     "id": "F017",
     "description": "Persist renewal fields in ClientContractWizardSubmission payload builder.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > FR1 — Contract Setup and Renewal Configuration"
     ]

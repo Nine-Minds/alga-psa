@@ -129,6 +129,10 @@ export type ClientContractWizardSubmission = {
   description?: string;
   client_id: string;
   start_date: string;
+  renewal_mode?: 'none' | 'manual' | 'auto';
+  notice_period_days?: number;
+  renewal_term_months?: number;
+  use_tenant_renewal_defaults?: boolean;
   billing_frequency?: string;
   currency_code: string;
   end_date?: string;
