@@ -58,7 +58,7 @@
   {
     "id": "F008",
     "description": "Show notice period selector/input in ContractBasicsStep for renewal-enabled modes.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > FR1 — Contract Setup and Renewal Configuration"
     ]

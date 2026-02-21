@@ -142,6 +142,8 @@ export function ContractBasicsStep({
   const selectedTemplate = selectedTemplateId
     ? templates.find((template) => template.contract_id === selectedTemplateId)
     : undefined;
+  const effectiveRenewalMode = data.renewal_mode ?? 'manual';
+  const isRenewalEnabled = effectiveRenewalMode !== 'none';
 
   return (
     <div className="space-y-6" data-automation-id="contract-basics-step">
@@ -348,7 +350,7 @@ export function ContractBasicsStep({
             <CustomSelect
               id="renewal-mode-fixed"
               options={renewalModeOptions}
-              value={data.renewal_mode ?? 'manual'}
+              value={effectiveRenewalMode}
               onValueChange={(value: string) =>
                 updateData({
                   renewal_mode: value as NonNullable<ContractWizardData['renewal_mode']>,
@@ -358,6 +360,33 @@ export function ContractBasicsStep({
               className="w-full"
             />
           </div>
+          {isRenewalEnabled && (
+            <div className="space-y-2">
+              <Label htmlFor="notice-period-fixed" className="text-xs font-medium">
+                Notice Period (Days)
+              </Label>
+              <Input
+                id="notice-period-fixed"
+                type="number"
+                min={0}
+                step={1}
+                value={data.notice_period_days ?? ''}
+                onChange={(e) => {
+                  const nextValue = e.target.value.trim();
+                  if (!nextValue) {
+                    updateData({ notice_period_days: undefined });
+                    return;
+                  }
+                  const parsed = Number.parseInt(nextValue, 10);
+                  updateData({
+                    notice_period_days: Number.isFinite(parsed) ? Math.max(0, parsed) : undefined,
+                  });
+                }}
+                placeholder="e.g., 30"
+                className="w-full"
+              />
+            </div>
+          )}
         </div>
       )}
 
@@ -380,7 +409,7 @@ export function ContractBasicsStep({
             <CustomSelect
               id="renewal-mode-evergreen"
               options={renewalModeOptions}
-              value={data.renewal_mode ?? 'manual'}
+              value={effectiveRenewalMode}
               onValueChange={(value: string) =>
                 updateData({
                   renewal_mode: value as NonNullable<ContractWizardData['renewal_mode']>,
@@ -390,6 +419,33 @@ export function ContractBasicsStep({
               className="w-full"
             />
           </div>
+          {isRenewalEnabled && (
+            <div className="space-y-2">
+              <Label htmlFor="notice-period-evergreen" className="text-xs font-medium">
+                Notice Period (Days)
+              </Label>
+              <Input
+                id="notice-period-evergreen"
+                type="number"
+                min={0}
+                step={1}
+                value={data.notice_period_days ?? ''}
+                onChange={(e) => {
+                  const nextValue = e.target.value.trim();
+                  if (!nextValue) {
+                    updateData({ notice_period_days: undefined });
+                    return;
+                  }
+                  const parsed = Number.parseInt(nextValue, 10);
+                  updateData({
+                    notice_period_days: Number.isFinite(parsed) ? Math.max(0, parsed) : undefined,
+                  });
+                }}
+                placeholder="e.g., 30"
+                className="w-full"
+              />
+            </div>
+          )}
         </div>
       )}
 

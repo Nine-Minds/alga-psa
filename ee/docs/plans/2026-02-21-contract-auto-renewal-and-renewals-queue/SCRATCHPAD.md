@@ -124,6 +124,9 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
 - (2026-02-21) Completed `T007`.
   - Extended `packages/billing/src/components/billing-dashboard/contracts/wizard-steps/ContractBasicsStep.renewalCards.test.ts`.
   - Added assertions for `renewalModeOptions` values (`none|manual|auto`) and `updateData` binding back to `renewal_mode`.
+- (2026-02-21) Completed `F008`.
+  - Added `Notice Period (Days)` input to both renewal cards in `packages/billing/src/components/billing-dashboard/contracts/wizard-steps/ContractBasicsStep.tsx`.
+  - Input is conditionally rendered only when renewal mode is enabled (`manual` or `auto`), with non-negative integer coercion on change.
 
 ## Open Questions
 - Should renewal ticket defaults be a brand-new billing settings card, or an extension of existing default ticket settings patterns?
