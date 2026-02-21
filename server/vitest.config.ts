@@ -54,6 +54,7 @@ export default defineConfig({
       { find: /^@alga-psa\/core\/secrets$/, replacement: path.resolve(__dirname, '../packages/core/src/lib/secrets/index.ts') },
       { find: /^@alga-psa\/core\/events$/, replacement: path.resolve(__dirname, '../packages/core/src/lib/events/index.ts') },
       { find: /^@alga-psa\/core\/encryption$/, replacement: path.resolve(__dirname, '../packages/core/src/lib/encryption.ts') },
+      { find: /^@alga-psa\/core\/i18n\/config$/, replacement: path.resolve(__dirname, '../packages/core/src/lib/i18n/config.ts') },
 
       { find: /^@alga-psa\/db$/, replacement: path.resolve(__dirname, '../packages/db/src/index.ts') },
       { find: /^@alga-psa\/db\/admin$/, replacement: path.resolve(__dirname, '../packages/db/src/lib/admin.ts') },
@@ -120,6 +121,7 @@ export default defineConfig({
       { find: 'next/server', replacement: path.resolve(__dirname, './src/test/stubs/next-server.ts') },
       { find: '@product/settings-extensions/entry', replacement: path.resolve(__dirname, './src/test/stubs/product-settings-extensions-entry.ts') },
       { find: '@product/chat/entry', replacement: path.resolve(__dirname, './src/test/stubs/product-chat-entry.ts') },
+      { find: '@product/billing/entry', replacement: path.resolve(__dirname, './src/test/stubs/product-billing-entry.tsx') },
       { find: 'pdf-lib', replacement: 'empty-module' },
     ],
   },

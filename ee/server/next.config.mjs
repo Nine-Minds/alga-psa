@@ -40,6 +40,12 @@ const nextConfig = {
       '@product/ext-proxy/handler': isEE
         ? '../packages/product-ext-proxy/ee/handler'
         : '../packages/product-ext-proxy/oss/handler',
+      '@alga-psa/integrations/entra/components/entry': isEE
+        ? '../packages/integrations/src/entra/components/ee/entry'
+        : '../packages/integrations/src/entra/components/oss/entry',
+      '@alga-psa/integrations/entra/routes/entry': isEE
+        ? '../packages/integrations/src/entra/routes/ee/entry'
+        : '../packages/integrations/src/entra/routes/oss/entry',
       // Event schemas package
       '@alga-psa/event-schemas': '../packages/event-schemas/src',
       '@alga-psa/event-schemas/': '../packages/event-schemas/src/',
@@ -108,6 +114,12 @@ const nextConfig = {
         '@product/ext-proxy/handler': isEE
           ? path.join(__dirname, '../packages/product-ext-proxy/ee/handler.ts')
           : path.join(__dirname, '../packages/product-ext-proxy/oss/handler.ts'),
+        '@alga-psa/integrations/entra/components/entry': isEE
+          ? path.join(__dirname, '../packages/integrations/src/entra/components/ee/entry.tsx')
+          : path.join(__dirname, '../packages/integrations/src/entra/components/oss/entry.tsx'),
+        '@alga-psa/integrations/entra/routes/entry': isEE
+          ? path.join(__dirname, '../packages/integrations/src/entra/routes/ee/entry.ts')
+          : path.join(__dirname, '../packages/integrations/src/entra/routes/oss/entry.ts'),
         // Event schemas package
         '@alga-psa/event-schemas': path.join(__dirname, '../packages/event-schemas/src'),
         // SSO provider buttons - always use EE implementation in EE server

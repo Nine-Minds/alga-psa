@@ -284,6 +284,43 @@ body {
     color: rgb(var(--color-destructive-foreground));
 }
 
+.entra-status-panel {
+    border-radius: 0.9rem;
+    border: 1px solid rgb(var(--color-border-200) / 0.92);
+    background:
+        radial-gradient(120% 100% at 100% 0%,
+            rgb(var(--color-primary-300) / 0.14) 0%,
+            transparent 60%),
+        linear-gradient(180deg,
+            rgb(var(--color-border-50) / 0.9) 0%,
+            rgb(var(--color-background) / 0.98) 100%);
+    box-shadow: 0 12px 28px rgb(var(--color-primary-500) / 0.08);
+}
+
+.entra-status-section {
+    border-radius: 0.7rem;
+    border: 1px solid rgb(var(--color-border-200) / 0.86);
+    background-color: rgb(var(--color-background) / 0.84);
+    padding: 0.75rem 0.85rem;
+}
+
+.dark .entra-status-panel {
+    border-color: rgb(var(--color-border-300) / 0.88);
+    background:
+        radial-gradient(130% 110% at 100% 0%,
+            rgb(var(--color-primary-400) / 0.2) 0%,
+            transparent 64%),
+        linear-gradient(180deg,
+            rgb(var(--color-border-100) / 0.88) 0%,
+            rgb(var(--color-background) / 0.96) 100%);
+    box-shadow: 0 16px 30px rgb(var(--color-primary-900) / 0.22);
+}
+
+.dark .entra-status-section {
+    border-color: rgb(var(--color-border-300) / 0.88);
+    background-color: rgb(var(--color-border-50) / 0.74);
+}
+
 .dark {
     --background: 0, 0, 0;
     --color-background: 0 0 0;

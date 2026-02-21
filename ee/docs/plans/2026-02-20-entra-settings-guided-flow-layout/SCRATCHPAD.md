@@ -1,0 +1,135 @@
+# Scratchpad — Entra Settings Guided Flow Layout
+
+- Plan slug: `entra-settings-guided-flow-layout`
+- Created: `2026-02-20`
+
+## What This Is
+
+Focused planning log for guided-layout improvements in Entra integration settings. Scope is intentionally limited to UX flow clarity and minimal behavior wiring.
+
+## Decisions
+
+- (2026-02-20) Use a new focused plan folder instead of extending the phase-1 mega-plan, to keep scope concise and reviewable.
+- (2026-02-20) Design direction approved: single-page guided step controller (not new route, not accordion).
+- (2026-02-20) Progression model is hard-gated: only current-step onboarding action is primary/actionable.
+- (2026-02-20) Test strategy will be light: add only focused UI-state tests and rely on existing Entra tests for broad regressions.
+- (2026-02-20) Approved UX direction includes an explicit post-initial-sync maintenance mode (operations-first layout), not just onboarding cleanup.
+
+## Discoveries / Constraints
+
+- (2026-02-20) Existing settings UI currently presents `Run Discovery`, `Run Initial Sync`, and `Sync All Tenants Now` side by side.
+- (2026-02-20) `discoverEntraManagedTenants` action already exists and is permission/flag-gated.
+- (2026-02-20) `startEntraSync` supports `scope: 'initial'` and `scope: 'all-tenants'`.
+- (2026-02-20) Mapping progress can be derived from existing signals in status + mapping summary (`lastDiscoveryAt`, `mappedTenantCount`).
+- (2026-02-20) Step 3 (Map) confirmation behavior currently lives in `EntraTenantMappingTable`.
+- (2026-02-20) Existing sync history action/panel (`getEntraSyncRunHistory` / `EntraSyncHistoryPanel`) can provide a mode-switch signal without new schema work.
+
+## Commands / Runbooks
+
+- (2026-02-20) Scaffold plan folder:
+  - `python3 /Users/roberisaacs/.codex/skills/alga-plan/scripts/scaffold_plan.py "Entra Settings Guided Flow Layout" --slug entra-settings-guided-flow-layout`
+
+## Links / References
+
+- Existing phase-1 plan baseline:
+  - `ee/docs/plans/2026-02-20-entra-integration-phase-1/PRD.md`
+  - `ee/docs/plans/2026-02-20-entra-integration-phase-1/features.json`
+  - `ee/docs/plans/2026-02-20-entra-integration-phase-1/tests.json`
+- Primary UI target:
+  - `ee/server/src/components/settings/integrations/EntraIntegrationSettings.tsx`
+- Existing actions:
+  - `packages/integrations/src/actions/integrations/entraActions.ts`
+
+## Open Questions
+
+- Should Step 3 include a dedicated top-level CTA (`Review Mappings`) that scrolls/focuses the table, or should copy-only guidance be used?
+- Should mapping confirmation continue to optionally start initial sync from table flow, or should guided Step 4 become the single canonical trigger?
+- In maintenance mode, should `Run Discovery` be a visible secondary action by default or placed behind a details/overflow affordance?
+
+## Execution Log
+
+- (2026-02-20) F001 implemented in `ee/server/src/components/settings/integrations/EntraIntegrationSettings.tsx`.
+  - Added explicit guided-step derivation helper (`deriveGuidedStepState`) with `connect|discover|map|sync` current-step output.
+  - Step derivation now uses existing status signals plus mapping summary via `mappedTenantCount = max(status.mappedTenantCount, mappingSummary.mapped)`.
+  - Rationale: deterministic step progression based only on existing UI-loaded state, no API/schema changes.
+
+## Gotchas
+
+- Running `npm -w sebastian-ee run test:unit -- src/__tests__/unit/entraIntegrationSettings.initialSyncCta.test.tsx` still executes the full unit suite because of the workspace script shape; several unrelated baseline tests fail in this worktree due missing `@enterprise/*` resolution and pre-existing duplicated-render test issues.
+- (2026-02-20) F002 implemented in `ee/server/src/components/settings/integrations/EntraIntegrationSettings.tsx`.
+  - Added computed per-step visual state (`current`, `complete`, `locked`) based on guided-step index.
+  - Step cards now show explicit status labels in the progress header while preserving existing step descriptions.
+- (2026-02-20) F003 implemented in `ee/server/src/components/settings/integrations/EntraIntegrationSettings.tsx`.
+  - Added `Current Step` card that renders one onboarding primary action at a time (`connect` guidance, `Run Discovery`, `Review Mappings`, or `Run Initial Sync`).
+  - Removed discovery/initial actions from the old shared action row, leaving no same-tier onboarding multi-action group.
+- (2026-02-20) Post-F003 targeted settings test run now fails in old assertions that expected always-visible `Run Initial Sync`; this is expected and will be resolved by F011/T00x guided-flow test updates.
+- (2026-02-20) F004 implemented in `ee/server/src/components/settings/integrations/EntraIntegrationSettings.tsx`.
+  - Added explicit current-step booleans and gated onboarding action rendering to current step only.
+  - Added guard in connection-option click handler to no-op if Connect is not the active step.
+- (2026-02-20) F005 implemented in `ee/server/src/components/settings/integrations/EntraIntegrationSettings.tsx`.
+  - Wired guided `Run Discovery` CTA to `discoverEntraManagedTenants`.
+  - Added discovery loading state and feedback message (`#entra-run-discovery-feedback`).
+  - On success, refreshes status and bumps mapping table refresh key so mapping context updates immediately.
+- (2026-02-20) F006 implemented in `ee/server/src/components/settings/integrations/EntraIntegrationSettings.tsx`.
+  - Wired guided `Run Initial Sync` CTA to `startEntraSync({ scope: 'initial' })`.
+  - Added initial-sync loading and feedback state (`#entra-run-initial-sync-feedback`) and status refresh after start.
+- (2026-02-20) F007 implemented in `ee/server/src/components/settings/integrations/EntraIntegrationSettings.tsx`.
+  - Moved `Sync All Tenants Now` into a dedicated `Ongoing Operations` panel (`#entra-ongoing-operations-panel`).
+  - Preserved existing enable/disable logic, action wiring, and feedback message behavior.
+- (2026-02-20) F008 implemented in `ee/server/src/components/settings/integrations/EntraIntegrationSettings.tsx`.
+  - Added explicit Step 3 heading and instructional mapping guidance copy above `EntraTenantMappingTable`.
+  - Added current-step cue text when map phase is active; kept `EntraTenantMappingTable` wiring unchanged to avoid behavior regression.
+- (2026-02-20) Mapping table unit test `src/__tests__/unit/entraTenantMappingTable.selection.test.tsx` has a pre-existing flaky assertion (`getByText('Unmapped Import Tenant')`) that now collides with same text in picker options; failure is unrelated to F008 logic (table internals unchanged).
+- (2026-02-20) F009 validated/implemented.
+  - Status diagnostics block (`#entra-connection-status-panel`) was preserved intact across layout refactor, including CIPP server and direct tenant/credential-source rows.
+  - Existing Refresh and Disconnect controls remained in place and unchanged.
+  - Validation check: `cd ee/server && npx vitest run src/__tests__/unit/entraIntegrationSettings.initialSyncCta.test.tsx -t "T121|T132"`.
+- (2026-02-20) F010 implemented by preserving existing advanced-section gates unchanged in `EntraIntegrationSettings`:
+  - `shouldShowFieldSyncControls(fieldSyncFlag.enabled)` still controls field-sync panel visibility.
+  - `shouldShowAmbiguousQueue(ambiguousQueueFlag.enabled)` still controls reconciliation queue visibility.
+- (2026-02-20) F011 implemented via focused guided-flow test rewrite in `ee/server/src/__tests__/unit/entraIntegrationSettings.initialSyncCta.test.tsx`.
+  - Added/updated tests for step gating states (Connect/Discover/Map/Sync) and CTA routing (`discoverEntraManagedTenants`, `startEntraSync({scope:'initial'})`).
+  - Preserved coverage for status diagnostics and queue flag gating in the same unit file.
+  - Validation check: `cd ee/server && npx vitest run src/__tests__/unit/entraIntegrationSettings.initialSyncCta.test.tsx` (passing).
+- (2026-02-20) F012 implemented in `ee/server/src/components/settings/integrations/EntraIntegrationSettings.tsx`.
+  - Added explicit mode signal fetch via `getEntraSyncRunHistory(10)` and derived page mode (`onboarding` vs `maintenance`) from presence of `initial`/`all-tenants` runs.
+  - Exposed mode metadata on root container (`data-entra-mode`, `data-entra-mode-ready`).
+  - Refreshes maintenance signal after manual sync starts to keep mode transition deterministic.
+- (2026-02-20) F013 implemented in `ee/server/src/components/settings/integrations/EntraIntegrationSettings.tsx`.
+  - Maintenance mode now suppresses onboarding step-progress/current-step cards.
+  - Added operations-first maintenance sequencing: health summary + status, ongoing operations, sync history/queue, then mapping/skipped review blocks.
+  - Added maintenance-only secondary discovery action (`Run Discovery Again`) in ongoing operations.
+- (2026-02-20) F014 implemented in `ee/server/src/components/settings/integrations/EntraIntegrationSettings.tsx`.
+  - Added explicit mode heading/copy banner at top of settings content (`Setup Mode` vs `Ongoing Operations Mode`).
+  - Copy now clearly distinguishes guided setup from post-setup maintenance behavior.
+- (2026-02-20) T001 completed.
+  - Verified existing diagnostics coverage still passes in new layout context (`T121`, `T132` in `entraIntegrationSettings.initialSyncCta.test.tsx`).
+  - Command: `cd ee/server && npx vitest run src/__tests__/unit/entraIntegrationSettings.initialSyncCta.test.tsx -t "T121|T132"`.
+- (2026-02-20) T002 completed.
+  - Validated not-connected gating state in `T002` test: Connect is current, later steps are locked, discovery/initial CTAs are hidden.
+  - Command: `cd ee/server && npx vitest run src/__tests__/unit/entraIntegrationSettings.initialSyncCta.test.tsx -t "T002"`.
+- (2026-02-20) T003 completed.
+  - `T003` confirms connected/no-discovery state selects Discover step and routes CTA click to `discoverEntraManagedTenants`.
+  - Command: `cd ee/server && npx vitest run src/__tests__/unit/entraIntegrationSettings.initialSyncCta.test.tsx -t "T003"`.
+- (2026-02-20) T004 completed.
+  - `T004` validates discovered/no-mapped state shifts current step to Map and highlights mapping guidance path (`Review Mappings`).
+  - Command: `cd ee/server && npx vitest run src/__tests__/unit/entraIntegrationSettings.initialSyncCta.test.tsx -t "T004"`.
+- (2026-02-20) T005 completed.
+  - `T005` verifies mapped-tenant state makes Sync current and routes CTA to `startEntraSync({ scope: 'initial' })`.
+  - Command: `cd ee/server && npx vitest run src/__tests__/unit/entraIntegrationSettings.initialSyncCta.test.tsx -t "T005"`.
+- (2026-02-20) T006 completed.
+  - Added `T006` assertion that `Sync All Tenants Now` is rendered under `#entra-ongoing-operations-panel` and remains gated by mapped-tenant count.
+  - Revalidated related enable/disable tests (`T124`, `T125`).
+  - Command: `cd ee/server && npx vitest run src/__tests__/unit/entraIntegrationSettings.initialSyncCta.test.tsx -t "T006|T124|T125"`.
+- (2026-02-20) T007 completed.
+  - Added explicit `T007` coverage for field-sync + ambiguous-queue flag gating and revalidated queue-specific tests.
+  - Command: `cd ee/server && npx vitest run src/__tests__/unit/entraIntegrationSettings.initialSyncCta.test.tsx -t "T007|T128|T129"`.
+- (2026-02-20) T008 completed.
+  - Added onboarding-mode assertion for empty sync history (`T008`) and validated with targeted run including maintenance tests.
+  - Command: `cd ee/server && npx vitest run src/__tests__/unit/entraIntegrationSettings.initialSyncCta.test.tsx -t "T008|T009|T010"`.
+- (2026-02-20) T009 completed.
+  - `T009` confirms presence of initial/all-tenants run history flips mode to maintenance and shows operations-first treatment.
+  - Command: `cd ee/server && npx vitest run src/__tests__/unit/entraIntegrationSettings.initialSyncCta.test.tsx -t "T009"`.
+- (2026-02-20) T010 completed.
+  - `T010` verifies maintenance mode still exposes mapping + history/queue sections while onboarding CTA card stays suppressed.
+  - Command: `cd ee/server && npx vitest run src/__tests__/unit/entraIntegrationSettings.initialSyncCta.test.tsx -t "T010"`.

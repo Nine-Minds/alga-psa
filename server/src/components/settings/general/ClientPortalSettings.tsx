@@ -6,7 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@alga
 import { Globe, Palette, Eye, EyeOff } from 'lucide-react';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 
-import { LOCALE_CONFIG, type SupportedLocale } from '@alga-psa/ui/lib/i18n/config';
+import { LOCALE_CONFIG, filterPseudoLocales, type SupportedLocale } from '@alga-psa/core/i18n/config';
+import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import {
   getTenantLocaleSettingsAction,
   updateTenantDefaultLocaleAction,
@@ -45,6 +46,11 @@ const ClientPortalSettings = () => {
   const [previewTheme, setPreviewTheme] = useState<'light' | 'dark'>('light');
   const [hasCustomDomain, setHasCustomDomain] = useState<boolean>(false);
   const { refreshBranding } = useBranding();
+  const { enabled: isMspI18nEnabled } = useFeatureFlag('msp-i18n-enabled', { defaultValue: false });
+  const visibleLocales = useMemo(
+    () => filterPseudoLocales(LOCALE_CONFIG.supportedLocales, !!isMspI18nEnabled),
+    [isMspI18nEnabled],
+  );
 
   // Check if custom domain is configured
   useEffect(() => {
@@ -70,11 +76,11 @@ const ClientPortalSettings = () => {
 
   // Convert locale config to SelectOption format
   const languageOptions = useMemo((): SelectOption[] => {
-    return LOCALE_CONFIG.supportedLocales.map((locale) => ({
+    return visibleLocales.map((locale) => ({
       value: locale,
       label: `${LOCALE_CONFIG.localeNames[locale]} (${locale.toUpperCase()})`,
     }));
-  }, []);
+  }, [visibleLocales]);
 
   useEffect(() => {
     const loadTenantSettings = async () => {
@@ -261,7 +267,7 @@ const ClientPortalSettings = () => {
                 Select which languages are available for users to choose from
               </p>
               <div className="space-y-2">
-                {LOCALE_CONFIG.supportedLocales.map((locale) => (
+                {visibleLocales.map((locale) => (
                   <Checkbox
                     key={locale}
                     id={`locale-${locale}`}

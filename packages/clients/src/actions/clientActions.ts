@@ -31,6 +31,101 @@ function maybeUserActor(currentUser: any) {
   return { actorType: 'USER' as const, actorUserId: userId };
 }
 
+async function getExistingPublicTables(
+  trx: Knex.Transaction,
+  tableNames: string[]
+): Promise<Set<string>> {
+  const rows = await trx('information_schema.tables')
+    .select('table_name')
+    .where({ table_schema: 'public' })
+    .whereIn('table_name', tableNames);
+
+  return new Set((rows as Array<{ table_name: string }>).map((row) => row.table_name));
+}
+
+async function cleanupEntraReferencesBeforeClientDelete(
+  trx: Knex.Transaction,
+  tenantId: string,
+  clientId: string
+): Promise<void> {
+  if (!isEnterprise) {
+    return;
+  }
+
+  const tableNames = [
+    'entra_sync_run_tenants',
+    'entra_contact_links',
+    'entra_contact_reconciliation_queue',
+    'entra_client_tenant_mappings',
+  ];
+  const existingTables = await getExistingPublicTables(trx, tableNames);
+  if (existingTables.size === 0) {
+    return;
+  }
+
+  const now = trx.fn.now();
+
+  if (existingTables.has('entra_sync_run_tenants')) {
+    await trx('entra_sync_run_tenants')
+      .where({ tenant: tenantId, client_id: clientId })
+      .update({ client_id: null, updated_at: now });
+  }
+
+  if (existingTables.has('entra_contact_links')) {
+    await trx('entra_contact_links')
+      .where({ tenant: tenantId, client_id: clientId })
+      .update({ client_id: null, updated_at: now });
+  }
+
+  if (existingTables.has('entra_contact_reconciliation_queue')) {
+    await trx('entra_contact_reconciliation_queue')
+      .where({ tenant: tenantId, client_id: clientId })
+      .update({ client_id: null, updated_at: now });
+  }
+
+  if (existingTables.has('entra_client_tenant_mappings')) {
+    const activeMappings = await trx('entra_client_tenant_mappings')
+      .where({
+        tenant: tenantId,
+        client_id: clientId,
+        is_active: true,
+      })
+      .select('managed_tenant_id');
+
+    if (activeMappings.length > 0) {
+      await trx('entra_client_tenant_mappings')
+        .where({
+          tenant: tenantId,
+          client_id: clientId,
+          is_active: true,
+        })
+        .update({
+          is_active: false,
+          updated_at: now,
+        });
+
+      const unmappedRows = (activeMappings as Array<{ managed_tenant_id: string }>).map((mapping) => ({
+        tenant: tenantId,
+        managed_tenant_id: mapping.managed_tenant_id,
+        client_id: null,
+        mapping_state: 'unmapped',
+        confidence_score: null,
+        is_active: true,
+        decided_by: null,
+        decided_at: now,
+        created_at: now,
+        updated_at: now,
+      }));
+
+      await trx('entra_client_tenant_mappings').insert(unmappedRows);
+    }
+
+    await trx('entra_client_tenant_mappings')
+      .where({ tenant: tenantId, client_id: clientId })
+      .update({ client_id: null, updated_at: now });
+  }
+}
+
 export const getClientById = withAuth(async (user, { tenant }, clientId: string): Promise<IClientWithLocation | null> => {
   // Check permission for client reading (in MSP, clients are managed via 'client' resource)
   if (!await hasPermissionAsync(user, 'client', 'read')) {
@@ -1004,6 +1099,8 @@ export const deleteClient = withAuth(async (user, { tenant }, clientId: string):
           .where({ tenant: tenantId, document_id: clientRecord.notes_document_id })
           .delete();
       }
+
+      await cleanupEntraReferencesBeforeClientDelete(trx, tenantId, clientId);
 
       const deleted = await trx('clients')
         .where({ client_id: clientId, tenant: tenantId })

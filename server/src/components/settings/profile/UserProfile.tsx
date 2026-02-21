@@ -35,7 +35,7 @@ import { LanguagePreference } from '@alga-psa/ui/components/LanguagePreference';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { getUserLocaleAction, updateUserLocaleAction } from '@alga-psa/users/actions';
 import { getInheritedLocaleAction } from '@alga-psa/tenancy/actions';
-import type { SupportedLocale } from '@alga-psa/ui/lib/i18n/config';
+import type { SupportedLocale } from '@alga-psa/core/i18n/config';
 
 // Dynamic import for EE SSO wrapper component
 const ConnectSsoWrapper = dynamic(

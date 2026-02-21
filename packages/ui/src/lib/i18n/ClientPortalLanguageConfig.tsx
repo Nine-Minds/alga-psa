@@ -5,9 +5,10 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { LOCALE_CONFIG, type SupportedLocale } from '@alga-psa/ui/lib/i18n/config';
+import React, { useState, useEffect, useMemo } from 'react';
+import { LOCALE_CONFIG, filterPseudoLocales, type SupportedLocale } from '@alga-psa/core/i18n/config';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
+import { useFeatureFlag } from '../../hooks';
 
 interface ClientPortalLanguageConfigProps {
   /** Current tenant ID */
@@ -26,6 +27,11 @@ export function ClientPortalLanguageConfig({
   onSave,
   className = '',
 }: ClientPortalLanguageConfigProps) {
+  const { enabled: isMspI18nEnabled } = useFeatureFlag('msp-i18n-enabled', { defaultValue: false });
+  const visibleLocales = useMemo(
+    () => filterPseudoLocales(LOCALE_CONFIG.supportedLocales, !!isMspI18nEnabled),
+    [isMspI18nEnabled],
+  );
   const [selectedLocale, setSelectedLocale] = useState<SupportedLocale>(currentDefaultLocale);
   const [isSaving, setIsSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
@@ -132,7 +138,7 @@ export function ClientPortalLanguageConfig({
             }}
             disabled={isSaving}
           >
-            {LOCALE_CONFIG.supportedLocales.map((locale) => (
+            {visibleLocales.map((locale) => (
               <option key={locale} value={locale}>
                 {LOCALE_CONFIG.localeNames[locale]} ({locale})
               </option>
@@ -149,7 +155,7 @@ export function ClientPortalLanguageConfig({
             Select which languages clients can choose from
           </p>
           <div className="mt-2 space-y-2">
-            {LOCALE_CONFIG.supportedLocales.map((locale) => (
+            {visibleLocales.map((locale) => (
               <div
                 key={locale}
                 className="flex items-center space-x-3"

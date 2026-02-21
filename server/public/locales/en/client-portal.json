@@ -11,7 +11,8 @@
     "account": "Account",
     "signOut": "Sign out",
     "clientPortal": "Client Portal",
-    "portal": "Portal"
+    "portal": "Portal",
+    "notifications": "Notifications"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -133,7 +134,8 @@
         "title": "Documentation Access",
         "description": "View shared documents and resources"
       }
-    }
+    },
+    "forgotPassword": "Forgot password?"
   },
   "account": {
     "title": "Account",
@@ -444,7 +446,9 @@
       "loading": "Loading preferences...",
       "loadError": "Failed to load preferences",
       "saveError": "Failed to save preference",
-      "noCategories": "No notification categories available"
+      "noCategories": "No notification categories available",
+      "emailPreferences": "Email preferences",
+      "internalPreferences": "Internal preferences"
     },
     "categories": {
       "tickets": "Tickets",

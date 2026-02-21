@@ -1,6 +1,11 @@
 import { Client, Connection, ScheduleOverlapPolicy } from '@temporalio/client';
 import { createLogger, format, transports } from 'winston';
-import { emailWebhookMaintenanceWorkflow, calendarWebhookMaintenanceWorkflow } from '../workflows';
+import { getAdminConnection } from '@alga-psa/db/admin.js';
+import {
+  calendarWebhookMaintenanceWorkflow,
+  emailWebhookMaintenanceWorkflow,
+  entraAllTenantsSyncWorkflow,
+} from '../workflows';
 import * as dotenv from 'dotenv';
 
 dotenv.config();
@@ -19,11 +24,99 @@ const logger = createLogger({
   ]
 });
 
+const EMAIL_WORKFLOW_TASK_QUEUE = 'email-domain-workflows';
+const ENTRA_WORKFLOW_TASK_QUEUE = 'tenant-workflows';
+const ENTRA_SCHEDULE_ID_PREFIX = 'entra-all-tenants-sync-schedule';
+
+interface EntraScheduleConfigRow {
+  tenantId: string;
+  syncEnabled: boolean;
+  syncIntervalMinutes: number;
+  hasActiveConnection: boolean;
+}
+
+function isAlreadyExistsError(error: any): boolean {
+  return Boolean(
+    error?.code === 6 || error?.name === 'ScheduleAlreadyRunning' || error?.message?.includes('AlreadyExists')
+  );
+}
+
+function isNotFoundError(error: any): boolean {
+  return Boolean(error?.code === 5 || error?.name === 'NotFoundError' || error?.message?.includes('NotFound'));
+}
+
+function normalizeIntervalMinutes(rawValue: unknown): number {
+  const parsed = Number(rawValue);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return 1440;
+  }
+
+  return Math.max(5, Math.floor(parsed));
+}
+
+async function upsertSchedule(client: Client, scheduleId: string, input: any): Promise<void> {
+  try {
+    await client.schedule.create({
+      scheduleId,
+      spec: input.spec,
+      action: input.action,
+      policies: input.policies,
+    } as any);
+    logger.info(`Successfully created schedule: ${scheduleId}`);
+  } catch (error: any) {
+    if (!isAlreadyExistsError(error)) {
+      throw error;
+    }
+
+    logger.info(`Schedule ${scheduleId} already exists. Updating configuration...`);
+    const handle = client.schedule.getHandle(scheduleId);
+    await handle.update((prev) => ({
+      ...prev,
+      spec: input.spec,
+      action: input.action,
+      policies: input.policies,
+    }));
+    logger.info(`Successfully updated schedule: ${scheduleId}`);
+  }
+}
+
+async function deleteScheduleIfExists(client: Client, scheduleId: string): Promise<void> {
+  try {
+    const handle = client.schedule.getHandle(scheduleId);
+    await handle.delete();
+    logger.info(`Deleted schedule: ${scheduleId}`);
+  } catch (error: any) {
+    if (isNotFoundError(error)) {
+      return;
+    }
+    logger.warn(`Failed to delete schedule ${scheduleId}: ${error?.message || 'Unknown error'}`);
+  }
+}
+
+async function loadEntraScheduleConfigs(): Promise<EntraScheduleConfigRow[]> {
+  const knex = await getAdminConnection();
+  const rows = await knex('entra_sync_settings as s')
+    .leftJoin('entra_partner_connections as c', function joinConnection() {
+      this.on('s.tenant', '=', 'c.tenant').andOn(knex.raw('c.is_active = true'));
+    })
+    .select([
+      's.tenant as tenantId',
+      's.sync_enabled as syncEnabled',
+      's.sync_interval_minutes as syncIntervalMinutes',
+      'c.connection_id as activeConnectionId',
+    ]);
+
+  return rows.map((row: any) => ({
+    tenantId: String(row.tenantId),
+    syncEnabled: Boolean(row.syncEnabled),
+    syncIntervalMinutes: normalizeIntervalMinutes(row.syncIntervalMinutes),
+    hasActiveConnection: Boolean(row.activeConnectionId),
+  }));
+}
+
 export async function setupSchedules() {
   const temporalAddress = process.env.TEMPORAL_ADDRESS || 'temporal-frontend.temporal.svc.cluster.local:7233';
   const temporalNamespace = process.env.TEMPORAL_NAMESPACE || 'default';
-  // Use specific queue for email maintenance
-  const taskQueue = 'email-domain-workflows';
 
   logger.info('Initializing Temporal Schedules...', { temporalAddress, temporalNamespace });
 
@@ -33,99 +126,71 @@ export async function setupSchedules() {
 
     const scheduleId = 'email-webhook-maintenance-schedule';
 
-    // Create the Schedule
-    try {
-      await client.schedule.create({
-        scheduleId,
-        spec: {
-          intervals: [{ every: '15m' }],
-        },
-        action: {
-          type: 'startWorkflow',
-          workflowType: emailWebhookMaintenanceWorkflow,
-          args: [{ lookAheadMinutes: 1440 }], // Check 24h ahead every 15m to catch anything expiring soon
-          taskQueue,
-          workflowExecutionTimeout: '10m',
-        },
-        policies: {
-          overlap: ScheduleOverlapPolicy.SKIP, // Don't stack runs
-          catchupWindow: '1m', // Don't run old missed schedules
-        },
-      });
-      logger.info(`Successfully created schedule: ${scheduleId}`);
-    } catch (error: any) {
-      if (error?.code === 6 || error?.name === 'ScheduleAlreadyRunning' || error?.message?.includes('AlreadyExists')) {
-        logger.info(`Schedule ${scheduleId} already exists. Updating configuration...`);
-        try {
-          const handle = client.schedule.getHandle(scheduleId);
-          await handle.update((prev) => ({
-            ...prev,
-            spec: {
-              intervals: [{ every: '15m' }],
-            },
-            action: {
-              type: 'startWorkflow',
-              workflowType: emailWebhookMaintenanceWorkflow,
-              args: [{ lookAheadMinutes: 1440 }],
-              taskQueue: 'email-domain-workflows',
-              workflowExecutionTimeout: '10m',
-            },
-          }));
-          logger.info(`Successfully updated schedule: ${scheduleId}`);
-        } catch (updateError: any) {
-          logger.error(`Failed to update existing schedule ${scheduleId}`, updateError);
-        }
-      } else {
-        logger.warn(`Failed to create schedule ${scheduleId}: ${error.message}.`);
-      }
-    }
+    await upsertSchedule(client, scheduleId, {
+      spec: {
+        intervals: [{ every: '15m' }],
+      },
+      action: {
+        type: 'startWorkflow',
+        workflowType: emailWebhookMaintenanceWorkflow,
+        args: [{ lookAheadMinutes: 1440 }],
+        taskQueue: EMAIL_WORKFLOW_TASK_QUEUE,
+        workflowExecutionTimeout: '10m',
+      },
+      policies: {
+        overlap: ScheduleOverlapPolicy.SKIP,
+        catchupWindow: '1m',
+      },
+    });
 
     // Calendar webhook maintenance schedule (runs every 30 minutes, checks 3 hours ahead)
     const calendarScheduleId = 'calendar-webhook-maintenance-schedule';
-    try {
-      await client.schedule.create({
-        scheduleId: calendarScheduleId,
+    await upsertSchedule(client, calendarScheduleId, {
+      spec: {
+        intervals: [{ every: '30m' }],
+      },
+      action: {
+        type: 'startWorkflow',
+        workflowType: calendarWebhookMaintenanceWorkflow,
+        args: [{ lookAheadMinutes: 180 }],
+        taskQueue: EMAIL_WORKFLOW_TASK_QUEUE,
+        workflowExecutionTimeout: '10m',
+      },
+      policies: {
+        overlap: ScheduleOverlapPolicy.SKIP,
+        catchupWindow: '1m',
+      },
+    });
+
+    // Entra recurring all-tenant sync schedules are created per tenant so each tenant
+    // can honor its own configured sync cadence.
+    const entraConfigs = await loadEntraScheduleConfigs();
+    for (const config of entraConfigs) {
+      const tenantScheduleId = `${ENTRA_SCHEDULE_ID_PREFIX}:${config.tenantId}`;
+      if (!config.syncEnabled || !config.hasActiveConnection) {
+        await deleteScheduleIfExists(client, tenantScheduleId);
+        continue;
+      }
+
+      await upsertSchedule(client, tenantScheduleId, {
         spec: {
-          intervals: [{ every: '30m' }],
+          intervals: [{ every: `${config.syncIntervalMinutes}m` }],
         },
         action: {
           type: 'startWorkflow',
-          workflowType: calendarWebhookMaintenanceWorkflow,
-          args: [{ lookAheadMinutes: 180 }], // Check 3h ahead every 30m (matches pg-boss cadence)
-          taskQueue,
-          workflowExecutionTimeout: '10m',
+          workflowType: entraAllTenantsSyncWorkflow,
+          args: [{
+            tenantId: config.tenantId,
+            trigger: 'scheduled',
+          }],
+          taskQueue: ENTRA_WORKFLOW_TASK_QUEUE,
+          workflowExecutionTimeout: '2h',
         },
         policies: {
-          overlap: ScheduleOverlapPolicy.SKIP, // Don't stack runs
-          catchupWindow: '1m', // Don't run old missed schedules
+          overlap: ScheduleOverlapPolicy.SKIP,
+          catchupWindow: '10m',
         },
       });
-      logger.info(`Successfully created schedule: ${calendarScheduleId}`);
-    } catch (error: any) {
-      if (error?.code === 6 || error?.name === 'ScheduleAlreadyRunning' || error?.message?.includes('AlreadyExists')) {
-        logger.info(`Schedule ${calendarScheduleId} already exists. Updating configuration...`);
-        try {
-          const handle = client.schedule.getHandle(calendarScheduleId);
-          await handle.update((prev) => ({
-            ...prev,
-            spec: {
-              intervals: [{ every: '30m' }],
-            },
-            action: {
-              type: 'startWorkflow',
-              workflowType: calendarWebhookMaintenanceWorkflow,
-              args: [{ lookAheadMinutes: 180 }],
-              taskQueue,
-              workflowExecutionTimeout: '10m',
-            },
-          }));
-          logger.info(`Successfully updated schedule: ${calendarScheduleId}`);
-        } catch (updateError: any) {
-          logger.error(`Failed to update existing schedule ${calendarScheduleId}`, updateError);
-        }
-      } else {
-        logger.warn(`Failed to create schedule ${calendarScheduleId}: ${error.message}.`);
-      }
     }
 
   } catch (error) {

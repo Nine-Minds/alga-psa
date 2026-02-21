@@ -28,7 +28,15 @@
     "quickActions": {
       "title": "Snelle acties",
       "createTicket": "Supportticket aanmaken",
+      "requestAppointment": "Afspraak aanvragen",
       "viewLatestInvoice": "Laatste factuur bekijken"
+    },
+    "appointments": {
+      "title": "Komende afspraken",
+      "noUpcoming": "Geen komende afspraken. Vraag er nu een aan!",
+      "requestButton": "Afspraak aanvragen",
+      "viewAll": "Alle afspraken bekijken →",
+      "technician": "Technicus"
     },
     "recentActivity": {
       "title": "Recente activiteit"
@@ -65,6 +73,8 @@
     "welcomeTitle": "Welkom in je klantenportaal",
     "welcomeSubtitle": "Beheer je supporttickets en blijf op de hoogte",
     "signInDescription": "Voer je gegevens in om toegang te krijgen tot je account.",
+    "clientLogin": "Klantenlogin",
+    "mspStaffLogin": "MSP-medewerker? Log hier in →",
     "accessDeniedTitle": "Toegang geweigerd",
     "accessDeniedMessage": "Je hebt geen toestemming voor toegang tot het klantenportaal.",
     "registrationSuccessTitle": "Registratie geslaagd",
@@ -125,8 +135,7 @@
         "description": "Bekijk gedeelde documenten en bronnen"
       }
     },
-    "clientLogin": "Klantenlogin",
-    "mspStaffLogin": "MSP-medewerker? Log hier in →"
+    "forgotPassword": "Wachtwoord vergeten?"
   },
   "account": {
     "title": "Account",
@@ -192,12 +201,6 @@
       "addPaymentError": "Betalingsmethode kon niet worden toegevoegd",
       "removePaymentError": "Betalingsmethode kon niet worden verwijderd",
       "setDefaultError": "Standaardbetalingsmethode kon niet worden ingesteld",
-      "validation": {
-        "cardNumber": "Voer een geldig kaartnummer van 16 cijfers in",
-        "expMonth": "Voer een geldige maand in (01-12)",
-        "expYear": "Voer een geldig jaar in (2024-2099)",
-        "cvv": "Voer een geldige CVV in"
-      },
       "loadingBillingInfo": "Facturatiegegevens worden geladen...",
       "overviewTitle": "Facturatie-overzicht",
       "paymentMethodsTitle": "Betaalmethoden",
@@ -229,6 +232,12 @@
         "endDate": "Einddatum",
         "status": "Status",
         "empty": "Geen facturatiegeschiedenis beschikbaar"
+      },
+      "validation": {
+        "cardNumber": "Voer een geldig kaartnummer van 16 cijfers in",
+        "expMonth": "Voer een geldige maand in (01-12)",
+        "expYear": "Voer een geldig jaar in (2024-2099)",
+        "cvv": "Voer een geldige CVV in"
       }
     }
   },
@@ -305,8 +314,8 @@
       "photoRemoved": "Foto succesvol verwijderd",
       "userNotFound": "Gebruiker niet gevonden",
       "loadError": "Profiel laden is mislukt",
-      "avatarDescription": "Deze avatar wordt getoond aan het MSP-team wanneer zij je contactgegevens bekijken.",
-      "loading": "Profiel wordt geladen..."
+      "loading": "Profiel wordt geladen...",
+      "avatarDescription": "Deze avatar wordt getoond aan het MSP-team wanneer zij je contactgegevens bekijken."
     },
     "imageUpload": {
       "uploadAvatar": "Avatar uploaden",
