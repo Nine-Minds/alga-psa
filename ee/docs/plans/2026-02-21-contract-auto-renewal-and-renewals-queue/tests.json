@@ -1746,7 +1746,7 @@
   {
     "id": "T219",
     "description": "Parity: 'Use shared renewal processing core logic callable from both pg-boss and Temporal adapters.' behaves equivalently under pg-boss and Temporal paths",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F120"
     ]
