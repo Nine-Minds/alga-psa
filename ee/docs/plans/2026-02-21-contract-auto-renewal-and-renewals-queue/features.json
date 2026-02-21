@@ -106,7 +106,7 @@
   {
     "id": "F014",
     "description": "Show inline validation errors for invalid renewal settings before wizard progression.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > FR1 — Contract Setup and Renewal Configuration"
     ]
