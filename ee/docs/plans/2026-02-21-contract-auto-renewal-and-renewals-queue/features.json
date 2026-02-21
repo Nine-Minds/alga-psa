@@ -114,7 +114,7 @@
   {
     "id": "F015",
     "description": "Include renewal fields in contract summary preview in ContractBasicsStep.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > FR1 — Contract Setup and Renewal Configuration"
     ]

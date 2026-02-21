@@ -639,6 +639,28 @@ export function ContractBasicsStep({
                   ? ` - ${formatDateFns(parseLocalYMD(data.end_date)!, 'MM/dd/yyyy')}`
                   : ' (Ongoing)'}
               </p>
+              {data.renewal_mode && (
+                <p>
+                  <strong>Renewal Mode:</strong>{' '}
+                  {data.renewal_mode === 'none'
+                    ? 'No Renewal'
+                    : data.renewal_mode === 'manual'
+                      ? 'Manual Renewal'
+                      : 'Auto Renew'}
+                </p>
+              )}
+              {data.renewal_mode && data.renewal_mode !== 'none' && data.notice_period_days !== undefined && (
+                <p>
+                  <strong>Notice Period:</strong> {data.notice_period_days} day
+                  {data.notice_period_days === 1 ? '' : 's'}
+                </p>
+              )}
+              {data.renewal_mode === 'auto' && data.renewal_term_months !== undefined && (
+                <p>
+                  <strong>Renewal Term:</strong> {data.renewal_term_months} month
+                  {data.renewal_term_months === 1 ? '' : 's'}
+                </p>
+              )}
               {data.po_required && (
                 <>
                   <p>
