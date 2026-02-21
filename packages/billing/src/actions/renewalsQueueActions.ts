@@ -171,3 +171,59 @@ export const markRenewalQueueItemRenewing = withAuth(async (
     };
   });
 });
+
+export const markRenewalQueueItemNonRenewing = withAuth(async (
+  _user,
+  { tenant },
+  clientContractId: string
+): Promise<RenewalQueueMutationResult> => {
+  if (typeof clientContractId !== 'string' || clientContractId.trim().length === 0) {
+    throw new Error('Client contract id is required');
+  }
+
+  const { knex } = await createTenantKnex();
+  const schema = knex.schema as any;
+  const hasStatusColumn = await (schema?.hasColumn?.('client_contracts', 'status') ?? false);
+
+  if (!hasStatusColumn) {
+    throw new Error('Renewals queue status column is not available');
+  }
+
+  return knex.transaction(async (trx) => {
+    const row = await trx('client_contracts')
+      .where({
+        tenant,
+        client_contract_id: clientContractId,
+        is_active: true,
+      })
+      .select('client_contract_id', 'status')
+      .first();
+
+    if (!row) {
+      throw new Error('Renewal work item not found');
+    }
+
+    const previousStatus = toRenewalWorkItemStatus((row as any).status);
+    if (previousStatus !== 'pending') {
+      throw new Error(`Only pending renewal work items can transition to non_renewing (current: ${previousStatus})`);
+    }
+
+    const updatedAt = new Date().toISOString();
+    await trx('client_contracts')
+      .where({
+        tenant,
+        client_contract_id: clientContractId,
+      })
+      .update({
+        status: 'non_renewing',
+        updated_at: updatedAt,
+      });
+
+    return {
+      client_contract_id: clientContractId,
+      previous_status: previousStatus,
+      status: 'non_renewing',
+      updated_at: updatedAt,
+    };
+  });
+});
