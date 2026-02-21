@@ -81,6 +81,14 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
 - (2026-02-21) Completed `T002`.
   - Extended `packages/billing/src/components/billing-dashboard/contracts/ContractWizard.renewalFields.test.ts` with default-state assertions using `createDefaultContractWizardData()`.
   - Validates default renewal state for new contracts: mode `manual`, notice `30`, no term months, tenant-default toggle enabled.
+- (2026-02-21) Completed `F003`.
+  - Extended `DraftContractWizardData` in `packages/billing/src/actions/contractWizardActions.ts` with renewal fields.
+  - Updated `getDraftContractForResume` to hydrate renewal settings from `client_contracts`:
+    - normalized `renewal_mode` (`none|manual|auto`)
+    - sanitized integer `notice_period_days` (non-negative)
+    - sanitized positive integer `renewal_term_months`
+    - hydrated `use_tenant_renewal_defaults` when boolean
+  - Rationale: resumed drafts now carry renewal metadata into `editingContract` so wizard state merge can restore renewal settings.
 
 ## Open Questions
 - Should renewal ticket defaults be a brand-new billing settings card, or an extension of existing default ticket settings patterns?

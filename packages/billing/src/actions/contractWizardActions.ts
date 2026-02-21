@@ -1538,6 +1538,10 @@ export type DraftContractWizardData = {
   contract_name: string;
   start_date: string;
   end_date?: string;
+  renewal_mode?: 'none' | 'manual' | 'auto';
+  notice_period_days?: number;
+  renewal_term_months?: number;
+  use_tenant_renewal_defaults?: boolean;
   description?: string;
   billing_frequency: string;
   currency_code: string;
@@ -1753,11 +1757,39 @@ export const getDraftContractForResume = withAuth(async (
     throw new Error('Draft contract has an invalid start date');
   }
 
+  const renewalMode =
+    clientContract.renewal_mode === 'none' ||
+    clientContract.renewal_mode === 'manual' ||
+    clientContract.renewal_mode === 'auto'
+      ? clientContract.renewal_mode
+      : undefined;
+
+  const noticePeriodRaw = clientContract.notice_period_days;
+  const noticePeriodDays =
+    noticePeriodRaw != null && Number.isFinite(Number(noticePeriodRaw))
+      ? Math.max(0, Math.trunc(Number(noticePeriodRaw)))
+      : undefined;
+
+  const renewalTermRaw = clientContract.renewal_term_months;
+  const renewalTermMonths =
+    renewalTermRaw != null && Number.isFinite(Number(renewalTermRaw))
+      ? Math.trunc(Number(renewalTermRaw)) > 0
+        ? Math.trunc(Number(renewalTermRaw))
+        : undefined
+      : undefined;
+
   return {
     client_id: clientContract.client_id,
     contract_name: contract.contract_name,
     start_date: startDate,
     end_date: normalizeDateOnly(clientContract.end_date) ?? undefined,
+    renewal_mode: renewalMode,
+    notice_period_days: noticePeriodDays,
+    renewal_term_months: renewalTermMonths,
+    use_tenant_renewal_defaults:
+      typeof clientContract.use_tenant_renewal_defaults === 'boolean'
+        ? clientContract.use_tenant_renewal_defaults
+        : undefined,
     description: contract.contract_description ?? undefined,
     billing_frequency: contract.billing_frequency ?? 'monthly',
     currency_code: contract.currency_code ?? 'USD',
