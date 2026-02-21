@@ -1578,7 +1578,7 @@
   {
     "id": "T198",
     "description": "UI behavior: Generate renewal queue entries for evergreen contracts based on annual review cycle. persists after refresh/navigation",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F100"
     ]
