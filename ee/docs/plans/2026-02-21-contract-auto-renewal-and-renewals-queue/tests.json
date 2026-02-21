@@ -378,7 +378,7 @@
   {
     "id": "T048",
     "description": "Functional: Add renewals tab value and metadata to billing tab configuration.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F048"
     ]
