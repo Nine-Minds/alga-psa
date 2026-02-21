@@ -1034,6 +1034,16 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
   - Validation:
     - `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`
     - `cd server && npm run typecheck`
+- (2026-02-21) Completed `F107`.
+  - Added cycle-level deduplication guard in scheduled renewal processing to prevent duplicate handling of the same contract/cycle period:
+    - dedupe identity: `client_contract_id + cycleKey` (fallback to `decision_due_date`)
+    - duplicate entries are skipped and counted in processor metrics
+  - This hardens evergreen annual-cycle processing against duplicate row inputs from upstream query/join behavior.
+  - Updated coverage:
+    - `server/src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts`
+  - Validation:
+    - `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`
+    - `cd server && npm run typecheck`
 
 ## Open Questions
 - Should renewal ticket defaults be a brand-new billing settings card, or an extension of existing default ticket settings patterns?

@@ -176,6 +176,16 @@ describe('renewal queue scheduling wiring', () => {
     expect(renewalHandlerSource).toContain('newCycleCount += 1;');
   });
 
+  it('prevents duplicate evergreen cycle entries for the same annual period during processing', () => {
+    expect(renewalHandlerSource).toContain('let duplicateCycleSkipCount = 0;');
+    expect(renewalHandlerSource).toContain('const processedCycleKeys = new Set<string>();');
+    expect(renewalHandlerSource).toContain('const dedupeCycleKey = nextCycleKey ?? decisionDueDate;');
+    expect(renewalHandlerSource).toContain('const cycleDedupeIdentity = `${(row as any).client_contract_id}:${dedupeCycleKey}`;');
+    expect(renewalHandlerSource).toContain('if (processedCycleKeys.has(cycleDedupeIdentity)) {');
+    expect(renewalHandlerSource).toContain('duplicateCycleSkipCount += 1;');
+    expect(renewalHandlerSource).toContain('processedCycleKeys.add(cycleDedupeIdentity);');
+  });
+
   it('registers and schedules renewal queue processing in the jobs module', () => {
     expect(jobsIndexSource).toContain("import { processRenewalQueueHandler, RenewalQueueProcessorJobData } from './handlers/processRenewalQueueHandler';");
     expect(jobsIndexSource).toContain("jobScheduler.registerJobHandler<RenewalQueueProcessorJobData>(");

@@ -324,8 +324,10 @@ export async function processRenewalQueueHandler(data: RenewalQueueProcessorJobD
   let ticketCreationSkippedMissingDefaultsCount = 0;
   let routingOverrideAppliedCount = 0;
   let duplicateTicketSkipCount = 0;
+  let duplicateCycleSkipCount = 0;
   let automationErrorCount = 0;
   const nowIso = new Date().toISOString();
+  const processedCycleKeys = new Set<string>();
 
   for (const row of candidateRows) {
     const normalized = normalizeClientContract(row as any) as unknown as Record<string, unknown>;
@@ -370,6 +372,13 @@ export async function processRenewalQueueHandler(data: RenewalQueueProcessorJobD
       typeof nextCycleKey === 'string' &&
       nextCycleKey.length > 0 &&
       previousCycleKey !== nextCycleKey;
+    const dedupeCycleKey = nextCycleKey ?? decisionDueDate;
+    const cycleDedupeIdentity = `${(row as any).client_contract_id}:${dedupeCycleKey}`;
+    if (processedCycleKeys.has(cycleDedupeIdentity)) {
+      duplicateCycleSkipCount += 1;
+      continue;
+    }
+    processedCycleKeys.add(cycleDedupeIdentity);
 
     const shouldNormalizeStatus = !isKnownRenewalStatus(currentStatus) || cycleChanged;
     const updates: Record<string, unknown> = {};
@@ -620,6 +629,7 @@ export async function processRenewalQueueHandler(data: RenewalQueueProcessorJobD
     ticketCreationSkippedMissingDefaultsCount,
     routingOverrideAppliedCount,
     duplicateTicketSkipCount,
+    duplicateCycleSkipCount,
     automationErrorCount,
   });
 }
