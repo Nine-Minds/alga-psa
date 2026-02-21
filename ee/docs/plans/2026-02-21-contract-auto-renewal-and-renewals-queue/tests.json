@@ -1898,7 +1898,7 @@
   {
     "id": "T238",
     "description": "E2E fixed-term renewal: create contract with end date + manual renewal, verify queue row appears in correct 90-day bucket and can be marked renewing.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F005",
       "F033",
