@@ -888,6 +888,18 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
   - Validation:
     - `cd server && npm run typecheck`
     - `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`
+- (2026-02-21) Completed `F095`.
+  - Added duplicate-prevention lookup before renewal ticket creation:
+    - checks existing `tickets` rows for matching `attributes.idempotency_key`
+    - if found, links existing ticket id to work item and skips create path
+  - Both workflow and direct ticket creation paths now receive shared ticket attributes including idempotency metadata.
+  - Added processor metric:
+    - `duplicateTicketSkipCount`
+  - Updated wiring coverage:
+    - `server/src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts`
+  - Validation:
+    - `cd server && npm run typecheck`
+    - `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`
 
 ## Open Questions
 - Should renewal ticket defaults be a brand-new billing settings card, or an extension of existing default ticket settings patterns?

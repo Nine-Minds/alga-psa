@@ -135,6 +135,14 @@ describe('renewal queue scheduling wiring', () => {
     expect(renewalHandlerSource).toContain('idempotency_key: params.idempotencyKey,');
   });
 
+  it('skips duplicate ticket creation when idempotent renewal cycle already has linked ticket', () => {
+    expect(renewalHandlerSource).toContain("schema?.hasTable?.('tickets') ?? false");
+    expect(renewalHandlerSource).toContain("whereRaw(\"(attributes::jsonb ->> 'idempotency_key') = ?\", [idempotencyKey])");
+    expect(renewalHandlerSource).toContain('const existingTicketId = normalizeOptionalUuid(existingTicket?.ticket_id);');
+    expect(renewalHandlerSource).toContain('createdTicketId = existingTicketId;');
+    expect(renewalHandlerSource).toContain('duplicateTicketSkipCount += 1;');
+  });
+
   it('registers and schedules renewal queue processing in the jobs module', () => {
     expect(jobsIndexSource).toContain("import { processRenewalQueueHandler, RenewalQueueProcessorJobData } from './handlers/processRenewalQueueHandler';");
     expect(jobsIndexSource).toContain("jobScheduler.registerJobHandler<RenewalQueueProcessorJobData>(");

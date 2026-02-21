@@ -110,6 +110,7 @@ const tryCreateRenewalTicketViaWorkflowAction = async (params: {
   statusId: string;
   priorityId: string;
   assignedTo: string | null;
+  attributes: Record<string, unknown>;
 }): Promise<string | null> => {
   if (!params.runId) {
     return null;
@@ -129,6 +130,7 @@ const tryCreateRenewalTicketViaWorkflowAction = async (params: {
     status_id: params.statusId,
     priority_id: params.priorityId,
     assigned_to: params.assignedTo,
+    attributes: params.attributes,
     idempotency_key: params.idempotencyKey,
   });
 
@@ -215,6 +217,7 @@ export async function processRenewalQueueHandler(data: RenewalQueueProcessorJobD
     hasContractRenewalTicketStatusColumn,
     hasContractRenewalTicketPriorityColumn,
     hasContractRenewalTicketAssigneeColumn,
+    hasTicketsTable,
     hasWorkflowRunsTable,
   ] = await Promise.all([
     schema?.hasColumn?.('client_contracts', 'decision_due_date') ?? false,
@@ -238,6 +241,7 @@ export async function processRenewalQueueHandler(data: RenewalQueueProcessorJobD
     schema?.hasColumn?.('client_contracts', 'renewal_ticket_status_id') ?? false,
     schema?.hasColumn?.('client_contracts', 'renewal_ticket_priority') ?? false,
     schema?.hasColumn?.('client_contracts', 'renewal_ticket_assignee_id') ?? false,
+    schema?.hasTable?.('tickets') ?? false,
     schema?.hasTable?.('workflow_runs') ?? false,
   ]);
 
@@ -317,6 +321,7 @@ export async function processRenewalQueueHandler(data: RenewalQueueProcessorJobD
   let workflowTicketCreateFallbackCount = 0;
   let ticketCreationSkippedMissingDefaultsCount = 0;
   let routingOverrideAppliedCount = 0;
+  let duplicateTicketSkipCount = 0;
   const nowIso = new Date().toISOString();
 
   for (const row of candidateRows) {
@@ -469,35 +474,65 @@ export async function processRenewalQueueHandler(data: RenewalQueueProcessorJobD
           normalized,
           decisionDueDate
         );
+        const ticketAttributes = {
+          renewal_cycle_key: cycleKey,
+          decision_due_date: decisionDueDate,
+          source_client_contract_id: (row as any).client_contract_id,
+          idempotency_key: idempotencyKey,
+        } as Record<string, unknown>;
 
         let createdTicketId: string | null = null;
-        workflowTicketCreateAttemptCount += 1;
-        try {
-          createdTicketId = await tryCreateRenewalTicketViaWorkflowAction({
-            knex,
-            tenantId,
-            runId: workflowRunIdForTenant,
-            idempotencyKey,
-            clientId,
-            title: ticketTitle,
-            description: ticketDescription,
-            boardId,
-            statusId,
-            priorityId,
-            assignedTo,
-          });
-          if (createdTicketId) {
-            workflowTicketCreateSuccessCount += 1;
-          }
-        } catch (error) {
-          logger.warn(
-            'Workflow tickets.create action failed for renewal automation ticket creation; falling back to direct creation',
-            {
+        if (hasTicketsTable) {
+          try {
+            const existingTicket = await knex('tickets')
+              .where({ tenant: tenantId })
+              .whereRaw("(attributes::jsonb ->> 'idempotency_key') = ?", [idempotencyKey])
+              .first('ticket_id');
+            const existingTicketId = normalizeOptionalUuid(existingTicket?.ticket_id);
+            if (existingTicketId) {
+              createdTicketId = existingTicketId;
+              duplicateTicketSkipCount += 1;
+            }
+          } catch (error) {
+            logger.warn('Failed idempotency lookup before renewal ticket creation', {
               tenantId,
               clientContractId: (row as any).client_contract_id,
+              idempotencyKey,
               error: error instanceof Error ? error.message : String(error),
+            });
+          }
+        }
+
+        if (!createdTicketId) {
+          workflowTicketCreateAttemptCount += 1;
+          try {
+            createdTicketId = await tryCreateRenewalTicketViaWorkflowAction({
+              knex,
+              tenantId,
+              runId: workflowRunIdForTenant,
+              idempotencyKey,
+              clientId,
+              title: ticketTitle,
+              description: ticketDescription,
+              boardId,
+              statusId,
+              priorityId,
+              assignedTo,
+              attributes: ticketAttributes,
+            });
+            if (createdTicketId) {
+              workflowTicketCreateSuccessCount += 1;
             }
-          );
+          } catch (error) {
+            logger.warn(
+              'Workflow tickets.create action failed for renewal automation ticket creation; falling back to direct creation',
+              {
+                tenantId,
+                clientContractId: (row as any).client_contract_id,
+                error: error instanceof Error ? error.message : String(error),
+              }
+            );
+          }
         }
 
         if (!createdTicketId) {
@@ -515,11 +550,7 @@ export async function processRenewalQueueHandler(data: RenewalQueueProcessorJobD
                 priorityId,
                 assignedTo,
                 idempotencyKey,
-                attributes: {
-                  renewal_cycle_key: cycleKey,
-                  decision_due_date: decisionDueDate,
-                  source_client_contract_id: (row as any).client_contract_id,
-                },
+                attributes: ticketAttributes,
               })
             ));
           } catch (error) {
@@ -573,5 +604,6 @@ export async function processRenewalQueueHandler(data: RenewalQueueProcessorJobD
     workflowTicketCreateFallbackCount,
     ticketCreationSkippedMissingDefaultsCount,
     routingOverrideAppliedCount,
+    duplicateTicketSkipCount,
   });
 }

@@ -754,7 +754,7 @@
   {
     "id": "F095",
     "description": "Skip duplicate ticket creation when idempotent renewal cycle already has linked ticket.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > FR6 — Automation and Ticket Creation"
     ]
