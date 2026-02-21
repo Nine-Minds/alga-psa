@@ -1140,7 +1140,7 @@
   {
     "id": "F142",
     "description": "Add indexes and uniqueness constraints supporting queue filtering/sorting and cycle deduplication on client_contracts renewal fields.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Rollout / Migration",
       "Non-functional Requirements",

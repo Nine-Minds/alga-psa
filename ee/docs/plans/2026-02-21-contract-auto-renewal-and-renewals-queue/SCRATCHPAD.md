@@ -1817,3 +1817,16 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
   - Migration is intentionally non-reversible (data backfill).
   - Validation:
     - `node -c server/migrations/202602211125_backfill_active_client_contract_renewal_defaults.cjs`
+- (2026-02-21) Completed `F142`.
+  - Added migration:
+    - `server/migrations/202602211130_add_contract_renewal_indexes_constraints.cjs`
+  - Added renewal queue performance indexes on `client_contracts` for common filters/sorts:
+    - `idx_client_contracts_renewal_due_status` (`tenant`, `decision_due_date`, `status`) partial active+due-date-not-null
+    - `idx_client_contracts_renewal_owner_status` (`tenant`, `assigned_to`, `status`) partial active
+    - `idx_client_contracts_renewal_mode_type` (`tenant`, `renewal_mode`, `end_date`) partial active
+    - `idx_client_contracts_renewal_snooze` (`tenant`, `status`, `snoozed_until`) partial active
+  - Added cycle dedupe uniqueness index:
+    - `ux_client_contracts_active_cycle_key` (`tenant`, `client_contract_id`, `renewal_cycle_key`) partial active+cycle-key-not-null
+  - Migration remains Citus-safe and guarded by column existence checks.
+  - Validation:
+    - `node -c server/migrations/202602211130_add_contract_renewal_indexes_constraints.cjs`
