@@ -62,4 +62,12 @@ describe('RenewalsQueueTab component', () => {
     expect(source).toContain("(['all', 'fixed-term', 'evergreen'] as const)");
     expect(source).toContain("if (contractTypeFilter !== 'all' && row.contract_type !== contractTypeFilter) {");
   });
+
+  it('shows days-remaining visual states for due-soon and overdue entries', () => {
+    expect(source).toContain('const getDueState = (daysUntilDue: number | undefined): \'overdue\' | \'due-soon\' | \'upcoming\' => {');
+    expect(source).toContain("if (daysUntilDue < 0) return 'overdue';");
+    expect(source).toContain("if (daysUntilDue <= 7) return 'due-soon';");
+    expect(source).toContain('data-testid="renewals-days-badge"');
+    expect(source).toContain('Overdue by ${Math.abs(row.days_until_due ?? 0)}d');
+  });
 });

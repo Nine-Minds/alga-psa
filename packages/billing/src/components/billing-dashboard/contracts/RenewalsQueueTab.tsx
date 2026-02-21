@@ -85,6 +85,13 @@ export default function RenewalsQueueTab() {
     });
   }, [bucket, contractTypeFilter, ownerFilter, renewalModeFilter, rows, statusFilter]);
 
+  const getDueState = (daysUntilDue: number | undefined): 'overdue' | 'due-soon' | 'upcoming' => {
+    if (typeof daysUntilDue !== 'number') return 'upcoming';
+    if (daysUntilDue < 0) return 'overdue';
+    if (daysUntilDue <= 7) return 'due-soon';
+    return 'upcoming';
+  };
+
   return (
     <section
       data-testid="renewals-queue-page"
@@ -191,7 +198,23 @@ export default function RenewalsQueueTab() {
                 data-testid="renewals-queue-row"
                 className="rounded border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-bg-0))] p-3"
               >
-                <p className="font-medium">{row.contract_name ?? row.contract_id}</p>
+                <div className="flex items-center justify-between gap-2">
+                  <p className="font-medium">{row.contract_name ?? row.contract_id}</p>
+                  <span
+                    data-testid="renewals-days-badge"
+                    className={`rounded px-2 py-0.5 text-[11px] font-medium ${
+                      getDueState(row.days_until_due) === 'overdue'
+                        ? 'bg-[rgb(var(--color-danger-100))] text-[rgb(var(--color-danger-700))]'
+                        : getDueState(row.days_until_due) === 'due-soon'
+                          ? 'bg-[rgb(var(--color-warning-100))] text-[rgb(var(--color-warning-700))]'
+                          : 'bg-[rgb(var(--color-info-100))] text-[rgb(var(--color-info-700))]'
+                    }`}
+                  >
+                    {getDueState(row.days_until_due) === 'overdue'
+                      ? `Overdue by ${Math.abs(row.days_until_due ?? 0)}d`
+                      : `${row.days_until_due ?? 0}d`}
+                  </span>
+                </div>
                 <p className="text-xs text-[rgb(var(--color-text-500))]">
                   {row.client_name ?? row.client_id} • due {row.decision_due_date ?? 'n/a'}
                 </p>

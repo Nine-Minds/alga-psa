@@ -433,6 +433,12 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
     - `packages/billing/src/actions/renewalsQueueActions.ts`
   - Added wiring coverage update in:
     - `packages/billing/tests/renewalsQueueActions.wiring.test.ts`
+- (2026-02-21) Completed `F059`.
+  - Added days-remaining visual badge state logic in queue rows:
+    - `overdue`, `due-soon`, `upcoming`
+  - Rendering now surfaces overdue and due-soon emphasis states via row badge styles.
+  - Added component coverage update in:
+    - `packages/billing/tests/RenewalsQueueTab.component.test.ts`
 
 ## Open Questions
 - Should renewal ticket defaults be a brand-new billing settings card, or an extension of existing default ticket settings patterns?
