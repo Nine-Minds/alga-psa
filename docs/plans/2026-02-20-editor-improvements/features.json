@@ -1,0 +1,134 @@
+[
+  {
+    "id": "F001",
+    "description": "Add 'collaborative_editing' feature flag to DEFAULT_BOOLEAN_FLAGS with default value false",
+    "implemented": false,
+    "prdRefs": ["F-P1-01"]
+  },
+  {
+    "id": "F002",
+    "description": "Add v3 collab packages to server/package.json: @tiptap/extension-collaboration@^3.12.0, @tiptap/extension-collaboration-caret@^3.0.0, @tiptap/y-tiptap@^3.0.2",
+    "implemented": false,
+    "prdRefs": ["F-P1-05"]
+  },
+  {
+    "id": "F003",
+    "description": "Create CollaborativeEditor component in packages/documents/src/components/ that initializes TipTap with Collaboration + CollaborationCaret extensions bound to a Y.js document via @tiptap/y-tiptap",
+    "implemented": false,
+    "prdRefs": ["F-P1-04", "F-P1-05"]
+  },
+  {
+    "id": "F004",
+    "description": "CollaborativeEditor connects to Hocuspocus using HocuspocusProvider with room name format 'document:<tenant>:<documentId>'",
+    "implemented": false,
+    "prdRefs": ["F-P1-04"]
+  },
+  {
+    "id": "F005",
+    "description": "CollaborativeEditor includes existing EditorToolbar (BubbleMenu) with all formatting options from PR #1898",
+    "implemented": false,
+    "prdRefs": ["F-P1-13"]
+  },
+  {
+    "id": "F006",
+    "description": "Collaboration cursors display user name and distinct color via awareness protocol",
+    "implemented": false,
+    "prdRefs": ["F-P1-06"]
+  },
+  {
+    "id": "F007",
+    "description": "Presence bar component above editor showing avatars/names of all connected users",
+    "implemented": false,
+    "prdRefs": ["F-P1-07"]
+  },
+  {
+    "id": "F008",
+    "description": "Connection status indicator component (connected / syncing / disconnected)",
+    "implemented": false,
+    "prdRefs": ["F-P1-08"]
+  },
+  {
+    "id": "F009",
+    "description": "Auto-save status indicator replacing manual save button ('All changes saved' / 'Saving...' / 'Offline')",
+    "implemented": false,
+    "prdRefs": ["F-P1-09"]
+  },
+  {
+    "id": "F010",
+    "description": "Markdown paste handling works in collaborative mode (same detection + conversion as current DocumentEditor)",
+    "implemented": false,
+    "prdRefs": ["F-P1-14"]
+  },
+  {
+    "id": "F011",
+    "description": "Add onConnect hook to Hocuspocus server.js that validates tenant segment in document room names matches connecting user's tenant",
+    "implemented": false,
+    "prdRefs": ["F-P1-12"]
+  },
+  {
+    "id": "F012",
+    "description": "Hocuspocus onConnect allows non-document rooms (notifications:*) to pass through unchanged",
+    "implemented": false,
+    "prdRefs": ["F-P1-12"]
+  },
+  {
+    "id": "F013",
+    "description": "Content persists to Hocuspocus PostgreSQL database via existing Database extension",
+    "implemented": false,
+    "prdRefs": ["F-P1-10"]
+  },
+  {
+    "id": "F014",
+    "description": "Create server action syncCollabSnapshot(documentId) that reads Y.js state, converts to TipTap JSON, writes to document_block_content",
+    "implemented": false,
+    "prdRefs": ["F-P1-11"]
+  },
+  {
+    "id": "F015",
+    "description": "Create /msp/collab-test/page.tsx route gated by collaborative_editing feature flag — shows 'Feature not available' when disabled",
+    "implemented": false,
+    "prdRefs": ["F-P1-01", "F-P1-03"]
+  },
+  {
+    "id": "F016",
+    "description": "Test page: 'Create New Document' button that creates a document via createBlockDocument and opens it in the collaborative editor",
+    "implemented": false,
+    "prdRefs": ["F-P1-02"]
+  },
+  {
+    "id": "F017",
+    "description": "Test page: URL parameter ?doc=<documentId> opens an existing document directly in the collaborative editor",
+    "implemented": false,
+    "prdRefs": ["F-P1-03"]
+  },
+  {
+    "id": "F018",
+    "description": "Test page: 'Snapshot to DB' button that calls syncCollabSnapshot and shows success/error feedback",
+    "implemented": false,
+    "prdRefs": ["F-P1-11"]
+  },
+  {
+    "id": "F019",
+    "description": "Test page: debug panel (collapsible) showing connection status, connected users count, room name, Y.js sync state",
+    "implemented": false,
+    "prdRefs": ["F-P1-03"]
+  },
+  {
+    "id": "F020",
+    "description": "CollaborativeEditor initializes Y.js document from existing document_block_content.block_data when the Hocuspocus document is empty (first connection for a document)",
+    "implemented": false,
+    "prdRefs": ["F-P2-02"]
+  },
+  {
+    "id": "F021",
+    "description": "Export CollaborativeEditor from packages/documents/src/components/index.ts",
+    "implemented": false,
+    "prdRefs": ["F-P1-04"]
+  },
+  {
+    "id": "F022",
+    "description": "CollaborativeEditor CSS: cursor label styling, presence bar styling, status indicator styling — using existing design tokens (--color-* CSS vars)",
+    "implemented": false,
+    "prdRefs": ["F-P1-06", "F-P1-07", "F-P1-08"]
+  }
+]
