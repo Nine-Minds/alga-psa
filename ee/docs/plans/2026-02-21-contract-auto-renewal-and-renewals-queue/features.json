@@ -210,7 +210,7 @@
   {
     "id": "F027",
     "description": "Persist renewal defaults in updateDefaultBillingSettings action writes.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > FR2 — Tenant Defaults and Contract-Level Overrides"
     ]

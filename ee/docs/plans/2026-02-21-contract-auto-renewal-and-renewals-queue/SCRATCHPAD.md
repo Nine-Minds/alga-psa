@@ -200,6 +200,8 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
   - Included tenant default renewal ticket assignee field mapping (`renewal_ticket_assignee_id`) in billing settings model/read-write path.
 - (2026-02-21) Completed `F026`.
   - `getDefaultBillingSettings` now returns renewal default fields (mode, notice days, due-date policy, ticket routing defaults) with deterministic fallbacks.
+- (2026-02-21) Completed `F027`.
+  - `updateDefaultBillingSettings` now writes renewal default fields via schema-guarded update/insert payloads.
 
 ## Open Questions
 - Should renewal ticket defaults be a brand-new billing settings card, or an extension of existing default ticket settings patterns?
