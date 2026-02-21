@@ -834,7 +834,7 @@
   {
     "id": "T105",
     "description": "Functional: Support create-renewal-draft action for evergreen queue entries.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F105"
     ]
