@@ -1282,7 +1282,7 @@
   {
     "id": "T161",
     "description": "UI behavior: Render contract type filter for fixed-term versus evergreen entries. persists after refresh/navigation",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F057"
     ]
