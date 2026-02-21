@@ -1082,7 +1082,7 @@
   {
     "id": "T136",
     "description": "Linkage correctness: 'Hydrate renewal fields when resuming draft contracts in the wizard.' stores created draft contract id on work item",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F003"
     ]
