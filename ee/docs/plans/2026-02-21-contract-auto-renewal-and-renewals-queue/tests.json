@@ -506,7 +506,7 @@
   {
     "id": "T064",
     "description": "Functional: Define queue status enum values pending/renewing/non_renewing/snoozed/completed in renewal work-item model.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F064"
     ]
