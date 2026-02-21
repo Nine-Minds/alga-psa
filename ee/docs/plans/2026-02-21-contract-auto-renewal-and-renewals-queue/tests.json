@@ -1322,7 +1322,7 @@
   {
     "id": "T166",
     "description": "UI behavior: Define queue status enum values pending/renewing/non_renewing/snoozed/completed in renewal work-item model. persists after refresh/navigation",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F064"
     ]
