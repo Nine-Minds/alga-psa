@@ -1058,7 +1058,7 @@
   {
     "id": "T133",
     "description": "Functional: Audit renewal draft creation linkage with actor id and timestamp metadata.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F133"
     ]
