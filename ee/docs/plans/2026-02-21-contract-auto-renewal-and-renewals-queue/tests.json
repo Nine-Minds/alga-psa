@@ -1522,7 +1522,7 @@
   {
     "id": "T191",
     "description": "Idempotency: repeated execution of 'Use idempotency key per tenant/client_contract_id/cycle key for ticket creation.' does not create duplicate tickets",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F094"
     ]
