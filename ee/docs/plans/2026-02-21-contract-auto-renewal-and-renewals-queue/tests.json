@@ -1990,7 +1990,7 @@
   {
     "id": "T248",
     "description": "Integration: migration backfill initializes deterministic renewal state for existing active client_contract rows.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F141"
     ]

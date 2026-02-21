@@ -76,4 +76,29 @@ describe('contract renewal migrations', () => {
       "CHECK (renewal_due_date_action_policy IN ('queue_only', 'create_ticket'))"
     );
   });
+
+  it('T248: backfill migration initializes deterministic renewal state for active fixed-term assignments', () => {
+    const migration = readRepoFile(
+      'server/migrations/202602211125_backfill_active_client_contract_renewal_defaults.cjs'
+    );
+
+    expect(migration).toContain('UPDATE client_contracts cc');
+    expect(migration).toContain("renewal_mode = COALESCE(cc.renewal_mode, 'manual')");
+    expect(migration).toContain('notice_period_days = COALESCE(cc.notice_period_days, 30)');
+    expect(migration).toContain(
+      'use_tenant_renewal_defaults = COALESCE(cc.use_tenant_renewal_defaults, true)'
+    );
+    expect(migration).toContain('decision_due_date = COALESCE(');
+    expect(migration).toContain(
+      "cc.end_date::date - (COALESCE(cc.notice_period_days, 30) * INTERVAL '1 day')"
+    );
+    expect(migration).toContain('renewal_cycle_start = COALESCE(cc.renewal_cycle_start, cc.start_date::date)');
+    expect(migration).toContain('renewal_cycle_end = COALESCE(cc.renewal_cycle_end, cc.end_date::date)');
+    expect(migration).toContain(
+      "renewal_cycle_key = COALESCE(cc.renewal_cycle_key, CONCAT('fixed-term:', cc.end_date::date::text))"
+    );
+    expect(migration).toContain("AND cc.is_active = true");
+    expect(migration).toContain("AND c.status = 'active'");
+    expect(migration).toContain('AND cc.end_date IS NOT NULL');
+  });
 });

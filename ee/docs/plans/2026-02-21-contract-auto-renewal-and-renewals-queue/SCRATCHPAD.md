@@ -1885,3 +1885,9 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
   - Assertions verify default renewal mode/notice/policy columns, ticket-routing default fields, and policy/validation constraints from `202602211120_add_default_billing_renewal_columns.cjs`.
   - Validation:
     - `cd server && npx vitest run src/test/unit/migrations/contractRenewalMigrations.test.ts --coverage=false`
+- (2026-02-21) Completed `T248`.
+  - Extended migration coverage for renewal backfill behavior in:
+    - `server/src/test/unit/migrations/contractRenewalMigrations.test.ts`
+  - Assertions verify data backfill SQL initializes deterministic renewal defaults/cycle fields and scopes updates to active fixed-term rows joined to active contracts.
+  - Validation:
+    - `cd server && npx vitest run src/test/unit/migrations/contractRenewalMigrations.test.ts --coverage=false`
