@@ -706,7 +706,7 @@
   {
     "id": "T089",
     "description": "Functional: Call workflow runtime tickets.create action for renewal ticket creation path.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F089"
     ]
