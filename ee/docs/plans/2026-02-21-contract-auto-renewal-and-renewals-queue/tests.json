@@ -138,7 +138,7 @@
   {
     "id": "T018",
     "description": "Functional: Persist renewal fields when saving draft contracts from wizard.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F018"
     ]

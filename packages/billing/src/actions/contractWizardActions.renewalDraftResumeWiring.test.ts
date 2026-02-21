@@ -25,4 +25,15 @@ describe('contractWizardActions draft renewal hydration wiring', () => {
     expect(source).toContain('Math.max(0, Math.trunc(Number(noticePeriodRaw)))');
     expect(source).toContain('Math.trunc(Number(renewalTermRaw)) > 0');
   });
+
+  it('persists renewal fields when saving client contracts (including drafts) with schema guards', () => {
+    expect(source).toContain("trx.schema.hasColumn('client_contracts', 'renewal_mode')");
+    expect(source).toContain("trx.schema.hasColumn('client_contracts', 'notice_period_days')");
+    expect(source).toContain("trx.schema.hasColumn('client_contracts', 'renewal_term_months')");
+    expect(source).toContain("trx.schema.hasColumn('client_contracts', 'use_tenant_renewal_defaults')");
+    expect(source).toContain('clientContractInsertData.renewal_mode =');
+    expect(source).toContain('clientContractInsertData.notice_period_days =');
+    expect(source).toContain('clientContractInsertData.renewal_term_months =');
+    expect(source).toContain('clientContractInsertData.use_tenant_renewal_defaults =');
+  });
 });

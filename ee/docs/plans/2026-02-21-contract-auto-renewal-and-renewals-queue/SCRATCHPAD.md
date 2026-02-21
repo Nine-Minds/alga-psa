@@ -182,6 +182,8 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
   - Test covers renewal preview rows and mode-gated rendering conditions in the review step.
 - (2026-02-21) Completed `T017`.
   - Extended `ContractWizard.renewalFields.test.ts` to assert `buildSubmissionData()` includes all renewal fields in outgoing wizard payload.
+- (2026-02-21) Completed `T018`.
+  - Extended `contractWizardActions.renewalDraftResumeWiring.test.ts` to assert draft/client save path writes renewal fields into `client_contracts` with schema-guarded `hasColumn` checks.
 
 ## Open Questions
 - Should renewal ticket defaults be a brand-new billing settings card, or an extension of existing default ticket settings patterns?
