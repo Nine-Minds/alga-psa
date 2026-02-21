@@ -575,6 +575,24 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
   - Validation:
     - `npm -w @alga-psa/billing run typecheck`
     - `npm -w @alga-psa/billing exec vitest run tests/renewalsQueueActions.unsnooze.wiring.test.ts tests/renewalsQueueActions.wiring.test.ts tests/renewalsQueueActions.snooze.wiring.test.ts`
+- (2026-02-21) Completed `F071`.
+  - Added actor audit persistence helper flow in renewal queue actions:
+    - `resolveActorUserId(user)`
+    - `withActionActor(updateData, hasLastActionByColumn, actorUserId)`
+  - User-initiated queue mutations now persist `last_action_by` when column exists:
+    - `markRenewalQueueItemRenewing`
+    - `markRenewalQueueItemNonRenewing`
+    - `createRenewalDraftForQueueItem`
+    - `snoozeRenewalQueueItem`
+    - `assignRenewalQueueItemOwner`
+  - Added wiring coverage:
+    - `packages/billing/tests/renewalsQueueActions.actorAudit.wiring.test.ts`
+  - Updated wiring expectations for mark actions:
+    - `packages/billing/tests/renewalsQueueActions.markRenewing.wiring.test.ts`
+    - `packages/billing/tests/renewalsQueueActions.markNonRenewing.wiring.test.ts`
+  - Validation:
+    - `npm -w @alga-psa/billing run typecheck`
+    - `npm -w @alga-psa/billing exec vitest run tests/renewalsQueueActions.actorAudit.wiring.test.ts tests/renewalsQueueActions.markRenewing.wiring.test.ts tests/renewalsQueueActions.markNonRenewing.wiring.test.ts tests/renewalsQueueActions.createDraft.wiring.test.ts tests/renewalsQueueActions.snooze.wiring.test.ts tests/renewalsQueueActions.assignOwner.wiring.test.ts`
 
 ## Open Questions
 - Should renewal ticket defaults be a brand-new billing settings card, or an extension of existing default ticket settings patterns?
