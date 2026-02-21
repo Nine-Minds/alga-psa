@@ -386,7 +386,7 @@
   {
     "id": "T049",
     "description": "Functional: Add Renewals Tabs.Content route to BillingDashboard tab host.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F049"
     ]
