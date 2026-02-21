@@ -1106,7 +1106,7 @@
   {
     "id": "T139",
     "description": "Validation negative-path: Validate notice period is a non-negative integer within configured bounds.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F012"
     ]
