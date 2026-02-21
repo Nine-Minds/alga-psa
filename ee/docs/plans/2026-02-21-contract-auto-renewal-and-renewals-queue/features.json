@@ -74,7 +74,7 @@
   {
     "id": "F010",
     "description": "Hide auto-renew-specific term controls when renewal mode is not auto.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > FR1 — Contract Setup and Renewal Configuration"
     ]
