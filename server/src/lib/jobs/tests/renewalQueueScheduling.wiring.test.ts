@@ -87,6 +87,14 @@ describe('renewal queue scheduling wiring', () => {
     expect(renewalHandlerSource).toContain("stepPath: RENEWAL_QUEUE_ACTION_STEP_PATH,");
   });
 
+  it('populates renewal ticket title with client and contract context', () => {
+    expect(renewalHandlerSource).toContain('const buildRenewalTicketTitle = (row: Record<string, unknown>, decisionDueDate: string): string => {');
+    expect(renewalHandlerSource).toContain("const clientName = typeof row.client_name === 'string' && row.client_name.trim().length > 0");
+    expect(renewalHandlerSource).toContain("const contractName = typeof row.contract_name === 'string' && row.contract_name.trim().length > 0");
+    expect(renewalHandlerSource).toContain('return `Renewal Decision Due ${decisionDueDate}: ${clientName} / ${contractName}`;');
+    expect(renewalHandlerSource).toContain('const ticketTitle = buildRenewalTicketTitle(row as Record<string, unknown>, decisionDueDate);');
+  });
+
   it('registers and schedules renewal queue processing in the jobs module', () => {
     expect(jobsIndexSource).toContain("import { processRenewalQueueHandler, RenewalQueueProcessorJobData } from './handlers/processRenewalQueueHandler';");
     expect(jobsIndexSource).toContain("jobScheduler.registerJobHandler<RenewalQueueProcessorJobData>(");

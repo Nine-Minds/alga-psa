@@ -714,7 +714,7 @@
   {
     "id": "F090",
     "description": "Populate renewal ticket title with client and contract context.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > FR6 — Automation and Ticket Creation"
     ]
