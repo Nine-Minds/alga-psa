@@ -78,6 +78,9 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
     - `renewal_term_months: undefined`
     - `use_tenant_renewal_defaults: true`
   - Updated wizard initialization/reset paths to use the shared factory, keeping default behavior deterministic across first render, open/reset, and edit-merge flows.
+- (2026-02-21) Completed `T002`.
+  - Extended `packages/billing/src/components/billing-dashboard/contracts/ContractWizard.renewalFields.test.ts` with default-state assertions using `createDefaultContractWizardData()`.
+  - Validates default renewal state for new contracts: mode `manual`, notice `30`, no term months, tenant-default toggle enabled.
 
 ## Open Questions
 - Should renewal ticket defaults be a brand-new billing settings card, or an extension of existing default ticket settings patterns?
