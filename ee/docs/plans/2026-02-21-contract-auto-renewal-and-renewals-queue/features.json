@@ -1010,7 +1010,7 @@
   {
     "id": "F127",
     "description": "Enforce billing update permission on queue mutation endpoints.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > FR10 \u2014 Permissions, Security, and Auditability"
     ]

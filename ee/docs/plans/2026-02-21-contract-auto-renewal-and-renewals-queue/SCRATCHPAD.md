@@ -1230,3 +1230,19 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
     - `packages/billing/tests/renewalsQueueActions.wiring.test.ts`
   - Validation:
     - `npm -w @alga-psa/billing exec vitest run tests/renewalsQueueActions.wiring.test.ts --coverage=false`
+- (2026-02-21) Completed `F127`.
+  - Enforced billing update authorization on all renewals queue mutation endpoints.
+  - Added shared guard `requireBillingUpdatePermission(user)` and applied it to:
+    - `markRenewalQueueItemRenewing`
+    - `markRenewalQueueItemNonRenewing`
+    - `createRenewalDraftForQueueItem`
+    - `snoozeRenewalQueueItem`
+    - `assignRenewalQueueItemOwner`
+    - `completeRenewalQueueItemForActivation`
+    - `completeRenewalQueueItemForNonRenewal`
+    - `retryRenewalQueueTicketCreation`
+  - Updated files:
+    - `packages/billing/src/actions/renewalsQueueActions.ts`
+    - `packages/billing/tests/renewalsQueueActions.permissions.wiring.test.ts`
+  - Validation:
+    - `npm -w @alga-psa/billing exec vitest run tests/renewalsQueueActions.wiring.test.ts tests/renewalsQueueActions.permissions.wiring.test.ts --coverage=false`

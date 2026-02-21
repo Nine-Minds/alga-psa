@@ -31,6 +31,11 @@ const requireBillingReadPermission = (user: unknown): void => {
     throw new Error('Permission denied: Cannot read renewals queue');
   }
 };
+const requireBillingUpdatePermission = (user: unknown): void => {
+  if (!hasPermission(user as any, 'billing', 'update')) {
+    throw new Error('Permission denied: Cannot update renewals queue');
+  }
+};
 const resolveActorUserId = (user: unknown): string | null => {
   const candidate = (user as { user_id?: unknown } | null | undefined)?.user_id;
   return typeof candidate === 'string' && candidate.trim().length > 0 ? candidate.trim() : null;
@@ -312,6 +317,8 @@ export const markRenewalQueueItemRenewing = withAuth(async (
   clientContractId: string,
   note?: string
 ): Promise<RenewalQueueMutationResult> => {
+  requireBillingUpdatePermission(user);
+
   if (typeof clientContractId !== 'string' || clientContractId.trim().length === 0) {
     throw new Error('Client contract id is required');
   }
@@ -389,6 +396,8 @@ export const markRenewalQueueItemNonRenewing = withAuth(async (
   clientContractId: string,
   note?: string
 ): Promise<RenewalQueueMutationResult> => {
+  requireBillingUpdatePermission(user);
+
   if (typeof clientContractId !== 'string' || clientContractId.trim().length === 0) {
     throw new Error('Client contract id is required');
   }
@@ -463,6 +472,8 @@ export const createRenewalDraftForQueueItem = withAuth(async (
   clientContractId: string,
   note?: string
 ): Promise<RenewalDraftCreationResult> => {
+  requireBillingUpdatePermission(user);
+
   if (typeof clientContractId !== 'string' || clientContractId.trim().length === 0) {
     throw new Error('Client contract id is required');
   }
@@ -649,6 +660,8 @@ export const snoozeRenewalQueueItem = withAuth(async (
   snoozedUntil: string,
   note?: string
 ): Promise<RenewalSnoozeResult> => {
+  requireBillingUpdatePermission(user);
+
   if (typeof clientContractId !== 'string' || clientContractId.trim().length === 0) {
     throw new Error('Client contract id is required');
   }
@@ -739,6 +752,8 @@ export const assignRenewalQueueItemOwner = withAuth(async (
   assignedTo: string | null,
   note?: string
 ): Promise<RenewalAssignmentResult> => {
+  requireBillingUpdatePermission(user);
+
   if (typeof clientContractId !== 'string' || clientContractId.trim().length === 0) {
     throw new Error('Client contract id is required');
   }
@@ -818,6 +833,8 @@ export const completeRenewalQueueItemForActivation = withAuth(async (
   activatedContractId?: string,
   note?: string
 ): Promise<RenewalCompletionResult> => {
+  requireBillingUpdatePermission(user);
+
   if (typeof clientContractId !== 'string' || clientContractId.trim().length === 0) {
     throw new Error('Client contract id is required');
   }
@@ -925,6 +942,8 @@ export const completeRenewalQueueItemForNonRenewal = withAuth(async (
   clientContractId: string,
   note?: string
 ): Promise<RenewalQueueMutationResult> => {
+  requireBillingUpdatePermission(user);
+
   if (typeof clientContractId !== 'string' || clientContractId.trim().length === 0) {
     throw new Error('Client contract id is required');
   }
@@ -998,6 +1017,8 @@ export const retryRenewalQueueTicketCreation = withAuth(async (
   { tenant },
   clientContractId: string
 ): Promise<RenewalTicketRetryResult> => {
+  requireBillingUpdatePermission(user);
+
   if (typeof clientContractId !== 'string' || clientContractId.trim().length === 0) {
     throw new Error('Client contract id is required');
   }
