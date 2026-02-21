@@ -50,7 +50,7 @@
   {
     "id": "F007",
     "description": "Show renewal mode selector with values none/manual/auto in ContractBasicsStep.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > FR1 — Contract Setup and Renewal Configuration"
     ]

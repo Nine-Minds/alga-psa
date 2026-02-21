@@ -133,6 +133,11 @@ export function ContractBasicsStep({
     value: template.contract_id,
     label: template.contract_name,
   }));
+  const renewalModeOptions = [
+    { value: 'none', label: 'No Renewal' },
+    { value: 'manual', label: 'Manual Renewal' },
+    { value: 'auto', label: 'Auto Renew' },
+  ];
 
   const selectedTemplate = selectedTemplateId
     ? templates.find((template) => template.contract_id === selectedTemplateId)
@@ -336,6 +341,23 @@ export function ContractBasicsStep({
           <p className="text-xs text-[rgb(var(--color-text-500))]">
             This contract has a fixed end date. Configure renewal behavior and notice timing.
           </p>
+          <div className="space-y-2">
+            <Label htmlFor="renewal-mode-fixed" className="text-xs font-medium">
+              Renewal Mode
+            </Label>
+            <CustomSelect
+              id="renewal-mode-fixed"
+              options={renewalModeOptions}
+              value={data.renewal_mode ?? 'manual'}
+              onValueChange={(value: string) =>
+                updateData({
+                  renewal_mode: value as NonNullable<ContractWizardData['renewal_mode']>,
+                })
+              }
+              placeholder="Select renewal mode"
+              className="w-full"
+            />
+          </div>
         </div>
       )}
 
@@ -351,6 +373,23 @@ export function ContractBasicsStep({
           <p className="text-xs text-[rgb(var(--color-text-500))]">
             This contract is ongoing. Configure annual review cadence and notice timing.
           </p>
+          <div className="space-y-2">
+            <Label htmlFor="renewal-mode-evergreen" className="text-xs font-medium">
+              Renewal Mode
+            </Label>
+            <CustomSelect
+              id="renewal-mode-evergreen"
+              options={renewalModeOptions}
+              value={data.renewal_mode ?? 'manual'}
+              onValueChange={(value: string) =>
+                updateData({
+                  renewal_mode: value as NonNullable<ContractWizardData['renewal_mode']>,
+                })
+              }
+              placeholder="Select renewal mode"
+              className="w-full"
+            />
+          </div>
         </div>
       )}
 
