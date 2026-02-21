@@ -1778,7 +1778,7 @@
   {
     "id": "T223",
     "description": "Parity: 'Keep effective behavior parity for ticket creation idempotency between pg-boss and Temporal runners.' behaves equivalently under pg-boss and Temporal paths",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F122"
     ]
