@@ -1554,7 +1554,7 @@
   {
     "id": "T195",
     "description": "UI behavior: Ensure due-date automation supports queue-only policy without creating tickets. persists after refresh/navigation",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F098"
     ]
