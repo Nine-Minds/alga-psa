@@ -274,7 +274,7 @@
   {
     "id": "T035",
     "description": "Functional: Compute evergreen decision_due_date using anchor date minus notice_period_days.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F035"
     ]
