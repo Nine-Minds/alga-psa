@@ -235,6 +235,21 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
     - explicit contract values (when overrides enabled),
     - tenant defaults,
     - hard defaults (`manual`, `30`).
+- (2026-02-21) Completed `F032`.
+  - Extended contract-assignment read APIs to expose normalized/effective renewal settings in both shared and clients data-access layers:
+    - `shared/billingClients/clientContracts.ts`
+    - `packages/clients/src/models/clientContract.ts`
+  - Added schema-guarded tenant-default joins (`default_billing_settings`) for read paths and computed:
+    - `effective_renewal_mode`
+    - `effective_notice_period_days`
+  - Added type surface fields on `IClientContract` in:
+    - `packages/types/src/interfaces/contract.interfaces.ts`
+    - `server/src/interfaces/contract.interfaces.ts`
+  - Validation run:
+    - `npm -w @alga-psa/shared run typecheck`
+    - `npm -w @alga-psa/clients run typecheck`
+    - `npm -w @alga-psa/billing run typecheck`
+    - `npm -w @alga-psa/billing exec vitest run tests/clientContractEffectiveRenewalSettings.test.ts`
 
 ## Open Questions
 - Should renewal ticket defaults be a brand-new billing settings card, or an extension of existing default ticket settings patterns?
