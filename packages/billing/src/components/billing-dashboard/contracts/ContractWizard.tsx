@@ -133,6 +133,29 @@ export interface ContractWizardData {
   template_id?: string;
 }
 
+export const createDefaultContractWizardData = (): ContractWizardData => ({
+  client_id: '',
+  contract_name: '',
+  start_date: '',
+  end_date: undefined,
+  renewal_mode: 'manual',
+  notice_period_days: 30,
+  renewal_term_months: undefined,
+  use_tenant_renewal_defaults: true,
+  description: '',
+  billing_frequency: 'monthly',
+  currency_code: 'USD',
+  fixed_services: [],
+  product_services: [],
+  fixed_base_rate: undefined,
+  enable_proration: true,
+  hourly_services: [],
+  minimum_billable_time: undefined,
+  round_up_to_nearest: undefined,
+  usage_services: [],
+  template_id: undefined,
+});
+
 type TemplateOption = {
   contract_id: string;
   contract_name: string;
@@ -166,24 +189,7 @@ export function ContractWizard({
   const [templateError, setTemplateError] = useState<string | null>(null);
   const [isTemplateLoading, startTemplateTransition] = useTransition();
 
-  const defaultWizardData: ContractWizardData = {
-    client_id: '',
-    contract_name: '',
-    start_date: '',
-    end_date: undefined,
-    description: '',
-    billing_frequency: 'monthly',
-    currency_code: 'USD',
-    fixed_services: [],
-    product_services: [],
-    fixed_base_rate: undefined,
-    enable_proration: true,
-    hourly_services: [],
-    minimum_billable_time: undefined,
-    round_up_to_nearest: undefined,
-    usage_services: [],
-    template_id: undefined,
-  };
+  const defaultWizardData = createDefaultContractWizardData();
 
   const [wizardData, setWizardData] = useState<ContractWizardData>(() => ({
     ...defaultWizardData,
@@ -202,7 +208,7 @@ export function ContractWizard({
     setCompletedSteps(new Set());
     setCurrentStep(0);
 
-    const initialWizardData = { ...defaultWizardData, ...(editingContract ?? {}) };
+    const initialWizardData = { ...createDefaultContractWizardData(), ...(editingContract ?? {}) };
     initialWizardDataRef.current = deepClone(initialWizardData);
 
     if (editingContract) {
@@ -231,7 +237,7 @@ export function ContractWizard({
   }, [open, editingContract]);
 
   const resetWizard = () => {
-    setWizardData(defaultWizardData);
+    setWizardData(createDefaultContractWizardData());
     setSelectedTemplateId(null);
     setErrors({});
     setCompletedSteps(new Set());

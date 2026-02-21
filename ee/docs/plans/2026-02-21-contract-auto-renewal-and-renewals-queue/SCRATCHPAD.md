@@ -70,6 +70,14 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
   - Test covers type-level contract for the four renewal fields and validates the allowed `renewal_mode` domain values.
   - Runbook:
     - `npx vitest run packages/billing/src/components/billing-dashboard/contracts/ContractWizard.renewalFields.test.ts`
+- (2026-02-21) Completed `F002`.
+  - Added `createDefaultContractWizardData()` in `packages/billing/src/components/billing-dashboard/contracts/ContractWizard.tsx`.
+  - Renewal defaults for new contracts now initialize as:
+    - `renewal_mode: 'manual'`
+    - `notice_period_days: 30`
+    - `renewal_term_months: undefined`
+    - `use_tenant_renewal_defaults: true`
+  - Updated wizard initialization/reset paths to use the shared factory, keeping default behavior deterministic across first render, open/reset, and edit-merge flows.
 
 ## Open Questions
 - Should renewal ticket defaults be a brand-new billing settings card, or an extension of existing default ticket settings patterns?

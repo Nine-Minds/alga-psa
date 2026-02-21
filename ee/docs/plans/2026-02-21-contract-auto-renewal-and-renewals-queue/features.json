@@ -10,7 +10,7 @@
   {
     "id": "F002",
     "description": "Initialize renewal fields in ContractWizard default state for new contracts.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > FR1 — Contract Setup and Renewal Configuration"
     ]
