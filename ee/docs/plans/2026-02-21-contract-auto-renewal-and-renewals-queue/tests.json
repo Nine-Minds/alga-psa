@@ -1690,7 +1690,7 @@
   {
     "id": "T212",
     "description": "Cycle rollover: evergreen behavior remains correct across year boundary for 'Prevent duplicate evergreen cycle entries for the same annual period.'",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F107"
     ]
