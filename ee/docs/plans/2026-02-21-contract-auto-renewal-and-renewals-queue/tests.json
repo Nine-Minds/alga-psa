@@ -626,7 +626,7 @@
   {
     "id": "T079",
     "description": "Functional: Refresh affected queue row state after successful action response.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F079"
     ]
