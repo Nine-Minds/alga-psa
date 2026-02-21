@@ -1,0 +1,72 @@
+# Scratchpad — Contract Auto-Renewal and Renewals Queue
+
+- Plan slug: `contract-auto-renewal-and-renewals-queue`
+- Created: `2026-02-21`
+
+## What This Is
+Rolling implementation memory for renewal settings + actionable renewals queue + automation ticketing.
+
+## Decisions
+- (2026-02-21) Build an **actionable queue** (not read-only report).
+- (2026-02-21) Ship **both** dashboard entry and full queue page (`Client Contracts` widget + `Renewals` tab).
+- (2026-02-21) Primary operational date is **renewal decision due date**.
+- (2026-02-21) Due-date behavior is configurable with **tenant defaults + optional per-contract override**.
+- (2026-02-21) Default automation target at due date: **create internal ticket**.
+- (2026-02-21) Minimum queue actions for v1: `Mark renewing`, `Mark non-renewing`, `Create renewal draft`, `Snooze`.
+- (2026-02-21) Default queue horizon: **90 days**, grouped `0-30`, `31-60`, `61-90`.
+- (2026-02-21) Queue includes **fixed-term + evergreen anniversaries**.
+- (2026-02-21) `Mark renewing` should **auto-create renewal draft** and open it.
+- (2026-02-21) Release approach: **single release** scope.
+- (2026-02-21) Automation runtime note: support **pg-boss for on-prem** and **Temporal for hosted/EE**.
+
+## Discoveries / Constraints
+- (2026-02-21) Runtime selection already exists in `server/src/lib/jobs/JobRunnerFactory.ts` with config/env-based choice and fallback behavior; default is pg-boss unless configured otherwise.
+- (2026-02-21) Existing scheduled jobs in `server/src/lib/jobs/initializeScheduledJobs.ts` explicitly branch for enterprise/temporal behavior in some paths; renewal automation should follow same compatibility pattern.
+- (2026-02-21) Contract lifecycle already emits `CONTRACT_CREATED` and `CONTRACT_RENEWAL_UPCOMING` in both `packages/clients/src/actions/clientContractActions.ts` and `packages/billing/src/actions/contractWizardActions.ts`.
+- (2026-02-21) `CONTRACT_RENEWAL_UPCOMING` computation today is window-based (`DEFAULT_CONTRACT_RENEWAL_UPCOMING_WINDOW_DAYS = 30`) in `shared/workflow/streams/domainEventBuilders/contractEventBuilders.ts`; queue design requires broader 90-day horizon and due-date semantics.
+- (2026-02-21) Existing contract expiration report is currently `end_date`-driven (`packages/billing/src/actions/contractReportActions.ts`, `server/src/lib/reports/definitions/contracts/expiration.ts`).
+- (2026-02-21) Billing settings already provide tenant defaults in `default_billing_settings` with client override pattern in `client_billing_settings`; actions in `packages/billing/src/actions/billingSettingsActions.ts` and shared helpers in `shared/billingClients/billingSettings.ts` are reusable design patterns.
+- (2026-02-21) Billing UI insertion points are clear:
+  - tabs config: `packages/billing/src/components/billing-dashboard/billingTabsConfig.ts`
+  - tab content host: `packages/billing/src/components/billing-dashboard/BillingDashboard.tsx`
+  - queue/widget host: `packages/billing/src/components/billing-dashboard/contracts/ClientContractsTab.tsx`
+  - wizard basics: `packages/billing/src/components/billing-dashboard/contracts/wizard-steps/ContractBasicsStep.tsx`
+- (2026-02-21) Contract assignment data shape in `server/src/interfaces/contract.interfaces.ts` is assignment-level and suitable for renewal metadata on `IClientContract`.
+
+## Commands / Runbooks
+- (2026-02-21) Inspect billing dashboard contract files:
+  - `rg -n "ContractWizard|ClientContractsTab|billingTabsConfig|ContractBasicsStep" packages/billing/src/components/billing-dashboard`
+- (2026-02-21) Inspect runtime selection + scheduling:
+  - `rg -n "JobRunnerFactory|initializeScheduledJobs|EDITION|JOB_RUNNER_TYPE" server/src/lib/jobs`
+- (2026-02-21) Inspect contract renewal event publishing:
+  - `rg -n "CONTRACT_RENEWAL_UPCOMING|computeContractRenewalUpcoming" packages/billing packages/clients shared/workflow`
+- (2026-02-21) Validate plan artifacts:
+  - `python3 /Users/roberisaacs/.codex/skills/alga-plan/scripts/validate_plan.py ee/docs/plans/2026-02-21-contract-auto-renewal-and-renewals-queue`
+
+## Links / References
+- Key plan path: `ee/docs/plans/2026-02-21-contract-auto-renewal-and-renewals-queue`
+- Runtime selection: `server/src/lib/jobs/JobRunnerFactory.ts`
+- Scheduled job init: `server/src/lib/jobs/initializeScheduledJobs.ts`
+- Job scheduler infra: `server/src/lib/jobs/jobScheduler.ts`
+- Renewal event builders: `shared/workflow/streams/domainEventBuilders/contractEventBuilders.ts`
+- Contract wizard save path: `packages/billing/src/actions/contractWizardActions.ts`
+- Client contract actions: `packages/clients/src/actions/clientContractActions.ts`
+- Billing settings actions: `packages/billing/src/actions/billingSettingsActions.ts`
+- Billing settings shared helpers: `shared/billingClients/billingSettings.ts`
+- Billing dashboard tabs host: `packages/billing/src/components/billing-dashboard/BillingDashboard.tsx`
+- Client contracts tab: `packages/billing/src/components/billing-dashboard/contracts/ClientContractsTab.tsx`
+- Wizard basics step: `packages/billing/src/components/billing-dashboard/contracts/wizard-steps/ContractBasicsStep.tsx`
+
+## Implementation Log
+- (2026-02-21) Completed `F001`.
+  - Added renewal fields to `ContractWizardData` in `packages/billing/src/components/billing-dashboard/contracts/ContractWizard.tsx`:
+    - `renewal_mode?: 'none' | 'manual' | 'auto'`
+    - `notice_period_days?: number`
+    - `renewal_term_months?: number`
+    - `use_tenant_renewal_defaults?: boolean`
+  - Rationale: establish typed wizard-state shape early so subsequent UI rendering, defaults/hydration, validation, and submission features can build on stable field names.
+
+## Open Questions
+- Should renewal ticket defaults be a brand-new billing settings card, or an extension of existing default ticket settings patterns?
+- Should evergreen annual review use contract start-date anniversary or configurable anchor date in v1?
+- Should renewal status transitions hard-lock contract activation behavior, or remain advisory with warnings in v1?

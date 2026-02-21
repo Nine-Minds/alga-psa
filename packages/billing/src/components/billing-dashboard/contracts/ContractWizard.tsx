@@ -85,6 +85,10 @@ export interface ContractWizardData {
   contract_name: string;
   start_date: string;
   end_date?: string;
+  renewal_mode?: 'none' | 'manual' | 'auto';
+  notice_period_days?: number;
+  renewal_term_months?: number;
+  use_tenant_renewal_defaults?: boolean;
   description?: string;
   billing_frequency: string;
   currency_code: string;
