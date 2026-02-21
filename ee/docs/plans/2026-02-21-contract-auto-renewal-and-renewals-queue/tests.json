@@ -490,7 +490,7 @@
   {
     "id": "T062",
     "description": "Functional: Navigate from upcoming renewals widget to Renewals tab preserving filter context.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F062"
     ]
