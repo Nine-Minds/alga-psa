@@ -242,7 +242,7 @@
   {
     "id": "T031",
     "description": "Functional: Enforce deterministic fallback precedence when override fields are partially missing.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F031"
     ]
