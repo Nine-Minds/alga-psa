@@ -1210,7 +1210,7 @@
   {
     "id": "T152",
     "description": "UI behavior: Clamp past-due decision calculations into queue visibility without negative date corruption. persists after refresh/navigation",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F047"
     ]
