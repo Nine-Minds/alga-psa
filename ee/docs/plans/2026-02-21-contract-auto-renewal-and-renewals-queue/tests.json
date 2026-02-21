@@ -1314,7 +1314,7 @@
   {
     "id": "T165",
     "description": "UI behavior: Refresh widget counts after queue action mutations complete. persists after refresh/navigation",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F063"
     ]
