@@ -522,7 +522,7 @@
   {
     "id": "T066",
     "description": "Functional: Implement mark-non-renewing action that transitions pending entries to non_renewing.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F066"
     ]
