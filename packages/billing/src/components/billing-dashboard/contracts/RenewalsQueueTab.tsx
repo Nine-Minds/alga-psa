@@ -222,6 +222,12 @@ export default function RenewalsQueueTab({ onQueueMutationComplete }: RenewalsQu
     return 'upcoming';
   };
 
+  const getContractTypeBadgeStyles = (contractType: ContractTypeFilter) => (
+    contractType === 'evergreen'
+      ? 'bg-[rgb(var(--color-success-100))] text-[rgb(var(--color-success-700))]'
+      : 'bg-[rgb(var(--color-muted-200))] text-[rgb(var(--color-text-700))]'
+  );
+
   return (
     <section
       data-testid="renewals-queue-page"
@@ -337,7 +343,16 @@ export default function RenewalsQueueTab({ onQueueMutationComplete }: RenewalsQu
                   </p>
                 )}
                 <div className="flex items-center justify-between gap-2">
-                  <p className="font-medium">{row.contract_name ?? row.contract_id}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="font-medium">{row.contract_name ?? row.contract_id}</p>
+                    <span
+                      data-testid="renewals-contract-type-badge"
+                      data-contract-type={row.contract_type}
+                      className={`rounded px-2 py-0.5 text-[11px] font-medium ${getContractTypeBadgeStyles(row.contract_type)}`}
+                    >
+                      {row.contract_type === 'evergreen' ? 'Evergreen' : 'Fixed-term'}
+                    </span>
+                  </div>
                   <span
                     data-testid="renewals-days-badge"
                     className={`rounded px-2 py-0.5 text-[11px] font-medium ${

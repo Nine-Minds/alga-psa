@@ -69,6 +69,9 @@ describe('RenewalsQueueTab component', () => {
     expect(source).toContain('data-testid="renewals-contract-type-filter"');
     expect(source).toContain("(['all', 'fixed-term', 'evergreen'] as const)");
     expect(source).toContain("if (contractTypeFilter !== 'all' && row.contract_type !== contractTypeFilter) {");
+    expect(source).toContain('data-testid="renewals-contract-type-badge"');
+    expect(source).toContain('data-contract-type={row.contract_type}');
+    expect(source).toContain("{row.contract_type === 'evergreen' ? 'Evergreen' : 'Fixed-term'}");
   });
 
   it('shows days-remaining visual states for due-soon and overdue entries', () => {

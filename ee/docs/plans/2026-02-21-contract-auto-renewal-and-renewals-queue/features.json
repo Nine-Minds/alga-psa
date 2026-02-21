@@ -802,7 +802,7 @@
   {
     "id": "F101",
     "description": "Display evergreen contract type badge in queue rows.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > FR7 — Evergreen Annual Review Flow"
     ]

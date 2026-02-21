@@ -974,6 +974,17 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
   - Validation:
     - `cd server && npm run typecheck`
     - `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`
+- (2026-02-21) Completed `F101`.
+  - Added explicit per-row contract type badge rendering in Renewals queue UI:
+    - evergreen rows now show `Evergreen` badge
+    - fixed-term rows show `Fixed-term` badge
+  - Implemented in:
+    - `packages/billing/src/components/billing-dashboard/contracts/RenewalsQueueTab.tsx`
+  - Added component wiring assertions:
+    - `packages/billing/tests/RenewalsQueueTab.component.test.ts`
+  - Validation:
+    - `npm -w @alga-psa/billing exec vitest run tests/RenewalsQueueTab.component.test.ts --coverage=false`
+    - `npm -w @alga-psa/billing run typecheck`
 
 ## Open Questions
 - Should renewal ticket defaults be a brand-new billing settings card, or an extension of existing default ticket settings patterns?
