@@ -98,7 +98,7 @@
   {
     "id": "F013",
     "description": "Validate renewal term months is positive when explicitly provided.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > FR1 — Contract Setup and Renewal Configuration"
     ]

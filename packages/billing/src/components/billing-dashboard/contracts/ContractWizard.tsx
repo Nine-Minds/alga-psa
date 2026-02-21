@@ -418,6 +418,18 @@ export function ContractWizard({
             return false;
           }
         }
+        if (wizardData.renewal_term_months !== undefined && wizardData.renewal_term_months !== null) {
+          if (
+            !Number.isInteger(wizardData.renewal_term_months) ||
+            wizardData.renewal_term_months <= 0
+          ) {
+            setErrors((prev) => ({
+              ...prev,
+              [stepIndex]: 'Renewal term months must be a positive whole number',
+            }));
+            return false;
+          }
+        }
         return true;
       case 1:
         if (wizardData.fixed_services.length > 0 && !wizardData.fixed_base_rate) {
