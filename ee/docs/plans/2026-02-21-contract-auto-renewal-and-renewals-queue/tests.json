@@ -1714,7 +1714,7 @@
   {
     "id": "T215",
     "description": "UI behavior: Include queue status in expiration report row payload when work item exists. persists after refresh/navigation",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F112"
     ]
