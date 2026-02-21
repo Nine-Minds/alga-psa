@@ -2036,7 +2036,7 @@
   {
     "id": "T253",
     "description": "Integration: processRenewalQueueHandler creates/links at most one renewal ticket per tenant+client_contract+cycle key when policy=create_ticket.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F138",
       "F140",

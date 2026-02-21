@@ -1917,3 +1917,9 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
   - Added assertions that `processRenewalQueueHandler` computes/persists `decision_due_date`, `renewal_cycle_start`, `renewal_cycle_end`, and `renewal_cycle_key` for eligible rows.
   - Validation:
     - `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`
+- (2026-02-21) Completed `T253`.
+  - Extended renewal job integration wiring coverage in:
+    - `server/src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts`
+  - Added assertions that ticket automation under `create_ticket` uses tenant+contract+cycle idempotency identity and duplicate lookup/linking so at most one ticket is linked per cycle.
+  - Validation:
+    - `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`

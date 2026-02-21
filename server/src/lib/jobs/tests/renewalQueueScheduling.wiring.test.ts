@@ -168,6 +168,20 @@ describe('renewal queue scheduling wiring', () => {
     expect(renewalHandlerSource).toContain('idempotency_key: params.idempotencyKey,');
   });
 
+  it('T253: creates or links at most one ticket per tenant/client-contract/cycle key under create_ticket policy', () => {
+    expect(renewalHandlerSource).toContain("effectiveDueDateActionPolicy === 'create_ticket'");
+    expect(renewalHandlerSource).toContain('const cycleKey = typeof nextCycleKey === \'string\' && nextCycleKey.length > 0');
+    expect(renewalHandlerSource).toContain('const idempotencyKey = buildRenewalTicketIdempotencyKey({');
+    expect(renewalHandlerSource).toContain('tenantId,');
+    expect(renewalHandlerSource).toContain('clientContractId: (row as any).client_contract_id,');
+    expect(renewalHandlerSource).toContain('cycleKey,');
+    expect(renewalHandlerSource).toContain("whereRaw(\"(attributes::jsonb ->> 'idempotency_key') = ?\", [idempotencyKey])");
+    expect(renewalHandlerSource).toContain('if (existingTicketId) {');
+    expect(renewalHandlerSource).toContain('createdTicketId = existingTicketId;');
+    expect(renewalHandlerSource).toContain('duplicateTicketSkipCount += 1;');
+    expect(renewalHandlerSource).toContain('updates.created_ticket_id = createdTicketId;');
+  });
+
   it('skips duplicate ticket creation when idempotent renewal cycle already has linked ticket', () => {
     expect(renewalHandlerSource).toContain("schema?.hasTable?.('tickets') ?? false");
     expect(renewalHandlerSource).toContain("whereRaw(\"(attributes::jsonb ->> 'idempotency_key') = ?\", [idempotencyKey])");
