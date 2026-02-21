@@ -402,7 +402,7 @@
   {
     "id": "T051",
     "description": "Functional: Load renewal queue rows from server action on Renewals page mount.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F051"
     ]
