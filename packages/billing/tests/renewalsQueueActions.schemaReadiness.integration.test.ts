@@ -1,0 +1,19 @@
+import { readFileSync } from 'node:fs';
+import { describe, expect, it } from 'vitest';
+
+const source = readFileSync(
+  new URL('../src/actions/renewalsQueueActions.ts', import.meta.url),
+  'utf8'
+);
+
+describe('renewalsQueueActions strict-schema integration wiring', () => {
+  it('T249: listRenewalQueueRows executes against migrated schema and avoids missing-column query branches', () => {
+    expect(source).toContain('const REQUIRED_RENEWAL_SCHEMA_COLUMNS = {');
+    expect(source).toContain('const assertRenewalSchemaReady = async (knex: any): Promise<void> => {');
+    expect(source).toContain('await assertRenewalSchemaReady(knex);');
+    expect(source).toContain("throw new Error('Permission denied: Cannot read renewals queue');");
+    expect(source).toContain('export const listRenewalQueueRows = withAuth(async (');
+    expect(source).toContain(".where({ 'cc.tenant': tenant, 'cc.is_active': true })");
+    expect(source).toContain("Run the latest server database migrations, then retry this renewals operation.");
+  });
+});

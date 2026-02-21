@@ -1998,7 +1998,7 @@
   {
     "id": "T249",
     "description": "Integration: listRenewalQueueRows executes successfully against migrated schema and no longer throws missing-column SQL errors.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F136",
       "F137",

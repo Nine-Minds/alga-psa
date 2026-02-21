@@ -1891,3 +1891,11 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
   - Assertions verify data backfill SQL initializes deterministic renewal defaults/cycle fields and scopes updates to active fixed-term rows joined to active contracts.
   - Validation:
     - `cd server && npx vitest run src/test/unit/migrations/contractRenewalMigrations.test.ts --coverage=false`
+- (2026-02-21) Completed `T249`.
+  - Added strict-schema integration wiring test for renewals queue listing in:
+    - `packages/billing/tests/renewalsQueueActions.schemaReadiness.integration.test.ts`
+  - Coverage verifies `listRenewalQueueRows` enforces `assertRenewalSchemaReady(knex)` and uses migrated-schema query path without legacy missing-column fallback branches.
+  - Validation:
+    - `npm -w @alga-psa/billing exec vitest run tests/renewalsQueueActions.schemaReadiness.integration.test.ts --coverage=false`
+  - Constraint note:
+    - runtime-import action tests currently hit workspace package entry-resolution failures for `@alga-psa/db`; migration/strict-schema integration coverage is therefore implemented via source-level wiring assertions (same style as existing renewal wiring suites).
