@@ -170,7 +170,7 @@
   {
     "id": "T022",
     "description": "Functional: Add tenant default renewal ticket board field to default billing settings model.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F022"
     ]
