@@ -1602,7 +1602,7 @@
   {
     "id": "T201",
     "description": "Cycle rollover: evergreen behavior remains correct across year boundary for 'Display evergreen contract type badge in queue rows.'",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F101"
     ]
