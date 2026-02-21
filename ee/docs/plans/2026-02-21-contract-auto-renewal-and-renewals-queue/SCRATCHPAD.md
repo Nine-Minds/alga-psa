@@ -1268,3 +1268,13 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
     - `packages/billing/tests/renewalsQueueActions.tenantWrites.wiring.test.ts`
   - Validation:
     - `npm -w @alga-psa/billing exec vitest run tests/renewalsQueueActions.tenantWrites.wiring.test.ts --coverage=false`
+- (2026-02-21) Completed `F131`.
+  - Enhanced renewal transition auditing to capture action metadata (`last_action`) alongside actor/timestamp/note.
+  - Added `withActionLabel(...)` and `last_action` column checks across mutation paths so transitions now record action labels such as:
+    - `mark_renewing`, `mark_non_renewing`, `create_renewal_draft`, `snooze`, `assign_owner`, `complete_after_activation`, `complete_after_non_renewal`
+  - Updated files:
+    - `packages/billing/src/actions/renewalsQueueActions.ts`
+    - `packages/billing/tests/renewalsQueueActions.transitionAudit.wiring.test.ts`
+    - `packages/billing/tests/renewalsQueueActions.actorAudit.wiring.test.ts`
+  - Validation:
+    - `npm -w @alga-psa/billing exec vitest run tests/renewalsQueueActions.transitionAudit.wiring.test.ts tests/renewalsQueueActions.actorAudit.wiring.test.ts tests/renewalsQueueActions.timestampAudit.wiring.test.ts tests/renewalsQueueActions.noteAudit.wiring.test.ts --coverage=false`
