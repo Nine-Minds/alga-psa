@@ -1939,7 +1939,7 @@
   {
     "id": "T242",
     "description": "E2E permissions: billing-read can view queue but cannot mutate, billing-update can execute queue actions.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F126",
       "F127"
