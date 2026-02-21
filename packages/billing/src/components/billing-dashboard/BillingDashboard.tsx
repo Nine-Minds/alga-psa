@@ -16,6 +16,7 @@ import TaxRates from './TaxRates';
 import UsageTracking from './UsageTracking';
 import TemplatesTab from './contracts/TemplatesTab';
 import ClientContractsTab from './contracts/ClientContractsTab';
+import RenewalsQueueTab from './contracts/RenewalsQueueTab';
 import ContractDetailSwitcher from './contracts/ContractDetailSwitcher';
 import { ContractLinePresetTypeRouter } from './contract-lines/ContractLinePresetTypeRouter';
 import BackNav from '@alga-psa/ui/components/BackNav';
@@ -141,12 +142,7 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
         </Tabs.Content>
 
         <Tabs.Content value="renewals">
-          <div
-            data-testid="renewals-tab-content"
-            className="rounded-md border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-bg-100))] p-4 text-sm text-[rgb(var(--color-text-500))]"
-          >
-            Renewals queue coming soon.
-          </div>
+          <RenewalsQueueTab />
         </Tabs.Content>
 
         <Tabs.Content value="accounting-exports">

@@ -394,7 +394,7 @@
   {
     "id": "F050",
     "description": "Add Renewals queue page component under billing dashboard components.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > FR4 — Renewals Queue and Dashboard Entry Points"
     ]

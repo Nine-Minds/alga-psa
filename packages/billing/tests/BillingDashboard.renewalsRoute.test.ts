@@ -9,6 +9,7 @@ const source = readFileSync(
 describe('BillingDashboard renewals route wiring', () => {
   it('registers a renewals Tabs.Content route in the tab host', () => {
     expect(source).toContain('<Tabs.Content value="renewals">');
-    expect(source).toContain('data-testid="renewals-tab-content"');
+    expect(source).toContain("import RenewalsQueueTab from './contracts/RenewalsQueueTab';");
+    expect(source).toContain('<RenewalsQueueTab />');
   });
 });

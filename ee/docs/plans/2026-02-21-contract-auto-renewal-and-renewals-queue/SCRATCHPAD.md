@@ -370,6 +370,13 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
   - Added initial placeholder content for the renewals route host.
   - Added route-wiring coverage:
     - `packages/billing/tests/BillingDashboard.renewalsRoute.test.ts`
+- (2026-02-21) Completed `F050`.
+  - Added dedicated renewals queue page component:
+    - `packages/billing/src/components/billing-dashboard/contracts/RenewalsQueueTab.tsx`
+  - Updated `BillingDashboard` renewals route to render `<RenewalsQueueTab />`.
+  - Added component + wiring coverage:
+    - `packages/billing/tests/RenewalsQueueTab.component.test.ts`
+    - `packages/billing/tests/BillingDashboard.renewalsRoute.test.ts`
 
 ## Open Questions
 - Should renewal ticket defaults be a brand-new billing settings card, or an extension of existing default ticket settings patterns?
