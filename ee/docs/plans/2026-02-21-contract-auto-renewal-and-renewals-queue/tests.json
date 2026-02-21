@@ -210,7 +210,7 @@
   {
     "id": "T027",
     "description": "Functional: Persist renewal defaults in updateDefaultBillingSettings action writes.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F027"
     ]
