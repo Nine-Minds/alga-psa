@@ -730,7 +730,7 @@
   {
     "id": "F092",
     "description": "Populate renewal ticket routing fields from effective renewal ticket defaults.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > FR6 — Automation and Ticket Creation"
     ]

@@ -211,6 +211,10 @@ export async function processRenewalQueueHandler(data: RenewalQueueProcessorJobD
     hasTenantRenewalTicketStatusColumn,
     hasTenantRenewalTicketPriorityColumn,
     hasTenantRenewalTicketAssigneeColumn,
+    hasContractRenewalTicketBoardColumn,
+    hasContractRenewalTicketStatusColumn,
+    hasContractRenewalTicketPriorityColumn,
+    hasContractRenewalTicketAssigneeColumn,
     hasWorkflowRunsTable,
   ] = await Promise.all([
     schema?.hasColumn?.('client_contracts', 'decision_due_date') ?? false,
@@ -230,6 +234,10 @@ export async function processRenewalQueueHandler(data: RenewalQueueProcessorJobD
     schema?.hasColumn?.('default_billing_settings', 'renewal_ticket_status_id') ?? false,
     schema?.hasColumn?.('default_billing_settings', 'renewal_ticket_priority') ?? false,
     schema?.hasColumn?.('default_billing_settings', 'renewal_ticket_assignee_id') ?? false,
+    schema?.hasColumn?.('client_contracts', 'renewal_ticket_board_id') ?? false,
+    schema?.hasColumn?.('client_contracts', 'renewal_ticket_status_id') ?? false,
+    schema?.hasColumn?.('client_contracts', 'renewal_ticket_priority') ?? false,
+    schema?.hasColumn?.('client_contracts', 'renewal_ticket_assignee_id') ?? false,
     schema?.hasTable?.('workflow_runs') ?? false,
   ]);
 
@@ -308,6 +316,7 @@ export async function processRenewalQueueHandler(data: RenewalQueueProcessorJobD
   let workflowTicketCreateSuccessCount = 0;
   let workflowTicketCreateFallbackCount = 0;
   let ticketCreationSkippedMissingDefaultsCount = 0;
+  let routingOverrideAppliedCount = 0;
   const nowIso = new Date().toISOString();
 
   for (const row of candidateRows) {
@@ -413,10 +422,37 @@ export async function processRenewalQueueHandler(data: RenewalQueueProcessorJobD
       && decisionDueDate <= today;
     if (shouldCreateTicketAtDueDate) {
       const clientId = normalizeOptionalUuid((row as any).client_id);
-      const boardId = normalizeOptionalUuid((row as any).tenant_renewal_ticket_board_id);
-      const statusId = normalizeOptionalUuid((row as any).tenant_renewal_ticket_status_id);
-      const priorityId = normalizeOptionalUuid((row as any).tenant_renewal_ticket_priority);
-      const assignedTo = normalizeOptionalUuid((row as any).tenant_renewal_ticket_assignee_id);
+      const tenantBoardId = normalizeOptionalUuid((row as any).tenant_renewal_ticket_board_id);
+      const tenantStatusId = normalizeOptionalUuid((row as any).tenant_renewal_ticket_status_id);
+      const tenantPriorityId = normalizeOptionalUuid((row as any).tenant_renewal_ticket_priority);
+      const tenantAssignedTo = normalizeOptionalUuid((row as any).tenant_renewal_ticket_assignee_id);
+      const contractBoardId = hasContractRenewalTicketBoardColumn
+        ? normalizeOptionalUuid((row as any).renewal_ticket_board_id)
+        : null;
+      const contractStatusId = hasContractRenewalTicketStatusColumn
+        ? normalizeOptionalUuid((row as any).renewal_ticket_status_id)
+        : null;
+      const contractPriorityId = hasContractRenewalTicketPriorityColumn
+        ? normalizeOptionalUuid((row as any).renewal_ticket_priority)
+        : null;
+      const contractAssignedTo = hasContractRenewalTicketAssigneeColumn
+        ? normalizeOptionalUuid((row as any).renewal_ticket_assignee_id)
+        : null;
+      const boardId = useTenantRenewalDefaults ? tenantBoardId : (contractBoardId ?? tenantBoardId);
+      const statusId = useTenantRenewalDefaults ? tenantStatusId : (contractStatusId ?? tenantStatusId);
+      const priorityId = useTenantRenewalDefaults ? tenantPriorityId : (contractPriorityId ?? tenantPriorityId);
+      const assignedTo = useTenantRenewalDefaults ? tenantAssignedTo : (contractAssignedTo ?? tenantAssignedTo);
+      if (
+        !useTenantRenewalDefaults
+        && (
+          contractBoardId !== null
+          || contractStatusId !== null
+          || contractPriorityId !== null
+          || contractAssignedTo !== null
+        )
+      ) {
+        routingOverrideAppliedCount += 1;
+      }
 
       if (clientId && boardId && statusId && priorityId) {
         const cycleKey = typeof nextCycleKey === 'string' && nextCycleKey.length > 0
@@ -536,5 +572,6 @@ export async function processRenewalQueueHandler(data: RenewalQueueProcessorJobD
     workflowTicketCreateSuccessCount,
     workflowTicketCreateFallbackCount,
     ticketCreationSkippedMissingDefaultsCount,
+    routingOverrideAppliedCount,
   });
 }

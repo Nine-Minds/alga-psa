@@ -851,6 +851,22 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
   - Validation:
     - `cd server && npm run typecheck`
     - `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`
+- (2026-02-21) Completed `F092`.
+  - Renewal ticket routing now uses effective defaults with tenant/contract precedence:
+    - tenant defaults from `default_billing_settings`:
+      - `renewal_ticket_board_id`
+      - `renewal_ticket_status_id`
+      - `renewal_ticket_priority`
+      - `renewal_ticket_assignee_id`
+    - optional contract-level overrides from `client_contracts` are applied when `use_tenant_renewal_defaults = false`
+    - deterministic fallback to tenant defaults for any missing contract-level routing values
+  - Added processor visibility metric:
+    - `routingOverrideAppliedCount`
+  - Updated wiring coverage:
+    - `server/src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts`
+  - Validation:
+    - `cd server && npm run typecheck`
+    - `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`
 
 ## Open Questions
 - Should renewal ticket defaults be a brand-new billing settings card, or an extension of existing default ticket settings patterns?

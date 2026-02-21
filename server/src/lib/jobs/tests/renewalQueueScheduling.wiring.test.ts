@@ -105,6 +105,21 @@ describe('renewal queue scheduling wiring', () => {
     expect(renewalHandlerSource).toContain('const ticketDescription = buildRenewalTicketDescription(');
   });
 
+  it('populates renewal ticket routing fields from effective renewal ticket defaults', () => {
+    expect(renewalHandlerSource).toContain("schema?.hasColumn?.('default_billing_settings', 'renewal_ticket_board_id') ?? false");
+    expect(renewalHandlerSource).toContain("schema?.hasColumn?.('default_billing_settings', 'renewal_ticket_status_id') ?? false");
+    expect(renewalHandlerSource).toContain("schema?.hasColumn?.('default_billing_settings', 'renewal_ticket_priority') ?? false");
+    expect(renewalHandlerSource).toContain("schema?.hasColumn?.('default_billing_settings', 'renewal_ticket_assignee_id') ?? false");
+    expect(renewalHandlerSource).toContain("schema?.hasColumn?.('client_contracts', 'renewal_ticket_board_id') ?? false");
+    expect(renewalHandlerSource).toContain("schema?.hasColumn?.('client_contracts', 'renewal_ticket_status_id') ?? false");
+    expect(renewalHandlerSource).toContain("schema?.hasColumn?.('client_contracts', 'renewal_ticket_priority') ?? false");
+    expect(renewalHandlerSource).toContain("schema?.hasColumn?.('client_contracts', 'renewal_ticket_assignee_id') ?? false");
+    expect(renewalHandlerSource).toContain('const boardId = useTenantRenewalDefaults ? tenantBoardId : (contractBoardId ?? tenantBoardId);');
+    expect(renewalHandlerSource).toContain('const statusId = useTenantRenewalDefaults ? tenantStatusId : (contractStatusId ?? tenantStatusId);');
+    expect(renewalHandlerSource).toContain('const priorityId = useTenantRenewalDefaults ? tenantPriorityId : (contractPriorityId ?? tenantPriorityId);');
+    expect(renewalHandlerSource).toContain('const assignedTo = useTenantRenewalDefaults ? tenantAssignedTo : (contractAssignedTo ?? tenantAssignedTo);');
+  });
+
   it('registers and schedules renewal queue processing in the jobs module', () => {
     expect(jobsIndexSource).toContain("import { processRenewalQueueHandler, RenewalQueueProcessorJobData } from './handlers/processRenewalQueueHandler';");
     expect(jobsIndexSource).toContain("jobScheduler.registerJobHandler<RenewalQueueProcessorJobData>(");
