@@ -89,6 +89,12 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
     - sanitized positive integer `renewal_term_months`
     - hydrated `use_tenant_renewal_defaults` when boolean
   - Rationale: resumed drafts now carry renewal metadata into `editingContract` so wizard state merge can restore renewal settings.
+- (2026-02-21) Completed `T003`.
+  - Added `packages/billing/src/actions/contractWizardActions.renewalDraftResumeWiring.test.ts`.
+  - Test validates:
+    - renewal fields are present on `DraftContractWizardData`,
+    - `getDraftContractForResume` returns hydrated renewal values,
+    - numeric renewal values are sanitized before payload return.
 
 ## Open Questions
 - Should renewal ticket defaults be a brand-new billing settings card, or an extension of existing default ticket settings patterns?

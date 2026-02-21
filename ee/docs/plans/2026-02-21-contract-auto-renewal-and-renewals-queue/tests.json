@@ -18,7 +18,7 @@
   {
     "id": "T003",
     "description": "Functional: Hydrate renewal fields when resuming draft contracts in the wizard.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F003"
     ]
