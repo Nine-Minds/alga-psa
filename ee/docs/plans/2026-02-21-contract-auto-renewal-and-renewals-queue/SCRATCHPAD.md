@@ -961,6 +961,19 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
     - `npm -w @alga-psa/billing exec vitest run tests/contractRenewalUpcomingEvent.wiring.test.ts tests/renewalsQueueActions.retryTicket.wiring.test.ts`
   - Note:
     - direct execution of `shared/workflow/streams/domainEventBuilders/__tests__/contractEventBuilders.test.ts` under current Vitest include globs returned “No test files found”; wiring assertions were added in billing tests to cover this change.
+- (2026-02-21) Completed `F100`.
+  - Confirmed evergreen renewal queue generation path in scheduled processor:
+    - processor normalizes each contract with `normalizeClientContract` (which computes evergreen annual-cycle decision dates)
+    - upserts normalized cycle boundaries and cycle key:
+      - `renewal_cycle_start`
+      - `renewal_cycle_end`
+      - `renewal_cycle_key`
+    - includes evergreen entries whenever computed decision due date is within the processing horizon
+  - Updated coverage:
+    - `server/src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts`
+  - Validation:
+    - `cd server && npm run typecheck`
+    - `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`
 
 ## Open Questions
 - Should renewal ticket defaults be a brand-new billing settings card, or an extension of existing default ticket settings patterns?

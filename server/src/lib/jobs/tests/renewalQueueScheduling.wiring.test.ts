@@ -157,6 +157,14 @@ describe('renewal queue scheduling wiring', () => {
     expect(renewalHandlerSource).toContain("&& effectiveDueDateActionPolicy === 'create_ticket'");
   });
 
+  it('generates renewal queue entries for evergreen contracts via annual-cycle normalization', () => {
+    expect(renewalHandlerSource).toContain('const normalized = normalizeClientContract(row as any) as unknown as Record<string, unknown>;');
+    expect(renewalHandlerSource).toContain('const nextCycleStart = normalizeOptionalDateOnly(normalized.renewal_cycle_start);');
+    expect(renewalHandlerSource).toContain('const nextCycleEnd = normalizeOptionalDateOnly(normalized.renewal_cycle_end);');
+    expect(renewalHandlerSource).toContain('updates.renewal_cycle_key = nextCycleKey;');
+    expect(renewalHandlerSource).toContain('if (!decisionDueDate || decisionDueDate < today || decisionDueDate > horizonDate) {');
+  });
+
   it('registers and schedules renewal queue processing in the jobs module', () => {
     expect(jobsIndexSource).toContain("import { processRenewalQueueHandler, RenewalQueueProcessorJobData } from './handlers/processRenewalQueueHandler';");
     expect(jobsIndexSource).toContain("jobScheduler.registerJobHandler<RenewalQueueProcessorJobData>(");
