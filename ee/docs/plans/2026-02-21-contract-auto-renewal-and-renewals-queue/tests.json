@@ -1666,7 +1666,7 @@
   {
     "id": "T209",
     "description": "Cycle rollover: evergreen behavior remains correct across year boundary for 'Support create-renewal-draft action for evergreen queue entries.'",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F105"
     ]
