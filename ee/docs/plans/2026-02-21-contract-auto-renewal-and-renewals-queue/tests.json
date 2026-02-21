@@ -634,7 +634,7 @@
   {
     "id": "T080",
     "description": "Functional: Include linked draft contract id in queue row once renewal draft is created.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F080"
     ]
