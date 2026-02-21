@@ -1122,7 +1122,7 @@
   {
     "id": "T141",
     "description": "Linkage correctness: 'Persist renewal fields when saving draft contracts from wizard.' stores created draft contract id on work item",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F018"
     ]
