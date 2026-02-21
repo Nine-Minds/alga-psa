@@ -112,6 +112,9 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
 - (2026-02-21) Completed `T005`.
   - Added `packages/billing/src/components/billing-dashboard/contracts/wizard-steps/ContractBasicsStep.renewalCards.test.ts`.
   - Test asserts fixed-term card conditional wiring on `data.end_date` and verifies the automation id/heading token.
+- (2026-02-21) Completed `F006`.
+  - Added evergreen variant UI in `packages/billing/src/components/billing-dashboard/contracts/wizard-steps/ContractBasicsStep.tsx`.
+  - New `Evergreen Review Settings` card renders when `data.end_date` is absent (`data-automation-id=\"renewal-settings-evergreen-card\"`).
 
 ## Open Questions
 - Should renewal ticket defaults be a brand-new billing settings card, or an extension of existing default ticket settings patterns?

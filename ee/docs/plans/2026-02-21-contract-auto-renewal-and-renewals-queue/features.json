@@ -42,7 +42,7 @@
   {
     "id": "F006",
     "description": "Render Evergreen Review settings card in ContractBasicsStep when end date is absent.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > FR1 — Contract Setup and Renewal Configuration"
     ]
