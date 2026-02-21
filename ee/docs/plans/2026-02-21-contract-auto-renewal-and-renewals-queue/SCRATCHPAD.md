@@ -611,6 +611,22 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
   - Validation:
     - `npm -w @alga-psa/billing run typecheck`
     - `npm -w @alga-psa/billing exec vitest run tests/renewalsQueueActions.timestampAudit.wiring.test.ts tests/renewalsQueueActions.actorAudit.wiring.test.ts tests/renewalsQueueActions.markRenewing.wiring.test.ts tests/renewalsQueueActions.markNonRenewing.wiring.test.ts tests/renewalsQueueActions.createDraft.wiring.test.ts tests/renewalsQueueActions.snooze.wiring.test.ts tests/renewalsQueueActions.assignOwner.wiring.test.ts`
+- (2026-02-21) Completed `F073`.
+  - Added optional queue action note support across mutation actions:
+    - `markRenewalQueueItemRenewing(..., note?)`
+    - `markRenewalQueueItemNonRenewing(..., note?)`
+    - `createRenewalDraftForQueueItem(..., note?)`
+    - `snoozeRenewalQueueItem(..., note?)`
+    - `assignRenewalQueueItemOwner(..., note?)`
+  - Added note helpers:
+    - `normalizeActionNote(note)`
+    - `withActionNote(updateData, hasLastActionNoteColumn, note)`
+  - Mutations now persist `last_action_note` when column exists and note is non-empty.
+  - Added wiring coverage:
+    - `packages/billing/tests/renewalsQueueActions.noteAudit.wiring.test.ts`
+  - Validation:
+    - `npm -w @alga-psa/billing run typecheck`
+    - `npm -w @alga-psa/billing exec vitest run tests/renewalsQueueActions.noteAudit.wiring.test.ts tests/renewalsQueueActions.timestampAudit.wiring.test.ts tests/renewalsQueueActions.actorAudit.wiring.test.ts tests/renewalsQueueActions.markRenewing.wiring.test.ts tests/renewalsQueueActions.markNonRenewing.wiring.test.ts tests/renewalsQueueActions.createDraft.wiring.test.ts tests/renewalsQueueActions.snooze.wiring.test.ts tests/renewalsQueueActions.assignOwner.wiring.test.ts`
 
 ## Open Questions
 - Should renewal ticket defaults be a brand-new billing settings card, or an extension of existing default ticket settings patterns?

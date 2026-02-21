@@ -578,7 +578,7 @@
   {
     "id": "F073",
     "description": "Persist action reason/note text on queue mutation when provided.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > FR5 — Queue Actions and Renewal Workflow"
     ]
