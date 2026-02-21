@@ -322,7 +322,7 @@
   {
     "id": "T041",
     "description": "Functional: Skip decision_due_date generation for terminated/expired contract assignments.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F041"
     ]
