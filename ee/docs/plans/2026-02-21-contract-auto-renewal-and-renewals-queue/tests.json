@@ -1002,7 +1002,7 @@
   {
     "id": "T126",
     "description": "Functional: Enforce billing read permission on renewals queue list endpoints.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F126"
     ]
