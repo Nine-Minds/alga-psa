@@ -1274,7 +1274,7 @@
   {
     "id": "T160",
     "description": "UI behavior: Render renewal mode filter for none/manual/auto. persists after refresh/navigation",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F056"
     ]
