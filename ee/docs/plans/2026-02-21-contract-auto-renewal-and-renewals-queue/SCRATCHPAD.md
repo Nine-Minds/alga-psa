@@ -1740,3 +1740,16 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
   - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
 - (2026-02-21) Completed `T243`.
   - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `F136`.
+  - Added migration:
+    - `server/migrations/202602211100_add_contract_renewal_queue_status_audit_columns.cjs`
+  - Migration adds renewal queue status/audit columns on `client_contracts`:
+    - `status`, `snoozed_until`, `assigned_to`, `last_action`, `last_action_by`, `last_action_at`, `last_action_note`
+  - Added queue-status check constraint:
+    - `client_contracts_renewal_status_check` (`pending|renewing|non_renewing|snoozed|completed`)
+  - Added tenant-scoped actor FKs (null-on-delete):
+    - `client_contracts_assigned_to_fkey` (`tenant`, `assigned_to`) -> `users(tenant, user_id)`
+    - `client_contracts_last_action_by_fkey` (`tenant`, `last_action_by`) -> `users(tenant, user_id)`
+  - Migration is idempotent and Citus-safe (`ensureSequentialMode`, guarded column/constraint checks).
+  - Validation:
+    - `node -c server/migrations/202602211100_add_contract_renewal_queue_status_audit_columns.cjs`
