@@ -410,7 +410,7 @@
   {
     "id": "T052",
     "description": "Functional: Render default 90-day horizon rows in Renewals queue.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F052"
     ]
