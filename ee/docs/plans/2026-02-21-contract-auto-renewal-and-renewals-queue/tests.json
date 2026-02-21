@@ -1426,7 +1426,7 @@
   {
     "id": "T179",
     "description": "UI behavior: Refresh affected queue row state after successful action response. persists after refresh/navigation",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F079"
     ]
