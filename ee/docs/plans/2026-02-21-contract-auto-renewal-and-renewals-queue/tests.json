@@ -890,7 +890,7 @@
   {
     "id": "T112",
     "description": "Functional: Include queue status in expiration report row payload when work item exists.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F112"
     ]
