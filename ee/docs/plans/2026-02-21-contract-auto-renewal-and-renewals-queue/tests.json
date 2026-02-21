@@ -642,7 +642,7 @@
   {
     "id": "T081",
     "description": "Functional: Include linked ticket id in queue row once due-date ticket is created.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F081"
     ]
