@@ -1018,7 +1018,7 @@
   {
     "id": "F128",
     "description": "Enforce billing settings update permission on renewal defaults update endpoints.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > FR10 \u2014 Permissions, Security, and Auditability"
     ]

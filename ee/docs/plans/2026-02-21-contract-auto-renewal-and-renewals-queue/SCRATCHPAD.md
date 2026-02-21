@@ -1246,3 +1246,11 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
     - `packages/billing/tests/renewalsQueueActions.permissions.wiring.test.ts`
   - Validation:
     - `npm -w @alga-psa/billing exec vitest run tests/renewalsQueueActions.wiring.test.ts tests/renewalsQueueActions.permissions.wiring.test.ts --coverage=false`
+- (2026-02-21) Completed `F128`.
+  - Enforced billing settings update authorization on renewal default writes.
+  - `updateDefaultBillingSettings` now requires `hasPermission(user, 'billing_settings', 'update')` and rejects unauthorized callers.
+  - Updated files:
+    - `packages/billing/src/actions/billingSettingsActions.ts`
+    - `packages/billing/tests/billingSettingsActions.renewalPermissions.wiring.test.ts`
+  - Validation:
+    - `npm -w @alga-psa/billing exec vitest run tests/billingSettingsActions.renewalPermissions.wiring.test.ts --coverage=false`
