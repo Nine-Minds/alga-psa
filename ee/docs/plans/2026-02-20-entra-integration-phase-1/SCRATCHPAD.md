@@ -1,0 +1,750 @@
+# Scratchpad — Microsoft Entra Integration Phase 1
+
+- Plan slug: `entra-integration-phase-1`
+- Created: `2026-02-19`
+- Last Updated: `2026-02-20`
+
+## What This Is
+
+Working notes for design and implementation decisions tied to the EE Entra integration plan.
+
+## Decisions
+
+- (2026-02-20) Scope is **Enterprise Edition only**. All user-visible Entra surfaces must be behind feature flags from first release.
+- (2026-02-20) Temporal is the execution backbone for discovery/sync runs (initial, single-client, all-tenants).
+- (2026-02-20) Phase 1 focuses on feature completeness, not broad operational hardening.
+- (2026-02-20) Sync behavior is additive/linking by default; field overwrites occur only for explicitly enabled fields.
+- (2026-02-20) Client portal users are excluded from Entra setup/sync functionality.
+- (2026-02-20) Use existing RBAC model (`system_settings.read/update`) for Entra setup and sync actions.
+
+## Discoveries / Constraints
+
+- Existing Microsoft OAuth/email/calendar flows already support tenant/env/app credential resolution patterns and `common` authority usage.
+- Existing secret system supports env/filesystem/vault read/write provider chains via `getSecretProviderInstance()` and tenant secret APIs.
+- Tenant secret metadata/value split is already implemented (`tenant_secrets` DB metadata + secret-provider value storage).
+- User model differentiates `internal` vs `client`; middleware and RBAC already branch by `user_type`.
+- EE already has platform feature-flag management APIs with tenant-targeting support in PostHog.
+- Temporal worker already supports multi-queue registration and has existing integration sync patterns (NinjaOne) to mirror.
+
+## Commands / Runbooks
+
+- Read PRD source: `textutil -convert txt -stdout ~/Downloads/entra-integration-prd.docx`
+- Validate plan JSON and references: `python3 ~/.codex/skills/alga-plan/scripts/validate_plan.py ee/docs/plans/2026-02-20-entra-integration-phase-1`
+
+## Links / References
+
+- `~/Downloads/entra-integration-prd.docx`
+- `packages/integrations/src/components/settings/integrations/IntegrationsSettingsPage.tsx`
+- `packages/integrations/src/components/settings/integrations/RmmIntegrationsSetup.tsx`
+- `packages/integrations/src/actions/email-actions/oauthActions.ts`
+- `packages/integrations/src/actions/calendarActions.ts`
+- `server/src/app/api/auth/microsoft/callback/route.ts`
+- `server/src/app/api/auth/microsoft/calendar/callback/route.ts`
+- `packages/core/src/lib/secrets/secretProvider.ts`
+- `packages/core/src/lib/secrets/VaultSecretProvider.ts`
+- `packages/tenancy/src/actions/tenant-secret-actions.ts`
+- `shared/workflow/secrets/tenantSecretProvider.ts`
+- `server/src/lib/auth/rbac.ts`
+- `shared/interfaces/user.interfaces.ts`
+- `server/src/middleware/express/authMiddleware.ts`
+- `ee/server/src/app/api/v1/platform-feature-flags/route.ts`
+- `ee/server/src/lib/platformFeatureFlags/posthogClient.ts`
+- `ee/temporal-workflows/src/worker.ts`
+- `ee/temporal-workflows/src/workflows/ninjaone-sync-workflow.ts`
+- `ee/temporal-workflows/src/activities/ninjaone-sync-activities.ts`
+- `ee/server/src/lib/integrations/ninjaone/sync/syncStrategy.ts`
+
+## Open Questions
+
+- Confirm exact delegated scopes needed for direct partner tenant + user enumeration in target MSP environments.
+- Confirm CIPP API endpoint/version contract to lock adapter payload parsing.
+- Confirm default fuzzy threshold values for mapping suggestions before UI finalization.
+
+## Implementation Log
+
+- (2026-02-20) `F001` completed: added CE Entra route delegator stubs under `server/src/app/api/integrations/entra/*` for root/connect/disconnect/discovery/mappings-preview/mappings-confirm/sync.
+- Decision: used the existing EE lazy-import stub pattern with edition checks and a consistent 501 JSON payload (`Microsoft Entra integration is only available in Enterprise Edition.`) for CE/non-EE behavior.
+- Added shared CE helper at `server/src/app/api/integrations/entra/_ceStub.ts` to avoid copy/paste drift in runtime/dynamic/exported fallback response behavior.
+- Validation command: `cd server && npx vitest run src/test/unit/enterpriseAliasEnvSwitch.unit.test.ts` (pass).
+- (2026-02-20) `F002` completed: added EE route handlers for Entra root/connect/disconnect/discovery/mappings-preview/mappings-confirm/sync under `ee/server/src/app/api/integrations/entra/*`.
+- Decision: created `ee/server/src/app/api/integrations/entra/_responses.ts` as a shared response/JSON-body parser helper to keep early route contracts stable while deeper business logic lands in later features.
+- (2026-02-20) `F003` completed: created `packages/integrations/src/actions/integrations/entraActions.ts` and exported the new action surface from both `packages/integrations/src/actions/integrations/index.ts` and `packages/integrations/src/actions/index.ts`.
+- Decision: Entra actions currently call EE route modules through a shared `callEeRoute` helper to keep action and API contracts aligned during phased implementation.
+- Validation command: `npx tsc --noEmit -p packages/integrations/tsconfig.json` (pass).
+- (2026-02-20) `F004` completed: added an EE Entra entry to Integrations settings in a new `Identity` tab/category and wired it to dynamic-load `@enterprise/components/settings/integrations/EntraIntegrationSettings`.
+- Discovery: `@enterprise/*` resolution in shared packages requires matching CE stub files under `packages/ee/src/*`; added Entra stub there to keep CE builds/typecheck valid.
+- Validation commands: `npx tsc --noEmit -p packages/integrations/tsconfig.json` and `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
+- (2026-02-20) `F005` completed: implemented EE shell component at `ee/server/src/components/settings/integrations/EntraIntegrationSettings.tsx` with a 4-step wizard scaffold (Connect, Discover, Map, Initial Sync) and placeholder status/actions.
+- (2026-02-20) `F006` completed: gated the Entra `Identity` settings surface with `useFeatureFlag('entra-integration-ui')`; the tab/card renders only when EE mode and flag enabled.
+- Decision: kept `useFeatureFlag` hook unchanged; existing default/forced-flag behavior already supports this gate without additional hook work.
+- (2026-02-20) `F007` completed: enforced `entra-integration-ui` checks server-side in both EE Entra routes (`ee/server/src/app/api/integrations/entra/*`) and Entra server actions (`packages/integrations/src/actions/integrations/entraActions.ts`).
+- Added shared EE guard `requireEntraUiFlagEnabled()` in `ee/server/src/app/api/integrations/entra/_guards.ts` using authenticated user + tenant-aware PostHog evaluation through `featureFlags.isEnabled(...)`.
+- Validation commands: `npx tsc --noEmit -p packages/integrations/tsconfig.json` and `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
+- (2026-02-20) `F008` completed: added a client-level `Sync Entra Now` action button in `packages/clients/src/components/clients/ClientDetails.tsx`, wired to `startEntraSync({ scope: 'single-client', clientId })` with success/error toast feedback.
+- Validation command: `npx tsc --noEmit -p packages/clients/tsconfig.json` (pass).
+- (2026-02-20) `F009` completed: gated the client-level Entra action button with `useFeatureFlag('entra-integration-client-sync-action')`; button now only renders when both EE mode and tenant flag are enabled.
+- (2026-02-20) `F010` completed: added canonical Entra Phase 1 flag definitions and an idempotent ensure workflow in `PostHogFeatureFlagService.ensureEntraPhase1Flags()`.
+- API workflow update: `POST /api/v1/platform-feature-flags` now supports `{"__action":"ensure_entra_phase1_flags"}` for creating missing Entra flags, and `GET` supports `?includeEntraPhase1Defaults=true` to return definitions alongside current flags.
+- Validation commands: `npx tsc --noEmit -p ee/server/tsconfig.json` and `npx tsc --noEmit -p packages/clients/tsconfig.json` (pass).
+- (2026-02-20) `F011` completed: added explicit Entra connection option cards in settings and gated CIPP visibility behind `useFeatureFlag('entra-integration-cipp')`.
+- Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
+- (2026-02-20) `F012` completed: added field-sync controls and ambiguous queue panels to Entra settings, each gated by their dedicated flags (`entra-integration-field-sync`, `entra-integration-ambiguous-queue`).
+- (2026-02-20) `F013` completed via migration `ee/server/migrations/20260220143000_create_entra_phase1_schema.cjs`: created `entra_partner_connections` with tenant-scoped connection metadata and lifecycle timestamps.
+- Validation command: `node --check ee/server/migrations/20260220143000_create_entra_phase1_schema.cjs` (pass).
+- (2026-02-20) `F014` completed: added unique partial index `ux_entra_partner_connections_active_per_tenant` to enforce at most one active partner connection per tenant.
+- (2026-02-20) `F015` completed: migration creates `entra_managed_tenants` for persisted discovered tenant records per MSP tenant.
+- (2026-02-20) `F016` completed: added managed-tenant lookup indexes for recency and case-insensitive primary-domain matching.
+- (2026-02-20) `F017` completed: migration adds `entra_client_tenant_mappings` to persist mapped/skipped/review decisions.
+- (2026-02-20) `F018` completed: added unique partial index `ux_entra_client_tenant_mappings_active` to prevent duplicate active mappings per discovered Entra tenant.
+- (2026-02-20) `F019` completed: migration creates `entra_sync_settings` for cadence, filters, and field-sync JSON config.
+- (2026-02-20) `F020` completed: migration adds parent sync run table `entra_sync_runs` with workflow/status/summary columns.
+- (2026-02-20) `F021` completed: migration adds `entra_sync_run_tenants` with FK linkage to parent run rows and per-tenant counters.
+- (2026-02-20) `F022` completed: migration adds `entra_contact_links` for Entra identity to contact mapping state.
+- (2026-02-20) `F023` completed: unique index `ux_entra_contact_links_entra_identity` enforces (`tenant`,`entra_tenant_id`,`entra_object_id`) uniqueness.
+- (2026-02-20) `F024` completed: partial unique index `ux_entra_contact_links_active_contact` enforces one active Entra link per contact.
+- (2026-02-20) `F025` completed: migration creates `entra_contact_reconciliation_queue` plus status/identity indexes for ambiguous match review.
+- (2026-02-20) `F026` completed: altered `clients` with `entra_tenant_id` and `entra_primary_domain` columns for mapping write-through.
+- (2026-02-20) `F027` completed: added `idx_clients_entra_tenant` for tenant-scoped `clients.entra_tenant_id` lookups.
+- (2026-02-20) `F028` completed: altered `contacts` with `entra_object_id`, `entra_sync_source`, and `last_entra_sync_at` metadata fields.
+- (2026-02-20) `F029` completed: added contact traceability columns `entra_user_principal_name` and `entra_account_enabled`.
+- (2026-02-20) `F030` completed: added `entra_sync_status` and `entra_sync_status_reason` columns to support disabled/deleted-state UX messaging.
+- (2026-02-20) `F031` completed: migration seeds one `entra_sync_settings` row per existing tenant with default `sync_interval_minutes=1440` and enabled sync.
+- (2026-02-20) `F032` completed: added `ee/server/src/interfaces/entra.interfaces.ts` and typed row mappers in `ee/server/src/lib/integrations/entra/entraRowMappers.ts` for all Entra tables.
+- Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
+- (2026-02-20) `F033` completed: added canonical Entra secret key constants in `ee/server/src/lib/integrations/entra/secrets.ts` for shared Microsoft app secrets plus direct/CIPP token keys.
+- (2026-02-20) `F034` completed: implemented `resolveMicrosoftCredentialsForTenant()` with explicit tenant-pair -> env-pair -> app-secret-pair precedence in `ee/server/src/lib/integrations/entra/auth/microsoftCredentialResolver.ts`.
+- (2026-02-20) `F035` completed: added `initiateEntraDirectOAuth` action with `system_settings.update` permission enforcement and Entra-specific OAuth state payload (tenant/user/nonce/timestamp/redirect).
+- Validation commands: `npx tsc --noEmit -p packages/integrations/tsconfig.json` and `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
+- (2026-02-20) `F036` completed: added `/api/auth/microsoft/entra/callback` server entry with EE branch delegation and EE callback handler that validates state, exchanges code, stores direct tokens in tenant secrets, and marks `entra_partner_connections` active.
+- Added matching `packages/ee` route stubs for new Entra/auth callback paths so CE/server alias typechecking resolves cleanly.
+- (2026-02-20) `F037` completed: added `refreshEntraDirectToken()` helper to refresh direct OAuth access using stored refresh token and Microsoft credential resolver, then persist rotated token metadata.
+- (2026-02-20) `F038` completed: centralized direct OAuth token persistence/rotation in `ee/server/src/lib/integrations/entra/auth/tokenStore.ts` using `getSecretProviderInstance()` tenant secrets.
+- Refactor: EE Entra callback and refresh helper now both call `saveEntraDirectTokenSet(...)` / `getEntraDirectRefreshToken(...)` to keep secret writes consistent and vault-compatible.
+- Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
+- (2026-02-20) `F039` completed: added `connectEntraCipp` action in `packages/integrations/src/actions/integrations/entraActions.ts` with base URL normalization/validation, required token checks, tenant-secret persistence, and active CIPP connection-row upsert.
+- Validation command: `npx tsc --noEmit -p packages/integrations/tsconfig.json` (pass).
+- (2026-02-20) `F040` completed: added `ee/server/src/lib/integrations/entra/providers/cipp/cippSecretStore.ts` with save/get/clear helpers using tenant secret provider APIs (vault/filesystem/env chain compatible).
+- Refactor: `connectEntraCipp` now uses `saveEntraCippCredentials(...)` instead of writing CIPP secrets inline.
+- Validation commands: `npx tsc --noEmit -p packages/integrations/tsconfig.json` and `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
+- (2026-02-20) `F041` completed: added EE `validate-direct` route (`ee/server/src/app/api/integrations/entra/validate-direct/route.ts`) that verifies direct credentials/token and probes Microsoft managed-tenant discovery access, with refresh retry on 401.
+- Added server action `validateEntraDirectConnection` and CE/EE route wiring stubs for `/api/integrations/entra/validate-direct`.
+- Validation commands: `npx tsc --noEmit -p packages/integrations/tsconfig.json`, `npx tsc --noEmit -p ee/server/tsconfig.json`, `npx tsc --noEmit -p server/tsconfig.json` (pass).
+- (2026-02-20) `F042` completed: added EE `validate-cipp` route (`ee/server/src/app/api/integrations/entra/validate-cipp/route.ts`) that loads CIPP credentials from tenant secrets and validates tenant-list access via CIPP API probing.
+- Added `validateEntraCippConnection` server action plus CE/EE route wiring stubs for `/api/integrations/entra/validate-cipp`.
+- Validation commands: `npx tsc --noEmit -p packages/integrations/tsconfig.json`, `npx tsc --noEmit -p ee/server/tsconfig.json`, `npx tsc --noEmit -p server/tsconfig.json` (pass).
+- (2026-02-20) `F043` completed: added `ee/server/src/lib/integrations/entra/connectionRepository.ts` and wired validation routes to persist `status`, `last_validated_at`, and JSON validation snapshots to `entra_partner_connections`.
+- Updated `GET /api/integrations/entra` to read active connection state + validation fields from DB, and updated `EntraIntegrationSettings` status panel to render connection status/type, last validation timestamp, and validation error message.
+- Validation commands: `npx tsc --noEmit -p ee/server/tsconfig.json`, `npx tsc --noEmit -p packages/integrations/tsconfig.json`, `npx tsc --noEmit -p server/tsconfig.json` (pass).
+- (2026-02-20) `F044` completed: disconnect flow now clears direct+CIPP tenant secrets and marks active `entra_partner_connections` rows disconnected via repository update (history rows are retained; no sync-run deletion).
+- Updates: `disconnectEntraIntegration` now enforces update permission before route call; `clearEntraDirectTokenSet` now deletes stored token secrets instead of writing empty-string placeholders.
+- Validation commands: `npx tsc --noEmit -p ee/server/tsconfig.json`, `npx tsc --noEmit -p packages/integrations/tsconfig.json`, `npx tsc --noEmit -p server/tsconfig.json` (pass).
+- (2026-02-20) `F045` completed: enforced connection-type credential cleanup in Entra actions via `clearStaleCredentialsForConnectionType(...)`.
+- Behavior: starting direct flow clears CIPP credentials; selecting/connecting CIPP clears direct OAuth token secrets, preventing stale dual-provider secret state.
+- Added CE stub for `@enterprise/lib/integrations/entra/auth/tokenStore` to keep non-EE alias builds type-safe.
+- Validation commands: `npx tsc --noEmit -p packages/integrations/tsconfig.json`, `npx tsc --noEmit -p ee/server/tsconfig.json`, `npx tsc --noEmit -p server/tsconfig.json` (pass).
+- (2026-02-20) `F046` completed: introduced provider abstraction types at `ee/server/src/lib/integrations/entra/providers/types.ts` including `EntraProviderAdapter` contract and normalized managed-tenant/user DTOs shared by direct and CIPP adapters.
+- Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
+- (2026-02-20) `F047` completed: added direct provider adapter at `ee/server/src/lib/integrations/entra/providers/direct/directProviderAdapter.ts` with managed-tenant enumeration via Microsoft Graph `tenantRelationships/managedTenants/tenants`.
+- Adapter behavior: tenant-scoped access-token resolution, auto-refresh on expiry/401, pagination via `@odata.nextLink`, normalization to canonical tenant DTO (`entraTenantId`, displayName, primaryDomain, sourceUserCount).
+- Note: `listUsersForTenant` intentionally left for `F048` and currently throws a clear not-implemented error.
+- Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
+- (2026-02-20) `F048` completed: implemented direct adapter per-tenant user enumeration in `listUsersForTenant(...)` using managed-users Graph endpoint with pagination and normalized user DTO mapping.
+- Normalized fields include object id, UPN/email, name fields, accountEnabled, job/mobile/business phones, and raw payload passthrough for downstream reconciliation.
+- Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
+- (2026-02-20) `F049` completed: added CIPP provider adapter at `ee/server/src/lib/integrations/entra/providers/cipp/cippProviderAdapter.ts` with managed-tenant enumeration and normalization.
+- Adapter behavior: loads CIPP creds from tenant secret store, probes common tenant-list endpoints, normalizes tenant id/display/domain/user-count, and deduplicates by tenant id.
+- Note: `listUsersForTenant` remains a deliberate not-implemented throw until `F050`.
+- Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
+- (2026-02-20) `F050` completed: implemented CIPP per-tenant user enumeration in `CippProviderAdapter.listUsersForTenant(...)` with endpoint fallback patterns and normalized user model parity (id/UPN/email/name/account-enabled/phones/job title).
+- Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
+- (2026-02-20) `F051` completed: added discovery execution path via `discoverManagedTenantsForTenant()` (`ee/server/src/lib/integrations/entra/discoveryService.ts`) and wired `POST /api/integrations/entra/discovery` to run provider discovery + DB upsert.
+- Added provider factory selector `getEntraProviderAdapter(connectionType)` (`ee/server/src/lib/integrations/entra/providers/index.ts`) and discovery action permission check for mutation flow.
+- Validation commands: `npx tsc --noEmit -p ee/server/tsconfig.json`, `npx tsc --noEmit -p packages/integrations/tsconfig.json`, `npx tsc --noEmit -p server/tsconfig.json` (pass).
+- (2026-02-20) `F052` completed: discovery persistence now writes required managed-tenant fields (`entra_tenant_id`, `display_name`, `primary_domain`, `source_user_count`) during upsert in `discoverManagedTenantsForTenant()`.
+- Source user counts are normalized in both direct and CIPP adapters before persistence.
+- (2026-02-20) `F053` completed: added exact-domain matcher utilities in `ee/server/src/lib/integrations/entra/mapping/matchers/exactDomainMatcher.ts`.
+- Includes domain normalization + email/url domain extraction and deterministic exact-domain candidate generation (`reason: exact_domain`, confidence `1.0`).
+- Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
+- (2026-02-20) `F054` completed: added secondary-domain matcher in `ee/server/src/lib/integrations/entra/mapping/matchers/secondaryDomainMatcher.ts`.
+- Secondary matches are normalized and scored below exact matches (`0.88`) so they contribute confidence/candidates without auto-promoting over exact-domain hits.
+- Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
+- (2026-02-20) `F055` completed: added fuzzy matcher in `ee/server/src/lib/integrations/entra/mapping/matchers/fuzzyMatcher.ts` using normalized bigram similarity.
+- Fuzzy candidates are sorted by score and explicitly marked `autoMatch: false` to prevent automatic confirmation.
+- Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
+- (2026-02-20) `F056` completed: implemented `buildEntraMappingPreview()` in `ee/server/src/lib/integrations/entra/mapping/mappingPreviewService.ts` and wired preview route to return grouped `autoMatched`, `fuzzyCandidates`, and `unmatched` sets.
+- Preview now combines exact-domain, secondary-domain, and fuzzy-name scoring against persisted discovered tenants and tenant client/domain data.
+- Validation commands: `npx tsc --noEmit -p ee/server/tsconfig.json`, `npx tsc --noEmit -p packages/integrations/tsconfig.json`, `npx tsc --noEmit -p server/tsconfig.json` (pass).
+- (2026-02-20) `F057` completed: added `EntraTenantMappingTable` (`ee/server/src/components/settings/integrations/EntraTenantMappingTable.tsx`) and embedded it in `EntraIntegrationSettings`.
+- UI now renders discovered tenants with status badges, suggestion reason, confidence score, and per-row candidate selection controls for mapping review.
+- Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
+- (2026-02-20) `F058` completed: extended `EntraTenantMappingTable` with a searchable manual client selector for fuzzy/unmatched rows.
+- Table now loads tenant client list via `getAllClients()`, supports per-row search input, and merges manual options with suggested candidates for explicit assignment selection.
+- Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
+- (2026-02-20) `F059` completed: added `skipEntraTenantMapping` action to persist `skip_for_now` active mapping state in `entra_client_tenant_mappings` while preserving discovered tenant records.
+- Mapping table now includes per-row `Skip for now` action and local skipped-state rendering so skipped rows are clearly marked and excluded from selection edits.
+- Validation commands: `npx tsc --noEmit -p packages/integrations/tsconfig.json`, `npx tsc --noEmit -p ee/server/tsconfig.json`, `npx tsc --noEmit -p server/tsconfig.json` (pass).
+- (2026-02-20) `F060` completed: added bulk helper button `Preselect Exact Matches` in `EntraTenantMappingTable` to set selections for all non-skipped auto-matched rows in one action.
+- Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
+- (2026-02-20) `F061` completed: `POST /api/integrations/entra/mappings/confirm` now persists mappings via `confirmEntraMappings()` service only when explicitly called with selected mapping payload.
+- Added route payload normalization (`managedTenantId`, `clientId`, optional mapping state/score) and action-side update-permission check before confirm execution.
+- Validation commands: `npx tsc --noEmit -p ee/server/tsconfig.json`, `npx tsc --noEmit -p packages/integrations/tsconfig.json`, `npx tsc --noEmit -p server/tsconfig.json` (pass).
+- (2026-02-20) `F062` completed: mapping confirm service now writes mapped client linkage fields (`clients.entra_tenant_id`, `clients.entra_primary_domain`) from selected managed-tenant records during confirm.
+- (2026-02-20) `F063` completed: confirm mapping service applies idempotent remap behavior by updating in-place when active mapping is unchanged and otherwise deactivating prior active row before inserting the next active mapping row.
+- (2026-02-20) `F064` completed: added unmap API/action (`/api/integrations/entra/mappings/unmap`, `unmapEntraTenant`) that safely deactivates active mapping rows, records active `unmapped` state, and clears previous mapped client Entra linkage fields.
+- Validation commands: `npx tsc --noEmit -p packages/integrations/tsconfig.json`, `npx tsc --noEmit -p ee/server/tsconfig.json`, `npx tsc --noEmit -p server/tsconfig.json` (pass).
+- (2026-02-20) `F065` completed: added remap API/action (`/api/integrations/entra/mappings/remap`, `remapEntraTenant`) to move a discovered managed tenant mapping to a target client using confirm-mapping persistence flow.
+- Includes CE delegator + EE stub route wiring for remap endpoint parity.
+- Validation commands: `npx tsc --noEmit -p ee/server/tsconfig.json`, `npx tsc --noEmit -p packages/integrations/tsconfig.json`, `npx tsc --noEmit -p server/tsconfig.json` (pass).
+- (2026-02-20) `F066` completed: added mapping conflict validator (`ee/server/src/lib/integrations/entra/mapping/validation.ts`) and enforced it in mappings confirm route.
+- Confirm now rejects requests that assign one discovered managed tenant to multiple client IDs in the same payload.
+- Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
+- (2026-02-20) `F067` completed: mapping summary counts are now computed from table state (`mapped`, `skipped`, `needsReview`) and displayed in `EntraIntegrationSettings` above the mapping table.
+- Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
+- (2026-02-20) `F068` completed: added `Run Initial Sync` CTA and bound enablement to confirmed mapping count (`status.mappedTenantCount > 0`) so initial sync can only be started when at least one mapping exists.
+- Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
+- (2026-02-20) `F069` completed: added skipped-tenants panel in settings with per-tenant `Remap` entry controls and wired skipped-row state propagation from `EntraTenantMappingTable`.
+- Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
+- (2026-02-20) `F070` completed: added explicit `entra-integration-ui` guard inside `EntraIntegrationSettings` so mapping wizard content is inaccessible and replaced by a disabled-state message when the flag is off.
+- Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
+- (2026-02-20) `F071` completed: added Temporal Entra sync/discovery shared contracts in `ee/temporal-workflows/src/types/entra-sync.ts` (workflow inputs, activity inputs, run/tenant result summaries).
+- Validation command: `npx tsc --noEmit -p ee/temporal-workflows/tsconfig.json` (pass).
+- (2026-02-20) `F072` completed: added `entraDiscoveryWorkflow` in `ee/temporal-workflows/src/workflows/entra-discovery-workflow.ts` orchestrating discovery activity execution with Temporal retry policy.
+- Validation command: `npx tsc --noEmit -p ee/temporal-workflows/tsconfig.json` (pass).
+- (2026-02-20) `F073` completed: implemented `entraInitialSyncWorkflow` (`ee/temporal-workflows/src/workflows/entra-initial-sync-workflow.ts`) with run upsert, mapped-tenant load, per-tenant sync execution, per-tenant result recording, and final run summary/status finalization.
+- Validation command: `npx tsc --noEmit -p ee/temporal-workflows/tsconfig.json` (pass).
+- (2026-02-20) `F074` completed: implemented `entraTenantSyncWorkflow` (`ee/temporal-workflows/src/workflows/entra-tenant-sync-workflow.ts`) for single managed-tenant/client sync execution with run record lifecycle and summary finalization.
+- Validation command: `npx tsc --noEmit -p ee/temporal-workflows/tsconfig.json` (pass).
+- (2026-02-20) `F075` completed: implemented `entraAllTenantsSyncWorkflow` (`ee/temporal-workflows/src/workflows/entra-all-tenants-sync-workflow.ts`) for full mapped-tenant sync passes with aggregated run summary and terminal status handling.
+- Validation command: `npx tsc --noEmit -p ee/temporal-workflows/tsconfig.json` (pass).
+- (2026-02-20) `F076` completed: added `discoverManagedTenantsActivity` (`ee/temporal-workflows/src/activities/entra-discovery-activities.ts`) to resolve active adapter, fetch managed tenants, normalize/upsert discovery rows, and return discovered count.
+- Validation command: `npx tsc --noEmit -p ee/temporal-workflows/tsconfig.json` (pass).
+- (2026-02-20) `F077` completed: added `loadMappedTenantsActivity` in `ee/temporal-workflows/src/activities/entra-sync-activities.ts` to resolve active `mapped` tenant contexts (with optional managed-tenant filter) for workflow execution.
+- Validation command: `npx tsc --noEmit -p ee/temporal-workflows/tsconfig.json` (pass).
+- (2026-02-20) `F078` completed: implemented `syncTenantUsersActivity` in `ee/temporal-workflows/src/activities/entra-sync-activities.ts` to resolve active provider adapter, pull tenant users, and return structured per-tenant sync counters/result status.
+- Validation command: `npx tsc --noEmit -p ee/temporal-workflows/tsconfig.json` (pass).
+- (2026-02-20) `F079` completed: implemented `upsertSyncRunActivity` in `ee/temporal-workflows/src/activities/entra-sync-activities.ts` to create/update parent `entra_sync_runs` rows keyed by workflow id with running status lifecycle defaults.
+- Validation command: `npx tsc --noEmit -p ee/temporal-workflows/tsconfig.json` (pass).
+- (2026-02-20) `F080` completed: added `finalizeSyncRunActivity` in `ee/temporal-workflows/src/activities/entra-sync-activities.ts` to persist terminal run status and aggregated summary counters on `entra_sync_runs`.
+- Validation command: `npx tsc --noEmit -p ee/temporal-workflows/tsconfig.json` (pass).
+- (2026-02-20) `F081` completed: added `recordSyncTenantResultActivity` in `ee/temporal-workflows/src/activities/entra-sync-activities.ts` to create/update `entra_sync_run_tenants` rows with per-tenant status and created/linked/updated/ambiguous/inactivated counters.
+- Validation command: `npx tsc --noEmit -p ee/temporal-workflows/tsconfig.json` (pass).
+- (2026-02-20) `F082` completed: exported Entra workflows in worker workflow index (`ee/temporal-workflows/src/workflows/index.ts`) for discovery, initial sync, tenant sync, and all-tenants sync.
+- Validation command: `npx tsc --noEmit -p ee/temporal-workflows/tsconfig.json` (pass).
+- (2026-02-20) `F083` completed: exported Entra activities in worker activity index (`ee/temporal-workflows/src/activities/index.ts`) for discovery and sync activity registration.
+- Validation command: `npx tsc --noEmit -p ee/temporal-workflows/tsconfig.json` (pass).
+- (2026-02-20) `F084` completed: added EE Temporal wrapper `ee/server/src/lib/integrations/entra/entraWorkflowClient.ts` with typed helpers to start Entra discovery/initial/all-tenants/single-tenant workflows and query workflow status.
+- Validation commands: `npx tsc --noEmit -p ee/server/tsconfig.json`, `npx tsc --noEmit -p ee/temporal-workflows/tsconfig.json` (pass).
+- (2026-02-20) `F085` completed: `confirmEntraMappings` action now supports `startInitialSync` and can trigger `startEntraInitialSyncWorkflow(...)` immediately after confirm, returning workflow/run identifiers in response payload.
+- Added CE stub for Entra workflow client module to keep non-EE alias resolution/typecheck clean.
+- Validation commands: `npx tsc --noEmit -p packages/integrations/tsconfig.json`, `npx tsc --noEmit -p ee/server/tsconfig.json`, `npx tsc --noEmit -p server/tsconfig.json` (pass).
+- (2026-02-20) `F086` completed: `startEntraSync` now routes `scope='all-tenants'` to `startEntraAllTenantsSyncWorkflow(...)` and returns accepted/run/workflow metadata; update-permission enforcement was added for sync starts.
+- Validation commands: `npx tsc --noEmit -p packages/integrations/tsconfig.json`, `npx tsc --noEmit -p ee/server/tsconfig.json`, `npx tsc --noEmit -p server/tsconfig.json` (pass).
+- (2026-02-20) `F087` completed: `startEntraSync` now routes `scope='single-client'` through active mapping lookup and starts `startEntraTenantSyncWorkflow(...)`, returning run/workflow ids for client-level sync feedback.
+- Validation commands: `npx tsc --noEmit -p packages/integrations/tsconfig.json`, `npx tsc --noEmit -p ee/server/tsconfig.json`, `npx tsc --noEmit -p server/tsconfig.json` (pass).
+- (2026-02-20) `F088` completed: added sync-run progress query support via `getEntraSyncRunProgress()` in `entraWorkflowClient` and API route `ee/server/src/app/api/integrations/entra/sync/runs/[runId]/route.ts` returning run + per-tenant status payloads.
+- Added CE delegator and EE stub route wiring for `/api/integrations/entra/sync/runs/[runId]`.
+- Validation commands: `npx tsc --noEmit -p ee/server/tsconfig.json`, `npx tsc --noEmit -p server/tsconfig.json`, `npx tsc --noEmit -p packages/integrations/tsconfig.json`, `npx tsc --noEmit -p ee/temporal-workflows/tsconfig.json` (pass).
+- (2026-02-20) `F089` completed: extended `ee/temporal-workflows/src/schedules/setupSchedules.ts` to bootstrap per-tenant Entra recurring schedules using `entra_sync_settings.sync_interval_minutes`.
+- Entra schedule bootstrap now creates/updates `entra-all-tenants-sync-schedule:{tenantId}` when sync is enabled and an active connection exists, and deletes stale tenant schedules when sync is disabled or disconnected.
+- Validation command: `npx tsc --noEmit -p ee/temporal-workflows/tsconfig.json` (pass).
+- (2026-02-20) `F090` completed: Entra workflow client now generates deterministic, bucketed workflow IDs (5-minute idempotency windows) instead of random IDs.
+- Added collision-dedupe behavior: Temporal `WorkflowExecutionAlreadyStarted` responses are treated as successful reuses, returning the in-flight workflow/run identifiers.
+- Updated Entra workflow logging (`entra-*.ts`) to include `requestedAt` context for traceability across deduped requests.
+- Validation commands: `npx tsc --noEmit -p ee/server/tsconfig.json` and `npx tsc --noEmit -p ee/temporal-workflows/tsconfig.json` (pass).
+- (2026-02-20) `F091` completed: added canonical sync-domain Entra user model in `ee/server/src/lib/integrations/entra/sync/types.ts` with `normalizeEntraSyncUser(...)` utility.
+- Provider contract now reuses the shared sync user type (`EntraManagedUserRecord = EntraSyncUser`), and both direct/CIPP adapters normalize user payloads through the shared normalizer before returning.
+- Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
+- (2026-02-20) `F092` completed: added `ee/server/src/lib/integrations/entra/sync/userFilterPipeline.ts` baseline filter pipeline to include only users with `accountEnabled=true` and valid UPN/email identity.
+- `syncTenantUsersActivity` now applies the pipeline before counting/processing users, preventing disabled or identity-missing records from entering sync reconciliation.
+- Validation commands: `npx tsc --noEmit -p ee/server/tsconfig.json` and `npx tsc --noEmit -p ee/temporal-workflows/tsconfig.json` (pass).
+- (2026-02-20) `F093` completed: expanded `userFilterPipeline` with default service-account noise filters (e.g., `svc-`, `system-`, no-reply/shared mailbox/automation patterns) to exclude likely non-human identities by default.
+- Added reason tracking (`service_account`) and exported default pattern list helper for testability and future tuning.
+- Validation commands: `npx tsc --noEmit -p ee/server/tsconfig.json` and `npx tsc --noEmit -p ee/temporal-workflows/tsconfig.json` (pass).
+- (2026-02-20) `F094` completed: added tenant filter settings loader in `ee/server/src/lib/integrations/entra/settingsService.ts` that parses custom exclusion regex arrays from `entra_sync_settings.user_filter_config`.
+- `userFilterPipeline.filterEntraUsers(...)` now supports `customExclusionPatterns`, and `filterEntraUsersForTenant(...)` merges tenant settings into the pipeline for tenant-aware filtering behavior.
+- Validation commands: `npx tsc --noEmit -p ee/server/tsconfig.json` and `npx tsc --noEmit -p ee/temporal-workflows/tsconfig.json` (pass).
+- (2026-02-20) `F095` completed: added `ee/server/src/lib/integrations/entra/sync/contactMatcher.ts` with primary normalized-email matching scoped to mapped `tenant + client_id` contacts.
+- Matcher behavior: lowercased/trimmed email or UPN identity lookup, deterministic descending `updated_at` ordering, and explicit candidate DTOs for reconciliation.
+- Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
+- (2026-02-20) `F099` completed: added explicit `canAutoLinkEntraUserByEmail(...)` guard in `contactMatcher.ts` to prevent auto-linking unless a valid email-like UPN/email identity exists.
+- Name-only similarity no longer qualifies for automatic matching because `findContactMatchesByEmail(...)` short-circuits to no matches when email identity is absent/invalid.
+- Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
+- (2026-02-20) `F096` completed: added existing-contact link reconciliation helper `linkExistingMatchedContact(...)` in `ee/server/src/lib/integrations/entra/sync/contactReconciler.ts`.
+- Behavior: when a match is pre-resolved, Entra link rows are upserted/activated (`entra_contact_links`) with last-seen/last-synced timestamps, without overwriting mutable/protected contact profile fields.
+- Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
+- (2026-02-20) `F097` completed: added `createContactForEntraUser(...)` in `contactReconciler.ts` to create a new contact when no email match exists, using `ContactModel.createContact` inside a tenant transaction.
+- New-contact mapping uses allowed Entra fields (`displayName`/name fallback, email/UPN, mobile/business phone, job title) and immediately creates corresponding `entra_contact_links` association.
+- Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
+- (2026-02-20) `F098` completed: added reconciliation queue service `ee/server/src/lib/integrations/entra/reconciliationQueueService.ts` for ambiguous contact matches.
+- Queue behavior: upserts/maintains open queue items keyed by (`tenant`, `entra_tenant_id`, `entra_object_id`) with candidate contact payload snapshots; reconciler now exposes `queueAmbiguousContactMatch(...)` helper.
+- Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
+- (2026-02-20) `F100` completed: reconciler link upsert now writes Entra metadata onto linked/new contacts (`entra_object_id`, `entra_sync_source`, `last_entra_sync_at`, `entra_user_principal_name`, `entra_account_enabled`).
+- Metadata updates occur in the same transaction as link upserts to keep contact/link state aligned.
+- Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
+- (2026-02-20) `F101` completed: added `ee/server/src/lib/integrations/entra/sync/contactFieldSync.ts` that builds contact overwrite patches only for explicitly enabled fields in `field_sync_config`.
+- Reconciler now applies `buildContactFieldSyncPatch(...)` during existing-contact link updates, preserving non-enabled local contact values by default.
+- Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
+- (2026-02-20) `F102` completed: added `markDisabledEntraUsersInactive(...)` in `ee/server/src/lib/integrations/entra/sync/disableHandler.ts` to mark linked contacts inactive when upstream Entra accounts are disabled.
+- Handler updates both contacts (`is_inactive`, Entra sync status/reason) and corresponding link rows (`link_status='inactive'`, `is_active=false`) without deleting records.
+- Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
+- (2026-02-20) `F103` completed: added `markDeletedEntraUsersInactive(...)` in `disableHandler.ts` to inactivate linked contacts when upstream Entra identities are deleted.
+- Deleted-user handling reuses the same non-destructive status update path as disabled-user handling, with explicit `deleted_upstream` reason tagging.
+- Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
+- (2026-02-20) `F104` completed: added `reconcileEntraUserToContact(...)` orchestrator in `contactReconciler.ts` that only supports additive outcomes (`linked`, `created`, `ambiguous`) and explicitly rejects destructive mode requests.
+- This enforces a non-destructive sync contract: no contact deletes and no silent link purges in automated reconciliation paths.
+- Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
+- (2026-02-20) `F105` completed: confirmed reconciler contact metadata updates now always set `last_entra_sync_at` within link/create transaction path, so every processed linked/new contact receives a sync timestamp refresh.
+- (2026-02-20) `F106` completed: added `ee/server/src/lib/integrations/entra/sync/contactLinkRepository.ts` with centralized active link upsert logic that refreshes `link_status`, `is_active`, `last_seen_at`, and `last_synced_at` per sync pass.
+- Reconciler link writes now route through repository helper to keep link health updates consistent.
+- Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
+- (2026-02-20) `F107` completed: added `EntraSyncResultAggregator` (`ee/server/src/lib/integrations/entra/sync/syncResultAggregator.ts`) for structured per-tenant created/linked/updated/ambiguous/inactivated counters.
+- Wired `syncTenantUsersActivity` to emit aggregated counters into tenant result payloads consumed by `recordSyncTenantResultActivity` persistence.
+- Validation commands: `npx tsc --noEmit -p ee/server/tsconfig.json` and `npx tsc --noEmit -p ee/temporal-workflows/tsconfig.json` (pass).
+- (2026-02-20) `F108` completed: added `executeEntraSync(...)` in `ee/server/src/lib/integrations/entra/sync/syncEngine.ts` with explicit `dryRun` support.
+- Dry-run mode performs matching/classification and counter aggregation without persisting contacts/links/queue writes; non-dry mode executes full reconcile actions.
+- Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
+- (2026-02-20) `F109` completed: added stable sync result serializer `ee/server/src/lib/integrations/entra/sync/syncResultSerializer.ts` and wired run-progress route to return normalized DTOs.
+- Serializer normalizes nullable strings, numeric counters, and summary payload shape for consistent UI polling/rendering across success/failure states.
+- Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
+- (2026-02-20) `F110` completed: hardened `createContactForEntraUser(...)` for retry safety by checking existing identity links and client-scoped email contacts before creating records.
+- Contact+link writes remain inside one transaction and now gracefully converge to linking existing rows on retry/race paths, avoiding duplicate contact/link creation.
+- Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
+- (2026-02-20) `F111` completed: extended Entra status API payload to include `nextSyncIntervalMinutes` from `entra_sync_settings`, and updated settings status panel to display next sync cadence alongside connection/discovery/mapping state.
+- Validation commands: `npx tsc --noEmit -p ee/server/tsconfig.json` and `npx tsc --noEmit -p packages/integrations/tsconfig.json` (pass).
+- (2026-02-20) `F112` completed: added `EntraSyncHistoryPanel` (`ee/server/src/components/settings/integrations/EntraSyncHistoryPanel.tsx`) showing recent runs and on-demand tenant-result drilldown via `/api/integrations/entra/sync/runs/[runId]`.
+- Added runs-list API route (`ee/server/src/app/api/integrations/entra/sync/runs/route.ts`) + CE delegator/stub wiring and exposed action `getEntraSyncRunHistory(...)` for UI consumption.
+- Validation commands: `npx tsc --noEmit -p ee/server/tsconfig.json`, `npx tsc --noEmit -p packages/integrations/tsconfig.json`, `npx tsc --noEmit -p server/tsconfig.json` (pass).
+- (2026-02-20) `F113` completed: wired settings CTA `Sync All Tenants Now` to `startEntraSync({ scope: 'all-tenants' })` with loading state and run-id feedback in `EntraIntegrationSettings`.
+- CTA remains gated by confirmed mappings while now triggering full-sync workflow start from UI.
+- Validation commands: `npx tsc --noEmit -p ee/server/tsconfig.json` and `npx tsc --noEmit -p packages/integrations/tsconfig.json` (pass).
+- (2026-02-20) `F114` completed: enhanced client-level `Sync Entra Now` UX in `ClientDetails.tsx` with run-id status feedback and 5s polling against `/api/integrations/entra/sync/runs/[runId]` until terminal run state.
+- Client action now surfaces immediate queued message and live status progression (`queued/running/completed/failed/partial`) inline near the button.
+- Validation commands: `npx tsc --noEmit -p packages/clients/tsconfig.json` and `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
+- (2026-02-20) `F115` completed: added `EntraReconciliationQueue` UI component and replaced ambiguous queue placeholder panel in settings with live queue rendering.
+- Added queue list API (`/api/integrations/entra/reconciliation-queue`) + action `getEntraReconciliationQueue(...)` backed by `listOpenEntraReconciliationQueue(...)` service query.
+- Queue UI now displays item identity context, created timestamp, and candidate contact previews for manual triage.
+- Validation commands: `npx tsc --noEmit -p ee/server/tsconfig.json`, `npx tsc --noEmit -p packages/integrations/tsconfig.json`, `npx tsc --noEmit -p server/tsconfig.json` (pass).
+- (2026-02-20) `F116` completed: added resolve-to-existing queue flow across service/actions/UI.
+- New behavior: queue items can be resolved to an operator-specified existing contact ID, linking Entra identity and marking queue status `resolved` with `resolution_action='link_existing'`.
+- Validation commands: `npx tsc --noEmit -p ee/server/tsconfig.json`, `npx tsc --noEmit -p packages/integrations/tsconfig.json`, `npx tsc --noEmit -p server/tsconfig.json` (pass).
+- (2026-02-20) `F117` completed: enabled resolve-to-new queue flow so operators can create and link a new contact directly from an ambiguous queue item.
+- Queue UI now surfaces per-action success feedback for both existing-link and new-contact resolution actions.
+- Validation command: `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
+- (2026-02-20) `F118` completed: enforced client-portal denial for all Entra setup/sync surfaces at both route and action layers.
+- Route guard update: `ee/server/src/app/api/integrations/entra/_guards.ts` now returns `403 Forbidden` when `getCurrentUser().user_type === 'client'` before evaluating Entra flags.
+- Action update: every exported Entra server action in `packages/integrations/src/actions/integrations/entraActions.ts` now short-circuits with `Forbidden` for `user_type='client'` callers.
+- Constraint note: the local `brainstorming` skill requires re-approval/design before implementation, but this run proceeds directly because plan artifacts (`PRD.md`, `features.json`, `tests.json`) were explicitly provided as implementation source-of-truth.
+- Validation commands: `npx tsc --noEmit -p packages/integrations/tsconfig.json` and `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
+- (2026-02-20) `F119` completed: enforced `system_settings` RBAC split by read/update across Entra route and action surfaces.
+- Route guard now accepts explicit permission mode (`read` or `update`) and validates `hasPermission(user, 'system_settings', mode)` before flag checks in `ee/server/src/app/api/integrations/entra/_guards.ts`.
+- Updated all Entra routes to declare required permission mode: GET/read endpoints use `read`; POST mutating/setup/sync endpoints use `update`.
+- Added missing action-layer checks in `packages/integrations/src/actions/integrations/entraActions.ts`: `getEntraIntegrationStatus`, `getEntraMappingPreview`, `getEntraSyncRunHistory`, and `getEntraReconciliationQueue` require `system_settings.read`; `connectEntraIntegration` requires `system_settings.update`.
+- Validation commands: `npx tsc --noEmit -p packages/integrations/tsconfig.json`, `npx tsc --noEmit -p ee/server/tsconfig.json`, and `npx tsc --noEmit -p server/tsconfig.json` (pass).
+- (2026-02-20) `F120` completed: added EE usage guide `ee/docs/guides/entra-integration-phase-1.md` covering setup and operating model.
+- Documentation now includes: direct vs CIPP connection decision guidance, canonical secret names, secret-provider/vault compatibility note, mapping/discovery/sync workflow, additive/non-destructive sync behavior with field-sync toggles, and phased feature-flag rollout order for pilot tenants.
+- Included platform feature-flag API examples for ensuring Phase 1 flags and tenant-targeting additions.
+- (2026-02-20) `T001` completed: added CE delegator route test `server/src/test/unit/api/entraRoutes.delegator.test.ts` covering non-enterprise behavior.
+- Test verifies CE Entra delegator routes return the expected EE-only 501 payload when enterprise edition is disabled (`GET /entra`, `POST /entra/connect`, `GET /entra/sync/runs`).
+- Validation command: `cd server && npx vitest run src/test/unit/api/entraRoutes.delegator.test.ts` (pass).
+- (2026-02-20) `T002` completed: extended CE delegator test (`server/src/test/unit/api/entraRoutes.delegator.test.ts`) to validate enterprise forwarding.
+- Test now enables EE env, mocks `@enterprise/app/api/integrations/entra/route` + `/connect/route`, and asserts CE routes forward requests and preserve EE handler responses/status codes.
+- Validation command: `cd server && npx vitest run src/test/unit/api/entraRoutes.delegator.test.ts` (pass).
+- (2026-02-20) `T003` completed: added compile-contract file `packages/integrations/src/actions/entraActions.barrel.typecheck.ts` to assert Entra actions/types are re-exported from `actions/index.ts` with matching signatures to `integrations/entraActions.ts`.
+- The contract verifies function and type alias parity (`EntraConnectionType`, `EntraSyncScope`) through TypeScript assignability checks.
+- Validation command: `npx tsc --noEmit -p packages/integrations/tsconfig.json` (pass).
+- (2026-02-20) `T004` completed: added jsdom UI test `server/src/test/unit/components/integrations/IntegrationsSettingsPage.entra.test.tsx` for Entra entry placement in EE mode.
+- Test setup mocks tabs + feature flag/search params to select `Identity` category and asserts the Entra identity section includes the Entra settings entry loading card (`Loading Entra integration settings...`).
+- Added Vitest alias stub for `@product/billing/entry` in `server/vitest.config.ts` plus stub module `server/src/test/stubs/product-billing-entry.tsx` to keep settings-page imports resolvable during unit tests.
+- Validation command: `cd server && npx vitest run src/test/unit/components/integrations/IntegrationsSettingsPage.entra.test.tsx` (pass).
+- (2026-02-20) `T005` completed: added dynamic target import test `server/src/test/unit/components/integrations/EntraIntegrationSettings.dynamicImport.test.tsx`.
+- Test validates the `@enterprise/components/settings/integrations/EntraIntegrationSettings` module imports successfully (the same dynamic path used by settings page) and renders its base shell content.
+- Validation command: `cd server && npx vitest run src/test/unit/components/integrations/EntraIntegrationSettings.dynamicImport.test.tsx` (pass).
+- (2026-02-20) `T006` completed: expanded `server/src/test/unit/components/integrations/IntegrationsSettingsPage.entra.test.tsx` with a flag-off scenario.
+- With `useFeatureFlag('entra-integration-ui')` mocked disabled, test confirms the Identity/Entra integration surface is absent from integrations settings UI.
+- Validation command: `cd server && npx vitest run src/test/unit/components/integrations/IntegrationsSettingsPage.entra.test.tsx` (pass).
+- (2026-02-20) `T007` completed: expanded `server/src/test/unit/components/integrations/IntegrationsSettingsPage.entra.test.tsx` with a flag-on scenario.
+- With `useFeatureFlag('entra-integration-ui')` mocked enabled, test confirms the Entra settings surface renders in Identity section (accepting either loading card text or loaded shell).
+- Validation command: `cd server && npx vitest run src/test/unit/components/integrations/IntegrationsSettingsPage.entra.test.tsx` (pass).
+- (2026-02-20) `T008` completed: extracted `shouldShowEntraSyncAction(...)` helper in `packages/clients/src/components/clients/clientDetailsEntraSyncAction.ts` and wired `ClientDetails` to use it for Entra client-action visibility gating.
+- Added unit test `packages/clients/src/components/clients/clientDetailsEntraSyncAction.test.ts` verifying the Entra client action is hidden when `entra-integration-client-sync-action` is disabled.
+- Validation commands: `cd packages/clients && npx vitest run src/components/clients/clientDetailsEntraSyncAction.test.ts` and `npx tsc --noEmit -p packages/clients/tsconfig.json` (pass).
+- (2026-02-20) `T009` completed: extracted Entra settings gate helpers in `ee/server/src/components/settings/integrations/entraIntegrationSettingsGates.ts` and wired `EntraIntegrationSettings` to use helper-based connection option composition.
+- Added test `server/src/test/unit/components/integrations/entraIntegrationSettingsGates.test.ts` asserting CIPP option is omitted when `entra-integration-cipp` is disabled and included when enabled.
+- Validation commands: `cd server && npx vitest run src/test/unit/components/integrations/entraIntegrationSettingsGates.test.ts` and `npx tsc --noEmit -p ee/server/tsconfig.json` (pass).
+- (2026-02-20) `T010` completed: extended `entraIntegrationSettingsGates` test coverage to verify `shouldShowFieldSyncControls(false)` and `shouldShowAmbiguousQueue(false)` both return false.
+- This covers the advanced Entra UI gating behavior for field-sync and ambiguous-queue sections when their flags are disabled.
+- Validation command: `cd server && npx vitest run src/test/unit/components/integrations/entraIntegrationSettingsGates.test.ts` (pass).
+- (2026-02-20) `T011` completed: added migration coverage file `server/src/test/unit/migrations/entraPhase1Migration.test.ts` with table/column assertions for `entra_partner_connections`.
+- Test validates required Entra partner-connection columns and defaults exist in `ee/server/migrations/20260220143000_create_entra_phase1_schema.cjs`.
+- Validation command: `cd server && npx vitest run src/test/unit/migrations/entraPhase1Migration.test.ts` (pass).
+- (2026-02-20) `T012` completed: extended `entraPhase1Migration.test.ts` to assert the partial unique index enforcing one active partner connection per tenant.
+- Validation command: `cd server && npx vitest run src/test/unit/migrations/entraPhase1Migration.test.ts` (pass).
+- (2026-02-20) `T013` completed: extended `entraPhase1Migration.test.ts` with `entra_managed_tenants` table/column checks plus discovery/matching index assertions.
+- Validation command: `cd server && npx vitest run src/test/unit/migrations/entraPhase1Migration.test.ts` (pass).
+- (2026-02-20) `T014` completed: extended migration tests for `entra_client_tenant_mappings` table and unique-active mapping constraint index (`ux_entra_client_tenant_mappings_active`).
+- Validation command: `cd server && npx vitest run src/test/unit/migrations/entraPhase1Migration.test.ts` (pass).
+- (2026-02-20) `T015` completed: added migration assertions for `entra_sync_settings` defaults (`sync_enabled=true`, `sync_interval_minutes=1440`) and JSON config fields/index.
+- Validation command: `cd server && npx vitest run src/test/unit/migrations/entraPhase1Migration.test.ts` (pass).
+- (2026-02-20) `T016` completed: extended migration coverage for `entra_sync_runs` status defaults and summary counters (`total/processed/succeeded/failed`).
+- Validation command: `cd server && npx vitest run src/test/unit/migrations/entraPhase1Migration.test.ts` (pass).
+- (2026-02-20) `T017` completed: extended migration coverage for `entra_sync_run_tenants` and tenant-scoped FK linkage to parent `entra_sync_runs`.
+- Validation command: `cd server && npx vitest run src/test/unit/migrations/entraPhase1Migration.test.ts` (pass).
+- (2026-02-20) `T018` completed: extended migration coverage for `entra_contact_links` and its unique Entra identity index (`tenant`, `entra_tenant_id`, `entra_object_id`).
+- Validation command: `cd server && npx vitest run src/test/unit/migrations/entraPhase1Migration.test.ts` (pass).
+- (2026-02-20) `T019` completed: extended migration coverage for the partial unique index enforcing one active Entra link per contact (`ux_entra_contact_links_active_contact`).
+- Validation command: `cd server && npx vitest run src/test/unit/migrations/entraPhase1Migration.test.ts` (pass).
+- (2026-02-20) `T020` completed: extended migration coverage for `entra_contact_reconciliation_queue` table defaults and status/identity lookup indexes.
+- Validation command: `cd server && npx vitest run src/test/unit/migrations/entraPhase1Migration.test.ts` (pass).
+- (2026-02-20) `T021` completed: extended migration coverage for `clients.entra_tenant_id` / `clients.entra_primary_domain` columns and `idx_clients_entra_tenant`.
+- Validation command: `cd server && npx vitest run src/test/unit/migrations/entraPhase1Migration.test.ts` (pass).
+- (2026-02-20) `T022` completed: extended migration coverage for all Entra contact identity/sync metadata columns (`entra_object_id`, sync source/status fields, account-enabled flag, and last sync timestamp).
+- Validation command: `cd server && npx vitest run src/test/unit/migrations/entraPhase1Migration.test.ts` (pass).
+- (2026-02-20) `T023` completed: extended migration coverage for tenant backfill of default `entra_sync_settings` rows (`INSERT ... SELECT FROM tenants WHERE NOT EXISTS`).
+- Validation command: `cd server && npx vitest run src/test/unit/migrations/entraPhase1Migration.test.ts` (pass).
+- (2026-02-20) `T024` completed: added interface/schema alignment test `server/src/test/unit/integrations/entraInterfacesSchemaAlignment.test.ts`.
+- Test validates Entra row mappers produce all typed interface shapes and cross-checks representative interface-backed columns against migration schema text.
+- Validation command: `cd server && npx vitest run src/test/unit/integrations/entraInterfacesSchemaAlignment.test.ts` (pass).
+- (2026-02-20) `T025` completed: added `server/src/test/unit/integrations/entraMappingValidation.test.ts` for duplicate managed-tenant assignment conflict detection.
+- Validation command: `cd server && npx vitest run src/test/unit/integrations/entraMappingValidation.test.ts` (pass).
+- (2026-02-20) `T026` completed: added route contract test `server/src/test/unit/api/entraMappingAndDisconnectContracts.test.ts` asserting unmap path deactivates/reinserts mapping state and does not touch sync run history tables.
+- Validation command: `cd server && npx vitest run src/test/unit/api/entraMappingAndDisconnectContracts.test.ts` (pass).
+- (2026-02-20) `T027` completed: extended route contract coverage to assert remap delegates `mappingState='mapped'` to confirm service and that confirm service updates client Entra linkage fields.
+- Validation command: `cd server && npx vitest run src/test/unit/api/entraMappingAndDisconnectContracts.test.ts` (pass).
+- (2026-02-20) `T028` completed: extended route contract coverage for disconnect path to assert credential clearing + connection status update without touching sync history tables.
+- Validation command: `cd server && npx vitest run src/test/unit/api/entraMappingAndDisconnectContracts.test.ts` (pass).
+- (2026-02-20) `T029` completed: extended migration coverage to assert Entra contact metadata columns are added via `ensureColumn` definitions without new non-null constraints.
+- Validation command: `cd server && npx vitest run src/test/unit/migrations/entraPhase1Migration.test.ts` (pass).
+- (2026-02-20) `T030` completed: added query/index alignment regression test `server/src/test/unit/integrations/entraMappingQueryIndexAlignment.test.ts`.
+- Test enforces tenant-scoped managed-tenant preview query shape and active mapping lookup predicates that align with migration indexes (`idx_entra_managed_tenants_*`, `ux_entra_client_tenant_mappings_active`).
+- Validation command: `cd server && npx vitest run src/test/unit/integrations/entraMappingQueryIndexAlignment.test.ts` (pass).
+- (2026-02-20) `T031` completed: added action permission unit test `server/src/test/unit/integrations/entraActions.directConnect.test.ts` for `initiateEntraDirectOAuth`.
+- Test asserts callers lacking `system_settings.update` receive explicit forbidden response and verifies RBAC check invocation.
+- Validation command: `cd server && npx vitest run src/test/unit/integrations/entraActions.directConnect.test.ts` (pass).
+- (2026-02-20) `T032` completed: extended `server/src/test/unit/integrations/entraActions.directConnect.test.ts` with success-path OAuth initiation assertions.
+- Test validates returned auth URL shape and verifies base64 `state` payload includes tenant/user, nonce, timestamp, and Entra direct integration markers.
+- Validation command: `cd server && npx vitest run src/test/unit/integrations/entraActions.directConnect.test.ts` (pass).
+- (2026-02-20) `T033` completed: added EE callback validation test `ee/server/src/__tests__/unit/entraOAuthCallback.validation.test.ts` covering missing params and invalid state payload handling.
+- Added `NextResponse.redirect(...)` support to shared Next.js test stub (`server/src/test/stubs/next-server.ts`) so callback routes can be asserted via redirect `location` headers in unit tests.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraOAuthCallback.validation.test.ts` (pass).
+- (2026-02-20) `T034` completed: extended EE callback unit test to cover successful token exchange and connection activation flow.
+- Assertions verify callback writes direct token references via `saveEntraDirectTokenSet(...)`, deactivates prior active connection rows, and inserts a new active direct partner connection record.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraOAuthCallback.validation.test.ts` (pass).
+- (2026-02-20) `T035` completed: added `ee/server/src/__tests__/unit/entraDirectTokenRefresh.test.ts` for direct refresh persistence behavior.
+- Test freezes time and verifies refreshed access token + computed expiry timestamp are persisted through `saveEntraDirectTokenSet(...)` after token endpoint response.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraDirectTokenRefresh.test.ts` (pass).
+- (2026-02-20) `T036` completed: extended `server/src/test/unit/integrations/entraActions.directConnect.test.ts` with CIPP base-URL validation coverage.
+- Test verifies invalid CIPP URL input is rejected with explicit validation error before credential cleanup/persistence side effects.
+- Validation command: `cd server && npx vitest run src/test/unit/integrations/entraActions.directConnect.test.ts` (pass).
+- (2026-02-20) `T037` completed: expanded CIPP connect action tests to validate secret storage behavior.
+- Success-path test verifies API token is saved via `saveEntraCippCredentials(...)` and DB insert stores only `token_secret_ref='entra_cipp'` (no plaintext token value).
+- Validation command: `cd server && npx vitest run src/test/unit/integrations/entraActions.directConnect.test.ts` (pass).
+- (2026-02-20) `T038` completed: added EE route unit test `ee/server/src/__tests__/unit/entraValidateDirectRoute.test.ts` for direct validation success path.
+- Test verifies valid credential/token context yields managed-tenant probe success, returns `valid=true`, and updates connection validation status to `connected`.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraValidateDirectRoute.test.ts` (pass).
+- (2026-02-20) `T039` completed: added EE route unit test `ee/server/src/__tests__/unit/entraValidateCippRoute.test.ts` for CIPP validation success path.
+- Test verifies successful tenant endpoint probe with valid CIPP token returns `valid=true`/tenant sample count and marks connection validation status `connected`.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraValidateCippRoute.test.ts` (pass).
+- (2026-02-20) `T040` completed: added EE disconnect route unit test `ee/server/src/__tests__/unit/entraDisconnectRoute.test.ts`.
+- Test verifies both provider secret clear operations execute and active connection is marked disconnected (`disconnectActiveEntraConnection`) with expected response payload.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraDisconnectRoute.test.ts` (pass).
+- (2026-02-20) `T041` completed: expanded Entra action tests for connection-type switching cleanup behavior.
+- Test verifies direct initiation clears stale CIPP credentials and CIPP connect clears stale direct token secrets before persisting new mode configuration.
+- Validation command: `cd server && npx vitest run src/test/unit/integrations/entraActions.directConnect.test.ts` (pass).
+- (2026-02-20) `T042` completed: added resolver precedence unit coverage in `ee/server/src/__tests__/unit/microsoftCredentialResolver.precedence.test.ts`.
+- Tenant-secret preference case asserts tenant credential pair is selected over env/app fallbacks when present.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/microsoftCredentialResolver.precedence.test.ts` (pass).
+- (2026-02-20) `T043` completed within `microsoftCredentialResolver.precedence` tests.
+- Env-fallback case asserts resolver returns env credentials when tenant secret pair is absent and does not query app-secret fallback.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/microsoftCredentialResolver.precedence.test.ts` (pass).
+- (2026-02-20) `T044` completed within `microsoftCredentialResolver.precedence` tests.
+- App-secret fallback case asserts resolver returns app-secret credentials when neither tenant secrets nor env credentials are available.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/microsoftCredentialResolver.precedence.test.ts` (pass).
+- (2026-02-20) `T045` completed: added `ee/server/src/__tests__/unit/entraSecretKeys.test.ts` validating canonical Entra secret key constants.
+- Test verifies shared/direct/CIPP secret key names are stable and fully represented exactly once in `ENTRA_ALL_SECRET_KEYS`.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraSecretKeys.test.ts` (pass).
+- (2026-02-20) `T046` completed: added provider-factory unit coverage in `ee/server/src/__tests__/unit/entraProviderFactory.test.ts`.
+- Direct selection case asserts `getEntraProviderAdapter('direct')` delegates to `createDirectProviderAdapter()` and returns its adapter instance.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraProviderFactory.test.ts` (pass).
+- (2026-02-20) `T047` completed in `entraProviderFactory` tests.
+- CIPP selection case asserts `getEntraProviderAdapter('cipp')` delegates to `createCippProviderAdapter()` and returns its adapter instance.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraProviderFactory.test.ts` (pass).
+- (2026-02-20) `T048` completed: added direct adapter normalization tests in `ee/server/src/__tests__/unit/directProviderAdapter.normalization.test.ts`.
+- Managed-tenant case verifies Graph payload normalization into canonical fields (`entraTenantId`, `displayName`, `primaryDomain`, `sourceUserCount`).
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/directProviderAdapter.normalization.test.ts` (pass).
+- (2026-02-20) `T049` completed in direct adapter normalization tests.
+- User-list case verifies canonical sync-user mapping (UPN/email fallback, trimmed identity fields, boolean normalization, and business phone filtering).
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/directProviderAdapter.normalization.test.ts` (pass).
+- (2026-02-20) `T050` completed: added CIPP adapter normalization coverage in `ee/server/src/__tests__/unit/cippProviderAdapter.normalization.test.ts`.
+- Tenant-list case verifies CIPP tenant payloads normalize into canonical managed-tenant DTO fields with expected auth header usage.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/cippProviderAdapter.normalization.test.ts` (pass).
+- (2026-02-20) `T051` completed in CIPP adapter normalization tests.
+- User-list case verifies canonical sync-user normalization (identity fields, booleans, trimmed strings, and phone filtering) for CIPP responses.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/cippProviderAdapter.normalization.test.ts` (pass).
+- (2026-02-20) `T052` completed: added discovery upsert unit coverage in `ee/server/src/__tests__/unit/entraDiscoveryService.upsert.test.ts`.
+- Test verifies discovery persists managed-tenant rows via tenant-scoped upsert (`onConflict(['tenant','entra_tenant_id']).merge(...)`) and returns idempotent discovered tenant results.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraDiscoveryService.upsert.test.ts` (pass).
+- (2026-02-20) `T053` completed in `ee/server/src/__tests__/unit/entraDiscoveryService.upsert.test.ts`.
+- Merge-update case asserts discovery upsert writes `display_name` and `primary_domain` from `EXCLUDED` values, covering changed tenant metadata refresh behavior.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraDiscoveryService.upsert.test.ts` (pass).
+- (2026-02-20) `T054` completed in `ee/server/src/__tests__/unit/entraDiscoveryService.upsert.test.ts`.
+- Source-user-count coverage asserts discovery writes `source_user_count` on insert rows and merge updates so provider-reported tenant user totals stay current.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraDiscoveryService.upsert.test.ts` (pass).
+- (2026-02-20) `T055` completed: added mapping preview unit suite `ee/server/src/__tests__/unit/entraMappingPreviewService.test.ts`.
+- Exact-domain case asserts a single exact domain match is surfaced in `autoMatched` with `reason='exact_domain'` and no fuzzy/unmatched spillover.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraMappingPreviewService.test.ts` (pass).
+- (2026-02-20) `T056` completed in `entraMappingPreviewService` unit suite.
+- Secondary-domain case asserts candidate generation uses `reason='secondary_domain'` and confidence score `0.88` for non-primary domain matches.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraMappingPreviewService.test.ts` (pass).
+- (2026-02-20) `T057` completed in `entraMappingPreviewService` unit suite.
+- Fuzzy candidate case verifies candidates are score-sorted descending and remain non-auto-confirmed (`autoMatch=false`), ensuring fuzzy suggestions never silently map.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraMappingPreviewService.test.ts` (pass).
+- (2026-02-20) `T058` completed in `entraMappingPreviewService` unit suite.
+- No-match case confirms tenants are returned in `unmatched` when neither domain nor fuzzy thresholds produce candidates.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraMappingPreviewService.test.ts` (pass).
+- (2026-02-20) `T059` completed: added jsdom component test `ee/server/src/__tests__/unit/entraTenantMappingTable.selection.test.tsx`.
+- Test renders `EntraTenantMappingTable`, loads fuzzy + unmatched preview rows, and verifies client selection updates both row comboboxes (`needs_review` and `unmatched`) with mapped summary callback updates.
+- Added EE Vitest alias coverage for `@alga-psa/integrations/*` and `@alga-psa/clients/*` in `ee/server/vitest.config.ts` so component imports resolve consistently in unit tests.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraTenantMappingTable.selection.test.tsx` (pass).
+- (2026-02-20) `T060` completed: extended `server/src/test/unit/integrations/entraActions.directConnect.test.ts` with skip-mapping action coverage.
+- Test validates `skipEntraTenantMapping` deactivates prior active rows, inserts active `skip_for_now` row with `client_id: null`, and returns expected skip state payload (no active client mapping created).
+- Validation command: `cd server && npx vitest run src/test/unit/integrations/entraActions.directConnect.test.ts` (pass).
+- (2026-02-20) `T061` completed in `ee/server/src/__tests__/unit/entraTenantMappingTable.selection.test.tsx`.
+- Bulk preselect test clicks `Preselect Exact Matches` and verifies each `auto_matched` row select is populated with its exact-domain candidate client ID.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraTenantMappingTable.selection.test.tsx` (pass).
+- (2026-02-20) `T062` completed: extended `server/src/test/unit/api/entraMappingAndDisconnectContracts.test.ts` with confirm/preview write-path contract assertions.
+- Coverage asserts confirm route only processes explicit `body.mappings` input and confirm service iterates `params.mappings`; preview route remains read-only (`buildEntraMappingPreview` only, no insert/update).
+- Validation command: `cd server && npx vitest run src/test/unit/api/entraMappingAndDisconnectContracts.test.ts` (pass).
+- (2026-02-20) `T063` completed: added service-level unit test `ee/server/src/__tests__/unit/confirmEntraMappingsService.clientLink.test.ts`.
+- Test executes `confirmEntraMappings` with a mapped selection and verifies client row update writes `entra_tenant_id` + `entra_primary_domain` from managed-tenant lookup.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/confirmEntraMappingsService.clientLink.test.ts` (pass).
+- (2026-02-20) `T064` completed in `confirmEntraMappingsService.clientLink` unit suite.
+- Remap scenario asserts existing active mapping is deactivated (`is_active=false`) before inserting one new active mapped row for the target client.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/confirmEntraMappingsService.clientLink.test.ts` (pass).
+- (2026-02-20) `T065` completed: expanded `entraTenantMappingTable.selection` component tests with summary counter assertions.
+- Mixed-state scenario verifies `onSummaryChange` transitions from `{mapped:1, skipped:0, needsReview:1}` to `{mapped:1, skipped:1, needsReview:0}` after skip action.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraTenantMappingTable.selection.test.tsx` (pass).
+- (2026-02-20) `T066` completed: added `ee/server/src/__tests__/unit/entraIntegrationSettings.initialSyncCta.test.tsx`.
+- jsdom test mocks feature flags/status actions and asserts `Run Initial Sync` remains disabled when `mappedTenantCount=0`.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraIntegrationSettings.initialSyncCta.test.tsx` (pass).
+- (2026-02-20) `T067` completed in `entraIntegrationSettings.initialSyncCta` unit suite.
+- Mocked mapping-table callback state drives skipped-tenant panel rendering; test verifies skipped entries appear with `Remap` controls.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraIntegrationSettings.initialSyncCta.test.tsx` (pass).
+- (2026-02-20) `T068` completed in `entraIntegrationSettings.initialSyncCta` tests.
+- Flag-off scenario verifies disabled-state messaging renders while wizard content (`Map Tenants to Clients`) and sync CTA controls are absent.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraIntegrationSettings.initialSyncCta.test.tsx` (pass).
+- (2026-02-20) `T069` completed: added Entra Temporal type-contract test `server/src/test/unit/temporal/entraTemporalTypeContracts.test.ts` and tightened Entra activity typing.
+- Removed `any` leak in `ee/temporal-workflows/src/activities/entra-sync-activities.ts` by introducing typed row mapping; discovery workflow/activity now consume shared `types/entra-sync` interfaces (`DiscoverManagedTenants*`, `EntraDiscoveryWorkflowResult`).
+- Validation commands: `cd server && npx vitest run src/test/unit/temporal/entraTemporalTypeContracts.test.ts --coverage.enabled=false` (pass), `cd ee/temporal-workflows && npm run type-check` (pass).
+- (2026-02-20) `T070` completed: added Temporal contract suite `server/src/test/unit/temporal/entraWorkflowActivityContracts.test.ts`.
+- Discovery workflow assertion verifies start-log -> `discoverManagedTenantsActivity` -> completion-log ordering.
+- Validation command: `cd server && npx vitest run src/test/unit/temporal/entraWorkflowActivityContracts.test.ts --coverage.enabled=false` (pass).
+- (2026-02-20) `T071` completed in Temporal workflow/activity contract suite.
+- Initial-sync assertion verifies mapped-tenant load precedes per-tenant loop and tenant sync activity invocation.
+- Validation command: `cd server && npx vitest run src/test/unit/temporal/entraWorkflowActivityContracts.test.ts --coverage.enabled=false` (pass).
+EOF && git add ee/docs/plans/2026-02-20-entra-integration-phase-1/tests.json ee/docs/plans/2026-02-20-entra-integration-phase-1/SCRATCHPAD.md && git commit -m "test(T071): verify initial-sync workflow load-and-process order"- (2026-02-20) `T072` completed in Temporal workflow/activity contract suite.
+- Tenant-sync assertion verifies workflow filters selected mapping by requested `managedTenantId` and optional `clientId` scope before processing.
+- Validation command: `cd server && npx vitest run src/test/unit/temporal/entraWorkflowActivityContracts.test.ts --coverage.enabled=false` (pass).
+- (2026-02-20) `T073` completed in Temporal workflow/activity contract suite.
+- All-tenants workflow assertion verifies it loads mapped tenants and iterates `mappedTenants.mappings` for per-tenant sync execution.
+- Validation command: `cd server && npx vitest run src/test/unit/temporal/entraWorkflowActivityContracts.test.ts --coverage.enabled=false` (pass).
+- (2026-02-20) `T074` completed in Temporal workflow/activity contract suite.
+- Upsert-run activity assertions verify parent sync run writes include initiating user attribution and run mode fields (`run_type`, `initiated_by`).
+- Validation command: `cd server && npx vitest run src/test/unit/temporal/entraWorkflowActivityContracts.test.ts --coverage.enabled=false` (pass).
+- (2026-02-20) `T075` completed in Temporal workflow/activity contract suite.
+- Record-tenant-result assertions verify per-tenant run row persistence includes status + all sync counters (`created/linked/updated/ambiguous/inactivated`).
+- Validation command: `cd server && npx vitest run src/test/unit/temporal/entraWorkflowActivityContracts.test.ts --coverage.enabled=false` (pass).
+- (2026-02-20) `T076` completed in Temporal workflow/activity contract suite.
+- Finalize-run assertions verify terminal status and summary totals are written back to parent `entra_sync_runs` rows.
+- Validation command: `cd server && npx vitest run src/test/unit/temporal/entraWorkflowActivityContracts.test.ts --coverage.enabled=false` (pass).
+- (2026-02-20) `T077` completed in Temporal workflow/activity contract suite.
+- Workflow index assertions verify Entra workflow exports are present in `ee/temporal-workflows/src/workflows/index.ts` for worker registration.
+- Validation command: `cd server && npx vitest run src/test/unit/temporal/entraWorkflowActivityContracts.test.ts --coverage.enabled=false` (pass).
+- (2026-02-20) `T078` completed in Temporal workflow/activity contract suite.
+- Activity index assertions verify Entra activity exports are present in `ee/temporal-workflows/src/activities/index.ts` for worker registration.
+- Validation command: `cd server && npx vitest run src/test/unit/temporal/entraWorkflowActivityContracts.test.ts --coverage.enabled=false` (pass).
+- (2026-02-20) `T079` completed: added workflow-client start tests in `ee/server/src/__tests__/unit/entraWorkflowClient.start.test.ts`.
+- Initial-sync case verifies Temporal start wrapper returns `available=true` with workflow/run IDs and generates the expected initial-sync workflow-id prefix.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraWorkflowClient.start.test.ts` (pass).
+- (2026-02-20) `T080` completed in `entraWorkflowClient.start` unit suite.
+- All-tenants case verifies Temporal start wrapper returns workflow/run IDs and includes trigger-scoped all-tenants workflow-id prefix.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraWorkflowClient.start.test.ts` (pass).
+- (2026-02-20) `T081` completed in `entraWorkflowClient.start` unit suite.
+- Single-tenant case verifies Temporal start wrapper returns workflow/run IDs and composes tenant+managed-tenant+client workflow-id prefix.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraWorkflowClient.start.test.ts` (pass).
+- (2026-02-20) `T082` completed: added route unit test `ee/server/src/__tests__/unit/entraSyncRunProgressRoute.test.ts`.
+- Test verifies sync run polling endpoint returns serialized run-level status plus tenant-level result rows and calls workflow progress reader with tenant-scoped context.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraSyncRunProgressRoute.test.ts` (pass).
+- (2026-02-20) `T083` completed: added contract test `server/src/test/unit/integrations/entraConfirmMappingsInitialSyncContract.test.ts`.
+- Test verifies `confirmEntraMappings` optional-start branch, workflow trigger invocation path, and response payload propagation of `initialSync.workflowId/runId`.
+- Validation commands: `cd server && npx vitest run src/test/unit/integrations/entraConfirmMappingsInitialSyncContract.test.ts --coverage.enabled=false` (pass), `cd server && npx vitest run src/test/unit/integrations/entraActions.directConnect.test.ts --coverage.enabled=false` (pass).
+- (2026-02-20) `T084` completed: added `server/src/test/unit/integrations/entraActions.startSync.test.ts`.
+- All-tenants case verifies manual `startEntraSync({scope:'all-tenants'})` dispatches `startEntraAllTenantsSyncWorkflow` with trigger=`manual` and returns workflow/run IDs.
+- Validation command: `cd server && npx vitest run src/test/unit/integrations/entraActions.startSync.test.ts --coverage.enabled=false` (pass).
+- (2026-02-20) `T085` completed in `entraActions.startSync` unit suite.
+- Single-client case verifies `startEntraSync({scope:'single-client'})` resolves mapped tenant context then dispatches `startEntraTenantSyncWorkflow` with expected identifiers.
+- Validation command: `cd server && npx vitest run src/test/unit/integrations/entraActions.startSync.test.ts --coverage.enabled=false` (pass).
+- (2026-02-20) `T086` completed in Temporal workflow/activity contract suite.
+- Schedule assertions verify tenant-scoped Entra recurring schedule creation path for enabled tenants with active connections, using scheduled all-tenants workflow trigger config.
+- Validation command: `cd server && npx vitest run src/test/unit/temporal/entraWorkflowActivityContracts.test.ts --coverage.enabled=false` (pass).
+- (2026-02-20) `T087` completed in Temporal workflow/activity contract suite.
+- `upsertSchedule` assertions verify already-existing schedules are updated via `handle.update(...)` with refreshed spec/action/policy definitions.
+- Validation command: `cd server && npx vitest run src/test/unit/temporal/entraWorkflowActivityContracts.test.ts --coverage.enabled=false` (pass).
+- (2026-02-20) `T088` completed in `entraWorkflowClient.start` unit suite.
+- Added collision test verifying repeated manual trigger inputs generate identical workflow IDs and that `WorkflowExecutionAlreadyStartedError` resolves to existing run identifiers via handle describe.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraWorkflowClient.start.test.ts` (pass).
+- (2026-02-20) `T089` completed in Temporal workflow/activity contract suite.
+- Added no-mapped-tenant assertions for initial/all-tenants workflows to ensure zero-initialized summaries and completed status path when nothing is processed.
+- Validation command: `cd server && npx vitest run src/test/unit/temporal/entraWorkflowActivityContracts.test.ts --coverage.enabled=false` (pass).
+- (2026-02-20) `T090` completed in Temporal workflow/activity contract suite.
+- Failure-path assertions verify per-tenant catch blocks emit failed tenant results and parent run status rolls up to `partial`/`failed` according to succeeded-vs-failed counts.
+- Validation command: `cd server && npx vitest run src/test/unit/temporal/entraWorkflowActivityContracts.test.ts --coverage.enabled=false` (pass).
+- (2026-02-20) `T091` completed: added user-filter pipeline unit suite `ee/server/src/__tests__/unit/entraUserFilterPipeline.test.ts`.
+- Disabled-user case verifies `accountEnabled=false` identities are excluded with reason `account_disabled`.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraUserFilterPipeline.test.ts` (pass).
+- (2026-02-20) `T092` completed in `entraUserFilterPipeline` suite.
+- Missing-identity case verifies users without valid UPN/email identities are excluded with `missing_identity` reason.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraUserFilterPipeline.test.ts` (pass).
+- (2026-02-20) `T093` completed in `entraUserFilterPipeline` suite.
+- Default service-account pattern case verifies identities like `svc-*` are filtered from sync candidates with `service_account` reason.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraUserFilterPipeline.test.ts` (pass).
+- (2026-02-20) `T094` completed in `entraUserFilterPipeline` suite.
+- Tenant custom pattern case verifies configured exclusions are applied on top of defaults and produce `tenant_custom_pattern` filtered results.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraUserFilterPipeline.test.ts` (pass).
+- (2026-02-20) `T095` completed: added reconciler/matcher unit suites (`ee/server/src/__tests__/unit/entraContactReconciler.test.ts`, `ee/server/src/__tests__/unit/entraContactMatcher.noEmailAutoLink.test.ts`).
+- Exact-email-match case verifies reconcile flow links existing contact and avoids duplicate contact creation.
+- Validation commands: `cd ee/server && npx vitest run src/__tests__/unit/entraContactReconciler.test.ts` (pass), `cd ee/server && npx vitest run src/__tests__/unit/entraContactMatcher.noEmailAutoLink.test.ts` (pass).
+- (2026-02-20) `T096` completed in `entraContactReconciler` unit suite.
+- No-match case verifies reconcile flow creates a new contact under the mapped client before linking Entra identity metadata.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraContactReconciler.test.ts` (pass).
+- (2026-02-20) `T097` completed in `entraContactReconciler` unit suite.
+- Ambiguous-match case verifies multiple candidates queue reconciliation items instead of auto-linking/creation.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraContactReconciler.test.ts` (pass).
+- (2026-02-20) `T098` completed in `entraContactMatcher.noEmailAutoLink` test.
+- Name-only identity case verifies missing valid email/UPN cannot auto-link contacts.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraContactMatcher.noEmailAutoLink.test.ts` (pass).
+- (2026-02-20) `T099` completed in `entraContactReconciler` unit suite.
+- Metadata-write assertions verify contact update patches include Entra identity/source fields during link/create reconciliation paths.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraContactReconciler.test.ts` (pass).
+- (2026-02-20) `T100` completed: added `ee/server/src/__tests__/unit/entraContactFieldSync.test.ts`.
+- Toggle-off case verifies `displayName=false` prevents `full_name` overwrite patch generation.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraContactFieldSync.test.ts` (pass).
+- (2026-02-20) `T101` completed in `entraContactFieldSync` test suite.
+- Toggle-on case verifies `displayName=true` includes `full_name` overwrite patch from Entra display name.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraContactFieldSync.test.ts` (pass).
+- (2026-02-20) `T102` completed in `entraContactFieldSync` test suite.
+- Toggle-on UPN case verifies `upn=true` includes `entra_user_principal_name` overwrite patch generation for linked contacts.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraContactFieldSync.test.ts` (pass).
+- (2026-02-20) `T103` completed: added `ee/server/src/__tests__/unit/entraDisableHandler.test.ts`.
+- Disabled-user handling assertion verifies linked contacts are marked inactive with `entra_sync_status_reason='disabled_upstream'` and link status is set inactive.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraDisableHandler.test.ts` (pass).
+- (2026-02-20) `T104` completed in `ee/server/src/__tests__/unit/entraDisableHandler.test.ts`.
+- Deleted-user handling assertion verifies linked contacts are marked inactive with `entra_sync_status_reason='deleted_upstream'`.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraDisableHandler.test.ts` (pass).
+- (2026-02-20) `T105` completed in `ee/server/src/__tests__/unit/entraDisableHandler.test.ts`.
+- Non-destructive handling assertion verifies disabled/deleted paths only issue update operations and never delete contact or link rows.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraDisableHandler.test.ts` (pass).
+- (2026-02-20) `T106` completed in `ee/server/src/__tests__/unit/entraContactReconciler.test.ts`.
+- Added assertions for both linked and created reconcile paths to verify `last_entra_sync_at` is refreshed on every processed contact row.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraContactReconciler.test.ts` (pass).
+- (2026-02-20) `T107` completed: added `ee/server/src/__tests__/unit/entraContactLinkRepository.test.ts`.
+- Upsert contract assertions verify link rows refresh `last_seen_at` and remain `link_status='active'`/`is_active=true` on each sync merge.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraContactLinkRepository.test.ts` (pass).
+- (2026-02-20) `T108` completed: added `ee/server/src/__tests__/unit/entraSyncResultAggregator.test.ts`.
+- Created-counter assertions verify aggregation correctness across `increment` + `add`, and ignore non-positive deltas.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraSyncResultAggregator.test.ts` (pass).
+- (2026-02-20) `T109` completed in `ee/server/src/__tests__/unit/entraSyncResultAggregator.test.ts`.
+- Linked-counter assertions verify accurate totals from `increment` and `add`, while ignoring invalid numeric deltas.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraSyncResultAggregator.test.ts` (pass).
+- (2026-02-20) `T110` completed in `ee/server/src/__tests__/unit/entraSyncResultAggregator.test.ts`.
+- Ambiguous-counter assertions verify per-tenant accumulation semantics and counter isolation from unrelated totals.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraSyncResultAggregator.test.ts` (pass).
+- (2026-02-20) `T111` completed: added `ee/server/src/__tests__/unit/entraSyncEngine.dryRun.test.ts`.
+- Dry-run engine assertions verify ambiguous/linked/created preview counters while ensuring no write-path reconciliation methods execute.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraSyncEngine.dryRun.test.ts` (pass).
+- (2026-02-20) `T112` completed: added `ee/server/src/__tests__/unit/entraSyncResultSerializer.test.ts`.
+- Serializer stability assertions compare key-shape parity for success vs failure runs and verify numeric/null normalization for tenant result DTOs.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraSyncResultSerializer.test.ts` (pass).
+- (2026-02-20) `T113` completed in `ee/server/src/__tests__/unit/entraContactLinkRepository.test.ts`.
+- Retry/idempotency assertion uses a conflict-aware fake transaction store to verify repeated sync upserts keep one row per (`tenant`,`entra_tenant_id`,`entra_object_id`) identity key.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraContactLinkRepository.test.ts` (pass).
+- (2026-02-20) `T114` completed in `ee/server/src/__tests__/unit/entraContactReconciler.test.ts`.
+- Retry-idempotency case simulates two sync passes for the same Entra identity and verifies only one contact is created; second pass links existing contact.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraContactReconciler.test.ts` (pass).
+- (2026-02-20) `T115` completed: added `ee/server/src/__tests__/unit/entraReconciliationQueueService.queue.test.ts`.
+- Queue insert assertions validate tenant/client/managed-tenant context plus serialized candidate-contact details and ambiguity payload (`reason`, `candidateCount`).
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraReconciliationQueueService.queue.test.ts` (pass).
+- (2026-02-20) `T116` completed: added `ee/server/src/__tests__/unit/entraReconciliationQueueService.resolve.test.ts`.
+- Resolve-to-existing assertions verify Entra identity linking and queue state transition to `resolved` with `resolution_action='link_existing'`.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraReconciliationQueueService.resolve.test.ts` (pass).
+- (2026-02-20) `T117` completed in `ee/server/src/__tests__/unit/entraReconciliationQueueService.resolve.test.ts`.
+- Resolve-to-new assertions verify normalized contact creation, Entra link upsert, and queue transition to `resolved` with `resolution_action='create_new'`.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraReconciliationQueueService.resolve.test.ts` (pass).
+- (2026-02-20) `T118` completed in `ee/server/src/__tests__/unit/entraReconciliationQueueService.resolve.test.ts`.
+- Guard-rail assertions verify resolve-to-existing rejects cross-client targets and rejects contacts outside tenant scope before link writes.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraReconciliationQueueService.resolve.test.ts` (pass).
+- (2026-02-20) `T119` completed in `server/src/test/unit/integrations/entraActions.startSync.test.ts`.
+- Single-client sync guard test verifies query scoping to active `mapped` rows for requested client and rejects workflow start when no qualifying mapping exists.
+- Validation command: `cd server && npx vitest run src/test/unit/integrations/entraActions.startSync.test.ts --coverage.enabled=false` (pass).
+- (2026-02-20) `T120` completed in `server/src/test/unit/temporal/entraWorkflowActivityContracts.test.ts`.
+- Contract assertion confirms `loadMappedTenantsActivity` filters to active `mapped` rows, which excludes `skip_for_now` mappings from all-tenant sync.
+- Validation command: `cd server && npx vitest run src/test/unit/temporal/entraWorkflowActivityContracts.test.ts --coverage.enabled=false` (pass).
+- (2026-02-20) `T121` completed in `ee/server/src/__tests__/unit/entraIntegrationSettings.initialSyncCta.test.tsx`.
+- Status-panel UI assertions verify rendering of connection state/type, last discovery, mapped tenant count, and configured sync interval text.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraIntegrationSettings.initialSyncCta.test.tsx` (pass).
+- (2026-02-20) `T122` completed: added `ee/server/src/__tests__/unit/entraSyncHistoryPanel.test.tsx`.
+- History list assertions verify run cards are rendered in descending `startedAt` order regardless of API return order.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraSyncHistoryPanel.test.tsx` (pass).
+- (2026-02-20) `T123` completed in `ee/server/src/__tests__/unit/entraSyncHistoryPanel.test.tsx`.
+- Drilldown test validates fetching run detail and rendering per-tenant outcome rows with created/linked/updated/ambiguous/inactivated counters.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraSyncHistoryPanel.test.tsx` (pass).
+- (2026-02-20) `T124` completed in `ee/server/src/__tests__/unit/entraIntegrationSettings.initialSyncCta.test.tsx`.
+- UI assertion verifies `Sync All Tenants Now` remains disabled when `mappedTenantCount` is zero.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraIntegrationSettings.initialSyncCta.test.tsx` (pass).
+- (2026-02-20) `T125` completed in `ee/server/src/__tests__/unit/entraIntegrationSettings.initialSyncCta.test.tsx`.
+- Complementary CTA assertion verifies `Sync All Tenants Now` is enabled when at least one active mapping is present.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraIntegrationSettings.initialSyncCta.test.tsx` (pass).
+- (2026-02-20) `T126` completed via `packages/clients/src/components/clients/clientDetailsEntraSyncAction.ts` and `ClientDetails.tsx` wiring.
+- Visibility logic now requires enterprise edition + client-sync flag + mapped client (`entra_tenant_id` present); unmapped clients do not see `Sync Entra Now`.
+- Validation command: `cd packages/clients && npx vitest run src/components/clients/clientDetailsEntraSyncAction.test.ts` (pass).
+- (2026-02-20) `T127` completed by extending `clientDetailsEntraSyncAction` helpers and wiring in `ClientDetails.tsx`.
+- Added tested run-id state resolution (`queued` + polling) and terminal-status detection to keep client sync status feedback/polling behavior deterministic.
+- Validation command: `cd packages/clients && npx vitest run src/components/clients/clientDetailsEntraSyncAction.test.ts` (pass).
+- (2026-02-20) `T128` completed in `ee/server/src/__tests__/unit/entraIntegrationSettings.initialSyncCta.test.tsx`.
+- Flag-gate assertion verifies ambiguous reconciliation queue panel stays hidden when `entra-integration-ambiguous-queue` is disabled.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraIntegrationSettings.initialSyncCta.test.tsx` (pass).
+- (2026-02-20) `T129` completed in `ee/server/src/__tests__/unit/entraIntegrationSettings.initialSyncCta.test.tsx`.
+- Complementary flag test verifies ambiguous reconciliation queue panel renders when `entra-integration-ambiguous-queue` is enabled.
+- Validation command: `cd ee/server && npx vitest run src/__tests__/unit/entraIntegrationSettings.initialSyncCta.test.tsx` (pass).
+- (2026-02-20) `T130` completed in `server/src/test/unit/integrations/entraActions.directConnect.test.ts`.
+- Added client-portal denial assertion for Entra settings status action (`Forbidden`) to enforce non-internal access boundaries.
+- Validation command: `cd server && npx vitest run src/test/unit/integrations/entraActions.directConnect.test.ts --coverage.enabled=false` (pass).
+- (2026-02-20) `T131` completed in `server/src/test/unit/integrations/entraActions.startSync.test.ts`.
+- Added explicit client-portal rejection assertion for manual sync action entrypoint (`startEntraSync`) with no workflow trigger side effects.
+- Validation command: `cd server && npx vitest run src/test/unit/integrations/entraActions.startSync.test.ts --coverage.enabled=false` (pass).
+- (2026-02-20) `T132` completed in `server/src/test/unit/integrations/entraActions.directConnect.test.ts`.
+- Added read-permission denial assertions for both status and mapping-preview actions to enforce `system_settings.read` requirements.
+- Validation command: `cd server && npx vitest run src/test/unit/integrations/entraActions.directConnect.test.ts --coverage.enabled=false` (pass).
+- (2026-02-20) `T133` completed across `entraActions.directConnect.test.ts` and `entraActions.startSync.test.ts`.
+- Added update-permission denial assertions for mapping confirmation and manual sync starts; direct-connect update-permission denial remains covered by `T031`.
+- Validation commands: `cd server && npx vitest run src/test/unit/integrations/entraActions.directConnect.test.ts --coverage.enabled=false` (pass), `cd server && npx vitest run src/test/unit/integrations/entraActions.startSync.test.ts --coverage.enabled=false` (pass).
+- (2026-02-20) `T134` completed in `server/src/test/unit/integrations/entraActions.directConnect.test.ts`.
+- Added a full authorized-action contract flow covering direct connect, discovery route, mapping confirm (+optional initial sync start), and manual all-tenants sync start.
+- Validation command: `cd server && npx vitest run src/test/unit/integrations/entraActions.directConnect.test.ts --coverage.enabled=false` (pass).
+- (2026-02-20) `T135` completed via docs contract test `server/src/test/unit/docs/entraIntegrationGuide.contract.test.ts`.
+- Verified guide includes both direct and CIPP setup paths plus explicit decision guidance for choosing connection type.
+- Validation command: `cd server && npx vitest run src/test/unit/docs/entraIntegrationGuide.contract.test.ts --coverage.enabled=false` (pass).
+- (2026-02-20) `T136` completed in docs contract suite `server/src/test/unit/docs/entraIntegrationGuide.contract.test.ts`.
+- Verified documentation enumerates Entra secret names and explicitly notes secret-provider chain compatibility (env/filesystem/vault).
+- Validation command: `cd server && npx vitest run src/test/unit/docs/entraIntegrationGuide.contract.test.ts --coverage.enabled=false` (pass).
+- (2026-02-20) `T137` completed in docs contract suite `server/src/test/unit/docs/entraIntegrationGuide.contract.test.ts`.
+- Confirmed guide explicitly documents additive/non-destructive sync defaults and field-sync toggle overwrite controls.
+- Validation command: `cd server && npx vitest run src/test/unit/docs/entraIntegrationGuide.contract.test.ts --coverage.enabled=false` (pass).
+- (2026-02-20) `T138` completed in docs contract suite `server/src/test/unit/docs/entraIntegrationGuide.contract.test.ts`.
+- Verified documentation includes recommended feature-flag rollout ordering for pilot/internal tenants before broad enablement.
+- Validation command: `cd server && npx vitest run src/test/unit/docs/entraIntegrationGuide.contract.test.ts --coverage.enabled=false` (pass).
+- (2026-02-20) `T139` completed in `server/src/test/unit/integrations/entraActions.directConnect.test.ts`.
+- Added flag-off assertion showing settings read path exits early with disabled response and does not touch Entra status/data route paths.
+- Validation command: `cd server && npx vitest run src/test/unit/integrations/entraActions.directConnect.test.ts --coverage.enabled=false` (pass).
+- (2026-02-20) `T140` completed in `packages/clients/src/components/clients/clientDetailsEntraSyncAction.test.ts`.
+- Added client-flag-off contract assertion for hidden sync entrypoint and preserved run-id status representation helper behavior (non-destructive UI toggle path).
+- Validation command: `cd packages/clients && npx vitest run src/components/clients/clientDetailsEntraSyncAction.test.ts` (pass).

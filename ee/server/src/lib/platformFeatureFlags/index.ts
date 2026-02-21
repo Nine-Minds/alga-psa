@@ -1,4 +1,4 @@
-export { PostHogFeatureFlagService } from './posthogClient';
+export { PostHogFeatureFlagService, ENTRA_PHASE1_FLAG_DEFINITIONS } from './posthogClient';
 export type {
   PostHogFeatureFlag,
   PostHogFlagFilters,

@@ -19,6 +19,7 @@ import {
   Calendar,
   CreditCard,
   Cloud,
+  Shield,
 } from 'lucide-react';
 import AccountingIntegrationsSetup from './AccountingIntegrationsSetup';
 import RmmIntegrationsSetup from './RmmIntegrationsSetup';
@@ -27,6 +28,7 @@ import { CalendarIntegrationsSettings } from '@alga-psa/integrations/components'
 import { GoogleIntegrationSettings } from './GoogleIntegrationSettings';
 import dynamic from 'next/dynamic';
 import Spinner from '@alga-psa/ui/components/Spinner';
+import { useFeatureFlag } from '@alga-psa/ui/hooks';
 
 // Dynamic import for StripeConnectionSettings (EE/OSS modular pattern)
 // Uses dynamic import with type assertion due to TypeScript bundler mode resolution issues
@@ -47,6 +49,8 @@ const StripeConnectionSettings = dynamic(
   }
 );
 
+import { EntraIntegrationSettings } from '@alga-psa/integrations/entra/components/entry';
+
 // Integration category definitions
 interface IntegrationCategory {
   id: string;
@@ -66,19 +70,21 @@ interface IntegrationItem {
 
 const IntegrationsSettingsPage: React.FC = () => {
   const isEEAvailable = process.env.NEXT_PUBLIC_EDITION === 'enterprise';
+  const entraUiFlag = useFeatureFlag('entra-integration-ui', { defaultValue: false });
+  const isEntraUiEnabled = isEEAvailable && entraUiFlag.enabled;
   const searchParams = useSearchParams();
   const categoryParam = searchParams?.get('category');
-  
+
   // Initialize selected category from URL param or default to 'accounting'
   const [selectedCategory, setSelectedCategory] = useState<string>(
-    categoryParam && ['accounting', 'rmm', 'communication', 'calendar', 'providers', 'payments'].includes(categoryParam)
+    categoryParam && ['accounting', 'rmm', 'communication', 'calendar', 'providers', 'identity', 'payments'].includes(categoryParam)
       ? categoryParam
       : 'accounting'
   );
 
   // Update selected category when URL param changes
   useEffect(() => {
-    if (categoryParam && ['accounting', 'rmm', 'communication', 'calendar', 'providers', 'payments'].includes(categoryParam)) {
+    if (categoryParam && ['accounting', 'rmm', 'communication', 'calendar', 'providers', 'identity', 'payments'].includes(categoryParam)) {
       setSelectedCategory(categoryParam);
     }
   }, [categoryParam]);
@@ -192,6 +198,21 @@ const IntegrationsSettingsPage: React.FC = () => {
       ],
     },
     {
+      id: 'identity',
+      label: 'Identity',
+      description: 'Connect identity providers for tenant discovery and contact synchronization.',
+      icon: Shield,
+      integrations: [
+        ...(isEntraUiEnabled ? [{
+          id: 'entra',
+          name: 'Microsoft Entra',
+          description: 'Discover managed Microsoft tenants and sync users to contacts',
+          component: EntraIntegrationSettings,
+          isEE: true,
+        }] : []),
+      ],
+    },
+    {
       id: 'payments',
       label: 'Payments',
       description: 'Accept online payments for invoices',
@@ -206,7 +227,7 @@ const IntegrationsSettingsPage: React.FC = () => {
         }] : []),
       ],
     },
-  ], [isEEAvailable]);
+  ], [isEEAvailable, isEntraUiEnabled]);
 
   // Filter out empty categories
   const visibleCategories = categories.filter(cat => cat.integrations.length > 0);

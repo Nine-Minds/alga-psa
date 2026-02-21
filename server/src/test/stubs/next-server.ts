@@ -13,6 +13,19 @@ class StubNextResponse extends GlobalResponse {
     super(body ?? null, init);
   }
 
+  static redirect(url: string | URL, init?: number | ResponseInit): StubNextResponse {
+    const status = typeof init === 'number' ? init : (init?.status ?? 307);
+    const headers = new GlobalHeaders(
+      typeof init === 'number' ? undefined : init?.headers
+    );
+    headers.set('location', String(url));
+    return new StubNextResponse(null, {
+      ...(typeof init === 'number' ? undefined : init),
+      status,
+      headers,
+    });
+  }
+
   static json(data: any, init?: ResponseInit): StubNextResponse {
     const headers = new GlobalHeaders(init?.headers || {});
     if (!headers.has('content-type')) {

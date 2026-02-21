@@ -9,6 +9,34 @@ import {
 
 const POSTHOG_API_HOST = process.env.POSTHOG_API_HOST || 'https://us.posthog.com';
 
+export const ENTRA_PHASE1_FLAG_DEFINITIONS = [
+  {
+    key: 'entra-integration-ui',
+    name: 'Entra Integration UI',
+    tags: ['entra', 'integration', 'phase-1'],
+  },
+  {
+    key: 'entra-integration-client-sync-action',
+    name: 'Entra Client Sync Action',
+    tags: ['entra', 'integration', 'phase-1'],
+  },
+  {
+    key: 'entra-integration-cipp',
+    name: 'Entra CIPP Option',
+    tags: ['entra', 'integration', 'phase-1'],
+  },
+  {
+    key: 'entra-integration-field-sync',
+    name: 'Entra Field Sync Controls',
+    tags: ['entra', 'integration', 'phase-1'],
+  },
+  {
+    key: 'entra-integration-ambiguous-queue',
+    name: 'Entra Ambiguous Queue',
+    tags: ['entra', 'integration', 'phase-1'],
+  },
+] as const;
+
 async function getPostHogConfig(): Promise<{ apiKey: string; projectId: string }> {
   const apiKey = await getSecret('posthog_personal_api_key', 'POSTHOG_PERSONAL_API_KEY');
   const projectId = await getSecret('posthog_project_id', 'POSTHOG_PROJECT_ID');
@@ -110,6 +138,50 @@ export class PostHogFeatureFlagService {
       method: 'PATCH',
       body: JSON.stringify({ deleted: true }),
     });
+  }
+
+  async ensureEntraPhase1Flags(): Promise<{
+    createdKeys: string[];
+    existingKeys: string[];
+  }> {
+    const currentFlags = await this.listFlags();
+    const currentKeys = new Set(currentFlags.map((flag) => flag.key));
+
+    const createdKeys: string[] = [];
+    const existingKeys: string[] = [];
+
+    for (const definition of ENTRA_PHASE1_FLAG_DEFINITIONS) {
+      if (currentKeys.has(definition.key)) {
+        existingKeys.push(definition.key);
+        continue;
+      }
+
+      try {
+        await this.createFlag({
+          key: definition.key,
+          name: definition.name,
+          active: true,
+          tags: definition.tags as unknown as string[],
+          filters: {
+            groups: [{ properties: [], rollout_percentage: 0, variant: null }],
+            multivariate: null,
+            aggregation_group_type_index: null,
+            payloads: {},
+          },
+        });
+        createdKeys.push(definition.key);
+        currentKeys.add(definition.key);
+      } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : String(error);
+        if (message.includes('key') || message.includes('already')) {
+          existingKeys.push(definition.key);
+          continue;
+        }
+        throw error;
+      }
+    }
+
+    return { createdKeys, existingKeys };
   }
 
   /**

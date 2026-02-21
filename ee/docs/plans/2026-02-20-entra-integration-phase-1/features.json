@@ -1,0 +1,1352 @@
+[
+  {
+    "id": "F001",
+    "description": "EE route ownership: add CE delegator routes for `/api/integrations/entra/*` that import EE handlers using the existing `@enterprise/...` pattern.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations"
+    ],
+    "locations": [
+      "server/src/app/api/integrations/entra"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "EE API module: add Entra route handlers for connect/disconnect/discovery/mapping/sync in EE app API namespace.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations"
+    ],
+    "locations": [
+      "ee/server/src/app/api/integrations/entra"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "Actions surface: create and export Entra server actions module for UI calls.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations"
+    ],
+    "locations": [
+      "packages/integrations/src/actions/integrations/entraActions.ts",
+      "packages/integrations/src/actions/index.ts"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "Integrations page placement: add EE Entra card/component entry in integrations settings layout.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ],
+    "locations": [
+      "packages/integrations/src/components/settings/integrations/IntegrationsSettingsPage.tsx"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "EE settings UI: implement `EntraIntegrationSettings` shell component loaded via dynamic EE import.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ],
+    "locations": [
+      "ee/server/src/components/settings/integrations/EntraIntegrationSettings.tsx"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "Flag gate (settings): hide/show Entra integration card and page sections with `entra-integration-ui`.",
+    "implemented": true,
+    "prdRefs": [
+      "Feature Flags / Rollout"
+    ],
+    "locations": [
+      "packages/integrations/src/components/settings/integrations/IntegrationsSettingsPage.tsx",
+      "packages/ui/src/hooks/useFeatureFlag.tsx"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "Flag gate (server): enforce `entra-integration-ui` checks in Entra actions/routes before returning user-visible data.",
+    "implemented": true,
+    "prdRefs": [
+      "Feature Flags / Rollout"
+    ],
+    "locations": [
+      "packages/integrations/src/actions/integrations/entraActions.ts",
+      "ee/server/src/app/api/integrations/entra"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "Client record placement: add EE Entra sync action entry point in client details UI.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ],
+    "locations": [
+      "packages/clients/src/components/clients/ClientDetails.tsx"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "Flag gate (client action): hide `Sync Entra Now` behind `entra-integration-client-sync-action`.",
+    "implemented": true,
+    "prdRefs": [
+      "Feature Flags / Rollout"
+    ],
+    "locations": [
+      "packages/clients/src/components/clients/ClientDetails.tsx",
+      "packages/ui/src/hooks/useFeatureFlag.tsx"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "Flag tenancy management: define and create required Entra flags through EE platform feature-flag API workflow.",
+    "implemented": true,
+    "prdRefs": [
+      "Feature Flags / Rollout"
+    ],
+    "locations": [
+      "ee/server/src/app/api/v1/platform-feature-flags/route.ts",
+      "ee/server/src/lib/platformFeatureFlags/posthogClient.ts"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "CIPP flag gate: only render CIPP connection option when `entra-integration-cipp` is enabled.",
+    "implemented": true,
+    "prdRefs": [
+      "Feature Flags / Rollout"
+    ],
+    "locations": [
+      "ee/server/src/components/settings/integrations/EntraIntegrationSettings.tsx"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "Advanced UI gates: guard field-sync controls and ambiguous queue panels with dedicated flags.",
+    "implemented": true,
+    "prdRefs": [
+      "Feature Flags / Rollout"
+    ],
+    "locations": [
+      "ee/server/src/components/settings/integrations/EntraIntegrationSettings.tsx"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "Schema: create `entra_partner_connections` table for tenant-level Entra connection records.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations"
+    ],
+    "locations": [
+      "ee/server/migrations"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "Schema constraint: enforce at most one active Entra partner connection per tenant.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations"
+    ],
+    "locations": [
+      "ee/server/migrations"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "Schema: create `entra_managed_tenants` table storing discovered tenant metadata per MSP tenant.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations"
+    ],
+    "locations": [
+      "ee/server/migrations"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "Schema index: add efficient lookup indexes for managed tenant discovery and domain matching.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations"
+    ],
+    "locations": [
+      "ee/server/migrations"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "Schema: create `entra_client_tenant_mappings` table for confirmed mapping state (mapped/skipped/review).",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations"
+    ],
+    "locations": [
+      "ee/server/migrations"
+    ]
+  },
+  {
+    "id": "F018",
+    "description": "Schema constraint: enforce unique active mapping for each discovered Entra tenant per MSP tenant.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations"
+    ],
+    "locations": [
+      "ee/server/migrations"
+    ]
+  },
+  {
+    "id": "F019",
+    "description": "Schema: create `entra_sync_settings` table for interval, filters, and field-sync toggles.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations"
+    ],
+    "locations": [
+      "ee/server/migrations"
+    ]
+  },
+  {
+    "id": "F020",
+    "description": "Schema: create `entra_sync_runs` table for parent sync execution records.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations"
+    ],
+    "locations": [
+      "ee/server/migrations"
+    ]
+  },
+  {
+    "id": "F021",
+    "description": "Schema: create `entra_sync_run_tenants` table for per-tenant sync outcomes within each run.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations"
+    ],
+    "locations": [
+      "ee/server/migrations"
+    ]
+  },
+  {
+    "id": "F022",
+    "description": "Schema: create `entra_contact_links` table mapping Entra identities to Alga contacts.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations"
+    ],
+    "locations": [
+      "ee/server/migrations"
+    ]
+  },
+  {
+    "id": "F023",
+    "description": "Schema constraint: enforce unique (`tenant`, `entra_tenant_id`, `entra_object_id`) in contact links.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations"
+    ],
+    "locations": [
+      "ee/server/migrations"
+    ]
+  },
+  {
+    "id": "F024",
+    "description": "Schema constraint: enforce one active Entra link per contact.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations"
+    ],
+    "locations": [
+      "ee/server/migrations"
+    ]
+  },
+  {
+    "id": "F025",
+    "description": "Schema: create `entra_contact_reconciliation_queue` for ambiguous match items requiring MSP action.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements"
+    ],
+    "locations": [
+      "ee/server/migrations"
+    ]
+  },
+  {
+    "id": "F026",
+    "description": "Client model extension: add `clients.entra_tenant_id` and `clients.entra_primary_domain` columns.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations"
+    ],
+    "locations": [
+      "ee/server/migrations"
+    ]
+  },
+  {
+    "id": "F027",
+    "description": "Client model indexes: add query/index support for `clients.entra_tenant_id` lookups.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations"
+    ],
+    "locations": [
+      "ee/server/migrations"
+    ]
+  },
+  {
+    "id": "F028",
+    "description": "Contact model extension: add `contacts.entra_object_id`, `contacts.entra_sync_source`, and `contacts.last_entra_sync_at` columns.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations"
+    ],
+    "locations": [
+      "ee/server/migrations"
+    ]
+  },
+  {
+    "id": "F029",
+    "description": "Contact sync metadata: add fields for UPN/account-enabled state on contacts for sync traceability.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements"
+    ],
+    "locations": [
+      "ee/server/migrations"
+    ]
+  },
+  {
+    "id": "F030",
+    "description": "Contact status metadata: add optional sync status/reason fields to support disabled/deleted handling UX.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements"
+    ],
+    "locations": [
+      "ee/server/migrations"
+    ]
+  },
+  {
+    "id": "F031",
+    "description": "Default settings migration: seed one `entra_sync_settings` row per tenant with 24h cadence defaults.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements"
+    ],
+    "locations": [
+      "ee/server/migrations"
+    ]
+  },
+  {
+    "id": "F032",
+    "description": "Types/models: add EE TypeScript interfaces and row mappers for all Entra tables.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations"
+    ],
+    "locations": [
+      "ee/server/src/interfaces/entra.interfaces.ts",
+      "ee/server/src/lib/integrations/entra"
+    ]
+  },
+  {
+    "id": "F033",
+    "description": "Secret constants: define canonical tenant secret keys for Entra direct/CIPP credentials and tokens.",
+    "implemented": true,
+    "prdRefs": [
+      "Security / Permissions"
+    ],
+    "locations": [
+      "ee/server/src/lib/integrations/entra/secrets.ts"
+    ]
+  },
+  {
+    "id": "F034",
+    "description": "Credential resolver: implement Microsoft app credential resolution reusing existing secret precedence (tenant/env/app).",
+    "implemented": true,
+    "prdRefs": [
+      "Security / Permissions"
+    ],
+    "locations": [
+      "ee/server/src/lib/integrations/entra/auth/microsoftCredentialResolver.ts"
+    ]
+  },
+  {
+    "id": "F035",
+    "description": "Direct connect initiation: add server action to start partner OAuth flow with Entra-specific state payload.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements"
+    ],
+    "locations": [
+      "packages/integrations/src/actions/integrations/entraActions.ts"
+    ]
+  },
+  {
+    "id": "F036",
+    "description": "OAuth callback: add `/api/auth/microsoft/entra/callback` handler to exchange code and persist partner token references.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations"
+    ],
+    "locations": [
+      "server/src/app/api/auth/microsoft/entra/callback/route.ts"
+    ]
+  },
+  {
+    "id": "F037",
+    "description": "Direct token refresh: implement reusable refresh helper for Entra direct provider sessions.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements"
+    ],
+    "locations": [
+      "ee/server/src/lib/integrations/entra/auth/refreshDirectToken.ts"
+    ]
+  },
+  {
+    "id": "F038",
+    "description": "Token secret persistence: store and rotate direct OAuth tokens through `getSecretProviderInstance()` tenant secrets.",
+    "implemented": true,
+    "prdRefs": [
+      "Security / Permissions"
+    ],
+    "locations": [
+      "ee/server/src/lib/integrations/entra/auth/tokenStore.ts",
+      "packages/core/src/lib/secrets/secretProvider.ts"
+    ]
+  },
+  {
+    "id": "F039",
+    "description": "CIPP connect action: add settings action to save CIPP base URL and token for tenant.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements"
+    ],
+    "locations": [
+      "packages/integrations/src/actions/integrations/entraActions.ts"
+    ]
+  },
+  {
+    "id": "F040",
+    "description": "CIPP token secret persistence: save/remove CIPP token via tenant secret provider (vault-compatible).",
+    "implemented": true,
+    "prdRefs": [
+      "Security / Permissions"
+    ],
+    "locations": [
+      "ee/server/src/lib/integrations/entra/providers/cipp/cippSecretStore.ts"
+    ]
+  },
+  {
+    "id": "F041",
+    "description": "Connection validation (direct): add server-side check endpoint/action confirming tenant discovery access.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements"
+    ],
+    "locations": [
+      "ee/server/src/app/api/integrations/entra/validate-direct/route.ts",
+      "packages/integrations/src/actions/integrations/entraActions.ts"
+    ]
+  },
+  {
+    "id": "F042",
+    "description": "Connection validation (CIPP): add endpoint/action confirming CIPP tenant list access.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements"
+    ],
+    "locations": [
+      "ee/server/src/app/api/integrations/entra/validate-cipp/route.ts",
+      "packages/integrations/src/actions/integrations/entraActions.ts"
+    ]
+  },
+  {
+    "id": "F043",
+    "description": "Connection status persistence: store and display `status`, `last_validated_at`, and validation error snapshot.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ],
+    "locations": [
+      "ee/server/src/lib/integrations/entra/connectionRepository.ts",
+      "ee/server/src/components/settings/integrations/EntraIntegrationSettings.tsx"
+    ]
+  },
+  {
+    "id": "F044",
+    "description": "Disconnect flow: remove provider secrets and mark connection disconnected without deleting historical runs.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements"
+    ],
+    "locations": [
+      "packages/integrations/src/actions/integrations/entraActions.ts",
+      "ee/server/src/lib/integrations/entra/connectionRepository.ts"
+    ]
+  },
+  {
+    "id": "F045",
+    "description": "Connection type switching: enforce cleanup of stale direct/CIPP credentials when switching connection type.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements"
+    ],
+    "locations": [
+      "packages/integrations/src/actions/integrations/entraActions.ts"
+    ]
+  },
+  {
+    "id": "F046",
+    "description": "Provider abstraction: define `EntraProviderAdapter` interface for `listManagedTenants` and `listUsersForTenant`.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations"
+    ],
+    "locations": [
+      "ee/server/src/lib/integrations/entra/providers/types.ts"
+    ]
+  },
+  {
+    "id": "F047",
+    "description": "Direct adapter (tenants): implement tenant enumeration via Microsoft APIs with normalized output.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements"
+    ],
+    "locations": [
+      "ee/server/src/lib/integrations/entra/providers/direct/directProviderAdapter.ts"
+    ]
+  },
+  {
+    "id": "F048",
+    "description": "Direct adapter (users): implement per-tenant user enumeration with normalized user payload fields.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements"
+    ],
+    "locations": [
+      "ee/server/src/lib/integrations/entra/providers/direct/directProviderAdapter.ts"
+    ]
+  },
+  {
+    "id": "F049",
+    "description": "CIPP adapter (tenants): implement managed tenant enumeration against configured CIPP endpoint.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements"
+    ],
+    "locations": [
+      "ee/server/src/lib/integrations/entra/providers/cipp/cippProviderAdapter.ts"
+    ]
+  },
+  {
+    "id": "F050",
+    "description": "CIPP adapter (users): implement per-tenant user enumeration with normalized model parity to direct adapter.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements"
+    ],
+    "locations": [
+      "ee/server/src/lib/integrations/entra/providers/cipp/cippProviderAdapter.ts"
+    ]
+  },
+  {
+    "id": "F051",
+    "description": "Discovery action: run provider tenant fetch and upsert into `entra_managed_tenants`.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements"
+    ],
+    "locations": [
+      "packages/integrations/src/actions/integrations/entraActions.ts",
+      "ee/server/src/lib/integrations/entra/discoveryService.ts"
+    ]
+  },
+  {
+    "id": "F052",
+    "description": "Discovery persistence fields: store tenant id, display name, primary domain, and source user count.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements"
+    ],
+    "locations": [
+      "ee/server/src/lib/integrations/entra/discoveryService.ts"
+    ]
+  },
+  {
+    "id": "F053",
+    "description": "Auto-match rule: exact domain match against client domain/email-domain data.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements"
+    ],
+    "locations": [
+      "ee/server/src/lib/integrations/entra/mapping/matchers/exactDomainMatcher.ts"
+    ]
+  },
+  {
+    "id": "F054",
+    "description": "Secondary domain match rule: support alternative client domain fields for confidence scoring.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements"
+    ],
+    "locations": [
+      "ee/server/src/lib/integrations/entra/mapping/matchers/secondaryDomainMatcher.ts"
+    ]
+  },
+  {
+    "id": "F055",
+    "description": "Fuzzy matcher: implement normalized string similarity for candidate suggestions (not auto-commit).",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements"
+    ],
+    "locations": [
+      "ee/server/src/lib/integrations/entra/mapping/matchers/fuzzyMatcher.ts"
+    ]
+  },
+  {
+    "id": "F056",
+    "description": "Preview grouping: return `autoMatched`, `fuzzyCandidates`, and `unmatched` sets for UI rendering.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ],
+    "locations": [
+      "ee/server/src/lib/integrations/entra/mapping/mappingPreviewService.ts"
+    ]
+  },
+  {
+    "id": "F057",
+    "description": "Mapping UI list: render discovered tenants with confidence and candidate selection controls.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ],
+    "locations": [
+      "ee/server/src/components/settings/integrations/EntraTenantMappingTable.tsx"
+    ]
+  },
+  {
+    "id": "F058",
+    "description": "Manual client selector: provide searchable client picker for fuzzy/unmatched tenant rows.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ],
+    "locations": [
+      "ee/server/src/components/settings/integrations/EntraTenantMappingTable.tsx"
+    ]
+  },
+  {
+    "id": "F059",
+    "description": "Skip flow: allow tenant rows to be marked `skip_for_now` without losing discovery data.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ],
+    "locations": [
+      "ee/server/src/components/settings/integrations/EntraTenantMappingTable.tsx",
+      "packages/integrations/src/actions/integrations/entraActions.ts"
+    ]
+  },
+  {
+    "id": "F060",
+    "description": "Bulk-accept helper: add UI action to preselect all exact-domain auto matches.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ],
+    "locations": [
+      "ee/server/src/components/settings/integrations/EntraTenantMappingTable.tsx"
+    ]
+  },
+  {
+    "id": "F061",
+    "description": "Confirm endpoint: persist selected tenant-client mappings only after explicit confirmation step.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements"
+    ],
+    "locations": [
+      "ee/server/src/app/api/integrations/entra/mappings/confirm/route.ts",
+      "packages/integrations/src/actions/integrations/entraActions.ts"
+    ]
+  },
+  {
+    "id": "F062",
+    "description": "Client linkage write: update mapped client records with `entra_tenant_id` and `entra_primary_domain` on confirm.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements"
+    ],
+    "locations": [
+      "ee/server/src/lib/integrations/entra/mapping/confirmMappingsService.ts"
+    ]
+  },
+  {
+    "id": "F063",
+    "description": "Idempotent remap behavior: remapping updates mapping state/history without duplicate active rows.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements"
+    ],
+    "locations": [
+      "ee/server/src/lib/integrations/entra/mapping/confirmMappingsService.ts"
+    ]
+  },
+  {
+    "id": "F064",
+    "description": "Unmap action: add API/action to remove active tenant-client mapping safely.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements"
+    ],
+    "locations": [
+      "ee/server/src/app/api/integrations/entra/mappings/unmap/route.ts",
+      "packages/integrations/src/actions/integrations/entraActions.ts"
+    ]
+  },
+  {
+    "id": "F065",
+    "description": "Remap action: move mapping from one client to another with conflict validation.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements"
+    ],
+    "locations": [
+      "ee/server/src/app/api/integrations/entra/mappings/remap/route.ts",
+      "packages/integrations/src/actions/integrations/entraActions.ts"
+    ]
+  },
+  {
+    "id": "F066",
+    "description": "Mapping conflict validation: block confirmation when same discovered tenant is assigned to multiple clients.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements"
+    ],
+    "locations": [
+      "ee/server/src/lib/integrations/entra/mapping/validation.ts"
+    ]
+  },
+  {
+    "id": "F067",
+    "description": "Mapping summary counts: compute and display totals for mapped/skipped/review categories.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ],
+    "locations": [
+      "ee/server/src/components/settings/integrations/EntraIntegrationSettings.tsx"
+    ]
+  },
+  {
+    "id": "F068",
+    "description": "Initial sync CTA: enable `Run Initial Sync` only when at least one mapping is confirmed.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ],
+    "locations": [
+      "ee/server/src/components/settings/integrations/EntraIntegrationSettings.tsx"
+    ]
+  },
+  {
+    "id": "F069",
+    "description": "Skipped-tenants panel: show skipped tenants and provide quick remap entry point.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ],
+    "locations": [
+      "ee/server/src/components/settings/integrations/EntraIntegrationSettings.tsx"
+    ]
+  },
+  {
+    "id": "F070",
+    "description": "Mapping-step feature gating: keep mapping wizard inaccessible when `entra-integration-ui` is disabled.",
+    "implemented": true,
+    "prdRefs": [
+      "Feature Flags / Rollout"
+    ],
+    "locations": [
+      "ee/server/src/components/settings/integrations/EntraIntegrationSettings.tsx"
+    ]
+  },
+  {
+    "id": "F071",
+    "description": "Temporal types: add Entra workflow/activity input/output interfaces.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations"
+    ],
+    "locations": [
+      "ee/temporal-workflows/src/types/entra-sync.ts"
+    ]
+  },
+  {
+    "id": "F072",
+    "description": "Workflow: implement `entraDiscoveryWorkflow` orchestration for provider discovery persistence.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements"
+    ],
+    "locations": [
+      "ee/temporal-workflows/src/workflows/entra-discovery-workflow.ts"
+    ]
+  },
+  {
+    "id": "F073",
+    "description": "Workflow: implement `entraInitialSyncWorkflow` for first-run mapped-tenant sync.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements"
+    ],
+    "locations": [
+      "ee/temporal-workflows/src/workflows/entra-initial-sync-workflow.ts"
+    ]
+  },
+  {
+    "id": "F074",
+    "description": "Workflow: implement `entraTenantSyncWorkflow` for single mapped tenant/client sync.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements"
+    ],
+    "locations": [
+      "ee/temporal-workflows/src/workflows/entra-tenant-sync-workflow.ts"
+    ]
+  },
+  {
+    "id": "F075",
+    "description": "Workflow: implement `entraAllTenantsSyncWorkflow` for recurring/manual full syncs.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements"
+    ],
+    "locations": [
+      "ee/temporal-workflows/src/workflows/entra-all-tenants-sync-workflow.ts"
+    ]
+  },
+  {
+    "id": "F076",
+    "description": "Activity: `discoverManagedTenantsActivity` fetches and normalizes tenant list from selected adapter.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements"
+    ],
+    "locations": [
+      "ee/temporal-workflows/src/activities/entra-discovery-activities.ts"
+    ]
+  },
+  {
+    "id": "F077",
+    "description": "Activity: `loadMappedTenantsActivity` resolves active mapped tenants for sync execution.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements"
+    ],
+    "locations": [
+      "ee/temporal-workflows/src/activities/entra-sync-activities.ts"
+    ]
+  },
+  {
+    "id": "F078",
+    "description": "Activity: `syncTenantUsersActivity` performs per-tenant user pull + reconciliation pipeline.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements"
+    ],
+    "locations": [
+      "ee/temporal-workflows/src/activities/entra-sync-activities.ts"
+    ]
+  },
+  {
+    "id": "F079",
+    "description": "Activity: `upsertSyncRunActivity` creates/updates parent sync run records.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations"
+    ],
+    "locations": [
+      "ee/temporal-workflows/src/activities/entra-sync-activities.ts"
+    ]
+  },
+  {
+    "id": "F080",
+    "description": "Activity: `finalizeSyncRunActivity` writes terminal run status and summary counts.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements"
+    ],
+    "locations": [
+      "ee/temporal-workflows/src/activities/entra-sync-activities.ts"
+    ]
+  },
+  {
+    "id": "F081",
+    "description": "Activity: `recordSyncTenantResultActivity` persists per-tenant success/failure and count details.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements"
+    ],
+    "locations": [
+      "ee/temporal-workflows/src/activities/entra-sync-activities.ts"
+    ]
+  },
+  {
+    "id": "F082",
+    "description": "Temporal registration: export new Entra workflows in worker workflow index.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations"
+    ],
+    "locations": [
+      "ee/temporal-workflows/src/workflows/index.ts"
+    ]
+  },
+  {
+    "id": "F083",
+    "description": "Temporal registration: export new Entra activities in worker activity index.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations"
+    ],
+    "locations": [
+      "ee/temporal-workflows/src/activities/index.ts"
+    ]
+  },
+  {
+    "id": "F084",
+    "description": "EE workflow client wrapper: implement typed start/query helpers for Entra workflows.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations"
+    ],
+    "locations": [
+      "ee/server/src/lib/integrations/entra/entraWorkflowClient.ts"
+    ]
+  },
+  {
+    "id": "F085",
+    "description": "Trigger path: mapping confirm can start `entraInitialSyncWorkflow` immediately when user requests initial sync.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows"
+    ],
+    "locations": [
+      "packages/integrations/src/actions/integrations/entraActions.ts",
+      "ee/server/src/lib/integrations/entra/entraWorkflowClient.ts"
+    ]
+  },
+  {
+    "id": "F086",
+    "description": "Trigger path: settings UI `Sync All Tenants Now` starts `entraAllTenantsSyncWorkflow`.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows"
+    ],
+    "locations": [
+      "packages/integrations/src/actions/integrations/entraActions.ts"
+    ]
+  },
+  {
+    "id": "F087",
+    "description": "Trigger path: client-level `Sync Entra Now` starts `entraTenantSyncWorkflow` for mapped client tenant.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows"
+    ],
+    "locations": [
+      "packages/integrations/src/actions/integrations/entraActions.ts",
+      "packages/clients/src/components/clients/ClientDetails.tsx"
+    ]
+  },
+  {
+    "id": "F088",
+    "description": "Workflow progress queries: expose run progress/state for UI polling and status rendering.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ],
+    "locations": [
+      "ee/server/src/lib/integrations/entra/entraWorkflowClient.ts",
+      "ee/server/src/app/api/integrations/entra/sync/runs/[runId]/route.ts"
+    ]
+  },
+  {
+    "id": "F089",
+    "description": "Temporal schedule setup: create/update recurring Entra sync schedule using tenant sync interval settings.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements"
+    ],
+    "locations": [
+      "ee/temporal-workflows/src/schedules/setupSchedules.ts"
+    ]
+  },
+  {
+    "id": "F090",
+    "description": "Workflow idempotency: enforce deterministic workflow IDs and dedupe for repeated manual requests.",
+    "implemented": true,
+    "prdRefs": [
+      "Non-functional Requirements"
+    ],
+    "locations": [
+      "ee/server/src/lib/integrations/entra/entraWorkflowClient.ts",
+      "ee/temporal-workflows/src/workflows/entra-*.ts"
+    ]
+  },
+  {
+    "id": "F091",
+    "description": "Sync domain model: define normalized Entra user shape used by all providers and sync logic.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations"
+    ],
+    "locations": [
+      "ee/server/src/lib/integrations/entra/sync/types.ts"
+    ]
+  },
+  {
+    "id": "F092",
+    "description": "Filtering pipeline: include only users with `accountEnabled=true` and valid UPN by default.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements"
+    ],
+    "locations": [
+      "ee/server/src/lib/integrations/entra/sync/userFilterPipeline.ts"
+    ]
+  },
+  {
+    "id": "F093",
+    "description": "Default noise filter: exclude service-account-like UPN/name patterns out of the box.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements"
+    ],
+    "locations": [
+      "ee/server/src/lib/integrations/entra/sync/userFilterPipeline.ts"
+    ]
+  },
+  {
+    "id": "F094",
+    "description": "Tenant custom filters: merge tenant-configured exclusion patterns into filtering pipeline.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements"
+    ],
+    "locations": [
+      "ee/server/src/lib/integrations/entra/sync/userFilterPipeline.ts",
+      "ee/server/src/lib/integrations/entra/settingsService.ts"
+    ]
+  },
+  {
+    "id": "F095",
+    "description": "Match strategy: perform primary contact matching by normalized email within mapped client scope.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements"
+    ],
+    "locations": [
+      "ee/server/src/lib/integrations/entra/sync/contactMatcher.ts"
+    ]
+  },
+  {
+    "id": "F096",
+    "description": "Existing-contact link path: when email matches, attach/update Entra link without overriding protected fields.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements"
+    ],
+    "locations": [
+      "ee/server/src/lib/integrations/entra/sync/contactReconciler.ts"
+    ]
+  },
+  {
+    "id": "F097",
+    "description": "Create-contact path: when no match exists, create a new client contact from allowed Entra fields.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements"
+    ],
+    "locations": [
+      "ee/server/src/lib/integrations/entra/sync/contactReconciler.ts",
+      "packages/clients/src/actions/contact-actions/contactActions.tsx"
+    ]
+  },
+  {
+    "id": "F098",
+    "description": "Ambiguous queue path: if multiple plausible matches exist, queue item for manual reconciliation.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements"
+    ],
+    "locations": [
+      "ee/server/src/lib/integrations/entra/sync/contactReconciler.ts",
+      "ee/server/src/lib/integrations/entra/reconciliationQueueService.ts"
+    ]
+  },
+  {
+    "id": "F099",
+    "description": "No name-only auto-linking: explicitly block automatic linking when email match is absent.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements"
+    ],
+    "locations": [
+      "ee/server/src/lib/integrations/entra/sync/contactMatcher.ts"
+    ]
+  },
+  {
+    "id": "F100",
+    "description": "Contact metadata write: persist Entra object id/source/last sync markers on linked/new contacts.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements"
+    ],
+    "locations": [
+      "ee/server/src/lib/integrations/entra/sync/contactReconciler.ts"
+    ]
+  },
+  {
+    "id": "F101",
+    "description": "Field overwrite guard: only sync mutable fields enabled in `entra_sync_settings.field_sync_config`.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements"
+    ],
+    "locations": [
+      "ee/server/src/lib/integrations/entra/sync/contactFieldSync.ts"
+    ]
+  },
+  {
+    "id": "F102",
+    "description": "Disabled-user handling: mark linked contacts inactive when Entra user becomes disabled.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements"
+    ],
+    "locations": [
+      "ee/server/src/lib/integrations/entra/sync/disableHandler.ts"
+    ]
+  },
+  {
+    "id": "F103",
+    "description": "Deleted-user handling: mark linked contacts inactive when upstream user is removed.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements"
+    ],
+    "locations": [
+      "ee/server/src/lib/integrations/entra/sync/disableHandler.ts"
+    ]
+  },
+  {
+    "id": "F104",
+    "description": "Non-destructive rule enforcement: never delete contacts or silently purge contact links during sync.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements"
+    ],
+    "locations": [
+      "ee/server/src/lib/integrations/entra/sync/contactReconciler.ts"
+    ]
+  },
+  {
+    "id": "F105",
+    "description": "Sync timestamp updates: set `last_entra_sync_at` on every processed linked/new contact.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements"
+    ],
+    "locations": [
+      "ee/server/src/lib/integrations/entra/sync/contactReconciler.ts"
+    ]
+  },
+  {
+    "id": "F106",
+    "description": "Link health updates: maintain `entra_contact_links` last-seen and status fields per sync.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements"
+    ],
+    "locations": [
+      "ee/server/src/lib/integrations/entra/sync/contactLinkRepository.ts"
+    ]
+  },
+  {
+    "id": "F107",
+    "description": "Per-tenant sync counters: track created/linked/updated/ambiguous/inactivated in tenant run rows.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements"
+    ],
+    "locations": [
+      "ee/server/src/lib/integrations/entra/sync/syncResultAggregator.ts",
+      "ee/temporal-workflows/src/activities/entra-sync-activities.ts"
+    ]
+  },
+  {
+    "id": "F108",
+    "description": "Dry-run sync mode: provide preview-only execution path used by safe validation actions/tests.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements"
+    ],
+    "locations": [
+      "ee/server/src/lib/integrations/entra/sync/syncEngine.ts"
+    ]
+  },
+  {
+    "id": "F109",
+    "description": "Sync result serializer: expose stable result DTO for settings and client UI summaries.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ],
+    "locations": [
+      "ee/server/src/lib/integrations/entra/sync/syncResultSerializer.ts"
+    ]
+  },
+  {
+    "id": "F110",
+    "description": "Retry-safe upserts: enforce transaction-safe link/contact upsert semantics for workflow retries.",
+    "implemented": true,
+    "prdRefs": [
+      "Non-functional Requirements"
+    ],
+    "locations": [
+      "ee/server/src/lib/integrations/entra/sync/contactReconciler.ts"
+    ]
+  },
+  {
+    "id": "F111",
+    "description": "Settings status panel: show connection state, last discovery, mapped tenant count, and next sync interval.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ],
+    "locations": [
+      "ee/server/src/components/settings/integrations/EntraIntegrationSettings.tsx"
+    ]
+  },
+  {
+    "id": "F112",
+    "description": "Sync history panel: render recent sync runs with per-tenant drilldown in settings UI.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ],
+    "locations": [
+      "ee/server/src/components/settings/integrations/EntraSyncHistoryPanel.tsx"
+    ]
+  },
+  {
+    "id": "F113",
+    "description": "Manual full sync UX: add `Sync All Tenants Now` button wired to Temporal full sync workflow.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows"
+    ],
+    "locations": [
+      "ee/server/src/components/settings/integrations/EntraIntegrationSettings.tsx",
+      "packages/integrations/src/actions/integrations/entraActions.ts"
+    ]
+  },
+  {
+    "id": "F114",
+    "description": "Manual client sync UX: add client-level action with run id feedback and progress polling.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows"
+    ],
+    "locations": [
+      "packages/clients/src/components/clients/ClientDetails.tsx",
+      "ee/server/src/app/api/integrations/entra/sync/runs/[runId]/route.ts"
+    ]
+  },
+  {
+    "id": "F115",
+    "description": "Ambiguous queue UI: render reconciliation queue table with item details and resolve actions.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements"
+    ],
+    "locations": [
+      "ee/server/src/components/settings/integrations/EntraReconciliationQueue.tsx"
+    ]
+  },
+  {
+    "id": "F116",
+    "description": "Resolve-to-existing action: allow MSP to link queue item to selected existing contact.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements"
+    ],
+    "locations": [
+      "packages/integrations/src/actions/integrations/entraActions.ts",
+      "ee/server/src/lib/integrations/entra/reconciliationQueueService.ts"
+    ]
+  },
+  {
+    "id": "F117",
+    "description": "Resolve-to-new action: allow MSP to create and link a new contact from queued ambiguous item.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements"
+    ],
+    "locations": [
+      "packages/integrations/src/actions/integrations/entraActions.ts",
+      "ee/server/src/lib/integrations/entra/reconciliationQueueService.ts"
+    ]
+  },
+  {
+    "id": "F118",
+    "description": "User-type enforcement: deny all Entra setup/sync actions for `user_type='client'` callers.",
+    "implemented": true,
+    "prdRefs": [
+      "Security / Permissions"
+    ],
+    "locations": [
+      "packages/integrations/src/actions/integrations/entraActions.ts",
+      "ee/server/src/app/api/integrations/entra"
+    ]
+  },
+  {
+    "id": "F119",
+    "description": "RBAC enforcement: require `system_settings.read` for view and `system_settings.update` for mutate/start-sync actions.",
+    "implemented": true,
+    "prdRefs": [
+      "Security / Permissions"
+    ],
+    "locations": [
+      "packages/integrations/src/actions/integrations/entraActions.ts",
+      "server/src/lib/auth/rbac.ts"
+    ]
+  },
+  {
+    "id": "F120",
+    "description": "Documentation deliverable: add EE Entra setup/use docs covering connection types, required secrets, and mapping/sync workflow.",
+    "implemented": true,
+    "prdRefs": [
+      "Acceptance Criteria"
+    ],
+    "locations": [
+      "ee/docs"
+    ]
+  }
+]

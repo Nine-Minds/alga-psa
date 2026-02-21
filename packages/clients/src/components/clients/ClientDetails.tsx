@@ -33,13 +33,14 @@ import {
   addClientInboundEmailDomain,
   removeClientInboundEmailDomain,
 } from '@alga-psa/clients/actions';
+import { startEntraSync } from '@alga-psa/integrations/actions';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { DeleteEntityDialog } from '@alga-psa/ui';
 import CustomTabs from '@alga-psa/ui/components/CustomTabs';
 import { QuickAddTicket } from '@alga-psa/tickets/components/QuickAddTicket';
 import { Button } from '@alga-psa/ui/components/Button';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
-import { ExternalLink, Trash2 } from 'lucide-react';
+import { ExternalLink, RefreshCw, Trash2 } from 'lucide-react';
 import BackNav from '@alga-psa/ui/components/BackNav';
 import InteractionsFeed from '../interactions/InteractionsFeed';
 import { IInteraction } from '@alga-psa/types';
@@ -65,12 +66,18 @@ import { ClientNotesPanel } from './panels/ClientNotesPanel';
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui';
 import EntityImageUpload from '@alga-psa/ui/components/EntityImageUpload';
+import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { getTicketFormOptions } from '@alga-psa/tickets/actions/optimizedTicketActions';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { ClientLanguagePreference } from './ClientLanguagePreference';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import ClientSurveySummaryCard from '@alga-psa/surveys/components/ClientSurveySummaryCard';
 import type { SurveyClientSatisfactionSummary } from '@alga-psa/types';
+import {
+  isTerminalEntraRunStatus,
+  resolveEntraClientSyncStartState,
+  shouldShowEntraSyncAction,
+} from './clientDetailsEntraSyncAction';
 
 
 const SwitchDetailItem: React.FC<{
@@ -217,6 +224,9 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   const [activeContactsToDeactivate, setActiveContactsToDeactivate] = useState<IContact[]>([]);
   const [isEditingLogo, setIsEditingLogo] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isSyncingEntra, setIsSyncingEntra] = useState(false);
+  const [entraSyncRunId, setEntraSyncRunId] = useState<string | null>(null);
+  const [entraSyncStatus, setEntraSyncStatus] = useState<string | null>(null);
   const [ticketFormOptions, setTicketFormOptions] = useState<{
     statusOptions: SelectOption[];
     priorityOptions: SelectOption[];
@@ -237,6 +247,69 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   const searchParams = useSearchParams();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const drawer = useDrawer();
+  const isEEAvailable = process.env.NEXT_PUBLIC_EDITION === 'enterprise';
+  const entraClientSyncFlag = useFeatureFlag('entra-integration-client-sync-action', {
+    defaultValue: false,
+  });
+  const showEntraSyncAction = shouldShowEntraSyncAction(
+    isEEAvailable ? 'enterprise' : process.env.NEXT_PUBLIC_EDITION,
+    entraClientSyncFlag.enabled,
+    editedClient
+  );
+
+  const fetchEntraSyncRunStatus = useCallback(async (runId: string): Promise<string | null> => {
+    const response = await fetch(`/api/integrations/entra/sync/runs/${runId}`, {
+      method: 'GET',
+      credentials: 'same-origin',
+      cache: 'no-store',
+    });
+    const payload = (await response.json().catch(() => null)) as {
+      success?: boolean;
+      data?: { run?: { status?: string } | null };
+      error?: string;
+    } | null;
+
+    if (!response.ok || !payload?.success) {
+      return null;
+    }
+
+    const status = payload.data?.run?.status ? String(payload.data.run.status) : null;
+    return status;
+  }, []);
+
+  useEffect(() => {
+    if (!entraSyncRunId) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const poll = async () => {
+      try {
+        const nextStatus = await fetchEntraSyncRunStatus(entraSyncRunId);
+        if (!nextStatus || cancelled) {
+          return;
+        }
+
+        setEntraSyncStatus(`Run ${entraSyncRunId}: ${nextStatus}`);
+        if (isTerminalEntraRunStatus(nextStatus)) {
+          setEntraSyncRunId(null);
+        }
+      } catch {
+        // Keep polling resilient and avoid noisy UI errors on transient failures.
+      }
+    };
+
+    void poll();
+    const intervalId = window.setInterval(() => {
+      void poll();
+    }, 5000);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+    };
+  }, [entraSyncRunId, fetchEntraSyncRunStatus]);
 
 
   const runDeleteValidation = useCallback(async () => {
@@ -730,6 +803,43 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       toast.error("Failed to save client details. Please try again.");
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleSyncEntraNow = async () => {
+    if (isSyncingEntra) return;
+
+    setIsSyncingEntra(true);
+    try {
+      const result = await startEntraSync({
+        scope: 'single-client',
+        clientId: editedClient.client_id,
+      });
+
+      if ('error' in result) {
+        toast.error(result.error || 'Failed to start Entra sync.');
+        return;
+      }
+
+      if (!result.success) {
+        toast.error('Failed to start Entra sync.');
+        return;
+      }
+
+      const syncState = resolveEntraClientSyncStartState(result.data?.runId);
+      if (syncState.shouldPoll && syncState.runId) {
+        setEntraSyncRunId(syncState.runId);
+        setEntraSyncStatus(syncState.statusMessage);
+        toast.success(`Entra sync started. Run ID: ${syncState.runId}`);
+      } else {
+        setEntraSyncStatus(syncState.statusMessage);
+        toast.success(syncState.statusMessage);
+      }
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Failed to start Entra sync.';
+      toast.error(message);
+    } finally {
+      setIsSyncingEntra(false);
     }
   };
 
@@ -1373,6 +1483,30 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
           )}
 
           <div className="flex items-center gap-2 mr-8">
+            {showEntraSyncAction && (
+              <div className="flex flex-col items-end gap-1">
+                <Button
+                  id={`${id}-sync-entra-now-button`}
+                  onClick={handleSyncEntraNow}
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center"
+                  disabled={isSyncingEntra}
+                >
+                  {isSyncingEntra ? (
+                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                  )}
+                  Sync Entra Now
+                </Button>
+                {entraSyncStatus ? (
+                  <p className="text-xs text-muted-foreground" id={`${id}-sync-entra-status`}>
+                    {entraSyncStatus}
+                  </p>
+                ) : null}
+              </div>
+            )}
             <Button
               id={`${id}-delete-client-button`}
               onClick={handleDeleteClient}
