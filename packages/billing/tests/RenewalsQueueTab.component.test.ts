@@ -38,4 +38,12 @@ describe('RenewalsQueueTab component', () => {
     expect(source).toContain('const uniqueOwners = Array.from(');
     expect(source).toContain('row.assigned_to ?? \'unassigned\'');
   });
+
+  it('renders a status filter for pending/renewing/non_renewing/snoozed/completed', () => {
+    expect(source).toContain("type RenewalStatus = 'all' | 'pending' | 'renewing' | 'non_renewing' | 'snoozed' | 'completed';");
+    expect(source).toContain('const [statusFilter, setStatusFilter] = useState<RenewalStatus>(\'all\');');
+    expect(source).toContain('data-testid="renewals-status-filter"');
+    expect(source).toContain("(['all', 'pending', 'renewing', 'non_renewing', 'snoozed', 'completed'] as const)");
+    expect(source).toContain("if (statusFilter !== 'all' && row.status !== statusFilter) {");
+  });
 });

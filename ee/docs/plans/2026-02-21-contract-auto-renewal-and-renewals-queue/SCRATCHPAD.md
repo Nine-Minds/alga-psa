@@ -407,6 +407,13 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
   - Added wiring coverage updates in:
     - `packages/billing/tests/RenewalsQueueTab.component.test.ts`
     - `packages/billing/tests/renewalsQueueActions.wiring.test.ts`
+- (2026-02-21) Completed `F055`.
+  - Added queue status mapping + filter support for:
+    - `pending`, `renewing`, `non_renewing`, `snoozed`, `completed`
+  - Added status filter UI + filtering behavior in `RenewalsQueueTab`.
+  - Extended action/component wiring coverage in:
+    - `packages/billing/tests/renewalsQueueActions.wiring.test.ts`
+    - `packages/billing/tests/RenewalsQueueTab.component.test.ts`
 
 ## Open Questions
 - Should renewal ticket defaults be a brand-new billing settings card, or an extension of existing default ticket settings patterns?

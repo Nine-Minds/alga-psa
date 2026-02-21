@@ -13,6 +13,7 @@ export type RenewalQueueRow = {
   client_id: string;
   client_name?: string | null;
   assigned_to?: string | null;
+  status?: 'pending' | 'renewing' | 'non_renewing' | 'snoozed' | 'completed';
   contract_type: 'fixed-term' | 'evergreen';
   effective_renewal_mode?: 'none' | 'manual' | 'auto';
   decision_due_date?: string;
@@ -85,6 +86,14 @@ export const listRenewalQueueRows = withAuth(async (
       client_id: row.client_id,
       client_name: (row as any).client_name ?? null,
       assigned_to: (row as any).assigned_to ?? null,
+      status:
+        (row as any).status === 'pending' ||
+        (row as any).status === 'renewing' ||
+        (row as any).status === 'non_renewing' ||
+        (row as any).status === 'snoozed' ||
+        (row as any).status === 'completed'
+          ? (row as any).status
+          : 'pending',
       contract_type: row.end_date ? 'fixed-term' : 'evergreen',
       effective_renewal_mode: row.effective_renewal_mode,
       decision_due_date: row.decision_due_date ?? undefined,

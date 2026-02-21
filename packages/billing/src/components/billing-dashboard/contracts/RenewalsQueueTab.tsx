@@ -8,6 +8,7 @@ import {
 
 const DEFAULT_HORIZON_DAYS = 90;
 type RenewalBucket = 'all' | '0-30' | '31-60' | '61-90';
+type RenewalStatus = 'all' | 'pending' | 'renewing' | 'non_renewing' | 'snoozed' | 'completed';
 
 export default function RenewalsQueueTab() {
   const [rows, setRows] = useState<RenewalQueueRow[]>([]);
@@ -15,6 +16,7 @@ export default function RenewalsQueueTab() {
   const [error, setError] = useState<string | null>(null);
   const [bucket, setBucket] = useState<RenewalBucket>('all');
   const [ownerFilter, setOwnerFilter] = useState<string>('all');
+  const [statusFilter, setStatusFilter] = useState<RenewalStatus>('all');
 
   useEffect(() => {
     let cancelled = false;
@@ -58,6 +60,9 @@ export default function RenewalsQueueTab() {
       if (ownerFilter !== 'all' && rowOwner !== ownerFilter) {
         return false;
       }
+      if (statusFilter !== 'all' && row.status !== statusFilter) {
+        return false;
+      }
 
       if (bucket === 'all') {
         return true;
@@ -68,7 +73,7 @@ export default function RenewalsQueueTab() {
       if (bucket === '31-60') return row.days_until_due >= 31 && row.days_until_due <= 60;
       return row.days_until_due >= 61 && row.days_until_due <= 90;
     });
-  }, [bucket, ownerFilter, rows]);
+  }, [bucket, ownerFilter, rows, statusFilter]);
 
   return (
     <section
@@ -115,6 +120,21 @@ export default function RenewalsQueueTab() {
               {ownerOptions.map((owner) => (
                 <option key={owner} value={owner}>
                   {owner === 'all' ? 'All Owners' : owner}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="flex items-center gap-2 text-xs text-[rgb(var(--color-text-500))]">
+            Status
+            <select
+              value={statusFilter}
+              onChange={(event) => setStatusFilter(event.target.value as RenewalStatus)}
+              data-testid="renewals-status-filter"
+              className="rounded border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-bg-0))] px-2 py-1 text-xs"
+            >
+              {(['all', 'pending', 'renewing', 'non_renewing', 'snoozed', 'completed'] as const).map((status) => (
+                <option key={status} value={status}>
+                  {status === 'all' ? 'All Statuses' : status}
                 </option>
               ))}
             </select>

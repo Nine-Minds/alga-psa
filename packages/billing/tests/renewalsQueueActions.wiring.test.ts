@@ -17,6 +17,9 @@ describe('renewalsQueueActions wiring', () => {
     expect(source).toContain('row.days_until_due >= 0');
     expect(source).toContain('row.days_until_due <= resolvedHorizonDays');
     expect(source).toContain('assigned_to: (row as any).assigned_to ?? null');
+    expect(source).toContain("(row as any).status === 'pending' ||");
+    expect(source).toContain("(row as any).status === 'renewing' ||");
+    expect(source).toContain("status:\n        (row as any).status === 'pending'");
     expect(source).toContain("contract_type: row.end_date ? 'fixed-term' : 'evergreen'");
   });
 });
