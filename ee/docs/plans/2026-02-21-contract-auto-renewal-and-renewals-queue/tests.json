@@ -298,7 +298,7 @@
   {
     "id": "T038",
     "description": "Functional: Recompute decision_due_date when notice period changes.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F038"
     ]
