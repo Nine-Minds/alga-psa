@@ -1234,7 +1234,7 @@
   {
     "id": "T155",
     "description": "UI behavior: Render default 90-day horizon rows in Renewals queue. persists after refresh/navigation",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F052"
     ]
