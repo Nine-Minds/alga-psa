@@ -290,7 +290,7 @@
   {
     "id": "F037",
     "description": "Recompute decision_due_date when contract end_date changes.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > FR3 — Renewal Decision Date Engine"
     ]
