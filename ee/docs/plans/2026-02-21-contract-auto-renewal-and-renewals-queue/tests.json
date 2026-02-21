@@ -770,7 +770,7 @@
   {
     "id": "T097",
     "description": "Functional: Allow manual retry action to re-attempt ticket creation for failed work items.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F097"
     ]
