@@ -1923,3 +1923,9 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
   - Added assertions that ticket automation under `create_ticket` uses tenant+contract+cycle idempotency identity and duplicate lookup/linking so at most one ticket is linked per cycle.
   - Validation:
     - `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`
+- (2026-02-21) Completed `T254`.
+  - Extended strict-schema integration wiring coverage for guard-failure path in:
+    - `packages/billing/tests/renewalsQueueActions.schemaReadiness.integration.test.ts`
+  - Assertions verify `assertRenewalSchemaReady` fails fast with actionable missing-column error text instructing migration execution.
+  - Validation:
+    - `npm -w @alga-psa/billing exec vitest run tests/renewalsQueueActions.schemaReadiness.integration.test.ts --coverage=false`

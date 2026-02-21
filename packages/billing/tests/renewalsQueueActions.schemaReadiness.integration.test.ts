@@ -41,4 +41,14 @@ describe('renewalsQueueActions strict-schema integration wiring', () => {
     expect(source).toContain('previous_status: previousStatus,');
     expect(source).toContain("status: 'renewing',");
   });
+
+  it('T254: renewal schema readiness guard rejects access with actionable error when required columns are absent', () => {
+    expect(source).toContain('const getMissingRenewalSchemaColumns = async (knex: any): Promise<string[]> => {');
+    expect(source).toContain('const assertRenewalSchemaReady = async (knex: any): Promise<void> => {');
+    expect(source).toContain('const missing = await getMissingRenewalSchemaColumns(knex);');
+    expect(source).toContain('if (missing.length === 0) {');
+    expect(source).toContain('throw new Error(');
+    expect(source).toContain('Renewal schema is not ready. Missing required columns:');
+    expect(source).toContain('Run the latest server database migrations, then retry this renewals operation.');
+  });
 });

@@ -2046,7 +2046,7 @@
   {
     "id": "T254",
     "description": "Integration (guard case): renewal schema readiness guard rejects access with actionable error when required columns are intentionally absent.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F143"
     ]
