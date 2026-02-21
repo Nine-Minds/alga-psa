@@ -86,6 +86,23 @@ describe('client contract effective renewal settings normalization', () => {
     expect(normalized.decision_due_date).toBe('2026-11-16');
   });
 
+  it('normalizes timestamp end_date to date-only semantics before fixed-term due-date math', () => {
+    const normalized = normalizeClientContract({
+      contract_id: 'contract-4b',
+      client_contract_id: 'cc-4b',
+      client_id: 'client-4b',
+      tenant: 'tenant-1',
+      start_date: '2026-01-01',
+      end_date: '2026-12-31T23:59:59.999Z',
+      is_active: true,
+      use_tenant_renewal_defaults: false,
+      renewal_mode: 'manual',
+      notice_period_days: 1,
+    });
+
+    expect(normalized.decision_due_date).toBe('2026-12-30');
+  });
+
   it('computes next evergreen review anchor date using contract anniversary rules', () => {
     expect(
       computeNextEvergreenReviewAnchorDate({

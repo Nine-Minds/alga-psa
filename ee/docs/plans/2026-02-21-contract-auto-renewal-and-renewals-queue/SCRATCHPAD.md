@@ -285,6 +285,10 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
     - `computeEvergreenDecisionDueDate` in `shared/billingClients/clientContracts.ts`
   - Applied in both read normalization paths (shared + clients model) so evergreen assignments now expose date-only `decision_due_date`.
   - Expanded deterministic date-math coverage in `packages/billing/tests/clientContractEffectiveRenewalSettings.test.ts`.
+- (2026-02-21) Completed `F036`.
+  - Confirmed and codified date-only normalization for `decision_due_date` math using `normalizeDateOnly` + UTC midnight subtraction paths.
+  - Added regression test proving timestamp `end_date` inputs are normalized to date-only before subtraction:
+    - `packages/billing/tests/clientContractEffectiveRenewalSettings.test.ts`
 
 ## Open Questions
 - Should renewal ticket defaults be a brand-new billing settings card, or an extension of existing default ticket settings patterns?
