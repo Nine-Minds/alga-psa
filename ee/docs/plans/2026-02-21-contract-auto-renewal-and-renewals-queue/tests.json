@@ -42,7 +42,7 @@
   {
     "id": "T006",
     "description": "Functional: Render Evergreen Review settings card in ContractBasicsStep when end date is absent.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F006"
     ]

@@ -9,4 +9,10 @@ describe('ContractBasicsStep renewal card rendering', () => {
     expect(source).toContain('data-automation-id="renewal-settings-fixed-term-card"');
     expect(source).toContain('Renewal Settings');
   });
+
+  it('renders the evergreen review card when end date is absent', () => {
+    expect(source).toContain('{!data.end_date && (');
+    expect(source).toContain('data-automation-id="renewal-settings-evergreen-card"');
+    expect(source).toContain('Evergreen Review Settings');
+  });
 });
