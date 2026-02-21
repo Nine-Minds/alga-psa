@@ -1178,7 +1178,7 @@
   {
     "id": "T148",
     "description": "Cycle rollover: evergreen behavior remains correct across year boundary for 'Compute evergreen decision_due_date using anchor date minus notice_period_days.'",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F035"
     ]
