@@ -1320,3 +1320,5 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
     - `npm -w @alga-psa/billing exec vitest run tests/clientContractEffectiveRenewalSettings.test.ts --coverage=false`
 - (2026-02-21) Completed `T033`.
   - Validation: `npm -w @alga-psa/billing exec vitest run tests/clientContractEffectiveRenewalSettings.test.ts --coverage=false`
+- (2026-02-21) Completed `T034`.
+  - Validation: `npm -w @alga-psa/billing exec vitest run tests/clientContractEffectiveRenewalSettings.test.ts --coverage=false`
