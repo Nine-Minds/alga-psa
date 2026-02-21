@@ -746,7 +746,7 @@
   {
     "id": "T094",
     "description": "Functional: Use idempotency key per tenant/client_contract_id/cycle key for ticket creation.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F094"
     ]
