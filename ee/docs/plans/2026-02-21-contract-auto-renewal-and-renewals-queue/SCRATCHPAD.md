@@ -1498,3 +1498,5 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
   - Validation: `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`; `cd ee/server && npx vitest run src/__tests__/unit/temporalJobRunner.scheduleRecurringJob.test.ts`
 - (2026-02-21) Completed `T122`.
   - Validation: `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`; `cd ee/server && npx vitest run src/__tests__/unit/temporalJobRunner.scheduleRecurringJob.test.ts`
+- (2026-02-21) Completed `T123`.
+  - Validation: `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`; `cd ee/server && npx vitest run src/__tests__/unit/temporalJobRunner.scheduleRecurringJob.test.ts`
