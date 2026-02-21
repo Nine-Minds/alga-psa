@@ -1212,3 +1212,13 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
     - `server/src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts`
   - Validation:
     - `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`
+- (2026-02-21) Completed `F125`.
+  - Added tenant-scope parity coverage across pg-boss and Temporal renewal runtime paths.
+  - Assertions verify:
+    - scheduler payload requires and forwards tenant id for renewal processing
+    - renewal processor enforces tenant id and scopes reads/writes by tenant
+    - Temporal runner enforces tenant id in job data and propagates tenant scope into workflow/job persistence
+  - Updated coverage:
+    - `server/src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts`
+  - Validation:
+    - `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`

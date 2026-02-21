@@ -994,7 +994,7 @@
   {
     "id": "F125",
     "description": "Preserve tenant-scoped execution semantics in both runtime paths.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > FR9 \u2014 Runtime Compatibility (On-prem PG Boss vs Hosted/EE Temporal)"
     ]

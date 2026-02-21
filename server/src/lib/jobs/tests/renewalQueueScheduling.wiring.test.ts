@@ -275,4 +275,20 @@ describe('renewal queue scheduling wiring', () => {
       "'TemporalJobRunner not available. Ensure EE modules are properly installed.'"
     );
   });
+
+  it('preserves tenant-scoped execution semantics in both pg-boss and Temporal runtime paths', () => {
+    expect(jobsIndexSource).toContain('export const scheduleRenewalQueueProcessingJob = async (');
+    expect(jobsIndexSource).toContain('tenantId: string,');
+    expect(jobsIndexSource).toContain('{ tenantId, horizonDays }');
+
+    expect(renewalHandlerSource).toContain("const tenantId = typeof data.tenantId === 'string' ? data.tenantId : '';");
+    expect(renewalHandlerSource).toContain("throw new Error('Tenant ID is required for renewal queue processing job');");
+    expect(renewalHandlerSource).toContain("'cc.tenant': tenantId,");
+    expect(renewalHandlerSource).toContain(".where({ tenant_id: tenantId })");
+    expect(renewalHandlerSource).toContain('tenant: tenantId,');
+
+    expect(temporalRunnerSource).toContain("throw new Error('tenantId is required in job data');");
+    expect(temporalRunnerSource).toContain('tenantId: data.tenantId,');
+    expect(temporalRunnerSource).toContain('.where({ tenant: data.tenantId })');
+  });
 });
