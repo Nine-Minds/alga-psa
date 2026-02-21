@@ -6,6 +6,7 @@ import {
   Percent,
   Layers3,
   Calendar,
+  Clock3,
   Gauge,
   BarChart3,
   Package
@@ -21,6 +22,7 @@ export interface BillingTabDefinition {
 export type BillingTabValue =
   | 'contract-templates'
   | 'client-contracts'
+  | 'renewals'
   | 'accounting-exports'
   | 'contract-lines'
   | 'invoicing'
@@ -38,6 +40,12 @@ export const billingTabDefinitions: BillingTabDefinition[] = [
     label: 'Client Contracts',
     href: '/msp/billing?tab=client-contracts',
     icon: FileText
+  },
+  {
+    value: 'renewals',
+    label: 'Renewals',
+    href: '/msp/billing?tab=renewals',
+    icon: Clock3
   },
   {
     value: 'accounting-exports',

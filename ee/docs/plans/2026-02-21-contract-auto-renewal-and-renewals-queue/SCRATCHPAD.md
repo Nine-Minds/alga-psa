@@ -358,6 +358,12 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
   - Applied in shared and clients normalization helpers.
   - Added deterministic clamp coverage in:
     - `packages/billing/tests/clientContractEffectiveRenewalSettings.test.ts`
+- (2026-02-21) Completed `F048`.
+  - Added `renewals` tab value to billing tab union/config metadata in:
+    - `packages/billing/src/components/billing-dashboard/billingTabsConfig.ts`
+  - Added tab definition (`label=Renewals`, `href=/msp/billing?tab=renewals`) and icon mapping.
+  - Added coverage:
+    - `packages/billing/tests/billingTabsConfig.renewals.test.ts`
 
 ## Open Questions
 - Should renewal ticket defaults be a brand-new billing settings card, or an extension of existing default ticket settings patterns?

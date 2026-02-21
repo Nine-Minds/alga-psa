@@ -378,7 +378,7 @@
   {
     "id": "F048",
     "description": "Add renewals tab value and metadata to billing tab configuration.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > FR4 — Renewals Queue and Dashboard Entry Points"
     ]
