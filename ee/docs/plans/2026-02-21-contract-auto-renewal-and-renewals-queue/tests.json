@@ -594,7 +594,7 @@
   {
     "id": "T075",
     "description": "Functional: Prevent invalid transition from non_renewing to renewing without explicit override action.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F075"
     ]
