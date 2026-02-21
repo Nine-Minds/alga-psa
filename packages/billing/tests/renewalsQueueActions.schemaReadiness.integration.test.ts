@@ -51,4 +51,19 @@ describe('renewalsQueueActions strict-schema integration wiring', () => {
     expect(source).toContain('Renewal schema is not ready. Missing required columns:');
     expect(source).toContain('Run the latest server database migrations, then retry this renewals operation.');
   });
+
+  it('T255: schema guard happy path is wired for operational renewals endpoints after migrations', () => {
+    expect(source).toContain('export const listRenewalQueueRows = withAuth(async (');
+    expect(source).toContain('export const markRenewalQueueItemRenewing = withAuth(async (');
+    expect(source).toContain('export const markRenewalQueueItemNonRenewing = withAuth(async (');
+    expect(source).toContain('export const createRenewalDraftForQueueItem = withAuth(async (');
+    expect(source).toContain('export const snoozeRenewalQueueItem = withAuth(async (');
+    expect(source).toContain('export const assignRenewalQueueItemOwner = withAuth(async (');
+    expect(source).toContain('export const completeRenewalQueueItemForActivation = withAuth(async (');
+    expect(source).toContain('export const completeRenewalQueueItemForNonRenewal = withAuth(async (');
+    expect(source).toContain('export const retryRenewalQueueTicketCreation = withAuth(async (');
+    expect(source.match(/await assertRenewalSchemaReady\(knex\);/g)?.length).toBeGreaterThanOrEqual(9);
+    expect(source).not.toContain('Renewals queue status column is not available');
+    expect(source).not.toContain('Renewals queue snooze columns are not available');
+  });
 });

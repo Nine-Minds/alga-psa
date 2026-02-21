@@ -2054,7 +2054,7 @@
   {
     "id": "T255",
     "description": "Integration (happy path): renewal schema readiness guard passes after migrations and renewals queue endpoints remain operational.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F143",
       "F144"

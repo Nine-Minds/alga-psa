@@ -1929,3 +1929,9 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
   - Assertions verify `assertRenewalSchemaReady` fails fast with actionable missing-column error text instructing migration execution.
   - Validation:
     - `npm -w @alga-psa/billing exec vitest run tests/renewalsQueueActions.schemaReadiness.integration.test.ts --coverage=false`
+- (2026-02-21) Completed `T255`.
+  - Extended strict-schema integration wiring coverage for guard-pass operational path in:
+    - `packages/billing/tests/renewalsQueueActions.schemaReadiness.integration.test.ts`
+  - Assertions verify all renewals queue endpoints invoke `assertRenewalSchemaReady(knex)` and no longer rely on legacy missing-column fallback branches in strict migrated-schema mode.
+  - Validation:
+    - `npm -w @alga-psa/billing exec vitest run tests/renewalsQueueActions.schemaReadiness.integration.test.ts --coverage=false`
