@@ -1296,3 +1296,13 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
     - `packages/billing/tests/renewalsQueueActions.createDraftAudit.wiring.test.ts`
   - Validation:
     - `npm -w @alga-psa/billing exec vitest run tests/renewalsQueueActions.createDraft.wiring.test.ts tests/renewalsQueueActions.createDraftAudit.wiring.test.ts --coverage=false`
+- (2026-02-21) Completed `F134`.
+  - Added explicit cross-tenant identifier rejection in queue mutation validation:
+    - owner assignment now rejects `assignedTo` user IDs found only in another tenant
+    - activation completion now rejects `activatedContractId` values belonging to another tenant
+  - Added explicit error paths for cross-tenant and not-in-tenant owner identifiers.
+  - Updated files:
+    - `packages/billing/src/actions/renewalsQueueActions.ts`
+    - `packages/billing/tests/renewalsQueueActions.crossTenantValidation.wiring.test.ts`
+  - Validation:
+    - `npm -w @alga-psa/billing exec vitest run tests/renewalsQueueActions.crossTenantValidation.wiring.test.ts tests/renewalsQueueActions.assignOwner.wiring.test.ts tests/renewalsQueueActions.completeOnActivation.wiring.test.ts --coverage=false`

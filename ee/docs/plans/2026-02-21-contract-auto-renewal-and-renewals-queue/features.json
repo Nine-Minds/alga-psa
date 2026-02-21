@@ -1066,7 +1066,7 @@
   {
     "id": "F134",
     "description": "Reject cross-tenant identifiers during queue mutation validation.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > FR10 \u2014 Permissions, Security, and Auditability"
     ]

@@ -813,6 +813,25 @@ export const assignRenewalQueueItemOwner = withAuth(async (
     : null;
 
   return knex.transaction(async (trx) => {
+    if (normalizedAssignedTo) {
+      const ownerInTenant = await trx('users')
+        .where({
+          tenant,
+          user_id: normalizedAssignedTo,
+        })
+        .first('user_id');
+      if (!ownerInTenant) {
+        const ownerInAnotherTenant = await trx('users')
+          .where({ user_id: normalizedAssignedTo })
+          .whereNot({ tenant })
+          .first('user_id');
+        if (ownerInAnotherTenant) {
+          throw new Error('Cross-tenant owner identifier is not allowed');
+        }
+        throw new Error('Assigned owner was not found in this tenant');
+      }
+    }
+
     const row = await trx('client_contracts')
       .where({
         tenant,
@@ -928,6 +947,18 @@ export const completeRenewalQueueItemForActivation = withAuth(async (
 
     if (typeof resolvedActivatedContractId !== 'string' || resolvedActivatedContractId.length === 0) {
       throw new Error('Activated renewal contract id is required');
+    }
+
+    const crossTenantActivatedContract = await trx('contracts')
+      .where({
+        contract_id: resolvedActivatedContractId,
+      })
+      .whereNot({
+        tenant,
+      })
+      .first('contract_id');
+    if (crossTenantActivatedContract) {
+      throw new Error('Cross-tenant activated contract identifier is not allowed');
     }
 
     const activeRenewalContract = await trx('contracts')
