@@ -506,7 +506,7 @@
   {
     "id": "F064",
     "description": "Define queue status enum values pending/renewing/non_renewing/snoozed/completed in renewal work-item model.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > FR5 — Queue Actions and Renewal Workflow"
     ]

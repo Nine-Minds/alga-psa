@@ -476,6 +476,19 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
   - Validation:
     - `npm -w @alga-psa/billing run typecheck`
     - `npm -w @alga-psa/billing exec vitest run tests/BillingDashboard.renewalsRoute.test.ts tests/RenewalsQueueTab.component.test.ts tests/ClientContractsTab.upcomingRenewalsWidget.test.ts`
+- (2026-02-21) Completed `F064`.
+  - Defined centralized renewal queue status enum in shared contract interfaces:
+    - `packages/types/src/interfaces/contract.interfaces.ts`
+    - `server/src/interfaces/contract.interfaces.ts`
+  - Added renewal work-item interface model (`IClientContractRenewalWorkItem`) with `status: RenewalWorkItemStatus`.
+  - Updated queue row model/status normalization to consume `RenewalWorkItemStatus` from shared types:
+    - `packages/billing/src/actions/renewalsQueueActions.ts`
+  - Updated wiring coverage:
+    - `packages/billing/tests/renewalsQueueActions.wiring.test.ts`
+  - Validation:
+    - `npm -w @alga-psa/billing run typecheck`
+    - `npm -w @alga-psa/billing exec vitest run tests/renewalsQueueActions.wiring.test.ts tests/RenewalsQueueTab.component.test.ts`
+    - `npm -w @alga-psa/server run typecheck` (workspace alias not present in root workspaces)
 
 ## Open Questions
 - Should renewal ticket defaults be a brand-new billing settings card, or an extension of existing default ticket settings patterns?

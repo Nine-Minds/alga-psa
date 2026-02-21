@@ -5,6 +5,7 @@ import { ISO8601String } from '@alga-psa/types';
  * Contract status types
  */
 export type ContractStatus = 'active' | 'draft' | 'terminated' | 'expired' | 'published' | 'archived';
+export type RenewalWorkItemStatus = 'pending' | 'renewing' | 'non_renewing' | 'snoozed' | 'completed';
 
 /**
  * Interface for a Contract
@@ -79,6 +80,31 @@ export interface IClientContract extends TenantEntity {
   po_required?: boolean;
   po_number?: string | null;
   po_amount?: number | null;
+  created_at?: ISO8601String;
+  updated_at?: ISO8601String;
+}
+
+/**
+ * Renewal queue work item model for a client contract cycle
+ */
+export interface IClientContractRenewalWorkItem extends TenantEntity {
+  renewal_work_item_id: string;
+  client_contract_id: string;
+  client_id: string;
+  contract_id: string;
+  decision_due_date: ISO8601String;
+  cycle_start?: ISO8601String | null;
+  cycle_end?: ISO8601String | null;
+  cycle_key: string;
+  status: RenewalWorkItemStatus;
+  assigned_to?: string | null;
+  snoozed_until?: ISO8601String | null;
+  created_ticket_id?: string | null;
+  created_draft_contract_id?: string | null;
+  last_action?: string | null;
+  last_action_by?: string | null;
+  last_action_at?: ISO8601String | null;
+  last_action_note?: string | null;
   created_at?: ISO8601String;
   updated_at?: ISO8601String;
 }
