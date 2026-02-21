@@ -1686,3 +1686,5 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
   - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
 - (2026-02-21) Completed `T216`.
   - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T217`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.

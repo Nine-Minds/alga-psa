@@ -1730,7 +1730,7 @@
   {
     "id": "T217",
     "description": "Parity: 'Register renewal scheduled processing job in pg-boss on-prem scheduling path.' behaves equivalently under pg-boss and Temporal paths",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F118"
     ]
