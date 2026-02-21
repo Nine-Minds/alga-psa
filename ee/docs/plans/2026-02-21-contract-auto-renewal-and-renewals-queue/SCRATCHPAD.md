@@ -1044,6 +1044,16 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
   - Validation:
     - `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`
     - `cd server && npm run typecheck`
+- (2026-02-21) Completed `F108`.
+  - Added regression coverage confirming evergreen decision due date uses contract-level notice-period override when tenant defaults are disabled.
+  - Covered both branches:
+    - tenant defaults enabled => tenant notice period drives evergreen decision date
+    - tenant defaults disabled => contract override notice period drives evergreen decision date
+  - Updated coverage:
+    - `packages/billing/tests/clientContractEffectiveRenewalSettings.test.ts`
+  - Validation:
+    - `npm -w @alga-psa/billing exec vitest run tests/clientContractEffectiveRenewalSettings.test.ts --coverage=false`
+    - `npm -w @alga-psa/billing run typecheck`
 
 ## Open Questions
 - Should renewal ticket defaults be a brand-new billing settings card, or an extension of existing default ticket settings patterns?

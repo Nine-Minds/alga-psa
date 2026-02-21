@@ -356,6 +356,57 @@ describe('client contract effective renewal settings normalization', () => {
     expect(septemberAnniversary).toBe('2026-08-21');
   });
 
+  it('respects evergreen-specific notice period overrides when tenant defaults are disabled', () => {
+    const now = '2026-01-01';
+    const startDate = '2024-09-10';
+
+    const withTenantDefaults = normalizeClientContract({
+      contract_id: 'contract-4k',
+      client_contract_id: 'cc-4k',
+      client_id: 'client-4k',
+      tenant: 'tenant-1',
+      start_date: startDate,
+      end_date: null,
+      is_active: true,
+      use_tenant_renewal_defaults: true,
+      tenant_default_renewal_mode: 'manual',
+      tenant_default_notice_period_days: 30,
+      notice_period_days: 10,
+    } as any);
+
+    const withContractOverride = normalizeClientContract({
+      contract_id: 'contract-4l',
+      client_contract_id: 'cc-4l',
+      client_id: 'client-4l',
+      tenant: 'tenant-1',
+      start_date: startDate,
+      end_date: null,
+      is_active: true,
+      use_tenant_renewal_defaults: false,
+      renewal_mode: 'manual',
+      tenant_default_renewal_mode: 'manual',
+      tenant_default_notice_period_days: 30,
+      notice_period_days: 10,
+    } as any);
+
+    const expectedTenantDueDate = computeEvergreenDecisionDueDate({
+      startDate,
+      now,
+      noticePeriodDays: 30,
+    });
+    const expectedOverrideDueDate = computeEvergreenDecisionDueDate({
+      startDate,
+      now,
+      noticePeriodDays: 10,
+    });
+
+    expect(expectedTenantDueDate).toBe('2026-08-11');
+    expect(expectedOverrideDueDate).toBe('2026-08-31');
+    expect(withTenantDefaults.decision_due_date).toBe(expectedTenantDueDate);
+    expect(withContractOverride.decision_due_date).toBe(expectedOverrideDueDate);
+    expect(withContractOverride.decision_due_date).not.toBe(withTenantDefaults.decision_due_date);
+  });
+
   it('computes evergreen cycle_start and cycle_end boundaries per annual cycle', () => {
     expect(
       computeEvergreenCycleBounds({
