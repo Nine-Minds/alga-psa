@@ -535,6 +535,20 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
   - Validation:
     - `npm -w @alga-psa/billing run typecheck`
     - `npm -w @alga-psa/billing exec vitest run tests/renewalsQueueActions.wiring.test.ts tests/renewalsQueueActions.markRenewing.wiring.test.ts tests/renewalsQueueActions.markNonRenewing.wiring.test.ts tests/renewalsQueueActions.createDraft.wiring.test.ts`
+- (2026-02-21) Completed `F068`.
+  - Added snooze mutation action:
+    - `snoozeRenewalQueueItem(clientContractId, snoozedUntil)` in `packages/billing/src/actions/renewalsQueueActions.ts`
+  - Action behavior:
+    - validates required `clientContractId` + `snoozedUntil`
+    - verifies `status` + `snoozed_until` columns exist
+    - normalizes `snoozed_until` to date-only (`YYYY-MM-DD`)
+    - blocks snoozing from terminal statuses (`completed`, `non_renewing`)
+    - updates status to `snoozed` and returns `RenewalSnoozeResult`
+  - Added wiring coverage:
+    - `packages/billing/tests/renewalsQueueActions.snooze.wiring.test.ts`
+  - Validation:
+    - `npm -w @alga-psa/billing run typecheck`
+    - `npm -w @alga-psa/billing exec vitest run tests/renewalsQueueActions.snooze.wiring.test.ts tests/renewalsQueueActions.markRenewing.wiring.test.ts tests/renewalsQueueActions.markNonRenewing.wiring.test.ts tests/renewalsQueueActions.createDraft.wiring.test.ts`
 
 ## Open Questions
 - Should renewal ticket defaults be a brand-new billing settings card, or an extension of existing default ticket settings patterns?

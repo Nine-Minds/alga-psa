@@ -48,6 +48,10 @@ export type RenewalDraftCreationResult = {
   draft_client_contract_id: string;
 };
 
+export type RenewalSnoozeResult = RenewalQueueMutationResult & {
+  snoozed_until: string;
+};
+
 export const listRenewalQueueRows = withAuth(async (
   _user,
   { tenant },
@@ -395,6 +399,77 @@ export const createRenewalDraftForQueueItem = withAuth(async (
       client_contract_id: clientContractId,
       created_draft_contract_id: draftContractId,
       draft_client_contract_id: draftClientContractId,
+    };
+  });
+});
+
+export const snoozeRenewalQueueItem = withAuth(async (
+  _user,
+  { tenant },
+  clientContractId: string,
+  snoozedUntil: string
+): Promise<RenewalSnoozeResult> => {
+  if (typeof clientContractId !== 'string' || clientContractId.trim().length === 0) {
+    throw new Error('Client contract id is required');
+  }
+  if (typeof snoozedUntil !== 'string' || snoozedUntil.trim().length === 0) {
+    throw new Error('Snooze target date is required');
+  }
+
+  const { knex } = await createTenantKnex();
+  const schema = knex.schema as any;
+  const [hasStatusColumn, hasSnoozedUntilColumn] = await Promise.all([
+    schema?.hasColumn?.('client_contracts', 'status') ?? false,
+    schema?.hasColumn?.('client_contracts', 'snoozed_until') ?? false,
+  ]);
+
+  if (!hasStatusColumn || !hasSnoozedUntilColumn) {
+    throw new Error('Renewals queue snooze columns are not available');
+  }
+
+  const normalizedSnoozedUntil = snoozedUntil.trim().slice(0, 10);
+  const parsedSnoozeDate = new Date(normalizedSnoozedUntil);
+  if (Number.isNaN(parsedSnoozeDate.getTime())) {
+    throw new Error('Snooze target date is invalid');
+  }
+
+  return knex.transaction(async (trx) => {
+    const row = await trx('client_contracts')
+      .where({
+        tenant,
+        client_contract_id: clientContractId,
+        is_active: true,
+      })
+      .select('client_contract_id', 'status')
+      .first();
+
+    if (!row) {
+      throw new Error('Renewal work item not found');
+    }
+
+    const previousStatus = toRenewalWorkItemStatus((row as any).status);
+    if (previousStatus === 'completed' || previousStatus === 'non_renewing') {
+      throw new Error(`Cannot snooze renewal work item from status ${previousStatus}`);
+    }
+
+    const updatedAt = new Date().toISOString();
+    await trx('client_contracts')
+      .where({
+        tenant,
+        client_contract_id: clientContractId,
+      })
+      .update({
+        status: 'snoozed',
+        snoozed_until: normalizedSnoozedUntil,
+        updated_at: updatedAt,
+      });
+
+    return {
+      client_contract_id: clientContractId,
+      previous_status: previousStatus,
+      status: 'snoozed',
+      updated_at: updatedAt,
+      snoozed_until: normalizedSnoozedUntil,
     };
   });
 });

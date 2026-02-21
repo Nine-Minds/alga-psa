@@ -538,7 +538,7 @@
   {
     "id": "F068",
     "description": "Implement snooze action that sets status to snoozed with snoozed_until date.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > FR5 — Queue Actions and Renewal Workflow"
     ]
