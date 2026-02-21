@@ -874,7 +874,7 @@
   {
     "id": "F110",
     "description": "Extend contract expiration report action to expose decision_due_date alongside end_date where available.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > FR8 — Reporting and Existing Surface Alignment"
     ]
