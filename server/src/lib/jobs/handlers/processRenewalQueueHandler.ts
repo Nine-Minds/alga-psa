@@ -31,10 +31,19 @@ const normalizeOptionalDateOnly = (value: unknown): string | null => {
   if (!isDateOnly(value)) return null;
   return value;
 };
-const resolveRenewalDueDateActionPolicy = (value: unknown): 'queue_only' | 'create_ticket' => (
+const resolveOptionalRenewalDueDateActionPolicy = (value: unknown): 'queue_only' | 'create_ticket' | null => (
   value === 'queue_only' || value === 'create_ticket'
     ? value
-    : DEFAULT_RENEWAL_DUE_DATE_ACTION_POLICY
+    : null
+);
+const resolveRenewalDueDateActionPolicy = (value: unknown): 'queue_only' | 'create_ticket' => (
+  resolveOptionalRenewalDueDateActionPolicy(value) ??
+    DEFAULT_RENEWAL_DUE_DATE_ACTION_POLICY
+);
+const resolveUseTenantRenewalDefaults = (value: unknown): boolean => (
+  typeof value === 'boolean'
+    ? value
+    : true
 );
 
 export async function processRenewalQueueHandler(data: RenewalQueueProcessorJobData): Promise<void> {
@@ -63,6 +72,7 @@ export async function processRenewalQueueHandler(data: RenewalQueueProcessorJobD
     hasDefaultNoticePeriodColumn,
     hasTenantDueDateActionPolicyColumn,
     hasContractDueDateActionPolicyColumn,
+    hasUseTenantRenewalDefaultsColumn,
   ] = await Promise.all([
     schema?.hasColumn?.('client_contracts', 'decision_due_date') ?? false,
     schema?.hasColumn?.('client_contracts', 'status') ?? false,
@@ -76,6 +86,7 @@ export async function processRenewalQueueHandler(data: RenewalQueueProcessorJobD
     schema?.hasColumn?.('default_billing_settings', 'default_notice_period_days') ?? false,
     schema?.hasColumn?.('default_billing_settings', 'renewal_due_date_action_policy') ?? false,
     schema?.hasColumn?.('client_contracts', 'renewal_due_date_action_policy') ?? false,
+    schema?.hasColumn?.('client_contracts', 'use_tenant_renewal_defaults') ?? false,
   ]);
 
   if (!hasDecisionDueDateColumn || !hasStatusColumn) {
@@ -124,6 +135,7 @@ export async function processRenewalQueueHandler(data: RenewalQueueProcessorJobD
   let newCycleCount = 0;
   let queueOnlyPolicyCount = 0;
   let createTicketPolicyCount = 0;
+  let contractOverridePolicyCount = 0;
   const nowIso = new Date().toISOString();
 
   for (const row of candidateRows) {
@@ -136,7 +148,20 @@ export async function processRenewalQueueHandler(data: RenewalQueueProcessorJobD
     const tenantDueDateActionPolicy = resolveRenewalDueDateActionPolicy(
       (row as any).tenant_renewal_due_date_action_policy
     );
-    if (tenantDueDateActionPolicy === 'queue_only') {
+    const useTenantRenewalDefaults = hasUseTenantRenewalDefaultsColumn
+      ? resolveUseTenantRenewalDefaults((row as any).use_tenant_renewal_defaults)
+      : true;
+    const contractOverrideDueDateActionPolicy = hasContractDueDateActionPolicyColumn
+      ? resolveOptionalRenewalDueDateActionPolicy((row as any).renewal_due_date_action_policy)
+      : null;
+    const effectiveDueDateActionPolicy = useTenantRenewalDefaults
+      ? tenantDueDateActionPolicy
+      : contractOverrideDueDateActionPolicy ?? tenantDueDateActionPolicy;
+    if (!useTenantRenewalDefaults && contractOverrideDueDateActionPolicy) {
+      contractOverridePolicyCount += 1;
+    }
+
+    if (effectiveDueDateActionPolicy === 'queue_only') {
       queueOnlyPolicyCount += 1;
     } else {
       createTicketPolicyCount += 1;
@@ -181,9 +206,9 @@ export async function processRenewalQueueHandler(data: RenewalQueueProcessorJobD
       updates.renewal_cycle_key = nextCycleKey;
     }
     if (hasContractDueDateActionPolicyColumn) {
-      const existingPolicy = resolveRenewalDueDateActionPolicy((row as any).renewal_due_date_action_policy);
-      if (existingPolicy !== tenantDueDateActionPolicy) {
-        updates.renewal_due_date_action_policy = tenantDueDateActionPolicy;
+      const existingPolicy = resolveOptionalRenewalDueDateActionPolicy((row as any).renewal_due_date_action_policy);
+      if (existingPolicy !== effectiveDueDateActionPolicy) {
+        updates.renewal_due_date_action_policy = effectiveDueDateActionPolicy;
       }
     }
 
@@ -233,5 +258,6 @@ export async function processRenewalQueueHandler(data: RenewalQueueProcessorJobD
     newCycleCount,
     queueOnlyPolicyCount,
     createTicketPolicyCount,
+    contractOverridePolicyCount,
   });
 }

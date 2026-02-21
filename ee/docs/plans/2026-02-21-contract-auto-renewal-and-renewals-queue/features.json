@@ -690,7 +690,7 @@
   {
     "id": "F087",
     "description": "Respect contract-level override due-date action policy during scheduled processing.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > FR6 — Automation and Ticket Creation"
     ]
