@@ -900,6 +900,19 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
   - Validation:
     - `cd server && npm run typecheck`
     - `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`
+- (2026-02-21) Completed `F096`.
+  - Renewal processor now records automation failures on work items when ticket creation fails:
+    - reads optional `client_contracts.automation_error` column
+    - writes failure reason on create-path errors
+    - records missing-routing-defaults as explicit automation error for `create_ticket` policy
+    - clears `automation_error` when ticket creation succeeds
+  - Added processor metric:
+    - `automationErrorCount`
+  - Updated wiring coverage:
+    - `server/src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts`
+  - Validation:
+    - `cd server && npm run typecheck`
+    - `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`
 
 ## Open Questions
 - Should renewal ticket defaults be a brand-new billing settings card, or an extension of existing default ticket settings patterns?

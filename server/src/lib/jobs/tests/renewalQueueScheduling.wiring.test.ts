@@ -143,6 +143,14 @@ describe('renewal queue scheduling wiring', () => {
     expect(renewalHandlerSource).toContain('duplicateTicketSkipCount += 1;');
   });
 
+  it('records automation_error on work item when renewal ticket creation fails', () => {
+    expect(renewalHandlerSource).toContain("schema?.hasColumn?.('client_contracts', 'automation_error') ?? false");
+    expect(renewalHandlerSource).toContain("updates.automation_error = ticketAutomationError ?? 'Renewal ticket automation failed';");
+    expect(renewalHandlerSource).toContain("updates.automation_error = 'Missing renewal ticket routing defaults for create_ticket policy';");
+    expect(renewalHandlerSource).toContain('automationErrorCount += 1;');
+    expect(renewalHandlerSource).toContain('updates.automation_error = null;');
+  });
+
   it('registers and schedules renewal queue processing in the jobs module', () => {
     expect(jobsIndexSource).toContain("import { processRenewalQueueHandler, RenewalQueueProcessorJobData } from './handlers/processRenewalQueueHandler';");
     expect(jobsIndexSource).toContain("jobScheduler.registerJobHandler<RenewalQueueProcessorJobData>(");

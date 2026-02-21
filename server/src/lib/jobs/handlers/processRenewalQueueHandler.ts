@@ -217,6 +217,7 @@ export async function processRenewalQueueHandler(data: RenewalQueueProcessorJobD
     hasContractRenewalTicketStatusColumn,
     hasContractRenewalTicketPriorityColumn,
     hasContractRenewalTicketAssigneeColumn,
+    hasAutomationErrorColumn,
     hasTicketsTable,
     hasWorkflowRunsTable,
   ] = await Promise.all([
@@ -241,6 +242,7 @@ export async function processRenewalQueueHandler(data: RenewalQueueProcessorJobD
     schema?.hasColumn?.('client_contracts', 'renewal_ticket_status_id') ?? false,
     schema?.hasColumn?.('client_contracts', 'renewal_ticket_priority') ?? false,
     schema?.hasColumn?.('client_contracts', 'renewal_ticket_assignee_id') ?? false,
+    schema?.hasColumn?.('client_contracts', 'automation_error') ?? false,
     schema?.hasTable?.('tickets') ?? false,
     schema?.hasTable?.('workflow_runs') ?? false,
   ]);
@@ -322,6 +324,7 @@ export async function processRenewalQueueHandler(data: RenewalQueueProcessorJobD
   let ticketCreationSkippedMissingDefaultsCount = 0;
   let routingOverrideAppliedCount = 0;
   let duplicateTicketSkipCount = 0;
+  let automationErrorCount = 0;
   const nowIso = new Date().toISOString();
 
   for (const row of candidateRows) {
@@ -426,6 +429,7 @@ export async function processRenewalQueueHandler(data: RenewalQueueProcessorJobD
       && effectiveDueDateActionPolicy === 'create_ticket'
       && decisionDueDate <= today;
     if (shouldCreateTicketAtDueDate) {
+      let ticketAutomationError: string | null = null;
       const clientId = normalizeOptionalUuid((row as any).client_id);
       const tenantBoardId = normalizeOptionalUuid((row as any).tenant_renewal_ticket_board_id);
       const tenantStatusId = normalizeOptionalUuid((row as any).tenant_renewal_ticket_status_id);
@@ -554,6 +558,7 @@ export async function processRenewalQueueHandler(data: RenewalQueueProcessorJobD
               })
             ));
           } catch (error) {
+            ticketAutomationError = error instanceof Error ? error.message : String(error);
             logger.error('Direct renewal automation ticket creation failed', {
               tenantId,
               clientContractId: (row as any).client_contract_id,
@@ -564,10 +569,20 @@ export async function processRenewalQueueHandler(data: RenewalQueueProcessorJobD
 
         if (createdTicketId) {
           updates.created_ticket_id = createdTicketId;
+          if (hasAutomationErrorColumn) {
+            updates.automation_error = null;
+          }
           createdTicketCount += 1;
+        } else if (hasAutomationErrorColumn) {
+          updates.automation_error = ticketAutomationError ?? 'Renewal ticket automation failed';
+          automationErrorCount += 1;
         }
       } else {
         ticketCreationSkippedMissingDefaultsCount += 1;
+        if (hasAutomationErrorColumn) {
+          updates.automation_error = 'Missing renewal ticket routing defaults for create_ticket policy';
+          automationErrorCount += 1;
+        }
       }
     }
 
@@ -605,5 +620,6 @@ export async function processRenewalQueueHandler(data: RenewalQueueProcessorJobD
     ticketCreationSkippedMissingDefaultsCount,
     routingOverrideAppliedCount,
     duplicateTicketSkipCount,
+    automationErrorCount,
   });
 }

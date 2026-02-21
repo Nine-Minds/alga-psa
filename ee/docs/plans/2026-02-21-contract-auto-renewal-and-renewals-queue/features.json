@@ -762,7 +762,7 @@
   {
     "id": "F096",
     "description": "Record automation_error on work item when ticket creation fails.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > FR6 — Automation and Ticket Creation"
     ]
