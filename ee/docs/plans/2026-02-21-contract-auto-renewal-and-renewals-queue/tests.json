@@ -1098,7 +1098,7 @@
   {
     "id": "T138",
     "description": "Validation negative-path: Validate renewal mode is required when an end date is set.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F011"
     ]
