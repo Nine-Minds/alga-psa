@@ -418,7 +418,7 @@
   {
     "id": "T053",
     "description": "Functional: Render bucket quick filters for 0-30, 31-60, and 61-90 days.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F053"
     ]
