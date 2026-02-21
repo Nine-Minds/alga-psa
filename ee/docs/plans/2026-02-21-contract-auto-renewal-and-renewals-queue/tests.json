@@ -314,7 +314,7 @@
   {
     "id": "T040",
     "description": "Functional: Recompute decision_due_date when evergreen anchor basis changes.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F040"
     ]
