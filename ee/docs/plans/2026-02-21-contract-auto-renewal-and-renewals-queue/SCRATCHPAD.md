@@ -1127,6 +1127,18 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
   - Validation:
     - `npm -w @alga-psa/billing exec vitest run tests/ContractReports.expirationCopy.wiring.test.ts tests/contractReportActions.summary.wiring.test.ts tests/contractReportActions.expiration.wiring.test.ts --coverage=false`
     - `npm -w @alga-psa/billing run typecheck`
+- (2026-02-21) Completed `F117`.
+  - Updated expiration-report row construction so legacy `auto_renew` display derives from effective renewal mode values.
+  - Effective renewal mode now resolves with tenant-default precedence logic:
+    - honors `use_tenant_renewal_defaults`
+    - falls back deterministically between contract/tenant/default (`manual`)
+  - `auto_renew` now maps to `effectiveRenewalMode === 'auto'`.
+  - Updated files:
+    - `packages/billing/src/actions/contractReportActions.ts`
+    - `packages/billing/tests/contractReportActions.expiration.wiring.test.ts`
+  - Validation:
+    - `npm -w @alga-psa/billing exec vitest run tests/contractReportActions.expiration.wiring.test.ts tests/contractReportActions.summary.wiring.test.ts tests/ContractReports.expirationCopy.wiring.test.ts --coverage=false`
+    - `npm -w @alga-psa/billing run typecheck`
 
 ## Open Questions
 - Should renewal ticket defaults be a brand-new billing settings card, or an extension of existing default ticket settings patterns?

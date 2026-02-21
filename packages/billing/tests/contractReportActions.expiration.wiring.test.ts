@@ -18,7 +18,10 @@ describe('contractReportActions expiration report wiring', () => {
   it('includes renewal_mode in expiration report row payloads', () => {
     expect(source).toContain("renewal_mode?: 'none' | 'manual' | 'auto' | null;");
     expect(source).toContain("'cc.renewal_mode',");
-    expect(source).toContain('renewal_mode: row.renewal_mode ?? null,');
+    expect(source).toContain("'cc.use_tenant_renewal_defaults',");
+    expect(source).toContain("'dbs.default_renewal_mode as tenant_default_renewal_mode',");
+    expect(source).toContain('const effectiveRenewalMode =');
+    expect(source).toContain('renewal_mode: effectiveRenewalMode,');
   });
 
   it('includes queue status in expiration rows when work-item status exists', () => {
@@ -31,11 +34,16 @@ describe('contractReportActions expiration report wiring', () => {
   it('keeps fixed-term expiration rows even when renewal fields are unset', () => {
     expect(source).toContain(".whereNotNull('cc.end_date')");
     expect(source).not.toContain(".whereNotNull('cc.renewal_mode')");
-    expect(source).toContain('renewal_mode: row.renewal_mode ?? null,');
+    expect(source).toContain("const useTenantRenewalDefaults = row.use_tenant_renewal_defaults !== false;");
+    expect(source).toContain("?? 'manual';");
   });
 
   it('keeps expiration-report sort semantics compatible with existing consumers', () => {
     expect(source).toContain(".orderBy('cc.end_date', 'asc');");
     expect(source).toContain("const key = `${item.contract_name}-${item.client_name}-${item.end_date}`;");
+  });
+
+  it('derives legacy auto_renew from effective renewal mode values', () => {
+    expect(source).toContain('auto_renew: effectiveRenewalMode === \'auto\'');
   });
 });

@@ -930,7 +930,7 @@
   {
     "id": "F117",
     "description": "Ensure legacy auto_renew display derives from new renewal mode values.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > FR8 — Reporting and Existing Surface Alignment"
     ]
