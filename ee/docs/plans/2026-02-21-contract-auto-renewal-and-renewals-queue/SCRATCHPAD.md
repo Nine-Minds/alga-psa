@@ -194,6 +194,8 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
   - Included tenant default renewal ticket board field mapping (`renewal_ticket_board_id`) in billing settings model/read-write path.
 - (2026-02-21) Completed `F023`.
   - Included tenant default renewal ticket status field mapping (`renewal_ticket_status_id`) in billing settings model/read-write path.
+- (2026-02-21) Completed `F024`.
+  - Included tenant default renewal ticket priority field mapping (`renewal_ticket_priority`) in billing settings model/read-write path.
 
 ## Open Questions
 - Should renewal ticket defaults be a brand-new billing settings card, or an extension of existing default ticket settings patterns?
