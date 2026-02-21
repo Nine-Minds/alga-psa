@@ -1802,7 +1802,7 @@
   {
     "id": "T226",
     "description": "Parity: 'Preserve tenant-scoped execution semantics in both runtime paths.' behaves equivalently under pg-boss and Temporal paths",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F125"
     ]
