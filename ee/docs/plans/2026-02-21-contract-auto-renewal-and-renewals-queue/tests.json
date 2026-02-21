@@ -1594,7 +1594,7 @@
   {
     "id": "T200",
     "description": "UI behavior: Display evergreen contract type badge in queue rows. persists after refresh/navigation",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F101"
     ]
