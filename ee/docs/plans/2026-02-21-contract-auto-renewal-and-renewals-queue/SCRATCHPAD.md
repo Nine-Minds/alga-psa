@@ -103,6 +103,9 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
     - normalizes positive `renewal_term_months`,
     - preserves explicit boolean `use_tenant_renewal_defaults`.
   - Wired both initial state and open-effect initialization to use this shared edit-hydration path.
+- (2026-02-21) Completed `T004`.
+  - Extended `packages/billing/src/components/billing-dashboard/contracts/ContractWizard.renewalFields.test.ts`.
+  - Added assertions proving edit hydration path uses `buildInitialContractWizardData(editingContract)` and renewal normalization helpers for mode/notice/term.
 
 ## Open Questions
 - Should renewal ticket defaults be a brand-new billing settings card, or an extension of existing default ticket settings patterns?

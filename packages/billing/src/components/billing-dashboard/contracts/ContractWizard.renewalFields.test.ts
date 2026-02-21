@@ -31,4 +31,16 @@ describe('ContractWizardData renewal fields', () => {
     expect(wizardSource).toContain('renewal_term_months: undefined');
     expect(wizardSource).toContain('use_tenant_renewal_defaults: true');
   });
+
+  it('hydrates and normalizes renewal fields for editing contracts', () => {
+    expect(wizardSource).toContain('buildInitialContractWizardData');
+    expect(wizardSource).toContain('normalizeRenewalMode(editingContract?.renewal_mode)');
+    expect(wizardSource).toContain(
+      'normalizeNonNegativeInteger(editingContract?.notice_period_days)'
+    );
+    expect(wizardSource).toContain(
+      'normalizePositiveInteger(editingContract?.renewal_term_months)'
+    );
+    expect(wizardSource).toContain('buildInitialContractWizardData(editingContract)');
+  });
 });
