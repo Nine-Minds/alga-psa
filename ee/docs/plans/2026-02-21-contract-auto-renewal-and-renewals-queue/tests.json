@@ -802,7 +802,7 @@
   {
     "id": "T101",
     "description": "Functional: Display evergreen contract type badge in queue rows.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F101"
     ]
