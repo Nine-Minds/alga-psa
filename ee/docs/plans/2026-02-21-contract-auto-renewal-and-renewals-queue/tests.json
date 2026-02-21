@@ -866,7 +866,7 @@
   {
     "id": "T109",
     "description": "Functional: Include evergreen entries in upcoming renewals widget counts.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F109"
     ]
