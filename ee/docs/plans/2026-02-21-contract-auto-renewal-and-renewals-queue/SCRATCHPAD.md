@@ -204,6 +204,8 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
   - `updateDefaultBillingSettings` now writes renewal default fields via schema-guarded update/insert payloads.
 - (2026-02-21) Completed `T019`.
   - Added `packages/billing/src/actions/billingSettingsActions.renewalDefaultsWiring.test.ts` and marked renewal-mode model coverage.
+- (2026-02-21) Completed `T020`.
+  - Covered by existing `billingSettingsActions.renewalDefaultsWiring.test.ts` assertions for `defaultNoticePeriodDays`.
 
 ## Open Questions
 - Should renewal ticket defaults be a brand-new billing settings card, or an extension of existing default ticket settings patterns?

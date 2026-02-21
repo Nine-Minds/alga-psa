@@ -154,7 +154,7 @@
   {
     "id": "T020",
     "description": "Functional: Add tenant default notice period days field to default billing settings model.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F020"
     ]
