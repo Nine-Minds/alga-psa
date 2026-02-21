@@ -1402,7 +1402,7 @@
   {
     "id": "T176",
     "description": "Date constraint: snooze action rejects non-future dates for 'Enforce snooze date must be in the future on action validation.'",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F076"
     ]
