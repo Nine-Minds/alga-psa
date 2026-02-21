@@ -338,6 +338,14 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
   - Added regression test:
     - `deduplicates active rows by tenant + client_contract_id + renewal_cycle_key`
     - in `packages/billing/tests/clientContractEffectiveRenewalSettings.test.ts`
+- (2026-02-21) Completed `F045`.
+  - Added explicit cycle boundary fields in normalization:
+    - `renewal_cycle_start`
+    - `renewal_cycle_end`
+  - Fixed-term boundaries map directly to assignment `start_date`/`end_date`.
+  - Evergreen boundaries now use annual cycle bounds helper:
+    - `computeEvergreenCycleBounds` in `shared/billingClients/clientContracts.ts`
+  - Added deterministic coverage in `packages/billing/tests/clientContractEffectiveRenewalSettings.test.ts`.
 
 ## Open Questions
 - Should renewal ticket defaults be a brand-new billing settings card, or an extension of existing default ticket settings patterns?

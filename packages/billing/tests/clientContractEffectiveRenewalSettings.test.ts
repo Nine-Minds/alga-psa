@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   computeEvergreenDecisionDueDate,
+  computeEvergreenCycleBounds,
   computeNextEvergreenReviewAnchorDate,
   dedupeClientContractsByRenewalCycle,
   normalizeClientContract,
@@ -259,7 +260,11 @@ describe('client contract effective renewal settings normalization', () => {
     });
 
     expect(fixedTerm.renewal_cycle_key).toBe('fixed-term:2026-12-31');
+    expect(fixedTerm.renewal_cycle_start).toBe('2026-01-01');
+    expect(fixedTerm.renewal_cycle_end).toBe('2026-12-31');
     expect(evergreen.renewal_cycle_key).toMatch(/^evergreen:\d{4}-\d{2}-\d{2}$/);
+    expect(evergreen.renewal_cycle_start).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(evergreen.renewal_cycle_end).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     expect(noneMode.renewal_cycle_key).toBeUndefined();
   });
 
@@ -347,6 +352,18 @@ describe('client contract effective renewal settings normalization', () => {
 
     expect(marchAnniversary).toBe('2026-02-18');
     expect(septemberAnniversary).toBe('2026-08-21');
+  });
+
+  it('computes evergreen cycle_start and cycle_end boundaries per annual cycle', () => {
+    expect(
+      computeEvergreenCycleBounds({
+        startDate: '2024-05-10',
+        now: '2026-05-01',
+      })
+    ).toEqual({
+      cycleStart: '2025-05-10',
+      cycleEnd: '2026-05-10',
+    });
   });
 
   it('exposes evergreen_review_anchor_date on active evergreen assignments', () => {

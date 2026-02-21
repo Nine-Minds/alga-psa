@@ -95,6 +95,38 @@ const computeEvergreenDecisionDueDate = (params: {
   return subtractDaysFromDateOnly(anchorDate, normalizedNoticePeriodDays);
 };
 
+const computeEvergreenCycleBounds = (params: {
+  startDate: string;
+  now?: string | Date;
+}): { cycleStart: string; cycleEnd: string } | undefined => {
+  const normalizedStartDate = normalizeDateOnly(params.startDate);
+  if (!normalizedStartDate) return undefined;
+
+  const start = new Date(`${normalizedStartDate}T00:00:00.000Z`);
+  if (Number.isNaN(start.getTime())) return undefined;
+
+  const anchorDate = computeNextEvergreenReviewAnchorDate({
+    startDate: normalizedStartDate,
+    now: params.now,
+  });
+  if (!anchorDate) return undefined;
+
+  const anchor = new Date(`${anchorDate}T00:00:00.000Z`);
+  if (Number.isNaN(anchor.getTime())) return undefined;
+
+  const previousAnchor = createClampedUtcDate(
+    anchor.getUTCFullYear() - 1,
+    start.getUTCMonth(),
+    start.getUTCDate()
+  );
+  const cycleStartDate = previousAnchor.getTime() < start.getTime() ? start : previousAnchor;
+
+  return {
+    cycleStart: cycleStartDate.toISOString().slice(0, 10),
+    cycleEnd: anchorDate,
+  };
+};
+
 type RenewalDefaultSelectionConfig = {
   joinDefaultSettings: boolean;
   defaultSelections: string[];
@@ -198,11 +230,24 @@ export const normalizeClientContract = (row: any): IClientContract => {
             noticePeriodDays: effectiveNoticePeriodDays,
           })
       : undefined;
+  if (normalizedEndDate && normalizedStartDate) {
+    normalized.renewal_cycle_start = normalizedStartDate;
+    normalized.renewal_cycle_end = normalizedEndDate;
+  } else if (!normalizedEndDate && normalizedStartDate && normalized.evergreen_review_anchor_date) {
+    const evergreenCycleBounds = computeEvergreenCycleBounds({ startDate: normalizedStartDate });
+    normalized.renewal_cycle_start = evergreenCycleBounds?.cycleStart;
+    normalized.renewal_cycle_end = evergreenCycleBounds?.cycleEnd;
+  } else {
+    normalized.renewal_cycle_start = undefined;
+    normalized.renewal_cycle_end = undefined;
+  }
   normalized.renewal_cycle_key = normalized.decision_due_date
     ? normalizedEndDate
-      ? `fixed-term:${normalizedEndDate}`
-      : normalized.evergreen_review_anchor_date
-        ? `evergreen:${normalized.evergreen_review_anchor_date as string}`
+      ? normalized.renewal_cycle_end
+        ? `fixed-term:${normalized.renewal_cycle_end as string}`
+        : undefined
+      : normalized.renewal_cycle_end
+        ? `evergreen:${normalized.renewal_cycle_end as string}`
         : undefined
     : undefined;
 
