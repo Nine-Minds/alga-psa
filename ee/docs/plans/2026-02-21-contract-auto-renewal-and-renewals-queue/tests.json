@@ -818,7 +818,7 @@
   {
     "id": "T103",
     "description": "Functional: Support mark-renewing action for evergreen queue entries.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F103"
     ]
