@@ -1818,7 +1818,7 @@
   {
     "id": "T228",
     "description": "UI behavior: Enforce billing read permission on renewals queue list endpoints. persists after refresh/navigation",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F126"
     ]
