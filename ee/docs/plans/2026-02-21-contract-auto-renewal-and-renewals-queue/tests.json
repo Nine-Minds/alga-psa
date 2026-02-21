@@ -1442,7 +1442,7 @@
   {
     "id": "T181",
     "description": "Linkage correctness: 'Include linked draft contract id in queue row once renewal draft is created.' stores created draft contract id on work item",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F080"
     ]
