@@ -21,6 +21,10 @@ const renewalHandlerSource = readFileSync(
   new URL('../handlers/processRenewalQueueHandler.ts', import.meta.url),
   'utf8'
 );
+const temporalRunnerSource = readFileSync(
+  new URL('../../../../../ee/server/src/lib/jobs/runners/TemporalJobRunner.ts', import.meta.url),
+  'utf8'
+);
 
 describe('renewal queue scheduling wiring', () => {
   it('adds a scheduled renewal queue processor handler that scans active contracts in a due window', () => {
@@ -224,5 +228,15 @@ describe('renewal queue scheduling wiring', () => {
     expect(registerHandlersSource).toContain('await processRenewalQueueHandler(data);');
     expect(initializeJobRunnerSource).toContain('await registerAllJobHandlers({');
     expect(initializeJobRunnerSource).toContain('runner.registerHandler(registered.config);');
+  });
+
+  it('keeps queue-creation payload parity between pg-boss and Temporal scheduling paths', () => {
+    expect(jobsIndexSource).toContain('export const scheduleRenewalQueueProcessingJob = async (');
+    expect(jobsIndexSource).toContain("'process-renewal-queue',");
+    expect(jobsIndexSource).toContain('{ tenantId, horizonDays }');
+    expect(temporalRunnerSource).toContain('jobName,');
+    expect(temporalRunnerSource).toContain('tenantId: data.tenantId,');
+    expect(temporalRunnerSource).toContain('data,');
+    expect(temporalRunnerSource).toContain("workflowType: 'genericJobWorkflow',");
   });
 });

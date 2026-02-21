@@ -1168,6 +1168,15 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
   - Validation:
     - `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`
     - `cd server && npm run typecheck`
+- (2026-02-21) Completed `F121`.
+  - Added parity coverage confirming queue-creation payload shape is equivalent across runner paths:
+    - pg-boss scheduling uses `process-renewal-queue` with `{ tenantId, horizonDays }`
+    - Temporal recurring workflow action forwards `jobName`, `tenantId`, and `data` through `genericJobWorkflow`
+  - Updated coverage:
+    - `server/src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts`
+  - Validation:
+    - `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`
+    - `cd server && npm run typecheck`
 
 ## Open Questions
 - Should renewal ticket defaults be a brand-new billing settings card, or an extension of existing default ticket settings patterns?
