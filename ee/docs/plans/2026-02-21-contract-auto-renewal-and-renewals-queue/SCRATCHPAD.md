@@ -670,6 +670,23 @@ Rolling implementation memory for renewal settings + actionable renewals queue +
   - Validation:
     - `npm -w @alga-psa/billing run typecheck`
     - `npm -w @alga-psa/billing exec vitest run tests/renewalsQueueActions.wiring.test.ts tests/RenewalsQueueTab.component.test.ts`
+- (2026-02-21) Completed `F078`.
+  - Added queue row action controls for:
+    - `Mark renewing`
+    - `Mark non-renewing`
+  - Implemented optimistic in-flight UI behavior in `RenewalsQueueTab`:
+    - per-row pending state map (`pendingRowActions`)
+    - immediate optimistic status/action updates before server response
+    - in-row pending indicator (`Updating action...`)
+    - action buttons disabled while row mutation is in-flight
+  - Mutation handlers call server actions:
+    - `markRenewalQueueItemRenewing`
+    - `markRenewalQueueItemNonRenewing`
+  - Updated coverage:
+    - `packages/billing/tests/RenewalsQueueTab.component.test.ts`
+  - Validation:
+    - `npm -w @alga-psa/billing run typecheck`
+    - `npm -w @alga-psa/billing exec vitest run tests/RenewalsQueueTab.component.test.ts tests/renewalsQueueActions.wiring.test.ts`
 
 ## Open Questions
 - Should renewal ticket defaults be a brand-new billing settings card, or an extension of existing default ticket settings patterns?

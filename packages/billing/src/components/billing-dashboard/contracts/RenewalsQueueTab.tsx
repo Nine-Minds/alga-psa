@@ -4,6 +4,9 @@ import React, { useMemo, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import {
   listRenewalQueueRows,
+  markRenewalQueueItemNonRenewing,
+  markRenewalQueueItemRenewing,
+  type RenewalQueueAction,
   type RenewalQueueRow,
 } from '@alga-psa/billing/actions/renewalsQueueActions';
 
@@ -12,6 +15,20 @@ type RenewalBucket = 'all' | '0-30' | '31-60' | '61-90';
 type RenewalStatus = 'all' | 'pending' | 'renewing' | 'non_renewing' | 'snoozed' | 'completed';
 type RenewalModeFilter = 'all' | 'none' | 'manual' | 'auto';
 type ContractTypeFilter = 'all' | 'fixed-term' | 'evergreen';
+type PendingRowAction = Extract<RenewalQueueAction, 'mark_renewing' | 'mark_non_renewing'>;
+
+const getAvailableActionsForStatus = (status: RenewalQueueRow['status']): RenewalQueueAction[] => {
+  if (status === 'pending') {
+    return ['mark_renewing', 'mark_non_renewing', 'create_renewal_draft', 'snooze', 'assign_owner'];
+  }
+  if (status === 'renewing') {
+    return ['create_renewal_draft', 'snooze', 'assign_owner'];
+  }
+  if (status === 'snoozed') {
+    return ['mark_renewing', 'mark_non_renewing', 'create_renewal_draft', 'assign_owner'];
+  }
+  return ['assign_owner'];
+};
 
 interface RenewalsQueueTabProps {
   onQueueMutationComplete?: () => void;
@@ -27,6 +44,7 @@ export default function RenewalsQueueTab({ onQueueMutationComplete }: RenewalsQu
   const [statusFilter, setStatusFilter] = useState<RenewalStatus>('all');
   const [renewalModeFilter, setRenewalModeFilter] = useState<RenewalModeFilter>('all');
   const [contractTypeFilter, setContractTypeFilter] = useState<ContractTypeFilter>('all');
+  const [pendingRowActions, setPendingRowActions] = useState<Record<string, PendingRowAction | undefined>>({});
 
   useEffect(() => {
     const bucketParam = searchParams?.get('bucket');
@@ -64,6 +82,86 @@ export default function RenewalsQueueTab({ onQueueMutationComplete }: RenewalsQu
       cancelled = true;
     };
   }, []);
+
+  const refreshRowsAfterMutation = async () => {
+    const result = await listRenewalQueueRows();
+    setRows(result);
+    onQueueMutationComplete?.();
+  };
+
+  const handleMarkRenewing = async (row: RenewalQueueRow) => {
+    const rowId = row.client_contract_id;
+    setPendingRowActions((current) => ({ ...current, [rowId]: 'mark_renewing' }));
+    setRows((current) =>
+      current.map((candidate) =>
+        candidate.client_contract_id === rowId
+          ? {
+              ...candidate,
+              status: 'renewing',
+              available_actions: getAvailableActionsForStatus('renewing'),
+            }
+          : candidate
+      )
+    );
+
+    try {
+      const result = await markRenewalQueueItemRenewing(rowId);
+      setRows((current) =>
+        current.map((candidate) =>
+          candidate.client_contract_id === rowId
+            ? {
+                ...candidate,
+                status: result.status,
+                available_actions: getAvailableActionsForStatus(result.status),
+              }
+            : candidate
+        )
+      );
+      await refreshRowsAfterMutation();
+    } catch (mutationError) {
+      setError(mutationError instanceof Error ? mutationError.message : 'Failed to update renewal status');
+      await refreshRowsAfterMutation();
+    } finally {
+      setPendingRowActions((current) => ({ ...current, [rowId]: undefined }));
+    }
+  };
+
+  const handleMarkNonRenewing = async (row: RenewalQueueRow) => {
+    const rowId = row.client_contract_id;
+    setPendingRowActions((current) => ({ ...current, [rowId]: 'mark_non_renewing' }));
+    setRows((current) =>
+      current.map((candidate) =>
+        candidate.client_contract_id === rowId
+          ? {
+              ...candidate,
+              status: 'non_renewing',
+              available_actions: getAvailableActionsForStatus('non_renewing'),
+            }
+          : candidate
+      )
+    );
+
+    try {
+      const result = await markRenewalQueueItemNonRenewing(rowId);
+      setRows((current) =>
+        current.map((candidate) =>
+          candidate.client_contract_id === rowId
+            ? {
+                ...candidate,
+                status: result.status,
+                available_actions: getAvailableActionsForStatus(result.status),
+              }
+            : candidate
+        )
+      );
+      await refreshRowsAfterMutation();
+    } catch (mutationError) {
+      setError(mutationError instanceof Error ? mutationError.message : 'Failed to update renewal status');
+      await refreshRowsAfterMutation();
+    } finally {
+      setPendingRowActions((current) => ({ ...current, [rowId]: undefined }));
+    }
+  };
 
   const ownerOptions = useMemo(() => {
     const uniqueOwners = Array.from(
@@ -212,6 +310,14 @@ export default function RenewalsQueueTab({ onQueueMutationComplete }: RenewalsQu
                 data-testid="renewals-queue-row"
                 className="rounded border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-bg-0))] p-3"
               >
+                {pendingRowActions[row.client_contract_id] && (
+                  <p
+                    data-testid="renewals-row-action-pending"
+                    className="mb-1 text-[11px] font-medium text-[rgb(var(--color-text-500))]"
+                  >
+                    Updating action...
+                  </p>
+                )}
                 <div className="flex items-center justify-between gap-2">
                   <p className="font-medium">{row.contract_name ?? row.contract_id}</p>
                   <span
@@ -238,6 +344,30 @@ export default function RenewalsQueueTab({ onQueueMutationComplete }: RenewalsQu
                 >
                   Actions: {row.available_actions.join(', ')}
                 </p>
+                <div className="mt-2 flex items-center gap-2">
+                  {row.available_actions.includes('mark_renewing') && (
+                    <button
+                      type="button"
+                      data-testid="renewals-row-action-mark-renewing"
+                      disabled={Boolean(pendingRowActions[row.client_contract_id])}
+                      onClick={() => handleMarkRenewing(row)}
+                      className="rounded border border-[rgb(var(--color-border-200))] px-2 py-1 text-[11px] disabled:opacity-50"
+                    >
+                      Mark renewing
+                    </button>
+                  )}
+                  {row.available_actions.includes('mark_non_renewing') && (
+                    <button
+                      type="button"
+                      data-testid="renewals-row-action-mark-non-renewing"
+                      disabled={Boolean(pendingRowActions[row.client_contract_id])}
+                      onClick={() => handleMarkNonRenewing(row)}
+                      className="rounded border border-[rgb(var(--color-border-200))] px-2 py-1 text-[11px] disabled:opacity-50"
+                    >
+                      Mark non-renewing
+                    </button>
+                  )}
+                </div>
               </div>
             ))}
           </div>

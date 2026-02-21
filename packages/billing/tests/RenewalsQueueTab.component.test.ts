@@ -80,7 +80,15 @@ describe('RenewalsQueueTab component', () => {
   });
 
   it('exposes row-level available actions based on queue status', () => {
+    expect(source).toContain('const [pendingRowActions, setPendingRowActions] = useState<Record<string, PendingRowAction | undefined>>({});');
+    expect(source).toContain('const refreshRowsAfterMutation = async () => {');
+    expect(source).toContain('const handleMarkRenewing = async (row: RenewalQueueRow) => {');
+    expect(source).toContain('const handleMarkNonRenewing = async (row: RenewalQueueRow) => {');
     expect(source).toContain('data-testid="renewals-queue-row-available-actions"');
     expect(source).toContain("Actions: {row.available_actions.join(', ')}");
+    expect(source).toContain('data-testid="renewals-row-action-mark-renewing"');
+    expect(source).toContain('data-testid="renewals-row-action-mark-non-renewing"');
+    expect(source).toContain('data-testid="renewals-row-action-pending"');
+    expect(source).toContain('Updating action...');
   });
 });

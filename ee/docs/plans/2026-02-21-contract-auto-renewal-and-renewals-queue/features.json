@@ -618,7 +618,7 @@
   {
     "id": "F078",
     "description": "Show optimistic UI state while queue actions are in-flight.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > FR5 — Queue Actions and Renewal Workflow"
     ]
