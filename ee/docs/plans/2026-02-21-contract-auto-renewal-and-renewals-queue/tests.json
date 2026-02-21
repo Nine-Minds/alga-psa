@@ -394,7 +394,7 @@
   {
     "id": "T050",
     "description": "Functional: Add Renewals queue page component under billing dashboard components.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F050"
     ]
