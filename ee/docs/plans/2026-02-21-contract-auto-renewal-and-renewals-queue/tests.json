@@ -738,7 +738,7 @@
   {
     "id": "T093",
     "description": "Functional: Persist created ticket id on renewal work item after successful ticket creation.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F093"
     ]
