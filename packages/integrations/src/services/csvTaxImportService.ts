@@ -8,9 +8,9 @@
 
 import { v4 as uuid4 } from 'uuid';
 import logger from '@alga-psa/core/logger';
-import { createTenantKnex } from '../db';
-import { TaxSource } from '../../interfaces/tax.interfaces';
-import { parseCSV } from '../utils/csvParser';
+import { createTenantKnex } from '@alga-psa/db';
+import { TaxSource } from '@alga-psa/types';
+import { parseCSV } from '@alga-psa/core';
 import {
   validateCSVForTaxImport,
   aggregateTaxByInvoice,

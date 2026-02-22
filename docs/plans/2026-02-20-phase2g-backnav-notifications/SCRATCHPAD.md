@@ -99,6 +99,8 @@
 - `csvTaxImportValidator.ts` uses `any` type for knex parameter — keep as-is, don't try to type-narrow in this PR.
 - The `packages/integrations/src/services/index.ts` currently only exports `./email`. Adding CSV tax exports here. Make sure the export doesn't conflict with any existing names.
 - After deleting server emailChannel.ts, verify that `sendEventEmail.ts` doesn't import from it (it doesn't — only imports from `emailLocaleResolver`).
+- **DISCOVERED during implementation**: `emailService.ts` (kept in server) also imports from `./emailChannel` — needed to update this caller too (not in original plan's caller list). Updated to `@alga-psa/notifications`.
+- **DISCOVERED during implementation**: `UnsavedChangesContext` in `packages/ui/src/context/UnsavedChangesContext.tsx` was declared with `const` (not `export const`). The server version exports it directly. Had to add `export` keyword to the package version for BackNav.tsx to import it.
 
 ## Commands
 

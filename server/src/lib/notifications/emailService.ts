@@ -1,6 +1,6 @@
 import nodemailer from 'nodemailer';
 import { getSecret } from '../utils/getSecret';
-import { EMAIL_EVENT_CHANNEL, getEmailEventChannel as getEmailChannelConstant } from './emailChannel';
+import { EMAIL_EVENT_CHANNEL, getEmailEventChannel as getEmailChannelConstant } from '@alga-psa/notifications';
 
 interface EmailConfig {
   // Email server configuration

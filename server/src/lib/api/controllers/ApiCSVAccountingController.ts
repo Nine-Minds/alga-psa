@@ -11,7 +11,7 @@ import { ApiBaseController } from './ApiBaseController';
 import { runWithTenant } from '../../db';
 import { handleApiError, ForbiddenError, UnauthorizedError } from '../middleware/apiMiddleware';
 import { BaseService, ListOptions } from './types';
-import { getCSVTaxImportService } from '../../services/csvTaxImportService';
+import { getCSVTaxImportService } from '@alga-psa/integrations/services';
 import { AccountingExportInvoiceSelector } from '../../services/accountingExportInvoiceSelector';
 import { AccountingExportService } from '../../services/accountingExportService';
 import { QuickBooksCSVAdapter } from '../../adapters/accounting/quickBooksCSVAdapter';
