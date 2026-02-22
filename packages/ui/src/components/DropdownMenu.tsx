@@ -25,7 +25,7 @@ function DropdownMenuContent({
         ref={ref}
         sideOffset={sideOffset}
         className={cn(
-          'z-50 min-w-[8rem] overflow-hidden rounded-md border bg-background dark:bg-[rgb(var(--color-card))] p-1 shadow-md animate-in data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2',
+          'z-50 min-w-[8rem] overflow-hidden rounded-md border bg-background dark:bg-[rgb(var(--color-card))] dark:border-[rgb(var(--color-border-200)/0.6)] dark:shadow-[0_0_15px_rgb(var(--color-primary-500)/0.07),0_4px_20px_rgb(0_0_0/0.25)] p-1 shadow-md animate-in data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2',
           className
         )}
         {...props}

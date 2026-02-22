@@ -38,13 +38,55 @@ Prefer radix components over other libraries
 
 ### Theme & Dark Mode
 
-For theming guidelines, CSS variable usage, and dark mode coding standards, see [Theming Documentation](ui/theming.md).
+For full theming guidelines, CSS variable usage, and provider architecture, see [Theming Documentation](ui/theming.md).
 
-Key rules:
-- Use Tailwind semantic tokens (`bg-primary-50`, `text-foreground`) — never hardcode hex/rgb values
+**Key rules:**
+- Use CSS variable tokens (`rgb(var(--color-text-700))`, `bg-primary-50`) — never hardcode hex/rgb values
 - Use `useAppTheme` from `@alga-psa/ui/hooks` — not `useTheme` from next-themes directly
 - Adapt dynamic entity colors with `adaptColorsForDarkMode()` from `@alga-psa/ui/lib/colorUtils`
 - Test all UI changes in both light and dark themes
+
+**Container backgrounds — always use CSS variables:**
+```tsx
+// Good — adapts to dark mode via globals.css
+<div className="bg-[rgb(var(--color-card))]">
+<div className="bg-[rgb(var(--color-background))]">
+
+// Bad — stays white in dark mode, text becomes invisible
+<div className="bg-white">
+<div className="bg-gray-50">
+```
+
+**Selection/highlight states — always add `dark:` variants:**
+```tsx
+// Good — readable in both themes
+<button className={selected
+  ? 'bg-blue-50 border-blue-500 dark:bg-blue-500/20 dark:border-blue-400'
+  : 'border-[rgb(var(--color-border-200))]'
+}>
+
+// Bad — light bg becomes unreadable on dark background
+<button className={selected ? 'bg-blue-50 border-blue-500' : ''}>
+```
+
+**Semantic status colors — use the theme-aware CSS variable system:**
+```tsx
+// Good — uses badge/status CSS variables that adapt per theme
+'border-[rgb(var(--badge-success-border))] bg-[rgb(var(--badge-success-bg))] text-[rgb(var(--badge-success-text))]'
+
+// Good — opacity approach for translucent tints on dark backgrounds
+'dark:bg-[rgb(var(--color-primary-400)/0.30)]'
+
+// Bad — hardcoded colors that don't adapt
+'bg-green-100 text-green-800'
+'bg-red-50 text-red-600'
+```
+
+**Common mistakes to avoid:**
+- `bg-white` on cards/panels — use `bg-[rgb(var(--color-card))]`
+- `bg-blue-50`, `bg-purple-100`, etc. without `dark:` variant — add `dark:bg-blue-500/20` or similar
+- `text-gray-700` on elements that may appear on dark backgrounds — use `text-[rgb(var(--color-text-700))]`
+- Hardcoded status colors (`text-red-600`, `text-green-600`) — use CSS variable tokens or add `dark:` variants (`dark:text-red-400`, `dark:text-green-400`)
 
 ## Loading States for Remote Content
 
@@ -218,8 +260,8 @@ When implementing action menus in DataTable components, follow these guidelines:
    - Use theme-aware styling for destructive actions:
      ```tsx
      // For destructive actions (delete, remove)
-     <DropdownMenuItem 
-       className="text-red-600 focus:text-red-600"
+     <DropdownMenuItem
+       className="text-red-600 dark:text-red-400 focus:text-red-600 dark:focus:text-red-400"
      >
        Delete
      </DropdownMenuItem>
@@ -237,7 +279,7 @@ When implementing action menus in DataTable components, follow these guidelines:
    ```tsx
    <DropdownMenuContent align="end">
      <DropdownMenuItem>Edit</DropdownMenuItem>
-     <DropdownMenuItem className="text-red-600 focus:text-red-600">
+     <DropdownMenuItem className="text-red-600 dark:text-red-400 focus:text-red-600 dark:focus:text-red-400">
        Delete
      </DropdownMenuItem>
    </DropdownMenuContent>
