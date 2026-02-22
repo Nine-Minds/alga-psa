@@ -246,6 +246,38 @@ test.describe('Workflow Designer UI - Contract Section', () => {
     }
   });
 
+  test('T125: New workflow confirms before discarding unsaved designer changes', async ({ page }) => {
+    test.setTimeout(120000);
+
+    const { db, tenantData, workflowPage } = await setupDesigner(page);
+    try {
+      await workflowPage.clickNewWorkflow();
+
+      const unsavedName = `Unsaved ${uuidv4().slice(0, 6)}`;
+      await workflowPage.setName(unsavedName);
+
+      await workflowPage.newWorkflowButton.click();
+      const discardDialog = page.locator('#workflow-designer-discard-changes-dialog');
+      const keepEditingButton = page.locator('#workflow-designer-discard-changes-dialog-close');
+      const discardChangesButton = page.locator('#workflow-designer-discard-changes-dialog-confirm');
+
+      await expect(discardDialog).toBeVisible();
+      await expect(discardDialog).toContainText('Discard unsaved changes');
+      await keepEditingButton.click();
+      await expect(discardDialog).toBeHidden();
+      await expect(workflowPage.nameInput).toHaveValue(unsavedName);
+
+      await workflowPage.newWorkflowButton.click();
+      await expect(discardDialog).toBeVisible();
+      await discardChangesButton.click();
+      await expect(discardDialog).toBeHidden();
+      await expect(workflowPage.nameInput).toHaveValue('New Workflow');
+    } finally {
+      await rollbackTenant(db, tenantData.tenant.tenantId).catch(() => {});
+      await db.destroy();
+    }
+  });
+
   test('T013: Advanced toggle enables pinning payload schema ref', async ({ page }) => {
     test.setTimeout(120000);
 

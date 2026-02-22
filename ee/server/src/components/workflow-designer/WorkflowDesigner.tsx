@@ -28,6 +28,7 @@ import {
 } from './pipeline/PipelineComponents';
 
 import { Button } from '@alga-psa/ui/components/Button';
+import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { Dialog, DialogFooter } from '@alga-psa/ui/components/Dialog';
 import { Input } from '@alga-psa/ui/components/Input';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
@@ -78,7 +79,8 @@ import type {
   ReturnStep,
   Expr,
   PublishError,
-  InputMapping
+  InputMapping,
+  MappingValue
 } from '@shared/workflow/runtime';
 import { validateExpressionSource } from '@shared/workflow/runtime/expressionEngine';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -136,6 +138,12 @@ type ActionRegistryItem = {
   outputSchema: JsonSchema;
 };
 
+type ActionInputMappingStatus = {
+  requiredCount: number;
+  mappedRequiredCount: number;
+  unmappedRequiredCount: number;
+};
+
 type JsonSchema = {
   type?: string | string[];
   title?: string;
@@ -175,6 +183,38 @@ const delayIfNeeded = async (delayMs?: number) => {
   if (delayMs && delayMs > 0) {
     await new Promise((resolve) => setTimeout(resolve, delayMs));
   }
+};
+
+const stableSerialize = (value: unknown): string =>
+  JSON.stringify(value, (_key, currentValue) => {
+    if (!currentValue || typeof currentValue !== 'object' || Array.isArray(currentValue)) {
+      return currentValue;
+    }
+    const sortedEntries = Object.entries(currentValue as Record<string, unknown>).sort(([a], [b]) => a.localeCompare(b));
+    return Object.fromEntries(sortedEntries);
+  });
+
+const areStructurallyEqual = (left: unknown, right: unknown): boolean => stableSerialize(left) === stableSerialize(right);
+
+const isInputMappingValueSet = (value: MappingValue | undefined, fieldType?: string): boolean => {
+  if (value === undefined) return false;
+  if (value === null) return true;
+
+  if (typeof value === 'object') {
+    if ('$expr' in value) {
+      return Boolean((value as Expr).$expr?.trim());
+    }
+    if ('$secret' in value) {
+      return Boolean((value as { $secret: string }).$secret?.trim());
+    }
+    return true;
+  }
+
+  if (typeof value === 'string') {
+    return fieldType === 'string' ? value.trim().length > 0 : true;
+  }
+
+  return true;
 };
 
 type PipeSegment = {
@@ -655,6 +695,57 @@ const getActionFromRegistry = (
 ): ActionRegistryItem | undefined => {
   if (!actionId) return undefined;
   return actionRegistry.find(a => a.id === actionId && (version === undefined || a.version === version));
+};
+
+const buildActionInputMappingStatusByStepId = (
+  steps: Step[],
+  actionRegistry: ActionRegistryItem[]
+): Map<string, ActionInputMappingStatus> => {
+  const statusByStepId = new Map<string, ActionInputMappingStatus>();
+
+  const visit = (pipeSteps: Step[]) => {
+    pipeSteps.forEach((step) => {
+      if (step.type === 'action.call') {
+        const config = (step as NodeStep).config as {
+          actionId?: string;
+          version?: number;
+          inputMapping?: InputMapping;
+        } | undefined;
+
+        const action = getActionFromRegistry(config?.actionId, config?.version, actionRegistry);
+        if (action?.inputSchema) {
+          const requiredFields = extractActionInputFields(action.inputSchema, action.inputSchema).filter((field) => Boolean(field.required));
+          if (requiredFields.length > 0) {
+            const inputMapping = config?.inputMapping ?? {};
+            const mappedRequiredCount = requiredFields.filter((field) =>
+              isInputMappingValueSet(inputMapping[field.name], field.type)
+            ).length;
+            statusByStepId.set(step.id, {
+              requiredCount: requiredFields.length,
+              mappedRequiredCount,
+              unmappedRequiredCount: requiredFields.length - mappedRequiredCount
+            });
+          }
+        }
+      }
+
+      if (step.type === 'control.if') {
+        const ifStep = step as IfBlock;
+        visit(ifStep.then ?? []);
+        visit(ifStep.else ?? []);
+      } else if (step.type === 'control.tryCatch') {
+        const tryCatchStep = step as TryCatchBlock;
+        visit(tryCatchStep.try ?? []);
+        visit(tryCatchStep.catch ?? []);
+      } else if (step.type === 'control.forEach') {
+        const forEachStep = step as ForEachBlock;
+        visit(forEachStep.body ?? []);
+      }
+    });
+  };
+
+  visit(steps);
+  return statusByStepId;
 };
 
 const buildDefaultValueFromSchema = (schema: JsonSchema, root: JsonSchema): unknown => {
@@ -1382,6 +1473,7 @@ const WorkflowDesigner: React.FC = () => {
   );
   const [contractSettingsExpanded, setContractSettingsExpanded] = useState(false);
   const [schemaRefAdvanced, setSchemaRefAdvanced] = useState(false);
+  const [showDiscardChangesDialog, setShowDiscardChangesDialog] = useState(false);
   const [showRunDialog, setShowRunDialog] = useState(false);
   const [showSchemaModal, setShowSchemaModal] = useState(false);
   const [schemaPreviewExpanded, setSchemaPreviewExpanded] = useState(false);
@@ -1439,6 +1531,7 @@ const WorkflowDesigner: React.FC = () => {
   const tabFromQuery = searchParams.get('tab');
   const didApplyWorkflowIdFromQuery = useRef<string | null>(null);
   const didApplyNewWorkflowFromQuery = useRef<boolean>(false);
+  const pendingDiscardActionRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     const raw = (tabFromQuery ?? '').trim().toLowerCase();
@@ -1512,6 +1605,11 @@ const WorkflowDesigner: React.FC = () => {
   const stepPathMap = useMemo(() => {
     return activeDefinition ? buildStepPathMap(activeDefinition.steps as Step[]) : {};
   }, [activeDefinition]);
+
+  const actionInputMappingStatusByStepId = useMemo(() => {
+    if (!activeDefinition) return new Map<string, ActionInputMappingStatus>();
+    return buildActionInputMappingStatusByStepId(activeDefinition.steps as Step[], actionRegistry);
+  }, [activeDefinition, actionRegistry]);
 
   const fieldOptions = useMemo(() => buildFieldOptions(payloadSchema), [payloadSchema]);
 
@@ -1621,6 +1719,63 @@ const WorkflowDesigner: React.FC = () => {
     () => definitions.find((definition) => definition.workflow_id === activeWorkflowId) ?? null,
     [definitions, activeWorkflowId]
   );
+
+  const hasUnsavedDesignerChanges = useMemo(() => {
+    if (!activeDefinition) return false;
+
+    if (activeWorkflowId && activeWorkflowRecord) {
+      const savedMode = (activeWorkflowRecord.payload_schema_mode === 'inferred' ? 'inferred' : 'pinned') as 'inferred' | 'pinned';
+      const savedPinnedRef = activeWorkflowRecord.pinned_payload_schema_ref ?? activeWorkflowRecord.payload_schema_ref ?? '';
+
+      return (
+        !areStructurallyEqual(activeDefinition, activeWorkflowRecord.draft_definition) ||
+        payloadSchemaModeDraft !== savedMode ||
+        pinnedPayloadSchemaRefDraft !== savedPinnedRef
+      );
+    }
+
+    const pristineUnsavedDraft: WorkflowDefinition = {
+      id: activeDefinition.id,
+      version: 1,
+      name: 'New Workflow',
+      description: '',
+      payloadSchemaRef: DEFAULT_PAYLOAD_SCHEMA,
+      steps: []
+    };
+
+    return (
+      !areStructurallyEqual(activeDefinition, pristineUnsavedDraft) ||
+      payloadSchemaModeDraft !== 'inferred' ||
+      pinnedPayloadSchemaRefDraft !== DEFAULT_PAYLOAD_SCHEMA
+    );
+  }, [
+    activeDefinition,
+    activeWorkflowId,
+    activeWorkflowRecord,
+    payloadSchemaModeDraft,
+    pinnedPayloadSchemaRefDraft
+  ]);
+
+  const closeDiscardChangesDialog = useCallback(() => {
+    setShowDiscardChangesDialog(false);
+    pendingDiscardActionRef.current = null;
+  }, []);
+
+  const requestDiscardChangesConfirmation = useCallback((onConfirmAction: () => void) => {
+    if (!hasUnsavedDesignerChanges) {
+      onConfirmAction();
+      return;
+    }
+    pendingDiscardActionRef.current = onConfirmAction;
+    setShowDiscardChangesDialog(true);
+  }, [hasUnsavedDesignerChanges]);
+
+  const handleConfirmDiscardChanges = useCallback(() => {
+    const action = pendingDiscardActionRef.current;
+    pendingDiscardActionRef.current = null;
+    setShowDiscardChangesDialog(false);
+    action?.();
+  }, []);
 
   useEffect(() => {
     // For unsaved drafts (no workflowId yet), keep the local mode state.
@@ -2336,7 +2491,7 @@ const WorkflowDesigner: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [workflowIdFromQuery, definitions]);
 
-  const handleCreateDefinition = () => {
+  const handleCreateDefinition = useCallback(() => {
     const draft = createDefaultDefinition();
     setActiveDefinition(draft);
     setActiveWorkflowId(null);
@@ -2349,7 +2504,7 @@ const WorkflowDesigner: React.FC = () => {
     setSelectedPipePath('root');
     setPublishErrors([]);
     setPublishWarnings([]);
-  };
+  }, []);
 
   useEffect(() => {
     if (!newWorkflowFromQuery) {
@@ -4245,6 +4400,7 @@ const WorkflowDesigner: React.FC = () => {
                         steps={(activeDefinition?.steps ?? []) as Step[]}
                         getLabel={(step) => getStepLabel(step as Step, nodeRegistryMap)}
                         getSubtitle={(step) => getGraphSubtitle(step as Step) ?? (step as Step).type}
+                        inputMappingStatusByStepId={actionInputMappingStatusByStepId}
                         selectedStepId={selectedStepId}
                         onSelectStepId={setSelectedStepId}
                         editable={canManage}
@@ -4259,6 +4415,7 @@ const WorkflowDesigner: React.FC = () => {
                       steps={activeDefinition?.steps ?? []}
                       pipePath="root"
                       stepPathPrefix="root"
+                      actionInputMappingStatusByStepId={actionInputMappingStatusByStepId}
                       selectedStepId={selectedStepId}
                       onSelectStep={setSelectedStepId}
                       onDeleteStep={handleDeleteStep}
@@ -4337,14 +4494,16 @@ const WorkflowDesigner: React.FC = () => {
         router.push(`/msp/workflows?${params.toString()}`);
       }}
       onCreateNew={() => {
-        const params = new URLSearchParams(searchParamsString);
-        params.delete('search');
-        params.delete('status');
-        params.delete('trigger');
-        params.delete('workflowId');
-        params.set('new', '1');
-        params.set('tab', 'designer');
-        router.push(`/msp/workflows?${params.toString()}`);
+        requestDiscardChangesConfirmation(() => {
+          const params = new URLSearchParams(searchParamsString);
+          params.delete('search');
+          params.delete('status');
+          params.delete('trigger');
+          params.delete('workflowId');
+          params.set('new', '1');
+          params.set('tab', 'designer');
+          router.push(`/msp/workflows?${params.toString()}`);
+        });
       }}
     />
   );
@@ -4371,7 +4530,11 @@ const WorkflowDesigner: React.FC = () => {
                 </span>
               )}
               {canManage && (
-                <Button id="workflow-designer-create" variant="outline" onClick={handleCreateDefinition}>
+                <Button
+                  id="workflow-designer-create"
+                  variant="outline"
+                  onClick={() => requestDiscardChangesConfirmation(handleCreateDefinition)}
+                >
                   New Workflow
                 </Button>
               )}
@@ -4440,6 +4603,17 @@ const WorkflowDesigner: React.FC = () => {
         onPublishDraft={handlePublish}
       />
 
+      <ConfirmationDialog
+        id="workflow-designer-discard-changes-dialog"
+        isOpen={showDiscardChangesDialog}
+        onClose={closeDiscardChangesDialog}
+        onConfirm={handleConfirmDiscardChanges}
+        title="Discard unsaved changes?"
+        message="You have unsaved changes in this workflow. Discard them and start a new workflow?"
+        confirmLabel="Discard changes"
+        cancelLabel="Keep editing"
+      />
+
       <div className="flex-1 min-h-0 overflow-hidden">
         <CustomTabs
           idPrefix="workflow-designer-tabs"
@@ -4468,6 +4642,7 @@ const Pipe: React.FC<{
   steps: Step[];
   pipePath: string;
   stepPathPrefix: string;
+  actionInputMappingStatusByStepId: Map<string, ActionInputMappingStatus>;
   selectedStepId: string | null;
   onSelectStep: (id: string) => void;
   onDeleteStep: (id: string) => void;
@@ -4483,6 +4658,7 @@ const Pipe: React.FC<{
   steps,
   pipePath,
   stepPathPrefix,
+  actionInputMappingStatusByStepId,
   selectedStepId,
   onSelectStep,
   onDeleteStep,
@@ -4549,6 +4725,7 @@ const Pipe: React.FC<{
                     <StepCard
                       step={step}
                       stepPath={`${stepPathPrefix}.steps[${index}]`}
+                      actionInputMappingStatus={actionInputMappingStatusByStepId.get(step.id)}
                       selected={selectedStepId === step.id}
                       selectedStepId={selectedStepId}
                       onSelectStep={onSelectStep}
@@ -4562,6 +4739,7 @@ const Pipe: React.FC<{
                       errorCount={errorMap.get(step.id)?.length ?? 0}
                       errorMap={errorMap}
                       disabled={disabled}
+                      actionInputMappingStatusByStepId={actionInputMappingStatusByStepId}
                     />
                   </div>
                 )}
@@ -4601,6 +4779,7 @@ const Pipe: React.FC<{
 const StepCard: React.FC<{
   step: Step;
   stepPath: string;
+  actionInputMappingStatus?: ActionInputMappingStatus;
   selected: boolean;
   selectedStepId: string | null;
   onSelectStep: (id: string) => void;
@@ -4613,10 +4792,12 @@ const StepCard: React.FC<{
   nodeRegistry: Record<string, NodeRegistryItem>;
   errorCount: number;
   errorMap: Map<string, PublishError[]>;
+  actionInputMappingStatusByStepId: Map<string, ActionInputMappingStatus>;
   disabled?: boolean;
 }> = ({
   step,
   stepPath,
+  actionInputMappingStatus,
   selected,
   selectedStepId,
   onSelectStep,
@@ -4629,6 +4810,7 @@ const StepCard: React.FC<{
   nodeRegistry,
   errorCount,
   errorMap,
+  actionInputMappingStatusByStepId,
   disabled = false
 }) => {
   const label = getStepLabel(step, nodeRegistry);
@@ -4653,7 +4835,7 @@ const StepCard: React.FC<{
           onClick={() => onSelectStep(step.id)}
           aria-label={`Select ${label} step`}
         >
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             {/* Step type icon */}
             <div className={`flex-shrink-0 ${colors.icon}`}>
               {icon}
@@ -4665,6 +4847,27 @@ const StepCard: React.FC<{
               <Badge className={`text-xs ${colors.badge}`}>
                 {step.type === 'control.if' ? 'If' : step.type === 'control.forEach' ? 'Loop' : step.type === 'control.tryCatch' ? 'Try' : 'Block'}
               </Badge>
+            )}
+            {actionInputMappingStatus && actionInputMappingStatus.requiredCount > 0 && (
+              actionInputMappingStatus.unmappedRequiredCount > 0 ? (
+                <Badge
+                  id={`workflow-step-mapping-status-${step.id}`}
+                  variant="error"
+                  className="text-xs"
+                  title={`${actionInputMappingStatus.unmappedRequiredCount} required fields are unmapped`}
+                >
+                  {actionInputMappingStatus.unmappedRequiredCount} required unmapped
+                </Badge>
+              ) : (
+                <span
+                  id={`workflow-step-mapping-status-${step.id}`}
+                  className="inline-flex items-center text-emerald-700/80"
+                  title={`All ${actionInputMappingStatus.requiredCount} required fields are mapped`}
+                  aria-label="All required fields mapped"
+                >
+                  <Link className="h-3.5 w-3.5" />
+                </span>
+              )
             )}
             {/* Error badge */}
             {errorCount > 0 && (
@@ -4727,6 +4930,7 @@ const StepCard: React.FC<{
                 onInsertAtPath={onInsertAtPath}
                 nodeRegistry={nodeRegistry}
                 errorMap={errorMap}
+                actionInputMappingStatusByStepId={actionInputMappingStatusByStepId}
                 disabled={disabled}
               />
             </BlockSection>
@@ -4744,6 +4948,7 @@ const StepCard: React.FC<{
                 onInsertAtPath={onInsertAtPath}
                 nodeRegistry={nodeRegistry}
                 errorMap={errorMap}
+                actionInputMappingStatusByStepId={actionInputMappingStatusByStepId}
                 disabled={disabled}
               />
             </BlockSection>
@@ -4771,6 +4976,7 @@ const StepCard: React.FC<{
                 onInsertAtPath={onInsertAtPath}
                 nodeRegistry={nodeRegistry}
                 errorMap={errorMap}
+                actionInputMappingStatusByStepId={actionInputMappingStatusByStepId}
                 disabled={disabled}
               />
             </BlockSection>
@@ -4788,6 +4994,7 @@ const StepCard: React.FC<{
                 onInsertAtPath={onInsertAtPath}
                 nodeRegistry={nodeRegistry}
                 errorMap={errorMap}
+                actionInputMappingStatusByStepId={actionInputMappingStatusByStepId}
                 disabled={disabled}
               />
             </BlockSection>
@@ -4815,6 +5022,7 @@ const StepCard: React.FC<{
                 onInsertAtPath={onInsertAtPath}
                 nodeRegistry={nodeRegistry}
                 errorMap={errorMap}
+                actionInputMappingStatusByStepId={actionInputMappingStatusByStepId}
                 disabled={disabled}
               />
             </BlockSection>
@@ -4901,6 +5109,26 @@ const StepConfigPanel: React.FC<{
     const config = (step as NodeStep).config as { inputMapping?: InputMapping } | undefined;
     return config?.inputMapping ?? {};
   }, [step]);
+
+  const requiredActionInputFields = useMemo(
+    () => actionInputFields.filter((field) => Boolean(field.required)),
+    [actionInputFields]
+  );
+
+  const mappedInputFieldCount = useMemo(() => Object.keys(inputMapping).length, [inputMapping]);
+
+  const mappedRequiredInputFieldCount = useMemo(
+    () =>
+      requiredActionInputFields.filter((field) =>
+        isInputMappingValueSet(inputMapping[field.name], field.type)
+      ).length,
+    [requiredActionInputFields, inputMapping]
+  );
+
+  const unmappedRequiredInputFieldCount = useMemo(
+    () => requiredActionInputFields.length - mappedRequiredInputFieldCount,
+    [requiredActionInputFields.length, mappedRequiredInputFieldCount]
+  );
 
   // §17 - Handle input mapping changes
   const handleInputMappingChange = useCallback((mapping: InputMapping) => {
@@ -5267,8 +5495,20 @@ const StepConfigPanel: React.FC<{
                 Map workflow data to action inputs.
               </p>
               <div className="text-xs text-gray-500 mt-1">
-                {Object.keys(inputMapping).length} / {actionInputFields.length} fields mapped
+                {mappedInputFieldCount} / {actionInputFields.length} fields mapped
               </div>
+              {requiredActionInputFields.length > 0 && (
+                <div
+                  id={`workflow-step-input-mapping-required-status-${step.id}`}
+                  className={`text-xs mt-1 ${
+                    unmappedRequiredInputFieldCount > 0 ? 'text-destructive' : 'text-emerald-700'
+                  }`}
+                >
+                  {unmappedRequiredInputFieldCount > 0
+                    ? `${unmappedRequiredInputFieldCount} required field${unmappedRequiredInputFieldCount === 1 ? '' : 's'} still unmapped`
+                    : `All ${requiredActionInputFields.length} required fields are mapped`}
+                </div>
+              )}
             </div>
             <Button
               id={`workflow-step-input-mapping-open-${step.id}`}

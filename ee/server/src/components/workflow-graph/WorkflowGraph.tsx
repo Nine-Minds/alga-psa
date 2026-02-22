@@ -18,13 +18,14 @@ import 'reactflow/dist/style.css';
 
 import { buildWorkflowGraph, type WorkflowGraphNodeData } from './buildWorkflowGraph';
 import { getStepTypeColor, getStepTypeIcon } from '../workflow-designer/pipeline/PipelineComponents';
-import { Plus, Trash2 } from 'lucide-react';
+import { Link2, Plus, Trash2 } from 'lucide-react';
 
 type WorkflowGraphProps<TStep> = {
   steps: TStep[];
   getLabel: (step: TStep) => string;
   getSubtitle?: (step: TStep) => string | null;
   statusByStepId?: Map<string, string>;
+  inputMappingStatusByStepId?: Map<string, { requiredCount: number; unmappedRequiredCount: number }>;
   selectedStepId?: string | null;
   onSelectStepId?: (stepId: string) => void;
   editable?: boolean;
@@ -97,6 +98,10 @@ const StepNode: React.FC<NodeProps<WorkflowGraphNodeData>> = ({ data, selected }
   const icon = getStepTypeIcon(stepType);
   const statusClass = statusStyles(data.status);
   const subtitleMono = stepType === 'action.call' || stepType === 'control.if' || stepType === 'state.set';
+  const requiredInputCount = data.requiredInputCount ?? 0;
+  const unmappedRequiredInputCount = data.unmappedRequiredInputCount ?? 0;
+  const hasRequiredInputStatus = stepType === 'action.call' && requiredInputCount > 0;
+  const hasUnmappedRequiredInputs = hasRequiredInputStatus && unmappedRequiredInputCount > 0;
   return (
     <div
       className={`relative bg-white rounded-md border-r border-t border-b border-[rgb(var(--color-border-200))] ${colors.border} shadow-sm px-3 py-2 ${statusClass} ${selected ? 'ring-2 ring-primary-300' : ''}`}
@@ -124,11 +129,31 @@ const StepNode: React.FC<NodeProps<WorkflowGraphNodeData>> = ({ data, selected }
             {data.subtitle ?? stepType}
           </div>
         </div>
-        {data.status && (
-          <div className="text-[10px] text-gray-600 whitespace-nowrap">
-            {data.status}
-          </div>
-        )}
+        <div className="flex items-start gap-1">
+          {hasRequiredInputStatus && (
+            hasUnmappedRequiredInputs ? (
+              <div
+                className="text-[10px] px-1.5 py-0.5 rounded-full border whitespace-nowrap bg-destructive/10 text-destructive border-destructive/30"
+                title={`${unmappedRequiredInputCount} required fields unmapped`}
+              >
+                {unmappedRequiredInputCount} req unmapped
+              </div>
+            ) : (
+              <div
+                className="inline-flex items-center text-emerald-700/80"
+                title="All required fields mapped"
+                aria-label="All required fields mapped"
+              >
+                <Link2 className="h-3.5 w-3.5" />
+              </div>
+            )
+          )}
+          {data.status && (
+            <div className="text-[10px] text-gray-600 whitespace-nowrap">
+              {data.status}
+            </div>
+          )}
+        </div>
       </div>
 
       {selected && data.stepId && data.onRequestDelete && (
@@ -209,6 +234,7 @@ export default function WorkflowGraph<TStep extends { id: string; type: string }
     getLabel,
     getSubtitle,
     statusByStepId,
+    inputMappingStatusByStepId,
     selectedStepId,
     onSelectStepId,
     editable = false,
@@ -230,6 +256,10 @@ export default function WorkflowGraph<TStep extends { id: string; type: string }
   const didInitialViewportRef = useRef(false);
 
   const statusMap = useMemo(() => statusByStepId ?? new Map<string, string>(), [statusByStepId]);
+  const inputMappingStatusMap = useMemo(
+    () => inputMappingStatusByStepId ?? new Map<string, { requiredCount: number; unmappedRequiredCount: number }>(),
+    [inputMappingStatusByStepId]
+  );
 
   const scheduleInitialViewport = useCallback(() => {
     const instance = instanceRef.current;
@@ -307,19 +337,22 @@ export default function WorkflowGraph<TStep extends { id: string; type: string }
     return nodes.map((node) => {
       const stepId = (node.data as WorkflowGraphNodeData | undefined)?.stepId;
       const status = stepId ? statusMap.get(stepId) ?? null : null;
+      const inputMappingStatus = stepId ? inputMappingStatusMap.get(stepId) ?? null : null;
       const kind = (node.data as WorkflowGraphNodeData).kind;
       return {
         ...node,
         data: {
           ...(node.data as WorkflowGraphNodeData),
           status,
+          requiredInputCount: inputMappingStatus?.requiredCount ?? null,
+          unmappedRequiredInputCount: inputMappingStatus?.unmappedRequiredCount ?? null,
           onRequestInsert: (node.data as WorkflowGraphNodeData).kind === 'insert' ? onRequestInsertAt ?? null : null,
           onRequestDelete: kind === 'step' ? onDeleteStepId ?? null : null
         },
         selected: Boolean(stepId && selectedStepId && stepId === selectedStepId)
       };
     });
-  }, [nodes, onDeleteStepId, onRequestInsertAt, selectedStepId, statusMap]);
+  }, [inputMappingStatusMap, nodes, onDeleteStepId, onRequestInsertAt, selectedStepId, statusMap]);
 
   if (loading) {
     return (

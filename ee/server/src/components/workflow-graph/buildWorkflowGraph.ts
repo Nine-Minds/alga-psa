@@ -12,6 +12,8 @@ export type WorkflowGraphNodeData = {
   subtitle?: string | null;
   branchLabel?: string | null;
   status?: string | null;
+  requiredInputCount?: number | null;
+  unmappedRequiredInputCount?: number | null;
   pipePath?: string | null;
   insertIndex?: number | null;
   onRequestInsert?: ((pipePath: string, index: number) => void) | null;
