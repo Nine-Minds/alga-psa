@@ -12,6 +12,8 @@ export default function Body({
   const [isNavigating, setIsNavigating] = useState(false);
   const [prevPathname, setPrevPathname] = useState('');
   const lockBodyScroll = (pathname?.startsWith('/msp/workflows') ?? false)
+    || (pathname?.startsWith('/msp/workflow-control') ?? false)
+    || (pathname?.startsWith('/msp/workflow-editor') ?? false)
     || (pathname?.startsWith('/msp/automation-hub') ?? false);
 
   // Handle navigation transitions

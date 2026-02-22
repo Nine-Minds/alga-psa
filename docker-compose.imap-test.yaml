@@ -12,5 +12,6 @@ services:
       - "${EXPOSE_IMAP_TEST_SMTP_PORT:-3025}:3025"
       - "${EXPOSE_IMAP_TEST_IMAP_PORT:-3143}:3143"
       - "${EXPOSE_IMAP_TEST_IMAPS_PORT:-3993}:3993"
+      - "${EXPOSE_IMAP_TEST_HTTP_PORT:-8080}:8080"
     networks:
       - app-network

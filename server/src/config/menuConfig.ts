@@ -142,10 +142,8 @@ export const navigationSections: NavigationSection[] = [
         name: 'Automation Hub',
         icon: Rocket,
         subItems: [
-          { name: 'Workflows', icon: ListTree, href: '/msp/workflows?tab=workflows' },
-          { name: 'Runs', icon: Clock, href: '/msp/workflows?tab=runs' },
-          { name: 'Events', icon: Bell, href: '/msp/workflows?tab=events' },
-          { name: 'Dead Letter', icon: Mail, href: '/msp/workflows?tab=dead-letter' },
+          { name: 'Control Panel', icon: Gauge, href: '/msp/workflow-control' },
+          { name: 'Workflow Editor', icon: ListTree, href: '/msp/workflow-editor' },
         ]
       },
       {

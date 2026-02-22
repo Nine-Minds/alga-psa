@@ -53,7 +53,6 @@ export function registerEmailActions(): void {
       await requirePermission(ctx, tx, { resource: 'email', action: 'process' });
 
       const { TenantEmailService, StaticTemplateProcessor, EmailProviderManager } = getWorkflowEmailProvider();
-      const { StorageProviderFactory } = await import('@alga-psa/documents');
 
       const settings = await TenantEmailService.getTenantEmailSettings(tx.tenantId, tx.trx);
       if (!settings) {
@@ -107,6 +106,7 @@ export function registerEmailActions(): void {
       const attachmentFileIds = Array.isArray(input.attachment_file_ids) ? input.attachment_file_ids : [];
       const attachments: Array<{ filename: string; content: Buffer; contentType?: string }> = [];
       if (attachmentFileIds.length) {
+        const { StorageProviderFactory } = await import('@alga-psa/documents');
         if (!provider.capabilities.supportsAttachments) {
           throwActionError(ctx, { category: 'ValidationError', code: 'VALIDATION_ERROR', message: 'Email provider does not support attachments' });
         }

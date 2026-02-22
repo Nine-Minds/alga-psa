@@ -54,7 +54,7 @@ export default function TemplatePreview({ isOpen, onClose, template, mode }: Tem
       
       toast.success("Workflow created successfully");
       onClose();
-      router.push(`/msp/automation-hub?tab=workflows&workflowId=${workflowId}`);
+      router.push(`/msp/workflow-editor/${workflowId}`);
     } catch (error) {
       console.error("Error creating workflow from template:", error);
       toast.error("Failed to create workflow from template");

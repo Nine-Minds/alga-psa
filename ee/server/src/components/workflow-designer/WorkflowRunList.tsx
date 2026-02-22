@@ -130,6 +130,33 @@ const buildWorkflowOptions = (definitions: WorkflowDefinitionSummary[]): SelectO
   }))
 ];
 
+const parseDateInputAsUtc = (value?: string): Date | null => {
+  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+  const [yearRaw, monthRaw, dayRaw] = value.split('-');
+  const year = Number(yearRaw);
+  const month = Number(monthRaw);
+  const day = Number(dayRaw);
+  if (!Number.isFinite(year) || !Number.isFinite(month) || !Number.isFinite(day)) return null;
+  return new Date(Date.UTC(year, month - 1, day));
+};
+
+const toExclusiveUpperBoundIso = (value?: string): string | undefined => {
+  const date = parseDateInputAsUtc(value);
+  if (!date) return undefined;
+  const nextDay = new Date(date.getTime() + 24 * 60 * 60 * 1000);
+  return nextDay.toISOString();
+};
+
+const toInclusiveLowerBoundIso = (value?: string): string | undefined => {
+  const date = parseDateInputAsUtc(value);
+  return date ? date.toISOString() : undefined;
+};
+
+const buildRunDateBounds = (filters: WorkflowRunFilters): { from?: string; to?: string } => ({
+  from: toInclusiveLowerBoundIso(filters.from),
+  to: toExclusiveUpperBoundIso(filters.to)
+});
+
 
 interface WorkflowRunListProps {
   definitions: WorkflowDefinitionSummary[];
@@ -203,6 +230,7 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({
   const fetchRuns = useCallback(
     async (cursor: number, append = false, overrideFilters?: WorkflowRunFilters) => {
       const activeFilters = overrideFilters ?? filters;
+      const { from, to } = buildRunDateBounds(activeFilters);
       setIsLoading(true);
       try {
         const data = (await listWorkflowRunsAction({
@@ -210,8 +238,8 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({
           workflowId: activeFilters.workflowId || undefined,
           version: activeFilters.workflowVersion || undefined,
           search: activeFilters.search || undefined,
-          from: activeFilters.from || undefined,
-          to: activeFilters.to || undefined,
+          from,
+          to,
           limit,
           cursor,
           sort: activeFilters.sort as any
@@ -233,12 +261,13 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({
   const fetchSummary = useCallback(
     async (overrideFilters?: WorkflowRunFilters) => {
       const activeFilters = overrideFilters ?? filters;
+      const { from, to } = buildRunDateBounds(activeFilters);
       try {
         const data = (await listWorkflowRunSummaryAction({
           workflowId: activeFilters.workflowId || undefined,
           version: activeFilters.workflowVersion || undefined,
-          from: activeFilters.from || undefined,
-          to: activeFilters.to || undefined
+          from,
+          to
         })) as WorkflowRunSummaryResponse;
         setSummary(data);
       } catch (error) {
@@ -337,14 +366,15 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({
   };
 
   const handleExport = async () => {
+    const { from, to } = buildRunDateBounds(filters);
     try {
       const result = await exportWorkflowRunsAction({
         status: filters.status !== 'all' ? [filters.status as any] : undefined,
         workflowId: filters.workflowId || undefined,
         version: filters.workflowVersion || undefined,
         search: filters.search || undefined,
-        from: filters.from || undefined,
-        to: filters.to || undefined,
+        from,
+        to,
         sort: filters.sort as any,
         limit: 1000,
         cursor: 0
@@ -457,7 +487,7 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({
     && (!activeDefinition.is_system || canAdmin);
 
   return (
-    <div className="flex-1 overflow-y-auto bg-gray-50">
+    <div className="h-full min-h-0 overflow-y-auto bg-gray-50">
       <div className="max-w-6xl mx-auto p-6 space-y-6">
         <Card className="p-4 space-y-4">
           <div className="flex flex-wrap items-center gap-2">
@@ -542,6 +572,11 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({
               type="number"
               value={filters.workflowVersion}
               onChange={(event) => setFilters((prev) => ({ ...prev, workflowVersion: event.target.value }))}
+              onWheel={(event) => {
+                if (document.activeElement === event.currentTarget) {
+                  event.currentTarget.blur();
+                }
+              }}
               placeholder="Any version"
             />
             <Input
