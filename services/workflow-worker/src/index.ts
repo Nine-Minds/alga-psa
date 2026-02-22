@@ -11,12 +11,13 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 import { getWorkflowRuntime, getActionRegistry } from '@shared/workflow/core/index.js';
-import { initializeWorkflowRuntimeV2 } from '@shared/workflow/runtime';
+import { initializeWorkflowRuntimeV2, registerWorkflowEmailProvider } from '@shared/workflow/runtime';
 import { WorkflowRuntimeV2Worker } from '@shared/workflow/workers';
 import { WorkflowRuntimeV2EventStreamWorker } from './v2/WorkflowRuntimeV2EventStreamWorker.js';
 import { WorkflowWorker } from './WorkflowWorker.js';
 import { WorkerServer } from './server.js';
 import logger from '@alga-psa/core/logger';
+import { TenantEmailService, StaticTemplateProcessor, EmailProviderManager } from '@alga-psa/email';
 import { initializeServerWorkflows } from '@shared/workflow/index.js';
 import { registerAccountingExportWorkflowActions } from './init/registerAccountingExportActions.js';
 import { updateSystemWorkflowsFromAssets } from './init/updateWorkflows.js';
@@ -50,6 +51,14 @@ async function startServices() {
     if (enableV2) {
       initializeWorkflowRuntimeV2();
     }
+
+    // Workflow actions resolve email integrations through a runtime registry.
+    // The API server registers this during app bootstrap; the worker must do the same.
+    registerWorkflowEmailProvider({
+      TenantEmailService: TenantEmailService as any,
+      StaticTemplateProcessor: StaticTemplateProcessor as any,
+      EmailProviderManager: EmailProviderManager as any,
+    });
 
     let legacyWorker: WorkflowWorker | null = null;
     let legacyServer: WorkerServer | null = null;

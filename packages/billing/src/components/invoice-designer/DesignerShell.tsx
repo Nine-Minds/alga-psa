@@ -1241,31 +1241,33 @@ export const DesignerShell: React.FC = () => {
 
       let state = useInvoiceDesignerStore.getState();
       let nodesById = new Map(state.nodes.map((node) => [node.id, node]));
-      let section = nodesById.get(sectionId);
+      const section = nodesById.get(sectionId);
       if (!section || section.type !== 'section') {
         showDropFeedback('info', missingSectionMessage);
         return;
       }
+      const sectionNode = section;
 
       // Legacy behavior used to auto-switch sizing modes before fitting.
       // In the CSS-first model, section sizing is controlled via CSS props instead.
       const switchedFromFill = false;
 
-      const intent = getSectionFitIntent(section, nodesById);
+      const intent = getSectionFitIntent(sectionNode, nodesById);
       if (intent.status === 'no-children') {
         showDropFeedback('info', 'Section has no child content to fit.');
         return;
       }
       if (intent.status === 'already-fitted') {
-        showDropFeedback('info', getSectionFitNoopMessage(section));
+        showDropFeedback('info', getSectionFitNoopMessage(sectionNode));
         return;
       }
 
-      const beforeSize = section.size;
-      resizeNode(section.id, intent.size, true);
-      const afterSection = useInvoiceDesignerStore.getState().nodes.find((node) => node.id === section.id);
+      const beforeSize = sectionNode.size;
+      const resolvedSectionId = sectionNode.id;
+      resizeNode(resolvedSectionId, intent.size, true);
+      const afterSection = useInvoiceDesignerStore.getState().nodes.find((node) => node.id === resolvedSectionId);
       if (!afterSection || sizesAreEffectivelyEqual(beforeSize, afterSection.size)) {
-        showDropFeedback('info', getSectionFitNoopMessage(section));
+        showDropFeedback('info', getSectionFitNoopMessage(sectionNode));
         return;
       }
       showDropFeedback(
