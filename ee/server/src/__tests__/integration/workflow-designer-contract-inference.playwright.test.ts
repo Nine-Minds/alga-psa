@@ -211,7 +211,7 @@ async function createWorkflowWithTrigger(
 }
 
 test.describe('Workflow Designer UI - Contract Section', () => {
-  test('T011: Designer shows Workflow data contract section instead of requiring payload schema pick', async ({ page }) => {
+  test('T011: Designer shows Workflow input data section instead of requiring payload schema pick', async ({ page }) => {
     test.setTimeout(120000);
 
     const { db, tenantData, workflowPage } = await setupDesigner(page);
@@ -220,7 +220,7 @@ test.describe('Workflow Designer UI - Contract Section', () => {
 
       // Verify the contract section is visible with the label
       await expect(workflowPage.contractSection).toBeVisible();
-      await expect(workflowPage.contractSectionLabel()).toContainText('Workflow data contract');
+      await expect(workflowPage.contractSectionLabel()).toContainText('Workflow input data');
     } finally {
       await rollbackTenant(db, tenantData.tenant.tenantId).catch(() => {});
       await db.destroy();
@@ -239,8 +239,7 @@ test.describe('Workflow Designer UI - Contract Section', () => {
       expect(isInferred).toBe(true);
 
       // Verify default message when no trigger selected
-      await expect(workflowPage.contractSection).toContainText('No trigger is selected');
-      await expect(workflowPage.contractSection).toContainText('payload');
+      await expect(workflowPage.contractSection).toContainText('Choose a trigger to define available data');
     } finally {
       await rollbackTenant(db, tenantData.tenant.tenantId).catch(() => {});
       await db.destroy();
@@ -254,8 +253,8 @@ test.describe('Workflow Designer UI - Contract Section', () => {
     try {
       await workflowPage.clickNewWorkflow();
 
-      // Click the contract mode toggle to enable pinned mode
-      await workflowPage.contractModeToggle.click();
+      // Enable pinned mode through advanced schema settings
+      await workflowPage.setContractModePinned();
 
       // Verify pinned mode is now active
       const isPinned = await workflowPage.isContractModePinned();
@@ -316,7 +315,7 @@ test.describe('Workflow Designer UI - Contract Section', () => {
     }
   });
 
-  test('T016: Inferred mode displays Effective schema preview label', async ({ page }) => {
+  test('T016: Inferred mode displays available fields preview label', async ({ page }) => {
     test.setTimeout(120000);
 
     const { db, tenantData, workflowPage } = await setupDesigner(page);
@@ -345,8 +344,10 @@ test.describe('Workflow Designer UI - Contract Section', () => {
       // Verify "Effective" badge is visible
       await expect(workflowPage.effectiveBadge()).toBeVisible();
 
-      // Verify the preview label shows "Effective schema preview"
-      await expect(workflowPage.contractSchemaPreviewLabel()).toContainText('Effective schema preview');
+      // Preview label is now behind advanced settings by default
+      await expect(workflowPage.contractSchemaPreviewLabel()).toHaveCount(0);
+      await workflowPage.ensureContractAdvancedOpen();
+      await expect(workflowPage.contractSchemaPreviewLabel()).toContainText('Available fields preview');
     } finally {
       if (workflowId) {
         await db('workflow_definitions').where({ workflow_id: workflowId }).del().catch(() => {});
@@ -356,7 +357,7 @@ test.describe('Workflow Designer UI - Contract Section', () => {
     }
   });
 
-  test('T017: Pinned mode displays Contract schema preview label', async ({ page }) => {
+  test('T017: Pinned mode displays available fields preview label', async ({ page }) => {
     test.setTimeout(120000);
 
     const { db, tenantData, workflowPage } = await setupDesigner(page);
@@ -378,8 +379,10 @@ test.describe('Workflow Designer UI - Contract Section', () => {
       const workflowName = (await db('workflow_definitions').where({ workflow_id: workflowId }).first())?.name;
       await workflowPage.selectWorkflowByName(workflowName);
 
-      // Verify the preview label shows "Contract schema preview"
-      await expect(workflowPage.contractSchemaPreviewLabel()).toContainText('Contract schema preview');
+      // Preview label is now behind advanced settings by default
+      await expect(workflowPage.contractSchemaPreviewLabel()).toHaveCount(0);
+      await workflowPage.ensureContractAdvancedOpen();
+      await expect(workflowPage.contractSchemaPreviewLabel()).toContainText('Available fields preview');
     } finally {
       if (workflowId) {
         await db('workflow_definitions').where({ workflow_id: workflowId }).del().catch(() => {});
@@ -478,9 +481,9 @@ test.describe('Workflow Designer UI - Contract Section', () => {
       const workflowName = (await db('workflow_definitions').where({ workflow_id: workflowId }).first())?.name;
       await workflowPage.selectWorkflowByName(workflowName);
 
-      // Verify the contract section explains the distinction
-      await expect(workflowPage.contractSection).toContainText('event.payload');
-      await expect(workflowPage.contractSection).toContainText('workflow contract');
+      // Verify simplified trigger/input summary content is present
+      await expect(workflowPage.contractSection).toContainText('Your steps read data from the selected trigger');
+      await expect(workflowPage.contractSection).not.toContainText('Trigger summary');
     } finally {
       if (workflowId) {
         await db('workflow_definitions').where({ workflow_id: workflowId }).del().catch(() => {});
@@ -511,6 +514,7 @@ test.describe('Workflow Designer UI - Contract Section', () => {
 
       const workflowName = (await db('workflow_definitions').where({ workflow_id: workflowId }).first())?.name;
       await workflowPage.selectWorkflowByName(workflowName);
+      await workflowPage.ensureContractAdvancedOpen();
 
       // Click on schema view button if schema preview is available
       await expect(workflowPage.schemaViewButton).toBeVisible({ timeout: 10_000 });
@@ -567,6 +571,7 @@ test.describe('Workflow Designer UI - Contract Section', () => {
       // Test inferred workflow modal
       const workflow1Name = (await db('workflow_definitions').where({ workflow_id: workflowId1 }).first())?.name;
       await workflowPage.selectWorkflowByName(workflow1Name);
+      await workflowPage.ensureContractAdvancedOpen();
 
       if (await workflowPage.schemaViewButton.isVisible()) {
         await workflowPage.schemaViewButton.click();
@@ -578,6 +583,7 @@ test.describe('Workflow Designer UI - Contract Section', () => {
       // Test pinned workflow modal
       const workflow2Name = (await db('workflow_definitions').where({ workflow_id: workflowId2 }).first())?.name;
       await workflowPage.selectWorkflowByName(workflow2Name);
+      await workflowPage.ensureContractAdvancedOpen();
 
       if (await workflowPage.schemaViewButton.isVisible()) {
         await workflowPage.schemaViewButton.click();
@@ -609,8 +615,8 @@ test.describe('Workflow Designer UI - Contract Section', () => {
       // Clear trigger to make it a manual workflow (new workflows default to no trigger)
       await workflowPage.clearTriggerEvent();
 
-      // Verify UX guidance about pinning schema
-      await expect(workflowPage.contractSection).toContainText('Manual workflows must pin a schema');
+      // Verify UX guidance about locking schema
+      await expect(workflowPage.contractSection).toContainText('Manual workflows need a locked schema');
 
       // Verify publish is disabled or shows appropriate warning
       // (The UI may disable publish or show validation error)
@@ -655,6 +661,7 @@ test.describe('Workflow Designer UI - Contract Section', () => {
       await expect(workflowPage.contractSection).toBeVisible();
 
       // Verify the contract mode toggle is disabled (cannot change)
+      await workflowPage.ensureContractAdvancedOpen();
       await expect(workflowPage.contractModeToggle).toBeDisabled();
     } finally {
       if (workflowId) {
@@ -686,6 +693,7 @@ test.describe('Workflow Designer UI - Contract Section', () => {
 
       const workflowName = (await db('workflow_definitions').where({ workflow_id: workflowId }).first())?.name;
       await workflowPage.selectWorkflowByName(workflowName);
+      await workflowPage.ensureContractAdvancedOpen();
 
       // Verify we can preview the schema
       await expect(workflowPage.schemaPreviewToggle).toBeVisible();

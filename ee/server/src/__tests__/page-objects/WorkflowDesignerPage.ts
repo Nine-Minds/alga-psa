@@ -22,6 +22,7 @@ export class WorkflowDesignerPage {
 
   // Contract section locators
   readonly contractSection: Locator;
+  readonly contractAdvancedToggle: Locator;
   readonly contractModeToggle: Locator;
   readonly schemaPreviewToggle: Locator;
   readonly schemaViewButton: Locator;
@@ -53,6 +54,7 @@ export class WorkflowDesignerPage {
 
     // Contract section locators
     this.contractSection = page.locator('#workflow-designer-contract-section');
+    this.contractAdvancedToggle = page.locator('#workflow-designer-contract-advanced-toggle');
     this.contractModeToggle = page.locator('#workflow-designer-contract-mode');
     this.schemaPreviewToggle = page.locator('#workflow-designer-schema-preview-toggle');
     this.schemaViewButton = page.locator('#workflow-designer-schema-view');
@@ -164,6 +166,7 @@ export class WorkflowDesignerPage {
   }
 
   async setPayloadSchemaRefAdvanced(schemaRef: string): Promise<void> {
+    await this.setContractModePinned();
     if (!(await this.payloadSchemaInput.isVisible())) {
       await this.payloadSchemaAdvancedToggle.click();
     }
@@ -239,17 +242,29 @@ export class WorkflowDesignerPage {
   }
 
   // Contract mode helpers
+  async ensureContractAdvancedOpen(): Promise<void> {
+    await expect(this.contractAdvancedToggle).toBeVisible({ timeout: 30_000 });
+    const toggleText = (await this.contractAdvancedToggle.textContent()) ?? '';
+    if (!toggleText.toLowerCase().includes('hide advanced')) {
+      await this.contractAdvancedToggle.click();
+    }
+    await expect(this.contractModeToggle).toBeVisible({ timeout: 30_000 });
+  }
+
   async isContractModeInferred(): Promise<boolean> {
+    await this.ensureContractAdvancedOpen();
     const checked = await this.contractModeToggle.getAttribute('aria-checked');
     return checked !== 'true';
   }
 
   async isContractModePinned(): Promise<boolean> {
+    await this.ensureContractAdvancedOpen();
     const checked = await this.contractModeToggle.getAttribute('aria-checked');
     return checked === 'true';
   }
 
   async setContractModePinned(): Promise<void> {
+    await this.ensureContractAdvancedOpen();
     await expect(this.contractModeToggle).toBeVisible({ timeout: 30_000 });
     const isInferred = await this.isContractModeInferred();
     if (isInferred) {
@@ -259,6 +274,7 @@ export class WorkflowDesignerPage {
   }
 
   async setContractModeInferred(): Promise<void> {
+    await this.ensureContractAdvancedOpen();
     const isPinned = await this.isContractModePinned();
     if (isPinned) {
       await this.contractModeToggle.click();
@@ -275,19 +291,19 @@ export class WorkflowDesignerPage {
   }
 
   contractSectionLabel(): Locator {
-    return this.page.locator('label[for="workflow-designer-contract-mode"]');
+    return this.page.locator('#workflow-designer-contract-section').getByText('Workflow input data');
   }
 
   inferredModeIndicator(): Locator {
-    return this.page.locator('#workflow-designer-contract-section').getByText('Inferred');
+    return this.page.locator('#workflow-designer-contract-section').getByText('Auto-selected from trigger');
   }
 
   effectiveBadge(): Locator {
-    return this.page.locator('#workflow-designer-contract-section').getByText('Effective', { exact: true });
+    return this.page.locator('#workflow-designer-contract-section').getByText('Auto', { exact: true });
   }
 
   contractSchemaPreviewLabel(): Locator {
-    return this.page.locator('#workflow-designer-contract-section').getByText(/Contract schema preview|Effective schema preview/);
+    return this.page.locator('#workflow-designer-contract-section').getByText('Available fields preview');
   }
 
   unknownSchemaWarning(): Locator {
@@ -295,7 +311,7 @@ export class WorkflowDesignerPage {
   }
 
   inferenceErrorMessage(): Locator {
-    return this.page.locator('#workflow-designer-contract-section').getByText(/No schema is available for/);
+    return this.page.locator('#workflow-designer-contract-section').getByText(/No schema is available for|could not load schema information/i);
   }
 
   contractDiffersWarning(): Locator {

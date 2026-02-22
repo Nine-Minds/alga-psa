@@ -1380,8 +1380,8 @@ const WorkflowDesigner: React.FC = () => {
   const [schemaMeta, setSchemaMeta] = useState<Map<string, { title: string | null; description: string | null }>>(
     new Map()
   );
+  const [contractSettingsExpanded, setContractSettingsExpanded] = useState(false);
   const [schemaRefAdvanced, setSchemaRefAdvanced] = useState(false);
-  const [triggerSourceSchemaAdvanced, setTriggerSourceSchemaAdvanced] = useState(false);
   const [showRunDialog, setShowRunDialog] = useState(false);
   const [showSchemaModal, setShowSchemaModal] = useState(false);
   const [schemaPreviewExpanded, setSchemaPreviewExpanded] = useState(false);
@@ -1630,6 +1630,8 @@ const WorkflowDesigner: React.FC = () => {
     setPayloadSchemaModeDraft(mode);
     setPinnedPayloadSchemaRefDraft(activeWorkflowRecord.pinned_payload_schema_ref ?? activeWorkflowRecord.payload_schema_ref ?? '');
     setSchemaInferenceEnabled(mode === 'inferred');
+    setContractSettingsExpanded(false);
+    setSchemaRefAdvanced(false);
   }, [activeWorkflowId, activeWorkflowRecord?.workflow_id]);
 
   const draftValidationErrors = useMemo(
@@ -2090,15 +2092,6 @@ const WorkflowDesigner: React.FC = () => {
     return inferredSchemaRef;
   }, [activeDefinition?.trigger, inferredSchemaRef]);
 
-  const triggerSourceSchemaOrigin = useMemo<'override' | 'catalog' | 'unknown'>(() => {
-    const trigger = activeDefinition?.trigger;
-    if (trigger?.type !== 'event') return 'unknown';
-    const override = (trigger as any)?.sourcePayloadSchemaRef;
-    if (typeof override === 'string' && override.trim()) return 'override';
-    if (typeof inferredSchemaRef === 'string' && inferredSchemaRef.trim()) return 'catalog';
-    return 'unknown';
-  }, [activeDefinition?.trigger, inferredSchemaRef]);
-
   const triggerPayloadMappingInfo = useMemo(() => {
     const trigger = activeDefinition?.trigger;
     if (trigger?.type !== 'event') {
@@ -2233,6 +2226,7 @@ const WorkflowDesigner: React.FC = () => {
     if (!ref) return;
     if (schemaRefs.length === 0) return;
     if (!schemaRefs.includes(ref)) {
+      setContractSettingsExpanded(true);
       setSchemaRefAdvanced(true);
       if (lastCapturedUnknownSchemaRef.current !== ref) {
         lastCapturedUnknownSchemaRef.current = ref;
@@ -2348,6 +2342,8 @@ const WorkflowDesigner: React.FC = () => {
     setActiveWorkflowId(null);
     setPayloadSchemaModeDraft('inferred');
     setSchemaInferenceEnabled(true);
+    setContractSettingsExpanded(false);
+    setSchemaRefAdvanced(false);
     setPinnedPayloadSchemaRefDraft(draft.payloadSchemaRef ?? '');
     setSelectedStepId(null);
     setSelectedPipePath('root');
@@ -3353,6 +3349,7 @@ const WorkflowDesigner: React.FC = () => {
                       if (status === 'unknown') return 'Unknown schema';
                       return 'Schema';
                     };
+                    const showTriggerSchemaDetails = contractSettingsExpanded;
 
                     const options: Array<{ value: string; label: string }> = [
                       { value: '', label: 'Manual (no trigger)' },
@@ -3419,9 +3416,11 @@ const WorkflowDesigner: React.FC = () => {
                               }>
                                 {selectedOption.status.charAt(0).toUpperCase() + selectedOption.status.slice(1)}
                               </Badge>
-                              <Badge className={schemaBadgeClass(selectedOption.payload_schema_ref_status)}>
-                                {schemaBadgeLabel(selectedOption.payload_schema_ref_status)}
-                              </Badge>
+                              {(showTriggerSchemaDetails || selectedOption.payload_schema_ref_status !== 'known') && (
+                                <Badge className={schemaBadgeClass(selectedOption.payload_schema_ref_status)}>
+                                  {schemaBadgeLabel(selectedOption.payload_schema_ref_status)}
+                                </Badge>
+                              )}
                               {selectedOption.category && (
                                 <Badge className="bg-white text-gray-700 border-gray-200">{selectedOption.category}</Badge>
                               )}
@@ -3429,42 +3428,44 @@ const WorkflowDesigner: React.FC = () => {
                             {selectedOption.description && (
                               <div className="text-xs text-gray-600">{selectedOption.description}</div>
                             )}
-                            <div className="flex flex-wrap items-center justify-between gap-3">
-                              <div className="text-[11px] text-gray-600">
-                                <span className="text-gray-500">Catalog schema:</span>{' '}
-                                <span className="font-mono break-all">{selectedOption.payload_schema_ref ?? '—'}</span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <Button
-                                  id="workflow-designer-trigger-event-view-catalog-schema"
-                                  variant="ghost"
-                                  size="sm"
-                                  type="button"
-                                  className="h-auto px-2 py-1 text-xs text-gray-600 hover:text-gray-800"
-                                  onClick={() => {
-                                    if (!selectedOption.payload_schema_ref) return;
-                                    openSchemaModalForRef({ schemaRef: selectedOption.payload_schema_ref, title: 'Trigger event schema' });
-                                  }}
-                                  disabled={!selectedOption.payload_schema_ref}
-                                >
-                                  View schema
-                                </Button>
-                                {triggerSourceSchemaRef && selectedOption.payload_schema_ref && triggerSourceSchemaRef !== selectedOption.payload_schema_ref && (
+                            {showTriggerSchemaDetails && (
+                              <div className="flex flex-wrap items-center justify-between gap-3">
+                                <div className="text-[11px] text-gray-600">
+                                  <span className="text-gray-500">Catalog schema:</span>{' '}
+                                  <span className="font-mono break-all">{selectedOption.payload_schema_ref ?? '—'}</span>
+                                </div>
+                                <div className="flex items-center gap-2">
                                   <Button
-                                    id="workflow-designer-trigger-event-view-effective-schema"
+                                    id="workflow-designer-trigger-event-view-catalog-schema"
                                     variant="ghost"
                                     size="sm"
                                     type="button"
-                                    className="h-auto px-2 py-1 text-xs text-gray-500 hover:text-gray-700"
+                                    className="h-auto px-2 py-1 text-xs text-gray-600 hover:text-gray-800"
                                     onClick={() => {
-                                      openSchemaModalForRef({ schemaRef: triggerSourceSchemaRef, title: 'Effective trigger source schema' });
+                                      if (!selectedOption.payload_schema_ref) return;
+                                      openSchemaModalForRef({ schemaRef: selectedOption.payload_schema_ref, title: 'Trigger event schema' });
                                     }}
+                                    disabled={!selectedOption.payload_schema_ref}
                                   >
-                                    View effective
+                                    View schema
                                   </Button>
-                                )}
+                                  {triggerSourceSchemaRef && selectedOption.payload_schema_ref && triggerSourceSchemaRef !== selectedOption.payload_schema_ref && (
+                                    <Button
+                                      id="workflow-designer-trigger-event-view-effective-schema"
+                                      variant="ghost"
+                                      size="sm"
+                                      type="button"
+                                      className="h-auto px-2 py-1 text-xs text-gray-500 hover:text-gray-700"
+                                      onClick={() => {
+                                        openSchemaModalForRef({ schemaRef: triggerSourceSchemaRef, title: 'Effective trigger source schema' });
+                                      }}
+                                    >
+                                      View effective
+                                    </Button>
+                                  )}
+                                </div>
                               </div>
-                            </div>
+                            )}
                             {eventCatalogStatus === 'loaded' && selectedOption.payload_schema_ref_status !== 'known' && (
                               <div className="mt-2 rounded border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
                                 This event is missing a valid schema reference. Publishing and running are disabled until it is fixed.
@@ -3486,454 +3487,439 @@ const WorkflowDesigner: React.FC = () => {
                     );
                   })()}
 
-                  {activeDefinition?.trigger?.type === 'event' && activeDefinition.trigger.eventName && (
-                    <div className="mt-3 space-y-2">
-                      <div className="rounded border border-gray-200 bg-white px-3 py-2">
-                        <div className="flex items-center justify-between gap-3">
-                          <div className="text-xs font-semibold text-gray-800">Trigger source payload schema</div>
-                          <Button
-                            id="workflow-designer-trigger-schema-advanced"
-                            variant="ghost"
-                            size="sm"
-                            type="button"
-                            className="h-auto px-2 py-1 text-xs text-gray-500 hover:text-gray-700"
-                            onClick={() => setTriggerSourceSchemaAdvanced((prev) => !prev)}
-                            disabled={!canManage}
-                          >
-                            {triggerSourceSchemaAdvanced ? 'Hide override' : 'Override'}
-                          </Button>
-                        </div>
-                        <div className="mt-1 text-[11px] text-gray-600">
+                  {contractSettingsExpanded && activeDefinition?.trigger?.type === 'event' && activeDefinition.trigger.eventName && (() => {
+                    const mapping = (activeDefinition.trigger as any).payloadMapping ?? {};
+                    const mappingProvided = mapping && typeof mapping === 'object' && Object.keys(mapping).length > 0;
+                    const payloadRef = activeDefinition.payloadSchemaRef ?? '';
+                    const refsMatch = !!triggerSourceSchemaRef && !!payloadRef && triggerSourceSchemaRef === payloadRef;
+                    const mappingRequired = !!triggerSourceSchemaRef && !!payloadRef && !refsMatch;
+                    const showEditor = mappingRequired || showTriggerMapping || mappingProvided;
+                    const mappingErrors = triggerValidationErrors.filter((err) => err.stepPath.startsWith('root.trigger.payloadMapping'));
+                    const mappingWarnings = triggerValidationWarnings.filter((warn) => warn.stepPath.startsWith('root.trigger.payloadMapping'));
+                    const summaryMessage = mappingRequired
+                      ? (mappingProvided
+                        ? 'Custom trigger mapping is active.'
+                        : 'Trigger mapping is required to run this workflow.')
+                      : (mappingProvided
+                        ? 'Optional trigger mapping is active.'
+                        : 'Using trigger payload as workflow input.');
+
+                    return (
+                      <div className="mt-3 rounded border border-gray-200 bg-white px-3 py-2">
+                        <div className="text-xs font-semibold text-gray-800">Trigger summary</div>
+
+                        <div className="mt-2 space-y-1 text-[11px] text-gray-600">
                           <div className="flex flex-wrap items-center gap-2">
-                            <span className="text-gray-500">Event:</span>
+                            <span className="text-gray-500">Trigger:</span>
                             <span className="font-mono break-all">{activeDefinition.trigger.eventName}</span>
                           </div>
-                          <div className="mt-1 flex flex-wrap items-center gap-2">
-                            <span className="text-gray-500">Source schema:</span>
-                            <span className="font-mono break-all">{triggerSourceSchemaRef ?? '—'}</span>
-                            {triggerSourceSchemaRef && (
-                              <Badge className={
-                                triggerSourceSchemaOrigin === 'override'
-                                  ? 'bg-purple-500/15 text-purple-600 border-purple-500/30'
-                                  : triggerSourceSchemaOrigin === 'catalog'
-                                    ? 'bg-blue-500/15 text-blue-600 border-blue-500/30'
-                                    : 'bg-gray-500/15 text-gray-600 border-gray-500/30'
-                              }>
-                                {triggerSourceSchemaOrigin === 'override' ? 'Override' : triggerSourceSchemaOrigin === 'catalog' ? 'Catalog' : 'Unknown'}
-                              </Badge>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span>{summaryMessage}</span>
+                            {mappingRequired ? (
+                              <Badge variant="warning">Action needed</Badge>
+                            ) : (
+                              <Badge variant="success">No mapping needed</Badge>
                             )}
                           </div>
-                          <div className="mt-1 flex flex-wrap items-center gap-2">
-                            <span className="text-gray-500">Workflow payload schema:</span>
-                            <span className="font-mono break-all">{activeDefinition.payloadSchemaRef ?? '—'}</span>
-                            {triggerPayloadMappingInfo.schemaRefsMatch && (
-                              <Badge variant="success">Match</Badge>
-                            )}
-                            {!triggerPayloadMappingInfo.schemaRefsMatch && triggerSourceSchemaRef && activeDefinition.payloadSchemaRef && (
-                              <Badge variant="warning">Mismatch</Badge>
-                            )}
-                          </div>
-                          {inferredSchemaRef && (
-                            <div className="mt-1 flex flex-wrap items-center gap-2">
-                              <span className="text-gray-500">From catalog:</span>
-                              <span className="font-mono break-all">{inferredSchemaRef}</span>
-                            </div>
-                          )}
-                          {typeof (activeDefinition.trigger as any).sourcePayloadSchemaRef === 'string' && (
-                            <div className="mt-1 flex flex-wrap items-center gap-2">
-                              <span className="text-gray-500">Override:</span>
-                              <span className="font-mono break-all">{String((activeDefinition.trigger as any).sourcePayloadSchemaRef)}</span>
-                            </div>
-                          )}
                         </div>
 
-                        {(triggerValidationErrors.length > 0 || triggerValidationWarnings.length > 0) && (
-                          <div className="mt-3 space-y-2">
-                            {triggerValidationErrors.length > 0 && (
-                              <div className="rounded border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
-                                <div className="font-semibold mb-1">Trigger validation errors</div>
-                                <ul className="list-disc pl-4 space-y-1">
-                                  {triggerValidationErrors.slice(0, 5).map((err, idx) => (
-                                    <li key={`${err.code}-${idx}`}>{err.message}</li>
-                                  ))}
-                                </ul>
-                                {triggerValidationErrors.length > 5 && (
-                                  <div className="mt-1 text-[11px] opacity-80">+{triggerValidationErrors.length - 5} more</div>
-                                )}
-                              </div>
-                            )}
-                            {triggerValidationWarnings.length > 0 && (
-                              <div className="rounded border border-warning/30 bg-warning/10 px-3 py-2 text-xs text-warning-foreground">
-                                <div className="font-semibold mb-1">Trigger warnings</div>
-                                <ul className="list-disc pl-4 space-y-1">
-                                  {triggerValidationWarnings.slice(0, 5).map((warn, idx) => (
-                                    <li key={`${warn.code}-${idx}`}>{warn.message}</li>
-                                  ))}
-                                </ul>
-                                {triggerValidationWarnings.length > 5 && (
-                                  <div className="mt-1 text-[11px] opacity-80">+{triggerValidationWarnings.length - 5} more</div>
-                                )}
-                              </div>
-                            )}
+                        {!triggerSourceSchemaRef && (
+                          <div className="mt-2 text-xs text-destructive">
+                            No source schema available for this event yet. Add <code className="bg-destructive/10 px-1 rounded">payload_schema_ref</code> in the event catalog or set an override.
                           </div>
                         )}
 
-                        {triggerSourceSchemaAdvanced && (
-                          <div className="mt-2">
-                            <SearchableSelect
-                              id="workflow-designer-trigger-source-schema"
-                              options={(() => {
-                                const current = String((activeDefinition.trigger as any).sourcePayloadSchemaRef ?? '');
-                                const base = schemaRefs.map((ref) => {
-                                  const meta = schemaMeta.get(ref);
-                                  const title = meta?.title ? ` — ${meta.title}` : '';
-                                  return { value: ref, label: `${ref}${title}` };
-                                });
-                                if (current && !schemaRefs.includes(current)) {
-                                  return [{ value: current, label: `${current} (unknown)` }, ...base];
-                                }
-                                return [{ value: '', label: 'Use catalog schema (default)' }, ...base];
-                              })()}
-                              value={String((activeDefinition.trigger as any).sourcePayloadSchemaRef ?? '')}
-                              onChange={(value) => {
-                                const nextTrigger: any = { ...activeDefinition.trigger };
-                                if (!value) {
-                                  delete nextTrigger.sourcePayloadSchemaRef;
-                                } else {
-                                  nextTrigger.sourcePayloadSchemaRef = value;
-                                }
-                                handleDefinitionChange({ trigger: nextTrigger });
-                              }}
-                              placeholder="Use catalog schema…"
-                              emptyMessage="No schemas found"
-                              disabled={registryError || !canManage}
-                              dropdownMode="overlay"
-                            />
+                        {mappingRequired && !mappingProvided && (
+                          <div className="mt-2 rounded border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <div>
+                                Mapping is required because trigger schema and workflow input schema do not match.
+                              </div>
+                              <Button
+                                id="workflow-designer-trigger-mapping-jump-to-contract"
+                                variant="ghost"
+                                size="sm"
+                                type="button"
+                                className="h-auto px-2 py-1 text-xs text-destructive hover:opacity-80"
+                                onClick={() => {
+                                  setShowTriggerMapping(true);
+                                }}
+                              >
+                                Configure mapping
+                              </Button>
+                            </div>
                           </div>
                         )}
-                      </div>
 
-                      {(() => {
-                        const mapping = (activeDefinition.trigger as any).payloadMapping ?? {};
-                        const mappingProvided = mapping && typeof mapping === 'object' && Object.keys(mapping).length > 0;
-                        const payloadRef = activeDefinition.payloadSchemaRef ?? '';
-                        const refsMatch = !!triggerSourceSchemaRef && !!payloadRef && triggerSourceSchemaRef === payloadRef;
-                        const mappingRequired = !!triggerSourceSchemaRef && !!payloadRef && !refsMatch;
-                        const showEditor = mappingRequired || showTriggerMapping || mappingProvided;
-                        const mappingErrors = triggerValidationErrors.filter((err) => err.stepPath.startsWith('root.trigger.payloadMapping'));
-                        const mappingWarnings = triggerValidationWarnings.filter((warn) => warn.stepPath.startsWith('root.trigger.payloadMapping'));
-
-                        return (
-                          <div className="rounded border border-gray-200 bg-white px-3 py-2">
-                            <div className="flex items-center justify-between gap-3">
-                              <div className="flex items-center gap-2">
-                                <div className="text-xs font-semibold text-gray-800">Trigger mapping</div>
-                                {mappingRequired ? (
-                                  <Badge variant="error">Required</Badge>
-                                ) : (
-                                  <Badge variant="success">Optional</Badge>
-                                )}
+                        <div className="mt-3 space-y-3 border-t border-gray-200 pt-3">
+                            <div>
+                              <div className="text-xs font-semibold text-gray-800">Trigger source schema override</div>
+                              <div className="mt-2">
+                                <SearchableSelect
+                                  id="workflow-designer-trigger-source-schema"
+                                  options={(() => {
+                                    const current = String((activeDefinition.trigger as any).sourcePayloadSchemaRef ?? '');
+                                    const base = schemaRefs.map((ref) => {
+                                      const meta = schemaMeta.get(ref);
+                                      const title = meta?.title ? ` — ${meta.title}` : '';
+                                      return { value: ref, label: `${ref}${title}` };
+                                    });
+                                    if (current && !schemaRefs.includes(current)) {
+                                      return [{ value: current, label: `${current} (unknown)` }, ...base];
+                                    }
+                                    return [{ value: '', label: 'Use catalog schema (default)' }, ...base];
+                                  })()}
+                                  value={String((activeDefinition.trigger as any).sourcePayloadSchemaRef ?? '')}
+                                  onChange={(value) => {
+                                    const nextTrigger: any = { ...activeDefinition.trigger };
+                                    if (!value) {
+                                      delete nextTrigger.sourcePayloadSchemaRef;
+                                    } else {
+                                      nextTrigger.sourcePayloadSchemaRef = value;
+                                    }
+                                    handleDefinitionChange({ trigger: nextTrigger });
+                                  }}
+                                  placeholder="Use catalog schema…"
+                                  emptyMessage="No schemas found"
+                                  disabled={registryError || !canManage}
+                                  dropdownMode="overlay"
+                                />
                               </div>
-                              {!mappingRequired && (
-                                <Button
-                                  id="workflow-designer-trigger-mapping-toggle"
-                                  variant="ghost"
-                                  size="sm"
-                                  type="button"
-                                  className="h-auto px-2 py-1 text-xs text-gray-500 hover:text-gray-700"
-                                  onClick={() => setShowTriggerMapping((prev) => !prev)}
-                                  disabled={!canManage}
-                                >
-                                  {showEditor ? 'Hide' : 'Show'}
-                                </Button>
-                              )}
                             </div>
 
-                            {!triggerSourceSchemaRef && (
-                              <div className="mt-2 text-xs text-destructive">
-                                No source schema available for this event yet. Add <code className="bg-destructive/10 px-1 rounded">payload_schema_ref</code> to the event catalog or set an override.
-                              </div>
-                            )}
-
-                            {mappingRequired && !mappingProvided && (
-                              <div className="mt-2 rounded border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
-                                <div className="flex flex-wrap items-center justify-between gap-2">
-                                  <div>
-                                    A trigger mapping is required because the trigger source schema does not match the workflow payload schema.
-                                  </div>
+                            <div>
+                              <div className="flex items-center justify-between gap-3">
+                                <div className="text-xs font-semibold text-gray-800">Trigger mapping</div>
+                                {!mappingRequired && (
                                   <Button
-                                    id="workflow-designer-trigger-mapping-jump-to-contract"
+                                    id="workflow-designer-trigger-mapping-toggle"
                                     variant="ghost"
                                     size="sm"
                                     type="button"
-                                    className="h-auto px-2 py-1 text-xs text-destructive hover:opacity-80"
-                                    onClick={() => {
-                                      document.getElementById('workflow-designer-contract-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                                    }}
+                                    className="h-auto px-2 py-1 text-xs text-gray-500 hover:text-gray-700"
+                                    onClick={() => setShowTriggerMapping((prev) => !prev)}
+                                    disabled={!canManage}
                                   >
-                                    View contract
+                                    {showEditor ? 'Hide mapping' : 'Show mapping'}
                                   </Button>
+                                )}
+                              </div>
+
+                              {!showEditor && !mappingRequired && !mappingProvided && (
+                                <div className="mt-2 text-xs text-gray-600">Mapping: Not required.</div>
+                              )}
+
+                              {(mappingErrors.length > 0 || mappingWarnings.length > 0) && (
+                                <div className="mt-3 space-y-2">
+                                  {mappingErrors.length > 0 && (
+                                    <div className="rounded border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+                                      <div className="font-semibold mb-1">Mapping errors</div>
+                                      <ul className="list-disc pl-4 space-y-1">
+                                        {mappingErrors.slice(0, 5).map((err, idx) => (
+                                          <li key={`${err.code}-${idx}`}>{err.message}</li>
+                                        ))}
+                                      </ul>
+                                      {mappingErrors.length > 5 && (
+                                        <div className="mt-1 text-[11px] opacity-80">+{mappingErrors.length - 5} more</div>
+                                      )}
+                                    </div>
+                                  )}
+                                  {mappingWarnings.length > 0 && (
+                                    <div className="rounded border border-warning/30 bg-warning/10 px-3 py-2 text-xs text-warning-foreground">
+                                      <div className="font-semibold mb-1">Mapping warnings</div>
+                                      <ul className="list-disc pl-4 space-y-1">
+                                        {mappingWarnings.slice(0, 5).map((warn, idx) => (
+                                          <li key={`${warn.code}-${idx}`}>{warn.message}</li>
+                                        ))}
+                                      </ul>
+                                      {mappingWarnings.length > 5 && (
+                                        <div className="mt-1 text-[11px] opacity-80">+{mappingWarnings.length - 5} more</div>
+                                      )}
+                                    </div>
+                                  )}
                                 </div>
-                              </div>
-                            )}
+                              )}
 
-                            {refsMatch && !mappingProvided && !showEditor && (
-                              <div className="mt-2 text-xs text-gray-600">
-                                Identity mapping (no mapping required).
-                              </div>
-                            )}
-
-                            {(mappingErrors.length > 0 || mappingWarnings.length > 0) && (
-                              <div className="mt-3 space-y-2">
-                                {mappingErrors.length > 0 && (
-                                  <div className="rounded border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
-                                    <div className="font-semibold mb-1">Mapping errors</div>
-                                    <ul className="list-disc pl-4 space-y-1">
-                                      {mappingErrors.slice(0, 5).map((err, idx) => (
-                                        <li key={`${err.code}-${idx}`}>{err.message}</li>
-                                      ))}
-                                    </ul>
-                                    {mappingErrors.length > 5 && (
-                                      <div className="mt-1 text-[11px] opacity-80">+{mappingErrors.length - 5} more</div>
-                                    )}
-                                  </div>
-                                )}
-                                {mappingWarnings.length > 0 && (
-                                  <div className="rounded border border-warning/30 bg-warning/10 px-3 py-2 text-xs text-warning-foreground">
-                                    <div className="font-semibold mb-1">Mapping warnings</div>
-                                    <ul className="list-disc pl-4 space-y-1">
-                                      {mappingWarnings.slice(0, 5).map((warn, idx) => (
-                                        <li key={`${warn.code}-${idx}`}>{warn.message}</li>
-                                      ))}
-                                    </ul>
-                                    {mappingWarnings.length > 5 && (
-                                      <div className="mt-1 text-[11px] opacity-80">+{mappingWarnings.length - 5} more</div>
-                                    )}
-                                  </div>
-                                )}
-                              </div>
-                            )}
-
-                            {showEditor && (
-                              <div className="mt-3">
-                                <p className="text-xs text-gray-500 mb-3">
-                                  Map data from <code className="bg-gray-100 px-1 rounded">event.payload</code> to the workflow payload.
-                                </p>
-                                <MappingPanel
-                                  value={mapping}
-                                  onChange={(next) => {
-                                    const nextTrigger: any = { ...activeDefinition.trigger };
-                                    nextTrigger.payloadMapping = Object.keys(next).length > 0 ? next : undefined;
-                                    handleDefinitionChange({ trigger: nextTrigger });
-                                  }}
-                                  targetFields={triggerMappingTargetFields}
-                                  dataContext={triggerMappingDataContext as any}
-                                  fieldOptions={triggerMappingFieldOptions}
-                                  stepId={`trigger-${activeDefinition.id}`}
-                                  disabled={!canManage}
-                                  payloadRootPath="event.payload"
-                                  expressionContextOverride={triggerMappingExpressionContext}
-                                />
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })()}
-                    </div>
-                  )}
-
-                  <div id="workflow-designer-contract-section" className="mt-4">
-                    <div className="flex items-center justify-between gap-4">
-                      <div>
-                        <Label htmlFor="workflow-designer-contract-mode">Workflow data contract</Label>
-                        <div className="text-xs text-gray-500">
-                          {activeDefinition?.trigger?.type === 'event' ? (
-                            <>
-                              The trigger event defines <span className="font-mono">event.payload</span>. The workflow contract defines the
-                              <span className="font-mono"> payload</span> object that steps read (after trigger mapping, if any).
-                            </>
-                          ) : (
-                            <>
-                              No trigger is selected. The workflow contract defines the <span className="font-mono">payload</span> object that steps read.
-                              Manual workflows must pin a schema before publishing or running.
-                            </>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-[11px] text-gray-500">Pin schema (advanced)</span>
-                        <Switch
-                          id="workflow-designer-contract-mode"
-                          checked={payloadSchemaModeDraft === 'pinned'}
-                          onCheckedChange={(checked) => {
-                            if (!activeDefinition) return;
-                            if (checked) {
-                              try {
-                                analytics.capture('workflow.payload_contract_mode.changed', {
-                                  workflowId: activeWorkflowId ?? activeDefinition?.id ?? null,
-                                  from: 'inferred',
-                                  to: 'pinned'
-                                });
-                              } catch {}
-                              setPayloadSchemaModeDraft('pinned');
-                              setSchemaInferenceEnabled(false);
-                              const pinned = pinnedPayloadSchemaRefDraft || activeDefinition.payloadSchemaRef || '';
-                              if (pinned) {
-                                setPinnedPayloadSchemaRefDraft(pinned);
-                                if (activeDefinition.payloadSchemaRef !== pinned) {
-                                  handleDefinitionChange({ payloadSchemaRef: pinned });
-                                }
-                              }
-                              return;
-                            }
-                            // inferred
-                            try {
-                              analytics.capture('workflow.payload_contract_mode.changed', {
-                                workflowId: activeWorkflowId ?? activeDefinition?.id ?? null,
-                                from: 'pinned',
-                                to: 'inferred'
-                              });
-                            } catch {}
-                            setPayloadSchemaModeDraft('inferred');
-                            setSchemaInferenceEnabled(true);
-                            setSchemaRefAdvanced(false);
-                            setPinnedPayloadSchemaRefDraft(activeDefinition.payloadSchemaRef ?? pinnedPayloadSchemaRefDraft ?? '');
-                            lastAppliedInferredRef.current = null;
-                            if (inferredSchemaRef && activeDefinition.payloadSchemaRef !== inferredSchemaRef) {
-                              handleDefinitionChange({ payloadSchemaRef: inferredSchemaRef });
-                            }
-                          }}
-                          disabled={!canManage}
-                        />
-                      </div>
-                    </div>
-
-                    {payloadSchemaModeDraft === 'pinned' ? (
-                      <>
-                        <div className="mt-2 flex items-center justify-between">
-                          <div className="text-xs text-gray-600">Pinned payload schema</div>
-                          <Button
-                            id="workflow-designer-schema-advanced"
-                            variant="ghost"
-                            size="sm"
-                            type="button"
-                            className="h-auto px-2 py-1 text-xs text-gray-500 hover:text-gray-700"
-                            onClick={() => setSchemaRefAdvanced((prev) => !prev)}
-                          >
-                            {schemaRefAdvanced ? 'Hide advanced' : 'Advanced'}
-                          </Button>
-                        </div>
-                        <div className="mt-2">
-                          {registryStatus === 'loading' ? (
-                            <Skeleton className="h-10 w-full" />
-                          ) : (
-                            <SearchableSelect
-                              id="workflow-designer-schema-ref-select"
-                              options={(() => {
-                                const current = activeDefinition?.payloadSchemaRef ?? '';
-                                const base = schemaRefs.map((ref) => {
-                                  const meta = schemaMeta.get(ref);
-                                  const title = meta?.title ? ` — ${meta.title}` : '';
-                                  return { value: ref, label: `${ref}${title}` };
-                                });
-                                if (current && !schemaRefs.includes(current)) {
-                                  return [{ value: current, label: `${current} (unknown)` }, ...base];
-                                }
-                                return base;
-                              })()}
-                              value={activeDefinition?.payloadSchemaRef ?? ''}
-                              onChange={(value) => {
-                                setPinnedPayloadSchemaRefDraft(value);
-                                analytics.capture('workflow.payload_schema_ref.selected', {
-                                  schemaRef: value || null,
-                                  workflowId: activeWorkflowId ?? activeDefinition?.id ?? null,
-                                  inferenceEnabled: false,
-                                  triggerEvent: activeDefinition?.trigger?.type === 'event' ? activeDefinition.trigger.eventName : null
-                                });
-                                handleDefinitionChange({ payloadSchemaRef: value });
-                              }}
-                              placeholder="Select schema…"
-                              emptyMessage="No schemas found"
-                              disabled={registryError || !canManage}
-                              required
-                              dropdownMode="overlay"
-                            />
-                          )}
-                        </div>
-
-                        {schemaRefAdvanced && (
-                          <div className="mt-2">
-                            <Input
-                              id="workflow-designer-schema"
-                              label="Payload schema ref (advanced)"
-                              value={activeDefinition?.payloadSchemaRef ?? ''}
-                              onChange={(event) => {
-                                setPinnedPayloadSchemaRefDraft(event.target.value);
-                                handleDefinitionChange({ payloadSchemaRef: event.target.value });
-                              }}
-                              disabled={!canManage}
-                            />
-                          </div>
-                        )}
-                      </>
-                    ) : (
-                      <div className="mt-2 rounded border border-gray-200 bg-white px-3 py-2">
-                        <div className="text-xs text-gray-700">
-                          <div className="flex items-center justify-between gap-3">
-                            <div>
-                              <span className="font-semibold text-gray-800">Inferred</span>{' '}
-                              <span className="text-gray-600">from the selected trigger event.</span>
-                            </div>
-                            {effectivePayloadSchemaRef && (
-                              <Badge className="bg-sky-500/15 text-sky-600 border-sky-500/30">Effective</Badge>
-                            )}
-                          </div>
-                          <div className="mt-1 text-[11px] text-gray-500 font-mono break-all">
-                            {inferredSchemaStatus === 'loading' ? (
-                              <Skeleton className="h-4 w-56" />
-                            ) : (
-                              (effectivePayloadSchemaRef || 'Select a trigger event to infer a schema.')
-                            )}
-                          </div>
-                          {inferredSchemaStatus === 'error' && activeDefinition?.trigger?.type === 'event' && (
-                            <div className="mt-2 rounded border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
-                              No schema is available for <span className="font-mono">{activeDefinition.trigger.eventName}</span>. Fix the event catalog entry to include a valid schema.
-                            </div>
-                          )}
-                          {activeWorkflowRecord?.published_version != null &&
-                            activeWorkflowRecord?.payload_schema_ref &&
-                            effectivePayloadSchemaRef &&
-                            activeWorkflowRecord.payload_schema_ref !== effectivePayloadSchemaRef && (
-                            <div className="mt-2 rounded border border-warning/30 bg-warning/10 px-3 py-2 text-xs text-warning-foreground">
-                              <div className="font-semibold">Draft contract differs from published</div>
-                              <div className="mt-1 opacity-90">
-                                Published contract uses <span className="font-mono">{activeWorkflowRecord.payload_schema_ref}</span>. This draft is currently inferred as{' '}
-                                <span className="font-mono">{effectivePayloadSchemaRef}</span>.
-                              </div>
-                              {canManage && (
-                                <div className="mt-2">
-                                  <Button
-                                    id="workflow-designer-pin-to-published-contract"
-                                    variant="outline"
-                                    size="sm"
-                                    type="button"
-                                    onClick={() => {
-                                      setPayloadSchemaModeDraft('pinned');
-                                      setSchemaInferenceEnabled(false);
-                                      setSchemaRefAdvanced(false);
-                                      setPinnedPayloadSchemaRefDraft(activeWorkflowRecord.payload_schema_ref ?? '');
-                                      if (activeDefinition?.payloadSchemaRef !== activeWorkflowRecord.payload_schema_ref) {
-                                        handleDefinitionChange({ payloadSchemaRef: activeWorkflowRecord.payload_schema_ref });
-                                      }
+                              {showEditor && (
+                                <div className="mt-3">
+                                  <p className="text-xs text-gray-500 mb-3">
+                                    Map data from <code className="bg-gray-100 px-1 rounded">event.payload</code> to workflow input.
+                                  </p>
+                                  <MappingPanel
+                                    value={mapping}
+                                    onChange={(next) => {
+                                      const nextTrigger: any = { ...activeDefinition.trigger };
+                                      nextTrigger.payloadMapping = Object.keys(next).length > 0 ? next : undefined;
+                                      handleDefinitionChange({ trigger: nextTrigger });
                                     }}
-                                  >
-                                    Pin to published contract
-                                  </Button>
+                                    targetFields={triggerMappingTargetFields}
+                                    dataContext={triggerMappingDataContext as any}
+                                    fieldOptions={triggerMappingFieldOptions}
+                                    stepId={`trigger-${activeDefinition.id}`}
+                                    disabled={!canManage}
+                                    payloadRootPath="event.payload"
+                                    expressionContextOverride={triggerMappingExpressionContext}
+                                  />
                                 </div>
                               )}
                             </div>
+                          </div>
+                      </div>
+                    );
+                  })()}
+
+                  <div id="workflow-designer-contract-section" className="mt-4">
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <Label>Workflow input data</Label>
+                        <div className="text-xs text-gray-500">
+                          {activeDefinition?.trigger?.type === 'event' ? (
+                            'Your steps read data from the selected trigger.'
+                          ) : (
+                            <>
+                              Choose a trigger to define available data. Manual workflows need a locked schema before publishing or running.
+                            </>
                           )}
                         </div>
+                        {activeDefinition?.trigger?.type === 'event' && triggerPayloadMappingInfo.mappingRequired && !contractSettingsExpanded && (
+                          <div className="mt-1 text-xs text-warning-foreground">
+                            Trigger mapping is required. Open Advanced schema settings to configure it.
+                          </div>
+                        )}
+                      </div>
+                      {activeDefinition?.trigger?.type !== 'event' && (
+                        <Button
+                          id="workflow-designer-select-trigger"
+                          variant="outline"
+                          size="sm"
+                          type="button"
+                          className="text-xs"
+                          onClick={() => {
+                            const triggerElement = document.getElementById('workflow-designer-trigger-event');
+                            if (!triggerElement) return;
+                            triggerElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            triggerElement.focus();
+                          }}
+                        >
+                          Select trigger
+                        </Button>
+                      )}
+                    </div>
+
+                    <div className="mt-2 text-xs text-gray-700">
+                      <span className="font-semibold text-gray-800">
+                        {payloadSchemaModeDraft === 'pinned' ? 'Schema version locked' : 'Auto-selected from trigger'}
+                      </span>
+                      <span className="text-gray-600">
+                        {payloadSchemaModeDraft === 'pinned'
+                          ? ' to keep this workflow stable if trigger schemas change.'
+                          : '.'}
+                      </span>
+
+                      {payloadSchemaModeDraft === 'inferred' && inferredSchemaStatus === 'loading' && (
+                        <div className="mt-2">
+                          <Skeleton className="h-4 w-56" />
+                        </div>
+                      )}
+
+                      {payloadSchemaModeDraft === 'inferred' && !effectivePayloadSchemaRef && inferredSchemaStatus !== 'loading' && (
+                        <div className="mt-2 text-xs text-gray-500">
+                          Choose a trigger to define available fields.
+                        </div>
+                      )}
+
+                      {inferredSchemaStatus === 'error' && activeDefinition?.trigger?.type === 'event' && (
+                        <div className="mt-2 rounded border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+                          We could not load schema information for <span className="font-mono">{activeDefinition.trigger.eventName}</span>. Check the event catalog entry.
+                        </div>
+                      )}
+
+                      {activeWorkflowRecord?.published_version != null &&
+                        activeWorkflowRecord?.payload_schema_ref &&
+                        effectivePayloadSchemaRef &&
+                        activeWorkflowRecord.payload_schema_ref !== effectivePayloadSchemaRef && (
+                        <div className="mt-2 rounded border border-warning/30 bg-warning/10 px-3 py-2 text-xs text-warning-foreground">
+                          <div className="font-semibold">Draft contract differs from published</div>
+                          <div className="mt-1 opacity-90">
+                            The published version uses <span className="font-mono">{activeWorkflowRecord.payload_schema_ref}</span>. This draft currently resolves to{' '}
+                            <span className="font-mono">{effectivePayloadSchemaRef}</span>.
+                          </div>
+                          {canManage && (
+                            <div className="mt-2">
+                              <Button
+                                id="workflow-designer-pin-to-published-contract"
+                                variant="outline"
+                                size="sm"
+                                type="button"
+                                onClick={() => {
+                                  setPayloadSchemaModeDraft('pinned');
+                                  setSchemaInferenceEnabled(false);
+                                  setSchemaRefAdvanced(false);
+                                  setContractSettingsExpanded(true);
+                                  setPinnedPayloadSchemaRefDraft(activeWorkflowRecord.payload_schema_ref ?? '');
+                                  if (activeDefinition?.payloadSchemaRef !== activeWorkflowRecord.payload_schema_ref) {
+                                    handleDefinitionChange({ payloadSchemaRef: activeWorkflowRecord.payload_schema_ref });
+                                  }
+                                }}
+                              >
+                                Lock to published contract
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {!contractSettingsExpanded && (
+                      <div className="mt-2 flex justify-end">
+                        <Button
+                          id="workflow-designer-contract-advanced-toggle"
+                          variant="ghost"
+                          size="sm"
+                          type="button"
+                          className="h-auto px-2 py-1 text-xs text-gray-500 hover:text-gray-700"
+                          onClick={() => setContractSettingsExpanded(true)}
+                        >
+                          Advanced schema settings
+                        </Button>
+                      </div>
+                    )}
+
+                    {contractSettingsExpanded && (
+                      <div id="workflow-designer-contract-advanced-panel" className="mt-2 rounded border border-gray-200 bg-gray-50 p-3">
+                        <div className="flex items-center justify-between gap-3">
+                          <div>
+                            <div className="text-xs font-semibold text-gray-800">Lock schema version</div>
+                            <div className="text-xs text-gray-500">
+                              Lock schema version to prevent future trigger changes from affecting this workflow.
+                            </div>
+                          </div>
+                          <Switch
+                            id="workflow-designer-contract-mode"
+                            checked={payloadSchemaModeDraft === 'pinned'}
+                            onCheckedChange={(checked) => {
+                              if (!activeDefinition) return;
+                              if (checked) {
+                                try {
+                                  analytics.capture('workflow.payload_contract_mode.changed', {
+                                    workflowId: activeWorkflowId ?? activeDefinition?.id ?? null,
+                                    from: 'inferred',
+                                    to: 'pinned'
+                                  });
+                                } catch {}
+                                setPayloadSchemaModeDraft('pinned');
+                                setSchemaInferenceEnabled(false);
+                                const pinned = pinnedPayloadSchemaRefDraft || activeDefinition.payloadSchemaRef || '';
+                                if (pinned) {
+                                  setPinnedPayloadSchemaRefDraft(pinned);
+                                  if (activeDefinition.payloadSchemaRef !== pinned) {
+                                    handleDefinitionChange({ payloadSchemaRef: pinned });
+                                  }
+                                }
+                                return;
+                              }
+                              // inferred
+                              try {
+                                analytics.capture('workflow.payload_contract_mode.changed', {
+                                  workflowId: activeWorkflowId ?? activeDefinition?.id ?? null,
+                                  from: 'pinned',
+                                  to: 'inferred'
+                                });
+                              } catch {}
+                              setPayloadSchemaModeDraft('inferred');
+                              setSchemaInferenceEnabled(true);
+                              setSchemaRefAdvanced(false);
+                              setPinnedPayloadSchemaRefDraft(activeDefinition.payloadSchemaRef ?? pinnedPayloadSchemaRefDraft ?? '');
+                              lastAppliedInferredRef.current = null;
+                              if (inferredSchemaRef && activeDefinition.payloadSchemaRef !== inferredSchemaRef) {
+                                handleDefinitionChange({ payloadSchemaRef: inferredSchemaRef });
+                              }
+                            }}
+                            disabled={!canManage}
+                          />
+                        </div>
+
+                        {payloadSchemaModeDraft === 'pinned' ? (
+                          <>
+                            <div className="mt-3 text-xs text-gray-600">Locked schema version</div>
+                            <div className="mt-2">
+                              {registryStatus === 'loading' ? (
+                                <Skeleton className="h-10 w-full" />
+                              ) : (
+                                <SearchableSelect
+                                  id="workflow-designer-schema-ref-select"
+                                  options={(() => {
+                                    const current = activeDefinition?.payloadSchemaRef ?? '';
+                                    const base = schemaRefs.map((ref) => {
+                                      const meta = schemaMeta.get(ref);
+                                      const title = meta?.title ? ` — ${meta.title}` : '';
+                                      return { value: ref, label: `${ref}${title}` };
+                                    });
+                                    if (current && !schemaRefs.includes(current)) {
+                                      return [{ value: current, label: `${current} (unknown)` }, ...base];
+                                    }
+                                    return base;
+                                  })()}
+                                  value={activeDefinition?.payloadSchemaRef ?? ''}
+                                  onChange={(value) => {
+                                    setPinnedPayloadSchemaRefDraft(value);
+                                    analytics.capture('workflow.payload_schema_ref.selected', {
+                                      schemaRef: value || null,
+                                      workflowId: activeWorkflowId ?? activeDefinition?.id ?? null,
+                                      inferenceEnabled: false,
+                                      triggerEvent: activeDefinition?.trigger?.type === 'event' ? activeDefinition.trigger.eventName : null
+                                    });
+                                    handleDefinitionChange({ payloadSchemaRef: value });
+                                  }}
+                                  placeholder="Select schema version…"
+                                  emptyMessage="No schemas found"
+                                  disabled={registryError || !canManage}
+                                  required
+                                  dropdownMode="overlay"
+                                />
+                              )}
+                            </div>
+
+                            <div className="mt-2 flex items-center justify-between">
+                              <div className="text-xs text-gray-600">Manual schema ref</div>
+                              <Button
+                                id="workflow-designer-schema-advanced"
+                                variant="ghost"
+                                size="sm"
+                                type="button"
+                                className="h-auto px-2 py-1 text-xs text-gray-500 hover:text-gray-700"
+                                onClick={() => setSchemaRefAdvanced((prev) => !prev)}
+                              >
+                                {schemaRefAdvanced ? 'Hide' : 'Edit'}
+                              </Button>
+                            </div>
+                            {schemaRefAdvanced && (
+                              <div className="mt-2">
+                                <Input
+                                  id="workflow-designer-schema"
+                                  label="Payload schema ref (advanced)"
+                                  value={activeDefinition?.payloadSchemaRef ?? ''}
+                                  onChange={(event) => {
+                                    setPinnedPayloadSchemaRefDraft(event.target.value);
+                                    handleDefinitionChange({ payloadSchemaRef: event.target.value });
+                                  }}
+                                  disabled={!canManage}
+                                />
+                              </div>
+                            )}
+                          </>
+                        ) : (
+                          <div className="mt-3 text-xs text-gray-600">
+                            {effectivePayloadSchemaRef ? (
+                              <>
+                                Current inferred schema:
+                                <span className="ml-1 font-mono break-all">{effectivePayloadSchemaRef}</span>
+                              </>
+                            ) : (
+                              'No schema inferred yet.'
+                            )}
+                          </div>
+                        )}
                       </div>
                     )}
 
@@ -3942,7 +3928,7 @@ const WorkflowDesigner: React.FC = () => {
                       !schemaRefs.includes(effectivePayloadSchemaRef) && (
                       <div className="mt-2 flex items-center justify-between gap-3 text-xs text-destructive">
                         <div>
-                          Unknown schema ref. Select a valid schema from the dropdown (or update the ref in Advanced).
+                          Unknown schema ref. Open Advanced schema settings and choose a valid schema version.
                         </div>
                         {canManage && (
                           <Button
@@ -3964,12 +3950,10 @@ const WorkflowDesigner: React.FC = () => {
                       </div>
                     )}
 
-                    {effectivePayloadSchemaRef && (
+                    {contractSettingsExpanded && effectivePayloadSchemaRef && (
                       <div className="mt-3 rounded border border-gray-200 bg-gray-50 p-3">
                         <div className="flex items-center justify-between gap-3">
-                          <div className="text-xs font-semibold text-gray-700">
-                            {payloadSchemaModeDraft === 'pinned' ? 'Contract schema preview' : 'Effective schema preview'}
-                          </div>
+                          <div className="text-xs font-semibold text-gray-700">Available fields preview</div>
                           <div className="flex items-center gap-2">
                             <Button
                               id="workflow-designer-schema-preview-toggle"
@@ -3979,7 +3963,7 @@ const WorkflowDesigner: React.FC = () => {
                               className="h-auto px-2 py-1 text-xs text-gray-600 hover:text-gray-800"
                               onClick={() => setSchemaPreviewExpanded((prev) => !prev)}
                             >
-                              {schemaPreviewExpanded ? 'Hide preview' : 'Show preview'}
+                              {schemaPreviewExpanded ? 'Hide fields' : 'Preview fields'}
                             </Button>
                             <Button
                               id="workflow-designer-schema-view"
@@ -3997,7 +3981,7 @@ const WorkflowDesigner: React.FC = () => {
                                   : false
                               }
                             >
-                              View full schema
+                              View JSON schema
                             </Button>
                             {activeWorkflowRecord?.published_version != null && (
                               <Button
@@ -4039,6 +4023,21 @@ const WorkflowDesigner: React.FC = () => {
                             })()}
                           </div>
                         )}
+                      </div>
+                    )}
+
+                    {contractSettingsExpanded && (
+                      <div className="mt-2 flex justify-end">
+                        <Button
+                          id="workflow-designer-contract-advanced-toggle"
+                          variant="ghost"
+                          size="sm"
+                          type="button"
+                          className="h-auto px-2 py-1 text-xs text-gray-500 hover:text-gray-700"
+                          onClick={() => setContractSettingsExpanded(false)}
+                        >
+                          Hide advanced schema settings
+                        </Button>
                       </div>
                     )}
                   </div>

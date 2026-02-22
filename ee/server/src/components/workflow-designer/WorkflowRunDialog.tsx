@@ -160,6 +160,15 @@ const setValueAtPath = (root: unknown, path: Array<string | number>, value: unkn
   return next;
 };
 
+const getValueAtPath = (root: unknown, path: Array<string | number>): unknown =>
+  path.reduce<unknown>((acc, part) => {
+    if (acc == null) return undefined;
+    return (acc as any)[part];
+  }, root);
+
+const isObjectRecord = (value: unknown): value is Record<string, unknown> =>
+  value != null && typeof value === 'object' && !Array.isArray(value);
+
 const pathToString = (path: Array<string | number>): string =>
   path.reduce<string>(
     (acc, part) => (typeof part === 'number' ? `${acc}[${part}]` : acc ? `${acc}.${part}` : String(part)),
@@ -182,14 +191,34 @@ const validateAgainstSchema = (schema: JsonSchema, value: unknown, root: JsonSch
       errors.push({ path, message: 'Expected object.' });
       return errors;
     }
+    const objectValue = value as Record<string, unknown>;
+    const knownProperties = resolved.properties ?? {};
+    const knownPropertyKeys = new Set(Object.keys(knownProperties));
     const required = new Set(resolved.required ?? []);
     for (const key of required) {
-      if ((value as any)[key] === undefined || (value as any)[key] === null || (value as any)[key] === '') {
+      if ((objectValue as any)[key] === undefined || (objectValue as any)[key] === null || (objectValue as any)[key] === '') {
         errors.push({ path: path ? `${path}.${key}` : key, message: 'Required field missing.' });
       }
     }
-    for (const [key, propSchema] of Object.entries(resolved.properties ?? {})) {
-      errors.push(...validateAgainstSchema(propSchema, (value as any)[key], root, path ? `${path}.${key}` : key));
+    for (const [key, propSchema] of Object.entries(knownProperties)) {
+      errors.push(...validateAgainstSchema(propSchema, objectValue[key], root, path ? `${path}.${key}` : key));
+    }
+    if (resolved.additionalProperties === false) {
+      for (const key of Object.keys(objectValue)) {
+        if (!knownPropertyKeys.has(key)) {
+          errors.push({ path: path ? `${path}.${key}` : key, message: 'Unknown property.' });
+        }
+      }
+    } else if (resolved.additionalProperties && typeof resolved.additionalProperties === 'object') {
+      for (const [key, dynamicValue] of Object.entries(objectValue)) {
+        if (knownPropertyKeys.has(key)) continue;
+        errors.push(...validateAgainstSchema(
+          resolved.additionalProperties,
+          dynamicValue,
+          root,
+          path ? `${path}.${key}` : key
+        ));
+      }
     }
     return errors;
   }
@@ -772,6 +801,16 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
       const required = new Set(resolved.required ?? []);
       const sectionId = fieldPath || 'root';
       const isCollapsed = collapsedSections.has(sectionId);
+      const objectValue = isObjectRecord(value) ? value : {};
+      const knownProperties = resolved.properties ?? {};
+      const knownPropertyEntries = Object.entries(knownProperties);
+      const knownPropertyKeys = new Set(Object.keys(knownProperties));
+      const hasAdditionalProperties = resolved.additionalProperties !== undefined && resolved.additionalProperties !== false;
+      const additionalValueSchema = hasAdditionalProperties && typeof resolved.additionalProperties === 'object'
+        ? resolveSchemaRef(resolved.additionalProperties, rootSchema)
+        : {};
+      const additionalValueRequired = new Set(additionalValueSchema.required ?? []);
+      const dynamicEntries = Object.entries(objectValue).filter(([key]) => !knownPropertyKeys.has(key));
       return (
         <div className="border border-gray-200 rounded p-3 space-y-3">
           <button
@@ -793,9 +832,12 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
             <span className="text-xs text-gray-400">{isCollapsed ? 'Show' : 'Hide'}</span>
           </button>
           {resolved.description && <div className="text-xs text-gray-500">{resolved.description}</div>}
+          {fieldErrors.map((err) => (
+            <div key={`${fieldPath || 'root'}-err`} className="text-xs text-destructive">{err.message}</div>
+          ))}
           {!isCollapsed && (
             <div className="space-y-3">
-              {Object.entries(resolved.properties ?? {}).map(([key, propSchema]) => (
+              {knownPropertyEntries.map(([key, propSchema]) => (
                 <div key={`${fieldPath}.${key}`}>
                   {renderField(
                     propSchema,
@@ -805,6 +847,68 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
                   )}
                 </div>
               ))}
+              {hasAdditionalProperties && (
+                <div className="rounded border border-gray-100 bg-gray-50 p-2 space-y-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="text-xs font-medium text-gray-700">Map entries</div>
+                    <Button
+                      id={`run-form-object-add-${fieldPath || 'root'}`}
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const input = window.prompt('Enter field key/path');
+                        const nextKey = (input ?? '').trim();
+                        if (!nextKey) return;
+                        if (knownPropertyKeys.has(nextKey) || dynamicEntries.some(([key]) => key === nextKey)) {
+                          toast.error('That key already exists.');
+                          return;
+                        }
+                        const defaultDynamicValue = hasAdditionalProperties && typeof resolved.additionalProperties === 'object'
+                          ? buildDefaultValueFromSchema(resolved.additionalProperties, rootSchema)
+                          : null;
+                        updateFormValue((prev) => {
+                          const current = getValueAtPath(prev, path);
+                          const nextObject = isObjectRecord(current) ? { ...current } : {};
+                          nextObject[nextKey] = defaultDynamicValue;
+                          return setValueAtPath(prev, path, nextObject);
+                        });
+                      }}
+                    >
+                      Add field
+                    </Button>
+                  </div>
+                  <div className="text-[11px] text-gray-500">
+                    For map-style objects, add keys and set each value.
+                  </div>
+                  {dynamicEntries.length === 0 && (
+                    <div className="text-xs text-gray-500">No map entries added.</div>
+                  )}
+                  {dynamicEntries.map(([entryKey, entryValue]) => (
+                    <div key={`${fieldPath}.dynamic.${entryKey}`} className="rounded border border-gray-200 bg-white p-2 space-y-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <code className="text-xs bg-gray-100 px-1 py-0.5 rounded break-all">{entryKey}</code>
+                        <Button
+                          id={`run-form-object-remove-${fieldPath || 'root'}-${entryKey}`}
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            updateFormValue((prev) => {
+                              const current = getValueAtPath(prev, path);
+                              if (!isObjectRecord(current)) return prev;
+                              const nextObject = { ...current };
+                              delete nextObject[entryKey];
+                              return setValueAtPath(prev, path, nextObject);
+                            });
+                          }}
+                        >
+                          Remove
+                        </Button>
+                      </div>
+                      {renderField(additionalValueSchema, entryValue, [...path, entryKey], additionalValueRequired)}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>
