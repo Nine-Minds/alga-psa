@@ -352,13 +352,16 @@ body {
     --badge-default-bg: 30 41 59;       /* slate-800 for dark mode */
     --badge-default-text: 203 213 225;  /* slate-300 */
     --badge-default-border: 51 65 85;   /* slate-700 */
+    --badge-secondary-bg: 51 65 85;    /* slate-700 for dark mode */
+    --badge-secondary-text: 226 232 240; /* slate-200 */
+    --badge-secondary-border: 71 85 105; /* slate-600 */
 
-    /* STATUS COLORS */
-    --color-status-success: 74 222 128; /* green-400 */
+    /* STATUS COLORS — muted for dark backgrounds */
+    --color-status-success: 74 190 120; /* muted green */
     --color-status-success-foreground: 15 23 42;
-    --color-status-warning: 251 191 36; /* amber-400 */
+    --color-status-warning: 235 180 50; /* bright amber */
     --color-status-warning-foreground: 15 23 42;
-    --color-status-error: 248 113 113; /* red-400 */
+    --color-status-error: 210 100 100; /* muted red */
     --color-status-error-foreground: 15 23 42;
 
     /* BORDER COLOR */
@@ -387,8 +390,8 @@ body {
     --color-text-800: 241 245 249;
     --color-text-900: 248 250 252;
 
-    /* Switch */
-    --color-switch-thumb: 248 250 252;
+    /* Switch — muted in dark mode for softer contrast */
+    --color-switch-thumb: 190 200 215;
 
     /* MAIN COLORS */
     /* Purple (#8a4dea) */
@@ -433,7 +436,7 @@ body {
 
     /* ALERT BACKGROUND COLORS — clean opaque tints for dark surfaces */
     --color-alert-destructive-bg: 50 20 20;   /* deep dark red */
-    --color-alert-warning-bg: 50 35 15;       /* deep dark amber */
+    --color-alert-warning-bg: 50 40 8;         /* golden amber, not brown */
     --color-alert-success-bg: 15 40 25;       /* deep dark green */
     --color-alert-info-bg: 20 30 60;          /* deep dark blue */
 
@@ -450,7 +453,7 @@ body {
     --color-table-hover: 32 22 46;               /* ~primary purple at 15% over dark bg */
     --color-table-selected: 43 27 58;            /* ~primary purple at 22% over dark bg */
     --color-table-status-approved: 10 30 20;     /* muted dark green */
-    --color-table-status-warning: 35 25 10;      /* muted dark amber */
+    --color-table-status-warning: 50 35 18;      /* muted dark orange */
 
     /* Sidebar Colors  */
     --color-sidebar-bg: #0f172a;
@@ -501,6 +504,9 @@ body {
     --badge-default-bg: 241 245 249;    /* slate-100 */
     --badge-default-text: 51 65 85;     /* slate-700 */
     --badge-default-border: 226 232 240; /* slate-200 */
+    --badge-secondary-bg: 226 232 240;  /* slate-200 — darker than default */
+    --badge-secondary-text: 30 41 59;   /* slate-800 */
+    --badge-secondary-border: 203 213 225; /* slate-300 */
 
     /* STATUS COLORS */
     --color-status-success: 34 197 94; /* green-500 */
@@ -766,36 +772,9 @@ body {
     border-color: transparent !important;
   }
 
-  button[role="switch"] {
-    width: 42px;
-    height: 25px;
-    background-color: rgb(var(--color-border-400));
-    border-radius: 9999px;
-    position: relative;
-    transition: background-color 0.2s;
-  }
-  
-  button[role="switch"][data-state="checked"] {
-    background-color: rgb(var(--color-primary-500));
-  }
-  
-  button[role="switch"]::before {
-    content: "";
-    display: block;
-    width: 21px;
-    height: 21px;
-    background-color: rgb(var(--color-switch-thumb));
-    border-radius: 9999px;
-    position: absolute;
-    top: 2px;
-    left: 2px;
-    transition: transform 0.2s;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-  }
-  
-  button[role="switch"][data-state="checked"]::before {
-    transform: translateX(17px);
-  }
+  /* Switch styles are handled by .switch-root and .switch-thumb classes below.
+     The Radix SwitchPrimitives.Thumb component renders the actual thumb element,
+     so no ::before pseudo-element is needed. */
 
 .rt-SwitchThumb {
   box-shadow: none !important;
