@@ -1,0 +1,152 @@
+[
+  {
+    "id": "T001",
+    "description": "npm run build succeeds after all changes",
+    "implemented": false,
+    "featureIds": ["F001", "F002", "F003", "F004", "F005", "F006", "F007", "F008", "F009", "F010", "F011", "F012", "F013", "F014"]
+  },
+  {
+    "id": "T002",
+    "description": "npm run build:shared succeeds (packages build independently)",
+    "implemented": false,
+    "featureIds": ["F004", "F008"]
+  },
+  {
+    "id": "T003",
+    "description": "packages/integrations/src/services/csvTaxImportValidator.ts exists and exports all original functions (validateCSVForTaxImport, aggregateTaxByInvoice, parseDate, parseAmount, parseTaxRate, etc.)",
+    "implemented": false,
+    "featureIds": ["F002"]
+  },
+  {
+    "id": "T004",
+    "description": "packages/integrations/src/services/csvTaxImportService.ts exists and exports CSVTaxImportService class and getCSVTaxImportService singleton",
+    "implemented": false,
+    "featureIds": ["F003"]
+  },
+  {
+    "id": "T005",
+    "description": "packages/integrations/src/lib/csvFieldNormalizer.ts exists and exports normalizeCSVHeaders, validateRequiredColumns, REQUIRED_TAX_IMPORT_COLUMNS, getSuggestionsForMissingColumns, formatColumnAliases",
+    "implemented": false,
+    "featureIds": ["F001"]
+  },
+  {
+    "id": "T006",
+    "description": "csvTaxImportService.ts in integrations imports parseCSV from @alga-psa/core (not server/src/lib/utils/csvParser)",
+    "implemented": false,
+    "featureIds": ["F003"]
+  },
+  {
+    "id": "T007",
+    "description": "csvTaxImportService.ts in integrations imports createTenantKnex from @alga-psa/db (not ../db)",
+    "implemented": false,
+    "featureIds": ["F003"]
+  },
+  {
+    "id": "T008",
+    "description": "csvTaxImportService.ts in integrations imports TaxSource from @alga-psa/types (not ../../interfaces/tax.interfaces)",
+    "implemented": false,
+    "featureIds": ["F003"]
+  },
+  {
+    "id": "T009",
+    "description": "server/src/lib/services/csvTaxImportValidator.ts does not exist",
+    "implemented": false,
+    "featureIds": ["F006"]
+  },
+  {
+    "id": "T010",
+    "description": "server/src/lib/services/csvTaxImportService.ts does not exist",
+    "implemented": false,
+    "featureIds": ["F006"]
+  },
+  {
+    "id": "T011",
+    "description": "server/src/lib/utils/csvFieldNormalizer.ts does not exist",
+    "implemented": false,
+    "featureIds": ["F006"]
+  },
+  {
+    "id": "T012",
+    "description": "Grep 'from.*server/src/lib/services/csvTaxImport' in *.ts returns 0 matches outside docs/",
+    "implemented": false,
+    "featureIds": ["F005", "F006"]
+  },
+  {
+    "id": "T013",
+    "description": "BackNav.tsx imports UnsavedChangesContext from ../context/UnsavedChangesContext (relative path within packages/ui)",
+    "implemented": false,
+    "featureIds": ["F007"]
+  },
+  {
+    "id": "T014",
+    "description": "Grep 'from.*server/src/contexts/UnsavedChangesContext' in packages/ returns 0 matches",
+    "implemented": false,
+    "featureIds": ["F007"]
+  },
+  {
+    "id": "T015",
+    "description": "getEmailNotificationService is importable from @alga-psa/notifications (exported from barrel)",
+    "implemented": false,
+    "featureIds": ["F008"]
+  },
+  {
+    "id": "T016",
+    "description": "server/src/lib/notifications/email.ts does not exist",
+    "implemented": false,
+    "featureIds": ["F010"]
+  },
+  {
+    "id": "T017",
+    "description": "server/src/lib/notifications/emailChannel.ts does not exist",
+    "implemented": false,
+    "featureIds": ["F013"]
+  },
+  {
+    "id": "T018",
+    "description": "Grep 'from.*lib/notifications/email[^LSN]' in server/src/ returns 0 matches (emailLocaleResolver, emailService, sendEventEmail still OK)",
+    "implemented": false,
+    "featureIds": ["F009", "F010"]
+  },
+  {
+    "id": "T019",
+    "description": "Grep 'from.*lib/notifications/emailChannel' in server/src/ returns 0 matches",
+    "implemented": false,
+    "featureIds": ["F011", "F012", "F013"]
+  },
+  {
+    "id": "T020",
+    "description": "server/src/lib/notifications/emailLocaleResolver.ts still exists (intentionally kept)",
+    "implemented": false,
+    "featureIds": ["F010"]
+  },
+  {
+    "id": "T021",
+    "description": "server/src/lib/notifications/emailService.ts still exists (intentionally kept)",
+    "implemented": false,
+    "featureIds": ["F010"]
+  },
+  {
+    "id": "T022",
+    "description": "server/src/lib/notifications/sendEventEmail.ts still exists (intentionally kept)",
+    "implemented": false,
+    "featureIds": ["F010"]
+  },
+  {
+    "id": "T023",
+    "description": "server/src/lib/notifications/NotificationAccumulator.ts still exists (intentionally kept)",
+    "implemented": false,
+    "featureIds": ["F010"]
+  },
+  {
+    "id": "T024",
+    "description": "server/src/lib/adapters/invoiceAdapters.ts does not exist",
+    "implemented": false,
+    "featureIds": ["F014"]
+  },
+  {
+    "id": "T025",
+    "description": "ApiCSVAccountingController.ts imports getCSVTaxImportService from @alga-psa/integrations (not relative server path)",
+    "implemented": false,
+    "featureIds": ["F005"]
+  }
+]

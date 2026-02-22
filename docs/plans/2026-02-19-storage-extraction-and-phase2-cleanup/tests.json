@@ -244,17 +244,10 @@
     "description": "Build: server/tsconfig.json includes @alga-psa/storage path mappings for Next.js resolution",
     "implemented": true,
     "featureIds": ["F040"]
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-=======
->>>>>>> 37006a786 (feat(F041): update VideoDocumentHandler storage import)
   },
   {
     "id": "T042",
     "description": "Build: VideoDocumentHandler imports StorageProviderFactory from @alga-psa/storage",
-<<<<<<< HEAD
-<<<<<<< HEAD
     "implemented": true,
     "featureIds": ["F041"]
   },
@@ -263,13 +256,5 @@
     "description": "Build: fileActions imports FileStoreModel/FileStore from @alga-psa/storage",
     "implemented": true,
     "featureIds": ["F042"]
->>>>>>> 9f28a270c (feat(F042): update fileActions storage model imports)
-=======
-    "implemented": false,
-=======
-    "implemented": true,
->>>>>>> 738e4318d (test(T042): verify VideoDocumentHandler import)
-    "featureIds": ["F041"]
->>>>>>> 37006a786 (feat(F041): update VideoDocumentHandler storage import)
   }
 ]
