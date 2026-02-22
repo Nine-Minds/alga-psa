@@ -1145,7 +1145,7 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
                       markDirty();
                     }}
                     className={`text-left p-4 border-2 rounded-lg transition-all focus:outline-none ${
-                      planType === key ? 'border-blue-500 bg-blue-50' : 'border-[rgb(var(--color-border-200))] hover:border-blue-500 hover:bg-blue-50'
+                      planType === key ? 'border-blue-500 bg-blue-50 dark:bg-blue-500/20 dark:border-blue-400' : 'border-[rgb(var(--color-border-200))] hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/15 dark:hover:border-blue-400'
                     }`}
                   >
                     <div className="flex items-start gap-3">
