@@ -278,7 +278,10 @@ const getAvailableActionsForStatus = (status: RenewalWorkItemStatus): RenewalQue
     return ['mark_renewing', 'mark_non_renewing', 'create_renewal_draft', 'snooze', 'assign_owner'];
   }
   if (status === 'renewing') {
-    return ['create_renewal_draft', 'snooze', 'assign_owner'];
+    return ['mark_non_renewing', 'create_renewal_draft', 'snooze', 'assign_owner'];
+  }
+  if (status === 'non_renewing') {
+    return ['mark_renewing', 'assign_owner'];
   }
   if (status === 'snoozed') {
     return ['mark_renewing', 'mark_non_renewing', 'create_renewal_draft', 'assign_owner'];
@@ -408,11 +411,10 @@ export const markRenewalQueueItemRenewing = withAuth(async (
     }
 
     const previousStatus = toRenewalWorkItemStatus((row as any).status);
-    if (previousStatus === 'non_renewing') {
-      throw new Error('Cannot transition non_renewing work item to renewing without explicit override action');
-    }
-    if (previousStatus !== 'pending') {
-      throw new Error(`Only pending renewal work items can transition to renewing (current: ${previousStatus})`);
+    if (previousStatus !== 'pending' && previousStatus !== 'non_renewing' && previousStatus !== 'snoozed') {
+      throw new Error(
+        `Only pending, non_renewing, or snoozed renewal work items can transition to renewing (current: ${previousStatus})`
+      );
     }
 
     const updatedAt = new Date().toISOString();
@@ -475,8 +477,10 @@ export const markRenewalQueueItemNonRenewing = withAuth(async (
     }
 
     const previousStatus = toRenewalWorkItemStatus((row as any).status);
-    if (previousStatus !== 'pending') {
-      throw new Error(`Only pending renewal work items can transition to non_renewing (current: ${previousStatus})`);
+    if (previousStatus !== 'pending' && previousStatus !== 'renewing' && previousStatus !== 'snoozed') {
+      throw new Error(
+        `Only pending, renewing, or snoozed renewal work items can transition to non_renewing (current: ${previousStatus})`
+      );
     }
 
     const updatedAt = new Date().toISOString();

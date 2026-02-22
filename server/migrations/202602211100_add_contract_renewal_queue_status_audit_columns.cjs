@@ -106,8 +106,7 @@ exports.up = async function up(knex) {
       ALTER TABLE ${tableName}
       ADD CONSTRAINT ${ASSIGNED_TO_FK}
       FOREIGN KEY (tenant, assigned_to)
-      REFERENCES users(tenant, user_id)
-      ON DELETE SET NULL;
+      REFERENCES users(tenant, user_id);
     `);
   }
 
@@ -117,8 +116,7 @@ exports.up = async function up(knex) {
       ALTER TABLE ${tableName}
       ADD CONSTRAINT ${LAST_ACTION_BY_FK}
       FOREIGN KEY (tenant, last_action_by)
-      REFERENCES users(tenant, user_id)
-      ON DELETE SET NULL;
+      REFERENCES users(tenant, user_id);
     `);
   }
 

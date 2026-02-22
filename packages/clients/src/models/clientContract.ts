@@ -460,6 +460,10 @@ const ClientContract = {
     contractId: string,
     startDate: string,
     endDate: string | null = null,
+    renewalSettings: Pick<
+      IClientContract,
+      'renewal_mode' | 'notice_period_days' | 'renewal_term_months' | 'use_tenant_renewal_defaults'
+    > | undefined,
     tenantId: string
   ): Promise<IClientContract> {
     const { knex: db, tenant } = await createTenantKnex(tenantId);
@@ -518,6 +522,33 @@ const ClientContract = {
         created_at: timestamp,
         updated_at: timestamp,
       };
+
+      if (endDate) {
+        if (renewalSettings?.use_tenant_renewal_defaults !== undefined) {
+          insertPayload.use_tenant_renewal_defaults = renewalSettings.use_tenant_renewal_defaults;
+        }
+        if (
+          renewalSettings?.renewal_mode === 'none' ||
+          renewalSettings?.renewal_mode === 'manual' ||
+          renewalSettings?.renewal_mode === 'auto'
+        ) {
+          insertPayload.renewal_mode = renewalSettings.renewal_mode;
+        }
+        if (
+          typeof renewalSettings?.notice_period_days === 'number' &&
+          Number.isFinite(renewalSettings.notice_period_days) &&
+          renewalSettings.notice_period_days >= 0
+        ) {
+          insertPayload.notice_period_days = Math.floor(renewalSettings.notice_period_days);
+        }
+        if (
+          typeof renewalSettings?.renewal_term_months === 'number' &&
+          Number.isFinite(renewalSettings.renewal_term_months) &&
+          renewalSettings.renewal_term_months > 0
+        ) {
+          insertPayload.renewal_term_months = Math.floor(renewalSettings.renewal_term_months);
+        }
+      }
 
       const [created] = await db<IClientContract>('client_contracts').insert(insertPayload).returning('*');
       return normalizeClientContract(created);

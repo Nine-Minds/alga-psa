@@ -6,14 +6,14 @@ const source = readFileSync(
   'utf8'
 );
 
-describe('BillingDashboard renewals route wiring', () => {
-  it('registers a renewals Tabs.Content route in the tab host', () => {
-    expect(source).toContain('const [renewalsQueueRefreshTrigger, setRenewalsQueueRefreshTrigger] = useState(0);');
-    expect(source).toContain('const handleRenewalsQueueMutationComplete = () => {');
-    expect(source).toContain('setRenewalsQueueRefreshTrigger((current) => current + 1);');
-    expect(source).toContain('<ClientContractsTab refreshTrigger={renewalsQueueRefreshTrigger} />');
-    expect(source).toContain('<Tabs.Content value="renewals">');
-    expect(source).toContain("import RenewalsQueueTab from './contracts/RenewalsQueueTab';");
-    expect(source).toContain('<RenewalsQueueTab onQueueMutationComplete={handleRenewalsQueueMutationComplete} />');
+describe('BillingDashboard renewals route removal', () => {
+  it('does not register a standalone renewals route in the billing tab host', () => {
+    expect(source).not.toContain('const [renewalsQueueRefreshTrigger, setRenewalsQueueRefreshTrigger] = useState(0);');
+    expect(source).not.toContain('const handleRenewalsQueueMutationComplete = () => {');
+    expect(source).not.toContain('setRenewalsQueueRefreshTrigger((current) => current + 1);');
+    expect(source).not.toContain('<Tabs.Content value="renewals">');
+    expect(source).not.toContain("import RenewalsQueueTab from './contracts/RenewalsQueueTab';");
+    expect(source).not.toContain('<RenewalsQueueTab onQueueMutationComplete={handleRenewalsQueueMutationComplete} />');
+    expect(source).toContain('<ClientContractsTab />');
   });
 });

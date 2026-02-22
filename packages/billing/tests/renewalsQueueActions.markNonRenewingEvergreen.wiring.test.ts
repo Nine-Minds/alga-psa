@@ -15,7 +15,7 @@ describe('renewalsQueueActions evergreen mark-non-renewing wiring', () => {
       .split('export const markRenewalQueueItemNonRenewing = withAuth(async (')[1]
       ?.split('export const createRenewalDraftForQueueItem = withAuth(async (')[0] ?? '';
 
-    expect(markNonRenewingSection).toContain("if (previousStatus !== 'pending') {");
+    expect(markNonRenewingSection).toContain("if (previousStatus !== 'pending' && previousStatus !== 'renewing' && previousStatus !== 'snoozed') {");
     expect(markNonRenewingSection).toContain("status: 'non_renewing',");
     expect(markNonRenewingSection).not.toContain('end_date');
     expect(markNonRenewingSection).not.toContain('contract_type');

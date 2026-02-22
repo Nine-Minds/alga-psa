@@ -16,7 +16,6 @@ import TaxRates from './TaxRates';
 import UsageTracking from './UsageTracking';
 import TemplatesTab from './contracts/TemplatesTab';
 import ClientContractsTab from './contracts/ClientContractsTab';
-import RenewalsQueueTab from './contracts/RenewalsQueueTab';
 import ContractDetailSwitcher from './contracts/ContractDetailSwitcher';
 import { ContractLinePresetTypeRouter } from './contract-lines/ContractLinePresetTypeRouter';
 import BackNav from '@alga-psa/ui/components/BackNav';
@@ -47,7 +46,6 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
   const liveSearchParams = useSearchParams();
   const [isHydrated, setIsHydrated] = useState(false);
   const [error] = useState<string | null>(null);
-  const [renewalsQueueRefreshTrigger, setRenewalsQueueRefreshTrigger] = useState(0);
 
   const tabDefinitions = useMemo(() => billingTabDefinitions, []);
 
@@ -96,10 +94,6 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
     ? (requestedTab as BillingTabValue)
     : tabDefinitions[0]?.value ?? 'client-contracts';
 
-  const handleRenewalsQueueMutationComplete = () => {
-    setRenewalsQueueRefreshTrigger((current) => current + 1);
-  };
-
   return (
     <div className="h-full overflow-y-auto p-6">
       <h1 className="text-3xl font-bold mb-6">Billing</h1>
@@ -142,12 +136,8 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
               currentUserId={currentUserId}
             />
           ) : (
-            <ClientContractsTab refreshTrigger={renewalsQueueRefreshTrigger} />
+            <ClientContractsTab />
           )}
-        </Tabs.Content>
-
-        <Tabs.Content value="renewals">
-          <RenewalsQueueTab onQueueMutationComplete={handleRenewalsQueueMutationComplete} />
         </Tabs.Content>
 
         <Tabs.Content value="accounting-exports">

@@ -550,9 +550,16 @@ export const getContractAssignments = withAuth(async (user, { tenant }, contract
       'cc.client_id',
       'cc.start_date',
       'cc.end_date',
+      'cc.renewal_mode',
+      'cc.notice_period_days',
+      'cc.renewal_term_months',
+      'cc.use_tenant_renewal_defaults',
+      'cc.decision_due_date',
       'cc.is_active',
       'cc.tenant',
-      'c.client_name'
+      'c.client_name',
+      'dbs.default_renewal_mode as tenant_default_renewal_mode',
+      'dbs.default_notice_period_days as tenant_default_notice_period_days'
     ];
 
     if (hasPoRequired) {
@@ -569,6 +576,9 @@ export const getContractAssignments = withAuth(async (user, { tenant }, contract
       .leftJoin('clients as c', function joinClients() {
         this.on('cc.client_id', '=', 'c.client_id').andOn('cc.tenant', '=', 'c.tenant');
       })
+      .leftJoin('default_billing_settings as dbs', function joinDefaults() {
+        this.on('cc.tenant', '=', 'dbs.tenant');
+      })
       .where(function whereContractOrTemplate(this: any) {
         this.where({ 'cc.contract_id': contractId })
           .orWhere({ 'cc.template_contract_id': contractId });
@@ -577,18 +587,66 @@ export const getContractAssignments = withAuth(async (user, { tenant }, contract
       .select(selection)
       .orderBy('cc.start_date', 'asc');
 
-    return rows.map((row: any) => ({
-      client_contract_id: row.client_contract_id,
-      client_id: row.client_id,
-      client_name: row.client_name ?? null,
-      start_date: row.start_date ?? null,
-      end_date: row.end_date ?? null,
-      is_active: row.is_active ?? false,
-      po_required: hasPoRequired ? Boolean(row.po_required) : false,
-      po_number: hasPoNumber ? row.po_number : undefined,
-      po_amount: hasPoAmount ? row.po_amount : undefined,
-      tenant: row.tenant,
-    }));
+    return rows.map((row: any) => {
+      const renewalMode =
+        row.renewal_mode === 'none' || row.renewal_mode === 'manual' || row.renewal_mode === 'auto'
+          ? row.renewal_mode
+          : undefined;
+      const tenantDefaultRenewalMode =
+        row.tenant_default_renewal_mode === 'none' ||
+        row.tenant_default_renewal_mode === 'manual' ||
+        row.tenant_default_renewal_mode === 'auto'
+          ? row.tenant_default_renewal_mode
+          : 'manual';
+      const useTenantRenewalDefaults = row.use_tenant_renewal_defaults !== false;
+
+      const noticePeriodRaw =
+        typeof row.notice_period_days === 'string' ? Number(row.notice_period_days) : row.notice_period_days;
+      const tenantDefaultNoticeRaw =
+        typeof row.tenant_default_notice_period_days === 'string'
+          ? Number(row.tenant_default_notice_period_days)
+          : row.tenant_default_notice_period_days;
+      const renewalTermRaw =
+        typeof row.renewal_term_months === 'string' ? Number(row.renewal_term_months) : row.renewal_term_months;
+
+      const noticePeriodDays =
+        Number.isInteger(noticePeriodRaw) && Number(noticePeriodRaw) >= 0
+          ? Number(noticePeriodRaw)
+          : undefined;
+      const tenantDefaultNoticePeriodDays =
+        Number.isInteger(tenantDefaultNoticeRaw) && Number(tenantDefaultNoticeRaw) >= 0
+          ? Number(tenantDefaultNoticeRaw)
+          : 30;
+
+      const renewalTermMonths =
+        Number.isInteger(renewalTermRaw) && Number(renewalTermRaw) > 0
+          ? Number(renewalTermRaw)
+          : undefined;
+
+      return {
+        client_contract_id: row.client_contract_id,
+        client_id: row.client_id,
+        client_name: row.client_name ?? null,
+        start_date: row.start_date ?? null,
+        end_date: row.end_date ?? null,
+        renewal_mode: renewalMode,
+        notice_period_days: noticePeriodDays,
+        renewal_term_months: renewalTermMonths,
+        use_tenant_renewal_defaults: useTenantRenewalDefaults,
+        effective_renewal_mode: useTenantRenewalDefaults
+          ? tenantDefaultRenewalMode
+          : renewalMode ?? tenantDefaultRenewalMode,
+        effective_notice_period_days: useTenantRenewalDefaults
+          ? tenantDefaultNoticePeriodDays
+          : noticePeriodDays ?? tenantDefaultNoticePeriodDays,
+        decision_due_date: row.decision_due_date ? new Date(row.decision_due_date).toISOString().split('T')[0] : null,
+        is_active: row.is_active ?? false,
+        po_required: hasPoRequired ? Boolean(row.po_required) : false,
+        po_number: hasPoNumber ? row.po_number : undefined,
+        po_amount: hasPoAmount ? row.po_amount : undefined,
+        tenant: row.tenant,
+      };
+    });
   } catch (error) {
     console.error(`Error fetching assignments for contract ${contractId}:`, error);
     if (error instanceof Error) {

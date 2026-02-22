@@ -119,7 +119,11 @@ export const assignContractToClient = withAuth(async (
   clientId: string,
   contractId: string,
   startDate: string,
-  endDate: string | null = null
+  endDate: string | null = null,
+  renewalSettings?: Pick<
+    IClientContract,
+    'renewal_mode' | 'notice_period_days' | 'renewal_term_months' | 'use_tenant_renewal_defaults'
+  >
 ): Promise<IClientContract> => {
   try {
     const clientContract = await ClientContract.assignContractToClient(
@@ -127,6 +131,7 @@ export const assignContractToClient = withAuth(async (
       contractId,
       startDate,
       endDate,
+      renewalSettings,
       tenant
     );
 

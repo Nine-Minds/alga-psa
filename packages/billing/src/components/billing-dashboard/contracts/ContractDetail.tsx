@@ -66,6 +66,17 @@ const formatDate = (value?: string | Date | null): string => {
   }
 };
 
+const normalizeRenewalMode = (value: unknown): 'none' | 'manual' | 'auto' | undefined => {
+  return value === 'none' || value === 'manual' || value === 'auto' ? value : undefined;
+};
+
+const formatRenewalModeLabel = (value: unknown): string => {
+  const mode = normalizeRenewalMode(value);
+  if (mode === 'auto') return 'Auto-renew';
+  if (mode === 'none') return 'Non-renewing';
+  return 'Manual renewal';
+};
+
 function getCurrencyMeta(currencyCode: string): { fractionDigits: number; symbol: string } {
   const formatter = new Intl.NumberFormat(undefined, { style: 'currency', currency: currencyCode });
   const fractionDigits = formatter.resolvedOptions().maximumFractionDigits ?? 2;
@@ -154,6 +165,24 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
       symbol,
     };
   }, [contract?.currency_code]);
+
+  const renewalModeOptions = useMemo(
+    () => [
+      { value: 'manual', label: 'Manual renewal' },
+      { value: 'auto', label: 'Auto-renew' },
+      { value: 'none', label: 'Non-renewing' },
+    ],
+    []
+  );
+  const primaryAssignment = assignments[0] ?? null;
+  const primaryAssignmentUsesTenantRenewalDefaults =
+    primaryAssignment?.use_tenant_renewal_defaults !== false;
+  const primaryAssignmentRenewalMode = normalizeRenewalMode(
+    primaryAssignment?.effective_renewal_mode ?? primaryAssignment?.renewal_mode
+  );
+  const primaryAssignmentNoticePeriod =
+    primaryAssignment?.effective_notice_period_days ?? primaryAssignment?.notice_period_days;
+
   // Sync tab state FROM URL changes (e.g., browser back/forward)
   // Don't include activeTab in deps - handleTabChange handles state → URL direction
   useEffect(() => {
@@ -495,6 +524,20 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
           // po_amount is already in cents in the state
           updatePayload.po_amount = editedAssignment.po_amount;
         }
+        if (
+          editedAssignment.use_tenant_renewal_defaults !== originalAssignment.use_tenant_renewal_defaults
+        ) {
+          updatePayload.use_tenant_renewal_defaults = editedAssignment.use_tenant_renewal_defaults;
+        }
+        if (editedAssignment.renewal_mode !== originalAssignment.renewal_mode) {
+          updatePayload.renewal_mode = editedAssignment.renewal_mode;
+        }
+        if (editedAssignment.notice_period_days !== originalAssignment.notice_period_days) {
+          updatePayload.notice_period_days = editedAssignment.notice_period_days;
+        }
+        if (editedAssignment.renewal_term_months !== originalAssignment.renewal_term_months) {
+          updatePayload.renewal_term_months = editedAssignment.renewal_term_months;
+        }
 
         // Only update if there are changes
         if (Object.keys(updatePayload).length > 1) { // More than just tenant
@@ -525,7 +568,20 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
     const normalizedData: IContractAssignmentSummary = {
       ...dataToEdit,
       start_date: dataToEdit.start_date ? toISODate(toPlainDate(dataToEdit.start_date)) : null,
-      end_date: dataToEdit.end_date ? toISODate(toPlainDate(dataToEdit.end_date)) : null
+      end_date: dataToEdit.end_date ? toISODate(toPlainDate(dataToEdit.end_date)) : null,
+      use_tenant_renewal_defaults:
+        typeof dataToEdit.use_tenant_renewal_defaults === 'boolean'
+          ? dataToEdit.use_tenant_renewal_defaults
+          : true,
+      renewal_mode: normalizeRenewalMode(dataToEdit.renewal_mode) ?? 'manual',
+      notice_period_days:
+        Number.isInteger(dataToEdit.notice_period_days) && Number(dataToEdit.notice_period_days) >= 0
+          ? Number(dataToEdit.notice_period_days)
+          : undefined,
+      renewal_term_months:
+        Number.isInteger(dataToEdit.renewal_term_months) && Number(dataToEdit.renewal_term_months) > 0
+          ? Number(dataToEdit.renewal_term_months)
+          : undefined,
     };
 
     // Save a snapshot of the data at the start of this edit session
@@ -997,6 +1053,43 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                       <span>Last Updated</span>
                       <span className="font-medium">{formatDate(contract.updated_at)}</span>
                     </div>
+                    {primaryAssignment && (
+                      <div className="rounded-md border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-surface-50))] p-3 space-y-1.5">
+                        <p className="text-xs uppercase tracking-wide text-muted-foreground">Renewal</p>
+                        <div className="flex items-center justify-between">
+                          <span>Mode</span>
+                          <span className="font-medium">
+                            {primaryAssignment.end_date
+                              ? formatRenewalModeLabel(primaryAssignmentRenewalMode)
+                              : 'Ongoing (no end date)'}
+                          </span>
+                        </div>
+                        {primaryAssignment.end_date && (
+                          <div className="flex items-center justify-between">
+                            <span>Source</span>
+                            <span className="font-medium">
+                              {primaryAssignmentUsesTenantRenewalDefaults ? 'Tenant defaults' : 'Custom settings'}
+                            </span>
+                          </div>
+                        )}
+                        {primaryAssignment.end_date &&
+                          primaryAssignmentRenewalMode !== 'none' &&
+                          primaryAssignmentNoticePeriod !== undefined && (
+                            <div className="flex items-center justify-between">
+                              <span>Notice</span>
+                              <span className="font-medium">
+                                {primaryAssignmentNoticePeriod} day{primaryAssignmentNoticePeriod === 1 ? '' : 's'}
+                              </span>
+                            </div>
+                          )}
+                        {primaryAssignment.end_date && primaryAssignment.decision_due_date && (
+                          <div className="flex items-center justify-between">
+                            <span>Decision Due</span>
+                            <span className="font-medium">{formatDate(primaryAssignment.decision_due_date)}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
                     {editDescription && (
                       <div>
                         <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">Description</p>
@@ -1220,6 +1313,155 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                                   {editData.end_date ? formatDate(editData.end_date) : 'Ongoing'}
                                 </p>
                               )}
+                            </div>
+                          </div>
+
+                          <div className="grid gap-4 md:grid-cols-2">
+                            <div className="space-y-2">
+                              <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+                                Renewal Handling
+                              </Label>
+                              {isEditing ? (
+                                <div className="space-y-3 rounded-md border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-surface-50))] p-3">
+                                  <div className="flex items-center justify-between">
+                                    <Label
+                                      htmlFor={`assignment-use-tenant-renewal-defaults-${assignment.client_contract_id}`}
+                                      className="text-sm"
+                                    >
+                                      Use tenant renewal defaults
+                                    </Label>
+                                    <Switch
+                                      id={`assignment-use-tenant-renewal-defaults-${assignment.client_contract_id}`}
+                                      checked={editData.use_tenant_renewal_defaults !== false}
+                                      onCheckedChange={(checked) =>
+                                        handleAssignmentFieldChange(
+                                          assignment.client_contract_id,
+                                          'use_tenant_renewal_defaults',
+                                          checked
+                                        )
+                                      }
+                                    />
+                                  </div>
+
+                                  {editData.use_tenant_renewal_defaults === false && (
+                                    <div className="space-y-2">
+                                      <Label htmlFor={`assignment-renewal-mode-${assignment.client_contract_id}`} className="text-sm">
+                                        Renewal Mode
+                                      </Label>
+                                      <CustomSelect
+                                        id={`assignment-renewal-mode-${assignment.client_contract_id}`}
+                                        options={renewalModeOptions}
+                                        value={normalizeRenewalMode(editData.renewal_mode) ?? 'manual'}
+                                        onValueChange={(value) =>
+                                          handleAssignmentFieldChange(
+                                            assignment.client_contract_id,
+                                            'renewal_mode',
+                                            value as 'none' | 'manual' | 'auto'
+                                          )
+                                        }
+                                        className="w-full"
+                                        placeholder="Select renewal mode"
+                                      />
+                                    </div>
+                                  )}
+
+                                  {editData.use_tenant_renewal_defaults === false &&
+                                    (normalizeRenewalMode(editData.renewal_mode) ?? 'manual') !== 'none' && (
+                                      <div className="space-y-2">
+                                        <Label htmlFor={`assignment-notice-period-${assignment.client_contract_id}`} className="text-sm">
+                                          Notice Period (Days)
+                                        </Label>
+                                        <Input
+                                          id={`assignment-notice-period-${assignment.client_contract_id}`}
+                                          type="number"
+                                          min={0}
+                                          step={1}
+                                          value={editData.notice_period_days ?? ''}
+                                          onChange={(event) => {
+                                            const raw = event.target.value.trim();
+                                            if (!raw) {
+                                              handleAssignmentFieldChange(
+                                                assignment.client_contract_id,
+                                                'notice_period_days',
+                                                undefined
+                                              );
+                                              return;
+                                            }
+                                            const parsed = Number.parseInt(raw, 10);
+                                            handleAssignmentFieldChange(
+                                              assignment.client_contract_id,
+                                              'notice_period_days',
+                                              Number.isFinite(parsed) ? Math.max(0, parsed) : undefined
+                                            );
+                                          }}
+                                          placeholder="e.g., 30"
+                                        />
+                                      </div>
+                                    )}
+
+                                  {editData.use_tenant_renewal_defaults === false &&
+                                    (normalizeRenewalMode(editData.renewal_mode) ?? 'manual') === 'auto' && (
+                                      <div className="space-y-2">
+                                        <Label htmlFor={`assignment-renewal-term-${assignment.client_contract_id}`} className="text-sm">
+                                          Renewal Term (Months)
+                                        </Label>
+                                        <Input
+                                          id={`assignment-renewal-term-${assignment.client_contract_id}`}
+                                          type="number"
+                                          min={1}
+                                          step={1}
+                                          value={editData.renewal_term_months ?? ''}
+                                          onChange={(event) => {
+                                            const raw = event.target.value.trim();
+                                            if (!raw) {
+                                              handleAssignmentFieldChange(
+                                                assignment.client_contract_id,
+                                                'renewal_term_months',
+                                                undefined
+                                              );
+                                              return;
+                                            }
+                                            const parsed = Number.parseInt(raw, 10);
+                                            handleAssignmentFieldChange(
+                                              assignment.client_contract_id,
+                                              'renewal_term_months',
+                                              Number.isFinite(parsed) && parsed > 0 ? parsed : undefined
+                                            );
+                                          }}
+                                          placeholder="e.g., 12"
+                                        />
+                                      </div>
+                                    )}
+                                </div>
+                              ) : (
+                                <div className="space-y-1">
+                                  <p className="text-sm text-[rgb(var(--color-text-800))]">
+                                    {formatRenewalModeLabel(
+                                      editData.effective_renewal_mode ?? editData.renewal_mode
+                                    )}
+                                  </p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {editData.use_tenant_renewal_defaults !== false
+                                      ? 'Using tenant defaults'
+                                      : 'Using custom assignment settings'}
+                                  </p>
+                                  {(editData.effective_notice_period_days ?? editData.notice_period_days) !== undefined && (
+                                    <p className="text-xs text-muted-foreground">
+                                      Notice:{' '}
+                                      {editData.effective_notice_period_days ?? editData.notice_period_days} day
+                                      {(editData.effective_notice_period_days ?? editData.notice_period_days) === 1 ? '' : 's'}
+                                    </p>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                            <div className="space-y-2">
+                              <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+                                Decision Due
+                              </Label>
+                              <p className="text-sm text-[rgb(var(--color-text-800))]">
+                                {editData.decision_due_date ? formatDate(editData.decision_due_date) : '—'}
+                              </p>
                             </div>
                           </div>
 

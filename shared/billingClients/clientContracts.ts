@@ -28,6 +28,10 @@ const normalizePositiveInteger = (value: unknown): number | undefined => {
 
 const normalizeDateOnly = (value: unknown): string | undefined => {
   if (value === null || value === undefined) return undefined;
+  if (value instanceof Date) {
+    if (Number.isNaN(value.getTime())) return undefined;
+    return value.toISOString().slice(0, 10);
+  }
   if (typeof value !== 'string') return undefined;
 
   const trimmed = value.trim();
@@ -477,6 +481,19 @@ export async function createClientContractAssignment(
     created_at: timestamp,
     updated_at: timestamp,
   };
+
+  if (input.renewal_mode === 'none' || input.renewal_mode === 'manual' || input.renewal_mode === 'auto') {
+    insertPayload.renewal_mode = input.renewal_mode;
+  }
+  if (Number.isInteger(input.notice_period_days) && (input.notice_period_days as number) >= 0) {
+    insertPayload.notice_period_days = input.notice_period_days;
+  }
+  if (Number.isInteger(input.renewal_term_months) && (input.renewal_term_months as number) > 0) {
+    insertPayload.renewal_term_months = input.renewal_term_months;
+  }
+  if (typeof input.use_tenant_renewal_defaults === 'boolean') {
+    insertPayload.use_tenant_renewal_defaults = input.use_tenant_renewal_defaults;
+  }
 
   const hasPoRequired = await (knexOrTrx as any).schema?.hasColumn?.('client_contracts', 'po_required');
   const hasPoNumber = await (knexOrTrx as any).schema?.hasColumn?.('client_contracts', 'po_number');

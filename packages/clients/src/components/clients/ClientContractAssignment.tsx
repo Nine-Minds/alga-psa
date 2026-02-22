@@ -1,23 +1,15 @@
 'use client';
 
-import React, { useState, useEffect, Fragment } from 'react'; // Added Fragment
+import React, { useState, useEffect } from 'react';
 import { Card, Box } from '@radix-ui/themes';
 import { Button } from '@alga-psa/ui/components/Button';
-import { Plus, MoreVertical, Calendar, Info } from 'lucide-react'; // Added Info icon
+import { Plus, MoreVertical, Calendar, AlertCircle } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@alga-psa/ui/components/DropdownMenu';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger, // Keep Trigger
-  DialogFooter,
-} from "@alga-psa/ui/components/Dialog"; // Removed DialogClose
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { ColumnDefinition } from '@alga-psa/types';
@@ -34,9 +26,8 @@ import {
 } from '@alga-psa/clients/actions';
 import { getClientById } from '@alga-psa/clients/actions';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
-import { AlertCircle } from 'lucide-react';
 import { Badge } from '@alga-psa/ui/components/Badge';
-import { ClientContractDialog } from './ClientContractDialog';
+import { ClientContractDialog, ClientContractDialogSubmission } from './ClientContractDialog';
 
 interface ClientContractAssignmentProps {
   clientId: string;
@@ -128,15 +119,23 @@ const ClientContractAssignment: React.FC<ClientContractAssignmentProps> = ({ cli
     }
   };
 
-  const handleAddContract = async (startDate: string, endDate: string | null) => {
+  const handleAddContract = async (payload: ClientContractDialogSubmission) => {
     if (!clientId || !selectedContractToAdd) return;
     
     try {
       await assignContractToClient(
         clientId,
         selectedContractToAdd,
-        startDate,
-        endDate
+        payload.startDate,
+        payload.endDate,
+        payload.endDate
+          ? {
+              renewal_mode: payload.renewal_mode,
+              notice_period_days: payload.notice_period_days,
+              renewal_term_months: payload.renewal_term_months,
+              use_tenant_renewal_defaults: payload.use_tenant_renewal_defaults,
+            }
+          : undefined
       );
       
       // Apply the contract to create client contract lines
@@ -192,11 +191,18 @@ const ClientContractAssignment: React.FC<ClientContractAssignmentProps> = ({ cli
     setEditingContract(contract);
   };
 
-  const handleContractUpdated = async (clientContractId: string, startDate: string, endDate: string | null) => {
+  const handleContractUpdated = async (
+    clientContractId: string,
+    payload: ClientContractDialogSubmission
+  ) => {
     try {
       await updateClientContract(clientContractId, { 
-        start_date: startDate,
-        end_date: endDate
+        start_date: payload.startDate,
+        end_date: payload.endDate,
+        use_tenant_renewal_defaults: payload.endDate ? payload.use_tenant_renewal_defaults : undefined,
+        renewal_mode: payload.endDate ? payload.renewal_mode : 'none',
+        notice_period_days: payload.endDate ? payload.notice_period_days : undefined,
+        renewal_term_months: payload.endDate ? payload.renewal_term_months : undefined,
       });
       fetchData(); // Refresh data
       setEditingContract(null);
@@ -223,6 +229,24 @@ const ClientContractAssignment: React.FC<ClientContractAssignmentProps> = ({ cli
     return date.toLocaleDateString();
   };
 
+  const getRenewalSummary = (contract: DetailedClientContract): string => {
+    if (!contract.end_date) {
+      return 'Ongoing';
+    }
+
+    const renewalMode = contract.effective_renewal_mode ?? contract.renewal_mode ?? 'manual';
+    if (renewalMode === 'auto') {
+      return 'Auto-renew';
+    }
+    if (renewalMode === 'none') {
+      return 'Non-renewing';
+    }
+    if (contract.decision_due_date) {
+      return `Manual (due ${formatDate(contract.decision_due_date)})`;
+    }
+    return 'Manual renewal';
+  };
+
   const contractColumns: ColumnDefinition<DetailedClientContract>[] = [
     {
       title: 'Contract Name',
@@ -244,6 +268,11 @@ const ClientContractAssignment: React.FC<ClientContractAssignmentProps> = ({ cli
       title: 'End Date',
       dataIndex: 'end_date',
       render: (value) => formatDate(value),
+    },
+    {
+      title: 'Renewal',
+      dataIndex: 'effective_renewal_mode',
+      render: (_value, record) => getRenewalSummary(record),
     },
     {
       title: 'Status',
@@ -380,11 +409,15 @@ const ClientContractAssignment: React.FC<ClientContractAssignmentProps> = ({ cli
         <ClientContractDialog
           isOpen={true}
           onClose={() => setEditingContract(null)}
-          onContractAssigned={(startDate: string, endDate: string | null) =>
-            handleContractUpdated(editingContract.client_contract_id, startDate, endDate)
+          onContractAssigned={(payload: ClientContractDialogSubmission) =>
+            handleContractUpdated(editingContract.client_contract_id, payload)
           }
           initialStartDate={editingContract.start_date}
           initialEndDate={editingContract.end_date}
+          initialRenewalMode={editingContract.renewal_mode}
+          initialNoticePeriodDays={editingContract.notice_period_days}
+          initialRenewalTermMonths={editingContract.renewal_term_months}
+          initialUseTenantRenewalDefaults={editingContract.use_tenant_renewal_defaults}
           contractLineNames={editingContract.contract_line_names}
         />
       )}
