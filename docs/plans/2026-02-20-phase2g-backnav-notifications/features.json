@@ -1,0 +1,86 @@
+[
+  {
+    "id": "F001",
+    "description": "Move csvFieldNormalizer.ts from server/src/lib/utils/ to packages/integrations/src/lib/ (standalone utility, no import changes needed)",
+    "implemented": false,
+    "prdRefs": ["Work Item 1"]
+  },
+  {
+    "id": "F002",
+    "description": "Move csvTaxImportValidator.ts to packages/integrations/src/services/ and update csvFieldNormalizer import to ../lib/csvFieldNormalizer (relative within package)",
+    "implemented": false,
+    "prdRefs": ["Work Item 1"]
+  },
+  {
+    "id": "F003",
+    "description": "Move csvTaxImportService.ts to packages/integrations/src/services/ and update imports: createTenantKnex from @alga-psa/db, TaxSource from @alga-psa/types, parseCSV from @alga-psa/core, csvTaxImportValidator stays relative",
+    "implemented": false,
+    "prdRefs": ["Work Item 1"]
+  },
+  {
+    "id": "F004",
+    "description": "Export csvTaxImportValidator and csvTaxImportService from packages/integrations/src/services/index.ts barrel",
+    "implemented": false,
+    "prdRefs": ["Work Item 1"]
+  },
+  {
+    "id": "F005",
+    "description": "Update ApiCSVAccountingController.ts to import getCSVTaxImportService from @alga-psa/integrations/services instead of ../../services/csvTaxImportService",
+    "implemented": false,
+    "prdRefs": ["Work Item 1"]
+  },
+  {
+    "id": "F006",
+    "description": "Delete server/src/lib/services/csvTaxImportValidator.ts, csvTaxImportService.ts, and server/src/lib/utils/csvFieldNormalizer.ts",
+    "implemented": false,
+    "prdRefs": ["Work Item 1"]
+  },
+  {
+    "id": "F007",
+    "description": "Fix BackNav.tsx import: change 'server/src/contexts/UnsavedChangesContext' to '../context/UnsavedChangesContext' (context already exists in packages/ui/src/context/)",
+    "implemented": false,
+    "prdRefs": ["Work Item 2"]
+  },
+  {
+    "id": "F008",
+    "description": "Export getEmailNotificationService (and EmailNotificationService class) from @alga-psa/notifications barrel via new notifications/email re-export in index.ts",
+    "implemented": false,
+    "prdRefs": ["Work Item 3"]
+  },
+  {
+    "id": "F009",
+    "description": "Update expiringCreditsNotificationHandler.ts to import getEmailNotificationService from @alga-psa/notifications instead of server/src/lib/notifications/email",
+    "implemented": false,
+    "prdRefs": ["Work Item 3"]
+  },
+  {
+    "id": "F010",
+    "description": "Delete server/src/lib/notifications/email.ts (adopt package version without inline rate limiting; rate limiting is centralized in TenantEmailService)",
+    "implemented": false,
+    "prdRefs": ["Work Item 3"]
+  },
+  {
+    "id": "F011",
+    "description": "Update 4 emailChannel callers to import from @alga-psa/notifications: ticketEmailSubscriber.ts, projectEmailSubscriber.ts, publishers/index.ts, TicketService.ts",
+    "implemented": false,
+    "prdRefs": ["Work Item 3"]
+  },
+  {
+    "id": "F012",
+    "description": "Update ticketEmailDelimiters.test.ts to import EMAIL_EVENT_CHANNEL from @alga-psa/notifications",
+    "implemented": false,
+    "prdRefs": ["Work Item 3"]
+  },
+  {
+    "id": "F013",
+    "description": "Delete server/src/lib/notifications/emailChannel.ts",
+    "implemented": false,
+    "prdRefs": ["Work Item 3"]
+  },
+  {
+    "id": "F014",
+    "description": "Delete orphan server/src/lib/adapters/invoiceAdapters.ts (zero callers; billing package has its own independent copy)",
+    "implemented": false,
+    "prdRefs": ["Work Item 4"]
+  }
+]

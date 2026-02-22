@@ -236,28 +236,19 @@
   {
     "id": "F040",
     "description": "Add @alga-psa/storage path mappings to server/tsconfig.json for Next.js resolution",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-04"]
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-=======
->>>>>>> 37006a786 (feat(F041): update VideoDocumentHandler storage import)
   },
   {
     "id": "F041",
     "description": "Update VideoDocumentHandler to import StorageProviderFactory from @alga-psa/storage",
     "implemented": true,
     "prdRefs": ["FR-11"]
-<<<<<<< HEAD
   },
   {
     "id": "F042",
     "description": "Update documents fileActions to import FileStoreModel and FileStore type from @alga-psa/storage",
     "implemented": true,
     "prdRefs": ["FR-11"]
->>>>>>> 9f28a270c (feat(F042): update fileActions storage model imports)
-=======
->>>>>>> 37006a786 (feat(F041): update VideoDocumentHandler storage import)
   }
 ]
