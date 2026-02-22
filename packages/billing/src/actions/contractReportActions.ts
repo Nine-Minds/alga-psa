@@ -2,6 +2,7 @@
 
 import { createTenantKnex } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
+import type { RenewalWorkItemStatus } from '@alga-psa/types';
 
 
 // Type definitions for reports
@@ -17,6 +18,9 @@ export interface ContractExpiration {
   contract_name: string;
   client_name: string;
   end_date: string;
+  decision_due_date?: string | null;
+  renewal_mode?: 'none' | 'manual' | 'auto' | null;
+  queue_status?: RenewalWorkItemStatus | null;
   days_until_expiration: number;
   monthly_value: number;
   auto_renew: boolean;
@@ -45,6 +49,7 @@ export interface ContractReportSummary {
   totalMRR: number;
   totalYTD: number;
   activeContractCount: number;
+  atRiskDecisionCount: number;
 }
 
 /**
@@ -193,6 +198,9 @@ export const getContractExpirationReport = withAuth(async (user, { tenant }): Pr
       .leftJoin('contract_lines as cln', function joinLines() {
         this.on('c.contract_id', '=', 'cln.contract_id').andOn('c.tenant', '=', 'cln.tenant');
       })
+      .leftJoin('default_billing_settings as dbs', function joinDefaultBillingSettings() {
+        this.on('cc.tenant', '=', 'dbs.tenant');
+      })
       .where({ 'c.tenant': tenant, 'cc.is_active': true })
       .whereNotNull('cc.end_date')
       .select(
@@ -200,6 +208,11 @@ export const getContractExpirationReport = withAuth(async (user, { tenant }): Pr
         'c.contract_name',
         'cl.client_name',
         'cc.end_date',
+        'cc.decision_due_date',
+        'cc.renewal_mode',
+        'cc.use_tenant_renewal_defaults',
+        'dbs.default_renewal_mode as tenant_default_renewal_mode',
+        'cc.status as queue_status',
         knex.raw('COALESCE(cln.custom_rate, 0) as monthly_value')
       )
       .orderBy('cc.end_date', 'asc');
@@ -207,14 +220,32 @@ export const getContractExpirationReport = withAuth(async (user, { tenant }): Pr
     const expirations: ContractExpiration[] = data.map((row: any) => {
       const endDate = new Date(row.end_date);
       const daysUntilExpiration = Math.ceil((endDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+      const contractRenewalMode = row.renewal_mode === 'none' || row.renewal_mode === 'manual' || row.renewal_mode === 'auto'
+        ? row.renewal_mode
+        : null;
+      const tenantDefaultRenewalMode =
+        row.tenant_default_renewal_mode === 'none'
+        || row.tenant_default_renewal_mode === 'manual'
+        || row.tenant_default_renewal_mode === 'auto'
+          ? row.tenant_default_renewal_mode
+          : null;
+      const useTenantRenewalDefaults = row.use_tenant_renewal_defaults !== false;
+      const effectiveRenewalMode =
+        (useTenantRenewalDefaults
+          ? (tenantDefaultRenewalMode ?? contractRenewalMode)
+          : (contractRenewalMode ?? tenantDefaultRenewalMode))
+        ?? 'manual';
 
       return {
         contract_name: row.contract_name,
         client_name: row.client_name || 'Unknown Client',
         end_date: endDate.toISOString().split('T')[0],
+        decision_due_date: row.decision_due_date ? new Date(row.decision_due_date).toISOString().split('T')[0] : null,
+        renewal_mode: effectiveRenewalMode,
+        queue_status: row.queue_status ?? null,
         days_until_expiration: Math.max(0, daysUntilExpiration),
         monthly_value: row.monthly_value || 0,
-        auto_renew: false // This could be extended to check a flag in the database
+        auto_renew: effectiveRenewalMode === 'auto'
       };
     });
 
@@ -400,11 +431,32 @@ export const getContractReportSummary = withAuth(async (user, { tenant }): Promi
       .first() as { count: string } | undefined;
 
     const activeContractCount = Number(activeContracts?.count ?? 0);
+    const summaryTodayDateOnly = today.toISOString().slice(0, 10);
+    const inNinetyDays = new Date(today);
+    inNinetyDays.setUTCDate(inNinetyDays.getUTCDate() + 90);
+    const summaryNinetyDaysDateOnly = inNinetyDays.toISOString().slice(0, 10);
+
+    const atRiskDecisions = await knex('client_contracts as cc')
+      .join('contracts as c', function joinContracts() {
+        this.on('cc.contract_id', '=', 'c.contract_id').andOn('cc.tenant', '=', 'c.tenant');
+      })
+      .where({
+        'cc.tenant': tenant,
+        'cc.is_active': true,
+        'c.status': 'active',
+      })
+      .whereNotNull('cc.decision_due_date')
+      .andWhere('cc.decision_due_date', '>=', summaryTodayDateOnly)
+      .andWhere('cc.decision_due_date', '<=', summaryNinetyDaysDateOnly)
+      .countDistinct('cc.client_contract_id as count')
+      .first() as { count: string } | undefined;
+    const atRiskDecisionCount = Number(atRiskDecisions?.count ?? 0);
 
     return {
       totalMRR,
       totalYTD,
-      activeContractCount
+      activeContractCount,
+      atRiskDecisionCount
     };
   } catch (error) {
     console.error('Error fetching contract report summary:', error);

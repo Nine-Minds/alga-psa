@@ -1,13 +1,308 @@
 import type { IClientContract } from '@alga-psa/types';
 import { createTenantKnex } from '@alga-psa/db';
+import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 
-const normalizeClientContract = (row: any): any => {
-  if (!row) return row;
-  if (row.contract_billing_frequency !== undefined && row.billing_frequency === undefined) {
-    row.billing_frequency = row.contract_billing_frequency;
+type RenewalMode = NonNullable<IClientContract['renewal_mode']>;
+
+const DEFAULT_RENEWAL_MODE: RenewalMode = 'manual';
+const DEFAULT_NOTICE_PERIOD_DAYS = 30;
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+const MAX_ABSOLUTE_DAYS_UNTIL_DUE = 36500;
+
+const normalizeRenewalMode = (value: unknown): RenewalMode | undefined => {
+  return value === 'none' || value === 'manual' || value === 'auto' ? value : undefined;
+};
+
+const normalizeNonNegativeInteger = (value: unknown): number | undefined => {
+  if (value === null || value === undefined) return undefined;
+  const numeric = typeof value === 'string' ? Number(value) : value;
+  if (typeof numeric !== 'number' || !Number.isFinite(numeric)) return undefined;
+  return Math.max(0, Math.trunc(numeric));
+};
+
+const normalizePositiveInteger = (value: unknown): number | undefined => {
+  const normalized = normalizeNonNegativeInteger(value);
+  return normalized !== undefined && normalized > 0 ? normalized : undefined;
+};
+
+const normalizeDateOnly = (value: unknown): string | undefined => {
+  if (value === null || value === undefined) return undefined;
+  if (typeof value !== 'string') return undefined;
+
+  const trimmed = value.trim();
+  if (!trimmed) return undefined;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return trimmed;
+  if (trimmed.includes('T')) {
+    return trimmed.slice(0, 10);
   }
-  return row;
+  return undefined;
+};
+
+const subtractDaysFromDateOnly = (dateOnly: string, days: number): string | undefined => {
+  if (!Number.isInteger(days) || days < 0) return undefined;
+  const parsed = new Date(`${dateOnly}T00:00:00.000Z`);
+  if (Number.isNaN(parsed.getTime())) return undefined;
+  return new Date(parsed.getTime() - days * MS_PER_DAY).toISOString().slice(0, 10);
+};
+
+const createClampedUtcDate = (year: number, monthIndex: number, dayOfMonth: number): Date => {
+  const lastDayOfMonth = new Date(Date.UTC(year, monthIndex + 1, 0)).getUTCDate();
+  const clampedDay = Math.min(dayOfMonth, lastDayOfMonth);
+  return new Date(Date.UTC(year, monthIndex, clampedDay));
+};
+
+const computeNextEvergreenReviewAnchorDate = (params: {
+  startDate: string;
+  now?: string | Date;
+}): string | undefined => {
+  const normalizedStartDate = normalizeDateOnly(params.startDate);
+  if (!normalizedStartDate) return undefined;
+
+  const start = new Date(`${normalizedStartDate}T00:00:00.000Z`);
+  if (Number.isNaN(start.getTime())) return undefined;
+
+  const normalizedNow = normalizeDateOnly(params.now instanceof Date ? params.now.toISOString() : params.now);
+  const nowBase = normalizedNow
+    ? new Date(`${normalizedNow}T00:00:00.000Z`)
+    : new Date(new Date().toISOString().slice(0, 10) + 'T00:00:00.000Z');
+  if (Number.isNaN(nowBase.getTime())) return undefined;
+
+  const month = start.getUTCMonth();
+  const day = start.getUTCDate();
+  const thisYearCandidate = createClampedUtcDate(nowBase.getUTCFullYear(), month, day);
+  const nextAnchor =
+    thisYearCandidate.getTime() >= nowBase.getTime()
+      ? thisYearCandidate
+      : createClampedUtcDate(nowBase.getUTCFullYear() + 1, month, day);
+
+  return nextAnchor.toISOString().slice(0, 10);
+};
+
+const computeEvergreenDecisionDueDate = (params: {
+  startDate: string;
+  noticePeriodDays: number;
+  now?: string | Date;
+}): string | undefined => {
+  const anchorDate = computeNextEvergreenReviewAnchorDate({
+    startDate: params.startDate,
+    now: params.now,
+  });
+  if (!anchorDate) return undefined;
+
+  const normalizedNoticePeriodDays = normalizeNonNegativeInteger(params.noticePeriodDays);
+  if (normalizedNoticePeriodDays === undefined) return undefined;
+
+  return subtractDaysFromDateOnly(anchorDate, normalizedNoticePeriodDays);
+};
+
+const computeEvergreenCycleBounds = (params: {
+  startDate: string;
+  now?: string | Date;
+}): { cycleStart: string; cycleEnd: string } | undefined => {
+  const normalizedStartDate = normalizeDateOnly(params.startDate);
+  if (!normalizedStartDate) return undefined;
+
+  const start = new Date(`${normalizedStartDate}T00:00:00.000Z`);
+  if (Number.isNaN(start.getTime())) return undefined;
+
+  const anchorDate = computeNextEvergreenReviewAnchorDate({
+    startDate: normalizedStartDate,
+    now: params.now,
+  });
+  if (!anchorDate) return undefined;
+
+  const anchor = new Date(`${anchorDate}T00:00:00.000Z`);
+  if (Number.isNaN(anchor.getTime())) return undefined;
+
+  const previousAnchor = createClampedUtcDate(
+    anchor.getUTCFullYear() - 1,
+    start.getUTCMonth(),
+    start.getUTCDate()
+  );
+  const cycleStartDate = previousAnchor.getTime() < start.getTime() ? start : previousAnchor;
+
+  return {
+    cycleStart: cycleStartDate.toISOString().slice(0, 10),
+    cycleEnd: anchorDate,
+  };
+};
+
+const computeDaysUntilDate = (params: {
+  targetDate: string;
+  now?: string | Date;
+}): number | undefined => {
+  const normalizedTargetDate = normalizeDateOnly(params.targetDate);
+  if (!normalizedTargetDate) return undefined;
+
+  const target = new Date(`${normalizedTargetDate}T00:00:00.000Z`);
+  if (Number.isNaN(target.getTime())) return undefined;
+
+  const normalizedNow = normalizeDateOnly(params.now instanceof Date ? params.now.toISOString() : params.now);
+  const nowBase = normalizedNow
+    ? new Date(`${normalizedNow}T00:00:00.000Z`)
+    : new Date(new Date().toISOString().slice(0, 10) + 'T00:00:00.000Z');
+  if (Number.isNaN(nowBase.getTime())) return undefined;
+
+  const rawDaysUntilDue = Math.round((target.getTime() - nowBase.getTime()) / MS_PER_DAY);
+  if (!Number.isFinite(rawDaysUntilDue)) return undefined;
+
+  return Math.max(
+    -MAX_ABSOLUTE_DAYS_UNTIL_DUE,
+    Math.min(MAX_ABSOLUTE_DAYS_UNTIL_DUE, rawDaysUntilDue)
+  );
+};
+
+type RenewalDefaultSelectionConfig = {
+  joinDefaultSettings: boolean;
+  defaultSelections: string[];
+};
+
+const getRenewalDefaultSelectionConfig = async (
+  db: Knex | Knex.Transaction
+): Promise<RenewalDefaultSelectionConfig> => {
+  const schema = (db as any).schema;
+  if (!schema?.hasColumn) {
+    return { joinDefaultSettings: false, defaultSelections: [] };
+  }
+
+  const [hasDefaultRenewalModeColumn, hasDefaultNoticePeriodColumn] = await Promise.all([
+    schema.hasColumn('default_billing_settings', 'default_renewal_mode'),
+    schema.hasColumn('default_billing_settings', 'default_notice_period_days'),
+  ]);
+
+  const defaultSelections: string[] = [];
+  if (hasDefaultRenewalModeColumn) {
+    defaultSelections.push('dbs.default_renewal_mode as tenant_default_renewal_mode');
+  }
+  if (hasDefaultNoticePeriodColumn) {
+    defaultSelections.push('dbs.default_notice_period_days as tenant_default_notice_period_days');
+  }
+
+  return {
+    joinDefaultSettings: defaultSelections.length > 0,
+    defaultSelections,
+  };
+};
+
+const withRenewalDefaultsJoin = (
+  query: Knex.QueryBuilder,
+  joinDefaultSettings: boolean
+): Knex.QueryBuilder => {
+  if (!joinDefaultSettings) {
+    return query;
+  }
+
+  return query.leftJoin('default_billing_settings as dbs', function joinDefaultBillingSettings() {
+    this.on('cc.tenant', '=', 'dbs.tenant');
+  });
+};
+
+export const normalizeClientContract = (row: any): IClientContract => {
+  if (!row) return row;
+
+  const normalized = { ...row } as Record<string, unknown>;
+
+  if (normalized.contract_billing_frequency !== undefined && normalized.billing_frequency === undefined) {
+    normalized.billing_frequency = normalized.contract_billing_frequency;
+  }
+
+  const renewalMode = normalizeRenewalMode(normalized.renewal_mode);
+  const noticePeriodDays = normalizeNonNegativeInteger(normalized.notice_period_days);
+  const renewalTermMonths = normalizePositiveInteger(normalized.renewal_term_months);
+  const useTenantDefaults =
+    typeof normalized.use_tenant_renewal_defaults === 'boolean'
+      ? normalized.use_tenant_renewal_defaults
+      : true;
+
+  const tenantDefaultRenewalMode =
+    normalizeRenewalMode(normalized.tenant_default_renewal_mode) ?? DEFAULT_RENEWAL_MODE;
+  const tenantDefaultNoticePeriodDays =
+    normalizeNonNegativeInteger(normalized.tenant_default_notice_period_days) ?? DEFAULT_NOTICE_PERIOD_DAYS;
+
+  normalized.renewal_mode = renewalMode;
+  normalized.notice_period_days = noticePeriodDays;
+  normalized.renewal_term_months = renewalTermMonths;
+  normalized.use_tenant_renewal_defaults = useTenantDefaults;
+  normalized.effective_renewal_mode = useTenantDefaults
+    ? tenantDefaultRenewalMode
+    : renewalMode ?? tenantDefaultRenewalMode;
+  normalized.effective_notice_period_days = useTenantDefaults
+    ? tenantDefaultNoticePeriodDays
+    : noticePeriodDays ?? tenantDefaultNoticePeriodDays;
+
+  const normalizedEndDate = normalizeDateOnly(normalized.end_date);
+  const normalizedStartDate = normalizeDateOnly(normalized.start_date);
+  const effectiveNoticePeriodDays = normalizeNonNegativeInteger(normalized.effective_notice_period_days);
+  const effectiveRenewalMode = normalizeRenewalMode(normalized.effective_renewal_mode);
+  const contractStatus = typeof normalized.contract_status === 'string' ? normalized.contract_status : undefined;
+  const isInactiveByStatus = contractStatus === 'terminated' || contractStatus === 'expired';
+  const isInactiveAssignment = normalized.is_active !== true;
+  const shouldSkipForLifecycleState = isInactiveAssignment || isInactiveByStatus;
+  normalized.evergreen_review_anchor_date =
+    !shouldSkipForLifecycleState && !normalizedEndDate && normalizedStartDate
+      ? computeNextEvergreenReviewAnchorDate({ startDate: normalizedStartDate })
+      : undefined;
+  const shouldSkipDecisionDueDate =
+    shouldSkipForLifecycleState || (effectiveRenewalMode === 'none' && !normalized.evergreen_review_anchor_date);
+  normalized.decision_due_date =
+    shouldSkipDecisionDueDate
+      ? undefined
+      : normalizedEndDate && effectiveNoticePeriodDays !== undefined
+      ? subtractDaysFromDateOnly(normalizedEndDate, effectiveNoticePeriodDays)
+      : !normalizedEndDate && normalizedStartDate && effectiveNoticePeriodDays !== undefined
+        ? computeEvergreenDecisionDueDate({
+            startDate: normalizedStartDate,
+            noticePeriodDays: effectiveNoticePeriodDays,
+          })
+      : undefined;
+  if (normalizedEndDate && normalizedStartDate) {
+    normalized.renewal_cycle_start = normalizedStartDate;
+    normalized.renewal_cycle_end = normalizedEndDate;
+  } else if (!normalizedEndDate && normalizedStartDate && normalized.evergreen_review_anchor_date) {
+    const evergreenCycleBounds = computeEvergreenCycleBounds({ startDate: normalizedStartDate });
+    normalized.renewal_cycle_start = evergreenCycleBounds?.cycleStart;
+    normalized.renewal_cycle_end = evergreenCycleBounds?.cycleEnd;
+  } else {
+    normalized.renewal_cycle_start = undefined;
+    normalized.renewal_cycle_end = undefined;
+  }
+  normalized.renewal_cycle_key = normalized.decision_due_date
+    ? normalizedEndDate
+      ? normalized.renewal_cycle_end
+        ? `fixed-term:${normalized.renewal_cycle_end as string}`
+        : undefined
+      : normalized.renewal_cycle_end
+        ? `evergreen:${normalized.renewal_cycle_end as string}`
+        : undefined
+    : undefined;
+  normalized.days_until_due = normalized.decision_due_date
+    ? computeDaysUntilDate({ targetDate: normalized.decision_due_date as string })
+    : undefined;
+
+  delete normalized.tenant_default_renewal_mode;
+  delete normalized.tenant_default_notice_period_days;
+
+  return normalized as unknown as IClientContract;
+};
+
+const dedupeClientContractsByRenewalCycle = (rows: IClientContract[]): IClientContract[] => {
+  const deduped = new Map<string, IClientContract>();
+
+  for (const row of rows) {
+    const cycleKey = row.renewal_cycle_key;
+    if (!cycleKey) {
+      deduped.set(`${row.tenant}:${row.client_contract_id}`, row);
+      continue;
+    }
+
+    const dedupeKey = `${row.tenant}:${row.client_contract_id}:${cycleKey}`;
+    if (!deduped.has(dedupeKey)) {
+      deduped.set(dedupeKey, row);
+    }
+  }
+
+  return [...deduped.values()];
 };
 
 /**
@@ -21,15 +316,23 @@ const ClientContract = {
     }
 
     try {
-      const rows = await db('client_contracts as cc')
+      const renewalDefaults = await getRenewalDefaultSelectionConfig(db);
+
+      const baseQuery = db('client_contracts as cc')
         .leftJoin('contracts as c', function joinContracts() {
           this.on('cc.contract_id', '=', 'c.contract_id').andOn('cc.tenant', '=', 'c.tenant');
         })
         .where({ 'cc.client_id': clientId, 'cc.tenant': tenant, 'cc.is_active': true })
-        .orderBy('cc.start_date', 'desc')
-        .select('cc.*', 'c.billing_frequency as contract_billing_frequency');
+        .orderBy('cc.start_date', 'desc');
 
-      return rows.map(normalizeClientContract);
+      const rows = await withRenewalDefaultsJoin(baseQuery, renewalDefaults.joinDefaultSettings).select([
+        'cc.*',
+        'c.billing_frequency as contract_billing_frequency',
+        'c.status as contract_status',
+        ...renewalDefaults.defaultSelections,
+      ]);
+
+      return dedupeClientContractsByRenewalCycle(rows.map(normalizeClientContract));
     } catch (error) {
       console.error(`Error fetching contracts for client ${clientId}:`, error);
       throw error;
@@ -47,7 +350,9 @@ const ClientContract = {
     }
 
     try {
-      const rows = await db('client_contracts as cc')
+      const renewalDefaults = await getRenewalDefaultSelectionConfig(db);
+
+      const baseQuery = db('client_contracts as cc')
         .leftJoin('contracts as c', function joinContracts() {
           this.on('cc.contract_id', '=', 'c.contract_id').andOn('cc.tenant', '=', 'c.tenant');
         })
@@ -56,10 +361,16 @@ const ClientContract = {
         .orderBy([
           { column: 'cc.client_id', order: 'asc' },
           { column: 'cc.start_date', order: 'desc' }
-        ])
-        .select('cc.*', 'c.billing_frequency as contract_billing_frequency');
+        ]);
 
-      return rows.map(normalizeClientContract);
+      const rows = await withRenewalDefaultsJoin(baseQuery, renewalDefaults.joinDefaultSettings).select([
+        'cc.*',
+        'c.billing_frequency as contract_billing_frequency',
+        'c.status as contract_status',
+        ...renewalDefaults.defaultSelections,
+      ]);
+
+      return dedupeClientContractsByRenewalCycle(rows.map(normalizeClientContract));
     } catch (error) {
       console.error('Error fetching contracts for clients:', error);
       throw error;
@@ -73,12 +384,21 @@ const ClientContract = {
     }
 
     try {
-      const row = await db('client_contracts as cc')
+      const renewalDefaults = await getRenewalDefaultSelectionConfig(db);
+
+      const baseQuery = db('client_contracts as cc')
         .leftJoin('contracts as c', function joinContracts() {
           this.on('cc.contract_id', '=', 'c.contract_id').andOn('cc.tenant', '=', 'c.tenant');
         })
-        .where({ 'cc.client_contract_id': clientContractId, 'cc.tenant': tenant })
-        .select('cc.*', 'c.billing_frequency as contract_billing_frequency')
+        .where({ 'cc.client_contract_id': clientContractId, 'cc.tenant': tenant });
+
+      const row = await withRenewalDefaultsJoin(baseQuery, renewalDefaults.joinDefaultSettings)
+        .select([
+          'cc.*',
+          'c.billing_frequency as contract_billing_frequency',
+          'c.status as contract_status',
+          ...renewalDefaults.defaultSelections,
+        ])
         .first();
 
       return row ? normalizeClientContract(row) : null;
@@ -95,24 +415,31 @@ const ClientContract = {
     }
 
     try {
-      const clientContract = await db('client_contracts as cc')
+      const renewalDefaults = await getRenewalDefaultSelectionConfig(db);
+
+      const baseQuery = db('client_contracts as cc')
         .join('contracts as c', function joinContracts() {
           this.on('cc.contract_id', '=', 'c.contract_id').andOn('cc.tenant', '=', 'c.tenant');
         })
-        .where({ 'cc.client_contract_id': clientContractId, 'cc.tenant': tenant })
-        .select(
+        .where({ 'cc.client_contract_id': clientContractId, 'cc.tenant': tenant });
+
+      const clientContract = await withRenewalDefaultsJoin(baseQuery, renewalDefaults.joinDefaultSettings).select(
+        [
           'cc.*',
           'c.contract_name',
           'c.contract_description',
-          'c.billing_frequency as contract_billing_frequency'
-        )
+          'c.billing_frequency as contract_billing_frequency',
+          'c.status as contract_status',
+          ...renewalDefaults.defaultSelections,
+        ]
+      )
         .first();
 
       if (!clientContract) {
         return null;
       }
 
-      const normalized = normalizeClientContract(clientContract);
+      const normalized = normalizeClientContract(clientContract) as any;
 
       const contractLines = await db('contract_lines')
         .where({ contract_id: normalized.contract_id, tenant })
@@ -133,6 +460,10 @@ const ClientContract = {
     contractId: string,
     startDate: string,
     endDate: string | null = null,
+    renewalSettings: Pick<
+      IClientContract,
+      'renewal_mode' | 'notice_period_days' | 'renewal_term_months' | 'use_tenant_renewal_defaults'
+    > | undefined,
     tenantId: string
   ): Promise<IClientContract> {
     const { knex: db, tenant } = await createTenantKnex(tenantId);
@@ -191,6 +522,33 @@ const ClientContract = {
         created_at: timestamp,
         updated_at: timestamp,
       };
+
+      if (endDate) {
+        if (renewalSettings?.use_tenant_renewal_defaults !== undefined) {
+          insertPayload.use_tenant_renewal_defaults = renewalSettings.use_tenant_renewal_defaults;
+        }
+        if (
+          renewalSettings?.renewal_mode === 'none' ||
+          renewalSettings?.renewal_mode === 'manual' ||
+          renewalSettings?.renewal_mode === 'auto'
+        ) {
+          insertPayload.renewal_mode = renewalSettings.renewal_mode;
+        }
+        if (
+          typeof renewalSettings?.notice_period_days === 'number' &&
+          Number.isFinite(renewalSettings.notice_period_days) &&
+          renewalSettings.notice_period_days >= 0
+        ) {
+          insertPayload.notice_period_days = Math.floor(renewalSettings.notice_period_days);
+        }
+        if (
+          typeof renewalSettings?.renewal_term_months === 'number' &&
+          Number.isFinite(renewalSettings.renewal_term_months) &&
+          renewalSettings.renewal_term_months > 0
+        ) {
+          insertPayload.renewal_term_months = Math.floor(renewalSettings.renewal_term_months);
+        }
+      }
 
       const [created] = await db<IClientContract>('client_contracts').insert(insertPayload).returning('*');
       return normalizeClientContract(created);

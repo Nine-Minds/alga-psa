@@ -1,0 +1,69 @@
+import { readFileSync } from 'node:fs';
+import { describe, expect, it } from 'vitest';
+
+const source = readFileSync(
+  new URL('../src/actions/renewalsQueueActions.ts', import.meta.url),
+  'utf8'
+);
+
+describe('renewalsQueueActions strict-schema integration wiring', () => {
+  it('T249: listRenewalQueueRows executes against migrated schema and avoids missing-column query branches', () => {
+    expect(source).toContain('const REQUIRED_RENEWAL_SCHEMA_COLUMNS = {');
+    expect(source).toContain('const assertRenewalSchemaReady = async (knex: any): Promise<void> => {');
+    expect(source).toContain('await assertRenewalSchemaReady(knex);');
+    expect(source).toContain("throw new Error('Permission denied: Cannot read renewals queue');");
+    expect(source).toContain('export const listRenewalQueueRows = withAuth(async (');
+    expect(source).toContain(".where({ 'cc.tenant': tenant, 'cc.is_active': true })");
+    expect(source).toContain("Run the latest server database migrations, then retry this renewals operation.");
+  });
+
+  it('T250: snoozeRenewalQueueItem persists status/snoozed_until plus last_action audit metadata', () => {
+    expect(source).toContain('export const snoozeRenewalQueueItem = withAuth(async (');
+    expect(source).toContain('await assertRenewalSchemaReady(knex);');
+    expect(source).toContain("status: 'snoozed',");
+    expect(source).toContain('snoozed_until: normalizedSnoozedUntil,');
+    expect(source).toContain('withActionLabel({');
+    expect(source).toContain("}, 'snooze'), actorUserId");
+    expect(source).toContain('withActionTimestamp(');
+    expect(source).toContain('withActionNote(');
+    expect(source).toContain('withActionActor(');
+    expect(source).toContain("throw new Error('Snooze target date must be in the future');");
+  });
+
+  it('T251: markRenewalQueueItemRenewing transitions pending->renewing and persists actor/timestamp metadata', () => {
+    expect(source).toContain('export const markRenewalQueueItemRenewing = withAuth(async (');
+    expect(source).toContain('await assertRenewalSchemaReady(knex);');
+    expect(source).toContain("if (previousStatus !== 'pending') {");
+    expect(source).toContain("status: 'renewing',");
+    expect(source).toContain("}, 'mark_renewing'), actorUserId");
+    expect(source).toContain('withActionTimestamp(');
+    expect(source).toContain('withActionActor(');
+    expect(source).toContain('previous_status: previousStatus,');
+    expect(source).toContain("status: 'renewing',");
+  });
+
+  it('T254: renewal schema readiness guard rejects access with actionable error when required columns are absent', () => {
+    expect(source).toContain('const getMissingRenewalSchemaColumns = async (knex: any): Promise<string[]> => {');
+    expect(source).toContain('const assertRenewalSchemaReady = async (knex: any): Promise<void> => {');
+    expect(source).toContain('const missing = await getMissingRenewalSchemaColumns(knex);');
+    expect(source).toContain('if (missing.length === 0) {');
+    expect(source).toContain('throw new Error(');
+    expect(source).toContain('Renewal schema is not ready. Missing required columns:');
+    expect(source).toContain('Run the latest server database migrations, then retry this renewals operation.');
+  });
+
+  it('T255: schema guard happy path is wired for operational renewals endpoints after migrations', () => {
+    expect(source).toContain('export const listRenewalQueueRows = withAuth(async (');
+    expect(source).toContain('export const markRenewalQueueItemRenewing = withAuth(async (');
+    expect(source).toContain('export const markRenewalQueueItemNonRenewing = withAuth(async (');
+    expect(source).toContain('export const createRenewalDraftForQueueItem = withAuth(async (');
+    expect(source).toContain('export const snoozeRenewalQueueItem = withAuth(async (');
+    expect(source).toContain('export const assignRenewalQueueItemOwner = withAuth(async (');
+    expect(source).toContain('export const completeRenewalQueueItemForActivation = withAuth(async (');
+    expect(source).toContain('export const completeRenewalQueueItemForNonRenewal = withAuth(async (');
+    expect(source).toContain('export const retryRenewalQueueTicketCreation = withAuth(async (');
+    expect(source.match(/await assertRenewalSchemaReady\(knex\);/g)?.length).toBeGreaterThanOrEqual(9);
+    expect(source).not.toContain('Renewals queue status column is not available');
+    expect(source).not.toContain('Renewals queue snooze columns are not available');
+  });
+});

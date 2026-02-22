@@ -18,6 +18,7 @@ import {
   ClientContractWizardSubmission,
   ClientTemplateSnapshot,
 } from '@alga-psa/billing/actions/contractWizardActions';
+import { getDefaultBillingSettings } from '@alga-psa/billing/actions/billingSettingsActions';
 
 const STEPS = [
   'Contract Basics',
@@ -29,6 +30,10 @@ const STEPS = [
 ] as const;
 
 const REQUIRED_STEPS = [0, 5];
+const MIN_NOTICE_PERIOD_DAYS = 0;
+const MAX_NOTICE_PERIOD_DAYS = 3650;
+const HARD_DEFAULT_RENEWAL_MODE: NonNullable<ContractWizardData['renewal_mode']> = 'manual';
+const HARD_DEFAULT_NOTICE_PERIOD_DAYS = 30;
 
 function isEqual(a: unknown, b: unknown): boolean {
   if (a === b) return true;
@@ -85,6 +90,10 @@ export interface ContractWizardData {
   contract_name: string;
   start_date: string;
   end_date?: string;
+  renewal_mode?: 'none' | 'manual' | 'auto';
+  notice_period_days?: number;
+  renewal_term_months?: number;
+  use_tenant_renewal_defaults?: boolean;
   description?: string;
   billing_frequency: string;
   currency_code: string;
@@ -129,6 +138,73 @@ export interface ContractWizardData {
   template_id?: string;
 }
 
+export const createDefaultContractWizardData = (): ContractWizardData => ({
+  client_id: '',
+  contract_name: '',
+  start_date: '',
+  end_date: undefined,
+  renewal_mode: 'manual',
+  notice_period_days: 30,
+  renewal_term_months: undefined,
+  use_tenant_renewal_defaults: true,
+  description: '',
+  billing_frequency: 'monthly',
+  currency_code: 'USD',
+  fixed_services: [],
+  product_services: [],
+  fixed_base_rate: undefined,
+  enable_proration: true,
+  hourly_services: [],
+  minimum_billable_time: undefined,
+  round_up_to_nearest: undefined,
+  usage_services: [],
+  template_id: undefined,
+});
+
+const normalizeRenewalMode = (value: unknown): ContractWizardData['renewal_mode'] | undefined => {
+  return value === 'none' || value === 'manual' || value === 'auto' ? value : undefined;
+};
+
+const normalizeNonNegativeInteger = (value: unknown): number | undefined => {
+  if (value === null || value === undefined) return undefined;
+  const numeric = typeof value === 'string' ? Number(value) : value;
+  if (typeof numeric !== 'number' || !Number.isFinite(numeric)) return undefined;
+  return Math.max(0, Math.trunc(numeric));
+};
+
+const normalizePositiveInteger = (value: unknown): number | undefined => {
+  const normalized = normalizeNonNegativeInteger(value);
+  return normalized && normalized > 0 ? normalized : undefined;
+};
+
+export const buildInitialContractWizardData = (
+  editingContract: ContractWizardData | null = null
+): ContractWizardData => {
+  const initial: ContractWizardData = {
+    ...createDefaultContractWizardData(),
+    ...(editingContract ?? {}),
+  };
+
+  const renewalMode = normalizeRenewalMode(editingContract?.renewal_mode);
+  const noticePeriodDays = normalizeNonNegativeInteger(editingContract?.notice_period_days);
+  const renewalTermMonths = normalizePositiveInteger(editingContract?.renewal_term_months);
+
+  if (renewalMode !== undefined) {
+    initial.renewal_mode = renewalMode;
+  }
+  if (noticePeriodDays !== undefined) {
+    initial.notice_period_days = noticePeriodDays;
+  }
+  if (renewalTermMonths !== undefined) {
+    initial.renewal_term_months = renewalTermMonths;
+  }
+  if (typeof editingContract?.use_tenant_renewal_defaults === 'boolean') {
+    initial.use_tenant_renewal_defaults = editingContract.use_tenant_renewal_defaults;
+  }
+
+  return initial;
+};
+
 type TemplateOption = {
   contract_id: string;
   contract_name: string;
@@ -162,28 +238,8 @@ export function ContractWizard({
   const [templateError, setTemplateError] = useState<string | null>(null);
   const [isTemplateLoading, startTemplateTransition] = useTransition();
 
-  const defaultWizardData: ContractWizardData = {
-    client_id: '',
-    contract_name: '',
-    start_date: '',
-    end_date: undefined,
-    description: '',
-    billing_frequency: 'monthly',
-    currency_code: 'USD',
-    fixed_services: [],
-    product_services: [],
-    fixed_base_rate: undefined,
-    enable_proration: true,
-    hourly_services: [],
-    minimum_billable_time: undefined,
-    round_up_to_nearest: undefined,
-    usage_services: [],
-    template_id: undefined,
-  };
-
   const [wizardData, setWizardData] = useState<ContractWizardData>(() => ({
-    ...defaultWizardData,
-    ...(editingContract ?? {}),
+    ...buildInitialContractWizardData(editingContract),
   }));
 
   useEffect(() => {
@@ -198,7 +254,7 @@ export function ContractWizard({
     setCompletedSteps(new Set());
     setCurrentStep(0);
 
-    const initialWizardData = { ...defaultWizardData, ...(editingContract ?? {}) };
+    const initialWizardData = buildInitialContractWizardData(editingContract);
     initialWizardDataRef.current = deepClone(initialWizardData);
 
     if (editingContract) {
@@ -227,7 +283,7 @@ export function ContractWizard({
   }, [open, editingContract]);
 
   const resetWizard = () => {
-    setWizardData(defaultWizardData);
+    setWizardData(createDefaultContractWizardData());
     setSelectedTemplateId(null);
     setErrors({});
     setCompletedSteps(new Set());
@@ -293,31 +349,60 @@ export function ContractWizard({
     });
   };
 
-  const buildSubmissionData = (): ClientContractWizardSubmission => ({
-    contract_id: wizardData.contract_id,
-    contract_name: wizardData.contract_name.trim(),
-    description: wizardData.description?.trim() || undefined,
-    client_id: wizardData.client_id || '',
-    start_date: wizardData.start_date,
-    end_date: wizardData.end_date,
-    po_required: wizardData.po_required,
-    po_number: wizardData.po_number,
-    po_amount: wizardData.po_amount,
-    fixed_base_rate: wizardData.fixed_base_rate,
-    fixed_billing_frequency: wizardData.fixed_billing_frequency,
-    enable_proration: wizardData.enable_proration,
-    hourly_services: wizardData.hourly_services ?? [],
-    hourly_billing_frequency: wizardData.hourly_billing_frequency,
-    fixed_services: wizardData.fixed_services ?? [],
-    product_services: wizardData.product_services ?? [],
-    usage_services: wizardData.usage_services ?? [],
-    usage_billing_frequency: wizardData.usage_billing_frequency,
-    minimum_billable_time: wizardData.minimum_billable_time,
-    round_up_to_nearest: wizardData.round_up_to_nearest,
-    billing_frequency: wizardData.billing_frequency,
-    currency_code: wizardData.currency_code,
-    template_id: wizardData.template_id,
-  });
+  const buildSubmissionData = async (): Promise<ClientContractWizardSubmission> => {
+    const useTenantDefaults = wizardData.use_tenant_renewal_defaults ?? true;
+
+    let tenantDefaultRenewalMode: ContractWizardData['renewal_mode'] | undefined;
+    let tenantDefaultNoticePeriodDays: number | undefined;
+
+    try {
+      const tenantDefaults = await getDefaultBillingSettings();
+      tenantDefaultRenewalMode = tenantDefaults.defaultRenewalMode;
+      tenantDefaultNoticePeriodDays = tenantDefaults.defaultNoticePeriodDays;
+    } catch (error) {
+      console.warn('Failed to load tenant renewal defaults for wizard submission', error);
+    }
+
+    const resolvedRenewalMode: NonNullable<ContractWizardData['renewal_mode']> = useTenantDefaults
+      ? tenantDefaultRenewalMode ?? HARD_DEFAULT_RENEWAL_MODE
+      : wizardData.renewal_mode ?? tenantDefaultRenewalMode ?? HARD_DEFAULT_RENEWAL_MODE;
+
+    const resolvedNoticePeriodDays = useTenantDefaults
+      ? tenantDefaultNoticePeriodDays ?? HARD_DEFAULT_NOTICE_PERIOD_DAYS
+      : wizardData.notice_period_days ??
+        tenantDefaultNoticePeriodDays ??
+        HARD_DEFAULT_NOTICE_PERIOD_DAYS;
+
+    return {
+      contract_id: wizardData.contract_id,
+      contract_name: wizardData.contract_name.trim(),
+      description: wizardData.description?.trim() || undefined,
+      client_id: wizardData.client_id || '',
+      start_date: wizardData.start_date,
+      renewal_mode: resolvedRenewalMode,
+      notice_period_days: resolvedNoticePeriodDays,
+      renewal_term_months: wizardData.renewal_term_months,
+      use_tenant_renewal_defaults: useTenantDefaults,
+      end_date: wizardData.end_date,
+      po_required: wizardData.po_required,
+      po_number: wizardData.po_number,
+      po_amount: wizardData.po_amount,
+      fixed_base_rate: wizardData.fixed_base_rate,
+      fixed_billing_frequency: wizardData.fixed_billing_frequency,
+      enable_proration: wizardData.enable_proration,
+      hourly_services: wizardData.hourly_services ?? [],
+      hourly_billing_frequency: wizardData.hourly_billing_frequency,
+      fixed_services: wizardData.fixed_services ?? [],
+      product_services: wizardData.product_services ?? [],
+      usage_services: wizardData.usage_services ?? [],
+      usage_billing_frequency: wizardData.usage_billing_frequency,
+      minimum_billable_time: wizardData.minimum_billable_time,
+      round_up_to_nearest: wizardData.round_up_to_nearest,
+      billing_frequency: wizardData.billing_frequency,
+      currency_code: wizardData.currency_code,
+      template_id: wizardData.template_id,
+    };
+  };
 
   const validateStep = (stepIndex: number): boolean => {
     setErrors((prev) => ({ ...prev, [stepIndex]: '' }));
@@ -339,6 +424,43 @@ export function ContractWizard({
         if (!wizardData.start_date) {
           setErrors((prev) => ({ ...prev, [stepIndex]: 'Start date is required' }));
           return false;
+        }
+        if (wizardData.end_date && !wizardData.renewal_mode) {
+          setErrors((prev) => ({
+            ...prev,
+            [stepIndex]: 'Renewal mode is required when an end date is set',
+          }));
+          return false;
+        }
+        if (wizardData.renewal_mode && wizardData.renewal_mode !== 'none') {
+          if (!Number.isInteger(wizardData.notice_period_days)) {
+            setErrors((prev) => ({
+              ...prev,
+              [stepIndex]: 'Notice period must be a whole number of days',
+            }));
+            return false;
+          }
+
+          const noticePeriod = wizardData.notice_period_days as number;
+          if (noticePeriod < MIN_NOTICE_PERIOD_DAYS || noticePeriod > MAX_NOTICE_PERIOD_DAYS) {
+            setErrors((prev) => ({
+              ...prev,
+              [stepIndex]: `Notice period must be between ${MIN_NOTICE_PERIOD_DAYS} and ${MAX_NOTICE_PERIOD_DAYS} days`,
+            }));
+            return false;
+          }
+        }
+        if (wizardData.renewal_term_months !== undefined && wizardData.renewal_term_months !== null) {
+          if (
+            !Number.isInteger(wizardData.renewal_term_months) ||
+            wizardData.renewal_term_months <= 0
+          ) {
+            setErrors((prev) => ({
+              ...prev,
+              [stepIndex]: 'Renewal term months must be a positive whole number',
+            }));
+            return false;
+          }
         }
         return true;
       case 1:
@@ -421,7 +543,7 @@ export function ContractWizard({
 
     setIsLoading(true);
     try {
-      const submission = buildSubmissionData();
+      const submission = await buildSubmissionData();
       const result = await createClientContractFromWizard(submission);
 
       const completedData: ContractWizardData = {
@@ -460,7 +582,7 @@ export function ContractWizard({
 
     setIsLoading(true);
     try {
-      const submission = buildSubmissionData();
+      const submission = await buildSubmissionData();
       const result = await createClientContractFromWizard(submission, { isDraft: true });
 
       const draftData: ContractWizardData = {

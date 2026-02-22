@@ -205,7 +205,10 @@ export const contractRenewalUpcomingEventPayloadSchema = BaseDomainEventPayloadS
   contractId: contractIdSchema,
   clientId: clientIdSchema,
   renewalAt: z.string().min(1),
+  decisionDueDate: z.string().min(1).optional(),
   daysUntilRenewal: z.number().int().nonnegative(),
+  daysUntilDecisionDue: z.number().int().nonnegative().optional(),
+  renewalCycleKey: z.string().min(1).optional(),
 }).describe('Payload for CONTRACT_RENEWAL_UPCOMING');
 
 export type ContractRenewalUpcomingEventPayload = z.infer<typeof contractRenewalUpcomingEventPayloadSchema>;

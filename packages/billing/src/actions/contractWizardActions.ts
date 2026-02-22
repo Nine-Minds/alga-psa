@@ -129,6 +129,10 @@ export type ClientContractWizardSubmission = {
   description?: string;
   client_id: string;
   start_date: string;
+  renewal_mode?: 'none' | 'manual' | 'auto';
+  notice_period_days?: number;
+  renewal_term_months?: number;
+  use_tenant_renewal_defaults?: boolean;
   billing_frequency?: string;
   currency_code: string;
   end_date?: string;
@@ -1231,7 +1235,19 @@ export const createClientContractFromWizard = withAuth(async (
 
     const clientContractId = uuidv4();
 
-    await trx('client_contracts').insert({
+    const [
+      hasRenewalModeColumn,
+      hasNoticePeriodColumn,
+      hasRenewalTermColumn,
+      hasUseTenantDefaultsColumn,
+    ] = await Promise.all([
+      trx.schema.hasColumn('client_contracts', 'renewal_mode'),
+      trx.schema.hasColumn('client_contracts', 'notice_period_days'),
+      trx.schema.hasColumn('client_contracts', 'renewal_term_months'),
+      trx.schema.hasColumn('client_contracts', 'use_tenant_renewal_defaults'),
+    ]);
+
+    const clientContractInsertData: Record<string, unknown> = {
       tenant,
       client_contract_id: clientContractId,
       client_id: submission.client_id,
@@ -1245,7 +1261,39 @@ export const createClientContractFromWizard = withAuth(async (
       created_at: now.toISOString(),
       updated_at: now.toISOString(),
       template_contract_id: submission.template_id ?? null,
-    });
+    };
+
+    if (hasRenewalModeColumn) {
+      clientContractInsertData.renewal_mode =
+        submission.renewal_mode === 'none' ||
+        submission.renewal_mode === 'manual' ||
+        submission.renewal_mode === 'auto'
+          ? submission.renewal_mode
+          : null;
+    }
+
+    if (hasNoticePeriodColumn) {
+      clientContractInsertData.notice_period_days =
+        Number.isInteger(submission.notice_period_days) && (submission.notice_period_days as number) >= 0
+          ? submission.notice_period_days
+          : null;
+    }
+
+    if (hasRenewalTermColumn) {
+      clientContractInsertData.renewal_term_months =
+        Number.isInteger(submission.renewal_term_months) && (submission.renewal_term_months as number) > 0
+          ? submission.renewal_term_months
+          : null;
+    }
+
+    if (hasUseTenantDefaultsColumn) {
+      clientContractInsertData.use_tenant_renewal_defaults =
+        typeof submission.use_tenant_renewal_defaults === 'boolean'
+          ? submission.use_tenant_renewal_defaults
+          : true;
+    }
+
+    await trx('client_contracts').insert(clientContractInsertData);
 
     createdForWorkflow = {
       contractId,
@@ -1257,8 +1305,19 @@ export const createClientContractFromWizard = withAuth(async (
       actorUserId: typeof user?.user_id === 'string' ? user.user_id : undefined,
     };
 
+    const decisionDueAtForWorkflow =
+      endDate && Number.isInteger(submission.notice_period_days) && (submission.notice_period_days as number) >= 0
+        ? new Date(
+          new Date(`${endDate}T00:00:00.000Z`).getTime() -
+            Math.trunc(submission.notice_period_days as number) * 24 * 60 * 60 * 1000
+        ).toISOString().slice(0, 10)
+        : endDate;
     renewalForWorkflow = endDate
-      ? computeContractRenewalUpcoming({ renewalAt: endDate, now: now.toISOString() })
+      ? computeContractRenewalUpcoming({
+          renewalAt: endDate,
+          decisionDueAt: decisionDueAtForWorkflow ?? undefined,
+          now: now.toISOString(),
+        })
       : null;
 
     // NOTE: The legacy replicateContractLinesToClient call has been removed.
@@ -1305,14 +1364,23 @@ export const createClientContractFromWizard = withAuth(async (
     });
 
     if (renewalForWorkflow) {
-      const renewal: { renewalAt: string; daysUntilRenewal: number } = renewalForWorkflow;
+      const renewal: {
+        renewalAt: string;
+        decisionDueDate: string;
+        daysUntilRenewal: number;
+        daysUntilDecisionDue: number;
+        renewalCycleKey?: string;
+      } = renewalForWorkflow as any;
       await publishWorkflowEvent({
         eventType: 'CONTRACT_RENEWAL_UPCOMING',
         payload: buildContractRenewalUpcomingPayload({
           contractId: wfData.contractId,
           clientId: wfData.clientId,
           renewalAt: renewal.renewalAt,
+          decisionDueDate: renewal.decisionDueDate,
           daysUntilRenewal: renewal.daysUntilRenewal,
+          daysUntilDecisionDue: renewal.daysUntilDecisionDue,
+          renewalCycleKey: renewal.renewalCycleKey,
         }),
         ctx: {
           tenantId: tenant,
@@ -1321,7 +1389,7 @@ export const createClientContractFromWizard = withAuth(async (
             ? { actorType: 'USER' as const, actorUserId: wfData.actorUserId }
             : undefined,
         },
-        idempotencyKey: `contract_renewal_upcoming:${wfData.contractId}:${wfData.clientId}:${renewal.renewalAt}`,
+        idempotencyKey: `contract_renewal_upcoming:${wfData.contractId}:${wfData.clientId}:${renewal.renewalCycleKey ?? renewal.decisionDueDate ?? renewal.renewalAt}`,
       });
     }
   }
@@ -1538,6 +1606,10 @@ export type DraftContractWizardData = {
   contract_name: string;
   start_date: string;
   end_date?: string;
+  renewal_mode?: 'none' | 'manual' | 'auto';
+  notice_period_days?: number;
+  renewal_term_months?: number;
+  use_tenant_renewal_defaults?: boolean;
   description?: string;
   billing_frequency: string;
   currency_code: string;
@@ -1753,11 +1825,39 @@ export const getDraftContractForResume = withAuth(async (
     throw new Error('Draft contract has an invalid start date');
   }
 
+  const renewalMode =
+    clientContract.renewal_mode === 'none' ||
+    clientContract.renewal_mode === 'manual' ||
+    clientContract.renewal_mode === 'auto'
+      ? clientContract.renewal_mode
+      : undefined;
+
+  const noticePeriodRaw = clientContract.notice_period_days;
+  const noticePeriodDays =
+    noticePeriodRaw != null && Number.isFinite(Number(noticePeriodRaw))
+      ? Math.max(0, Math.trunc(Number(noticePeriodRaw)))
+      : undefined;
+
+  const renewalTermRaw = clientContract.renewal_term_months;
+  const renewalTermMonths =
+    renewalTermRaw != null && Number.isFinite(Number(renewalTermRaw))
+      ? Math.trunc(Number(renewalTermRaw)) > 0
+        ? Math.trunc(Number(renewalTermRaw))
+        : undefined
+      : undefined;
+
   return {
     client_id: clientContract.client_id,
     contract_name: contract.contract_name,
     start_date: startDate,
     end_date: normalizeDateOnly(clientContract.end_date) ?? undefined,
+    renewal_mode: renewalMode,
+    notice_period_days: noticePeriodDays,
+    renewal_term_months: renewalTermMonths,
+    use_tenant_renewal_defaults:
+      typeof clientContract.use_tenant_renewal_defaults === 'boolean'
+        ? clientContract.use_tenant_renewal_defaults
+        : undefined,
     description: contract.contract_description ?? undefined,
     billing_frequency: contract.billing_frequency ?? 'monthly',
     currency_code: contract.currency_code ?? 'USD',

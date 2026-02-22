@@ -4,7 +4,19 @@ import { createTenantKnex } from "@alga-psa/db";
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withAuth } from '@alga-psa/auth';
+import { hasPermission } from '@alga-psa/auth/rbac';
 
+type RenewalMode = 'none' | 'manual' | 'auto';
+type RenewalDueDateActionPolicy = 'queue_only' | 'create_ticket';
+
+const DEFAULT_RENEWAL_MODE: RenewalMode = 'manual';
+const DEFAULT_NOTICE_PERIOD_DAYS = 30;
+const DEFAULT_RENEWAL_DUE_DATE_ACTION_POLICY: RenewalDueDateActionPolicy = 'create_ticket';
+const requireBillingSettingsUpdatePermission = (user: unknown): void => {
+  if (!hasPermission(user as any, 'billing_settings', 'update')) {
+    throw new Error('Permission denied: Cannot update billing settings');
+  }
+};
 
 export interface BillingSettings {
   zeroDollarInvoiceHandling: 'normal' | 'finalized';
@@ -12,6 +24,13 @@ export interface BillingSettings {
   enableCreditExpiration?: boolean;
   creditExpirationDays?: number;
   creditExpirationNotificationDays?: number[];
+  defaultRenewalMode?: RenewalMode;
+  defaultNoticePeriodDays?: number;
+  renewalDueDateActionPolicy?: RenewalDueDateActionPolicy;
+  renewalTicketBoardId?: string;
+  renewalTicketStatusId?: string;
+  renewalTicketPriority?: string;
+  renewalTicketAssigneeId?: string;
 }
 
 export const getDefaultBillingSettings = withAuth(async (
@@ -34,8 +53,28 @@ export const getDefaultBillingSettings = withAuth(async (
       enableCreditExpiration: true,
       creditExpirationDays: 365,
       creditExpirationNotificationDays: [30, 7, 1],
+      defaultRenewalMode: DEFAULT_RENEWAL_MODE,
+      defaultNoticePeriodDays: DEFAULT_NOTICE_PERIOD_DAYS,
+      renewalDueDateActionPolicy: DEFAULT_RENEWAL_DUE_DATE_ACTION_POLICY,
+      renewalTicketBoardId: undefined,
+      renewalTicketStatusId: undefined,
+      renewalTicketPriority: undefined,
+      renewalTicketAssigneeId: undefined,
     };
   }
+
+  const renewalMode =
+    settings.default_renewal_mode === 'none' ||
+    settings.default_renewal_mode === 'manual' ||
+    settings.default_renewal_mode === 'auto'
+      ? settings.default_renewal_mode
+      : DEFAULT_RENEWAL_MODE;
+
+  const renewalDueDateActionPolicy =
+    settings.renewal_due_date_action_policy === 'queue_only' ||
+    settings.renewal_due_date_action_policy === 'create_ticket'
+      ? settings.renewal_due_date_action_policy
+      : DEFAULT_RENEWAL_DUE_DATE_ACTION_POLICY;
 
   return {
     zeroDollarInvoiceHandling: settings.zero_dollar_invoice_handling,
@@ -43,6 +82,13 @@ export const getDefaultBillingSettings = withAuth(async (
     enableCreditExpiration: settings.enable_credit_expiration ?? true,
     creditExpirationDays: settings.credit_expiration_days ?? 365,
     creditExpirationNotificationDays: settings.credit_expiration_notification_days ?? [30, 7, 1],
+    defaultRenewalMode: renewalMode,
+    defaultNoticePeriodDays: settings.default_notice_period_days ?? DEFAULT_NOTICE_PERIOD_DAYS,
+    renewalDueDateActionPolicy,
+    renewalTicketBoardId: settings.renewal_ticket_board_id ?? undefined,
+    renewalTicketStatusId: settings.renewal_ticket_status_id ?? undefined,
+    renewalTicketPriority: settings.renewal_ticket_priority ?? undefined,
+    renewalTicketAssigneeId: settings.renewal_ticket_assignee_id ?? undefined,
   };
 });
 
@@ -51,12 +97,67 @@ export const updateDefaultBillingSettings = withAuth(async (
   { tenant },
   data: BillingSettings
 ): Promise<{ success: boolean }> => {
+  requireBillingSettingsUpdatePermission(user);
+
   const { knex } = await createTenantKnex();
 
   await withTransaction(knex, async (trx: Knex.Transaction) => {
+    const [
+      hasDefaultRenewalModeColumn,
+      hasDefaultNoticePeriodColumn,
+      hasRenewalDueDateActionPolicyColumn,
+      hasRenewalTicketBoardColumn,
+      hasRenewalTicketStatusColumn,
+      hasRenewalTicketPriorityColumn,
+      hasRenewalTicketAssigneeColumn,
+    ] = await Promise.all([
+      trx.schema.hasColumn('default_billing_settings', 'default_renewal_mode'),
+      trx.schema.hasColumn('default_billing_settings', 'default_notice_period_days'),
+      trx.schema.hasColumn('default_billing_settings', 'renewal_due_date_action_policy'),
+      trx.schema.hasColumn('default_billing_settings', 'renewal_ticket_board_id'),
+      trx.schema.hasColumn('default_billing_settings', 'renewal_ticket_status_id'),
+      trx.schema.hasColumn('default_billing_settings', 'renewal_ticket_priority'),
+      trx.schema.hasColumn('default_billing_settings', 'renewal_ticket_assignee_id'),
+    ]);
+
     const existingSettings = await trx('default_billing_settings')
       .where({ tenant })
       .first();
+
+    const renewalUpdates: Record<string, unknown> = {};
+    if (hasDefaultRenewalModeColumn) {
+      renewalUpdates.default_renewal_mode =
+        data.defaultRenewalMode === 'none' ||
+        data.defaultRenewalMode === 'manual' ||
+        data.defaultRenewalMode === 'auto'
+          ? data.defaultRenewalMode
+          : DEFAULT_RENEWAL_MODE;
+    }
+    if (hasDefaultNoticePeriodColumn) {
+      renewalUpdates.default_notice_period_days =
+        Number.isInteger(data.defaultNoticePeriodDays) && (data.defaultNoticePeriodDays as number) >= 0
+          ? data.defaultNoticePeriodDays
+          : DEFAULT_NOTICE_PERIOD_DAYS;
+    }
+    if (hasRenewalDueDateActionPolicyColumn) {
+      renewalUpdates.renewal_due_date_action_policy =
+        data.renewalDueDateActionPolicy === 'queue_only' ||
+        data.renewalDueDateActionPolicy === 'create_ticket'
+          ? data.renewalDueDateActionPolicy
+          : DEFAULT_RENEWAL_DUE_DATE_ACTION_POLICY;
+    }
+    if (hasRenewalTicketBoardColumn) {
+      renewalUpdates.renewal_ticket_board_id = data.renewalTicketBoardId ?? null;
+    }
+    if (hasRenewalTicketStatusColumn) {
+      renewalUpdates.renewal_ticket_status_id = data.renewalTicketStatusId ?? null;
+    }
+    if (hasRenewalTicketPriorityColumn) {
+      renewalUpdates.renewal_ticket_priority = data.renewalTicketPriority ?? null;
+    }
+    if (hasRenewalTicketAssigneeColumn) {
+      renewalUpdates.renewal_ticket_assignee_id = data.renewalTicketAssigneeId ?? null;
+    }
 
     if (existingSettings) {
       return await trx('default_billing_settings')
@@ -67,6 +168,7 @@ export const updateDefaultBillingSettings = withAuth(async (
           enable_credit_expiration: data.enableCreditExpiration,
           credit_expiration_days: data.creditExpirationDays,
           credit_expiration_notification_days: data.creditExpirationNotificationDays,
+          ...renewalUpdates,
           updated_at: trx.fn.now()
         });
     } else {
@@ -76,7 +178,8 @@ export const updateDefaultBillingSettings = withAuth(async (
         suppress_zero_dollar_invoices: data.suppressZeroDollarInvoices,
         enable_credit_expiration: data.enableCreditExpiration ?? true,
         credit_expiration_days: data.creditExpirationDays ?? 365,
-        credit_expiration_notification_days: data.creditExpirationNotificationDays ?? [30, 7, 1]
+        credit_expiration_notification_days: data.creditExpirationNotificationDays ?? [30, 7, 1],
+        ...renewalUpdates,
         // created_at and updated_at will be set by default values
       });
     }

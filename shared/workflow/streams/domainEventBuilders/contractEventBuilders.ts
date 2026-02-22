@@ -1,6 +1,6 @@
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
-export const DEFAULT_CONTRACT_RENEWAL_UPCOMING_WINDOW_DAYS = 30;
+export const DEFAULT_CONTRACT_RENEWAL_UPCOMING_WINDOW_DAYS = 90;
 
 function toUtcMidnightDate(value: string | Date): Date {
   if (value instanceof Date) {
@@ -14,22 +14,41 @@ function toUtcMidnightDate(value: string | Date): Date {
 
 export function computeContractRenewalUpcoming(params: {
   renewalAt: string;
+  decisionDueAt?: string;
+  renewalCycleKey?: string;
   now?: string | Date;
   windowDays?: number;
-}): { renewalAt: string; daysUntilRenewal: number } | null {
+}): {
+  renewalAt: string;
+  decisionDueDate: string;
+  daysUntilRenewal: number;
+  daysUntilDecisionDue: number;
+  renewalCycleKey?: string;
+} | null {
   const windowDays = params.windowDays ?? DEFAULT_CONTRACT_RENEWAL_UPCOMING_WINDOW_DAYS;
   if (!Number.isInteger(windowDays) || windowDays < 0) return null;
 
   const renewalDate = toUtcMidnightDate(params.renewalAt);
   if (Number.isNaN(renewalDate.getTime())) return null;
+  const decisionDueDateRaw = params.decisionDueAt ?? params.renewalAt;
+  const decisionDueDate = toUtcMidnightDate(decisionDueDateRaw);
+  if (Number.isNaN(decisionDueDate.getTime())) return null;
 
   const nowDate = toUtcMidnightDate(params.now ?? new Date());
+  const daysUntilDecisionDue = Math.round((decisionDueDate.getTime() - nowDate.getTime()) / MS_PER_DAY);
   const daysUntilRenewal = Math.round((renewalDate.getTime() - nowDate.getTime()) / MS_PER_DAY);
 
-  if (!Number.isFinite(daysUntilRenewal) || daysUntilRenewal < 0) return null;
-  if (daysUntilRenewal > windowDays) return null;
+  if (!Number.isFinite(daysUntilDecisionDue) || daysUntilDecisionDue < 0) return null;
+  if (!Number.isFinite(daysUntilRenewal)) return null;
+  if (daysUntilDecisionDue > windowDays) return null;
 
-  return { renewalAt: params.renewalAt, daysUntilRenewal };
+  return {
+    renewalAt: params.renewalAt,
+    decisionDueDate: decisionDueDateRaw,
+    daysUntilRenewal,
+    daysUntilDecisionDue,
+    renewalCycleKey: params.renewalCycleKey,
+  };
 }
 
 export function buildContractCreatedPayload(params: {
@@ -88,13 +107,18 @@ export function buildContractRenewalUpcomingPayload(params: {
   contractId: string;
   clientId: string;
   renewalAt: string;
+  decisionDueDate?: string;
   daysUntilRenewal: number;
+  daysUntilDecisionDue?: number;
+  renewalCycleKey?: string;
 }) {
   return {
     contractId: params.contractId,
     clientId: params.clientId,
     renewalAt: params.renewalAt,
+    decisionDueDate: params.decisionDueDate,
     daysUntilRenewal: params.daysUntilRenewal,
+    daysUntilDecisionDue: params.daysUntilDecisionDue,
+    renewalCycleKey: params.renewalCycleKey,
   };
 }
-

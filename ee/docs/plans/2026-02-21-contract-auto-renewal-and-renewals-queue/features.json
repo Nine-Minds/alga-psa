@@ -1,0 +1,1170 @@
+[
+  {
+    "id": "F001",
+    "description": "Extend ContractWizardData with renewal mode, notice period, term months, and override toggle fields.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR1 — Contract Setup and Renewal Configuration"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "Initialize renewal fields in ContractWizard default state for new contracts.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR1 — Contract Setup and Renewal Configuration"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "Hydrate renewal fields when resuming draft contracts in the wizard.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR1 — Contract Setup and Renewal Configuration"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "Hydrate renewal fields when editing existing contracts in the wizard.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR1 — Contract Setup and Renewal Configuration"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "Render Renewal Settings card in ContractBasicsStep when end date is present.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR1 — Contract Setup and Renewal Configuration"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "Render Evergreen Review settings card in ContractBasicsStep when end date is absent.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR1 — Contract Setup and Renewal Configuration"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "Show renewal mode selector with values none/manual/auto in ContractBasicsStep.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR1 — Contract Setup and Renewal Configuration"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "Show notice period selector/input in ContractBasicsStep for renewal-enabled modes.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR1 — Contract Setup and Renewal Configuration"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "Show renewal term behavior input in ContractBasicsStep for auto-renew mode.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR1 — Contract Setup and Renewal Configuration"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "Hide auto-renew-specific term controls when renewal mode is not auto.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR1 — Contract Setup and Renewal Configuration"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "Validate renewal mode is required when an end date is set.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR1 — Contract Setup and Renewal Configuration"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "Validate notice period is a non-negative integer within configured bounds.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR1 — Contract Setup and Renewal Configuration"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "Validate renewal term months is positive when explicitly provided.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR1 — Contract Setup and Renewal Configuration"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "Show inline validation errors for invalid renewal settings before wizard progression.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR1 — Contract Setup and Renewal Configuration"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "Include renewal fields in contract summary preview in ContractBasicsStep.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR1 — Contract Setup and Renewal Configuration"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "Include renewal fields in review step payload preview before submit.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR1 — Contract Setup and Renewal Configuration"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "Persist renewal fields in ClientContractWizardSubmission payload builder.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR1 — Contract Setup and Renewal Configuration"
+    ]
+  },
+  {
+    "id": "F018",
+    "description": "Persist renewal fields when saving draft contracts from wizard.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR1 — Contract Setup and Renewal Configuration"
+    ]
+  },
+  {
+    "id": "F019",
+    "description": "Add tenant default renewal mode field to default billing settings model.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR2 — Tenant Defaults and Contract-Level Overrides"
+    ]
+  },
+  {
+    "id": "F020",
+    "description": "Add tenant default notice period days field to default billing settings model.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR2 — Tenant Defaults and Contract-Level Overrides"
+    ]
+  },
+  {
+    "id": "F021",
+    "description": "Add tenant default due-date action policy field to default billing settings model.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR2 — Tenant Defaults and Contract-Level Overrides"
+    ]
+  },
+  {
+    "id": "F022",
+    "description": "Add tenant default renewal ticket board field to default billing settings model.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR2 — Tenant Defaults and Contract-Level Overrides"
+    ]
+  },
+  {
+    "id": "F023",
+    "description": "Add tenant default renewal ticket status field to default billing settings model.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR2 — Tenant Defaults and Contract-Level Overrides"
+    ]
+  },
+  {
+    "id": "F024",
+    "description": "Add tenant default renewal ticket priority field to default billing settings model.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR2 — Tenant Defaults and Contract-Level Overrides"
+    ]
+  },
+  {
+    "id": "F025",
+    "description": "Add tenant default renewal ticket assignee field to default billing settings model.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR2 — Tenant Defaults and Contract-Level Overrides"
+    ]
+  },
+  {
+    "id": "F026",
+    "description": "Expose renewal defaults in getDefaultBillingSettings action response.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR2 — Tenant Defaults and Contract-Level Overrides"
+    ]
+  },
+  {
+    "id": "F027",
+    "description": "Persist renewal defaults in updateDefaultBillingSettings action writes.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR2 — Tenant Defaults and Contract-Level Overrides"
+    ]
+  },
+  {
+    "id": "F028",
+    "description": "Add use-tenant-defaults toggle to contract renewal settings payload.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR2 — Tenant Defaults and Contract-Level Overrides"
+    ]
+  },
+  {
+    "id": "F029",
+    "description": "Apply tenant defaults to contract assignment when override toggle is enabled.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR2 — Tenant Defaults and Contract-Level Overrides"
+    ]
+  },
+  {
+    "id": "F030",
+    "description": "Apply explicit contract-level override values when override toggle is disabled.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR2 — Tenant Defaults and Contract-Level Overrides"
+    ]
+  },
+  {
+    "id": "F031",
+    "description": "Enforce deterministic fallback precedence when override fields are partially missing.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR2 — Tenant Defaults and Contract-Level Overrides"
+    ]
+  },
+  {
+    "id": "F032",
+    "description": "Expose effective renewal settings in contract assignment read APIs.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR2 — Tenant Defaults and Contract-Level Overrides"
+    ]
+  },
+  {
+    "id": "F033",
+    "description": "Compute decision_due_date for fixed-term assignments using end_date minus notice_period_days.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR3 — Renewal Decision Date Engine"
+    ]
+  },
+  {
+    "id": "F034",
+    "description": "Compute next evergreen review anchor date from active contract anniversary rules.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR3 — Renewal Decision Date Engine"
+    ]
+  },
+  {
+    "id": "F035",
+    "description": "Compute evergreen decision_due_date using anchor date minus notice_period_days.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR3 — Renewal Decision Date Engine"
+    ]
+  },
+  {
+    "id": "F036",
+    "description": "Normalize decision_due_date calculations to date-only semantics used by client_contracts.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR3 — Renewal Decision Date Engine"
+    ]
+  },
+  {
+    "id": "F037",
+    "description": "Recompute decision_due_date when contract end_date changes.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR3 — Renewal Decision Date Engine"
+    ]
+  },
+  {
+    "id": "F038",
+    "description": "Recompute decision_due_date when notice period changes.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR3 — Renewal Decision Date Engine"
+    ]
+  },
+  {
+    "id": "F039",
+    "description": "Recompute decision_due_date when renewal mode changes between none/manual/auto.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR3 — Renewal Decision Date Engine"
+    ]
+  },
+  {
+    "id": "F040",
+    "description": "Recompute decision_due_date when evergreen anchor basis changes.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR3 — Renewal Decision Date Engine"
+    ]
+  },
+  {
+    "id": "F041",
+    "description": "Skip decision_due_date generation for terminated/expired contract assignments.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR3 — Renewal Decision Date Engine"
+    ]
+  },
+  {
+    "id": "F042",
+    "description": "Skip decision_due_date generation when renewal mode is none and no evergreen review is configured.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR3 — Renewal Decision Date Engine"
+    ]
+  },
+  {
+    "id": "F043",
+    "description": "Create one renewal cycle key per contract assignment cycle for deduplication.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR3 — Renewal Decision Date Engine"
+    ]
+  },
+  {
+    "id": "F044",
+    "description": "Prevent duplicate active renewal work items for same tenant/client_contract_id/cycle key.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR3 — Renewal Decision Date Engine"
+    ]
+  },
+  {
+    "id": "F045",
+    "description": "Persist cycle_start and cycle_end boundaries for each generated renewal cycle.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR3 — Renewal Decision Date Engine"
+    ]
+  },
+  {
+    "id": "F046",
+    "description": "Expose days_until_due as derived queue field for UI sorting and badges.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR3 — Renewal Decision Date Engine"
+    ]
+  },
+  {
+    "id": "F047",
+    "description": "Clamp past-due decision calculations into queue visibility without negative date corruption.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR3 — Renewal Decision Date Engine"
+    ]
+  },
+  {
+    "id": "F048",
+    "description": "Add renewals tab value and metadata to billing tab configuration.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR4 — Renewals Queue and Dashboard Entry Points"
+    ]
+  },
+  {
+    "id": "F049",
+    "description": "Add Renewals Tabs.Content route to BillingDashboard tab host.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR4 — Renewals Queue and Dashboard Entry Points"
+    ]
+  },
+  {
+    "id": "F050",
+    "description": "Add Renewals queue page component under billing dashboard components.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR4 — Renewals Queue and Dashboard Entry Points"
+    ]
+  },
+  {
+    "id": "F051",
+    "description": "Load renewal queue rows from server action on Renewals page mount.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR4 — Renewals Queue and Dashboard Entry Points"
+    ]
+  },
+  {
+    "id": "F052",
+    "description": "Render default 90-day horizon rows in Renewals queue.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR4 — Renewals Queue and Dashboard Entry Points"
+    ]
+  },
+  {
+    "id": "F053",
+    "description": "Render bucket quick filters for 0-30, 31-60, and 61-90 days.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR4 — Renewals Queue and Dashboard Entry Points"
+    ]
+  },
+  {
+    "id": "F054",
+    "description": "Render owner filter for assigned user in Renewals queue.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR4 — Renewals Queue and Dashboard Entry Points"
+    ]
+  },
+  {
+    "id": "F055",
+    "description": "Render status filter for pending/renewing/non_renewing/snoozed/completed.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR4 — Renewals Queue and Dashboard Entry Points"
+    ]
+  },
+  {
+    "id": "F056",
+    "description": "Render renewal mode filter for none/manual/auto.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR4 — Renewals Queue and Dashboard Entry Points"
+    ]
+  },
+  {
+    "id": "F057",
+    "description": "Render contract type filter for fixed-term versus evergreen entries.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR4 — Renewals Queue and Dashboard Entry Points"
+    ]
+  },
+  {
+    "id": "F058",
+    "description": "Sort queue by decision_due_date ascending by default.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR4 — Renewals Queue and Dashboard Entry Points"
+    ]
+  },
+  {
+    "id": "F059",
+    "description": "Show days-remaining visual state for due-soon and overdue entries.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR4 — Renewals Queue and Dashboard Entry Points"
+    ]
+  },
+  {
+    "id": "F060",
+    "description": "Add Upcoming Renewals summary widget to ClientContractsTab.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR4 — Renewals Queue and Dashboard Entry Points"
+    ]
+  },
+  {
+    "id": "F061",
+    "description": "Show 90-day bucket counts in ClientContractsTab upcoming renewals widget.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR4 — Renewals Queue and Dashboard Entry Points"
+    ]
+  },
+  {
+    "id": "F062",
+    "description": "Navigate from upcoming renewals widget to Renewals tab preserving filter context.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR4 — Renewals Queue and Dashboard Entry Points"
+    ]
+  },
+  {
+    "id": "F063",
+    "description": "Refresh widget counts after queue action mutations complete.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR4 — Renewals Queue and Dashboard Entry Points"
+    ]
+  },
+  {
+    "id": "F064",
+    "description": "Define queue status enum values pending/renewing/non_renewing/snoozed/completed in renewal work-item model.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR5 — Queue Actions and Renewal Workflow"
+    ]
+  },
+  {
+    "id": "F065",
+    "description": "Implement mark-renewing action that transitions pending entries to renewing.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR5 — Queue Actions and Renewal Workflow"
+    ]
+  },
+  {
+    "id": "F066",
+    "description": "Implement mark-non-renewing action that transitions pending entries to non_renewing.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR5 — Queue Actions and Renewal Workflow"
+    ]
+  },
+  {
+    "id": "F067",
+    "description": "Implement create-renewal-draft action for eligible queue entries.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR5 — Queue Actions and Renewal Workflow"
+    ]
+  },
+  {
+    "id": "F068",
+    "description": "Implement snooze action that sets status to snoozed with snoozed_until date.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR5 — Queue Actions and Renewal Workflow"
+    ]
+  },
+  {
+    "id": "F069",
+    "description": "Implement assign-owner action to set assigned_to on renewal work item.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR5 — Queue Actions and Renewal Workflow"
+    ]
+  },
+  {
+    "id": "F070",
+    "description": "Implement unsnooze transition back to pending when snooze period elapses.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR5 — Queue Actions and Renewal Workflow"
+    ]
+  },
+  {
+    "id": "F071",
+    "description": "Persist action actor user id on each queue mutation.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR5 — Queue Actions and Renewal Workflow"
+    ]
+  },
+  {
+    "id": "F072",
+    "description": "Persist action timestamp on each queue mutation.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR5 — Queue Actions and Renewal Workflow"
+    ]
+  },
+  {
+    "id": "F073",
+    "description": "Persist action reason/note text on queue mutation when provided.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR5 — Queue Actions and Renewal Workflow"
+    ]
+  },
+  {
+    "id": "F074",
+    "description": "Prevent invalid transition from completed back to pending without explicit reopen action.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR5 — Queue Actions and Renewal Workflow"
+    ]
+  },
+  {
+    "id": "F075",
+    "description": "Prevent invalid transition from non_renewing to renewing without explicit override action.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR5 — Queue Actions and Renewal Workflow"
+    ]
+  },
+  {
+    "id": "F076",
+    "description": "Enforce snooze date must be in the future on action validation.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR5 — Queue Actions and Renewal Workflow"
+    ]
+  },
+  {
+    "id": "F077",
+    "description": "Expose queue row action availability based on current status.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR5 — Queue Actions and Renewal Workflow"
+    ]
+  },
+  {
+    "id": "F078",
+    "description": "Show optimistic UI state while queue actions are in-flight.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR5 — Queue Actions and Renewal Workflow"
+    ]
+  },
+  {
+    "id": "F079",
+    "description": "Refresh affected queue row state after successful action response.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR5 — Queue Actions and Renewal Workflow"
+    ]
+  },
+  {
+    "id": "F080",
+    "description": "Include linked draft contract id in queue row once renewal draft is created.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR5 — Queue Actions and Renewal Workflow"
+    ]
+  },
+  {
+    "id": "F081",
+    "description": "Include linked ticket id in queue row once due-date ticket is created.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR5 — Queue Actions and Renewal Workflow"
+    ]
+  },
+  {
+    "id": "F082",
+    "description": "Mark work item completed when renewed contract activation is confirmed.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR5 — Queue Actions and Renewal Workflow"
+    ]
+  },
+  {
+    "id": "F083",
+    "description": "Mark work item completed when non-renewal finalization is confirmed.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR5 — Queue Actions and Renewal Workflow"
+    ]
+  },
+  {
+    "id": "F084",
+    "description": "Create scheduled renewal processor that scans due decision windows for active contracts.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR6 — Automation and Ticket Creation"
+    ]
+  },
+  {
+    "id": "F085",
+    "description": "Upsert renewal work items during scheduled processing for newly eligible cycles.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR6 — Automation and Ticket Creation"
+    ]
+  },
+  {
+    "id": "F086",
+    "description": "Respect tenant default due-date action policy during scheduled processing.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR6 — Automation and Ticket Creation"
+    ]
+  },
+  {
+    "id": "F087",
+    "description": "Respect contract-level override due-date action policy during scheduled processing.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR6 — Automation and Ticket Creation"
+    ]
+  },
+  {
+    "id": "F088",
+    "description": "Create internal ticket at decision due date when effective policy is create_ticket.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR6 — Automation and Ticket Creation"
+    ]
+  },
+  {
+    "id": "F089",
+    "description": "Call workflow runtime tickets.create action for renewal ticket creation path.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR6 — Automation and Ticket Creation"
+    ]
+  },
+  {
+    "id": "F090",
+    "description": "Populate renewal ticket title with client and contract context.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR6 — Automation and Ticket Creation"
+    ]
+  },
+  {
+    "id": "F091",
+    "description": "Populate renewal ticket description with due date and renewal settings context.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR6 — Automation and Ticket Creation"
+    ]
+  },
+  {
+    "id": "F092",
+    "description": "Populate renewal ticket routing fields from effective renewal ticket defaults.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR6 — Automation and Ticket Creation"
+    ]
+  },
+  {
+    "id": "F093",
+    "description": "Persist created ticket id on renewal work item after successful ticket creation.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR6 — Automation and Ticket Creation"
+    ]
+  },
+  {
+    "id": "F094",
+    "description": "Use idempotency key per tenant/client_contract_id/cycle key for ticket creation.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR6 — Automation and Ticket Creation"
+    ]
+  },
+  {
+    "id": "F095",
+    "description": "Skip duplicate ticket creation when idempotent renewal cycle already has linked ticket.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR6 — Automation and Ticket Creation"
+    ]
+  },
+  {
+    "id": "F096",
+    "description": "Record automation_error on work item when ticket creation fails.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR6 — Automation and Ticket Creation"
+    ]
+  },
+  {
+    "id": "F097",
+    "description": "Allow manual retry action to re-attempt ticket creation for failed work items.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR6 — Automation and Ticket Creation"
+    ]
+  },
+  {
+    "id": "F098",
+    "description": "Ensure due-date automation supports queue-only policy without creating tickets.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR6 — Automation and Ticket Creation"
+    ]
+  },
+  {
+    "id": "F099",
+    "description": "Publish/emit renewal-upcoming domain event payloads compatible with queue creation semantics.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR6 — Automation and Ticket Creation"
+    ]
+  },
+  {
+    "id": "F100",
+    "description": "Generate renewal queue entries for evergreen contracts based on annual review cycle.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR7 — Evergreen Annual Review Flow"
+    ]
+  },
+  {
+    "id": "F101",
+    "description": "Display evergreen contract type badge in queue rows.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR7 — Evergreen Annual Review Flow"
+    ]
+  },
+  {
+    "id": "F102",
+    "description": "Show evergreen cycle anchor date in queue row details.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR7 — Evergreen Annual Review Flow"
+    ]
+  },
+  {
+    "id": "F103",
+    "description": "Support mark-renewing action for evergreen queue entries.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR7 — Evergreen Annual Review Flow"
+    ]
+  },
+  {
+    "id": "F104",
+    "description": "Support mark-non-renewing action for evergreen queue entries.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR7 — Evergreen Annual Review Flow"
+    ]
+  },
+  {
+    "id": "F105",
+    "description": "Support create-renewal-draft action for evergreen queue entries.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR7 — Evergreen Annual Review Flow"
+    ]
+  },
+  {
+    "id": "F106",
+    "description": "Roll evergreen cycle forward to next annual window after completion.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR7 — Evergreen Annual Review Flow"
+    ]
+  },
+  {
+    "id": "F107",
+    "description": "Prevent duplicate evergreen cycle entries for the same annual period.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR7 — Evergreen Annual Review Flow"
+    ]
+  },
+  {
+    "id": "F108",
+    "description": "Respect evergreen-specific notice period overrides on decision date computation.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR7 — Evergreen Annual Review Flow"
+    ]
+  },
+  {
+    "id": "F109",
+    "description": "Include evergreen entries in upcoming renewals widget counts.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR7 — Evergreen Annual Review Flow"
+    ]
+  },
+  {
+    "id": "F110",
+    "description": "Extend contract expiration report action to expose decision_due_date alongside end_date where available.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR8 — Reporting and Existing Surface Alignment"
+    ]
+  },
+  {
+    "id": "F111",
+    "description": "Include renewal mode in expiration report row payload.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR8 — Reporting and Existing Surface Alignment"
+    ]
+  },
+  {
+    "id": "F112",
+    "description": "Include queue status in expiration report row payload when work item exists.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR8 — Reporting and Existing Surface Alignment"
+    ]
+  },
+  {
+    "id": "F113",
+    "description": "Keep existing expiration report rows for fixed-term contracts without renewal config.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR8 — Reporting and Existing Surface Alignment"
+    ]
+  },
+  {
+    "id": "F114",
+    "description": "Keep existing expiration report sort compatibility for existing report consumers.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR8 — Reporting and Existing Surface Alignment"
+    ]
+  },
+  {
+    "id": "F115",
+    "description": "Expose at-risk count based on decision_due_date windows for dashboard usage.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR8 — Reporting and Existing Surface Alignment"
+    ]
+  },
+  {
+    "id": "F116",
+    "description": "Align contract reports tab expiration copy to reference renewal decisions as well as expiration.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR8 — Reporting and Existing Surface Alignment"
+    ]
+  },
+  {
+    "id": "F117",
+    "description": "Ensure legacy auto_renew display derives from new renewal mode values.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR8 — Reporting and Existing Surface Alignment"
+    ]
+  },
+  {
+    "id": "F118",
+    "description": "Register renewal scheduled processing job in pg-boss on-prem scheduling path.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR9 — Runtime Compatibility (On-prem PG Boss vs Hosted/EE Temporal)"
+    ]
+  },
+  {
+    "id": "F119",
+    "description": "Register renewal scheduled processing workflow in Temporal hosted/EE scheduling path.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR9 — Runtime Compatibility (On-prem PG Boss vs Hosted/EE Temporal)"
+    ]
+  },
+  {
+    "id": "F120",
+    "description": "Use shared renewal processing core logic callable from both pg-boss and Temporal adapters.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR9 — Runtime Compatibility (On-prem PG Boss vs Hosted/EE Temporal)"
+    ]
+  },
+  {
+    "id": "F121",
+    "description": "Keep effective behavior parity for queue creation between pg-boss and Temporal runners.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR9 — Runtime Compatibility (On-prem PG Boss vs Hosted/EE Temporal)"
+    ]
+  },
+  {
+    "id": "F122",
+    "description": "Keep effective behavior parity for ticket creation idempotency between pg-boss and Temporal runners.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR9 — Runtime Compatibility (On-prem PG Boss vs Hosted/EE Temporal)"
+    ]
+  },
+  {
+    "id": "F123",
+    "description": "Honor existing JobRunnerFactory runtime selection without forcing edition-specific code forks in business logic.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR9 — Runtime Compatibility (On-prem PG Boss vs Hosted/EE Temporal)"
+    ]
+  },
+  {
+    "id": "F124",
+    "description": "Fallback gracefully to supported runner path when temporal bootstrap is unavailable.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR9 — Runtime Compatibility (On-prem PG Boss vs Hosted/EE Temporal)"
+    ]
+  },
+  {
+    "id": "F125",
+    "description": "Preserve tenant-scoped execution semantics in both runtime paths.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR9 — Runtime Compatibility (On-prem PG Boss vs Hosted/EE Temporal)"
+    ]
+  },
+  {
+    "id": "F126",
+    "description": "Enforce billing read permission on renewals queue list endpoints.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR10 — Permissions, Security, and Auditability"
+    ]
+  },
+  {
+    "id": "F127",
+    "description": "Enforce billing update permission on queue mutation endpoints.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR10 — Permissions, Security, and Auditability"
+    ]
+  },
+  {
+    "id": "F128",
+    "description": "Enforce billing settings update permission on renewal defaults update endpoints.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR10 — Permissions, Security, and Auditability"
+    ]
+  },
+  {
+    "id": "F129",
+    "description": "Apply tenant filter to all renewal work-item reads by default.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR10 — Permissions, Security, and Auditability"
+    ]
+  },
+  {
+    "id": "F130",
+    "description": "Apply tenant filter to all renewal work-item writes by default.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR10 — Permissions, Security, and Auditability"
+    ]
+  },
+  {
+    "id": "F131",
+    "description": "Audit renewal state transitions with actor id and transition metadata.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR10 — Permissions, Security, and Auditability"
+    ]
+  },
+  {
+    "id": "F132",
+    "description": "Audit ticket automation linkage with actor type system and timestamp metadata.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR10 — Permissions, Security, and Auditability"
+    ]
+  },
+  {
+    "id": "F133",
+    "description": "Audit renewal draft creation linkage with actor id and timestamp metadata.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR10 — Permissions, Security, and Auditability"
+    ]
+  },
+  {
+    "id": "F134",
+    "description": "Reject cross-tenant identifiers during queue mutation validation.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR10 — Permissions, Security, and Auditability"
+    ]
+  },
+  {
+    "id": "F135",
+    "description": "Sanitize user-provided action notes before persistence and render.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > FR10 — Permissions, Security, and Auditability"
+    ]
+  },
+  {
+    "id": "F136",
+    "description": "Add migration adding renewals queue status/audit columns on client_contracts (status, snoozed_until, assigned_to, last_action, last_action_by, last_action_at, last_action_note).",
+    "implemented": true,
+    "prdRefs": [
+      "Rollout / Migration",
+      "Requirements > Functional Requirements > FR5 — Queue Actions and Renewal Workflow",
+      "Requirements > Functional Requirements > FR10 — Permissions, Security, and Auditability"
+    ]
+  },
+  {
+    "id": "F137",
+    "description": "Add migration adding renewal-cycle columns on client_contracts (decision_due_date, renewal_cycle_start, renewal_cycle_end, renewal_cycle_key).",
+    "implemented": true,
+    "prdRefs": [
+      "Rollout / Migration",
+      "Requirements > Functional Requirements > FR3 — Renewal Decision Date Engine",
+      "Requirements > Functional Requirements > FR7 — Evergreen Annual Review Flow"
+    ]
+  },
+  {
+    "id": "F138",
+    "description": "Add migration adding renewal automation linkage/policy columns on client_contracts (created_ticket_id, automation_error, renewal_due_date_action_policy, renewal_ticket_board_id, renewal_ticket_status_id, renewal_ticket_priority, renewal_ticket_assignee_id, created_draft_contract_id).",
+    "implemented": true,
+    "prdRefs": [
+      "Rollout / Migration",
+      "Requirements > Functional Requirements > FR6 — Automation and Ticket Creation"
+    ]
+  },
+  {
+    "id": "F139",
+    "description": "Add migration adding renewal configuration columns on client_contracts (renewal_mode, notice_period_days, renewal_term_months, use_tenant_renewal_defaults).",
+    "implemented": true,
+    "prdRefs": [
+      "Rollout / Migration",
+      "Requirements > Functional Requirements > FR1 — Contract Setup and Renewal Configuration",
+      "Requirements > Functional Requirements > FR2 — Tenant Defaults and Contract-Level Overrides"
+    ]
+  },
+  {
+    "id": "F140",
+    "description": "Add migration adding renewal default/policy columns on default_billing_settings (default_renewal_mode, default_notice_period_days, renewal_due_date_action_policy, renewal_ticket_board_id, renewal_ticket_status_id, renewal_ticket_priority, renewal_ticket_assignee_id).",
+    "implemented": true,
+    "prdRefs": [
+      "Rollout / Migration",
+      "Requirements > Functional Requirements > FR2 — Tenant Defaults and Contract-Level Overrides",
+      "Requirements > Functional Requirements > FR6 — Automation and Ticket Creation"
+    ]
+  },
+  {
+    "id": "F141",
+    "description": "Add migration/backfill for existing active client_contract rows to initialize deterministic renewal state/defaults and compute first decision_due_date/cycle fields.",
+    "implemented": true,
+    "prdRefs": [
+      "Rollout / Migration",
+      "Requirements > Functional Requirements > FR3 — Renewal Decision Date Engine"
+    ]
+  },
+  {
+    "id": "F142",
+    "description": "Add indexes and uniqueness constraints supporting queue filtering/sorting and cycle deduplication on client_contracts renewal fields.",
+    "implemented": true,
+    "prdRefs": [
+      "Rollout / Migration",
+      "Non-functional Requirements",
+      "Requirements > Functional Requirements > FR3 — Renewal Decision Date Engine"
+    ]
+  },
+  {
+    "id": "F143",
+    "description": "Add server-side renewal schema readiness guard that fails fast with actionable error when required renewal columns are missing.",
+    "implemented": true,
+    "prdRefs": [
+      "Rollout / Migration",
+      "Requirements > Functional Requirements > FR4 — Renewals Queue and Dashboard Entry Points",
+      "Requirements > Functional Requirements > FR6 — Automation and Ticket Creation"
+    ]
+  },
+  {
+    "id": "F144",
+    "description": "After migrations ship, remove required-column compatibility branches in renewal queue actions/jobs and run in strict migrated-schema mode.",
+    "implemented": true,
+    "prdRefs": [
+      "Rollout / Migration",
+      "Requirements > Functional Requirements > FR5 — Queue Actions and Renewal Workflow",
+      "Requirements > Functional Requirements > FR6 — Automation and Ticket Creation"
+    ]
+  }
+]

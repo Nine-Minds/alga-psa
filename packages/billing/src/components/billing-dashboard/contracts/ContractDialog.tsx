@@ -45,6 +45,12 @@ interface ContractDialogProps {
 }
 
 export function ContractDialog({ onContractSaved, editingContract, onClose, triggerButton }: ContractDialogProps) {
+  const renewalModeOptions = [
+    { value: 'manual', label: 'Manual renewal' },
+    { value: 'auto', label: 'Auto-renew' },
+    { value: 'none', label: 'Non-renewing' },
+  ];
+
   const [open, setOpen] = useState(false);
   const [contractName, setContractName] = useState(editingContract?.contract_name ?? '');
   const [contractDescription, setContractDescription] = useState(editingContract?.contract_description ?? '');
@@ -53,6 +59,10 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
   const [billingFrequency, setBillingFrequency] = useState<string>('monthly');
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
+  const [renewalMode, setRenewalMode] = useState<'none' | 'manual' | 'auto'>('manual');
+  const [useTenantRenewalDefaults, setUseTenantRenewalDefaults] = useState<boolean>(true);
+  const [noticePeriodDays, setNoticePeriodDays] = useState<string>('30');
+  const [renewalTermMonths, setRenewalTermMonths] = useState<string>('');
   const [poRequired, setPoRequired] = useState<boolean>(false);
   const [poNumber, setPoNumber] = useState<string>('');
   const [poAmountInput, setPoAmountInput] = useState<string>('');
@@ -326,6 +336,30 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
       errors.push('PO number (required when PO is enabled)');
     }
 
+    const parsedNoticePeriodDays = noticePeriodDays.trim()
+      ? Number.parseInt(noticePeriodDays.trim(), 10)
+      : undefined;
+    if (
+      !useTenantRenewalDefaults &&
+      parsedNoticePeriodDays !== undefined &&
+      (!Number.isFinite(parsedNoticePeriodDays) || parsedNoticePeriodDays < 0)
+    ) {
+      errors.push('Notice period days must be a non-negative whole number');
+    }
+
+    const parsedRenewalTermMonths = renewalTermMonths.trim()
+      ? Number.parseInt(renewalTermMonths.trim(), 10)
+      : undefined;
+    if (!useTenantRenewalDefaults && renewalMode === 'auto') {
+      if (
+        parsedRenewalTermMonths === undefined ||
+        !Number.isFinite(parsedRenewalTermMonths) ||
+        parsedRenewalTermMonths <= 0
+      ) {
+        errors.push('Renewal term months must be a positive whole number for auto-renew contracts');
+      }
+    }
+
     if (errors.length > 0) {
       setValidationErrors(errors);
       return;
@@ -408,6 +442,12 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
           start_date: startDate.toISOString().split('T')[0],
           end_date: endDate ? endDate.toISOString().split('T')[0] : null,
           is_active: saveAsActive,
+          use_tenant_renewal_defaults: useTenantRenewalDefaults,
+          renewal_mode: useTenantRenewalDefaults ? undefined : renewalMode,
+          notice_period_days:
+            !useTenantRenewalDefaults && renewalMode !== 'none' ? parsedNoticePeriodDays : undefined,
+          renewal_term_months:
+            !useTenantRenewalDefaults && renewalMode === 'auto' ? parsedRenewalTermMonths : undefined,
           po_required: poRequired,
           po_number: poRequired ? poNumber : null,
           po_amount: poRequired ? poAmount : null,
@@ -435,6 +475,10 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
     setBillingFrequency('monthly');
     setStartDate(null);
     setEndDate(null);
+    setRenewalMode('manual');
+    setUseTenantRenewalDefaults(true);
+    setNoticePeriodDays('30');
+    setRenewalTermMonths('');
     setPoRequired(false);
     setPoNumber('');
     setPoAmountInput('');
@@ -604,6 +648,75 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
                 onChange={(date) => setEndDate(date ?? null)}
                 className="w-full"
               />
+            </div>
+
+            <div className="border rounded-md p-4 space-y-3 bg-[rgb(var(--color-surface-50))]">
+              <div>
+                <h4 className="text-sm font-semibold">Renewal Settings</h4>
+                <p className="text-xs text-muted-foreground">
+                  Configure renewal behavior for this client contract assignment.
+                </p>
+              </div>
+
+              <div className="flex items-center justify-between rounded-md border border-[rgb(var(--color-border-200))] p-3">
+                <div className="space-y-1">
+                  <Label htmlFor="quick-add-use-tenant-renewal-defaults" className="text-xs font-medium">
+                    Use Tenant Renewal Defaults
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    Apply organization-level renewal mode and notice period settings.
+                  </p>
+                </div>
+                <Switch
+                  id="quick-add-use-tenant-renewal-defaults"
+                  checked={useTenantRenewalDefaults}
+                  onCheckedChange={setUseTenantRenewalDefaults}
+                />
+              </div>
+
+              {!useTenantRenewalDefaults && (
+                <div className="space-y-2">
+                  <Label htmlFor="quick-add-renewal-mode">Renewal Mode</Label>
+                  <CustomSelect
+                    id="quick-add-renewal-mode"
+                    options={renewalModeOptions}
+                    value={renewalMode}
+                    onValueChange={(value: string) => setRenewalMode(value as 'none' | 'manual' | 'auto')}
+                    placeholder="Select renewal mode"
+                    className="w-full"
+                  />
+                </div>
+              )}
+
+              {!useTenantRenewalDefaults && renewalMode !== 'none' && (
+                <div className="space-y-2">
+                  <Label htmlFor="quick-add-notice-period-days">Notice Period (Days)</Label>
+                  <Input
+                    id="quick-add-notice-period-days"
+                    type="number"
+                    min={0}
+                    step={1}
+                    value={noticePeriodDays}
+                    onChange={(e) => setNoticePeriodDays(e.target.value)}
+                    placeholder="e.g., 30"
+                  />
+                </div>
+              )}
+
+              {!useTenantRenewalDefaults && renewalMode === 'auto' && (
+                <div className="space-y-2">
+                  <Label htmlFor="quick-add-renewal-term-months">Renewal Term (Months)</Label>
+                  <Input
+                    id="quick-add-renewal-term-months"
+                    type="number"
+                    min={1}
+                    step={1}
+                    value={renewalTermMonths}
+                    onChange={(e) => setRenewalTermMonths(e.target.value)}
+                    placeholder="e.g., 12"
+                  />
+                </div>
+              )}
             </div>
 
             {/* Description */}

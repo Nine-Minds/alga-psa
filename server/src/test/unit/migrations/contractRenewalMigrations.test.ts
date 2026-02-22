@@ -1,0 +1,104 @@
+import { describe, expect, it } from 'vitest';
+import path from 'path';
+import { readFileSync } from 'node:fs';
+
+function readRepoFile(relativePathFromRepoRoot: string): string {
+  const repoRoot = path.resolve(__dirname, '../../../../..');
+  return readFileSync(path.join(repoRoot, relativePathFromRepoRoot), 'utf8');
+}
+
+describe('contract renewal migrations', () => {
+  it('T244: creates required renewal queue status/audit columns on client_contracts', () => {
+    const migration = readRepoFile(
+      'server/migrations/202602211100_add_contract_renewal_queue_status_audit_columns.cjs'
+    );
+
+    expect(migration).toContain("table.text('status').notNullable().defaultTo('pending')");
+    expect(migration).toContain("table.date('snoozed_until').nullable()");
+    expect(migration).toContain("table.uuid('assigned_to').nullable()");
+    expect(migration).toContain("table.text('last_action').nullable()");
+    expect(migration).toContain("table.uuid('last_action_by').nullable()");
+    expect(migration).toContain("table.timestamp('last_action_at').nullable()");
+    expect(migration).toContain("table.text('last_action_note').nullable()");
+    expect(migration).toContain("CHECK (status IN ('pending', 'renewing', 'non_renewing', 'snoozed', 'completed'))");
+  });
+
+  it('T245: creates required renewal-cycle columns on client_contracts', () => {
+    const migration = readRepoFile(
+      'server/migrations/202602211105_add_contract_renewal_cycle_columns.cjs'
+    );
+
+    expect(migration).toContain("table.date('decision_due_date').nullable()");
+    expect(migration).toContain("table.date('renewal_cycle_start').nullable()");
+    expect(migration).toContain("table.date('renewal_cycle_end').nullable()");
+    expect(migration).toContain("table.text('renewal_cycle_key').nullable()");
+    expect(migration).toContain("table.dropColumn('renewal_cycle_key')");
+    expect(migration).toContain("table.dropColumn('renewal_cycle_end')");
+    expect(migration).toContain("table.dropColumn('renewal_cycle_start')");
+    expect(migration).toContain("table.dropColumn('decision_due_date')");
+  });
+
+  it('T246: creates required renewal automation/policy columns on client_contracts', () => {
+    const migration = readRepoFile(
+      'server/migrations/202602211110_add_contract_renewal_automation_columns.cjs'
+    );
+
+    expect(migration).toContain("table.uuid('created_ticket_id').nullable()");
+    expect(migration).toContain("table.text('automation_error').nullable()");
+    expect(migration).toContain("table.text('renewal_due_date_action_policy').nullable()");
+    expect(migration).toContain("table.uuid('renewal_ticket_board_id').nullable()");
+    expect(migration).toContain("table.uuid('renewal_ticket_status_id').nullable()");
+    expect(migration).toContain("table.uuid('renewal_ticket_priority').nullable()");
+    expect(migration).toContain("table.uuid('renewal_ticket_assignee_id').nullable()");
+    expect(migration).toContain("table.uuid('created_draft_contract_id').nullable()");
+    expect(migration).toContain(
+      "CHECK (renewal_due_date_action_policy IN ('queue_only', 'create_ticket'))"
+    );
+  });
+
+  it('T247: creates required renewal default/policy columns on default_billing_settings', () => {
+    const migration = readRepoFile(
+      'server/migrations/202602211120_add_default_billing_renewal_columns.cjs'
+    );
+
+    expect(migration).toContain("table.text('default_renewal_mode').notNullable().defaultTo('manual')");
+    expect(migration).toContain("table.integer('default_notice_period_days').notNullable().defaultTo(30)");
+    expect(migration).toContain(
+      "table.text('renewal_due_date_action_policy').notNullable().defaultTo('create_ticket')"
+    );
+    expect(migration).toContain("table.uuid('renewal_ticket_board_id').nullable()");
+    expect(migration).toContain("table.uuid('renewal_ticket_status_id').nullable()");
+    expect(migration).toContain("table.uuid('renewal_ticket_priority').nullable()");
+    expect(migration).toContain("table.uuid('renewal_ticket_assignee_id').nullable()");
+    expect(migration).toContain("CHECK (default_renewal_mode IN ('none', 'manual', 'auto'))");
+    expect(migration).toContain('CHECK (default_notice_period_days >= 0)');
+    expect(migration).toContain(
+      "CHECK (renewal_due_date_action_policy IN ('queue_only', 'create_ticket'))"
+    );
+  });
+
+  it('T248: backfill migration initializes deterministic renewal state for active fixed-term assignments', () => {
+    const migration = readRepoFile(
+      'server/migrations/202602211125_backfill_active_client_contract_renewal_defaults.cjs'
+    );
+
+    expect(migration).toContain('UPDATE client_contracts cc');
+    expect(migration).toContain("renewal_mode = COALESCE(cc.renewal_mode, 'manual')");
+    expect(migration).toContain('notice_period_days = COALESCE(cc.notice_period_days, 30)');
+    expect(migration).toContain(
+      'use_tenant_renewal_defaults = COALESCE(cc.use_tenant_renewal_defaults, true)'
+    );
+    expect(migration).toContain('decision_due_date = COALESCE(');
+    expect(migration).toContain(
+      "cc.end_date::date - (COALESCE(cc.notice_period_days, 30) * INTERVAL '1 day')"
+    );
+    expect(migration).toContain('renewal_cycle_start = COALESCE(cc.renewal_cycle_start, cc.start_date::date)');
+    expect(migration).toContain('renewal_cycle_end = COALESCE(cc.renewal_cycle_end, cc.end_date::date)');
+    expect(migration).toContain(
+      "renewal_cycle_key = COALESCE(cc.renewal_cycle_key, CONCAT('fixed-term:', cc.end_date::date::text))"
+    );
+    expect(migration).toContain("AND cc.is_active = true");
+    expect(migration).toContain("AND c.status = 'active'");
+    expect(migration).toContain('AND cc.end_date IS NOT NULL');
+  });
+});

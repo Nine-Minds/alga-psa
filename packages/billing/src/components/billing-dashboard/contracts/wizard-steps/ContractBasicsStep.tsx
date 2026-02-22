@@ -133,10 +133,19 @@ export function ContractBasicsStep({
     value: template.contract_id,
     label: template.contract_name,
   }));
+  const renewalModeOptions = [
+    { value: 'none', label: 'No Renewal' },
+    { value: 'manual', label: 'Manual Renewal' },
+    { value: 'auto', label: 'Auto Renew' },
+  ];
 
   const selectedTemplate = selectedTemplateId
     ? templates.find((template) => template.contract_id === selectedTemplateId)
     : undefined;
+  const effectiveRenewalMode = data.renewal_mode ?? 'manual';
+  const isRenewalEnabled = effectiveRenewalMode !== 'none';
+  const isAutoRenew = effectiveRenewalMode === 'auto';
+  const useTenantRenewalDefaults = data.use_tenant_renewal_defaults ?? true;
 
   return (
     <div className="space-y-6" data-automation-id="contract-basics-step">
@@ -324,6 +333,214 @@ export function ContractBasicsStep({
         )}
       </div>
 
+      {data.end_date && (
+        <div
+          className="border border-[rgb(var(--color-border-200))] rounded-md p-4 space-y-2 bg-[rgb(var(--color-surface-50))]"
+          data-automation-id="renewal-settings-fixed-term-card"
+        >
+          <div className="flex items-center gap-2">
+            <Repeat className="h-4 w-4 text-[rgb(var(--color-primary-600))]" />
+            <h4 className="text-sm font-semibold">Renewal Settings</h4>
+          </div>
+          <p className="text-xs text-[rgb(var(--color-text-500))]">
+            This contract has a fixed end date. Configure renewal behavior and notice timing.
+          </p>
+          <div className="flex items-center justify-between rounded-md border border-[rgb(var(--color-border-200))] p-3">
+            <div className="space-y-1">
+              <Label htmlFor="use-tenant-renewal-defaults-fixed" className="text-xs font-medium">
+                Use Tenant Renewal Defaults
+              </Label>
+              <p className="text-xs text-[rgb(var(--color-text-500))]">
+                Apply organization-level renewal settings unless explicitly overridden.
+              </p>
+            </div>
+            <Switch
+              id="use-tenant-renewal-defaults-fixed"
+              checked={useTenantRenewalDefaults}
+              onCheckedChange={(checked) =>
+                updateData({ use_tenant_renewal_defaults: checked })
+              }
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="renewal-mode-fixed" className="text-xs font-medium">
+              Renewal Mode
+            </Label>
+            <CustomSelect
+              id="renewal-mode-fixed"
+              options={renewalModeOptions}
+              value={effectiveRenewalMode}
+              onValueChange={(value: string) =>
+                updateData({
+                  renewal_mode: value as NonNullable<ContractWizardData['renewal_mode']>,
+                })
+              }
+              placeholder="Select renewal mode"
+              className="w-full"
+            />
+          </div>
+          {isRenewalEnabled && (
+            <div className="space-y-2">
+              <Label htmlFor="notice-period-fixed" className="text-xs font-medium">
+                Notice Period (Days)
+              </Label>
+              <Input
+                id="notice-period-fixed"
+                type="number"
+                min={0}
+                step={1}
+                value={data.notice_period_days ?? ''}
+                onChange={(e) => {
+                  const nextValue = e.target.value.trim();
+                  if (!nextValue) {
+                    updateData({ notice_period_days: undefined });
+                    return;
+                  }
+                  const parsed = Number.parseInt(nextValue, 10);
+                  updateData({
+                    notice_period_days: Number.isFinite(parsed) ? Math.max(0, parsed) : undefined,
+                  });
+                }}
+                placeholder="e.g., 30"
+                className="w-full"
+              />
+            </div>
+          )}
+          {isAutoRenew && (
+            <div className="space-y-2">
+              <Label htmlFor="renewal-term-fixed" className="text-xs font-medium">
+                Renewal Term (Months)
+              </Label>
+              <Input
+                id="renewal-term-fixed"
+                type="number"
+                min={1}
+                step={1}
+                value={data.renewal_term_months ?? ''}
+                onChange={(e) => {
+                  const nextValue = e.target.value.trim();
+                  if (!nextValue) {
+                    updateData({ renewal_term_months: undefined });
+                    return;
+                  }
+                  const parsed = Number.parseInt(nextValue, 10);
+                  updateData({
+                    renewal_term_months:
+                      Number.isFinite(parsed) && parsed > 0 ? parsed : undefined,
+                  });
+                }}
+                placeholder="e.g., 12"
+                className="w-full"
+              />
+            </div>
+          )}
+        </div>
+      )}
+
+      {!data.end_date && (
+        <div
+          className="border border-[rgb(var(--color-border-200))] rounded-md p-4 space-y-2 bg-[rgb(var(--color-surface-50))]"
+          data-automation-id="renewal-settings-evergreen-card"
+        >
+          <div className="flex items-center gap-2">
+            <Repeat className="h-4 w-4 text-[rgb(var(--color-primary-600))]" />
+            <h4 className="text-sm font-semibold">Evergreen Review Settings</h4>
+          </div>
+          <p className="text-xs text-[rgb(var(--color-text-500))]">
+            This contract is ongoing. Configure annual review cadence and notice timing.
+          </p>
+          <div className="flex items-center justify-between rounded-md border border-[rgb(var(--color-border-200))] p-3">
+            <div className="space-y-1">
+              <Label htmlFor="use-tenant-renewal-defaults-evergreen" className="text-xs font-medium">
+                Use Tenant Renewal Defaults
+              </Label>
+              <p className="text-xs text-[rgb(var(--color-text-500))]">
+                Apply organization-level renewal settings unless explicitly overridden.
+              </p>
+            </div>
+            <Switch
+              id="use-tenant-renewal-defaults-evergreen"
+              checked={useTenantRenewalDefaults}
+              onCheckedChange={(checked) =>
+                updateData({ use_tenant_renewal_defaults: checked })
+              }
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="renewal-mode-evergreen" className="text-xs font-medium">
+              Renewal Mode
+            </Label>
+            <CustomSelect
+              id="renewal-mode-evergreen"
+              options={renewalModeOptions}
+              value={effectiveRenewalMode}
+              onValueChange={(value: string) =>
+                updateData({
+                  renewal_mode: value as NonNullable<ContractWizardData['renewal_mode']>,
+                })
+              }
+              placeholder="Select renewal mode"
+              className="w-full"
+            />
+          </div>
+          {isRenewalEnabled && (
+            <div className="space-y-2">
+              <Label htmlFor="notice-period-evergreen" className="text-xs font-medium">
+                Notice Period (Days)
+              </Label>
+              <Input
+                id="notice-period-evergreen"
+                type="number"
+                min={0}
+                step={1}
+                value={data.notice_period_days ?? ''}
+                onChange={(e) => {
+                  const nextValue = e.target.value.trim();
+                  if (!nextValue) {
+                    updateData({ notice_period_days: undefined });
+                    return;
+                  }
+                  const parsed = Number.parseInt(nextValue, 10);
+                  updateData({
+                    notice_period_days: Number.isFinite(parsed) ? Math.max(0, parsed) : undefined,
+                  });
+                }}
+                placeholder="e.g., 30"
+                className="w-full"
+              />
+            </div>
+          )}
+          {isAutoRenew && (
+            <div className="space-y-2">
+              <Label htmlFor="renewal-term-evergreen" className="text-xs font-medium">
+                Renewal Term (Months)
+              </Label>
+              <Input
+                id="renewal-term-evergreen"
+                type="number"
+                min={1}
+                step={1}
+                value={data.renewal_term_months ?? ''}
+                onChange={(e) => {
+                  const nextValue = e.target.value.trim();
+                  if (!nextValue) {
+                    updateData({ renewal_term_months: undefined });
+                    return;
+                  }
+                  const parsed = Number.parseInt(nextValue, 10);
+                  updateData({
+                    renewal_term_months:
+                      Number.isFinite(parsed) && parsed > 0 ? parsed : undefined,
+                  });
+                }}
+                placeholder="e.g., 12"
+                className="w-full"
+              />
+            </div>
+          )}
+        </div>
+      )}
+
       <div className="space-y-2">
         <Label htmlFor="description">Description (Optional)</Label>
         <TextArea
@@ -457,6 +674,28 @@ export function ContractBasicsStep({
                   ? ` - ${formatDateFns(parseLocalYMD(data.end_date)!, 'MM/dd/yyyy')}`
                   : ' (Ongoing)'}
               </p>
+              {data.renewal_mode && (
+                <p>
+                  <strong>Renewal Mode:</strong>{' '}
+                  {data.renewal_mode === 'none'
+                    ? 'No Renewal'
+                    : data.renewal_mode === 'manual'
+                      ? 'Manual Renewal'
+                      : 'Auto Renew'}
+                </p>
+              )}
+              {data.renewal_mode && data.renewal_mode !== 'none' && data.notice_period_days !== undefined && (
+                <p>
+                  <strong>Notice Period:</strong> {data.notice_period_days} day
+                  {data.notice_period_days === 1 ? '' : 's'}
+                </p>
+              )}
+              {data.renewal_mode === 'auto' && data.renewal_term_months !== undefined && (
+                <p>
+                  <strong>Renewal Term:</strong> {data.renewal_term_months} month
+                  {data.renewal_term_months === 1 ? '' : 's'}
+                </p>
+              )}
               {data.po_required && (
                 <>
                   <p>

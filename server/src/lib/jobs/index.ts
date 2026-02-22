@@ -12,6 +12,7 @@ import { handleReconcileBucketUsage, ReconcileBucketUsageJobData } from './handl
 import { handleAssetImportJob, AssetImportJobData } from './handlers/assetImportHandler';
 import { emailWebhookMaintenanceHandler, EmailWebhookMaintenanceJobData } from './handlers/emailWebhookMaintenanceHandler';
 import { renewGoogleGmailWatchSubscriptions, GoogleGmailWatchRenewalJobData } from './handlers/googleGmailWatchRenewalHandler';
+import { processRenewalQueueHandler, RenewalQueueProcessorJobData } from './handlers/processRenewalQueueHandler';
 import { cleanupTemporaryFormsJob } from '../../services/cleanupTemporaryFormsJob';
 import { cleanupAiSessionKeysHandler, CleanupAiSessionKeysJobData } from './handlers/cleanupAiSessionKeysHandler';
 import {
@@ -121,6 +122,14 @@ export const initializeScheduler = async (storageService?: StorageService) => {
       await emailWebhookMaintenanceHandler(job);
     });
 
+    // Register renewal queue processing handler
+    jobScheduler.registerJobHandler<RenewalQueueProcessorJobData>(
+      'process-renewal-queue',
+      async (job: Job<RenewalQueueProcessorJobData>) => {
+        await processRenewalQueueHandler(job.data);
+      }
+    );
+
     jobScheduler.registerJobHandler<GoogleGmailWatchRenewalJobData>('renew-google-gmail-watch', async (job: Job<GoogleGmailWatchRenewalJobData>) => {
       await renewGoogleGmailWatchSubscriptions(job.data);
     });
@@ -171,7 +180,8 @@ export type {
   GooglePubSubVerificationJobData,
   GoogleGmailWatchRenewalJobData,
   AssetImportJobData,
-  EmailWebhookMaintenanceJobData
+  EmailWebhookMaintenanceJobData,
+  RenewalQueueProcessorJobData
 };
 // Export job scheduling helper functions
 export const scheduleInvoiceGeneration = async (
@@ -368,3 +378,15 @@ export const scheduleEmailWebhookMaintenanceJob = async (
   );
 };
 
+export const scheduleRenewalQueueProcessingJob = async (
+  tenantId: string,
+  horizonDays: number = 90,
+  cronExpression: string = '0 5 * * *'
+): Promise<string | null> => {
+  const scheduler = await initializeScheduler();
+  return await scheduler.scheduleRecurringJob<RenewalQueueProcessorJobData>(
+    'process-renewal-queue',
+    cronExpression,
+    { tenantId, horizonDays }
+  );
+};

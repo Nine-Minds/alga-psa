@@ -1,0 +1,2063 @@
+[
+  {
+    "id": "T001",
+    "description": "Functional: Extend ContractWizardData with renewal mode, notice period, term months, and override toggle fields.",
+    "implemented": true,
+    "featureIds": [
+      "F001"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "Functional: Initialize renewal fields in ContractWizard default state for new contracts.",
+    "implemented": true,
+    "featureIds": [
+      "F002"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "Functional: Hydrate renewal fields when resuming draft contracts in the wizard.",
+    "implemented": true,
+    "featureIds": [
+      "F003"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "Functional: Hydrate renewal fields when editing existing contracts in the wizard.",
+    "implemented": true,
+    "featureIds": [
+      "F004"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "Functional: Render Renewal Settings card in ContractBasicsStep when end date is present.",
+    "implemented": true,
+    "featureIds": [
+      "F005"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "Functional: Render Evergreen Review settings card in ContractBasicsStep when end date is absent.",
+    "implemented": true,
+    "featureIds": [
+      "F006"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "Functional: Show renewal mode selector with values none/manual/auto in ContractBasicsStep.",
+    "implemented": true,
+    "featureIds": [
+      "F007"
+    ]
+  },
+  {
+    "id": "T008",
+    "description": "Functional: Show notice period selector/input in ContractBasicsStep for renewal-enabled modes.",
+    "implemented": true,
+    "featureIds": [
+      "F008"
+    ]
+  },
+  {
+    "id": "T009",
+    "description": "Functional: Show renewal term behavior input in ContractBasicsStep for auto-renew mode.",
+    "implemented": true,
+    "featureIds": [
+      "F009"
+    ]
+  },
+  {
+    "id": "T010",
+    "description": "Functional: Hide auto-renew-specific term controls when renewal mode is not auto.",
+    "implemented": true,
+    "featureIds": [
+      "F010"
+    ]
+  },
+  {
+    "id": "T011",
+    "description": "Functional: Validate renewal mode is required when an end date is set.",
+    "implemented": true,
+    "featureIds": [
+      "F011"
+    ]
+  },
+  {
+    "id": "T012",
+    "description": "Functional: Validate notice period is a non-negative integer within configured bounds.",
+    "implemented": true,
+    "featureIds": [
+      "F012"
+    ]
+  },
+  {
+    "id": "T013",
+    "description": "Functional: Validate renewal term months is positive when explicitly provided.",
+    "implemented": true,
+    "featureIds": [
+      "F013"
+    ]
+  },
+  {
+    "id": "T014",
+    "description": "Functional: Show inline validation errors for invalid renewal settings before wizard progression.",
+    "implemented": true,
+    "featureIds": [
+      "F014"
+    ]
+  },
+  {
+    "id": "T015",
+    "description": "Functional: Include renewal fields in contract summary preview in ContractBasicsStep.",
+    "implemented": true,
+    "featureIds": [
+      "F015"
+    ]
+  },
+  {
+    "id": "T016",
+    "description": "Functional: Include renewal fields in review step payload preview before submit.",
+    "implemented": true,
+    "featureIds": [
+      "F016"
+    ]
+  },
+  {
+    "id": "T017",
+    "description": "Functional: Persist renewal fields in ClientContractWizardSubmission payload builder.",
+    "implemented": true,
+    "featureIds": [
+      "F017"
+    ]
+  },
+  {
+    "id": "T018",
+    "description": "Functional: Persist renewal fields when saving draft contracts from wizard.",
+    "implemented": true,
+    "featureIds": [
+      "F018"
+    ]
+  },
+  {
+    "id": "T019",
+    "description": "Functional: Add tenant default renewal mode field to default billing settings model.",
+    "implemented": true,
+    "featureIds": [
+      "F019"
+    ]
+  },
+  {
+    "id": "T020",
+    "description": "Functional: Add tenant default notice period days field to default billing settings model.",
+    "implemented": true,
+    "featureIds": [
+      "F020"
+    ]
+  },
+  {
+    "id": "T021",
+    "description": "Functional: Add tenant default due-date action policy field to default billing settings model.",
+    "implemented": true,
+    "featureIds": [
+      "F021"
+    ]
+  },
+  {
+    "id": "T022",
+    "description": "Functional: Add tenant default renewal ticket board field to default billing settings model.",
+    "implemented": true,
+    "featureIds": [
+      "F022"
+    ]
+  },
+  {
+    "id": "T023",
+    "description": "Functional: Add tenant default renewal ticket status field to default billing settings model.",
+    "implemented": true,
+    "featureIds": [
+      "F023"
+    ]
+  },
+  {
+    "id": "T024",
+    "description": "Functional: Add tenant default renewal ticket priority field to default billing settings model.",
+    "implemented": true,
+    "featureIds": [
+      "F024"
+    ]
+  },
+  {
+    "id": "T025",
+    "description": "Functional: Add tenant default renewal ticket assignee field to default billing settings model.",
+    "implemented": true,
+    "featureIds": [
+      "F025"
+    ]
+  },
+  {
+    "id": "T026",
+    "description": "Functional: Expose renewal defaults in getDefaultBillingSettings action response.",
+    "implemented": true,
+    "featureIds": [
+      "F026"
+    ]
+  },
+  {
+    "id": "T027",
+    "description": "Functional: Persist renewal defaults in updateDefaultBillingSettings action writes.",
+    "implemented": true,
+    "featureIds": [
+      "F027"
+    ]
+  },
+  {
+    "id": "T028",
+    "description": "Functional: Add use-tenant-defaults toggle to contract renewal settings payload.",
+    "implemented": true,
+    "featureIds": [
+      "F028"
+    ]
+  },
+  {
+    "id": "T029",
+    "description": "Functional: Apply tenant defaults to contract assignment when override toggle is enabled.",
+    "implemented": true,
+    "featureIds": [
+      "F029"
+    ]
+  },
+  {
+    "id": "T030",
+    "description": "Functional: Apply explicit contract-level override values when override toggle is disabled.",
+    "implemented": true,
+    "featureIds": [
+      "F030"
+    ]
+  },
+  {
+    "id": "T031",
+    "description": "Functional: Enforce deterministic fallback precedence when override fields are partially missing.",
+    "implemented": true,
+    "featureIds": [
+      "F031"
+    ]
+  },
+  {
+    "id": "T032",
+    "description": "Functional: Expose effective renewal settings in contract assignment read APIs.",
+    "implemented": true,
+    "featureIds": [
+      "F032"
+    ]
+  },
+  {
+    "id": "T033",
+    "description": "Functional: Compute decision_due_date for fixed-term assignments using end_date minus notice_period_days.",
+    "implemented": true,
+    "featureIds": [
+      "F033"
+    ]
+  },
+  {
+    "id": "T034",
+    "description": "Functional: Compute next evergreen review anchor date from active contract anniversary rules.",
+    "implemented": true,
+    "featureIds": [
+      "F034"
+    ]
+  },
+  {
+    "id": "T035",
+    "description": "Functional: Compute evergreen decision_due_date using anchor date minus notice_period_days.",
+    "implemented": true,
+    "featureIds": [
+      "F035"
+    ]
+  },
+  {
+    "id": "T036",
+    "description": "Functional: Normalize decision_due_date calculations to date-only semantics used by client_contracts.",
+    "implemented": true,
+    "featureIds": [
+      "F036"
+    ]
+  },
+  {
+    "id": "T037",
+    "description": "Functional: Recompute decision_due_date when contract end_date changes.",
+    "implemented": true,
+    "featureIds": [
+      "F037"
+    ]
+  },
+  {
+    "id": "T038",
+    "description": "Functional: Recompute decision_due_date when notice period changes.",
+    "implemented": true,
+    "featureIds": [
+      "F038"
+    ]
+  },
+  {
+    "id": "T039",
+    "description": "Functional: Recompute decision_due_date when renewal mode changes between none/manual/auto.",
+    "implemented": true,
+    "featureIds": [
+      "F039"
+    ]
+  },
+  {
+    "id": "T040",
+    "description": "Functional: Recompute decision_due_date when evergreen anchor basis changes.",
+    "implemented": true,
+    "featureIds": [
+      "F040"
+    ]
+  },
+  {
+    "id": "T041",
+    "description": "Functional: Skip decision_due_date generation for terminated/expired contract assignments.",
+    "implemented": true,
+    "featureIds": [
+      "F041"
+    ]
+  },
+  {
+    "id": "T042",
+    "description": "Functional: Skip decision_due_date generation when renewal mode is none and no evergreen review is configured.",
+    "implemented": true,
+    "featureIds": [
+      "F042"
+    ]
+  },
+  {
+    "id": "T043",
+    "description": "Functional: Create one renewal cycle key per contract assignment cycle for deduplication.",
+    "implemented": true,
+    "featureIds": [
+      "F043"
+    ]
+  },
+  {
+    "id": "T044",
+    "description": "Functional: Prevent duplicate active renewal work items for same tenant/client_contract_id/cycle key.",
+    "implemented": true,
+    "featureIds": [
+      "F044"
+    ]
+  },
+  {
+    "id": "T045",
+    "description": "Functional: Persist cycle_start and cycle_end boundaries for each generated renewal cycle.",
+    "implemented": true,
+    "featureIds": [
+      "F045"
+    ]
+  },
+  {
+    "id": "T046",
+    "description": "Functional: Expose days_until_due as derived queue field for UI sorting and badges.",
+    "implemented": true,
+    "featureIds": [
+      "F046"
+    ]
+  },
+  {
+    "id": "T047",
+    "description": "Functional: Clamp past-due decision calculations into queue visibility without negative date corruption.",
+    "implemented": true,
+    "featureIds": [
+      "F047"
+    ]
+  },
+  {
+    "id": "T048",
+    "description": "Functional: Add renewals tab value and metadata to billing tab configuration.",
+    "implemented": true,
+    "featureIds": [
+      "F048"
+    ]
+  },
+  {
+    "id": "T049",
+    "description": "Functional: Add Renewals Tabs.Content route to BillingDashboard tab host.",
+    "implemented": true,
+    "featureIds": [
+      "F049"
+    ]
+  },
+  {
+    "id": "T050",
+    "description": "Functional: Add Renewals queue page component under billing dashboard components.",
+    "implemented": true,
+    "featureIds": [
+      "F050"
+    ]
+  },
+  {
+    "id": "T051",
+    "description": "Functional: Load renewal queue rows from server action on Renewals page mount.",
+    "implemented": true,
+    "featureIds": [
+      "F051"
+    ]
+  },
+  {
+    "id": "T052",
+    "description": "Functional: Render default 90-day horizon rows in Renewals queue.",
+    "implemented": true,
+    "featureIds": [
+      "F052"
+    ]
+  },
+  {
+    "id": "T053",
+    "description": "Functional: Render bucket quick filters for 0-30, 31-60, and 61-90 days.",
+    "implemented": true,
+    "featureIds": [
+      "F053"
+    ]
+  },
+  {
+    "id": "T054",
+    "description": "Functional: Render owner filter for assigned user in Renewals queue.",
+    "implemented": true,
+    "featureIds": [
+      "F054"
+    ]
+  },
+  {
+    "id": "T055",
+    "description": "Functional: Render status filter for pending/renewing/non_renewing/snoozed/completed.",
+    "implemented": true,
+    "featureIds": [
+      "F055"
+    ]
+  },
+  {
+    "id": "T056",
+    "description": "Functional: Render renewal mode filter for none/manual/auto.",
+    "implemented": true,
+    "featureIds": [
+      "F056"
+    ]
+  },
+  {
+    "id": "T057",
+    "description": "Functional: Render contract type filter for fixed-term versus evergreen entries.",
+    "implemented": true,
+    "featureIds": [
+      "F057"
+    ]
+  },
+  {
+    "id": "T058",
+    "description": "Functional: Sort queue by decision_due_date ascending by default.",
+    "implemented": true,
+    "featureIds": [
+      "F058"
+    ]
+  },
+  {
+    "id": "T059",
+    "description": "Functional: Show days-remaining visual state for due-soon and overdue entries.",
+    "implemented": true,
+    "featureIds": [
+      "F059"
+    ]
+  },
+  {
+    "id": "T060",
+    "description": "Functional: Add Upcoming Renewals summary widget to ClientContractsTab.",
+    "implemented": true,
+    "featureIds": [
+      "F060"
+    ]
+  },
+  {
+    "id": "T061",
+    "description": "Functional: Show 90-day bucket counts in ClientContractsTab upcoming renewals widget.",
+    "implemented": true,
+    "featureIds": [
+      "F061"
+    ]
+  },
+  {
+    "id": "T062",
+    "description": "Functional: Navigate from upcoming renewals widget to Renewals tab preserving filter context.",
+    "implemented": true,
+    "featureIds": [
+      "F062"
+    ]
+  },
+  {
+    "id": "T063",
+    "description": "Functional: Refresh widget counts after queue action mutations complete.",
+    "implemented": true,
+    "featureIds": [
+      "F063"
+    ]
+  },
+  {
+    "id": "T064",
+    "description": "Functional: Define queue status enum values pending/renewing/non_renewing/snoozed/completed in renewal work-item model.",
+    "implemented": true,
+    "featureIds": [
+      "F064"
+    ]
+  },
+  {
+    "id": "T065",
+    "description": "Functional: Implement mark-renewing action that transitions pending entries to renewing.",
+    "implemented": true,
+    "featureIds": [
+      "F065"
+    ]
+  },
+  {
+    "id": "T066",
+    "description": "Functional: Implement mark-non-renewing action that transitions pending entries to non_renewing.",
+    "implemented": true,
+    "featureIds": [
+      "F066"
+    ]
+  },
+  {
+    "id": "T067",
+    "description": "Functional: Implement create-renewal-draft action for eligible queue entries.",
+    "implemented": true,
+    "featureIds": [
+      "F067"
+    ]
+  },
+  {
+    "id": "T068",
+    "description": "Functional: Implement snooze action that sets status to snoozed with snoozed_until date.",
+    "implemented": true,
+    "featureIds": [
+      "F068"
+    ]
+  },
+  {
+    "id": "T069",
+    "description": "Functional: Implement assign-owner action to set assigned_to on renewal work item.",
+    "implemented": true,
+    "featureIds": [
+      "F069"
+    ]
+  },
+  {
+    "id": "T070",
+    "description": "Functional: Implement unsnooze transition back to pending when snooze period elapses.",
+    "implemented": true,
+    "featureIds": [
+      "F070"
+    ]
+  },
+  {
+    "id": "T071",
+    "description": "Functional: Persist action actor user id on each queue mutation.",
+    "implemented": true,
+    "featureIds": [
+      "F071"
+    ]
+  },
+  {
+    "id": "T072",
+    "description": "Functional: Persist action timestamp on each queue mutation.",
+    "implemented": true,
+    "featureIds": [
+      "F072"
+    ]
+  },
+  {
+    "id": "T073",
+    "description": "Functional: Persist action reason/note text on queue mutation when provided.",
+    "implemented": true,
+    "featureIds": [
+      "F073"
+    ]
+  },
+  {
+    "id": "T074",
+    "description": "Functional: Prevent invalid transition from completed back to pending without explicit reopen action.",
+    "implemented": true,
+    "featureIds": [
+      "F074"
+    ]
+  },
+  {
+    "id": "T075",
+    "description": "Functional: Prevent invalid transition from non_renewing to renewing without explicit override action.",
+    "implemented": true,
+    "featureIds": [
+      "F075"
+    ]
+  },
+  {
+    "id": "T076",
+    "description": "Functional: Enforce snooze date must be in the future on action validation.",
+    "implemented": true,
+    "featureIds": [
+      "F076"
+    ]
+  },
+  {
+    "id": "T077",
+    "description": "Functional: Expose queue row action availability based on current status.",
+    "implemented": true,
+    "featureIds": [
+      "F077"
+    ]
+  },
+  {
+    "id": "T078",
+    "description": "Functional: Show optimistic UI state while queue actions are in-flight.",
+    "implemented": true,
+    "featureIds": [
+      "F078"
+    ]
+  },
+  {
+    "id": "T079",
+    "description": "Functional: Refresh affected queue row state after successful action response.",
+    "implemented": true,
+    "featureIds": [
+      "F079"
+    ]
+  },
+  {
+    "id": "T080",
+    "description": "Functional: Include linked draft contract id in queue row once renewal draft is created.",
+    "implemented": true,
+    "featureIds": [
+      "F080"
+    ]
+  },
+  {
+    "id": "T081",
+    "description": "Functional: Include linked ticket id in queue row once due-date ticket is created.",
+    "implemented": true,
+    "featureIds": [
+      "F081"
+    ]
+  },
+  {
+    "id": "T082",
+    "description": "Functional: Mark work item completed when renewed contract activation is confirmed.",
+    "implemented": true,
+    "featureIds": [
+      "F082"
+    ]
+  },
+  {
+    "id": "T083",
+    "description": "Functional: Mark work item completed when non-renewal finalization is confirmed.",
+    "implemented": true,
+    "featureIds": [
+      "F083"
+    ]
+  },
+  {
+    "id": "T084",
+    "description": "Functional: Create scheduled renewal processor that scans due decision windows for active contracts.",
+    "implemented": true,
+    "featureIds": [
+      "F084"
+    ]
+  },
+  {
+    "id": "T085",
+    "description": "Functional: Upsert renewal work items during scheduled processing for newly eligible cycles.",
+    "implemented": true,
+    "featureIds": [
+      "F085"
+    ]
+  },
+  {
+    "id": "T086",
+    "description": "Functional: Respect tenant default due-date action policy during scheduled processing.",
+    "implemented": true,
+    "featureIds": [
+      "F086"
+    ]
+  },
+  {
+    "id": "T087",
+    "description": "Functional: Respect contract-level override due-date action policy during scheduled processing.",
+    "implemented": true,
+    "featureIds": [
+      "F087"
+    ]
+  },
+  {
+    "id": "T088",
+    "description": "Functional: Create internal ticket at decision due date when effective policy is create_ticket.",
+    "implemented": true,
+    "featureIds": [
+      "F088"
+    ]
+  },
+  {
+    "id": "T089",
+    "description": "Functional: Call workflow runtime tickets.create action for renewal ticket creation path.",
+    "implemented": true,
+    "featureIds": [
+      "F089"
+    ]
+  },
+  {
+    "id": "T090",
+    "description": "Functional: Populate renewal ticket title with client and contract context.",
+    "implemented": true,
+    "featureIds": [
+      "F090"
+    ]
+  },
+  {
+    "id": "T091",
+    "description": "Functional: Populate renewal ticket description with due date and renewal settings context.",
+    "implemented": true,
+    "featureIds": [
+      "F091"
+    ]
+  },
+  {
+    "id": "T092",
+    "description": "Functional: Populate renewal ticket routing fields from effective renewal ticket defaults.",
+    "implemented": true,
+    "featureIds": [
+      "F092"
+    ]
+  },
+  {
+    "id": "T093",
+    "description": "Functional: Persist created ticket id on renewal work item after successful ticket creation.",
+    "implemented": true,
+    "featureIds": [
+      "F093"
+    ]
+  },
+  {
+    "id": "T094",
+    "description": "Functional: Use idempotency key per tenant/client_contract_id/cycle key for ticket creation.",
+    "implemented": true,
+    "featureIds": [
+      "F094"
+    ]
+  },
+  {
+    "id": "T095",
+    "description": "Functional: Skip duplicate ticket creation when idempotent renewal cycle already has linked ticket.",
+    "implemented": true,
+    "featureIds": [
+      "F095"
+    ]
+  },
+  {
+    "id": "T096",
+    "description": "Functional: Record automation_error on work item when ticket creation fails.",
+    "implemented": true,
+    "featureIds": [
+      "F096"
+    ]
+  },
+  {
+    "id": "T097",
+    "description": "Functional: Allow manual retry action to re-attempt ticket creation for failed work items.",
+    "implemented": true,
+    "featureIds": [
+      "F097"
+    ]
+  },
+  {
+    "id": "T098",
+    "description": "Functional: Ensure due-date automation supports queue-only policy without creating tickets.",
+    "implemented": true,
+    "featureIds": [
+      "F098"
+    ]
+  },
+  {
+    "id": "T099",
+    "description": "Functional: Publish/emit renewal-upcoming domain event payloads compatible with queue creation semantics.",
+    "implemented": true,
+    "featureIds": [
+      "F099"
+    ]
+  },
+  {
+    "id": "T100",
+    "description": "Functional: Generate renewal queue entries for evergreen contracts based on annual review cycle.",
+    "implemented": true,
+    "featureIds": [
+      "F100"
+    ]
+  },
+  {
+    "id": "T101",
+    "description": "Functional: Display evergreen contract type badge in queue rows.",
+    "implemented": true,
+    "featureIds": [
+      "F101"
+    ]
+  },
+  {
+    "id": "T102",
+    "description": "Functional: Show evergreen cycle anchor date in queue row details.",
+    "implemented": true,
+    "featureIds": [
+      "F102"
+    ]
+  },
+  {
+    "id": "T103",
+    "description": "Functional: Support mark-renewing action for evergreen queue entries.",
+    "implemented": true,
+    "featureIds": [
+      "F103"
+    ]
+  },
+  {
+    "id": "T104",
+    "description": "Functional: Support mark-non-renewing action for evergreen queue entries.",
+    "implemented": true,
+    "featureIds": [
+      "F104"
+    ]
+  },
+  {
+    "id": "T105",
+    "description": "Functional: Support create-renewal-draft action for evergreen queue entries.",
+    "implemented": true,
+    "featureIds": [
+      "F105"
+    ]
+  },
+  {
+    "id": "T106",
+    "description": "Functional: Roll evergreen cycle forward to next annual window after completion.",
+    "implemented": true,
+    "featureIds": [
+      "F106"
+    ]
+  },
+  {
+    "id": "T107",
+    "description": "Functional: Prevent duplicate evergreen cycle entries for the same annual period.",
+    "implemented": true,
+    "featureIds": [
+      "F107"
+    ]
+  },
+  {
+    "id": "T108",
+    "description": "Functional: Respect evergreen-specific notice period overrides on decision date computation.",
+    "implemented": true,
+    "featureIds": [
+      "F108"
+    ]
+  },
+  {
+    "id": "T109",
+    "description": "Functional: Include evergreen entries in upcoming renewals widget counts.",
+    "implemented": true,
+    "featureIds": [
+      "F109"
+    ]
+  },
+  {
+    "id": "T110",
+    "description": "Functional: Extend contract expiration report action to expose decision_due_date alongside end_date where available.",
+    "implemented": true,
+    "featureIds": [
+      "F110"
+    ]
+  },
+  {
+    "id": "T111",
+    "description": "Functional: Include renewal mode in expiration report row payload.",
+    "implemented": true,
+    "featureIds": [
+      "F111"
+    ]
+  },
+  {
+    "id": "T112",
+    "description": "Functional: Include queue status in expiration report row payload when work item exists.",
+    "implemented": true,
+    "featureIds": [
+      "F112"
+    ]
+  },
+  {
+    "id": "T113",
+    "description": "Functional: Keep existing expiration report rows for fixed-term contracts without renewal config.",
+    "implemented": true,
+    "featureIds": [
+      "F113"
+    ]
+  },
+  {
+    "id": "T114",
+    "description": "Functional: Keep existing expiration report sort compatibility for existing report consumers.",
+    "implemented": true,
+    "featureIds": [
+      "F114"
+    ]
+  },
+  {
+    "id": "T115",
+    "description": "Functional: Expose at-risk count based on decision_due_date windows for dashboard usage.",
+    "implemented": true,
+    "featureIds": [
+      "F115"
+    ]
+  },
+  {
+    "id": "T116",
+    "description": "Functional: Align contract reports tab expiration copy to reference renewal decisions as well as expiration.",
+    "implemented": true,
+    "featureIds": [
+      "F116"
+    ]
+  },
+  {
+    "id": "T117",
+    "description": "Functional: Ensure legacy auto_renew display derives from new renewal mode values.",
+    "implemented": true,
+    "featureIds": [
+      "F117"
+    ]
+  },
+  {
+    "id": "T118",
+    "description": "Functional: Register renewal scheduled processing job in pg-boss on-prem scheduling path.",
+    "implemented": true,
+    "featureIds": [
+      "F118"
+    ]
+  },
+  {
+    "id": "T119",
+    "description": "Functional: Register renewal scheduled processing workflow in Temporal hosted/EE scheduling path.",
+    "implemented": true,
+    "featureIds": [
+      "F119"
+    ]
+  },
+  {
+    "id": "T120",
+    "description": "Functional: Use shared renewal processing core logic callable from both pg-boss and Temporal adapters.",
+    "implemented": true,
+    "featureIds": [
+      "F120"
+    ]
+  },
+  {
+    "id": "T121",
+    "description": "Functional: Keep effective behavior parity for queue creation between pg-boss and Temporal runners.",
+    "implemented": true,
+    "featureIds": [
+      "F121"
+    ]
+  },
+  {
+    "id": "T122",
+    "description": "Functional: Keep effective behavior parity for ticket creation idempotency between pg-boss and Temporal runners.",
+    "implemented": true,
+    "featureIds": [
+      "F122"
+    ]
+  },
+  {
+    "id": "T123",
+    "description": "Functional: Honor existing JobRunnerFactory runtime selection without forcing edition-specific code forks in business logic.",
+    "implemented": true,
+    "featureIds": [
+      "F123"
+    ]
+  },
+  {
+    "id": "T124",
+    "description": "Functional: Fallback gracefully to supported runner path when temporal bootstrap is unavailable.",
+    "implemented": true,
+    "featureIds": [
+      "F124"
+    ]
+  },
+  {
+    "id": "T125",
+    "description": "Functional: Preserve tenant-scoped execution semantics in both runtime paths.",
+    "implemented": true,
+    "featureIds": [
+      "F125"
+    ]
+  },
+  {
+    "id": "T126",
+    "description": "Functional: Enforce billing read permission on renewals queue list endpoints.",
+    "implemented": true,
+    "featureIds": [
+      "F126"
+    ]
+  },
+  {
+    "id": "T127",
+    "description": "Functional: Enforce billing update permission on queue mutation endpoints.",
+    "implemented": true,
+    "featureIds": [
+      "F127"
+    ]
+  },
+  {
+    "id": "T128",
+    "description": "Functional: Enforce billing settings update permission on renewal defaults update endpoints.",
+    "implemented": true,
+    "featureIds": [
+      "F128"
+    ]
+  },
+  {
+    "id": "T129",
+    "description": "Functional: Apply tenant filter to all renewal work-item reads by default.",
+    "implemented": true,
+    "featureIds": [
+      "F129"
+    ]
+  },
+  {
+    "id": "T130",
+    "description": "Functional: Apply tenant filter to all renewal work-item writes by default.",
+    "implemented": true,
+    "featureIds": [
+      "F130"
+    ]
+  },
+  {
+    "id": "T131",
+    "description": "Functional: Audit renewal state transitions with actor id and transition metadata.",
+    "implemented": true,
+    "featureIds": [
+      "F131"
+    ]
+  },
+  {
+    "id": "T132",
+    "description": "Functional: Audit ticket automation linkage with actor type system and timestamp metadata.",
+    "implemented": true,
+    "featureIds": [
+      "F132"
+    ]
+  },
+  {
+    "id": "T133",
+    "description": "Functional: Audit renewal draft creation linkage with actor id and timestamp metadata.",
+    "implemented": true,
+    "featureIds": [
+      "F133"
+    ]
+  },
+  {
+    "id": "T134",
+    "description": "Functional: Reject cross-tenant identifiers during queue mutation validation.",
+    "implemented": true,
+    "featureIds": [
+      "F134"
+    ]
+  },
+  {
+    "id": "T135",
+    "description": "Functional: Sanitize user-provided action notes before persistence and render.",
+    "implemented": true,
+    "featureIds": [
+      "F135"
+    ]
+  },
+  {
+    "id": "T136",
+    "description": "Linkage correctness: 'Hydrate renewal fields when resuming draft contracts in the wizard.' stores created draft contract id on work item",
+    "implemented": true,
+    "featureIds": [
+      "F003"
+    ]
+  },
+  {
+    "id": "T137",
+    "description": "Cycle rollover: evergreen behavior remains correct across year boundary for 'Render Evergreen Review settings card in ContractBasicsStep when end date is absent.'",
+    "implemented": true,
+    "featureIds": [
+      "F006"
+    ]
+  },
+  {
+    "id": "T138",
+    "description": "Validation negative-path: Validate renewal mode is required when an end date is set.",
+    "implemented": true,
+    "featureIds": [
+      "F011"
+    ]
+  },
+  {
+    "id": "T139",
+    "description": "Validation negative-path: Validate notice period is a non-negative integer within configured bounds.",
+    "implemented": true,
+    "featureIds": [
+      "F012"
+    ]
+  },
+  {
+    "id": "T140",
+    "description": "Validation negative-path: Validate renewal term months is positive when explicitly provided.",
+    "implemented": true,
+    "featureIds": [
+      "F013"
+    ]
+  },
+  {
+    "id": "T141",
+    "description": "Linkage correctness: 'Persist renewal fields when saving draft contracts from wizard.' stores created draft contract id on work item",
+    "implemented": true,
+    "featureIds": [
+      "F018"
+    ]
+  },
+  {
+    "id": "T142",
+    "description": "Idempotency: repeated execution of 'Add tenant default renewal ticket board field to default billing settings model.' does not create duplicate tickets",
+    "implemented": true,
+    "featureIds": [
+      "F022"
+    ]
+  },
+  {
+    "id": "T143",
+    "description": "Idempotency: repeated execution of 'Add tenant default renewal ticket status field to default billing settings model.' does not create duplicate tickets",
+    "implemented": true,
+    "featureIds": [
+      "F023"
+    ]
+  },
+  {
+    "id": "T144",
+    "description": "Idempotency: repeated execution of 'Add tenant default renewal ticket priority field to default billing settings model.' does not create duplicate tickets",
+    "implemented": true,
+    "featureIds": [
+      "F024"
+    ]
+  },
+  {
+    "id": "T145",
+    "description": "Idempotency: repeated execution of 'Add tenant default renewal ticket assignee field to default billing settings model.' does not create duplicate tickets",
+    "implemented": true,
+    "featureIds": [
+      "F025"
+    ]
+  },
+  {
+    "id": "T146",
+    "description": "Validation negative-path: Enforce deterministic fallback precedence when override fields are partially missing.",
+    "implemented": true,
+    "featureIds": [
+      "F031"
+    ]
+  },
+  {
+    "id": "T147",
+    "description": "Cycle rollover: evergreen behavior remains correct across year boundary for 'Compute next evergreen review anchor date from active contract anniversary rules.'",
+    "implemented": true,
+    "featureIds": [
+      "F034"
+    ]
+  },
+  {
+    "id": "T148",
+    "description": "Cycle rollover: evergreen behavior remains correct across year boundary for 'Compute evergreen decision_due_date using anchor date minus notice_period_days.'",
+    "implemented": true,
+    "featureIds": [
+      "F035"
+    ]
+  },
+  {
+    "id": "T149",
+    "description": "Cycle rollover: evergreen behavior remains correct across year boundary for 'Recompute decision_due_date when evergreen anchor basis changes.'",
+    "implemented": true,
+    "featureIds": [
+      "F040"
+    ]
+  },
+  {
+    "id": "T150",
+    "description": "Cycle rollover: evergreen behavior remains correct across year boundary for 'Skip decision_due_date generation when renewal mode is none and no evergreen review is configured.'",
+    "implemented": true,
+    "featureIds": [
+      "F042"
+    ]
+  },
+  {
+    "id": "T151",
+    "description": "UI behavior: Expose days_until_due as derived queue field for UI sorting and badges. persists after refresh/navigation",
+    "implemented": true,
+    "featureIds": [
+      "F046"
+    ]
+  },
+  {
+    "id": "T152",
+    "description": "UI behavior: Clamp past-due decision calculations into queue visibility without negative date corruption. persists after refresh/navigation",
+    "implemented": true,
+    "featureIds": [
+      "F047"
+    ]
+  },
+  {
+    "id": "T153",
+    "description": "UI behavior: Add Renewals queue page component under billing dashboard components. persists after refresh/navigation",
+    "implemented": true,
+    "featureIds": [
+      "F050"
+    ]
+  },
+  {
+    "id": "T154",
+    "description": "UI behavior: Load renewal queue rows from server action on Renewals page mount. persists after refresh/navigation",
+    "implemented": true,
+    "featureIds": [
+      "F051"
+    ]
+  },
+  {
+    "id": "T155",
+    "description": "UI behavior: Render default 90-day horizon rows in Renewals queue. persists after refresh/navigation",
+    "implemented": true,
+    "featureIds": [
+      "F052"
+    ]
+  },
+  {
+    "id": "T156",
+    "description": "UI behavior: Render bucket quick filters for 0-30, 31-60, and 61-90 days. persists after refresh/navigation",
+    "implemented": true,
+    "featureIds": [
+      "F053"
+    ]
+  },
+  {
+    "id": "T157",
+    "description": "UI behavior: Render owner filter for assigned user in Renewals queue. persists after refresh/navigation",
+    "implemented": true,
+    "featureIds": [
+      "F054"
+    ]
+  },
+  {
+    "id": "T158",
+    "description": "UI behavior: Render status filter for pending/renewing/non_renewing/snoozed/completed. persists after refresh/navigation",
+    "implemented": true,
+    "featureIds": [
+      "F055"
+    ]
+  },
+  {
+    "id": "T159",
+    "description": "Date constraint: snooze action rejects non-future dates for 'Render status filter for pending/renewing/non_renewing/snoozed/completed.'",
+    "implemented": true,
+    "featureIds": [
+      "F055"
+    ]
+  },
+  {
+    "id": "T160",
+    "description": "UI behavior: Render renewal mode filter for none/manual/auto. persists after refresh/navigation",
+    "implemented": true,
+    "featureIds": [
+      "F056"
+    ]
+  },
+  {
+    "id": "T161",
+    "description": "UI behavior: Render contract type filter for fixed-term versus evergreen entries. persists after refresh/navigation",
+    "implemented": true,
+    "featureIds": [
+      "F057"
+    ]
+  },
+  {
+    "id": "T162",
+    "description": "Cycle rollover: evergreen behavior remains correct across year boundary for 'Render contract type filter for fixed-term versus evergreen entries.'",
+    "implemented": true,
+    "featureIds": [
+      "F057"
+    ]
+  },
+  {
+    "id": "T163",
+    "description": "UI behavior: Sort queue by decision_due_date ascending by default. persists after refresh/navigation",
+    "implemented": true,
+    "featureIds": [
+      "F058"
+    ]
+  },
+  {
+    "id": "T164",
+    "description": "UI behavior: Navigate from upcoming renewals widget to Renewals tab preserving filter context. persists after refresh/navigation",
+    "implemented": true,
+    "featureIds": [
+      "F062"
+    ]
+  },
+  {
+    "id": "T165",
+    "description": "UI behavior: Refresh widget counts after queue action mutations complete. persists after refresh/navigation",
+    "implemented": true,
+    "featureIds": [
+      "F063"
+    ]
+  },
+  {
+    "id": "T166",
+    "description": "UI behavior: Define queue status enum values pending/renewing/non_renewing/snoozed/completed in renewal work-item model. persists after refresh/navigation",
+    "implemented": true,
+    "featureIds": [
+      "F064"
+    ]
+  },
+  {
+    "id": "T167",
+    "description": "Date constraint: snooze action rejects non-future dates for 'Define queue status enum values pending/renewing/non_renewing/snoozed/completed in renewal work-item model.'",
+    "implemented": true,
+    "featureIds": [
+      "F064"
+    ]
+  },
+  {
+    "id": "T168",
+    "description": "UI behavior: Implement create-renewal-draft action for eligible queue entries. persists after refresh/navigation",
+    "implemented": true,
+    "featureIds": [
+      "F067"
+    ]
+  },
+  {
+    "id": "T169",
+    "description": "Linkage correctness: 'Implement create-renewal-draft action for eligible queue entries.' stores created draft contract id on work item",
+    "implemented": true,
+    "featureIds": [
+      "F067"
+    ]
+  },
+  {
+    "id": "T170",
+    "description": "Date constraint: snooze action rejects non-future dates for 'Implement snooze action that sets status to snoozed with snoozed_until date.'",
+    "implemented": true,
+    "featureIds": [
+      "F068"
+    ]
+  },
+  {
+    "id": "T171",
+    "description": "Date constraint: snooze action rejects non-future dates for 'Implement unsnooze transition back to pending when snooze period elapses.'",
+    "implemented": true,
+    "featureIds": [
+      "F070"
+    ]
+  },
+  {
+    "id": "T172",
+    "description": "UI behavior: Persist action actor user id on each queue mutation. persists after refresh/navigation",
+    "implemented": true,
+    "featureIds": [
+      "F071"
+    ]
+  },
+  {
+    "id": "T173",
+    "description": "UI behavior: Persist action timestamp on each queue mutation. persists after refresh/navigation",
+    "implemented": true,
+    "featureIds": [
+      "F072"
+    ]
+  },
+  {
+    "id": "T174",
+    "description": "UI behavior: Persist action reason/note text on queue mutation when provided. persists after refresh/navigation",
+    "implemented": true,
+    "featureIds": [
+      "F073"
+    ]
+  },
+  {
+    "id": "T175",
+    "description": "Validation negative-path: Enforce snooze date must be in the future on action validation.",
+    "implemented": true,
+    "featureIds": [
+      "F076"
+    ]
+  },
+  {
+    "id": "T176",
+    "description": "Date constraint: snooze action rejects non-future dates for 'Enforce snooze date must be in the future on action validation.'",
+    "implemented": true,
+    "featureIds": [
+      "F076"
+    ]
+  },
+  {
+    "id": "T177",
+    "description": "UI behavior: Expose queue row action availability based on current status. persists after refresh/navigation",
+    "implemented": true,
+    "featureIds": [
+      "F077"
+    ]
+  },
+  {
+    "id": "T178",
+    "description": "UI behavior: Show optimistic UI state while queue actions are in-flight. persists after refresh/navigation",
+    "implemented": true,
+    "featureIds": [
+      "F078"
+    ]
+  },
+  {
+    "id": "T179",
+    "description": "UI behavior: Refresh affected queue row state after successful action response. persists after refresh/navigation",
+    "implemented": true,
+    "featureIds": [
+      "F079"
+    ]
+  },
+  {
+    "id": "T180",
+    "description": "UI behavior: Include linked draft contract id in queue row once renewal draft is created. persists after refresh/navigation",
+    "implemented": true,
+    "featureIds": [
+      "F080"
+    ]
+  },
+  {
+    "id": "T181",
+    "description": "Linkage correctness: 'Include linked draft contract id in queue row once renewal draft is created.' stores created draft contract id on work item",
+    "implemented": true,
+    "featureIds": [
+      "F080"
+    ]
+  },
+  {
+    "id": "T182",
+    "description": "UI behavior: Include linked ticket id in queue row once due-date ticket is created. persists after refresh/navigation",
+    "implemented": true,
+    "featureIds": [
+      "F081"
+    ]
+  },
+  {
+    "id": "T183",
+    "description": "Idempotency: repeated execution of 'Include linked ticket id in queue row once due-date ticket is created.' does not create duplicate tickets",
+    "implemented": true,
+    "featureIds": [
+      "F081"
+    ]
+  },
+  {
+    "id": "T184",
+    "description": "Idempotency: repeated execution of 'Create internal ticket at decision due date when effective policy is create_ticket.' does not create duplicate tickets",
+    "implemented": true,
+    "featureIds": [
+      "F088"
+    ]
+  },
+  {
+    "id": "T185",
+    "description": "Idempotency: repeated execution of 'Call workflow runtime tickets.create action for renewal ticket creation path.' does not create duplicate tickets",
+    "implemented": true,
+    "featureIds": [
+      "F089"
+    ]
+  },
+  {
+    "id": "T186",
+    "description": "Parity: 'Call workflow runtime tickets.create action for renewal ticket creation path.' behaves equivalently under pg-boss and Temporal paths",
+    "implemented": true,
+    "featureIds": [
+      "F089"
+    ]
+  },
+  {
+    "id": "T187",
+    "description": "Idempotency: repeated execution of 'Populate renewal ticket title with client and contract context.' does not create duplicate tickets",
+    "implemented": true,
+    "featureIds": [
+      "F090"
+    ]
+  },
+  {
+    "id": "T188",
+    "description": "Idempotency: repeated execution of 'Populate renewal ticket description with due date and renewal settings context.' does not create duplicate tickets",
+    "implemented": true,
+    "featureIds": [
+      "F091"
+    ]
+  },
+  {
+    "id": "T189",
+    "description": "Idempotency: repeated execution of 'Populate renewal ticket routing fields from effective renewal ticket defaults.' does not create duplicate tickets",
+    "implemented": true,
+    "featureIds": [
+      "F092"
+    ]
+  },
+  {
+    "id": "T190",
+    "description": "Idempotency: repeated execution of 'Persist created ticket id on renewal work item after successful ticket creation.' does not create duplicate tickets",
+    "implemented": true,
+    "featureIds": [
+      "F093"
+    ]
+  },
+  {
+    "id": "T191",
+    "description": "Idempotency: repeated execution of 'Use idempotency key per tenant/client_contract_id/cycle key for ticket creation.' does not create duplicate tickets",
+    "implemented": true,
+    "featureIds": [
+      "F094"
+    ]
+  },
+  {
+    "id": "T192",
+    "description": "Idempotency: repeated execution of 'Skip duplicate ticket creation when idempotent renewal cycle already has linked ticket.' does not create duplicate tickets",
+    "implemented": true,
+    "featureIds": [
+      "F095"
+    ]
+  },
+  {
+    "id": "T193",
+    "description": "Idempotency: repeated execution of 'Record automation_error on work item when ticket creation fails.' does not create duplicate tickets",
+    "implemented": true,
+    "featureIds": [
+      "F096"
+    ]
+  },
+  {
+    "id": "T194",
+    "description": "Idempotency: repeated execution of 'Allow manual retry action to re-attempt ticket creation for failed work items.' does not create duplicate tickets",
+    "implemented": true,
+    "featureIds": [
+      "F097"
+    ]
+  },
+  {
+    "id": "T195",
+    "description": "UI behavior: Ensure due-date automation supports queue-only policy without creating tickets. persists after refresh/navigation",
+    "implemented": true,
+    "featureIds": [
+      "F098"
+    ]
+  },
+  {
+    "id": "T196",
+    "description": "Idempotency: repeated execution of 'Ensure due-date automation supports queue-only policy without creating tickets.' does not create duplicate tickets",
+    "implemented": true,
+    "featureIds": [
+      "F098"
+    ]
+  },
+  {
+    "id": "T197",
+    "description": "UI behavior: Publish/emit renewal-upcoming domain event payloads compatible with queue creation semantics. persists after refresh/navigation",
+    "implemented": true,
+    "featureIds": [
+      "F099"
+    ]
+  },
+  {
+    "id": "T198",
+    "description": "UI behavior: Generate renewal queue entries for evergreen contracts based on annual review cycle. persists after refresh/navigation",
+    "implemented": true,
+    "featureIds": [
+      "F100"
+    ]
+  },
+  {
+    "id": "T199",
+    "description": "Cycle rollover: evergreen behavior remains correct across year boundary for 'Generate renewal queue entries for evergreen contracts based on annual review cycle.'",
+    "implemented": true,
+    "featureIds": [
+      "F100"
+    ]
+  },
+  {
+    "id": "T200",
+    "description": "UI behavior: Display evergreen contract type badge in queue rows. persists after refresh/navigation",
+    "implemented": true,
+    "featureIds": [
+      "F101"
+    ]
+  },
+  {
+    "id": "T201",
+    "description": "Cycle rollover: evergreen behavior remains correct across year boundary for 'Display evergreen contract type badge in queue rows.'",
+    "implemented": true,
+    "featureIds": [
+      "F101"
+    ]
+  },
+  {
+    "id": "T202",
+    "description": "UI behavior: Show evergreen cycle anchor date in queue row details. persists after refresh/navigation",
+    "implemented": true,
+    "featureIds": [
+      "F102"
+    ]
+  },
+  {
+    "id": "T203",
+    "description": "Cycle rollover: evergreen behavior remains correct across year boundary for 'Show evergreen cycle anchor date in queue row details.'",
+    "implemented": true,
+    "featureIds": [
+      "F102"
+    ]
+  },
+  {
+    "id": "T204",
+    "description": "UI behavior: Support mark-renewing action for evergreen queue entries. persists after refresh/navigation",
+    "implemented": true,
+    "featureIds": [
+      "F103"
+    ]
+  },
+  {
+    "id": "T205",
+    "description": "Cycle rollover: evergreen behavior remains correct across year boundary for 'Support mark-renewing action for evergreen queue entries.'",
+    "implemented": true,
+    "featureIds": [
+      "F103"
+    ]
+  },
+  {
+    "id": "T206",
+    "description": "UI behavior: Support mark-non-renewing action for evergreen queue entries. persists after refresh/navigation",
+    "implemented": true,
+    "featureIds": [
+      "F104"
+    ]
+  },
+  {
+    "id": "T207",
+    "description": "Cycle rollover: evergreen behavior remains correct across year boundary for 'Support mark-non-renewing action for evergreen queue entries.'",
+    "implemented": true,
+    "featureIds": [
+      "F104"
+    ]
+  },
+  {
+    "id": "T208",
+    "description": "UI behavior: Support create-renewal-draft action for evergreen queue entries. persists after refresh/navigation",
+    "implemented": true,
+    "featureIds": [
+      "F105"
+    ]
+  },
+  {
+    "id": "T209",
+    "description": "Cycle rollover: evergreen behavior remains correct across year boundary for 'Support create-renewal-draft action for evergreen queue entries.'",
+    "implemented": true,
+    "featureIds": [
+      "F105"
+    ]
+  },
+  {
+    "id": "T210",
+    "description": "Linkage correctness: 'Support create-renewal-draft action for evergreen queue entries.' stores created draft contract id on work item",
+    "implemented": true,
+    "featureIds": [
+      "F105"
+    ]
+  },
+  {
+    "id": "T211",
+    "description": "Cycle rollover: evergreen behavior remains correct across year boundary for 'Roll evergreen cycle forward to next annual window after completion.'",
+    "implemented": true,
+    "featureIds": [
+      "F106"
+    ]
+  },
+  {
+    "id": "T212",
+    "description": "Cycle rollover: evergreen behavior remains correct across year boundary for 'Prevent duplicate evergreen cycle entries for the same annual period.'",
+    "implemented": true,
+    "featureIds": [
+      "F107"
+    ]
+  },
+  {
+    "id": "T213",
+    "description": "Cycle rollover: evergreen behavior remains correct across year boundary for 'Respect evergreen-specific notice period overrides on decision date computation.'",
+    "implemented": true,
+    "featureIds": [
+      "F108"
+    ]
+  },
+  {
+    "id": "T214",
+    "description": "Cycle rollover: evergreen behavior remains correct across year boundary for 'Include evergreen entries in upcoming renewals widget counts.'",
+    "implemented": true,
+    "featureIds": [
+      "F109"
+    ]
+  },
+  {
+    "id": "T215",
+    "description": "UI behavior: Include queue status in expiration report row payload when work item exists. persists after refresh/navigation",
+    "implemented": true,
+    "featureIds": [
+      "F112"
+    ]
+  },
+  {
+    "id": "T216",
+    "description": "UI behavior: Keep existing expiration report sort compatibility for existing report consumers. persists after refresh/navigation",
+    "implemented": true,
+    "featureIds": [
+      "F114"
+    ]
+  },
+  {
+    "id": "T217",
+    "description": "Parity: 'Register renewal scheduled processing job in pg-boss on-prem scheduling path.' behaves equivalently under pg-boss and Temporal paths",
+    "implemented": true,
+    "featureIds": [
+      "F118"
+    ]
+  },
+  {
+    "id": "T218",
+    "description": "Parity: 'Register renewal scheduled processing workflow in Temporal hosted/EE scheduling path.' behaves equivalently under pg-boss and Temporal paths",
+    "implemented": true,
+    "featureIds": [
+      "F119"
+    ]
+  },
+  {
+    "id": "T219",
+    "description": "Parity: 'Use shared renewal processing core logic callable from both pg-boss and Temporal adapters.' behaves equivalently under pg-boss and Temporal paths",
+    "implemented": true,
+    "featureIds": [
+      "F120"
+    ]
+  },
+  {
+    "id": "T220",
+    "description": "UI behavior: Keep effective behavior parity for queue creation between pg-boss and Temporal runners. persists after refresh/navigation",
+    "implemented": true,
+    "featureIds": [
+      "F121"
+    ]
+  },
+  {
+    "id": "T221",
+    "description": "Parity: 'Keep effective behavior parity for queue creation between pg-boss and Temporal runners.' behaves equivalently under pg-boss and Temporal paths",
+    "implemented": true,
+    "featureIds": [
+      "F121"
+    ]
+  },
+  {
+    "id": "T222",
+    "description": "Idempotency: repeated execution of 'Keep effective behavior parity for ticket creation idempotency between pg-boss and Temporal runners.' does not create duplicate tickets",
+    "implemented": true,
+    "featureIds": [
+      "F122"
+    ]
+  },
+  {
+    "id": "T223",
+    "description": "Parity: 'Keep effective behavior parity for ticket creation idempotency between pg-boss and Temporal runners.' behaves equivalently under pg-boss and Temporal paths",
+    "implemented": true,
+    "featureIds": [
+      "F122"
+    ]
+  },
+  {
+    "id": "T224",
+    "description": "Parity: 'Honor existing JobRunnerFactory runtime selection without forcing edition-specific code forks in business logic.' behaves equivalently under pg-boss and Temporal paths",
+    "implemented": true,
+    "featureIds": [
+      "F123"
+    ]
+  },
+  {
+    "id": "T225",
+    "description": "Parity: 'Fallback gracefully to supported runner path when temporal bootstrap is unavailable.' behaves equivalently under pg-boss and Temporal paths",
+    "implemented": true,
+    "featureIds": [
+      "F124"
+    ]
+  },
+  {
+    "id": "T226",
+    "description": "Parity: 'Preserve tenant-scoped execution semantics in both runtime paths.' behaves equivalently under pg-boss and Temporal paths",
+    "implemented": true,
+    "featureIds": [
+      "F125"
+    ]
+  },
+  {
+    "id": "T227",
+    "description": "Validation negative-path: Enforce billing read permission on renewals queue list endpoints.",
+    "implemented": true,
+    "featureIds": [
+      "F126"
+    ]
+  },
+  {
+    "id": "T228",
+    "description": "UI behavior: Enforce billing read permission on renewals queue list endpoints. persists after refresh/navigation",
+    "implemented": true,
+    "featureIds": [
+      "F126"
+    ]
+  },
+  {
+    "id": "T229",
+    "description": "Validation negative-path: Enforce billing update permission on queue mutation endpoints.",
+    "implemented": true,
+    "featureIds": [
+      "F127"
+    ]
+  },
+  {
+    "id": "T230",
+    "description": "UI behavior: Enforce billing update permission on queue mutation endpoints. persists after refresh/navigation",
+    "implemented": true,
+    "featureIds": [
+      "F127"
+    ]
+  },
+  {
+    "id": "T231",
+    "description": "Validation negative-path: Enforce billing settings update permission on renewal defaults update endpoints.",
+    "implemented": true,
+    "featureIds": [
+      "F128"
+    ]
+  },
+  {
+    "id": "T232",
+    "description": "UI behavior: Apply tenant filter to all renewal work-item reads by default. persists after refresh/navigation",
+    "implemented": true,
+    "featureIds": [
+      "F129"
+    ]
+  },
+  {
+    "id": "T233",
+    "description": "UI behavior: Apply tenant filter to all renewal work-item writes by default. persists after refresh/navigation",
+    "implemented": true,
+    "featureIds": [
+      "F130"
+    ]
+  },
+  {
+    "id": "T234",
+    "description": "Idempotency: repeated execution of 'Audit ticket automation linkage with actor type system and timestamp metadata.' does not create duplicate tickets",
+    "implemented": true,
+    "featureIds": [
+      "F132"
+    ]
+  },
+  {
+    "id": "T235",
+    "description": "Linkage correctness: 'Audit renewal draft creation linkage with actor id and timestamp metadata.' stores created draft contract id on work item",
+    "implemented": true,
+    "featureIds": [
+      "F133"
+    ]
+  },
+  {
+    "id": "T236",
+    "description": "Validation negative-path: Reject cross-tenant identifiers during queue mutation validation.",
+    "implemented": true,
+    "featureIds": [
+      "F134"
+    ]
+  },
+  {
+    "id": "T237",
+    "description": "UI behavior: Reject cross-tenant identifiers during queue mutation validation. persists after refresh/navigation",
+    "implemented": true,
+    "featureIds": [
+      "F134"
+    ]
+  },
+  {
+    "id": "T238",
+    "description": "E2E fixed-term renewal: create contract with end date + manual renewal, verify queue row appears in correct 90-day bucket and can be marked renewing.",
+    "implemented": true,
+    "featureIds": [
+      "F005",
+      "F033",
+      "F052",
+      "F065"
+    ]
+  },
+  {
+    "id": "T239",
+    "description": "E2E evergreen renewal: create evergreen contract with annual review settings, verify queue entry generation and annual cycle rollover after completion.",
+    "implemented": true,
+    "featureIds": [
+      "F006",
+      "F100",
+      "F106"
+    ]
+  },
+  {
+    "id": "T240",
+    "description": "E2E due-date automation ticketing: due entry creates exactly one ticket and links ticket id on renewal work item.",
+    "implemented": true,
+    "featureIds": [
+      "F088",
+      "F093",
+      "F094"
+    ]
+  },
+  {
+    "id": "T241",
+    "description": "E2E queue action flow: mark renewing auto-creates draft, open editor, then complete work item after activation.",
+    "implemented": true,
+    "featureIds": [
+      "F065",
+      "F067",
+      "F082"
+    ]
+  },
+  {
+    "id": "T242",
+    "description": "E2E permissions: billing-read can view queue but cannot mutate, billing-update can execute queue actions.",
+    "implemented": true,
+    "featureIds": [
+      "F126",
+      "F127"
+    ]
+  },
+  {
+    "id": "T243",
+    "description": "E2E defaults and overrides: tenant default create-ticket policy applies, then per-contract override to queue-only suppresses ticket creation.",
+    "implemented": true,
+    "featureIds": [
+      "F021",
+      "F030",
+      "F098"
+    ]
+  },
+  {
+    "id": "T244",
+    "description": "Integration: latest migrations create required renewal queue status/audit columns on client_contracts.",
+    "implemented": true,
+    "featureIds": [
+      "F136"
+    ]
+  },
+  {
+    "id": "T245",
+    "description": "Integration: latest migrations create required renewal-cycle columns on client_contracts.",
+    "implemented": true,
+    "featureIds": [
+      "F137"
+    ]
+  },
+  {
+    "id": "T246",
+    "description": "Integration: latest migrations create required renewal automation/policy columns on client_contracts.",
+    "implemented": true,
+    "featureIds": [
+      "F138"
+    ]
+  },
+  {
+    "id": "T247",
+    "description": "Integration: latest migrations create required renewal default/policy columns on default_billing_settings.",
+    "implemented": true,
+    "featureIds": [
+      "F140"
+    ]
+  },
+  {
+    "id": "T248",
+    "description": "Integration: migration backfill initializes deterministic renewal state for existing active client_contract rows.",
+    "implemented": true,
+    "featureIds": [
+      "F141"
+    ]
+  },
+  {
+    "id": "T249",
+    "description": "Integration: listRenewalQueueRows executes successfully against migrated schema and no longer throws missing-column SQL errors.",
+    "implemented": true,
+    "featureIds": [
+      "F136",
+      "F137",
+      "F139",
+      "F143"
+    ]
+  },
+  {
+    "id": "T250",
+    "description": "Integration: snoozeRenewalQueueItem updates status/snoozed_until and persists last_action audit fields for migrated rows.",
+    "implemented": true,
+    "featureIds": [
+      "F136",
+      "F139"
+    ]
+  },
+  {
+    "id": "T251",
+    "description": "Integration: markRenewalQueueItemRenewing transitions pending->renewing and persists actor/timestamp metadata.",
+    "implemented": true,
+    "featureIds": [
+      "F136"
+    ]
+  },
+  {
+    "id": "T252",
+    "description": "Integration: processRenewalQueueHandler computes and persists decision_due_date/cycle fields for eligible contracts.",
+    "implemented": true,
+    "featureIds": [
+      "F137",
+      "F139",
+      "F141"
+    ]
+  },
+  {
+    "id": "T253",
+    "description": "Integration: processRenewalQueueHandler creates/links at most one renewal ticket per tenant+client_contract+cycle key when policy=create_ticket.",
+    "implemented": true,
+    "featureIds": [
+      "F138",
+      "F140",
+      "F142"
+    ]
+  },
+  {
+    "id": "T254",
+    "description": "Integration (guard case): renewal schema readiness guard rejects access with actionable error when required columns are intentionally absent.",
+    "implemented": true,
+    "featureIds": [
+      "F143"
+    ]
+  },
+  {
+    "id": "T255",
+    "description": "Integration (happy path): renewal schema readiness guard passes after migrations and renewals queue endpoints remain operational.",
+    "implemented": true,
+    "featureIds": [
+      "F143",
+      "F144"
+    ]
+  }
+]

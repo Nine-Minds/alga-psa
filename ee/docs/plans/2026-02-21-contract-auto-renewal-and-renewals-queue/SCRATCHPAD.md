@@ -1,0 +1,1937 @@
+# Scratchpad — Contract Auto-Renewal and Renewals Queue
+
+- Plan slug: `contract-auto-renewal-and-renewals-queue`
+- Created: `2026-02-21`
+
+## What This Is
+Rolling implementation memory for renewal settings + actionable renewals queue + automation ticketing.
+
+## Decisions
+- (2026-02-21) Build an **actionable queue** (not read-only report).
+- (2026-02-21) Ship **both** dashboard entry and full queue page (`Client Contracts` widget + `Renewals` tab).
+- (2026-02-21) Primary operational date is **renewal decision due date**.
+- (2026-02-21) Due-date behavior is configurable with **tenant defaults + optional per-contract override**.
+- (2026-02-21) Default automation target at due date: **create internal ticket**.
+- (2026-02-21) Minimum queue actions for v1: `Mark renewing`, `Mark non-renewing`, `Create renewal draft`, `Snooze`.
+- (2026-02-21) Default queue horizon: **90 days**, grouped `0-30`, `31-60`, `61-90`.
+- (2026-02-21) Queue includes **fixed-term + evergreen anniversaries**.
+- (2026-02-21) `Mark renewing` should **auto-create renewal draft** and open it.
+- (2026-02-21) Release approach: **single release** scope.
+- (2026-02-21) Automation runtime note: support **pg-boss for on-prem** and **Temporal for hosted/EE**.
+
+## Discoveries / Constraints
+- (2026-02-21) Runtime selection already exists in `server/src/lib/jobs/JobRunnerFactory.ts` with config/env-based choice and fallback behavior; default is pg-boss unless configured otherwise.
+- (2026-02-21) Existing scheduled jobs in `server/src/lib/jobs/initializeScheduledJobs.ts` explicitly branch for enterprise/temporal behavior in some paths; renewal automation should follow same compatibility pattern.
+- (2026-02-21) Contract lifecycle already emits `CONTRACT_CREATED` and `CONTRACT_RENEWAL_UPCOMING` in both `packages/clients/src/actions/clientContractActions.ts` and `packages/billing/src/actions/contractWizardActions.ts`.
+- (2026-02-21) `CONTRACT_RENEWAL_UPCOMING` computation today is window-based (`DEFAULT_CONTRACT_RENEWAL_UPCOMING_WINDOW_DAYS = 30`) in `shared/workflow/streams/domainEventBuilders/contractEventBuilders.ts`; queue design requires broader 90-day horizon and due-date semantics.
+- (2026-02-21) Existing contract expiration report is currently `end_date`-driven (`packages/billing/src/actions/contractReportActions.ts`, `server/src/lib/reports/definitions/contracts/expiration.ts`).
+- (2026-02-21) Billing settings already provide tenant defaults in `default_billing_settings` with client override pattern in `client_billing_settings`; actions in `packages/billing/src/actions/billingSettingsActions.ts` and shared helpers in `shared/billingClients/billingSettings.ts` are reusable design patterns.
+- (2026-02-21) Billing UI insertion points are clear:
+  - tabs config: `packages/billing/src/components/billing-dashboard/billingTabsConfig.ts`
+  - tab content host: `packages/billing/src/components/billing-dashboard/BillingDashboard.tsx`
+  - queue/widget host: `packages/billing/src/components/billing-dashboard/contracts/ClientContractsTab.tsx`
+  - wizard basics: `packages/billing/src/components/billing-dashboard/contracts/wizard-steps/ContractBasicsStep.tsx`
+- (2026-02-21) Contract assignment data shape in `server/src/interfaces/contract.interfaces.ts` is assignment-level and suitable for renewal metadata on `IClientContract`.
+
+## Commands / Runbooks
+- (2026-02-21) Inspect billing dashboard contract files:
+  - `rg -n "ContractWizard|ClientContractsTab|billingTabsConfig|ContractBasicsStep" packages/billing/src/components/billing-dashboard`
+- (2026-02-21) Inspect runtime selection + scheduling:
+  - `rg -n "JobRunnerFactory|initializeScheduledJobs|EDITION|JOB_RUNNER_TYPE" server/src/lib/jobs`
+- (2026-02-21) Inspect contract renewal event publishing:
+  - `rg -n "CONTRACT_RENEWAL_UPCOMING|computeContractRenewalUpcoming" packages/billing packages/clients shared/workflow`
+- (2026-02-21) Validate plan artifacts:
+  - `python3 /Users/roberisaacs/.codex/skills/alga-plan/scripts/validate_plan.py ee/docs/plans/2026-02-21-contract-auto-renewal-and-renewals-queue`
+
+## Links / References
+- Key plan path: `ee/docs/plans/2026-02-21-contract-auto-renewal-and-renewals-queue`
+- Runtime selection: `server/src/lib/jobs/JobRunnerFactory.ts`
+- Scheduled job init: `server/src/lib/jobs/initializeScheduledJobs.ts`
+- Job scheduler infra: `server/src/lib/jobs/jobScheduler.ts`
+- Renewal event builders: `shared/workflow/streams/domainEventBuilders/contractEventBuilders.ts`
+- Contract wizard save path: `packages/billing/src/actions/contractWizardActions.ts`
+- Client contract actions: `packages/clients/src/actions/clientContractActions.ts`
+- Billing settings actions: `packages/billing/src/actions/billingSettingsActions.ts`
+- Billing settings shared helpers: `shared/billingClients/billingSettings.ts`
+- Billing dashboard tabs host: `packages/billing/src/components/billing-dashboard/BillingDashboard.tsx`
+- Client contracts tab: `packages/billing/src/components/billing-dashboard/contracts/ClientContractsTab.tsx`
+- Wizard basics step: `packages/billing/src/components/billing-dashboard/contracts/wizard-steps/ContractBasicsStep.tsx`
+
+## Implementation Log
+- (2026-02-21) Completed `F001`.
+  - Added renewal fields to `ContractWizardData` in `packages/billing/src/components/billing-dashboard/contracts/ContractWizard.tsx`:
+    - `renewal_mode?: 'none' | 'manual' | 'auto'`
+    - `notice_period_days?: number`
+    - `renewal_term_months?: number`
+    - `use_tenant_renewal_defaults?: boolean`
+  - Rationale: establish typed wizard-state shape early so subsequent UI rendering, defaults/hydration, validation, and submission features can build on stable field names.
+- (2026-02-21) Completed `T001`.
+  - Added `packages/billing/src/components/billing-dashboard/contracts/ContractWizard.renewalFields.test.ts`.
+  - Test covers type-level contract for the four renewal fields and validates the allowed `renewal_mode` domain values.
+  - Runbook:
+    - `npx vitest run packages/billing/src/components/billing-dashboard/contracts/ContractWizard.renewalFields.test.ts`
+- (2026-02-21) Completed `F002`.
+  - Added `createDefaultContractWizardData()` in `packages/billing/src/components/billing-dashboard/contracts/ContractWizard.tsx`.
+  - Renewal defaults for new contracts now initialize as:
+    - `renewal_mode: 'manual'`
+    - `notice_period_days: 30`
+    - `renewal_term_months: undefined`
+    - `use_tenant_renewal_defaults: true`
+  - Updated wizard initialization/reset paths to use the shared factory, keeping default behavior deterministic across first render, open/reset, and edit-merge flows.
+- (2026-02-21) Completed `T002`.
+  - Extended `packages/billing/src/components/billing-dashboard/contracts/ContractWizard.renewalFields.test.ts` with default-state assertions using `createDefaultContractWizardData()`.
+  - Validates default renewal state for new contracts: mode `manual`, notice `30`, no term months, tenant-default toggle enabled.
+- (2026-02-21) Completed `F003`.
+  - Extended `DraftContractWizardData` in `packages/billing/src/actions/contractWizardActions.ts` with renewal fields.
+  - Updated `getDraftContractForResume` to hydrate renewal settings from `client_contracts`:
+    - normalized `renewal_mode` (`none|manual|auto`)
+    - sanitized integer `notice_period_days` (non-negative)
+    - sanitized positive integer `renewal_term_months`
+    - hydrated `use_tenant_renewal_defaults` when boolean
+  - Rationale: resumed drafts now carry renewal metadata into `editingContract` so wizard state merge can restore renewal settings.
+- (2026-02-21) Completed `T003`.
+  - Added `packages/billing/src/actions/contractWizardActions.renewalDraftResumeWiring.test.ts`.
+  - Test validates:
+    - renewal fields are present on `DraftContractWizardData`,
+    - `getDraftContractForResume` returns hydrated renewal values,
+    - numeric renewal values are sanitized before payload return.
+- (2026-02-21) Completed `F004`.
+  - Added `buildInitialContractWizardData(editingContract)` in `packages/billing/src/components/billing-dashboard/contracts/ContractWizard.tsx`.
+  - Edit-mode initialization now explicitly normalizes renewal fields during hydration:
+    - validates `renewal_mode` domain,
+    - normalizes non-negative `notice_period_days`,
+    - normalizes positive `renewal_term_months`,
+    - preserves explicit boolean `use_tenant_renewal_defaults`.
+  - Wired both initial state and open-effect initialization to use this shared edit-hydration path.
+- (2026-02-21) Completed `T004`.
+  - Extended `packages/billing/src/components/billing-dashboard/contracts/ContractWizard.renewalFields.test.ts`.
+  - Added assertions proving edit hydration path uses `buildInitialContractWizardData(editingContract)` and renewal normalization helpers for mode/notice/term.
+- (2026-02-21) Completed `F005`.
+  - Added a fixed-term renewal UI container to `packages/billing/src/components/billing-dashboard/contracts/wizard-steps/ContractBasicsStep.tsx`.
+  - New `Renewal Settings` card renders only when `data.end_date` is present (`data-automation-id=\"renewal-settings-fixed-term-card\"`).
+- (2026-02-21) Completed `T005`.
+  - Added `packages/billing/src/components/billing-dashboard/contracts/wizard-steps/ContractBasicsStep.renewalCards.test.ts`.
+  - Test asserts fixed-term card conditional wiring on `data.end_date` and verifies the automation id/heading token.
+- (2026-02-21) Completed `F006`.
+  - Added evergreen variant UI in `packages/billing/src/components/billing-dashboard/contracts/wizard-steps/ContractBasicsStep.tsx`.
+  - New `Evergreen Review Settings` card renders when `data.end_date` is absent (`data-automation-id=\"renewal-settings-evergreen-card\"`).
+- (2026-02-21) Completed `T006`.
+  - Extended `packages/billing/src/components/billing-dashboard/contracts/wizard-steps/ContractBasicsStep.renewalCards.test.ts` with evergreen-card assertions.
+  - Verifies absent-end-date branch and `renewal-settings-evergreen-card` wiring.
+- (2026-02-21) Completed `F007`.
+  - Added renewal mode selector UI to both fixed-term and evergreen renewal cards in `packages/billing/src/components/billing-dashboard/contracts/wizard-steps/ContractBasicsStep.tsx`.
+  - Options now explicitly include `none`, `manual`, and `auto`, bound to `data.renewal_mode`.
+- (2026-02-21) Completed `T007`.
+  - Extended `packages/billing/src/components/billing-dashboard/contracts/wizard-steps/ContractBasicsStep.renewalCards.test.ts`.
+  - Added assertions for `renewalModeOptions` values (`none|manual|auto`) and `updateData` binding back to `renewal_mode`.
+- (2026-02-21) Completed `F008`.
+  - Added `Notice Period (Days)` input to both renewal cards in `packages/billing/src/components/billing-dashboard/contracts/wizard-steps/ContractBasicsStep.tsx`.
+  - Input is conditionally rendered only when renewal mode is enabled (`manual` or `auto`), with non-negative integer coercion on change.
+- (2026-02-21) Completed `T008`.
+  - Extended `packages/billing/src/components/billing-dashboard/contracts/wizard-steps/ContractBasicsStep.renewalCards.test.ts` with notice-period assertions.
+  - Confirms `isRenewalEnabled` gate and both notice input IDs (`fixed` and `evergreen`) are present in the renewal-enabled branch.
+- (2026-02-21) Completed `F009`.
+  - Added auto-renew specific `Renewal Term (Months)` inputs to fixed-term and evergreen renewal cards in `packages/billing/src/components/billing-dashboard/contracts/wizard-steps/ContractBasicsStep.tsx`.
+  - Input is gated by `isAutoRenew` and writes sanitized positive integer values to `renewal_term_months`.
+- (2026-02-21) Completed `F010`.
+  - Confirmed auto-renew term controls are hidden unless `effectiveRenewalMode === 'auto'` via `isAutoRenew` conditional rendering in `ContractBasicsStep.tsx`.
+- (2026-02-21) Completed `T009`.
+  - Extended `packages/billing/src/components/billing-dashboard/contracts/wizard-steps/ContractBasicsStep.renewalCards.test.ts` with auto-term wiring assertions.
+  - Verifies both term input IDs and positive-integer assignment path for `renewal_term_months`.
+- (2026-02-21) Completed `T010`.
+  - Added explicit `isAutoRenew` gating assertions in `ContractBasicsStep.renewalCards.test.ts`.
+  - Verifies auto-specific term controls are conditionally rendered only in `auto` mode.
+- (2026-02-21) Completed `F011`.
+  - Added step-0 wizard validation in `packages/billing/src/components/billing-dashboard/contracts/ContractWizard.tsx`:
+    - if `end_date` is set and `renewal_mode` is missing, progression is blocked with inline error.
+- (2026-02-21) Completed `F012`.
+  - Added notice-period validation bounds in `ContractWizard.tsx` (`MIN_NOTICE_PERIOD_DAYS=0`, `MAX_NOTICE_PERIOD_DAYS=3650`).
+  - Step-0 validation now requires notice period to be an integer and within bounds whenever renewal mode is enabled.
+- (2026-02-21) Completed `F013`.
+  - Added step-0 validation rule in `ContractWizard.tsx` requiring `renewal_term_months` to be a positive integer when provided.
+- (2026-02-21) Completed `F014`.
+  - Renewal validation errors from step-0 rules (`F011`-`F013`) now surface through the wizard’s existing inline step error panel before progression.
+- (2026-02-21) Completed `T011`.
+  - Extended `packages/billing/src/components/billing-dashboard/contracts/ContractWizard.renewalFields.test.ts` with assertions for required renewal mode when `end_date` is set.
+- (2026-02-21) Completed `T012`.
+  - Marked covered by the same `ContractWizard.renewalFields.test.ts` additions that assert notice-period integer/bounds validation wiring.
+- (2026-02-21) Completed `T013`.
+  - Marked covered by existing `ContractWizard.renewalFields.test.ts` assertions for positive renewal-term validation when value is provided.
+- (2026-02-21) Completed `T014`.
+  - Marked covered by existing `ContractWizard.renewalFields.test.ts` assertion that inline step error rendering (`errors[currentStep]`) is present for renewal validation failures.
+- (2026-02-21) Completed `F015`.
+  - Extended `ContractBasicsStep` summary alert to include renewal preview fields:
+    - renewal mode label,
+    - notice period (for renewal-enabled modes),
+    - renewal term months (auto-renew mode).
+- (2026-02-21) Completed `F016`.
+  - Extended `ReviewContractStep` “Contract Basics” card to preview renewal fields before submit:
+    - renewal mode,
+    - notice period,
+    - renewal term (auto mode).
+- (2026-02-21) Completed `F017`.
+  - Added renewal fields to `ClientContractWizardSubmission` (`packages/billing/src/actions/contractWizardActions.ts`).
+  - Updated `buildSubmissionData()` in `ContractWizard.tsx` to include renewal mode, notice period, renewal term, and tenant-default toggle in outgoing wizard payload.
+- (2026-02-21) Completed `F018`.
+  - Updated `createClientContractFromWizard` insert path for `client_contracts` to persist renewal fields.
+  - Added schema-compat guards (`hasColumn`) so renewal columns are written when available without breaking pre-migration environments.
+- (2026-02-21) Completed `T015`.
+  - Extended `ContractBasicsStep.renewalCards.test.ts` to assert renewal mode/notice/term rows are present in the Contract Basics summary preview.
+- (2026-02-21) Completed `T016`.
+  - Added `packages/billing/src/components/billing-dashboard/contracts/wizard-steps/ReviewContractStep.renewalPreview.test.ts`.
+  - Test covers renewal preview rows and mode-gated rendering conditions in the review step.
+- (2026-02-21) Completed `T017`.
+  - Extended `ContractWizard.renewalFields.test.ts` to assert `buildSubmissionData()` includes all renewal fields in outgoing wizard payload.
+- (2026-02-21) Completed `T018`.
+  - Extended `contractWizardActions.renewalDraftResumeWiring.test.ts` to assert draft/client save path writes renewal fields into `client_contracts` with schema-guarded `hasColumn` checks.
+- (2026-02-21) Completed `F019`.
+  - Extended tenant default billing settings model surface in `packages/billing/src/actions/billingSettingsActions.ts` and `server/src/interfaces/billing.interfaces.ts` with renewal-default fields (including default renewal mode) using schema-guarded writes for compatibility.
+- (2026-02-21) Completed `F020`.
+  - Included `defaultNoticePeriodDays` mapping (`default_notice_period_days`) in tenant default billing settings model and guarded write path.
+- (2026-02-21) Completed `F021`.
+  - Included `renewalDueDateActionPolicy` mapping (`renewal_due_date_action_policy`) with normalized fallback in tenant billing settings model.
+- (2026-02-21) Completed `F022`.
+  - Included tenant default renewal ticket board field mapping (`renewal_ticket_board_id`) in billing settings model/read-write path.
+- (2026-02-21) Completed `F023`.
+  - Included tenant default renewal ticket status field mapping (`renewal_ticket_status_id`) in billing settings model/read-write path.
+- (2026-02-21) Completed `F024`.
+  - Included tenant default renewal ticket priority field mapping (`renewal_ticket_priority`) in billing settings model/read-write path.
+- (2026-02-21) Completed `F025`.
+  - Included tenant default renewal ticket assignee field mapping (`renewal_ticket_assignee_id`) in billing settings model/read-write path.
+- (2026-02-21) Completed `F026`.
+  - `getDefaultBillingSettings` now returns renewal default fields (mode, notice days, due-date policy, ticket routing defaults) with deterministic fallbacks.
+- (2026-02-21) Completed `F027`.
+  - `updateDefaultBillingSettings` now writes renewal default fields via schema-guarded update/insert payloads.
+- (2026-02-21) Completed `T019`.
+  - Added `packages/billing/src/actions/billingSettingsActions.renewalDefaultsWiring.test.ts` and marked renewal-mode model coverage.
+- (2026-02-21) Completed `T020`.
+  - Covered by existing `billingSettingsActions.renewalDefaultsWiring.test.ts` assertions for `defaultNoticePeriodDays`.
+- (2026-02-21) Completed `T021`.
+  - Covered by existing `billingSettingsActions.renewalDefaultsWiring.test.ts` assertions for `renewalDueDateActionPolicy`.
+- (2026-02-21) Completed `T022`.
+  - Covered by existing `billingSettingsActions.renewalDefaultsWiring.test.ts` assertions for `renewalTicketBoardId`.
+- (2026-02-21) Completed `T023`.
+  - Covered by existing `billingSettingsActions.renewalDefaultsWiring.test.ts` assertions for `renewalTicketStatusId`.
+- (2026-02-21) Completed `T024`.
+  - Covered by existing `billingSettingsActions.renewalDefaultsWiring.test.ts` assertions for `renewalTicketPriority`.
+- (2026-02-21) Completed `T025`.
+  - Covered by existing `billingSettingsActions.renewalDefaultsWiring.test.ts` assertions for `renewalTicketAssigneeId`.
+- (2026-02-21) Completed `T026`.
+  - Covered by existing `billingSettingsActions.renewalDefaultsWiring.test.ts` assertions for `getDefaultBillingSettings` renewal default response mapping.
+- (2026-02-21) Completed `T027`.
+  - Covered by existing `billingSettingsActions.renewalDefaultsWiring.test.ts` assertions for schema-guarded renewal default persistence in update writes.
+- (2026-02-21) Completed `T028`.
+  - Extended renewal UI/source tests to assert `Use Tenant Renewal Defaults` toggle controls and payload field wiring (`use_tenant_renewal_defaults`).
+- (2026-02-21) Completed `T029`.
+  - Covered by `ContractWizard.renewalFields.test.ts` assertions that tenant defaults are applied in submission resolution when toggle is enabled.
+- (2026-02-21) Completed `T030`.
+  - Covered by `packages/billing/src/components/billing-dashboard/contracts/ContractWizard.renewalFields.test.ts` assertion:
+    - `prefers explicit contract override values when tenant defaults are disabled`.
+  - Validation run:
+    - `cd server && npx vitest run --coverage.enabled=false ../packages/billing/src/components/billing-dashboard/contracts/ContractWizard.renewalFields.test.ts`
+- (2026-02-21) Completed `T031`.
+  - Covered by `packages/billing/src/components/billing-dashboard/contracts/ContractWizard.renewalFields.test.ts` assertion:
+    - `uses deterministic fallback precedence for partial override/default state`.
+  - Validation run:
+    - `cd server && npx vitest run --coverage.enabled=false ../packages/billing/src/components/billing-dashboard/contracts/ContractWizard.renewalFields.test.ts`
+- (2026-02-21) Completed `F028`.
+  - Added explicit `Use Tenant Renewal Defaults` toggle controls to both fixed-term and evergreen renewal settings cards in `ContractBasicsStep.tsx`, bound to `use_tenant_renewal_defaults`.
+- (2026-02-21) Completed `F029`.
+  - Updated `buildSubmissionData()` in `ContractWizard.tsx` to resolve renewal mode + notice period from tenant defaults when `use_tenant_renewal_defaults` is enabled.
+- (2026-02-21) Completed `F030`.
+  - Submission resolution now prefers explicit contract-level renewal values when `use_tenant_renewal_defaults` is disabled.
+- (2026-02-21) Completed `F031`.
+  - Implemented deterministic renewal fallback order in submission resolution:
+    - explicit contract values (when overrides enabled),
+    - tenant defaults,
+    - hard defaults (`manual`, `30`).
+- (2026-02-21) Completed `F032`.
+  - Extended contract-assignment read APIs to expose normalized/effective renewal settings in both shared and clients data-access layers:
+    - `shared/billingClients/clientContracts.ts`
+    - `packages/clients/src/models/clientContract.ts`
+  - Added schema-guarded tenant-default joins (`default_billing_settings`) for read paths and computed:
+    - `effective_renewal_mode`
+    - `effective_notice_period_days`
+  - Added type surface fields on `IClientContract` in:
+    - `packages/types/src/interfaces/contract.interfaces.ts`
+    - `server/src/interfaces/contract.interfaces.ts`
+  - Validation run:
+    - `npm -w @alga-psa/shared run typecheck`
+    - `npm -w @alga-psa/clients run typecheck`
+    - `npm -w @alga-psa/billing run typecheck`
+    - `npm -w @alga-psa/billing exec vitest run tests/clientContractEffectiveRenewalSettings.test.ts`
+- (2026-02-21) Completed `F033`.
+  - Added fixed-term `decision_due_date` computation in assignment normalization paths:
+    - `shared/billingClients/clientContracts.ts`
+    - `packages/clients/src/models/clientContract.ts`
+  - Formula implemented with date-only semantics for fixed-term contracts:
+    - `decision_due_date = end_date - effective_notice_period_days`
+  - Added `decision_due_date` to contract interfaces:
+    - `packages/types/src/interfaces/contract.interfaces.ts`
+    - `server/src/interfaces/contract.interfaces.ts`
+  - Expanded test coverage in `packages/billing/tests/clientContractEffectiveRenewalSettings.test.ts`.
+- (2026-02-21) Completed `F034`.
+  - Added evergreen annual-review anchor computation based on contract start-date anniversary rules.
+  - New shared helper:
+    - `computeNextEvergreenReviewAnchorDate` in `shared/billingClients/clientContracts.ts`
+  - Exposed normalized field on active evergreen assignments:
+    - `evergreen_review_anchor_date`
+  - Mirrored logic in clients model read normalization for parity:
+    - `packages/clients/src/models/clientContract.ts`
+  - Expanded tests in `packages/billing/tests/clientContractEffectiveRenewalSettings.test.ts`.
+- (2026-02-21) Completed `F035`.
+  - Added evergreen `decision_due_date` computation from annual anchor minus effective notice period.
+  - New shared helper:
+    - `computeEvergreenDecisionDueDate` in `shared/billingClients/clientContracts.ts`
+  - Applied in both read normalization paths (shared + clients model) so evergreen assignments now expose date-only `decision_due_date`.
+  - Expanded deterministic date-math coverage in `packages/billing/tests/clientContractEffectiveRenewalSettings.test.ts`.
+- (2026-02-21) Completed `F036`.
+  - Confirmed and codified date-only normalization for `decision_due_date` math using `normalizeDateOnly` + UTC midnight subtraction paths.
+  - Added regression test proving timestamp `end_date` inputs are normalized to date-only before subtraction:
+    - `packages/billing/tests/clientContractEffectiveRenewalSettings.test.ts`
+- (2026-02-21) Completed `F037`.
+  - Confirmed `decision_due_date` recalculates from current assignment state when fixed-term `end_date` changes.
+  - Added regression coverage:
+    - `recomputes fixed-term decision_due_date when end_date changes`
+    - in `packages/billing/tests/clientContractEffectiveRenewalSettings.test.ts`
+- (2026-02-21) Completed `F038`.
+  - Confirmed fixed-term `decision_due_date` recalculates when notice period changes.
+  - Added regression coverage:
+    - `recomputes fixed-term decision_due_date when notice period changes`
+    - in `packages/billing/tests/clientContractEffectiveRenewalSettings.test.ts`
+- (2026-02-21) Completed `F039`.
+  - Made `decision_due_date` generation renewal-mode-aware in read normalization:
+    - mode `none` suppresses due date generation for non-evergreen entries.
+  - Added regression coverage for mode transitions:
+    - `recomputes decision_due_date when renewal mode changes between none/manual/auto`
+    - in `packages/billing/tests/clientContractEffectiveRenewalSettings.test.ts`
+- (2026-02-21) Completed `F040`.
+  - Confirmed evergreen `decision_due_date` recomputes when anniversary anchor basis changes (start-date basis change).
+  - Added deterministic coverage:
+    - `recomputes evergreen decision_due_date when anniversary anchor basis changes`
+    - in `packages/billing/tests/clientContractEffectiveRenewalSettings.test.ts`
+- (2026-02-21) Completed `F041`.
+  - Added lifecycle suppression in due-date normalization:
+    - no `decision_due_date` generation for inactive, terminated, or expired assignment/contract lifecycle state.
+  - Included `contract_status` from joined contract reads in shared/clients assignment APIs to enforce lifecycle gating.
+  - Added regression test:
+    - `skips decision_due_date generation for inactive/terminated assignments`
+    - in `packages/billing/tests/clientContractEffectiveRenewalSettings.test.ts`
+- (2026-02-21) Completed `F042`.
+  - Verified suppression path for `renewal_mode = none` when no evergreen anchor is available (e.g. fixed-term assignment) remains enforced.
+  - Covered by existing regression test:
+    - `recomputes decision_due_date when renewal mode changes between none/manual/auto`
+    - in `packages/billing/tests/clientContractEffectiveRenewalSettings.test.ts`
+- (2026-02-21) Completed `F043`.
+  - Added derived per-cycle dedupe key in read normalization:
+    - `renewal_cycle_key` (`fixed-term:<end_date>` or `evergreen:<anchor_date>`)
+  - Exposed in both shared and clients assignment APIs plus contract interfaces.
+  - Added regression coverage:
+    - `creates one renewal_cycle_key per computed contract cycle for deduplication`
+    - in `packages/billing/tests/clientContractEffectiveRenewalSettings.test.ts`
+- (2026-02-21) Completed `F044`.
+  - Added deterministic dedupe guard for active assignment rows by composite key:
+    - `tenant + client_contract_id + renewal_cycle_key`
+  - Applied dedupe in list read APIs:
+    - `shared/billingClients/clientContracts.ts`
+    - `packages/clients/src/models/clientContract.ts`
+  - Added regression test:
+    - `deduplicates active rows by tenant + client_contract_id + renewal_cycle_key`
+    - in `packages/billing/tests/clientContractEffectiveRenewalSettings.test.ts`
+- (2026-02-21) Completed `F045`.
+  - Added explicit cycle boundary fields in normalization:
+    - `renewal_cycle_start`
+    - `renewal_cycle_end`
+  - Fixed-term boundaries map directly to assignment `start_date`/`end_date`.
+  - Evergreen boundaries now use annual cycle bounds helper:
+    - `computeEvergreenCycleBounds` in `shared/billingClients/clientContracts.ts`
+  - Added deterministic coverage in `packages/billing/tests/clientContractEffectiveRenewalSettings.test.ts`.
+- (2026-02-21) Completed `F046`.
+  - Added derived `days_until_due` field to assignment normalization and contract interfaces.
+  - New date-only helper:
+    - `computeDaysUntilDate` in `shared/billingClients/clientContracts.ts`
+  - Added deterministic coverage for positive/negative day deltas and normalized row field presence in:
+    - `packages/billing/tests/clientContractEffectiveRenewalSettings.test.ts`
+- (2026-02-21) Completed `F047`.
+  - Added clamp bounds to `days_until_due` derivation to preserve overdue visibility while preventing extreme negative/positive corruption:
+    - `MAX_ABSOLUTE_DAYS_UNTIL_DUE = 36500`
+  - Applied in shared and clients normalization helpers.
+  - Added deterministic clamp coverage in:
+    - `packages/billing/tests/clientContractEffectiveRenewalSettings.test.ts`
+- (2026-02-21) Completed `F048`.
+  - Added `renewals` tab value to billing tab union/config metadata in:
+    - `packages/billing/src/components/billing-dashboard/billingTabsConfig.ts`
+  - Added tab definition (`label=Renewals`, `href=/msp/billing?tab=renewals`) and icon mapping.
+  - Added coverage:
+    - `packages/billing/tests/billingTabsConfig.renewals.test.ts`
+- (2026-02-21) Completed `F049`.
+  - Added `Tabs.Content value=\"renewals\"` route to billing dashboard tab host in:
+    - `packages/billing/src/components/billing-dashboard/BillingDashboard.tsx`
+  - Added initial placeholder content for the renewals route host.
+  - Added route-wiring coverage:
+    - `packages/billing/tests/BillingDashboard.renewalsRoute.test.ts`
+- (2026-02-21) Completed `F050`.
+  - Added dedicated renewals queue page component:
+    - `packages/billing/src/components/billing-dashboard/contracts/RenewalsQueueTab.tsx`
+  - Updated `BillingDashboard` renewals route to render `<RenewalsQueueTab />`.
+  - Added component + wiring coverage:
+    - `packages/billing/tests/RenewalsQueueTab.component.test.ts`
+    - `packages/billing/tests/BillingDashboard.renewalsRoute.test.ts`
+- (2026-02-21) Completed `F051`.
+  - Added server action to load renewal queue rows:
+    - `packages/billing/src/actions/renewalsQueueActions.ts`
+  - Renewals page now calls `listRenewalQueueRows()` on mount via `useEffect` and renders loading/empty/error/data states.
+  - Exported renewals queue actions via:
+    - `packages/billing/src/actions/index.ts`
+  - Added wiring coverage:
+    - `packages/billing/tests/renewalsQueueActions.wiring.test.ts`
+    - `packages/billing/tests/RenewalsQueueTab.component.test.ts`
+- (2026-02-21) Completed `F052`.
+  - Added default 90-day horizon behavior to renewals queue loading:
+    - `DEFAULT_RENEWALS_HORIZON_DAYS = 90` in `renewalsQueueActions.ts`
+    - server-side filtering for `days_until_due` in range `[0, horizonDays]`
+  - Updated renewals UI copy to indicate default horizon window.
+  - Extended wiring coverage in:
+    - `packages/billing/tests/renewalsQueueActions.wiring.test.ts`
+    - `packages/billing/tests/RenewalsQueueTab.component.test.ts`
+- (2026-02-21) Completed `F053`.
+  - Added renewals queue bucket quick filters in `RenewalsQueueTab`:
+    - `All`, `0-30 Days`, `31-60 Days`, `61-90 Days`
+  - Implemented client-side bucket filtering against `days_until_due`.
+  - Extended component coverage in:
+    - `packages/billing/tests/RenewalsQueueTab.component.test.ts`
+- (2026-02-21) Completed `F054`.
+  - Added owner filter UI + behavior in `RenewalsQueueTab`:
+    - owner options derive from queue row `assigned_to` values with `unassigned` fallback.
+  - Extended queue row shape from server action with `assigned_to`.
+  - Added wiring coverage updates in:
+    - `packages/billing/tests/RenewalsQueueTab.component.test.ts`
+    - `packages/billing/tests/renewalsQueueActions.wiring.test.ts`
+- (2026-02-21) Completed `F055`.
+  - Added queue status mapping + filter support for:
+    - `pending`, `renewing`, `non_renewing`, `snoozed`, `completed`
+  - Added status filter UI + filtering behavior in `RenewalsQueueTab`.
+  - Extended action/component wiring coverage in:
+    - `packages/billing/tests/renewalsQueueActions.wiring.test.ts`
+    - `packages/billing/tests/RenewalsQueueTab.component.test.ts`
+- (2026-02-21) Completed `F056`.
+  - Added renewal mode filter support in queue UI for:
+    - `none`, `manual`, `auto`
+  - Queue row mapping already includes `effective_renewal_mode`; UI filtering now applies this dimension.
+  - Extended action/component wiring coverage in:
+    - `packages/billing/tests/renewalsQueueActions.wiring.test.ts`
+    - `packages/billing/tests/RenewalsQueueTab.component.test.ts`
+- (2026-02-21) Completed `F057`.
+  - Added contract type filter support in queue UI for:
+    - `fixed-term`, `evergreen`
+  - Filter operates on queue row `contract_type`.
+  - Extended component wiring coverage in:
+    - `packages/billing/tests/RenewalsQueueTab.component.test.ts`
+- (2026-02-21) Completed `F058`.
+  - Enforced default queue sort by `decision_due_date` ascending in renewals list action.
+  - Sorting now occurs after normalization/horizon filtering in:
+    - `packages/billing/src/actions/renewalsQueueActions.ts`
+  - Added wiring coverage update in:
+    - `packages/billing/tests/renewalsQueueActions.wiring.test.ts`
+- (2026-02-21) Completed `F059`.
+  - Added days-remaining visual badge state logic in queue rows:
+    - `overdue`, `due-soon`, `upcoming`
+  - Rendering now surfaces overdue and due-soon emphasis states via row badge styles.
+  - Added component coverage update in:
+    - `packages/billing/tests/RenewalsQueueTab.component.test.ts`
+- (2026-02-21) Completed `F060`.
+  - Added `Upcoming Renewals` summary widget to `ClientContractsTab` with queue-derived total count.
+  - Widget data source now loads via `listRenewalQueueRows()` during tab fetch flow.
+  - Added coverage:
+    - `packages/billing/tests/ClientContractsTab.upcomingRenewalsWidget.test.ts`
+- (2026-02-21) Completed `F061`.
+  - Updated `Upcoming Renewals` widget to display 90-day bucket counts:
+    - `0-30`, `31-60`, `61-90`
+  - Counts now derive from renewal queue row `days_until_due`.
+  - Added coverage update in:
+    - `packages/billing/tests/ClientContractsTab.upcomingRenewalsWidget.test.ts`
+- (2026-02-21) Completed `F062`.
+  - Added widget-to-queue navigation with preserved bucket context in:
+    - `packages/billing/src/components/billing-dashboard/contracts/ClientContractsTab.tsx`
+  - Bucket count badges now route to:
+    - `/msp/billing?tab=renewals&bucket=0-30|31-60|61-90`
+  - Added queue hydration from URL bucket query param in:
+    - `packages/billing/src/components/billing-dashboard/contracts/RenewalsQueueTab.tsx`
+  - Added/updated coverage in:
+    - `packages/billing/tests/ClientContractsTab.upcomingRenewalsWidget.test.ts`
+    - `packages/billing/tests/RenewalsQueueTab.component.test.ts`
+  - Validation:
+    - `npm -w @alga-psa/billing run typecheck`
+    - `npm -w @alga-psa/billing exec vitest run tests/ClientContractsTab.upcomingRenewalsWidget.test.ts tests/RenewalsQueueTab.component.test.ts`
+- (2026-02-21) Completed `F063`.
+  - Added queue-to-widget refresh wiring in billing dashboard:
+    - `packages/billing/src/components/billing-dashboard/BillingDashboard.tsx`
+  - `BillingDashboard` now increments `renewalsQueueRefreshTrigger` when renewals queue refreshes after mutation pathways.
+  - Passed refresh trigger into `ClientContractsTab` so upcoming renewals bucket counts are recomputed.
+  - `RenewalsQueueTab` now accepts `onQueueMutationComplete` and emits it after successful queue row reloads:
+    - `packages/billing/src/components/billing-dashboard/contracts/RenewalsQueueTab.tsx`
+  - Added wiring coverage in:
+    - `packages/billing/tests/BillingDashboard.renewalsRoute.test.ts`
+    - `packages/billing/tests/RenewalsQueueTab.component.test.ts`
+  - Validation:
+    - `npm -w @alga-psa/billing run typecheck`
+    - `npm -w @alga-psa/billing exec vitest run tests/BillingDashboard.renewalsRoute.test.ts tests/RenewalsQueueTab.component.test.ts tests/ClientContractsTab.upcomingRenewalsWidget.test.ts`
+- (2026-02-21) Completed `F064`.
+  - Defined centralized renewal queue status enum in shared contract interfaces:
+    - `packages/types/src/interfaces/contract.interfaces.ts`
+    - `server/src/interfaces/contract.interfaces.ts`
+  - Added renewal work-item interface model (`IClientContractRenewalWorkItem`) with `status: RenewalWorkItemStatus`.
+  - Updated queue row model/status normalization to consume `RenewalWorkItemStatus` from shared types:
+    - `packages/billing/src/actions/renewalsQueueActions.ts`
+  - Updated wiring coverage:
+    - `packages/billing/tests/renewalsQueueActions.wiring.test.ts`
+  - Validation:
+    - `npm -w @alga-psa/billing run typecheck`
+    - `npm -w @alga-psa/billing exec vitest run tests/renewalsQueueActions.wiring.test.ts tests/RenewalsQueueTab.component.test.ts`
+    - `npm -w @alga-psa/server run typecheck` (workspace alias not present in root workspaces)
+- (2026-02-21) Completed `F065`.
+  - Added queue mutation action to transition pending work items to renewing:
+    - `markRenewalQueueItemRenewing(clientContractId)` in `packages/billing/src/actions/renewalsQueueActions.ts`
+  - Transition behavior:
+    - validates required `clientContractId`
+    - enforces tenant-scoped active row lookup
+    - requires current status to resolve as `pending`
+    - updates status to `renewing` and writes `updated_at`
+  - Added mutation response payload shape:
+    - `RenewalQueueMutationResult`
+  - Added/updated wiring coverage:
+    - `packages/billing/tests/renewalsQueueActions.wiring.test.ts`
+    - `packages/billing/tests/renewalsQueueActions.markRenewing.wiring.test.ts`
+  - Validation:
+    - `npm -w @alga-psa/billing run typecheck`
+    - `npm -w @alga-psa/billing exec vitest run tests/renewalsQueueActions.wiring.test.ts tests/renewalsQueueActions.markRenewing.wiring.test.ts`
+- (2026-02-21) Completed `F066`.
+  - Added queue mutation action to transition pending work items to non-renewing:
+    - `markRenewalQueueItemNonRenewing(clientContractId)` in `packages/billing/src/actions/renewalsQueueActions.ts`
+  - Transition behavior mirrors mark-renewing safeguards:
+    - validates required `clientContractId`
+    - verifies status column availability
+    - enforces tenant-scoped active row lookup
+    - requires current status to resolve as `pending`
+    - updates status to `non_renewing` and writes `updated_at`
+  - Added wiring coverage:
+    - `packages/billing/tests/renewalsQueueActions.markNonRenewing.wiring.test.ts`
+  - Validation:
+    - `npm -w @alga-psa/billing run typecheck`
+    - `npm -w @alga-psa/billing exec vitest run tests/renewalsQueueActions.markRenewing.wiring.test.ts tests/renewalsQueueActions.markNonRenewing.wiring.test.ts`
+- (2026-02-21) Completed `F067`.
+  - Added renewal draft action for eligible queue entries:
+    - `createRenewalDraftForQueueItem(clientContractId)` in `packages/billing/src/actions/renewalsQueueActions.ts`
+  - Action behavior:
+    - requires non-empty `clientContractId`
+    - resolves eligible statuses to `pending|renewing` only
+    - creates a new draft contract + draft client contract assignment
+    - reuses existing linked draft when `created_draft_contract_id` is already present and valid
+    - links original row via `created_draft_contract_id` when column exists
+  - Added response type:
+    - `RenewalDraftCreationResult`
+  - Added wiring coverage:
+    - `packages/billing/tests/renewalsQueueActions.createDraft.wiring.test.ts`
+  - Validation:
+    - `npm -w @alga-psa/billing run typecheck`
+    - `npm -w @alga-psa/billing exec vitest run tests/renewalsQueueActions.wiring.test.ts tests/renewalsQueueActions.markRenewing.wiring.test.ts tests/renewalsQueueActions.markNonRenewing.wiring.test.ts tests/renewalsQueueActions.createDraft.wiring.test.ts`
+- (2026-02-21) Completed `F068`.
+  - Added snooze mutation action:
+    - `snoozeRenewalQueueItem(clientContractId, snoozedUntil)` in `packages/billing/src/actions/renewalsQueueActions.ts`
+  - Action behavior:
+    - validates required `clientContractId` + `snoozedUntil`
+    - verifies `status` + `snoozed_until` columns exist
+    - normalizes `snoozed_until` to date-only (`YYYY-MM-DD`)
+    - blocks snoozing from terminal statuses (`completed`, `non_renewing`)
+    - updates status to `snoozed` and returns `RenewalSnoozeResult`
+  - Added wiring coverage:
+    - `packages/billing/tests/renewalsQueueActions.snooze.wiring.test.ts`
+  - Validation:
+    - `npm -w @alga-psa/billing run typecheck`
+    - `npm -w @alga-psa/billing exec vitest run tests/renewalsQueueActions.snooze.wiring.test.ts tests/renewalsQueueActions.markRenewing.wiring.test.ts tests/renewalsQueueActions.markNonRenewing.wiring.test.ts tests/renewalsQueueActions.createDraft.wiring.test.ts`
+- (2026-02-21) Completed `F069`.
+  - Added assign-owner mutation action:
+    - `assignRenewalQueueItemOwner(clientContractId, assignedTo)` in `packages/billing/src/actions/renewalsQueueActions.ts`
+  - Action behavior:
+    - validates required `clientContractId`
+    - allows `assignedTo` as user id string or `null` (unassign)
+    - verifies `status` + `assigned_to` columns exist
+    - updates `assigned_to` with tenant-scoped row filtering
+    - returns `RenewalAssignmentResult` with current status + updated timestamp
+  - Added wiring coverage:
+    - `packages/billing/tests/renewalsQueueActions.assignOwner.wiring.test.ts`
+  - Validation:
+    - `npm -w @alga-psa/billing run typecheck`
+    - `npm -w @alga-psa/billing exec vitest run tests/renewalsQueueActions.assignOwner.wiring.test.ts tests/renewalsQueueActions.snooze.wiring.test.ts tests/renewalsQueueActions.createDraft.wiring.test.ts`
+- (2026-02-21) Completed `F070`.
+  - Added automatic unsnooze transition during queue list refresh in:
+    - `packages/billing/src/actions/renewalsQueueActions.ts`
+  - Behavior:
+    - checks `status` + `snoozed_until` columns
+    - moves eligible rows from `snoozed` to `pending` when `snoozed_until <= today`
+    - clears `snoozed_until` and updates `updated_at`
+  - Added wiring coverage:
+    - `packages/billing/tests/renewalsQueueActions.unsnooze.wiring.test.ts`
+  - Validation:
+    - `npm -w @alga-psa/billing run typecheck`
+    - `npm -w @alga-psa/billing exec vitest run tests/renewalsQueueActions.unsnooze.wiring.test.ts tests/renewalsQueueActions.wiring.test.ts tests/renewalsQueueActions.snooze.wiring.test.ts`
+- (2026-02-21) Completed `F071`.
+  - Added actor audit persistence helper flow in renewal queue actions:
+    - `resolveActorUserId(user)`
+    - `withActionActor(updateData, hasLastActionByColumn, actorUserId)`
+  - User-initiated queue mutations now persist `last_action_by` when column exists:
+    - `markRenewalQueueItemRenewing`
+    - `markRenewalQueueItemNonRenewing`
+    - `createRenewalDraftForQueueItem`
+    - `snoozeRenewalQueueItem`
+    - `assignRenewalQueueItemOwner`
+  - Added wiring coverage:
+    - `packages/billing/tests/renewalsQueueActions.actorAudit.wiring.test.ts`
+  - Updated wiring expectations for mark actions:
+    - `packages/billing/tests/renewalsQueueActions.markRenewing.wiring.test.ts`
+    - `packages/billing/tests/renewalsQueueActions.markNonRenewing.wiring.test.ts`
+  - Validation:
+    - `npm -w @alga-psa/billing run typecheck`
+    - `npm -w @alga-psa/billing exec vitest run tests/renewalsQueueActions.actorAudit.wiring.test.ts tests/renewalsQueueActions.markRenewing.wiring.test.ts tests/renewalsQueueActions.markNonRenewing.wiring.test.ts tests/renewalsQueueActions.createDraft.wiring.test.ts tests/renewalsQueueActions.snooze.wiring.test.ts tests/renewalsQueueActions.assignOwner.wiring.test.ts`
+- (2026-02-21) Completed `F072`.
+  - Added timestamp audit persistence helper in renewal queue actions:
+    - `withActionTimestamp(updateData, hasLastActionAtColumn, actionAt)`
+  - User-initiated queue mutations now persist `last_action_at` when column exists:
+    - `markRenewalQueueItemRenewing`
+    - `markRenewalQueueItemNonRenewing`
+    - `createRenewalDraftForQueueItem`
+    - `snoozeRenewalQueueItem`
+    - `assignRenewalQueueItemOwner`
+  - Added wiring coverage:
+    - `packages/billing/tests/renewalsQueueActions.timestampAudit.wiring.test.ts`
+  - Updated wiring expectations for mark/actor tests:
+    - `packages/billing/tests/renewalsQueueActions.markRenewing.wiring.test.ts`
+    - `packages/billing/tests/renewalsQueueActions.markNonRenewing.wiring.test.ts`
+    - `packages/billing/tests/renewalsQueueActions.actorAudit.wiring.test.ts`
+  - Validation:
+    - `npm -w @alga-psa/billing run typecheck`
+    - `npm -w @alga-psa/billing exec vitest run tests/renewalsQueueActions.timestampAudit.wiring.test.ts tests/renewalsQueueActions.actorAudit.wiring.test.ts tests/renewalsQueueActions.markRenewing.wiring.test.ts tests/renewalsQueueActions.markNonRenewing.wiring.test.ts tests/renewalsQueueActions.createDraft.wiring.test.ts tests/renewalsQueueActions.snooze.wiring.test.ts tests/renewalsQueueActions.assignOwner.wiring.test.ts`
+- (2026-02-21) Completed `F073`.
+  - Added optional queue action note support across mutation actions:
+    - `markRenewalQueueItemRenewing(..., note?)`
+    - `markRenewalQueueItemNonRenewing(..., note?)`
+    - `createRenewalDraftForQueueItem(..., note?)`
+    - `snoozeRenewalQueueItem(..., note?)`
+    - `assignRenewalQueueItemOwner(..., note?)`
+  - Added note helpers:
+    - `normalizeActionNote(note)`
+    - `withActionNote(updateData, hasLastActionNoteColumn, note)`
+  - Mutations now persist `last_action_note` when column exists and note is non-empty.
+  - Added wiring coverage:
+    - `packages/billing/tests/renewalsQueueActions.noteAudit.wiring.test.ts`
+  - Validation:
+    - `npm -w @alga-psa/billing run typecheck`
+    - `npm -w @alga-psa/billing exec vitest run tests/renewalsQueueActions.noteAudit.wiring.test.ts tests/renewalsQueueActions.timestampAudit.wiring.test.ts tests/renewalsQueueActions.actorAudit.wiring.test.ts tests/renewalsQueueActions.markRenewing.wiring.test.ts tests/renewalsQueueActions.markNonRenewing.wiring.test.ts tests/renewalsQueueActions.createDraft.wiring.test.ts tests/renewalsQueueActions.snooze.wiring.test.ts tests/renewalsQueueActions.assignOwner.wiring.test.ts`
+- (2026-02-21) Completed `F074`.
+  - Added explicit completed-status guard in automatic unsnooze pending-transition path:
+    - `packages/billing/src/actions/renewalsQueueActions.ts`
+  - Unsnooze update now includes:
+    - `.andWhereNot('status', 'completed')`
+  - This ensures completed work items never implicitly transition back to pending without an explicit reopen flow.
+  - Updated coverage:
+    - `packages/billing/tests/renewalsQueueActions.unsnooze.wiring.test.ts`
+  - Validation:
+    - `npm -w @alga-psa/billing run typecheck`
+    - `npm -w @alga-psa/billing exec vitest run tests/renewalsQueueActions.unsnooze.wiring.test.ts tests/renewalsQueueActions.noteAudit.wiring.test.ts tests/renewalsQueueActions.timestampAudit.wiring.test.ts`
+- (2026-02-21) Completed `F075`.
+  - Added explicit override guard to renewing transition:
+    - `markRenewalQueueItemRenewing` now rejects `previousStatus === 'non_renewing'` with an override-required error.
+  - This preserves strict non-renewal intent unless a dedicated override flow is implemented.
+  - Updated wiring coverage:
+    - `packages/billing/tests/renewalsQueueActions.markRenewing.wiring.test.ts`
+  - Validation:
+    - `npm -w @alga-psa/billing run typecheck`
+    - `npm -w @alga-psa/billing exec vitest run tests/renewalsQueueActions.markRenewing.wiring.test.ts tests/renewalsQueueActions.markNonRenewing.wiring.test.ts`
+- (2026-02-21) Completed `F076`.
+  - Added future-date enforcement for snooze action validation:
+    - `snoozeRenewalQueueItem` now rejects `snoozedUntil <= today`
+  - Added explicit error path:
+    - `Snooze target date must be in the future`
+  - Updated wiring coverage:
+    - `packages/billing/tests/renewalsQueueActions.snooze.wiring.test.ts`
+  - Validation:
+    - `npm -w @alga-psa/billing run typecheck`
+    - `npm -w @alga-psa/billing exec vitest run tests/renewalsQueueActions.snooze.wiring.test.ts tests/renewalsQueueActions.unsnooze.wiring.test.ts`
+- (2026-02-21) Completed `F077`.
+  - Added row-level action availability model based on effective queue status:
+    - `RenewalQueueAction` union
+    - `getAvailableActionsForStatus(status)` in `packages/billing/src/actions/renewalsQueueActions.ts`
+  - `listRenewalQueueRows` now returns `available_actions` for each row.
+  - Renewals queue UI now surfaces available actions per row:
+    - `Actions: {row.available_actions.join(', ')}` in `packages/billing/src/components/billing-dashboard/contracts/RenewalsQueueTab.tsx`
+  - Updated coverage:
+    - `packages/billing/tests/renewalsQueueActions.wiring.test.ts`
+    - `packages/billing/tests/RenewalsQueueTab.component.test.ts`
+  - Validation:
+    - `npm -w @alga-psa/billing run typecheck`
+    - `npm -w @alga-psa/billing exec vitest run tests/renewalsQueueActions.wiring.test.ts tests/RenewalsQueueTab.component.test.ts`
+- (2026-02-21) Completed `F078`.
+  - Added queue row action controls for:
+    - `Mark renewing`
+    - `Mark non-renewing`
+  - Implemented optimistic in-flight UI behavior in `RenewalsQueueTab`:
+    - per-row pending state map (`pendingRowActions`)
+    - immediate optimistic status/action updates before server response
+    - in-row pending indicator (`Updating action...`)
+    - action buttons disabled while row mutation is in-flight
+  - Mutation handlers call server actions:
+    - `markRenewalQueueItemRenewing`
+    - `markRenewalQueueItemNonRenewing`
+  - Updated coverage:
+    - `packages/billing/tests/RenewalsQueueTab.component.test.ts`
+  - Validation:
+    - `npm -w @alga-psa/billing run typecheck`
+    - `npm -w @alga-psa/billing exec vitest run tests/RenewalsQueueTab.component.test.ts tests/renewalsQueueActions.wiring.test.ts`
+- (2026-02-21) Completed `F079`.
+  - Added targeted row refresh helper after successful mutation responses:
+    - `refreshQueueRowFromServer(clientContractId)` in `RenewalsQueueTab`
+  - Success path now refreshes only the affected row from server state:
+    - `await refreshQueueRowFromServer(rowId)`
+  - Fallback path still supports full refresh when row cannot be resolved.
+  - Updated coverage:
+    - `packages/billing/tests/RenewalsQueueTab.component.test.ts`
+  - Validation:
+    - `npm -w @alga-psa/billing run typecheck`
+    - `npm -w @alga-psa/billing exec vitest run tests/RenewalsQueueTab.component.test.ts`
+- (2026-02-21) Completed `F080`.
+  - Extended renewal queue row model with draft linkage:
+    - `created_draft_contract_id?: string | null` in `RenewalQueueRow`
+  - Queue list action now maps draft linkage field from row source:
+    - `created_draft_contract_id: (row as any).created_draft_contract_id ?? null`
+  - Renewals queue UI now shows linked draft id when present:
+    - `Draft contract: {row.created_draft_contract_id}`
+  - Updated coverage:
+    - `packages/billing/tests/renewalsQueueActions.wiring.test.ts`
+    - `packages/billing/tests/RenewalsQueueTab.component.test.ts`
+  - Validation:
+    - `npm -w @alga-psa/billing run typecheck`
+    - `npm -w @alga-psa/billing exec vitest run tests/renewalsQueueActions.wiring.test.ts tests/RenewalsQueueTab.component.test.ts tests/renewalsQueueActions.createDraft.wiring.test.ts`
+- (2026-02-21) Completed `F081`.
+  - Extended renewal queue row model with ticket linkage:
+    - `created_ticket_id?: string | null` in `RenewalQueueRow`
+  - Queue list action now maps ticket linkage:
+    - `created_ticket_id: (row as any).created_ticket_id ?? null`
+  - Renewals queue UI now shows linked ticket id when present:
+    - `Ticket: {row.created_ticket_id}`
+  - Updated coverage:
+    - `packages/billing/tests/renewalsQueueActions.wiring.test.ts`
+    - `packages/billing/tests/RenewalsQueueTab.component.test.ts`
+  - Validation:
+    - `npm -w @alga-psa/billing run typecheck`
+    - `npm -w @alga-psa/billing exec vitest run tests/renewalsQueueActions.wiring.test.ts tests/RenewalsQueueTab.component.test.ts`
+- (2026-02-21) Completed `F082`.
+  - Added activation-confirmed completion action:
+    - `completeRenewalQueueItemForActivation(clientContractId, activatedContractId?, note?)`
+    - in `packages/billing/src/actions/renewalsQueueActions.ts`
+  - Completion rules:
+    - source work item must be `renewing`
+    - target renewal contract must exist with `status = active`
+    - on success, work item transitions to `completed` with audit metadata
+  - Added result type:
+    - `RenewalCompletionResult`
+  - Added wiring coverage:
+    - `packages/billing/tests/renewalsQueueActions.completeOnActivation.wiring.test.ts`
+  - Validation:
+    - `npm -w @alga-psa/billing run typecheck`
+    - `npm -w @alga-psa/billing exec vitest run tests/renewalsQueueActions.completeOnActivation.wiring.test.ts tests/renewalsQueueActions.markRenewing.wiring.test.ts tests/renewalsQueueActions.createDraft.wiring.test.ts`
+- (2026-02-21) Completed `F083`.
+  - Added non-renewal finalization completion action:
+    - `completeRenewalQueueItemForNonRenewal(clientContractId, note?)`
+    - in `packages/billing/src/actions/renewalsQueueActions.ts`
+  - Completion rules:
+    - source work item must be `non_renewing`
+    - on success, work item transitions to `completed` with audit metadata
+  - Added wiring coverage:
+    - `packages/billing/tests/renewalsQueueActions.completeNonRenewal.wiring.test.ts`
+  - Validation:
+    - `npm -w @alga-psa/billing run typecheck`
+    - `npm -w @alga-psa/billing exec vitest run tests/renewalsQueueActions.completeNonRenewal.wiring.test.ts tests/renewalsQueueActions.completeOnActivation.wiring.test.ts`
+- (2026-02-21) Completed `F084`.
+  - Added a scheduled renewal queue processor job handler:
+    - `processRenewalQueueHandler(data)` in `server/src/lib/jobs/handlers/processRenewalQueueHandler.ts`
+    - scans active contracts whose `decision_due_date` falls within `today..horizonDays`
+    - defaults horizon to `90` days and validates `tenantId`
+  - Registered new job name and scheduling helpers:
+    - pg-boss handler registration in `server/src/lib/jobs/index.ts`
+    - recurring scheduling helper `scheduleRenewalQueueProcessingJob(...)`
+    - tenant startup scheduling hook in `server/src/lib/jobs/initializeScheduledJobs.ts` (daily at `0 5 * * *`)
+    - abstraction-layer handler registration + available handler list in `server/src/lib/jobs/registerAllHandlers.ts`
+  - Added wiring test under included Vitest paths:
+    - `server/src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts`
+  - Validation:
+    - `cd server && npm run typecheck`
+    - `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`
+- (2026-02-21) Completed `F085`.
+  - Extended renewal queue processor to upsert work-item state for newly eligible cycles:
+    - processor now loads active contract assignments, normalizes effective renewal state, and filters by computed `decision_due_date` within `today..horizon`
+    - upserts `decision_due_date`, `renewal_cycle_start`, `renewal_cycle_end`, and `renewal_cycle_key` when drift/new cycle is detected
+    - resets cycle-scoped linkage fields (`created_ticket_id`, `created_draft_contract_id`) when cycle key rolls
+    - normalizes unknown/invalid statuses (or cycle changes) back to `pending`
+  - Updated wiring coverage:
+    - `server/src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts`
+  - Validation:
+    - `cd server && npm run typecheck`
+    - `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`
+- (2026-02-21) Completed `F086`.
+  - Scheduled renewal processing now explicitly resolves tenant default due-date action policy:
+    - reads `default_billing_settings.renewal_due_date_action_policy` when available
+    - normalizes policy (`queue_only | create_ticket`) with deterministic fallback to `create_ticket`
+  - During upsert, processor applies tenant policy to work-item rows when contract-level policy column exists:
+    - updates `client_contracts.renewal_due_date_action_policy` to tenant effective value
+    - tracks policy distribution in logs (`queueOnlyPolicyCount`, `createTicketPolicyCount`)
+  - Updated wiring coverage:
+    - `server/src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts`
+  - Validation:
+    - `cd server && npm run typecheck`
+    - `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`
+- (2026-02-21) Completed `F087`.
+  - Scheduled renewal processing now applies contract-level due-date policy overrides with deterministic precedence:
+    - resolve `use_tenant_renewal_defaults` (default `true`)
+    - resolve contract-level policy from `client_contracts.renewal_due_date_action_policy` when valid
+    - compute effective policy as:
+      - tenant policy when `use_tenant_renewal_defaults = true`
+      - contract override when defaults are disabled and explicit contract policy exists
+      - tenant fallback when override is missing/invalid
+  - Processor now logs override utilization:
+    - `contractOverridePolicyCount`
+  - Updated wiring coverage:
+    - `server/src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts`
+  - Validation:
+    - `cd server && npm run typecheck`
+    - `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`
+- (2026-02-21) Completed `F088`.
+  - Added due-date ticket automation execution in renewal processor:
+    - computes `shouldCreateTicketAtDueDate` for eligible rows where:
+      - effective policy is `create_ticket`
+      - decision due date is due (`<= today`)
+      - no `created_ticket_id` is already linked
+    - builds renewal-context title/description payloads
+    - uses configured renewal routing defaults (board/status/priority/assignee) when present
+  - Processor now persists ticket linkage on success:
+    - `updates.created_ticket_id = createdTicketId`
+  - Added direct ticket-creation fallback path for resilience when workflow action execution is unavailable.
+  - Updated wiring coverage:
+    - `server/src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts`
+  - Validation:
+    - `cd server && npm run typecheck`
+    - `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`
+- (2026-02-21) Completed `F089`.
+  - Integrated renewal ticket automation with workflow runtime business action path:
+    - initializes runtime v2 action registry (`initializeWorkflowRuntimeV2`)
+    - resolves and invokes `tickets.create@v1` from `getActionRegistryV2`
+    - validates both input and output schemas via registered action definitions
+  - Retained direct-ticket fallback path when runtime action execution is unavailable/fails to keep automation robust.
+  - Updated wiring coverage:
+    - `server/src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts`
+  - Validation:
+    - `cd server && npm run typecheck`
+    - `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`
+- (2026-02-21) Completed `F090`.
+  - Added renewal ticket title builder with explicit client + contract context:
+    - `buildRenewalTicketTitle(row, decisionDueDate)`
+    - title shape: `Renewal Decision Due {date}: {clientName} / {contractName}`
+  - Renewal automation now uses this title for both workflow-action and direct-fallback ticket creation paths.
+  - Updated wiring coverage:
+    - `server/src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts`
+  - Validation:
+    - `cd server && npm run typecheck`
+    - `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`
+- (2026-02-21) Completed `F091`.
+  - Added renewal ticket description builder with due-date + renewal-settings context:
+    - `buildRenewalTicketDescription(row, normalized, decisionDueDate)`
+    - includes decision due date, effective renewal mode, effective notice period, and cycle key metadata
+  - Renewal automation now uses this description for workflow-action and direct-fallback ticket creation paths.
+  - Updated wiring coverage:
+    - `server/src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts`
+  - Validation:
+    - `cd server && npm run typecheck`
+    - `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`
+- (2026-02-21) Completed `F092`.
+  - Renewal ticket routing now uses effective defaults with tenant/contract precedence:
+    - tenant defaults from `default_billing_settings`:
+      - `renewal_ticket_board_id`
+      - `renewal_ticket_status_id`
+      - `renewal_ticket_priority`
+      - `renewal_ticket_assignee_id`
+    - optional contract-level overrides from `client_contracts` are applied when `use_tenant_renewal_defaults = false`
+    - deterministic fallback to tenant defaults for any missing contract-level routing values
+  - Added processor visibility metric:
+    - `routingOverrideAppliedCount`
+  - Updated wiring coverage:
+    - `server/src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts`
+  - Validation:
+    - `cd server && npm run typecheck`
+    - `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`
+- (2026-02-21) Completed `F093`.
+  - Renewal processor now persists ticket linkage on successful automation:
+    - captures ticket id from workflow-action/direct-fallback creation result
+    - writes `created_ticket_id` on the client-contract renewal work item update payload
+  - This makes ticket linkage visible in queue APIs/UI and supports downstream idempotency checks.
+  - Updated wiring coverage:
+    - `server/src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts`
+  - Validation:
+    - `cd server && npm run typecheck`
+    - `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`
+- (2026-02-21) Completed `F094`.
+  - Added deterministic renewal ticket idempotency key builder:
+    - shape: `renewal-ticket:{tenantId}:{clientContractId}:{cycleKey}`
+  - Processor now uses this idempotency key for:
+    - workflow runtime `tickets.create` invocation input (`idempotency_key`)
+    - direct fallback ticket attributes (`idempotency_key`) for duplicate-detection context
+  - Updated wiring coverage:
+    - `server/src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts`
+  - Validation:
+    - `cd server && npm run typecheck`
+    - `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`
+- (2026-02-21) Completed `F095`.
+  - Added duplicate-prevention lookup before renewal ticket creation:
+    - checks existing `tickets` rows for matching `attributes.idempotency_key`
+    - if found, links existing ticket id to work item and skips create path
+  - Both workflow and direct ticket creation paths now receive shared ticket attributes including idempotency metadata.
+  - Added processor metric:
+    - `duplicateTicketSkipCount`
+  - Updated wiring coverage:
+    - `server/src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts`
+  - Validation:
+    - `cd server && npm run typecheck`
+    - `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`
+- (2026-02-21) Completed `F096`.
+  - Renewal processor now records automation failures on work items when ticket creation fails:
+    - reads optional `client_contracts.automation_error` column
+    - writes failure reason on create-path errors
+    - records missing-routing-defaults as explicit automation error for `create_ticket` policy
+    - clears `automation_error` when ticket creation succeeds
+  - Added processor metric:
+    - `automationErrorCount`
+  - Updated wiring coverage:
+    - `server/src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts`
+  - Validation:
+    - `cd server && npm run typecheck`
+    - `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`
+- (2026-02-21) Completed `F097`.
+  - Added manual retry queue action for failed renewal ticket automation:
+    - `retryRenewalQueueTicketCreation(clientContractId)` in `packages/billing/src/actions/renewalsQueueActions.ts`
+  - Retry action behavior:
+    - validates work item + due-date eligibility
+    - resolves effective due-date policy and routing defaults with tenant/contract precedence
+    - reuses cycle idempotency key to avoid duplicates
+    - links existing idempotent ticket when present
+    - otherwise re-attempts ticket creation and updates `created_ticket_id` / `automation_error`
+  - Exposed `automation_error` in renewal queue row payload model.
+  - Updated coverage:
+    - `packages/billing/tests/renewalsQueueActions.retryTicket.wiring.test.ts`
+  - Validation:
+    - `npm -w @alga-psa/billing run typecheck`
+    - `npm -w @alga-psa/billing exec vitest run tests/renewalsQueueActions.retryTicket.wiring.test.ts tests/renewalsQueueActions.wiring.test.ts`
+- (2026-02-21) Completed `F098`.
+  - Queue-only policy behavior is enforced in both automation paths:
+    - scheduled processor only enters ticket-create path when `effectiveDueDateActionPolicy === 'create_ticket'`
+    - manual retry action returns without creating tickets when effective policy is `queue_only`
+  - This preserves queue visibility/workflow without forcing ticket side effects.
+  - Updated coverage:
+    - `server/src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts`
+    - `packages/billing/tests/renewalsQueueActions.retryTicket.wiring.test.ts`
+  - Validation:
+    - `cd server && npm run typecheck`
+    - `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`
+    - `npm -w @alga-psa/billing run typecheck`
+    - `npm -w @alga-psa/billing exec vitest run tests/renewalsQueueActions.retryTicket.wiring.test.ts tests/renewalsQueueActions.wiring.test.ts`
+- (2026-02-21) Completed `F099`.
+  - Updated contract renewal-upcoming domain-event builders/schemas for queue-compatible semantics:
+    - expanded default window from 30 to 90 days
+    - `computeContractRenewalUpcoming` now supports decision-due date and renewal cycle key inputs
+    - payload now includes:
+      - `decisionDueDate`
+      - `daysUntilDecisionDue`
+      - `renewalCycleKey`
+  - Updated event publishers in:
+    - `packages/billing/src/actions/contractWizardActions.ts`
+    - `packages/clients/src/actions/clientContractActions.ts`
+  - `CONTRACT_RENEWAL_UPCOMING` idempotency keys now prefer cycle-key/decision-due identity where available.
+  - Added wiring coverage:
+    - `packages/billing/tests/contractRenewalUpcomingEvent.wiring.test.ts`
+  - Validation:
+    - `npm -w @alga-psa/billing run typecheck`
+    - `npm -w @alga-psa/clients run typecheck`
+    - `npm -w @alga-psa/billing exec vitest run tests/contractRenewalUpcomingEvent.wiring.test.ts tests/renewalsQueueActions.retryTicket.wiring.test.ts`
+  - Note:
+    - direct execution of `shared/workflow/streams/domainEventBuilders/__tests__/contractEventBuilders.test.ts` under current Vitest include globs returned “No test files found”; wiring assertions were added in billing tests to cover this change.
+- (2026-02-21) Completed `F100`.
+  - Confirmed evergreen renewal queue generation path in scheduled processor:
+    - processor normalizes each contract with `normalizeClientContract` (which computes evergreen annual-cycle decision dates)
+    - upserts normalized cycle boundaries and cycle key:
+      - `renewal_cycle_start`
+      - `renewal_cycle_end`
+      - `renewal_cycle_key`
+    - includes evergreen entries whenever computed decision due date is within the processing horizon
+  - Updated coverage:
+    - `server/src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts`
+  - Validation:
+    - `cd server && npm run typecheck`
+    - `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`
+- (2026-02-21) Completed `F101`.
+  - Added explicit per-row contract type badge rendering in Renewals queue UI:
+    - evergreen rows now show `Evergreen` badge
+    - fixed-term rows show `Fixed-term` badge
+  - Implemented in:
+    - `packages/billing/src/components/billing-dashboard/contracts/RenewalsQueueTab.tsx`
+  - Added component wiring assertions:
+    - `packages/billing/tests/RenewalsQueueTab.component.test.ts`
+  - Validation:
+    - `npm -w @alga-psa/billing exec vitest run tests/RenewalsQueueTab.component.test.ts --coverage=false`
+    - `npm -w @alga-psa/billing run typecheck`
+- (2026-02-21) Completed `F102`.
+  - Added evergreen cycle anchor detail to renewal queue rows.
+  - Queue row model now surfaces:
+    - `evergreen_cycle_anchor_date` (from `evergreen_review_anchor_date`, fallback `renewal_cycle_end`)
+  - UI now renders evergreen-only row detail:
+    - `Evergreen anchor: <date>`
+  - Updated wiring coverage:
+    - `packages/billing/tests/RenewalsQueueTab.component.test.ts`
+    - `packages/billing/tests/renewalsQueueActions.wiring.test.ts`
+  - Validation:
+    - `npm -w @alga-psa/billing exec vitest run tests/RenewalsQueueTab.component.test.ts tests/renewalsQueueActions.wiring.test.ts --coverage=false`
+    - `npm -w @alga-psa/billing run typecheck`
+- (2026-02-21) Completed `F103`.
+  - Confirmed evergreen entries share the same mark-renewing transition path as fixed-term entries:
+    - queue action availability is status-driven (`pending` includes `mark_renewing`)
+    - mark-renewing mutation path has no contract-type/end-date gate
+  - Added dedicated wiring coverage:
+    - `packages/billing/tests/renewalsQueueActions.markRenewingEvergreen.wiring.test.ts`
+  - Validation:
+    - `npm -w @alga-psa/billing exec vitest run tests/renewalsQueueActions.markRenewing.wiring.test.ts tests/renewalsQueueActions.markRenewingEvergreen.wiring.test.ts --coverage=false`
+    - `npm -w @alga-psa/billing run typecheck`
+- (2026-02-21) Completed `F104`.
+  - Confirmed evergreen entries share the same mark-non-renewing transition path as fixed-term entries:
+    - queue action availability remains status-driven
+    - mark-non-renewing mutation path has no contract-type/end-date gate
+  - Added dedicated wiring coverage:
+    - `packages/billing/tests/renewalsQueueActions.markNonRenewingEvergreen.wiring.test.ts`
+  - Validation:
+    - `npm -w @alga-psa/billing exec vitest run tests/renewalsQueueActions.markNonRenewing.wiring.test.ts tests/renewalsQueueActions.markNonRenewingEvergreen.wiring.test.ts --coverage=false`
+    - `npm -w @alga-psa/billing run typecheck`
+- (2026-02-21) Completed `F105`.
+  - Confirmed create-renewal-draft action supports evergreen entries:
+    - mutation eligibility is status-driven (`pending` / `renewing`)
+    - draft assignment creation logic supports null `end_date` (evergreen) while preserving start-date semantics
+  - Added dedicated wiring coverage:
+    - `packages/billing/tests/renewalsQueueActions.createDraftEvergreen.wiring.test.ts`
+  - Validation:
+    - `npm -w @alga-psa/billing exec vitest run tests/renewalsQueueActions.createDraft.wiring.test.ts tests/renewalsQueueActions.createDraftEvergreen.wiring.test.ts --coverage=false`
+    - `npm -w @alga-psa/billing run typecheck`
+- (2026-02-21) Completed `F106`.
+  - Confirmed evergreen cycle rollover semantics in scheduled renewal processing:
+    - when cycle key advances, processor treats it as a new cycle (`cycleChanged`)
+    - status normalization reopens work item to `pending`
+    - updated cycle key is persisted and cycle-change counters increment
+  - Added explicit rollover wiring coverage:
+    - `server/src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts`
+  - Validation:
+    - `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`
+    - `cd server && npm run typecheck`
+- (2026-02-21) Completed `F107`.
+  - Added cycle-level deduplication guard in scheduled renewal processing to prevent duplicate handling of the same contract/cycle period:
+    - dedupe identity: `client_contract_id + cycleKey` (fallback to `decision_due_date`)
+    - duplicate entries are skipped and counted in processor metrics
+  - This hardens evergreen annual-cycle processing against duplicate row inputs from upstream query/join behavior.
+  - Updated coverage:
+    - `server/src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts`
+  - Validation:
+    - `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`
+    - `cd server && npm run typecheck`
+- (2026-02-21) Completed `F108`.
+  - Added regression coverage confirming evergreen decision due date uses contract-level notice-period override when tenant defaults are disabled.
+  - Covered both branches:
+    - tenant defaults enabled => tenant notice period drives evergreen decision date
+    - tenant defaults disabled => contract override notice period drives evergreen decision date
+  - Updated coverage:
+    - `packages/billing/tests/clientContractEffectiveRenewalSettings.test.ts`
+  - Validation:
+    - `npm -w @alga-psa/billing exec vitest run tests/clientContractEffectiveRenewalSettings.test.ts --coverage=false`
+    - `npm -w @alga-psa/billing run typecheck`
+- (2026-02-21) Completed `F109`.
+  - Updated `ClientContractsTab` upcoming-renewals widget bucketing to explicitly include both contract types:
+    - `fixed-term`
+    - `evergreen`
+  - Added explicit widget wiring coverage to ensure evergreen entries are included in bucket counts.
+  - Updated files:
+    - `packages/billing/src/components/billing-dashboard/contracts/ClientContractsTab.tsx`
+    - `packages/billing/tests/ClientContractsTab.upcomingRenewalsWidget.test.ts`
+  - Validation:
+    - `npm -w @alga-psa/billing exec vitest run tests/ClientContractsTab.upcomingRenewalsWidget.test.ts --coverage=false`
+    - `npm -w @alga-psa/billing run typecheck`
+- (2026-02-21) Completed `F110`.
+  - Extended expiration-report action payload to include `decision_due_date` alongside `end_date` when present.
+  - Updated `ContractExpiration` type and query mapping in:
+    - `packages/billing/src/actions/contractReportActions.ts`
+  - Added wiring coverage:
+    - `packages/billing/tests/contractReportActions.expiration.wiring.test.ts`
+  - Validation:
+    - `npm -w @alga-psa/billing exec vitest run tests/contractReportActions.expiration.wiring.test.ts --coverage=false`
+    - `npm -w @alga-psa/billing run typecheck`
+- (2026-02-21) Completed `F111`.
+  - Extended expiration-report rows to include `renewal_mode`.
+  - Updated report contract type in:
+    - `packages/billing/src/actions/contractReportActions.ts`
+  - Expanded wiring coverage:
+    - `packages/billing/tests/contractReportActions.expiration.wiring.test.ts`
+  - Validation:
+    - `npm -w @alga-psa/billing exec vitest run tests/contractReportActions.expiration.wiring.test.ts --coverage=false`
+    - `npm -w @alga-psa/billing run typecheck`
+- (2026-02-21) Completed `F112`.
+  - Extended expiration-report rows to include renewal queue state when present (`queue_status` from `client_contracts.status`).
+  - Updated files:
+    - `packages/billing/src/actions/contractReportActions.ts`
+    - `packages/billing/tests/contractReportActions.expiration.wiring.test.ts`
+  - Validation:
+    - `npm -w @alga-psa/billing exec vitest run tests/contractReportActions.expiration.wiring.test.ts --coverage=false`
+    - `npm -w @alga-psa/billing run typecheck`
+- (2026-02-21) Completed `F113`.
+  - Preserved existing fixed-term expiration inclusion semantics while adding renewal metadata:
+    - expiration rows still key off `end_date` presence
+    - no hard requirement for `renewal_mode` to be set
+  - Added explicit compatibility coverage in:
+    - `packages/billing/tests/contractReportActions.expiration.wiring.test.ts`
+  - Validation:
+    - `npm -w @alga-psa/billing exec vitest run tests/contractReportActions.expiration.wiring.test.ts --coverage=false`
+    - `npm -w @alga-psa/billing run typecheck`
+- (2026-02-21) Completed `F114`.
+  - Preserved expiration-report sort compatibility for existing consumers:
+    - primary ordering remains `cc.end_date ASC`
+    - dedupe key remains based on contract/client/end-date identity
+  - Added explicit compatibility assertions in:
+    - `packages/billing/tests/contractReportActions.expiration.wiring.test.ts`
+  - Validation:
+    - `npm -w @alga-psa/billing exec vitest run tests/contractReportActions.expiration.wiring.test.ts --coverage=false`
+    - `npm -w @alga-psa/billing run typecheck`
+- (2026-02-21) Completed `F115`.
+  - Extended report summary payload with `atRiskDecisionCount` for dashboard consumption.
+  - At-risk metric now counts active client-contract assignments with `decision_due_date` in the next 90 days.
+  - Updated files:
+    - `packages/billing/src/actions/contractReportActions.ts`
+    - `packages/billing/tests/contractReportActions.summary.wiring.test.ts`
+  - Validation:
+    - `npm -w @alga-psa/billing exec vitest run tests/contractReportActions.summary.wiring.test.ts tests/contractReportActions.expiration.wiring.test.ts --coverage=false`
+    - `npm -w @alga-psa/billing run typecheck`
+- (2026-02-21) Completed `F116`.
+  - Updated Contract Reports expiration tab copy to reference renewal decisions in addition to expirations.
+  - Updated UX copy in:
+    - `packages/billing/src/components/billing-dashboard/reports/ContractReports.tsx`
+  - Added wiring coverage:
+    - `packages/billing/tests/ContractReports.expirationCopy.wiring.test.ts`
+  - Validation:
+    - `npm -w @alga-psa/billing exec vitest run tests/ContractReports.expirationCopy.wiring.test.ts tests/contractReportActions.summary.wiring.test.ts tests/contractReportActions.expiration.wiring.test.ts --coverage=false`
+    - `npm -w @alga-psa/billing run typecheck`
+- (2026-02-21) Completed `F117`.
+  - Updated expiration-report row construction so legacy `auto_renew` display derives from effective renewal mode values.
+  - Effective renewal mode now resolves with tenant-default precedence logic:
+    - honors `use_tenant_renewal_defaults`
+    - falls back deterministically between contract/tenant/default (`manual`)
+  - `auto_renew` now maps to `effectiveRenewalMode === 'auto'`.
+  - Updated files:
+    - `packages/billing/src/actions/contractReportActions.ts`
+    - `packages/billing/tests/contractReportActions.expiration.wiring.test.ts`
+  - Validation:
+    - `npm -w @alga-psa/billing exec vitest run tests/contractReportActions.expiration.wiring.test.ts tests/contractReportActions.summary.wiring.test.ts tests/ContractReports.expirationCopy.wiring.test.ts --coverage=false`
+    - `npm -w @alga-psa/billing run typecheck`
+- (2026-02-21) Completed `F118`.
+  - Confirmed renewal scheduled processor registration in the on-prem pg-boss scheduled initialization path:
+    - tenant loop schedules `process-renewal-queue` via `scheduleRenewalQueueProcessingJob(tenantId, 90, cron)`
+    - includes both first-schedule and singleton-already-scheduled handling logs
+  - Updated coverage:
+    - `server/src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts`
+  - Validation:
+    - `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`
+    - `cd server && npm run typecheck`
+- (2026-02-21) Completed `F119`.
+  - Added Temporal runner coverage proving renewal scheduled processing can be registered as a recurring Temporal workflow:
+    - schedules `process-renewal-queue` with tenant + horizon payload
+    - validates Temporal schedule action carries renewal job name/data
+  - Updated coverage:
+    - `ee/server/src/__tests__/unit/temporalJobRunner.scheduleRecurringJob.test.ts`
+  - Validation:
+    - `cd ee/server && npx vitest run src/__tests__/unit/temporalJobRunner.scheduleRecurringJob.test.ts`
+  - Note:
+    - `npm --prefix ee/server run test:unit -- src/__tests__/unit/temporalJobRunner.scheduleRecurringJob.test.ts` executes the full unit suite in this workspace and currently surfaces unrelated pre-existing failures in other unit files; targeted execution of the modified test passes.
+- (2026-02-21) Completed `F120`.
+  - Confirmed renewal processing uses a shared core handler callable from both runtime adapters:
+    - legacy pg-boss registration path (`index.ts`) calls `processRenewalQueueHandler`
+    - centralized handler registry (`registerAllHandlers.ts`) also calls the same handler for Temporal/runner abstraction execution
+    - `initializeJobRunner.ts` bridges registered handlers into runner implementations
+  - Updated coverage:
+    - `server/src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts`
+  - Validation:
+    - `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`
+    - `cd server && npm run typecheck`
+- (2026-02-21) Completed `F121`.
+  - Added parity coverage confirming queue-creation payload shape is equivalent across runner paths:
+    - pg-boss scheduling uses `process-renewal-queue` with `{ tenantId, horizonDays }`
+    - Temporal recurring workflow action forwards `jobName`, `tenantId`, and `data` through `genericJobWorkflow`
+  - Updated coverage:
+    - `server/src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts`
+  - Validation:
+    - `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`
+    - `cd server && npm run typecheck`
+- (2026-02-21) Completed `F122`.
+  - Added runtime-parity coverage confirming ticket idempotency behavior is shared across runner paths because both execute the same renewal processor core:
+    - shared idempotency key construction
+    - duplicate-ticket lookup by idempotency attribute
+    - shared duplicate-skip semantics
+  - Updated coverage:
+    - `server/src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts`
+  - Validation:
+    - `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`
+    - `cd server && npm run typecheck`
+- (2026-02-21) Completed `F123`.
+  - Added wiring coverage confirming runtime selection stays in `JobRunnerFactory` and renewal business logic remains runner/edition agnostic:
+    - runner type resolution via config/env (`JOB_RUNNER_TYPE`)
+    - renewal processor contains no edition/runtime branching
+  - Updated coverage:
+    - `server/src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts`
+  - Validation:
+    - `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`
+    - `cd server && npm run typecheck`
+
+## Open Questions
+- Should renewal ticket defaults be a brand-new billing settings card, or an extension of existing default ticket settings patterns?
+- Should evergreen annual review use contract start-date anniversary or configurable anchor date in v1?
+- Should renewal status transitions hard-lock contract activation behavior, or remain advisory with warnings in v1?
+- (2026-02-21) Completed `F124`.
+  - Added explicit runtime-fallback coverage confirming Temporal bootstrap failures gracefully fall back to pg-boss when fallback is enabled.
+  - Assertions verify:
+    - Temporal path attempted first for EE/runtime selection
+    - fallback gate checks `config?.fallbackToPgBoss !== false`
+    - fallback execution calls `createPgBossRunner(config)`
+    - Temporal bootstrap/import failures remain surfaced and handled by fallback branch
+  - Updated coverage:
+    - `server/src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts`
+  - Validation:
+    - `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`
+- (2026-02-21) Completed `F125`.
+  - Added tenant-scope parity coverage across pg-boss and Temporal renewal runtime paths.
+  - Assertions verify:
+    - scheduler payload requires and forwards tenant id for renewal processing
+    - renewal processor enforces tenant id and scopes reads/writes by tenant
+    - Temporal runner enforces tenant id in job data and propagates tenant scope into workflow/job persistence
+  - Updated coverage:
+    - `server/src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts`
+  - Validation:
+    - `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`
+- (2026-02-21) Completed `F126`.
+  - Enforced billing read authorization on renewals queue list endpoint.
+  - `listRenewalQueueRows` now gates access via `hasPermission(user, 'billing', 'read')` and throws `Permission denied: Cannot read renewals queue` when unauthorized.
+  - Updated files:
+    - `packages/billing/src/actions/renewalsQueueActions.ts`
+    - `packages/billing/tests/renewalsQueueActions.wiring.test.ts`
+  - Validation:
+    - `npm -w @alga-psa/billing exec vitest run tests/renewalsQueueActions.wiring.test.ts --coverage=false`
+- (2026-02-21) Completed `F127`.
+  - Enforced billing update authorization on all renewals queue mutation endpoints.
+  - Added shared guard `requireBillingUpdatePermission(user)` and applied it to:
+    - `markRenewalQueueItemRenewing`
+    - `markRenewalQueueItemNonRenewing`
+    - `createRenewalDraftForQueueItem`
+    - `snoozeRenewalQueueItem`
+    - `assignRenewalQueueItemOwner`
+    - `completeRenewalQueueItemForActivation`
+    - `completeRenewalQueueItemForNonRenewal`
+    - `retryRenewalQueueTicketCreation`
+  - Updated files:
+    - `packages/billing/src/actions/renewalsQueueActions.ts`
+    - `packages/billing/tests/renewalsQueueActions.permissions.wiring.test.ts`
+  - Validation:
+    - `npm -w @alga-psa/billing exec vitest run tests/renewalsQueueActions.wiring.test.ts tests/renewalsQueueActions.permissions.wiring.test.ts --coverage=false`
+- (2026-02-21) Completed `F128`.
+  - Enforced billing settings update authorization on renewal default writes.
+  - `updateDefaultBillingSettings` now requires `hasPermission(user, 'billing_settings', 'update')` and rejects unauthorized callers.
+  - Updated files:
+    - `packages/billing/src/actions/billingSettingsActions.ts`
+    - `packages/billing/tests/billingSettingsActions.renewalPermissions.wiring.test.ts`
+  - Validation:
+    - `npm -w @alga-psa/billing exec vitest run tests/billingSettingsActions.renewalPermissions.wiring.test.ts --coverage=false`
+- (2026-02-21) Completed `F129`.
+  - Added explicit wiring coverage that renewal work-item read paths are tenant-scoped by default.
+  - Coverage asserts tenant filtering across list/read query builders in renewals queue actions.
+  - Updated file:
+    - `packages/billing/tests/renewalsQueueActions.tenantReads.wiring.test.ts`
+  - Validation:
+    - `npm -w @alga-psa/billing exec vitest run tests/renewalsQueueActions.tenantReads.wiring.test.ts --coverage=false`
+- (2026-02-21) Completed `F130`.
+  - Added wiring coverage that renewal work-item mutation/write paths remain tenant-filtered by default.
+  - Coverage checks tenant-scoped update/insert/lookup clauses in renewals queue action writes.
+  - Updated file:
+    - `packages/billing/tests/renewalsQueueActions.tenantWrites.wiring.test.ts`
+  - Validation:
+    - `npm -w @alga-psa/billing exec vitest run tests/renewalsQueueActions.tenantWrites.wiring.test.ts --coverage=false`
+- (2026-02-21) Completed `F131`.
+  - Enhanced renewal transition auditing to capture action metadata (`last_action`) alongside actor/timestamp/note.
+  - Added `withActionLabel(...)` and `last_action` column checks across mutation paths so transitions now record action labels such as:
+    - `mark_renewing`, `mark_non_renewing`, `create_renewal_draft`, `snooze`, `assign_owner`, `complete_after_activation`, `complete_after_non_renewal`
+  - Updated files:
+    - `packages/billing/src/actions/renewalsQueueActions.ts`
+    - `packages/billing/tests/renewalsQueueActions.transitionAudit.wiring.test.ts`
+    - `packages/billing/tests/renewalsQueueActions.actorAudit.wiring.test.ts`
+  - Validation:
+    - `npm -w @alga-psa/billing exec vitest run tests/renewalsQueueActions.transitionAudit.wiring.test.ts tests/renewalsQueueActions.actorAudit.wiring.test.ts tests/renewalsQueueActions.timestampAudit.wiring.test.ts tests/renewalsQueueActions.noteAudit.wiring.test.ts --coverage=false`
+- (2026-02-21) Completed `F132`.
+  - Added automation-linkage audit metadata in renewal processor when due-date ticket linkage succeeds.
+  - When a ticket is linked, handler now records (when columns exist):
+    - `last_action = 'system_ticket_automation_linked'`
+    - `last_action_by = null` (system actor)
+    - `last_action_at = nowIso`
+  - Updated files:
+    - `server/src/lib/jobs/handlers/processRenewalQueueHandler.ts`
+    - `server/src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts`
+  - Validation:
+    - `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`
+- (2026-02-21) Completed `F133`.
+  - Added explicit draft-linkage audit coverage ensuring renewal draft creation linkage persists with actor/timestamp metadata.
+  - Coverage validates draft link persistence and action metadata chain (`withActionLabel` + `withActionActor` + `withActionTimestamp`).
+  - Updated file:
+    - `packages/billing/tests/renewalsQueueActions.createDraftAudit.wiring.test.ts`
+  - Validation:
+    - `npm -w @alga-psa/billing exec vitest run tests/renewalsQueueActions.createDraft.wiring.test.ts tests/renewalsQueueActions.createDraftAudit.wiring.test.ts --coverage=false`
+- (2026-02-21) Completed `F134`.
+  - Added explicit cross-tenant identifier rejection in queue mutation validation:
+    - owner assignment now rejects `assignedTo` user IDs found only in another tenant
+    - activation completion now rejects `activatedContractId` values belonging to another tenant
+  - Added explicit error paths for cross-tenant and not-in-tenant owner identifiers.
+  - Updated files:
+    - `packages/billing/src/actions/renewalsQueueActions.ts`
+    - `packages/billing/tests/renewalsQueueActions.crossTenantValidation.wiring.test.ts`
+  - Validation:
+    - `npm -w @alga-psa/billing exec vitest run tests/renewalsQueueActions.crossTenantValidation.wiring.test.ts tests/renewalsQueueActions.assignOwner.wiring.test.ts tests/renewalsQueueActions.completeOnActivation.wiring.test.ts --coverage=false`
+- (2026-02-21) Completed `F135`.
+  - Added note sanitization prior to persistence/render for renewal queue action notes.
+  - `normalizeActionNote` now sanitizes input by stripping HTML tags, removing angle brackets/control chars, normalizing whitespace, and trimming.
+  - Updated files:
+    - `packages/billing/src/actions/renewalsQueueActions.ts`
+    - `packages/billing/tests/renewalsQueueActions.noteSanitization.wiring.test.ts`
+  - Validation:
+    - `npm -w @alga-psa/billing exec vitest run tests/renewalsQueueActions.noteAudit.wiring.test.ts tests/renewalsQueueActions.noteSanitization.wiring.test.ts --coverage=false`
+- (2026-02-21) Completed `T032`.
+  - Verified effective renewal settings exposure in contract assignment read paths.
+  - Validation:
+    - `npm -w @alga-psa/billing exec vitest run tests/clientContractEffectiveRenewalSettings.test.ts --coverage=false`
+- (2026-02-21) Completed `T033`.
+  - Validation: `npm -w @alga-psa/billing exec vitest run tests/clientContractEffectiveRenewalSettings.test.ts --coverage=false`
+- (2026-02-21) Completed `T034`.
+  - Validation: `npm -w @alga-psa/billing exec vitest run tests/clientContractEffectiveRenewalSettings.test.ts --coverage=false`
+- (2026-02-21) Completed `T035`.
+  - Validation: `npm -w @alga-psa/billing exec vitest run tests/clientContractEffectiveRenewalSettings.test.ts --coverage=false`
+- (2026-02-21) Completed `T036`.
+  - Validation: `npm -w @alga-psa/billing exec vitest run tests/clientContractEffectiveRenewalSettings.test.ts --coverage=false`
+- (2026-02-21) Completed `T037`.
+  - Validation: `npm -w @alga-psa/billing exec vitest run tests/clientContractEffectiveRenewalSettings.test.ts --coverage=false`
+- (2026-02-21) Completed `T038`.
+  - Validation: `npm -w @alga-psa/billing exec vitest run tests/clientContractEffectiveRenewalSettings.test.ts --coverage=false`
+- (2026-02-21) Completed `T039`.
+  - Validation: `npm -w @alga-psa/billing exec vitest run tests/clientContractEffectiveRenewalSettings.test.ts --coverage=false`
+- (2026-02-21) Completed `T040`.
+  - Validation: `npm -w @alga-psa/billing exec vitest run tests/clientContractEffectiveRenewalSettings.test.ts --coverage=false`
+- (2026-02-21) Completed `T041`.
+  - Validation: `npm -w @alga-psa/billing exec vitest run tests/clientContractEffectiveRenewalSettings.test.ts --coverage=false`
+- (2026-02-21) Completed `T042`.
+  - Validation: `npm -w @alga-psa/billing exec vitest run tests/clientContractEffectiveRenewalSettings.test.ts --coverage=false`
+- (2026-02-21) Completed `T043`.
+  - Validation: `npm -w @alga-psa/billing exec vitest run tests/clientContractEffectiveRenewalSettings.test.ts --coverage=false`
+- (2026-02-21) Completed `T044`.
+  - Validation: `npm -w @alga-psa/billing exec vitest run tests/clientContractEffectiveRenewalSettings.test.ts --coverage=false`
+- (2026-02-21) Completed `T045`.
+  - Validation: `npm -w @alga-psa/billing exec vitest run tests/clientContractEffectiveRenewalSettings.test.ts --coverage=false`
+- (2026-02-21) Completed `T046`.
+  - Validation: `npm -w @alga-psa/billing exec vitest run tests/clientContractEffectiveRenewalSettings.test.ts --coverage=false`
+- (2026-02-21) Completed `T047`.
+  - Validation: `npm -w @alga-psa/billing exec vitest run tests/clientContractEffectiveRenewalSettings.test.ts --coverage=false`
+- (2026-02-21) Completed `T048`.
+  - Validation: `npm -w @alga-psa/billing exec vitest run tests/billingTabsConfig.renewals.test.ts tests/BillingDashboard.renewalsRoute.test.ts tests/RenewalsQueueTab.component.test.ts tests/renewalsQueueActions.wiring.test.ts --coverage=false`
+- (2026-02-21) Completed `T049`.
+  - Validation: `npm -w @alga-psa/billing exec vitest run tests/billingTabsConfig.renewals.test.ts tests/BillingDashboard.renewalsRoute.test.ts tests/RenewalsQueueTab.component.test.ts tests/renewalsQueueActions.wiring.test.ts --coverage=false`
+- (2026-02-21) Completed `T050`.
+  - Validation: `npm -w @alga-psa/billing exec vitest run tests/billingTabsConfig.renewals.test.ts tests/BillingDashboard.renewalsRoute.test.ts tests/RenewalsQueueTab.component.test.ts tests/renewalsQueueActions.wiring.test.ts --coverage=false`
+- (2026-02-21) Completed `T051`.
+  - Validation: `npm -w @alga-psa/billing exec vitest run tests/billingTabsConfig.renewals.test.ts tests/BillingDashboard.renewalsRoute.test.ts tests/RenewalsQueueTab.component.test.ts tests/renewalsQueueActions.wiring.test.ts --coverage=false`
+- (2026-02-21) Completed `T052`.
+  - Validation: `npm -w @alga-psa/billing exec vitest run tests/billingTabsConfig.renewals.test.ts tests/BillingDashboard.renewalsRoute.test.ts tests/RenewalsQueueTab.component.test.ts tests/renewalsQueueActions.wiring.test.ts --coverage=false`
+- (2026-02-21) Completed `T053`.
+  - Validation: `npm -w @alga-psa/billing exec vitest run tests/billingTabsConfig.renewals.test.ts tests/BillingDashboard.renewalsRoute.test.ts tests/RenewalsQueueTab.component.test.ts tests/renewalsQueueActions.wiring.test.ts --coverage=false`
+- (2026-02-21) Completed `T054`.
+  - Validation: `npm -w @alga-psa/billing exec vitest run tests/billingTabsConfig.renewals.test.ts tests/BillingDashboard.renewalsRoute.test.ts tests/RenewalsQueueTab.component.test.ts tests/renewalsQueueActions.wiring.test.ts --coverage=false`
+- (2026-02-21) Completed `T055`.
+  - Validation: `npm -w @alga-psa/billing exec vitest run tests/billingTabsConfig.renewals.test.ts tests/BillingDashboard.renewalsRoute.test.ts tests/RenewalsQueueTab.component.test.ts tests/renewalsQueueActions.wiring.test.ts --coverage=false`
+- (2026-02-21) Completed `T056`.
+  - Validation: `npm -w @alga-psa/billing exec vitest run tests/billingTabsConfig.renewals.test.ts tests/BillingDashboard.renewalsRoute.test.ts tests/RenewalsQueueTab.component.test.ts tests/renewalsQueueActions.wiring.test.ts --coverage=false`
+- (2026-02-21) Completed `T057`.
+  - Validation: `npm -w @alga-psa/billing exec vitest run tests/billingTabsConfig.renewals.test.ts tests/BillingDashboard.renewalsRoute.test.ts tests/RenewalsQueueTab.component.test.ts tests/renewalsQueueActions.wiring.test.ts --coverage=false`
+- (2026-02-21) Completed `T058`.
+  - Validation: `npm -w @alga-psa/billing exec vitest run tests/billingTabsConfig.renewals.test.ts tests/BillingDashboard.renewalsRoute.test.ts tests/RenewalsQueueTab.component.test.ts tests/renewalsQueueActions.wiring.test.ts --coverage=false`
+- (2026-02-21) Completed `T059`.
+  - Validation: `npm -w @alga-psa/billing exec vitest run tests/billingTabsConfig.renewals.test.ts tests/BillingDashboard.renewalsRoute.test.ts tests/RenewalsQueueTab.component.test.ts tests/renewalsQueueActions.wiring.test.ts --coverage=false`
+- (2026-02-21) Completed `T060`.
+  - Validation: `npm -w @alga-psa/billing exec vitest run tests/ClientContractsTab.upcomingRenewalsWidget.test.ts tests/BillingDashboard.renewalsRoute.test.ts --coverage=false`
+- (2026-02-21) Completed `T061`.
+  - Validation: `npm -w @alga-psa/billing exec vitest run tests/ClientContractsTab.upcomingRenewalsWidget.test.ts tests/BillingDashboard.renewalsRoute.test.ts --coverage=false`
+- (2026-02-21) Completed `T062`.
+  - Validation: `npm -w @alga-psa/billing exec vitest run tests/ClientContractsTab.upcomingRenewalsWidget.test.ts tests/BillingDashboard.renewalsRoute.test.ts --coverage=false`
+- (2026-02-21) Completed `T063`.
+  - Validation: `npm -w @alga-psa/billing exec vitest run tests/ClientContractsTab.upcomingRenewalsWidget.test.ts tests/BillingDashboard.renewalsRoute.test.ts --coverage=false`
+- (2026-02-21) Completed `T064`.
+  - Validation: `cd packages/billing && npx vitest run $(rg --files tests | rg 'renewalsQueueActions') tests/RenewalsQueueTab.component.test.ts --coverage=false`
+- (2026-02-21) Completed `T065`.
+  - Validation: `cd packages/billing && npx vitest run $(rg --files tests | rg 'renewalsQueueActions') tests/RenewalsQueueTab.component.test.ts --coverage=false`
+- (2026-02-21) Completed `T066`.
+  - Validation: `cd packages/billing && npx vitest run $(rg --files tests | rg 'renewalsQueueActions') tests/RenewalsQueueTab.component.test.ts --coverage=false`
+- (2026-02-21) Completed `T067`.
+  - Validation: `cd packages/billing && npx vitest run $(rg --files tests | rg 'renewalsQueueActions') tests/RenewalsQueueTab.component.test.ts --coverage=false`
+- (2026-02-21) Completed `T068`.
+  - Validation: `cd packages/billing && npx vitest run $(rg --files tests | rg 'renewalsQueueActions') tests/RenewalsQueueTab.component.test.ts --coverage=false`
+- (2026-02-21) Completed `T069`.
+  - Validation: `cd packages/billing && npx vitest run $(rg --files tests | rg 'renewalsQueueActions') tests/RenewalsQueueTab.component.test.ts --coverage=false`
+- (2026-02-21) Completed `T070`.
+  - Validation: `cd packages/billing && npx vitest run $(rg --files tests | rg 'renewalsQueueActions') tests/RenewalsQueueTab.component.test.ts --coverage=false`
+- (2026-02-21) Completed `T071`.
+  - Validation: `cd packages/billing && npx vitest run $(rg --files tests | rg 'renewalsQueueActions') tests/RenewalsQueueTab.component.test.ts --coverage=false`
+- (2026-02-21) Completed `T072`.
+  - Validation: `cd packages/billing && npx vitest run $(rg --files tests | rg 'renewalsQueueActions') tests/RenewalsQueueTab.component.test.ts --coverage=false`
+- (2026-02-21) Completed `T073`.
+  - Validation: `cd packages/billing && npx vitest run $(rg --files tests | rg 'renewalsQueueActions') tests/RenewalsQueueTab.component.test.ts --coverage=false`
+- (2026-02-21) Completed `T074`.
+  - Validation: `cd packages/billing && npx vitest run $(rg --files tests | rg 'renewalsQueueActions') tests/RenewalsQueueTab.component.test.ts --coverage=false`
+- (2026-02-21) Completed `T075`.
+  - Validation: `cd packages/billing && npx vitest run $(rg --files tests | rg 'renewalsQueueActions') tests/RenewalsQueueTab.component.test.ts --coverage=false`
+- (2026-02-21) Completed `T076`.
+  - Validation: `cd packages/billing && npx vitest run $(rg --files tests | rg 'renewalsQueueActions') tests/RenewalsQueueTab.component.test.ts --coverage=false`
+- (2026-02-21) Completed `T077`.
+  - Validation: `cd packages/billing && npx vitest run $(rg --files tests | rg 'renewalsQueueActions') tests/RenewalsQueueTab.component.test.ts --coverage=false`
+- (2026-02-21) Completed `T078`.
+  - Validation: `cd packages/billing && npx vitest run $(rg --files tests | rg 'renewalsQueueActions') tests/RenewalsQueueTab.component.test.ts --coverage=false`
+- (2026-02-21) Completed `T079`.
+  - Validation: `cd packages/billing && npx vitest run $(rg --files tests | rg 'renewalsQueueActions') tests/RenewalsQueueTab.component.test.ts --coverage=false`
+- (2026-02-21) Completed `T080`.
+  - Validation: `cd packages/billing && npx vitest run $(rg --files tests | rg 'renewalsQueueActions') tests/RenewalsQueueTab.component.test.ts --coverage=false`
+- (2026-02-21) Completed `T081`.
+  - Validation: `cd packages/billing && npx vitest run $(rg --files tests | rg 'renewalsQueueActions') tests/RenewalsQueueTab.component.test.ts --coverage=false`
+- (2026-02-21) Completed `T082`.
+  - Validation: `cd packages/billing && npx vitest run $(rg --files tests | rg 'renewalsQueueActions') tests/RenewalsQueueTab.component.test.ts --coverage=false`
+- (2026-02-21) Completed `T083`.
+  - Validation: `cd packages/billing && npx vitest run $(rg --files tests | rg 'renewalsQueueActions') tests/RenewalsQueueTab.component.test.ts --coverage=false`
+- (2026-02-21) Completed `T084`.
+  - Validation: `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`; `cd ee/server && npx vitest run src/__tests__/unit/temporalJobRunner.scheduleRecurringJob.test.ts`; `cd packages/billing && npx vitest run $(rg --files tests | rg 'renewalsQueueActions') tests/RenewalsQueueTab.component.test.ts --coverage=false`; `npm -w @alga-psa/billing exec vitest run tests/contractRenewalUpcomingEvent.wiring.test.ts tests/clientContractEffectiveRenewalSettings.test.ts tests/ClientContractsTab.upcomingRenewalsWidget.test.ts --coverage=false`
+- (2026-02-21) Completed `T085`.
+  - Validation: `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`; `cd ee/server && npx vitest run src/__tests__/unit/temporalJobRunner.scheduleRecurringJob.test.ts`; `cd packages/billing && npx vitest run $(rg --files tests | rg 'renewalsQueueActions') tests/RenewalsQueueTab.component.test.ts --coverage=false`; `npm -w @alga-psa/billing exec vitest run tests/contractRenewalUpcomingEvent.wiring.test.ts tests/clientContractEffectiveRenewalSettings.test.ts tests/ClientContractsTab.upcomingRenewalsWidget.test.ts --coverage=false`
+- (2026-02-21) Completed `T086`.
+  - Validation: `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`; `cd ee/server && npx vitest run src/__tests__/unit/temporalJobRunner.scheduleRecurringJob.test.ts`; `cd packages/billing && npx vitest run $(rg --files tests | rg 'renewalsQueueActions') tests/RenewalsQueueTab.component.test.ts --coverage=false`; `npm -w @alga-psa/billing exec vitest run tests/contractRenewalUpcomingEvent.wiring.test.ts tests/clientContractEffectiveRenewalSettings.test.ts tests/ClientContractsTab.upcomingRenewalsWidget.test.ts --coverage=false`
+- (2026-02-21) Completed `T087`.
+  - Validation: `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`; `cd ee/server && npx vitest run src/__tests__/unit/temporalJobRunner.scheduleRecurringJob.test.ts`; `cd packages/billing && npx vitest run $(rg --files tests | rg 'renewalsQueueActions') tests/RenewalsQueueTab.component.test.ts --coverage=false`; `npm -w @alga-psa/billing exec vitest run tests/contractRenewalUpcomingEvent.wiring.test.ts tests/clientContractEffectiveRenewalSettings.test.ts tests/ClientContractsTab.upcomingRenewalsWidget.test.ts --coverage=false`
+- (2026-02-21) Completed `T088`.
+  - Validation: `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`; `cd ee/server && npx vitest run src/__tests__/unit/temporalJobRunner.scheduleRecurringJob.test.ts`; `cd packages/billing && npx vitest run $(rg --files tests | rg 'renewalsQueueActions') tests/RenewalsQueueTab.component.test.ts --coverage=false`; `npm -w @alga-psa/billing exec vitest run tests/contractRenewalUpcomingEvent.wiring.test.ts tests/clientContractEffectiveRenewalSettings.test.ts tests/ClientContractsTab.upcomingRenewalsWidget.test.ts --coverage=false`
+- (2026-02-21) Completed `T089`.
+  - Validation: `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`; `cd ee/server && npx vitest run src/__tests__/unit/temporalJobRunner.scheduleRecurringJob.test.ts`; `cd packages/billing && npx vitest run $(rg --files tests | rg 'renewalsQueueActions') tests/RenewalsQueueTab.component.test.ts --coverage=false`; `npm -w @alga-psa/billing exec vitest run tests/contractRenewalUpcomingEvent.wiring.test.ts tests/clientContractEffectiveRenewalSettings.test.ts tests/ClientContractsTab.upcomingRenewalsWidget.test.ts --coverage=false`
+- (2026-02-21) Completed `T090`.
+  - Validation: `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`; `cd ee/server && npx vitest run src/__tests__/unit/temporalJobRunner.scheduleRecurringJob.test.ts`; `cd packages/billing && npx vitest run $(rg --files tests | rg 'renewalsQueueActions') tests/RenewalsQueueTab.component.test.ts --coverage=false`; `npm -w @alga-psa/billing exec vitest run tests/contractRenewalUpcomingEvent.wiring.test.ts tests/clientContractEffectiveRenewalSettings.test.ts tests/ClientContractsTab.upcomingRenewalsWidget.test.ts --coverage=false`
+- (2026-02-21) Completed `T091`.
+  - Validation: `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`; `cd ee/server && npx vitest run src/__tests__/unit/temporalJobRunner.scheduleRecurringJob.test.ts`; `cd packages/billing && npx vitest run $(rg --files tests | rg 'renewalsQueueActions') tests/RenewalsQueueTab.component.test.ts --coverage=false`; `npm -w @alga-psa/billing exec vitest run tests/contractRenewalUpcomingEvent.wiring.test.ts tests/clientContractEffectiveRenewalSettings.test.ts tests/ClientContractsTab.upcomingRenewalsWidget.test.ts --coverage=false`
+- (2026-02-21) Completed `T092`.
+  - Validation: `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`; `cd ee/server && npx vitest run src/__tests__/unit/temporalJobRunner.scheduleRecurringJob.test.ts`; `cd packages/billing && npx vitest run $(rg --files tests | rg 'renewalsQueueActions') tests/RenewalsQueueTab.component.test.ts --coverage=false`; `npm -w @alga-psa/billing exec vitest run tests/contractRenewalUpcomingEvent.wiring.test.ts tests/clientContractEffectiveRenewalSettings.test.ts tests/ClientContractsTab.upcomingRenewalsWidget.test.ts --coverage=false`
+- (2026-02-21) Completed `T093`.
+  - Validation: `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`; `cd ee/server && npx vitest run src/__tests__/unit/temporalJobRunner.scheduleRecurringJob.test.ts`; `cd packages/billing && npx vitest run $(rg --files tests | rg 'renewalsQueueActions') tests/RenewalsQueueTab.component.test.ts --coverage=false`; `npm -w @alga-psa/billing exec vitest run tests/contractRenewalUpcomingEvent.wiring.test.ts tests/clientContractEffectiveRenewalSettings.test.ts tests/ClientContractsTab.upcomingRenewalsWidget.test.ts --coverage=false`
+- (2026-02-21) Completed `T094`.
+  - Validation: `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`; `cd ee/server && npx vitest run src/__tests__/unit/temporalJobRunner.scheduleRecurringJob.test.ts`; `cd packages/billing && npx vitest run $(rg --files tests | rg 'renewalsQueueActions') tests/RenewalsQueueTab.component.test.ts --coverage=false`; `npm -w @alga-psa/billing exec vitest run tests/contractRenewalUpcomingEvent.wiring.test.ts tests/clientContractEffectiveRenewalSettings.test.ts tests/ClientContractsTab.upcomingRenewalsWidget.test.ts --coverage=false`
+- (2026-02-21) Completed `T095`.
+  - Validation: `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`; `cd ee/server && npx vitest run src/__tests__/unit/temporalJobRunner.scheduleRecurringJob.test.ts`; `cd packages/billing && npx vitest run $(rg --files tests | rg 'renewalsQueueActions') tests/RenewalsQueueTab.component.test.ts --coverage=false`; `npm -w @alga-psa/billing exec vitest run tests/contractRenewalUpcomingEvent.wiring.test.ts tests/clientContractEffectiveRenewalSettings.test.ts tests/ClientContractsTab.upcomingRenewalsWidget.test.ts --coverage=false`
+- (2026-02-21) Completed `T096`.
+  - Validation: `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`; `cd ee/server && npx vitest run src/__tests__/unit/temporalJobRunner.scheduleRecurringJob.test.ts`; `cd packages/billing && npx vitest run $(rg --files tests | rg 'renewalsQueueActions') tests/RenewalsQueueTab.component.test.ts --coverage=false`; `npm -w @alga-psa/billing exec vitest run tests/contractRenewalUpcomingEvent.wiring.test.ts tests/clientContractEffectiveRenewalSettings.test.ts tests/ClientContractsTab.upcomingRenewalsWidget.test.ts --coverage=false`
+- (2026-02-21) Completed `T097`.
+  - Validation: `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`; `cd ee/server && npx vitest run src/__tests__/unit/temporalJobRunner.scheduleRecurringJob.test.ts`; `cd packages/billing && npx vitest run $(rg --files tests | rg 'renewalsQueueActions') tests/RenewalsQueueTab.component.test.ts --coverage=false`; `npm -w @alga-psa/billing exec vitest run tests/contractRenewalUpcomingEvent.wiring.test.ts tests/clientContractEffectiveRenewalSettings.test.ts tests/ClientContractsTab.upcomingRenewalsWidget.test.ts --coverage=false`
+- (2026-02-21) Completed `T098`.
+  - Validation: `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`; `cd ee/server && npx vitest run src/__tests__/unit/temporalJobRunner.scheduleRecurringJob.test.ts`; `cd packages/billing && npx vitest run $(rg --files tests | rg 'renewalsQueueActions') tests/RenewalsQueueTab.component.test.ts --coverage=false`; `npm -w @alga-psa/billing exec vitest run tests/contractRenewalUpcomingEvent.wiring.test.ts tests/clientContractEffectiveRenewalSettings.test.ts tests/ClientContractsTab.upcomingRenewalsWidget.test.ts --coverage=false`
+- (2026-02-21) Completed `T099`.
+  - Validation: `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`; `cd ee/server && npx vitest run src/__tests__/unit/temporalJobRunner.scheduleRecurringJob.test.ts`; `cd packages/billing && npx vitest run $(rg --files tests | rg 'renewalsQueueActions') tests/RenewalsQueueTab.component.test.ts --coverage=false`; `npm -w @alga-psa/billing exec vitest run tests/contractRenewalUpcomingEvent.wiring.test.ts tests/clientContractEffectiveRenewalSettings.test.ts tests/ClientContractsTab.upcomingRenewalsWidget.test.ts --coverage=false`
+- (2026-02-21) Completed `T100`.
+  - Validation: `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`; `cd ee/server && npx vitest run src/__tests__/unit/temporalJobRunner.scheduleRecurringJob.test.ts`; `cd packages/billing && npx vitest run $(rg --files tests | rg 'renewalsQueueActions') tests/RenewalsQueueTab.component.test.ts --coverage=false`; `npm -w @alga-psa/billing exec vitest run tests/contractRenewalUpcomingEvent.wiring.test.ts tests/clientContractEffectiveRenewalSettings.test.ts tests/ClientContractsTab.upcomingRenewalsWidget.test.ts --coverage=false`
+- (2026-02-21) Completed `T101`.
+  - Validation: `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`; `cd ee/server && npx vitest run src/__tests__/unit/temporalJobRunner.scheduleRecurringJob.test.ts`; `cd packages/billing && npx vitest run $(rg --files tests | rg 'renewalsQueueActions') tests/RenewalsQueueTab.component.test.ts --coverage=false`; `npm -w @alga-psa/billing exec vitest run tests/contractRenewalUpcomingEvent.wiring.test.ts tests/clientContractEffectiveRenewalSettings.test.ts tests/ClientContractsTab.upcomingRenewalsWidget.test.ts --coverage=false`
+- (2026-02-21) Completed `T102`.
+  - Validation: `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`; `cd ee/server && npx vitest run src/__tests__/unit/temporalJobRunner.scheduleRecurringJob.test.ts`; `cd packages/billing && npx vitest run $(rg --files tests | rg 'renewalsQueueActions') tests/RenewalsQueueTab.component.test.ts --coverage=false`; `npm -w @alga-psa/billing exec vitest run tests/contractRenewalUpcomingEvent.wiring.test.ts tests/clientContractEffectiveRenewalSettings.test.ts tests/ClientContractsTab.upcomingRenewalsWidget.test.ts --coverage=false`
+- (2026-02-21) Completed `T103`.
+  - Validation: `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`; `cd ee/server && npx vitest run src/__tests__/unit/temporalJobRunner.scheduleRecurringJob.test.ts`; `cd packages/billing && npx vitest run $(rg --files tests | rg 'renewalsQueueActions') tests/RenewalsQueueTab.component.test.ts --coverage=false`; `npm -w @alga-psa/billing exec vitest run tests/contractRenewalUpcomingEvent.wiring.test.ts tests/clientContractEffectiveRenewalSettings.test.ts tests/ClientContractsTab.upcomingRenewalsWidget.test.ts --coverage=false`
+- (2026-02-21) Completed `T104`.
+  - Validation: `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`; `cd ee/server && npx vitest run src/__tests__/unit/temporalJobRunner.scheduleRecurringJob.test.ts`; `cd packages/billing && npx vitest run $(rg --files tests | rg 'renewalsQueueActions') tests/RenewalsQueueTab.component.test.ts --coverage=false`; `npm -w @alga-psa/billing exec vitest run tests/contractRenewalUpcomingEvent.wiring.test.ts tests/clientContractEffectiveRenewalSettings.test.ts tests/ClientContractsTab.upcomingRenewalsWidget.test.ts --coverage=false`
+- (2026-02-21) Completed `T105`.
+  - Validation: `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`; `cd ee/server && npx vitest run src/__tests__/unit/temporalJobRunner.scheduleRecurringJob.test.ts`; `cd packages/billing && npx vitest run $(rg --files tests | rg 'renewalsQueueActions') tests/RenewalsQueueTab.component.test.ts --coverage=false`; `npm -w @alga-psa/billing exec vitest run tests/contractRenewalUpcomingEvent.wiring.test.ts tests/clientContractEffectiveRenewalSettings.test.ts tests/ClientContractsTab.upcomingRenewalsWidget.test.ts --coverage=false`
+- (2026-02-21) Completed `T106`.
+  - Validation: `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`; `cd ee/server && npx vitest run src/__tests__/unit/temporalJobRunner.scheduleRecurringJob.test.ts`; `cd packages/billing && npx vitest run $(rg --files tests | rg 'renewalsQueueActions') tests/RenewalsQueueTab.component.test.ts --coverage=false`; `npm -w @alga-psa/billing exec vitest run tests/contractRenewalUpcomingEvent.wiring.test.ts tests/clientContractEffectiveRenewalSettings.test.ts tests/ClientContractsTab.upcomingRenewalsWidget.test.ts --coverage=false`
+- (2026-02-21) Completed `T107`.
+  - Validation: `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`; `cd ee/server && npx vitest run src/__tests__/unit/temporalJobRunner.scheduleRecurringJob.test.ts`; `cd packages/billing && npx vitest run $(rg --files tests | rg 'renewalsQueueActions') tests/RenewalsQueueTab.component.test.ts --coverage=false`; `npm -w @alga-psa/billing exec vitest run tests/contractRenewalUpcomingEvent.wiring.test.ts tests/clientContractEffectiveRenewalSettings.test.ts tests/ClientContractsTab.upcomingRenewalsWidget.test.ts --coverage=false`
+- (2026-02-21) Completed `T108`.
+  - Validation: `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`; `cd ee/server && npx vitest run src/__tests__/unit/temporalJobRunner.scheduleRecurringJob.test.ts`; `cd packages/billing && npx vitest run $(rg --files tests | rg 'renewalsQueueActions') tests/RenewalsQueueTab.component.test.ts --coverage=false`; `npm -w @alga-psa/billing exec vitest run tests/contractRenewalUpcomingEvent.wiring.test.ts tests/clientContractEffectiveRenewalSettings.test.ts tests/ClientContractsTab.upcomingRenewalsWidget.test.ts --coverage=false`
+- (2026-02-21) Completed `T109`.
+  - Validation: `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`; `cd ee/server && npx vitest run src/__tests__/unit/temporalJobRunner.scheduleRecurringJob.test.ts`; `cd packages/billing && npx vitest run $(rg --files tests | rg 'renewalsQueueActions') tests/RenewalsQueueTab.component.test.ts --coverage=false`; `npm -w @alga-psa/billing exec vitest run tests/contractRenewalUpcomingEvent.wiring.test.ts tests/clientContractEffectiveRenewalSettings.test.ts tests/ClientContractsTab.upcomingRenewalsWidget.test.ts --coverage=false`
+- (2026-02-21) Completed `T110`.
+  - Validation: `npm -w @alga-psa/billing exec vitest run tests/contractReportActions.expiration.wiring.test.ts tests/contractReportActions.summary.wiring.test.ts tests/ContractReports.expirationCopy.wiring.test.ts --coverage=false`
+- (2026-02-21) Completed `T111`.
+  - Validation: `npm -w @alga-psa/billing exec vitest run tests/contractReportActions.expiration.wiring.test.ts tests/contractReportActions.summary.wiring.test.ts tests/ContractReports.expirationCopy.wiring.test.ts --coverage=false`
+- (2026-02-21) Completed `T112`.
+  - Validation: `npm -w @alga-psa/billing exec vitest run tests/contractReportActions.expiration.wiring.test.ts tests/contractReportActions.summary.wiring.test.ts tests/ContractReports.expirationCopy.wiring.test.ts --coverage=false`
+- (2026-02-21) Completed `T113`.
+  - Validation: `npm -w @alga-psa/billing exec vitest run tests/contractReportActions.expiration.wiring.test.ts tests/contractReportActions.summary.wiring.test.ts tests/ContractReports.expirationCopy.wiring.test.ts --coverage=false`
+- (2026-02-21) Completed `T114`.
+  - Validation: `npm -w @alga-psa/billing exec vitest run tests/contractReportActions.expiration.wiring.test.ts tests/contractReportActions.summary.wiring.test.ts tests/ContractReports.expirationCopy.wiring.test.ts --coverage=false`
+- (2026-02-21) Completed `T115`.
+  - Validation: `npm -w @alga-psa/billing exec vitest run tests/contractReportActions.expiration.wiring.test.ts tests/contractReportActions.summary.wiring.test.ts tests/ContractReports.expirationCopy.wiring.test.ts --coverage=false`
+- (2026-02-21) Completed `T116`.
+  - Validation: `npm -w @alga-psa/billing exec vitest run tests/contractReportActions.expiration.wiring.test.ts tests/contractReportActions.summary.wiring.test.ts tests/ContractReports.expirationCopy.wiring.test.ts --coverage=false`
+- (2026-02-21) Completed `T117`.
+  - Validation: `npm -w @alga-psa/billing exec vitest run tests/contractReportActions.expiration.wiring.test.ts tests/contractReportActions.summary.wiring.test.ts tests/ContractReports.expirationCopy.wiring.test.ts --coverage=false`
+- (2026-02-21) Completed `T118`.
+  - Validation: `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`; `cd ee/server && npx vitest run src/__tests__/unit/temporalJobRunner.scheduleRecurringJob.test.ts`
+- (2026-02-21) Completed `T119`.
+  - Validation: `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`; `cd ee/server && npx vitest run src/__tests__/unit/temporalJobRunner.scheduleRecurringJob.test.ts`
+- (2026-02-21) Completed `T120`.
+  - Validation: `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`; `cd ee/server && npx vitest run src/__tests__/unit/temporalJobRunner.scheduleRecurringJob.test.ts`
+- (2026-02-21) Completed `T121`.
+  - Validation: `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`; `cd ee/server && npx vitest run src/__tests__/unit/temporalJobRunner.scheduleRecurringJob.test.ts`
+- (2026-02-21) Completed `T122`.
+  - Validation: `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`; `cd ee/server && npx vitest run src/__tests__/unit/temporalJobRunner.scheduleRecurringJob.test.ts`
+- (2026-02-21) Completed `T123`.
+  - Validation: `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`; `cd ee/server && npx vitest run src/__tests__/unit/temporalJobRunner.scheduleRecurringJob.test.ts`
+- (2026-02-21) Completed `T124`.
+  - Validation: `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`; `cd ee/server && npx vitest run src/__tests__/unit/temporalJobRunner.scheduleRecurringJob.test.ts`
+- (2026-02-21) Completed `T125`.
+  - Validation: `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`; `cd ee/server && npx vitest run src/__tests__/unit/temporalJobRunner.scheduleRecurringJob.test.ts`
+- (2026-02-21) Completed `T126`.
+  - Validation: `npm -w @alga-psa/billing exec vitest run tests/renewalsQueueActions.permissions.wiring.test.ts tests/billingSettingsActions.renewalPermissions.wiring.test.ts tests/renewalsQueueActions.tenantReads.wiring.test.ts tests/renewalsQueueActions.tenantWrites.wiring.test.ts tests/renewalsQueueActions.transitionAudit.wiring.test.ts tests/renewalsQueueActions.createDraftAudit.wiring.test.ts tests/renewalsQueueActions.crossTenantValidation.wiring.test.ts tests/renewalsQueueActions.noteSanitization.wiring.test.ts tests/renewalsQueueActions.actorAudit.wiring.test.ts tests/renewalsQueueActions.timestampAudit.wiring.test.ts tests/renewalsQueueActions.noteAudit.wiring.test.ts --coverage=false`
+- (2026-02-21) Completed `T127`.
+  - Validation: `npm -w @alga-psa/billing exec vitest run tests/renewalsQueueActions.permissions.wiring.test.ts tests/billingSettingsActions.renewalPermissions.wiring.test.ts tests/renewalsQueueActions.tenantReads.wiring.test.ts tests/renewalsQueueActions.tenantWrites.wiring.test.ts tests/renewalsQueueActions.transitionAudit.wiring.test.ts tests/renewalsQueueActions.createDraftAudit.wiring.test.ts tests/renewalsQueueActions.crossTenantValidation.wiring.test.ts tests/renewalsQueueActions.noteSanitization.wiring.test.ts tests/renewalsQueueActions.actorAudit.wiring.test.ts tests/renewalsQueueActions.timestampAudit.wiring.test.ts tests/renewalsQueueActions.noteAudit.wiring.test.ts --coverage=false`
+- (2026-02-21) Completed `T128`.
+  - Validation: `npm -w @alga-psa/billing exec vitest run tests/renewalsQueueActions.permissions.wiring.test.ts tests/billingSettingsActions.renewalPermissions.wiring.test.ts tests/renewalsQueueActions.tenantReads.wiring.test.ts tests/renewalsQueueActions.tenantWrites.wiring.test.ts tests/renewalsQueueActions.transitionAudit.wiring.test.ts tests/renewalsQueueActions.createDraftAudit.wiring.test.ts tests/renewalsQueueActions.crossTenantValidation.wiring.test.ts tests/renewalsQueueActions.noteSanitization.wiring.test.ts tests/renewalsQueueActions.actorAudit.wiring.test.ts tests/renewalsQueueActions.timestampAudit.wiring.test.ts tests/renewalsQueueActions.noteAudit.wiring.test.ts --coverage=false`
+- (2026-02-21) Completed `T129`.
+  - Validation: `npm -w @alga-psa/billing exec vitest run tests/renewalsQueueActions.permissions.wiring.test.ts tests/billingSettingsActions.renewalPermissions.wiring.test.ts tests/renewalsQueueActions.tenantReads.wiring.test.ts tests/renewalsQueueActions.tenantWrites.wiring.test.ts tests/renewalsQueueActions.transitionAudit.wiring.test.ts tests/renewalsQueueActions.createDraftAudit.wiring.test.ts tests/renewalsQueueActions.crossTenantValidation.wiring.test.ts tests/renewalsQueueActions.noteSanitization.wiring.test.ts tests/renewalsQueueActions.actorAudit.wiring.test.ts tests/renewalsQueueActions.timestampAudit.wiring.test.ts tests/renewalsQueueActions.noteAudit.wiring.test.ts --coverage=false`
+- (2026-02-21) Completed `T130`.
+  - Validation: `npm -w @alga-psa/billing exec vitest run tests/renewalsQueueActions.permissions.wiring.test.ts tests/billingSettingsActions.renewalPermissions.wiring.test.ts tests/renewalsQueueActions.tenantReads.wiring.test.ts tests/renewalsQueueActions.tenantWrites.wiring.test.ts tests/renewalsQueueActions.transitionAudit.wiring.test.ts tests/renewalsQueueActions.createDraftAudit.wiring.test.ts tests/renewalsQueueActions.crossTenantValidation.wiring.test.ts tests/renewalsQueueActions.noteSanitization.wiring.test.ts tests/renewalsQueueActions.actorAudit.wiring.test.ts tests/renewalsQueueActions.timestampAudit.wiring.test.ts tests/renewalsQueueActions.noteAudit.wiring.test.ts --coverage=false`
+- (2026-02-21) Completed `T131`.
+  - Validation: `npm -w @alga-psa/billing exec vitest run tests/renewalsQueueActions.permissions.wiring.test.ts tests/billingSettingsActions.renewalPermissions.wiring.test.ts tests/renewalsQueueActions.tenantReads.wiring.test.ts tests/renewalsQueueActions.tenantWrites.wiring.test.ts tests/renewalsQueueActions.transitionAudit.wiring.test.ts tests/renewalsQueueActions.createDraftAudit.wiring.test.ts tests/renewalsQueueActions.crossTenantValidation.wiring.test.ts tests/renewalsQueueActions.noteSanitization.wiring.test.ts tests/renewalsQueueActions.actorAudit.wiring.test.ts tests/renewalsQueueActions.timestampAudit.wiring.test.ts tests/renewalsQueueActions.noteAudit.wiring.test.ts --coverage=false`
+- (2026-02-21) Completed `T132`.
+  - Validation: `npm -w @alga-psa/billing exec vitest run tests/renewalsQueueActions.permissions.wiring.test.ts tests/billingSettingsActions.renewalPermissions.wiring.test.ts tests/renewalsQueueActions.tenantReads.wiring.test.ts tests/renewalsQueueActions.tenantWrites.wiring.test.ts tests/renewalsQueueActions.transitionAudit.wiring.test.ts tests/renewalsQueueActions.createDraftAudit.wiring.test.ts tests/renewalsQueueActions.crossTenantValidation.wiring.test.ts tests/renewalsQueueActions.noteSanitization.wiring.test.ts tests/renewalsQueueActions.actorAudit.wiring.test.ts tests/renewalsQueueActions.timestampAudit.wiring.test.ts tests/renewalsQueueActions.noteAudit.wiring.test.ts --coverage=false`
+- (2026-02-21) Completed `T133`.
+  - Validation: `npm -w @alga-psa/billing exec vitest run tests/renewalsQueueActions.permissions.wiring.test.ts tests/billingSettingsActions.renewalPermissions.wiring.test.ts tests/renewalsQueueActions.tenantReads.wiring.test.ts tests/renewalsQueueActions.tenantWrites.wiring.test.ts tests/renewalsQueueActions.transitionAudit.wiring.test.ts tests/renewalsQueueActions.createDraftAudit.wiring.test.ts tests/renewalsQueueActions.crossTenantValidation.wiring.test.ts tests/renewalsQueueActions.noteSanitization.wiring.test.ts tests/renewalsQueueActions.actorAudit.wiring.test.ts tests/renewalsQueueActions.timestampAudit.wiring.test.ts tests/renewalsQueueActions.noteAudit.wiring.test.ts --coverage=false`
+- (2026-02-21) Completed `T134`.
+  - Validation: `npm -w @alga-psa/billing exec vitest run tests/renewalsQueueActions.permissions.wiring.test.ts tests/billingSettingsActions.renewalPermissions.wiring.test.ts tests/renewalsQueueActions.tenantReads.wiring.test.ts tests/renewalsQueueActions.tenantWrites.wiring.test.ts tests/renewalsQueueActions.transitionAudit.wiring.test.ts tests/renewalsQueueActions.createDraftAudit.wiring.test.ts tests/renewalsQueueActions.crossTenantValidation.wiring.test.ts tests/renewalsQueueActions.noteSanitization.wiring.test.ts tests/renewalsQueueActions.actorAudit.wiring.test.ts tests/renewalsQueueActions.timestampAudit.wiring.test.ts tests/renewalsQueueActions.noteAudit.wiring.test.ts --coverage=false`
+- (2026-02-21) Completed `T135`.
+  - Validation: `npm -w @alga-psa/billing exec vitest run tests/renewalsQueueActions.permissions.wiring.test.ts tests/billingSettingsActions.renewalPermissions.wiring.test.ts tests/renewalsQueueActions.tenantReads.wiring.test.ts tests/renewalsQueueActions.tenantWrites.wiring.test.ts tests/renewalsQueueActions.transitionAudit.wiring.test.ts tests/renewalsQueueActions.createDraftAudit.wiring.test.ts tests/renewalsQueueActions.crossTenantValidation.wiring.test.ts tests/renewalsQueueActions.noteSanitization.wiring.test.ts tests/renewalsQueueActions.actorAudit.wiring.test.ts tests/renewalsQueueActions.timestampAudit.wiring.test.ts tests/renewalsQueueActions.noteAudit.wiring.test.ts --coverage=false`
+- (2026-02-21) Completed `T136`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T137`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T138`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T139`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T140`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T141`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T142`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T143`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T144`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T145`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T146`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T147`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T148`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T149`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T150`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T151`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T152`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T153`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T154`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T155`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T156`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T157`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T158`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T159`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T160`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T161`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T162`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T163`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T164`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T165`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T166`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T167`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T168`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T169`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T170`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T171`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T172`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T173`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T174`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T175`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T176`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T177`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T178`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T179`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T180`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T181`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T182`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T183`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T184`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T185`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T186`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T187`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T188`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T189`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T190`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T191`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T192`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T193`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T194`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T195`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T196`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T197`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T198`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T199`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T200`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T201`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T202`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T203`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T204`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T205`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T206`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T207`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T208`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T209`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T210`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T211`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T212`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T213`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T214`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T215`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T216`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T217`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T218`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T219`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T220`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T221`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T222`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T223`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T224`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T225`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T226`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T227`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T228`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T229`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T230`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T231`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T232`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T233`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T234`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T235`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T236`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T237`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T238`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T239`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T240`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T241`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T242`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `T243`.
+  - Validation: consolidated renewal billing/server/ee suites executed and passing in this session.
+- (2026-02-21) Completed `F136`.
+  - Added migration:
+    - `server/migrations/202602211100_add_contract_renewal_queue_status_audit_columns.cjs`
+  - Migration adds renewal queue status/audit columns on `client_contracts`:
+    - `status`, `snoozed_until`, `assigned_to`, `last_action`, `last_action_by`, `last_action_at`, `last_action_note`
+  - Added queue-status check constraint:
+    - `client_contracts_renewal_status_check` (`pending|renewing|non_renewing|snoozed|completed`)
+  - Added tenant-scoped actor FKs (null-on-delete):
+    - `client_contracts_assigned_to_fkey` (`tenant`, `assigned_to`) -> `users(tenant, user_id)`
+    - `client_contracts_last_action_by_fkey` (`tenant`, `last_action_by`) -> `users(tenant, user_id)`
+  - Migration is idempotent and Citus-safe (`ensureSequentialMode`, guarded column/constraint checks).
+  - Validation:
+    - `node -c server/migrations/202602211100_add_contract_renewal_queue_status_audit_columns.cjs`
+- (2026-02-21) Completed `F137`.
+  - Added migration:
+    - `server/migrations/202602211105_add_contract_renewal_cycle_columns.cjs`
+  - Migration adds renewal-cycle fields on `client_contracts`:
+    - `decision_due_date`
+    - `renewal_cycle_start`
+    - `renewal_cycle_end`
+    - `renewal_cycle_key`
+  - Migration remains idempotent and Citus-safe with guarded column checks.
+  - Validation:
+    - `node -c server/migrations/202602211105_add_contract_renewal_cycle_columns.cjs`
+- (2026-02-21) Completed `F138`.
+  - Added migration:
+    - `server/migrations/202602211110_add_contract_renewal_automation_columns.cjs`
+  - Migration adds renewal automation linkage/policy columns on `client_contracts`:
+    - `created_ticket_id`, `automation_error`, `renewal_due_date_action_policy`
+    - `renewal_ticket_board_id`, `renewal_ticket_status_id`, `renewal_ticket_priority`, `renewal_ticket_assignee_id`
+    - `created_draft_contract_id`
+  - Added policy check constraint:
+    - `client_contracts_renewal_due_date_action_policy_check` (`queue_only|create_ticket`)
+  - Migration remains idempotent and Citus-safe with guarded column/constraint checks.
+  - Validation:
+    - `node -c server/migrations/202602211110_add_contract_renewal_automation_columns.cjs`
+- (2026-02-21) Completed `F139`.
+  - Added migration:
+    - `server/migrations/202602211115_add_contract_renewal_config_columns.cjs`
+  - Migration adds renewal configuration columns on `client_contracts`:
+    - `renewal_mode`, `notice_period_days`, `renewal_term_months`, `use_tenant_renewal_defaults`
+  - Added DB constraints aligned to wizard/server validation rules:
+    - `client_contracts_renewal_mode_check` (`none|manual|auto`)
+    - `client_contracts_notice_period_days_check` (`>= 0`)
+    - `client_contracts_renewal_term_months_check` (`NULL OR > 0`)
+  - Migration remains idempotent and Citus-safe with guarded column/constraint checks.
+  - Validation:
+    - `node -c server/migrations/202602211115_add_contract_renewal_config_columns.cjs`
+- (2026-02-21) Completed `F140`.
+  - Added migration:
+    - `server/migrations/202602211120_add_default_billing_renewal_columns.cjs`
+  - Migration adds renewal defaults/policy columns on `default_billing_settings`:
+    - `default_renewal_mode`, `default_notice_period_days`, `renewal_due_date_action_policy`
+    - `renewal_ticket_board_id`, `renewal_ticket_status_id`, `renewal_ticket_priority`, `renewal_ticket_assignee_id`
+  - Added DB constraints for default value domains:
+    - `default_billing_settings_default_renewal_mode_check`
+    - `default_billing_settings_default_notice_period_days_check`
+    - `default_billing_settings_renewal_due_date_action_policy_check`
+  - Migration remains idempotent and Citus-safe with guarded column/constraint checks.
+  - Validation:
+    - `node -c server/migrations/202602211120_add_default_billing_renewal_columns.cjs`
+- (2026-02-21) Completed `F141`.
+  - Added backfill migration:
+    - `server/migrations/202602211125_backfill_active_client_contract_renewal_defaults.cjs`
+  - Backfill scope:
+    - active fixed-term `client_contracts` rows (`is_active=true`, joined `contracts.status='active'`, `end_date IS NOT NULL`)
+  - Backfill behavior (only when target fields are missing):
+    - sets deterministic defaults: `renewal_mode='manual'`, `notice_period_days=30`, `use_tenant_renewal_defaults=true`
+    - computes initial fixed-term cycle fields:
+      - `decision_due_date = end_date - notice_period_days`
+      - `renewal_cycle_start = start_date::date`
+      - `renewal_cycle_end = end_date::date`
+      - `renewal_cycle_key = fixed-term:<end_date>`
+    - preserves existing non-null values via `COALESCE` to avoid overwriting already-migrated data
+  - Migration is intentionally non-reversible (data backfill).
+  - Validation:
+    - `node -c server/migrations/202602211125_backfill_active_client_contract_renewal_defaults.cjs`
+- (2026-02-21) Completed `F142`.
+  - Added migration:
+    - `server/migrations/202602211130_add_contract_renewal_indexes_constraints.cjs`
+  - Added renewal queue performance indexes on `client_contracts` for common filters/sorts:
+    - `idx_client_contracts_renewal_due_status` (`tenant`, `decision_due_date`, `status`) partial active+due-date-not-null
+    - `idx_client_contracts_renewal_owner_status` (`tenant`, `assigned_to`, `status`) partial active
+    - `idx_client_contracts_renewal_mode_type` (`tenant`, `renewal_mode`, `end_date`) partial active
+    - `idx_client_contracts_renewal_snooze` (`tenant`, `status`, `snoozed_until`) partial active
+  - Added cycle dedupe uniqueness index:
+    - `ux_client_contracts_active_cycle_key` (`tenant`, `client_contract_id`, `renewal_cycle_key`) partial active+cycle-key-not-null
+  - Migration remains Citus-safe and guarded by column existence checks.
+  - Validation:
+    - `node -c server/migrations/202602211130_add_contract_renewal_indexes_constraints.cjs`
+- (2026-02-21) Completed `F143`.
+  - Added renewal schema-readiness guard in queue actions:
+    - `packages/billing/src/actions/renewalsQueueActions.ts`
+    - `assertRenewalSchemaReady(knex)` now validates required renewal columns on:
+      - `client_contracts`
+      - `default_billing_settings`
+    - all renewals queue endpoints now fail fast with actionable migration guidance when required schema is missing.
+  - Added renewal schema-readiness enforcement in scheduled automation:
+    - `server/src/lib/jobs/handlers/processRenewalQueueHandler.ts`
+    - processor now throws actionable error listing missing renewal columns/tables instead of silently skipping.
+  - Validation:
+    - `npm -w @alga-psa/billing run typecheck`
+    - `cd server && npm run typecheck`
+    - `npm -w @alga-psa/billing exec vitest run tests/renewalsQueueActions.wiring.test.ts --coverage=false`
+    - `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`
+- (2026-02-21) Completed `F144`.
+  - Removed required-column compatibility branching in strict migrated-schema paths:
+    - `packages/billing/src/actions/renewalsQueueActions.ts`
+      - queue list/load now uses direct migrated-schema fields for unsnooze + tenant-default joins.
+      - queue mutation/update helpers now write action audit fields directly (no per-column optional branch).
+      - retry-ticket flow now uses direct migrated-schema policy/routing fields.
+    - `server/src/lib/jobs/handlers/processRenewalQueueHandler.ts`
+      - post-guard processing now assumes migrated columns exist and applies direct policy/cycle/ticket updates.
+      - direct tenant-default selection list + default settings join used in all renewal processor reads.
+  - Updated strict-mode wiring assertions:
+    - `server/src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts`
+  - Validation:
+    - `npm -w @alga-psa/billing run typecheck`
+    - `cd server && npm run typecheck`
+    - `npm -w @alga-psa/billing exec vitest run tests/renewalsQueueActions.wiring.test.ts --coverage=false`
+    - `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`
+- (2026-02-21) Completed `T244`.
+  - Added migration coverage for renewal queue status/audit columns on `client_contracts` in:
+    - `server/src/test/unit/migrations/contractRenewalMigrations.test.ts`
+  - Assertions cover required status/audit columns and status domain constraint wiring from migration `202602211100_add_contract_renewal_queue_status_audit_columns.cjs`.
+  - Validation:
+    - `cd server && npx vitest run src/test/unit/migrations/contractRenewalMigrations.test.ts --coverage=false`
+- (2026-02-21) Completed `T245`.
+  - Extended migration coverage for renewal-cycle columns in:
+    - `server/src/test/unit/migrations/contractRenewalMigrations.test.ts`
+  - Assertions verify `decision_due_date`, `renewal_cycle_start`, `renewal_cycle_end`, and `renewal_cycle_key` add/drop wiring in migration `202602211105_add_contract_renewal_cycle_columns.cjs`.
+  - Validation:
+    - `cd server && npx vitest run src/test/unit/migrations/contractRenewalMigrations.test.ts --coverage=false`
+- (2026-02-21) Completed `T246`.
+  - Extended migration coverage for renewal automation/policy linkage columns on `client_contracts` in:
+    - `server/src/test/unit/migrations/contractRenewalMigrations.test.ts`
+  - Assertions verify ticket link, routing override, automation error, and policy-check constraint wiring from `202602211110_add_contract_renewal_automation_columns.cjs`.
+  - Validation:
+    - `cd server && npx vitest run src/test/unit/migrations/contractRenewalMigrations.test.ts --coverage=false`
+- (2026-02-21) Completed `T247`.
+  - Extended migration coverage for renewal default/policy columns on `default_billing_settings` in:
+    - `server/src/test/unit/migrations/contractRenewalMigrations.test.ts`
+  - Assertions verify default renewal mode/notice/policy columns, ticket-routing default fields, and policy/validation constraints from `202602211120_add_default_billing_renewal_columns.cjs`.
+  - Validation:
+    - `cd server && npx vitest run src/test/unit/migrations/contractRenewalMigrations.test.ts --coverage=false`
+- (2026-02-21) Completed `T248`.
+  - Extended migration coverage for renewal backfill behavior in:
+    - `server/src/test/unit/migrations/contractRenewalMigrations.test.ts`
+  - Assertions verify data backfill SQL initializes deterministic renewal defaults/cycle fields and scopes updates to active fixed-term rows joined to active contracts.
+  - Validation:
+    - `cd server && npx vitest run src/test/unit/migrations/contractRenewalMigrations.test.ts --coverage=false`
+- (2026-02-21) Completed `T249`.
+  - Added strict-schema integration wiring test for renewals queue listing in:
+    - `packages/billing/tests/renewalsQueueActions.schemaReadiness.integration.test.ts`
+  - Coverage verifies `listRenewalQueueRows` enforces `assertRenewalSchemaReady(knex)` and uses migrated-schema query path without legacy missing-column fallback branches.
+  - Validation:
+    - `npm -w @alga-psa/billing exec vitest run tests/renewalsQueueActions.schemaReadiness.integration.test.ts --coverage=false`
+  - Constraint note:
+    - runtime-import action tests currently hit workspace package entry-resolution failures for `@alga-psa/db`; migration/strict-schema integration coverage is therefore implemented via source-level wiring assertions (same style as existing renewal wiring suites).
+- (2026-02-21) Completed `T250`.
+  - Extended strict-schema integration wiring coverage for snooze mutation in:
+    - `packages/billing/tests/renewalsQueueActions.schemaReadiness.integration.test.ts`
+  - Assertions verify migrated-schema snooze path writes `status='snoozed'`, `snoozed_until`, and action audit metadata (`last_action`/actor/timestamp/note chain).
+  - Validation:
+    - `npm -w @alga-psa/billing exec vitest run tests/renewalsQueueActions.schemaReadiness.integration.test.ts --coverage=false`
+- (2026-02-21) Completed `T251`.
+  - Extended strict-schema integration wiring coverage for mark-renewing mutation in:
+    - `packages/billing/tests/renewalsQueueActions.schemaReadiness.integration.test.ts`
+  - Assertions verify pending-only transition to `renewing` plus actor/timestamp audit persistence in migrated-schema path.
+  - Validation:
+    - `npm -w @alga-psa/billing exec vitest run tests/renewalsQueueActions.schemaReadiness.integration.test.ts --coverage=false`
+- (2026-02-21) Completed `T252`.
+  - Extended renewal job integration wiring coverage in:
+    - `server/src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts`
+  - Added assertions that `processRenewalQueueHandler` computes/persists `decision_due_date`, `renewal_cycle_start`, `renewal_cycle_end`, and `renewal_cycle_key` for eligible rows.
+  - Validation:
+    - `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`
+- (2026-02-21) Completed `T253`.
+  - Extended renewal job integration wiring coverage in:
+    - `server/src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts`
+  - Added assertions that ticket automation under `create_ticket` uses tenant+contract+cycle idempotency identity and duplicate lookup/linking so at most one ticket is linked per cycle.
+  - Validation:
+    - `cd server && npx vitest run src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --coverage=false`
+- (2026-02-21) Completed `T254`.
+  - Extended strict-schema integration wiring coverage for guard-failure path in:
+    - `packages/billing/tests/renewalsQueueActions.schemaReadiness.integration.test.ts`
+  - Assertions verify `assertRenewalSchemaReady` fails fast with actionable missing-column error text instructing migration execution.
+  - Validation:
+    - `npm -w @alga-psa/billing exec vitest run tests/renewalsQueueActions.schemaReadiness.integration.test.ts --coverage=false`
+- (2026-02-21) Completed `T255`.
+  - Extended strict-schema integration wiring coverage for guard-pass operational path in:
+    - `packages/billing/tests/renewalsQueueActions.schemaReadiness.integration.test.ts`
+  - Assertions verify all renewals queue endpoints invoke `assertRenewalSchemaReady(knex)` and no longer rely on legacy missing-column fallback branches in strict migrated-schema mode.
+  - Validation:
+    - `npm -w @alga-psa/billing exec vitest run tests/renewalsQueueActions.schemaReadiness.integration.test.ts --coverage=false`

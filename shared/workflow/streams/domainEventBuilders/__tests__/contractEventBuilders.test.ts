@@ -81,10 +81,18 @@ describe('contractEventBuilders', () => {
     const computed = computeContractRenewalUpcoming({
       now: '2026-01-01T00:00:00.000Z',
       renewalAt: '2026-01-15',
-      windowDays: 30,
+      decisionDueAt: '2026-01-10',
+      renewalCycleKey: 'fixed-term:2026-01-15',
+      windowDays: 90,
     });
 
-    expect(computed).toEqual({ renewalAt: '2026-01-15', daysUntilRenewal: 14 });
+    expect(computed).toEqual({
+      renewalAt: '2026-01-15',
+      decisionDueDate: '2026-01-10',
+      daysUntilRenewal: 14,
+      daysUntilDecisionDue: 9,
+      renewalCycleKey: 'fixed-term:2026-01-15',
+    });
 
     const payload = buildWorkflowPayload(
       buildContractRenewalUpcomingPayload({ contractId, clientId, ...computed! }),
@@ -94,4 +102,3 @@ describe('contractEventBuilders', () => {
     expect(contractRenewalUpcomingEventPayloadSchema.safeParse(payload).success).toBe(true);
   });
 });
-

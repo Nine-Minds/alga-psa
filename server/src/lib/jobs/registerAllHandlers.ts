@@ -23,6 +23,10 @@ import {
   handleReconcileBucketUsage,
   ReconcileBucketUsageJobData,
 } from './handlers/reconcileBucketUsageHandler';
+import {
+  processRenewalQueueHandler,
+  RenewalQueueProcessorJobData,
+} from './handlers/processRenewalQueueHandler';
 import { cleanupTemporaryFormsJob } from '../../services/cleanupTemporaryFormsJob';
 import {
   cleanupAiSessionKeysHandler,
@@ -206,6 +210,17 @@ export async function registerAllJobHandlers(
     registerOpts
   );
 
+  JobHandlerRegistry.register<RenewalQueueProcessorJobData & BaseJobData>(
+    {
+      name: 'process-renewal-queue',
+      handler: async (_jobId, data) => {
+        await processRenewalQueueHandler(data);
+      },
+      retry: { maxAttempts: 3 },
+    },
+    registerOpts
+  );
+
   // ============================================================================
   // CLEANUP HANDLERS
   // ============================================================================
@@ -324,6 +339,7 @@ export function getAvailableJobHandlers(): string[] {
     'asset_import',
     // Usage & Reconciliation
     'reconcile-bucket-usage',
+    'process-renewal-queue',
     // Cleanup
     'cleanup-temporary-workflow-forms',
     // Calendar

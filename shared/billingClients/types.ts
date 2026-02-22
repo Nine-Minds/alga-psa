@@ -31,10 +31,13 @@ export type ClientContractAssignmentCreateInput = {
   start_date: string;
   end_date: string | null;
   is_active: boolean;
+  renewal_mode?: 'none' | 'manual' | 'auto';
+  notice_period_days?: number;
+  renewal_term_months?: number;
+  use_tenant_renewal_defaults?: boolean;
   po_required?: boolean;
   po_number?: string | null;
   po_amount?: number | null;
 };
 
 export type ClientContractAssignmentUpdateInput = Partial<IClientContract>;
-

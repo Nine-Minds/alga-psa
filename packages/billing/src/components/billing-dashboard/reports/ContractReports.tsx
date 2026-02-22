@@ -415,13 +415,13 @@ const ContractReports: React.FC = () => {
           <Card className="p-6">
             <div className="flex items-center gap-2 mb-4">
               <Calendar className="h-5 w-5 text-amber-600" />
-              <h3 className="text-lg font-semibold">Contract Expiration Report</h3>
+              <h3 className="text-lg font-semibold">Contract Expiration and Renewal Decisions</h3>
             </div>
             <p className="text-sm text-muted-foreground mb-4">
-              Track upcoming contract expirations and renewal opportunities
+              Track upcoming contract expirations and renewal decision due dates.
             </p>
             {expirationData.length === 0 ? (
-              <p className="text-sm text-muted-foreground py-8 text-center">No contracts expiring in the near future</p>
+              <p className="text-sm text-muted-foreground py-8 text-center">No upcoming contract expirations or renewal decisions in the near term</p>
             ) : (
               <DataTable
                 id="contract-expiration-table"
