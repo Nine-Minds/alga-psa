@@ -5,7 +5,11 @@ import dynamic from 'next/dynamic';
 import type { ComponentType } from 'react';
 
 // Define the props type based on the component's props
-export type WorkflowProps = {};
+export type WorkflowProps = {
+  mode?: 'control-panel' | 'editor-list' | 'editor-designer';
+  workflowId?: string | null;
+  isNew?: boolean;
+};
 export type WorkflowComponentType = ComponentType<WorkflowProps>;
 
 // Dynamic import using the new aliasing system

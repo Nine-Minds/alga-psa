@@ -765,7 +765,7 @@ const RunStudioShell: React.FC<RunStudioShellProps> = ({ runId }) => {
             {lastUpdatedAt ? <span>Updated {lastUpdatedAt.toLocaleTimeString()}</span> : null}
           </div>
           <div className="mt-2 text-xs">
-            <Link href="/msp/workflows" className="text-primary-600 hover:text-primary-700">
+            <Link href="/msp/workflow-control" className="text-primary-600 hover:text-primary-700">
               ← Back to Workflows
             </Link>
           </div>

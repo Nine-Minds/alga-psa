@@ -113,6 +113,8 @@ interface WorkflowListProps {
   onSelectWorkflow?: (workflowId: string) => void;
   onCreateNew?: () => void;
   onOpenEventCatalog?: () => void;
+  editorBasePath?: string;
+  controlPanelBasePath?: string;
 }
 
 const getStatusBadgeVariant = (status: string, isPaused?: boolean): BadgeVariant => {
@@ -171,7 +173,13 @@ const getTriggerLabel = (trigger?: Record<string, unknown> | null): string => {
   return 'Manual';
 };
 
-export default function WorkflowList({ onSelectWorkflow, onCreateNew, onOpenEventCatalog }: WorkflowListProps) {
+export default function WorkflowList({
+  onSelectWorkflow,
+  onCreateNew,
+  onOpenEventCatalog,
+  editorBasePath = '/msp/workflow-editor',
+  controlPanelBasePath = '/msp/workflow-control'
+}: WorkflowListProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const didUnmount = useRef(false);
@@ -326,7 +334,9 @@ export default function WorkflowList({ onSelectWorkflow, onCreateNew, onOpenEven
     clearSearchDebounce();
     if (onSelectWorkflow) {
       onSelectWorkflow(workflow.workflow_id);
+      return;
     }
+    router.push(`${editorBasePath}/${workflow.workflow_id}`);
   };
 
   const handleTogglePause = async (workflow: WorkflowDefinitionListItem, e: React.MouseEvent) => {
@@ -350,8 +360,7 @@ export default function WorkflowList({ onSelectWorkflow, onCreateNew, onOpenEven
 
   const handleViewRuns = (workflow: WorkflowDefinitionListItem, e: React.MouseEvent) => {
     e.stopPropagation();
-    // Navigate to runs tab with workflow filter
-    router.push(`/msp/workflows?tab=runs&workflowId=${workflow.workflow_id}`);
+    router.push(`${controlPanelBasePath}?section=runs`);
   };
 
   const handleOpenEventCatalog = () => {
@@ -360,7 +369,7 @@ export default function WorkflowList({ onSelectWorkflow, onCreateNew, onOpenEven
       onOpenEventCatalog();
       return;
     }
-    router.push('/msp/workflows?tab=event-catalog');
+    router.push(`${controlPanelBasePath}?section=event-catalog`);
   };
 
   // Bulk selection handlers
@@ -534,7 +543,7 @@ export default function WorkflowList({ onSelectWorkflow, onCreateNew, onOpenEven
       sortable: true,
       render: (value: unknown, record: WorkflowDefinitionListItem) => (
         <Link
-          href={`/msp/workflows?tab=designer&workflowId=${record.workflow_id}`}
+          href={`${editorBasePath}/${record.workflow_id}`}
           id={`workflow-list-open-${record.workflow_id}`}
           aria-label={record.name}
           className="block w-full text-left"

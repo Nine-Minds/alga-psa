@@ -1103,7 +1103,7 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
               </div>
               {selectedEventType && (
                 <Button id="run-dialog-open-event-catalog" asChild variant="ghost" size="sm">
-                  <Link href={`/msp/automation-hub?tab=events&eventType=${encodeURIComponent(selectedEventType)}`}>
+                  <Link href={`/msp/workflow-control?section=events&eventType=${encodeURIComponent(selectedEventType)}`}>
                     Open event catalog
                   </Link>
                 </Button>

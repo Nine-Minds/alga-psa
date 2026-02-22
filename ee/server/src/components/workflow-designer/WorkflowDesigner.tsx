@@ -237,6 +237,31 @@ const CONTROL_BLOCKS: Array<{ id: Step['type']; label: string; category: string;
 
 const DEFAULT_PAYLOAD_SCHEMA = 'payload.EmailWorkflowPayload.v1';
 
+type WorkflowDesignerMode = 'control-panel' | 'editor-list' | 'editor-designer';
+
+type WorkflowDesignerProps = {
+  mode?: WorkflowDesignerMode;
+  workflowId?: string | null;
+  isNew?: boolean;
+};
+
+type ControlPanelTab = 'Runs' | 'Events' | 'Event Catalog' | 'Dead Letter';
+
+const mapSectionToControlPanelTab = (section: string | null, canAdmin: boolean): ControlPanelTab => {
+  const raw = (section ?? '').trim().toLowerCase();
+  if (raw === 'events') return 'Events';
+  if (raw === 'event-catalog' || raw === 'events-catalog' || raw === 'event_catalog') return 'Event Catalog';
+  if ((raw === 'dead-letter' || raw === 'deadletter' || raw === 'dead_letter') && canAdmin) return 'Dead Letter';
+  return 'Runs';
+};
+
+const mapControlPanelTabToSection = (tab: string): string => {
+  if (tab === 'Events') return 'events';
+  if (tab === 'Event Catalog') return 'event-catalog';
+  if (tab === 'Dead Letter') return 'dead-letter';
+  return 'runs';
+};
+
 const createDefaultDefinition = (): WorkflowDefinition => ({
   id: uuidv4(),
   version: 1,
@@ -1439,7 +1464,11 @@ const createStepFromPalette = (
   } satisfies NodeStep;
 };
 
-const WorkflowDesigner: React.FC = () => {
+const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
+  mode = 'editor-list',
+  workflowId: workflowIdProp = null,
+  isNew = false
+}) => {
   const [activeTab, setActiveTab] = useState('Workflows');
   const [definitions, setDefinitions] = useState<WorkflowDefinitionRecord[]>([]);
   const [activeDefinition, setActiveDefinition] = useState<WorkflowDefinition | null>(null);
@@ -1526,20 +1555,12 @@ const WorkflowDesigner: React.FC = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const searchParamsString = searchParams.toString();
-  const workflowIdFromQuery = searchParams.get('workflowId');
-  const newWorkflowFromQuery = searchParams.get('new') === '1';
-  const tabFromQuery = searchParams.get('tab');
-  const didApplyWorkflowIdFromQuery = useRef<string | null>(null);
-  const didApplyNewWorkflowFromQuery = useRef<boolean>(false);
+  const didApplyWorkflowIdFromRoute = useRef<string | null>(null);
+  const didApplyNewWorkflowFromRoute = useRef<boolean>(false);
   const pendingDiscardActionRef = useRef<(() => void) | null>(null);
-
-  useEffect(() => {
-    const raw = (tabFromQuery ?? '').trim().toLowerCase();
-    if (raw !== 'audit') return;
-    const params = new URLSearchParams(searchParamsString);
-    params.set('tab', 'workflows');
-    router.replace(`/msp/workflows?${params.toString()}`);
-  }, [router, searchParamsString, tabFromQuery]);
+  const controlPanelSectionFromQuery = searchParams.get('section');
+  const requestedWorkflowId = mode === 'editor-designer' ? workflowIdProp : null;
+  const requestedNewWorkflow = mode === 'editor-designer' && isNew;
 
   useEffect(() => {
     try {
@@ -1855,57 +1876,39 @@ const WorkflowDesigner: React.FC = () => {
     [userPermissions, canAdmin]
   );
 
-  const tabLabelFromQuery = useMemo(() => {
-    const raw = (tabFromQuery ?? '').trim().toLowerCase();
-    if (!raw) return null;
-    if (raw === 'workflows' || raw === 'list') return 'Workflows';
-    if (raw === 'designer') return 'Designer';
-    if (raw === 'runs') return 'Runs';
-    if (raw === 'events') return 'Events';
-    if (raw === 'event-catalog' || raw === 'events-catalog' || raw === 'event_catalog') return 'Event Catalog';
-    if (raw === 'dead-letter' || raw === 'deadletter' || raw === 'dead_letter') return 'Dead Letter';
-    return null;
-  }, [tabFromQuery]);
-
   useEffect(() => {
-    if (!tabLabelFromQuery) return;
-
-    const isAdminTab = tabLabelFromQuery === 'Dead Letter';
-    if (isAdminTab && !canAdmin) {
-      const params = new URLSearchParams(searchParamsString);
-      params.set('tab', 'workflows');
-      router.replace(`/msp/workflows?${params.toString()}`);
+    if (mode === 'editor-list') {
+      setActiveTab('Workflows');
       return;
     }
 
-    setActiveTab(tabLabelFromQuery);
-  }, [canAdmin, router, searchParamsString, tabLabelFromQuery]);
+    if (mode === 'editor-designer') {
+      setActiveTab('Designer');
+      return;
+    }
 
-  const handleTabChange = useCallback((nextTabLabel: string) => {
+    const tab = mapSectionToControlPanelTab(controlPanelSectionFromQuery, canAdmin);
+    setActiveTab(tab);
+  }, [canAdmin, controlPanelSectionFromQuery, mode]);
+
+  const handleControlPanelTabChange = useCallback((nextTabLabel: string) => {
     setActiveTab(nextTabLabel);
 
-    const tabValue =
-      nextTabLabel === 'Workflows' ? 'workflows'
-        : nextTabLabel === 'Designer' ? 'designer'
-          : nextTabLabel === 'Runs' ? 'runs'
-            : nextTabLabel === 'Events' ? 'events'
-              : nextTabLabel === 'Event Catalog' ? 'event-catalog'
-              : nextTabLabel === 'Dead Letter' ? 'dead-letter'
-                : null;
+    if (mode !== 'control-panel') return;
 
-    if (!tabValue) return;
-
+    const section = mapControlPanelTabToSection(nextTabLabel);
     const params = new URLSearchParams(searchParamsString);
-    params.set('tab', tabValue);
-    if (tabValue === 'workflows') {
-      params.delete('workflowId');
-      params.delete('new');
+    if (section === 'runs') {
+      params.delete('section');
+    } else {
+      params.set('section', section);
     }
     const nextParamsString = params.toString();
+    const nextUrl = nextParamsString ? `/msp/workflow-control?${nextParamsString}` : '/msp/workflow-control';
     if (nextParamsString !== searchParamsString) {
-      router.replace(`/msp/workflows?${nextParamsString}`);
+      router.replace(nextUrl);
     }
-  }, [router, searchParamsString]);
+  }, [mode, router, searchParamsString]);
 
   const triggerRequiresEventCatalog = useMemo(() => {
     return Boolean(activeDefinition?.trigger?.type === 'event' && activeDefinition.trigger.eventName);
@@ -2035,7 +2038,7 @@ const WorkflowDesigner: React.FC = () => {
 	    } finally {
       setIsLoading(false);
     }
-  }, [newWorkflowFromQuery, workflowIdFromQuery]);
+  }, []);
 
   const loadRunSummary = useCallback(async () => {
     try {
@@ -2464,32 +2467,35 @@ const WorkflowDesigner: React.FC = () => {
   };
 
   useEffect(() => {
-    if (!workflowIdFromQuery) {
-      // Reset ref when workflowId is cleared
-      didApplyWorkflowIdFromQuery.current = null;
-      // Clear active definition if workflowId is cleared
-      if (activeWorkflowId) {
+    if (mode !== 'editor-designer') {
+      didApplyWorkflowIdFromRoute.current = null;
+      return;
+    }
+
+    if (!requestedWorkflowId) {
+      didApplyWorkflowIdFromRoute.current = null;
+      if (!requestedNewWorkflow && activeWorkflowId) {
         setActiveDefinition(null);
         setActiveWorkflowId(null);
       }
       return;
     }
-    if (didApplyWorkflowIdFromQuery.current === workflowIdFromQuery) return;
-    
-    // Clear previous workflow immediately when a new one is selected
-    if (activeWorkflowId !== workflowIdFromQuery) {
+
+    if (didApplyWorkflowIdFromRoute.current === requestedWorkflowId) return;
+
+    if (activeWorkflowId !== requestedWorkflowId) {
       setActiveDefinition(null);
       setActiveWorkflowId(null);
       setSelectedStepId(null);
       setSelectedPipePath('root');
     }
-    
-    const match = definitions.find((d) => d.workflow_id === workflowIdFromQuery);
+
+    const match = definitions.find((d) => d.workflow_id === requestedWorkflowId);
     if (!match) return;
-    didApplyWorkflowIdFromQuery.current = workflowIdFromQuery;
+    didApplyWorkflowIdFromRoute.current = requestedWorkflowId;
     handleSelectDefinition(match);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [workflowIdFromQuery, definitions]);
+  }, [activeWorkflowId, definitions, mode, requestedNewWorkflow, requestedWorkflowId]);
 
   const handleCreateDefinition = useCallback(() => {
     const draft = createDefaultDefinition();
@@ -2507,19 +2513,18 @@ const WorkflowDesigner: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (!newWorkflowFromQuery) {
-      didApplyNewWorkflowFromQuery.current = false;
+    if (mode !== 'editor-designer') {
+      didApplyNewWorkflowFromRoute.current = false;
       return;
     }
-    if (didApplyNewWorkflowFromQuery.current) return;
-    didApplyNewWorkflowFromQuery.current = true;
+    if (!requestedNewWorkflow) {
+      didApplyNewWorkflowFromRoute.current = false;
+      return;
+    }
+    if (didApplyNewWorkflowFromRoute.current) return;
+    didApplyNewWorkflowFromRoute.current = true;
     handleCreateDefinition();
-
-    const nextParams = new URLSearchParams(searchParams.toString());
-    nextParams.delete('new');
-    router.replace(`?${nextParams.toString()}`, { scroll: false });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [newWorkflowFromQuery]);
+  }, [handleCreateDefinition, mode, requestedNewWorkflow]);
 
   const handleDefinitionChange = (changes: Partial<WorkflowDefinition>) => {
     if (!activeDefinition) return;
@@ -2544,12 +2549,7 @@ const WorkflowDesigner: React.FC = () => {
         setActiveWorkflowId(data.workflowId);
         setActiveDefinition({ ...activeDefinition, id: data.workflowId });
 
-        // Keep the URL in sync with the newly created workflow so downstream effects (and tab navigation)
-        // don't immediately clear the active workflow when `workflowId` is missing from the query string.
-        const nextParams = new URLSearchParams(searchParams.toString());
-        nextParams.set('workflowId', data.workflowId);
-        nextParams.delete('new');
-        router.replace(`?${nextParams.toString()}`, { scroll: false });
+        router.replace(`/msp/workflow-editor/${encodeURIComponent(data.workflowId)}`, { scroll: false });
         toast.success('Workflow created');
       } else {
         await updateWorkflowDefinitionDraftAction({
@@ -4477,48 +4477,75 @@ const WorkflowDesigner: React.FC = () => {
   const workflowListContent = (
     <WorkflowListV2
       onSelectWorkflow={(workflowId) => {
-        const params = new URLSearchParams(searchParamsString);
-        params.delete('search');
-        params.delete('status');
-        params.delete('trigger');
-        params.delete('new');
-        params.set('workflowId', workflowId);
-        params.set('tab', 'designer');
-        router.push(`/msp/workflows?${params.toString()}`);
+        router.push(`/msp/workflow-editor/${encodeURIComponent(workflowId)}`);
       }}
       onOpenEventCatalog={() => {
-        const params = new URLSearchParams(searchParamsString);
-        params.delete('workflowId');
-        params.delete('new');
-        params.set('tab', 'event-catalog');
-        router.push(`/msp/workflows?${params.toString()}`);
+        router.push('/msp/workflow-control?section=event-catalog');
       }}
       onCreateNew={() => {
         requestDiscardChangesConfirmation(() => {
-          const params = new URLSearchParams(searchParamsString);
-          params.delete('search');
-          params.delete('status');
-          params.delete('trigger');
-          params.delete('workflowId');
-          params.set('new', '1');
-          params.set('tab', 'designer');
-          router.push(`/msp/workflows?${params.toString()}`);
+          router.push('/msp/workflow-editor/new');
         });
       }}
     />
   );
 
-  const eventCatalogContent = <EventsCatalogV2 />;
+  const eventCatalogContent = (
+    <div className="h-full min-h-0 overflow-y-auto px-6 py-4">
+      <EventsCatalogV2 />
+    </div>
+  );
+  const isControlPanelMode = mode === 'control-panel';
+  const isEditorDesignerMode = mode === 'editor-designer';
+
+  const controlPanelTabs = [
+    { label: 'Runs', content: runListContent },
+    { label: 'Events', content: eventListContent },
+    { label: 'Event Catalog', content: eventCatalogContent },
+    ...(canAdmin ? [{ label: 'Dead Letter', content: deadLetterContent }] : [])
+  ];
+
+  const pageTitle =
+    isControlPanelMode
+      ? 'Workflow Control Panel'
+      : isEditorDesignerMode
+        ? 'Workflow Designer'
+        : 'Workflow Editor';
+
+  const pageDescription =
+    isControlPanelMode
+      ? 'Monitor runs, events, the event catalog, and dead-letter runs.'
+      : isEditorDesignerMode
+        ? 'Build and maintain workflow automations.'
+        : 'Choose a workflow to edit or create a new workflow.';
+
+  const handleBackToWorkflowList = useCallback(() => {
+    requestDiscardChangesConfirmation(() => {
+      router.push('/msp/workflow-editor');
+    });
+  }, [requestDiscardChangesConfirmation, router]);
 
   return (
     <div className="h-full min-h-0 flex flex-col">
       <div className="border-b bg-white px-6 py-4">
-        <div className="flex items-center justify-between">
+        <div className="flex items-start justify-between gap-4">
           <div>
-            <h1 className="text-xl font-semibold text-gray-900">Workflows</h1>
-            <p className="text-sm text-gray-500">Create and run workflow automations.</p>
+            {isEditorDesignerMode && (
+              <Button
+                id="workflow-designer-back-to-list"
+                variant="ghost"
+                size="sm"
+                className="mb-2 px-0"
+                onClick={handleBackToWorkflowList}
+              >
+                <ChevronRight className="mr-1 h-4 w-4 rotate-180" />
+                Back to workflows
+              </Button>
+            )}
+            <h1 className="text-xl font-semibold text-gray-900">{pageTitle}</h1>
+            <p className="text-sm text-gray-500">{pageDescription}</p>
           </div>
-          {activeTab === 'Designer' && (
+          {isEditorDesignerMode && (
             <div className="flex items-center gap-2">
               {activeWorkflowRecord && (
                 <span
@@ -4533,7 +4560,7 @@ const WorkflowDesigner: React.FC = () => {
                 <Button
                   id="workflow-designer-create"
                   variant="secondary"
-                  onClick={() => requestDiscardChangesConfirmation(handleCreateDefinition)}
+                  onClick={() => requestDiscardChangesConfirmation(() => router.push('/msp/workflow-editor/new'))}
                 >
                   New Workflow
                 </Button>
@@ -4609,30 +4636,29 @@ const WorkflowDesigner: React.FC = () => {
         onClose={closeDiscardChangesDialog}
         onConfirm={handleConfirmDiscardChanges}
         title="Discard unsaved changes?"
-        message="You have unsaved changes in this workflow. Discard them and start a new workflow?"
+        message="You have unsaved changes in this workflow. Discard them and continue?"
         confirmLabel="Discard changes"
         cancelLabel="Keep editing"
       />
 
       <div className="flex-1 min-h-0 overflow-hidden">
-        <CustomTabs
-          idPrefix="workflow-designer-tabs"
-          value={activeTab}
-          onTabChange={handleTabChange}
-          tabs={[
-            { label: 'Workflows', content: workflowListContent },
-            { label: 'Designer', content: designerContent },
-            { label: 'Runs', content: runListContent },
-            { label: 'Events', content: eventListContent },
-            { label: 'Event Catalog', content: eventCatalogContent },
-            ...(canAdmin ? [{ label: 'Dead Letter', content: deadLetterContent }] : []),
-          ]}
-          tabStyles={{
-            root: 'h-full min-h-0 flex flex-col',
-            content: 'flex-1 min-h-0 overflow-hidden',
-            list: 'px-6 bg-white border-b border-gray-200 mb-0'
-          }}
-        />
+        {isControlPanelMode ? (
+          <CustomTabs
+            idPrefix="workflow-control-tabs"
+            value={activeTab}
+            onTabChange={handleControlPanelTabChange}
+            tabs={controlPanelTabs}
+            tabStyles={{
+              root: 'h-full min-h-0 flex flex-col',
+              content: 'flex-1 min-h-0 overflow-hidden',
+              list: 'px-6 bg-white border-b border-gray-200 mb-0'
+            }}
+          />
+        ) : isEditorDesignerMode ? (
+          designerContent
+        ) : (
+          workflowListContent
+        )}
       </div>
     </div>
   );

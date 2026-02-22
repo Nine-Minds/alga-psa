@@ -162,8 +162,7 @@ export default function WorkflowEditorComponent({ workflowId, onBack }: Workflow
         toast.success("Workflow created successfully");
         setSavedWorkflowId(newWorkflowId);
         
-        // Navigate to the workflows tab with the new workflow ID
-        router.push(`/msp/automation-hub?tab=workflows&workflowId=${newWorkflowId}`);
+        router.push(`/msp/workflow-editor/${newWorkflowId}`);
       }
       onBack(); // Go back to workflow list
     } catch (error) {
