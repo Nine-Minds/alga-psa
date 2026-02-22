@@ -4532,7 +4532,7 @@ const WorkflowDesigner: React.FC = () => {
               {canManage && (
                 <Button
                   id="workflow-designer-create"
-                  variant="outline"
+                  variant="secondary"
                   onClick={() => requestDiscardChangesConfirmation(handleCreateDefinition)}
                 >
                   New Workflow
@@ -6364,7 +6364,14 @@ const ActionSchemaReference: React.FC<{
   saveAs?: string;
   onCopyPath?: (path: string) => void;
 }> = ({ action, saveAs, onCopyPath }) => {
+  const [showSchemaDetails, setShowSchemaDetails] = useState(false);
   const [showRawSchema, setShowRawSchema] = useState(false);
+
+  useEffect(() => {
+    if (!showSchemaDetails) {
+      setShowRawSchema(false);
+    }
+  }, [showSchemaDetails]);
 
   if (!action) {
     return (
@@ -6387,87 +6394,102 @@ const ActionSchemaReference: React.FC<{
         </div>
       )}
 
-      {/* Input Schema */}
-      <SchemaReferenceSection
-        title="Input Schema"
-        icon={<Code className="w-3.5 h-3.5 text-gray-500" />}
-        fields={inputFields}
-        pathPrefix="input"
-        defaultExpanded={true}
-        emptyMessage="No input parameters"
-        onCopyPath={onCopyPath}
-      />
-
-      {/* Output Schema */}
-      <SchemaReferenceSection
-        title="Output Schema"
-        icon={<FileJson className="w-3.5 h-3.5 text-gray-500" />}
-        fields={outputFields}
-        pathPrefix={saveAs ? `vars.${saveAs}` : 'output'}
-        defaultExpanded={true}
-        emptyMessage="No output fields"
-        onCopyPath={onCopyPath}
-        headerExtra={
-          saveAs && (
-            <span className="text-[10px] text-gray-500 font-normal">
-              → vars.{saveAs}
-            </span>
-          )
-        }
-      />
-
-      {/* SaveAs preview */}
-      {saveAs && (
-        <div className="text-xs bg-success/10 border border-success/30 rounded-md p-2 flex items-center gap-2">
-          <Check className="w-3.5 h-3.5 text-success" />
-          <span className="text-success">
-            Output available at <code className="bg-success/15 px-1 rounded">${`{vars.${saveAs}}`}</code>
-          </span>
-        </div>
-      )}
-
-      {/* Raw schema toggle and export */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center justify-end">
         <button
-          onClick={() => setShowRawSchema(!showRawSchema)}
-          className="text-[10px] text-gray-500 hover:text-gray-700 flex items-center gap-1"
+          id={`workflow-step-schema-details-toggle-${action.id}`}
+          onClick={() => setShowSchemaDetails((prev) => !prev)}
+          className="text-[11px] text-gray-500 hover:text-gray-700 flex items-center gap-1"
         >
-          {showRawSchema ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
-          {showRawSchema ? 'Hide' : 'Show'} raw JSON Schema
-        </button>
-
-        {/* §16.7 - Export schema as JSON */}
-        <button
-          onClick={() => {
-            const schema = {
-              actionId: action.id,
-              version: action.version,
-              inputSchema: action.inputSchema,
-              outputSchema: action.outputSchema
-            };
-            const blob = new Blob([JSON.stringify(schema, null, 2)], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `${action.id}-schema.json`;
-            a.click();
-            URL.revokeObjectURL(url);
-          }}
-          className="text-[10px] text-blue-500 hover:text-blue-700 flex items-center gap-1"
-          title="Download schema as JSON file"
-        >
-          <FileJson className="w-3 h-3" />
-          Export schema
+          {showSchemaDetails ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+          {showSchemaDetails ? 'Hide schema details' : 'View schema details'}
         </button>
       </div>
 
-      {showRawSchema && (
-        <div className="text-[10px] font-mono bg-gray-900 text-gray-100 p-2 rounded-md overflow-x-auto">
-          <div className="text-gray-400 mb-1">// Input Schema</div>
-          <pre>{JSON.stringify(action.inputSchema, null, 2)}</pre>
-          <div className="text-gray-400 mt-2 mb-1">// Output Schema</div>
-          <pre>{JSON.stringify(action.outputSchema, null, 2)}</pre>
-        </div>
+      {showSchemaDetails && (
+        <>
+          {/* Input Schema */}
+          <SchemaReferenceSection
+            title="Input Schema"
+            icon={<Code className="w-3.5 h-3.5 text-gray-500" />}
+            fields={inputFields}
+            pathPrefix="input"
+            defaultExpanded={false}
+            emptyMessage="No input parameters"
+            onCopyPath={onCopyPath}
+          />
+
+          {/* Output Schema */}
+          <SchemaReferenceSection
+            title="Output Schema"
+            icon={<FileJson className="w-3.5 h-3.5 text-gray-500" />}
+            fields={outputFields}
+            pathPrefix={saveAs ? `vars.${saveAs}` : 'output'}
+            defaultExpanded={false}
+            emptyMessage="No output fields"
+            onCopyPath={onCopyPath}
+            headerExtra={
+              saveAs && (
+                <span className="text-[10px] text-gray-500 font-normal">
+                  → vars.{saveAs}
+                </span>
+              )
+            }
+          />
+
+          {/* SaveAs preview */}
+          {saveAs && (
+            <div className="text-xs bg-success/10 border border-success/30 rounded-md p-2 flex items-center gap-2">
+              <Check className="w-3.5 h-3.5 text-success" />
+              <span className="text-success">
+                Output available at <code className="bg-success/15 px-1 rounded">${`{vars.${saveAs}}`}</code>
+              </span>
+            </div>
+          )}
+
+          {/* Raw schema toggle and export */}
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setShowRawSchema(!showRawSchema)}
+              className="text-[10px] text-gray-500 hover:text-gray-700 flex items-center gap-1"
+            >
+              {showRawSchema ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+              {showRawSchema ? 'Hide' : 'Show'} raw JSON Schema
+            </button>
+
+            {/* §16.7 - Export schema as JSON */}
+            <button
+              onClick={() => {
+                const schema = {
+                  actionId: action.id,
+                  version: action.version,
+                  inputSchema: action.inputSchema,
+                  outputSchema: action.outputSchema
+                };
+                const blob = new Blob([JSON.stringify(schema, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `${action.id}-schema.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+              }}
+              className="text-[10px] text-blue-500 hover:text-blue-700 flex items-center gap-1"
+              title="Download schema as JSON file"
+            >
+              <FileJson className="w-3 h-3" />
+              Export schema
+            </button>
+          </div>
+
+          {showRawSchema && (
+            <div className="text-[10px] font-mono bg-gray-900 text-gray-100 p-2 rounded-md overflow-x-auto">
+              <div className="text-gray-400 mb-1">// Input Schema</div>
+              <pre>{JSON.stringify(action.inputSchema, null, 2)}</pre>
+              <div className="text-gray-400 mt-2 mb-1">// Output Schema</div>
+              <pre>{JSON.stringify(action.outputSchema, null, 2)}</pre>
+            </div>
+          )}
+        </>
       )}
     </div>
   );
