@@ -33,6 +33,7 @@ function getRequestIp(request: NextRequest): string {
 }
 
 function buildGenericFailureResponse(): NextResponse {
+  // Anti-enumeration rule: every failure path must return the exact same response shape/message.
   const response = NextResponse.json(
     { ok: false, message: MSP_SSO_GENERIC_FAILURE_MESSAGE },
     { status: 200 }
@@ -79,6 +80,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       return buildGenericFailureResponse();
     }
 
+    // Anti-enumeration rule: lookup outcomes only affect internal source selection, never external messaging.
     const outcome = await resolveMspSsoCredentialSource({ provider, email });
     if (!outcome.resolved || !outcome.source) {
       console.info('[msp-sso-resolve] no available credential source', {

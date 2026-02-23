@@ -82,6 +82,7 @@ Working notes for MSP SSO tenant-first resolver and provider-settings changes (M
 - (2026-02-23) `F047` complete: enterprise builds still follow the existing SSO registry mapper path (`isEnterprise` branch) unchanged.
 - (2026-02-23) `F048` complete: CE now bypasses EE account-link persistence by short-circuiting `ensureOAuthAccountLink` when `isEnterprise` is false.
 - (2026-02-23) `F049` complete: Microsoft provider issuer now uses `${tenantId || 'common'}` to ensure empty tenant IDs default to `common`.
+- (2026-02-23) `F050` complete: added explicit anti-enumeration comments in resolver route to prevent exposing lookup outcomes in client-visible responses.
 
 ## Commands / Runbooks
 
