@@ -157,12 +157,13 @@
   {
     "id": "T015",
     "description": "Connection status shows 'connected' (green) when WebSocket is open",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F008"
     ],
-    "testType": "manual",
-    "notes": "Open test page with Hocuspocus running"
+    "testType": "unit",
+    "testFile": "server/src/test/unit/documents/CollaborativeEditor.extensions.test.tsx",
+    "vitestName": "renders a connected status when the provider is connected"
   },
   {
     "id": "T016",
