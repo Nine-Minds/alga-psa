@@ -19,7 +19,7 @@
   {
     "id": "T003",
     "description": "Microsoft settings status action returns masked values only (no raw secret content).",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F002",
       "F009"
