@@ -390,13 +390,13 @@
   {
     "id": "T036",
     "description": "Two users from different tenants connecting to the same document ID are routed to different Hocuspocus rooms (tenant isolation)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F011"
     ],
-    "testType": "integration",
-    "testFile": "server/src/test/integration/collaborativeEditing.integration.test.ts",
-    "vitestName": "should produce different room names for same doc in different tenants"
+    "testType": "unit",
+    "testFile": "server/src/test/unit/documents/CollaborativeEditor.extensions.test.tsx",
+    "vitestName": "uses distinct room names for the same document across tenants"
   },
   {
     "id": "T037",

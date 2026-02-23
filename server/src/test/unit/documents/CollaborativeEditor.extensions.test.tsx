@@ -140,6 +140,30 @@ describe('CollaborativeEditor', () => {
     });
   });
 
+  it('uses distinct room names for the same document across tenants', () => {
+    render(
+      <CollaborativeEditor
+        documentId="doc-88"
+        tenantId="tenant-a"
+        userId="user-a"
+        userName="Editor A"
+      />
+    );
+
+    render(
+      <CollaborativeEditor
+        documentId="doc-88"
+        tenantId="tenant-b"
+        userId="user-b"
+        userName="Editor B"
+      />
+    );
+
+    const roomNames = createYjsProviderMock.mock.calls.map((call) => call[0]);
+    expect(roomNames).toContain('document:tenant-a:doc-88');
+    expect(roomNames).toContain('document:tenant-b:doc-88');
+  });
+
   it('renders a connected status when the provider is connected', () => {
     const { getByText, container } = render(
       <CollaborativeEditor
