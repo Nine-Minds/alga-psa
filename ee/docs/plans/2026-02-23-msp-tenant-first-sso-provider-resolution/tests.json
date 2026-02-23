@@ -471,7 +471,7 @@
   {
     "id": "T057",
     "description": "EE build path continues to use enterprise registry profile mapper unchanged.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F047"
     ]
