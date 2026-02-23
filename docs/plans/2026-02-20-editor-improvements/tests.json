@@ -13,12 +13,13 @@
   {
     "id": "T002",
     "description": "/msp/collab-test returns 'Feature not available' message when collaborative_editing flag is disabled",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F015"
     ],
-    "testType": "manual",
-    "notes": "Verify in browser with flag disabled"
+    "testType": "unit",
+    "testFile": "server/src/test/unit/app/msp/collab-test/page.test.tsx",
+    "vitestName": "renders a feature unavailable message when collaborative editing is disabled"
   },
   {
     "id": "T003",
