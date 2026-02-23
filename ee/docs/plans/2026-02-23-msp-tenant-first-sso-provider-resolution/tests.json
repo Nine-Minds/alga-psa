@@ -78,7 +78,7 @@
   {
     "id": "T010",
     "description": "Microsoft settings status action exposes derived redirect URI and scope metadata.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F002"
     ]
