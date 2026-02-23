@@ -357,12 +357,13 @@
   {
     "id": "T033",
     "description": "When Hocuspocus document already has Y.js state, existing block_data is NOT used (Y.js state takes precedence)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F020"
     ],
-    "testType": "manual",
-    "notes": "Edit via collab, manually change DB content, reload \u2014 should show collab version"
+    "testType": "unit",
+    "testFile": "server/src/test/unit/documents/CollaborativeEditor.extensions.test.tsx",
+    "vitestName": "does not reinitialize Y.js content when the fragment already has data"
   },
   {
     "id": "T034",

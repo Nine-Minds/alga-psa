@@ -343,4 +343,30 @@ describe('CollaborativeEditor', () => {
 
     getXmlFragmentSpy.mockRestore();
   });
+
+  it('does not reinitialize Y.js content when the fragment already has data', async () => {
+    const fragmentMock = { length: 1, delete: vi.fn() } as unknown as Y.XmlFragment;
+    const getXmlFragmentSpy = vi.spyOn(ydoc, 'getXmlFragment').mockReturnValue(fragmentMock);
+    getBlockContentMock.mockResolvedValue({
+      block_data: JSON.stringify({ type: 'doc', content: [{ type: 'paragraph' }] }),
+    });
+
+    render(
+      <CollaborativeEditor
+        documentId="doc-11"
+        tenantId="tenant-11"
+        userId="user-11"
+        userName="Editor Eleven"
+      />
+    );
+
+    await waitFor(() => {
+      expect(getXmlFragmentSpy).toHaveBeenCalledWith('prosemirror');
+    });
+
+    expect(getBlockContentMock).not.toHaveBeenCalled();
+    expect(prosemirrorJSONToYXmlFragmentMock).not.toHaveBeenCalled();
+
+    getXmlFragmentSpy.mockRestore();
+  });
 });
