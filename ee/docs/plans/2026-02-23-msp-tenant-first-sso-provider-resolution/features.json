@@ -21,7 +21,7 @@
 
   { "id": "F019", "description": "Replace CE SSO button stub with MSP-login-capable SSO buttons component.", "implemented": true, "prdRefs": ["Functional Requirements #9", "Acceptance Criteria #3"] },
   { "id": "F020", "description": "Require non-empty email before enabling MSP SSO buttons.", "implemented": true, "prdRefs": ["UX / UI Notes", "Acceptance Criteria #3"] },
-  { "id": "F021", "description": "Wire Microsoft MSP button to resolver + NextAuth OAuth flow.", "implemented": false, "prdRefs": ["Primary Flow A", "Primary Flow B"] },
+  { "id": "F021", "description": "Wire Microsoft MSP button to resolver + NextAuth OAuth flow.", "implemented": true, "prdRefs": ["Primary Flow A", "Primary Flow B"] },
   { "id": "F022", "description": "Wire Google MSP button to resolver + NextAuth OAuth flow.", "implemented": false, "prdRefs": ["Primary Flow A", "Primary Flow B"] },
   { "id": "F023", "description": "Show one generic resolver/start failure message across all failure reasons.", "implemented": false, "prdRefs": ["Security / Permissions", "Acceptance Criteria #5"] },
   { "id": "F024", "description": "Keep client portal login SSO behavior unchanged (no new SSO buttons/flow).", "implemented": false, "prdRefs": ["Non-goals", "Acceptance Criteria #8"] },

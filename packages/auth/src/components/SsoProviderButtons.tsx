@@ -30,19 +30,48 @@ export interface SsoProviderButtonsProps {
   callbackUrl: string;
   tenantHint?: string;
   email?: string;
+  onError?: (message: string) => void;
 }
 
 export default function SsoProviderButtons({
   callbackUrl,
   tenantHint,
   email,
+  onError,
 }: SsoProviderButtonsProps): React.ReactElement {
   const [pendingProvider, setPendingProvider] = useState<string | null>(null);
   const hasEmail = Boolean((email || '').trim());
+  const genericStartFailureMessage =
+    "We couldn't start SSO sign-in. Please verify provider setup and try again.";
 
   const handleSignIn = async (providerId: MspSsoProvider['id']) => {
+    if (!hasEmail) return;
     setPendingProvider(providerId);
     try {
+      onError?.('');
+      const resolveResponse = await fetch('/api/auth/msp/sso/resolve', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          provider: providerId,
+          email: (email || '').trim(),
+          callbackUrl,
+        }),
+      });
+
+      let resolveResult: { ok?: boolean; message?: string } | null = null;
+      try {
+        resolveResult = await resolveResponse.json();
+      } catch {
+        resolveResult = null;
+      }
+
+      if (!resolveResponse.ok || !resolveResult?.ok) {
+        onError?.(resolveResult?.message || genericStartFailureMessage);
+        return;
+      }
+
       const statePayload: Record<string, unknown> = {
         mode: 'login',
         tenant: tenantHint ?? null,
@@ -57,6 +86,8 @@ export default function SsoProviderButtons({
       }
 
       await signIn(providerId, { callbackUrl }, authorizationParams);
+    } catch {
+      onError?.(genericStartFailureMessage);
     } finally {
       setPendingProvider(null);
     }
