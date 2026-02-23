@@ -31,7 +31,7 @@
   { "id": "F027", "description": "Resolver performs internal-user lookup by normalized email for source selection only.", "implemented": true, "prdRefs": ["Functional Requirements #4", "Functional Requirements #5"] },
   { "id": "F028", "description": "Resolver chooses tenant source when user exists and tenant provider is configured for selected provider.", "implemented": true, "prdRefs": ["Functional Requirements #5"] },
   { "id": "F029", "description": "Resolver chooses app fallback source when tenant source is not available but app fallback keys are available.", "implemented": true, "prdRefs": ["Functional Requirements #5"] },
-  { "id": "F030", "description": "Resolver applies same external behavior for unknown user as known-user-missing-provider paths.", "implemented": false, "prdRefs": ["Functional Requirements #6", "Security / Permissions"] },
+  { "id": "F030", "description": "Resolver applies same external behavior for unknown user as known-user-missing-provider paths.", "implemented": true, "prdRefs": ["Functional Requirements #6", "Security / Permissions"] },
   { "id": "F031", "description": "Resolver returns identical response schema and status across lookup outcomes.", "implemented": false, "prdRefs": ["Functional Requirements #6", "Functional Requirements #7"] },
   { "id": "F032", "description": "Resolver sets signed, short-lived httpOnly context cookie with source metadata.", "implemented": false, "prdRefs": ["Functional Requirements #7"] },
   { "id": "F033", "description": "Resolver context cookie excludes raw client IDs/secrets.", "implemented": false, "prdRefs": ["Functional Requirements #7", "Security / Permissions"] },
