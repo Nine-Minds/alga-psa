@@ -125,3 +125,4 @@ Working notes for MSP SSO tenant-first resolver and provider-settings changes (M
 - (2026-02-23)  complete: unit test verifies  persists  in tenant secrets.
 - (2026-02-23)  complete: unit test verifies  persists  in tenant secrets.
 - (2026-02-23)  complete: status action test validates derived redirect URIs and scopes metadata for Microsoft email/calendar/SSO flows.
+- (2026-02-23)  complete: reset action test verifies Microsoft email provider rows/config tokens are disconnected and cleared.

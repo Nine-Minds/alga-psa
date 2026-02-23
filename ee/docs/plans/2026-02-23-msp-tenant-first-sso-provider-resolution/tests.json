@@ -86,7 +86,7 @@
   {
     "id": "T011",
     "description": "Microsoft settings reset action disconnects Microsoft email providers for the tenant.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F004"
     ]
