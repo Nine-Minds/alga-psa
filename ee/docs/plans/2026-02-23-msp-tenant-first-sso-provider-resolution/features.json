@@ -1,6 +1,6 @@
 [
   { "id": "F001", "description": "Add Microsoft provider card to Settings -> Integrations -> Providers.", "implemented": true, "prdRefs": ["Functional Requirements #1"] },
-  { "id": "F002", "description": "Create `getMicrosoftIntegrationStatus` action returning masked status plus derived redirect URI/scope metadata.", "implemented": false, "prdRefs": ["Functional Requirements #2"] },
+  { "id": "F002", "description": "Create `getMicrosoftIntegrationStatus` action returning masked status plus derived redirect URI/scope metadata.", "implemented": true, "prdRefs": ["Functional Requirements #2"] },
   { "id": "F003", "description": "Create `saveMicrosoftIntegrationSettings` action with validation for client ID, client secret, and optional tenant ID.", "implemented": false, "prdRefs": ["Functional Requirements #2", "Functional Requirements #3"] },
   { "id": "F004", "description": "Create `resetMicrosoftProvidersToDisconnected` action to clear Microsoft provider connection state/tokens for tenant providers.", "implemented": false, "prdRefs": ["Functional Requirements #2"] },
   { "id": "F005", "description": "Export new Microsoft integration actions from integrations action entrypoints used by settings UI.", "implemented": false, "prdRefs": ["Functional Requirements #2"] },
