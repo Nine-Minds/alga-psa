@@ -37,6 +37,7 @@ Working notes for MSP SSO tenant-first resolver and provider-settings changes (M
 - (2026-02-23) `F002` complete: added `getMicrosoftIntegrationStatus` action in `packages/integrations/src/actions/integrations/microsoftActions.ts` with masked secret output, derived Microsoft redirect URIs (`email`, `calendar`, `sso`), and scope metadata.
 - (2026-02-23) `F003` complete: added `saveMicrosoftIntegrationSettings` action with validation for required client ID/client secret and optional tenant ID normalization (`common` default).
 - (2026-02-23) `F004` complete: added `resetMicrosoftProvidersToDisconnected` action that disconnects Microsoft email/calendar providers and clears Microsoft token + webhook state across `microsoft_email_provider_config` and `microsoft_calendar_provider_config`.
+- (2026-02-23) `F005` complete: exported Microsoft integrations actions from both `packages/integrations/src/actions/integrations/index.ts` and `packages/integrations/src/actions/index.ts`.
 
 ## Commands / Runbooks
 

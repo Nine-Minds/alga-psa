@@ -1,4 +1,9 @@
 export { getGoogleIntegrationStatus, saveGoogleIntegrationSettings, resetGoogleProvidersToDisconnected } from './googleActions';
+export {
+  getMicrosoftIntegrationStatus,
+  saveMicrosoftIntegrationSettings,
+  resetMicrosoftProvidersToDisconnected
+} from './microsoftActions';
 export { getXeroConnectionStatus, getXeroIntegrationStatus, disconnectXero } from './xeroActions';
 export { getXeroCsvSettings, saveXeroCsvSettings } from './xeroCsvActions';
 export {

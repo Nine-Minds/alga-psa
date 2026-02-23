@@ -99,6 +99,11 @@ export {
   resetGoogleProvidersToDisconnected
 } from './integrations/googleActions';
 export {
+  getMicrosoftIntegrationStatus,
+  saveMicrosoftIntegrationSettings,
+  resetMicrosoftProvidersToDisconnected
+} from './integrations/microsoftActions';
+export {
   initiateEntraDirectOAuth,
   connectEntraCipp,
   getEntraIntegrationStatus,
