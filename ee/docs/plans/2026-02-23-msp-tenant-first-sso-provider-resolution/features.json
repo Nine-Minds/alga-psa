@@ -38,7 +38,7 @@
   { "id": "F034", "description": "Resolver uses app fallback keys `MICROSOFT_OAUTH_*` for Microsoft fallback source.", "implemented": true, "prdRefs": ["Functional Requirements #5", "Secret keys"] },
   { "id": "F035", "description": "Resolver uses app fallback keys `GOOGLE_OAUTH_*` for Google fallback source.", "implemented": true, "prdRefs": ["Functional Requirements #5", "Secret keys"] },
   { "id": "F036", "description": "Resolver returns generic failure when neither tenant source nor app fallback is available.", "implemented": true, "prdRefs": ["Primary Flow C"] },
-  { "id": "F037", "description": "Add basic resolver endpoint rate limiting keyed by request IP + normalized email hash bucket.", "implemented": false, "prdRefs": ["Non-functional Requirements #2"] },
+  { "id": "F037", "description": "Add basic resolver endpoint rate limiting keyed by request IP + normalized email hash bucket.", "implemented": true, "prdRefs": ["Non-functional Requirements #2"] },
   { "id": "F038", "description": "Add sanitized structured logs for resolver decisions/failures without user-existence leakage.", "implemented": false, "prdRefs": ["Observability", "Non-functional Requirements #3"] },
 
   { "id": "F039", "description": "Allow CE MSP OAuth provider registration by removing effective EE-only gating for Google/Microsoft in NextAuth options path.", "implemented": false, "prdRefs": ["Functional Requirements #9"] },
