@@ -79,7 +79,17 @@ exports.up = async function up(knex) {
         ),
         renewal_cycle_start = COALESCE(cc.renewal_cycle_start, cc.start_date::date),
         renewal_cycle_end = COALESCE(cc.renewal_cycle_end, cc.end_date::date),
-        renewal_cycle_key = COALESCE(cc.renewal_cycle_key, CONCAT('fixed-term:', cc.end_date::date::text)),
+        renewal_cycle_key = COALESCE(
+          cc.renewal_cycle_key,
+          (
+            'fixed-term:' ||
+            EXTRACT(YEAR FROM cc.end_date)::int::text ||
+            '-' ||
+            LPAD(EXTRACT(MONTH FROM cc.end_date)::int::text, 2, '0') ||
+            '-' ||
+            LPAD(EXTRACT(DAY FROM cc.end_date)::int::text, 2, '0')
+          )
+        ),
         updated_at = NOW()
       FROM contracts c
       WHERE cc.tenant = c.tenant

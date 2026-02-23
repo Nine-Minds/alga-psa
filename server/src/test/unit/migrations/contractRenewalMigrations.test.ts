@@ -94,9 +94,11 @@ describe('contract renewal migrations', () => {
     );
     expect(migration).toContain('renewal_cycle_start = COALESCE(cc.renewal_cycle_start, cc.start_date::date)');
     expect(migration).toContain('renewal_cycle_end = COALESCE(cc.renewal_cycle_end, cc.end_date::date)');
-    expect(migration).toContain(
-      "renewal_cycle_key = COALESCE(cc.renewal_cycle_key, CONCAT('fixed-term:', cc.end_date::date::text))"
-    );
+    expect(migration).toContain('renewal_cycle_key = COALESCE(');
+    expect(migration).toContain("'fixed-term:' ||");
+    expect(migration).toContain('EXTRACT(YEAR FROM cc.end_date)::int::text');
+    expect(migration).toContain("LPAD(EXTRACT(MONTH FROM cc.end_date)::int::text, 2, '0')");
+    expect(migration).toContain("LPAD(EXTRACT(DAY FROM cc.end_date)::int::text, 2, '0')");
     expect(migration).toContain("AND cc.is_active = true");
     expect(migration).toContain("AND c.status = 'active'");
     expect(migration).toContain('AND cc.end_date IS NOT NULL');
