@@ -2,6 +2,7 @@
 
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { withAuth } from '@alga-psa/auth';
+import { createTenantKnex } from '@alga-psa/db';
 
 const MICROSOFT_CLIENT_ID_SECRET = 'microsoft_client_id';
 const MICROSOFT_CLIENT_SECRET_SECRET = 'microsoft_client_secret';
@@ -144,5 +145,61 @@ export const saveMicrosoftIntegrationSettings = withAuth(async (
     return { success: true };
   } catch (err: any) {
     return { success: false, error: err?.message || 'Failed to save Microsoft integration settings' };
+  }
+});
+
+export const resetMicrosoftProvidersToDisconnected = withAuth(async (
+  _user,
+  { tenant }
+): Promise<{ success: boolean; error?: string }> => {
+  try {
+    const { knex } = await createTenantKnex();
+
+    await knex('email_providers')
+      .where({ tenant, provider_type: 'microsoft' })
+      .update({
+        status: 'disconnected',
+        error_message: null,
+        updated_at: knex.fn.now(),
+      });
+
+    await knex('microsoft_email_provider_config')
+      .where({ tenant })
+      .update({
+        access_token: null,
+        refresh_token: null,
+        token_expires_at: null,
+        webhook_subscription_id: null,
+        webhook_verification_token: null,
+        webhook_expires_at: null,
+        last_subscription_renewal: null,
+        updated_at: knex.fn.now(),
+      });
+
+    await knex('calendar_providers')
+      .where({ tenant, provider_type: 'microsoft' })
+      .update({
+        status: 'disconnected',
+        error_message: null,
+        updated_at: knex.fn.now(),
+      });
+
+    await knex('microsoft_calendar_provider_config')
+      .where({ tenant })
+      .update({
+        access_token: null,
+        refresh_token: null,
+        token_expires_at: null,
+        webhook_subscription_id: null,
+        webhook_expires_at: null,
+        webhook_notification_url: null,
+        webhook_verification_token: null,
+        delta_link: null,
+        updated_at: knex.fn.now(),
+      });
+
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Failed to reset Microsoft providers' };
   }
 });
