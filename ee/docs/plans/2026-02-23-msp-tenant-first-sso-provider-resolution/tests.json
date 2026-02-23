@@ -110,7 +110,7 @@
   {
     "id": "T014",
     "description": "Non-admin user receives permission error on Microsoft settings save.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F010"
     ]

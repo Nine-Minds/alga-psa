@@ -128,3 +128,4 @@ Working notes for MSP SSO tenant-first resolver and provider-settings changes (M
 - (2026-02-23)  complete: reset action test verifies Microsoft email provider rows/config tokens are disconnected and cleared.
 - (2026-02-23)  complete: reset action test verifies Microsoft calendar provider rows/config tokens are disconnected and cleared.
 - (2026-02-23)  complete: test asserts Microsoft action exports exist in both integrations action index entrypoints used by settings imports.
+- (2026-02-23)  complete: unit test verifies save action returns  for users lacking .
