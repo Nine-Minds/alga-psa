@@ -580,7 +580,7 @@
   {
     "id": "T069",
     "description": "End-to-end MSP Google SSO fallback source succeeds when tenant source is absent but app fallback exists.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F022",
       "F029",

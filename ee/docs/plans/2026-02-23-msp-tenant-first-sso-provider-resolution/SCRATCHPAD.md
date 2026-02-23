@@ -192,3 +192,4 @@ Working notes for MSP SSO tenant-first resolver and provider-settings changes (M
 - (2026-02-23) Command run: `cd server && npx vitest run --coverage.enabled=false ../packages/auth/src/components/SsoProviderButtons.msp.test.tsx ../packages/auth/src/components/ClientLoginForm.ssoGuard.test.ts ../packages/auth/src/components/MspCredentialsFlow.contract.test.ts`.
 - (2026-02-23) `T067` complete: SSO component end-to-end contract scenario verifies Google tenant-source success path reaches NextAuth `signIn`.
 - (2026-02-23) `T068` complete: SSO component end-to-end contract scenario verifies Microsoft app-fallback success path reaches NextAuth `signIn`.
+- (2026-02-23) `T069` complete: SSO component end-to-end contract scenario verifies Google app-fallback success path reaches NextAuth `signIn`.
