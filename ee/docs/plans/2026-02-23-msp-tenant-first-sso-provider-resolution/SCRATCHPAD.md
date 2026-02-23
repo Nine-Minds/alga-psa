@@ -177,3 +177,4 @@ Working notes for MSP SSO tenant-first resolver and provider-settings changes (M
 - (2026-02-23) `T053` complete: CE mapper unit test verifies normalized-email resolution for Microsoft profile and expected extended user shape.
 - (2026-02-23) `T054` complete: CE mapper unit test verifies normalized-email resolution for Google profile and expected extended user shape.
 - (2026-02-23) `T055` complete: CE mapper unit test verifies inactive accounts are rejected for MSP OAuth sign-in.
+- (2026-02-23) `T056` complete: CE mapper unit test verifies non-internal/client user types are rejected for MSP OAuth sign-in.

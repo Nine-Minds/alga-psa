@@ -462,7 +462,7 @@
   {
     "id": "T056",
     "description": "CE OAuth mapper rejects client user_type for MSP SSO flow.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F045",
       "F046"
