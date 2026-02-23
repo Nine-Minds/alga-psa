@@ -20,6 +20,7 @@ import {
   defaultInlineContentSpecs,
   filterSuggestionItems,
 } from '@blocknote/core';
+import { TextSelection } from '@tiptap/pm/state';
 import { Mention } from './Mention';
 import { Emoticon } from './EmoticonExtension';
 
@@ -200,6 +201,63 @@ export default function TextEditor({
     _tiptapOptions: {
       extensions: [Emoticon],
       editorProps: {
+        handleDOMEvents: {
+          mousedown: (view, event) => {
+            // Fix: clicking in empty space to the left/right of text places
+            // cursor at the wrong position. Intercept at mousedown to prevent
+            // flash, and manually handle drag-to-select from the corrected anchor.
+            if (event.detail > 1 || event.shiftKey || event.button !== 0) return false;
+
+            const posInfo = view.posAtCoords({ left: event.clientX, top: event.clientY });
+            if (!posInfo) return false;
+
+            const { state } = view;
+            const $pos = state.doc.resolve(posInfo.pos);
+
+            if (!$pos.parent.isTextblock || $pos.parent.content.size === 0) return false;
+
+            const blockStart = $pos.start();
+            if (posInfo.pos !== blockStart) return false;
+
+            const startCoords = view.coordsAtPos(blockStart);
+            const endCoords = view.coordsAtPos($pos.end());
+
+            let anchorPos: number | null = null;
+            if (event.clientX > endCoords.left) {
+              anchorPos = $pos.end(); // right of text → end
+            } else if (event.clientX < startCoords.left) {
+              anchorPos = blockStart; // left of text → start
+            }
+
+            if (anchorPos === null) return false;
+
+            event.preventDefault();
+            view.dispatch(
+              state.tr.setSelection(TextSelection.create(state.doc, anchorPos))
+            );
+            view.focus();
+
+            // Handle drag-to-select from the corrected anchor
+            const onMouseMove = (e: MouseEvent) => {
+              if (view.isDestroyed) return;
+              const movePos = view.posAtCoords({ left: e.clientX, top: e.clientY });
+              if (movePos) {
+                const sel = TextSelection.create(view.state.doc, anchorPos!, movePos.pos);
+                view.dispatch(view.state.tr.setSelection(sel));
+              }
+            };
+
+            const onMouseUp = () => {
+              document.removeEventListener('mousemove', onMouseMove);
+              document.removeEventListener('mouseup', onMouseUp);
+            };
+
+            document.addEventListener('mousemove', onMouseMove);
+            document.addEventListener('mouseup', onMouseUp);
+
+            return true;
+          },
+        },
         handlePaste: (view, event, slice) => {
           // Handle pasting into empty blocks
           const { state, dispatch } = view;
