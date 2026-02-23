@@ -216,7 +216,7 @@
   {
     "id": "T027",
     "description": "Google button triggers resolver call before invoking NextAuth signIn.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F022"
     ]

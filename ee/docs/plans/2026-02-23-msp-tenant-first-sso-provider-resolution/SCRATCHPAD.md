@@ -143,3 +143,4 @@ Working notes for MSP SSO tenant-first resolver and provider-settings changes (M
 - (2026-02-23) Command run: `cd server && npx vitest run --coverage.enabled=false ../packages/auth/src/components/SsoProviderButtons.msp.test.tsx ../packages/auth/src/components/ClientLoginForm.ssoGuard.test.ts`.
 - (2026-02-23) `T025` complete: SSO button interaction tests verify both providers stay disabled until a non-empty email is supplied.
 - (2026-02-23) `T026` complete: component test verifies Microsoft button performs resolver POST first and only then invokes `signIn('azure-ad')`.
+- (2026-02-23) `T027` complete: component test verifies Google button performs resolver POST first and then calls `signIn('google')`.
