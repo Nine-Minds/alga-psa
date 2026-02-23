@@ -122,3 +122,4 @@ Working notes for MSP SSO tenant-first resolver and provider-settings changes (M
 - (2026-02-23)  complete: unit test covers save action rejecting blank  with required-field error.
 - (2026-02-23)  complete: unit test verifies save action defaults  to  when omitted.
 - (2026-02-23)  complete: unit test verifies  persists  in tenant secrets.
+- (2026-02-23)  complete: unit test verifies  persists  in tenant secrets.
