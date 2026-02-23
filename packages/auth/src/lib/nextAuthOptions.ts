@@ -23,6 +23,11 @@ import { loadEnterpriseSsoProviderRegistryImpl } from "./sso/enterpriseRegistryE
 import type { OAuthProfileMappingResult, OAuthLinkProvider } from "./sso/types";
 import { OAuthAccountLinkConflictError } from "./sso/types";
 import { cookies } from "next/headers.js";
+import {
+    MSP_SSO_RESOLUTION_COOKIE,
+    getMspSsoSigningSecret,
+    parseAndVerifyMspSsoResolutionCookie,
+} from "./sso/mspSsoResolution";
 import { UserSession } from "@alga-psa/db/models/UserSession";
 import { getClientIp } from "./ipAddress";
 import { generateDeviceFingerprint, getDeviceInfo } from "./deviceFingerprint";
@@ -795,7 +800,7 @@ async function getOAuthSecrets() {
         secretProvider.getAppSecret('MICROSOFT_OAUTH_AUTHORITY'),
     ]);
 
-    return {
+    const resolved = {
         googleClientId: googleClientId || process.env.GOOGLE_OAUTH_CLIENT_ID || '',
         googleClientSecret: googleClientSecret || process.env.GOOGLE_OAUTH_CLIENT_SECRET || '',
         keycloakClientId: keycloakClientId || process.env.KEYCLOAK_CLIENT_ID || '',
@@ -807,6 +812,54 @@ async function getOAuthSecrets() {
         microsoftTenantId: microsoftTenantId || process.env.MICROSOFT_OAUTH_TENANT_ID || '',
         microsoftAuthority: microsoftAuthority || process.env.MICROSOFT_OAUTH_AUTHORITY || '',
     };
+
+    try {
+        const signingSecret = await getMspSsoSigningSecret();
+        if (!signingSecret) {
+            return resolved;
+        }
+
+        const cookieStore = await cookies();
+        const cookieValue = cookieStore.get(MSP_SSO_RESOLUTION_COOKIE)?.value;
+        const resolution = parseAndVerifyMspSsoResolutionCookie({
+            value: cookieValue,
+            secret: signingSecret,
+        });
+
+        if (!resolution || resolution.source !== 'tenant' || !resolution.tenantId) {
+            return resolved;
+        }
+
+        if (resolution.provider === 'google') {
+            const [tenantGoogleClientId, tenantGoogleClientSecret] = await Promise.all([
+                secretProvider.getTenantSecret(resolution.tenantId, 'google_client_id'),
+                secretProvider.getTenantSecret(resolution.tenantId, 'google_client_secret'),
+            ]);
+
+            if (tenantGoogleClientId && tenantGoogleClientSecret) {
+                resolved.googleClientId = tenantGoogleClientId;
+                resolved.googleClientSecret = tenantGoogleClientSecret;
+            }
+        }
+
+        if (resolution.provider === 'azure-ad') {
+            const [tenantMicrosoftClientId, tenantMicrosoftClientSecret, tenantMicrosoftTenantId] = await Promise.all([
+                secretProvider.getTenantSecret(resolution.tenantId, 'microsoft_client_id'),
+                secretProvider.getTenantSecret(resolution.tenantId, 'microsoft_client_secret'),
+                secretProvider.getTenantSecret(resolution.tenantId, 'microsoft_tenant_id'),
+            ]);
+
+            if (tenantMicrosoftClientId && tenantMicrosoftClientSecret) {
+                resolved.microsoftClientId = tenantMicrosoftClientId;
+                resolved.microsoftClientSecret = tenantMicrosoftClientSecret;
+                resolved.microsoftTenantId = tenantMicrosoftTenantId || 'common';
+            }
+        }
+    } catch (error) {
+        console.warn('[oauth] failed to resolve tenant-scoped OAuth credentials', error);
+    }
+
+    return resolved;
 }
 
 // Build NextAuth options dynamically with secrets
@@ -819,7 +872,7 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
     trustHost: true,
     secret: nextAuthSecret,
     providers: [
-        ...(isEnterprise && secrets.googleClientId && secrets.googleClientSecret
+        ...(secrets.googleClientId && secrets.googleClientSecret
             ? [
                 GoogleProvider({
                     clientId: secrets.googleClientId,
@@ -849,13 +902,12 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
                 }),
             ]
             : []),
-        ...(isEnterprise && secrets.microsoftClientId && secrets.microsoftClientSecret
+        ...(secrets.microsoftClientId && secrets.microsoftClientSecret
             ? [
                 AzureADProvider({
                     clientId: secrets.microsoftClientId,
                     clientSecret: secrets.microsoftClientSecret,
-                    // Always use 'common' for multi-tenant Azure AD apps
-                    issuer: `https://login.microsoftonline.com/common/v2.0`,
+                    issuer: `https://login.microsoftonline.com/${secrets.microsoftTenantId || 'common'}/v2.0`,
                     checks: ['pkce', 'state'],
                     profile: async (profile: Record<string, any>): Promise<ExtendedUser> => {
                         const emailCandidate =
@@ -1564,13 +1616,8 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
 }
 
 // For backward compatibility, create a cached instance
-let cachedOptions: NextAuthConfig | null = null;
-
 export async function getAuthOptions(): Promise<NextAuthConfig> {
-    if (!cachedOptions) {
-        cachedOptions = await buildAuthOptions();
-    }
-    return cachedOptions;
+    return buildAuthOptions();
 }
 
 // Synchronous fallback that uses environment variables
@@ -1580,8 +1627,7 @@ export const options: NextAuthConfig = {
     // NextAuth will still require a secret at runtime for JWT/session operations; keep that enforcement in runtime paths.
     secret: process.env.NEXTAUTH_SECRET,
     providers: [
-        ...(isEnterprise &&
-        process.env.GOOGLE_OAUTH_CLIENT_ID &&
+        ...(process.env.GOOGLE_OAUTH_CLIENT_ID &&
         process.env.GOOGLE_OAUTH_CLIENT_SECRET
             ? [
                 GoogleProvider({
@@ -1612,15 +1658,13 @@ export const options: NextAuthConfig = {
                 }),
             ]
             : []),
-        ...(isEnterprise &&
-        process.env.MICROSOFT_OAUTH_CLIENT_ID &&
+        ...(process.env.MICROSOFT_OAUTH_CLIENT_ID &&
         process.env.MICROSOFT_OAUTH_CLIENT_SECRET
             ? [
                 AzureADProvider({
                     clientId: process.env.MICROSOFT_OAUTH_CLIENT_ID as string,
                     clientSecret: process.env.MICROSOFT_OAUTH_CLIENT_SECRET as string,
-                    // Always use 'common' for multi-tenant Azure AD apps
-                    issuer: `https://login.microsoftonline.com/common/v2.0`,
+                    issuer: `https://login.microsoftonline.com/${process.env.MICROSOFT_OAUTH_TENANT_ID || 'common'}/v2.0`,
                     profile: async (profile: Record<string, any>): Promise<ExtendedUser> => {
                         const emailCandidate =
                             profile.email ??

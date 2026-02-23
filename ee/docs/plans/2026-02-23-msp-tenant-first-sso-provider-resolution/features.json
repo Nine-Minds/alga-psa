@@ -41,7 +41,7 @@
   { "id": "F037", "description": "Add basic resolver endpoint rate limiting keyed by request IP + normalized email hash bucket.", "implemented": true, "prdRefs": ["Non-functional Requirements #2"] },
   { "id": "F038", "description": "Add sanitized structured logs for resolver decisions/failures without user-existence leakage.", "implemented": true, "prdRefs": ["Observability", "Non-functional Requirements #3"] },
 
-  { "id": "F039", "description": "Allow CE MSP OAuth provider registration by removing effective EE-only gating for Google/Microsoft in NextAuth options path.", "implemented": false, "prdRefs": ["Functional Requirements #9"] },
+  { "id": "F039", "description": "Allow CE MSP OAuth provider registration by removing effective EE-only gating for Google/Microsoft in NextAuth options path.", "implemented": true, "prdRefs": ["Functional Requirements #9"] },
   { "id": "F040", "description": "Refactor auth options caching so OAuth provider credentials can be resolved per request (remove/alter static cache).", "implemented": false, "prdRefs": ["Functional Requirements #11"] },
   { "id": "F041", "description": "Update OAuth secret resolution to read resolver context cookie and select tenant source when requested and valid.", "implemented": false, "prdRefs": ["Functional Requirements #8"] },
   { "id": "F042", "description": "When resolver context is absent/invalid/expired, fall back to app-level OAuth keys only.", "implemented": false, "prdRefs": ["Functional Requirements #13"] },
