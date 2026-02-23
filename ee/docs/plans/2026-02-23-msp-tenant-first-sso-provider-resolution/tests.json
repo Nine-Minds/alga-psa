@@ -427,7 +427,7 @@
   {
     "id": "T052",
     "description": "Resolver cookie is overwritten on subsequent SSO start attempts (new nonce and expiry).",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F044"
     ]
