@@ -301,7 +301,7 @@
   {
     "id": "T037",
     "description": "Resolver unknown-user path with available app fallback returns same success schema as known-user-missing-provider path.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F030",
       "F031"
