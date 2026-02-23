@@ -435,7 +435,7 @@
   {
     "id": "T040",
     "description": "Two HocuspocusProviders connecting to the same room sync Y.js document content within 3 seconds",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F004",
       "F013"
