@@ -269,24 +269,24 @@
   {
     "id": "T025",
     "description": "syncCollabSnapshot writes correct TipTap JSON to document_block_content.block_data for the given documentId",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F014"
     ],
-    "testType": "integration",
-    "testFile": "server/src/test/integration/collaborativeEditing.integration.test.ts",
-    "vitestName": "should update block_data when syncing a snapshot from collab state"
+    "testType": "unit",
+    "testFile": "server/src/test/unit/documents/collaborativeEditingActions.test.ts",
+    "vitestName": "writes TipTap JSON snapshot to document_block_content"
   },
   {
     "id": "T026",
     "description": "syncCollabSnapshot returns error if documentId does not exist",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F014"
     ],
-    "testType": "integration",
-    "testFile": "server/src/test/integration/collaborativeEditing.integration.test.ts",
-    "vitestName": "should return null block_data for non-existent document"
+    "testType": "unit",
+    "testFile": "server/src/test/unit/documents/collaborativeEditingActions.test.ts",
+    "vitestName": "returns a not found error when the document is missing"
   },
   {
     "id": "T027",
