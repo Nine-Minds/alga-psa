@@ -1,7 +1,7 @@
 import { Knex } from 'knex';
 import { runWithTenant } from 'server/src/lib/db';
 import { getConnection } from 'server/src/lib/db/db';
-import { getEmailNotificationService } from 'server/src/lib/notifications/email';
+import { getEmailNotificationService } from '@alga-psa/notifications';
 import { ICreditTracking } from 'server/src/interfaces/billing.interfaces';
 import { formatCurrency, formatDate } from 'server/src/lib/utils/formatters';
 import { toPlainDate, toISODate } from 'server/src/lib/utils/dateTimeUtils';

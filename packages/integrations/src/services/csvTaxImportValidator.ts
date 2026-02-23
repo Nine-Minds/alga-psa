@@ -13,7 +13,7 @@ import {
   REQUIRED_TAX_IMPORT_COLUMNS,
   getSuggestionsForMissingColumns,
   formatColumnAliases
-} from '../utils/csvFieldNormalizer';
+} from '../lib/csvFieldNormalizer';
 
 /**
  * Result of parsing a single CSV row

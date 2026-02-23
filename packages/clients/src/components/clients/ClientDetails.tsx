@@ -32,8 +32,8 @@ import {
   listClientInboundEmailDomains,
   addClientInboundEmailDomain,
   removeClientInboundEmailDomain,
+  startClientEntraSync,
 } from '@alga-psa/clients/actions';
-import { startEntraSync } from '@alga-psa/integrations/actions';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { DeleteEntityDialog } from '@alga-psa/ui';
 import CustomTabs from '@alga-psa/ui/components/CustomTabs';
@@ -811,8 +811,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
 
     setIsSyncingEntra(true);
     try {
-      const result = await startEntraSync({
-        scope: 'single-client',
+      const result = await startClientEntraSync({
         clientId: editedClient.client_id,
       });
 

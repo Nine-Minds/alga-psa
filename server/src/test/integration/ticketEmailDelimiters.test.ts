@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { randomUUID } from 'node:crypto';
-import { EMAIL_EVENT_CHANNEL } from '../../lib/notifications/emailChannel';
+import { EMAIL_EVENT_CHANNEL } from '@alga-psa/notifications';
 
 interface TemplateRecord {
   subject: string;

@@ -15,7 +15,7 @@ import { getConnection } from '../../db/db';
 import { getSecret } from '../../utils/getSecret';
 import { createTenantKnex } from '../../db';
 import { formatBlockNoteContent } from '../../utils/blocknoteUtils';
-import { getEmailEventChannel } from '@/lib/notifications/emailChannel';
+import { getEmailEventChannel } from '@alga-psa/notifications';
 import type { Knex } from 'knex';
 import { getPortalDomain } from 'server/src/models/PortalDomainModel';
 import { buildTenantPortalSlug } from '@shared/utils/tenantSlug';

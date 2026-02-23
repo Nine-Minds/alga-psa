@@ -73,8 +73,8 @@ vi.mock('../../../../../server/src/lib/eventBus', async (importOriginal) => {
   };
 });
 
-vi.mock('../../../../../server/src/lib/notifications/emailChannel', async (importOriginal) => {
-  const actual = await importOriginal() as typeof import('../../../../../server/src/lib/notifications/emailChannel');
+vi.mock('@alga-psa/notifications', async (importOriginal) => {
+  const actual = await importOriginal() as typeof import('@alga-psa/notifications');
   return {
     ...actual,
     getEmailEventChannel: vi.fn(() => 'email-channel'),
