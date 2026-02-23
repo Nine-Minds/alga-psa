@@ -111,3 +111,5 @@ Working memory for implementing real-time collaborative editing via TipTap + Hoc
 - (2026-02-23) Attempted integration run for collaborativeEditing tests; skipped due to DB connection refused on localhost:5438 (see vitest output). Replaced T005 with unit coverage in `CollaborativeEditor.extensions.test.tsx` asserting `createYjsProvider` receives `document:<tenant>:<documentId>`. Ran: `npx vitest src/test/unit/documents/CollaborativeEditor.extensions.test.tsx` (from `server/`).
 
 - (2026-02-23) Added unit coverage for connected status rendering in CollaborativeEditor (used for T006). Ran: `npx vitest src/test/unit/documents/CollaborativeEditor.extensions.test.tsx` (from `server/`).
+
+- (2026-02-23) Added unit tests for EditorToolbar wiring (bubble menu render + formatting/link command wiring) in `server/src/test/unit/documents/EditorToolbar.test.tsx`; marked T007 complete. Ran: `npx vitest src/test/unit/documents/EditorToolbar.test.tsx` (from `server/`).

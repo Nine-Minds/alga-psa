@@ -69,12 +69,13 @@
   {
     "id": "T007",
     "description": "EditorToolbar (BubbleMenu) appears when text is selected in CollaborativeEditor",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F005"
     ],
-    "testType": "manual",
-    "notes": "Type text, select it, verify BubbleMenu appears"
+    "testType": "unit",
+    "testFile": "server/src/test/unit/documents/EditorToolbar.test.tsx",
+    "vitestName": "renders the bubble menu toolbar container"
   },
   {
     "id": "T008",
