@@ -174,3 +174,4 @@ Working notes for MSP SSO tenant-first resolver and provider-settings changes (M
 - (2026-02-23) `T050` complete: NextAuth contract test verifies invalid/absent resolver context returns early to app-level fallback credential set.
 - (2026-02-23) `T051` complete: NextAuth contract test verifies expired resolver context is ignored through the same early-return fallback path.
 - (2026-02-23) `T052` complete: resolver route test verifies consecutive successful starts set different cookie values (overwrite behavior).
+- (2026-02-23) `T053` complete: CE mapper unit test verifies normalized-email resolution for Microsoft profile and expected extended user shape.
