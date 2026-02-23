@@ -310,7 +310,7 @@
   {
     "id": "T038",
     "description": "Resolver unknown-user path with no available fallback returns same generic failure schema as known-user-no-source path.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F030",
       "F031",

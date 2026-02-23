@@ -157,3 +157,4 @@ Working notes for MSP SSO tenant-first resolver and provider-settings changes (M
 - (2026-02-23) `T035` complete: helper test verifies Microsoft app fallback source when tenant Microsoft secrets are unavailable.
 - (2026-02-23) `T036` complete: helper test verifies Google app fallback source when tenant Google secrets are unavailable.
 - (2026-02-23) `T037` complete: route test verifies unknown-user and known-user-missing-tenant both produce identical success schema with app fallback.
+- (2026-02-23) `T038` complete: route test verifies unknown-user and known-user-no-source both return identical generic failure payload.
