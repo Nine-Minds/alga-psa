@@ -3,6 +3,7 @@ import { Redis } from '@hocuspocus/extension-redis'
 import { Database } from '@hocuspocus/extension-database'
 import { Logger } from '@hocuspocus/extension-logger'
 import { NotificationExtension } from './NotificationExtension.js'
+import { validateDocumentRoomAccess } from './tenantValidation.js'
 
 // Helper function to get required env var or fail in production
 function getEnvOrFail(key, fallbackValue = null) {
@@ -15,34 +16,6 @@ function getEnvOrFail(key, fallbackValue = null) {
     }
 
     return value || fallbackValue;
-}
-
-function parseDocumentRoom(roomName) {
-    if (!roomName || !roomName.startsWith('document:')) {
-        return null;
-    }
-    const parts = roomName.split(':');
-    if (parts.length !== 3) {
-        return null;
-    }
-    const [, tenantId, documentId] = parts;
-    if (!tenantId || !documentId) {
-        return null;
-    }
-    return { tenantId, documentId };
-}
-
-function getTenantFromRequest(request) {
-    if (!request?.url) {
-        return null;
-    }
-    try {
-        const url = new URL(request.url, 'http://localhost');
-        return url.searchParams.get('tenantId');
-    } catch (error) {
-        console.error('[Hocuspocus] Failed to parse request URL for tenant validation:', error);
-        return null;
-    }
 }
 
 const server = Server.configure({
@@ -77,25 +50,7 @@ const server = Server.configure({
           }),
     ],
     async onConnect(data) {
-        const roomName = data.documentName;
-
-        if (roomName?.startsWith('notifications:')) {
-            return;
-        }
-
-        const parsedRoom = parseDocumentRoom(roomName);
-        if (!parsedRoom) {
-            return;
-        }
-
-        const tenantFromRequest = getTenantFromRequest(data.request);
-        if (!tenantFromRequest) {
-            throw new Error('Tenant validation failed: missing tenantId');
-        }
-
-        if (tenantFromRequest !== parsedRoom.tenantId) {
-            throw new Error('Tenant validation failed: room tenant mismatch');
-        }
+        validateDocumentRoomAccess(data.documentName, data.request);
     },
     })
 

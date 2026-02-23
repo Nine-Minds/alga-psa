@@ -212,35 +212,35 @@
   {
     "id": "T020",
     "description": "Hocuspocus onConnect rejects connection when room name tenant does not match user tenant",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F011"
     ],
-    "testType": "integration",
-    "testFile": "server/src/test/integration/collaborativeEditing.integration.test.ts",
-    "vitestName": "should reject room name with mismatched tenant"
+    "testType": "unit",
+    "testFile": "server/src/test/unit/hocuspocus/tenantValidation.test.ts",
+    "vitestName": "rejects room names with mismatched tenant"
   },
   {
     "id": "T021",
     "description": "Hocuspocus onConnect allows connection when room name tenant matches user tenant",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F011"
     ],
-    "testType": "integration",
-    "testFile": "server/src/test/integration/collaborativeEditing.integration.test.ts",
-    "vitestName": "should allow room name with matching tenant"
+    "testType": "unit",
+    "testFile": "server/src/test/unit/hocuspocus/tenantValidation.test.ts",
+    "vitestName": "allows room names with matching tenant"
   },
   {
     "id": "T022",
     "description": "Hocuspocus onConnect allows notification rooms (notifications:*) to pass through without document validation",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F012"
     ],
-    "testType": "integration",
-    "testFile": "server/src/test/integration/collaborativeEditing.integration.test.ts",
-    "vitestName": "should pass through notification rooms without document validation"
+    "testType": "unit",
+    "testFile": "server/src/test/unit/hocuspocus/tenantValidation.test.ts",
+    "vitestName": "bypasses validation for notification rooms"
   },
   {
     "id": "T023",

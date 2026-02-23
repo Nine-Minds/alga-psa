@@ -139,3 +139,5 @@ Working memory for implementing real-time collaborative editing via TipTap + Hoc
 - (2026-02-23) Added markdown paste unit test in `server/src/test/unit/documents/CollaborativeEditor.markdown.test.tsx` by mocking `useEditor` and `marked.parse`; marked T019 complete. Ran: `npx vitest src/test/unit/documents/CollaborativeEditor.markdown.test.tsx` (from `server/`).
 
 - (2026-02-23) Extracted markdown paste handling into `packages/documents/src/components/markdownPaste.ts` and wired CollaborativeEditor to use it. Added unit test `server/src/test/unit/documents/markdownPaste.test.ts` for T019. Ran: `npx vitest src/test/unit/documents/markdownPaste.test.ts` (from `server/`).
+
+- (2026-02-23) Extracted Hocuspocus tenant validation helpers to `hocuspocus/tenantValidation.js` and wired `hocuspocus/server.js` to use them. Added unit tests in `server/src/test/unit/hocuspocus/tenantValidation.test.ts` covering mismatched tenant, matching tenant, and notification-room bypass; marked T020-T022 complete. Ran: `npx vitest src/test/unit/hocuspocus/tenantValidation.test.ts` (from `server/`).
