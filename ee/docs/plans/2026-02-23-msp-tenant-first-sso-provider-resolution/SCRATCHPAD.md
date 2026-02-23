@@ -72,6 +72,7 @@ Working notes for MSP SSO tenant-first resolver and provider-settings changes (M
 - (2026-02-23) `F037` complete: resolver now applies in-memory rate limiting keyed by request IP + hashed normalized email bucket.
 - (2026-02-23) `F038` complete: resolver logs now include only provider/source classification and generic failure context without raw email, secrets, or explicit existence flags.
 - (2026-02-23) `F039` complete: removed EE-only gating around Google/Microsoft provider registration in NextAuth options so CE can register MSP OAuth providers when credentials exist.
+- (2026-02-23) `F040` complete: removed static `cachedOptions`; `getAuthOptions()` now rebuilds per request so resolver cookie context can affect provider credentials.
 
 ## Commands / Runbooks
 
