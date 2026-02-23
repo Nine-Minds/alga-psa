@@ -66,6 +66,7 @@ Working notes for MSP SSO tenant-first resolver and provider-settings changes (M
 - (2026-02-23) `F031` complete: resolver returns stable `200` + `{ ok: true|false }` schema regardless of lookup outcome, with generic failure payload shape.
 - (2026-02-23) `F032` complete: resolver issues signed, short-lived, httpOnly `msp_sso_resolution` cookie containing only source metadata.
 - (2026-02-23) `F033` complete: resolver cookie payload intentionally omits raw OAuth client IDs and client secrets.
+- (2026-02-23) `F034` complete: Microsoft fallback readiness in resolver uses `MICROSOFT_OAUTH_CLIENT_ID` + `MICROSOFT_OAUTH_CLIENT_SECRET` (env/app secrets).
 
 ## Commands / Runbooks
 
