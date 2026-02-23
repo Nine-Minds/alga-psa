@@ -2,8 +2,10 @@
   {
     "id": "T001",
     "description": "Feature flag 'collaborative_editing' exists in DEFAULT_BOOLEAN_FLAGS and defaults to false",
-    "implemented": false,
-    "featureIds": ["F001"],
+    "implemented": true,
+    "featureIds": [
+      "F001"
+    ],
     "testType": "integration",
     "testFile": "server/src/test/integration/collaborativeEditing.integration.test.ts",
     "vitestName": "should have collaborative_editing flag defaulting to false"
@@ -12,7 +14,9 @@
     "id": "T002",
     "description": "/msp/collab-test returns 'Feature not available' message when collaborative_editing flag is disabled",
     "implemented": false,
-    "featureIds": ["F015"],
+    "featureIds": [
+      "F015"
+    ],
     "testType": "manual",
     "notes": "Verify in browser with flag disabled"
   },
@@ -20,7 +24,9 @@
     "id": "T003",
     "description": "/msp/collab-test renders the test page UI when collaborative_editing flag is enabled",
     "implemented": false,
-    "featureIds": ["F015"],
+    "featureIds": [
+      "F015"
+    ],
     "testType": "manual",
     "notes": "Verify in browser with flag enabled"
   },
@@ -28,7 +34,9 @@
     "id": "T004",
     "description": "CollaborativeEditor mounts and initializes TipTap with Collaboration and CollaborationCaret extensions without errors",
     "implemented": false,
-    "featureIds": ["F003"],
+    "featureIds": [
+      "F003"
+    ],
     "testType": "manual",
     "notes": "Open test page, check browser console for errors"
   },
@@ -36,7 +44,9 @@
     "id": "T005",
     "description": "CollaborativeEditor creates HocuspocusProvider with correct room name format 'document:<tenant>:<documentId>'",
     "implemented": false,
-    "featureIds": ["F004"],
+    "featureIds": [
+      "F004"
+    ],
     "testType": "integration",
     "testFile": "server/src/test/integration/collaborativeEditing.integration.test.ts",
     "vitestName": "should construct room name as document:<tenant>:<documentId>"
@@ -45,7 +55,10 @@
     "id": "T006",
     "description": "CollaborativeEditor connects to Hocuspocus server successfully (connection status shows 'connected')",
     "implemented": false,
-    "featureIds": ["F004", "F008"],
+    "featureIds": [
+      "F004",
+      "F008"
+    ],
     "testType": "manual",
     "notes": "Open test page with Hocuspocus running, verify green connection indicator"
   },
@@ -53,7 +66,9 @@
     "id": "T007",
     "description": "EditorToolbar (BubbleMenu) appears when text is selected in CollaborativeEditor",
     "implemented": false,
-    "featureIds": ["F005"],
+    "featureIds": [
+      "F005"
+    ],
     "testType": "manual",
     "notes": "Type text, select it, verify BubbleMenu appears"
   },
@@ -61,7 +76,9 @@
     "id": "T008",
     "description": "Bold, italic, underline, strikethrough, code formatting works in collaborative mode",
     "implemented": false,
-    "featureIds": ["F005"],
+    "featureIds": [
+      "F005"
+    ],
     "testType": "manual",
     "notes": "Apply each formatting via BubbleMenu, verify it sticks"
   },
@@ -69,7 +86,9 @@
     "id": "T009",
     "description": "Heading 1, Heading 2, bullet list, ordered list, blockquote work in collaborative mode",
     "implemented": false,
-    "featureIds": ["F005"],
+    "featureIds": [
+      "F005"
+    ],
     "testType": "manual",
     "notes": "Apply each block type via BubbleMenu, verify rendering"
   },
@@ -77,7 +96,9 @@
     "id": "T010",
     "description": "Link insertion/editing works via toolbar in collaborative mode",
     "implemented": false,
-    "featureIds": ["F005"],
+    "featureIds": [
+      "F005"
+    ],
     "testType": "manual",
     "notes": "Insert link via BubbleMenu, verify href is saved"
   },
@@ -85,7 +106,9 @@
     "id": "T011",
     "description": "Two users editing the same document see each other's cursor with name label and distinct color",
     "implemented": false,
-    "featureIds": ["F006"],
+    "featureIds": [
+      "F006"
+    ],
     "testType": "manual-multiuser",
     "notes": "Two browser tabs (regular + incognito), same doc URL, verify colored cursors with names"
   },
@@ -93,7 +116,9 @@
     "id": "T012",
     "description": "Cursor color assignment is deterministic per user (same user always gets same color)",
     "implemented": false,
-    "featureIds": ["F006"],
+    "featureIds": [
+      "F006"
+    ],
     "testType": "manual-multiuser",
     "notes": "Reload page, verify same user gets same color"
   },
@@ -101,7 +126,9 @@
     "id": "T013",
     "description": "Presence bar shows both users' names when two users are connected to the same document",
     "implemented": false,
-    "featureIds": ["F007"],
+    "featureIds": [
+      "F007"
+    ],
     "testType": "manual-multiuser",
     "notes": "Two tabs connected, verify presence bar shows both names"
   },
@@ -109,7 +136,9 @@
     "id": "T014",
     "description": "Presence bar updates when a user disconnects (name disappears)",
     "implemented": false,
-    "featureIds": ["F007"],
+    "featureIds": [
+      "F007"
+    ],
     "testType": "manual-multiuser",
     "notes": "Close one tab, verify name disappears from presence bar in remaining tab"
   },
@@ -117,7 +146,9 @@
     "id": "T015",
     "description": "Connection status shows 'connected' (green) when WebSocket is open",
     "implemented": false,
-    "featureIds": ["F008"],
+    "featureIds": [
+      "F008"
+    ],
     "testType": "manual",
     "notes": "Open test page with Hocuspocus running"
   },
@@ -125,7 +156,9 @@
     "id": "T016",
     "description": "Connection status shows 'disconnected' (red) when WebSocket drops",
     "implemented": false,
-    "featureIds": ["F008"],
+    "featureIds": [
+      "F008"
+    ],
     "testType": "manual",
     "notes": "Stop Hocuspocus server while editor is open, verify red indicator"
   },
@@ -133,7 +166,9 @@
     "id": "T017",
     "description": "Auto-save indicator shows 'All changes saved' after edits sync to Hocuspocus",
     "implemented": false,
-    "featureIds": ["F009"],
+    "featureIds": [
+      "F009"
+    ],
     "testType": "manual",
     "notes": "Type text, wait a moment, verify status text"
   },
@@ -141,7 +176,9 @@
     "id": "T018",
     "description": "No manual 'Save' button exists in CollaborativeEditor",
     "implemented": false,
-    "featureIds": ["F009"],
+    "featureIds": [
+      "F009"
+    ],
     "testType": "manual",
     "notes": "Visually confirm no Save button in the editor UI"
   },
@@ -149,7 +186,9 @@
     "id": "T019",
     "description": "Pasting markdown text converts to rich text in collaborative editor",
     "implemented": false,
-    "featureIds": ["F010"],
+    "featureIds": [
+      "F010"
+    ],
     "testType": "manual",
     "notes": "Copy markdown (e.g. '## Hello\\n- item'), paste into editor, verify conversion"
   },
@@ -157,7 +196,9 @@
     "id": "T020",
     "description": "Hocuspocus onConnect rejects connection when room name tenant does not match user tenant",
     "implemented": false,
-    "featureIds": ["F011"],
+    "featureIds": [
+      "F011"
+    ],
     "testType": "integration",
     "testFile": "server/src/test/integration/collaborativeEditing.integration.test.ts",
     "vitestName": "should reject room name with mismatched tenant"
@@ -166,7 +207,9 @@
     "id": "T021",
     "description": "Hocuspocus onConnect allows connection when room name tenant matches user tenant",
     "implemented": false,
-    "featureIds": ["F011"],
+    "featureIds": [
+      "F011"
+    ],
     "testType": "integration",
     "testFile": "server/src/test/integration/collaborativeEditing.integration.test.ts",
     "vitestName": "should allow room name with matching tenant"
@@ -175,7 +218,9 @@
     "id": "T022",
     "description": "Hocuspocus onConnect allows notification rooms (notifications:*) to pass through without document validation",
     "implemented": false,
-    "featureIds": ["F012"],
+    "featureIds": [
+      "F012"
+    ],
     "testType": "integration",
     "testFile": "server/src/test/integration/collaborativeEditing.integration.test.ts",
     "vitestName": "should pass through notification rooms without document validation"
@@ -184,7 +229,9 @@
     "id": "T023",
     "description": "Content typed in the editor persists across full page refresh (Hocuspocus DB persistence)",
     "implemented": false,
-    "featureIds": ["F013"],
+    "featureIds": [
+      "F013"
+    ],
     "testType": "manual",
     "notes": "Type text, refresh page, verify content reloads"
   },
@@ -192,7 +239,9 @@
     "id": "T024",
     "description": "Changes made by user A appear in real-time for user B without page refresh",
     "implemented": false,
-    "featureIds": ["F013"],
+    "featureIds": [
+      "F013"
+    ],
     "testType": "manual-multiuser",
     "notes": "Two tabs, type in one, verify appears in the other instantly"
   },
@@ -200,7 +249,9 @@
     "id": "T025",
     "description": "syncCollabSnapshot writes correct TipTap JSON to document_block_content.block_data for the given documentId",
     "implemented": false,
-    "featureIds": ["F014"],
+    "featureIds": [
+      "F014"
+    ],
     "testType": "integration",
     "testFile": "server/src/test/integration/collaborativeEditing.integration.test.ts",
     "vitestName": "should update block_data when syncing a snapshot from collab state"
@@ -209,7 +260,9 @@
     "id": "T026",
     "description": "syncCollabSnapshot returns error if documentId does not exist",
     "implemented": false,
-    "featureIds": ["F014"],
+    "featureIds": [
+      "F014"
+    ],
     "testType": "integration",
     "testFile": "server/src/test/integration/collaborativeEditing.integration.test.ts",
     "vitestName": "should return null block_data for non-existent document"
@@ -218,7 +271,9 @@
     "id": "T027",
     "description": "'Create New Document' button on test page creates a document and navigates to ?doc=<newId>",
     "implemented": false,
-    "featureIds": ["F016"],
+    "featureIds": [
+      "F016"
+    ],
     "testType": "manual",
     "notes": "Click Create New, verify URL changes and editor loads"
   },
@@ -226,7 +281,9 @@
     "id": "T028",
     "description": "Opening /msp/collab-test?doc=<existingId> loads the collaborative editor for that document",
     "implemented": false,
-    "featureIds": ["F017"],
+    "featureIds": [
+      "F017"
+    ],
     "testType": "manual",
     "notes": "Navigate to URL with valid doc ID, verify editor loads content"
   },
@@ -234,7 +291,9 @@
     "id": "T029",
     "description": "Opening /msp/collab-test?doc=<nonExistentId> shows an error message",
     "implemented": false,
-    "featureIds": ["F017"],
+    "featureIds": [
+      "F017"
+    ],
     "testType": "manual",
     "notes": "Navigate to URL with bogus doc ID, verify error"
   },
@@ -242,7 +301,9 @@
     "id": "T030",
     "description": "'Snapshot to DB' button calls syncCollabSnapshot and shows success toast",
     "implemented": false,
-    "featureIds": ["F018"],
+    "featureIds": [
+      "F018"
+    ],
     "testType": "manual",
     "notes": "Click Snapshot to DB, verify toast and check document_block_content table"
   },
@@ -250,7 +311,9 @@
     "id": "T031",
     "description": "Debug panel shows connection status, connected user count, and room name",
     "implemented": false,
-    "featureIds": ["F019"],
+    "featureIds": [
+      "F019"
+    ],
     "testType": "manual",
     "notes": "Open debug panel on test page, verify all fields populated"
   },
@@ -258,7 +321,9 @@
     "id": "T032",
     "description": "When Hocuspocus document is empty and document_block_content has existing content, the Y.js document is initialized from block_data",
     "implemented": false,
-    "featureIds": ["F020"],
+    "featureIds": [
+      "F020"
+    ],
     "testType": "integration",
     "testFile": "server/src/test/integration/collaborativeEditing.integration.test.ts",
     "vitestName": "should load existing block_data as TipTap-compatible JSON for Y.js initialization"
@@ -267,15 +332,19 @@
     "id": "T033",
     "description": "When Hocuspocus document already has Y.js state, existing block_data is NOT used (Y.js state takes precedence)",
     "implemented": false,
-    "featureIds": ["F020"],
+    "featureIds": [
+      "F020"
+    ],
     "testType": "manual",
-    "notes": "Edit via collab, manually change DB content, reload — should show collab version"
+    "notes": "Edit via collab, manually change DB content, reload \u2014 should show collab version"
   },
   {
     "id": "T034",
     "description": "CollaborativeEditor is exported from packages/documents/src/components/index.ts",
     "implemented": false,
-    "featureIds": ["F021"],
+    "featureIds": [
+      "F021"
+    ],
     "testType": "build",
     "notes": "Verify import works: import { CollaborativeEditor } from '@alga-psa/documents/components'"
   },
@@ -283,7 +352,9 @@
     "id": "T035",
     "description": "Collaboration cursor labels use design system CSS variables (--color-*) and are readable in both light and dark themes",
     "implemented": false,
-    "featureIds": ["F022"],
+    "featureIds": [
+      "F022"
+    ],
     "testType": "manual",
     "notes": "Toggle dark/light mode, verify cursor labels readable in both"
   },
@@ -291,7 +362,9 @@
     "id": "T036",
     "description": "Two users from different tenants connecting to the same document ID are routed to different Hocuspocus rooms (tenant isolation)",
     "implemented": false,
-    "featureIds": ["F011"],
+    "featureIds": [
+      "F011"
+    ],
     "testType": "integration",
     "testFile": "server/src/test/integration/collaborativeEditing.integration.test.ts",
     "vitestName": "should produce different room names for same doc in different tenants"
@@ -300,7 +373,10 @@
     "id": "T037",
     "description": "Concurrent formatting operations from two users do not corrupt the document (Y.js CRDT conflict resolution)",
     "implemented": false,
-    "featureIds": ["F003", "F013"],
+    "featureIds": [
+      "F003",
+      "F013"
+    ],
     "testType": "manual-multiuser",
     "notes": "Two tabs, both bold different words simultaneously, verify no corruption"
   },
@@ -308,7 +384,9 @@
     "id": "T038",
     "description": "Emoticon extension converts text emoticons to emoji in collaborative mode (e.g., ':) ' becomes emoji)",
     "implemented": false,
-    "featureIds": ["F023"],
+    "featureIds": [
+      "F023"
+    ],
     "testType": "manual",
     "notes": "Type ':) ' in collaborative editor, verify emoji conversion"
   },
@@ -316,7 +394,9 @@
     "id": "T039",
     "description": "Link auto-detection works in collaborative mode (typing a URL auto-links it)",
     "implemented": false,
-    "featureIds": ["F024"],
+    "featureIds": [
+      "F024"
+    ],
     "testType": "manual",
     "notes": "Type a URL followed by space, verify it becomes a clickable link with target=_blank"
   },
@@ -324,7 +404,10 @@
     "id": "T040",
     "description": "Two HocuspocusProviders connecting to the same room sync Y.js document content within 3 seconds",
     "implemented": false,
-    "featureIds": ["F004", "F013"],
+    "featureIds": [
+      "F004",
+      "F013"
+    ],
     "testType": "integration",
     "testFile": "server/src/test/integration/collaborativeEditing.integration.test.ts",
     "vitestName": "should sync content between two providers connected to the same room",
@@ -334,7 +417,9 @@
     "id": "T041",
     "description": "Awareness state (user name, cursor color) broadcasts between two providers in the same room",
     "implemented": false,
-    "featureIds": ["F006"],
+    "featureIds": [
+      "F006"
+    ],
     "testType": "integration",
     "testFile": "server/src/test/integration/collaborativeEditing.integration.test.ts",
     "vitestName": "should broadcast awareness state between providers",
@@ -344,7 +429,9 @@
     "id": "T042",
     "description": "Hocuspocus onConnect rejects WebSocket connection when room tenant does not match connecting user's tenant",
     "implemented": false,
-    "featureIds": ["F011"],
+    "featureIds": [
+      "F011"
+    ],
     "testType": "integration",
     "testFile": "server/src/test/integration/collaborativeEditing.integration.test.ts",
     "vitestName": "should reject WebSocket connection with mismatched tenant",
@@ -354,7 +441,9 @@
     "id": "T043",
     "description": "Content written via HocuspocusProvider persists across full disconnect/reconnect cycle",
     "implemented": false,
-    "featureIds": ["F013"],
+    "featureIds": [
+      "F013"
+    ],
     "testType": "integration",
     "testFile": "server/src/test/integration/collaborativeEditing.integration.test.ts",
     "vitestName": "should persist content across disconnect and reconnect",
@@ -364,7 +453,9 @@
     "id": "T044",
     "description": "syncCollabSnapshot end-to-end: write content via provider, call syncCollabSnapshot, verify document_block_content updated",
     "implemented": false,
-    "featureIds": ["F014"],
+    "featureIds": [
+      "F014"
+    ],
     "testType": "integration",
     "testFile": "server/src/test/integration/collaborativeEditing.integration.test.ts",
     "vitestName": "should sync Y.js content to document_block_content via syncCollabSnapshot",
@@ -374,7 +465,11 @@
     "id": "T045",
     "description": "Playwright: two browser contexts editing same document see each other's changes in real-time",
     "implemented": false,
-    "featureIds": ["F004", "F006", "F007"],
+    "featureIds": [
+      "F004",
+      "F006",
+      "F007"
+    ],
     "testType": "e2e",
     "testFile": "server/src/test/e2e/collaborativeEditing.e2e.test.ts",
     "notes": "Requires full app + Hocuspocus. Two browser contexts (different users), same doc URL. Type in context A, assert content in context B within 3s. Verify cursor labels and presence bar."
