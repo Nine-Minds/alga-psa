@@ -7,3 +7,36 @@ export function getFeatureImplementation<T>(ceModule: T, eeModule?: T): T {
   return ceModule;
 }
 
+// ---------------------------------------------------------------------------
+// Feature-flag registry
+//
+// Packages that need feature-flag checks (e.g. @alga-psa/integrations,
+// @alga-psa/clients) call `isFeatureFlagEnabled` from here.
+// The *server* registers the real PostHog-backed implementation at startup
+// via `registerFeatureFlagChecker`.
+// ---------------------------------------------------------------------------
+
+export interface FeatureFlagContext {
+  userId?: string;
+  tenantId?: string;
+}
+
+type FeatureFlagChecker = (
+  flagKey: string,
+  context: FeatureFlagContext,
+) => Promise<boolean>;
+
+let _checker: FeatureFlagChecker | null = null;
+
+export function registerFeatureFlagChecker(checker: FeatureFlagChecker): void {
+  _checker = checker;
+}
+
+export async function isFeatureFlagEnabled(
+  flagKey: string,
+  context: FeatureFlagContext = {},
+): Promise<boolean> {
+  if (!_checker) return false;
+  return _checker(flagKey, context);
+}
+

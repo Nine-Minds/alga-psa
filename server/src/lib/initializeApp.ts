@@ -1,7 +1,7 @@
 import { isEnterprise } from './features';
 import { initializeEventBus, cleanupEventBus } from './eventBus/initialize';
 import { initializeScheduledJobs } from './jobs/initializeScheduledJobs';
-import { logger } from '@alga-psa/core';
+import { logger, registerFeatureFlagChecker } from '@alga-psa/core';
 import { initializeServerWorkflows } from '@alga-psa/shared/workflow/init/serverInit';
 import { registerAccountingExportWorkflowActions } from './workflow/registerAccountingExportActions';
 import { validateEnv } from 'server/src/config/envConfig';
@@ -44,6 +44,12 @@ export async function initializeApp() {
   try {
     // Load environment configuration
     config();
+
+    // Register the server's PostHog-backed feature-flag checker so that
+    // packages (@alga-psa/integrations, @alga-psa/clients, etc.) can check
+    // feature flags via @alga-psa/core without importing from server.
+    const { featureFlags } = await import('./feature-flags/featureFlags');
+    registerFeatureFlagChecker((flag, ctx) => featureFlags.isEnabled(flag, ctx));
 
     // Validate secret uniqueness first (must succeed)
     try {

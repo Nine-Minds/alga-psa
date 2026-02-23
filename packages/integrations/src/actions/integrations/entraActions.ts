@@ -3,6 +3,7 @@
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
+import { isFeatureFlagEnabled } from '@alga-psa/core';
 import { routes } from '@alga-psa/integrations/entra/routes/entry';
 import { createTenantKnex } from '@alga-psa/db';
 import { generateMicrosoftAuthUrl, generateNonce } from '../../utils/email/oauthHelpers';
@@ -65,8 +66,7 @@ async function isEntraUiEnabledForTenant(params: {
   tenantId: string;
   userId?: string;
 }): Promise<boolean> {
-  const { featureFlags } = await import('server/src/lib/feature-flags/featureFlags');
-  return featureFlags.isEnabled('entra-integration-ui', {
+  return isFeatureFlagEnabled('entra-integration-ui', {
     tenantId: params.tenantId,
     userId: params.userId,
   });
@@ -76,8 +76,7 @@ async function isEntraAmbiguousQueueEnabledForTenant(params: {
   tenantId: string;
   userId?: string;
 }): Promise<boolean> {
-  const { featureFlags } = await import('server/src/lib/feature-flags/featureFlags');
-  return featureFlags.isEnabled('entra-integration-ambiguous-queue', {
+  return isFeatureFlagEnabled('entra-integration-ambiguous-queue', {
     tenantId: params.tenantId,
     userId: params.userId,
   });
@@ -87,8 +86,7 @@ async function isEntraFieldSyncEnabledForTenant(params: {
   tenantId: string;
   userId?: string;
 }): Promise<boolean> {
-  const { featureFlags } = await import('server/src/lib/feature-flags/featureFlags');
-  return featureFlags.isEnabled('entra-integration-field-sync', {
+  return isFeatureFlagEnabled('entra-integration-field-sync', {
     tenantId: params.tenantId,
     userId: params.userId,
   });
