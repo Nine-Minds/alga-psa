@@ -139,3 +139,5 @@ Working notes for MSP SSO tenant-first resolver and provider-settings changes (M
 - (2026-02-23) `T020` complete: providers-first contract test verifies Microsoft calendar form renders CTA (`configure-microsoft-calendar-providers-link`) when provider readiness is missing.
 - (2026-02-23) `T021` complete: calendar providers-first contract test verifies create flow submits metadata and uses empty vendor credential fields (no manual OAuth credential entry requirement).
 - (2026-02-23) `T022` complete: persistence contract test verifies Microsoft email provider action derives effective credentials from hosted/tenant secrets and does not rely on form-entered secrets.
+- (2026-02-23) `T024` complete: added `SsoProviderButtons.msp.test.tsx` to validate CE MSP login renders both Google and Microsoft SSO buttons.
+- (2026-02-23) Command run: `cd server && npx vitest run --coverage.enabled=false ../packages/auth/src/components/SsoProviderButtons.msp.test.tsx ../packages/auth/src/components/ClientLoginForm.ssoGuard.test.ts`.
