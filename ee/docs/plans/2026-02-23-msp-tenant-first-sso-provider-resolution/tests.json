@@ -345,7 +345,7 @@
   {
     "id": "T042",
     "description": "Resolver uses `GOOGLE_OAUTH_CLIENT_ID` + `GOOGLE_OAUTH_CLIENT_SECRET` for Google fallback readiness check.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F035"
     ]
