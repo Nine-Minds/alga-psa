@@ -302,12 +302,13 @@
   {
     "id": "T028",
     "description": "Opening /msp/collab-test?doc=<existingId> loads the collaborative editor for that document",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F017"
     ],
-    "testType": "manual",
-    "notes": "Navigate to URL with valid doc ID, verify editor loads content"
+    "testType": "unit",
+    "testFile": "server/src/test/unit/app/msp/collab-test/CollabTestPageClient.test.tsx",
+    "vitestName": "loads an existing document from the query string"
   },
   {
     "id": "T029",

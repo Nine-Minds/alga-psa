@@ -149,3 +149,5 @@ Working memory for implementing real-time collaborative editing via TipTap + Hoc
 - (2026-02-23) Added unit tests for `syncCollabSnapshot` in `server/src/test/unit/documents/collaborativeEditingActions.test.ts` covering snapshot writes (T025) and missing document error (T026). Ran: `npx vitest src/test/unit/documents/collaborativeEditingActions.test.ts` (from `server/`).
 
 - (2026-02-23) Added CollabTestPageClient unit test for Create New Document navigation in `server/src/test/unit/app/msp/collab-test/CollabTestPageClient.test.tsx`; marked T027 complete. Ran: `npx vitest src/test/unit/app/msp/collab-test/CollabTestPageClient.test.tsx` (from `server/`).
+
+- (2026-02-23) Added CollabTestPageClient unit test for loading existing document from query params (renders CollaborativeEditor); marked T028 complete. Ran: `npx vitest src/test/unit/app/msp/collab-test/CollabTestPageClient.test.tsx` (from `server/`).

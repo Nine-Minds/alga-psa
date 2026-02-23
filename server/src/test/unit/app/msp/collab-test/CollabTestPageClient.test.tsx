@@ -77,4 +77,21 @@ describe('CollabTestPageClient', () => {
     });
     expect(pushMock).toHaveBeenCalledWith('/msp/collab-test?doc=doc-123');
   });
+
+  it('loads an existing document from the query string', async () => {
+    const params = new URLSearchParams();
+    params.set('doc', 'doc-456');
+    useSearchParamsMock.mockReturnValue(params);
+    getBlockContentMock.mockResolvedValue({ block_data: '{}' });
+
+    const { findByTestId } = render(
+      <CollabTestPageClient userId="user-1" userName="User One" tenantId="tenant-1" />
+    );
+
+    await waitFor(() => {
+      expect(getBlockContentMock).toHaveBeenCalledWith('doc-456');
+    });
+
+    expect(await findByTestId('collaborative-editor')).toBeTruthy();
+  });
 });
