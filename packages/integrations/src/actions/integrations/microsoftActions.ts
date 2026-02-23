@@ -105,3 +105,44 @@ export const getMicrosoftIntegrationStatus = withAuth(async (
     return { success: false, error: err?.message || 'Failed to load Microsoft integration status' };
   }
 });
+
+function normalizeMicrosoftClientId(value: string): string {
+  return value
+    .normalize('NFKC')
+    .replace(/[\u200B-\u200D\uFEFF]/g, '')
+    .trim();
+}
+
+function normalizeTenantId(value?: string): string {
+  const normalized = (value || '').trim();
+  return normalized || 'common';
+}
+
+export const saveMicrosoftIntegrationSettings = withAuth(async (
+  _user,
+  { tenant },
+  input: {
+    clientId: string;
+    clientSecret: string;
+    tenantId?: string;
+  }
+): Promise<{ success: boolean; error?: string }> => {
+  try {
+    const clientId = normalizeMicrosoftClientId(input.clientId ?? '');
+    if (!clientId) return { success: false, error: 'Microsoft OAuth Client ID is required' };
+
+    const clientSecret = (input.clientSecret || '').trim();
+    if (!clientSecret) return { success: false, error: 'Microsoft OAuth Client Secret is required' };
+
+    const tenantId = normalizeTenantId(input.tenantId);
+
+    const secretProvider = await getSecretProviderInstance();
+    await secretProvider.setTenantSecret(tenant, MICROSOFT_CLIENT_ID_SECRET, clientId);
+    await secretProvider.setTenantSecret(tenant, MICROSOFT_CLIENT_SECRET_SECRET, clientSecret);
+    await secretProvider.setTenantSecret(tenant, MICROSOFT_TENANT_ID_SECRET, tenantId);
+
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Failed to save Microsoft integration settings' };
+  }
+});
