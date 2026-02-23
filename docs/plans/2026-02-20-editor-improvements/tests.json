@@ -179,12 +179,13 @@
   {
     "id": "T017",
     "description": "Auto-save indicator shows 'All changes saved' after edits sync to Hocuspocus",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F009"
     ],
-    "testType": "manual",
-    "notes": "Type text, wait a moment, verify status text"
+    "testType": "unit",
+    "testFile": "server/src/test/unit/documents/CollaborativeEditor.extensions.test.tsx",
+    "vitestName": "shows all changes saved when there are no unsynced changes"
   },
   {
     "id": "T018",

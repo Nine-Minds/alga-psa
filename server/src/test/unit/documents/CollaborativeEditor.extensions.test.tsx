@@ -271,4 +271,19 @@ describe('CollaborativeEditor', () => {
     const statusWrapper = container.querySelector('[data-status]');
     expect(statusWrapper?.getAttribute('data-status')).toBe('disconnected');
   });
+
+  it('shows all changes saved when there are no unsynced changes', () => {
+    providerMock.hasUnsyncedChanges = false;
+
+    const { getByText } = render(
+      <CollaborativeEditor
+        documentId="doc-8"
+        tenantId="tenant-8"
+        userId="user-8"
+        userName="Editor Eight"
+      />
+    );
+
+    expect(getByText('All changes saved')).toBeTruthy();
+  });
 });
