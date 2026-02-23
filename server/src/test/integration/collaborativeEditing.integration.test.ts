@@ -477,4 +477,50 @@ describeIfHocuspocus('Hocuspocus persistence', () => {
 
     reconnected.destroy();
   });
+
+  it('should sync content between two providers connected to the same room', async () => {
+    const tenantId = uuidv4();
+    const docId = uuidv4();
+    const roomName = `document:${tenantId}:${docId}`;
+    const docA = new Y.Doc();
+    const docB = new Y.Doc();
+
+    const providerA = new HocuspocusProvider({
+      url: HOCUSPOCUS_URL,
+      name: roomName,
+      document: docA,
+      parameters: { tenantId },
+    });
+
+    const providerB = new HocuspocusProvider({
+      url: HOCUSPOCUS_URL,
+      name: roomName,
+      document: docB,
+      parameters: { tenantId },
+    });
+
+    await Promise.all([waitForSynced(providerA), waitForSynced(providerB)]);
+
+    const textA = docA.getText('test');
+    const textB = docB.getText('test');
+
+    const waitForRemote = new Promise<void>((resolve) => {
+      const handle = () => {
+        if (textB.toString() === 'Hello from A') {
+          textB.unobserve(handle);
+          resolve();
+        }
+      };
+      textB.observe(handle);
+      handle();
+    });
+
+    textA.insert(0, 'Hello from A');
+
+    await waitForRemote;
+    expect(textB.toString()).toBe('Hello from A');
+
+    providerA.destroy();
+    providerB.destroy();
+  });
 });

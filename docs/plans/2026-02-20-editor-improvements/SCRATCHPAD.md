@@ -143,3 +143,5 @@ Working memory for implementing real-time collaborative editing via TipTap + Hoc
 - (2026-02-23) Extracted Hocuspocus tenant validation helpers to `hocuspocus/tenantValidation.js` and wired `hocuspocus/server.js` to use them. Added unit tests in `server/src/test/unit/hocuspocus/tenantValidation.test.ts` covering mismatched tenant, matching tenant, and notification-room bypass; marked T020-T022 complete. Ran: `npx vitest src/test/unit/hocuspocus/tenantValidation.test.ts` (from `server/`).
 
 - (2026-02-23) Ran `RUN_HOCUSPOCUS_TESTS=false npx vitest src/test/integration/collaborativeEditing.integration.test.ts -t "persist content"` — Hocuspocus persistence test skipped because RUN_HOCUSPOCUS_TESTS is false.
+
+- (2026-02-23) Added Hocuspocus provider sync test (`should sync content between two providers connected to the same room`) in `server/src/test/integration/collaborativeEditing.integration.test.ts`; marked T024 complete. Ran: `RUN_HOCUSPOCUS_TESTS=false npx vitest src/test/integration/collaborativeEditing.integration.test.ts -t "sync content"` (skipped because RUN_HOCUSPOCUS_TESTS is false).

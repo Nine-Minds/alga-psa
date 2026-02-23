@@ -257,12 +257,14 @@
   {
     "id": "T024",
     "description": "Changes made by user A appear in real-time for user B without page refresh",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F013"
     ],
-    "testType": "manual-multiuser",
-    "notes": "Two tabs, type in one, verify appears in the other instantly"
+    "testType": "integration",
+    "testFile": "server/src/test/integration/collaborativeEditing.integration.test.ts",
+    "vitestName": "should sync content between two providers connected to the same room",
+    "notes": "Requires RUN_HOCUSPOCUS_TESTS=true and Hocuspocus on ws://localhost:1234"
   },
   {
     "id": "T025",
