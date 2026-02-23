@@ -78,6 +78,7 @@ Working notes for MSP SSO tenant-first resolver and provider-settings changes (M
 - (2026-02-23) `F043` complete: tenant-source cookie context is accepted only after HMAC signature and expiry checks in `parseAndVerifyMspSsoResolutionCookie`.
 - (2026-02-23) `F044` complete: resolver writes a freshly signed cookie (new nonce + expiry) on each successful start attempt, replacing stale context.
 - (2026-02-23) `F045` complete: added CE-safe OAuth mapper `mapCeOAuthProfileToExtendedUser` for Google/Microsoft MSP sign-in lookups by normalized internal email.
+- (2026-02-23) `F046` complete: Google/Microsoft profile callbacks now route through `mapOAuthProfileToExtendedUser`, which selects CE mapper in community edition.
 
 ## Commands / Runbooks
 
