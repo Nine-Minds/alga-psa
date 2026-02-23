@@ -56,5 +56,5 @@
   { "id": "F049", "description": "Ensure Microsoft tenant ID selection for OAuth issuer/authorization defaults to `common` when tenant value is empty.", "implemented": true, "prdRefs": ["Secret keys", "Functional Requirements #3"] },
   { "id": "F050", "description": "Document in code comments that resolver lookup result must never be surfaced to client-facing messages.", "implemented": true, "prdRefs": ["Security / Permissions"] },
   { "id": "F051", "description": "Update `.env.example` comments to indicate `GOOGLE_OAUTH_*` and `MICROSOFT_OAUTH_*` can be used for CE MSP SSO fallback.", "implemented": true, "prdRefs": ["Rollout / Migration"] },
-  { "id": "F052", "description": "Add/update developer docs for provider setup order: Providers settings first, then Microsoft/Google integration-level connection.", "implemented": false, "prdRefs": ["UX / UI Notes", "Acceptance Criteria #9"] }
+  { "id": "F052", "description": "Add/update developer docs for provider setup order: Providers settings first, then Microsoft/Google integration-level connection.", "implemented": true, "prdRefs": ["UX / UI Notes", "Acceptance Criteria #9"] }
 ]
