@@ -15,11 +15,16 @@ Working memory for implementing real-time collaborative editing via TipTap + Hoc
 - (2026-02-20) Hocuspocus already uses a separate PostgreSQL database for Y.js persistence — document content will live in both places: Hocuspocus DB (Y.js binary state for real-time) and main DB (rendered JSON snapshot for search/preview/API).
 - (2026-02-20) No persistent author attribution per text portion — live cursors only (like Google Docs). Users can type their name if they want attribution. Adding per-character authorship would require custom Y.js extensions and is out of scope.
 - (2026-02-20) `tests.json` is a verification checklist, not a commit plan. Tests are verified in natural batches matching implementation work, not one commit per test. Expected batches:
-  1. CollaborativeEditor component → T004-T010, T018, T034, T035
-  2. Hocuspocus auth hook → T020-T022, T036
+  1. CollaborativeEditor component → T004-T010, T018, T034, T035, T038, T039
+  2. Hocuspocus auth hook → T020-T022, T036, T042
   3. Test page UI → T001-T003, T027-T031
   4. Manual two-user session → T011-T014, T023-T024, T037
-  5. Snapshot sync → T025-T026, T030, T032-T033
+  5. Snapshot sync → T025-T026, T030, T032-T033, T044
+  6. Automated collab sync → T040, T041, T043 (require Hocuspocus running)
+  7. Playwright e2e → T045 (require full app + Hocuspocus)
+- (2026-02-23) Rebased onto `some_more_improvements_to_editor` — Emoticon extension and cursor placement fix now in base. CollaborativeEditor must include the `Emoticon` extension from `@alga-psa/ui/editor`.
+- (2026-02-23) Behavior parity audit: CollaborativeEditor must match DocumentEditor's full extension set: StarterKit, Link (with autolink/linkOnPaste/target config), Underline, Emoticon. Added F023, F024, T038, T039.
+- (2026-02-23) Added automated collaboration tests (T040-T045) that go beyond DB-level: programmatic HocuspocusProvider sync, awareness broadcast, real onConnect rejection, persistence round-trip, and Playwright e2e.
 
 ## Discoveries / Constraints
 
@@ -43,22 +48,31 @@ Working memory for implementing real-time collaborative editing via TipTap + Hoc
 - (2026-02-20) Hocuspocus server has NO authentication/authorization on `onConnect`. Any room name is accepted. Phase 1 needs at minimum tenant-scoped room names; Phase 2 needs proper auth token validation.
 - (2026-02-20) Feature flags: default to `false` in `DEFAULT_BOOLEAN_FLAGS`. New flag `collaborative_editing` will default to `false`.
 - (2026-02-20) Existing `DocumentEditor` uses manual Save button + `updateBlockContent` server action. Collab version will auto-persist via Hocuspocus DB extension, but still needs a mechanism to sync snapshots back to `document_block_content` table.
+- (2026-02-23) **Docker dev setup**: In the Docker compose stack, Hocuspocus uses the `server` database with `app_user` (not a separate `hocuspocus` DB). Env defaults: `DB_NAME_HOCUSPOCUS=server`, `DB_USER_HOCUSPOCUS=app_user`. The Hocuspocus Database extension auto-creates its tables.
+- (2026-02-23) **Hocuspocus container start command** (when not already running):
+  ```
+  APP_NAME=alga_psa EXPOSE_HOCUSPOCUS_PORT=1234 DB_NAME_HOCUSPOCUS=server DB_USER_HOCUSPOCUS=app_user \
+    REDIS_HOST=redis REDIS_PORT=6379 DB_HOST=postgres DB_PORT=5432 HOCUSPOCUS_PORT=1234 \
+    docker compose -p alga-psa -f docker-compose.yaml -f docker-compose.base.yaml up -d hocuspocus
+  ```
+- (2026-02-23) **Automated test infrastructure**: Tests T040-T044 require Hocuspocus on localhost:1234. The Docker stack provides this. Test T045 (Playwright) additionally requires the Next.js dev server.
 
 ## Commands / Runbooks
 
 - Build shared packages: `npm run build:shared`
 - Dev server: `npm run dev`
-- Hocuspocus dev: `cd hocuspocus && node server.js`
-- Docker hocuspocus: check `docker-compose.base.yaml` for hocuspocus service
-- Create hocuspocus DB (one-time): `CREATE DATABASE hocuspocus;` + create user `hocuspocus_user`
+- Start Hocuspocus in Docker: see container start command in Discoveries section above
+- Verify Hocuspocus is running: `docker logs alga_psa_hocuspocus --tail 5` (should show "Ready.")
+- Run integration tests: `npm run test:integration -- collaborativeEditing`
 - Local collab test: open two tabs to `http://localhost:3000/msp/collab-test?doc=<id>` (one regular, one incognito with different user)
 
 ## Links / References
 
 - PR #1898: Editor improvements (merged to main)
 - **Test files:**
-  - `server/src/test/integration/collaborativeEditing.integration.test.ts` — integration tests (DB, snapshot sync, room names, tenant isolation, feature flag)
-  - Run: `npm run test:integration -- collaborativeEditing`
+  - `server/src/test/integration/collaborativeEditing.integration.test.ts` — integration tests (DB, snapshot sync, room names, tenant isolation, feature flag, provider sync)
+  - `server/src/test/e2e/collaborativeEditing.e2e.test.ts` — Playwright e2e tests (two-browser collab)
+  - Run integration: `npm run test:integration -- collaborativeEditing`
 - `packages/documents/src/components/DocumentEditor.tsx` — current TipTap editor
 - `packages/documents/src/components/EditorToolbar.tsx` — BubbleMenu toolbar
 - `hocuspocus/server.js` — Hocuspocus server config
@@ -67,6 +81,8 @@ Working memory for implementing real-time collaborative editing via TipTap + Hoc
 - `server/src/lib/feature-flags/featureFlags.ts` — feature flag defaults
 - `server/src/hooks/useFeatureFlag.tsx` — client-side feature flag hook
 - `packages/documents/src/actions/documentBlockContentActions.ts` — document CRUD actions
+- `packages/ui/src/editor/EmoticonExtension.ts` — Emoticon extension (text emoticons → emoji)
+- `packages/ui/src/editor/index.ts` — exports Emoticon extension
 
 ## Open Questions
 

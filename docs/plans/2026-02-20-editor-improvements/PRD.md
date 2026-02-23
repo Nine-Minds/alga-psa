@@ -94,6 +94,10 @@ Currently, document editing is single-user with manual save. If two users open t
 
 **F-P1-14**: Markdown paste handling works in collaborative mode (same behavior as current `DocumentEditor`).
 
+**F-P1-15**: Editor includes the `Emoticon` extension (from `@alga-psa/ui/editor`) for text-emoticon-to-emoji conversion (e.g., `:)` → emoji).
+
+**F-P1-16**: Editor includes the `Link` extension configured identically to the current `DocumentEditor`: `openOnClick: false`, `autolink: true`, `linkOnPaste: true`, `HTMLAttributes: { target: '_blank', rel: 'noopener noreferrer' }`.
+
 #### Phase 2 — Production Integration
 
 **F-P2-01**: Replace `DocumentEditor` usage across the app with `CollaborativeEditor`.
@@ -167,16 +171,51 @@ Currently, document editing is single-user with manual save. If two users open t
 
 The full stack can be tested locally without any production dependency:
 
-**Prerequisites** (all already part of the dev setup except the hocuspocus DB):
-- PostgreSQL running locally (existing)
-- Redis running locally (existing)
-- `hocuspocus` database created: `CREATE DATABASE hocuspocus;` with user `hocuspocus_user` (one-time)
+**Prerequisites** (all already part of the dev Docker setup):
+- PostgreSQL running (existing `alga_psa_postgres` container, port 5432)
+- Redis running (existing `alga_psa_redis` container, port 6379)
+- Hocuspocus running (`alga_psa_hocuspocus` container, port 1234) — uses the `server` database with `app_user` in dev (no separate hocuspocus DB needed)
+
+**Start Hocuspocus in Docker (if not running):**
+```bash
+APP_NAME=alga_psa EXPOSE_HOCUSPOCUS_PORT=1234 DB_NAME_HOCUSPOCUS=server DB_USER_HOCUSPOCUS=app_user \
+  REDIS_HOST=redis REDIS_PORT=6379 DB_HOST=postgres DB_PORT=5432 HOCUSPOCUS_PORT=1234 \
+  docker compose -p alga-psa -f docker-compose.yaml -f docker-compose.base.yaml up -d hocuspocus
+```
 
 **Run locally:**
 1. `npm run dev` — Next.js app on localhost:3000
-2. `cd hocuspocus && node server.js` — Hocuspocus on localhost:1234
+2. Hocuspocus on localhost:1234 (via Docker, see above)
 3. Open two browser tabs (or one regular + one incognito with a different user) to `/msp/collab-test?doc=<id>`
 4. Both tabs should show live cursors and real-time sync
+
+## Automated Test Strategy
+
+### Programmatic Y.js Sync Tests (require Hocuspocus + Redis + PostgreSQL)
+
+These tests create `HocuspocusProvider` instances programmatically (no browser) to verify server-side collaboration behavior:
+
+1. **Two-provider sync**: Connect two providers to the same room, write content via provider A, verify it arrives at provider B within a timeout.
+2. **Awareness broadcast**: Set awareness state (user name, cursor) on provider A, verify provider B receives it.
+3. **onConnect tenant rejection**: Connect with a room name containing a mismatched tenant, verify the connection is rejected.
+4. **syncCollabSnapshot end-to-end**: Write content via a provider, call `syncCollabSnapshot`, verify `document_block_content` is updated.
+5. **Content persistence**: Write via provider, disconnect both, reconnect a new provider to the same room, verify content loads from Hocuspocus DB.
+
+**Infrastructure required**: Hocuspocus server on localhost:1234, PostgreSQL, Redis. All available via the Docker stack.
+
+**Test file**: `server/src/test/integration/collaborativeEditing.integration.test.ts` (extend existing)
+
+### Playwright Browser Tests (require full app + Hocuspocus)
+
+These are end-to-end browser tests for real UI collaboration:
+
+1. Two browser contexts (different logged-in users), same `?doc=<id>` URL.
+2. Type in context A, assert content appears in context B within 3 seconds.
+3. Verify cursor labels with user names appear.
+4. Verify presence bar shows both users' names.
+5. Close context A, verify presence bar in context B updates.
+
+**Infrastructure required**: Next.js dev server + Hocuspocus + PostgreSQL + Redis.
 
 ## Open Questions
 
@@ -195,4 +234,8 @@ The full stack can be tested locally without any production dependency:
 - [ ] "Snapshot to DB" button successfully writes content to `document_block_content`
 - [ ] Tenant isolation: users from different tenants cannot see each other's edits
 - [ ] All existing editor formatting (from PR #1898) works in collaborative mode
+- [ ] Emoticon extension works in collaborative mode (`:)` converts to emoji)
+- [ ] Link auto-detection works (typing a URL auto-links it)
 - [ ] Connection/save status is visible to the user
+- [ ] Programmatic two-provider sync test passes (automated)
+- [ ] Programmatic onConnect tenant rejection test passes (automated)

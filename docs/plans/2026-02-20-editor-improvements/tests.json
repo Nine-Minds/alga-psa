@@ -303,5 +303,80 @@
     "featureIds": ["F003", "F013"],
     "testType": "manual-multiuser",
     "notes": "Two tabs, both bold different words simultaneously, verify no corruption"
+  },
+  {
+    "id": "T038",
+    "description": "Emoticon extension converts text emoticons to emoji in collaborative mode (e.g., ':) ' becomes emoji)",
+    "implemented": false,
+    "featureIds": ["F023"],
+    "testType": "manual",
+    "notes": "Type ':) ' in collaborative editor, verify emoji conversion"
+  },
+  {
+    "id": "T039",
+    "description": "Link auto-detection works in collaborative mode (typing a URL auto-links it)",
+    "implemented": false,
+    "featureIds": ["F024"],
+    "testType": "manual",
+    "notes": "Type a URL followed by space, verify it becomes a clickable link with target=_blank"
+  },
+  {
+    "id": "T040",
+    "description": "Two HocuspocusProviders connecting to the same room sync Y.js document content within 3 seconds",
+    "implemented": false,
+    "featureIds": ["F004", "F013"],
+    "testType": "integration",
+    "testFile": "server/src/test/integration/collaborativeEditing.integration.test.ts",
+    "vitestName": "should sync content between two providers connected to the same room",
+    "notes": "Requires Hocuspocus running on localhost:1234. Creates two HocuspocusProvider instances, writes via provider A, asserts content arrives at provider B."
+  },
+  {
+    "id": "T041",
+    "description": "Awareness state (user name, cursor color) broadcasts between two providers in the same room",
+    "implemented": false,
+    "featureIds": ["F006"],
+    "testType": "integration",
+    "testFile": "server/src/test/integration/collaborativeEditing.integration.test.ts",
+    "vitestName": "should broadcast awareness state between providers",
+    "notes": "Requires Hocuspocus running. Set awareness on provider A, verify provider B receives it via awareness.on('change')."
+  },
+  {
+    "id": "T042",
+    "description": "Hocuspocus onConnect rejects WebSocket connection when room tenant does not match connecting user's tenant",
+    "implemented": false,
+    "featureIds": ["F011"],
+    "testType": "integration",
+    "testFile": "server/src/test/integration/collaborativeEditing.integration.test.ts",
+    "vitestName": "should reject WebSocket connection with mismatched tenant",
+    "notes": "Requires Hocuspocus running with onConnect hook deployed. Connect a real HocuspocusProvider with wrong tenant in room name, verify onClose/onDisconnect fires."
+  },
+  {
+    "id": "T043",
+    "description": "Content written via HocuspocusProvider persists across full disconnect/reconnect cycle",
+    "implemented": false,
+    "featureIds": ["F013"],
+    "testType": "integration",
+    "testFile": "server/src/test/integration/collaborativeEditing.integration.test.ts",
+    "vitestName": "should persist content across disconnect and reconnect",
+    "notes": "Requires Hocuspocus running. Write content, destroy provider, create new provider to same room, verify content loads from Hocuspocus DB."
+  },
+  {
+    "id": "T044",
+    "description": "syncCollabSnapshot end-to-end: write content via provider, call syncCollabSnapshot, verify document_block_content updated",
+    "implemented": false,
+    "featureIds": ["F014"],
+    "testType": "integration",
+    "testFile": "server/src/test/integration/collaborativeEditing.integration.test.ts",
+    "vitestName": "should sync Y.js content to document_block_content via syncCollabSnapshot",
+    "notes": "Requires Hocuspocus running. Write via provider, call the actual server action, query DB to verify."
+  },
+  {
+    "id": "T045",
+    "description": "Playwright: two browser contexts editing same document see each other's changes in real-time",
+    "implemented": false,
+    "featureIds": ["F004", "F006", "F007"],
+    "testType": "e2e",
+    "testFile": "server/src/test/e2e/collaborativeEditing.e2e.test.ts",
+    "notes": "Requires full app + Hocuspocus. Two browser contexts (different users), same doc URL. Type in context A, assert content in context B within 3s. Verify cursor labels and presence bar."
   }
 ]

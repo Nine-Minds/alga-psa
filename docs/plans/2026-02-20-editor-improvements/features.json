@@ -130,5 +130,17 @@
     "description": "CollaborativeEditor CSS: cursor label styling, presence bar styling, status indicator styling — using existing design tokens (--color-* CSS vars)",
     "implemented": false,
     "prdRefs": ["F-P1-06", "F-P1-07", "F-P1-08"]
+  },
+  {
+    "id": "F023",
+    "description": "CollaborativeEditor includes Emoticon extension from @alga-psa/ui/editor for text-emoticon-to-emoji conversion",
+    "implemented": false,
+    "prdRefs": ["F-P1-15"]
+  },
+  {
+    "id": "F024",
+    "description": "CollaborativeEditor includes Link extension with config matching DocumentEditor: openOnClick: false, autolink: true, linkOnPaste: true, target: '_blank', rel: 'noopener noreferrer'",
+    "implemented": false,
+    "prdRefs": ["F-P1-16"]
   }
 ]
