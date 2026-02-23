@@ -267,7 +267,7 @@
   {
     "id": "T033",
     "description": "Resolver selects tenant source for Microsoft when user exists and tenant Microsoft secrets are present.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F028"
     ]
