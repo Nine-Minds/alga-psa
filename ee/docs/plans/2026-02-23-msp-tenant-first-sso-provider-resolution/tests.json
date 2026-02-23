@@ -70,7 +70,7 @@
   {
     "id": "T009",
     "description": "Microsoft settings save action persists `microsoft_tenant_id` in tenant secrets.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F008"
     ]
