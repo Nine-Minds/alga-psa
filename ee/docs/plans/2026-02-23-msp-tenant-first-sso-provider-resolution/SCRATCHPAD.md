@@ -160,3 +160,4 @@ Working notes for MSP SSO tenant-first resolver and provider-settings changes (M
 - (2026-02-23) `T038` complete: route test verifies unknown-user and known-user-no-source both return identical generic failure payload.
 - (2026-02-23) `T039` complete: signed-cookie helper test verifies payload/value exclude raw OAuth client IDs and secrets.
 - (2026-02-23) `T040` complete: signed-cookie helper test validates provider/source/issuedAt/expiresAt/nonce fields plus parseable signature.
+- (2026-02-23) `T041` complete: helper test asserts Microsoft app fallback checks use `MICROSOFT_OAUTH_CLIENT_ID` and `MICROSOFT_OAUTH_CLIENT_SECRET`.

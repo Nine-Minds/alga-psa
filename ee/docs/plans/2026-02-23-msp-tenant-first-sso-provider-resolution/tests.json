@@ -337,7 +337,7 @@
   {
     "id": "T041",
     "description": "Resolver uses `MICROSOFT_OAUTH_CLIENT_ID` + `MICROSOFT_OAUTH_CLIENT_SECRET` for Microsoft fallback readiness check.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F034"
     ]
