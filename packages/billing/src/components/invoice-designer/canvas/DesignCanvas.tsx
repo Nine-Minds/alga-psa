@@ -112,47 +112,47 @@ const getSectionSemanticCue = (sectionName: string): SectionSemanticCue => {
   if (/\b(item|line item|service|detail)\b/.test(name)) {
     return {
       label: 'Items',
-      toneClass: 'bg-cyan-100/45',
-      chipClass: 'border-cyan-300 bg-cyan-100 text-cyan-800',
+      toneClass: 'bg-cyan-100/45 dark:bg-cyan-900/20',
+      chipClass: 'border-cyan-300 dark:border-cyan-700 bg-cyan-100 dark:bg-cyan-900/40 text-cyan-800 dark:text-cyan-300',
       accentClass: 'bg-cyan-400/80',
     };
   }
   if (/\b(total|summary|payment)\b/.test(name)) {
     return {
       label: 'Totals',
-      toneClass: 'bg-emerald-100/45',
-      chipClass: 'border-emerald-300 bg-emerald-100 text-emerald-800',
+      toneClass: 'bg-emerald-100/45 dark:bg-emerald-900/20',
+      chipClass: 'border-emerald-300 dark:border-emerald-700 bg-emerald-100 dark:bg-emerald-900/40 text-emerald-800 dark:text-emerald-300',
       accentClass: 'bg-emerald-400/80',
     };
   }
   if (/\b(footer|approval|signature)\b/.test(name)) {
     return {
       label: 'Footer',
-      toneClass: 'bg-slate-100',
-      chipClass: 'border-slate-400 bg-white text-slate-700',
+      toneClass: 'bg-slate-100 dark:bg-slate-800/30',
+      chipClass: 'border-slate-400 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300',
       accentClass: 'bg-slate-400/80',
     };
   }
   if (/\b(billing|info|meta|details)\b/.test(name)) {
     return {
       label: 'Info',
-      toneClass: 'bg-blue-100/45',
-      chipClass: 'border-blue-300 bg-blue-100 text-blue-800',
+      toneClass: 'bg-blue-100/45 dark:bg-blue-900/20',
+      chipClass: 'border-blue-300 dark:border-blue-700 bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300',
       accentClass: 'bg-blue-400/80',
     };
   }
   if (/\b(header|masthead|top)\b/.test(name)) {
     return {
       label: 'Header',
-      toneClass: 'bg-amber-100/45',
-      chipClass: 'border-amber-300 bg-amber-100 text-amber-800',
+      toneClass: 'bg-amber-100/45 dark:bg-amber-900/20',
+      chipClass: 'border-amber-300 dark:border-amber-700 bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300',
       accentClass: 'bg-amber-400/80',
     };
   }
   return {
     label: 'Section',
     toneClass: 'bg-blue-100/45',
-    chipClass: 'border-blue-300 bg-blue-100 text-blue-800',
+    chipClass: 'border-blue-300 dark:border-blue-700 bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300',
     accentClass: 'bg-blue-400/80',
   };
 };
@@ -472,7 +472,7 @@ const renderTablePreview = (
   return (
     <div
       className={clsx(
-        'h-full overflow-hidden text-[10px] text-slate-700 rounded-sm bg-white',
+        'h-full overflow-hidden text-[10px] text-slate-700 dark:text-slate-300 rounded-sm bg-white dark:bg-transparent',
         borderConfig.outer && ['border', INVOICE_BORDER_STRONG_COLOR_CLASS]
       )}
     >
@@ -855,8 +855,8 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
   const fieldBorderStyle = isFieldNode ? resolveFieldBorderStyle(metadata) : 'box';
   const sectionContainerClasses =
     node.type === 'section'
-      ? clsx(sectionCue?.toneClass ?? 'bg-blue-100/45', resolveSectionBorderClasses(sectionBorderStyle))
-      : 'border bg-blue-50/40 border-blue-200 border-dashed';
+      ? clsx(sectionCue?.toneClass ?? 'bg-blue-100/45 dark:bg-blue-900/20', resolveSectionBorderClasses(sectionBorderStyle))
+      : 'border bg-blue-50/40 dark:bg-blue-900/15 border-blue-200 dark:border-blue-800 border-dashed';
   const fieldSurfaceClasses = resolveFieldBorderClasses(fieldBorderStyle);
   const isInlineFieldLike = isFieldNode || isLabelNode;
   const isCompactLeaf = isTotalsRow || isInlineFieldLike || isTextNode;
@@ -984,12 +984,12 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
           ? 'rounded-sm border border-transparent bg-transparent shadow-none'
           : [
               'rounded-md',
-              isContainer ? sectionContainerClasses : `border bg-white shadow-sm ${INVOICE_BORDER_COLOR_CLASS}`,
+              isContainer ? sectionContainerClasses : `border bg-white dark:bg-transparent shadow-sm ${INVOICE_BORDER_COLOR_CLASS}`,
             ],
         isSelected &&
           (isLabelNode
-            ? 'ring-2 ring-blue-600/70 shadow-[0_0_0_2px_rgba(37,99,235,0.15)]'
-            : 'ring-2 ring-blue-600 shadow-[0_0_0_3px_rgba(37,99,235,0.2)] border-blue-500'),
+            ? 'ring-2 ring-primary-500/70 shadow-[0_0_0_2px_rgb(var(--color-primary-500)/0.15)]'
+            : 'ring-2 ring-primary-500 shadow-[0_0_0_3px_rgb(var(--color-primary-500)/0.2)] border-primary-500'),
         !isSelected &&
           isReferenceNode &&
           'ring-2 ring-amber-500 shadow-[0_0_0_2px_rgba(245,158,11,0.2)]',
@@ -1027,7 +1027,7 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
       {isContainer ? (
         <div className="relative w-full h-full">
           {sectionCue && <div className={clsx('absolute inset-y-0 left-0 w-1 rounded-l-md', sectionCue.accentClass)} />}
-          <div className="absolute left-2 top-1 text-[10px] uppercase tracking-wide text-slate-500 pointer-events-none z-10 flex items-center gap-1.5">
+          <div className="absolute left-2 top-1 text-[10px] uppercase tracking-wide text-slate-700 dark:text-slate-300 pointer-events-none z-10 flex items-center gap-1.5">
             <span>{getNodeName(node)} · {node.type}</span>
             {sectionCue && (
               <span className={clsx('rounded border px-1 py-0.5 text-[9px] font-semibold', sectionCue.chipClass)}>
@@ -1083,7 +1083,7 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
           )
         ) : (
           <>
-            <div className="px-2 py-1 border-b bg-slate-50 text-xs font-semibold text-slate-600 flex items-center justify-between">
+            <div className="px-2 py-1 border-b bg-slate-50 dark:bg-slate-800 text-xs font-semibold text-slate-600 dark:text-slate-300 flex items-center justify-between">
               <span className="truncate">{getNodeName(node)}</span>
               <span className="text-[10px] uppercase tracking-wide text-slate-400">{node.type}</span>
             </div>
@@ -1110,7 +1110,7 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
           role="button"
           tabIndex={0}
           onPointerDown={startResize}
-          className="absolute -bottom-2 -right-2 h-4 w-4 rounded-full border border-blue-500 bg-white cursor-se-resize"
+          className="absolute -bottom-2 -right-2 h-4 w-4 rounded-full border border-primary-500 bg-white dark:bg-slate-900 cursor-se-resize"
         />
       )}
     </div>
@@ -1386,7 +1386,7 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
 
   return (
     <div
-      className="relative flex-1 overflow-auto bg-slate-100"
+      className="relative flex-1 overflow-auto bg-slate-100 dark:bg-[rgb(var(--color-background))]"
       onClick={() => {
         if (!readOnly) {
           onNodeSelect(null);
@@ -1395,12 +1395,12 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
     >
       {showRulers && (
         <>
-          <div className="absolute top-0 left-12 right-0 h-8 bg-white border-b border-slate-200 flex items-end text-[10px] text-slate-400 px-3 gap-3 z-10">
+          <div className="absolute top-0 left-12 right-0 h-8 bg-white dark:bg-[rgb(var(--color-card))] border-b border-slate-200 dark:border-[rgb(var(--color-border-200))] flex items-end text-[10px] text-slate-400 px-3 gap-3 z-10">
             {Array.from({ length: Math.ceil(canvasWidth / 50) + 2 }).map((_, index) => (
               <span key={`hr-${index}`}>{index * 50}</span>
             ))}
           </div>
-          <div className="absolute top-8 bottom-0 left-0 w-12 bg-white border-r border-slate-200 flex flex-col items-end text-[10px] text-slate-400 py-4 pr-1 gap-6 z-10">
+          <div className="absolute top-8 bottom-0 left-0 w-12 bg-white dark:bg-[rgb(var(--color-card))] border-r border-slate-200 dark:border-[rgb(var(--color-border-200))] flex flex-col items-end text-[10px] text-slate-400 py-4 pr-1 gap-6 z-10">
             {Array.from({ length: Math.ceil(canvasHeight / 50) + 2 }).map((_, index) => (
               <span key={`vr-${index}`}>{index * 50}</span>
             ))}
@@ -1409,34 +1409,42 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
       )}
       <div className="relative flex-1" style={{ padding: showRulers ? '48px 0 0 48px' : '32px' }}>
         <div
-          ref={setArtboardNodeRef}
-          className={clsx(
-            'relative mx-auto rounded-lg border border-slate-300 shadow-inner bg-white',
-            ((isDragActive && isOver) || forcedDropTarget === 'canvas') && 'ring-2 ring-emerald-500'
-          )}
-          data-designer-canvas="true"
-          style={{ 
-            width: canvasWidth, 
-            height: canvasHeight, 
-            minHeight: DESIGNER_CANVAS_HEIGHT,
-            ...backgroundStyle 
-          }}
-          onPointerMove={handlePointerMove}
-          onPointerLeave={handlePointerLeave}
-          onClick={(e) => {
-            e.stopPropagation();
-            if (!readOnly) {
-              onNodeSelect(null);
-            }
+          className="mx-auto"
+          style={{
+            width: canvasWidth * canvasScale,
+            height: Math.max(canvasHeight, DESIGNER_CANVAS_HEIGHT) * canvasScale,
           }}
         >
-          <div className="absolute left-3 top-2 z-20 rounded bg-slate-900/80 px-2 py-0.5 text-[10px] uppercase tracking-wide text-white pointer-events-none">
-            Template Boundary
-          </div>
           <div
-            className="absolute inset-0"
-            style={{ transform: `scale(${canvasScale})`, transformOrigin: 'top left' }}
+            ref={setArtboardNodeRef}
+            className={clsx(
+              'relative rounded-lg border border-slate-300 dark:border-slate-600 shadow-inner bg-white dark:bg-slate-900',
+              ((isDragActive && isOver) || forcedDropTarget === 'canvas') && 'ring-2 ring-emerald-500'
+            )}
+            data-designer-canvas="true"
+            style={{
+              width: canvasWidth,
+              height: canvasHeight,
+              minHeight: DESIGNER_CANVAS_HEIGHT,
+              transform: `scale(${canvasScale})`,
+              transformOrigin: 'top left',
+              ...backgroundStyle,
+            }}
+            onPointerMove={handlePointerMove}
+            onPointerLeave={handlePointerLeave}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (!readOnly) {
+                onNodeSelect(null);
+              }
+            }}
           >
+            <div className="absolute left-3 top-2 z-20 rounded bg-slate-900/80 px-2 py-0.5 text-[10px] uppercase tracking-wide text-white pointer-events-none">
+              Template Boundary
+            </div>
+            <div
+              className="absolute inset-0"
+            >
             <div
               className="absolute inset-0"
               style={{
@@ -1455,12 +1463,13 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
                 )}
                 style={guide.type === 'vertical' ? { left: guide.position } : { top: guide.position }}
               >
-                <span className="absolute text-[10px] bg-white px-1 text-blue-500">
+                <span className="absolute text-[10px] bg-white dark:bg-[rgb(var(--color-card))] px-1 text-blue-500">
                   {guide.description}
                 </span>
               </div>
             ))}
           </div>
+        </div>
         </div>
       </div>
     </div>

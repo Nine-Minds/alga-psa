@@ -190,7 +190,7 @@ export const ValidationBadge: React.FC<ValidationBadgeProps> = ({
 
       {/* Expanded Error Details */}
       {expanded && errors.length > 0 && (
-        <div className="absolute z-50 top-full left-0 mt-1 w-72 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
+        <div className="absolute z-50 top-full left-0 mt-1 w-72 bg-white dark:bg-[rgb(var(--color-card))] border border-gray-200 dark:border-[rgb(var(--color-border-200))] rounded-lg shadow-lg overflow-hidden">
           {/* Error list */}
           {errorList.length > 0 && (
             <div className="p-2 border-b border-gray-100">

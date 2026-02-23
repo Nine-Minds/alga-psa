@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useTheme } from 'next-themes';
 import { Droppable } from '@hello-pangea/dnd';
 import ReactFlow, {
   Background,
@@ -104,7 +105,7 @@ const StepNode: React.FC<NodeProps<WorkflowGraphNodeData>> = ({ data, selected }
   const hasUnmappedRequiredInputs = hasRequiredInputStatus && unmappedRequiredInputCount > 0;
   return (
     <div
-      className={`relative bg-white rounded-md border-r border-t border-b border-[rgb(var(--color-border-200))] ${colors.border} shadow-sm px-3 py-2 ${statusClass} ${selected ? 'ring-2 ring-primary-300' : ''}`}
+      className={`relative bg-white dark:bg-[rgb(var(--color-card))] rounded-md border-r border-t border-b border-[rgb(var(--color-border-200))] ${colors.border} shadow-sm px-3 py-2 ${statusClass} ${selected ? 'ring-2 ring-primary-300' : ''}`}
       style={{ width: 260, height: 72, borderLeftWidth: 4, boxSizing: 'border-box' }}
     >
       <Handle
@@ -159,7 +160,7 @@ const StepNode: React.FC<NodeProps<WorkflowGraphNodeData>> = ({ data, selected }
       {selected && data.stepId && data.onRequestDelete && (
         <button
           type="button"
-          className="absolute -right-2 -top-2 rounded-full border border-gray-200 bg-white shadow-sm p-1 text-gray-500 hover:text-destructive hover:border-destructive/30"
+          className="absolute -right-2 -top-2 rounded-full border border-gray-200 dark:border-[rgb(var(--color-border-200))] bg-white dark:bg-[rgb(var(--color-card))] shadow-sm p-1 text-gray-500 hover:text-destructive hover:border-destructive/30"
           aria-label="Delete step"
           title="Delete step"
           onClick={(event) => {
@@ -192,7 +193,7 @@ const InsertNode: React.FC<{ data: WorkflowGraphNodeData }> = ({ data }) => {
           }}
           className={[
             'flex items-center justify-center',
-            'rounded-md border shadow-sm bg-white',
+            'rounded-md border shadow-sm bg-white dark:bg-[rgb(var(--color-card))]',
             snapshot.isDraggingOver
               ? 'border-[rgb(var(--color-primary-400))] ring-2 ring-[rgb(var(--color-primary-200))]'
               : 'border-[rgb(var(--color-border-200))]',
@@ -244,6 +245,8 @@ export default function WorkflowGraph<TStep extends { id: string; type: string }
     className
   } = props;
 
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === 'dark';
   const [nodes, setNodes] = useState<Node<WorkflowGraphNodeData>[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
   const [loading, setLoading] = useState(true);
@@ -396,6 +399,7 @@ export default function WorkflowGraph<TStep extends { id: string; type: string }
         nodes={displayNodes}
         edges={edges}
         nodeTypes={nodeTypes}
+        className="!bg-white dark:!bg-[rgb(var(--color-card))]"
         style={{ width: '100%', height: '100%' }}
         minZoom={0.25}
         maxZoom={1.5}
@@ -424,7 +428,7 @@ export default function WorkflowGraph<TStep extends { id: string; type: string }
           animated: false
         }}
       >
-        <Background gap={24} size={1} color="#e5e7eb" />
+        <Background gap={24} size={1} color={isDark ? '#334155' : '#e5e7eb'} />
         <Controls />
         <MiniMap
           nodeStrokeColor={(n) => {
@@ -439,7 +443,9 @@ export default function WorkflowGraph<TStep extends { id: string; type: string }
             if (colors.border.includes('green')) return '#22c55e';
             return '#9ca3af';
           }}
-          nodeColor={() => '#ffffff'}
+          nodeColor={() => isDark ? '#475569' : '#ffffff'}
+          maskColor={isDark ? 'rgba(15, 23, 42, 0.45)' : undefined}
+          style={isDark ? { backgroundColor: '#334155' } : undefined}
           nodeBorderRadius={2}
         />
       </ReactFlow>
