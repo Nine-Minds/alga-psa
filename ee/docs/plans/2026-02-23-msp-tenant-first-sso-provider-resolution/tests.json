@@ -142,7 +142,7 @@
   {
     "id": "T018",
     "description": "CE Microsoft email form no longer blocks save due to manual client credentials fields.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F014",
       "F017"

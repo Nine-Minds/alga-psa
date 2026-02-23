@@ -134,3 +134,4 @@ Working notes for MSP SSO tenant-first resolver and provider-settings changes (M
 - (2026-02-23) Command run: `cd server && npx vitest run ../packages/integrations/src/actions/integrations/microsoftActions.test.ts ../packages/integrations/src/actions/integrations/providerReadiness.test.ts`.
 - (2026-02-23) `T017` complete: `providerReadiness.test.ts` verifies Google readiness is true only when both `google_client_id` and `google_client_secret` are configured.
 - (2026-02-23) `T023` complete: Google readiness coverage explicitly asserts Pub/Sub keys are not required for MSP SSO readiness decisions.
+- (2026-02-23) `T018` complete: `microsoftProviders.providersFirst.test.ts` verifies CE Microsoft email form no longer requires manual `clientId`/`clientSecret` fields and uses providers-managed credentials.
