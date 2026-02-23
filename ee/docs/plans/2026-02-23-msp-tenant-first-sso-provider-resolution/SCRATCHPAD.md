@@ -172,3 +172,4 @@ Working notes for MSP SSO tenant-first resolver and provider-settings changes (M
 - (2026-02-23) `T048` complete: NextAuth contract test verifies tenant-scoped Microsoft credentials are read when resolver cookie selects tenant source.
 - (2026-02-23) `T049` complete: NextAuth contract test verifies tenant-scoped Google credentials are read when resolver cookie selects tenant source.
 - (2026-02-23) `T050` complete: NextAuth contract test verifies invalid/absent resolver context returns early to app-level fallback credential set.
+- (2026-02-23) `T051` complete: NextAuth contract test verifies expired resolver context is ignored through the same early-return fallback path.

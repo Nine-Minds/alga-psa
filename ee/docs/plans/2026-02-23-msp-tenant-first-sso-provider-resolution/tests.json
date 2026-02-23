@@ -418,7 +418,7 @@
   {
     "id": "T051",
     "description": "Expired resolver cookie context is ignored and app fallback is used.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F042",
       "F043"
