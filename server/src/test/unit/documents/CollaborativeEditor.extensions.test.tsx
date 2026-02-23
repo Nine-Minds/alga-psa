@@ -58,6 +58,11 @@ vi.mock('@alga-psa/documents/actions/documentBlockContentActions', () => ({
 }));
 
 let CollaborativeEditor: typeof import('@alga-psa/documents/components/CollaborativeEditor').CollaborativeEditor;
+const emitProviderEvent = (event: string, payload?: any) => {
+  const listeners = providerListeners.get(event);
+  if (!listeners) return;
+  listeners.forEach((callback) => callback(payload));
+};
 
 describe('CollaborativeEditor', () => {
   beforeEach(async () => {
@@ -195,5 +200,58 @@ describe('CollaborativeEditor', () => {
 
     const secondCall = providerMock.awareness.setLocalStateField.mock.calls.at(-1)?.[1];
     expect(firstCall?.color).toBe(secondCall?.color);
+  });
+
+  it('shows connected users in the presence bar', async () => {
+    awarenessStates.set(1, { user: { id: 'user-a', name: 'User A', color: '#111111' } });
+    awarenessStates.set(2, { user: { id: 'user-b', name: 'User B', color: '#222222' } });
+
+    const { getByText } = render(
+      <CollaborativeEditor
+        documentId="doc-5"
+        tenantId="tenant-5"
+        userId="user-5"
+        userName="Editor Five"
+      />
+    );
+
+    await act(async () => {
+      emitProviderEvent('awarenessChange');
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    expect(getByText('User A')).toBeTruthy();
+    expect(getByText('User B')).toBeTruthy();
+  });
+
+  it('updates presence bar when a user disconnects', async () => {
+    awarenessStates.set(1, { user: { id: 'user-a', name: 'User A', color: '#111111' } });
+    awarenessStates.set(2, { user: { id: 'user-b', name: 'User B', color: '#222222' } });
+
+    const { queryByText } = render(
+      <CollaborativeEditor
+        documentId="doc-6"
+        tenantId="tenant-6"
+        userId="user-6"
+        userName="Editor Six"
+      />
+    );
+
+    await act(async () => {
+      emitProviderEvent('awarenessChange');
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    expect(queryByText('User A')).toBeTruthy();
+    expect(queryByText('User B')).toBeTruthy();
+
+    awarenessStates.delete(2);
+
+    await act(async () => {
+      emitProviderEvent('awarenessChange');
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    expect(queryByText('User B')).toBeNull();
   });
 });

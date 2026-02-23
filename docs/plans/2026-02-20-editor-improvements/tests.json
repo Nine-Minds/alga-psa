@@ -135,12 +135,13 @@
   {
     "id": "T013",
     "description": "Presence bar shows both users' names when two users are connected to the same document",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F007"
     ],
-    "testType": "manual-multiuser",
-    "notes": "Two tabs connected, verify presence bar shows both names"
+    "testType": "unit",
+    "testFile": "server/src/test/unit/documents/CollaborativeEditor.extensions.test.tsx",
+    "vitestName": "shows connected users in the presence bar"
   },
   {
     "id": "T014",
