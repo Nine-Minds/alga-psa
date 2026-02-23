@@ -40,6 +40,7 @@ Working notes for MSP SSO tenant-first resolver and provider-settings changes (M
 - (2026-02-23) `F005` complete: exported Microsoft integrations actions from both `packages/integrations/src/actions/integrations/index.ts` and `packages/integrations/src/actions/index.ts`.
 - (2026-02-23) `F006` complete: `saveMicrosoftIntegrationSettings` persists `microsoft_client_id` using `secretProvider.setTenantSecret(tenant, 'microsoft_client_id', clientId)`.
 - (2026-02-23) `F007` complete: `saveMicrosoftIntegrationSettings` persists `microsoft_client_secret` as tenant secret.
+- (2026-02-23) `F008` complete: `saveMicrosoftIntegrationSettings` persists `microsoft_tenant_id` with default `common` when input is blank.
 
 ## Commands / Runbooks
 

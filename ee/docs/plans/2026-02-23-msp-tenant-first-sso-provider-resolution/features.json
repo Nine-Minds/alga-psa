@@ -6,7 +6,7 @@
   { "id": "F005", "description": "Export new Microsoft integration actions from integrations action entrypoints used by settings UI.", "implemented": true, "prdRefs": ["Functional Requirements #2"] },
   { "id": "F006", "description": "Persist `microsoft_client_id` as tenant secret from Providers settings.", "implemented": true, "prdRefs": ["Functional Requirements #3"] },
   { "id": "F007", "description": "Persist `microsoft_client_secret` as tenant secret from Providers settings.", "implemented": true, "prdRefs": ["Functional Requirements #3"] },
-  { "id": "F008", "description": "Persist `microsoft_tenant_id` as tenant secret with default `common` when omitted.", "implemented": false, "prdRefs": ["Functional Requirements #3"] },
+  { "id": "F008", "description": "Persist `microsoft_tenant_id` as tenant secret with default `common` when omitted.", "implemented": true, "prdRefs": ["Functional Requirements #3"] },
   { "id": "F009", "description": "Render masked saved-secret indicators in Microsoft settings status response/UI.", "implemented": false, "prdRefs": ["Acceptance Criteria #2"] },
   { "id": "F010", "description": "Enforce RBAC (`system_settings:update`) on Microsoft settings save/reset actions.", "implemented": false, "prdRefs": ["Security / Permissions"] },
   { "id": "F011", "description": "Restrict Microsoft settings actions from client portal user context.", "implemented": false, "prdRefs": ["Security / Permissions"] },
