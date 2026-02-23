@@ -167,7 +167,7 @@
   {
     "id": "T021",
     "description": "CE Microsoft calendar form can save provider metadata without manual OAuth credential entry.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F016",
       "F018"
