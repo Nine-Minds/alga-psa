@@ -118,7 +118,7 @@
   {
     "id": "T015",
     "description": "Client-portal user context is denied on Microsoft settings status/save/reset actions.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F011"
     ]
