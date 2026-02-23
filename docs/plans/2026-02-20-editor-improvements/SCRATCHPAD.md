@@ -125,3 +125,5 @@ Working memory for implementing real-time collaborative editing via TipTap + Hoc
 - (2026-02-23) Marked T012 complete using deterministic cursor color unit test.
 
 - (2026-02-23) Marked T013 complete using presence bar unit test in `CollaborativeEditor.extensions.test.tsx`.
+
+- (2026-02-23) Marked T014 complete using presence bar disconnect unit test in `CollaborativeEditor.extensions.test.tsx`.

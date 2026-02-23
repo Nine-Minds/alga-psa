@@ -146,12 +146,13 @@
   {
     "id": "T014",
     "description": "Presence bar updates when a user disconnects (name disappears)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F007"
     ],
-    "testType": "manual-multiuser",
-    "notes": "Close one tab, verify name disappears from presence bar in remaining tab"
+    "testType": "unit",
+    "testFile": "server/src/test/unit/documents/CollaborativeEditor.extensions.test.tsx",
+    "vitestName": "updates presence bar when a user disconnects"
   },
   {
     "id": "T015",
