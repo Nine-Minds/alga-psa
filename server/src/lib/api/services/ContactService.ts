@@ -7,7 +7,7 @@ import { Knex } from 'knex';
 import { BaseService, ServiceContext, ListResult } from '@alga-psa/db';
 import { IContact } from 'server/src/interfaces/contact.interfaces';
 import { withTransaction } from '@alga-psa/db';
-import { getContactAvatarUrl } from 'server/src/lib/utils/avatarUtils';
+import { getContactAvatarUrl } from '@alga-psa/formatting/avatarUtils';
 import { NotFoundError } from '../middleware/apiMiddleware';
 import { 
   CreateContactData, 

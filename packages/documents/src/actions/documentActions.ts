@@ -12,7 +12,7 @@ import puppeteer from 'puppeteer';
 import { writeFile, unlink, mkdir } from 'fs/promises';
 import { join } from 'path';
 import { CacheFactory } from '../cache/CacheFactory';
-import { convertBlockNoteToHTML } from '@alga-psa/documents/lib/blocknoteUtils';
+import { convertBlockNoteToHTML } from '@alga-psa/formatting/blocknoteUtils';
 import DocumentAssociation from '@alga-psa/documents/models/documentAssociation';
 import {
     IDocument,
@@ -2351,28 +2351,6 @@ export const getImageUrl = withAuth(async (user, { tenant }, file_id: string): P
     return null;
   }
 });
-
-/**
- * Generates a URL for accessing an image file by its ID without authentication checks.
- * This is the INTERNAL API that bypasses user authentication and permission validation.
- *
- * Use this function when:
- * - System-level operations that don't require user context
- * - Internal service calls where authentication is handled elsewhere
- * - Background processes and workflows
- * - Avatar utilities and other trusted internal operations
- *
- * SECURITY WARNING: This function bypasses all user authentication and permission checks.
- * Only use in trusted contexts where access control is handled at a higher level.
- *
- * @param file_id The ID of the file in external_files
- * @param tenant Optional tenant - if provided, skips getCurrentUser call (avoids circular dependency)
- * @returns A promise resolving to the image URL string, or null if an error occurs or the file is not found/an image
- */
-export async function getImageUrlInternal(file_id: string, tenant?: string): Promise<string | null> {
-  // For internal use, we can use runWithTenant if tenant is provided
-  return await getImageUrlCore(file_id, false);
-}
 
 export const getDistinctEntityTypes = withAuth(async (user, { tenant }): Promise<string[]> => {
   try {

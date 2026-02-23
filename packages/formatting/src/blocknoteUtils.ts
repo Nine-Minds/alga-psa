@@ -72,12 +72,12 @@ export function formatBlockNoteContent(content: unknown): { html: string; text: 
  */
 export function convertBlockNoteToMarkdown(blocks: any): string {
   console.log("[BlockNoteUtils] Converting to markdown:", typeof blocks === 'string' ? 'JSON string' : (blocks ? 'blocks array' : 'undefined'));
-  
+
   // Handle empty input
   if (!blocks) {
     return "[No content]";
   }
-  
+
   // Parse JSON string if needed
   let blockData: Block[] | PartialBlock[];
   if (typeof blocks === 'string') {
@@ -90,10 +90,10 @@ export function convertBlockNoteToMarkdown(blocks: any): string {
   } else {
     blockData = blocks;
   }
-  
+
   // Try conversion methods in sequence and use the first one that works
   let markdown: string = "";
-  
+
   // 1. Try custom converter first
   try {
     markdown = customBlocksToMarkdown(blockData);
@@ -103,7 +103,7 @@ export function convertBlockNoteToMarkdown(blocks: any): string {
   } catch (customError) {
     console.error("[BlockNoteUtils] Custom markdown conversion failed:", customError);
   }
-  
+
   // 2. If custom converter failed, try simple text extraction
   try {
     markdown = simpleTextExtraction(blockData);
@@ -113,7 +113,7 @@ export function convertBlockNoteToMarkdown(blocks: any): string {
   } catch (error) {
     console.error("[BlockNoteUtils] Simple text extraction failed:", error);
   }
-  
+
   // 3. Last resort - extract any text we can find
   try {
     const extractedText = extractRawText(blockData);
@@ -123,7 +123,7 @@ export function convertBlockNoteToMarkdown(blocks: any): string {
   } catch (error) {
     console.error("[BlockNoteUtils] Direct text extraction failed:", error);
   }
-  
+
   // Absolute last resort
   return "[Content could not be converted to markdown]";
 }
@@ -139,12 +139,12 @@ export function convertBlockNoteToMarkdown(blocks: any): string {
  */
 function extractRawText(blocks: Block[] | PartialBlock[]): string {
   const textParts: string[] = [];
-  
+
   try {
     // Recursively search for text in the block structure
     const extractTextFromObject = (obj: any): void => {
       if (!obj) return;
-      
+
       if (typeof obj === 'string') {
         textParts.push(obj);
       } else if (Array.isArray(obj)) {
@@ -154,12 +154,12 @@ function extractRawText(blocks: Block[] | PartialBlock[]): string {
         if (obj.text && typeof obj.text === 'string') {
           textParts.push(obj.text);
         }
-        
+
         // Look for content property
         if (obj.content) {
           extractTextFromObject(obj.content);
         }
-        
+
         // Recursively check all properties
         Object.values(obj).forEach(value => {
           if (typeof value === 'object' || Array.isArray(value)) {
@@ -168,7 +168,7 @@ function extractRawText(blocks: Block[] | PartialBlock[]): string {
         });
       }
     };
-    
+
     extractTextFromObject(blocks);
     return textParts.join('\n').trim();
   } catch (error) {
@@ -190,22 +190,22 @@ function simpleTextExtraction(blocks: Block[] | PartialBlock[]): string {
   return blocks
     .map(block => {
       if (!block.content) return '';
-      
+
       if (typeof block.content === 'string') {
         return block.content;
       }
-      
+
       if (Array.isArray(block.content)) {
         return block.content
           .filter((item: any) => item && item.type === 'text')
           .map((item: any) => item.text || '')
           .join('');
       }
-      
+
       if (typeof block.content === 'object' && block.content !== null) {
         return JSON.stringify(block.content);
       }
-      
+
       return '';
     })
     .filter(text => text.trim() !== '')
@@ -229,8 +229,20 @@ function extractStyledTextFromContent(content: any[]): string {
   }
 
   return content
-    .filter((item: any) => item && (item.type === 'text' || item.type === 'mention'))
+    .filter((item: any) => item && (item.type === 'text' || item.type === 'mention' || item.type === 'link'))
     .map((item: any) => {
+      // Handle link inline content
+      if (item.type === 'link') {
+        const href = item.href || '';
+        const linkText = Array.isArray(item.content)
+          ? item.content
+              .filter((c: any) => c.type === 'text')
+              .map((c: any) => c.text || '')
+              .join('')
+          : '';
+        return `[${linkText}](${href})`;
+      }
+
       // Handle mention inline content
       if (item.type === 'mention') {
         const { userId, username, displayName } = item.props || {};
@@ -295,30 +307,30 @@ function customBlocksToMarkdown(blocks: Block[] | PartialBlock[]): string {
   return blocks.map((block) => {
     // Check for block-level styling (like paragraph background color)
     let blockWrapper = (content: string): string => content;
-    
+
     if (block.props) {
       const props = block.props as any;
-      
+
       // Handle block background color
       if (props.backgroundColor && props.backgroundColor !== 'default') {
         blockWrapper = (content: string) =>
           `<div style="background-color:${props.backgroundColor}">${content}</div>`;
       }
-      
+
       // Handle text alignment
       if (props.textAlignment && props.textAlignment !== 'left') {
         const alignStyle = props.textAlignment === 'center' ? 'center' :
                           (props.textAlignment === 'right' ? 'right' : 'justify');
-        
+
         const prevWrapper = blockWrapper;
         blockWrapper = (content: string) =>
           prevWrapper(`<div style="text-align:${alignStyle}">${content}</div>`);
       }
     }
-    
+
     // Handle different block types
     let content = '';
-    
+
     switch (block.type) {
       case 'paragraph':
         // Handle empty paragraphs explicitly
@@ -328,7 +340,7 @@ function customBlocksToMarkdown(blocks: Block[] | PartialBlock[]): string {
         }
         content = extractStyledTextFromContent(block.content);
         return blockWrapper(content);
-        
+
       case 'heading':
         if (block.content && Array.isArray(block.content)) {
           const level = (block.props as any)?.level || 1;
@@ -337,24 +349,24 @@ function customBlocksToMarkdown(blocks: Block[] | PartialBlock[]): string {
           return blockWrapper(content);
         }
         break;
-        
+
       case 'table':
         return convertTableToMarkdown(block);
-        
+
       case 'numberedListItem':
         if (block.content && Array.isArray(block.content)) {
           content = `1. ${extractStyledTextFromContent(block.content)}`;
           return blockWrapper(content);
         }
         break;
-        
+
       case 'bulletListItem':
         if (block.content && Array.isArray(block.content)) {
           content = `* ${extractStyledTextFromContent(block.content)}`;
           return blockWrapper(content);
         }
         break;
-        
+
       case 'checkListItem':
         if (block.content && Array.isArray(block.content)) {
           const checked = (block.props as any)?.checked ? 'x' : ' ';
@@ -362,7 +374,7 @@ function customBlocksToMarkdown(blocks: Block[] | PartialBlock[]): string {
           return blockWrapper(content);
         }
         break;
-        
+
       case 'codeBlock':
         if (block.content && Array.isArray(block.content)) {
           const language = (block.props as any)?.language || '';
@@ -370,13 +382,13 @@ function customBlocksToMarkdown(blocks: Block[] | PartialBlock[]): string {
           return blockWrapper(content);
         }
         break;
-        
+
       default:
         // Unknown block type
         console.log(`[BlockNoteUtils] Unknown block type: ${block.type}`);
         return '';
     }
-    
+
     return '';
   }).join('\n\n'); // Don't filter empty strings to preserve empty paragraphs
 }
@@ -390,51 +402,51 @@ function customBlocksToMarkdown(blocks: Block[] | PartialBlock[]): string {
 function convertTableToMarkdown(block: Block | PartialBlock): string {
   try {
     const content = block.content as any;
-    
+
     // Validate table structure
     if (!content || typeof content !== 'object' || !content.rows) {
       return '[Invalid table structure]';
     }
-    
+
     const rows = content.rows || [];
     if (rows.length === 0) {
       return '';
     }
-    
+
     // Determine the number of columns from the first row
     const numCols = rows[0].cells ? rows[0].cells.length : 0;
     if (numCols === 0) {
       return '';
     }
-    
+
     // Build the markdown table
     let markdown = '';
-    
+
     // Process each row
     rows.forEach((row: any, rowIndex: number) => {
       const cells = row.cells || [];
-      
+
       // Add cells for this row
       let rowMarkdown = '|';
       for (let colIndex = 0; colIndex < numCols; colIndex++) {
         const cell = cells[colIndex] || [];
         let cellText = ' ';
-        
+
         // Extract styled text from cell content
         if (Array.isArray(cell)) {
           // Use our styled text extraction function
           cellText = extractStyledTextFromContent(cell);
-          
+
           // If cell is empty, use a space to maintain table structure
           if (!cellText || cellText.trim() === '') {
             cellText = ' ';
           }
         }
-        
+
         rowMarkdown += ` ${cellText} |`;
       }
       markdown += rowMarkdown + '\n';
-      
+
       // Add separator row after the header
       if (rowIndex === 0) {
         let separator = '|';
@@ -444,17 +456,17 @@ function convertTableToMarkdown(block: Block | PartialBlock): string {
         markdown += separator + '\n';
       }
     });
-    
+
     // Apply any block-level styling to the table
     if (block.props) {
       const props = block.props as any;
-      
+
       // Handle block background color
       if (props.backgroundColor && props.backgroundColor !== 'default') {
         markdown = `<div style="background-color:${props.backgroundColor}">\n${markdown}\n</div>`;
       }
     }
-    
+
     return markdown;
   } catch (error) {
     console.error("[BlockNoteUtils] Error converting table to markdown:", error);
@@ -473,8 +485,30 @@ function extractStyledTextToHTML(content: any[]): string {
   if (content.length === 0) return '<br>';
 
   return content
-    .filter((item: any) => item && (item.type === 'text' || item.type === 'mention'))
+    .filter((item: any) => item && (item.type === 'text' || item.type === 'mention' || item.type === 'link'))
     .map((item: any) => {
+      // Handle link inline content
+      if (item.type === 'link') {
+        const href = (item.href || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+        const linkText = Array.isArray(item.content)
+          ? item.content
+              .filter((c: any) => c.type === 'text')
+              .map((c: any) => {
+                let text = (c.text || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                if (c.styles) {
+                  if (c.styles.code) text = `<code>${text}</code>`;
+                  if (c.styles.strike) text = `<s>${text}</s>`;
+                  if (c.styles.underline) text = `<u>${text}</u>`;
+                  if (c.styles.italic) text = `<em>${text}</em>`;
+                  if (c.styles.bold) text = `<strong>${text}</strong>`;
+                }
+                return text;
+              })
+              .join('')
+          : '';
+        return `<a href="${href}" target="_blank" rel="noopener noreferrer">${linkText}</a>`;
+      }
+
       // Handle mention inline content
       if (item.type === 'mention') {
         const { userId, username, displayName } = item.props || {};
@@ -550,7 +584,7 @@ export function convertBlockNoteToHTML(blocks: any): string {
     return '<p>[Invalid content format - not an array]</p>';
   }
 
-  const output: string[] = [];
+  let output: string[] = [];
 
 
   function processBlocksRecursive(
@@ -581,7 +615,7 @@ export function convertBlockNoteToHTML(blocks: any): string {
       if (block.type === 'paragraph' && currentLevel > 0) {
         blockStylesArray.push(`margin-left: ${currentLevel * 25}px`); // 25px per indent level
       }
-      
+
       const styleAttribute = blockStylesArray.length > 0 ? ` style="${blockStylesArray.join(';')}"` : '';
 
       let content = '';

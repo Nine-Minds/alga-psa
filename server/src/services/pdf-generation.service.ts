@@ -4,7 +4,7 @@ import { FileStore } from 'server/src/types/storage';
 import { getInvoiceForRendering } from '@alga-psa/billing/actions/invoiceQueries';
 import { getInvoiceTemplates } from '@alga-psa/billing/actions/invoiceTemplates';
 import { runWithTenant, createTenantKnex } from 'server/src/lib/db';
-import { getClientLogoUrl } from 'server/src/lib/utils/avatarUtils';
+import { getClientLogoUrl } from '@alga-psa/formatting/avatarUtils';
 import { evaluateInvoiceTemplateAst } from '@alga-psa/billing/lib/invoice-template-ast/evaluator';
 import { renderInvoiceTemplateAstHtmlDocument } from '@alga-psa/billing/lib/invoice-template-ast/server-render';
 import type { InvoiceViewModel as DbInvoiceViewModel, IInvoiceCharge } from 'server/src/interfaces/invoice.interfaces';
@@ -12,7 +12,7 @@ import type { DateValue, InvoiceTemplateAst, WasmInvoiceViewModel } from '@alga-
 import { browserPoolService, BrowserPoolService } from './browser-pool.service';
 import { IDocument } from 'server/src/interfaces/document.interface';
 import { getDocument } from '@alga-psa/documents/actions/documentActions';
-import { convertBlockNoteToHTML } from 'server/src/lib/utils/blocknoteUtils';
+import { convertBlockNoteToHTML } from '@alga-psa/formatting/blocknoteUtils';
 import { v4 as uuidv4 } from 'uuid';
 import { StorageProviderFactory, generateStoragePath } from '@alga-psa/storage';
 import { FileStoreModel } from 'server/src/models/storage';

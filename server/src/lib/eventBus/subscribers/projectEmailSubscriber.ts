@@ -12,7 +12,7 @@ import {
 import { sendEventEmail, SendEmailParams } from '../../notifications/sendEventEmail';
 import logger from '@alga-psa/core/logger';
 import { createTenantKnex } from '../../db';
-import { formatBlockNoteContent } from '../../utils/blocknoteUtils';
+import { formatBlockNoteContent } from '@alga-psa/formatting/blocknoteUtils';
 import { getEmailEventChannel } from '@alga-psa/notifications';
 import { isValidEmail } from '@alga-psa/core';
 
