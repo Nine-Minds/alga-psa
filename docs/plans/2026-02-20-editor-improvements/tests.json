@@ -496,7 +496,7 @@
   {
     "id": "T045",
     "description": "Playwright: two browser contexts editing same document see each other's changes in real-time",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F004",
       "F006",
@@ -504,6 +504,7 @@
     ],
     "testType": "e2e",
     "testFile": "server/src/test/e2e/collaborativeEditing.e2e.test.ts",
+    "vitestName": "two browser contexts see real-time changes and presence",
     "notes": "Requires full app + Hocuspocus. Two browser contexts (different users), same doc URL. Type in context A, assert content in context B within 3s. Verify cursor labels and presence bar."
   }
 ]
