@@ -340,9 +340,9 @@ body {
     --badge-info-bg: 30 58 138;         /* blue-900 for dark mode */
     --badge-info-text: 191 219 254;     /* blue-200 */
     --badge-info-border: 30 64 175;     /* blue-800 */
-    --badge-warning-bg: 69 26 3;         /* orange-950 — less brown */
-    --badge-warning-text: 253 186 116;  /* orange-300 — warm but not yellow */
-    --badge-warning-border: 124 45 18;  /* orange-900 */
+    --badge-warning-bg: 55 38 6;         /* amber-950 — warm dark gold */
+    --badge-warning-text: 253 224 71;   /* #FDE047 — yellow-300 */
+    --badge-warning-border: 234 179 8;  /* #EAB308 — yellow-500 */
     --badge-success-bg: 20 83 45;       /* green-900 for dark mode */
     --badge-success-text: 134 239 172;  /* green-300 — muted */
     --badge-success-border: 22 101 52;  /* green-800 */
@@ -1016,6 +1016,45 @@ body {
     radial-gradient(ellipse 60% 50% at 85% 20%, rgb(20 50 65 / 0.2) 0%, transparent 50%),
     rgb(var(--color-border-100));
   box-shadow: inset 0 2px 6px rgb(0 0 0 / 0.3), inset 0 0 0 1px rgb(255 255 255 / 0.06);
+}
+
+/* Expression editor placeholder (Monaco inline decoration) */
+.expression-editor-placeholder {
+  color: #9ca3af;
+  font-style: italic;
+  pointer-events: none;
+}
+
+.dark .expression-editor-placeholder {
+  color: #6b7280;
+}
+
+/* ReactFlow dark mode overrides */
+.dark .react-flow__minimap {
+  background-color: #334155;
+  border: 1px solid #475569;
+  border-radius: 6px;
+}
+
+.dark .react-flow__controls {
+  background: #1e293b;
+  border: 1px solid #475569;
+  border-radius: 6px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+.dark .react-flow__controls-button {
+  background: #1e293b;
+  border-bottom: 1px solid #334155;
+  fill: #cbd5e1;
+}
+
+.dark .react-flow__controls-button:last-child {
+  border-bottom: none;
+}
+
+.dark .react-flow__controls-button:hover {
+  background: #334155;
 }
 
 /* Override BlockNote theme so parent background shows through (light + dark) */

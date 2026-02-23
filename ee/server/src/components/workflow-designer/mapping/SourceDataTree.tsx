@@ -474,7 +474,7 @@ export const SourceDataTree: React.FC<SourceDataTreeProps> = ({
 
   return (
     <div
-      className="border border-gray-200 rounded-lg bg-white flex flex-col"
+      className="border border-gray-200 dark:border-[rgb(var(--color-border-200))] rounded-lg bg-white dark:bg-[rgb(var(--color-card))] flex flex-col"
       style={height ? { height } : undefined}
     >
       {/* Search input */}

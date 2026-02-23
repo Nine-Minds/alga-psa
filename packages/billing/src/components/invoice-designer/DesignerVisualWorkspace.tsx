@@ -2,8 +2,10 @@
 
 import React, { useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@alga-psa/ui/components/Tabs';
-import { Input } from '@alga-psa/ui/components/Input';
 import { Button } from '@alga-psa/ui/components/Button';
+import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { AsyncSearchableSelect } from '@alga-psa/ui/components/AsyncSearchableSelect';
+import ViewSwitcher from '@alga-psa/ui/components/ViewSwitcher';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { fetchInvoicesPaginated, getInvoiceForRendering } from '@alga-psa/billing/actions/invoiceQueries';
 import { runAuthoritativeInvoiceTemplatePreview } from '@alga-psa/billing/actions/invoiceTemplatePreview';
@@ -46,36 +48,10 @@ const useDebouncedValue = <T,>(value: T, delayMs: number) => {
   return debounced;
 };
 
-const PreviewSourceToggle: React.FC<{
-  sourceKind: PreviewSourceKind;
-  onSourceChange: (next: PreviewSourceKind) => void;
-}> = ({ sourceKind, onSourceChange }) => (
-  <div
-    className="inline-flex rounded-md border border-slate-200 bg-white p-1"
-    role="group"
-    aria-label="Preview source"
-    data-automation-id="invoice-designer-preview-source-toggle"
-  >
-    <Button
-      id="invoice-designer-preview-source-sample-button"
-      variant={sourceKind === 'sample' ? 'default' : 'ghost'}
-      size="sm"
-      onClick={() => onSourceChange('sample')}
-      data-automation-id="invoice-designer-preview-source-sample"
-    >
-      Sample
-    </Button>
-    <Button
-      id="invoice-designer-preview-source-existing-button"
-      variant={sourceKind === 'existing' ? 'default' : 'ghost'}
-      size="sm"
-      onClick={() => onSourceChange('existing')}
-      data-automation-id="invoice-designer-preview-source-existing"
-    >
-      Existing
-    </Button>
-  </div>
-);
+const PREVIEW_SOURCE_OPTIONS: { value: PreviewSourceKind; label: string }[] = [
+  { value: 'sample', label: 'Sample' },
+  { value: 'existing', label: 'Existing' },
+];
 
 export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = ({
   visualWorkspaceTab,
@@ -94,7 +70,6 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
     Awaited<ReturnType<typeof runAuthoritativeInvoiceTemplatePreview>> | null
   >(null);
   const [manualRunNonce, setManualRunNonce] = useState(0);
-  const debouncedSearchTerm = useDebouncedValue(previewState.invoiceSearchTerm, 300);
   const debouncedNodes = useDebouncedValue(nodes, 140);
   const detailRequestSequence = useRef(0);
   const previewRunSequence = useRef(0);
@@ -170,54 +145,6 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
     previewState.shapeStatus === 'running' ||
     previewState.renderStatus === 'running' ||
     previewState.verifyStatus === 'running';
-
-  useEffect(() => {
-    if (previewState.sourceKind !== 'existing') {
-      return;
-    }
-
-    let isMounted = true;
-    dispatch({ type: 'list-load-start' });
-
-    fetchInvoicesPaginated({
-      page: previewState.invoiceListPage,
-      pageSize: previewState.invoiceListPageSize,
-      searchTerm: debouncedSearchTerm,
-      status: 'all',
-      sortBy: 'invoice_date',
-      sortOrder: 'desc',
-    })
-      .then((result) => {
-        if (!isMounted) {
-          return;
-        }
-        dispatch({
-          type: 'list-load-success',
-          payload: {
-            invoices: result.invoices,
-            totalPages: result.totalPages,
-            totalCount: result.total,
-            page: result.page,
-          },
-        });
-      })
-      .catch((error) => {
-        if (!isMounted) {
-          return;
-        }
-        const message = error instanceof Error ? error.message : 'Failed to load invoices.';
-        dispatch({ type: 'list-load-error', error: message });
-      });
-
-    return () => {
-      isMounted = false;
-    };
-  }, [
-    debouncedSearchTerm,
-    previewState.invoiceListPage,
-    previewState.invoiceListPageSize,
-    previewState.sourceKind,
-  ]);
 
   useEffect(() => {
     if (previewState.sourceKind !== 'existing' || !previewState.selectedInvoiceId) {
@@ -342,32 +269,32 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
       </TabsContent>
 
       <TabsContent value="preview" className="pt-3 space-y-3">
-        <div className="rounded-md border border-slate-200 bg-slate-50 px-4 py-3 space-y-3">
+        <div className="rounded-md border border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-slate-50 dark:bg-[rgb(var(--color-card))] px-4 py-3 space-y-3">
           <div className="flex flex-wrap items-center gap-3">
-            <PreviewSourceToggle
-              sourceKind={previewState.sourceKind}
-              onSourceChange={(source) => dispatch({ type: 'set-source', source })}
+            <ViewSwitcher
+              currentView={previewState.sourceKind}
+              onChange={(source: PreviewSourceKind) => dispatch({ type: 'set-source', source })}
+              options={PREVIEW_SOURCE_OPTIONS}
             />
           </div>
 
           {previewState.sourceKind === 'sample' ? (
             <div className="space-y-1">
-              <label htmlFor="preview-sample-select" className="text-xs font-semibold text-slate-700">
+              <label htmlFor="preview-sample-select" className="text-xs font-semibold text-slate-700 dark:text-slate-300">
                 Sample Scenario
               </label>
-              <select
-                id="preview-sample-select"
-                className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
-                value={activeSample?.id ?? ''}
-                onChange={(event) => dispatch({ type: 'set-sample', sampleId: event.target.value })}
-                data-automation-id="invoice-designer-preview-sample-select"
-              >
-                {INVOICE_PREVIEW_SAMPLE_SCENARIOS.map((scenario) => (
-                  <option key={scenario.id} value={scenario.id}>
-                    {scenario.label}
-                  </option>
-                ))}
-              </select>
+              <div className="w-fit">
+                <CustomSelect
+                  id="invoice-designer-preview-sample-select"
+                  options={INVOICE_PREVIEW_SAMPLE_SCENARIOS.map((scenario) => ({
+                    value: scenario.id,
+                    label: scenario.label,
+                  }))}
+                  value={activeSample?.id ?? ''}
+                  onValueChange={(value: string) => dispatch({ type: 'set-sample', sampleId: value })}
+                  placeholder="Select scenario..."
+                />
+              </div>
               {activeSample && (
                 <p className="text-xs text-slate-500" data-automation-id="invoice-designer-preview-sample-description">
                   {activeSample.description}
@@ -375,135 +302,46 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
               )}
             </div>
           ) : (
-            <div className="space-y-2">
-              <div className="grid gap-2 md:grid-cols-[1fr_auto] md:items-end">
-                <div className="space-y-1">
-                  <label htmlFor="preview-existing-search" className="text-xs font-semibold text-slate-700">
-                    Search Existing Invoices
-                  </label>
-                  <div data-automation-id="invoice-designer-preview-existing-search">
-                    <Input
-                      id="preview-existing-search"
-                      aria-label="Search Existing Invoices"
-                      value={previewState.invoiceSearchTerm}
-                      onChange={(event) => dispatch({ type: 'set-search-term', value: event.target.value })}
-                      placeholder="Search by invoice number or client..."
-                      data-automation-id="invoice-designer-preview-existing-search-input"
-                    />
-                  </div>
-                </div>
-                <Button
-                  id="invoice-designer-preview-existing-clear-button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => dispatch({ type: 'clear-existing-invoice' })}
-                  data-automation-id="invoice-designer-preview-existing-clear"
-                >
-                  Clear
-                </Button>
-              </div>
-
-              {previewState.isInvoiceListLoading && (
-                <p
-                  className="text-xs text-slate-500"
-                  data-automation-id="invoice-designer-preview-existing-loading"
-                >
-                  Loading invoices...
-                </p>
-              )}
-
-              {!previewState.isInvoiceListLoading && previewState.invoiceListError && (
-                <p
-                  className="rounded border border-destructive/30 bg-destructive/10 px-2 py-1 text-xs text-destructive"
-                  data-automation-id="invoice-designer-preview-existing-error"
-                >
-                  {previewState.invoiceListError}
-                </p>
-              )}
-
-              {!previewState.isInvoiceListLoading &&
-                !previewState.invoiceListError &&
-                previewState.invoiceList.length === 0 && (
-                  <p
-                    className="rounded border border-slate-200 bg-white px-2 py-1 text-xs text-slate-500"
-                    data-automation-id="invoice-designer-preview-existing-empty"
-                  >
-                    No invoices matched this search.
-                  </p>
-                )}
-
-              {previewState.invoiceList.length > 0 && (
-                <div className="space-y-2">
-                  <label htmlFor="preview-existing-select" className="text-xs font-semibold text-slate-700">
-                    Select Invoice
-                  </label>
-                  <select
-                    id="preview-existing-select"
-                    className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
-                    value={previewState.selectedInvoiceId ?? ''}
-                    onChange={(event) => {
-                      const invoiceId = event.target.value;
-                      if (!invoiceId) {
-                        dispatch({ type: 'clear-existing-invoice' });
-                        return;
-                      }
-                      dispatch({ type: 'select-existing-invoice', invoiceId });
-                    }}
-                    data-automation-id="invoice-designer-preview-existing-select"
-                  >
-                    <option value="">Select invoice...</option>
-                    {previewState.invoiceList.map((invoice) => (
-                      <option key={invoice.invoice_id} value={invoice.invoice_id}>
-                        {invoice.invoice_number} · {invoice.client.name}
-                      </option>
-                    ))}
-                  </select>
-                  <div className="flex items-center justify-between text-xs text-slate-500">
-                    <span data-automation-id="invoice-designer-preview-existing-pagination-status">
-                      Page {previewState.invoiceListPage} of {Math.max(1, previewState.invoiceListTotalPages || 1)}
-                    </span>
-                    <div className="flex gap-2">
-                      <Button
-                        id="invoice-designer-preview-existing-prev-page-button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() =>
-                          dispatch({ type: 'set-list-page', page: Math.max(1, previewState.invoiceListPage - 1) })
-                        }
-                        disabled={previewState.invoiceListPage <= 1 || previewState.isInvoiceListLoading}
-                        data-automation-id="invoice-designer-preview-existing-prev-page"
-                      >
-                        Previous
-                      </Button>
-                      <Button
-                        id="invoice-designer-preview-existing-next-page-button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() =>
-                          dispatch({
-                            type: 'set-list-page',
-                            page: previewState.invoiceListPage + 1,
-                          })
-                        }
-                        disabled={
-                          previewState.invoiceListTotalPages === 0 ||
-                          previewState.invoiceListPage >= previewState.invoiceListTotalPages ||
-                          previewState.isInvoiceListLoading
-                        }
-                        data-automation-id="invoice-designer-preview-existing-next-page"
-                      >
-                        Next
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              )}
+            <div className="w-72">
+              <AsyncSearchableSelect
+                id="invoice-designer-preview-existing-select"
+                value={previewState.selectedInvoiceId ?? ''}
+                onChange={(value: string) => {
+                  if (!value) {
+                    dispatch({ type: 'clear-existing-invoice' });
+                    return;
+                  }
+                  dispatch({ type: 'select-existing-invoice', invoiceId: value });
+                }}
+                loadOptions={async ({ search, page, limit }) => {
+                  const result = await fetchInvoicesPaginated({
+                    page,
+                    pageSize: limit,
+                    searchTerm: search,
+                    status: 'all',
+                    sortBy: 'invoice_date',
+                    sortOrder: 'desc',
+                  });
+                  return {
+                    options: result.invoices.map((inv) => ({
+                      value: inv.invoice_id,
+                      label: `${inv.invoice_number} · ${inv.client.name}`,
+                    })),
+                    total: result.total,
+                  };
+                }}
+                placeholder="Search invoices..."
+                searchPlaceholder="Search by number or client..."
+                emptyMessage="No invoices found."
+                dropdownMode="overlay"
+                label="Select Invoice"
+              />
             </div>
           )}
 
           {previewState.sourceKind === 'existing' && previewState.isInvoiceDetailLoading && (
             <p
-              className="rounded border border-slate-200 bg-white px-2 py-1 text-xs text-slate-500"
+              className="rounded border border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-white dark:bg-[rgb(var(--color-card))] px-2 py-1 text-xs text-slate-500 dark:text-slate-400"
               data-automation-id="invoice-designer-preview-existing-detail-loading"
             >
               Loading invoice details...
@@ -521,7 +359,7 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
 
           {previewState.sourceKind === 'existing' && !previewState.selectedInvoiceId && (
             <p
-              className="rounded border border-slate-200 bg-white px-2 py-1 text-xs text-slate-500"
+              className="rounded border border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-white dark:bg-[rgb(var(--color-card))] px-2 py-1 text-xs text-slate-500 dark:text-slate-400"
               data-automation-id="invoice-designer-preview-existing-detail-empty"
             >
               Select an invoice to preview data-bound output.
@@ -530,21 +368,21 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
         </div>
 
         <div
-          className="rounded-md border border-slate-200 bg-white px-3 py-2 space-y-2"
+          className="rounded-md border border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-white dark:bg-[rgb(var(--color-card))] px-3 py-2 space-y-2"
           data-automation-id="invoice-designer-preview-pipeline-status"
         >
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex flex-wrap items-center gap-2 text-xs text-slate-600">
+            <div className="flex flex-wrap items-center gap-2 text-xs text-slate-600 dark:text-slate-400">
               <span className="font-semibold">Shape</span>
               <span
-                className="rounded border border-slate-200 bg-slate-50 px-2 py-0.5 uppercase"
+                className="rounded border border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-slate-50 dark:bg-[rgb(var(--color-background))] px-2 py-0.5 uppercase"
                 data-automation-id="invoice-designer-preview-shape-status"
               >
                 {displayStatuses.shapeStatus}
               </span>
               <span className="font-semibold">Render</span>
               <span
-                className="rounded border border-slate-200 bg-slate-50 px-2 py-0.5 uppercase"
+                className="rounded border border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-slate-50 dark:bg-[rgb(var(--color-background))] px-2 py-0.5 uppercase"
                 data-automation-id="invoice-designer-preview-render-status"
               >
                 {displayStatuses.renderStatus}
@@ -598,7 +436,7 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
         </div>
 
         <div
-          className="border rounded overflow-hidden bg-white min-h-[320px]"
+          className="border dark:border-[rgb(var(--color-border-200))] rounded overflow-hidden bg-white dark:bg-[rgb(var(--color-card))] min-h-[320px]"
           data-automation-id="invoice-designer-preview-render-output"
         >
           {!previewData && (

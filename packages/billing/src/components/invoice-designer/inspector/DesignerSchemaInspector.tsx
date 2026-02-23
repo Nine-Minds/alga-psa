@@ -1,5 +1,6 @@
 import React, { useCallback, useMemo } from 'react';
 import { Input } from '@alga-psa/ui/components/Input';
+import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { getComponentSchema } from '../schema/componentSchema';
 import type { DesignerNode } from '../state/designerStore';
 import { useInvoiceDesignerStore } from '../state/designerStore';
@@ -161,6 +162,7 @@ export const DesignerSchemaInspector: React.FC<Props> = ({ node, nodesById }) =>
           <Input
             id={domId}
             type="number"
+            min={0}
             value={valueAsString}
             placeholder={field.placeholder}
             onChange={(event) => {
@@ -169,6 +171,7 @@ export const DesignerSchemaInspector: React.FC<Props> = ({ node, nodesById }) =>
             onBlur={(event) => {
               applyNormalized(field.path, normalizeNumber(event.target.value), true);
             }}
+            onWheel={(event) => (event.target as HTMLInputElement).blur()}
           />
         </div>
       );
@@ -182,18 +185,13 @@ export const DesignerSchemaInspector: React.FC<Props> = ({ node, nodesById }) =>
           <label htmlFor={domId} className="text-xs text-slate-500 block mb-1">
             {field.label}
           </label>
-          <select
+          <CustomSelect
             id={domId}
-            className="w-full border border-slate-300 rounded-md px-2 py-1 text-sm"
+            options={field.options.map((option) => ({ value: option.value, label: option.label }))}
             value={valueAsString}
-            onChange={(event) => setNodeProp(node.id, field.path, event.target.value, true)}
-          >
-            {field.options.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
+            onValueChange={(value: string) => setNodeProp(node.id, field.path, value, true)}
+            size="sm"
+          />
         </div>
       );
     }
@@ -271,8 +269,8 @@ export const DesignerSchemaInspector: React.FC<Props> = ({ node, nodesById }) =>
       {panels
         .filter((panel) => resolveVisibleWhenValue(panel.visibleWhen))
         .map((panel) => (
-          <div key={panel.id} className="rounded border border-slate-200 bg-white px-3 py-2 space-y-2">
-            <p className="text-xs font-semibold text-slate-700">{panel.title}</p>
+          <div key={panel.id} className="rounded border border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-white dark:bg-[rgb(var(--color-card))] px-3 py-2 space-y-2">
+            <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">{panel.title}</p>
             <div className="space-y-2">{panel.fields.map((field) => renderField(panel, field))}</div>
           </div>
         ))}

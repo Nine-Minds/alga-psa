@@ -14,7 +14,8 @@ import React, { useRef, useEffect, useCallback, useState, useMemo, forwardRef, u
 import Editor, { loader, useMonaco } from '@monaco-editor/react';
 import type * as monaco from 'monaco-editor';
 import { registerJsonataLanguage, LANGUAGE_ID } from './jsonataLanguage';
-import { registerJsonataThemes, LIGHT_THEME_NAME } from './jsonataTheme';
+import { useTheme } from 'next-themes';
+import { registerJsonataThemes, LIGHT_THEME_NAME, DARK_THEME_NAME } from './jsonataTheme';
 import { registerCompletionProvider, type ExpressionContext, type JsonSchema } from './completionProvider';
 import { registerHoverProvider } from './hoverProvider';
 import { registerSignatureHelpProvider } from './signatureHelpProvider';
@@ -153,6 +154,8 @@ export const ExpressionEditor = forwardRef<ExpressionEditorHandle, ExpressionEdi
     },
     ref
   ) {
+    const { resolvedTheme } = useTheme();
+    const isDark = resolvedTheme === 'dark';
     const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
     const monacoRef = useRef<typeof monaco | null>(null);
     const contextRef = useRef<ExpressionContext>(context);
@@ -160,6 +163,7 @@ export const ExpressionEditor = forwardRef<ExpressionEditorHandle, ExpressionEdi
     const diagnosticsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const [isFocused, setIsFocused] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
+    const placeholderCollectionRef = useRef<monaco.editor.IEditorDecorationsCollection | null>(null);
 
     // Keep context ref updated and sync to global registry
     useEffect(() => {
@@ -400,6 +404,30 @@ export const ExpressionEditor = forwardRef<ExpressionEditorHandle, ExpressionEdi
       };
     }, []);
 
+    // Manage placeholder via Monaco decorations (renders at exact text position)
+    useEffect(() => {
+      const editor = editorRef.current;
+      const monacoInstance = monacoRef.current;
+      if (!editor || !monacoInstance || isLoading) return;
+      const showPlaceholder = !!placeholder && !value && !isFocused;
+      if (showPlaceholder) {
+        if (!placeholderCollectionRef.current) {
+          placeholderCollectionRef.current = editor.createDecorationsCollection();
+        }
+        placeholderCollectionRef.current.set([{
+          range: new monacoInstance.Range(1, 1, 1, 1),
+          options: {
+            after: {
+              content: placeholder,
+              inlineClassName: 'expression-editor-placeholder',
+            },
+          },
+        }]);
+      } else if (placeholderCollectionRef.current) {
+        placeholderCollectionRef.current.clear();
+      }
+    }, [value, isFocused, isLoading, placeholder]);
+
     // Handle value change with debouncing
     const handleChange = useCallback(
       (newValue: string | undefined) => {
@@ -478,8 +506,8 @@ export const ExpressionEditor = forwardRef<ExpressionEditorHandle, ExpressionEdi
     const wrapperClasses = useMemo(() => {
       const base = 'rounded-md border transition-colors overflow-hidden';
       const focusRing = isFocused ? 'ring-2 ring-primary-500 ring-offset-1' : '';
-      const errorBorder = hasError ? 'border-destructive' : 'border-gray-300';
-      const disabledStyle = disabled ? 'opacity-50 cursor-not-allowed bg-gray-50' : 'bg-white';
+      const errorBorder = hasError ? 'border-destructive' : 'border-gray-300 dark:border-[rgb(var(--color-border-200))]';
+      const disabledStyle = disabled ? 'opacity-50 cursor-not-allowed bg-gray-50 dark:bg-gray-800' : 'bg-white dark:bg-gray-800';
       return `${base} ${focusRing} ${errorBorder} ${disabledStyle} ${className}`.trim();
     }, [isFocused, hasError, disabled, className]);
 
@@ -493,22 +521,13 @@ export const ExpressionEditor = forwardRef<ExpressionEditorHandle, ExpressionEdi
         <Editor
           height="100%"
           language={LANGUAGE_ID}
-          theme={LIGHT_THEME_NAME}
+          theme={isDark ? DARK_THEME_NAME : LIGHT_THEME_NAME}
           value={value}
           onChange={handleChange}
           onMount={handleEditorDidMount}
           options={options}
           loading={null} // We handle loading ourselves
         />
-        {/* Placeholder overlay when empty and not focused */}
-        {placeholder && !value && !isFocused && !isLoading && (
-          <div
-            className="absolute inset-0 pointer-events-none flex items-center px-3 text-gray-400 text-sm font-mono"
-            style={{ paddingTop: singleLine ? 4 : 8 }}
-          >
-            {placeholder}
-          </div>
-        )}
       </div>
     );
   }
