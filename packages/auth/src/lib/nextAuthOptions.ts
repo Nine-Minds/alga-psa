@@ -20,8 +20,9 @@ import { buildTenantPortalSlug, isValidTenantSlug } from "@alga-psa/validation";
 import { isEnterprise } from "@alga-psa/core/features";
 import { getSSORegistry, registerSSOProvider } from "./sso/registry";
 import { loadEnterpriseSsoProviderRegistryImpl } from "./sso/enterpriseRegistryEntry";
-import type { OAuthProfileMappingResult, OAuthLinkProvider } from "./sso/types";
+import type { OAuthProfileMappingInput, OAuthProfileMappingResult, OAuthLinkProvider } from "./sso/types";
 import { OAuthAccountLinkConflictError } from "./sso/types";
+import { mapCeOAuthProfileToExtendedUser } from "./sso/ceOAuthProfileMapper";
 import { cookies } from "next/headers.js";
 import {
     MSP_SSO_RESOLUTION_COOKIE,
@@ -321,6 +322,16 @@ function toOAuthProfileMappingResult(user: ExtendedUser): OAuthProfileMappingRes
         clientId: user.clientId,
         contactId: user.contactId,
     };
+}
+
+async function mapOAuthProfileToExtendedUser(
+    input: OAuthProfileMappingInput,
+): Promise<ExtendedUser> {
+    if (isEnterprise) {
+        return (await getSSORegistry().mapOAuthProfileToExtendedUser(input)) as ExtendedUser;
+    }
+
+    return (await mapCeOAuthProfileToExtendedUser(input)) as ExtendedUser;
 }
 
 const OAUTH_PROVIDER_ALIASES: Record<string, OAuthLinkProvider> = {
@@ -673,6 +684,10 @@ async function ensureOAuthAccountLink(
     account: Record<string, unknown> | null | undefined,
     providerId?: string | null,
 ): Promise<void> {
+    if (!isEnterprise) {
+        return;
+    }
+
     if (!user || !providerId) {
         return;
     }
@@ -889,7 +904,7 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
                             typeof googleProfile.vanity_host === 'string'
                                 ? googleProfile.vanity_host
                                 : undefined;
-                        return await getSSORegistry().mapOAuthProfileToExtendedUser({
+                        return await mapOAuthProfileToExtendedUser({
                             provider: 'google',
                             email: profile.email,
                             image: profile.picture,
@@ -929,7 +944,7 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
                             typeof profile.vanity_host === 'string' ? profile.vanity_host : undefined;
                         const userTypeHint =
                             typeof profile.user_type === 'string' ? profile.user_type : undefined;
-                        return getSSORegistry().mapOAuthProfileToExtendedUser({
+                        return mapOAuthProfileToExtendedUser({
                             provider: 'microsoft',
                             email: typeof emailCandidate === 'string' ? emailCandidate : undefined,
                             image: profile.picture ?? profile.photo ?? undefined,
@@ -1645,7 +1660,7 @@ export const options: NextAuthConfig = {
                             typeof googleProfile.vanity_host === 'string'
                                 ? googleProfile.vanity_host
                                 : undefined;
-                        return await getSSORegistry().mapOAuthProfileToExtendedUser({
+                        return await mapOAuthProfileToExtendedUser({
                             provider: 'google',
                             email: profile.email,
                             image: (profile as any).picture,
@@ -1685,7 +1700,7 @@ export const options: NextAuthConfig = {
                             typeof profile.vanity_host === 'string' ? profile.vanity_host : undefined;
                         const userTypeHint =
                             typeof profile.user_type === 'string' ? profile.user_type : undefined;
-                        return getSSORegistry().mapOAuthProfileToExtendedUser({
+                        return mapOAuthProfileToExtendedUser({
                             provider: 'microsoft',
                             email: typeof emailCandidate === 'string' ? emailCandidate : undefined,
                             image: profile.picture ?? profile.photo ?? undefined,
