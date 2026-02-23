@@ -156,7 +156,7 @@
   {
     "id": "F020",
     "description": "CollaborativeEditor initializes Y.js document from existing document_block_content.block_data when the Hocuspocus document is empty (first connection for a document)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "F-P2-02"
     ]

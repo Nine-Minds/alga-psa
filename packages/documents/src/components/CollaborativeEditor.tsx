@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { EditorContent, useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Link from '@tiptap/extension-link';
@@ -8,11 +8,13 @@ import Underline from '@tiptap/extension-underline';
 import Collaboration from '@tiptap/extension-collaboration';
 import CollaborationCaret from '@tiptap/extension-collaboration-caret';
 import { marked } from 'marked';
+import { prosemirrorJSONToYXmlFragment } from 'y-prosemirror';
 import { Emoticon, createYjsProvider } from '@alga-psa/ui/editor';
 import AvatarIcon from '@alga-psa/ui/components/AvatarIcon';
 import { Card } from '@alga-psa/ui/components/Card';
 import { EditorToolbar } from './EditorToolbar';
 import styles from './CollaborativeEditor.module.css';
+import { getBlockContent } from '../actions/documentBlockContentActions';
 
 type ConnectionStatus = 'connecting' | 'connected' | 'disconnected';
 
@@ -120,6 +122,7 @@ export function CollaborativeEditor({
   const [isSynced, setIsSynced] = useState(false);
   const [editorReady, setEditorReady] = useState(false);
   const [connectedUsers, setConnectedUsers] = useState<PresenceUser[]>([]);
+  const hasInitializedContent = useRef(false);
 
   const editor = useEditor({
     extensions: [
@@ -238,6 +241,46 @@ export function CollaborativeEditor({
       ydoc.destroy();
     };
   }, [provider, ydoc, userId, userName, userColor, onConnectionStatusChange, onSyncStateChange, onUsersChange]);
+
+  useEffect(() => {
+    if (!editor || !editorReady) return;
+    if (hasInitializedContent.current) return;
+
+    const initializeFromBlockContent = async () => {
+      if (!provider.synced) {
+        await new Promise<void>((resolve) => {
+          const handleSynced = ({ state }: { state: boolean }) => {
+            if (!state) return;
+            provider.off('synced', handleSynced);
+            resolve();
+          };
+          provider.on('synced', handleSynced);
+        });
+      }
+
+      const fragment = ydoc.getXmlFragment('prosemirror');
+      if (fragment.length > 0) {
+        hasInitializedContent.current = true;
+        return;
+      }
+
+      try {
+        const existing = await getBlockContent(documentId);
+        if (existing?.block_data) {
+          const parsed = typeof existing.block_data === 'string'
+            ? JSON.parse(existing.block_data)
+            : existing.block_data;
+          prosemirrorJSONToYXmlFragment(editor.schema, parsed, fragment);
+        }
+      } catch (error) {
+        console.error('[CollaborativeEditor] Failed to initialize from block content:', error);
+      } finally {
+        hasInitializedContent.current = true;
+      }
+    };
+
+    void initializeFromBlockContent();
+  }, [editor, editorReady, provider, ydoc, documentId]);
 
   const saveStatus = connectionStatus === 'disconnected'
     ? 'Offline — changes will sync when reconnected'

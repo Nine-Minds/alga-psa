@@ -99,3 +99,4 @@ Working memory for implementing real-time collaborative editing via TipTap + Hoc
 - (2026-02-23) Exported `CollaborativeEditor` from `packages/documents/src/components/index.ts`.
 - (2026-02-23) Added collab test page at `/msp/collab-test` with feature-flag gating, create/open doc flow, snapshot button, and debug panel. Implemented `syncCollabSnapshot` server action using Hocuspocus sync + Yjs→Prosemirror JSON conversion.
 - (2026-02-23) Confirmed Hocuspocus Database extension already configured for persistence; marked F013 complete.
+- (2026-02-23) Added Y.js initialization from existing `document_block_content` when collab doc is empty using `prosemirrorJSONToYXmlFragment`.
