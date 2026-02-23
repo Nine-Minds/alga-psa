@@ -184,7 +184,7 @@
   {
     "id": "T023",
     "description": "Google provider readiness for MSP SSO uses `google_client_id`/`google_client_secret` and does not require Gmail PubSub keys.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F013"
     ]
