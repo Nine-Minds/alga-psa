@@ -54,7 +54,7 @@
   {
     "id": "T007",
     "description": "Microsoft settings save action persists `microsoft_client_id` in tenant secrets.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F006"
     ]
