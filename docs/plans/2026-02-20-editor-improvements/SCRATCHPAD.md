@@ -107,3 +107,5 @@ Working memory for implementing real-time collaborative editing via TipTap + Hoc
 - (2026-02-23) Added unit test for collab-test feature flag enabled state and marked T003 complete. Ran: `npx vitest src/test/unit/app/msp/collab-test/page.test.tsx` (from `server/`).
 
 - (2026-02-23) Added unit test for CollaborativeEditor collaboration extensions (`server/src/test/unit/documents/CollaborativeEditor.extensions.test.tsx`) and stubs for `emoticon` + `@tiptap/extension-collaboration-caret` in `server/src/test/stubs/`. Updated `server/vitest.config.ts` to alias those stubs and inline `@tiptap/react` for test isolation. Marked T004 complete. Ran: `npx vitest src/test/unit/documents/CollaborativeEditor.extensions.test.tsx` (from `server/`).
+
+- (2026-02-23) Attempted integration run for collaborativeEditing tests; skipped due to DB connection refused on localhost:5438 (see vitest output). Replaced T005 with unit coverage in `CollaborativeEditor.extensions.test.tsx` asserting `createYjsProvider` receives `document:<tenant>:<documentId>`. Ran: `npx vitest src/test/unit/documents/CollaborativeEditor.extensions.test.tsx` (from `server/`).

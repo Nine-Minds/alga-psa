@@ -6,7 +6,7 @@ import * as Y from 'yjs';
 
 (globalThis as unknown as { React?: typeof React }).React = React;
 
-const { collaborationConfigure, collaborationCaretConfigure, providerMock } = vi.hoisted(() => {
+const { collaborationConfigure, collaborationCaretConfigure, providerMock, createYjsProviderMock } = vi.hoisted(() => {
   const awarenessMock = {
     setLocalStateField: vi.fn(),
     getStates: vi.fn(() => new Map()),
@@ -24,6 +24,7 @@ const { collaborationConfigure, collaborationCaretConfigure, providerMock } = vi
       synced: true,
       hasUnsyncedChanges: false,
     },
+    createYjsProviderMock: vi.fn(),
   };
 });
 
@@ -43,7 +44,7 @@ vi.mock('@tiptap/extension-collaboration-caret', () => ({
 
 vi.mock('@alga-psa/ui/editor', () => ({
   Emoticon: { name: 'emoticon-extension' },
-  createYjsProvider: vi.fn(() => ({ provider: providerMock, ydoc })),
+  createYjsProvider: (...args: unknown[]) => createYjsProviderMock(...args),
 }));
 
 vi.mock('y-prosemirror', () => ({
@@ -60,6 +61,7 @@ describe('CollaborativeEditor', () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     ydoc = new Y.Doc();
+    createYjsProviderMock.mockImplementation(() => ({ provider: providerMock, ydoc }));
     ({ CollaborativeEditor } = await import('@alga-psa/documents/components/CollaborativeEditor'));
   });
 
@@ -85,6 +87,24 @@ describe('CollaborativeEditor', () => {
         name: 'Editor One',
         color: expect.any(String),
       }),
+    });
+  });
+
+  it('constructs the collab room name as document:<tenant>:<documentId>', () => {
+    render(
+      <CollaborativeEditor
+        documentId="doc-88"
+        tenantId="tenant-99"
+        userId="user-88"
+        userName="Editor Eight"
+      />
+    );
+
+    expect(createYjsProviderMock).toHaveBeenCalledWith('document:tenant-99:doc-88', {
+      parameters: {
+        tenantId: 'tenant-99',
+        userId: 'user-88',
+      },
     });
   });
 });
