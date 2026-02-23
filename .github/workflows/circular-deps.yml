@@ -1,0 +1,42 @@
+name: Circular Dependency Check
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - master
+      - develop
+
+jobs:
+  circular-deps:
+    name: Check for new circular dependencies
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Upgrade npm to version 11
+        run: npm install -g npm@11
+
+      - name: Install dependencies
+        run: |
+          if ! npm ci; then
+            echo "npm ci failed; attempting npm install fallback to regenerate lock data"
+            npm install --legacy-peer-deps
+          fi
+
+      - name: Export Nx project graph
+        run: npx nx graph --file=/tmp/project-graph.json
+        env:
+          NX_DAEMON: 'false'
+
+      - name: Detect circular dependencies
+        run: node scripts/check-circular-deps.mjs /tmp/project-graph.json --baseline .github/known-cycles.json
