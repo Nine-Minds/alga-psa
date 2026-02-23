@@ -36,7 +36,7 @@
   {
     "id": "T005",
     "description": "Microsoft settings save action rejects empty client secret.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F003"
     ]
