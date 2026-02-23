@@ -99,7 +99,7 @@
   {
     "id": "F013",
     "description": "Content persists to Hocuspocus PostgreSQL database via existing Database extension",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "F-P1-10"
     ]
