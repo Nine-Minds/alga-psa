@@ -46,6 +46,7 @@ Working notes for MSP SSO tenant-first resolver and provider-settings changes (M
 - (2026-02-23) `F011` complete: status/save/reset Microsoft actions consistently reject client-portal user context with `Forbidden`.
 - (2026-02-23) `F012` complete: added `getMicrosoftProviderReadiness(tenant)` helper in `packages/integrations/src/actions/integrations/providerReadiness.ts` requiring both `microsoft_client_id` and `microsoft_client_secret`.
 - (2026-02-23) `F013` complete: added `getGoogleProviderReadiness(tenant)` helper that checks only `google_client_id` + `google_client_secret` (no Gmail Pub/Sub dependency).
+- (2026-02-23) `F014` complete: removed manual `clientId`/`clientSecret` requirements and fields from `MicrosoftProviderForm` schema/UI; OAuth configuration now relies on Providers-managed credentials.
 
 ## Commands / Runbooks
 

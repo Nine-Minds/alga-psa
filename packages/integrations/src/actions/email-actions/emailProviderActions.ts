@@ -175,11 +175,16 @@ async function persistMicrosoftConfig(
 
   // Save secrets to tenant-specific secret store
   const secretProvider = await getSecretProviderInstance();
+  const [tenantClientId, tenantClientSecret, tenantTenantId] = await Promise.all([
+    secretProvider.getTenantSecret(tenant, 'microsoft_client_id'),
+    secretProvider.getTenantSecret(tenant, 'microsoft_client_secret'),
+    secretProvider.getTenantSecret(tenant, 'microsoft_tenant_id')
+  ]);
   
-  // Use hosted credentials if available, otherwise use user-provided credentials
-  const effectiveClientId = hostedConfig?.client_id || config.client_id;
-  const effectiveClientSecret = hostedConfig?.client_secret || config.client_secret;
-  const effectiveTenantId = hostedConfig?.tenant_id || config.tenant_id;
+  // Use hosted credentials if available; otherwise prefer tenant provider secrets and then per-provider values.
+  const effectiveClientId = hostedConfig?.client_id || tenantClientId || config.client_id || '';
+  const effectiveClientSecret = hostedConfig?.client_secret || tenantClientSecret || config.client_secret || '';
+  const effectiveTenantId = hostedConfig?.tenant_id || tenantTenantId || config.tenant_id || 'common';
   const effectiveRedirectUri = hostedConfig?.redirect_uri || config.redirect_uri;
   
   // Ensure required fields are not undefined
@@ -231,8 +236,8 @@ async function persistMicrosoftConfig(
   `, [
     providerId,
     tenant,
-    effectiveClientId || null,
-    effectiveClientSecret || null,
+    effectiveClientId,
+    effectiveClientSecret,
     effectiveTenantId,
     effectiveRedirectUri,
     config.auto_process_emails,
