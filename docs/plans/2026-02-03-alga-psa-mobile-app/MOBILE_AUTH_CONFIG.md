@@ -20,10 +20,6 @@ Mobile login reuses the existing web sign-in (`/auth/signin`) and SSO providers.
 
 ## Environment Variables
 
-### Enablement
-
-- `ALGA_MOBILE_AUTH_ENABLED=true|false`
-
 ### Token TTLs (seconds)
 
 - `ALGA_MOBILE_OTT_TTL_SEC` (default: `60`)
@@ -53,4 +49,3 @@ Migration: `server/migrations/20260203210000_add_mobile_auth_tables.cjs`
   - hashed token storage, TTL, and single-use (`used_at`)
 - `mobile_refresh_tokens`
   - hashed refresh token storage and rotation (`replaced_by_id`)
-

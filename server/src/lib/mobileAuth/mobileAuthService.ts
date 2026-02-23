@@ -4,7 +4,7 @@ import { getConnection } from '../db/db';
 import { ApiKeyService } from '../services/apiKeyService';
 import { findUserByIdForApi } from '@alga-psa/users/actions';
 import { runWithTenant } from '../db';
-import { ForbiddenError, UnauthorizedError } from '../api/middleware/apiMiddleware';
+import { UnauthorizedError } from '../api/middleware/apiMiddleware';
 import { auditLog } from '../logging/auditLog';
 import { enforceMobileOttExchangeLimit, enforceMobileRefreshLimit } from '../security/mobileAuthRateLimiting';
 
@@ -43,7 +43,6 @@ export const revokeSessionSchema = z.object({
 });
 
 export type MobileAuthConfig = {
-  mobileEnabled: boolean;
   hostedDomainAllowlist: string[];
   ottTtlSec: number;
   accessTtlSec: number;
@@ -51,8 +50,6 @@ export type MobileAuthConfig = {
 };
 
 export function getMobileAuthConfig(): MobileAuthConfig {
-  const enabled = (process.env.ALGA_MOBILE_AUTH_ENABLED ?? '').trim().toLowerCase() === 'true';
-
   const parseNumber = (key: string, fallback: number) => {
     const raw = process.env[key];
     const n = raw ? Number(raw) : NaN;
@@ -65,7 +62,6 @@ export function getMobileAuthConfig(): MobileAuthConfig {
     .filter(Boolean);
 
   return {
-    mobileEnabled: enabled,
     hostedDomainAllowlist: allowlist,
     ottTtlSec: parseNumber('ALGA_MOBILE_OTT_TTL_SEC', 60),
     accessTtlSec: parseNumber('ALGA_MOBILE_ACCESS_TTL_SEC', 15 * 60),
@@ -91,9 +87,6 @@ export async function issueMobileOtt(input: {
   metadata?: Record<string, unknown>;
 }): Promise<IssuedOtt> {
   const config = getMobileAuthConfig();
-  if (!config.mobileEnabled) {
-    throw new ForbiddenError('Mobile auth is disabled');
-  }
 
   const ott = generateOpaqueToken(24);
   const ottHash = sha256(ott);
@@ -243,9 +236,6 @@ export type ExchangeOttResult = {
 
 export async function exchangeOttForSession(input: z.infer<typeof exchangeOttSchema>): Promise<ExchangeOttResult> {
   const config = getMobileAuthConfig();
-  if (!config.mobileEnabled) {
-    throw new ForbiddenError('Mobile auth is disabled');
-  }
 
   const consumed = await consumeMobileOtt({ ott: input.ott, state: input.state, deviceId: input.device?.deviceId });
   if (!consumed) {
@@ -335,9 +325,6 @@ export type RefreshSessionResult = {
 
 export async function refreshMobileSession(input: z.infer<typeof refreshSessionSchema>): Promise<RefreshSessionResult> {
   const config = getMobileAuthConfig();
-  if (!config.mobileEnabled) {
-    throw new ForbiddenError('Mobile auth is disabled');
-  }
 
   const hash = sha256(input.refreshToken);
   const existing = await getActiveRefreshTokenByHash(hash);
@@ -400,11 +387,6 @@ export async function refreshMobileSession(input: z.infer<typeof refreshSessionS
 }
 
 export async function revokeMobileSession(input: z.infer<typeof revokeSessionSchema>): Promise<void> {
-  const config = getMobileAuthConfig();
-  if (!config.mobileEnabled) {
-    throw new ForbiddenError('Mobile auth is disabled');
-  }
-
   const hash = sha256(input.refreshToken);
   const existing = await getActiveRefreshTokenByHash(hash);
   if (!existing) {
@@ -456,7 +438,6 @@ async function safeAuditLog(input: {
 }
 
 export type MobileAuthCapabilities = {
-  mobileEnabled: boolean;
   providers: { microsoft: boolean; google: boolean };
   hostedDomainAllowlist?: string[];
   accessTtlSec?: number;
@@ -467,7 +448,6 @@ export type MobileAuthCapabilities = {
 export function getCapabilitiesResponse(): MobileAuthCapabilities {
   const config = getMobileAuthConfig();
   return {
-    mobileEnabled: config.mobileEnabled,
     providers: { microsoft: true, google: true },
     hostedDomainAllowlist: config.hostedDomainAllowlist.length ? config.hostedDomainAllowlist : undefined,
     accessTtlSec: config.accessTtlSec,

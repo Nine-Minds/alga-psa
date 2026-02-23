@@ -12,17 +12,10 @@ Date: `2026-02-03`
 ## Quick triage checklist
 
 1) Confirm the user is on an Alga-hosted environment and using the correct base URL.
-2) Confirm mobile auth is enabled for the environment:
-   - Check `/api/v1/mobile/auth/capabilities` for `mobileEnabled=true`.
-3) Confirm the base URL host is allowlisted (if allowlist enabled).
-4) Confirm the tenant has at least one SSO provider configured (Microsoft/Google).
+2) Confirm the base URL host is allowlisted (if allowlist enabled).
+3) Confirm the tenant has at least one SSO provider configured (Microsoft/Google).
 
 ## Common failure modes
-
-### “Mobile sign-in disabled”
-
-- Cause: mobile auth disabled server-side.
-- Fix: enable mobile auth configuration; redeploy or toggle per environment.
 
 ### “Host not allowlisted”
 
@@ -60,4 +53,3 @@ Date: `2026-02-03`
   - OTT issued/exchanged
   - Refresh succeeded/failed
   - Revoke/logout
-
