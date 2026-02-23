@@ -94,7 +94,7 @@
   {
     "id": "T012",
     "description": "Microsoft settings reset action disconnects Microsoft calendar providers for the tenant.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F004"
     ]
