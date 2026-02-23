@@ -3,6 +3,8 @@ import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { HocuspocusProvider } from '@hocuspocus/provider';
 import * as Y from 'yjs';
+import { prosemirrorJSONToYXmlFragment } from 'y-prosemirror';
+import { schema } from 'prosemirror-schema-basic';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { createTenant, createUser } from '../../../test-utils/testDataFactory';
 
@@ -522,5 +524,155 @@ describeIfHocuspocus('Hocuspocus persistence', () => {
 
     providerA.destroy();
     providerB.destroy();
+  });
+
+  it('should broadcast awareness state between providers', async () => {
+    const tenantId = uuidv4();
+    const docId = uuidv4();
+    const roomName = `document:${tenantId}:${docId}`;
+    const docA = new Y.Doc();
+    const docB = new Y.Doc();
+
+    const providerA = new HocuspocusProvider({
+      url: HOCUSPOCUS_URL,
+      name: roomName,
+      document: docA,
+      parameters: { tenantId },
+    });
+
+    const providerB = new HocuspocusProvider({
+      url: HOCUSPOCUS_URL,
+      name: roomName,
+      document: docB,
+      parameters: { tenantId },
+    });
+
+    await Promise.all([waitForSynced(providerA), waitForSynced(providerB)]);
+
+    const received = new Promise<void>((resolve, reject) => {
+      const timeout = setTimeout(() => reject(new Error('Awareness state not received.')), 3000);
+      const handle = () => {
+        const states = Array.from(providerB.awareness.getStates().values());
+        const hasUser = states.some((state) => state?.user?.name === 'User A');
+        if (hasUser) {
+          clearTimeout(timeout);
+          providerB.awareness.off('change', handle);
+          resolve();
+        }
+      };
+      providerB.awareness.on('change', handle);
+      handle();
+    });
+
+    providerA.awareness.setLocalStateField('user', {
+      id: 'user-a',
+      name: 'User A',
+      color: '#ff0000',
+    });
+
+    await received;
+
+    providerA.destroy();
+    providerB.destroy();
+  });
+
+  it('should reject WebSocket connection with mismatched tenant', async () => {
+    const tenantId = uuidv4();
+    const docId = uuidv4();
+    const roomName = `document:${uuidv4()}:${docId}`;
+    const ydoc = new Y.Doc();
+
+    const provider = new HocuspocusProvider({
+      url: HOCUSPOCUS_URL,
+      name: roomName,
+      document: ydoc,
+      parameters: { tenantId },
+    });
+
+    const statuses: string[] = [];
+    const disconnected = new Promise<void>((resolve, reject) => {
+      const timeout = setTimeout(() => reject(new Error('Expected disconnect.')), 3000);
+      provider.on('status', ({ status }) => {
+        statuses.push(status);
+        if (status === 'disconnected') {
+          clearTimeout(timeout);
+          resolve();
+        }
+      });
+    });
+
+    await disconnected;
+    expect(statuses).not.toContain('connected');
+
+    provider.destroy();
+  });
+
+  it('should sync Y.js content to document_block_content via syncCollabSnapshot', async () => {
+    const docId = uuidv4();
+    const now = new Date();
+
+    await db('documents').insert({
+      document_id: docId,
+      document_name: 'Snapshot Test',
+      document_type: 'text',
+      tenant: tenantId,
+      created_by: userId,
+      updated_by: userId,
+      created_at: now,
+      updated_at: now,
+    });
+
+    await db('document_block_content').insert({
+      content_id: uuidv4(),
+      document_id: docId,
+      block_data: JSON.stringify({ type: 'doc', content: [] }),
+      tenant: tenantId,
+      created_at: now,
+      updated_at: now,
+    });
+
+    const roomName = `document:${tenantId}:${docId}`;
+    const ydoc = new Y.Doc();
+
+    const provider = new HocuspocusProvider({
+      url: HOCUSPOCUS_URL,
+      name: roomName,
+      document: ydoc,
+      parameters: { tenantId },
+    });
+
+    await waitForSynced(provider);
+
+    const fragment = ydoc.getXmlFragment('prosemirror');
+    prosemirrorJSONToYXmlFragment(schema, {
+      type: 'doc',
+      content: [
+        {
+          type: 'paragraph',
+          content: [{ type: 'text', text: 'Snapshot content' }],
+        },
+      ],
+    }, fragment);
+
+    await new Promise((resolve) => setTimeout(resolve, 200));
+
+    provider.destroy();
+
+    const { syncCollabSnapshot } = await import(
+      '@alga-psa/documents/actions/collaborativeEditingActions'
+    );
+    const result = await syncCollabSnapshot(docId);
+
+    expect(result?.success).toBe(true);
+
+    const content = await db('document_block_content')
+      .where({ document_id: docId, tenant: tenantId })
+      .first();
+
+    const parsed = typeof content.block_data === 'string'
+      ? JSON.parse(content.block_data)
+      : content.block_data;
+
+    expect(parsed.content?.[0]?.content?.[0]?.text).toBe('Snapshot content');
   });
 });

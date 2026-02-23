@@ -448,7 +448,7 @@
   {
     "id": "T041",
     "description": "Awareness state (user name, cursor color) broadcasts between two providers in the same room",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F006"
     ],
@@ -460,7 +460,7 @@
   {
     "id": "T042",
     "description": "Hocuspocus onConnect rejects WebSocket connection when room tenant does not match connecting user's tenant",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F011"
     ],
@@ -472,19 +472,19 @@
   {
     "id": "T043",
     "description": "Content written via HocuspocusProvider persists across full disconnect/reconnect cycle",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F013"
     ],
     "testType": "integration",
     "testFile": "server/src/test/integration/collaborativeEditing.integration.test.ts",
-    "vitestName": "should persist content across disconnect and reconnect",
+    "vitestName": "should persist content across a disconnect/reconnect cycle",
     "notes": "Requires Hocuspocus running. Write content, destroy provider, create new provider to same room, verify content loads from Hocuspocus DB."
   },
   {
     "id": "T044",
     "description": "syncCollabSnapshot end-to-end: write content via provider, call syncCollabSnapshot, verify document_block_content updated",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F014"
     ],
