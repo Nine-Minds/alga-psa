@@ -124,12 +124,13 @@
   {
     "id": "T012",
     "description": "Cursor color assignment is deterministic per user (same user always gets same color)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F006"
     ],
-    "testType": "manual-multiuser",
-    "notes": "Reload page, verify same user gets same color"
+    "testType": "unit",
+    "testFile": "server/src/test/unit/documents/CollaborativeEditor.extensions.test.tsx",
+    "vitestName": "assigns deterministic cursor colors per user"
   },
   {
     "id": "T013",
