@@ -108,4 +108,32 @@ describe('CollabTestPageClient', () => {
     expect(await findByText('Document not found. Check the ID and try again.')).toBeTruthy();
     expect(queryByTestId('collaborative-editor')).toBeNull();
   });
+
+  it('calls syncCollabSnapshot and shows success message', async () => {
+    const params = new URLSearchParams();
+    params.set('doc', 'doc-789');
+    useSearchParamsMock.mockReturnValue(params);
+    getBlockContentMock.mockResolvedValue({ block_data: '{}' });
+
+    const { syncCollabSnapshot } = await import(
+      '@alga-psa/documents/actions/collaborativeEditingActions'
+    );
+    const syncCollabSnapshotMock = syncCollabSnapshot as unknown as {
+      mockResolvedValue: (value: unknown) => void;
+    };
+    syncCollabSnapshotMock.mockResolvedValue({ success: true });
+
+    const { findByText, getByText } = render(
+      <CollabTestPageClient userId="user-1" userName="User One" tenantId="tenant-1" />
+    );
+
+    await waitFor(() => {
+      expect(getBlockContentMock).toHaveBeenCalledWith('doc-789');
+    });
+
+    fireEvent.click(getByText('Snapshot to DB'));
+
+    expect(await findByText('Snapshot saved to document_block_content.')).toBeTruthy();
+    expect(syncCollabSnapshot).toHaveBeenCalledWith('doc-789');
+  });
 });

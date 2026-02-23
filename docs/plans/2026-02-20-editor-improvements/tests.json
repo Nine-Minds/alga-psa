@@ -324,12 +324,13 @@
   {
     "id": "T030",
     "description": "'Snapshot to DB' button calls syncCollabSnapshot and shows success toast",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F018"
     ],
-    "testType": "manual",
-    "notes": "Click Snapshot to DB, verify toast and check document_block_content table"
+    "testType": "unit",
+    "testFile": "server/src/test/unit/app/msp/collab-test/CollabTestPageClient.test.tsx",
+    "vitestName": "calls syncCollabSnapshot and shows success message"
   },
   {
     "id": "T031",
