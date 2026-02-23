@@ -200,7 +200,7 @@
   {
     "id": "T025",
     "description": "SSO buttons remain disabled until email input is non-empty.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F020"
     ]
