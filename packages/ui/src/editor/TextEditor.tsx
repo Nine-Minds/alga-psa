@@ -6,6 +6,9 @@ import {
   useCreateBlockNote,
   SuggestionMenuController,
   DefaultReactSuggestionItem,
+  GridSuggestionMenuController,
+  DefaultReactGridSuggestionItem,
+  GridSuggestionMenuProps,
 } from "@blocknote/react";
 import { BlockNoteView } from '@blocknote/mantine';
 import '@blocknote/core/fonts/inter.css';
@@ -18,9 +21,46 @@ import {
   filterSuggestionItems,
 } from '@blocknote/core';
 import { Mention } from './Mention';
+import { Emoticon } from './EmoticonExtension';
 
 // Debug flag
 const DEBUG = false;
+
+// Custom emoji grid that silently hides when no items match, instead of
+// showing "No items found" (prevents flash after emoticon conversion).
+function EmojiGrid(props: GridSuggestionMenuProps<DefaultReactGridSuggestionItem>) {
+  const { items, selectedIndex, onItemClick, columns, loadingState } = props;
+
+  if (items.length === 0 && loadingState === 'loaded') {
+    return null;
+  }
+
+  if (loadingState === 'loading-initial' || loadingState === 'loading') {
+    return <div className="bn-grid-suggestion-menu-loader">Loading...</div>;
+  }
+
+  return (
+    <div
+      id="bn-grid-suggestion-menu"
+      className="bn-grid-suggestion-menu"
+      role="grid"
+      style={{ gridTemplateColumns: `repeat(${columns}, 1fr)` }}
+    >
+      {items.map((item, i) => (
+        <div
+          key={item.id}
+          role="option"
+          aria-selected={i === selectedIndex}
+          className={`bn-grid-suggestion-menu-item${i === selectedIndex ? ' bn-grid-suggestion-menu-item-selected' : ''}`}
+          style={{ cursor: 'pointer' }}
+          onClick={() => onItemClick?.(item)}
+        >
+          {item.icon}
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export interface MentionUser {
   user_id: string;
@@ -158,6 +198,7 @@ export default function TextEditor({
       }
     },
     _tiptapOptions: {
+      extensions: [Emoticon],
       editorProps: {
         handlePaste: (view, event, slice) => {
           // Handle pasting into empty blocks
@@ -324,6 +365,7 @@ export default function TextEditor({
         <BlockNoteView
           editor={editor}
           theme={blockNoteTheme}
+          emojiPicker={false}
           className="w-full min-w-0 [&_.ProseMirror]:break-words [&_.ProseMirror]:max-w-full [&_.ProseMirror]:min-w-0 [&_.bn-block-outer_[data-drag-handle]]:!hidden [&_[draggable='true']]:!hidden [&_.ProseMirror_a]:text-[rgb(var(--badge-info-text))] [&_.ProseMirror_a]:font-medium [&_.ProseMirror_a]:underline [&_.ProseMirror_a]:decoration-[rgb(var(--badge-info-text)/0.4)] [&_.ProseMirror_a]:underline-offset-2 [&_.ProseMirror_a:hover]:decoration-[rgb(var(--badge-info-text))]"
           editable={true}
           style={{
@@ -334,6 +376,12 @@ export default function TextEditor({
           <SuggestionMenuController
             triggerCharacter="@"
             getItems={async (query) => getMentionMenuItems(query)}
+          />
+          <GridSuggestionMenuController
+            triggerCharacter=":"
+            columns={10}
+            minQueryLength={2}
+            gridSuggestionMenuComponent={EmojiGrid}
           />
         </BlockNoteView>
       </div>
