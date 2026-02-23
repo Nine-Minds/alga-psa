@@ -38,7 +38,7 @@ export const SlaBreachChart: React.FC<SlaBreachChartProps> = ({
           <CardTitle>{title}</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="animate-pulse h-64 bg-gray-100 rounded"></div>
+          <div className="animate-pulse h-64 bg-muted rounded"></div>
         </CardContent>
       </Card>
     );
@@ -51,13 +51,27 @@ export const SlaBreachChart: React.FC<SlaBreachChartProps> = ({
           <CardTitle>{title}</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="h-64 flex items-center justify-center text-gray-500">
+          <div className="h-64 flex items-center justify-center text-muted-foreground">
             No breach data available
           </div>
         </CardContent>
       </Card>
     );
   }
+
+  // Read theme-aware colors from CSS variables
+  const getCssColor = (varName: string): string => {
+    if (typeof window === 'undefined') return '';
+    const raw = getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
+    return raw ? `rgb(${raw})` : '';
+  };
+
+  const successColor = getCssColor('--color-status-success');
+  const warningColor = getCssColor('--color-status-warning');
+  const errorColor = getCssColor('--color-status-error');
+  const borderColor = getCssColor('--color-border-200');
+  const textColor = getCssColor('--color-text-500');
+  const cardBg = getCssColor('--color-card');
 
   // Format data for chart
   const chartData = data.map(item => ({
@@ -68,9 +82,9 @@ export const SlaBreachChart: React.FC<SlaBreachChartProps> = ({
   }));
 
   const getBarColor = (rate: number): string => {
-    if (rate <= 10) return '#22c55e'; // green
-    if (rate <= 25) return '#f59e0b'; // amber
-    return '#ef4444'; // red
+    if (rate <= 10) return successColor;
+    if (rate <= 25) return warningColor;
+    return errorColor;
   };
 
   return (
@@ -82,26 +96,30 @@ export const SlaBreachChart: React.FC<SlaBreachChartProps> = ({
         <div className="h-64">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={chartData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+              <CartesianGrid strokeDasharray="3 3" stroke={borderColor} />
               <XAxis
                 dataKey="name"
-                tick={{ fontSize: 12, fill: '#6b7280' }}
+                tick={{ fontSize: 12, fill: textColor }}
                 tickLine={false}
-                axisLine={{ stroke: '#e5e7eb' }}
+                axisLine={{ stroke: borderColor }}
               />
               <YAxis
-                tick={{ fontSize: 12, fill: '#6b7280' }}
+                tick={{ fontSize: 12, fill: textColor }}
                 tickLine={false}
-                axisLine={{ stroke: '#e5e7eb' }}
+                axisLine={{ stroke: borderColor }}
                 tickFormatter={(value) => `${value}%`}
               />
               <Tooltip
+                cursor={{ fill: `${borderColor}`, opacity: 0.3 }}
                 contentStyle={{
-                  backgroundColor: '#fff',
-                  border: '1px solid #e5e7eb',
+                  backgroundColor: cardBg,
+                  color: textColor,
+                  border: `1px solid ${borderColor}`,
                   borderRadius: '8px',
                   boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
                 }}
+                labelStyle={{ color: textColor }}
+                itemStyle={{ color: textColor }}
                 formatter={(value: number, name: string, props: { payload?: { breached: number; total: number } }) => {
                   if (name === 'breachRate' && props.payload) {
                     return [`${value}% (${props.payload.breached}/${props.payload.total})`, 'Breach Rate'];

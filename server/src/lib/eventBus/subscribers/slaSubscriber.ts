@@ -78,7 +78,11 @@ async function handleTicketCreatedEvent(event: unknown): Promise<void> {
       const { knex } = await createTenantKnex();
 
       await withTransaction(knex, async (trx: Knex.Transaction) => {
-        // Get ticket details needed for SLA
+        // The TICKET_CREATED event is published inside the creation
+        // transaction, so the row may not be visible yet on a separate
+        // connection. Wait briefly for the transaction to commit.
+        await new Promise(resolve => setTimeout(resolve, 500));
+
         const ticket = await trx('tickets')
           .where({ tenant: tenantId, ticket_id: ticketId })
           .select('client_id', 'board_id', 'priority_id', 'entered_at')
@@ -346,6 +350,17 @@ async function handleResponseStateChangedEvent(event: unknown): Promise<void> {
 
     await runWithTenant(tenantId, async () => {
       const { knex } = await createTenantKnex();
+
+      // Check if response state tracking is enabled for this tenant
+      const tenantSettingsRow = await knex('tenant_settings')
+        .select('ticket_display_settings')
+        .where({ tenant: tenantId })
+        .first();
+      const responseStateEnabled = (tenantSettingsRow?.ticket_display_settings as any)?.responseStateTrackingEnabled ?? true;
+      if (!responseStateEnabled) {
+        logger.debug('[SlaSubscriber] Response state tracking disabled, skipping', { tenantId, ticketId });
+        return;
+      }
 
       await withTransaction(knex, async (trx: Knex.Transaction) => {
         const result = await handleResponseStateChange(

@@ -24,8 +24,8 @@ export const SlaMetricsCards: React.FC<SlaMetricsCardsProps> = ({ data, loading 
           <Card key={i}>
             <CardContent className="p-6">
               <div className="animate-pulse pt-6">
-                <div className="h-4 bg-gray-200 rounded w-1/2 mb-2"></div>
-                <div className="h-8 bg-gray-200 rounded w-3/4"></div>
+                <div className="h-4 bg-muted rounded w-1/2 mb-2"></div>
+                <div className="h-8 bg-muted rounded w-3/4"></div>
               </div>
             </CardContent>
           </Card>
@@ -38,38 +38,45 @@ export const SlaMetricsCards: React.FC<SlaMetricsCardsProps> = ({ data, loading 
     return null;
   }
 
+  const getStatusClasses = (rate: number) => {
+    if (rate >= 90) return { color: 'text-success', bgColor: 'bg-success/10' };
+    if (rate >= 70) return { color: 'text-warning', bgColor: 'bg-warning/10' };
+    return { color: 'text-error', bgColor: 'bg-error/10' };
+  };
+
+  const overallStatus = getStatusClasses(data.compliance.overallRate);
+  const responseStatus = getStatusClasses(data.compliance.responseRate);
+
   const metrics = [
     {
       title: 'Overall Compliance',
       value: `${data.compliance.overallRate}%`,
       subtitle: `${data.compliance.totalTickets} tickets tracked`,
       icon: data.compliance.overallRate >= 90 ? CheckCircle : data.compliance.overallRate >= 70 ? TrendingUp : TrendingDown,
-      color: data.compliance.overallRate >= 90 ? 'text-green-600' : data.compliance.overallRate >= 70 ? 'text-amber-600' : 'text-red-600',
-      bgColor: data.compliance.overallRate >= 90 ? 'bg-green-50' : data.compliance.overallRate >= 70 ? 'bg-amber-50' : 'bg-red-50'
+      ...overallStatus
     },
     {
       title: 'Response SLA',
       value: `${data.compliance.responseRate}%`,
       subtitle: `${data.compliance.responseMetCount} met / ${data.compliance.responseBreachedCount} breached`,
       icon: Clock,
-      color: data.compliance.responseRate >= 90 ? 'text-green-600' : data.compliance.responseRate >= 70 ? 'text-amber-600' : 'text-red-600',
-      bgColor: data.compliance.responseRate >= 90 ? 'bg-green-50' : data.compliance.responseRate >= 70 ? 'bg-amber-50' : 'bg-red-50'
+      ...responseStatus
     },
     {
       title: 'At Risk',
       value: data.atRiskCount.toString(),
       subtitle: 'tickets approaching breach',
       icon: AlertTriangle,
-      color: 'text-amber-600',
-      bgColor: 'bg-amber-50'
+      color: 'text-warning',
+      bgColor: 'bg-warning/10'
     },
     {
       title: 'Currently Paused',
       value: data.pausedCount.toString(),
       subtitle: 'tickets with paused SLA',
       icon: PauseCircle,
-      color: 'text-blue-600',
-      bgColor: 'bg-blue-50'
+      color: 'text-primary',
+      bgColor: 'bg-primary/10'
     }
   ];
 
@@ -80,9 +87,9 @@ export const SlaMetricsCards: React.FC<SlaMetricsCardsProps> = ({ data, loading 
           <CardContent className="p-6">
             <div className="flex items-start justify-between pt-6">
               <div>
-                <p className="text-sm font-medium text-gray-600">{metric.title}</p>
+                <p className="text-sm font-medium text-muted-foreground">{metric.title}</p>
                 <p className={`text-2xl font-bold mt-1 ${metric.color}`}>{metric.value}</p>
-                <p className="text-xs text-gray-500 mt-1">{metric.subtitle}</p>
+                <p className="text-xs text-muted-foreground mt-1">{metric.subtitle}</p>
               </div>
               <div className={`p-2 rounded-lg ${metric.bgColor}`}>
                 <metric.icon className={`h-5 w-5 ${metric.color}`} />

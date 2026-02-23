@@ -75,8 +75,11 @@ interface HolidayFormData {
 }
 
 export function BusinessHoursSettings() {
-  // Tenant timezone for defaulting new schedules
-  const [tenantTimezone, setTenantTimezone] = useState<string>('UTC');
+  // Tenant timezone for defaulting new schedules (browser timezone as fallback)
+  const browserTimezone = typeof Intl !== 'undefined'
+    ? Intl.DateTimeFormat().resolvedOptions().timeZone
+    : 'UTC';
+  const [tenantTimezone, setTenantTimezone] = useState<string>(browserTimezone);
 
   // Main state
   const [schedules, setSchedules] = useState<IBusinessHoursSchedule[]>([]);
@@ -156,7 +159,9 @@ export function BusinessHoursSettings() {
 
   useEffect(() => {
     fetchSchedules();
-    getTenantTimezoneForSla().then(tz => setTenantTimezone(tz)).catch(() => {});
+    getTenantTimezoneForSla().then(tz => {
+      if (tz && tz !== 'UTC') setTenantTimezone(tz);
+    }).catch(() => {});
   }, [fetchSchedules]);
 
   // Open schedule dialog for creating
@@ -312,7 +317,7 @@ export function BusinessHoursSettings() {
   const handleCreateDefaultSchedule = async () => {
     try {
       setLoading(true);
-      await createDefaultBusinessHoursSchedule();
+      await createDefaultBusinessHoursSchedule(Intl.DateTimeFormat().resolvedOptions().timeZone);
       toast.success('Default business hours schedule created');
       await fetchSchedules();
     } catch (err) {

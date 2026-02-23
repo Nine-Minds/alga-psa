@@ -1,6 +1,8 @@
 services:
   temporal-dev:
     image: temporalio/auto-setup:1.24.2
+    ports:
+      - "7233:7233"
     environment:
       - DB=postgres12
       - DB_PORT=5432

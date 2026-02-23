@@ -28,7 +28,8 @@ import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Label } from '@alga-psa/ui/components/Label';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, ChevronDown } from 'lucide-react';
+import * as Accordion from '@radix-ui/react-accordion';
 
 interface SlaPolicyFormProps {
   policyId?: string;  // If provided, edit mode
@@ -94,6 +95,19 @@ const DEFAULT_ESCALATION_3 = 110;
 // Generate unique ID for local use
 function generateLocalId(): string {
   return `local_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+}
+
+// Format minutes into human-readable time
+function formatMinutesDisplay(minutes: number | null): string {
+  if (minutes === null) return 'No target';
+  if (minutes < 60) return `${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  if (hours < 24) return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
+  const days = Math.floor(hours / 24);
+  const remainingHours = hours % 24;
+  if (remainingHours > 0) return `${days}d ${remainingHours}h`;
+  return `${days}d`;
 }
 
 export function SlaPolicyForm({ policyId, onSave, onCancel }: SlaPolicyFormProps) {
@@ -538,160 +552,195 @@ export function SlaPolicyForm({ policyId, onSave, onCancel }: SlaPolicyFormProps
             <div className="mb-4 text-sm text-red-600">{validationErrors.targets}</div>
           )}
 
-          <div className="space-y-6">
-            {targets.map((target) => (
-              <div
-                key={target.priority_id}
-                className="border border-gray-200 rounded-lg p-4 bg-gray-50"
-              >
-                <div className="flex items-center justify-between mb-4">
-                  <h4 className="font-medium text-gray-900">{target.priority_name}</h4>
-                  <Checkbox
-                    id={`sla-target-24x7-${target.priority_id}`}
-                    label="24/7 (ignore business hours)"
-                    checked={target.is_24x7}
-                    onChange={(e) => handleTargetChange(target.priority_id, 'is_24x7', e.target.checked)}
-                    containerClassName="mb-0"
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Response Time */}
-                  <div>
-                    <Label className="mb-1 block">Response Time</Label>
-                    {customResponseInputs[target.priority_id] ? (
-                      <div className="flex items-center gap-2">
-                        <Input
-                          id={`sla-target-response-custom-${target.priority_id}`}
-                          type="number"
-                          min={1}
-                          value={target.response_time_minutes ?? ''}
-                          onChange={(e) => handleTargetChange(
-                            target.priority_id,
-                            'response_time_minutes',
-                            e.target.value === '' ? null : parseInt(e.target.value, 10)
-                          )}
-                          placeholder="Minutes"
-                          className="w-32"
-                        />
-                        <span className="text-sm text-gray-500">minutes</span>
-                        <Button
-                          id={`sla-target-response-preset-${target.priority_id}`}
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setCustomResponseInputs(prev => ({ ...prev, [target.priority_id]: false }))}
-                        >
-                          Use preset
-                        </Button>
+          <Accordion.Root type="multiple" className="w-full space-y-2">
+            {targets.map((target) => {
+              const hasTargets = target.response_time_minutes !== null || target.resolution_time_minutes !== null;
+              return (
+                <Accordion.Item
+                  key={target.priority_id}
+                  value={target.priority_id}
+                  className="border border-border rounded-lg overflow-hidden"
+                >
+                  <Accordion.Header className="flex">
+                    <Accordion.Trigger
+                      id={`sla-target-trigger-${target.priority_id}`}
+                      className="flex flex-1 items-center justify-between p-4 font-medium transition-all hover:bg-muted/50 [&[data-state=open]>svg.chevron]:rotate-180 bg-gray-50"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <span className="font-medium text-foreground">{target.priority_name}</span>
+                        {hasTargets ? (
+                          <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-primary/10 text-primary rounded text-xs font-medium">
+                              Response: {formatMinutesDisplay(target.response_time_minutes)}
+                            </span>
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-success/10 text-success rounded text-xs font-medium">
+                              Resolution: {formatMinutesDisplay(target.resolution_time_minutes)}
+                            </span>
+                            {target.is_24x7 && (
+                              <span className="inline-flex items-center px-2 py-0.5 bg-secondary/10 text-secondary rounded text-xs font-medium">
+                                24/7
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-sm text-muted-foreground">Not configured</span>
+                        )}
                       </div>
-                    ) : (
-                      <CustomSelect
-                        id={`sla-target-response-${target.priority_id}`}
-                        options={RESPONSE_TIME_OPTIONS}
-                        value={target.response_time_minutes === null ? '' : String(target.response_time_minutes)}
-                        onValueChange={(value) => handleResponseTimeSelect(target.priority_id, value)}
-                        placeholder="Select response time"
-                      />
-                    )}
-                  </div>
-
-                  {/* Resolution Time */}
-                  <div>
-                    <Label className="mb-1 block">Resolution Time</Label>
-                    {customResolutionInputs[target.priority_id] ? (
-                      <div className="flex items-center gap-2">
-                        <Input
-                          id={`sla-target-resolution-custom-${target.priority_id}`}
-                          type="number"
-                          min={1}
-                          value={target.resolution_time_minutes ?? ''}
-                          onChange={(e) => handleTargetChange(
-                            target.priority_id,
-                            'resolution_time_minutes',
-                            e.target.value === '' ? null : parseInt(e.target.value, 10)
-                          )}
-                          placeholder="Minutes"
-                          className="w-32"
+                      <ChevronDown className="chevron h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200" />
+                    </Accordion.Trigger>
+                  </Accordion.Header>
+                  <Accordion.Content className="overflow-hidden data-[state=closed]:hidden">
+                    <div className="p-4 border-t border-border space-y-4">
+                      <div className="flex justify-end">
+                        <Checkbox
+                          id={`sla-target-24x7-${target.priority_id}`}
+                          label="24/7 (ignore business hours)"
+                          checked={target.is_24x7}
+                          onChange={(e) => handleTargetChange(target.priority_id, 'is_24x7', e.target.checked)}
+                          containerClassName="mb-0"
                         />
-                        <span className="text-sm text-gray-500">minutes</span>
-                        <Button
-                          id={`sla-target-resolution-preset-${target.priority_id}`}
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setCustomResolutionInputs(prev => ({ ...prev, [target.priority_id]: false }))}
-                        >
-                          Use preset
-                        </Button>
                       </div>
-                    ) : (
-                      <CustomSelect
-                        id={`sla-target-resolution-${target.priority_id}`}
-                        options={RESOLUTION_TIME_OPTIONS}
-                        value={target.resolution_time_minutes === null ? '' : String(target.resolution_time_minutes)}
-                        onValueChange={(value) => handleResolutionTimeSelect(target.priority_id, value)}
-                        placeholder="Select resolution time"
-                      />
-                    )}
-                  </div>
-                </div>
 
-                {/* Escalation Percentages */}
-                <div className="mt-4">
-                  <Label className="mb-2 block text-sm text-gray-600">Escalation Thresholds (% of time elapsed)</Label>
-                  <div className="grid grid-cols-3 gap-4">
-                    <div>
-                      <Input
-                        id={`sla-target-escalation-1-${target.priority_id}`}
-                        type="number"
-                        min={0}
-                        max={200}
-                        value={target.escalation_1_percent}
-                        onChange={(e) => handleTargetChange(
-                          target.priority_id,
-                          'escalation_1_percent',
-                          parseInt(e.target.value, 10) || 0
-                        )}
-                        label="Level 1 (%)"
-                        error={validationErrors[`escalation_1_${target.priority_id}`]}
-                      />
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* Response Time */}
+                        <div>
+                          <Label className="mb-1 block">Response Time</Label>
+                          {customResponseInputs[target.priority_id] ? (
+                            <div className="flex items-center gap-2">
+                              <Input
+                                id={`sla-target-response-custom-${target.priority_id}`}
+                                type="number"
+                                min={1}
+                                value={target.response_time_minutes ?? ''}
+                                onChange={(e) => handleTargetChange(
+                                  target.priority_id,
+                                  'response_time_minutes',
+                                  e.target.value === '' ? null : parseInt(e.target.value, 10)
+                                )}
+                                placeholder="Minutes"
+                                className="w-32"
+                              />
+                              <span className="text-sm text-gray-500">minutes</span>
+                              <Button
+                                id={`sla-target-response-preset-${target.priority_id}`}
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setCustomResponseInputs(prev => ({ ...prev, [target.priority_id]: false }))}
+                              >
+                                Use preset
+                              </Button>
+                            </div>
+                          ) : (
+                            <CustomSelect
+                              id={`sla-target-response-${target.priority_id}`}
+                              options={RESPONSE_TIME_OPTIONS}
+                              value={target.response_time_minutes === null ? '' : String(target.response_time_minutes)}
+                              onValueChange={(value) => handleResponseTimeSelect(target.priority_id, value)}
+                              placeholder="Select response time"
+                            />
+                          )}
+                        </div>
+
+                        {/* Resolution Time */}
+                        <div>
+                          <Label className="mb-1 block">Resolution Time</Label>
+                          {customResolutionInputs[target.priority_id] ? (
+                            <div className="flex items-center gap-2">
+                              <Input
+                                id={`sla-target-resolution-custom-${target.priority_id}`}
+                                type="number"
+                                min={1}
+                                value={target.resolution_time_minutes ?? ''}
+                                onChange={(e) => handleTargetChange(
+                                  target.priority_id,
+                                  'resolution_time_minutes',
+                                  e.target.value === '' ? null : parseInt(e.target.value, 10)
+                                )}
+                                placeholder="Minutes"
+                                className="w-32"
+                              />
+                              <span className="text-sm text-gray-500">minutes</span>
+                              <Button
+                                id={`sla-target-resolution-preset-${target.priority_id}`}
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setCustomResolutionInputs(prev => ({ ...prev, [target.priority_id]: false }))}
+                              >
+                                Use preset
+                              </Button>
+                            </div>
+                          ) : (
+                            <CustomSelect
+                              id={`sla-target-resolution-${target.priority_id}`}
+                              options={RESOLUTION_TIME_OPTIONS}
+                              value={target.resolution_time_minutes === null ? '' : String(target.resolution_time_minutes)}
+                              onValueChange={(value) => handleResolutionTimeSelect(target.priority_id, value)}
+                              placeholder="Select resolution time"
+                            />
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Escalation Percentages */}
+                      <div>
+                        <Label className="mb-2 block text-sm text-gray-600">Escalation Thresholds (% of time elapsed)</Label>
+                        <div className="grid grid-cols-3 gap-4">
+                          <div>
+                            <Input
+                              id={`sla-target-escalation-1-${target.priority_id}`}
+                              type="number"
+                              min={0}
+                              max={200}
+                              value={target.escalation_1_percent}
+                              onChange={(e) => handleTargetChange(
+                                target.priority_id,
+                                'escalation_1_percent',
+                                parseInt(e.target.value, 10) || 0
+                              )}
+                              label="Level 1 (%)"
+                              error={validationErrors[`escalation_1_${target.priority_id}`]}
+                            />
+                          </div>
+                          <div>
+                            <Input
+                              id={`sla-target-escalation-2-${target.priority_id}`}
+                              type="number"
+                              min={0}
+                              max={200}
+                              value={target.escalation_2_percent}
+                              onChange={(e) => handleTargetChange(
+                                target.priority_id,
+                                'escalation_2_percent',
+                                parseInt(e.target.value, 10) || 0
+                              )}
+                              label="Level 2 (%)"
+                              error={validationErrors[`escalation_2_${target.priority_id}`]}
+                            />
+                          </div>
+                          <div>
+                            <Input
+                              id={`sla-target-escalation-3-${target.priority_id}`}
+                              type="number"
+                              min={0}
+                              max={200}
+                              value={target.escalation_3_percent}
+                              onChange={(e) => handleTargetChange(
+                                target.priority_id,
+                                'escalation_3_percent',
+                                parseInt(e.target.value, 10) || 0
+                              )}
+                              label="Level 3 (%)"
+                              error={validationErrors[`escalation_3_${target.priority_id}`]}
+                            />
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                    <div>
-                      <Input
-                        id={`sla-target-escalation-2-${target.priority_id}`}
-                        type="number"
-                        min={0}
-                        max={200}
-                        value={target.escalation_2_percent}
-                        onChange={(e) => handleTargetChange(
-                          target.priority_id,
-                          'escalation_2_percent',
-                          parseInt(e.target.value, 10) || 0
-                        )}
-                        label="Level 2 (%)"
-                        error={validationErrors[`escalation_2_${target.priority_id}`]}
-                      />
-                    </div>
-                    <div>
-                      <Input
-                        id={`sla-target-escalation-3-${target.priority_id}`}
-                        type="number"
-                        min={0}
-                        max={200}
-                        value={target.escalation_3_percent}
-                        onChange={(e) => handleTargetChange(
-                          target.priority_id,
-                          'escalation_3_percent',
-                          parseInt(e.target.value, 10) || 0
-                        )}
-                        label="Level 3 (%)"
-                        error={validationErrors[`escalation_3_${target.priority_id}`]}
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+                  </Accordion.Content>
+                </Accordion.Item>
+              );
+            })}
+          </Accordion.Root>
         </CardContent>
       </Card>
 
@@ -714,126 +763,163 @@ export function SlaPolicyForm({ policyId, onSave, onCancel }: SlaPolicyFormProps
         <CardContent>
           {thresholds.length === 0 ? (
             <div className="text-center text-gray-500 py-4">
-              No notification thresholds configured. Click "Add Threshold" to create one.
+              No notification thresholds configured. Click &quot;Add Threshold&quot; to create one.
             </div>
           ) : (
-            <div className="space-y-4">
-              {thresholds.map((threshold, index) => (
-                <div
-                  key={threshold.id}
-                  className="border border-gray-200 rounded-lg p-4 bg-gray-50"
-                >
-                  <div className="flex items-start justify-between mb-4">
-                    <h4 className="font-medium text-gray-900">Threshold {index + 1}</h4>
-                    <Button
-                      id={`sla-remove-threshold-${index}`}
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => removeThreshold(threshold.id)}
-                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
+            <Accordion.Root type="multiple" className="w-full space-y-2">
+              {thresholds.map((threshold, index) => {
+                const recipients = [
+                  threshold.notify_assignee && 'Assignee',
+                  threshold.notify_board_manager && 'Board Mgr',
+                  threshold.notify_escalation_manager && 'Escalation Mgr'
+                ].filter(Boolean);
+                const channels = threshold.channels.map(c => c === 'in_app' ? 'In-App' : 'Email');
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                    <div>
-                      <Input
-                        id={`sla-threshold-percent-${index}`}
-                        type="number"
-                        min={0}
-                        max={200}
-                        value={threshold.threshold_percent}
-                        onChange={(e) => handleThresholdChange(
-                          threshold.id,
-                          'threshold_percent',
-                          parseInt(e.target.value, 10) || 0
-                        )}
-                        label="Threshold (%)"
-                        error={validationErrors[`threshold_percent_${index}`]}
-                      />
-                    </div>
-                    <div>
-                      <CustomSelect
-                        id={`sla-threshold-type-${index}`}
-                        label="Notification Type"
-                        options={NOTIFICATION_TYPE_OPTIONS}
-                        value={threshold.notification_type}
-                        onValueChange={(value) => handleThresholdChange(
-                          threshold.id,
-                          'notification_type',
-                          value as SlaNotificationType
-                        )}
-                      />
-                    </div>
-                  </div>
+                return (
+                  <Accordion.Item
+                    key={threshold.id}
+                    value={threshold.id}
+                    className="border border-border rounded-lg overflow-hidden"
+                  >
+                    <Accordion.Header className="flex">
+                      <Accordion.Trigger
+                        id={`sla-threshold-trigger-${index}`}
+                        className="flex flex-1 items-center justify-between p-4 font-medium transition-all hover:bg-muted/50 [&[data-state=open]>svg.chevron]:rotate-180 bg-gray-50"
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold ${
+                            threshold.notification_type === 'breach'
+                              ? 'bg-error/10 text-error'
+                              : 'bg-warning/10 text-warning'
+                          }`}>
+                            {threshold.threshold_percent}% {threshold.notification_type}
+                          </span>
+                          <span className="text-sm text-muted-foreground">
+                            {recipients.join(', ') || 'No recipients'}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            via {channels.join(', ') || 'none'}
+                          </span>
+                        </div>
+                        <ChevronDown className="chevron h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200" />
+                      </Accordion.Trigger>
+                    </Accordion.Header>
+                    <Accordion.Content className="overflow-hidden data-[state=closed]:hidden">
+                      <div className="p-4 border-t border-border space-y-4">
+                        <div className="flex justify-end">
+                          <Button
+                            id={`sla-remove-threshold-${index}`}
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeThreshold(threshold.id)}
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          >
+                            <Trash2 className="w-4 h-4 mr-1" />
+                            Remove
+                          </Button>
+                        </div>
 
-                  <div className="mb-4">
-                    <Label className="mb-2 block text-sm text-gray-600">Recipients</Label>
-                    <div className="flex flex-wrap gap-4">
-                      <Checkbox
-                        id={`sla-threshold-notify-assignee-${index}`}
-                        label="Assignee"
-                        checked={threshold.notify_assignee}
-                        onChange={(e) => handleThresholdChange(
-                          threshold.id,
-                          'notify_assignee',
-                          e.target.checked
-                        )}
-                        containerClassName="mb-0"
-                      />
-                      <Checkbox
-                        id={`sla-threshold-notify-board-manager-${index}`}
-                        label="Board Manager"
-                        checked={threshold.notify_board_manager}
-                        onChange={(e) => handleThresholdChange(
-                          threshold.id,
-                          'notify_board_manager',
-                          e.target.checked
-                        )}
-                        containerClassName="mb-0"
-                      />
-                      <Checkbox
-                        id={`sla-threshold-notify-escalation-manager-${index}`}
-                        label="Escalation Manager"
-                        checked={threshold.notify_escalation_manager}
-                        onChange={(e) => handleThresholdChange(
-                          threshold.id,
-                          'notify_escalation_manager',
-                          e.target.checked
-                        )}
-                        containerClassName="mb-0"
-                      />
-                    </div>
-                  </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <Input
+                              id={`sla-threshold-percent-${index}`}
+                              type="number"
+                              min={0}
+                              max={200}
+                              value={threshold.threshold_percent}
+                              onChange={(e) => handleThresholdChange(
+                                threshold.id,
+                                'threshold_percent',
+                                parseInt(e.target.value, 10) || 0
+                              )}
+                              label="Threshold (%)"
+                              error={validationErrors[`threshold_percent_${index}`]}
+                            />
+                          </div>
+                          <div>
+                            <CustomSelect
+                              id={`sla-threshold-type-${index}`}
+                              label="Notification Type"
+                              options={NOTIFICATION_TYPE_OPTIONS}
+                              value={threshold.notification_type}
+                              onValueChange={(value) => handleThresholdChange(
+                                threshold.id,
+                                'notification_type',
+                                value as SlaNotificationType
+                              )}
+                            />
+                          </div>
+                        </div>
 
-                  <div>
-                    <Label className="mb-2 block text-sm text-gray-600">
-                      Notification Channels
-                      {validationErrors[`threshold_channels_${index}`] && (
-                        <span className="text-red-600 ml-2">{validationErrors[`threshold_channels_${index}`]}</span>
-                      )}
-                    </Label>
-                    <div className="flex gap-4">
-                      <Checkbox
-                        id={`sla-threshold-channel-in-app-${index}`}
-                        label="In-App"
-                        checked={threshold.channels.includes('in_app')}
-                        onChange={() => toggleThresholdChannel(threshold.id, 'in_app')}
-                        containerClassName="mb-0"
-                      />
-                      <Checkbox
-                        id={`sla-threshold-channel-email-${index}`}
-                        label="Email"
-                        checked={threshold.channels.includes('email')}
-                        onChange={() => toggleThresholdChannel(threshold.id, 'email')}
-                        containerClassName="mb-0"
-                      />
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
+                        <div>
+                          <Label className="mb-2 block text-sm text-gray-600">Recipients</Label>
+                          <div className="flex flex-wrap gap-4">
+                            <Checkbox
+                              id={`sla-threshold-notify-assignee-${index}`}
+                              label="Assignee"
+                              checked={threshold.notify_assignee}
+                              onChange={(e) => handleThresholdChange(
+                                threshold.id,
+                                'notify_assignee',
+                                e.target.checked
+                              )}
+                              containerClassName="mb-0"
+                            />
+                            <Checkbox
+                              id={`sla-threshold-notify-board-manager-${index}`}
+                              label="Board Manager"
+                              checked={threshold.notify_board_manager}
+                              onChange={(e) => handleThresholdChange(
+                                threshold.id,
+                                'notify_board_manager',
+                                e.target.checked
+                              )}
+                              containerClassName="mb-0"
+                            />
+                            <Checkbox
+                              id={`sla-threshold-notify-escalation-manager-${index}`}
+                              label="Escalation Manager"
+                              checked={threshold.notify_escalation_manager}
+                              onChange={(e) => handleThresholdChange(
+                                threshold.id,
+                                'notify_escalation_manager',
+                                e.target.checked
+                              )}
+                              containerClassName="mb-0"
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <Label className="mb-2 block text-sm text-gray-600">
+                            Notification Channels
+                            {validationErrors[`threshold_channels_${index}`] && (
+                              <span className="text-red-600 ml-2">{validationErrors[`threshold_channels_${index}`]}</span>
+                            )}
+                          </Label>
+                          <div className="flex gap-4">
+                            <Checkbox
+                              id={`sla-threshold-channel-in-app-${index}`}
+                              label="In-App"
+                              checked={threshold.channels.includes('in_app')}
+                              onChange={() => toggleThresholdChannel(threshold.id, 'in_app')}
+                              containerClassName="mb-0"
+                            />
+                            <Checkbox
+                              id={`sla-threshold-channel-email-${index}`}
+                              label="Email"
+                              checked={threshold.channels.includes('email')}
+                              onChange={() => toggleThresholdChannel(threshold.id, 'email')}
+                              containerClassName="mb-0"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </Accordion.Content>
+                  </Accordion.Item>
+                );
+              })}
+            </Accordion.Root>
           )}
         </CardContent>
       </Card>

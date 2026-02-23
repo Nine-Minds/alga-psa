@@ -10,6 +10,8 @@ interface TimezoneOption {
   value: string;
   label: string;
   region: string;
+  /** Short abbreviation derived from Intl, e.g. "EST", "PST", "GMT+1" */
+  abbreviation: string;
 }
 
 interface TimezonePickerProps extends AutomationProps {
@@ -17,6 +19,24 @@ interface TimezonePickerProps extends AutomationProps {
   onValueChange: (value: string) => void;
   className?: string;
 }
+
+/**
+ * Use Intl.DateTimeFormat to get the short abbreviation for a timezone.
+ * Returns strings like "EST", "CST", "GMT+5:30", etc.
+ * Locale-aware — will return localized abbreviations for non-English users.
+ */
+const getTimezoneAbbreviation = (timezone: string): string => {
+  try {
+    const formatter = new Intl.DateTimeFormat(undefined, {
+      timeZone: timezone,
+      timeZoneName: 'short',
+    });
+    const parts = formatter.formatToParts(new Date());
+    return parts.find(p => p.type === 'timeZoneName')?.value || '';
+  } catch {
+    return '';
+  }
+};
 
 const formatTimezoneLabel = (timezone: string): string => {
   try {
@@ -39,7 +59,8 @@ const groupTimezones = (timezones: string[]): TimezoneOption[] => {
     return {
       value: tz,
       label: formatTimezoneLabel(tz),
-      region: region.replace('_', ' ')
+      region: region.replace('_', ' '),
+      abbreviation: getTimezoneAbbreviation(tz),
     };
   });
 };
@@ -59,26 +80,60 @@ export default function TimezonePicker({ value, onValueChange, className }: Time
 
   const filteredOptions = useMemo(() => {
     if (!search) return timezoneOptions;
-    
+
     const searchLower = search.toLowerCase();
-    return timezoneOptions.filter(option => 
+    return timezoneOptions.filter(option =>
       option.label.toLowerCase().includes(searchLower) ||
-      option.region.toLowerCase().includes(searchLower)
+      option.region.toLowerCase().includes(searchLower) ||
+      option.abbreviation.toLowerCase().includes(searchLower)
     );
   }, [timezoneOptions, search]);
 
   const groupedOptions = useMemo(() => {
-    const groups = new Map<string, TimezoneOption[]>();
-    
+    if (!search) {
+      // No search — group by region alphabetically
+      const groups = new Map<string, TimezoneOption[]>();
+      filteredOptions.forEach(option => {
+        if (!groups.has(option.region)) {
+          groups.set(option.region, []);
+        }
+        groups.get(option.region)?.push(option);
+      });
+      return Array.from(groups.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+    }
+
+    // When searching, split into abbreviation matches first, then the rest
+    const searchLower = search.toLowerCase();
+    const abbrMatches: TimezoneOption[] = [];
+    const otherMatches: TimezoneOption[] = [];
+
     filteredOptions.forEach(option => {
-      if (!groups.has(option.region)) {
-        groups.set(option.region, []);
+      if (option.abbreviation.toLowerCase().includes(searchLower)) {
+        abbrMatches.push(option);
+      } else {
+        otherMatches.push(option);
       }
-      groups.get(option.region)?.push(option);
     });
 
-    return Array.from(groups.entries()).sort((a, b) => a[0].localeCompare(b[0]));
-  }, [filteredOptions]);
+    const groups: [string, TimezoneOption[]][] = [];
+    if (abbrMatches.length > 0) {
+      groups.push([`Matching "${search.toUpperCase()}"`, abbrMatches]);
+    }
+    if (otherMatches.length > 0) {
+      // Group remaining by region
+      const regionGroups = new Map<string, TimezoneOption[]>();
+      otherMatches.forEach(option => {
+        if (!regionGroups.has(option.region)) {
+          regionGroups.set(option.region, []);
+        }
+        regionGroups.get(option.region)?.push(option);
+      });
+      Array.from(regionGroups.entries())
+        .sort((a, b) => a[0].localeCompare(b[0]))
+        .forEach(entry => groups.push(entry));
+    }
+    return groups;
+  }, [filteredOptions, search]);
 
   const handleSelect = (timezone: string) => {
     onValueChange(timezone);
@@ -118,7 +173,7 @@ export default function TimezonePicker({ value, onValueChange, className }: Time
             value={search}
             onValueChange={setSearch}
             className="flex-1 outline-none placeholder:text-gray-500 text-sm"
-            placeholder="Search timezones..."
+            placeholder="Search timezones or abbreviations (e.g. EST)..."
           />
         </div>
         <Command.List className="max-h-[300px] overflow-y-auto p-2">
@@ -138,6 +193,9 @@ export default function TimezonePicker({ value, onValueChange, className }: Time
                     )}
                   >
                     <span className="flex-1">{option.label}</span>
+                    {option.abbreviation && (
+                      <span className="text-xs text-gray-400 mr-2">{option.abbreviation}</span>
+                    )}
                     {value === option.value && (
                       <Check className="w-4 h-4 text-purple-600" />
                     )}

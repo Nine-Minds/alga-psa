@@ -516,7 +516,7 @@ export const bulkCreateHolidays = withAuth(async (_user, { tenant }, holidays: I
 /**
  * Create a default business hours schedule with standard business hours (Mon-Fri 8am-6pm)
  */
-export const createDefaultBusinessHoursSchedule = withAuth(async (_user, { tenant }): Promise<IBusinessHoursScheduleWithEntries> => {
+export const createDefaultBusinessHoursSchedule = withAuth(async (_user, { tenant }, browserTimezone?: string): Promise<IBusinessHoursScheduleWithEntries> => {
   // Standard business hours entries for Mon-Fri (days 1-5)
   const standardEntries: IBusinessHoursEntryInput[] = [
     { day_of_week: 0, start_time: '08:00', end_time: '18:00', is_enabled: false }, // Sunday
@@ -533,13 +533,14 @@ export const createDefaultBusinessHoursSchedule = withAuth(async (_user, { tenan
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     const scheduleId = uuidv4();
 
-    // Resolve tenant timezone (falls back to UTC)
+    // Resolve tenant timezone (falls back to browser timezone, then UTC)
     const settingsRow = await trx('tenant_settings')
       .where({ tenant })
       .select('settings')
       .first();
     const rawTz = settingsRow?.settings?.timezone;
-    const timezone = normalizeIanaTimeZone(typeof rawTz === 'string' ? rawTz : null);
+    const tenantTz = typeof rawTz === 'string' ? rawTz : null;
+    const timezone = normalizeIanaTimeZone(tenantTz || browserTimezone || null);
 
     // Unset any existing default
     await trx('business_hours_schedules')
