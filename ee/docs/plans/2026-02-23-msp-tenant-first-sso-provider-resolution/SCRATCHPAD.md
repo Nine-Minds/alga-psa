@@ -56,6 +56,7 @@ Working notes for MSP SSO tenant-first resolver and provider-settings changes (M
 - (2026-02-23) `F021` complete: Microsoft SSO button now calls `POST /api/auth/msp/sso/resolve` with `{ provider: 'azure-ad', email, callbackUrl }` before invoking `signIn('azure-ad')`.
 - (2026-02-23) `F022` complete: Google SSO button now follows the same resolver-first flow (`provider: 'google'`) before `signIn('google')`.
 - (2026-02-23) `F023` complete: MSP login SSO UI now always shows the same generic start-failure message and does not surface resolver-specific error text.
+- (2026-02-23) `F024` complete: client portal login remains unchanged; `ClientLoginForm` still keeps SSO section commented out.
 
 ## Commands / Runbooks
 
