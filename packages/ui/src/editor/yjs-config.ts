@@ -4,7 +4,12 @@ import { HocuspocusProvider } from '@hocuspocus/provider';
 const HOCUSPOCUS_URL = process.env.HOCUSPOCUS_URL || 'http://localhost';
 const HOCUSPOCUS_PORT = process.env.HOCUSPOCUS_PORT || '1234';
 
-export const createYjsProvider = (roomName: string) => {
+type YjsProviderOptions = {
+  parameters?: Record<string, string>;
+  token?: string | null;
+};
+
+export const createYjsProvider = (roomName: string, options: YjsProviderOptions = {}) => {
   const ydoc = new Y.Doc();
   const provider = new HocuspocusProvider({
     // url: 'https://testing2.idgomezj.com/',
@@ -12,6 +17,8 @@ export const createYjsProvider = (roomName: string) => {
     url: `${HOCUSPOCUS_URL}:${HOCUSPOCUS_PORT}/`, // for production
     name: roomName,
     document: ydoc,
+    parameters: options.parameters ?? {},
+    token: options.token ?? null,
 
     // Uncomment for debugging
     // onConnect: () => console.log('Connected to Hocuspocus server, room:', roomName),

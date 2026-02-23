@@ -17,6 +17,34 @@ function getEnvOrFail(key, fallbackValue = null) {
     return value || fallbackValue;
 }
 
+function parseDocumentRoom(roomName) {
+    if (!roomName || !roomName.startsWith('document:')) {
+        return null;
+    }
+    const parts = roomName.split(':');
+    if (parts.length !== 3) {
+        return null;
+    }
+    const [, tenantId, documentId] = parts;
+    if (!tenantId || !documentId) {
+        return null;
+    }
+    return { tenantId, documentId };
+}
+
+function getTenantFromRequest(request) {
+    if (!request?.url) {
+        return null;
+    }
+    try {
+        const url = new URL(request.url, 'http://localhost');
+        return url.searchParams.get('tenantId');
+    } catch (error) {
+        console.error('[Hocuspocus] Failed to parse request URL for tenant validation:', error);
+        return null;
+    }
+}
+
 const server = Server.configure({
     port: process.env.PORT || 1234,
     extensions: [
@@ -48,6 +76,27 @@ const server = Server.configure({
             level: 'debug', // Set to 'debug' for maximum verbosity
           }),
     ],
+    async onConnect(data) {
+        const roomName = data.documentName;
+
+        if (roomName?.startsWith('notifications:')) {
+            return;
+        }
+
+        const parsedRoom = parseDocumentRoom(roomName);
+        if (!parsedRoom) {
+            return;
+        }
+
+        const tenantFromRequest = getTenantFromRequest(data.request);
+        if (!tenantFromRequest) {
+            throw new Error('Tenant validation failed: missing tenantId');
+        }
+
+        if (tenantFromRequest !== parsedRoom.tenantId) {
+            throw new Error('Tenant validation failed: room tenant mismatch');
+        }
+    },
     })
 
 // const server = Server.configure({

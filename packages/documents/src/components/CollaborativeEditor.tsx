@@ -103,7 +103,16 @@ export function CollaborativeEditor({
   onUsersChange,
 }: CollaborativeEditorProps) {
   const roomName = useMemo(() => `document:${tenantId}:${documentId}`, [tenantId, documentId]);
-  const { provider, ydoc } = useMemo(() => createYjsProvider(roomName), [roomName]);
+  const { provider, ydoc } = useMemo(
+    () =>
+      createYjsProvider(roomName, {
+        parameters: {
+          tenantId,
+          userId,
+        },
+      }),
+    [roomName, tenantId, userId]
+  );
   const userColor = useMemo(() => getUserColor(userId), [userId]);
 
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('connecting');

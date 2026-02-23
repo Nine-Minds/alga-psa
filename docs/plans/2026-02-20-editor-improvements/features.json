@@ -83,7 +83,7 @@
   {
     "id": "F011",
     "description": "Add onConnect hook to Hocuspocus server.js that validates tenant segment in document room names matches connecting user's tenant",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "F-P1-12"
     ]
@@ -91,7 +91,7 @@
   {
     "id": "F012",
     "description": "Hocuspocus onConnect allows non-document rooms (notifications:*) to pass through unchanged",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "F-P1-12"
     ]
