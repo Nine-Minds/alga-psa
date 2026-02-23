@@ -69,6 +69,7 @@ export default defineConfig({
       { find: /^@alga-psa\/auth\/withAuth$/, replacement: path.resolve(__dirname, '../packages/auth/src/lib/withAuth.ts') },
       { find: /^@alga-psa\/auth\/apiAuth$/, replacement: path.resolve(__dirname, '../packages/auth/src/lib/apiAuth.ts') },
       { find: /^@alga-psa\/auth\/types\/next-auth$/, replacement: path.resolve(__dirname, '../packages/auth/src/types/next-auth.ts') },
+      { find: /^@alga-psa\/auth\/lib\/sso\/mspSsoResolution$/, replacement: path.resolve(__dirname, '../packages/auth/src/lib/sso/mspSsoResolution.ts') },
       { find: /^@alga-psa\/auth\/deviceFingerprint$/, replacement: path.resolve(__dirname, '../packages/auth/src/lib/deviceFingerprint.ts') },
       { find: /^@alga-psa\/auth\/ipAddress$/, replacement: path.resolve(__dirname, '../packages/auth/src/lib/ipAddress.ts') },
       { find: /^@alga-psa\/auth\/geolocation$/, replacement: path.resolve(__dirname, '../packages/auth/src/lib/geolocation.ts') },

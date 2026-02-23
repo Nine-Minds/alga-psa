@@ -146,3 +146,7 @@ Working notes for MSP SSO tenant-first resolver and provider-settings changes (M
 - (2026-02-23) `T027` complete: component test verifies Google button performs resolver POST first and then calls `signIn('google')`.
 - (2026-02-23) `T028` complete: failure-path component test verifies resolver/network failures always emit one generic MSP SSO start error message.
 - (2026-02-23) `T029` complete: client portal login contract test verifies `ClientLoginForm` keeps SSO section commented/disabled with no new client portal SSO affordance.
+- (2026-02-23) `T030` complete: added resolver route unit coverage validating valid payload -> `{ ok: true }` and signed `msp_sso_resolution` cookie set on success.
+- (2026-02-23) Added auth/server test suites: `packages/auth/src/lib/sso/mspSsoResolution.test.ts` and `server/src/app/api/auth/msp/sso/resolve/route.test.ts`.
+- (2026-02-23) Added Vitest alias for `@alga-psa/auth/lib/sso/mspSsoResolution` in `server/vitest.config.ts` to enable route test resolution.
+- (2026-02-23) Command run: `cd server && npx vitest run --coverage.enabled=false ../packages/auth/src/lib/sso/mspSsoResolution.test.ts src/app/api/auth/msp/sso/resolve/route.test.ts`.

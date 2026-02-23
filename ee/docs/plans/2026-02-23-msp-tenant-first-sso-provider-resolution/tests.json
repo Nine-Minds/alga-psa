@@ -240,7 +240,7 @@
   {
     "id": "T030",
     "description": "Resolver endpoint accepts valid payload and returns `{ ok: true }` with context cookie when source is resolvable.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F025",
       "F032"
