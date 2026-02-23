@@ -90,3 +90,6 @@ Working memory for implementing real-time collaborative editing via TipTap + Hoc
 - ~~What user info should be displayed for collaboration cursors?~~ — RESOLVED. Name + color. No persistent authorship tracking.
 - Should the Hocuspocus `onConnect` hook validate auth tokens in Phase 1, or is tenant-scoped room naming sufficient for the test page?
 - ~~TipTap v3 collab extension compatibility~~ — RESOLVED. Use v3 packages: `@tiptap/extension-collaboration`, `@tiptap/extension-collaboration-caret`, `@tiptap/y-tiptap`.
+
+## Updates
+- (2026-02-23) Added `collaborative_editing: false` to default feature flags in `server/src/lib/feature-flags/featureFlags.ts` to gate the collab test page.
