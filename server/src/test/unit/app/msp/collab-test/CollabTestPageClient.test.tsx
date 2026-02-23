@@ -94,4 +94,18 @@ describe('CollabTestPageClient', () => {
 
     expect(await findByTestId('collaborative-editor')).toBeTruthy();
   });
+
+  it('shows an error when the document does not exist', async () => {
+    const params = new URLSearchParams();
+    params.set('doc', 'missing-doc');
+    useSearchParamsMock.mockReturnValue(params);
+    getBlockContentMock.mockResolvedValue(null);
+
+    const { findByText, queryByTestId } = render(
+      <CollabTestPageClient userId="user-1" userName="User One" tenantId="tenant-1" />
+    );
+
+    expect(await findByText('Document not found. Check the ID and try again.')).toBeTruthy();
+    expect(queryByTestId('collaborative-editor')).toBeNull();
+  });
 });

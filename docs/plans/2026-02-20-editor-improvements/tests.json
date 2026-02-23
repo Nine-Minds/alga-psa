@@ -313,12 +313,13 @@
   {
     "id": "T029",
     "description": "Opening /msp/collab-test?doc=<nonExistentId> shows an error message",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F017"
     ],
-    "testType": "manual",
-    "notes": "Navigate to URL with bogus doc ID, verify error"
+    "testType": "unit",
+    "testFile": "server/src/test/unit/app/msp/collab-test/CollabTestPageClient.test.tsx",
+    "vitestName": "shows an error when the document does not exist"
   },
   {
     "id": "T030",
