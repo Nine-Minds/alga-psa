@@ -41,6 +41,7 @@ Working notes for MSP SSO tenant-first resolver and provider-settings changes (M
 - (2026-02-23) `F006` complete: `saveMicrosoftIntegrationSettings` persists `microsoft_client_id` using `secretProvider.setTenantSecret(tenant, 'microsoft_client_id', clientId)`.
 - (2026-02-23) `F007` complete: `saveMicrosoftIntegrationSettings` persists `microsoft_client_secret` as tenant secret.
 - (2026-02-23) `F008` complete: `saveMicrosoftIntegrationSettings` persists `microsoft_tenant_id` with default `common` when input is blank.
+- (2026-02-23) `F009` complete: Microsoft provider settings UI now loads status and displays masked secret indicator (`Stored secret: ••••`) via `status.config.clientSecretMasked`.
 
 ## Commands / Runbooks
 
