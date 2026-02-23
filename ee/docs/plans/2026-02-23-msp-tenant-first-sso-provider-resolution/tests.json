@@ -558,7 +558,7 @@
   {
     "id": "T067",
     "description": "End-to-end MSP Google SSO with tenant source succeeds from login form to authenticated redirect.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F022",
       "F028",
