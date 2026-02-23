@@ -368,12 +368,13 @@
   {
     "id": "T034",
     "description": "CollaborativeEditor is exported from packages/documents/src/components/index.ts",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F021"
     ],
-    "testType": "build",
-    "notes": "Verify import works: import { CollaborativeEditor } from '@alga-psa/documents/components'"
+    "testType": "unit",
+    "testFile": "server/src/test/unit/documents/componentsExports.test.ts",
+    "vitestName": "exports CollaborativeEditor"
   },
   {
     "id": "T035",
