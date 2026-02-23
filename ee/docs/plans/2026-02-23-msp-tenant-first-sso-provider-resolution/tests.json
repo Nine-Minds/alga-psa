@@ -601,7 +601,7 @@
   {
     "id": "T071",
     "description": "End-to-end CE credentials login (non-SSO) remains unaffected by resolver cookie behavior.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F040",
       "F042",

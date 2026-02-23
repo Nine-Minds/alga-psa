@@ -194,3 +194,4 @@ Working notes for MSP SSO tenant-first resolver and provider-settings changes (M
 - (2026-02-23) `T068` complete: SSO component end-to-end contract scenario verifies Microsoft app-fallback success path reaches NextAuth `signIn`.
 - (2026-02-23) `T069` complete: SSO component end-to-end contract scenario verifies Google app-fallback success path reaches NextAuth `signIn`.
 - (2026-02-23) `T070` complete: end-to-end contract scenario verifies unknown-user and known-unconfigured tenant failures surface the identical generic UI message.
+- (2026-02-23) `T071` complete: credentials-flow contract test verifies MSP credentials sign-in path remains separate from resolver-cookie handling.
