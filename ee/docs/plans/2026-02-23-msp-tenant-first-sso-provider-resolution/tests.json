@@ -361,7 +361,7 @@
   {
     "id": "T044",
     "description": "Resolver rate limiter blocks repeated abusive attempts and returns generic failure response.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F037"
     ]

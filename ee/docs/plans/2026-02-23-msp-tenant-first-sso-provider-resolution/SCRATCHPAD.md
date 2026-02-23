@@ -163,3 +163,4 @@ Working notes for MSP SSO tenant-first resolver and provider-settings changes (M
 - (2026-02-23) `T041` complete: helper test asserts Microsoft app fallback checks use `MICROSOFT_OAUTH_CLIENT_ID` and `MICROSOFT_OAUTH_CLIENT_SECRET`.
 - (2026-02-23) `T042` complete: helper test asserts Google app fallback checks use `GOOGLE_OAUTH_CLIENT_ID` and `GOOGLE_OAUTH_CLIENT_SECRET`.
 - (2026-02-23) `T043` complete: helper test verifies invalid signature and expired cookie contexts are rejected by resolver-cookie parser.
+- (2026-02-23) `T044` complete: route test verifies rate-limited requests still return the same generic failure response.
