@@ -1,0 +1,110 @@
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.presenceBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.presenceEmpty {
+  font-size: 12px;
+  color: rgb(var(--color-text-500));
+}
+
+.userChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid rgb(var(--color-border-200));
+  background: rgb(var(--color-card));
+  color: rgb(var(--color-text-700));
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.statusBar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.connectionStatus {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: rgb(var(--color-text-600));
+}
+
+.statusDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: rgb(var(--color-border-300));
+}
+
+.connectionStatus[data-status='connected'] .statusDot {
+  background: rgb(var(--color-success-500));
+}
+
+.connectionStatus[data-status='connecting'] .statusDot {
+  background: rgb(var(--color-warning-500));
+}
+
+.connectionStatus[data-status='disconnected'] .statusDot {
+  background: rgb(var(--color-danger-500));
+}
+
+.saveStatus {
+  font-size: 12px;
+  color: rgb(var(--color-text-500));
+}
+
+.editorContainer :global(.ProseMirror) p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: rgb(var(--color-text-400));
+  pointer-events: none;
+  height: 0;
+}
+
+.editorContainer :global(.ProseMirror) a {
+  color: rgb(var(--badge-info-text));
+  font-weight: 500;
+  text-decoration: underline;
+  text-decoration-color: rgb(var(--badge-info-text) / 0.4);
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.editorContainer :global(.ProseMirror) a:hover {
+  text-decoration-color: rgb(var(--badge-info-text));
+}
+
+.editorContainer :global(.collaboration-caret__label),
+.editorContainer :global(.collaboration-cursor__label) {
+  padding: 2px 6px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: rgb(var(--color-text-0));
+  box-shadow: 0 1px 2px rgba(var(--color-text-900), 0.2);
+}
+
+.editorContainer :global(.collaboration-caret__caret),
+.editorContainer :global(.collaboration-cursor__caret) {
+  border-left-width: 2px;
+  border-left-style: solid;
+  margin-left: -1px;
+}

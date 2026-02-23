@@ -3,3 +3,4 @@ export type { RichTextViewerProps } from './RichTextViewer';
 export { default as TextEditor, DEFAULT_BLOCK } from './TextEditor';
 export { Emoticon } from './EmoticonExtension';
 export type { EmoticonOptions } from './EmoticonExtension';
+export { createYjsProvider } from './yjs-config';

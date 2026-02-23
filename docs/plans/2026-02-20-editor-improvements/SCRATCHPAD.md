@@ -94,3 +94,4 @@ Working memory for implementing real-time collaborative editing via TipTap + Hoc
 ## Updates
 - (2026-02-23) Added `collaborative_editing: false` to default feature flags in `server/src/lib/feature-flags/featureFlags.ts` to gate the collab test page.
 - (2026-02-23) Added TipTap v3 collab packages to `server/package.json` for collaborative editor support.
+- (2026-02-23) Added `CollaborativeEditor` component with TipTap Collaboration + CollaborationCaret bound to Y.js, Hocuspocus room naming, EditorToolbar integration, markdown paste handling, Emoticon/Link config, presence bar, connection/save indicators, and CSS styling. Exported `createYjsProvider` from `@alga-psa/ui/editor`.

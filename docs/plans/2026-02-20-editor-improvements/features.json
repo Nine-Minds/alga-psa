@@ -18,7 +18,7 @@
   {
     "id": "F003",
     "description": "Create CollaborativeEditor component in packages/documents/src/components/ that initializes TipTap with Collaboration + CollaborationCaret extensions bound to a Y.js document via @tiptap/y-tiptap",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "F-P1-04",
       "F-P1-05"
@@ -27,7 +27,7 @@
   {
     "id": "F004",
     "description": "CollaborativeEditor connects to Hocuspocus using HocuspocusProvider with room name format 'document:<tenant>:<documentId>'",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "F-P1-04"
     ]
@@ -35,7 +35,7 @@
   {
     "id": "F005",
     "description": "CollaborativeEditor includes existing EditorToolbar (BubbleMenu) with all formatting options from PR #1898",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "F-P1-13"
     ]
@@ -43,7 +43,7 @@
   {
     "id": "F006",
     "description": "Collaboration cursors display user name and distinct color via awareness protocol",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "F-P1-06"
     ]
@@ -51,7 +51,7 @@
   {
     "id": "F007",
     "description": "Presence bar component above editor showing avatars/names of all connected users",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "F-P1-07"
     ]
@@ -59,7 +59,7 @@
   {
     "id": "F008",
     "description": "Connection status indicator component (connected / syncing / disconnected)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "F-P1-08"
     ]
@@ -67,7 +67,7 @@
   {
     "id": "F009",
     "description": "Auto-save status indicator replacing manual save button ('All changes saved' / 'Saving...' / 'Offline')",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "F-P1-09"
     ]
@@ -75,7 +75,7 @@
   {
     "id": "F010",
     "description": "Markdown paste handling works in collaborative mode (same detection + conversion as current DocumentEditor)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "F-P1-14"
     ]
@@ -172,7 +172,7 @@
   {
     "id": "F022",
     "description": "CollaborativeEditor CSS: cursor label styling, presence bar styling, status indicator styling \u2014 using existing design tokens (--color-* CSS vars)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "F-P1-06",
       "F-P1-07",
@@ -182,7 +182,7 @@
   {
     "id": "F023",
     "description": "CollaborativeEditor includes Emoticon extension from @alga-psa/ui/editor for text-emoticon-to-emoji conversion",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "F-P1-15"
     ]
@@ -190,7 +190,7 @@
   {
     "id": "F024",
     "description": "CollaborativeEditor includes Link extension with config matching DocumentEditor: openOnClick: false, autolink: true, linkOnPaste: true, target: '_blank', rel: 'noopener noreferrer'",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "F-P1-16"
     ]
