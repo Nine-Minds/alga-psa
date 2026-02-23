@@ -511,7 +511,7 @@
   {
     "id": "T062",
     "description": "Integration docs describe provider setup order for Microsoft and Google in Providers settings before account connection flows.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F052"
     ]
