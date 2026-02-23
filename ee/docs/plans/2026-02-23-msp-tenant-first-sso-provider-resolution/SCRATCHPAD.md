@@ -68,6 +68,7 @@ Working notes for MSP SSO tenant-first resolver and provider-settings changes (M
 - (2026-02-23) `F033` complete: resolver cookie payload intentionally omits raw OAuth client IDs and client secrets.
 - (2026-02-23) `F034` complete: Microsoft fallback readiness in resolver uses `MICROSOFT_OAUTH_CLIENT_ID` + `MICROSOFT_OAUTH_CLIENT_SECRET` (env/app secrets).
 - (2026-02-23) `F035` complete: Google fallback readiness in resolver uses `GOOGLE_OAUTH_CLIENT_ID` + `GOOGLE_OAUTH_CLIENT_SECRET` (env/app secrets).
+- (2026-02-23) `F036` complete: resolver returns the generic `ok:false` failure payload when no tenant or app credential source is available.
 
 ## Commands / Runbooks
 
