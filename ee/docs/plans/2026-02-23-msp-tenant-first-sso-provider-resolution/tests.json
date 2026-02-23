@@ -353,7 +353,7 @@
   {
     "id": "T043",
     "description": "Resolver returns generic failure when tenant source missing and fallback source missing.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F036"
     ]
