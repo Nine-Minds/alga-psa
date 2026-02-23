@@ -130,6 +130,8 @@ export const saveMicrosoftIntegrationSettings = withAuth(async (
   }
 ): Promise<{ success: boolean; error?: string }> => {
   try {
+    if ((user as any)?.user_type === 'client') return { success: false, error: 'Forbidden' };
+
     const permitted = await hasPermission(user as any, 'system_settings', 'update');
     if (!permitted) return { success: false, error: 'Forbidden' };
 
@@ -157,6 +159,8 @@ export const resetMicrosoftProvidersToDisconnected = withAuth(async (
   { tenant }
 ): Promise<{ success: boolean; error?: string }> => {
   try {
+    if ((user as any)?.user_type === 'client') return { success: false, error: 'Forbidden' };
+
     const permitted = await hasPermission(user as any, 'system_settings', 'update');
     if (!permitted) return { success: false, error: 'Forbidden' };
 

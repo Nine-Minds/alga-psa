@@ -43,6 +43,7 @@ Working notes for MSP SSO tenant-first resolver and provider-settings changes (M
 - (2026-02-23) `F008` complete: `saveMicrosoftIntegrationSettings` persists `microsoft_tenant_id` with default `common` when input is blank.
 - (2026-02-23) `F009` complete: Microsoft provider settings UI now loads status and displays masked secret indicator (`Stored secret: ••••`) via `status.config.clientSecretMasked`.
 - (2026-02-23) `F010` complete: `saveMicrosoftIntegrationSettings` and `resetMicrosoftProvidersToDisconnected` now enforce RBAC via `hasPermission(user, 'system_settings', 'update')`.
+- (2026-02-23) `F011` complete: status/save/reset Microsoft actions consistently reject client-portal user context with `Forbidden`.
 
 ## Commands / Runbooks
 

@@ -9,7 +9,7 @@
   { "id": "F008", "description": "Persist `microsoft_tenant_id` as tenant secret with default `common` when omitted.", "implemented": true, "prdRefs": ["Functional Requirements #3"] },
   { "id": "F009", "description": "Render masked saved-secret indicators in Microsoft settings status response/UI.", "implemented": true, "prdRefs": ["Acceptance Criteria #2"] },
   { "id": "F010", "description": "Enforce RBAC (`system_settings:update`) on Microsoft settings save/reset actions.", "implemented": true, "prdRefs": ["Security / Permissions"] },
-  { "id": "F011", "description": "Restrict Microsoft settings actions from client portal user context.", "implemented": false, "prdRefs": ["Security / Permissions"] },
+  { "id": "F011", "description": "Restrict Microsoft settings actions from client portal user context.", "implemented": true, "prdRefs": ["Security / Permissions"] },
 
   { "id": "F012", "description": "Add provider-readiness check helper for Microsoft (`microsoft_client_id` + `microsoft_client_secret`).", "implemented": false, "prdRefs": ["Functional Requirements #5"] },
   { "id": "F013", "description": "Add provider-readiness check helper for Google (`google_client_id` + `google_client_secret`) for MSP SSO usage.", "implemented": false, "prdRefs": ["Functional Requirements #5"] },
