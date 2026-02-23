@@ -16,7 +16,7 @@
   { "id": "F014", "description": "Update CE Microsoft email form to remove required manual client ID/client secret inputs.", "implemented": true, "prdRefs": ["Functional Requirements #12"] },
   { "id": "F015", "description": "Update CE Microsoft email form to display 'Configure Providers first' CTA when Microsoft provider settings are missing.", "implemented": true, "prdRefs": ["Functional Requirements #12"] },
   { "id": "F016", "description": "Update CE Microsoft calendar form to use provider-settings-first behavior and CTA when Microsoft settings are missing.", "implemented": true, "prdRefs": ["Functional Requirements #12"] },
-  { "id": "F017", "description": "Ensure CE Microsoft email provider persistence no longer depends on per-provider client credential form fields.", "implemented": false, "prdRefs": ["Functional Requirements #12"] },
+  { "id": "F017", "description": "Ensure CE Microsoft email provider persistence no longer depends on per-provider client credential form fields.", "implemented": true, "prdRefs": ["Functional Requirements #12"] },
   { "id": "F018", "description": "Ensure CE Microsoft calendar provider persistence no longer depends on per-provider client credential form fields.", "implemented": false, "prdRefs": ["Functional Requirements #12"] },
 
   { "id": "F019", "description": "Replace CE SSO button stub with MSP-login-capable SSO buttons component.", "implemented": false, "prdRefs": ["Functional Requirements #9", "Acceptance Criteria #3"] },
