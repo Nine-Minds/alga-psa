@@ -495,7 +495,7 @@
   {
     "id": "T060",
     "description": "Code comments/docs include explicit anti-enumeration guidance in resolver/auth flow modules.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F050"
     ]
