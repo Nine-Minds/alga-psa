@@ -26,6 +26,7 @@ export type TicketListSettings = {
 
 export type TicketingDisplaySettings = {
   dateTimeFormat?: string; // date-fns format string, e.g. 'MMM d, yyyy h:mm a'
+  responseStateTrackingEnabled?: boolean; // default true — when false, response state is not tracked or displayed
   list?: TicketListSettings;
 };
 
@@ -42,6 +43,7 @@ export const getTicketingDisplaySettings = withAuth(async (_user, { tenant }): P
 
     return {
       dateTimeFormat: display.dateTimeFormat || DEFAULT_TICKETING_DATETIME_FORMAT,
+      responseStateTrackingEnabled: display.responseStateTrackingEnabled ?? true,
       list: {
         columnVisibility: {
           ticket_number: display?.list?.columnVisibility?.ticket_number ?? true,
@@ -65,6 +67,7 @@ export const getTicketingDisplaySettings = withAuth(async (_user, { tenant }): P
     // As a last resort return defaults
     return {
       dateTimeFormat: DEFAULT_TICKETING_DATETIME_FORMAT,
+      responseStateTrackingEnabled: true,
       list: {
         columnVisibility: {
           ticket_number: true,

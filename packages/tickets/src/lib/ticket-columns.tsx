@@ -103,6 +103,7 @@ type TicketListSettings = {
 
 type TicketingDisplaySettings = {
   dateTimeFormat?: string;
+  responseStateTrackingEnabled?: boolean;
   list?: TicketListSettings;
 };
 
@@ -284,10 +285,11 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
         render: (value: string, record: ITicketListItem) => {
           // Get response_state from the record - it may be on the record if fetched
           const responseState = (record as any).response_state as TicketResponseState | undefined;
+          const showResponseState = displaySettings?.responseStateTrackingEnabled !== false;
           return (
             <div className="flex items-center gap-1.5 flex-wrap">
               <span>{value || 'No Status'}</span>
-              {responseState && (
+              {showResponseState && responseState && (
                 <ResponseStateBadge
                   responseState={responseState}
                   variant="badge"

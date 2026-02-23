@@ -233,6 +233,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const [contacts, setContacts] = useState<IContact[]>(initialContacts);
     const [locations, setLocations] = useState<IClientLocation[]>(initialLocations);
     const [dateTimeFormat, setDateTimeFormat] = useState<string>('MMM d, yyyy h:mm a');
+    const [responseStateTrackingEnabled, setResponseStateTrackingEnabled] = useState<boolean>(true);
     const [createdRelativeTime, setCreatedRelativeTime] = useState<string>('');
     const [updatedRelativeTime, setUpdatedRelativeTime] = useState<string>('');
     const [addChildTicketNumber, setAddChildTicketNumber] = useState<string>('');
@@ -361,6 +362,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                 if (settings?.dateTimeFormat) {
                     setDateTimeFormat(settings.dateTimeFormat);
                 }
+                setResponseStateTrackingEnabled(settings?.responseStateTrackingEnabled ?? true);
             } catch (error) {
                 console.error('Failed to load ticketing display settings:', error);
             }
@@ -811,7 +813,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                 // Optimistically update the response state in UI to match server behavior:
                 // - Internal note: no change
                 // - Client-visible comment from internal user (MSP portal): awaiting client
-                if (!isInternal) {
+                if (!isInternal && responseStateTrackingEnabled) {
                     setTicket((prev: any) => ({
                         ...prev,
                         response_state: 'awaiting_client'
@@ -1503,7 +1505,7 @@ const handleClose = () => {
                             <BackNav href="/msp/tickets">← Back to Tickets</BackNav>
                         )}
                         <h6 className="text-sm font-medium whitespace-nowrap">#{ticket.ticket_number}</h6>
-                        {ticket.response_state ? (
+                        {responseStateTrackingEnabled && ticket.response_state ? (
                             <ResponseStateBadge
                                 responseState={ticket.response_state}
                                 size="sm"
@@ -1799,6 +1801,7 @@ const handleClose = () => {
                                     itilImpact={itilImpact}
                                     itilUrgency={itilUrgency}
                                     isBundledChild={Boolean(bundle?.isBundleChild)}
+                                    responseStateTrackingEnabled={responseStateTrackingEnabled}
                                     renderProjectTaskActions={renderCreateProjectTask}
                                     additionalAgents={additionalAgents.map(a => ({
                                         user_id: a.additional_user_id || a.assigned_to,

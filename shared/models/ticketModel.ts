@@ -1089,14 +1089,23 @@ export class TicketModel {
     await trx('comments').insert(baseCommentData);
 
     if (!validatedData.is_internal && validatedData.author_type === 'contact') {
-      await trx('tickets')
-        .where({
-          ticket_id: validatedData.ticket_id,
-          tenant,
-        })
-        .update({
-          response_state: 'awaiting_internal',
-        });
+      // Only update response state if tracking is enabled for this tenant
+      const tenantSettingsRow = await trx('tenant_settings')
+        .select('ticket_display_settings')
+        .where({ tenant })
+        .first();
+      const responseStateEnabled = (tenantSettingsRow?.ticket_display_settings as any)?.responseStateTrackingEnabled ?? true;
+
+      if (responseStateEnabled) {
+        await trx('tickets')
+          .where({
+            ticket_id: validatedData.ticket_id,
+            tenant,
+          })
+          .update({
+            response_state: 'awaiting_internal',
+          });
+      }
     }
 
     // Publish comment event if publisher provided

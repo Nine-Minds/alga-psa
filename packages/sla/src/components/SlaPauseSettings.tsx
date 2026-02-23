@@ -10,6 +10,7 @@ import {
   bulkUpdateStatusSlaPauseConfigs,
 } from '../actions';
 import { getStatuses } from '@alga-psa/reference-data/actions';
+import { getResponseStateTrackingSetting, updateResponseStateTrackingSetting } from '../actions';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@alga-psa/ui/components/Card';
@@ -31,6 +32,7 @@ export function SlaPauseSettings() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [responseStateTrackingEnabled, setResponseStateTrackingEnabled] = useState<boolean>(true);
 
   // Load initial data
   useEffect(() => {
@@ -39,14 +41,16 @@ export function SlaPauseSettings() {
         setIsLoading(true);
         setError(null);
 
-        // Fetch SLA settings, status pause configs, and ticket statuses in parallel
-        const [settings, pauseConfigs, allStatuses] = await Promise.all([
+        // Fetch SLA settings, status pause configs, ticket statuses, and display settings in parallel
+        const [settings, pauseConfigs, allStatuses, responseStateEnabled] = await Promise.all([
           getSlaSettings(),
           getStatusSlaPauseConfigs(),
           getStatuses('ticket'),
+          getResponseStateTrackingSetting(),
         ]);
 
         setSlaSettings(settings);
+        setResponseStateTrackingEnabled(responseStateEnabled);
 
         // Build a map of status_id -> pauses_sla from existing configs
         const pauseConfigMap = new Map<string, boolean>();
@@ -75,6 +79,18 @@ export function SlaPauseSettings() {
     }
 
     loadData();
+  }, []);
+
+  // Handle response state tracking toggle
+  const handleResponseStateTrackingChange = useCallback(async (checked: boolean) => {
+    try {
+      await updateResponseStateTrackingSetting(checked);
+      setResponseStateTrackingEnabled(checked);
+      toast.success(checked ? 'Response state tracking enabled' : 'Response state tracking disabled');
+    } catch (err) {
+      console.error('Error updating response state tracking:', err);
+      toast.error(err instanceof Error ? err.message : 'Failed to update response state tracking');
+    }
   }, []);
 
   // Handle global setting toggle
@@ -193,12 +209,33 @@ export function SlaPauseSettings() {
             Configure global behavior for SLA timer pausing
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-6">
+          {/* Response State Tracking toggle */}
           <div className="flex items-center space-x-4">
+            <Switch
+              id="response-state-tracking"
+              checked={responseStateTrackingEnabled}
+              onCheckedChange={handleResponseStateTrackingChange}
+            />
+            <div className="space-y-1">
+              <Label htmlFor="response-state-tracking" className="text-base font-medium">
+                Track response state on tickets
+              </Label>
+              <p className="text-sm text-muted-foreground">
+                When enabled, tickets automatically track who needs to respond next
+                (awaiting client or awaiting internal response).
+                This also controls the visibility of response state badges and filters.
+              </p>
+            </div>
+          </div>
+
+          {/* Pause on Awaiting Client toggle */}
+          <div className={`flex items-center space-x-4 ${!responseStateTrackingEnabled ? 'opacity-50' : ''}`}>
             <Switch
               id="pause-on-awaiting-client"
               checked={slaSettings?.pause_on_awaiting_client ?? false}
               onCheckedChange={handleGlobalSettingChange}
+              disabled={!responseStateTrackingEnabled}
             />
             <div className="space-y-1">
               <Label htmlFor="pause-on-awaiting-client" className="text-base font-medium">
@@ -209,6 +246,11 @@ export function SlaPauseSettings() {
                 awaiting a response from the client. The timer will resume when the client responds
                 or the ticket status changes.
               </p>
+              {!responseStateTrackingEnabled && (
+                <p className="text-sm text-amber-600">
+                  Enable response state tracking above to use this option.
+                </p>
+              )}
             </div>
           </div>
         </CardContent>

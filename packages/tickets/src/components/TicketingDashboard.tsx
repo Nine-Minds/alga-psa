@@ -1365,18 +1365,20 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                   onValueChange={(value) => setSelectedStatus(value)}
                   placeholder="Select Status"
                 />
-                <CustomSelect
-                  data-automation-id={`${id}-response-state-select`}
-                  options={[
-                    { value: 'all', label: 'All Response States' },
-                    { value: 'awaiting_client', label: 'Awaiting Client' },
-                    { value: 'awaiting_internal', label: 'Awaiting Internal' },
-                    { value: 'none', label: 'No Response State' },
-                  ]}
-                  value={selectedResponseState}
-                  onValueChange={(value) => setSelectedResponseState(value as 'awaiting_client' | 'awaiting_internal' | 'none' | 'all')}
-                  placeholder="Response State"
-                />
+                {displaySettings?.responseStateTrackingEnabled !== false && (
+                  <CustomSelect
+                    data-automation-id={`${id}-response-state-select`}
+                    options={[
+                      { value: 'all', label: 'All Response States' },
+                      { value: 'awaiting_client', label: 'Awaiting Client' },
+                      { value: 'awaiting_internal', label: 'Awaiting Internal' },
+                      { value: 'none', label: 'No Response State' },
+                    ]}
+                    value={selectedResponseState}
+                    onValueChange={(value) => setSelectedResponseState(value as 'awaiting_client' | 'awaiting_internal' | 'none' | 'all')}
+                    placeholder="Response State"
+                  />
+                )}
                 <PrioritySelect
                   id={`${id}-priority-select`}
                   options={priorityOptions}

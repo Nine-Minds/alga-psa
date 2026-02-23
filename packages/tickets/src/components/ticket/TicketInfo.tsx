@@ -61,6 +61,7 @@ interface TicketInfoProps {
   itilSubcategory?: string;
   renderProjectTaskActions?: (args: { ticket: ITicket; additionalAgents?: { user_id: string; name: string }[] }) => React.ReactNode;
   additionalAgents?: { user_id: string; name: string }[];
+  responseStateTrackingEnabled?: boolean;
 }
 
 const TicketInfo: React.FC<TicketInfoProps> = ({
@@ -88,6 +89,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
   itilSubcategory,
   renderProjectTaskActions,
   additionalAgents,
+  responseStateTrackingEnabled = true,
 }) => {
   // Use initialCategories from server to avoid timing issues on first render
   const [categories, setCategories] = useState<ITicketCategory[]>(initialCategories);
@@ -1010,13 +1012,15 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
             </div>
 
             {/* Row 4: Response State + Due Date (future SLA area) */}
-            <div>
-              <ResponseStateDisplay
-                value={((pendingChanges.response_state ?? originalTicketValues.response_state) || null) as TicketResponseState}
-                onValueChange={(value) => handlePendingChange('response_state', value)}
-                editable={true}
-              />
-            </div>
+            {responseStateTrackingEnabled && (
+              <div>
+                <ResponseStateDisplay
+                  value={((pendingChanges.response_state ?? originalTicketValues.response_state) || null) as TicketResponseState}
+                  onValueChange={(value) => handlePendingChange('response_state', value)}
+                  editable={true}
+                />
+              </div>
+            )}
             <div>
               <h5 className="font-bold mb-2">Due Date</h5>
               {(() => {

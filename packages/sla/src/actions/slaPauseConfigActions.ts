@@ -387,3 +387,61 @@ export const deleteStatusSlaPauseConfig = withAuth(async (_user, { tenant }, sta
     }
   });
 });
+
+// ============================================================================
+// Response State Tracking Setting (reads/writes tenant_settings JSONB)
+// ============================================================================
+
+/**
+ * Get the response state tracking setting for the current tenant.
+ * This reads from tenant_settings.ticket_display_settings JSONB to avoid
+ * circular dependency with @alga-psa/tickets.
+ */
+export const getResponseStateTrackingSetting = withAuth(async (_user, { tenant }): Promise<boolean> => {
+  const { knex: db } = await createTenantKnex();
+  const row = await db('tenant_settings')
+    .select('ticket_display_settings')
+    .where({ tenant })
+    .first();
+  return (row?.ticket_display_settings as any)?.responseStateTrackingEnabled ?? true;
+});
+
+/**
+ * Update the response state tracking setting for the current tenant.
+ */
+export const updateResponseStateTrackingSetting = withAuth(async (_user, { tenant }, enabled: boolean): Promise<boolean> => {
+  const { knex: db } = await createTenantKnex();
+  const now = new Date();
+
+  const existingRow = await db('tenant_settings')
+    .select('ticket_display_settings', 'settings')
+    .where({ tenant })
+    .first();
+
+  const currentDisplay = (existingRow?.ticket_display_settings as any) || {};
+  const mergedDisplay = { ...currentDisplay, responseStateTrackingEnabled: enabled };
+
+  const rootSettings = (existingRow?.settings as any) || {};
+  const ticketing = rootSettings.ticketing || {};
+  const display = ticketing.display || {};
+  const mergedSettings = {
+    ...rootSettings,
+    ticketing: { ...ticketing, display: { ...display, responseStateTrackingEnabled: enabled } },
+  };
+
+  await db('tenant_settings')
+    .insert({
+      tenant,
+      ticket_display_settings: JSON.stringify(mergedDisplay),
+      settings: JSON.stringify(mergedSettings),
+      updated_at: now,
+    })
+    .onConflict('tenant')
+    .merge({
+      ticket_display_settings: JSON.stringify(mergedDisplay),
+      settings: JSON.stringify(mergedSettings),
+      updated_at: now,
+    });
+
+  return enabled;
+});

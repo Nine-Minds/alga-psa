@@ -255,12 +255,19 @@ export async function handleStatusChange(
       .first();
 
     const pauseOnAwaitingClient = slaSettings?.pause_on_awaiting_client ?? true;
-    const isAwaitingClient = ticket.response_state === 'awaiting_client';
+
+    // Check if response state tracking is enabled before considering awaiting_client
+    const tenantSettingsRow = await trx('tenant_settings')
+      .select('ticket_display_settings')
+      .where({ tenant })
+      .first();
+    const responseStateEnabled = (tenantSettingsRow?.ticket_display_settings as any)?.responseStateTrackingEnabled ?? true;
+    const isAwaitingClient = responseStateEnabled && ticket.response_state === 'awaiting_client';
 
     // Determine if SLA should be paused after this change
     // SLA should be paused if:
     // 1. New status is configured to pause, OR
-    // 2. Awaiting client AND pause_on_awaiting_client is enabled
+    // 2. Awaiting client AND pause_on_awaiting_client is enabled AND response state tracking is enabled
     const shouldBePaused = newStatusPauses || (isAwaitingClient && pauseOnAwaitingClient);
 
     if (shouldBePaused && !isPaused) {
@@ -322,6 +329,16 @@ export async function handleResponseStateChange(
 
     // If feature is disabled, no action needed
     if (!pauseOnAwaitingClient) {
+      return { success: true, was_paused: false, is_now_paused: false };
+    }
+
+    // Check if response state tracking is enabled at tenant level
+    const tenantSettingsRow = await trx('tenant_settings')
+      .select('ticket_display_settings')
+      .where({ tenant })
+      .first();
+    const responseStateEnabled = (tenantSettingsRow?.ticket_display_settings as any)?.responseStateTrackingEnabled ?? true;
+    if (!responseStateEnabled) {
       return { success: true, was_paused: false, is_now_paused: false };
     }
 
@@ -406,9 +423,16 @@ export async function shouldSlaBePaused(
     slaSettings = { pause_on_awaiting_client: true };
   }
 
-  // Check 1: Awaiting client response
+  // Check 1: Awaiting client response (only if response state tracking is enabled)
   if (slaSettings.pause_on_awaiting_client && ticket.response_state === 'awaiting_client') {
-    return { paused: true, reason: 'awaiting_client' };
+    const tenantSettingsRow = await trx('tenant_settings')
+      .select('ticket_display_settings')
+      .where({ tenant })
+      .first();
+    const responseStateEnabled = (tenantSettingsRow?.ticket_display_settings as any)?.responseStateTrackingEnabled ?? true;
+    if (responseStateEnabled) {
+      return { paused: true, reason: 'awaiting_client' };
+    }
   }
 
   // Check 2: Status-based pause
