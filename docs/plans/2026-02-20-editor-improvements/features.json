@@ -164,7 +164,7 @@
   {
     "id": "F021",
     "description": "Export CollaborativeEditor from packages/documents/src/components/index.ts",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "F-P1-04"
     ]
