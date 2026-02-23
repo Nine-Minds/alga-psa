@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, cleanup } from '@testing-library/react';
+import { render, cleanup, act } from '@testing-library/react';
 import * as Y from 'yjs';
 
 (globalThis as unknown as { React?: typeof React }).React = React;
@@ -140,5 +140,60 @@ describe('CollaborativeEditor', () => {
     const statusWrapper = container.querySelector('[data-status]');
     expect(statusWrapper).toBeTruthy();
     expect(statusWrapper.getAttribute('data-status')).toBe('connected');
+  });
+
+  it('sets awareness user state for collaboration cursors', async () => {
+    await act(async () => {
+      render(
+        <CollaborativeEditor
+          documentId="doc-3"
+          tenantId="tenant-3"
+          userId="user-3"
+          userName="Editor Three"
+        />
+      );
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    expect(providerMock.awareness.setLocalStateField).toHaveBeenCalledWith(
+      'user',
+      expect.objectContaining({
+        id: 'user-3',
+        name: 'Editor Three',
+        color: expect.any(String),
+      })
+    );
+  });
+
+  it('assigns deterministic cursor colors per user', async () => {
+    await act(async () => {
+      render(
+        <CollaborativeEditor
+          documentId="doc-4"
+          tenantId="tenant-4"
+          userId="user-4"
+          userName="Editor Four"
+        />
+      );
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    const firstCall = providerMock.awareness.setLocalStateField.mock.calls[0]?.[1];
+    cleanup();
+
+    await act(async () => {
+      render(
+        <CollaborativeEditor
+          documentId="doc-4"
+          tenantId="tenant-4"
+          userId="user-4"
+          userName="Editor Four"
+        />
+      );
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    const secondCall = providerMock.awareness.setLocalStateField.mock.calls.at(-1)?.[1];
+    expect(firstCall?.color).toBe(secondCall?.color);
   });
 });

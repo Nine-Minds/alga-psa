@@ -119,3 +119,5 @@ Working memory for implementing real-time collaborative editing via TipTap + Hoc
 - (2026-02-23) Marked T009 complete using EditorToolbar unit test wiring block formatting commands (`EditorToolbar.test.tsx`).
 
 - (2026-02-23) Marked T010 complete using EditorToolbar unit test for link command wiring (`EditorToolbar.test.tsx`).
+
+- (2026-02-23) Added CollaborativeEditor unit coverage for awareness user state (T011) and deterministic color (T012) in `CollaborativeEditor.extensions.test.tsx`. Ran: `npx vitest src/test/unit/documents/CollaborativeEditor.extensions.test.tsx` (from `server/`).

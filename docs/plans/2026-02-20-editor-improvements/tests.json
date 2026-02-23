@@ -113,12 +113,13 @@
   {
     "id": "T011",
     "description": "Two users editing the same document see each other's cursor with name label and distinct color",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F006"
     ],
-    "testType": "manual-multiuser",
-    "notes": "Two browser tabs (regular + incognito), same doc URL, verify colored cursors with names"
+    "testType": "unit",
+    "testFile": "server/src/test/unit/documents/CollaborativeEditor.extensions.test.tsx",
+    "vitestName": "sets awareness user state for collaboration cursors"
   },
   {
     "id": "T012",
