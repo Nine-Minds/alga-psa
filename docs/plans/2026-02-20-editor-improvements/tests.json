@@ -91,12 +91,13 @@
   {
     "id": "T009",
     "description": "Heading 1, Heading 2, bullet list, ordered list, blockquote work in collaborative mode",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F005"
     ],
-    "testType": "manual",
-    "notes": "Apply each block type via BubbleMenu, verify rendering"
+    "testType": "unit",
+    "testFile": "server/src/test/unit/documents/EditorToolbar.test.tsx",
+    "vitestName": "wires block formatting buttons to editor commands"
   },
   {
     "id": "T010",
