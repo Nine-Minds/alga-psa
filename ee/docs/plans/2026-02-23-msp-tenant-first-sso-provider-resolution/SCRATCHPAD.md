@@ -33,6 +33,7 @@ Working notes for MSP SSO tenant-first resolver and provider-settings changes (M
 ## Progress Log
 
 - (2026-02-23) `F001` complete: added Microsoft provider card component at `packages/integrations/src/components/settings/integrations/MicrosoftIntegrationSettings.tsx` and rendered it in Providers tab beneath Google settings.
+- (2026-02-23) `T001` complete: added `IntegrationsSettingsPage.providers.test.ts` to assert Providers composition includes both `GoogleIntegrationSettings` and `MicrosoftIntegrationSettings`.
 
 ## Commands / Runbooks
 
