@@ -103,3 +103,5 @@ Working memory for implementing real-time collaborative editing via TipTap + Hoc
 - (2026-02-23) Marked T001 complete (feature flag default false test already present in integration suite).
 
 - (2026-02-23) Added unit test coverage for collab-test feature flag disabled state (`server/src/test/unit/app/msp/collab-test/page.test.tsx`) and marked T002 complete. Ran: `npx vitest src/test/unit/app/msp/collab-test/page.test.tsx` (from `server/`).
+
+- (2026-02-23) Added unit test for collab-test feature flag enabled state and marked T003 complete. Ran: `npx vitest src/test/unit/app/msp/collab-test/page.test.tsx` (from `server/`).

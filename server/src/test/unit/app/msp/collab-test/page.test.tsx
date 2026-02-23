@@ -62,4 +62,26 @@ describe('CollabTestPage', () => {
     expect((result as any)?.type).toBe(CardMock);
     expect((result as any)?.props?.children).toBe('Feature not available.');
   });
+
+  it('renders the collab test client when collaborative editing is enabled', async () => {
+    getSessionWithRevocationCheckMock.mockResolvedValue({
+      user: {
+        id: 'user-2',
+        tenant: 'tenant-2',
+        user_type: 'internal',
+        name: 'Editor Two',
+      },
+    });
+    isEnabledMock.mockResolvedValue(true);
+
+    const result = await CollabTestPage();
+
+    expect(redirectMock).not.toHaveBeenCalled();
+    expect((result as any)?.type).toBe(CollabTestPageClientMock);
+    expect((result as any)?.props).toMatchObject({
+      userId: 'user-2',
+      userName: 'Editor Two',
+      tenantId: 'tenant-2',
+    });
+  });
 });

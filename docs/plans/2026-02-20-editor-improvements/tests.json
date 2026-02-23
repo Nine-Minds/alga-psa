@@ -24,12 +24,13 @@
   {
     "id": "T003",
     "description": "/msp/collab-test renders the test page UI when collaborative_editing flag is enabled",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F015"
     ],
-    "testType": "manual",
-    "notes": "Verify in browser with flag enabled"
+    "testType": "unit",
+    "testFile": "server/src/test/unit/app/msp/collab-test/page.test.tsx",
+    "vitestName": "renders the collab test client when collaborative editing is enabled"
   },
   {
     "id": "T004",
