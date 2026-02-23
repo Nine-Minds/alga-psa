@@ -569,7 +569,7 @@
   {
     "id": "T068",
     "description": "End-to-end MSP Microsoft SSO fallback source succeeds when tenant source is absent but app fallback exists.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F021",
       "F029",
