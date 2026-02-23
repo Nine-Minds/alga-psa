@@ -76,6 +76,7 @@ Working notes for MSP SSO tenant-first resolver and provider-settings changes (M
 - (2026-02-23) `F041` complete: OAuth secret resolution now reads `msp_sso_resolution` cookie context and applies tenant-scoped Google/Microsoft credentials when valid tenant source is requested.
 - (2026-02-23) `F042` complete: when resolver cookie context is missing/invalid/expired, OAuth secret resolution keeps using app-level fallback credentials only.
 - (2026-02-23) `F043` complete: tenant-source cookie context is accepted only after HMAC signature and expiry checks in `parseAndVerifyMspSsoResolutionCookie`.
+- (2026-02-23) `F044` complete: resolver writes a freshly signed cookie (new nonce + expiry) on each successful start attempt, replacing stale context.
 
 ## Commands / Runbooks
 

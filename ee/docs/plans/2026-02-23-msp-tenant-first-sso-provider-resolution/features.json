@@ -46,7 +46,7 @@
   { "id": "F041", "description": "Update OAuth secret resolution to read resolver context cookie and select tenant source when requested and valid.", "implemented": true, "prdRefs": ["Functional Requirements #8"] },
   { "id": "F042", "description": "When resolver context is absent/invalid/expired, fall back to app-level OAuth keys only.", "implemented": true, "prdRefs": ["Functional Requirements #13"] },
   { "id": "F043", "description": "Validate resolver cookie signature and TTL before applying tenant selection.", "implemented": true, "prdRefs": ["Non-functional Requirements #1"] },
-  { "id": "F044", "description": "Overwrite resolver cookie on each new start attempt with short TTL to minimize stale context.", "implemented": false, "prdRefs": ["Non-functional Requirements #1"] },
+  { "id": "F044", "description": "Overwrite resolver cookie on each new start attempt with short TTL to minimize stale context.", "implemented": true, "prdRefs": ["Non-functional Requirements #1"] },
 
   { "id": "F045", "description": "Add CE-safe OAuth profile mapping helper for MSP internal users (Google + Microsoft) in auth package.", "implemented": false, "prdRefs": ["Functional Requirements #10"] },
   { "id": "F046", "description": "Use CE-safe mapper in provider profile callbacks when edition is community.", "implemented": false, "prdRefs": ["Functional Requirements #10"] },
