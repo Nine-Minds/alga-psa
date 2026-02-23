@@ -413,22 +413,24 @@
   {
     "id": "T038",
     "description": "Emoticon extension converts text emoticons to emoji in collaborative mode (e.g., ':) ' becomes emoji)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F023"
     ],
-    "testType": "manual",
-    "notes": "Type ':) ' in collaborative editor, verify emoji conversion"
+    "testType": "unit",
+    "testFile": "server/src/test/unit/documents/collaborativeEditorConfig.test.ts",
+    "vitestName": "includes the Emoticon extension"
   },
   {
     "id": "T039",
     "description": "Link auto-detection works in collaborative mode (typing a URL auto-links it)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F024"
     ],
-    "testType": "manual",
-    "notes": "Type a URL followed by space, verify it becomes a clickable link with target=_blank"
+    "testType": "unit",
+    "testFile": "server/src/test/unit/documents/collaborativeEditorConfig.test.ts",
+    "vitestName": "configures Link with autolink and safe target attributes"
   },
   {
     "id": "T040",

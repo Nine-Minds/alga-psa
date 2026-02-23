@@ -107,6 +107,7 @@ Working memory for implementing real-time collaborative editing via TipTap + Hoc
 - (2026-02-23) Added unit test to ensure cursor label styles use design system color variables (`server/src/test/unit/documents/collaborativeEditorStyles.test.ts`).
 - (2026-02-23) Added unit test ensuring tenant-specific room names differ for the same document ID (`server/src/test/unit/documents/CollaborativeEditor.extensions.test.tsx`).
 - (2026-02-23) Added Yjs unit test verifying concurrent formatting merges without corrupting content (`server/src/test/unit/yjs/collaborationFormatting.test.ts`).
+- (2026-02-23) Added unit tests confirming `CollaborativeEditor` includes Emoticon and Link configuration (`server/src/test/unit/documents/collaborativeEditorConfig.test.ts`).
 
 - (2026-02-23) Added unit test coverage for collab-test feature flag disabled state (`server/src/test/unit/app/msp/collab-test/page.test.tsx`) and marked T002 complete. Ran: `npx vitest src/test/unit/app/msp/collab-test/page.test.tsx` (from `server/`).
 
