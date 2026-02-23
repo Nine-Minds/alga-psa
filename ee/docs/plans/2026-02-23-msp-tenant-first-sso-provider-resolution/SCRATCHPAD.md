@@ -52,6 +52,7 @@ Working notes for MSP SSO tenant-first resolver and provider-settings changes (M
 - (2026-02-23) `F017` complete: `persistMicrosoftConfig` now resolves Microsoft credentials from tenant provider secrets before per-provider payload values, so CE email provider persistence does not require form-entered client credentials.
 - (2026-02-23) `F018` complete: Microsoft calendar form persists provider metadata without client credential inputs by creating/updating providers with provider-settings-first OAuth flow.
 - (2026-02-23) `F019` complete: replaced CE `SsoProviderButtons` null stub with a real Google/Microsoft MSP SSO button component in `packages/auth/src/components/SsoProviderButtons.tsx`.
+- (2026-02-23) `F020` complete: MSP SSO buttons are disabled until a non-empty email is entered (`hasEmail` gate in `SsoProviderButtons`).
 
 ## Commands / Runbooks
 
