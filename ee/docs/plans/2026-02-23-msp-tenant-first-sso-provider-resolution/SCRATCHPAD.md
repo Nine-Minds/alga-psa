@@ -60,6 +60,7 @@ Working notes for MSP SSO tenant-first resolver and provider-settings changes (M
 - (2026-02-23) `F025` complete: added unauthenticated resolver route `server/src/app/api/auth/msp/sso/resolve/route.ts` and shared resolver utilities in `packages/auth/src/lib/sso/mspSsoResolution.ts`.
 - (2026-02-23) `F026` complete: resolver validates provider/email/callbackUrl, normalizes email casing/whitespace, and returns only generic failure responses for malformed input.
 - (2026-02-23) `F027` complete: resolver performs internal-user lookup on normalized email (`LOWER(email)`) strictly for source-selection decisions.
+- (2026-02-23) `F028` complete: resolver selects tenant source when an internal user exists and tenant credentials for the chosen provider are ready.
 
 ## Commands / Runbooks
 
