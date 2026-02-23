@@ -10,7 +10,7 @@
   {
     "id": "F002",
     "description": "Add v3 collab packages to server/package.json: @tiptap/extension-collaboration@^3.12.0, @tiptap/extension-collaboration-caret@^3.0.0, @tiptap/y-tiptap@^3.0.2",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "F-P1-05"
     ]
