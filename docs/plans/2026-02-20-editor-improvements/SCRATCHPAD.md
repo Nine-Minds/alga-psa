@@ -155,3 +155,5 @@ Working memory for implementing real-time collaborative editing via TipTap + Hoc
 - (2026-02-23) Added CollabTestPageClient unit test for missing document error message (no editor render); marked T029 complete. Ran: `npx vitest src/test/unit/app/msp/collab-test/CollabTestPageClient.test.tsx` (from `server/`).
 
 - (2026-02-23) Added CollabTestPageClient unit test for Snapshot to DB success message + syncCollabSnapshot call; marked T030 complete. Ran: `npx vitest src/test/unit/app/msp/collab-test/CollabTestPageClient.test.tsx` (from `server/`).
+
+- (2026-02-23) Added CollabTestPageClient unit test asserting debug panel room/connection/user count values; marked T031 complete. Ran: `npx vitest src/test/unit/app/msp/collab-test/CollabTestPageClient.test.tsx` (from `server/`).

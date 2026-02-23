@@ -335,12 +335,13 @@
   {
     "id": "T031",
     "description": "Debug panel shows connection status, connected user count, and room name",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F019"
     ],
-    "testType": "manual",
-    "notes": "Open debug panel on test page, verify all fields populated"
+    "testType": "unit",
+    "testFile": "server/src/test/unit/app/msp/collab-test/CollabTestPageClient.test.tsx",
+    "vitestName": "shows debug panel values for room and connection status"
   },
   {
     "id": "T032",

@@ -136,4 +136,19 @@ describe('CollabTestPageClient', () => {
     expect(await findByText('Snapshot saved to document_block_content.')).toBeTruthy();
     expect(syncCollabSnapshot).toHaveBeenCalledWith('doc-789');
   });
+
+  it('shows debug panel values for room and connection status', async () => {
+    const params = new URLSearchParams();
+    params.set('doc', 'doc-999');
+    useSearchParamsMock.mockReturnValue(params);
+    getBlockContentMock.mockResolvedValue({ block_data: '{}' });
+
+    const { findByText } = render(
+      <CollabTestPageClient userId="user-1" userName="User One" tenantId="tenant-1" />
+    );
+
+    expect(await findByText('Room: document:tenant-1:doc-999')).toBeTruthy();
+    expect(await findByText('Connection: connecting')).toBeTruthy();
+    expect(await findByText('Connected users: 0')).toBeTruthy();
+  });
 });
