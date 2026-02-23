@@ -208,7 +208,7 @@
   {
     "id": "T026",
     "description": "Microsoft button triggers resolver call before invoking NextAuth signIn.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F021"
     ]
