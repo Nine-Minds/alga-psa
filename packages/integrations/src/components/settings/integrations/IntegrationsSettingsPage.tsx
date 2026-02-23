@@ -26,6 +26,7 @@ import RmmIntegrationsSetup from './RmmIntegrationsSetup';
 import { EmailProviderConfiguration } from '@alga-psa/integrations/components';
 import { CalendarIntegrationsSettings } from '@alga-psa/integrations/components';
 import { GoogleIntegrationSettings } from './GoogleIntegrationSettings';
+import { MicrosoftIntegrationSettings } from './MicrosoftIntegrationSettings';
 import dynamic from 'next/dynamic';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
@@ -187,11 +188,12 @@ const IntegrationsSettingsPage: React.FC = () => {
                 <CardHeader>
                   <CardTitle>Provider Credentials</CardTitle>
                   <CardDescription>
-                    Configure Google first, then connect Google accounts from the Inbound Email and Calendar integration screens.
+                    Configure Google and Microsoft first, then connect provider accounts from the Inbound Email and Calendar integration screens.
                   </CardDescription>
                 </CardHeader>
               </Card>
               <GoogleIntegrationSettings />
+              <MicrosoftIntegrationSettings />
             </div>
           ),
         },
