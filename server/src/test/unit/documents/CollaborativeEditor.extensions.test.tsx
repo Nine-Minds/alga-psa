@@ -286,4 +286,17 @@ describe('CollaborativeEditor', () => {
 
     expect(getByText('All changes saved')).toBeTruthy();
   });
+
+  it('does not render a manual save button', () => {
+    const { queryByRole } = render(
+      <CollaborativeEditor
+        documentId="doc-9"
+        tenantId="tenant-9"
+        userId="user-9"
+        userName="Editor Nine"
+      />
+    );
+
+    expect(queryByRole('button', { name: /save/i })).toBeNull();
+  });
 });

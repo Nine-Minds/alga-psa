@@ -190,12 +190,13 @@
   {
     "id": "T018",
     "description": "No manual 'Save' button exists in CollaborativeEditor",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F009"
     ],
-    "testType": "manual",
-    "notes": "Visually confirm no Save button in the editor UI"
+    "testType": "unit",
+    "testFile": "server/src/test/unit/documents/CollaborativeEditor.extensions.test.tsx",
+    "vitestName": "does not render a manual save button"
   },
   {
     "id": "T019",
