@@ -503,7 +503,7 @@
   {
     "id": "T061",
     "description": "`.env.example` documents CE MSP fallback usage for `GOOGLE_OAUTH_*` and `MICROSOFT_OAUTH_*` keys.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F051"
     ]
