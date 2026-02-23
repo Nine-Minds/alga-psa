@@ -320,7 +320,7 @@
   {
     "id": "T039",
     "description": "Resolver context cookie payload excludes raw client IDs and client secrets.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F033"
     ]
