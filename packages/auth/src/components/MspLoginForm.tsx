@@ -143,7 +143,7 @@ export default function MspLoginForm({ callbackUrl, onError, onTwoFactorRequired
         </Button>
       </div>
 
-     <SsoProviderButtons callbackUrl={callbackUrl} />
+     <SsoProviderButtons callbackUrl={callbackUrl} email={email} />
 
     </form>
   );
