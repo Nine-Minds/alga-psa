@@ -5,6 +5,7 @@ import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Link from '@tiptap/extension-link';
 import Underline from '@tiptap/extension-underline';
+import { Emoticon } from '@alga-psa/ui/editor';
 import { marked } from 'marked';
 import { getBlockContent, updateBlockContent } from '../actions/documentBlockContentActions';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -44,6 +45,7 @@ export function DocumentEditor({ documentId, userId, placeholder }: DocumentEdit
         },
       }),
       Underline,
+      Emoticon,
     ],
     content: '<p></p>',
     editorProps: {
