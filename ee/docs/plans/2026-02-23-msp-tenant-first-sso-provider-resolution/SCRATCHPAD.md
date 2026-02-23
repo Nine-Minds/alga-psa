@@ -64,6 +64,7 @@ Working notes for MSP SSO tenant-first resolver and provider-settings changes (M
 - (2026-02-23) `F029` complete: resolver falls back to app OAuth credentials when tenant source is unavailable and provider fallback keys are configured.
 - (2026-02-23) `F030` complete: unknown-user attempts follow the same external success/failure behavior as known-user-without-tenant-config paths.
 - (2026-02-23) `F031` complete: resolver returns stable `200` + `{ ok: true|false }` schema regardless of lookup outcome, with generic failure payload shape.
+- (2026-02-23) `F032` complete: resolver issues signed, short-lived, httpOnly `msp_sso_resolution` cookie containing only source metadata.
 
 ## Commands / Runbooks
 
