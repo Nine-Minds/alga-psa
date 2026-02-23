@@ -283,7 +283,7 @@
   {
     "id": "T035",
     "description": "Resolver selects app fallback source when user exists but tenant Microsoft config is missing and app fallback exists.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F029",
       "F034"
