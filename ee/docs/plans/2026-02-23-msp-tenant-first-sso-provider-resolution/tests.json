@@ -393,7 +393,7 @@
   {
     "id": "T048",
     "description": "NextAuth secret resolver uses tenant source from valid resolver cookie for Microsoft.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F041"
     ]

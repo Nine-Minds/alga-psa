@@ -169,3 +169,4 @@ Working notes for MSP SSO tenant-first resolver and provider-settings changes (M
 - (2026-02-23) Added auth/doc test suites: `ceOAuthProfileMapper.test.ts`, `nextAuthOptions.mspContract.test.ts`, and `mspSsoDocsContract.test.ts`.
 - (2026-02-23) Command run: `cd server && npx vitest run --coverage.enabled=false ../packages/auth/src/lib/sso/ceOAuthProfileMapper.test.ts ../packages/auth/src/lib/nextAuthOptions.mspContract.test.ts ../packages/auth/src/lib/sso/mspSsoDocsContract.test.ts`.
 - (2026-02-23) `T047` complete: NextAuth contract test verifies `getAuthOptions` returns `buildAuthOptions()` directly and no static `cachedOptions` cache remains.
+- (2026-02-23) `T048` complete: NextAuth contract test verifies tenant-scoped Microsoft credentials are read when resolver cookie selects tenant source.
