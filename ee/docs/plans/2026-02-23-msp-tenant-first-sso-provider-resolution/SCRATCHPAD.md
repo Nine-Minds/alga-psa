@@ -153,3 +153,4 @@ Working notes for MSP SSO tenant-first resolver and provider-settings changes (M
 - (2026-02-23) `T031` complete: resolver route test verifies invalid provider input returns the generic `{ ok:false, message }` response contract.
 - (2026-02-23) `T032` complete: `mspSsoResolution.test.ts` verifies resolver lowercases/trims email before DB lookup binding.
 - (2026-02-23) `T033` complete: helper test verifies Microsoft tenant source selection when user exists and tenant Microsoft secrets are ready.
+- (2026-02-23) `T034` complete: helper test verifies Google tenant source selection when user exists and tenant Google secrets are ready.

@@ -275,7 +275,7 @@
   {
     "id": "T034",
     "description": "Resolver selects tenant source for Google when user exists and tenant Google secrets are present.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F028"
     ]
