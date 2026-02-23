@@ -44,7 +44,7 @@
   {
     "id": "T006",
     "description": "Microsoft settings save action defaults tenant ID to `common` when omitted.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F003",
       "F008",

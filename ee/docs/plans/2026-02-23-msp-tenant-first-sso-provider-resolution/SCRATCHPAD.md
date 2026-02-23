@@ -120,3 +120,4 @@ Working notes for MSP SSO tenant-first resolver and provider-settings changes (M
 - (2026-02-23)  complete:  asserts Microsoft status returns masked secret indicators and does not expose raw secret values.
 - (2026-02-23)  complete: unit test covers save action rejecting blank  with required-field error.
 - (2026-02-23)  complete: unit test covers save action rejecting blank  with required-field error.
+- (2026-02-23)  complete: unit test verifies save action defaults  to  when omitted.
