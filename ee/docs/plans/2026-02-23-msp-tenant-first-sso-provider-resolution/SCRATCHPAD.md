@@ -138,3 +138,4 @@ Working notes for MSP SSO tenant-first resolver and provider-settings changes (M
 - (2026-02-23) `T019` complete: providers-first contract test verifies Microsoft email form renders CTA (`configure-microsoft-providers-link`) to Providers settings when readiness is false.
 - (2026-02-23) `T020` complete: providers-first contract test verifies Microsoft calendar form renders CTA (`configure-microsoft-calendar-providers-link`) when provider readiness is missing.
 - (2026-02-23) `T021` complete: calendar providers-first contract test verifies create flow submits metadata and uses empty vendor credential fields (no manual OAuth credential entry requirement).
+- (2026-02-23) `T022` complete: persistence contract test verifies Microsoft email provider action derives effective credentials from hosted/tenant secrets and does not rely on form-entered secrets.

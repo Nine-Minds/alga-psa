@@ -176,7 +176,7 @@
   {
     "id": "T022",
     "description": "CE Microsoft email provider persistence writes null/derived credential fields rather than requiring form-entered secrets.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F017"
     ]
