@@ -118,3 +118,4 @@ Working notes for MSP SSO tenant-first resolver and provider-settings changes (M
 - None blocking for initial implementation phase.
 - (2026-02-23) `T002` complete: added unit coverage in `microsoftActions.test.ts` proving `getMicrosoftIntegrationStatus` returns `success:true` for authorized internal admin context.
 - (2026-02-23)  complete:  asserts Microsoft status returns masked secret indicators and does not expose raw secret values.
+- (2026-02-23)  complete: unit test covers save action rejecting blank  with required-field error.
