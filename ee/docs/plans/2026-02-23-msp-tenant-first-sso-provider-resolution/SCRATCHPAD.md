@@ -180,3 +180,4 @@ Working notes for MSP SSO tenant-first resolver and provider-settings changes (M
 - (2026-02-23) `T056` complete: CE mapper unit test verifies non-internal/client user types are rejected for MSP OAuth sign-in.
 - (2026-02-23) `T057` complete: NextAuth contract test verifies enterprise path still delegates profile mapping to EE SSO registry implementation.
 - (2026-02-23) `T058` complete: NextAuth contract test verifies `ensureOAuthAccountLink` short-circuits when `isEnterprise` is false.
+- (2026-02-23) `T059` complete: NextAuth contract test verifies Microsoft issuer uses tenant ID with `common` default in dynamic and sync provider configuration.

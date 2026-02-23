@@ -487,7 +487,7 @@
   {
     "id": "T059",
     "description": "Microsoft OAuth issuer/authorization path uses tenant ID when provided, else defaults to `common`.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F049"
     ]
