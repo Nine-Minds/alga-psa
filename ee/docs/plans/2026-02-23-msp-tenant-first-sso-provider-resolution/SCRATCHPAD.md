@@ -165,3 +165,6 @@ Working notes for MSP SSO tenant-first resolver and provider-settings changes (M
 - (2026-02-23) `T043` complete: helper test verifies invalid signature and expired cookie contexts are rejected by resolver-cookie parser.
 - (2026-02-23) `T044` complete: route test verifies rate-limited requests still return the same generic failure response.
 - (2026-02-23) `T045` complete: route test verifies logs include provider/source classification without raw email, secret material, or user-existence fields.
+- (2026-02-23) `T046` complete: added `nextAuthOptions.mspContract.test.ts` asserting CE path registers Google/Microsoft providers when credential inputs are available.
+- (2026-02-23) Added auth/doc test suites: `ceOAuthProfileMapper.test.ts`, `nextAuthOptions.mspContract.test.ts`, and `mspSsoDocsContract.test.ts`.
+- (2026-02-23) Command run: `cd server && npx vitest run --coverage.enabled=false ../packages/auth/src/lib/sso/ceOAuthProfileMapper.test.ts ../packages/auth/src/lib/nextAuthOptions.mspContract.test.ts ../packages/auth/src/lib/sso/mspSsoDocsContract.test.ts`.

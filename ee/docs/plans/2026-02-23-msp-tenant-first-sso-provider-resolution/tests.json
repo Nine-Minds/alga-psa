@@ -377,7 +377,7 @@
   {
     "id": "T046",
     "description": "CE build registers Google/Microsoft OAuth providers in NextAuth when fallback or tenant-selected source is available.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F039"
     ]
