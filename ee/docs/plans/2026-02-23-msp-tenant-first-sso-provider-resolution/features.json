@@ -23,7 +23,7 @@
   { "id": "F020", "description": "Require non-empty email before enabling MSP SSO buttons.", "implemented": true, "prdRefs": ["UX / UI Notes", "Acceptance Criteria #3"] },
   { "id": "F021", "description": "Wire Microsoft MSP button to resolver + NextAuth OAuth flow.", "implemented": true, "prdRefs": ["Primary Flow A", "Primary Flow B"] },
   { "id": "F022", "description": "Wire Google MSP button to resolver + NextAuth OAuth flow.", "implemented": true, "prdRefs": ["Primary Flow A", "Primary Flow B"] },
-  { "id": "F023", "description": "Show one generic resolver/start failure message across all failure reasons.", "implemented": false, "prdRefs": ["Security / Permissions", "Acceptance Criteria #5"] },
+  { "id": "F023", "description": "Show one generic resolver/start failure message across all failure reasons.", "implemented": true, "prdRefs": ["Security / Permissions", "Acceptance Criteria #5"] },
   { "id": "F024", "description": "Keep client portal login SSO behavior unchanged (no new SSO buttons/flow).", "implemented": false, "prdRefs": ["Non-goals", "Acceptance Criteria #8"] },
 
   { "id": "F025", "description": "Add unauthenticated `POST /api/auth/msp/sso/resolve` endpoint.", "implemented": false, "prdRefs": ["Data / API / Integrations"] },

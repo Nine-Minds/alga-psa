@@ -68,7 +68,7 @@ export default function SsoProviderButtons({
       }
 
       if (!resolveResponse.ok || !resolveResult?.ok) {
-        onError?.(resolveResult?.message || genericStartFailureMessage);
+        onError?.(genericStartFailureMessage);
         return;
       }
 
