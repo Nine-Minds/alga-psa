@@ -1,0 +1,284 @@
+[
+  {
+    "id": "T001",
+    "description": "Validate ee/appliance directory structure exists with expected top-level folders.",
+    "implemented": false,
+    "featureIds": ["F001"]
+  },
+  {
+    "id": "T002",
+    "description": "Run packer validate on Ubuntu base template with required variables provided.",
+    "implemented": false,
+    "featureIds": ["F002", "F005"]
+  },
+  {
+    "id": "T003",
+    "description": "Build OVA artifact in CI and confirm artifact file naming includes version and build ID.",
+    "implemented": false,
+    "featureIds": ["F003", "F005", "F007"]
+  },
+  {
+    "id": "T004",
+    "description": "Build QCOW2 artifact in CI and confirm artifact file naming includes version and build ID.",
+    "implemented": false,
+    "featureIds": ["F004", "F005", "F007"]
+  },
+  {
+    "id": "T005",
+    "description": "Verify build metadata is embedded and retrievable from published release manifest.",
+    "implemented": false,
+    "featureIds": ["F006", "F015"]
+  },
+  {
+    "id": "T006",
+    "description": "Verify build-images.sh fails fast when required inputs are missing.",
+    "implemented": false,
+    "featureIds": ["F007"]
+  },
+  {
+    "id": "T007",
+    "description": "Boot fresh VM from OVA artifact and verify first-boot initialization completes successfully.",
+    "implemented": false,
+    "featureIds": ["F008"]
+  },
+  {
+    "id": "T008",
+    "description": "Boot fresh VM from QCOW2 artifact and verify first-boot initialization completes successfully.",
+    "implemented": false,
+    "featureIds": ["F008"]
+  },
+  {
+    "id": "T009",
+    "description": "Verify pinned k3s version is installed exactly as configured in release metadata.",
+    "implemented": false,
+    "featureIds": ["F009"]
+  },
+  {
+    "id": "T010",
+    "description": "Verify Kubernetes API reports Ready state within expected bootstrap timeout.",
+    "implemented": false,
+    "featureIds": ["F009"]
+  },
+  {
+    "id": "T011",
+    "description": "Verify Flux controller installs successfully on first boot.",
+    "implemented": false,
+    "featureIds": ["F010"]
+  },
+  {
+    "id": "T012",
+    "description": "Verify Flux can authenticate and reconcile from configured release source.",
+    "implemented": false,
+    "featureIds": ["F010", "F011"]
+  },
+  {
+    "id": "T013",
+    "description": "Verify single-node overlay file only overrides required keys and does not duplicate full helm values.",
+    "implemented": false,
+    "featureIds": ["F012"]
+  },
+  {
+    "id": "T014",
+    "description": "Render root helm chart with appliance single-node overlay and confirm templates resolve without errors.",
+    "implemented": false,
+    "featureIds": ["F012", "F013"]
+  },
+  {
+    "id": "T015",
+    "description": "Verify application deployment reaches healthy status after first GitOps sync.",
+    "implemented": false,
+    "featureIds": ["F013"]
+  },
+  {
+    "id": "T016",
+    "description": "Verify bootstrap-site.sh performs non-interactive setup and exits successfully for a new site.",
+    "implemented": false,
+    "featureIds": ["F014"]
+  },
+  {
+    "id": "T017",
+    "description": "Verify release manifest schema rejects missing required fields.",
+    "implemented": false,
+    "featureIds": ["F015"]
+  },
+  {
+    "id": "T018",
+    "description": "Verify publish-release.sh writes release record and channel pointer updates atomically.",
+    "implemented": false,
+    "featureIds": ["F016", "F033"]
+  },
+  {
+    "id": "T019",
+    "description": "Verify scheduled rebuild workflow creates a fresh image artifact on cadence.",
+    "implemented": false,
+    "featureIds": ["F017"]
+  },
+  {
+    "id": "T020",
+    "description": "Verify scheduled rebuild workflow updates stable install pointer to latest approved patch.",
+    "implemented": false,
+    "featureIds": ["F017", "F033"]
+  },
+  {
+    "id": "T021",
+    "description": "Verify stale-build guard blocks publication when base image age threshold is exceeded.",
+    "implemented": false,
+    "featureIds": ["F018"]
+  },
+  {
+    "id": "T022",
+    "description": "Upgrade app from release N to N+1 by GitOps desired-state update and verify workload rollout success.",
+    "implemented": false,
+    "featureIds": ["F019"]
+  },
+  {
+    "id": "T023",
+    "description": "Verify upgrade-site.sh app-only mode performs preflight checks before advancing release.",
+    "implemented": false,
+    "featureIds": ["F020", "F022"]
+  },
+  {
+    "id": "T024",
+    "description": "Verify upgrade-site.sh app-only mode fails safely and leaves current release unchanged on preflight failure.",
+    "implemented": false,
+    "featureIds": ["F020", "F022"]
+  },
+  {
+    "id": "T025",
+    "description": "Verify compatibility matrix prevents unsupported app and k3s version combinations from upgrade execution.",
+    "implemented": false,
+    "featureIds": ["F021"]
+  },
+  {
+    "id": "T026",
+    "description": "Verify host image upgrade flow enforces maintenance window acknowledgement before execution.",
+    "implemented": false,
+    "featureIds": ["F022"]
+  },
+  {
+    "id": "T027",
+    "description": "Execute app rollback to previous release pointer and verify service health is restored.",
+    "implemented": false,
+    "featureIds": ["F023"]
+  },
+  {
+    "id": "T028",
+    "description": "Execute image rollback to prior appliance artifact and verify node returns to service.",
+    "implemented": false,
+    "featureIds": ["F024"]
+  },
+  {
+    "id": "T029",
+    "description": "Verify image scan confirms no site secrets are present in artifact filesystem.",
+    "implemented": false,
+    "featureIds": ["F025"]
+  },
+  {
+    "id": "T030",
+    "description": "Verify bootstrap secret injection path works and does not persist plaintext secrets in logs.",
+    "implemented": false,
+    "featureIds": ["F025"]
+  },
+  {
+    "id": "T031",
+    "description": "Verify every release artifact has generated sha256 and signature metadata.",
+    "implemented": false,
+    "featureIds": ["F026"]
+  },
+  {
+    "id": "T032",
+    "description": "Verify deployment manifests generated for release use digest-pinned image references.",
+    "implemented": false,
+    "featureIds": ["F027"]
+  },
+  {
+    "id": "T033",
+    "description": "Render HA overlay against helm chart and verify expected scheduling/high-availability settings are present.",
+    "implemented": false,
+    "featureIds": ["F028"]
+  },
+  {
+    "id": "T034",
+    "description": "Execute scripted single-node to 3-node expansion in test environment and verify embedded etcd control-plane quorum.",
+    "implemented": false,
+    "featureIds": ["F029", "F030"]
+  },
+  {
+    "id": "T035",
+    "description": "Verify workloads continue serving during post-expansion node failover scenario.",
+    "implemented": false,
+    "featureIds": ["F028", "F029"]
+  },
+  {
+    "id": "T036",
+    "description": "Verify operator runbook includes install, upgrade, rollback, and HA migration sections with tested commands.",
+    "implemented": false,
+    "featureIds": ["F031"]
+  },
+  {
+    "id": "T037",
+    "description": "Verify CI pipeline includes and enforces image build, smoke validation, release packaging, and publish stages.",
+    "implemented": false,
+    "featureIds": ["F032"]
+  },
+  {
+    "id": "T038",
+    "description": "Verify CI smoke test boots built artifact and confirms k3s readiness and app deployment health checks.",
+    "implemented": false,
+    "featureIds": ["F032", "F013"]
+  },
+  {
+    "id": "T039",
+    "description": "Promote release from candidate to stable without rebuilding artifacts and verify channel pointer behavior.",
+    "implemented": false,
+    "featureIds": ["F033"]
+  },
+  {
+    "id": "T040",
+    "description": "Verify signed offline bundle workflow can import release artifacts and complete bootstrap without external network dependency.",
+    "implemented": false,
+    "featureIds": ["F034"]
+  },
+  {
+    "id": "T041",
+    "description": "Verify signed offline bundle workflow can perform app upgrade between two mirrored releases.",
+    "implemented": false,
+    "featureIds": ["F034", "F019"]
+  },
+  {
+    "id": "T046",
+    "description": "Verify upgrade automation rejects upgrade attempts outside supported policy window (older than N-2).",
+    "implemented": false,
+    "featureIds": ["F035"]
+  },
+  {
+    "id": "T047",
+    "description": "Verify upgrade automation rejects skipped-minor upgrades and requires sequential N to N+1 progression.",
+    "implemented": false,
+    "featureIds": ["F036"]
+  },
+  {
+    "id": "T042",
+    "description": "Negative test: corrupt artifact checksum and confirm bootstrap or upgrade process refuses artifact usage.",
+    "implemented": false,
+    "featureIds": ["F026", "F014", "F020"]
+  },
+  {
+    "id": "T043",
+    "description": "Negative test: GitOps source unavailable at bootstrap time and confirm retry/failure behavior is documented and safe.",
+    "implemented": false,
+    "featureIds": ["F010", "F011", "F014"]
+  },
+  {
+    "id": "T044",
+    "description": "Negative test: attempt unsupported direct customer host tweak path and confirm documented unsupported behavior.",
+    "implemented": false,
+    "featureIds": ["F031"]
+  },
+  {
+    "id": "T045",
+    "description": "Acceptance test: fresh install from latest stable artifact to working application completes within target onboarding window.",
+    "implemented": false,
+    "featureIds": ["F017", "F013", "F014"]
+  }
+]

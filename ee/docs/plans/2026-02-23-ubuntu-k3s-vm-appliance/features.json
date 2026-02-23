@@ -1,0 +1,218 @@
+[
+  {
+    "id": "F001",
+    "description": "Create appliance workspace structure under ee/appliance for packer, cloud-init, k3s bootstrap, gitops, scripts, and releases.",
+    "implemented": false,
+    "prdRefs": ["Proposed Solution Overview", "Public Interfaces / Contracts"]
+  },
+  {
+    "id": "F002",
+    "description": "Add Ubuntu 24.04 Packer base template using unattended autoinstall/cloud-init seed configuration.",
+    "implemented": false,
+    "prdRefs": ["FR-1 Image Build and Publication"]
+  },
+  {
+    "id": "F003",
+    "description": "Add Packer target configuration for vSphere OVA artifact output.",
+    "implemented": false,
+    "prdRefs": ["FR-1 Image Build and Publication"]
+  },
+  {
+    "id": "F004",
+    "description": "Add Packer target configuration for QCOW2 artifact output.",
+    "implemented": false,
+    "prdRefs": ["FR-1 Image Build and Publication"]
+  },
+  {
+    "id": "F005",
+    "description": "Implement deterministic build variables for appliance version, k3s version, and build ID across all image outputs.",
+    "implemented": false,
+    "prdRefs": ["FR-1 Image Build and Publication"]
+  },
+  {
+    "id": "F006",
+    "description": "Embed build metadata into artifacts and release manifest (version, timestamp, component versions, checksums).",
+    "implemented": false,
+    "prdRefs": ["FR-1 Image Build and Publication", "Public Interfaces / Contracts"]
+  },
+  {
+    "id": "F007",
+    "description": "Add scripted image build entrypoint ee/appliance/scripts/build-images.sh supporting OVA and QCOW2 targets.",
+    "implemented": false,
+    "prdRefs": ["Public Interfaces / Contracts"]
+  },
+  {
+    "id": "F008",
+    "description": "Add first-boot host initialization script to configure prerequisites required for k3s single-node operation.",
+    "implemented": false,
+    "prdRefs": ["FR-2 Single-Node k3s Appliance Bootstrap"]
+  },
+  {
+    "id": "F009",
+    "description": "Install pinned k3s version on first boot and verify Kubernetes control plane reaches Ready state.",
+    "implemented": false,
+    "prdRefs": ["FR-2 Single-Node k3s Appliance Bootstrap"]
+  },
+  {
+    "id": "F010",
+    "description": "Install and configure Flux for pull-based reconciliation on first boot.",
+    "implemented": false,
+    "prdRefs": ["FR-2 Single-Node k3s Appliance Bootstrap", "Decision Defaults (Locked)"]
+  },
+  {
+    "id": "F011",
+    "description": "Define release repository structure consumed by GitOps controller for channel-based app rollout.",
+    "implemented": false,
+    "prdRefs": ["FR-3 Application Deployment", "Data / Integration Notes"]
+  },
+  {
+    "id": "F012",
+    "description": "Create appliance values overlay for single-node deployment profile while retaining helm/values.yaml as base.",
+    "implemented": false,
+    "prdRefs": ["FR-3 Application Deployment", "Data / Integration Notes"]
+  },
+  {
+    "id": "F013",
+    "description": "Deploy Alga PSA using root helm/ chart via GitOps-managed desired state reference.",
+    "implemented": false,
+    "prdRefs": ["FR-3 Application Deployment"]
+  },
+  {
+    "id": "F014",
+    "description": "Add scripted site bootstrap command ee/appliance/scripts/bootstrap-site.sh for non-interactive initial deployment.",
+    "implemented": false,
+    "prdRefs": ["Public Interfaces / Contracts"]
+  },
+  {
+    "id": "F015",
+    "description": "Define release manifest schema in ee/appliance/releases/<version>/release.json and enforce required fields.",
+    "implemented": false,
+    "prdRefs": ["Public Interfaces / Contracts"]
+  },
+  {
+    "id": "F016",
+    "description": "Add release publication script ee/appliance/scripts/publish-release.sh that writes release metadata and channel pointers.",
+    "implemented": false,
+    "prdRefs": ["Public Interfaces / Contracts", "FR-5 Always-Current New-Customer Image"]
+  },
+  {
+    "id": "F017",
+    "description": "Implement scheduled rebuild workflow that continuously publishes updated new-customer image artifacts.",
+    "implemented": false,
+    "prdRefs": ["FR-5 Always-Current New-Customer Image"]
+  },
+  {
+    "id": "F018",
+    "description": "Implement stale-build guardrails preventing release publication when base image age exceeds policy threshold.",
+    "implemented": false,
+    "prdRefs": ["FR-5 Always-Current New-Customer Image"]
+  },
+  {
+    "id": "F019",
+    "description": "Define app upgrade workflow using GitOps desired-state update from release N to N+1.",
+    "implemented": false,
+    "prdRefs": ["FR-4 Upgrade and Rollback"]
+  },
+  {
+    "id": "F020",
+    "description": "Add scripted site upgrade command ee/appliance/scripts/upgrade-site.sh with app-only upgrade mode.",
+    "implemented": false,
+    "prdRefs": ["FR-4 Upgrade and Rollback", "Public Interfaces / Contracts"]
+  },
+  {
+    "id": "F021",
+    "description": "Add k3s compatibility matrix mapping supported app versions to supported k3s versions.",
+    "implemented": false,
+    "prdRefs": ["FR-4 Upgrade and Rollback", "Decision Defaults (Locked)"]
+  },
+  {
+    "id": "F022",
+    "description": "Define host image upgrade workflow including preflight checks and maintenance window requirements.",
+    "implemented": false,
+    "prdRefs": ["FR-4 Upgrade and Rollback", "Security and Compliance Requirements"]
+  },
+  {
+    "id": "F023",
+    "description": "Provide application rollback workflow using previous release pointer with explicit support runbook.",
+    "implemented": false,
+    "prdRefs": ["FR-4 Upgrade and Rollback"]
+  },
+  {
+    "id": "F024",
+    "description": "Provide image-layer rollback workflow to previously validated appliance artifact version.",
+    "implemented": false,
+    "prdRefs": ["FR-4 Upgrade and Rollback"]
+  },
+  {
+    "id": "F025",
+    "description": "Enforce no-secret-in-image policy and require site bootstrap secret injection mechanism.",
+    "implemented": false,
+    "prdRefs": ["Security and Compliance Requirements"]
+  },
+  {
+    "id": "F026",
+    "description": "Generate and publish artifact checksums and signature metadata for each release artifact.",
+    "implemented": false,
+    "prdRefs": ["Security and Compliance Requirements", "FR-1 Image Build and Publication"]
+  },
+  {
+    "id": "F027",
+    "description": "Ensure Kubernetes workload image references are digest-pinned in release-generated deployment state.",
+    "implemented": false,
+    "prdRefs": ["Security and Compliance Requirements"]
+  },
+  {
+    "id": "F028",
+    "description": "Create HA values overlay profile for 3-node deployment mode with scheduling and availability settings.",
+    "implemented": false,
+    "prdRefs": ["FR-6 Path to 3-Node HA"]
+  },
+  {
+    "id": "F029",
+    "description": "Define scripted node-expansion workflow to migrate from single-node to 3-node HA topology.",
+    "implemented": false,
+    "prdRefs": ["FR-6 Path to 3-Node HA"]
+  },
+  {
+    "id": "F030",
+    "description": "Document and enforce embedded etcd as the supported HA datastore model for k3s enterprise deployment profile.",
+    "implemented": false,
+    "prdRefs": ["FR-6 Path to 3-Node HA", "Decision Defaults (Locked)"]
+  },
+  {
+    "id": "F031",
+    "description": "Produce appliance operator runbook for install, bootstrap, upgrade, rollback, and HA migration.",
+    "implemented": false,
+    "prdRefs": ["Rollout Plan", "Acceptance Criteria / Definition of Done"]
+  },
+  {
+    "id": "F032",
+    "description": "Add CI pipeline stages for image build, smoke validation, release packaging, and publication.",
+    "implemented": false,
+    "prdRefs": ["FR-1 Image Build and Publication", "Acceptance Criteria / Definition of Done"]
+  },
+  {
+    "id": "F033",
+    "description": "Add release channels (candidate, stable) with promotion process independent from artifact rebuild.",
+    "implemented": false,
+    "prdRefs": ["FR-5 Always-Current New-Customer Image"]
+  },
+  {
+    "id": "F034",
+    "description": "Define and implement hybrid artifact distribution mode with vendor-hosted default plus signed offline bundle import for restricted customer sites.",
+    "implemented": false,
+    "prdRefs": ["Decision Defaults (Locked)", "Risks and Mitigations"]
+  },
+  {
+    "id": "F035",
+    "description": "Enforce supported release policy of N, N-1, and N-2 for appliance upgrades.",
+    "implemented": false,
+    "prdRefs": ["FR-4 Upgrade and Rollback", "Decision Defaults (Locked)"]
+  },
+  {
+    "id": "F036",
+    "description": "Enforce sequential-only application upgrade progression (N to N+1) in automation and runbooks.",
+    "implemented": false,
+    "prdRefs": ["FR-4 Upgrade and Rollback", "Decision Defaults (Locked)"]
+  }
+]
