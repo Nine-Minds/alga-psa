@@ -224,7 +224,7 @@
   {
     "id": "T028",
     "description": "Resolver failure always shows same generic error message text in MSP login UI.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F023"
     ]

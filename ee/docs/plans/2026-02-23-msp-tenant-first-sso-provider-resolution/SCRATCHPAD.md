@@ -144,3 +144,4 @@ Working notes for MSP SSO tenant-first resolver and provider-settings changes (M
 - (2026-02-23) `T025` complete: SSO button interaction tests verify both providers stay disabled until a non-empty email is supplied.
 - (2026-02-23) `T026` complete: component test verifies Microsoft button performs resolver POST first and only then invokes `signIn('azure-ad')`.
 - (2026-02-23) `T027` complete: component test verifies Google button performs resolver POST first and then calls `signIn('google')`.
+- (2026-02-23) `T028` complete: failure-path component test verifies resolver/network failures always emit one generic MSP SSO start error message.
