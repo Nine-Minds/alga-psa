@@ -258,7 +258,7 @@
   {
     "id": "T032",
     "description": "Resolver endpoint normalizes email case/whitespace before lookup.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F026",
       "F027"
