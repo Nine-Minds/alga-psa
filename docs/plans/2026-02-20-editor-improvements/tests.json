@@ -35,12 +35,13 @@
   {
     "id": "T004",
     "description": "CollaborativeEditor mounts and initializes TipTap with Collaboration and CollaborationCaret extensions without errors",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F003"
     ],
-    "testType": "manual",
-    "notes": "Open test page, check browser console for errors"
+    "testType": "unit",
+    "testFile": "server/src/test/unit/documents/CollaborativeEditor.extensions.test.tsx",
+    "vitestName": "initializes TipTap with collaboration extensions"
   },
   {
     "id": "T005",

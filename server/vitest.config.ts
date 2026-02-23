@@ -119,6 +119,8 @@ export default defineConfig({
       { find: 'fs', replacement: 'node:fs' },
       { find: 'fs/promises', replacement: 'node:fs/promises' },
       { find: 'next/server', replacement: path.resolve(__dirname, './src/test/stubs/next-server.ts') },
+      { find: '@tiptap/extension-collaboration-caret', replacement: path.resolve(__dirname, './src/test/stubs/tiptap-collaboration-caret.ts') },
+      { find: 'emoticon', replacement: path.resolve(__dirname, './src/test/stubs/emoticon.ts') },
       { find: '@product/settings-extensions/entry', replacement: path.resolve(__dirname, './src/test/stubs/product-settings-extensions-entry.ts') },
       { find: '@product/chat/entry', replacement: path.resolve(__dirname, './src/test/stubs/product-chat-entry.ts') },
       { find: '@product/billing/entry', replacement: path.resolve(__dirname, './src/test/stubs/product-billing-entry.tsx') },
@@ -131,6 +133,7 @@ export default defineConfig({
         'next-auth',
         '@auth/core',
         'next',
+        '@tiptap/react',
       ],
     },
     fs: {
