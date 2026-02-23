@@ -444,7 +444,7 @@
   {
     "id": "T054",
     "description": "CE OAuth mapper resolves internal user by normalized email for Google profile and returns expected extended user shape.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F045",
       "F046"
