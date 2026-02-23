@@ -80,12 +80,13 @@
   {
     "id": "T008",
     "description": "Bold, italic, underline, strikethrough, code formatting works in collaborative mode",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F005"
     ],
-    "testType": "manual",
-    "notes": "Apply each formatting via BubbleMenu, verify it sticks"
+    "testType": "unit",
+    "testFile": "server/src/test/unit/documents/EditorToolbar.test.tsx",
+    "vitestName": "wires inline formatting buttons to editor commands"
   },
   {
     "id": "T009",
