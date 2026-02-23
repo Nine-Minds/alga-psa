@@ -102,7 +102,7 @@
   {
     "id": "T013",
     "description": "Microsoft settings save/reset actions are exported via integrations action index and callable from UI imports.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F005"
     ]
