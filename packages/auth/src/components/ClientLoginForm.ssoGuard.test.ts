@@ -17,4 +17,12 @@ describe('Client portal login SSO guard', () => {
     expect(source).toContain('<SsoProviderButtons');
     expect(source).toContain('/* SSO not supported for client portal');
   });
+
+  it('T072: client portal flow keeps SSO affordances disabled in end-to-end contract', () => {
+    const source = read('ClientLoginForm.tsx');
+
+    expect(source).toContain('SSO not supported for client portal');
+    expect(source).toContain('callbackUrl={callbackUrl}');
+    expect(source).toContain('tenantHint={tenantSlug}');
+  });
 });

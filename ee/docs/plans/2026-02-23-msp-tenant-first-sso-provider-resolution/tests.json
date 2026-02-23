@@ -547,7 +547,7 @@
   {
     "id": "T066",
     "description": "End-to-end MSP Microsoft SSO with tenant source succeeds from login form to authenticated redirect.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F021",
       "F028",

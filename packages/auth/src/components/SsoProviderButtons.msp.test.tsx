@@ -123,4 +123,98 @@ describe('MSP SSO provider buttons', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Sign in with Google' }));
     await waitFor(() => expect(onError).toHaveBeenLastCalledWith(generic));
   });
+
+  it('T066: end-to-end contract for Microsoft tenant-source success reaches NextAuth signIn', async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({ ok: true }),
+    }));
+    vi.stubGlobal('fetch', fetchMock as any);
+
+    render(<SsoProviderButtons callbackUrl="/post-auth" email="tenant-user@example.com" />);
+    fireEvent.click(screen.getByRole('button', { name: 'Sign in with Microsoft' }));
+
+    await waitFor(() => expect(signInMock).toHaveBeenCalledWith(
+      'azure-ad',
+      { callbackUrl: '/post-auth' },
+      expect.objectContaining({ state: expect.any(String) })
+    ));
+  });
+
+  it('T067: end-to-end contract for Google tenant-source success reaches NextAuth signIn', async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({ ok: true }),
+    }));
+    vi.stubGlobal('fetch', fetchMock as any);
+
+    render(<SsoProviderButtons callbackUrl="/post-auth" email="tenant-user@example.com" />);
+    fireEvent.click(screen.getByRole('button', { name: 'Sign in with Google' }));
+
+    await waitFor(() => expect(signInMock).toHaveBeenCalledWith(
+      'google',
+      { callbackUrl: '/post-auth' },
+      expect.objectContaining({ state: expect.any(String) })
+    ));
+  });
+
+  it('T068: end-to-end contract for Microsoft app-fallback success reaches NextAuth signIn', async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({ ok: true }),
+    }));
+    vi.stubGlobal('fetch', fetchMock as any);
+
+    render(<SsoProviderButtons callbackUrl="/post-auth" email="fallback-user@example.com" />);
+    fireEvent.click(screen.getByRole('button', { name: 'Sign in with Microsoft' }));
+
+    await waitFor(() => expect(signInMock).toHaveBeenCalledWith(
+      'azure-ad',
+      { callbackUrl: '/post-auth' },
+      expect.objectContaining({ state: expect.any(String) })
+    ));
+  });
+
+  it('T069: end-to-end contract for Google app-fallback success reaches NextAuth signIn', async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({ ok: true }),
+    }));
+    vi.stubGlobal('fetch', fetchMock as any);
+
+    render(<SsoProviderButtons callbackUrl="/post-auth" email="fallback-user@example.com" />);
+    fireEvent.click(screen.getByRole('button', { name: 'Sign in with Google' }));
+
+    await waitFor(() => expect(signInMock).toHaveBeenCalledWith(
+      'google',
+      { callbackUrl: '/post-auth' },
+      expect.objectContaining({ state: expect.any(String) })
+    ));
+  });
+
+  it('T070: unknown-user and known-unconfigured-tenant failures share one generic UI error', async () => {
+    const onError = vi.fn();
+    const generic = "We couldn't start SSO sign-in. Please verify provider setup and try again.";
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: false,
+        json: async () => ({ ok: false, message: 'unknown user path' }),
+      })
+      .mockResolvedValueOnce({
+        ok: false,
+        json: async () => ({ ok: false, message: 'known unconfigured tenant path' }),
+      });
+    vi.stubGlobal('fetch', fetchMock as any);
+
+    const { rerender } = render(
+      <SsoProviderButtons callbackUrl="/post-auth" email="someone@example.com" onError={onError} />
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Sign in with Microsoft' }));
+    await waitFor(() => expect(onError).toHaveBeenCalledWith(generic));
+
+    rerender(<SsoProviderButtons callbackUrl="/post-auth" email="someone@example.com" onError={onError} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Sign in with Google' }));
+    await waitFor(() => expect(onError).toHaveBeenLastCalledWith(generic));
+  });
 });

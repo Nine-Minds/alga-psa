@@ -187,3 +187,6 @@ Working notes for MSP SSO tenant-first resolver and provider-settings changes (M
 - (2026-02-23) `T063` complete: resolver helper integration-style test covers tenant-source selection when a matching internal user row and tenant provider secrets are present.
 - (2026-02-23) `T064` complete: resolver route test covers unknown-email guard path returning generic response without user-existence disclosure.
 - (2026-02-23) `T065` complete: resolver helper integration-style test covers app-source selection when user row exists but tenant provider readiness is absent.
+- (2026-02-23) `T066` complete: expanded `SsoProviderButtons.msp.test.tsx` with end-to-end contract scenario for Microsoft tenant-source success from login button click through NextAuth `signIn` invocation.
+- (2026-02-23) Updated auth flow contract tests: `SsoProviderButtons.msp.test.tsx`, `ClientLoginForm.ssoGuard.test.ts`, and `MspCredentialsFlow.contract.test.ts`.
+- (2026-02-23) Command run: `cd server && npx vitest run --coverage.enabled=false ../packages/auth/src/components/SsoProviderButtons.msp.test.tsx ../packages/auth/src/components/ClientLoginForm.ssoGuard.test.ts ../packages/auth/src/components/MspCredentialsFlow.contract.test.ts`.
