@@ -385,7 +385,7 @@
   {
     "id": "T047",
     "description": "Auth options are not stuck on stale provider secrets across attempts with different resolver cookies.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F040"
     ]
