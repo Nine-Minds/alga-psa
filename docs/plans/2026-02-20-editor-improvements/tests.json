@@ -379,12 +379,13 @@
   {
     "id": "T035",
     "description": "Collaboration cursor labels use design system CSS variables (--color-*) and are readable in both light and dark themes",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F022"
     ],
-    "testType": "manual",
-    "notes": "Toggle dark/light mode, verify cursor labels readable in both"
+    "testType": "unit",
+    "testFile": "server/src/test/unit/documents/collaborativeEditorStyles.test.ts",
+    "vitestName": "uses design system color variables for cursor labels"
   },
   {
     "id": "T036",
