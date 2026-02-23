@@ -4,6 +4,7 @@ import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { createTenantKnex } from '@alga-psa/db';
+import { getMicrosoftProviderReadiness } from './providerReadiness';
 
 const MICROSOFT_CLIENT_ID_SECRET = 'microsoft_client_id';
 const MICROSOFT_CLIENT_SECRET_SECRET = 'microsoft_client_secret';
@@ -70,6 +71,7 @@ export const getMicrosoftIntegrationStatus = withAuth(async (
 
     const tenantId = (tenantIdRaw || '').trim() || 'common';
     const baseUrl = await getDeploymentBaseUrl();
+    const readiness = await getMicrosoftProviderReadiness(tenant);
 
     return {
       success: true,
@@ -100,7 +102,7 @@ export const getMicrosoftIntegrationStatus = withAuth(async (
         clientId: clientId || undefined,
         clientSecretMasked: clientSecret ? maskSecret(clientSecret) : undefined,
         tenantId,
-        ready: Boolean(clientId && clientSecret),
+        ready: readiness.ready,
       },
     };
   } catch (err: any) {

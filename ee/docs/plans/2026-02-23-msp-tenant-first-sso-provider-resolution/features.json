@@ -11,7 +11,7 @@
   { "id": "F010", "description": "Enforce RBAC (`system_settings:update`) on Microsoft settings save/reset actions.", "implemented": true, "prdRefs": ["Security / Permissions"] },
   { "id": "F011", "description": "Restrict Microsoft settings actions from client portal user context.", "implemented": true, "prdRefs": ["Security / Permissions"] },
 
-  { "id": "F012", "description": "Add provider-readiness check helper for Microsoft (`microsoft_client_id` + `microsoft_client_secret`).", "implemented": false, "prdRefs": ["Functional Requirements #5"] },
+  { "id": "F012", "description": "Add provider-readiness check helper for Microsoft (`microsoft_client_id` + `microsoft_client_secret`).", "implemented": true, "prdRefs": ["Functional Requirements #5"] },
   { "id": "F013", "description": "Add provider-readiness check helper for Google (`google_client_id` + `google_client_secret`) for MSP SSO usage.", "implemented": false, "prdRefs": ["Functional Requirements #5"] },
   { "id": "F014", "description": "Update CE Microsoft email form to remove required manual client ID/client secret inputs.", "implemented": false, "prdRefs": ["Functional Requirements #12"] },
   { "id": "F015", "description": "Update CE Microsoft email form to display 'Configure Providers first' CTA when Microsoft provider settings are missing.", "implemented": false, "prdRefs": ["Functional Requirements #12"] },

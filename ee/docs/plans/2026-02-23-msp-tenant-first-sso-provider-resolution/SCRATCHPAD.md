@@ -44,6 +44,7 @@ Working notes for MSP SSO tenant-first resolver and provider-settings changes (M
 - (2026-02-23) `F009` complete: Microsoft provider settings UI now loads status and displays masked secret indicator (`Stored secret: ••••`) via `status.config.clientSecretMasked`.
 - (2026-02-23) `F010` complete: `saveMicrosoftIntegrationSettings` and `resetMicrosoftProvidersToDisconnected` now enforce RBAC via `hasPermission(user, 'system_settings', 'update')`.
 - (2026-02-23) `F011` complete: status/save/reset Microsoft actions consistently reject client-portal user context with `Forbidden`.
+- (2026-02-23) `F012` complete: added `getMicrosoftProviderReadiness(tenant)` helper in `packages/integrations/src/actions/integrations/providerReadiness.ts` requiring both `microsoft_client_id` and `microsoft_client_secret`.
 
 ## Commands / Runbooks
 
