@@ -369,7 +369,7 @@
   {
     "id": "T045",
     "description": "Resolver structured logs include provider and source classification but no raw email, secrets, or explicit existence marker.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F038"
     ]
