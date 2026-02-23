@@ -26,6 +26,22 @@ export const getAllClientsForAssets = withAuth(async (
   }) as unknown as IClient[];
 });
 
+export const getClientByIdForAssets = withAuth(async (
+  _user,
+  { tenant },
+  clientId: string
+): Promise<IClient | null> => {
+  const { knex } = await createTenantKnex();
+
+  return withTransaction(knex, async (trx: Knex.Transaction) => {
+    const result = await trx('clients')
+      .select('*')
+      .where({ client_id: clientId, tenant })
+      .first();
+    return result ?? null;
+  }) as unknown as IClient | null;
+});
+
 export const getClientLocationsForAssets = withAuth(async (
   _user,
   { tenant },

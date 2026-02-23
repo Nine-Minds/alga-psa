@@ -15,7 +15,7 @@ import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
-import Drawer from '@alga-psa/ui/components/Drawer';
+import { useDrawer } from '@alga-psa/ui';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { IContract, IContractAssignmentSummary } from '@alga-psa/types';
 import { IClient } from '@alga-psa/types';
@@ -40,7 +40,6 @@ import PricingSchedules from './PricingSchedules';
 import { Temporal } from '@js-temporal/polyfill';
 import { toPlainDate, toISODate } from '@alga-psa/core';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
-import ClientAvatar from '@alga-psa/ui/components/ClientAvatar';
 
 // Dynamic import to avoid circular dependency (billing -> documents -> ui -> analytics -> ... -> billing)
 const Documents = dynamic(
@@ -89,11 +88,15 @@ interface ContractDetailProps {
   serverDocuments?: IDocument[] | null;
   /** Current user ID fetched server-side */
   serverUserId?: string | null;
+  /** Optional injected UI for client quick view (e.g. @alga-psa/clients ClientDetails).
+   *  If omitted, falls back to a minimal drawer with a link to open the client page. */
+  renderClientDetails?: (args: { id: string; client: IClient }) => React.ReactNode;
 }
 
 const ContractDetail: React.FC<ContractDetailProps> = ({
   serverDocuments,
-  serverUserId
+  serverUserId,
+  renderClientDetails
 }) => {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -118,9 +121,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
   // Use server-provided userId if available
   const [currentUserId, setCurrentUserId] = useState<string>(serverUserId || '');
 
-  // Client drawer state
-  const [quickViewClient, setQuickViewClient] = useState<IClient | null>(null);
-  const [isQuickViewOpen, setIsQuickViewOpen] = useState(false);
+  const { openDrawer, replaceDrawer } = useDrawer();
 
   // Confirmation dialog state
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
@@ -390,14 +391,40 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
   }, [router]);
 
   const handleOpenClientDrawer = async (clientId: string) => {
+    openDrawer(
+      <div className="p-4 text-sm text-gray-600">Loading…</div>,
+      undefined,
+      undefined,
+      '900px'
+    );
     try {
       const clientData = await getClientByIdForBilling(clientId);
-      if (clientData) {
-        setQuickViewClient(clientData);
-        setIsQuickViewOpen(true);
+      if (!clientData) {
+        replaceDrawer(<div className="p-4 text-sm text-gray-600">Client not found.</div>);
+        return;
       }
+      replaceDrawer(
+        renderClientDetails
+          ? renderClientDetails({ id: 'contract-client-details', client: clientData })
+          : (
+              <div className="p-4 space-y-3">
+                <div className="text-lg font-semibold">{clientData.client_name}</div>
+                <Button
+                  id="contract-open-client"
+                  type="button"
+                  variant="outline"
+                  onClick={() => window.open(`/msp/clients/${clientData.client_id}`, '_blank', 'noopener,noreferrer')}
+                >
+                  Open Client
+                </Button>
+              </div>
+            ),
+        undefined,
+        '900px'
+      );
     } catch (error) {
       console.error('Error fetching client details:', error);
+      replaceDrawer(<div className="p-4 text-sm text-red-600">Failed to load client details.</div>);
     }
   };
 
@@ -1707,56 +1734,6 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
           </Card>
         </TabsContent>
       </Tabs>
-
-      <Drawer
-        isOpen={isQuickViewOpen}
-        onClose={() => {
-          setIsQuickViewOpen(false);
-          setQuickViewClient(null);
-        }}
-      >
-        {quickViewClient && (
-          <div className="p-4 space-y-4">
-            <div className="flex items-center gap-3">
-              <ClientAvatar
-                clientId={quickViewClient.client_id}
-                clientName={quickViewClient.client_name}
-                logoUrl={(quickViewClient as any).logoUrl}
-              />
-              <div className="min-w-0">
-                <div className="text-base font-semibold truncate">{quickViewClient.client_name}</div>
-                <div className="text-sm text-muted-foreground">
-                  {quickViewClient.is_inactive ? 'Inactive' : 'Active'}
-                  {quickViewClient.client_type ? ` • ${quickViewClient.client_type}` : ''}
-                </div>
-              </div>
-            </div>
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base font-semibold">Client Summary</CardTitle>
-              </CardHeader>
-              <CardContent className="text-sm text-[rgb(var(--color-text-700))] space-y-2">
-                <div className="flex justify-between gap-4">
-                  <span className="text-muted-foreground">Client ID</span>
-                  <span className="font-mono text-xs break-all">{quickViewClient.client_id}</span>
-                </div>
-                {'email' in quickViewClient && (quickViewClient as any).email ? (
-                  <div className="flex justify-between gap-4">
-                    <span className="text-muted-foreground">Email</span>
-                    <span className="truncate">{(quickViewClient as any).email}</span>
-                  </div>
-                ) : null}
-                {'phone_no' in quickViewClient && (quickViewClient as any).phone_no ? (
-                  <div className="flex justify-between gap-4">
-                    <span className="text-muted-foreground">Phone</span>
-                    <span className="truncate">{(quickViewClient as any).phone_no}</span>
-                  </div>
-                ) : null}
-              </CardContent>
-            </Card>
-          </div>
-        )}
-      </Drawer>
 
       <ConfirmationDialog
         isOpen={showCancelConfirm}

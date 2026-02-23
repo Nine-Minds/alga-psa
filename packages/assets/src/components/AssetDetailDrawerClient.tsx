@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo } from 'react';
 import type { ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import Drawer from '@alga-psa/ui/components/Drawer';
+import { useDrawer } from '@alga-psa/ui';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@alga-psa/ui/components/Tabs';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
@@ -15,6 +16,7 @@ import type {
   AssetMaintenanceHistory,
   AssetMaintenanceReport,
   AssetTicketSummary,
+  IClient,
   IDocument,
 } from '@alga-psa/types';
 import {
@@ -36,6 +38,8 @@ import { AssetAlertsSection } from './AssetAlertsSection';
 import { AssetPatchStatusSection } from './AssetPatchStatusSection';
 import { AssetSoftwareInventory } from './AssetSoftwareInventory';
 import { ASSET_DRAWER_TABS, type AssetDrawerTab } from './AssetDetailDrawer.types';
+import { getClientByIdForAssets } from '../actions/clientLookupActions';
+import Link from 'next/link';
 
 interface AssetDetailDrawerClientProps {
   isOpen: boolean;
@@ -52,6 +56,9 @@ interface AssetDetailDrawerClientProps {
   onClose: () => void;
   onTabChange: (tab: AssetDrawerTab) => void;
   defaultBoardId?: string;
+  /** Optional injected UI for client quick view (e.g. @alga-psa/clients ClientDetails).
+   *  If omitted, falls back to a minimal drawer with a link to open the client page. */
+  renderClientDetails?: (args: { id: string; client: IClient }) => ReactNode;
 }
 
 const TAB_ORDER: AssetDrawerTab[] = [
@@ -83,8 +90,10 @@ export function AssetDetailDrawerClient({
   onClose,
   onTabChange,
   defaultBoardId,
+  renderClientDetails,
 }: AssetDetailDrawerClientProps) {
   const router = useRouter();
+  const { openDrawer: openContextDrawer, replaceDrawer } = useDrawer();
   const desiredTab = activeTab;
 
   const handleTabChange = useCallback(
@@ -98,6 +107,47 @@ export function AssetDetailDrawerClient({
   );
 
   const visibleAssetId = selectedAssetId;
+
+  const handleOpenClientDrawer = useCallback(async (clientId: string, clientName: string) => {
+    openContextDrawer(
+      <div className="p-4 text-sm text-gray-600">Loading…</div>,
+      undefined,
+      undefined,
+      '900px'
+    );
+    try {
+      const clientData = await getClientByIdForAssets(clientId);
+      if (!clientData) {
+        replaceDrawer(
+          <div className="p-4 text-sm text-gray-600">Client not found.</div>,
+          undefined,
+          '900px'
+        );
+        return;
+      }
+      replaceDrawer(
+        renderClientDetails
+          ? renderClientDetails({ id: 'asset-drawer-client-details', client: clientData })
+          : (
+              <div className="p-4 space-y-3">
+                <div className="text-lg font-semibold">{clientData.client_name}</div>
+                <Link href={`/msp/clients/${clientData.client_id}`} className="text-primary-600 hover:underline">
+                  View client details
+                </Link>
+              </div>
+            ),
+        undefined,
+        '900px'
+      );
+    } catch (err) {
+      console.error('Error fetching client details:', err);
+      replaceDrawer(
+        <div className="p-4 text-sm text-red-600">Failed to load client details.</div>,
+        undefined,
+        '900px'
+      );
+    }
+  }, [openContextDrawer, replaceDrawer, renderClientDetails]);
 
   const registerDrawer = useRegisterUIComponent<ContainerComponent>({
     id: 'asset-detail-drawer',
@@ -155,6 +205,9 @@ export function AssetDetailDrawerClient({
           statusBadge,
           onClose,
           defaultBoardId,
+          onClientClick: asset.client_id
+            ? () => handleOpenClientDrawer(asset.client_id!, asset.client?.client_name || asset.client_id!)
+            : undefined,
         });
       case ASSET_DRAWER_TABS.MAINTENANCE:
         return renderMaintenanceTab({
@@ -173,8 +226,10 @@ export function AssetDetailDrawerClient({
   }, [
     activeTab,
     asset,
+    defaultBoardId,
     desiredTab,
     documents,
+    handleOpenClientDrawer,
     onClose,
     history,
     maintenanceHistory,
@@ -229,9 +284,10 @@ type OverviewTabProps = {
   statusBadge: ReactNode;
   onClose: () => void;
   defaultBoardId?: string;
+  onClientClick?: () => void;
 };
 
-function renderOverviewTab({ asset, maintenanceReport, history, router, statusBadge, onClose, defaultBoardId }: OverviewTabProps) {
+function renderOverviewTab({ asset, maintenanceReport, history, router, statusBadge, onClose, defaultBoardId, onClientClick }: OverviewTabProps) {
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
@@ -243,7 +299,15 @@ function renderOverviewTab({ asset, maintenanceReport, history, router, statusBa
           <p className="text-sm text-gray-500">
             Asset tag {asset.asset_tag} • {asset.asset_type.replace('_', ' ')}
           </p>
-          {asset.client?.client_name && <p className="text-sm text-gray-500">Client: {asset.client.client_name}</p>}
+          {asset.client?.client_name && (
+            onClientClick ? (
+              <button type="button" onClick={onClientClick} className="text-sm text-primary-600 hover:text-primary-700 hover:underline text-left">
+                Client: {asset.client.client_name}
+              </button>
+            ) : (
+              <p className="text-sm text-gray-500">Client: {asset.client.client_name}</p>
+            )
+          )}
         </div>
         <div className="flex flex-wrap gap-2">
           <Button id="asset-drawer-open-record" variant="default" size="sm" className="gap-2" onClick={() => router.push(`/msp/assets/${asset.asset_id}`)}>
@@ -297,7 +361,7 @@ function renderOverviewTab({ asset, maintenanceReport, history, router, statusBa
 
       <Card className="space-y-4 p-4" {...withDataAutomationId({ id: 'asset-drawer-overview-info' })}>
         <SectionTitle icon={<Settings2 className="h-4 w-4" />} title="Asset summary" />
-        <InfoGrid asset={asset} />
+        <InfoGrid asset={asset} onClientClick={onClientClick} />
       </Card>
 
       {/* RMM Alerts Section - Shows active alerts for RMM-managed assets */}
@@ -497,10 +561,19 @@ function MetricCard({ id, icon, label, value, helper }: MetricCardProps) {
   );
 }
 
-function InfoGrid({ asset }: { asset: Asset }) {
+function InfoGrid({ asset, onClientClick }: { asset: Asset; onClientClick?: () => void }) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-600">
-      <InfoRow label="Client" value={asset.client?.client_name || 'Unassigned'} />
+      {onClientClick ? (
+        <div className="flex flex-col gap-1">
+          <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">Client</span>
+          <button type="button" onClick={onClientClick} className="text-sm text-primary-600 hover:text-primary-700 hover:underline text-left">
+            {asset.client?.client_name || 'Unassigned'}
+          </button>
+        </div>
+      ) : (
+        <InfoRow label="Client" value={asset.client?.client_name || 'Unassigned'} />
+      )}
       <InfoRow label="Asset tag" value={asset.asset_tag} />
       <InfoRow label="Status" value={asset.status} />
       <InfoRow label="Created" value={formatDate(asset.created_at)} />
