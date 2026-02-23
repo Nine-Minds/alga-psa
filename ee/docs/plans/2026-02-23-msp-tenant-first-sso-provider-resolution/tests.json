@@ -453,7 +453,7 @@
   {
     "id": "T055",
     "description": "CE OAuth mapper rejects inactive user accounts.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F045",
       "F046"
