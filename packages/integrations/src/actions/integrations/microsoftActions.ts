@@ -2,6 +2,7 @@
 
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { withAuth } from '@alga-psa/auth';
+import { hasPermission } from '@alga-psa/auth/rbac';
 import { createTenantKnex } from '@alga-psa/db';
 
 const MICROSOFT_CLIENT_ID_SECRET = 'microsoft_client_id';
@@ -120,7 +121,7 @@ function normalizeTenantId(value?: string): string {
 }
 
 export const saveMicrosoftIntegrationSettings = withAuth(async (
-  _user,
+  user,
   { tenant },
   input: {
     clientId: string;
@@ -129,6 +130,9 @@ export const saveMicrosoftIntegrationSettings = withAuth(async (
   }
 ): Promise<{ success: boolean; error?: string }> => {
   try {
+    const permitted = await hasPermission(user as any, 'system_settings', 'update');
+    if (!permitted) return { success: false, error: 'Forbidden' };
+
     const clientId = normalizeMicrosoftClientId(input.clientId ?? '');
     if (!clientId) return { success: false, error: 'Microsoft OAuth Client ID is required' };
 
@@ -149,10 +153,13 @@ export const saveMicrosoftIntegrationSettings = withAuth(async (
 });
 
 export const resetMicrosoftProvidersToDisconnected = withAuth(async (
-  _user,
+  user,
   { tenant }
 ): Promise<{ success: boolean; error?: string }> => {
   try {
+    const permitted = await hasPermission(user as any, 'system_settings', 'update');
+    if (!permitted) return { success: false, error: 'Forbidden' };
+
     const { knex } = await createTenantKnex();
 
     await knex('email_providers')
