@@ -479,7 +479,7 @@
   {
     "id": "T058",
     "description": "CE MSP OAuth sign-in succeeds without EE account-link persistence dependencies.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F048"
     ]
