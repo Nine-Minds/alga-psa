@@ -519,7 +519,7 @@
   {
     "id": "T063",
     "description": "DB-backed integration sanity (happy path): resolver selects tenant source when matching internal user row and tenant secret readiness are present.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F027",
       "F028"
