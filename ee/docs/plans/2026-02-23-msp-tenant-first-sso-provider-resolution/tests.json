@@ -611,7 +611,7 @@
   {
     "id": "T072",
     "description": "End-to-end client portal login behavior remains unchanged with no new SSO affordances introduced.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F024"
     ]
