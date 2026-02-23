@@ -201,12 +201,13 @@
   {
     "id": "T019",
     "description": "Pasting markdown text converts to rich text in collaborative editor",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F010"
     ],
-    "testType": "manual",
-    "notes": "Copy markdown (e.g. '## Hello\\n- item'), paste into editor, verify conversion"
+    "testType": "unit",
+    "testFile": "server/src/test/unit/documents/markdownPaste.test.ts",
+    "vitestName": "converts markdown plain text into HTML via marked"
   },
   {
     "id": "T020",

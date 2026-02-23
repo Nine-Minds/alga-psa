@@ -7,12 +7,12 @@ import Link from '@tiptap/extension-link';
 import Underline from '@tiptap/extension-underline';
 import Collaboration from '@tiptap/extension-collaboration';
 import CollaborationCaret from '@tiptap/extension-collaboration-caret';
-import { marked } from 'marked';
 import { prosemirrorJSONToYXmlFragment } from 'y-prosemirror';
 import { Emoticon, createYjsProvider } from '@alga-psa/ui/editor';
 import AvatarIcon from '@alga-psa/ui/components/AvatarIcon';
 import { Card } from '@alga-psa/ui/components/Card';
 import { EditorToolbar } from './EditorToolbar';
+import { handleMarkdownPaste } from './markdownPaste';
 import styles from './CollaborativeEditor.module.css';
 import { getBlockContent } from '../actions/documentBlockContentActions';
 
@@ -163,25 +163,11 @@ export function CollaborativeEditor({
         paste: (_view, event) => {
           const plainText = event.clipboardData?.getData('text/plain');
           const htmlText = event.clipboardData?.getData('text/html');
-
-          if (plainText && !htmlText) {
-            const markdownPattern = /^#{1,6}\s|^\*\s|^-\s|^\d+\.\s|\*\*[^*]+\*\*|\[.+\]\(.+\)|^```/m;
-            if (markdownPattern.test(plainText)) {
-              try {
-                const html = marked.parse(plainText, { async: false }) as string;
-                if (html && html !== `<p>${plainText}</p>\n`) {
-                  editor?.commands.insertContent(html, {
-                    parseOptions: { preserveWhitespace: false },
-                  });
-                  return true;
-                }
-              } catch (error) {
-                console.error('Markdown paste conversion failed:', error);
-              }
-            }
-          }
-
-          return false;
+          return handleMarkdownPaste(plainText, htmlText, (html) => {
+            editor?.commands.insertContent(html, {
+              parseOptions: { preserveWhitespace: false },
+            });
+          });
         },
       },
     },
