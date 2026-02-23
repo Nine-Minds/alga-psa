@@ -232,7 +232,7 @@
   {
     "id": "T029",
     "description": "Client portal login UI remains unchanged and does not render new SSO buttons.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F024"
     ]
