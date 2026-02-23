@@ -136,3 +136,4 @@ Working notes for MSP SSO tenant-first resolver and provider-settings changes (M
 - (2026-02-23) `T023` complete: Google readiness coverage explicitly asserts Pub/Sub keys are not required for MSP SSO readiness decisions.
 - (2026-02-23) `T018` complete: `microsoftProviders.providersFirst.test.ts` verifies CE Microsoft email form no longer requires manual `clientId`/`clientSecret` fields and uses providers-managed credentials.
 - (2026-02-23) `T019` complete: providers-first contract test verifies Microsoft email form renders CTA (`configure-microsoft-providers-link`) to Providers settings when readiness is false.
+- (2026-02-23) `T020` complete: providers-first contract test verifies Microsoft calendar form renders CTA (`configure-microsoft-calendar-providers-link`) when provider readiness is missing.

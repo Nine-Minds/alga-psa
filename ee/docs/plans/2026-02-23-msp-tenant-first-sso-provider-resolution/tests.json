@@ -159,7 +159,7 @@
   {
     "id": "T020",
     "description": "CE Microsoft calendar form shows Providers CTA when Microsoft readiness is false.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F016"
     ]
