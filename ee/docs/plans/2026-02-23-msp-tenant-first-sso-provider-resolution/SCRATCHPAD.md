@@ -132,3 +132,4 @@ Working notes for MSP SSO tenant-first resolver and provider-settings changes (M
 - (2026-02-23) `T015` complete: status/save/reset action tests verify client-portal user context is denied with `Forbidden`.
 - (2026-02-23) `T016`/`T017`/`T023` implemented in `providerReadiness.test.ts`; readiness now validated as secret-pair checks (`microsoft_client_*`, `google_client_*`) with explicit assertion that Google readiness does not depend on Gmail Pub/Sub keys.
 - (2026-02-23) Command run: `cd server && npx vitest run ../packages/integrations/src/actions/integrations/microsoftActions.test.ts ../packages/integrations/src/actions/integrations/providerReadiness.test.ts`.
+- (2026-02-23) `T017` complete: `providerReadiness.test.ts` verifies Google readiness is true only when both `google_client_id` and `google_client_secret` are configured.

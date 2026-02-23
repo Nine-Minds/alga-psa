@@ -134,7 +134,7 @@
   {
     "id": "T017",
     "description": "Google readiness helper returns ready only when both `google_client_id` and `google_client_secret` exist.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F013"
     ]
