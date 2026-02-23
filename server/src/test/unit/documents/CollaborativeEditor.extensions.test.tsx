@@ -29,6 +29,8 @@ const { collaborationConfigure, collaborationCaretConfigure, providerMock, creat
 });
 
 let ydoc: Y.Doc;
+let providerListeners: Map<string, Set<(payload: any) => void>>;
+let awarenessStates: Map<number, { user?: { id: string; name: string; color: string } }>;
 
 vi.mock('@tiptap/extension-collaboration', () => ({
   default: {
@@ -61,6 +63,22 @@ describe('CollaborativeEditor', () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     ydoc = new Y.Doc();
+    providerListeners = new Map();
+    awarenessStates = new Map();
+    providerMock.status = 'connected';
+    providerMock.synced = true;
+    providerMock.hasUnsyncedChanges = false;
+    providerMock.awareness.getStates.mockImplementation(() => awarenessStates);
+    providerMock.on.mockImplementation((event: string, callback: (payload: any) => void) => {
+      const existing = providerListeners.get(event) ?? new Set();
+      existing.add(callback);
+      providerListeners.set(event, existing);
+    });
+    providerMock.off.mockImplementation((event: string, callback: (payload: any) => void) => {
+      const existing = providerListeners.get(event);
+      if (!existing) return;
+      existing.delete(callback);
+    });
     createYjsProviderMock.mockImplementation(() => ({ provider: providerMock, ydoc }));
     ({ CollaborativeEditor } = await import('@alga-psa/documents/components/CollaborativeEditor'));
   });
@@ -106,5 +124,21 @@ describe('CollaborativeEditor', () => {
         userId: 'user-88',
       },
     });
+  });
+
+  it('renders a connected status when the provider is connected', () => {
+    const { getByText, container } = render(
+      <CollaborativeEditor
+        documentId="doc-2"
+        tenantId="tenant-2"
+        userId="user-2"
+        userName="Editor Two"
+      />
+    );
+
+    expect(getByText('Connected')).toBeTruthy();
+    const statusWrapper = container.querySelector('[data-status]');
+    expect(statusWrapper).toBeTruthy();
+    expect(statusWrapper.getAttribute('data-status')).toBe('connected');
   });
 });

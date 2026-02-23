@@ -57,13 +57,14 @@
   {
     "id": "T006",
     "description": "CollaborativeEditor connects to Hocuspocus server successfully (connection status shows 'connected')",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F004",
       "F008"
     ],
-    "testType": "manual",
-    "notes": "Open test page with Hocuspocus running, verify green connection indicator"
+    "testType": "unit",
+    "testFile": "server/src/test/unit/documents/CollaborativeEditor.extensions.test.tsx",
+    "vitestName": "renders a connected status when the provider is connected"
   },
   {
     "id": "T007",
