@@ -401,13 +401,14 @@
   {
     "id": "T037",
     "description": "Concurrent formatting operations from two users do not corrupt the document (Y.js CRDT conflict resolution)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F003",
       "F013"
     ],
-    "testType": "manual-multiuser",
-    "notes": "Two tabs, both bold different words simultaneously, verify no corruption"
+    "testType": "unit",
+    "testFile": "server/src/test/unit/yjs/collaborationFormatting.test.ts",
+    "vitestName": "merges concurrent formatting updates without corrupting content"
   },
   {
     "id": "T038",
