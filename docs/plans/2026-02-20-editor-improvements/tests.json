@@ -102,12 +102,13 @@
   {
     "id": "T010",
     "description": "Link insertion/editing works via toolbar in collaborative mode",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F005"
     ],
-    "testType": "manual",
-    "notes": "Insert link via BubbleMenu, verify href is saved"
+    "testType": "unit",
+    "testFile": "server/src/test/unit/documents/EditorToolbar.test.tsx",
+    "vitestName": "wires the link button to setLink with prompt input"
   },
   {
     "id": "T011",
