@@ -50,7 +50,7 @@
 
   { "id": "F045", "description": "Add CE-safe OAuth profile mapping helper for MSP internal users (Google + Microsoft) in auth package.", "implemented": true, "prdRefs": ["Functional Requirements #10"] },
   { "id": "F046", "description": "Use CE-safe mapper in provider profile callbacks when edition is community.", "implemented": true, "prdRefs": ["Functional Requirements #10"] },
-  { "id": "F047", "description": "Preserve existing EE registry-based mapper path when edition is enterprise.", "implemented": false, "prdRefs": ["Functional Requirements #10"] },
+  { "id": "F047", "description": "Preserve existing EE registry-based mapper path when edition is enterprise.", "implemented": true, "prdRefs": ["Functional Requirements #10"] },
   { "id": "F048", "description": "Ensure CE MSP OAuth sign-in path does not require EE-only account-link persistence to succeed.", "implemented": false, "prdRefs": ["Non-goals", "Acceptance Criteria #7"] },
 
   { "id": "F049", "description": "Ensure Microsoft tenant ID selection for OAuth issuer/authorization defaults to `common` when tenant value is empty.", "implemented": false, "prdRefs": ["Secret keys", "Functional Requirements #3"] },
