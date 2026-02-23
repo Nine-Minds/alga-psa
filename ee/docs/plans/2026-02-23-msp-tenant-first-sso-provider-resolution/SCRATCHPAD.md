@@ -116,3 +116,4 @@ Working notes for MSP SSO tenant-first resolver and provider-settings changes (M
 ## Open Questions
 
 - None blocking for initial implementation phase.
+- (2026-02-23) `T002` complete: added unit coverage in `microsoftActions.test.ts` proving `getMicrosoftIntegrationStatus` returns `success:true` for authorized internal admin context.

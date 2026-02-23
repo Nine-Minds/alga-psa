@@ -1,7 +1,7 @@
 'use server';
 
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
-import { withAuth } from '@alga-psa/auth';
+import { withAuth } from '@alga-psa/auth/withAuth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { createTenantKnex } from '@alga-psa/db';
 import { getMicrosoftProviderReadiness } from './providerReadiness';
