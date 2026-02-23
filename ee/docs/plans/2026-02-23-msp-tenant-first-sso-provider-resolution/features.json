@@ -39,7 +39,7 @@
   { "id": "F035", "description": "Resolver uses app fallback keys `GOOGLE_OAUTH_*` for Google fallback source.", "implemented": true, "prdRefs": ["Functional Requirements #5", "Secret keys"] },
   { "id": "F036", "description": "Resolver returns generic failure when neither tenant source nor app fallback is available.", "implemented": true, "prdRefs": ["Primary Flow C"] },
   { "id": "F037", "description": "Add basic resolver endpoint rate limiting keyed by request IP + normalized email hash bucket.", "implemented": true, "prdRefs": ["Non-functional Requirements #2"] },
-  { "id": "F038", "description": "Add sanitized structured logs for resolver decisions/failures without user-existence leakage.", "implemented": false, "prdRefs": ["Observability", "Non-functional Requirements #3"] },
+  { "id": "F038", "description": "Add sanitized structured logs for resolver decisions/failures without user-existence leakage.", "implemented": true, "prdRefs": ["Observability", "Non-functional Requirements #3"] },
 
   { "id": "F039", "description": "Allow CE MSP OAuth provider registration by removing effective EE-only gating for Google/Microsoft in NextAuth options path.", "implemented": false, "prdRefs": ["Functional Requirements #9"] },
   { "id": "F040", "description": "Refactor auth options caching so OAuth provider credentials can be resolved per request (remove/alter static cache).", "implemented": false, "prdRefs": ["Functional Requirements #11"] },
