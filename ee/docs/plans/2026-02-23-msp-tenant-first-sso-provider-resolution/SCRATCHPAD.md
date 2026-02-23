@@ -54,6 +54,7 @@ Working notes for MSP SSO tenant-first resolver and provider-settings changes (M
 - (2026-02-23) `F019` complete: replaced CE `SsoProviderButtons` null stub with a real Google/Microsoft MSP SSO button component in `packages/auth/src/components/SsoProviderButtons.tsx`.
 - (2026-02-23) `F020` complete: MSP SSO buttons are disabled until a non-empty email is entered (`hasEmail` gate in `SsoProviderButtons`).
 - (2026-02-23) `F021` complete: Microsoft SSO button now calls `POST /api/auth/msp/sso/resolve` with `{ provider: 'azure-ad', email, callbackUrl }` before invoking `signIn('azure-ad')`.
+- (2026-02-23) `F022` complete: Google SSO button now follows the same resolver-first flow (`provider: 'google'`) before `signIn('google')`.
 
 ## Commands / Runbooks
 
