@@ -409,7 +409,7 @@
   {
     "id": "T050",
     "description": "Invalid resolver cookie signature is ignored and app fallback is used.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F042",
       "F043"
