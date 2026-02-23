@@ -151,7 +151,7 @@
   {
     "id": "T019",
     "description": "CE Microsoft email form shows Providers CTA when Microsoft readiness is false.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F015"
     ]
