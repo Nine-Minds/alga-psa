@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef, type ReactNode } from 'react';
 import { useRegisterUIComponent } from '@alga-psa/ui/ui-reflection/useRegisterUIComponent';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
 import { Card } from '@alga-psa/ui/components/Card';
@@ -52,6 +52,8 @@ import {
 
 interface AssetDashboardClientProps {
   initialAssets: AssetListResponse;
+  /** Optional injected UI for client quick view. */
+  renderClientDetails?: (args: { id: string; client: IClient }) => ReactNode;
 }
 
 type ColumnKey =
@@ -74,7 +76,7 @@ const RMM_MANAGED_OPTIONS: { value: string; label: string }[] = [
   { value: 'unmanaged', label: 'Not Managed' },
 ];
 
-export default function AssetDashboardClient({ initialAssets }: AssetDashboardClientProps) {
+export default function AssetDashboardClient({ initialAssets, renderClientDetails }: AssetDashboardClientProps) {
   useRegisterUIComponent({
     id: 'asset-dashboard',
     type: 'container',
@@ -1119,6 +1121,7 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
         isLoading={drawerLoading}
         onClose={handleDrawerClose}
         onTabChange={handleDrawerTabChange}
+        renderClientDetails={renderClientDetails}
       />
     </div>
   );
@@ -1129,7 +1132,7 @@ type SummaryTileProps = {
   title: string;
   helper: string;
   value: number;
-  icon: React.ReactNode;
+  icon: ReactNode;
   isLoading?: boolean;
 };
 

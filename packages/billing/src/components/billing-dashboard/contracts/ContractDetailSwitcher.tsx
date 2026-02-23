@@ -8,7 +8,7 @@ import { getContractById } from '@alga-psa/billing/actions/contractActions';
 import ContractTemplateDetail from './ContractTemplateDetail';
 import ContractDetail from './ContractDetail';
 import { getClientContractByIdForBilling } from '@alga-psa/billing/actions/billingClientsActions';
-import { IDocument } from '@alga-psa/types';
+import { IClient, IDocument } from '@alga-psa/types';
 
 type ViewMode = 'loading' | 'template' | 'client' | 'error';
 
@@ -17,11 +17,14 @@ interface ContractDetailSwitcherProps {
   contractDocuments?: IDocument[] | null;
   /** Current user ID fetched server-side */
   currentUserId?: string | null;
+  /** Optional injected UI for client quick view. */
+  renderClientDetails?: (args: { id: string; client: IClient }) => React.ReactNode;
 }
 
 const ContractDetailSwitcher: React.FC<ContractDetailSwitcherProps> = ({
   contractDocuments,
-  currentUserId
+  currentUserId,
+  renderClientDetails
 }) => {
   const searchParams = useSearchParams();
   const contractId = searchParams?.get('contractId') ?? null;
@@ -125,6 +128,7 @@ const ContractDetailSwitcher: React.FC<ContractDetailSwitcherProps> = ({
     <ContractDetail
       serverDocuments={contractDocuments}
       serverUserId={currentUserId}
+      renderClientDetails={renderClientDetails}
     />
   );
 };

@@ -33,9 +33,27 @@
     "./projects/*": {
       "import": "./src/projects/*.tsx",
       "types": "./src/projects/*.tsx"
+    },
+    "./billing": {
+      "import": "./src/billing/index.ts",
+      "types": "./src/billing/index.ts"
+    },
+    "./billing/*": {
+      "import": "./src/billing/*.tsx",
+      "types": "./src/billing/*.tsx"
+    },
+    "./assets": {
+      "import": "./src/assets/index.ts",
+      "types": "./src/assets/index.ts"
+    },
+    "./assets/*": {
+      "import": "./src/assets/*.tsx",
+      "types": "./src/assets/*.tsx"
     }
   },
   "dependencies": {
+    "@alga-psa/assets": "*",
+    "@alga-psa/billing": "*",
     "@alga-psa/clients": "*",
     "@alga-psa/projects": "*",
     "@alga-psa/scheduling": "*",
