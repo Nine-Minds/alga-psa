@@ -249,7 +249,7 @@
   {
     "id": "T031",
     "description": "Resolver endpoint rejects invalid provider values with generic failure response shape.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F026",
       "F031"
