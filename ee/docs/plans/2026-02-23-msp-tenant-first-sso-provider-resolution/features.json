@@ -34,7 +34,7 @@
   { "id": "F030", "description": "Resolver applies same external behavior for unknown user as known-user-missing-provider paths.", "implemented": true, "prdRefs": ["Functional Requirements #6", "Security / Permissions"] },
   { "id": "F031", "description": "Resolver returns identical response schema and status across lookup outcomes.", "implemented": true, "prdRefs": ["Functional Requirements #6", "Functional Requirements #7"] },
   { "id": "F032", "description": "Resolver sets signed, short-lived httpOnly context cookie with source metadata.", "implemented": true, "prdRefs": ["Functional Requirements #7"] },
-  { "id": "F033", "description": "Resolver context cookie excludes raw client IDs/secrets.", "implemented": false, "prdRefs": ["Functional Requirements #7", "Security / Permissions"] },
+  { "id": "F033", "description": "Resolver context cookie excludes raw client IDs/secrets.", "implemented": true, "prdRefs": ["Functional Requirements #7", "Security / Permissions"] },
   { "id": "F034", "description": "Resolver uses app fallback keys `MICROSOFT_OAUTH_*` for Microsoft fallback source.", "implemented": false, "prdRefs": ["Functional Requirements #5", "Secret keys"] },
   { "id": "F035", "description": "Resolver uses app fallback keys `GOOGLE_OAUTH_*` for Google fallback source.", "implemented": false, "prdRefs": ["Functional Requirements #5", "Secret keys"] },
   { "id": "F036", "description": "Resolver returns generic failure when neither tenant source nor app fallback is available.", "implemented": false, "prdRefs": ["Primary Flow C"] },
