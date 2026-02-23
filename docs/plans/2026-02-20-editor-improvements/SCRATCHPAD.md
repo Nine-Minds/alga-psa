@@ -97,3 +97,4 @@ Working memory for implementing real-time collaborative editing via TipTap + Hoc
 - (2026-02-23) Added `CollaborativeEditor` component with TipTap Collaboration + CollaborationCaret bound to Y.js, Hocuspocus room naming, EditorToolbar integration, markdown paste handling, Emoticon/Link config, presence bar, connection/save indicators, and CSS styling. Exported `createYjsProvider` from `@alga-psa/ui/editor`.
 - (2026-02-23) Added Hocuspocus `onConnect` tenant validation for `document:` rooms and allowed `notifications:` rooms to pass through. Extended `createYjsProvider` to accept connection parameters and pass tenantId/userId.
 - (2026-02-23) Exported `CollaborativeEditor` from `packages/documents/src/components/index.ts`.
+- (2026-02-23) Added collab test page at `/msp/collab-test` with feature-flag gating, create/open doc flow, snapshot button, and debug panel. Implemented `syncCollabSnapshot` server action using Hocuspocus sync + Yjs→Prosemirror JSON conversion.

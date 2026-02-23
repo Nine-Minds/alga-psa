@@ -107,7 +107,7 @@
   {
     "id": "F014",
     "description": "Create server action syncCollabSnapshot(documentId) that reads Y.js state, converts to TipTap JSON, writes to document_block_content",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "F-P1-11"
     ]
@@ -115,7 +115,7 @@
   {
     "id": "F015",
     "description": "Create /msp/collab-test/page.tsx route gated by collaborative_editing feature flag \u2014 shows 'Feature not available' when disabled",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "F-P1-01",
       "F-P1-03"
@@ -124,7 +124,7 @@
   {
     "id": "F016",
     "description": "Test page: 'Create New Document' button that creates a document via createBlockDocument and opens it in the collaborative editor",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "F-P1-02"
     ]
@@ -132,7 +132,7 @@
   {
     "id": "F017",
     "description": "Test page: URL parameter ?doc=<documentId> opens an existing document directly in the collaborative editor",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "F-P1-03"
     ]
@@ -140,7 +140,7 @@
   {
     "id": "F018",
     "description": "Test page: 'Snapshot to DB' button that calls syncCollabSnapshot and shows success/error feedback",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "F-P1-11"
     ]
@@ -148,7 +148,7 @@
   {
     "id": "F019",
     "description": "Test page: debug panel (collapsible) showing connection status, connected users count, room name, Y.js sync state",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "F-P1-03"
     ]
