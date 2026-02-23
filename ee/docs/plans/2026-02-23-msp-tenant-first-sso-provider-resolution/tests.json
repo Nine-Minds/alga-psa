@@ -537,7 +537,7 @@
   {
     "id": "T065",
     "description": "DB-backed integration sanity (fallback path): resolver selects app source when user row exists but tenant readiness is absent.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F029",
       "F034",
