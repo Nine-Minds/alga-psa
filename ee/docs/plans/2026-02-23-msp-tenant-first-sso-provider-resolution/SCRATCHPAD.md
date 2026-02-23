@@ -117,16 +117,18 @@ Working notes for MSP SSO tenant-first resolver and provider-settings changes (M
 
 - None blocking for initial implementation phase.
 - (2026-02-23) `T002` complete: added unit coverage in `microsoftActions.test.ts` proving `getMicrosoftIntegrationStatus` returns `success:true` for authorized internal admin context.
-- (2026-02-23)  complete:  asserts Microsoft status returns masked secret indicators and does not expose raw secret values.
-- (2026-02-23)  complete: unit test covers save action rejecting blank  with required-field error.
-- (2026-02-23)  complete: unit test covers save action rejecting blank  with required-field error.
-- (2026-02-23)  complete: unit test verifies save action defaults  to  when omitted.
-- (2026-02-23)  complete: unit test verifies  persists  in tenant secrets.
-- (2026-02-23)  complete: unit test verifies  persists  in tenant secrets.
-- (2026-02-23)  complete: unit test verifies  persists  in tenant secrets.
-- (2026-02-23)  complete: status action test validates derived redirect URIs and scopes metadata for Microsoft email/calendar/SSO flows.
-- (2026-02-23)  complete: reset action test verifies Microsoft email provider rows/config tokens are disconnected and cleared.
-- (2026-02-23)  complete: reset action test verifies Microsoft calendar provider rows/config tokens are disconnected and cleared.
-- (2026-02-23)  complete: test asserts Microsoft action exports exist in both integrations action index entrypoints used by settings imports.
-- (2026-02-23)  complete: unit test verifies save action returns  for users lacking .
-- (2026-02-23)  complete: unit test verifies status/save/reset all return  under client-portal user context.
+- (2026-02-23) `T003` complete: `microsoftActions.test.ts` asserts Microsoft status returns masked secret indicators and never returns raw client secret text.
+- (2026-02-23) `T004` complete: unit coverage verifies `saveMicrosoftIntegrationSettings` rejects blank `clientId`.
+- (2026-02-23) `T005` complete: unit coverage verifies `saveMicrosoftIntegrationSettings` rejects blank `clientSecret`.
+- (2026-02-23) `T006` complete: save action test verifies default `microsoft_tenant_id` of `common` when tenant ID input is omitted.
+- (2026-02-23) `T007` complete: save action test verifies persistence of tenant secret key `microsoft_client_id`.
+- (2026-02-23) `T008` complete: save action test verifies persistence of tenant secret key `microsoft_client_secret`.
+- (2026-02-23) `T009` complete: save action test verifies persistence of tenant secret key `microsoft_tenant_id`.
+- (2026-02-23) `T010` complete: status action test validates derived redirect URIs and scope metadata for Microsoft email/calendar/SSO.
+- (2026-02-23) `T011` complete: reset action test verifies Microsoft email provider rows are set disconnected and token/webhook fields are cleared.
+- (2026-02-23) `T012` complete: reset action test verifies Microsoft calendar provider rows are set disconnected and token/subscription fields are cleared.
+- (2026-02-23) `T013` complete: export coverage verifies Microsoft integration actions are present in integrations index entrypoints.
+- (2026-02-23) `T014` complete: save action test verifies non-admin users without `system_settings:update` receive `Forbidden`.
+- (2026-02-23) `T015` complete: status/save/reset action tests verify client-portal user context is denied with `Forbidden`.
+- (2026-02-23) `T016`/`T017`/`T023` implemented in `providerReadiness.test.ts`; readiness now validated as secret-pair checks (`microsoft_client_*`, `google_client_*`) with explicit assertion that Google readiness does not depend on Gmail Pub/Sub keys.
+- (2026-02-23) Command run: `cd server && npx vitest run ../packages/integrations/src/actions/integrations/microsoftActions.test.ts ../packages/integrations/src/actions/integrations/providerReadiness.test.ts`.

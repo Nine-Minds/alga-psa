@@ -126,7 +126,7 @@
   {
     "id": "T016",
     "description": "Microsoft readiness helper returns ready only when both `microsoft_client_id` and `microsoft_client_secret` exist.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F012"
     ]
