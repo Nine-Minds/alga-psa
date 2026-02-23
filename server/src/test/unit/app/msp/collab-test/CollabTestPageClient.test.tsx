@@ -1,0 +1,80 @@
+// @vitest-environment jsdom
+import React from 'react';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { render, fireEvent, waitFor } from '@testing-library/react';
+
+(globalThis as unknown as { React?: typeof React }).React = React;
+
+const pushMock = vi.fn();
+const useSearchParamsMock = vi.fn(() => new URLSearchParams());
+const createBlockDocumentMock = vi.fn();
+const getBlockContentMock = vi.fn();
+
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: pushMock }),
+  useSearchParams: () => useSearchParamsMock(),
+}));
+
+vi.mock('@alga-psa/documents/components', () => ({
+  CollaborativeEditor: () => <div data-testid="collaborative-editor" />,
+}));
+
+vi.mock('@alga-psa/documents/actions/documentBlockContentActions', () => ({
+  createBlockDocument: (...args: unknown[]) => createBlockDocumentMock(...args),
+  getBlockContent: (...args: unknown[]) => getBlockContentMock(...args),
+}));
+
+vi.mock('@alga-psa/documents/actions/collaborativeEditingActions', () => ({
+  syncCollabSnapshot: vi.fn(),
+}));
+
+vi.mock('@alga-psa/ui/components/Button', () => ({
+  Button: ({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) => (
+    <button type="button" {...props}>
+      {children}
+    </button>
+  ),
+}));
+
+vi.mock('@alga-psa/ui/components/Card', () => ({
+  Card: ({ children, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
+    <div {...props}>{children}</div>
+  ),
+}));
+
+vi.mock('@alga-psa/ui/components/Input', () => ({
+  Input: (props: React.InputHTMLAttributes<HTMLInputElement>) => <input {...props} />,
+}));
+
+const { default: CollabTestPageClient } = await import(
+  '@/app/msp/collab-test/CollabTestPageClient'
+);
+
+describe('CollabTestPageClient', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    useSearchParamsMock.mockReturnValue(new URLSearchParams());
+    getBlockContentMock.mockResolvedValue(null);
+  });
+
+  it('creates a document and navigates to the new doc id', async () => {
+    createBlockDocumentMock.mockResolvedValue({ document_id: 'doc-123' });
+
+    const { getByText } = render(
+      <CollabTestPageClient userId="user-1" userName="User One" tenantId="tenant-1" />
+    );
+
+    fireEvent.click(getByText('Create New Document'));
+
+    await waitFor(() => {
+      expect(createBlockDocumentMock).toHaveBeenCalled();
+    });
+
+    expect(createBlockDocumentMock).toHaveBeenCalledWith({
+      document_name: expect.stringContaining('Collab Test'),
+      user_id: 'user-1',
+      block_data: expect.any(Object),
+    });
+    expect(pushMock).toHaveBeenCalledWith('/msp/collab-test?doc=doc-123');
+  });
+});

@@ -147,3 +147,5 @@ Working memory for implementing real-time collaborative editing via TipTap + Hoc
 - (2026-02-23) Added Hocuspocus provider sync test (`should sync content between two providers connected to the same room`) in `server/src/test/integration/collaborativeEditing.integration.test.ts`; marked T024 complete. Ran: `RUN_HOCUSPOCUS_TESTS=false npx vitest src/test/integration/collaborativeEditing.integration.test.ts -t "sync content"` (skipped because RUN_HOCUSPOCUS_TESTS is false).
 
 - (2026-02-23) Added unit tests for `syncCollabSnapshot` in `server/src/test/unit/documents/collaborativeEditingActions.test.ts` covering snapshot writes (T025) and missing document error (T026). Ran: `npx vitest src/test/unit/documents/collaborativeEditingActions.test.ts` (from `server/`).
+
+- (2026-02-23) Added CollabTestPageClient unit test for Create New Document navigation in `server/src/test/unit/app/msp/collab-test/CollabTestPageClient.test.tsx`; marked T027 complete. Ran: `npx vitest src/test/unit/app/msp/collab-test/CollabTestPageClient.test.tsx` (from `server/`).

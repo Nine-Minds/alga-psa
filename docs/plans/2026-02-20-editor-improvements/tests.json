@@ -291,12 +291,13 @@
   {
     "id": "T027",
     "description": "'Create New Document' button on test page creates a document and navigates to ?doc=<newId>",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F016"
     ],
-    "testType": "manual",
-    "notes": "Click Create New, verify URL changes and editor loads"
+    "testType": "unit",
+    "testFile": "server/src/test/unit/app/msp/collab-test/CollabTestPageClient.test.tsx",
+    "vitestName": "creates a document and navigates to the new doc id"
   },
   {
     "id": "T028",
