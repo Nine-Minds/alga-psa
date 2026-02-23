@@ -1,6 +1,8 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach, vi } from 'vitest';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
+import { HocuspocusProvider } from '@hocuspocus/provider';
+import * as Y from 'yjs';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { createTenant, createUser } from '../../../test-utils/testDataFactory';
 
@@ -24,6 +26,22 @@ let tenantId: string;
 let userId: string;
 let secondTenantId: string;
 let secondUserId: string;
+
+const RUN_HOCUSPOCUS_TESTS = process.env.RUN_HOCUSPOCUS_TESTS === 'true';
+const HOCUSPOCUS_URL = process.env.HOCUSPOCUS_URL || 'ws://localhost:1234';
+const describeIfHocuspocus = RUN_HOCUSPOCUS_TESTS ? describe : describe.skip;
+const waitForSynced = (provider: HocuspocusProvider) => new Promise<void>((resolve) => {
+  if (provider.synced) {
+    resolve();
+    return;
+  }
+  const handleSynced = ({ state }: { state: boolean }) => {
+    if (!state) return;
+    provider.off('synced', handleSynced);
+    resolve();
+  };
+  provider.on('synced', handleSynced);
+});
 
 // Mock createTenantKnex to use test DB
 vi.mock('@alga-psa/db', async () => {
@@ -417,5 +435,46 @@ describe('Collaborative Editing — Integration Tests', () => {
 
       expect(content).toBeUndefined();
     });
+  });
+});
+
+// ─── Hocuspocus Persistence (No DB Required) ───────────────────────
+
+describeIfHocuspocus('Hocuspocus persistence', () => {
+  it('should persist content across a disconnect/reconnect cycle', async () => {
+    const tenantId = uuidv4();
+    const docId = uuidv4();
+    const roomName = `document:${tenantId}:${docId}`;
+    const ydoc = new Y.Doc();
+
+    const provider = new HocuspocusProvider({
+      url: HOCUSPOCUS_URL,
+      name: roomName,
+      document: ydoc,
+      parameters: { tenantId },
+    });
+
+    await waitForSynced(provider);
+
+    const text = ydoc.getText('test');
+    text.insert(0, 'Persisted content');
+
+    await waitForSynced(provider);
+    provider.destroy();
+
+    const ydocReloaded = new Y.Doc();
+    const reconnected = new HocuspocusProvider({
+      url: HOCUSPOCUS_URL,
+      name: roomName,
+      document: ydocReloaded,
+      parameters: { tenantId },
+    });
+
+    await waitForSynced(reconnected);
+
+    const reloadedText = ydocReloaded.getText('test').toString();
+    expect(reloadedText).toBe('Persisted content');
+
+    reconnected.destroy();
   });
 });

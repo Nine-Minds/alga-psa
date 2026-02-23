@@ -245,12 +245,14 @@
   {
     "id": "T023",
     "description": "Content typed in the editor persists across full page refresh (Hocuspocus DB persistence)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F013"
     ],
-    "testType": "manual",
-    "notes": "Type text, refresh page, verify content reloads"
+    "testType": "integration",
+    "testFile": "server/src/test/integration/collaborativeEditing.integration.test.ts",
+    "vitestName": "should persist content across a disconnect/reconnect cycle",
+    "notes": "Requires RUN_HOCUSPOCUS_TESTS=true and Hocuspocus on ws://localhost:1234"
   },
   {
     "id": "T024",
