@@ -528,7 +528,7 @@
   {
     "id": "T064",
     "description": "DB-backed integration sanity (guard path): resolver for unknown email returns generic response without user-existence details.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F030",
       "F031"

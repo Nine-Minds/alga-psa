@@ -185,3 +185,4 @@ Working notes for MSP SSO tenant-first resolver and provider-settings changes (M
 - (2026-02-23) `T061` complete: docs contract test verifies `.env.example` includes CE MSP SSO fallback usage for `GOOGLE_OAUTH_*` and `MICROSOFT_OAUTH_*`.
 - (2026-02-23) `T062` complete: docs contract test verifies provider setup order documentation instructs Providers settings before integration OAuth connections.
 - (2026-02-23) `T063` complete: resolver helper integration-style test covers tenant-source selection when a matching internal user row and tenant provider secrets are present.
+- (2026-02-23) `T064` complete: resolver route test covers unknown-email guard path returning generic response without user-existence disclosure.
