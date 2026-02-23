@@ -1,12 +1,19 @@
 // @vitest-environment jsdom
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, cleanup, act } from '@testing-library/react';
+import { render, cleanup, act, waitFor } from '@testing-library/react';
 import * as Y from 'yjs';
 
 (globalThis as unknown as { React?: typeof React }).React = React;
 
-const { collaborationConfigure, collaborationCaretConfigure, providerMock, createYjsProviderMock } = vi.hoisted(() => {
+const {
+  collaborationConfigure,
+  collaborationCaretConfigure,
+  providerMock,
+  createYjsProviderMock,
+  getBlockContentMock,
+  prosemirrorJSONToYXmlFragmentMock,
+} = vi.hoisted(() => {
   const awarenessMock = {
     setLocalStateField: vi.fn(),
     getStates: vi.fn(() => new Map()),
@@ -25,6 +32,8 @@ const { collaborationConfigure, collaborationCaretConfigure, providerMock, creat
       hasUnsyncedChanges: false,
     },
     createYjsProviderMock: vi.fn(),
+    getBlockContentMock: vi.fn(async () => null),
+    prosemirrorJSONToYXmlFragmentMock: vi.fn(),
   };
 });
 
@@ -50,11 +59,11 @@ vi.mock('@alga-psa/ui/editor', () => ({
 }));
 
 vi.mock('y-prosemirror', () => ({
-  prosemirrorJSONToYXmlFragment: vi.fn(),
+  prosemirrorJSONToYXmlFragment: (...args: unknown[]) => prosemirrorJSONToYXmlFragmentMock(...args),
 }));
 
 vi.mock('@alga-psa/documents/actions/documentBlockContentActions', () => ({
-  getBlockContent: vi.fn(async () => null),
+  getBlockContent: (...args: unknown[]) => getBlockContentMock(...args),
 }));
 
 let CollaborativeEditor: typeof import('@alga-psa/documents/components/CollaborativeEditor').CollaborativeEditor;
@@ -298,5 +307,40 @@ describe('CollaborativeEditor', () => {
     );
 
     expect(queryByRole('button', { name: /save/i })).toBeNull();
+  });
+
+  it('initializes the Y.js document from existing block content when empty', async () => {
+    providerMock.synced = false;
+    const fragmentMock = { length: 0, delete: vi.fn() } as unknown as Y.XmlFragment;
+    const getXmlFragmentSpy = vi.spyOn(ydoc, 'getXmlFragment').mockReturnValue(fragmentMock);
+    getBlockContentMock.mockResolvedValue({
+      block_data: JSON.stringify({ type: 'doc', content: [{ type: 'paragraph' }] }),
+    });
+
+    await act(async () => {
+      render(
+        <CollaborativeEditor
+          documentId="doc-10"
+          tenantId="tenant-10"
+          userId="user-10"
+          userName="Editor Ten"
+        />
+      );
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    await waitFor(() => {
+      expect(providerMock.on).toHaveBeenCalledWith('synced', expect.any(Function));
+    });
+
+    act(() => {
+      emitProviderEvent('synced', { state: true });
+    });
+
+    await waitFor(() => {
+      expect(prosemirrorJSONToYXmlFragmentMock).toHaveBeenCalled();
+    });
+
+    getXmlFragmentSpy.mockRestore();
   });
 });

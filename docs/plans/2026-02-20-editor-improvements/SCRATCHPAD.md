@@ -101,6 +101,7 @@ Working memory for implementing real-time collaborative editing via TipTap + Hoc
 - (2026-02-23) Confirmed Hocuspocus Database extension already configured for persistence; marked F013 complete.
 - (2026-02-23) Added Y.js initialization from existing `document_block_content` when collab doc is empty using `prosemirrorJSONToYXmlFragment`.
 - (2026-02-23) Marked T001 complete (feature flag default false test already present in integration suite).
+- (2026-02-23) Added unit test coverage for Y.js initialization from existing block content when the collab document is empty (`server/src/test/unit/documents/CollaborativeEditor.extensions.test.tsx`).
 
 - (2026-02-23) Added unit test coverage for collab-test feature flag disabled state (`server/src/test/unit/app/msp/collab-test/page.test.tsx`) and marked T002 complete. Ran: `npx vitest src/test/unit/app/msp/collab-test/page.test.tsx` (from `server/`).
 

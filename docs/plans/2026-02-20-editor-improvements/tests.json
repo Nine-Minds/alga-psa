@@ -346,13 +346,13 @@
   {
     "id": "T032",
     "description": "When Hocuspocus document is empty and document_block_content has existing content, the Y.js document is initialized from block_data",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F020"
     ],
-    "testType": "integration",
-    "testFile": "server/src/test/integration/collaborativeEditing.integration.test.ts",
-    "vitestName": "should load existing block_data as TipTap-compatible JSON for Y.js initialization"
+    "testType": "unit",
+    "testFile": "server/src/test/unit/documents/CollaborativeEditor.extensions.test.tsx",
+    "vitestName": "initializes the Y.js document from existing block content when empty"
   },
   {
     "id": "T033",
