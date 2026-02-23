@@ -8,7 +8,6 @@ Last updated: 2026-02-03
 
 ### Pre-release
 
-- [ ] Server: mobile auth endpoints enabled behind a feature/config flag per environment.
 - [ ] Server: hosted domain allowlist configured (if used) and includes the production domain(s).
 - [ ] Server: token TTLs/rotation configured; revocation works.
 - [ ] Server: RBAC verified for ticket list/detail/comments/mutations (401/403 behavior).
@@ -38,7 +37,6 @@ Last updated: 2026-02-03
 
 ### Immediate mitigation (minutes)
 
-- Disable mobile auth capability flag server-side (capabilities endpoint returns `mobileEnabled:false`).
 - Revoke/expire refresh tokens for affected tenant(s) if compromise is suspected.
 - Communicate status to testers and support.
 
@@ -51,4 +49,3 @@ Last updated: 2026-02-03
 
 - Root-cause analysis with logs/metrics for auth failures, 401/403 spikes, and API error rates.
 - Patch + re-release with incremented build numbers and updated release notes.
-

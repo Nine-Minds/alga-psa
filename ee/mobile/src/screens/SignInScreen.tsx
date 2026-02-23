@@ -78,11 +78,6 @@ export function SignInScreen() {
       setError("Missing configuration. Please set EXPO_PUBLIC_ALGA_BASE_URL.");
       return;
     }
-    if (capabilities && !capabilities.mobileEnabled) {
-      analytics.trackEvent(MobileAnalyticsEvents.authSignInBlocked, { reason: "mobile_disabled" });
-      setError("Mobile sign-in is not enabled for this server.");
-      return;
-    }
     if (!hostAllowed) {
       analytics.trackEvent(MobileAnalyticsEvents.authSignInBlocked, { reason: "host_not_allowlisted" });
       setError("This base URL is not allowed for mobile sign-in.");
@@ -135,7 +130,6 @@ export function SignInScreen() {
           disabled={
             status === "opening" ||
             !baseUrl ||
-            (capabilities !== null && !capabilities.mobileEnabled) ||
             !hostAllowed
           }
           accessibilityLabel={t("auth.signIn.cta")}
@@ -175,10 +169,6 @@ export function SignInScreen() {
         <Text style={{ ...typography.caption, marginTop: spacing.md, textAlign: "center", color: colors.mutedText }}>
           Checking server sign-in support…
         </Text>
-      ) : capabilities && !capabilities.mobileEnabled ? (
-        <Text style={{ ...typography.caption, marginTop: spacing.md, textAlign: "center", color: colors.danger }}>
-          Mobile sign-in is disabled for this server.
-        </Text>
       ) : capabilitiesError ? (
         <View style={{ marginTop: spacing.md, alignItems: "center" }}>
           <Text style={{ ...typography.caption, textAlign: "center", color: colors.mutedText }}>
@@ -193,7 +183,7 @@ export function SignInScreen() {
         <Text style={{ ...typography.caption, marginTop: spacing.md, textAlign: "center", color: colors.danger }}>
           This server domain is not allowed for mobile sign-in.
         </Text>
-      ) : capabilities && capabilities.mobileEnabled && !hasConfiguredSsoProvider ? (
+      ) : capabilities && !hasConfiguredSsoProvider ? (
         <Text style={{ ...typography.caption, marginTop: spacing.md, textAlign: "center", color: colors.mutedText }}>
           Microsoft/Google SSO is not configured for this server. Sign-in may require a password login.
         </Text>

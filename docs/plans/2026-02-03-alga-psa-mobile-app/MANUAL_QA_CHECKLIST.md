@@ -12,7 +12,7 @@ This checklist is used to validate MVP behavior end-to-end in a real device/simu
 - [ ] Session persists across app restart.
 - [ ] Refresh rotates credentials before expiry; revoked sessions force sign-in.
 - [ ] Logout revokes session server-side and clears local storage.
-- [ ] Capability discovery gates sign-in when mobile auth disabled or host not allowlisted.
+- [ ] Capability discovery gates sign-in when host is not allowlisted.
 
 ## Tickets — List
 
@@ -57,4 +57,3 @@ This checklist is used to validate MVP behavior end-to-end in a real device/simu
 - [ ] Account section shows signed-in status, user, and tenant id.
 - [ ] Clear cache clears in-memory caches and prompts confirmation.
 - [ ] About/Legal opens and link-outs to privacy/terms work.
-
