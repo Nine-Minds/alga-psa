@@ -129,3 +129,5 @@ Working memory for implementing real-time collaborative editing via TipTap + Hoc
 - (2026-02-23) Marked T014 complete using presence bar disconnect unit test in `CollaborativeEditor.extensions.test.tsx`.
 
 - (2026-02-23) Marked T015 complete using connected-status unit test in `CollaborativeEditor.extensions.test.tsx`.
+
+- (2026-02-23) Added unit coverage for disconnected status rendering in CollaborativeEditor (T016) in `server/src/test/unit/documents/CollaborativeEditor.extensions.test.tsx`. Ran: `npx vitest src/test/unit/documents/CollaborativeEditor.extensions.test.tsx` (from `server/`).

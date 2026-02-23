@@ -254,4 +254,21 @@ describe('CollaborativeEditor', () => {
 
     expect(queryByText('User B')).toBeNull();
   });
+
+  it('renders a disconnected status when the provider disconnects', () => {
+    providerMock.status = 'disconnected';
+
+    const { getByText, container } = render(
+      <CollaborativeEditor
+        documentId="doc-7"
+        tenantId="tenant-7"
+        userId="user-7"
+        userName="Editor Seven"
+      />
+    );
+
+    expect(getByText('Disconnected')).toBeTruthy();
+    const statusWrapper = container.querySelector('[data-status]');
+    expect(statusWrapper?.getAttribute('data-status')).toBe('disconnected');
+  });
 });

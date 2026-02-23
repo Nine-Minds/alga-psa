@@ -168,12 +168,13 @@
   {
     "id": "T016",
     "description": "Connection status shows 'disconnected' (red) when WebSocket drops",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F008"
     ],
-    "testType": "manual",
-    "notes": "Stop Hocuspocus server while editor is open, verify red indicator"
+    "testType": "unit",
+    "testFile": "server/src/test/unit/documents/CollaborativeEditor.extensions.test.tsx",
+    "vitestName": "renders a disconnected status when the provider disconnects"
   },
   {
     "id": "T017",
