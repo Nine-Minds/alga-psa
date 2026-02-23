@@ -328,7 +328,7 @@
   {
     "id": "T040",
     "description": "Resolver context cookie includes provider, source, issuedAt/expiresAt, nonce, and signature.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F032",
       "F043"
