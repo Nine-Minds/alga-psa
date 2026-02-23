@@ -50,6 +50,7 @@ Working notes for MSP SSO tenant-first resolver and provider-settings changes (M
 - (2026-02-23) `F015` complete: Microsoft email form now shows a "Configure Providers first" CTA (`configure-microsoft-providers-link`) when Microsoft provider readiness is false.
 - (2026-02-23) `F016` complete: Microsoft calendar form now checks provider readiness, shows a Providers-first CTA when missing, and disables OAuth connect until provider settings are ready.
 - (2026-02-23) `F017` complete: `persistMicrosoftConfig` now resolves Microsoft credentials from tenant provider secrets before per-provider payload values, so CE email provider persistence does not require form-entered client credentials.
+- (2026-02-23) `F018` complete: Microsoft calendar form persists provider metadata without client credential inputs by creating/updating providers with provider-settings-first OAuth flow.
 
 ## Commands / Runbooks
 
