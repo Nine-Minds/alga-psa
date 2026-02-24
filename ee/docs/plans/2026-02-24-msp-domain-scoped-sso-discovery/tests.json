@@ -434,7 +434,7 @@
   {
     "id": "T051",
     "description": "DB-backed integration guard path: inactive/deleted domain mappings are ignored by discovery.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F004",
       "F006",
