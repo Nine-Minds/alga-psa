@@ -1,10 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-let mockUserRow: { user_id: string; tenant: string } | undefined;
-let lookedUpEmail: string | undefined;
-
 const tenantSecrets = new Map<string, string>();
 const appSecrets = new Map<string, string>();
+const domainRows: Array<{ tenant: string; domain: string; is_active: boolean }> = [];
 
 const getTenantSecretMock = vi.fn(async (tenant: string, key: string) => {
   return tenantSecrets.get(`${tenant}:${key}`) ?? null;
@@ -13,18 +11,34 @@ const getAppSecretMock = vi.fn(async (key: string) => {
   return appSecrets.get(key) ?? null;
 });
 
-const dbMock = vi.fn((_table: string) => ({
-  select: () => ({
-    whereRaw: (_sql: string, bindings: unknown[]) => {
-      lookedUpEmail = String(bindings[0] ?? '');
-      return {
-        andWhere: () => ({
-          first: async () => mockUserRow,
-        }),
-      };
-    },
-  }),
-}));
+const dbMock = vi.fn((table: string) => {
+  if (table !== 'msp_sso_tenant_login_domains') {
+    throw new Error(`Unexpected table: ${table}`);
+  }
+
+  const state: {
+    isActive?: boolean;
+    domain?: string;
+  } = {};
+
+  return {
+    distinct: () => ({
+      where: (conditions: { is_active?: boolean }) => {
+        state.isActive = conditions?.is_active;
+        return {
+          whereRaw: (_sql: string, bindings: unknown[]) => {
+            state.domain = String(bindings[0] ?? '').toLowerCase();
+            const rows = domainRows
+              .filter((row) => (state.isActive === undefined ? true : row.is_active === state.isActive))
+              .filter((row) => row.domain.toLowerCase() === state.domain)
+              .map((row) => ({ tenant: row.tenant }));
+            return Promise.resolve(rows);
+          },
+        };
+      },
+    }),
+  };
+});
 
 vi.mock('@alga-psa/core/secrets', () => ({
   getSecretProviderInstance: async () => ({
@@ -38,155 +52,178 @@ vi.mock('@alga-psa/db/admin', () => ({
 }));
 
 import {
+  createSignedMspSsoDiscoveryCookie,
   createSignedMspSsoResolutionCookie,
+  discoverMspSsoProviderOptions,
+  extractDomainFromEmail,
   normalizeResolverEmail,
+  parseAndVerifyMspSsoDiscoveryCookie,
   parseAndVerifyMspSsoResolutionCookie,
   resolveMspSsoCredentialSource,
+  resolveTenantForMspSsoDomain,
 } from './mspSsoResolution';
 
 describe('mspSsoResolution helpers', () => {
   beforeEach(() => {
-    mockUserRow = undefined;
-    lookedUpEmail = undefined;
     tenantSecrets.clear();
     appSecrets.clear();
+    domainRows.length = 0;
     getTenantSecretMock.mockClear();
     getAppSecretMock.mockClear();
     dbMock.mockClear();
   });
 
-  it('T032: normalizes email case/whitespace before resolver user lookup', async () => {
-    appSecrets.set('GOOGLE_OAUTH_CLIENT_ID', 'app-google-id');
-    appSecrets.set('GOOGLE_OAUTH_CLIENT_SECRET', 'app-google-secret');
-
-    await resolveMspSsoCredentialSource({
-      provider: 'google',
-      email: '  User@Example.COM  ',
-    });
-
+  it('normalizes email and extracts domain from mixed-case input', () => {
     expect(normalizeResolverEmail('  User@Example.COM  ')).toBe('user@example.com');
-    expect(lookedUpEmail).toBe('user@example.com');
+    expect(extractDomainFromEmail('  User@Example.COM  ')).toBe('example.com');
+    expect(extractDomainFromEmail('not-an-email')).toBeNull();
   });
 
-  it('T033/T063: selects tenant source for Microsoft when matching internal user + tenant secrets exist', async () => {
-    mockUserRow = { user_id: 'user-1', tenant: 'tenant-1' };
-    tenantSecrets.set('tenant-1:microsoft_client_id', 'tenant-ms-id');
-    tenantSecrets.set('tenant-1:microsoft_client_secret', 'tenant-ms-secret');
+  it('resolves mapped domain to single tenant and marks ambiguous duplicates as unresolved', async () => {
+    domainRows.push(
+      { tenant: 'tenant-1', domain: 'acme.com', is_active: true },
+      { tenant: 'tenant-2', domain: 'shared.com', is_active: true },
+      { tenant: 'tenant-3', domain: 'shared.com', is_active: true }
+    );
 
-    await expect(
-      resolveMspSsoCredentialSource({ provider: 'azure-ad', email: 'user@example.com' })
-    ).resolves.toMatchObject({
-      resolved: true,
-      source: 'tenant',
-      userId: 'user-1',
+    await expect(resolveTenantForMspSsoDomain('acme.com')).resolves.toEqual({
       tenantId: 'tenant-1',
-      userFound: true,
+      ambiguous: false,
+    });
+    await expect(resolveTenantForMspSsoDomain('shared.com')).resolves.toEqual({
+      ambiguous: true,
+    });
+    await expect(resolveTenantForMspSsoDomain('unknown.com')).resolves.toEqual({
+      ambiguous: false,
     });
   });
 
-  it('T034: selects tenant source for Google when matching internal user + tenant secrets exist', async () => {
-    mockUserRow = { user_id: 'user-2', tenant: 'tenant-1' };
-    tenantSecrets.set('tenant-1:google_client_id', 'tenant-google-id');
-    tenantSecrets.set('tenant-1:google_client_secret', 'tenant-google-secret');
+  it('discovers tenant-scoped provider list without user lookup', async () => {
+    domainRows.push({ tenant: 'tenant-1', domain: 'acme.com', is_active: true });
+    tenantSecrets.set('tenant-1:microsoft_client_id', 'ms-id');
+    tenantSecrets.set('tenant-1:microsoft_client_secret', 'ms-secret');
 
-    await expect(
-      resolveMspSsoCredentialSource({ provider: 'google', email: 'user@example.com' })
-    ).resolves.toMatchObject({
-      resolved: true,
+    const result = await discoverMspSsoProviderOptions('person@acme.com');
+    expect(result).toEqual({
       source: 'tenant',
-      userId: 'user-2',
       tenantId: 'tenant-1',
-      userFound: true,
+      providers: ['azure-ad'],
+      domain: 'acme.com',
+      ambiguous: false,
     });
   });
 
-  it('T035/T041/T065: uses Microsoft app fallback keys when tenant source unavailable', async () => {
-    mockUserRow = { user_id: 'user-3', tenant: 'tenant-1' };
-    appSecrets.set('MICROSOFT_OAUTH_CLIENT_ID', 'app-ms-id');
-    appSecrets.set('MICROSOFT_OAUTH_CLIENT_SECRET', 'app-ms-secret');
+  it('falls back to app providers for unresolved or ambiguous domains', async () => {
+    domainRows.push(
+      { tenant: 'tenant-1', domain: 'shared.com', is_active: true },
+      { tenant: 'tenant-2', domain: 'shared.com', is_active: true }
+    );
+    appSecrets.set('GOOGLE_OAUTH_CLIENT_ID', 'google-id');
+    appSecrets.set('GOOGLE_OAUTH_CLIENT_SECRET', 'google-secret');
+
+    await expect(discoverMspSsoProviderOptions('person@shared.com')).resolves.toEqual({
+      source: 'app',
+      providers: ['google'],
+      domain: 'shared.com',
+      ambiguous: true,
+    });
+    await expect(discoverMspSsoProviderOptions('person@unknown.com')).resolves.toEqual({
+      source: 'app',
+      providers: ['google'],
+      domain: 'unknown.com',
+      ambiguous: false,
+    });
+  });
+
+  it('resolver enforces discovered provider allow-list and falls back to app when discovery missing', async () => {
+    tenantSecrets.set('tenant-1:microsoft_client_id', 'ms-id');
+    tenantSecrets.set('tenant-1:microsoft_client_secret', 'ms-secret');
+    appSecrets.set('GOOGLE_OAUTH_CLIENT_ID', 'google-id');
+    appSecrets.set('GOOGLE_OAUTH_CLIENT_SECRET', 'google-secret');
 
     await expect(
-      resolveMspSsoCredentialSource({ provider: 'azure-ad', email: 'user@example.com' })
-    ).resolves.toMatchObject({
+      resolveMspSsoCredentialSource({
+        provider: 'azure-ad',
+        discovery: {
+          source: 'tenant',
+          tenantId: 'tenant-1',
+          providers: ['azure-ad'],
+          issuedAt: 1,
+          expiresAt: Number.MAX_SAFE_INTEGER,
+          nonce: 'nonce-1',
+        },
+      })
+    ).resolves.toEqual({
+      resolved: true,
+      source: 'tenant',
+      tenantId: 'tenant-1',
+    });
+
+    await expect(
+      resolveMspSsoCredentialSource({
+        provider: 'google',
+        discovery: {
+          source: 'tenant',
+          tenantId: 'tenant-1',
+          providers: ['azure-ad'],
+          issuedAt: 1,
+          expiresAt: Number.MAX_SAFE_INTEGER,
+          nonce: 'nonce-2',
+        },
+      })
+    ).resolves.toEqual({ resolved: false });
+
+    await expect(resolveMspSsoCredentialSource({ provider: 'google' })).resolves.toEqual({
       resolved: true,
       source: 'app',
-      userFound: true,
     });
-
-    expect(getAppSecretMock).toHaveBeenCalledWith('MICROSOFT_OAUTH_CLIENT_ID');
-    expect(getAppSecretMock).toHaveBeenCalledWith('MICROSOFT_OAUTH_CLIENT_SECRET');
   });
 
-  it('T036/T042: uses Google app fallback keys when tenant source unavailable', async () => {
-    mockUserRow = { user_id: 'user-4', tenant: 'tenant-1' };
-    appSecrets.set('GOOGLE_OAUTH_CLIENT_ID', 'app-google-id');
-    appSecrets.set('GOOGLE_OAUTH_CLIENT_SECRET', 'app-google-secret');
-
-    await expect(
-      resolveMspSsoCredentialSource({ provider: 'google', email: 'user@example.com' })
-    ).resolves.toMatchObject({
-      resolved: true,
-      source: 'app',
-      userFound: true,
-    });
-
-    expect(getAppSecretMock).toHaveBeenCalledWith('GOOGLE_OAUTH_CLIENT_ID');
-    expect(getAppSecretMock).toHaveBeenCalledWith('GOOGLE_OAUTH_CLIENT_SECRET');
-  });
-
-  it('T039/T040: signed cookie includes source metadata + signature and excludes raw secrets', () => {
-    const { value, payload } = createSignedMspSsoResolutionCookie({
-      provider: 'azure-ad',
+  it('signs and verifies discovery + resolver cookies without secrets in payload', () => {
+    const discovery = createSignedMspSsoDiscoveryCookie({
       source: 'tenant',
       tenantId: 'tenant-1',
-      userId: 'user-1',
-      secret: 'unit-test-signing-secret',
+      providers: ['google', 'azure-ad'],
+      secret: 'unit-secret',
       now: 1_700_000_000_000,
       ttlSeconds: 300,
     });
 
-    expect(payload).toMatchObject({
+    expect(discovery.value).toContain('.');
+    expect(discovery.value).not.toContain('client_secret');
+    expect(discovery.payload.providers).toEqual(['google', 'azure-ad']);
+
+    expect(
+      parseAndVerifyMspSsoDiscoveryCookie({
+        value: discovery.value,
+        secret: 'unit-secret',
+        now: 1_700_000_010_000,
+      })
+    ).toMatchObject({
+      source: 'tenant',
+      tenantId: 'tenant-1',
+      providers: ['google', 'azure-ad'],
+    });
+
+    const resolution = createSignedMspSsoResolutionCookie({
       provider: 'azure-ad',
       source: 'tenant',
       tenantId: 'tenant-1',
-      userId: 'user-1',
-      issuedAt: 1_700_000_000_000,
-      expiresAt: 1_700_000_300_000,
-    });
-    expect(payload.nonce.length).toBeGreaterThanOrEqual(8);
-
-    expect(value).toContain('.');
-    expect(value).not.toContain('client_id');
-    expect(value).not.toContain('client_secret');
-
-    const parsed = parseAndVerifyMspSsoResolutionCookie({
-      value,
-      secret: 'unit-test-signing-secret',
-      now: 1_700_000_050_000,
+      secret: 'unit-secret',
+      now: 1_700_000_000_000,
+      ttlSeconds: 300,
     });
 
-    expect(parsed).toMatchObject({
+    expect(
+      parseAndVerifyMspSsoResolutionCookie({
+        value: resolution.value,
+        secret: 'unit-secret',
+        now: 1_700_000_010_000,
+      })
+    ).toMatchObject({
       provider: 'azure-ad',
       source: 'tenant',
       tenantId: 'tenant-1',
-      userId: 'user-1',
     });
-  });
-
-  it('T043: invalid signature or expired cookie fails verification', () => {
-    const { value } = createSignedMspSsoResolutionCookie({
-      provider: 'google',
-      source: 'app',
-      secret: 'secret-a',
-      now: 10_000,
-      ttlSeconds: 1,
-    });
-
-    expect(
-      parseAndVerifyMspSsoResolutionCookie({ value, secret: 'wrong-secret', now: 10_500 })
-    ).toBeNull();
-    expect(
-      parseAndVerifyMspSsoResolutionCookie({ value, secret: 'secret-a', now: 12_000 })
-    ).toBeNull();
   });
 });

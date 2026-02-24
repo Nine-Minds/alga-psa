@@ -56,7 +56,7 @@
   {
     "id": "F010",
     "description": "Add `POST /api/auth/msp/sso/discover` endpoint for MSP SSO domain discovery.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Functional Requirements #3", "Endpoint"]
   },
   {

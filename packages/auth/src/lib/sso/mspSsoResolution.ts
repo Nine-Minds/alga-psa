@@ -6,9 +6,14 @@ export type MspSsoProviderId = 'google' | 'azure-ad';
 export type MspSsoSource = 'tenant' | 'app';
 
 export const MSP_SSO_RESOLUTION_COOKIE = 'msp_sso_resolution';
+export const MSP_SSO_DISCOVERY_COOKIE = 'msp_sso_discovery';
 export const MSP_SSO_RESOLUTION_TTL_SECONDS = 5 * 60;
+export const MSP_SSO_DISCOVERY_TTL_SECONDS = 5 * 60;
 export const MSP_SSO_GENERIC_FAILURE_MESSAGE =
   "We couldn't start SSO sign-in. Please verify provider setup and try again.";
+export const MSP_SSO_LOGIN_DOMAIN_TABLE = 'msp_sso_tenant_login_domains';
+
+const PROVIDER_ORDER: MspSsoProviderId[] = ['google', 'azure-ad'];
 
 export interface MspSsoResolutionPayload {
   provider: MspSsoProviderId;
@@ -20,17 +25,37 @@ export interface MspSsoResolutionPayload {
   nonce: string;
 }
 
+export interface MspSsoDiscoveryPayload {
+  source: MspSsoSource;
+  tenantId?: string;
+  providers: MspSsoProviderId[];
+  issuedAt: number;
+  expiresAt: number;
+  nonce: string;
+}
+
 interface ResolverInputs {
   provider: MspSsoProviderId;
-  email: string;
+  discovery?: MspSsoDiscoveryPayload | null;
 }
 
 interface ResolverOutcome {
   resolved: boolean;
   source?: MspSsoSource;
-  userId?: string;
   tenantId?: string;
-  userFound: boolean;
+}
+
+export interface MspSsoDiscoveryOutcome {
+  source: MspSsoSource;
+  tenantId?: string;
+  providers: MspSsoProviderId[];
+  domain: string;
+  ambiguous: boolean;
+}
+
+interface DomainTenantResolution {
+  tenantId?: string;
+  ambiguous: boolean;
 }
 
 function isConfigured(value: string | null | undefined): boolean {
@@ -59,8 +84,29 @@ function isSupportedProvider(provider: string): provider is MspSsoProviderId {
   return provider === 'google' || provider === 'azure-ad';
 }
 
+function normalizeProviders(values: unknown): MspSsoProviderId[] {
+  if (!Array.isArray(values)) return [];
+  const providers = values
+    .filter((provider): provider is string => typeof provider === 'string')
+    .filter((provider): provider is MspSsoProviderId => isSupportedProvider(provider));
+
+  return Array.from(new Set(providers)).sort(
+    (left, right) => PROVIDER_ORDER.indexOf(left) - PROVIDER_ORDER.indexOf(right)
+  );
+}
+
 export function normalizeResolverEmail(value: string): string {
   return value.trim().toLowerCase();
+}
+
+export function extractDomainFromEmail(value: string): string | null {
+  const normalized = normalizeResolverEmail(value);
+  const atIndex = normalized.lastIndexOf('@');
+  if (atIndex <= 0 || atIndex >= normalized.length - 1) return null;
+
+  const domain = normalized.slice(atIndex + 1).trim();
+  if (!domain || domain.includes('@') || !domain.includes('.')) return null;
+  return domain;
 }
 
 export function isValidResolverCallbackUrl(value: string | undefined): boolean {
@@ -91,7 +137,10 @@ export async function getMspSsoSigningSecret(): Promise<string | null> {
   return fromAppSecret || null;
 }
 
-async function hasTenantProviderCredentials(tenant: string, provider: MspSsoProviderId): Promise<boolean> {
+export async function hasTenantProviderCredentials(
+  tenant: string,
+  provider: MspSsoProviderId
+): Promise<boolean> {
   const secretProvider = await getSecretProviderInstance();
   if (provider === 'google') {
     const [clientId, clientSecret] = await Promise.all([
@@ -108,7 +157,9 @@ async function hasTenantProviderCredentials(tenant: string, provider: MspSsoProv
   return isConfigured(clientId) && isConfigured(clientSecret);
 }
 
-async function hasAppFallbackCredentials(provider: MspSsoProviderId): Promise<boolean> {
+export async function hasAppFallbackProviderCredentials(
+  provider: MspSsoProviderId
+): Promise<boolean> {
   const secretProvider = await getSecretProviderInstance();
   if (provider === 'google') {
     const clientId =
@@ -129,39 +180,126 @@ async function hasAppFallbackCredentials(provider: MspSsoProviderId): Promise<bo
   return isConfigured(clientId) && isConfigured(clientSecret);
 }
 
-export async function resolveMspSsoCredentialSource(inputs: ResolverInputs): Promise<ResolverOutcome> {
-  const email = normalizeResolverEmail(inputs.email);
+export async function resolveTenantForMspSsoDomain(
+  domain: string
+): Promise<DomainTenantResolution> {
+  const normalizedDomain = domain.trim().toLowerCase();
+  if (!normalizedDomain) {
+    return { ambiguous: false };
+  }
+
   const db = await getAdminConnection();
+  const rows = await db(MSP_SSO_LOGIN_DOMAIN_TABLE)
+    .distinct('tenant')
+    .where({ is_active: true })
+    .whereRaw('lower(domain) = ?', [normalizedDomain]);
 
-  const user = await db('users')
-    .select('user_id', 'tenant')
-    .whereRaw('LOWER(email) = ?', [email])
-    .andWhere({ user_type: 'internal', is_inactive: false })
-    .first();
+  const tenants = Array.from(
+    new Set(
+      rows
+        .map((row: Record<string, unknown>) => row.tenant)
+        .filter((tenant): tenant is string => typeof tenant === 'string' && tenant.length > 0)
+    )
+  );
 
-  const userFound = Boolean(user);
-  if (user && (await hasTenantProviderCredentials(user.tenant, inputs.provider))) {
+  if (tenants.length === 1) {
     return {
-      resolved: true,
-      source: 'tenant',
-      tenantId: user.tenant,
-      userId: user.user_id,
-      userFound,
+      tenantId: tenants[0],
+      ambiguous: false,
     };
   }
 
-  if (await hasAppFallbackCredentials(inputs.provider)) {
+  if (tenants.length > 1) {
+    return {
+      ambiguous: true,
+    };
+  }
+
+  return { ambiguous: false };
+}
+
+export async function discoverMspSsoProviderOptions(
+  email: string
+): Promise<MspSsoDiscoveryOutcome | null> {
+  const domain = extractDomainFromEmail(email);
+  if (!domain) return null;
+
+  const domainResolution = await resolveTenantForMspSsoDomain(domain);
+  if (domainResolution.tenantId && !domainResolution.ambiguous) {
+    const [googleReady, microsoftReady] = await Promise.all([
+      hasTenantProviderCredentials(domainResolution.tenantId, 'google'),
+      hasTenantProviderCredentials(domainResolution.tenantId, 'azure-ad'),
+    ]);
+
+    return {
+      source: 'tenant',
+      tenantId: domainResolution.tenantId,
+      providers: normalizeProviders([
+        ...(googleReady ? ['google'] : []),
+        ...(microsoftReady ? ['azure-ad'] : []),
+      ]),
+      domain,
+      ambiguous: false,
+    };
+  }
+
+  const [googleReady, microsoftReady] = await Promise.all([
+    hasAppFallbackProviderCredentials('google'),
+    hasAppFallbackProviderCredentials('azure-ad'),
+  ]);
+
+  return {
+    source: 'app',
+    providers: normalizeProviders([
+      ...(googleReady ? ['google'] : []),
+      ...(microsoftReady ? ['azure-ad'] : []),
+    ]),
+    domain,
+    ambiguous: domainResolution.ambiguous,
+  };
+}
+
+export async function resolveMspSsoCredentialSource(
+  inputs: ResolverInputs
+): Promise<ResolverOutcome> {
+  const discovery = inputs.discovery;
+  if (discovery) {
+    const allowedProviders = normalizeProviders(discovery.providers);
+    if (!allowedProviders.includes(inputs.provider)) {
+      return { resolved: false };
+    }
+
+    if (discovery.source === 'tenant' && discovery.tenantId) {
+      if (await hasTenantProviderCredentials(discovery.tenantId, inputs.provider)) {
+        return {
+          resolved: true,
+          source: 'tenant',
+          tenantId: discovery.tenantId,
+        };
+      }
+
+      return { resolved: false };
+    }
+
+    if (discovery.source === 'app') {
+      if (await hasAppFallbackProviderCredentials(inputs.provider)) {
+        return {
+          resolved: true,
+          source: 'app',
+        };
+      }
+      return { resolved: false };
+    }
+  }
+
+  if (await hasAppFallbackProviderCredentials(inputs.provider)) {
     return {
       resolved: true,
       source: 'app',
-      userFound,
     };
   }
 
-  return {
-    resolved: false,
-    userFound,
-  };
+  return { resolved: false };
 }
 
 export function createSignedMspSsoResolutionCookie(params: {
@@ -180,6 +318,30 @@ export function createSignedMspSsoResolutionCookie(params: {
     source: params.source,
     tenantId: params.tenantId,
     userId: params.userId,
+    issuedAt: now,
+    expiresAt: now + ttl * 1000,
+    nonce: randomBytes(16).toString('hex'),
+  };
+
+  const payloadEncoded = toBase64Url(JSON.stringify(payload));
+  const signature = computeCookieSignature(payloadEncoded, params.secret);
+  return { value: `${payloadEncoded}.${signature}`, payload };
+}
+
+export function createSignedMspSsoDiscoveryCookie(params: {
+  source: MspSsoSource;
+  tenantId?: string;
+  providers: MspSsoProviderId[];
+  secret: string;
+  ttlSeconds?: number;
+  now?: number;
+}): { value: string; payload: MspSsoDiscoveryPayload } {
+  const now = params.now ?? Date.now();
+  const ttl = params.ttlSeconds ?? MSP_SSO_DISCOVERY_TTL_SECONDS;
+  const payload: MspSsoDiscoveryPayload = {
+    source: params.source,
+    tenantId: params.tenantId,
+    providers: normalizeProviders(params.providers),
     issuedAt: now,
     expiresAt: now + ttl * 1000,
     nonce: randomBytes(16).toString('hex'),
@@ -228,4 +390,52 @@ export function parseAndVerifyMspSsoResolutionCookie(params: {
   const now = params.now ?? Date.now();
   if (payload.expiresAt <= now) return null;
   return payload;
+}
+
+export function parseAndVerifyMspSsoDiscoveryCookie(params: {
+  value: string | undefined;
+  secret: string;
+  now?: number;
+}): MspSsoDiscoveryPayload | null {
+  const { value, secret } = params;
+  if (!value) return null;
+
+  const parts = value.split('.');
+  if (parts.length !== 2) return null;
+  const [payloadEncoded, signature] = parts;
+  if (!payloadEncoded || !signature) return null;
+
+  const expected = computeCookieSignature(payloadEncoded, secret);
+  const expectedBuffer = Buffer.from(expected);
+  const signatureBuffer = Buffer.from(signature);
+  if (
+    expectedBuffer.length !== signatureBuffer.length ||
+    !timingSafeEqual(expectedBuffer, signatureBuffer)
+  ) {
+    return null;
+  }
+
+  let payload: MspSsoDiscoveryPayload;
+  try {
+    payload = JSON.parse(fromBase64Url(payloadEncoded)) as MspSsoDiscoveryPayload;
+  } catch {
+    return null;
+  }
+
+  if (!payload) return null;
+  if (payload.source !== 'tenant' && payload.source !== 'app') return null;
+  if (typeof payload.issuedAt !== 'number' || typeof payload.expiresAt !== 'number') return null;
+  if (typeof payload.nonce !== 'string' || payload.nonce.length < 8) return null;
+  if (!Array.isArray(payload.providers)) return null;
+
+  const providers = normalizeProviders(payload.providers);
+  if (providers.length !== payload.providers.length) return null;
+
+  const now = params.now ?? Date.now();
+  if (payload.expiresAt <= now) return null;
+
+  return {
+    ...payload,
+    providers,
+  };
 }

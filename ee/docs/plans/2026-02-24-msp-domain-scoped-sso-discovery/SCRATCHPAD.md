@@ -31,6 +31,7 @@ Working notes for shifting MSP SSO provider enablement from user-based pre-auth 
 - (2026-02-24) Added Providers UI section `MspSsoLoginDomainsSettings` and wired it into `IntegrationsSettingsPage` providers tab below Google/Microsoft credential cards.
 - (2026-02-24) Providers UI supports full domain list editing: add-new input, per-row inline edits, per-row remove controls, and explicit save/refresh actions.
 - (2026-02-24) Providers UI renders save failures in neutral actionable alerts (validation messages + conflict domain hints) without exposing backend internals.
+- (2026-02-24) Added discovery endpoint `POST /api/auth/msp/sso/discover` with invariant response shape `{ ok: true, providers: [] }` and signed discovery cookie issuance on valid requests.
 
 ## Commands / Runbooks
 
@@ -42,6 +43,10 @@ Working notes for shifting MSP SSO provider enablement from user-based pre-auth 
   - `cd server && npx vitest run src/test/unit/migrations/mspSsoTenantLoginDomainsMigration.test.ts`
 - (2026-02-24) Validate domain actions unit tests:
   - `cd server && npx vitest run --coverage.enabled=false ../packages/integrations/src/actions/integrations/mspSsoDomainActions.test.ts`
+- (2026-02-24) Validate discovery endpoint tests:
+  - `cd server && npx vitest run --coverage.enabled=false src/app/api/auth/msp/sso/discover/route.test.ts`
+- (2026-02-24) Validate SSO discovery helper tests:
+  - `cd server && npx vitest run --coverage.enabled=false ../packages/auth/src/lib/sso/mspSsoResolution.test.ts`
 
 ## Gotchas
 
@@ -56,6 +61,8 @@ Working notes for shifting MSP SSO provider enablement from user-based pre-auth 
   - `packages/auth/src/components/SsoProviderButtons.tsx`
 - Current resolver endpoint:
   - `server/src/app/api/auth/msp/sso/resolve/route.ts`
+- Discovery endpoint:
+  - `server/src/app/api/auth/msp/sso/discover/route.ts`
 - Resolver helper library:
   - `packages/auth/src/lib/sso/mspSsoResolution.ts`
 - Provider readiness/actions:
