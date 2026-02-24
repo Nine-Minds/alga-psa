@@ -99,7 +99,7 @@
     "id": "F17",
     "description": "Read-only view mode in drawer: render content without editing capabilities",
     "prdRefs": ["F14"],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F18",

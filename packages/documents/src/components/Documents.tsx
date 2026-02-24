@@ -14,7 +14,7 @@ import { DocumentsGridSkeleton } from './DocumentsPageSkeleton';
 import { Button } from '@alga-psa/ui/components/Button';
 import Drawer from '@alga-psa/ui/components/Drawer';
 import { Input } from '@alga-psa/ui/components/Input';
-import { RichTextViewer, TextEditor } from '@alga-psa/ui/editor';
+import { TextEditor } from '@alga-psa/ui/editor';
 import { CollaborativeEditor } from './CollaborativeEditor';
 import FolderTreeView from './FolderTreeView';
 import FolderManager from './FolderManager';
@@ -47,6 +47,7 @@ import {
 } from '../actions/documentBlockContentActions';
 import { syncCollabSnapshot } from '../actions/collaborativeEditingActions';
 import { DocumentEditor } from './DocumentEditor';
+import { DocumentViewer } from './DocumentViewer';
 
 const DEFAULT_BLOCKS: PartialBlock[] = [{
   type: "paragraph",
@@ -134,7 +135,7 @@ const Documents = ({
   const [documentName, setDocumentName] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [isLoadingContent, setIsLoadingContent] = useState(false);
-  const [currentContent, setCurrentContent] = useState<PartialBlock[]>(DEFAULT_BLOCKS);
+  const [currentContent, setCurrentContent] = useState<any>(DEFAULT_BLOCKS);
   const [hasContentChanged, setHasContentChanged] = useState(false);
   const editorRef = useRef<BlockNoteEditor | null>(null);
   const [isEditModeInDrawer, setIsEditModeInDrawer] = useState(false);
@@ -1449,10 +1450,7 @@ const Documents = ({
                       />
                     )
                   ) : selectedDocument ? (
-                    <RichTextViewer
-                      id={`${id}-viewer`}
-                      content={currentContent}
-                    />
+                    <DocumentViewer content={currentContent} />
                   ) : (
                     <div className="flex justify-center items-center h-full text-gray-500">
                       Select a document or create a new one.
