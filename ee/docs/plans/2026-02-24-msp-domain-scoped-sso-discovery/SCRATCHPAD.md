@@ -41,6 +41,7 @@ Working notes for shifting MSP SSO provider enablement from user-based pre-auth 
 - (2026-02-24) Unresolved-domain discovery falls back to app-level provider readiness via `GOOGLE_OAUTH_*` and `MICROSOFT_OAUTH_*` app secrets/env.
 - (2026-02-24) Discovery endpoint response is invariant across invalid/limited/error paths and only returns allowed provider IDs (`google`, `azure-ad`) when available.
 - (2026-02-24) Added signed discovery cookie helper (`createSignedMspSsoDiscoveryCookie` / parse verifier) with only source/tenant/providers/timing metadata; no OAuth client IDs or secrets.
+- (2026-02-24) Discovery endpoint now rotates discovery cookie on valid requests and clears stale/invalid context cookies with `maxAge: 0` on neutral failure responses.
 
 ## Commands / Runbooks
 

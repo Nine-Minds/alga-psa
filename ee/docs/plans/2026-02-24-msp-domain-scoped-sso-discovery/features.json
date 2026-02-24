@@ -116,7 +116,7 @@
   {
     "id": "F020",
     "description": "Set and rotate discovery-context cookie from discovery endpoint; clear stale cookie on invalid input.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Functional Requirements #6", "Functional Requirements #7"]
   },
   {
