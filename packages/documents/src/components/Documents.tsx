@@ -1388,6 +1388,11 @@ const Documents = ({
 
               <div className="flex-1 overflow-y-auto mb-4 p-2">
                 <div className="h-full w-full">
+                  {isFallbackMode && (
+                    <div className="mb-2 rounded border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-700">
+                      Offline — manual save mode
+                    </div>
+                  )}
                   {isLoadingContent ? (
                     <div className="flex justify-center items-center h-full">
                       <Spinner size="sm" />

@@ -81,7 +81,7 @@
     "id": "F14",
     "description": "Fallback mode shows status indicator: 'Offline — manual save mode'",
     "prdRefs": ["F10"],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F15",

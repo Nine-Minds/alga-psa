@@ -65,3 +65,4 @@
 - Added best-effort snapshot on drawer close for collaborative sessions.
 - Added 3s Hocuspocus timeout handling to switch drawer editor into fallback mode.
 - Fallback editor now uses `DocumentEditor` with drawer-level save via `updateBlockContent` and shared toolbar/styling.
+- Added fallback status banner: "Offline — manual save mode".
