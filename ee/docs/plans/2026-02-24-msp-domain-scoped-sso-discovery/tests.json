@@ -51,7 +51,7 @@
   {
     "id": "T007",
     "description": "Save login-domain action lowercases and trims domains before persistence.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F005"
     ]
