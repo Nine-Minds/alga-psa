@@ -1,0 +1,340 @@
+'use client';
+
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { EditorContent, useEditor } from '@tiptap/react';
+import StarterKit from '@tiptap/starter-kit';
+import Link from '@tiptap/extension-link';
+import Underline from '@tiptap/extension-underline';
+import Collaboration from '@tiptap/extension-collaboration';
+import CollaborationCaret from '@tiptap/extension-collaboration-caret';
+import { prosemirrorJSONToYXmlFragment } from 'y-prosemirror';
+import { Emoticon, createYjsProvider } from '@alga-psa/ui/editor';
+import AvatarIcon from '@alga-psa/ui/components/AvatarIcon';
+import { Card } from '@alga-psa/ui/components/Card';
+import { EditorToolbar } from './EditorToolbar';
+import { handleMarkdownPaste } from './markdownPaste';
+import styles from './CollaborativeEditor.module.css';
+import { getBlockContent } from '../actions/documentBlockContentActions';
+
+type ConnectionStatus = 'connecting' | 'connected' | 'disconnected';
+
+type PresenceUser = {
+  id: string;
+  name: string;
+  color: string;
+};
+
+interface CollaborativeEditorProps {
+  documentId: string;
+  tenantId: string;
+  userId: string;
+  userName: string;
+  placeholder?: string;
+  onConnectionStatusChange?: (status: ConnectionStatus) => void;
+  onSyncStateChange?: (synced: boolean) => void;
+  onUsersChange?: (users: PresenceUser[]) => void;
+}
+
+const USER_COLORS = [
+  '#0ea5e9',
+  '#14b8a6',
+  '#f97316',
+  '#ef4444',
+  '#8b5cf6',
+  '#22c55e',
+  '#eab308',
+  '#ec4899',
+];
+
+const hashString = (value: string) => {
+  let hash = 0;
+  for (let i = 0; i < value.length; i += 1) {
+    hash = (hash << 5) - hash + value.charCodeAt(i);
+    hash |= 0;
+  }
+  return Math.abs(hash);
+};
+
+const getUserColor = (userId: string) => {
+  const index = hashString(userId) % USER_COLORS.length;
+  return USER_COLORS[index];
+};
+
+const parseName = (name: string) => {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) {
+    return { firstName: 'User', lastName: '' };
+  }
+  return {
+    firstName: parts[0] || 'User',
+    lastName: parts.slice(1).join(' '),
+  };
+};
+
+const buildPresenceUsers = (
+  states: Array<[number, { user?: PresenceUser }]>,
+  fallbackColor: string
+) => {
+  const users = states
+    .map(([clientId, state]) => {
+      if (!state.user) return null;
+      return {
+        id: state.user.id || `${clientId}`,
+        name: state.user.name || 'User',
+        color: state.user.color || fallbackColor,
+      } as PresenceUser;
+    })
+    .filter(Boolean) as PresenceUser[];
+
+  const seen = new Set<string>();
+  return users.filter((user) => {
+    if (seen.has(user.id)) return false;
+    seen.add(user.id);
+    return true;
+  });
+};
+
+export function CollaborativeEditor({
+  documentId,
+  tenantId,
+  userId,
+  userName,
+  placeholder,
+  onConnectionStatusChange,
+  onSyncStateChange,
+  onUsersChange,
+}: CollaborativeEditorProps) {
+  const roomName = useMemo(() => `document:${tenantId}:${documentId}`, [tenantId, documentId]);
+  const { provider, ydoc } = useMemo(
+    () =>
+      createYjsProvider(roomName, {
+        parameters: {
+          tenantId,
+          userId,
+        },
+      }),
+    [roomName, tenantId, userId]
+  );
+  const userColor = useMemo(() => getUserColor(userId), [userId]);
+
+  const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('connecting');
+  const [hasUnsyncedChanges, setHasUnsyncedChanges] = useState(false);
+  const [isSynced, setIsSynced] = useState(false);
+  const [editorReady, setEditorReady] = useState(false);
+  const [connectedUsers, setConnectedUsers] = useState<PresenceUser[]>([]);
+  const hasInitializedContent = useRef(false);
+
+  const editor = useEditor({
+    immediatelyRender: false,
+    extensions: [
+      StarterKit.configure({
+        undoRedo: false,
+      }),
+      Link.configure({
+        openOnClick: false,
+        autolink: true,
+        linkOnPaste: true,
+        HTMLAttributes: {
+          target: '_blank',
+          rel: 'noopener noreferrer',
+        },
+      }),
+      Underline,
+      Emoticon,
+      Collaboration.configure({
+        document: ydoc,
+      }),
+      CollaborationCaret.configure({
+        provider,
+        user: {
+          id: userId,
+          name: userName,
+          color: userColor,
+        },
+        render: (user) => {
+          const cursor = document.createElement('span');
+          cursor.classList.add('collaboration-caret');
+          cursor.style.borderColor = user.color;
+
+          const label = document.createElement('span');
+          label.classList.add('collaboration-caret__label');
+          label.style.backgroundColor = user.color;
+          label.textContent = user.name;
+          cursor.appendChild(label);
+
+          return cursor;
+        },
+      }),
+    ],
+    editorProps: {
+      attributes: {
+        class: 'prose prose-sm sm:prose lg:prose-lg xl:prose-2xl mx-auto focus:outline-none',
+      },
+      handlePaste: () => {
+        return false;
+      },
+      handleDOMEvents: {
+        paste: (_view, event) => {
+          const plainText = event.clipboardData?.getData('text/plain');
+          const htmlText = event.clipboardData?.getData('text/html');
+          return handleMarkdownPaste(plainText, htmlText, (html) => {
+            editor?.commands.insertContent(html, {
+              parseOptions: { preserveWhitespace: false },
+            });
+          });
+        },
+      },
+    },
+    onCreate: () => {
+      setEditorReady(true);
+    },
+    onDestroy: () => {
+      setEditorReady(false);
+    },
+  });
+
+  useEffect(() => {
+    provider.awareness?.setLocalStateField('user', {
+      id: userId,
+      name: userName,
+      color: userColor,
+    });
+
+    const handleStatus = ({ status }: { status: ConnectionStatus }) => {
+      setConnectionStatus(status);
+      onConnectionStatusChange?.(status);
+    };
+
+    const handleSynced = ({ state }: { state: boolean }) => {
+      setIsSynced(state);
+      onSyncStateChange?.(state);
+    };
+
+    const handleUnsyncedChanges = (count: number) => {
+      setHasUnsyncedChanges(count > 0);
+    };
+
+    const handleAwarenessChange = () => {
+      const awarenessStates = provider.awareness?.getStates?.();
+      if (!awarenessStates) return;
+      const users = buildPresenceUsers(Array.from(awarenessStates.entries()), userColor);
+      setConnectedUsers(users);
+      onUsersChange?.(users);
+    };
+
+    provider.on('status', handleStatus);
+    provider.on('synced', handleSynced);
+    provider.on('unsyncedChanges', handleUnsyncedChanges);
+    provider.on('awarenessChange', handleAwarenessChange);
+
+    handleStatus({ status: provider.status as ConnectionStatus });
+    handleSynced({ state: provider.synced });
+    setHasUnsyncedChanges(provider.hasUnsyncedChanges);
+    handleAwarenessChange();
+
+    return () => {
+      provider.off('status', handleStatus);
+      provider.off('synced', handleSynced);
+      provider.off('unsyncedChanges', handleUnsyncedChanges);
+      provider.off('awarenessChange', handleAwarenessChange);
+      provider.destroy();
+      ydoc.destroy();
+    };
+  }, [provider, ydoc, userId, userName, userColor, onConnectionStatusChange, onSyncStateChange, onUsersChange]);
+
+  useEffect(() => {
+    if (!editor || !editorReady) return;
+    if (hasInitializedContent.current) return;
+
+    const initializeFromBlockContent = async () => {
+      if (!provider.synced) {
+        await new Promise<void>((resolve) => {
+          const handleSynced = ({ state }: { state: boolean }) => {
+            if (!state) return;
+            provider.off('synced', handleSynced);
+            resolve();
+          };
+          provider.on('synced', handleSynced);
+        });
+      }
+
+      const fragment = ydoc.getXmlFragment('prosemirror');
+      if (fragment.length > 0) {
+        hasInitializedContent.current = true;
+        return;
+      }
+
+      try {
+        const existing = await getBlockContent(documentId);
+        if (existing?.block_data) {
+          const parsed = typeof existing.block_data === 'string'
+            ? JSON.parse(existing.block_data)
+            : existing.block_data;
+          prosemirrorJSONToYXmlFragment(editor.schema, parsed, fragment);
+        }
+      } catch (error) {
+        console.error('[CollaborativeEditor] Failed to initialize from block content:', error);
+      } finally {
+        hasInitializedContent.current = true;
+      }
+    };
+
+    void initializeFromBlockContent();
+  }, [editor, editorReady, provider, ydoc, documentId]);
+
+  const saveStatus = connectionStatus === 'disconnected'
+    ? 'Offline — changes will sync when reconnected'
+    : hasUnsyncedChanges
+      ? 'Saving...'
+      : 'All changes saved';
+
+  const connectionLabel = connectionStatus === 'connected'
+    ? 'Connected'
+    : connectionStatus === 'connecting'
+      ? 'Connecting'
+      : 'Disconnected';
+
+  return (
+    <Card className="p-4">
+      <div className={styles.header}>
+        <div className={styles.presenceBar}>
+          {connectedUsers.length === 0 ? (
+            <span className={styles.presenceEmpty}>No one else is editing</span>
+          ) : (
+            connectedUsers.map((user) => {
+              const { firstName, lastName } = parseName(user.name);
+              return (
+                <div key={user.id} className={styles.userChip}>
+                  <AvatarIcon userId={user.id} firstName={firstName} lastName={lastName} size="xs" />
+                  <span>{user.name}</span>
+                </div>
+              );
+            })
+          )}
+        </div>
+        <div className={styles.statusBar}>
+          <div className={styles.connectionStatus} data-status={connectionStatus}>
+            <span className={styles.statusDot} />
+            <span>{connectionLabel}</span>
+          </div>
+          <div className={styles.saveStatus}>
+            {saveStatus}
+            {connectionStatus === 'connected' && !isSynced ? ' (syncing)' : ''}
+          </div>
+        </div>
+      </div>
+
+      {editor && editorReady && !editor.isDestroyed ? (
+        <div
+          className={styles.editorContainer}
+          data-placeholder={placeholder || 'Start writing...'}
+        >
+          <EditorToolbar editor={editor} />
+          <EditorContent editor={editor} />
+        </div>
+      ) : (
+        <div className="flex justify-center items-center h-64">Initializing editor...</div>
+      )}
+    </Card>
+  );
+}

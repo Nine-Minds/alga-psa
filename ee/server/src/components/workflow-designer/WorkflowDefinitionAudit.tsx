@@ -163,7 +163,7 @@ const WorkflowDefinitionAudit: React.FC<WorkflowDefinitionAuditProps> = ({ workf
             </TableBody>
           </Table>
           {cursor !== null && (
-            <div className="flex justify-center border-t bg-white p-4">
+            <div className="flex justify-center border-t bg-white dark:bg-[rgb(var(--color-card))] p-4">
               <Button
                 id="workflow-audit-load-more"
                 variant="outline"

@@ -1216,7 +1216,7 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
                 />
                 <button
                   onClick={() => handleRemoveMapping(field.name)}
-                  className={`absolute -right-2 -top-2 p-1 bg-white border border-gray-200 rounded-full shadow-sm transition-opacity hover:bg-destructive/10 hover:border-destructive/30 ${
+                  className={`absolute -right-2 -top-2 p-1 bg-white dark:bg-[rgb(var(--color-card))] border border-gray-200 dark:border-[rgb(var(--color-border-200))] rounded-full shadow-sm transition-opacity hover:bg-destructive/10 hover:border-destructive/30 ${
                     isFocused ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
                   }`}
                   title="Remove mapping (Delete/Backspace)"

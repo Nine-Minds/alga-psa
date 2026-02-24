@@ -38,7 +38,7 @@ export const DesignerToolbar: React.FC<DesignerToolbarProps> = ({
   onGridSizeChange,
 }) => {
   return (
-    <div className="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-2">
+    <div className="flex items-center justify-between border-b border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-white dark:bg-[rgb(var(--color-card))] px-4 py-2">
       <div className="flex items-center gap-3">
         <Button id="designer-toolbar-undo" variant="outline" size="sm" onClick={onUndo}>
           Undo
@@ -46,7 +46,7 @@ export const DesignerToolbar: React.FC<DesignerToolbarProps> = ({
         <Button id="designer-toolbar-redo" variant="outline" size="sm" onClick={onRedo}>
           Redo
         </Button>
-        <div className="flex items-center gap-2 text-sm text-slate-600">
+        <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
           <Switch id="snap-toggle" checked={snapToGrid} onCheckedChange={onToggleSnap} />
           <label htmlFor="snap-toggle">Snap</label>
           <input
@@ -55,14 +55,14 @@ export const DesignerToolbar: React.FC<DesignerToolbarProps> = ({
             max={64}
             value={gridSize}
             onChange={(event) => onGridSizeChange(Number(event.target.value))}
-            className="w-16 border rounded px-1 py-0.5 text-xs"
+            className="w-16 border border-slate-200 dark:border-slate-600 rounded px-1 py-0.5 text-xs bg-white dark:bg-[rgb(var(--color-background))] dark:text-slate-300"
           />
         </div>
-        <div className="flex items-center gap-2 text-sm text-slate-600">
+        <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
           <Switch id="guides-toggle" checked={showGuides} onCheckedChange={onToggleGuides} />
           <label htmlFor="guides-toggle">Guides</label>
         </div>
-        <div className="flex items-center gap-2 text-sm text-slate-600">
+        <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
           <Switch id="rulers-toggle" checked={showRulers} onCheckedChange={onToggleRulers} />
           <label htmlFor="rulers-toggle">Rulers</label>
         </div>
@@ -81,7 +81,7 @@ export const DesignerToolbar: React.FC<DesignerToolbarProps> = ({
           />
           <span>{Math.round(canvasScale * 100)}%</span>
         </div>
-        <div className="text-xs text-slate-500 flex flex-col">
+        <div className="text-xs text-slate-500 dark:text-slate-400 flex flex-col">
           <span>Drags: {metrics.totalDrags}</span>
           <span>Success: {metrics.completedDrops}</span>
           <span>Invalid: {metrics.failedDrops}</span>

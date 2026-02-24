@@ -9,12 +9,8 @@ import { ProjectsSection } from './ProjectsSection';
 import { WorkflowTasksSection } from './WorkflowTasksSection';
 import { NotificationsSection } from './NotificationsSection';
 import { ActivitiesDataTableSection } from './ActivitiesDataTableSection';
-import { Button } from '@alga-psa/ui/components/Button';
 import { LayoutGrid, List, ChevronDown, ChevronUp } from 'lucide-react';
 import { ActivityFilters as ActivityFiltersType, ActivityType } from '@alga-psa/types';
-import { CustomTabs } from '@alga-psa/ui/components/CustomTabs';
-import { DrawerProvider } from '@alga-psa/ui';
-import { ActivityDrawerProvider } from './ActivityDrawerProvider';
 import { useUserPreference } from '@alga-psa/users/hooks';
 import { Card, CardHeader } from '@alga-psa/ui/components/Card';
 
@@ -169,23 +165,19 @@ export function UserActivitiesDashboard() {
   };
 
   return (
-    <DrawerProvider>
-      <ActivityDrawerProvider>
-        <div className="container mx-auto p-6">
-          <div className="flex items-center justify-between mb-6">
-            <h1 className="text-2xl font-bold">User Activities</h1>
-            <div className="flex items-center gap-4">
-              <ViewSwitcher
-                options={viewOptions}
-                currentView={viewMode}
-                onChange={handleViewChange}
-              />
-            </div>
-          </div>
-
-          {viewMode === 'cards' ? cardViewContent : tableViewContent}
+    <div className="container mx-auto p-6">
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold">User Activities</h1>
+        <div className="flex items-center gap-4">
+          <ViewSwitcher
+            options={viewOptions}
+            currentView={viewMode}
+            onChange={handleViewChange}
+          />
         </div>
-      </ActivityDrawerProvider>
-    </DrawerProvider>
+      </div>
+
+      {viewMode === 'cards' ? cardViewContent : tableViewContent}
+    </div>
   );
 }

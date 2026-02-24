@@ -1,7 +1,8 @@
 'use client';
 
 import { useCallback } from 'react';
-import { BubbleMenu, Editor } from '@tiptap/react';
+import { Editor } from '@tiptap/react';
+import { BubbleMenu } from '@tiptap/react/menus';
 import {
   Bold,
   Italic,
@@ -67,7 +68,6 @@ export function EditorToolbar({ editor }: EditorToolbarProps) {
   return (
     <BubbleMenu
       editor={editor}
-      tippyOptions={{ duration: 100 }}
       className="flex items-center gap-0.5 p-1 rounded-lg border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] shadow-md"
     >
       {/* Inline style buttons */}

@@ -1,5 +1,5 @@
 import React, { Suspense } from 'react';
-import { BillingDashboard } from '@alga-psa/billing';
+import { MspBillingDashboardClient } from '@alga-psa/msp-composition/billing';
 import { getServices } from '@alga-psa/billing/actions';
 import { getDocumentsByContractId } from '@alga-psa/documents/actions/documentActions';
 import { getCurrentUser } from '@alga-psa/users/actions';
@@ -38,7 +38,7 @@ const BillingPage = async ({ searchParams }: BillingPageProps) => {
 
   return (
     <Suspense fallback={<div className="p-4">Loading billing dashboard...</div>}>
-      <BillingDashboard
+      <MspBillingDashboardClient
         initialServices={services}
         contractDocuments={contractDocuments}
         currentUserId={currentUserId}

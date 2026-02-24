@@ -3,7 +3,7 @@ import { createTenantKnex } from 'server/src/lib/db';
 import DocumentBlockContent from 'server/src/lib/models/documentBlockContent';
 import Document from '@alga-psa/documents/models/document';
 import { marked } from 'marked';
-import { convertBlockNoteToHTML } from 'server/src/lib/utils/blocknoteUtils';
+import { convertBlockNoteToHTML } from '@alga-psa/formatting/blocknoteUtils';
 import logger from '@alga-psa/core/logger';
 import { downloadDocument } from '@alga-psa/documents/actions/documentActions';
 import { createPDFGenerationService } from 'server/src/services/pdf-generation.service';

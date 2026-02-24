@@ -28,7 +28,7 @@ import { createNotificationFromTemplateInternal } from '@alga-psa/notifications/
 import logger from '@alga-psa/core/logger';
 import { getConnection } from '../../db/db';
 import type { Knex } from 'knex';
-import { convertBlockNoteToMarkdown } from '../../utils/blocknoteUtils';
+import { convertBlockNoteToMarkdown } from '@alga-psa/formatting/blocknoteUtils';
 import { resolveNotificationLinks } from '../../utils/notificationLinkResolver';
 
 /**

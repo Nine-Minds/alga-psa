@@ -1,0 +1,27 @@
+{
+  "name": "@alga-psa/formatting",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "packages/formatting/src",
+  "projectType": "library",
+  "tags": ["scope:formatting", "type:horizontal"],
+  "targets": {
+    "build": {
+      "executor": "nx:noop",
+      "dependsOn": []
+    },
+    "test": {
+      "executor": "@nx/vite:test",
+      "outputs": ["{workspaceRoot}/coverage/packages/formatting"],
+      "options": {
+        "passWithNoTests": true
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "outputs": ["{options.outputFile}"],
+      "options": {
+        "lintFilePatterns": ["packages/formatting/**/*.{ts,tsx}"]
+      }
+    }
+  }
+}

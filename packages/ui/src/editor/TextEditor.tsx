@@ -6,21 +6,61 @@ import {
   useCreateBlockNote,
   SuggestionMenuController,
   DefaultReactSuggestionItem,
+  GridSuggestionMenuController,
+  DefaultReactGridSuggestionItem,
+  GridSuggestionMenuProps,
 } from "@blocknote/react";
 import { BlockNoteView } from '@blocknote/mantine';
 import '@blocknote/core/fonts/inter.css';
-import '@blocknote/mantine/style.css';
+import './blocknote-styles.css';
 import {
   BlockNoteEditor,
   PartialBlock,
   BlockNoteSchema,
   defaultInlineContentSpecs,
-  filterSuggestionItems,
 } from '@blocknote/core';
+import { TextSelection } from '@tiptap/pm/state';
 import { Mention } from './Mention';
+import { Emoticon } from './EmoticonExtension';
 
 // Debug flag
 const DEBUG = false;
+
+// Custom emoji grid that silently hides when no items match, instead of
+// showing "No items found" (prevents flash after emoticon conversion).
+function EmojiGrid(props: GridSuggestionMenuProps<DefaultReactGridSuggestionItem>) {
+  const { items, selectedIndex, onItemClick, columns, loadingState } = props;
+
+  if (items.length === 0 && loadingState === 'loaded') {
+    return null;
+  }
+
+  if (loadingState === 'loading-initial' || loadingState === 'loading') {
+    return <div className="bn-grid-suggestion-menu-loader">Loading...</div>;
+  }
+
+  return (
+    <div
+      id="bn-grid-suggestion-menu"
+      className="bn-grid-suggestion-menu"
+      role="grid"
+      style={{ gridTemplateColumns: `repeat(${columns}, 1fr)` }}
+    >
+      {items.map((item, i) => (
+        <div
+          key={item.id}
+          role="option"
+          aria-selected={i === selectedIndex}
+          className={`bn-grid-suggestion-menu-item${i === selectedIndex ? ' bn-grid-suggestion-menu-item-selected' : ''}`}
+          style={{ cursor: 'pointer' }}
+          onClick={() => onItemClick?.(item)}
+        >
+          {item.icon}
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export interface MentionUser {
   user_id: string;
@@ -115,7 +155,7 @@ export default function TextEditor({
 
     // Type guard for text content
     const isTextContent = (content: any): content is { type: "text"; text: string; styles: {} } => {
-      return content?.type === "text";
+      return content?.type === "text" && typeof content?.text === "string";
     };
 
     // Remove empty trailing blocks
@@ -158,7 +198,65 @@ export default function TextEditor({
       }
     },
     _tiptapOptions: {
+      extensions: [Emoticon],
       editorProps: {
+        handleDOMEvents: {
+          mousedown: (view, event) => {
+            // Fix: clicking in empty space to the left/right of text places
+            // cursor at the wrong position. Intercept at mousedown to prevent
+            // flash, and manually handle drag-to-select from the corrected anchor.
+            if (event.detail > 1 || event.shiftKey || event.button !== 0) return false;
+
+            const posInfo = view.posAtCoords({ left: event.clientX, top: event.clientY });
+            if (!posInfo) return false;
+
+            const { state } = view;
+            const $pos = state.doc.resolve(posInfo.pos);
+
+            if (!$pos.parent.isTextblock || $pos.parent.content.size === 0) return false;
+
+            const blockStart = $pos.start();
+            if (posInfo.pos !== blockStart) return false;
+
+            const startCoords = view.coordsAtPos(blockStart);
+            const endCoords = view.coordsAtPos($pos.end());
+
+            let anchorPos: number | null = null;
+            if (event.clientX > endCoords.left) {
+              anchorPos = $pos.end(); // right of text → end
+            } else if (event.clientX < startCoords.left) {
+              anchorPos = blockStart; // left of text → start
+            }
+
+            if (anchorPos === null) return false;
+
+            event.preventDefault();
+            view.dispatch(
+              state.tr.setSelection(TextSelection.create(state.doc, anchorPos))
+            );
+            view.focus();
+
+            // Handle drag-to-select from the corrected anchor
+            const onMouseMove = (e: MouseEvent) => {
+              if (view.isDestroyed) return;
+              const movePos = view.posAtCoords({ left: e.clientX, top: e.clientY });
+              if (movePos) {
+                const sel = TextSelection.create(view.state.doc, anchorPos!, movePos.pos);
+                view.dispatch(view.state.tr.setSelection(sel));
+              }
+            };
+
+            const onMouseUp = () => {
+              document.removeEventListener('mousemove', onMouseMove);
+              document.removeEventListener('mouseup', onMouseUp);
+            };
+
+            document.addEventListener('mousemove', onMouseMove);
+            document.addEventListener('mouseup', onMouseUp);
+
+            return true;
+          },
+        },
         handlePaste: (view, event, slice) => {
           // Handle pasting into empty blocks
           const { state, dispatch } = view;
@@ -296,14 +394,14 @@ export default function TextEditor({
 
     const handleChange = () => {
       if (DEBUG) {
-        console.log('TextEditor: Editor content changed:', editor.topLevelBlocks);
+        console.log('TextEditor: Editor content changed:', editor.document);
       }
       if (onContentChange) {
-        onContentChange(editor.topLevelBlocks as any);
+        onContentChange(editor.document as any);
       }
     };
 
-    const cleanup = editor.onEditorContentChange(handleChange);
+    const cleanup = editor.onChange(handleChange);
     return cleanup;
   }, [editor, onContentChange]);
 
@@ -324,6 +422,7 @@ export default function TextEditor({
         <BlockNoteView
           editor={editor}
           theme={blockNoteTheme}
+          emojiPicker={false}
           className="w-full min-w-0 [&_.ProseMirror]:break-words [&_.ProseMirror]:max-w-full [&_.ProseMirror]:min-w-0 [&_.bn-block-outer_[data-drag-handle]]:!hidden [&_[draggable='true']]:!hidden [&_.ProseMirror_a]:text-[rgb(var(--badge-info-text))] [&_.ProseMirror_a]:font-medium [&_.ProseMirror_a]:underline [&_.ProseMirror_a]:decoration-[rgb(var(--badge-info-text)/0.4)] [&_.ProseMirror_a]:underline-offset-2 [&_.ProseMirror_a:hover]:decoration-[rgb(var(--badge-info-text))]"
           editable={true}
           style={{
@@ -334,6 +433,12 @@ export default function TextEditor({
           <SuggestionMenuController
             triggerCharacter="@"
             getItems={async (query) => getMentionMenuItems(query)}
+          />
+          <GridSuggestionMenuController
+            triggerCharacter=":"
+            columns={10}
+            minQueryLength={2}
+            gridSuggestionMenuComponent={EmojiGrid}
           />
         </BlockNoteView>
       </div>

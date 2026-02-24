@@ -14,6 +14,7 @@ import QuickAskOverlay from 'server/src/components/chat/QuickAskOverlay';
 import { isExperimentalFeatureEnabled } from '@alga-psa/tenancy/actions';
 import { MspSchedulingProvider } from '@alga-psa/msp-composition/scheduling';
 import { MspTicketIntegrationProvider } from '@alga-psa/msp-composition/projects';
+import { MspClientDrawerProvider } from '@alga-psa/msp-composition/clients';
 
 interface DefaultLayoutProps {
   children: React.ReactNode;
@@ -240,6 +241,7 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
     <DrawerProvider>
     <MspTicketIntegrationProvider>
       <ActivityDrawerProvider>
+      <MspClientDrawerProvider>
         <div className="flex h-screen overflow-hidden bg-gray-100">
           <SidebarWithFeatureFlags
             sidebarOpen={sidebarOpen}
@@ -298,6 +300,7 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
           </div>
         </div>
         <DrawerOutlet />
+      </MspClientDrawerProvider>
       </ActivityDrawerProvider>
     </MspTicketIntegrationProvider>
     </DrawerProvider>

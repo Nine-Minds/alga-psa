@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo } from 'react';
 import type { ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import Drawer from '@alga-psa/ui/components/Drawer';
+import { useClientDrawer } from '@alga-psa/ui';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@alga-psa/ui/components/Tabs';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
@@ -85,6 +86,7 @@ export function AssetDetailDrawerClient({
   defaultBoardId,
 }: AssetDetailDrawerClientProps) {
   const router = useRouter();
+  const clientDrawer = useClientDrawer();
   const desiredTab = activeTab;
 
   const handleTabChange = useCallback(
@@ -155,6 +157,9 @@ export function AssetDetailDrawerClient({
           statusBadge,
           onClose,
           defaultBoardId,
+          onClientClick: asset.client_id && clientDrawer
+            ? () => clientDrawer.openClientDrawer(asset.client_id!)
+            : undefined,
         });
       case ASSET_DRAWER_TABS.MAINTENANCE:
         return renderMaintenanceTab({
@@ -173,6 +178,8 @@ export function AssetDetailDrawerClient({
   }, [
     activeTab,
     asset,
+    clientDrawer,
+    defaultBoardId,
     desiredTab,
     documents,
     onClose,
@@ -229,9 +236,10 @@ type OverviewTabProps = {
   statusBadge: ReactNode;
   onClose: () => void;
   defaultBoardId?: string;
+  onClientClick?: () => void;
 };
 
-function renderOverviewTab({ asset, maintenanceReport, history, router, statusBadge, onClose, defaultBoardId }: OverviewTabProps) {
+function renderOverviewTab({ asset, maintenanceReport, history, router, statusBadge, onClose, defaultBoardId, onClientClick }: OverviewTabProps) {
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
@@ -243,7 +251,15 @@ function renderOverviewTab({ asset, maintenanceReport, history, router, statusBa
           <p className="text-sm text-gray-500">
             Asset tag {asset.asset_tag} • {asset.asset_type.replace('_', ' ')}
           </p>
-          {asset.client?.client_name && <p className="text-sm text-gray-500">Client: {asset.client.client_name}</p>}
+          {asset.client?.client_name && (
+            onClientClick ? (
+              <button type="button" onClick={onClientClick} className="text-sm text-primary-600 hover:text-primary-700 hover:underline text-left">
+                Client: {asset.client.client_name}
+              </button>
+            ) : (
+              <p className="text-sm text-gray-500">Client: {asset.client.client_name}</p>
+            )
+          )}
         </div>
         <div className="flex flex-wrap gap-2">
           <Button id="asset-drawer-open-record" variant="default" size="sm" className="gap-2" onClick={() => router.push(`/msp/assets/${asset.asset_id}`)}>
@@ -297,7 +313,7 @@ function renderOverviewTab({ asset, maintenanceReport, history, router, statusBa
 
       <Card className="space-y-4 p-4" {...withDataAutomationId({ id: 'asset-drawer-overview-info' })}>
         <SectionTitle icon={<Settings2 className="h-4 w-4" />} title="Asset summary" />
-        <InfoGrid asset={asset} />
+        <InfoGrid asset={asset} onClientClick={onClientClick} />
       </Card>
 
       {/* RMM Alerts Section - Shows active alerts for RMM-managed assets */}
@@ -497,10 +513,19 @@ function MetricCard({ id, icon, label, value, helper }: MetricCardProps) {
   );
 }
 
-function InfoGrid({ asset }: { asset: Asset }) {
+function InfoGrid({ asset, onClientClick }: { asset: Asset; onClientClick?: () => void }) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-600">
-      <InfoRow label="Client" value={asset.client?.client_name || 'Unassigned'} />
+      {onClientClick ? (
+        <div className="flex flex-col gap-1">
+          <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">Client</span>
+          <button type="button" onClick={onClientClick} className="text-sm text-primary-600 hover:text-primary-700 hover:underline text-left">
+            {asset.client?.client_name || 'Unassigned'}
+          </button>
+        </div>
+      ) : (
+        <InfoRow label="Client" value={asset.client?.client_name || 'Unassigned'} />
+      )}
       <InfoRow label="Asset tag" value={asset.asset_tag} />
       <InfoRow label="Status" value={asset.status} />
       <InfoRow label="Created" value={formatDate(asset.created_at)} />

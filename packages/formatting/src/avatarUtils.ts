@@ -1,5 +1,5 @@
-import { createTenantKnex } from 'server/src/lib/db';
-import { getImageUrlInternal } from '@alga-psa/documents/actions/documentActions';
+import { createTenantKnex } from '@alga-psa/db';
+import { getImageUrlInternal } from './imageUrl';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 
@@ -22,7 +22,7 @@ export async function getEntityImageUrl(
   tenant: string
 ): Promise<string | null> {
   try {
-    const { knex } = await createTenantKnex();
+    const { knex } = await createTenantKnex(tenant);
 
     // Wrap database queries in a transaction for consistency
     const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -37,12 +37,12 @@ export async function getEntityImageUrl(
       query = query.andWhere('is_entity_logo', true);
 
       const association = await query.first();
-      
+
       // If no association found, return null (this is expected - many entities don't have logos)
       if (!association?.document_id) {
         return null;
       }
-      
+
       // Get the file_id and updated_at from the documents table within the same transaction
       const documentRecord = await trx('documents')
         .select('file_id', 'updated_at')
@@ -51,7 +51,7 @@ export async function getEntityImageUrl(
           tenant
         })
         .first();
-      
+
       // If no document record or no file_id, return null (document may have been deleted)
       if (!documentRecord?.file_id) {
         return null;
@@ -66,9 +66,9 @@ export async function getEntityImageUrl(
     }
 
     // Use the existing getImageUrl function to get the URL
-    // This function manages its own transaction internally
-    const imageUrl = await getImageUrlInternal(result.file_id);
-    
+    // Pass tenant to avoid circular dependency (getImageUrlInternal -> getCurrentUser -> getUserWithRoles -> getUserAvatarUrl)
+    const imageUrl = await getImageUrlInternal(result.file_id, tenant);
+
     if (imageUrl) {
       // Add the document's updated_at timestamp for cache busting
       // This ensures the URL changes only when the document is actually updated
@@ -136,16 +136,16 @@ export async function getEntityImageUrlsBatch(
   tenant: string
 ): Promise<Map<string, string | null>> {
   const result = new Map<string, string | null>();
-  
+
   // Initialize all IDs with null
   entityIds.forEach(id => result.set(id, null));
-  
+
   if (entityIds.length === 0) {
     return result;
   }
 
   try {
-    const { knex } = await createTenantKnex();
+    const { knex } = await createTenantKnex(tenant);
 
     // Get all associations in one query
     const associations = await knex('document_associations')
@@ -177,7 +177,8 @@ export async function getEntityImageUrlsBatch(
       const docInfo = docToFileMap.get(documentId);
       if (docInfo?.file_id) {
         try {
-          const imageUrl = await getImageUrlInternal(docInfo.file_id);
+          // Pass tenant to avoid circular dependency
+          const imageUrl = await getImageUrlInternal(docInfo.file_id, tenant);
           if (imageUrl) {
             // Add the document's updated_at timestamp for cache busting
             const timestamp = docInfo.updated_at ? new Date(docInfo.updated_at).getTime() : 0;
@@ -224,37 +225,3 @@ export async function getContactAvatarUrlsBatch(
 ): Promise<Map<string, string | null>> {
   return getEntityImageUrlsBatch('contact', contactIds, tenant);
 }
-
-/**
- * Convenience function to get multiple user avatar URLs at once
- */
-export async function getUserAvatarUrlsBatch(
-  userIds: string[],
-  tenant: string
-): Promise<Map<string, string | null>> {
-  return getEntityImageUrlsBatch('user', userIds, tenant);
-}
-
-/**
- * Example usage:
- *
- * // Using the general function:
- * const avatarUrl = await getEntityImageUrl('user', userId, tenant);
- *
- * // Or using the convenience functions:
- * const userAvatarUrl = await getUserAvatarUrl(userId, tenant);
- * const contactAvatarUrl = await getContactAvatarUrl(contactId, tenant);
- * const clientLogoUrl = await getClientLogoUrl(clientId, tenant);
- *
- * // Batch loading:
- * const clientIds = ['id1', 'id2', 'id3'];
- * const logoUrls = await getClientLogoUrlsBatch(clientIds, tenant);
- * const logoUrl1 = logoUrls.get('id1'); // string | null
- *
- * // Then use the URL in a component:
- * <UserAvatar
- *   userId={userId}
- *   userName={userName}
- *   avatarUrl={userAvatarUrl}
- * />
- */

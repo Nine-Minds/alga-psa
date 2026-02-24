@@ -138,7 +138,6 @@ export function revokeSession(
 }
 
 export type MobileAuthCapabilities = {
-  mobileEnabled: boolean;
   providers: {
     microsoft: boolean;
     google: boolean;

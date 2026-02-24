@@ -27,8 +27,6 @@ function mapAuthCallbackError(code: string): string {
       return "Too many sign-in attempts. Please wait a moment and try again.";
     case "client_not_allowed":
       return "Client portal users can’t sign in to the mobile app. Please use an internal account.";
-    case "mobile_disabled":
-      return "Mobile sign-in is disabled for this server.";
     case "host_not_allowlisted":
       return "This server domain is not allowed for mobile sign-in.";
     default:

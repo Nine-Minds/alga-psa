@@ -23,9 +23,9 @@ import { z } from 'zod';
 import { validateData } from '@alga-psa/validation';
 import { publishEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { getEventBus } from '@alga-psa/event-bus';
-import { convertBlockNoteToMarkdown } from '@alga-psa/documents/lib/blocknoteUtils';
+import { convertBlockNoteToMarkdown } from '@alga-psa/formatting/blocknoteUtils';
 import { getImageUrl } from '@alga-psa/documents/actions/documentActions';
-import { getClientLogoUrl, getUserAvatarUrl, getClientLogoUrlsBatch } from '@alga-psa/documents/lib/avatarUtils';
+import { getClientLogoUrl, getUserAvatarUrl, getClientLogoUrlsBatch } from '@alga-psa/formatting/avatarUtils';
 import {
   ticketFormSchema,
   ticketSchema,

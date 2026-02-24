@@ -371,7 +371,6 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
                 }
                 setIsActive(checked);
               }}
-              className="data-[state=checked]:bg-green-500"
             />
           </div>
         </div>

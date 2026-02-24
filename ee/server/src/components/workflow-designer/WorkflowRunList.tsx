@@ -770,7 +770,7 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({
             </TableBody>
           </Table>
           {nextCursor !== null && (
-            <div className="flex justify-center border-t bg-white p-4">
+            <div className="flex justify-center border-t bg-white dark:bg-[rgb(var(--color-card))] p-4">
               <Button
                 id="workflow-runs-load-more"
                 variant="outline"

@@ -211,6 +211,8 @@ async function main() {
       console.log('\n   Consider the correct position based on foreign key dependencies:');
       console.log('   - Tables referenced by other tables should be deleted AFTER their dependents');
       console.log('   - Leaf tables (no dependencies) should be deleted first');
+      console.log('\n   ⚠️  IMPORTANT: After adding missing tables, a new Temporal deployment is required');
+      console.log('   to pick up the updated deletion order.');
     }
 
     if (result.success) {

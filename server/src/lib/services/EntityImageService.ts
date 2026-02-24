@@ -1,6 +1,6 @@
 import { StorageService } from 'server/src/lib/storage/StorageService';
 import { deleteDocument, getDocumentTypeId } from '@alga-psa/documents/actions/documentActions';
-import { getEntityImageUrl } from 'server/src/lib/utils/avatarUtils';
+import { getEntityImageUrl } from '@alga-psa/formatting/avatarUtils';
 import Document from '@alga-psa/documents/models/document';
 import DocumentAssociation from '@alga-psa/documents/models/documentAssociation';
 import { createTenantKnex } from 'server/src/lib/db';

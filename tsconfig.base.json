@@ -73,6 +73,8 @@
       "@alga-psa/scheduling/*": ["packages/scheduling/src/*"],
       "@alga-psa/workflows": ["packages/workflows/src"],
       "@alga-psa/workflows/*": ["packages/workflows/src/*"],
+      "@alga-psa/formatting": ["packages/formatting/src"],
+      "@alga-psa/formatting/*": ["packages/formatting/src/*"],
       "@alga-psa/documents": ["packages/documents/src"],
       "@alga-psa/documents/*": ["packages/documents/src/*"],
       "@alga-psa/storage": ["packages/storage/src"],

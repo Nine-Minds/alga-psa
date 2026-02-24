@@ -7,3 +7,4 @@ export * from './documentBlockContentActions';
 export * from './documentContentActions';
 export * from './document-download';
 export * from './file-actions';
+export * from './collaborativeEditingActions';

@@ -62,6 +62,9 @@ RUN rm -rf .next && \
         NEXTAUTH_SECRET="$NEXTAUTH_SECRET_BUILD" AUTH_SECRET="$NEXTAUTH_SECRET_BUILD" npm run build; \
     fi
 
+# Copy core package.json for version info
+COPY packages/core/package.json /app/packages/core/package.json
+
 # Copy and make entrypoint executable (rarely changes)
 COPY server/entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh

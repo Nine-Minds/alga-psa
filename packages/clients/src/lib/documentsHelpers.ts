@@ -1,26 +1,29 @@
 /**
  * Documents helpers for clients package
  *
- * These are dynamic import wrappers to avoid circular dependency:
- * clients -> documents -> ... -> clients
+ * Previously used dynamic imports to avoid circular dependency (clients -> documents -> ... -> clients).
+ * Now imports directly from @alga-psa/formatting which has no circular dependency risk.
  */
 
+import {
+  getClientLogoUrl,
+  getClientLogoUrlsBatch,
+  getContactAvatarUrl,
+  getContactAvatarUrlsBatch,
+} from '@alga-psa/formatting/avatarUtils';
+
 export async function getClientLogoUrlAsync(clientId: string, tenant: string): Promise<string | null> {
-  const module = await import('@alga-psa/documents/lib/avatarUtils');
-  return module.getClientLogoUrl(clientId, tenant);
+  return getClientLogoUrl(clientId, tenant);
 }
 
 export async function getClientLogoUrlsBatchAsync(clientIds: string[], tenant: string): Promise<Map<string, string | null>> {
-  const module = await import('@alga-psa/documents/lib/avatarUtils');
-  return module.getClientLogoUrlsBatch(clientIds, tenant);
+  return getClientLogoUrlsBatch(clientIds, tenant);
 }
 
 export async function getContactAvatarUrlAsync(contactId: string, tenant: string): Promise<string | null> {
-  const module = await import('@alga-psa/documents/lib/avatarUtils');
-  return module.getContactAvatarUrl(contactId, tenant);
+  return getContactAvatarUrl(contactId, tenant);
 }
 
 export async function getContactAvatarUrlsBatchAsync(contactIds: string[], tenant: string): Promise<Map<string, string | null>> {
-  const module = await import('@alga-psa/documents/lib/avatarUtils');
-  return module.getContactAvatarUrlsBatch(contactIds, tenant);
+  return getContactAvatarUrlsBatch(contactIds, tenant);
 }

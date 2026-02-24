@@ -54,6 +54,9 @@ COPY ./server/src/ ./server/src/
 COPY ./scripts ./scripts
 COPY ./shared/workflow/ ./shared/workflow/
 
+# Copy core package.json for version info
+COPY packages/core/package.json /app/packages/core/package.json
+
 # Copy entrypoint
 COPY server/entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh

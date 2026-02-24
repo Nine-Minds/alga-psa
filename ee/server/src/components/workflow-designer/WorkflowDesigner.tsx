@@ -3168,11 +3168,11 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
   const designerContent = (
     <DragDropContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
     <div className="flex flex-col h-full min-h-0">
-	      <div ref={designerFloatAnchorRef} className="relative flex flex-col flex-1 min-h-0 overflow-hidden bg-gray-50">
+	      <div ref={designerFloatAnchorRef} className="relative flex flex-col flex-1 min-h-0 overflow-hidden bg-gray-50 dark:bg-[rgb(var(--color-background))]">
         <div className="sticky top-4 z-20 h-0 pointer-events-none">
           {/* Floating Icon-Grid Palette (left) */}
           <aside
-            className={`pointer-events-auto w-56 max-h-[calc(100vh-220px)] bg-white/95 backdrop-blur border border-gray-200 rounded-lg shadow-lg overflow-hidden flex flex-col min-h-0 z-40 ${designerFloatAnchorRect ? '' : 'hidden'}`}
+            className={`pointer-events-auto w-56 max-h-[calc(100vh-220px)] bg-white/95 dark:bg-[rgb(var(--color-card))]/95 backdrop-blur border border-gray-200 dark:border-[rgb(var(--color-border-200))] rounded-lg shadow-lg overflow-hidden flex flex-col min-h-0 z-40 ${designerFloatAnchorRect ? '' : 'hidden'}`}
             style={designerFloatAnchorRect ? {
               position: 'fixed',
               top: Math.min(Math.max(8, designerFloatAnchorRect.top + 16), window.innerHeight - 160),
@@ -3252,7 +3252,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
           {/* Floating Properties (right) */}
           <aside
             id="workflow-designer-sidebar-scroll"
-            className={`pointer-events-auto w-[420px] max-h-[calc(100vh-220px)] bg-white/95 backdrop-blur border border-gray-200 rounded-lg shadow-lg overflow-y-auto p-4 space-y-4 z-40 ${designerFloatAnchorRect ? '' : 'hidden'}`}
+            className={`pointer-events-auto w-[420px] max-h-[calc(100vh-220px)] bg-white/95 dark:bg-[rgb(var(--color-card))]/95 backdrop-blur border border-gray-200 dark:border-[rgb(var(--color-border-200))] rounded-lg shadow-lg overflow-y-auto p-4 space-y-4 z-40 ${designerFloatAnchorRect ? '' : 'hidden'}`}
             style={designerFloatAnchorRect ? {
               position: 'fixed',
               top: Math.min(Math.max(8, designerFloatAnchorRect.top + 16), window.innerHeight - 160),
@@ -3263,7 +3263,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
             {activeWorkflowRecord && metadataDraft && canEditMetadata && (
               <Card className="p-3 space-y-3">
                 <div>
-                  <div className="text-sm font-semibold text-gray-800">Workflow Settings</div>
+                  <div className="text-sm font-semibold text-gray-800 dark:text-gray-200">Workflow Settings</div>
                   <div className="text-xs text-gray-500">Visibility, pausing, and safety controls.</div>
                 </div>
                 <Switch
@@ -3455,7 +3455,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                           <Skeleton className="h-8 w-16 rounded-md" />
                         </div>
                       </div>
-                      <Skeleton className="h-[650px] w-full rounded border border-gray-200 bg-white" />
+                      <Skeleton className="h-[650px] w-full rounded border border-gray-200 dark:border-[rgb(var(--color-border-200))] bg-white dark:bg-[rgb(var(--color-card))]" />
                     </div>
                   </>
                 ) : (
@@ -3548,7 +3548,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
 	                          />
 	                        )}
 	                        {eventCatalogStatus === 'loading' && (
-	                          <div className="rounded border border-gray-200 bg-white px-3 py-2 space-y-2">
+	                          <div className="rounded border border-gray-200 dark:border-[rgb(var(--color-border-200))] bg-white dark:bg-[rgb(var(--color-card))] px-3 py-2 space-y-2">
 	                            <div className="flex flex-wrap items-center gap-2">
 	                              <Skeleton className="h-5 w-16 rounded-full" />
 	                              <Skeleton className="h-5 w-16 rounded-full" />
@@ -3558,7 +3558,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
 	                          </div>
 	                        )}
 	                        {selectedOption && (
-	                          <div className="rounded border border-gray-200 bg-white px-3 py-2 space-y-1">
+	                          <div className="rounded border border-gray-200 dark:border-[rgb(var(--color-border-200))] bg-white dark:bg-[rgb(var(--color-card))] px-3 py-2 space-y-1">
 	                            <div className="flex flex-wrap items-center gap-2">
 	                              <Badge className={selectedOption.source === 'system' ? 'bg-purple-500/15 text-purple-600 border-purple-500/30' : 'bg-emerald-500/15 text-emerald-600 border-emerald-500/30'}>
                                 {selectedOption.source === 'system' ? 'System' : 'Tenant'}
@@ -3577,7 +3577,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                                 </Badge>
                               )}
                               {selectedOption.category && (
-                                <Badge className="bg-white text-gray-700 border-gray-200">{selectedOption.category}</Badge>
+                                <Badge className="bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-[rgb(var(--color-border-200))]">{selectedOption.category}</Badge>
                               )}
                             </div>
                             {selectedOption.description && (
@@ -3660,8 +3660,8 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                         : 'Using trigger payload as workflow input.');
 
                     return (
-                      <div className="mt-3 rounded border border-gray-200 bg-white px-3 py-2">
-                        <div className="text-xs font-semibold text-gray-800">Trigger summary</div>
+                      <div className="mt-3 rounded border border-gray-200 dark:border-[rgb(var(--color-border-200))] bg-white dark:bg-[rgb(var(--color-card))] px-3 py-2">
+                        <div className="text-xs font-semibold text-gray-800 dark:text-gray-200">Trigger summary</div>
 
                         <div className="mt-2 space-y-1 text-[11px] text-gray-600">
                           <div className="flex flex-wrap items-center gap-2">
@@ -3708,7 +3708,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
 
                         <div className="mt-3 space-y-3 border-t border-gray-200 pt-3">
                             <div>
-                              <div className="text-xs font-semibold text-gray-800">Trigger source schema override</div>
+                              <div className="text-xs font-semibold text-gray-800 dark:text-gray-200">Trigger source schema override</div>
                               <div className="mt-2">
                                 <SearchableSelect
                                   id="workflow-designer-trigger-source-schema"
@@ -3744,7 +3744,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
 
                             <div>
                               <div className="flex items-center justify-between gap-3">
-                                <div className="text-xs font-semibold text-gray-800">Trigger mapping</div>
+                                <div className="text-xs font-semibold text-gray-800 dark:text-gray-200">Trigger mapping</div>
                                 {!mappingRequired && (
                                   <Button
                                     id="workflow-designer-trigger-mapping-toggle"
@@ -3944,7 +3944,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                       <div id="workflow-designer-contract-advanced-panel" className="mt-2 rounded border border-gray-200 bg-gray-50 p-3">
                         <div className="flex items-center justify-between gap-3">
                           <div>
-                            <div className="text-xs font-semibold text-gray-800">Lock schema version</div>
+                            <div className="text-xs font-semibold text-gray-800 dark:text-gray-200">Lock schema version</div>
                             <div className="text-xs text-gray-500">
                               Lock schema version to prevent future trigger changes from affecting this workflow.
                             </div>
@@ -4166,7 +4166,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                               return (
                                 <div className="flex flex-wrap gap-1">
                                   {shown.map((k) => (
-                                    <span key={k} className="rounded bg-white px-2 py-0.5 border border-gray-200">
+                                    <span key={k} className="rounded bg-white dark:bg-gray-800 px-2 py-0.5 border border-gray-200 dark:border-[rgb(var(--color-border-200))]">
                                       {k}
                                     </span>
                                   ))}
@@ -4207,9 +4207,9 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                       if (e.target === e.currentTarget) setShowSchemaModal(false);
                     }}
                   >
-                    <div className="w-full max-w-3xl rounded-lg bg-white shadow-xl border border-gray-200 overflow-hidden">
+                    <div className="w-full max-w-3xl rounded-lg bg-white dark:bg-[rgb(var(--color-card))] shadow-xl border border-gray-200 dark:border-[rgb(var(--color-border-200))] overflow-hidden">
                       <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
-                        <div className="text-sm font-semibold text-gray-900">Workflow payload contract schema</div>
+                        <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">Workflow payload contract schema</div>
                         <Button
                           id="workflow-designer-schema-modal-close"
                           variant="ghost"
@@ -4220,7 +4220,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                           Close
                         </Button>
                       </div>
-                      <div className="px-4 py-2 border-b border-gray-200 bg-gray-50">
+                      <div className="px-4 py-2 border-b border-gray-200 dark:border-[rgb(var(--color-border-200))] bg-gray-50 dark:bg-[rgb(var(--color-background))]">
                         <div className="text-[11px] text-gray-600">
                           <span className="text-gray-500">Schema ref:</span>{' '}
                           <span className="font-mono break-all">{effectivePayloadSchemaRef}</span>
@@ -4262,9 +4262,9 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                       if (e.target === e.currentTarget) setShowTriggerSchemaModal(false);
                     }}
                   >
-                    <div className="w-full max-w-3xl rounded-lg bg-white shadow-xl border border-gray-200 overflow-hidden">
+                    <div className="w-full max-w-3xl rounded-lg bg-white dark:bg-[rgb(var(--color-card))] shadow-xl border border-gray-200 dark:border-[rgb(var(--color-border-200))] overflow-hidden">
                       <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
-                        <div className="text-sm font-semibold text-gray-900">{triggerSchemaModalTitle}</div>
+                        <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">{triggerSchemaModalTitle}</div>
                         <Button
                           id="workflow-designer-trigger-schema-modal-close"
                           variant="ghost"
@@ -4275,7 +4275,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                           Close
                         </Button>
                       </div>
-                      <div className="px-4 py-2 border-b border-gray-200 bg-gray-50">
+                      <div className="px-4 py-2 border-b border-gray-200 dark:border-[rgb(var(--color-border-200))] bg-gray-50 dark:bg-[rgb(var(--color-background))]">
                         <div className="text-[11px] text-gray-600">
                           <span className="text-gray-500">Schema ref:</span>{' '}
                           <span className="font-mono break-all">{triggerSchemaModalRef}</span>
@@ -4314,9 +4314,9 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                       if (e.target === e.currentTarget) setShowPublishedContractModal(false);
                     }}
                   >
-                    <div className="w-full max-w-3xl rounded-lg bg-white shadow-xl border border-gray-200 overflow-hidden">
+                    <div className="w-full max-w-3xl rounded-lg bg-white dark:bg-[rgb(var(--color-card))] shadow-xl border border-gray-200 dark:border-[rgb(var(--color-border-200))] overflow-hidden">
                       <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
-                        <div className="text-sm font-semibold text-gray-900">
+                        <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">
                           Published contract schema{publishedContractModalVersion ? ` (v${publishedContractModalVersion})` : ''}
                         </div>
                         <Button
@@ -4365,7 +4365,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                 <div>
                   <div className="flex items-center justify-between mb-3">
                     <div>
-                      <h2 className="text-lg font-semibold text-gray-900">Workflow Steps</h2>
+                      <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Workflow Steps</h2>
                       <p className="text-sm text-gray-500">
                         {stepsViewMode === 'list'
                           ? 'Drag steps to reorder or move between pipes.'
@@ -4395,7 +4395,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                     </div>
                   </div>
                   {stepsViewMode === 'graph' ? (
-                    <div className="h-[650px] rounded border border-gray-200 bg-white overflow-hidden">
+                    <div className="h-[650px] rounded border border-gray-200 dark:border-[rgb(var(--color-border-200))] bg-white dark:bg-[rgb(var(--color-card))] overflow-hidden">
                       <WorkflowGraph
                         steps={(activeDefinition?.steps ?? []) as Step[]}
                         getLabel={(step) => getStepLabel(step as Step, nodeRegistryMap)}
@@ -4527,7 +4527,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
 
   return (
     <div className="h-full min-h-0 flex flex-col">
-      <div className="border-b bg-white px-6 py-4">
+      <div className="border-b bg-white dark:bg-[rgb(var(--color-card))] px-6 py-4">
         <div className="flex items-start justify-between gap-4">
           <div>
             {isEditorDesignerMode && (
@@ -4542,8 +4542,8 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                 Back to workflows
               </Button>
             )}
-            <h1 className="text-xl font-semibold text-gray-900">{pageTitle}</h1>
-            <p className="text-sm text-gray-500">{pageDescription}</p>
+            <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">{pageTitle}</h1>
+            <p className="text-sm text-gray-500 dark:text-gray-400">{pageDescription}</p>
           </div>
           {isEditorDesignerMode && (
             <div className="flex items-center gap-2">
@@ -4651,7 +4651,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
             tabStyles={{
               root: 'h-full min-h-0 flex flex-col',
               content: 'flex-1 min-h-0 overflow-hidden',
-              list: 'px-6 bg-white border-b border-gray-200 mb-0'
+              list: 'px-6 bg-white dark:bg-[rgb(var(--color-card))] border-b border-gray-200 dark:border-[rgb(var(--color-border-200))] mb-0'
             }}
           />
         ) : isEditorDesignerMode ? (
@@ -5237,7 +5237,7 @@ const StepConfigPanel: React.FC<{
   return (
     <div className="space-y-4">
       <div>
-        <div className="text-sm font-semibold text-gray-800">{getStepLabel(step, nodeRegistry)}</div>
+        <div className="text-sm font-semibold text-gray-800 dark:text-gray-200">{getStepLabel(step, nodeRegistry)}</div>
         <div className="text-xs text-gray-500">{stepPath ?? step.id}</div>
       </div>
 
@@ -5516,7 +5516,7 @@ const StepConfigPanel: React.FC<{
         <div className="mt-4 pt-4 border-t border-gray-200">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <div className="text-sm font-semibold text-gray-800">Input Mapping</div>
+              <div className="text-sm font-semibold text-gray-800 dark:text-gray-200">Input Mapping</div>
               <p className="text-xs text-gray-500 mt-1">
                 Map workflow data to action inputs.
               </p>
@@ -5954,7 +5954,7 @@ const SchemaForm: React.FC<{
   return (
     <div className="space-y-4">
       <div>
-        <div className="text-sm font-semibold text-gray-800">Node Configuration</div>
+        <div className="text-sm font-semibold text-gray-800 dark:text-gray-200">Node Configuration</div>
         {missingRequired.length > 0 && (
           <div className="text-xs text-destructive">Missing required: {missingRequired.map(k => getFieldMeta(k).label).join(', ')}</div>
         )}
@@ -6343,7 +6343,7 @@ const SchemaReferenceSection: React.FC<{
       </button>
 
       {expanded && (
-        <div className="px-2 py-2 bg-white max-h-64 overflow-y-auto">
+        <div className="px-2 py-2 bg-white dark:bg-[rgb(var(--color-card))] max-h-64 overflow-y-auto">
           {fields.length === 0 ? (
             <div className="text-xs text-gray-400 text-center py-2">{emptyMessage}</div>
           ) : (

@@ -171,7 +171,6 @@ describe('mobile auth (OTT + refresh rotation)', () => {
     state.mobile_refresh_tokens.length = 0;
     state.sessions.length = 0;
 
-    process.env.ALGA_MOBILE_AUTH_ENABLED = 'true';
     process.env.ALGA_MOBILE_OTT_TTL_SEC = '60';
     process.env.ALGA_MOBILE_ACCESS_TTL_SEC = '900';
     process.env.ALGA_MOBILE_REFRESH_TTL_SEC = '3600';

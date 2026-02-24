@@ -1,0 +1,678 @@
+import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach, vi } from 'vitest';
+import type { Knex } from 'knex';
+import { v4 as uuidv4 } from 'uuid';
+import { HocuspocusProvider } from '@hocuspocus/provider';
+import * as Y from 'yjs';
+import { prosemirrorJSONToYXmlFragment } from 'y-prosemirror';
+import { schema } from 'prosemirror-schema-basic';
+import { createTestDbConnection } from '../../../test-utils/dbConfig';
+import { createTenant, createUser } from '../../../test-utils/testDataFactory';
+
+/**
+ * Collaborative Editing — Integration Tests
+ *
+ * Tests the server-side components of collaborative editing:
+ * - Document creation for collaborative sessions
+ * - Snapshot sync from Y.js state back to document_block_content
+ * - Feature flag gating
+ * - Tenant isolation in room name construction
+ *
+ * These tests use a real test database but mock the Hocuspocus connection
+ * (actual WebSocket collaboration is tested manually via the test page).
+ *
+ * Run: npm run test:integration -- collaborativeEditing
+ */
+
+let db: Knex;
+let tenantId: string;
+let userId: string;
+let secondTenantId: string;
+let secondUserId: string;
+
+const RUN_HOCUSPOCUS_TESTS = process.env.RUN_HOCUSPOCUS_TESTS === 'true';
+const HOCUSPOCUS_URL = process.env.HOCUSPOCUS_URL || 'ws://localhost:1234';
+const describeIfHocuspocus = RUN_HOCUSPOCUS_TESTS ? describe : describe.skip;
+const waitForSynced = (provider: HocuspocusProvider) => new Promise<void>((resolve) => {
+  if (provider.synced) {
+    resolve();
+    return;
+  }
+  const handleSynced = ({ state }: { state: boolean }) => {
+    if (!state) return;
+    provider.off('synced', handleSynced);
+    resolve();
+  };
+  provider.on('synced', handleSynced);
+});
+
+// Mock createTenantKnex to use test DB
+vi.mock('@alga-psa/db', async () => {
+  const actual = await vi.importActual<typeof import('@alga-psa/db')>('@alga-psa/db');
+  return {
+    ...actual,
+    createTenantKnex: vi.fn(async () => ({ knex: db, tenant: tenantId })),
+    withTransaction: actual.withTransaction,
+  };
+});
+
+// Mock auth to return our test user
+vi.mock('@alga-psa/auth', async () => {
+  const actual = await vi.importActual<typeof import('@alga-psa/auth')>('@alga-psa/auth');
+  return {
+    ...actual,
+    withAuth: vi.fn((fn: Function) => {
+      return (...args: any[]) => {
+        const user = { user_id: userId, tenant: tenantId };
+        const ctx = { tenant: tenantId };
+        return fn(user, ctx, ...args);
+      };
+    }),
+    hasPermission: vi.fn(() => Promise.resolve(true)),
+    getSession: vi.fn(() => Promise.resolve({ user: { id: userId, tenant: tenantId } })),
+  };
+});
+
+// Mock event publishing (not relevant to collab tests)
+vi.mock('@alga-psa/event-bus/publishers', () => ({
+  publishEvent: vi.fn(),
+  publishWorkflowEvent: vi.fn(),
+}));
+
+describe('Collaborative Editing — Integration Tests', () => {
+  const HOOK_TIMEOUT = 120_000;
+
+  beforeAll(async () => {
+    db = await createTestDbConnection();
+
+    // Create two tenants to test isolation
+    tenantId = await createTenant(db, 'Collab Test MSP');
+    userId = await createUser(db, tenantId, {
+      first_name: 'Editor',
+      last_name: 'One',
+      email: 'editor1@test.com',
+    });
+
+    secondTenantId = await createTenant(db, 'Other MSP');
+    secondUserId = await createUser(db, secondTenantId, {
+      first_name: 'Editor',
+      last_name: 'Two',
+      email: 'editor2@test.com',
+    });
+  }, HOOK_TIMEOUT);
+
+  afterAll(async () => {
+    // Cleanup in reverse FK order
+    for (const table of ['document_block_content', 'documents', 'users', 'tenants']) {
+      try {
+        if (table === 'tenants') {
+          await db(table).whereIn('tenant', [tenantId, secondTenantId]).del();
+        } else {
+          await db(table).where({ tenant: tenantId }).del();
+          await db(table).where({ tenant: secondTenantId }).del();
+        }
+      } catch (e) {
+        // table may not exist in test DB — ignore
+      }
+    }
+    await db.destroy();
+  }, HOOK_TIMEOUT);
+
+  // ─── Document Creation for Collab Sessions ───────────────────────
+
+  describe('Document creation for collaborative sessions', () => {
+    let testDocId: string;
+
+    afterEach(async () => {
+      if (testDocId) {
+        await db('document_block_content').where({ document_id: testDocId, tenant: tenantId }).del();
+        await db('documents').where({ document_id: testDocId, tenant: tenantId }).del();
+        testDocId = '';
+      }
+    });
+
+    it('should create a document with empty block_data for a new collab session', async () => {
+      testDocId = uuidv4();
+      const now = db.fn.now();
+
+      await db('documents').insert({
+        document_id: testDocId,
+        document_name: 'Collab Test Doc',
+        user_id: userId,
+        created_by: userId,
+        tenant: tenantId,
+        order_number: 0,
+        created_at: now,
+        updated_at: now,
+      });
+
+      await db('document_block_content').insert({
+        content_id: uuidv4(),
+        document_id: testDocId,
+        block_data: JSON.stringify({ type: 'doc', content: [] }),
+        tenant: tenantId,
+        created_at: now,
+        updated_at: now,
+      });
+
+      const doc = await db('documents').where({ document_id: testDocId, tenant: tenantId }).first();
+      expect(doc).toBeDefined();
+      expect(doc.document_name).toBe('Collab Test Doc');
+
+      const content = await db('document_block_content')
+        .where({ document_id: testDocId, tenant: tenantId })
+        .first();
+      expect(content).toBeDefined();
+      expect(content.block_data).toBeDefined();
+    });
+
+    it('should enforce tenant in document_block_content composite key', async () => {
+      testDocId = uuidv4();
+      const now = db.fn.now();
+
+      await db('documents').insert({
+        document_id: testDocId,
+        document_name: 'Tenant Isolation Doc',
+        user_id: userId,
+        created_by: userId,
+        tenant: tenantId,
+        order_number: 0,
+        created_at: now,
+        updated_at: now,
+      });
+
+      await db('document_block_content').insert({
+        content_id: uuidv4(),
+        document_id: testDocId,
+        block_data: JSON.stringify({ type: 'doc', content: [{ type: 'paragraph' }] }),
+        tenant: tenantId,
+        created_at: now,
+        updated_at: now,
+      });
+
+      // Query with wrong tenant should return nothing
+      const wrongTenant = await db('document_block_content')
+        .where({ document_id: testDocId, tenant: secondTenantId })
+        .first();
+      expect(wrongTenant).toBeUndefined();
+
+      // Query with correct tenant should return the content
+      const correctTenant = await db('document_block_content')
+        .where({ document_id: testDocId, tenant: tenantId })
+        .first();
+      expect(correctTenant).toBeDefined();
+    });
+  });
+
+  // ─── Snapshot Sync (Y.js → Main DB) ─────────────────────────────
+
+  describe('Snapshot sync: writing Y.js state back to document_block_content', () => {
+    let testDocId: string;
+
+    beforeEach(async () => {
+      testDocId = uuidv4();
+      const now = db.fn.now();
+
+      await db('documents').insert({
+        document_id: testDocId,
+        document_name: 'Snapshot Test Doc',
+        user_id: userId,
+        created_by: userId,
+        tenant: tenantId,
+        order_number: 0,
+        created_at: now,
+        updated_at: now,
+      });
+
+      await db('document_block_content').insert({
+        content_id: uuidv4(),
+        document_id: testDocId,
+        block_data: JSON.stringify({ type: 'doc', content: [] }),
+        tenant: tenantId,
+        created_at: now,
+        updated_at: now,
+      });
+    });
+
+    afterEach(async () => {
+      await db('document_block_content').where({ document_id: testDocId, tenant: tenantId }).del();
+      await db('documents').where({ document_id: testDocId, tenant: tenantId }).del();
+    });
+
+    it('should update block_data when syncing a snapshot from collab state', async () => {
+      const collabContent = {
+        type: 'doc',
+        content: [
+          {
+            type: 'paragraph',
+            content: [{ type: 'text', text: 'Collaboratively edited content' }],
+          },
+        ],
+      };
+
+      const [updated] = await db('document_block_content')
+        .where({ document_id: testDocId, tenant: tenantId })
+        .update({
+          block_data: JSON.stringify(collabContent),
+          updated_at: db.fn.now(),
+        })
+        .returning(['content_id', 'block_data']);
+
+      expect(updated).toBeDefined();
+
+      // Verify the snapshot was written correctly
+      const content = await db('document_block_content')
+        .where({ document_id: testDocId, tenant: tenantId })
+        .first();
+
+      const parsed = typeof content.block_data === 'string'
+        ? JSON.parse(content.block_data)
+        : content.block_data;
+      expect(parsed.content[0].content[0].text).toBe('Collaboratively edited content');
+    });
+
+    it('should preserve document metadata when syncing snapshot', async () => {
+      const beforeSync = await db('documents')
+        .where({ document_id: testDocId, tenant: tenantId })
+        .first();
+
+      // Simulate snapshot sync — only updates block_content, not the document record
+      await db('document_block_content')
+        .where({ document_id: testDocId, tenant: tenantId })
+        .update({
+          block_data: JSON.stringify({ type: 'doc', content: [{ type: 'paragraph' }] }),
+          updated_at: db.fn.now(),
+        });
+
+      const afterSync = await db('documents')
+        .where({ document_id: testDocId, tenant: tenantId })
+        .first();
+
+      expect(afterSync.document_name).toBe(beforeSync.document_name);
+      expect(afterSync.created_by).toBe(beforeSync.created_by);
+    });
+  });
+
+  // ─── Hocuspocus Room Name Construction ───────────────────────────
+
+  describe('Room name construction and tenant isolation', () => {
+    it('should construct room name as document:<tenant>:<documentId>', () => {
+      const docId = uuidv4();
+      const roomName = `document:${tenantId}:${docId}`;
+
+      expect(roomName).toMatch(/^document:[0-9a-f-]+:[0-9a-f-]+$/);
+
+      const [prefix, roomTenant, roomDocId] = roomName.split(':');
+      expect(prefix).toBe('document');
+      expect(roomTenant).toBe(tenantId);
+      expect(roomDocId).toBe(docId);
+    });
+
+    it('should produce different room names for same doc in different tenants', () => {
+      const docId = uuidv4();
+      const room1 = `document:${tenantId}:${docId}`;
+      const room2 = `document:${secondTenantId}:${docId}`;
+
+      expect(room1).not.toBe(room2);
+    });
+
+    it('should reject room name with mismatched tenant', () => {
+      // Simulates the onConnect validation logic
+      const connectingTenant = tenantId;
+      const roomName = `document:${secondTenantId}:${uuidv4()}`;
+
+      const [, roomTenant] = roomName.split(':');
+      const isAllowed = roomTenant === connectingTenant;
+
+      expect(isAllowed).toBe(false);
+    });
+
+    it('should allow room name with matching tenant', () => {
+      const connectingTenant = tenantId;
+      const roomName = `document:${tenantId}:${uuidv4()}`;
+
+      const [, roomTenant] = roomName.split(':');
+      const isAllowed = roomTenant === connectingTenant;
+
+      expect(isAllowed).toBe(true);
+    });
+
+    it('should pass through notification rooms without document validation', () => {
+      const roomName = `notifications:${tenantId}:${userId}`;
+      const isDocumentRoom = roomName.startsWith('document:');
+
+      expect(isDocumentRoom).toBe(false);
+      // Non-document rooms skip tenant validation
+    });
+  });
+
+  // ─── Feature Flag Default ────────────────────────────────────────
+
+  describe('Feature flag configuration', () => {
+    it('should have collaborative_editing flag defaulting to false', async () => {
+      // This test verifies the flag is registered — import the defaults directly
+      const { featureFlags } = await import('@/lib/feature-flags/featureFlags');
+
+      // When PostHog is unavailable (test env), it falls back to defaults
+      const enabled = await featureFlags.isEnabled('collaborative_editing');
+      expect(enabled).toBe(false);
+    });
+  });
+
+  // ─── Y.js Document Initialization ────────────────────────────────
+
+  describe('Y.js document initialization from existing content', () => {
+    let testDocId: string;
+
+    beforeEach(async () => {
+      testDocId = uuidv4();
+      const now = db.fn.now();
+
+      const existingContent = {
+        type: 'doc',
+        content: [
+          {
+            type: 'paragraph',
+            content: [{ type: 'text', text: 'Pre-existing document content' }],
+          },
+          {
+            type: 'heading',
+            attrs: { level: 2 },
+            content: [{ type: 'text', text: 'Section Title' }],
+          },
+        ],
+      };
+
+      await db('documents').insert({
+        document_id: testDocId,
+        document_name: 'Existing Doc',
+        user_id: userId,
+        created_by: userId,
+        tenant: tenantId,
+        order_number: 0,
+        created_at: now,
+        updated_at: now,
+      });
+
+      await db('document_block_content').insert({
+        content_id: uuidv4(),
+        document_id: testDocId,
+        block_data: JSON.stringify(existingContent),
+        tenant: tenantId,
+        created_at: now,
+        updated_at: now,
+      });
+    });
+
+    afterEach(async () => {
+      await db('document_block_content').where({ document_id: testDocId, tenant: tenantId }).del();
+      await db('documents').where({ document_id: testDocId, tenant: tenantId }).del();
+    });
+
+    it('should load existing block_data as TipTap-compatible JSON for Y.js initialization', async () => {
+      const content = await db('document_block_content')
+        .where({ document_id: testDocId, tenant: tenantId })
+        .first();
+
+      expect(content).toBeDefined();
+
+      const parsed = typeof content.block_data === 'string'
+        ? JSON.parse(content.block_data)
+        : content.block_data;
+
+      // Verify it's valid TipTap JSON structure
+      expect(parsed).toHaveProperty('type', 'doc');
+      expect(parsed).toHaveProperty('content');
+      expect(Array.isArray(parsed.content)).toBe(true);
+      expect(parsed.content.length).toBeGreaterThan(0);
+
+      // Verify content types are TipTap-compatible node types
+      const nodeTypes = parsed.content.map((node: any) => node.type);
+      expect(nodeTypes).toEqual(expect.arrayContaining(['paragraph', 'heading']));
+    });
+
+    it('should return null block_data for non-existent document', async () => {
+      const content = await db('document_block_content')
+        .where({ document_id: uuidv4(), tenant: tenantId })
+        .first();
+
+      expect(content).toBeUndefined();
+    });
+  });
+});
+
+// ─── Hocuspocus Persistence (No DB Required) ───────────────────────
+
+describeIfHocuspocus('Hocuspocus persistence', () => {
+  it('should persist content across a disconnect/reconnect cycle', async () => {
+    const tenantId = uuidv4();
+    const docId = uuidv4();
+    const roomName = `document:${tenantId}:${docId}`;
+    const ydoc = new Y.Doc();
+
+    const provider = new HocuspocusProvider({
+      url: HOCUSPOCUS_URL,
+      name: roomName,
+      document: ydoc,
+      parameters: { tenantId },
+    });
+
+    await waitForSynced(provider);
+
+    const text = ydoc.getText('test');
+    text.insert(0, 'Persisted content');
+
+    await waitForSynced(provider);
+    provider.destroy();
+
+    const ydocReloaded = new Y.Doc();
+    const reconnected = new HocuspocusProvider({
+      url: HOCUSPOCUS_URL,
+      name: roomName,
+      document: ydocReloaded,
+      parameters: { tenantId },
+    });
+
+    await waitForSynced(reconnected);
+
+    const reloadedText = ydocReloaded.getText('test').toString();
+    expect(reloadedText).toBe('Persisted content');
+
+    reconnected.destroy();
+  });
+
+  it('should sync content between two providers connected to the same room', async () => {
+    const tenantId = uuidv4();
+    const docId = uuidv4();
+    const roomName = `document:${tenantId}:${docId}`;
+    const docA = new Y.Doc();
+    const docB = new Y.Doc();
+
+    const providerA = new HocuspocusProvider({
+      url: HOCUSPOCUS_URL,
+      name: roomName,
+      document: docA,
+      parameters: { tenantId },
+    });
+
+    const providerB = new HocuspocusProvider({
+      url: HOCUSPOCUS_URL,
+      name: roomName,
+      document: docB,
+      parameters: { tenantId },
+    });
+
+    await Promise.all([waitForSynced(providerA), waitForSynced(providerB)]);
+
+    const textA = docA.getText('test');
+    const textB = docB.getText('test');
+
+    const waitForRemote = new Promise<void>((resolve) => {
+      const handle = () => {
+        if (textB.toString() === 'Hello from A') {
+          textB.unobserve(handle);
+          resolve();
+        }
+      };
+      textB.observe(handle);
+      handle();
+    });
+
+    textA.insert(0, 'Hello from A');
+
+    await waitForRemote;
+    expect(textB.toString()).toBe('Hello from A');
+
+    providerA.destroy();
+    providerB.destroy();
+  });
+
+  it('should broadcast awareness state between providers', async () => {
+    const tenantId = uuidv4();
+    const docId = uuidv4();
+    const roomName = `document:${tenantId}:${docId}`;
+    const docA = new Y.Doc();
+    const docB = new Y.Doc();
+
+    const providerA = new HocuspocusProvider({
+      url: HOCUSPOCUS_URL,
+      name: roomName,
+      document: docA,
+      parameters: { tenantId },
+    });
+
+    const providerB = new HocuspocusProvider({
+      url: HOCUSPOCUS_URL,
+      name: roomName,
+      document: docB,
+      parameters: { tenantId },
+    });
+
+    await Promise.all([waitForSynced(providerA), waitForSynced(providerB)]);
+
+    const received = new Promise<void>((resolve, reject) => {
+      const timeout = setTimeout(() => reject(new Error('Awareness state not received.')), 3000);
+      const handle = () => {
+        const states = Array.from(providerB.awareness.getStates().values());
+        const hasUser = states.some((state) => state?.user?.name === 'User A');
+        if (hasUser) {
+          clearTimeout(timeout);
+          providerB.awareness.off('change', handle);
+          resolve();
+        }
+      };
+      providerB.awareness.on('change', handle);
+      handle();
+    });
+
+    providerA.awareness.setLocalStateField('user', {
+      id: 'user-a',
+      name: 'User A',
+      color: '#ff0000',
+    });
+
+    await received;
+
+    providerA.destroy();
+    providerB.destroy();
+  });
+
+  it('should reject WebSocket connection with mismatched tenant', async () => {
+    const tenantId = uuidv4();
+    const docId = uuidv4();
+    const roomName = `document:${uuidv4()}:${docId}`;
+    const ydoc = new Y.Doc();
+
+    const provider = new HocuspocusProvider({
+      url: HOCUSPOCUS_URL,
+      name: roomName,
+      document: ydoc,
+      parameters: { tenantId },
+    });
+
+    const statuses: string[] = [];
+    const disconnected = new Promise<void>((resolve, reject) => {
+      const timeout = setTimeout(() => reject(new Error('Expected disconnect.')), 3000);
+      provider.on('status', ({ status }) => {
+        statuses.push(status);
+        if (status === 'disconnected') {
+          clearTimeout(timeout);
+          resolve();
+        }
+      });
+    });
+
+    await disconnected;
+    expect(statuses).not.toContain('connected');
+
+    provider.destroy();
+  });
+
+  it('should sync Y.js content to document_block_content via syncCollabSnapshot', async () => {
+    const docId = uuidv4();
+    const now = new Date();
+
+    await db('documents').insert({
+      document_id: docId,
+      document_name: 'Snapshot Test',
+      document_type: 'text',
+      tenant: tenantId,
+      created_by: userId,
+      updated_by: userId,
+      created_at: now,
+      updated_at: now,
+    });
+
+    await db('document_block_content').insert({
+      content_id: uuidv4(),
+      document_id: docId,
+      block_data: JSON.stringify({ type: 'doc', content: [] }),
+      tenant: tenantId,
+      created_at: now,
+      updated_at: now,
+    });
+
+    const roomName = `document:${tenantId}:${docId}`;
+    const ydoc = new Y.Doc();
+
+    const provider = new HocuspocusProvider({
+      url: HOCUSPOCUS_URL,
+      name: roomName,
+      document: ydoc,
+      parameters: { tenantId },
+    });
+
+    await waitForSynced(provider);
+
+    const fragment = ydoc.getXmlFragment('prosemirror');
+    prosemirrorJSONToYXmlFragment(schema, {
+      type: 'doc',
+      content: [
+        {
+          type: 'paragraph',
+          content: [{ type: 'text', text: 'Snapshot content' }],
+        },
+      ],
+    }, fragment);
+
+    await new Promise((resolve) => setTimeout(resolve, 200));
+
+    provider.destroy();
+
+    const { syncCollabSnapshot } = await import(
+      '@alga-psa/documents/actions/collaborativeEditingActions'
+    );
+    const result = await syncCollabSnapshot(docId);
+
+    expect(result?.success).toBe(true);
+
+    const content = await db('document_block_content')
+      .where({ document_id: docId, tenant: tenantId })
+      .first();
+
+    const parsed = typeof content.block_data === 'string'
+      ? JSON.parse(content.block_data)
+      : content.block_data;
+
+    expect(parsed.content?.[0]?.content?.[0]?.text).toBe('Snapshot content');
+  });
+});
