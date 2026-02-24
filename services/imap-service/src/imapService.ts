@@ -546,7 +546,9 @@ class ImapFolderListener {
 
       let uids: number[] | string = range;
       try {
-        const searchResult = await client.search({ uid: range });
+        // Always use UID mode. Default search/fetch behavior in imapflow is sequence-number based,
+        // and mixing sequence numbers with UID cursors causes new-message detection gaps.
+        const searchResult = await client.search({ uid: range }, { uid: true });
         if (Array.isArray(searchResult) && searchResult.length > 0) {
           const filtered = searchResult.filter((uid) => uid >= startUid);
           if (filtered.length > 0) {
@@ -555,7 +557,7 @@ class ImapFolderListener {
             await this.updateLastSyncAt();
             return;
           }
-        } else {
+        } else if (Array.isArray(searchResult) && searchResult.length === 0) {
           await this.updateLastSyncAt();
           return;
         }
@@ -563,7 +565,7 @@ class ImapFolderListener {
         // fallback to fetch range
       }
 
-      for await (const message of client.fetch(uids, { uid: true, source: true })) {
+      for await (const message of client.fetch(uids, { uid: true, source: true }, { uid: true })) {
         if (!message?.source) continue;
         if (message.uid && message.uid < startUid) continue;
         if (message.uid && message.uid > maxUid) {
