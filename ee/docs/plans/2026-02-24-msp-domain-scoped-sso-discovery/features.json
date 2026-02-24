@@ -104,7 +104,7 @@
   {
     "id": "F018",
     "description": "Return invariant discovery response schema `{ ok: true, providers: [] }` with allowed provider IDs only.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Functional Requirements #3", "Non-functional Requirements #1"]
   },
   {
