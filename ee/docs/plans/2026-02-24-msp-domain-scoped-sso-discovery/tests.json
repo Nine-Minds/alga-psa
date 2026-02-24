@@ -95,7 +95,7 @@
   {
     "id": "T012",
     "description": "Providers settings page renders MSP SSO login-domain management section.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F007"
     ]
