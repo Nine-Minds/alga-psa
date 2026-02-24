@@ -175,4 +175,36 @@ describe('detectBlockContentFormat', () => {
       ],
     });
   });
+
+  it('converts link inline content to ProseMirror link marks', () => {
+    const blocknote = [
+      {
+        type: 'paragraph',
+        props: {},
+        content: [
+          {
+            type: 'link',
+            href: 'https://example.com',
+            content: [{ type: 'text', text: 'Example', styles: {} }],
+          },
+        ],
+      },
+    ];
+
+    expect(blockNoteJsonToProsemirrorJson(blocknote)).toEqual({
+      type: 'doc',
+      content: [
+        {
+          type: 'paragraph',
+          content: [
+            {
+              type: 'text',
+              text: 'Example',
+              marks: [{ type: 'link', attrs: { href: 'https://example.com' } }],
+            },
+          ],
+        },
+      ],
+    });
+  });
 });

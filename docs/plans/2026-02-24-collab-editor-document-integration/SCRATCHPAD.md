@@ -88,3 +88,5 @@
 - Ran `npx vitest run ../packages/documents/src/lib/blockContentFormat.test.ts`.
 - Added numbered list item conversion test in `packages/documents/src/lib/blockContentFormat.test.ts` and marked T10 complete.
 - Ran `npx vitest run ../packages/documents/src/lib/blockContentFormat.test.ts`.
+- Added link inline conversion test in `packages/documents/src/lib/blockContentFormat.test.ts` and marked T11 complete.
+- Ran `npx vitest run ../packages/documents/src/lib/blockContentFormat.test.ts`.

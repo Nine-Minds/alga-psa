@@ -63,7 +63,7 @@
     "id": "T11",
     "description": "Convert BlockNote link inline content to ProseMirror link mark",
     "featureIds": ["F07"],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T12",
