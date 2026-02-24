@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { RateLimiterMemory } from 'rate-limiter-flexible';
 import {
+  MSP_SSO_DISCOVERY_COOKIE,
   MSP_SSO_GENERIC_FAILURE_MESSAGE,
   MSP_SSO_RESOLUTION_COOKIE,
   MSP_SSO_RESOLUTION_TTL_SECONDS,
@@ -9,6 +10,7 @@ import {
   getMspSsoSigningSecret,
   isValidResolverCallbackUrl,
   normalizeResolverEmail,
+  parseAndVerifyMspSsoDiscoveryCookie,
   parseResolverProvider,
   resolveMspSsoCredentialSource,
 } from '@alga-psa/auth/lib/sso/mspSsoResolution';
@@ -80,18 +82,28 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       return buildGenericFailureResponse();
     }
 
-    // Anti-enumeration rule: lookup outcomes only affect internal source selection, never external messaging.
-    const outcome = await resolveMspSsoCredentialSource({ provider, email });
-    if (!outcome.resolved || !outcome.source) {
-      console.info('[msp-sso-resolve] no available credential source', {
-        provider,
-      });
-      return buildGenericFailureResponse();
-    }
-
     const signingSecret = await getMspSsoSigningSecret();
     if (!signingSecret) {
       console.warn('[msp-sso-resolve] NEXTAUTH_SECRET not configured; unable to issue resolution cookie');
+      return buildGenericFailureResponse();
+    }
+
+    const discoveryCookieValue = request.cookies.get(MSP_SSO_DISCOVERY_COOKIE)?.value;
+    const discoveryContext = parseAndVerifyMspSsoDiscoveryCookie({
+      value: discoveryCookieValue,
+      secret: signingSecret,
+    });
+
+    // Anti-enumeration rule: lookup outcomes only affect internal source selection, never external messaging.
+    const outcome = await resolveMspSsoCredentialSource({
+      provider,
+      discovery: discoveryContext,
+    });
+    if (!outcome.resolved || !outcome.source) {
+      console.info('[msp-sso-resolve] no available credential source', {
+        provider,
+        discovery: discoveryContext ? 'present' : 'missing-or-invalid',
+      });
       return buildGenericFailureResponse();
     }
 
@@ -99,7 +111,6 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       provider,
       source: outcome.source,
       tenantId: outcome.tenantId,
-      userId: outcome.userId,
       secret: signingSecret,
       ttlSeconds: MSP_SSO_RESOLUTION_TTL_SECONDS,
     });

@@ -122,7 +122,7 @@
   {
     "id": "F021",
     "description": "Update MSP `SsoProviderButtons` to call discovery endpoint when a valid email is entered.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Functional Requirements #7", "UX / UI Notes #2"]
   },
   {

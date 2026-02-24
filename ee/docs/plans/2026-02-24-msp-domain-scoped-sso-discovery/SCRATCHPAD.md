@@ -42,6 +42,7 @@ Working notes for shifting MSP SSO provider enablement from user-based pre-auth 
 - (2026-02-24) Discovery endpoint response is invariant across invalid/limited/error paths and only returns allowed provider IDs (`google`, `azure-ad`) when available.
 - (2026-02-24) Added signed discovery cookie helper (`createSignedMspSsoDiscoveryCookie` / parse verifier) with only source/tenant/providers/timing metadata; no OAuth client IDs or secrets.
 - (2026-02-24) Discovery endpoint now rotates discovery cookie on valid requests and clears stale/invalid context cookies with `maxAge: 0` on neutral failure responses.
+- (2026-02-24) MSP `SsoProviderButtons` now calls `/api/auth/msp/sso/discover` whenever a syntactically valid email is entered and uses response providers as the client-side allow-list input.
 
 ## Commands / Runbooks
 
@@ -57,6 +58,8 @@ Working notes for shifting MSP SSO provider enablement from user-based pre-auth 
   - `cd server && npx vitest run --coverage.enabled=false src/app/api/auth/msp/sso/discover/route.test.ts`
 - (2026-02-24) Validate SSO discovery helper tests:
   - `cd server && npx vitest run --coverage.enabled=false ../packages/auth/src/lib/sso/mspSsoResolution.test.ts`
+- (2026-02-24) Validate MSP discovery + resolver + SSO button tests:
+  - `cd server && npx vitest run --coverage.enabled=false src/app/api/auth/msp/sso/discover/route.test.ts src/app/api/auth/msp/sso/resolve/route.test.ts ../packages/auth/src/lib/sso/mspSsoResolution.test.ts ../packages/auth/src/components/SsoProviderButtons.msp.test.tsx`
 
 ## Gotchas
 

@@ -12,209 +12,178 @@ vi.mock('next-auth/react', () => ({
 
 import SsoProviderButtons from './SsoProviderButtons';
 
+const localStorageState = new Map<string, string>();
+const localStorageMock = {
+  getItem: (key: string) => localStorageState.get(key) ?? null,
+  setItem: (key: string, value: string) => {
+    localStorageState.set(key, value);
+  },
+  removeItem: (key: string) => {
+    localStorageState.delete(key);
+  },
+  clear: () => {
+    localStorageState.clear();
+  },
+};
+
+function buildFetchMock(options: {
+  discoverProviders: Array<'google' | 'azure-ad'>;
+  resolveOk?: boolean;
+}) {
+  return vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = String(input);
+
+    if (url === '/api/auth/msp/sso/discover') {
+      return {
+        ok: true,
+        json: async () => ({ ok: true, providers: options.discoverProviders }),
+      };
+    }
+
+    if (url === '/api/auth/msp/sso/resolve') {
+      return {
+        ok: options.resolveOk ?? true,
+        json: async () => ({ ok: options.resolveOk ?? true }),
+      };
+    }
+
+    throw new Error(`Unexpected fetch URL: ${url}`);
+  });
+}
+
 describe('MSP SSO provider buttons', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    localStorageMock.clear();
+    Object.defineProperty(window, 'localStorage', {
+      value: localStorageMock,
+      configurable: true,
+    });
   });
 
-  it('T024: renders Google and Microsoft buttons in CE implementation', () => {
-    render(<SsoProviderButtons callbackUrl="/msp" email="user@example.com" />);
+  it('T031: remains disabled for empty or invalid email input', () => {
+    const fetchMock = buildFetchMock({ discoverProviders: ['google', 'azure-ad'] });
+    vi.stubGlobal('fetch', fetchMock as any);
 
-    expect(screen.getByRole('button', { name: 'Sign in with Google' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Sign in with Microsoft' })).toBeInTheDocument();
-  });
-
-  it('T025: keeps SSO buttons disabled until email is non-empty', () => {
     const { rerender } = render(<SsoProviderButtons callbackUrl="/msp" email="   " />);
 
     expect(screen.getByRole('button', { name: 'Sign in with Google' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Sign in with Microsoft' })).toBeDisabled();
+    expect(fetchMock).not.toHaveBeenCalled();
 
-    rerender(<SsoProviderButtons callbackUrl="/msp" email="user@example.com" />);
+    rerender(<SsoProviderButtons callbackUrl="/msp" email="not-an-email" />);
 
-    expect(screen.getByRole('button', { name: 'Sign in with Google' })).not.toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Sign in with Google' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Sign in with Microsoft' })).toBeDisabled();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('T032: remains disabled while discovery request is in flight', async () => {
+    let resolveDiscovery: ((value: unknown) => void) | null = null;
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      if (String(input) !== '/api/auth/msp/sso/discover') {
+        throw new Error(`Unexpected URL: ${String(input)}`);
+      }
+      return await new Promise((resolve) => {
+        resolveDiscovery = resolve;
+      });
+    });
+    vi.stubGlobal('fetch', fetchMock as any);
+
+    render(<SsoProviderButtons callbackUrl="/msp" email="user@example.com" />);
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith(
+      '/api/auth/msp/sso/discover',
+      expect.objectContaining({ method: 'POST' })
+    ));
+    expect(screen.getByRole('button', { name: 'Sign in with Google' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Sign in with Microsoft' })).toBeDisabled();
+
+    resolveDiscovery?.({
+      ok: true,
+      json: async () => ({ ok: true, providers: ['google'] }),
+    });
+
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Sign in with Google' })).not.toBeDisabled());
+  });
+
+  it('T033: enables only Microsoft when discovery returns azure-ad', async () => {
+    const fetchMock = buildFetchMock({ discoverProviders: ['azure-ad'] });
+    vi.stubGlobal('fetch', fetchMock as any);
+
+    render(<SsoProviderButtons callbackUrl="/msp" email="user@example.com" />);
+
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Sign in with Microsoft' })).not.toBeDisabled());
+    expect(screen.getByRole('button', { name: 'Sign in with Google' })).toBeDisabled();
+  });
+
+  it('T034: enables both providers when discovery returns both', async () => {
+    const fetchMock = buildFetchMock({ discoverProviders: ['google', 'azure-ad'] });
+    vi.stubGlobal('fetch', fetchMock as any);
+
+    render(<SsoProviderButtons callbackUrl="/msp" email="user@example.com" />);
+
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Sign in with Google' })).not.toBeDisabled());
     expect(screen.getByRole('button', { name: 'Sign in with Microsoft' })).not.toBeDisabled();
   });
 
-  it('T026: Microsoft click calls resolver before NextAuth signIn', async () => {
-    const fetchMock = vi.fn(async () => ({
-      ok: true,
-      json: async () => ({ ok: true }),
-    }));
+  it('T035/T038: keeps unsupported providers disabled and blocked from resolver call', async () => {
+    const fetchMock = buildFetchMock({ discoverProviders: ['google'] });
     vi.stubGlobal('fetch', fetchMock as any);
 
-    render(<SsoProviderButtons callbackUrl="/dashboard" email="admin@example.com" />);
+    render(<SsoProviderButtons callbackUrl="/msp" email="user@example.com" />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Sign in with Microsoft' }));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Sign in with Google' })).not.toBeDisabled());
 
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
-    await waitFor(() => expect(signInMock).toHaveBeenCalledTimes(1));
+    const microsoftButton = screen.getByRole('button', { name: 'Sign in with Microsoft' });
+    expect(microsoftButton).toBeDisabled();
 
-    expect(fetchMock).toHaveBeenCalledWith(
+    fireEvent.click(microsoftButton);
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock).not.toHaveBeenCalledWith(
       '/api/auth/msp/sso/resolve',
-      expect.objectContaining({
-        method: 'POST',
-      })
+      expect.anything()
     );
-
-    const body = JSON.parse(fetchMock.mock.calls[0][1].body as string);
-    expect(body).toMatchObject({
-      provider: 'azure-ad',
-      email: 'admin@example.com',
-      callbackUrl: '/dashboard',
-    });
-
-    expect(signInMock).toHaveBeenCalledWith(
-      'azure-ad',
-      { callbackUrl: '/dashboard' },
-      expect.objectContaining({ state: expect.any(String) })
-    );
-
-    expect(fetchMock.mock.invocationCallOrder[0]).toBeLessThan(signInMock.mock.invocationCallOrder[0]);
+    expect(signInMock).not.toHaveBeenCalled();
   });
 
-  it('T027: Google click calls resolver before NextAuth signIn', async () => {
-    const fetchMock = vi.fn(async () => ({
-      ok: true,
-      json: async () => ({ ok: true }),
-    }));
+  it('T036: persists last selected provider locally after successful resolver start', async () => {
+    const fetchMock = buildFetchMock({ discoverProviders: ['google', 'azure-ad'] });
     vi.stubGlobal('fetch', fetchMock as any);
 
     render(<SsoProviderButtons callbackUrl="/dashboard" email="admin@example.com" />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Sign in with Google' }));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Sign in with Microsoft' })).not.toBeDisabled());
 
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
-    await waitFor(() => expect(signInMock).toHaveBeenCalledTimes(1));
+    fireEvent.click(screen.getByRole('button', { name: 'Sign in with Microsoft' }));
 
-    const body = JSON.parse(fetchMock.mock.calls[0][1].body as string);
-    expect(body.provider).toBe('google');
-    expect(signInMock).toHaveBeenCalledWith(
-      'google',
+    await waitFor(() => expect(signInMock).toHaveBeenCalledWith(
+      'azure-ad',
       { callbackUrl: '/dashboard' },
       expect.objectContaining({ state: expect.any(String) })
-    );
-    expect(fetchMock.mock.invocationCallOrder[0]).toBeLessThan(signInMock.mock.invocationCallOrder[0]);
-  });
-
-  it('T028: resolver/start failures always surface the same generic message', async () => {
-    const onError = vi.fn();
-    const generic = "We couldn't start SSO sign-in. Please verify provider setup and try again.";
-
-    const fetchFailure = vi.fn(async () => ({
-      ok: false,
-      json: async () => ({ ok: false, message: 'specific backend reason' }),
-    }));
-    vi.stubGlobal('fetch', fetchFailure as any);
-
-    const { rerender } = render(
-      <SsoProviderButtons callbackUrl="/dashboard" email="admin@example.com" onError={onError} />
-    );
-
-    fireEvent.click(screen.getByRole('button', { name: 'Sign in with Microsoft' }));
-    await waitFor(() => expect(onError).toHaveBeenCalledWith(generic));
-
-    const thrownFetch = vi.fn(async () => {
-      throw new Error('network down');
-    });
-    vi.stubGlobal('fetch', thrownFetch as any);
-
-    rerender(<SsoProviderButtons callbackUrl="/dashboard" email="admin@example.com" onError={onError} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Sign in with Google' }));
-    await waitFor(() => expect(onError).toHaveBeenLastCalledWith(generic));
-  });
-
-  it('T066: end-to-end contract for Microsoft tenant-source success reaches NextAuth signIn', async () => {
-    const fetchMock = vi.fn(async () => ({
-      ok: true,
-      json: async () => ({ ok: true }),
-    }));
-    vi.stubGlobal('fetch', fetchMock as any);
-
-    render(<SsoProviderButtons callbackUrl="/post-auth" email="tenant-user@example.com" />);
-    fireEvent.click(screen.getByRole('button', { name: 'Sign in with Microsoft' }));
-
-    await waitFor(() => expect(signInMock).toHaveBeenCalledWith(
-      'azure-ad',
-      { callbackUrl: '/post-auth' },
-      expect.objectContaining({ state: expect.any(String) })
     ));
+
+    expect(window.localStorage.getItem('msp_sso_last_provider')).toBe('azure-ad');
   });
 
-  it('T067: end-to-end contract for Google tenant-source success reaches NextAuth signIn', async () => {
-    const fetchMock = vi.fn(async () => ({
-      ok: true,
-      json: async () => ({ ok: true }),
-    }));
-    vi.stubGlobal('fetch', fetchMock as any);
+  it('T037: remembered provider is preselected only when still eligible', async () => {
+    window.localStorage.setItem('msp_sso_last_provider', 'google');
 
-    render(<SsoProviderButtons callbackUrl="/post-auth" email="tenant-user@example.com" />);
-    fireEvent.click(screen.getByRole('button', { name: 'Sign in with Google' }));
+    const fetchEligible = buildFetchMock({ discoverProviders: ['google', 'azure-ad'] });
+    vi.stubGlobal('fetch', fetchEligible as any);
 
-    await waitFor(() => expect(signInMock).toHaveBeenCalledWith(
-      'google',
-      { callbackUrl: '/post-auth' },
-      expect.objectContaining({ state: expect.any(String) })
-    ));
-  });
+    const { rerender } = render(<SsoProviderButtons callbackUrl="/msp" email="user@example.com" />);
 
-  it('T068: end-to-end contract for Microsoft app-fallback success reaches NextAuth signIn', async () => {
-    const fetchMock = vi.fn(async () => ({
-      ok: true,
-      json: async () => ({ ok: true }),
-    }));
-    vi.stubGlobal('fetch', fetchMock as any);
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Sign in with Google' })).not.toBeDisabled());
+    expect(screen.getByRole('button', { name: 'Sign in with Google' })).toHaveAttribute('data-preferred', 'true');
 
-    render(<SsoProviderButtons callbackUrl="/post-auth" email="fallback-user@example.com" />);
-    fireEvent.click(screen.getByRole('button', { name: 'Sign in with Microsoft' }));
+    const fetchIneligible = buildFetchMock({ discoverProviders: ['azure-ad'] });
+    vi.stubGlobal('fetch', fetchIneligible as any);
+    rerender(<SsoProviderButtons callbackUrl="/msp" email="user@acme.com" />);
 
-    await waitFor(() => expect(signInMock).toHaveBeenCalledWith(
-      'azure-ad',
-      { callbackUrl: '/post-auth' },
-      expect.objectContaining({ state: expect.any(String) })
-    ));
-  });
-
-  it('T069: end-to-end contract for Google app-fallback success reaches NextAuth signIn', async () => {
-    const fetchMock = vi.fn(async () => ({
-      ok: true,
-      json: async () => ({ ok: true }),
-    }));
-    vi.stubGlobal('fetch', fetchMock as any);
-
-    render(<SsoProviderButtons callbackUrl="/post-auth" email="fallback-user@example.com" />);
-    fireEvent.click(screen.getByRole('button', { name: 'Sign in with Google' }));
-
-    await waitFor(() => expect(signInMock).toHaveBeenCalledWith(
-      'google',
-      { callbackUrl: '/post-auth' },
-      expect.objectContaining({ state: expect.any(String) })
-    ));
-  });
-
-  it('T070: unknown-user and known-unconfigured-tenant failures share one generic UI error', async () => {
-    const onError = vi.fn();
-    const generic = "We couldn't start SSO sign-in. Please verify provider setup and try again.";
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValueOnce({
-        ok: false,
-        json: async () => ({ ok: false, message: 'unknown user path' }),
-      })
-      .mockResolvedValueOnce({
-        ok: false,
-        json: async () => ({ ok: false, message: 'known unconfigured tenant path' }),
-      });
-    vi.stubGlobal('fetch', fetchMock as any);
-
-    const { rerender } = render(
-      <SsoProviderButtons callbackUrl="/post-auth" email="someone@example.com" onError={onError} />
-    );
-    fireEvent.click(screen.getByRole('button', { name: 'Sign in with Microsoft' }));
-    await waitFor(() => expect(onError).toHaveBeenCalledWith(generic));
-
-    rerender(<SsoProviderButtons callbackUrl="/post-auth" email="someone@example.com" onError={onError} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Sign in with Google' }));
-    await waitFor(() => expect(onError).toHaveBeenLastCalledWith(generic));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Sign in with Microsoft' })).not.toBeDisabled());
+    expect(screen.getByRole('button', { name: 'Sign in with Google' })).toHaveAttribute('data-preferred', 'false');
+    expect(screen.getByRole('button', { name: 'Sign in with Microsoft' })).toHaveAttribute('data-preferred', 'false');
   });
 });

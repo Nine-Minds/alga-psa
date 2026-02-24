@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import clsx from 'clsx';
 import { signIn } from 'next-auth/react';
 import { Loader2 } from 'lucide-react';
@@ -25,6 +25,8 @@ const MSP_SSO_PROVIDERS: MspSsoProvider[] = [
   { id: 'google', name: 'Sign in with Google' },
   { id: 'azure-ad', name: 'Sign in with Microsoft' },
 ];
+const LAST_PROVIDER_STORAGE_KEY = 'msp_sso_last_provider';
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export interface SsoProviderButtonsProps {
   callbackUrl: string;
@@ -40,12 +42,89 @@ export default function SsoProviderButtons({
   onError,
 }: SsoProviderButtonsProps): React.ReactElement {
   const [pendingProvider, setPendingProvider] = useState<string | null>(null);
-  const hasEmail = Boolean((email || '').trim());
+  const [isDiscovering, setIsDiscovering] = useState(false);
+  const [allowedProviders, setAllowedProviders] = useState<MspSsoProvider['id'][]>([]);
+  const [preferredProvider, setPreferredProvider] = useState<MspSsoProvider['id'] | null>(null);
+  const normalizedEmail = (email || '').trim().toLowerCase();
+  const hasValidEmail = EMAIL_PATTERN.test(normalizedEmail);
   const genericStartFailureMessage =
     "We couldn't start SSO sign-in. Please verify provider setup and try again.";
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const stored = window.localStorage.getItem(LAST_PROVIDER_STORAGE_KEY);
+    if (stored === 'google' || stored === 'azure-ad') {
+      setPreferredProvider(stored);
+    }
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    if (!hasValidEmail) {
+      setAllowedProviders([]);
+      setIsDiscovering(false);
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    const runDiscovery = async () => {
+      setIsDiscovering(true);
+      try {
+        const response = await fetch('/api/auth/msp/sso/discover', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ email: normalizedEmail }),
+        });
+
+        let result: { providers?: unknown } | null = null;
+        try {
+          result = await response.json();
+        } catch {
+          result = null;
+        }
+
+        if (cancelled) return;
+        if (!response.ok || !Array.isArray(result?.providers)) {
+          setAllowedProviders([]);
+          return;
+        }
+
+        const providers = result.providers
+          .filter((provider): provider is MspSsoProvider['id'] => provider === 'google' || provider === 'azure-ad');
+        setAllowedProviders(Array.from(new Set(providers)));
+      } catch {
+        if (!cancelled) {
+          setAllowedProviders([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setIsDiscovering(false);
+        }
+      }
+    };
+
+    void runDiscovery();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [hasValidEmail, normalizedEmail]);
+
+  const orderedProviders = useMemo(() => {
+    if (!preferredProvider || !allowedProviders.includes(preferredProvider)) {
+      return MSP_SSO_PROVIDERS;
+    }
+    return [
+      ...MSP_SSO_PROVIDERS.filter((provider) => provider.id === preferredProvider),
+      ...MSP_SSO_PROVIDERS.filter((provider) => provider.id !== preferredProvider),
+    ];
+  }, [preferredProvider, allowedProviders]);
+
   const handleSignIn = async (providerId: MspSsoProvider['id']) => {
-    if (!hasEmail) return;
+    if (!hasValidEmail || isDiscovering || !allowedProviders.includes(providerId)) return;
     setPendingProvider(providerId);
     try {
       onError?.('');
@@ -55,7 +134,7 @@ export default function SsoProviderButtons({
         credentials: 'include',
         body: JSON.stringify({
           provider: providerId,
-          email: (email || '').trim(),
+          email: normalizedEmail,
           callbackUrl,
         }),
       });
@@ -71,6 +150,11 @@ export default function SsoProviderButtons({
         onError?.(genericStartFailureMessage);
         return;
       }
+
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem(LAST_PROVIDER_STORAGE_KEY, providerId);
+      }
+      setPreferredProvider(providerId);
 
       const statePayload: Record<string, unknown> = {
         mode: 'login',
@@ -102,8 +186,10 @@ export default function SsoProviderButtons({
 
   return (
     <div className="flex gap-3">
-      {MSP_SSO_PROVIDERS.map((provider) => {
+      {orderedProviders.map((provider) => {
         const isPending = pendingProvider === provider.id;
+        const isAllowed = allowedProviders.includes(provider.id);
+        const isDisabled = !hasValidEmail || isDiscovering || isPending || !isAllowed;
 
         return (
           <Button
@@ -113,7 +199,9 @@ export default function SsoProviderButtons({
             variant="outline"
             size="lg"
             onClick={() => handleSignIn(provider.id)}
-            disabled={!hasEmail || isPending}
+            disabled={isDisabled}
+            autoFocus={Boolean(preferredProvider && preferredProvider === provider.id && isAllowed)}
+            data-preferred={preferredProvider === provider.id && isAllowed ? 'true' : 'false'}
             className={clsx(
               'flex items-center gap-2 px-6 py-2 h-auto',
               provider.id === 'google' && 'border-[#34A853] hover:bg-[#34A853]/5',
