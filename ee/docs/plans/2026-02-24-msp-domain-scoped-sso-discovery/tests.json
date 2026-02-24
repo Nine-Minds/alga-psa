@@ -349,7 +349,7 @@
   {
     "id": "T041",
     "description": "Resolver falls back to app-level behavior when discovery cookie is missing, invalid, or expired.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F027",
       "F028"
