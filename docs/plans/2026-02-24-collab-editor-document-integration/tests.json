@@ -1,0 +1,212 @@
+[
+  {
+    "id": "T01",
+    "description": "Drawer opens CollaborativeEditor when clicking an in-app document in edit mode",
+    "featureIds": ["F01"],
+    "implemented": false
+  },
+  {
+    "id": "T02",
+    "description": "CollaborativeEditor connects to correct Hocuspocus room (document:<tenantId>:<documentId>)",
+    "featureIds": ["F02"],
+    "implemented": false
+  },
+  {
+    "id": "T03",
+    "description": "Detect BlockNote JSON format: array with objects having 'props' field",
+    "featureIds": ["F03"],
+    "implemented": false
+  },
+  {
+    "id": "T04",
+    "description": "Detect ProseMirror JSON format: object with type:'doc'",
+    "featureIds": ["F03"],
+    "implemented": false
+  },
+  {
+    "id": "T05",
+    "description": "Detect empty/null block_data and initialize empty document",
+    "featureIds": ["F03"],
+    "implemented": false
+  },
+  {
+    "id": "T06",
+    "description": "Convert BlockNote paragraph block to ProseMirror paragraph node",
+    "featureIds": ["F04"],
+    "implemented": false
+  },
+  {
+    "id": "T07",
+    "description": "Convert BlockNote paragraph with styled text (bold, italic, underline) to ProseMirror marks",
+    "featureIds": ["F07"],
+    "implemented": false
+  },
+  {
+    "id": "T08",
+    "description": "Convert BlockNote heading block (levels 1-3) to ProseMirror heading node",
+    "featureIds": ["F05"],
+    "implemented": false
+  },
+  {
+    "id": "T09",
+    "description": "Convert BlockNote bulletListItem blocks to ProseMirror bullet_list > list_item",
+    "featureIds": ["F06"],
+    "implemented": false
+  },
+  {
+    "id": "T10",
+    "description": "Convert BlockNote numberedListItem blocks to ProseMirror ordered_list > list_item",
+    "featureIds": ["F06"],
+    "implemented": false
+  },
+  {
+    "id": "T11",
+    "description": "Convert BlockNote link inline content to ProseMirror link mark",
+    "featureIds": ["F07"],
+    "implemented": false
+  },
+  {
+    "id": "T12",
+    "description": "Convert BlockNote mention inline content to ProseMirror (preserve or drop gracefully)",
+    "featureIds": ["F07"],
+    "implemented": false
+  },
+  {
+    "id": "T13",
+    "description": "Convert BlockNote codeBlock to ProseMirror code_block node",
+    "featureIds": ["F08"],
+    "implemented": false
+  },
+  {
+    "id": "T14",
+    "description": "Convert BlockNote blockquote (quote) to ProseMirror blockquote node",
+    "featureIds": ["F08"],
+    "implemented": false
+  },
+  {
+    "id": "T15",
+    "description": "Conversion handles empty blocks (no content) without crashing",
+    "featureIds": ["F04"],
+    "implemented": false
+  },
+  {
+    "id": "T16",
+    "description": "Conversion handles nested children blocks",
+    "featureIds": ["F06", "F08"],
+    "implemented": false
+  },
+  {
+    "id": "T17",
+    "description": "Existing ProseMirror JSON document loads without conversion in CollaborativeEditor",
+    "featureIds": ["F09"],
+    "implemented": false
+  },
+  {
+    "id": "T18",
+    "description": "Existing BlockNote JSON document loads correctly after conversion in CollaborativeEditor",
+    "featureIds": ["F09"],
+    "implemented": false
+  },
+  {
+    "id": "T19",
+    "description": "Save button triggers syncCollabSnapshot and persists content to document_block_content",
+    "featureIds": ["F10"],
+    "implemented": false
+  },
+  {
+    "id": "T20",
+    "description": "Closing drawer triggers snapshot (best-effort, doesn't block close)",
+    "featureIds": ["F11"],
+    "implemented": false
+  },
+  {
+    "id": "T21",
+    "description": "When Hocuspocus is unreachable, editor falls back to single-user mode within 3 seconds",
+    "featureIds": ["F12"],
+    "implemented": false
+  },
+  {
+    "id": "T22",
+    "description": "Fallback mode allows editing and saving via manual Save button",
+    "featureIds": ["F13"],
+    "implemented": false
+  },
+  {
+    "id": "T23",
+    "description": "Fallback mode shows 'Offline — manual save mode' status indicator",
+    "featureIds": ["F14"],
+    "implemented": false
+  },
+  {
+    "id": "T24",
+    "description": "Two users opening same document in drawers see each other's cursors",
+    "featureIds": ["F15"],
+    "implemented": false
+  },
+  {
+    "id": "T25",
+    "description": "Presence bar in drawer shows names/avatars of connected users",
+    "featureIds": ["F15"],
+    "implemented": false
+  },
+  {
+    "id": "T26",
+    "description": "Changes from user A appear in user B's drawer in real-time",
+    "featureIds": ["F15"],
+    "implemented": false
+  },
+  {
+    "id": "T27",
+    "description": "New document creation: drawer opens with empty CollaborativeEditor, document record created in DB",
+    "featureIds": ["F16"],
+    "implemented": false
+  },
+  {
+    "id": "T28",
+    "description": "Read-only view mode renders document content without editing",
+    "featureIds": ["F17"],
+    "implemented": false
+  },
+  {
+    "id": "T29",
+    "description": "Document name can be edited in the drawer header",
+    "featureIds": ["F18"],
+    "implemented": false
+  },
+  {
+    "id": "T30",
+    "description": "Unsaved changes warning appears when closing drawer in fallback mode with pending changes",
+    "featureIds": ["F19"],
+    "implemented": false
+  },
+  {
+    "id": "T31",
+    "description": "After BlockNote-to-ProseMirror conversion, converted format is persisted back to DB",
+    "featureIds": ["F20"],
+    "implemented": false
+  },
+  {
+    "id": "T32",
+    "description": "Round-trip: content saved by CollaborativeEditor can be reopened in CollaborativeEditor",
+    "featureIds": ["F09", "F10"],
+    "implemented": false
+  },
+  {
+    "id": "T33",
+    "description": "Formatting toolbar (BubbleMenu) works inside the drawer CollaborativeEditor",
+    "featureIds": ["F01"],
+    "implemented": false
+  },
+  {
+    "id": "T34",
+    "description": "Emoticon extension works in drawer CollaborativeEditor (:) converts to emoji)",
+    "featureIds": ["F01"],
+    "implemented": false
+  },
+  {
+    "id": "T35",
+    "description": "Link auto-detection works in drawer CollaborativeEditor",
+    "featureIds": ["F01"],
+    "implemented": false
+  }
+]

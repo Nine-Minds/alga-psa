@@ -1,0 +1,122 @@
+[
+  {
+    "id": "F01",
+    "description": "Documents.tsx drawer renders CollaborativeEditor instead of TextEditor when editing an in-app document",
+    "prdRefs": ["F01"],
+    "implemented": false
+  },
+  {
+    "id": "F02",
+    "description": "CollaborativeEditor receives documentId, tenantId, userId, userName from drawer and connects to Hocuspocus room",
+    "prdRefs": ["F02"],
+    "implemented": false
+  },
+  {
+    "id": "F03",
+    "description": "Content format detection: detect whether block_data is BlockNote JSON (array with props) or ProseMirror JSON (object with type:'doc')",
+    "prdRefs": ["F04"],
+    "implemented": false
+  },
+  {
+    "id": "F04",
+    "description": "BlockNote-to-ProseMirror conversion function: paragraph blocks",
+    "prdRefs": ["F05"],
+    "implemented": false
+  },
+  {
+    "id": "F05",
+    "description": "BlockNote-to-ProseMirror conversion function: heading blocks with level prop",
+    "prdRefs": ["F05"],
+    "implemented": false
+  },
+  {
+    "id": "F06",
+    "description": "BlockNote-to-ProseMirror conversion function: bulletListItem and numberedListItem blocks",
+    "prdRefs": ["F05"],
+    "implemented": false
+  },
+  {
+    "id": "F07",
+    "description": "BlockNote-to-ProseMirror conversion function: inline content (text with styles, links, mentions)",
+    "prdRefs": ["F05"],
+    "implemented": false
+  },
+  {
+    "id": "F08",
+    "description": "BlockNote-to-ProseMirror conversion function: checkListItem, codeBlock, blockquote, table blocks",
+    "prdRefs": ["F05"],
+    "implemented": false
+  },
+  {
+    "id": "F09",
+    "description": "On first connection to a Y.js room with no state, initialize from block_data (converting from BlockNote format if needed)",
+    "prdRefs": ["F03", "F04"],
+    "implemented": false
+  },
+  {
+    "id": "F10",
+    "description": "Manual Save button in drawer footer triggers syncCollabSnapshot() when in collaborative mode",
+    "prdRefs": ["F07"],
+    "implemented": false
+  },
+  {
+    "id": "F11",
+    "description": "On drawer close, trigger a best-effort snapshot to persist content",
+    "prdRefs": ["F08"],
+    "implemented": false
+  },
+  {
+    "id": "F12",
+    "description": "Graceful fallback: detect Hocuspocus unreachable (3s timeout) and switch to single-user Tiptap editor with manual save",
+    "prdRefs": ["F09", "F10"],
+    "implemented": false
+  },
+  {
+    "id": "F13",
+    "description": "Fallback mode uses DocumentEditor (single-user Tiptap) with manual save via updateBlockContent()",
+    "prdRefs": ["F09", "F15"],
+    "implemented": false
+  },
+  {
+    "id": "F14",
+    "description": "Fallback mode shows status indicator: 'Offline — manual save mode'",
+    "prdRefs": ["F10"],
+    "implemented": false
+  },
+  {
+    "id": "F15",
+    "description": "Presence bar and collaboration cursors work in drawer context (existing CollaborativeEditor features)",
+    "prdRefs": ["F11", "F12"],
+    "implemented": false
+  },
+  {
+    "id": "F16",
+    "description": "New document creation in drawer: create document record + block_content, then open CollaborativeEditor in new room",
+    "prdRefs": ["F13"],
+    "implemented": false
+  },
+  {
+    "id": "F17",
+    "description": "Read-only view mode in drawer: render content without editing capabilities",
+    "prdRefs": ["F14"],
+    "implemented": false
+  },
+  {
+    "id": "F18",
+    "description": "Document name editing in drawer header still works with new editor",
+    "prdRefs": ["F01"],
+    "implemented": false
+  },
+  {
+    "id": "F19",
+    "description": "Unsaved changes warning on drawer close (when in fallback mode with pending changes)",
+    "prdRefs": ["F09"],
+    "implemented": false
+  },
+  {
+    "id": "F20",
+    "description": "After format conversion from BlockNote to ProseMirror, persist the converted format back to document_block_content",
+    "prdRefs": ["F04", "F05"],
+    "implemented": false
+  }
+]
