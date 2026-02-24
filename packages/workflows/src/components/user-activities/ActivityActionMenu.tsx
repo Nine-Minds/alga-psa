@@ -2,7 +2,7 @@
 
 import React from 'react';
 
-import { Activity, ActivityType } from "@alga-psa/types";
+import { Activity, ActivityType, ProjectTaskActivity } from "@alga-psa/types";
 import { Button } from "@alga-psa/ui/components/Button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@alga-psa/ui/components/DropdownMenu";
 import { MoreVertical } from 'lucide-react';
@@ -90,9 +90,11 @@ export function ActivityActionMenu({ activity, onActionComplete, onViewDetails }
       case ActivityType.SCHEDULE:
         router.push(`/msp/schedule/entries/${activity.id}`);
         break;
-      case ActivityType.PROJECT_TASK:
-        router.push(`/msp/projects/tasks/${activity.id}`);
+      case ActivityType.PROJECT_TASK: {
+        const projectTask = activity as ProjectTaskActivity;
+        router.push(`/msp/projects/${projectTask.projectId}?phaseId=${projectTask.phaseId}&taskId=${activity.id}`);
         break;
+      }
       case ActivityType.TICKET:
         router.push(`/msp/tickets/${activity.id}`);
         break;
@@ -188,7 +190,7 @@ export function ActivityActionMenu({ activity, onActionComplete, onViewDetails }
   const shouldShowAction = (actionId: string) => {
     // For 'edit' action, only show for tickets and workflow tasks
     if (actionId === 'edit') {
-      return activity.type === ActivityType.TICKET || activity.type === ActivityType.WORKFLOW_TASK;
+      return activity.type === ActivityType.TICKET || activity.type === ActivityType.WORKFLOW_TASK || activity.type === ActivityType.PROJECT_TASK;
     }
     
     // For workflow task specific actions, only show for workflow tasks

@@ -28,7 +28,7 @@ import { useRouter } from 'next/navigation';
 import { Monitor, Network, Server, Smartphone, Printer as PrinterIcon, Router, Shield, Radio, Scale, MapPin, ExternalLink } from 'lucide-react';
 import { Text } from '@radix-ui/themes';
 import { useRegisterUIComponent } from '@alga-psa/ui/ui-reflection/useRegisterUIComponent';
-import Drawer from '@alga-psa/ui/components/Drawer';
+import { useClientDrawer } from '@alga-psa/ui';
 
 interface AssetFormProps {
   assetId: string;
@@ -84,8 +84,7 @@ export default function AssetForm({ assetId }: AssetFormProps) {
   const [locationsError, setLocationsError] = useState<string | null>(null);
   const [selectedLocationId, setSelectedLocationId] = useState<string>('');
   const [customLocation, setCustomLocation] = useState('');
-  const [isClientDrawerOpen, setIsClientDrawerOpen] = useState(false);
-  const [clientDrawerData, setClientDrawerData] = useState<ClientOptionSummary | null>(null);
+  const clientDrawer = useClientDrawer();
 
   useRegisterUIComponent({
     id: 'asset-edit-form',
@@ -382,21 +381,9 @@ export default function AssetForm({ assetId }: AssetFormProps) {
   };
 
   const handleOpenClientDrawer = () => {
-    if (!formData.client_id) {
-      return;
+    if (formData.client_id && clientDrawer) {
+      clientDrawer.openClientDrawer(formData.client_id);
     }
-
-    const clientSummary =
-      clients.find((client) => client.id === formData.client_id) ??
-      { id: formData.client_id, name: formData.client_id };
-
-    setClientDrawerData(clientSummary);
-    setIsClientDrawerOpen(true);
-  };
-
-  const handleCloseClientDrawer = () => {
-    setIsClientDrawerOpen(false);
-    setClientDrawerData(null);
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1255,29 +1242,6 @@ export default function AssetForm({ assetId }: AssetFormProps) {
           </div>
         )}
       </form>
-
-      <Drawer
-        id="asset-client-quick-view"
-        isOpen={isClientDrawerOpen}
-        onClose={handleCloseClientDrawer}
-      >
-        {clientDrawerData ? (
-          <div className="p-6 space-y-3">
-            <div>
-              <div className="text-sm text-[rgb(var(--color-text-600))]">Client</div>
-              <div className="text-lg font-semibold text-[rgb(var(--color-text-900))]">
-                {clientDrawerData.name}
-              </div>
-            </div>
-            <Link
-              href={`/msp/clients/${clientDrawerData.id}`}
-              className="inline-flex items-center gap-1 text-primary-600 hover:text-primary-700 hover:underline"
-            >
-              View client details <ExternalLink size={14} />
-            </Link>
-          </div>
-        ) : null}
-      </Drawer>
     </div>
   );
 }
