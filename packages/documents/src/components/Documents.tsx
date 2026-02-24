@@ -44,6 +44,7 @@ import {
   updateBlockContent,
   createBlockDocument
 } from '../actions/documentBlockContentActions';
+import { syncCollabSnapshot } from '../actions/collaborativeEditingActions';
 
 const DEFAULT_BLOCKS: PartialBlock[] = [{
   type: "paragraph",
@@ -201,6 +202,7 @@ const Documents = ({
     return null;
   });
   const [selectedDocumentsForMove, setSelectedDocumentsForMove] = useState<Set<string>>(new Set());
+  const isCollaborativeEdit = Boolean(!isCreatingNew && selectedDocument && isEditModeInDrawer);
 
   useEffect(() => {
     let mounted = true;
@@ -704,6 +706,34 @@ const Documents = ({
       setIsDrawerOpen(false);
     } catch (error) {
       console.error('Error saving document:', error);
+      setDrawerError(
+        tDoc('messages.saveFailed', 'Failed to save document')
+      );
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleSaveCollabSnapshot = async () => {
+    try {
+      if (!selectedDocument) return;
+      setIsSaving(true);
+
+      if (documentName !== selectedDocument.document_name) {
+        await updateDocument(selectedDocument.document_id, {
+          document_name: documentName,
+          edited_by: userId
+        });
+      }
+
+      await syncCollabSnapshot(selectedDocument.document_id);
+
+      setEditedDocumentId(selectedDocument.document_id);
+      setRefreshTimestamp(Date.now());
+
+      setIsDrawerOpen(false);
+    } catch (error) {
+      console.error('Error saving document snapshot:', error);
       setDrawerError(
         tDoc('messages.saveFailed', 'Failed to save document')
       );
@@ -1321,8 +1351,22 @@ const Documents = ({
                 {(isCreatingNew || isEditModeInDrawer) && (
                   <Button
                     id={`${id}-save-btn`}
-                    onClick={isCreatingNew ? handleSaveNewDocument : handleSaveChanges}
-                    disabled={isSaving || (!hasContentChanged && !isCreatingNew && documentName === selectedDocument?.document_name)}
+                    onClick={
+                      isCreatingNew
+                        ? handleSaveNewDocument
+                        : isCollaborativeEdit
+                          ? handleSaveCollabSnapshot
+                          : handleSaveChanges
+                    }
+                    disabled={
+                      isSaving
+                      || (
+                        !isCollaborativeEdit
+                        && !hasContentChanged
+                        && !isCreatingNew
+                        && documentName === selectedDocument?.document_name
+                      )
+                    }
                     variant="default"
                     className={isCreatingNew && !newDocumentName.trim() ? 'opacity-50' : ''}
                   >

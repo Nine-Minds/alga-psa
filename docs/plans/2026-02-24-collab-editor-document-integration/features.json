@@ -57,7 +57,7 @@
     "id": "F10",
     "description": "Manual Save button in drawer footer triggers syncCollabSnapshot() when in collaborative mode",
     "prdRefs": ["F07"],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F11",

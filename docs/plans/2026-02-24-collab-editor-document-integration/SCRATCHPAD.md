@@ -61,3 +61,4 @@
 - Expanded inline conversion to map text styles, links, and mentions to ProseMirror marks/text.
 - Added conversion support for checklists, code blocks, blockquotes, and table fallbacks.
 - Collaborative editor now initializes Y.js state from existing block_data with BlockNote conversion when needed.
+- Save button in drawer now triggers collaborative snapshot sync when using the collab editor.
