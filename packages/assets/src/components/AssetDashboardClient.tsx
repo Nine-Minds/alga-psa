@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef, type ReactNode } from 'react';
 import { useRegisterUIComponent } from '@alga-psa/ui/ui-reflection/useRegisterUIComponent';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
+import { useClientDrawer } from '@alga-psa/ui';
 import { Card } from '@alga-psa/ui/components/Card';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -52,8 +53,6 @@ import {
 
 interface AssetDashboardClientProps {
   initialAssets: AssetListResponse;
-  /** Optional injected UI for client quick view. */
-  renderClientDetails?: (args: { id: string; client: IClient }) => ReactNode;
 }
 
 type ColumnKey =
@@ -76,7 +75,8 @@ const RMM_MANAGED_OPTIONS: { value: string; label: string }[] = [
   { value: 'unmanaged', label: 'Not Managed' },
 ];
 
-export default function AssetDashboardClient({ initialAssets, renderClientDetails }: AssetDashboardClientProps) {
+export default function AssetDashboardClient({ initialAssets }: AssetDashboardClientProps) {
+  const clientDrawer = useClientDrawer();
   useRegisterUIComponent({
     id: 'asset-dashboard',
     type: 'container',
@@ -633,11 +633,24 @@ export default function AssetDashboardClient({ initialAssets, renderClientDetail
     client_name: {
       dataIndex: 'client_name',
       title: 'Client',
-      render: (_: unknown, record: Asset) => (
-        <span className="text-sm font-medium text-gray-700">
-          {record.client?.client_name || 'Unassigned'}
-        </span>
-      )
+      render: (_: unknown, record: Asset) => {
+        const name = record.client?.client_name || 'Unassigned';
+        if (record.client_id && clientDrawer) {
+          return (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                clientDrawer.openClientDrawer(record.client_id);
+              }}
+              className="text-sm font-medium text-blue-500 hover:underline text-left bg-transparent border-none p-0"
+            >
+              {name}
+            </button>
+          );
+        }
+        return <span className="text-sm font-medium text-gray-700">{name}</span>;
+      }
     },
     location: {
       dataIndex: 'location',
@@ -1121,7 +1134,6 @@ export default function AssetDashboardClient({ initialAssets, renderClientDetail
         isLoading={drawerLoading}
         onClose={handleDrawerClose}
         onTabChange={handleDrawerTabChange}
-        renderClientDetails={renderClientDetails}
       />
     </div>
   );

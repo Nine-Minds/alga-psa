@@ -49,6 +49,14 @@
     "./assets/*": {
       "import": "./src/assets/*.tsx",
       "types": "./src/assets/*.tsx"
+    },
+    "./clients": {
+      "import": "./src/clients/index.ts",
+      "types": "./src/clients/index.ts"
+    },
+    "./clients/*": {
+      "import": "./src/clients/*.tsx",
+      "types": "./src/clients/*.tsx"
     }
   },
   "dependencies": {

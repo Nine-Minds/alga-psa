@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo } from 'react';
 import type { ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import Drawer from '@alga-psa/ui/components/Drawer';
-import { useDrawer } from '@alga-psa/ui';
+import { useClientDrawer } from '@alga-psa/ui';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@alga-psa/ui/components/Tabs';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
@@ -16,7 +16,6 @@ import type {
   AssetMaintenanceHistory,
   AssetMaintenanceReport,
   AssetTicketSummary,
-  IClient,
   IDocument,
 } from '@alga-psa/types';
 import {
@@ -38,8 +37,6 @@ import { AssetAlertsSection } from './AssetAlertsSection';
 import { AssetPatchStatusSection } from './AssetPatchStatusSection';
 import { AssetSoftwareInventory } from './AssetSoftwareInventory';
 import { ASSET_DRAWER_TABS, type AssetDrawerTab } from './AssetDetailDrawer.types';
-import { getClientByIdForAssets } from '../actions/clientLookupActions';
-import Link from 'next/link';
 
 interface AssetDetailDrawerClientProps {
   isOpen: boolean;
@@ -56,9 +53,6 @@ interface AssetDetailDrawerClientProps {
   onClose: () => void;
   onTabChange: (tab: AssetDrawerTab) => void;
   defaultBoardId?: string;
-  /** Optional injected UI for client quick view (e.g. @alga-psa/clients ClientDetails).
-   *  If omitted, falls back to a minimal drawer with a link to open the client page. */
-  renderClientDetails?: (args: { id: string; client: IClient }) => ReactNode;
 }
 
 const TAB_ORDER: AssetDrawerTab[] = [
@@ -90,10 +84,9 @@ export function AssetDetailDrawerClient({
   onClose,
   onTabChange,
   defaultBoardId,
-  renderClientDetails,
 }: AssetDetailDrawerClientProps) {
   const router = useRouter();
-  const { openDrawer: openContextDrawer, replaceDrawer } = useDrawer();
+  const clientDrawer = useClientDrawer();
   const desiredTab = activeTab;
 
   const handleTabChange = useCallback(
@@ -107,47 +100,6 @@ export function AssetDetailDrawerClient({
   );
 
   const visibleAssetId = selectedAssetId;
-
-  const handleOpenClientDrawer = useCallback(async (clientId: string, clientName: string) => {
-    openContextDrawer(
-      <div className="p-4 text-sm text-gray-600">Loading…</div>,
-      undefined,
-      undefined,
-      '900px'
-    );
-    try {
-      const clientData = await getClientByIdForAssets(clientId);
-      if (!clientData) {
-        replaceDrawer(
-          <div className="p-4 text-sm text-gray-600">Client not found.</div>,
-          undefined,
-          '900px'
-        );
-        return;
-      }
-      replaceDrawer(
-        renderClientDetails
-          ? renderClientDetails({ id: 'asset-drawer-client-details', client: clientData })
-          : (
-              <div className="p-4 space-y-3">
-                <div className="text-lg font-semibold">{clientData.client_name}</div>
-                <Link href={`/msp/clients/${clientData.client_id}`} className="text-primary-600 hover:underline">
-                  View client details
-                </Link>
-              </div>
-            ),
-        undefined,
-        '900px'
-      );
-    } catch (err) {
-      console.error('Error fetching client details:', err);
-      replaceDrawer(
-        <div className="p-4 text-sm text-red-600">Failed to load client details.</div>,
-        undefined,
-        '900px'
-      );
-    }
-  }, [openContextDrawer, replaceDrawer, renderClientDetails]);
 
   const registerDrawer = useRegisterUIComponent<ContainerComponent>({
     id: 'asset-detail-drawer',
@@ -205,8 +157,8 @@ export function AssetDetailDrawerClient({
           statusBadge,
           onClose,
           defaultBoardId,
-          onClientClick: asset.client_id
-            ? () => handleOpenClientDrawer(asset.client_id!, asset.client?.client_name || asset.client_id!)
+          onClientClick: asset.client_id && clientDrawer
+            ? () => clientDrawer.openClientDrawer(asset.client_id!)
             : undefined,
         });
       case ASSET_DRAWER_TABS.MAINTENANCE:
@@ -226,10 +178,10 @@ export function AssetDetailDrawerClient({
   }, [
     activeTab,
     asset,
+    clientDrawer,
     defaultBoardId,
     desiredTab,
     documents,
-    handleOpenClientDrawer,
     onClose,
     history,
     maintenanceHistory,
