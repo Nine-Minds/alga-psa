@@ -110,7 +110,7 @@
   {
     "id": "F019",
     "description": "Add signed discovery-context cookie helper carrying tenant/source/providers metadata only.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Functional Requirements #6", "Non-functional Requirements #4"]
   },
   {
