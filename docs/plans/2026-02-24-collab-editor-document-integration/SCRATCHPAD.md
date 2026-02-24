@@ -103,3 +103,5 @@
 - Added `CollaborativeEditor.init.test.tsx` to cover ProseMirror load (no conversion) and BlockNote load (conversion + persistence), marking T17/T18 complete.
 - Mocked `EditorToolbar` in the new test file to avoid editor API dependencies.
 - Ran `npx vitest run ../packages/documents/src/components/CollaborativeEditor.init.test.tsx`.
+- Extended `Documents.drawer.test.tsx` to assert Save triggers `syncCollabSnapshot` in collaborative mode (T19) and adjusted mock to set connection status via `useEffect`.
+- Ran `npx vitest run ../packages/documents/src/components/Documents.drawer.test.tsx`.

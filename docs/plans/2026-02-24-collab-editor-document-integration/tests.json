@@ -111,7 +111,7 @@
     "id": "T19",
     "description": "Save button triggers syncCollabSnapshot and persists content to document_block_content",
     "featureIds": ["F10"],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T20",

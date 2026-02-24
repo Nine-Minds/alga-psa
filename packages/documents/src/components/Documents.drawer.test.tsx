@@ -4,6 +4,7 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import Documents from './Documents.tsx';
+import { syncCollabSnapshot } from '../actions/collaborativeEditingActions';
 
 const mockRefresh = vi.fn();
 const mockReplace = vi.fn();
@@ -76,7 +77,12 @@ vi.mock('./DocumentListView', () => ({ default: () => null }));
 vi.mock('./DocumentsPageSkeleton', () => ({ DocumentsGridSkeleton: () => null }));
 
 vi.mock('./CollaborativeEditor', () => ({
-  CollaborativeEditor: () => <div data-testid="collab-editor" />,
+  CollaborativeEditor: (props: { onConnectionStatusChange?: (status: string) => void }) => {
+    React.useEffect(() => {
+      props.onConnectionStatusChange?.('connected');
+    }, [props.onConnectionStatusChange]);
+    return <div data-testid="collab-editor" />;
+  },
 }));
 
 vi.mock('./DocumentEditor', () => ({
@@ -172,6 +178,43 @@ describe('Documents drawer', () => {
 
     await waitFor(() => {
       expect(screen.getByTestId('collab-editor')).toBeInTheDocument();
+    });
+  });
+
+  it('triggers syncCollabSnapshot when saving in collaborative mode', async () => {
+    render(
+      <Documents
+        id="documents"
+        documents={[
+          {
+            document_id: 'doc-1',
+            document_name: 'Runbook',
+            type_id: null,
+            user_id: 'user-1',
+            order_number: 0,
+            created_by: 'user-1',
+            type_name: 'text/plain',
+            tenant: 'tenant-1',
+          },
+        ]}
+        gridColumns={3}
+        userId="user-1"
+        entityId="entity-1"
+        entityType="asset"
+        isLoading={false}
+      />
+    );
+
+    fireEvent.click(screen.getByTestId('doc-card'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('collab-editor')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => {
+      expect(syncCollabSnapshot).toHaveBeenCalledWith('doc-1');
     });
   });
 });
