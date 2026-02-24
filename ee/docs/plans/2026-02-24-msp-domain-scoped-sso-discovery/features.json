@@ -140,7 +140,7 @@
   {
     "id": "F024",
     "description": "Persist last-selected provider locally and preselect it when still eligible (without bypassing server checks).",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes #5", "Open Questions #3"]
   },
   {
