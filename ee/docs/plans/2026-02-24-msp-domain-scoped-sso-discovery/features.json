@@ -182,7 +182,7 @@
   {
     "id": "F031",
     "description": "Keep client portal login and client SSO affordances unchanged.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Non-goals #2", "Functional Requirements #11"]
   },
   {
