@@ -75,7 +75,7 @@
     "id": "T13",
     "description": "Convert BlockNote codeBlock to ProseMirror code_block node",
     "featureIds": ["F08"],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T14",

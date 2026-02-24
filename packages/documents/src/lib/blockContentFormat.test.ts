@@ -232,4 +232,24 @@ describe('detectBlockContentFormat', () => {
       ],
     });
   });
+
+  it('converts code blocks to ProseMirror code_block nodes', () => {
+    const blocknote = [
+      {
+        type: 'codeBlock',
+        props: {},
+        content: [{ type: 'text', text: 'const x = 1;', styles: {} }],
+      },
+    ];
+
+    expect(blockNoteJsonToProsemirrorJson(blocknote)).toEqual({
+      type: 'doc',
+      content: [
+        {
+          type: 'code_block',
+          content: [{ type: 'text', text: 'const x = 1;' }],
+        },
+      ],
+    });
+  });
 });
