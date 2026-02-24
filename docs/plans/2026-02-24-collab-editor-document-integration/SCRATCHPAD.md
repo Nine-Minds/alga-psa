@@ -119,3 +119,4 @@
   - Collaboration extension configured with Yjs document for real-time sync.
 - Added T27 test to ensure folder-mode new document creation calls `createBlockDocument` and opens the collab editor. Test: `packages/documents/src/components/Documents.drawer.test.tsx`.
 - Added T28 test to ensure non-editable docs render the read-only viewer in the drawer. File: `packages/documents/src/components/Documents.drawer.test.tsx`.
+- Added T29 test confirming document name input in drawer is editable. File: `packages/documents/src/components/Documents.drawer.test.tsx`.

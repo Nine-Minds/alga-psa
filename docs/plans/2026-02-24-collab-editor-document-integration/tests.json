@@ -171,7 +171,7 @@
     "id": "T29",
     "description": "Document name can be edited in the drawer header",
     "featureIds": ["F18"],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T30",
