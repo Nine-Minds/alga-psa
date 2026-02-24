@@ -33,7 +33,7 @@
     "id": "T06",
     "description": "Convert BlockNote paragraph block to ProseMirror paragraph node",
     "featureIds": ["F04"],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T07",

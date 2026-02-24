@@ -1,4 +1,4 @@
-import { detectBlockContentFormat } from './blockContentFormat';
+import { blockNoteJsonToProsemirrorJson, detectBlockContentFormat } from './blockContentFormat';
 
 describe('detectBlockContentFormat', () => {
   it('detects BlockNote JSON arrays with props', () => {
@@ -25,5 +25,25 @@ describe('detectBlockContentFormat', () => {
   it('treats null/empty as empty format', () => {
     expect(detectBlockContentFormat(null)).toBe('empty');
     expect(detectBlockContentFormat([])).toBe('empty');
+  });
+
+  it('converts paragraph blocks to ProseMirror paragraphs', () => {
+    const blocknote = [
+      {
+        type: 'paragraph',
+        props: { textAlignment: 'left' },
+        content: [{ type: 'text', text: 'Hello', styles: {} }],
+      },
+    ];
+
+    expect(blockNoteJsonToProsemirrorJson(blocknote)).toEqual({
+      type: 'doc',
+      content: [
+        {
+          type: 'paragraph',
+          content: [{ type: 'text', text: 'Hello' }],
+        },
+      ],
+    });
   });
 });
