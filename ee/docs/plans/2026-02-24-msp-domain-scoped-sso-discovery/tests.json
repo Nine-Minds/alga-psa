@@ -127,7 +127,7 @@
   {
     "id": "T016",
     "description": "Providers UI shows conflict/ambiguity error state with neutral language.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F009",
       "F006"
