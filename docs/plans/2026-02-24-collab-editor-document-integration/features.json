@@ -15,7 +15,7 @@
     "id": "F03",
     "description": "Content format detection: detect whether block_data is BlockNote JSON (array with props) or ProseMirror JSON (object with type:'doc')",
     "prdRefs": ["F04"],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F04",
