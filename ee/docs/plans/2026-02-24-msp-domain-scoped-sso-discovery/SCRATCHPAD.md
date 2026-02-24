@@ -53,6 +53,7 @@ Working notes for shifting MSP SSO provider enablement from user-based pre-auth 
 - (2026-02-24) OAuth callback/user mapping path was left unchanged; discovery/resolver changes only affect pre-auth provider eligibility and source selection.
 - (2026-02-24) MSP credentials form submit path in `MspLoginForm` is unchanged; SSO discovery logic is isolated to `SsoProviderButtons`.
 - (2026-02-24) Client portal login remains unchanged: client SSO affordance stays commented/disabled and does not invoke MSP discovery logic.
+- (2026-02-24) Updated provider setup docs with explicit ordering: configure provider credentials, then configure tenant MSP login domains before relying on MSP SSO.
 
 ## Commands / Runbooks
 

@@ -188,7 +188,7 @@
   {
     "id": "F032",
     "description": "Document provider setup order including tenant login-domain setup before MSP SSO use.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Functional Requirements #11", "Acceptance Criteria #1"]
   },
   {
