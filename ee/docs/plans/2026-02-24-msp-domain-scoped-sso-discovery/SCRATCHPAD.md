@@ -122,3 +122,4 @@ Working notes for shifting MSP SSO provider enablement from user-based pre-auth 
 - (2026-02-24) Completed T018: Discovery endpoint normalizes email and extracts domain correctly from mixed-case input.
 - (2026-02-24) Completed T019: Discovery endpoint rate-limited calls return the same neutral response schema.
 - (2026-02-24) Completed T020: Known mapped domain with tenant Microsoft configured returns only `azure-ad`.
+- (2026-02-24) Completed T021: Known mapped domain with both tenant providers configured returns `google` and `azure-ad`.

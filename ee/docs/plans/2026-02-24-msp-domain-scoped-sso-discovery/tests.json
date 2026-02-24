@@ -173,7 +173,7 @@
   {
     "id": "T021",
     "description": "Known mapped domain with both tenant providers configured returns `google` and `azure-ad`.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F013",
       "F015",
