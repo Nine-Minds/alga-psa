@@ -231,7 +231,7 @@
   {
     "id": "T027",
     "description": "Discovery logs avoid raw email and include only safe domain/hash metadata.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F012",
       "F018"
