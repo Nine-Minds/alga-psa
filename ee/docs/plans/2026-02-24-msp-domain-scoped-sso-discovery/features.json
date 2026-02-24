@@ -14,7 +14,7 @@
   {
     "id": "F003",
     "description": "Add server action to list configured MSP SSO login domains for the current tenant.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Functional Requirements #2"]
   },
   {

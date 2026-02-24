@@ -24,6 +24,7 @@ Working notes for shifting MSP SSO provider enablement from user-based pre-auth 
 - (2026-02-24) Added `server/migrations/20260224103000_create_msp_sso_tenant_login_domains.cjs` with table `msp_sso_tenant_login_domains` (`tenant`, `id`, `domain`, `is_active`, audit actor/timestamps), plus backfill from `tenants.email` only for globally-unambiguous domains.
 - (2026-02-24) Cross-tenant duplicate domains are intentionally allowed in persistence; uniqueness is enforced only per-tenant via `(tenant, lower(domain))` so runtime discovery can fail-closed on ambiguity.
 - (2026-02-24) Added domain-management indexes: `msp_sso_tenant_login_domains_domain_active_idx`, `msp_sso_tenant_login_domains_tenant_active_idx`, and unique tenant-local `msp_sso_tenant_login_domains_tenant_domain_uniq`.
+- (2026-02-24) Added tenant settings actions in `packages/integrations/src/actions/integrations/mspSsoDomainActions.ts`; `listMspSsoLoginDomains` enforces internal admin auth and returns normalized active domains for the current tenant.
 
 ## Commands / Runbooks
 
@@ -33,6 +34,12 @@ Working notes for shifting MSP SSO provider enablement from user-based pre-auth 
   - `python3 /Users/roberisaacs/.codex/skills/alga-plan/scripts/validate_plan.py ee/docs/plans/2026-02-24-msp-domain-scoped-sso-discovery`
 - (2026-02-24) Validate migration contract test:
   - `cd server && npx vitest run src/test/unit/migrations/mspSsoTenantLoginDomainsMigration.test.ts`
+- (2026-02-24) Validate domain actions unit tests:
+  - `cd server && npx vitest run --coverage.enabled=false ../packages/integrations/src/actions/integrations/mspSsoDomainActions.test.ts`
+
+## Gotchas
+
+- (2026-02-24) `vitest` default coverage output can fail with `ENOSPC` in this worktree; use `--coverage.enabled=false` for targeted unit runs while iterating.
 
 ## Links / References
 
