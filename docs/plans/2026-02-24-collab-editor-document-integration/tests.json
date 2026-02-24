@@ -39,7 +39,7 @@
     "id": "T07",
     "description": "Convert BlockNote paragraph with styled text (bold, italic, underline) to ProseMirror marks",
     "featureIds": ["F07"],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T08",

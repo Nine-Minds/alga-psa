@@ -46,4 +46,31 @@ describe('detectBlockContentFormat', () => {
       ],
     });
   });
+
+  it('converts styled text to ProseMirror marks', () => {
+    const blocknote = [
+      {
+        type: 'paragraph',
+        props: {},
+        content: [
+          {
+            type: 'text',
+            text: 'Styled',
+            styles: { bold: true, italic: true, underline: true },
+          },
+        ],
+      },
+    ];
+
+    const result = blockNoteJsonToProsemirrorJson(blocknote);
+    const marks = result.content[0]?.content?.[0]?.marks || [];
+
+    expect(marks).toEqual(
+      expect.arrayContaining([
+        { type: 'bold' },
+        { type: 'italic' },
+        { type: 'underline' },
+      ])
+    );
+  });
 });

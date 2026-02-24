@@ -79,3 +79,4 @@
 - Added format detection test for ProseMirror JSON.
 - Added empty/null format detection test.
 - Added paragraph conversion test for BlockNote → ProseMirror.
+- Added styled text conversion test for bold/italic/underline marks.
