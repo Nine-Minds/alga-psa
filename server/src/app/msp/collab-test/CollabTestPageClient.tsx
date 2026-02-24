@@ -142,13 +142,14 @@ export default function CollabTestPageClient({ userId, userName, tenantId }: Col
               placeholder="Enter document ID"
             />
           </div>
-          <Button onClick={handleOpenDocument} disabled={isLoadingDoc || isCreating}>
+          <Button id="collab-test-open-btn" onClick={handleOpenDocument} disabled={isLoadingDoc || isCreating}>
             Open
           </Button>
-          <Button variant="secondary" onClick={handleCreateDocument} disabled={isCreating}>
+          <Button id="collab-test-create-btn" variant="secondary" onClick={handleCreateDocument} disabled={isCreating}>
             {isCreating ? 'Creating...' : 'Create New Document'}
           </Button>
           <Button
+            id="collab-test-snapshot-btn"
             variant="secondary"
             onClick={handleSnapshot}
             disabled={!activeDocumentId || isSnapshotting}
