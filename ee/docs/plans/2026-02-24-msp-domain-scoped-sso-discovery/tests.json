@@ -323,7 +323,7 @@
   {
     "id": "T038",
     "description": "Clicking a disabled provider button never triggers resolver/start API call.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F023",
       "F026"
