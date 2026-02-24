@@ -43,6 +43,7 @@ Working notes for shifting MSP SSO provider enablement from user-based pre-auth 
 - (2026-02-24) Added signed discovery cookie helper (`createSignedMspSsoDiscoveryCookie` / parse verifier) with only source/tenant/providers/timing metadata; no OAuth client IDs or secrets.
 - (2026-02-24) Discovery endpoint now rotates discovery cookie on valid requests and clears stale/invalid context cookies with `maxAge: 0` on neutral failure responses.
 - (2026-02-24) MSP `SsoProviderButtons` now calls `/api/auth/msp/sso/discover` whenever a syntactically valid email is entered and uses response providers as the client-side allow-list input.
+- (2026-02-24) MSP SSO buttons remain disabled for invalid email and during discovery fetch in-flight state; enablement happens only after discovery completes.
 
 ## Commands / Runbooks
 

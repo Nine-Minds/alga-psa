@@ -128,7 +128,7 @@
   {
     "id": "F022",
     "description": "Keep SSO buttons disabled while discovery is pending or email is invalid.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes #2"]
   },
   {
