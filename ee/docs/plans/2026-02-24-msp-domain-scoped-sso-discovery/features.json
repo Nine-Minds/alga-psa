@@ -20,7 +20,7 @@
   {
     "id": "F004",
     "description": "Add server action to create/update/remove tenant MSP SSO login domains.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Functional Requirements #2"]
   },
   {
