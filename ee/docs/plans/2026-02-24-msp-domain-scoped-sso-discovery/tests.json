@@ -204,7 +204,7 @@
   {
     "id": "T024",
     "description": "Unresolved domain with app Microsoft fallback configured returns only `azure-ad`.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F017",
       "F018"
