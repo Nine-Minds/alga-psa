@@ -90,7 +90,23 @@ export async function GET(request: NextRequest) {
         updated_at: knex.fn.now(),
       });
 
-    const successRedirect = state.redirectUri || url.origin;
+    const rawSuccessRedirect = state.redirectUri || url.origin;
+    let successRedirect = rawSuccessRedirect;
+
+    // Prevent redirecting back to this callback endpoint, which causes a second
+    // request without code/state and surfaces a false "Missing code/state" error.
+    try {
+      const parsed = new URL(rawSuccessRedirect, url.origin);
+      if (parsed.pathname === '/api/email/oauth/imap/callback') {
+        parsed.pathname = '/msp/settings/email';
+        parsed.searchParams.set('imapOAuth', 'success');
+        parsed.searchParams.set('providerId', state.providerId);
+        successRedirect = parsed.toString();
+      }
+    } catch {
+      // Keep original redirect target if it cannot be parsed.
+    }
+
     return NextResponse.redirect(successRedirect);
   } catch (error: any) {
     console.error('IMAP OAuth callback error:', error);

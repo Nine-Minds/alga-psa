@@ -1011,6 +1011,7 @@ export const testEmailProviderConnection = withAuth(async (
       const auth: any = { user: config.username };
       if (config.auth_type === 'oauth2') {
         auth.accessToken = accessToken;
+        auth.method = process.env.IMAP_OAUTH_AUTH_MECHANISM === 'OAUTHBEARER' ? 'OAUTHBEARER' : 'XOAUTH2';
       } else {
         const passwordSecret = await secretProvider.getTenantSecret(tenant, `imap_password_${providerId}` as string);
         const password = passwordSecret || undefined;
