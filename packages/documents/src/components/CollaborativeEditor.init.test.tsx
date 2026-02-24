@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 import React from 'react';
-import { render, waitFor } from '@testing-library/react';
+import { render, waitFor, screen } from '@testing-library/react';
 import { CollaborativeEditor } from './CollaborativeEditor';
 import { prosemirrorJSONToYXmlFragment } from 'y-prosemirror';
 import { blockNoteJsonToProsemirrorJson } from '../lib/blockContentFormat';
@@ -34,6 +34,21 @@ const createYjsProvider = vi.fn(() => ({
 
 let hasCreated = false;
 
+const caretRenderRef = vi.hoisted(() => ({
+  current: null as ((user: { name: string; color: string }) => HTMLElement) | null,
+}));
+
+const mockCollaboration = vi.hoisted(() => ({
+  configure: vi.fn(() => ({})),
+}));
+
+const mockCollaborationCaret = vi.hoisted(() => ({
+  configure: vi.fn((options: { render: (user: { name: string; color: string }) => HTMLElement }) => {
+    caretRenderRef.current = options.render;
+    return {};
+  }),
+}));
+
 vi.mock('@tiptap/react', () => ({
   useEditor: vi.fn((options) => {
     if (!hasCreated && options?.onCreate) {
@@ -49,6 +64,14 @@ vi.mock('@tiptap/react', () => ({
     };
   }),
   EditorContent: () => null,
+}));
+
+vi.mock('@tiptap/extension-collaboration', () => ({
+  default: mockCollaboration,
+}));
+
+vi.mock('@tiptap/extension-collaboration-caret', () => ({
+  default: mockCollaborationCaret,
 }));
 
 vi.mock('y-prosemirror', () => ({
@@ -69,6 +92,10 @@ vi.mock('@alga-psa/ui/editor', () => ({
   MentionSuggestionPopup: () => null,
 }));
 
+vi.mock('@alga-psa/ui/components/AvatarIcon', () => ({
+  default: () => <div data-testid="avatar" />,
+}));
+
 vi.mock('../actions/documentBlockContentActions', () => ({
   getBlockContent: vi.fn(),
   updateBlockContent: vi.fn(),
@@ -78,6 +105,7 @@ describe('CollaborativeEditor initialization', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     hasCreated = false;
+    caretRenderRef.current = null;
     mockYdoc.getXmlFragment.mockReturnValue(fragment);
   });
 
@@ -141,5 +169,60 @@ describe('CollaborativeEditor initialization', () => {
       block_data: JSON.stringify(converted),
       user_id: 'user-1',
     });
+  });
+
+  it('shows connected users in the presence bar', async () => {
+    mockProvider.awareness.getStates.mockReturnValue(new Map([
+      [1, { user: { id: 'user-1', name: 'User One', color: '#111111' } }],
+      [2, { user: { id: 'user-2', name: 'User Two', color: '#222222' } }],
+    ]));
+
+    render(
+      <CollaborativeEditor
+        documentId="doc-3"
+        tenantId="tenant-1"
+        userId="user-1"
+        userName="User One"
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('User One')).toBeInTheDocument();
+      expect(screen.getByText('User Two')).toBeInTheDocument();
+    });
+  });
+
+  it('configures Yjs collaboration for real-time sync', () => {
+    render(
+      <CollaborativeEditor
+        documentId="doc-4"
+        tenantId="tenant-1"
+        userId="user-1"
+        userName="User One"
+      />
+    );
+
+    expect(mockCollaboration.configure).toHaveBeenCalledWith(
+      expect.objectContaining({ document: mockYdoc })
+    );
+  });
+
+  it('renders collaboration caret labels for remote users', () => {
+    render(
+      <CollaborativeEditor
+        documentId="doc-5"
+        tenantId="tenant-1"
+        userId="user-1"
+        userName="User One"
+      />
+    );
+
+    expect(mockCollaborationCaret.configure).toHaveBeenCalled();
+    expect(caretRenderRef.current).toBeTypeOf('function');
+
+    const caret = caretRenderRef.current?.({ name: 'User Two', color: '#123456' });
+    const label = caret?.querySelector('.collaboration-caret__label');
+    expect(label?.textContent).toBe('User Two');
+    expect((label as HTMLElement | null)?.style.backgroundColor).toBe('rgb(18, 52, 86)');
   });
 });

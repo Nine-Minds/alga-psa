@@ -141,19 +141,19 @@
     "id": "T24",
     "description": "Two users opening same document in drawers see each other's cursors",
     "featureIds": ["F15"],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T25",
     "description": "Presence bar in drawer shows names/avatars of connected users",
     "featureIds": ["F15"],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T26",
     "description": "Changes from user A appear in user B's drawer in real-time",
     "featureIds": ["F15"],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T27",

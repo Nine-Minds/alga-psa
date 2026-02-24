@@ -113,3 +113,7 @@
 - Test T21 now passes by waiting for the 3s timeout to switch to the fallback editor. Test: `packages/documents/src/components/Documents.drawer.test.tsx`.
 - Added fallback mode save test (T22) asserting `updateBlockContent` runs when manual save is enabled. Enhanced `DocumentEditor` mock to drive unsaved state and content for fallback save. File: `packages/documents/src/components/Documents.drawer.test.tsx`.
 - Added T23 test to confirm offline indicator appears in fallback mode (`Offline — manual save mode`). File: `packages/documents/src/components/Documents.drawer.test.tsx`.
+- Added collaborative presence/caret tests in `packages/documents/src/components/CollaborativeEditor.init.test.tsx`:
+  - Presence bar renders connected users from awareness state.
+  - Collaboration caret render callback produces labeled cursor.
+  - Collaboration extension configured with Yjs document for real-time sync.
