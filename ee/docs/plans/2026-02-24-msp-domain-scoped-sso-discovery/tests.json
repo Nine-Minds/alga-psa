@@ -452,7 +452,7 @@
   {
     "id": "T053",
     "description": "Environment/docs contract explains unresolved-domain app-fallback provider behavior.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F033"
     ]
