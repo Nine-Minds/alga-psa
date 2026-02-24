@@ -5,6 +5,7 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import Documents from './Documents.tsx';
 import { syncCollabSnapshot } from '../actions/collaborativeEditingActions';
+import { updateBlockContent } from '../actions/documentBlockContentActions';
 
 const mockRefresh = vi.fn();
 const mockReplace = vi.fn();
@@ -77,6 +78,8 @@ vi.mock('./DocumentListView', () => ({ default: () => null }));
 vi.mock('./DocumentsPageSkeleton', () => ({ DocumentsGridSkeleton: () => null }));
 
 let mockCollabStatus: string | null = 'connected';
+let mockFallbackUnsaved = false;
+let mockFallbackContent: Record<string, any> | null = null;
 
 vi.mock('./CollaborativeEditor', () => ({
   CollaborativeEditor: (props: { onConnectionStatusChange?: (status: string) => void }) => {
@@ -90,7 +93,21 @@ vi.mock('./CollaborativeEditor', () => ({
 }));
 
 vi.mock('./DocumentEditor', () => ({
-  DocumentEditor: () => <div data-testid="fallback-editor" />,
+  DocumentEditor: ({
+    onUnsavedChangesChange,
+    onContentChange,
+  }: {
+    onUnsavedChangesChange?: (hasChanges: boolean) => void;
+    onContentChange?: (content: Record<string, any> | null) => void;
+  }) => {
+    React.useEffect(() => {
+      onUnsavedChangesChange?.(mockFallbackUnsaved);
+      if (mockFallbackContent) {
+        onContentChange?.(mockFallbackContent);
+      }
+    }, [onUnsavedChangesChange, onContentChange]);
+    return <div data-testid="fallback-editor" />;
+  },
 }));
 
 vi.mock('./DocumentViewer', () => ({
@@ -157,6 +174,8 @@ describe('Documents drawer', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockCollabStatus = 'connected';
+    mockFallbackUnsaved = false;
+    mockFallbackContent = null;
   });
 
   it('opens CollaborativeEditor when editing an in-app document', async () => {
@@ -302,6 +321,60 @@ describe('Documents drawer', () => {
     });
 
     expect(screen.getByTestId('fallback-editor')).toBeInTheDocument();
+
+    vi.useRealTimers();
+  });
+
+  it('allows editing and saving in fallback mode', async () => {
+    mockCollabStatus = null;
+    mockFallbackUnsaved = true;
+    mockFallbackContent = { type: 'doc', content: [{ type: 'paragraph' }] };
+    vi.useFakeTimers();
+
+    render(
+      <Documents
+        id="documents"
+        documents={[
+          {
+            document_id: 'doc-1',
+            document_name: 'Runbook',
+            type_id: null,
+            user_id: 'user-1',
+            order_number: 0,
+            created_by: 'user-1',
+            type_name: 'text/plain',
+            tenant: 'tenant-1',
+          },
+        ]}
+        gridColumns={3}
+        userId="user-1"
+        entityId="entity-1"
+        entityType="asset"
+        isLoading={false}
+      />
+    );
+
+    fireEvent.click(screen.getByTestId('doc-card'));
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3000);
+    });
+
+    expect(screen.getByTestId('fallback-editor')).toBeInTheDocument();
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(updateBlockContent).toHaveBeenCalledWith('doc-1', expect.objectContaining({
+      block_data: JSON.stringify(mockFallbackContent),
+    }));
 
     vi.useRealTimers();
   });

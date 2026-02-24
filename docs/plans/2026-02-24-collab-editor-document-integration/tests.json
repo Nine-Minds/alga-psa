@@ -129,7 +129,7 @@
     "id": "T22",
     "description": "Fallback mode allows editing and saving via manual Save button",
     "featureIds": ["F13"],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T23",
