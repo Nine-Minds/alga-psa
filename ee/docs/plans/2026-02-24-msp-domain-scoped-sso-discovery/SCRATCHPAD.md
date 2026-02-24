@@ -33,6 +33,7 @@ Working notes for shifting MSP SSO provider enablement from user-based pre-auth 
 - (2026-02-24) Providers UI renders save failures in neutral actionable alerts (validation messages + conflict domain hints) without exposing backend internals.
 - (2026-02-24) Added discovery endpoint `POST /api/auth/msp/sso/discover` with invariant response shape `{ ok: true, providers: [] }` and signed discovery cookie issuance on valid requests.
 - (2026-02-24) Discovery route normalizes/validates email before lookup and derives a normalized domain via shared helper (`extractDomainFromEmail`).
+- (2026-02-24) Discovery route uses per-IP/per-email-hash memory rate limiting and returns the same neutral `{ ok: true, providers: [] }` payload on limit hits.
 
 ## Commands / Runbooks
 

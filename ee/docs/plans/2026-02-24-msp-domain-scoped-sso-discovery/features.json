@@ -68,7 +68,7 @@
   {
     "id": "F012",
     "description": "Apply rate limiting to discovery endpoint with neutral response behavior on limit hits.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Non-functional Requirements #2", "Security / Permissions #2"]
   },
   {
