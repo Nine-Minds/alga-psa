@@ -222,7 +222,7 @@
   {
     "id": "T026",
     "description": "Discovery implementation contract does not branch on specific-user existence lookup results.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F013",
       "F018"

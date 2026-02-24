@@ -127,3 +127,4 @@ Working notes for shifting MSP SSO provider enablement from user-based pre-auth 
 - (2026-02-24) Completed T023: Unresolved domain with app Google fallback configured returns only `google`.
 - (2026-02-24) Completed T024: Unresolved domain with app Microsoft fallback configured returns only `azure-ad`.
 - (2026-02-24) Completed T025: Unresolved domain with no app fallback providers configured returns empty provider list.
+- (2026-02-24) Completed T026: Discovery implementation contract does not branch on specific-user existence lookup results.
