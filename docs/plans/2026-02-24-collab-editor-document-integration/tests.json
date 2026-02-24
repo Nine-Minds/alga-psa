@@ -189,24 +189,24 @@
     "id": "T32",
     "description": "Round-trip: content saved by CollaborativeEditor can be reopened in CollaborativeEditor",
     "featureIds": ["F09", "F10"],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T33",
     "description": "Formatting toolbar (BubbleMenu) works inside the drawer CollaborativeEditor",
     "featureIds": ["F01"],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T34",
     "description": "Emoticon extension works in drawer CollaborativeEditor (:) converts to emoji)",
     "featureIds": ["F01"],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T35",
     "description": "Link auto-detection works in drawer CollaborativeEditor",
     "featureIds": ["F01"],
-    "implemented": false
+    "implemented": true
   }
 ]

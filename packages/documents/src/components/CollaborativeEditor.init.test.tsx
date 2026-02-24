@@ -7,6 +7,7 @@ import { CollaborativeEditor } from './CollaborativeEditor';
 import { prosemirrorJSONToYXmlFragment } from 'y-prosemirror';
 import { blockNoteJsonToProsemirrorJson } from '../lib/blockContentFormat';
 import { getBlockContent, updateBlockContent } from '../actions/documentBlockContentActions';
+import { Emoticon } from '@alga-psa/ui/editor';
 
 const mockProvider = {
   awareness: {
@@ -38,6 +39,10 @@ const caretRenderRef = vi.hoisted(() => ({
   current: null as ((user: { name: string; color: string }) => HTMLElement) | null,
 }));
 
+const editorOptionsRef = vi.hoisted(() => ({
+  current: null as any,
+}));
+
 const mockCollaboration = vi.hoisted(() => ({
   configure: vi.fn(() => ({})),
 }));
@@ -49,8 +54,13 @@ const mockCollaborationCaret = vi.hoisted(() => ({
   }),
 }));
 
+const mockLink = vi.hoisted(() => ({
+  configure: vi.fn(() => ({})),
+}));
+
 vi.mock('@tiptap/react', () => ({
   useEditor: vi.fn((options) => {
+    editorOptionsRef.current = options;
     if (!hasCreated && options?.onCreate) {
       hasCreated = true;
       options.onCreate();
@@ -66,6 +76,10 @@ vi.mock('@tiptap/react', () => ({
   EditorContent: () => null,
 }));
 
+vi.mock('@tiptap/extension-link', () => ({
+  default: mockLink,
+}));
+
 vi.mock('@tiptap/extension-collaboration', () => ({
   default: mockCollaboration,
 }));
@@ -79,7 +93,7 @@ vi.mock('y-prosemirror', () => ({
 }));
 
 vi.mock('./EditorToolbar', () => ({
-  EditorToolbar: () => null,
+  EditorToolbar: () => <div data-testid="editor-toolbar" />,
 }));
 
 vi.mock('@alga-psa/ui/editor', () => ({
@@ -106,6 +120,7 @@ describe('CollaborativeEditor initialization', () => {
     vi.clearAllMocks();
     hasCreated = false;
     caretRenderRef.current = null;
+    editorOptionsRef.current = null;
     mockYdoc.getXmlFragment.mockReturnValue(fragment);
   });
 
@@ -171,6 +186,30 @@ describe('CollaborativeEditor initialization', () => {
     });
   });
 
+  it('reopens content saved as ProseMirror JSON string', async () => {
+    const saved = {
+      type: 'doc',
+      content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Round trip' }] }],
+    };
+
+    (getBlockContent as unknown as { mockResolvedValue: (value: unknown) => void }).mockResolvedValue({
+      block_data: JSON.stringify(saved),
+    });
+
+    render(
+      <CollaborativeEditor
+        documentId="doc-rt"
+        tenantId="tenant-1"
+        userId="user-1"
+        userName="User One"
+      />
+    );
+
+    await waitFor(() => {
+      expect(prosemirrorJSONToYXmlFragment).toHaveBeenCalledWith({}, saved, fragment);
+    });
+  });
+
   it('shows connected users in the presence bar', async () => {
     mockProvider.awareness.getStates.mockReturnValue(new Map([
       [1, { user: { id: 'user-1', name: 'User One', color: '#111111' } }],
@@ -190,6 +229,51 @@ describe('CollaborativeEditor initialization', () => {
       expect(screen.getByText('User One')).toBeInTheDocument();
       expect(screen.getByText('User Two')).toBeInTheDocument();
     });
+  });
+
+  it('renders the formatting toolbar inside the editor', async () => {
+    render(
+      <CollaborativeEditor
+        documentId="doc-toolbar"
+        tenantId="tenant-1"
+        userId="user-1"
+        userName="User One"
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('editor-toolbar')).toBeInTheDocument();
+    });
+  });
+
+  it('includes the Emoticon extension in the editor', () => {
+    render(
+      <CollaborativeEditor
+        documentId="doc-emoji"
+        tenantId="tenant-1"
+        userId="user-1"
+        userName="User One"
+      />
+    );
+
+    const extensions = editorOptionsRef.current?.extensions ?? [];
+    expect(extensions).toContain(Emoticon);
+  });
+
+  it('configures link auto-detection in the editor', () => {
+    render(
+      <CollaborativeEditor
+        documentId="doc-link"
+        tenantId="tenant-1"
+        userId="user-1"
+        userName="User One"
+      />
+    );
+
+    expect(mockLink.configure).toHaveBeenCalledWith(expect.objectContaining({
+      autolink: true,
+      linkOnPaste: true,
+    }));
   });
 
   it('configures Yjs collaboration for real-time sync', () => {
