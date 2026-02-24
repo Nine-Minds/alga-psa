@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useTheme } from 'next-themes';
 import { useCreateBlockNote } from '@blocknote/react';
 import { BlockNoteView } from '@blocknote/mantine';
@@ -204,6 +204,109 @@ function trimTrailingEmpty(blocks: PartialBlock[]): PartialBlock[] {
   return i >= 0 ? blocks.slice(0, i + 1) : DEFAULT_EMPTY_BLOCK;
 }
 
+/**
+ * Sanitize blocks so they are safe for BlockNote's `initialContent`.
+ * Converts content items with non-string `text` to strings, and
+ * falls back to a plain paragraph for blocks with unrecognised types.
+ */
+function sanitizeBlocks(blocks: PartialBlock[]): PartialBlock[] {
+  if (!Array.isArray(blocks) || blocks.length === 0) return DEFAULT_EMPTY_BLOCK;
+
+  const KNOWN_BLOCK_TYPES = new Set([
+    'paragraph', 'heading', 'bulletListItem', 'numberedListItem',
+    'checkListItem', 'table', 'image', 'video', 'audio', 'file',
+    'codeBlock',
+  ]);
+
+  const sanitized: PartialBlock[] = [];
+
+  for (const block of blocks) {
+    // If block is not an object, skip it
+    if (!block || typeof block !== 'object') continue;
+
+    // If block type is unknown, try to extract text and wrap in a paragraph
+    if (block.type && !KNOWN_BLOCK_TYPES.has(block.type)) {
+      const text = extractTextFromBlock(block);
+      if (text) {
+        sanitized.push({
+          type: 'paragraph' as const,
+          content: [{ type: 'text' as const, text, styles: {} }],
+        });
+      }
+      continue;
+    }
+
+    // Sanitize content items
+    if (Array.isArray(block.content)) {
+      const cleanContent = (block.content as any[]).map((item) => {
+        if (item && item.type === 'text' && typeof item.text !== 'string') {
+          return { ...item, text: item.text != null ? String(item.text) : '' };
+        }
+        return item;
+      });
+      sanitized.push({ ...block, content: cleanContent } as PartialBlock);
+    } else {
+      sanitized.push(block);
+    }
+  }
+
+  return sanitized.length > 0 ? sanitized : DEFAULT_EMPTY_BLOCK;
+}
+
+function extractTextFromBlock(block: PartialBlock): string {
+  if (!block.content || !Array.isArray(block.content)) return '';
+  return (block.content as any[])
+    .map((item) => {
+      if (typeof item?.text === 'string') return item.text;
+      if (item?.text != null) return String(item.text);
+      return '';
+    })
+    .join('');
+}
+
+/**
+ * Recursively extract text from a ProseMirror/Tiptap JSON document.
+ */
+function extractTextFromProseMirror(node: any): string {
+  if (!node) return '';
+  if (typeof node.text === 'string') return node.text;
+  if (Array.isArray(node.content)) {
+    return node.content.map(extractTextFromProseMirror).join(
+      node.type === 'doc' || node.type === 'paragraph' ? '\n' : ''
+    );
+  }
+  return '';
+}
+
+/**
+ * Error boundary that catches BlockNote render errors and shows the content
+ * as plain text instead.
+ */
+class RichTextErrorBoundary extends React.Component<
+  { children: React.ReactNode; fallbackText?: string },
+  { hasError: boolean }
+> {
+  constructor(props: { children: React.ReactNode; fallbackText?: string }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="w-full text-sm text-[rgb(var(--color-text-700))] whitespace-pre-wrap break-words">
+          {this.props.fallbackText || ''}
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 function RichTextViewerInternal({
   id = 'rich-text-viewer',
   content,
@@ -221,7 +324,7 @@ function RichTextViewerInternal({
       if (mdText) {
         return { syncBlocks: DEFAULT_EMPTY_BLOCK, rawMarkdown: mdText };
       }
-      return { syncBlocks: autolinkBlocks(trimTrailingEmpty(content)), rawMarkdown: null };
+      return { syncBlocks: sanitizeBlocks(autolinkBlocks(trimTrailingEmpty(content))), rawMarkdown: null };
     }
 
     // Try JSON parse
@@ -233,7 +336,18 @@ function RichTextViewerInternal({
         if (mdText) {
           return { syncBlocks: DEFAULT_EMPTY_BLOCK, rawMarkdown: mdText };
         }
-        return { syncBlocks: autolinkBlocks(trimTrailingEmpty(parsed)), rawMarkdown: null };
+        return { syncBlocks: sanitizeBlocks(autolinkBlocks(trimTrailingEmpty(parsed))), rawMarkdown: null };
+      }
+      // Handle ProseMirror/Tiptap JSON format: { type: "doc", content: [...] }
+      if (parsed && typeof parsed === 'object' && parsed.type === 'doc' && Array.isArray(parsed.content)) {
+        const text = extractTextFromProseMirror(parsed);
+        if (text) {
+          const plainBlock: PartialBlock[] = [{
+            type: 'paragraph' as const,
+            content: [{ type: 'text' as const, text, styles: {} }],
+          }];
+          return { syncBlocks: autolinkBlocks(plainBlock), rawMarkdown: null };
+        }
       }
     } catch {
       // Not JSON
@@ -360,7 +474,29 @@ function RichTextViewerInternal({
   );
 }
 
-const RichTextViewer = dynamic(() => Promise.resolve(RichTextViewerInternal), {
+function RichTextViewerWithBoundary(props: RichTextViewerProps) {
+  // Extract plain text for error fallback
+  const fallbackText = useMemo(() => {
+    try {
+      const raw = Array.isArray(props.content) ? props.content : JSON.parse(props.content as string);
+      if (Array.isArray(raw)) {
+        return raw.map((b: any) => {
+          if (!Array.isArray(b?.content)) return '';
+          return b.content.map((c: any) => (typeof c?.text === 'string' ? c.text : '')).join('');
+        }).filter(Boolean).join('\n');
+      }
+    } catch { /* ignore */ }
+    return typeof props.content === 'string' ? props.content : '';
+  }, [props.content]);
+
+  return (
+    <RichTextErrorBoundary fallbackText={fallbackText}>
+      <RichTextViewerInternal {...props} />
+    </RichTextErrorBoundary>
+  );
+}
+
+const RichTextViewer = dynamic(() => Promise.resolve(RichTextViewerWithBoundary), {
   ssr: false,
   loading: () => <div>Loading...</div>,
 });
