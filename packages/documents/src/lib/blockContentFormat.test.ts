@@ -114,4 +114,34 @@ describe('detectBlockContentFormat', () => {
       ],
     });
   });
+
+  it('converts bullet list items to ProseMirror bullet_list nodes', () => {
+    const blocknote = [
+      {
+        type: 'bulletListItem',
+        props: {},
+        content: [{ type: 'text', text: 'Bullet', styles: {} }],
+      },
+    ];
+
+    expect(blockNoteJsonToProsemirrorJson(blocknote)).toEqual({
+      type: 'doc',
+      content: [
+        {
+          type: 'bullet_list',
+          content: [
+            {
+              type: 'list_item',
+              content: [
+                {
+                  type: 'paragraph',
+                  content: [{ type: 'text', text: 'Bullet' }],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+  });
 });

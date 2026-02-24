@@ -84,3 +84,5 @@
 ## 2026-02-24 Updates
 - Added heading conversion test for BlockNote -> ProseMirror (levels 1-3) in `packages/documents/src/lib/blockContentFormat.test.ts` and marked T08 complete.
 - Ran `npx vitest run ../packages/documents/src/lib/blockContentFormat.test.ts`.
+- Added bullet list item conversion test in `packages/documents/src/lib/blockContentFormat.test.ts` and marked T09 complete.
+- Ran `npx vitest run ../packages/documents/src/lib/blockContentFormat.test.ts`.

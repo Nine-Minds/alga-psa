@@ -51,7 +51,7 @@
     "id": "T09",
     "description": "Convert BlockNote bulletListItem blocks to ProseMirror bullet_list > list_item",
     "featureIds": ["F06"],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T10",
