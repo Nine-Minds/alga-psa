@@ -248,7 +248,7 @@
   {
     "id": "T029",
     "description": "Discovery context cookie expires according to configured short TTL.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F019"
     ]
