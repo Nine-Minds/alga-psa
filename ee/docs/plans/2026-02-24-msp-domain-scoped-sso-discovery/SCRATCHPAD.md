@@ -124,3 +124,4 @@ Working notes for shifting MSP SSO provider enablement from user-based pre-auth 
 - (2026-02-24) Completed T020: Known mapped domain with tenant Microsoft configured returns only `azure-ad`.
 - (2026-02-24) Completed T021: Known mapped domain with both tenant providers configured returns `google` and `azure-ad`.
 - (2026-02-24) Completed T022: Known mapped domain with no tenant providers configured returns empty providers list.
+- (2026-02-24) Completed T023: Unresolved domain with app Google fallback configured returns only `google`.

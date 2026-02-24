@@ -195,7 +195,7 @@
   {
     "id": "T023",
     "description": "Unresolved domain with app Google fallback configured returns only `google`.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F017",
       "F018"
