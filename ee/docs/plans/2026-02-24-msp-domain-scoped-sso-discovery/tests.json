@@ -184,7 +184,7 @@
   {
     "id": "T022",
     "description": "Known mapped domain with no tenant providers configured returns empty providers list.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F013",
       "F015",
