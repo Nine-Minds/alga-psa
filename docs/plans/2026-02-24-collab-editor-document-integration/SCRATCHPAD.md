@@ -70,3 +70,4 @@
 - New document creation now pre-creates document + block_content and opens the collaborative editor in the new room.
 - Added read-only `DocumentViewer` (Tiptap) for drawer view mode to render BlockNote or ProseMirror content.
 - Document name input remains editable and wired to update document name on save in both collab and fallback modes.
+- Unsaved changes warning now accounts for fallback editor changes before closing the drawer.

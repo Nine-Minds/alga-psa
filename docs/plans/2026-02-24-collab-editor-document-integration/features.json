@@ -111,7 +111,7 @@
     "id": "F19",
     "description": "Unsaved changes warning on drawer close (when in fallback mode with pending changes)",
     "prdRefs": ["F09"],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F20",

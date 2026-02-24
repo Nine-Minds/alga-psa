@@ -573,11 +573,24 @@ const Documents = ({
     if (isCreatingNew) {
       return hasContentChanged || newDocumentName.trim() !== '';
     }
+    if (isFallbackMode && selectedDocument) {
+      return fallbackHasUnsavedChanges || documentName !== selectedDocument.document_name;
+    }
     if (isEditModeInDrawer && selectedDocument) {
       return hasContentChanged || documentName !== selectedDocument.document_name;
     }
     return false;
-  }, [isDrawerOpen, isCreatingNew, hasContentChanged, newDocumentName, isEditModeInDrawer, selectedDocument, documentName]);
+  }, [
+    isDrawerOpen,
+    isCreatingNew,
+    hasContentChanged,
+    newDocumentName,
+    isFallbackMode,
+    fallbackHasUnsavedChanges,
+    isEditModeInDrawer,
+    selectedDocument,
+    documentName,
+  ]);
 
   // Register with UnsavedChangesContext for browser navigation protection
   useRegisterUnsavedChanges(`document-editor-${id}`, hasUnsavedDocumentChanges);
