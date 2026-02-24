@@ -55,6 +55,7 @@ Working notes for shifting MSP SSO provider enablement from user-based pre-auth 
 - (2026-02-24) Client portal login remains unchanged: client SSO affordance stays commented/disabled and does not invoke MSP discovery logic.
 - (2026-02-24) Updated provider setup docs with explicit ordering: configure provider credentials, then configure tenant MSP login domains before relying on MSP SSO.
 - (2026-02-24) Added env/docs guidance clarifying unresolved-domain behavior: discovery falls back to app-level `GOOGLE_OAUTH_*` / `MICROSOFT_OAUTH_*` provider configuration.
+- (2026-02-24) CE/EE parity enforced for MSP SSO button behavior with a shared discovery/resolve contract test (`ssoProviderButtons.ceEeParity.test.ts`).
 
 ## Commands / Runbooks
 

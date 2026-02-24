@@ -200,7 +200,7 @@
   {
     "id": "F034",
     "description": "Ensure CE and EE route/component wiring both use the same discovery + resolver gating behavior.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Functional Requirements #12", "Acceptance Criteria #7"]
   },
   {
