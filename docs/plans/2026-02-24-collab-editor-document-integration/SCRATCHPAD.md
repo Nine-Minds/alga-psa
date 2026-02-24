@@ -96,3 +96,5 @@
 - Ran `npx vitest run ../packages/documents/src/lib/blockContentFormat.test.ts`.
 - Added blockquote conversion test in `packages/documents/src/lib/blockContentFormat.test.ts` and marked T14 complete.
 - Ran `npx vitest run ../packages/documents/src/lib/blockContentFormat.test.ts`.
+- Added empty block conversion test in `packages/documents/src/lib/blockContentFormat.test.ts` and marked T15 complete.
+- Ran `npx vitest run ../packages/documents/src/lib/blockContentFormat.test.ts`.

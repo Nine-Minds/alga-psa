@@ -277,4 +277,19 @@ describe('detectBlockContentFormat', () => {
       ],
     });
   });
+
+  it('handles empty blocks without crashing', () => {
+    const blocknote = [
+      {
+        type: 'paragraph',
+        props: {},
+        content: [],
+      },
+    ];
+
+    expect(blockNoteJsonToProsemirrorJson(blocknote)).toEqual({
+      type: 'doc',
+      content: [{ type: 'paragraph' }],
+    });
+  });
 });

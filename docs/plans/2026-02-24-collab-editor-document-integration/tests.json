@@ -87,7 +87,7 @@
     "id": "T15",
     "description": "Conversion handles empty blocks (no content) without crashing",
     "featureIds": ["F04"],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T16",
