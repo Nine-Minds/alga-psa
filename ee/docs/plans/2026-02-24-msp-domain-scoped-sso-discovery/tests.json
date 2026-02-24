@@ -486,7 +486,7 @@
   {
     "id": "T057",
     "description": "Backfill migration skips conflicting candidate domains and records deterministic no-op behavior.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F001",
       "F006"
