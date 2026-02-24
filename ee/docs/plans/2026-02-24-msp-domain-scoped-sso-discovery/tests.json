@@ -273,7 +273,7 @@
   {
     "id": "T032",
     "description": "MSP SSO buttons remain disabled while discovery request is in flight.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F021",
       "F022"
