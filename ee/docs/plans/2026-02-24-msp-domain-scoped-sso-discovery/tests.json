@@ -213,7 +213,7 @@
   {
     "id": "T025",
     "description": "Unresolved domain with no app fallback providers configured returns empty provider list.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F017",
       "F018"
