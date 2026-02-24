@@ -59,7 +59,7 @@
   {
     "id": "T008",
     "description": "Save login-domain action rejects malformed domains with a deterministic validation error.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F005",
       "F009"

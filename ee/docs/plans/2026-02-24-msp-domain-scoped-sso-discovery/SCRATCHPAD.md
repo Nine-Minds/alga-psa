@@ -109,3 +109,4 @@ Working notes for shifting MSP SSO provider enablement from user-based pre-auth 
 - (2026-02-24) Completed T005: List login-domain action returns normalized, deduplicated tenant domains.
 - (2026-02-24) Completed T006: Save login-domain action persists valid domains for the tenant.
 - (2026-02-24) Completed T007: Save login-domain action lowercases and trims domains before persistence.
+- (2026-02-24) Completed T008: Save login-domain action rejects malformed domains with a deterministic validation error.
