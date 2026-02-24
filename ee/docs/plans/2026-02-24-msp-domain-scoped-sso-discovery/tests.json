@@ -68,7 +68,7 @@
   {
     "id": "T009",
     "description": "Save login-domain action prevents duplicate domains in one tenant payload.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F005",
       "F006"
