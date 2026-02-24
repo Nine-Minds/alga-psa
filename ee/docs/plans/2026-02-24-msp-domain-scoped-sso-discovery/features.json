@@ -176,7 +176,7 @@
   {
     "id": "F030",
     "description": "Keep MSP credentials login flow unchanged while adding domain-based SSO discovery.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Primary Flow D", "Functional Requirements #11"]
   },
   {

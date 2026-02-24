@@ -51,6 +51,7 @@ Working notes for shifting MSP SSO provider enablement from user-based pre-auth 
 - (2026-02-24) Resolver fallback behavior: when discovery cookie is missing/invalid/expired, source resolution uses app-level provider readiness only.
 - (2026-02-24) Resolver maintains one external generic failure schema/message for invalid payload, limit hits, disallowed provider, missing credentials, and internal errors.
 - (2026-02-24) OAuth callback/user mapping path was left unchanged; discovery/resolver changes only affect pre-auth provider eligibility and source selection.
+- (2026-02-24) MSP credentials form submit path in `MspLoginForm` is unchanged; SSO discovery logic is isolated to `SsoProviderButtons`.
 
 ## Commands / Runbooks
 
