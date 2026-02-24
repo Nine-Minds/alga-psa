@@ -155,7 +155,7 @@ export default function TextEditor({
 
     // Type guard for text content
     const isTextContent = (content: any): content is { type: "text"; text: string; styles: {} } => {
-      return content?.type === "text";
+      return content?.type === "text" && typeof content?.text === "string";
     };
 
     // Remove empty trailing blocks

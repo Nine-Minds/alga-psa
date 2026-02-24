@@ -105,7 +105,7 @@ function autolinkBlocks(blocks: PartialBlock[]): PartialBlock[] {
 
     for (const item of block.content as any[]) {
       // Only process text items (skip links, mentions, etc.)
-      if (item.type !== 'text' || !item.text) {
+      if (item.type !== 'text' || !item.text || typeof item.text !== 'string') {
         newContent.push(item);
         continue;
       }
@@ -178,7 +178,7 @@ function trimTrailingEmpty(blocks: PartialBlock[]): PartialBlock[] {
   const isTextContent = (
     item: unknown
   ): item is { type: 'text'; text: string; styles: Record<string, unknown> } => {
-    return typeof item === 'object' && item !== null && (item as any).type === 'text';
+    return typeof item === 'object' && item !== null && (item as any).type === 'text' && typeof (item as any).text === 'string';
   };
 
   let i = blocks.length - 1;
