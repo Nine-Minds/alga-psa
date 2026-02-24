@@ -51,7 +51,7 @@
     "id": "F09",
     "description": "On first connection to a Y.js room with no state, initialize from block_data (converting from BlockNote format if needed)",
     "prdRefs": ["F03", "F04"],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F10",

@@ -24,6 +24,11 @@ import { EditorToolbar } from './EditorToolbar';
 import { handleMarkdownPaste } from './markdownPaste';
 import styles from './CollaborativeEditor.module.css';
 import { getBlockContent } from '../actions/documentBlockContentActions';
+import {
+  blockNoteJsonToProsemirrorJson,
+  detectBlockContentFormat,
+  parseBlockContent,
+} from '../lib/blockContentFormat';
 
 type ConnectionStatus = 'connecting' | 'connected' | 'disconnected';
 
@@ -295,10 +300,14 @@ export function CollaborativeEditor({
       try {
         const existing = await getBlockContent(documentId);
         if (existing?.block_data) {
-          const parsed = typeof existing.block_data === 'string'
-            ? JSON.parse(existing.block_data)
-            : existing.block_data;
-          prosemirrorJSONToYXmlFragment(editor.schema, parsed, fragment);
+          const format = detectBlockContentFormat(existing.block_data);
+          if (format === 'blocknote') {
+            const converted = blockNoteJsonToProsemirrorJson(existing.block_data);
+            prosemirrorJSONToYXmlFragment(editor.schema, converted, fragment);
+          } else if (format === 'prosemirror') {
+            const parsed = parseBlockContent(existing.block_data);
+            prosemirrorJSONToYXmlFragment(editor.schema, parsed, fragment);
+          }
         }
       } catch (error) {
         console.error('[CollaborativeEditor] Failed to initialize from block content:', error);
