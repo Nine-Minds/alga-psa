@@ -407,7 +407,7 @@
   {
     "id": "T048",
     "description": "CE/EE SSO component wiring continues to route MSP login through shared discovery-enabled SSO entrypoint.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F034"
     ]
