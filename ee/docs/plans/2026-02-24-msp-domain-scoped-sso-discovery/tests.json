@@ -444,7 +444,7 @@
   {
     "id": "T052",
     "description": "Documentation contract includes tenant login-domain setup in provider configuration instructions.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F032"
     ]

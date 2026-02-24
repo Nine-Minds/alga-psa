@@ -153,3 +153,4 @@ Working notes for shifting MSP SSO provider enablement from user-based pre-auth 
 - (2026-02-24) Completed T049: DB-backed integration happy path: mapped tenant domain + tenant Microsoft secrets yields discovery providers `["azure-ad"]`.
 - (2026-02-24) Completed T050: DB-backed integration guard path: ambiguous duplicate domain mapping resolves as unresolved and returns neutral provider set.
 - (2026-02-24) Completed T051: DB-backed integration guard path: inactive/deleted domain mappings are ignored by discovery.
+- (2026-02-24) Completed T052: Documentation contract includes tenant login-domain setup in provider configuration instructions.
