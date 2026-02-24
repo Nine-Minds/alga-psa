@@ -183,7 +183,7 @@
     "id": "T31",
     "description": "After BlockNote-to-ProseMirror conversion, converted format is persisted back to DB",
     "featureIds": ["F20"],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T32",

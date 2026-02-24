@@ -121,3 +121,4 @@
 - Added T28 test to ensure non-editable docs render the read-only viewer in the drawer. File: `packages/documents/src/components/Documents.drawer.test.tsx`.
 - Added T29 test confirming document name input in drawer is editable. File: `packages/documents/src/components/Documents.drawer.test.tsx`.
 - Added T30 test verifying unsaved changes confirmation appears when closing in fallback mode. Updated ConfirmationDialog mock to render when open. File: `packages/documents/src/components/Documents.drawer.test.tsx`.
+- Marked T31 complete based on existing conversion persistence assertion in `packages/documents/src/components/CollaborativeEditor.init.test.tsx`.
