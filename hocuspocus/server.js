@@ -3,6 +3,7 @@ import { Redis } from '@hocuspocus/extension-redis'
 import { Database } from '@hocuspocus/extension-database'
 import { Logger } from '@hocuspocus/extension-logger'
 import { NotificationExtension } from './NotificationExtension.js'
+import { validateDocumentRoomAccess } from './tenantValidation.js'
 
 // Helper function to get required env var or fail in production
 function getEnvOrFail(key, fallbackValue = null) {
@@ -48,6 +49,9 @@ const server = Server.configure({
             level: 'debug', // Set to 'debug' for maximum verbosity
           }),
     ],
+    async onConnect(data) {
+        validateDocumentRoomAccess(data.documentName, data.request);
+    },
     })
 
 // const server = Server.configure({

@@ -14,7 +14,7 @@ import logger from '@alga-psa/core/logger';
 import { getConnection } from '../../db/db';
 import { getSecret } from '../../utils/getSecret';
 import { createTenantKnex } from '../../db';
-import { formatBlockNoteContent } from '../../utils/blocknoteUtils';
+import { formatBlockNoteContent } from '@alga-psa/formatting/blocknoteUtils';
 import { getEmailEventChannel } from '@alga-psa/notifications';
 import type { Knex } from 'knex';
 import { getPortalDomain } from 'server/src/models/PortalDomainModel';

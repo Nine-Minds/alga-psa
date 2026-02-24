@@ -28,7 +28,7 @@ export function TaskCommentForm({
       return;
     }
 
-    const blocks = editorRef.current.topLevelBlocks;
+    const blocks = editorRef.current.document;
 
     // Check if editor has any meaningful content
     const hasContent = blocks.some((block: any) => {
@@ -57,7 +57,7 @@ export function TaskCommentForm({
 
       // Clear the editor by replacing content with default empty block
       editorRef.current.replaceBlocks(
-        editorRef.current.topLevelBlocks,
+        editorRef.current.document,
         DEFAULT_BLOCK
       );
 

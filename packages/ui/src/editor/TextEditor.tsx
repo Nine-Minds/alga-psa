@@ -12,13 +12,12 @@ import {
 } from "@blocknote/react";
 import { BlockNoteView } from '@blocknote/mantine';
 import '@blocknote/core/fonts/inter.css';
-import '@blocknote/mantine/style.css';
+import './blocknote-styles.css';
 import {
   BlockNoteEditor,
   PartialBlock,
   BlockNoteSchema,
   defaultInlineContentSpecs,
-  filterSuggestionItems,
 } from '@blocknote/core';
 import { TextSelection } from '@tiptap/pm/state';
 import { Mention } from './Mention';
@@ -395,14 +394,14 @@ export default function TextEditor({
 
     const handleChange = () => {
       if (DEBUG) {
-        console.log('TextEditor: Editor content changed:', editor.topLevelBlocks);
+        console.log('TextEditor: Editor content changed:', editor.document);
       }
       if (onContentChange) {
-        onContentChange(editor.topLevelBlocks as any);
+        onContentChange(editor.document as any);
       }
     };
 
-    const cleanup = editor.onEditorContentChange(handleChange);
+    const cleanup = editor.onChange(handleChange);
     return cleanup;
   }, [editor, onContentChange]);
 

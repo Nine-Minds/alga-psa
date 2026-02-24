@@ -2,7 +2,7 @@ import { Knex } from 'knex';
 import type { IUser, IRole, IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { createTenantKnex, runWithTenant } from 'server/src/lib/db';
 import { getSession } from '@alga-psa/auth';
-import { getUserAvatarUrl } from 'server/src/lib/utils/avatarUtils';
+import { getUserAvatarUrl } from '@alga-psa/formatting/avatarUtils';
 import logger from '@alga-psa/core/logger';
 import { withTransaction } from '@alga-psa/db';
 

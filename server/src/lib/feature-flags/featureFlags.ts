@@ -29,6 +29,7 @@ const DEFAULT_BOOLEAN_FLAGS: Record<string, boolean> = {
   'enable_query_caching': true,
   'enable_lazy_loading': true,
   'enable_websocket_updates': false,
+  'collaborative_editing': false,
   
   // Integration features
   'enable_slack_integration': true,
