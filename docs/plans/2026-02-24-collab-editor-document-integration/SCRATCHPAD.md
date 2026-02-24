@@ -58,3 +58,4 @@
 - Implemented initial BlockNote-to-ProseMirror conversion for paragraph blocks in `blockContentFormat`.
 - Added heading block conversion with level mapping to ProseMirror heading nodes.
 - Added BlockNote list item conversion to ProseMirror bullet/ordered list nodes.
+- Expanded inline conversion to map text styles, links, and mentions to ProseMirror marks/text.

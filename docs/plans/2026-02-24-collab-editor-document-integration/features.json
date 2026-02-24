@@ -39,7 +39,7 @@
     "id": "F07",
     "description": "BlockNote-to-ProseMirror conversion function: inline content (text with styles, links, mentions)",
     "prdRefs": ["F05"],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F08",

@@ -88,13 +88,64 @@ const convertInlineContent = (content: BlockNoteBlock['content']): ProseMirrorNo
     .map((item) => {
       if (!item || typeof item !== 'object') return null;
       if (item.type === 'text') {
-        return {
+        const marks: ProseMirrorNode['marks'] = [];
+        const styles = item.styles as Record<string, unknown> | undefined;
+        if (styles?.bold) marks.push({ type: 'bold' });
+        if (styles?.italic) marks.push({ type: 'italic' });
+        if (styles?.underline) marks.push({ type: 'underline' });
+        if (styles?.strike) marks.push({ type: 'strike' });
+        if (styles?.code) marks.push({ type: 'code' });
+        const linkValue = styles?.link as
+          | { href?: string; url?: string }
+          | string
+          | undefined;
+        const href = typeof linkValue === 'string'
+          ? linkValue
+          : linkValue?.href || linkValue?.url;
+        if (href) {
+          marks.push({ type: 'link', attrs: { href } });
+        }
+        const textNode: ProseMirrorNode = {
           type: 'text',
           text: item.text || '',
-        } as ProseMirrorNode;
+        };
+        if (marks.length > 0) {
+          textNode.marks = marks;
+        }
+        return textNode;
       }
+
+      if (item.type === 'link') {
+        const href = (item as { href?: string; url?: string }).href
+          || (item as { url?: string }).url;
+        const linkContent = convertInlineContent((item as { content?: BlockNoteInline[] }).content);
+        const nodes = linkContent.length > 0
+          ? linkContent
+          : item.text
+            ? [{ type: 'text', text: item.text as string }]
+            : [];
+        if (!href) return nodes;
+        return nodes.map((node) => ({
+          ...node,
+          marks: [...(node.marks ?? []), { type: 'link', attrs: { href } }],
+        }));
+      }
+
+      if (item.type === 'mention') {
+        const label = (item as { label?: string; name?: string; username?: string }).label
+          || (item as { name?: string }).name
+          || (item as { username?: string }).username
+          || (item as { id?: string }).id
+          || 'mention';
+        return {
+          type: 'text',
+          text: `@${label}`,
+        };
+      }
+
       return null;
     })
+    .flat()
     .filter(Boolean) as ProseMirrorNode[];
 };
 
