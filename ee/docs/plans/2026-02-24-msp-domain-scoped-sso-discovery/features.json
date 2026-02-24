@@ -44,7 +44,7 @@
   {
     "id": "F008",
     "description": "Add add/remove/edit controls for multiple login domains in the Providers UI.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Functional Requirements #2", "UX / UI Notes #1"]
   },
   {
