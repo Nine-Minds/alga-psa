@@ -391,7 +391,7 @@
   {
     "id": "T046",
     "description": "MSP credentials sign-in flow remains functional and independent from SSO discovery outcome.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F030"
     ]
