@@ -140,3 +140,4 @@ Working notes for shifting MSP SSO provider enablement from user-based pre-auth 
 - (2026-02-24) Completed T036: Last-selected provider preference is persisted locally when user completes provider click.
 - (2026-02-24) Completed T037: Remembered provider is only auto-selected when it is still present in discovered provider list.
 - (2026-02-24) Completed T038: Clicking a disabled provider button never triggers resolver/start API call.
+- (2026-02-24) Completed T039: Resolver consumes valid discovery cookie and uses tenant/source metadata for provider start.

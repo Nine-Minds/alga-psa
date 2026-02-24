@@ -332,7 +332,7 @@
   {
     "id": "T039",
     "description": "Resolver consumes valid discovery cookie and uses tenant/source metadata for provider start.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F025"
     ]
