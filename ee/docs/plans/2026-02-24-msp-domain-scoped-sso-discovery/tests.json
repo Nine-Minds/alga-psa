@@ -111,7 +111,7 @@
   {
     "id": "T014",
     "description": "Providers UI remove-domain flow invokes save action and removes domain row from view.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F008"
     ]
