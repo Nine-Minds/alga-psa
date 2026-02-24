@@ -15,7 +15,7 @@
     "id": "T03",
     "description": "Detect BlockNote JSON format: array with objects having 'props' field",
     "featureIds": ["F03"],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T04",
