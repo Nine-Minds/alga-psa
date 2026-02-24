@@ -99,13 +99,13 @@
     "id": "T17",
     "description": "Existing ProseMirror JSON document loads without conversion in CollaborativeEditor",
     "featureIds": ["F09"],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T18",
     "description": "Existing BlockNote JSON document loads correctly after conversion in CollaborativeEditor",
     "featureIds": ["F09"],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T19",

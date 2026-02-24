@@ -100,3 +100,6 @@
 - Ran `npx vitest run ../packages/documents/src/lib/blockContentFormat.test.ts`.
 - Added recursive conversion to flatten `children` blocks in `packages/documents/src/lib/blockContentFormat.ts` plus a nested children test in `packages/documents/src/lib/blockContentFormat.test.ts` (T16).
 - Ran `npx vitest run ../packages/documents/src/lib/blockContentFormat.test.ts`.
+- Added `CollaborativeEditor.init.test.tsx` to cover ProseMirror load (no conversion) and BlockNote load (conversion + persistence), marking T17/T18 complete.
+- Mocked `EditorToolbar` in the new test file to avoid editor API dependencies.
+- Ran `npx vitest run ../packages/documents/src/components/CollaborativeEditor.init.test.tsx`.
