@@ -21,7 +21,7 @@
     "id": "T04",
     "description": "Detect ProseMirror JSON format: object with type:'doc'",
     "featureIds": ["F03"],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T05",

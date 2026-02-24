@@ -12,4 +12,13 @@ describe('detectBlockContentFormat', () => {
 
     expect(detectBlockContentFormat(blocknote)).toBe('blocknote');
   });
+
+  it('detects ProseMirror JSON documents', () => {
+    const prosemirror = {
+      type: 'doc',
+      content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Hi' }] }],
+    };
+
+    expect(detectBlockContentFormat(prosemirror)).toBe('prosemirror');
+  });
 });

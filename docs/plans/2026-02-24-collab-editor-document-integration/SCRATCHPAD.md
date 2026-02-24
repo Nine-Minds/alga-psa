@@ -76,3 +76,4 @@
 - Synced entity-mode drawer rendering with collaborative/fallback editor logic (avoids legacy BlockNote path).
 - Added test ensuring `CollaborativeEditor` uses `document:<tenantId>:<documentId>` room naming.
 - Added format detection test for BlockNote JSON.
+- Added format detection test for ProseMirror JSON.
