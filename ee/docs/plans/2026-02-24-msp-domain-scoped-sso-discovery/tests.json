@@ -375,7 +375,7 @@
   {
     "id": "T044",
     "description": "Resolver logging excludes raw email and other sensitive identifiers.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F028"
     ]
