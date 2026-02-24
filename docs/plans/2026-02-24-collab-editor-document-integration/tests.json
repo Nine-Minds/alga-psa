@@ -81,7 +81,7 @@
     "id": "T14",
     "description": "Convert BlockNote blockquote (quote) to ProseMirror blockquote node",
     "featureIds": ["F08"],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T15",

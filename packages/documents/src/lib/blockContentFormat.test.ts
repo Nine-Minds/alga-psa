@@ -252,4 +252,29 @@ describe('detectBlockContentFormat', () => {
       ],
     });
   });
+
+  it('converts blockquotes to ProseMirror blockquote nodes', () => {
+    const blocknote = [
+      {
+        type: 'blockquote',
+        props: {},
+        content: [{ type: 'text', text: 'Quoted', styles: {} }],
+      },
+    ];
+
+    expect(blockNoteJsonToProsemirrorJson(blocknote)).toEqual({
+      type: 'doc',
+      content: [
+        {
+          type: 'blockquote',
+          content: [
+            {
+              type: 'paragraph',
+              content: [{ type: 'text', text: 'Quoted' }],
+            },
+          ],
+        },
+      ],
+    });
+  });
 });
