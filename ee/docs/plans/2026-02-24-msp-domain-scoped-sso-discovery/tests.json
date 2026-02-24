@@ -43,7 +43,7 @@
   {
     "id": "T006",
     "description": "Save login-domain action persists valid domains for the tenant.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F004"
     ]
