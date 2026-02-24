@@ -86,3 +86,5 @@
 - Ran `npx vitest run ../packages/documents/src/lib/blockContentFormat.test.ts`.
 - Added bullet list item conversion test in `packages/documents/src/lib/blockContentFormat.test.ts` and marked T09 complete.
 - Ran `npx vitest run ../packages/documents/src/lib/blockContentFormat.test.ts`.
+- Added numbered list item conversion test in `packages/documents/src/lib/blockContentFormat.test.ts` and marked T10 complete.
+- Ran `npx vitest run ../packages/documents/src/lib/blockContentFormat.test.ts`.

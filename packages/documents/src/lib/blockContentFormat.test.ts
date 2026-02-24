@@ -144,4 +144,35 @@ describe('detectBlockContentFormat', () => {
       ],
     });
   });
+
+  it('converts numbered list items to ProseMirror ordered_list nodes', () => {
+    const blocknote = [
+      {
+        type: 'numberedListItem',
+        props: { number: 2 },
+        content: [{ type: 'text', text: 'Step', styles: {} }],
+      },
+    ];
+
+    expect(blockNoteJsonToProsemirrorJson(blocknote)).toEqual({
+      type: 'doc',
+      content: [
+        {
+          type: 'ordered_list',
+          attrs: { order: 2 },
+          content: [
+            {
+              type: 'list_item',
+              content: [
+                {
+                  type: 'paragraph',
+                  content: [{ type: 'text', text: 'Step' }],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+  });
 });
