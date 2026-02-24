@@ -495,7 +495,7 @@
   {
     "id": "T058",
     "description": "CE and EE both expose discovery route + resolver gating behavior with identical external API contracts.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F034",
       "F025",

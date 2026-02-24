@@ -159,3 +159,4 @@ Working notes for shifting MSP SSO provider enablement from user-based pre-auth 
 - (2026-02-24) Completed T055: Callback URL passthrough remains intact for MSP login redirects when SSO discovery is active.
 - (2026-02-24) Completed T056: Backfill migration populates initial login-domain entries from tenant primary email domain only when unambiguous.
 - (2026-02-24) Completed T057: Backfill migration skips conflicting candidate domains and records deterministic no-op behavior.
+- (2026-02-24) Completed T058: CE and EE both expose discovery route + resolver gating behavior with identical external API contracts.
