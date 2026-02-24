@@ -103,7 +103,7 @@
   {
     "id": "T013",
     "description": "Providers UI add-domain flow invokes save action and refreshes rendered domain list.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F008"
     ]

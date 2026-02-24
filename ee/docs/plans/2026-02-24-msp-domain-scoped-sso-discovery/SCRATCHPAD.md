@@ -114,3 +114,4 @@ Working notes for shifting MSP SSO provider enablement from user-based pre-auth 
 - (2026-02-24) Completed T010: Cross-tenant domain conflict behavior follows configured policy (reject or mark ambiguous).
 - (2026-02-24) Completed T011: Removing/deactivating a tenant login domain updates subsequent listing and discovery reads.
 - (2026-02-24) Completed T012: Providers settings page renders MSP SSO login-domain management section.
+- (2026-02-24) Completed T013: Providers UI add-domain flow invokes save action and refreshes rendered domain list.
