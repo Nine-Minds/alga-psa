@@ -56,6 +56,7 @@ Working notes for shifting MSP SSO provider enablement from user-based pre-auth 
 - (2026-02-24) Updated provider setup docs with explicit ordering: configure provider credentials, then configure tenant MSP login domains before relying on MSP SSO.
 - (2026-02-24) Added env/docs guidance clarifying unresolved-domain behavior: discovery falls back to app-level `GOOGLE_OAUTH_*` / `MICROSOFT_OAUTH_*` provider configuration.
 - (2026-02-24) CE/EE parity enforced for MSP SSO button behavior with a shared discovery/resolve contract test (`ssoProviderButtons.ceEeParity.test.ts`).
+- (2026-02-24) Added route/callback contract coverage proving `/auth/msp/signin` links and callbackUrl passthrough/default behavior remain unchanged.
 
 ## Commands / Runbooks
 
@@ -73,6 +74,8 @@ Working notes for shifting MSP SSO provider enablement from user-based pre-auth 
   - `cd server && npx vitest run --coverage.enabled=false ../packages/auth/src/lib/sso/mspSsoResolution.test.ts`
 - (2026-02-24) Validate MSP discovery + resolver + SSO button tests:
   - `cd server && npx vitest run --coverage.enabled=false src/app/api/auth/msp/sso/discover/route.test.ts src/app/api/auth/msp/sso/resolve/route.test.ts ../packages/auth/src/lib/sso/mspSsoResolution.test.ts ../packages/auth/src/components/SsoProviderButtons.msp.test.tsx`
+- (2026-02-24) Validate MSP sign-in route and callback contracts:
+  - `cd server && npx vitest run --coverage.enabled=false ../packages/auth/src/components/MspSignInRoute.contract.test.ts`
 
 ## Gotchas
 

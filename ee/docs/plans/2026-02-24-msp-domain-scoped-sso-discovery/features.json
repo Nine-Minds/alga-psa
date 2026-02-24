@@ -206,7 +206,7 @@
   {
     "id": "F035",
     "description": "Preserve existing `/auth/msp/signin` URLs and existing emailed links without hostname migration requirements.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Functional Requirements #11", "Acceptance Criteria #6"]
   }
 ]
