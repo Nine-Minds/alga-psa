@@ -47,6 +47,7 @@ Working notes for shifting MSP SSO provider enablement from user-based pre-auth 
 - (2026-02-24) Provider buttons now honor discovery allow-list strictly: unsupported providers stay disabled and disabled clicks do not invoke resolver/start.
 - (2026-02-24) Added local remembered-provider UX (`localStorage` key `msp_sso_last_provider`) and only marks preferred provider when it is still in the discovered eligible set.
 - (2026-02-24) Resolver now consumes signed discovery context cookie and passes parsed discovery metadata into source resolution before issuing `msp_sso_resolution`.
+- (2026-02-24) Resolver/source helper enforces discovered provider allow-list; provider attempts outside cookie-allowed set fail with generic response.
 
 ## Commands / Runbooks
 

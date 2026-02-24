@@ -152,7 +152,7 @@
   {
     "id": "F026",
     "description": "Reject resolver attempts when requested provider is not in discovered allowed provider set.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Functional Requirements #8", "Acceptance Criteria #5"]
   },
   {
