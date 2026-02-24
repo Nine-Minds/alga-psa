@@ -80,3 +80,7 @@
 - Added empty/null format detection test.
 - Added paragraph conversion test for BlockNote → ProseMirror.
 - Added styled text conversion test for bold/italic/underline marks.
+
+## 2026-02-24 Updates
+- Added heading conversion test for BlockNote -> ProseMirror (levels 1-3) in `packages/documents/src/lib/blockContentFormat.test.ts` and marked T08 complete.
+- Ran `npx vitest run ../packages/documents/src/lib/blockContentFormat.test.ts`.

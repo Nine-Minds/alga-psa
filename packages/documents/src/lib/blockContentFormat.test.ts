@@ -73,4 +73,45 @@ describe('detectBlockContentFormat', () => {
       ])
     );
   });
+
+  it('converts heading blocks (levels 1-3) to ProseMirror headings', () => {
+    const blocknote = [
+      {
+        type: 'heading',
+        props: { level: 1 },
+        content: [{ type: 'text', text: 'Title', styles: {} }],
+      },
+      {
+        type: 'heading',
+        props: { level: 2 },
+        content: [{ type: 'text', text: 'Subtitle', styles: {} }],
+      },
+      {
+        type: 'heading',
+        props: { level: 3 },
+        content: [{ type: 'text', text: 'Section', styles: {} }],
+      },
+    ];
+
+    expect(blockNoteJsonToProsemirrorJson(blocknote)).toEqual({
+      type: 'doc',
+      content: [
+        {
+          type: 'heading',
+          attrs: { level: 1 },
+          content: [{ type: 'text', text: 'Title' }],
+        },
+        {
+          type: 'heading',
+          attrs: { level: 2 },
+          content: [{ type: 'text', text: 'Subtitle' }],
+        },
+        {
+          type: 'heading',
+          attrs: { level: 3 },
+          content: [{ type: 'text', text: 'Section' }],
+        },
+      ],
+    });
+  });
 });
