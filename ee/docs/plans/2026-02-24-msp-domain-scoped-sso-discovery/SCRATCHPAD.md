@@ -102,3 +102,4 @@ Working notes for shifting MSP SSO provider enablement from user-based pre-auth 
 - Should domain conflicts be hard-blocked at write-time or tolerated and treated as unresolved at read-time?
 - Should unresolved-domain app-fallback provider exposure be configurable by environment?
 - Should remembered provider preference be localStorage only or include signed cookie metadata?
+- (2026-02-24) Completed T001: Migration creates tenant MSP SSO login-domain persistence model with expected columns.
