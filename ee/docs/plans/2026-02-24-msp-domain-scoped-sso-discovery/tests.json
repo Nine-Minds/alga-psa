@@ -425,7 +425,7 @@
   {
     "id": "T050",
     "description": "DB-backed integration guard path: ambiguous duplicate domain mapping resolves as unresolved and returns neutral provider set.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F014",
       "F018"
