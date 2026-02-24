@@ -163,7 +163,7 @@
   {
     "id": "T020",
     "description": "Known mapped domain with tenant Microsoft configured returns only `azure-ad`.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F013",
       "F016",
