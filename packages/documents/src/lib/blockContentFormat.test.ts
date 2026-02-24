@@ -21,4 +21,9 @@ describe('detectBlockContentFormat', () => {
 
     expect(detectBlockContentFormat(prosemirror)).toBe('prosemirror');
   });
+
+  it('treats null/empty as empty format', () => {
+    expect(detectBlockContentFormat(null)).toBe('empty');
+    expect(detectBlockContentFormat([])).toBe('empty');
+  });
 });

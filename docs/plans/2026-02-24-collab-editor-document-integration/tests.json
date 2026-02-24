@@ -27,7 +27,7 @@
     "id": "T05",
     "description": "Detect empty/null block_data and initialize empty document",
     "featureIds": ["F03"],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T06",
