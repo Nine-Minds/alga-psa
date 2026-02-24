@@ -460,7 +460,7 @@
   {
     "id": "T054",
     "description": "Route contract verifies `/auth/msp/signin` path remains unchanged after discovery rollout.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F035"
     ]

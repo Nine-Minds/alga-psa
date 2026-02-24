@@ -155,3 +155,4 @@ Working notes for shifting MSP SSO provider enablement from user-based pre-auth 
 - (2026-02-24) Completed T051: DB-backed integration guard path: inactive/deleted domain mappings are ignored by discovery.
 - (2026-02-24) Completed T052: Documentation contract includes tenant login-domain setup in provider configuration instructions.
 - (2026-02-24) Completed T053: Environment/docs contract explains unresolved-domain app-fallback provider behavior.
+- (2026-02-24) Completed T054: Route contract verifies `/auth/msp/signin` path remains unchanged after discovery rollout.
