@@ -264,7 +264,7 @@
   {
     "id": "T031",
     "description": "MSP SSO buttons remain disabled for invalid/empty email input.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F021",
       "F022"
