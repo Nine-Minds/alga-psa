@@ -77,7 +77,7 @@
   {
     "id": "T010",
     "description": "Cross-tenant domain conflict behavior follows configured policy (reject or mark ambiguous).",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F006",
       "F014"
