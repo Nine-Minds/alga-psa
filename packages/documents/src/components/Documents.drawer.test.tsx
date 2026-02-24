@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import Documents from './Documents.tsx';
 import { syncCollabSnapshot } from '../actions/collaborativeEditingActions';
 
@@ -76,10 +76,14 @@ vi.mock('./DocumentsPagination', () => ({ default: () => null }));
 vi.mock('./DocumentListView', () => ({ default: () => null }));
 vi.mock('./DocumentsPageSkeleton', () => ({ DocumentsGridSkeleton: () => null }));
 
+let mockCollabStatus: string | null = 'connected';
+
 vi.mock('./CollaborativeEditor', () => ({
   CollaborativeEditor: (props: { onConnectionStatusChange?: (status: string) => void }) => {
     React.useEffect(() => {
-      props.onConnectionStatusChange?.('connected');
+      if (mockCollabStatus) {
+        props.onConnectionStatusChange?.(mockCollabStatus);
+      }
     }, [props.onConnectionStatusChange]);
     return <div data-testid="collab-editor" />;
   },
@@ -152,6 +156,7 @@ describe('Documents drawer', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockCollabStatus = 'connected';
   });
 
   it('opens CollaborativeEditor when editing an in-app document', async () => {
@@ -257,5 +262,47 @@ describe('Documents drawer', () => {
     await waitFor(() => {
       expect(syncCollabSnapshot).toHaveBeenCalledWith('doc-1');
     });
+  });
+
+  it('falls back to the single-user editor when collab is unreachable', async () => {
+    mockCollabStatus = null;
+    vi.useFakeTimers();
+
+    render(
+      <Documents
+        id="documents"
+        documents={[
+          {
+            document_id: 'doc-1',
+            document_name: 'Runbook',
+            type_id: null,
+            user_id: 'user-1',
+            order_number: 0,
+            created_by: 'user-1',
+            type_name: 'text/plain',
+            tenant: 'tenant-1',
+          },
+        ]}
+        gridColumns={3}
+        userId="user-1"
+        entityId="entity-1"
+        entityType="asset"
+        isLoading={false}
+      />
+    );
+
+    fireEvent.click(screen.getByTestId('doc-card'));
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3000);
+    });
+
+    expect(screen.getByTestId('fallback-editor')).toBeInTheDocument();
+
+    vi.useRealTimers();
   });
 });

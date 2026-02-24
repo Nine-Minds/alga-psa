@@ -107,3 +107,7 @@
 - Ran `npx vitest run ../packages/documents/src/components/Documents.drawer.test.tsx`.
 - Added drawer close snapshot test in `Documents.drawer.test.tsx` and marked T20 complete.
 - Ran `npx vitest run ../packages/documents/src/components/Documents.drawer.test.tsx`.
+
+## Updates
+- Fixed fallback mode timing loop by separating `isEditingDocument` from `isCollaborativeEdit` so the timeout can set fallback without immediately clearing it. Files: `packages/documents/src/components/Documents.tsx`.
+- Test T21 now passes by waiting for the 3s timeout to switch to the fallback editor. Test: `packages/documents/src/components/Documents.drawer.test.tsx`.

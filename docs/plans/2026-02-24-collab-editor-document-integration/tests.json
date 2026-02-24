@@ -123,7 +123,7 @@
     "id": "T21",
     "description": "When Hocuspocus is unreachable, editor falls back to single-user mode within 3 seconds",
     "featureIds": ["F12"],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T22",

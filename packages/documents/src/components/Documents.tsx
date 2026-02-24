@@ -212,14 +212,15 @@ const Documents = ({
     return null;
   });
   const [selectedDocumentsForMove, setSelectedDocumentsForMove] = useState<Set<string>>(new Set());
-  const isCollaborativeEdit = Boolean(!isCreatingNew && selectedDocument && isEditModeInDrawer && !isFallbackMode);
+  const isEditingDocument = Boolean(!isCreatingNew && selectedDocument && isEditModeInDrawer);
+  const isCollaborativeEdit = Boolean(isEditingDocument && !isFallbackMode);
 
   useEffect(() => {
     collabStatusRef.current = collabConnectionStatus;
   }, [collabConnectionStatus]);
 
   useEffect(() => {
-    if (!isCollaborativeEdit || !selectedDocument) {
+    if (!isEditingDocument || !selectedDocument) {
       setIsFallbackMode(false);
       return;
     }
@@ -237,7 +238,7 @@ const Documents = ({
     return () => {
       clearTimeout(timeout);
     };
-  }, [isCollaborativeEdit, selectedDocument?.document_id]);
+  }, [isEditingDocument, selectedDocument?.document_id]);
 
   useEffect(() => {
     let mounted = true;
