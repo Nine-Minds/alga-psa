@@ -135,3 +135,4 @@ Working notes for shifting MSP SSO provider enablement from user-based pre-auth 
 - (2026-02-24) Completed T031: MSP SSO buttons remain disabled for invalid/empty email input.
 - (2026-02-24) Completed T032: MSP SSO buttons remain disabled while discovery request is in flight.
 - (2026-02-24) Completed T033: MSP login enables only Microsoft button when discovery returns `azure-ad` only.
+- (2026-02-24) Completed T034: MSP login enables both buttons when discovery returns both providers.
