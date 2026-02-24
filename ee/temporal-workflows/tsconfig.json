@@ -48,6 +48,8 @@
       "@alga-psa/db/tenant.js": ["../../packages/db/src/lib/tenant.ts"],
       "@alga-psa/types": ["../../packages/types/src/index.ts"],
       "@alga-psa/types/*": ["../../packages/types/src/*"],
+      "@alga-psa/storage": ["../../packages/storage/src/index.ts"],
+      "@alga-psa/storage/*": ["../../packages/storage/src/*"],
       "@alga-psa/db/admin": ["../../packages/db/src/lib/admin.ts"],
       "@alga-psa/db/admin.js": ["../../packages/db/src/lib/admin.ts"],
       "@temporalio/activity": ["../../node_modules/@temporalio/activity"],
