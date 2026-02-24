@@ -240,7 +240,7 @@
   {
     "id": "T028",
     "description": "Discovery context cookie is signed and excludes OAuth client IDs/secrets.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F019"
     ]

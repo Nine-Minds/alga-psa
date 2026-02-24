@@ -129,3 +129,4 @@ Working notes for shifting MSP SSO provider enablement from user-based pre-auth 
 - (2026-02-24) Completed T025: Unresolved domain with no app fallback providers configured returns empty provider list.
 - (2026-02-24) Completed T026: Discovery implementation contract does not branch on specific-user existence lookup results.
 - (2026-02-24) Completed T027: Discovery logs avoid raw email and include only safe domain/hash metadata.
+- (2026-02-24) Completed T028: Discovery context cookie is signed and excludes OAuth client IDs/secrets.
