@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
-import { useEditor, EditorContent } from '@tiptap/react';
+import { useEditor, EditorContent, type Editor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Link from '@tiptap/extension-link';
 import Underline from '@tiptap/extension-underline';
@@ -18,9 +18,21 @@ interface DocumentEditorProps {
   documentId: string;
   userId: string;
   placeholder?: string;
+  editorRef?: React.MutableRefObject<Editor | null>;
+  onContentChange?: (content: Record<string, any>) => void;
+  onUnsavedChangesChange?: (hasUnsavedChanges: boolean) => void;
+  hideSaveButton?: boolean;
 }
 
-export function DocumentEditor({ documentId, userId, placeholder }: DocumentEditorProps) {
+export function DocumentEditor({
+  documentId,
+  userId,
+  placeholder,
+  editorRef,
+  onContentChange,
+  onUnsavedChangesChange,
+  hideSaveButton = false,
+}: DocumentEditorProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -88,6 +100,9 @@ export function DocumentEditor({ documentId, userId, placeholder }: DocumentEdit
       // Only track changes after initial content has been loaded
       if (contentLoadedRef.current) {
         setHasUnsavedChanges(true);
+        if (editor) {
+          onContentChange?.(editor.getJSON());
+        }
       }
     },
   });
@@ -148,6 +163,18 @@ export function DocumentEditor({ documentId, userId, placeholder }: DocumentEdit
     }
   };
 
+  useEffect(() => {
+    if (!editorRef) return;
+    editorRef.current = editor ?? null;
+    return () => {
+      editorRef.current = null;
+    };
+  }, [editor, editorRef]);
+
+  useEffect(() => {
+    onUnsavedChangesChange?.(hasUnsavedChanges);
+  }, [hasUnsavedChanges, onUnsavedChangesChange]);
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
@@ -167,15 +194,17 @@ export function DocumentEditor({ documentId, userId, placeholder }: DocumentEdit
 
   return (
     <Card className="p-4">
-      <div className="mb-4 flex justify-end">
-        <Button
-          id="save-document-button"
-          onClick={handleSave}
-          disabled={isLoading || isSaving}
-        >
-          {isSaving ? 'Saving...' : 'Save'}
-        </Button>
-      </div>
+      {!hideSaveButton && (
+        <div className="mb-4 flex justify-end">
+          <Button
+            id="save-document-button"
+            onClick={handleSave}
+            disabled={isLoading || isSaving}
+          >
+            {isSaving ? 'Saving...' : 'Save'}
+          </Button>
+        </div>
+      )}
 
       {isLoading ? (
         <div className="flex justify-center items-center h-64">

@@ -75,7 +75,7 @@
     "id": "F13",
     "description": "Fallback mode uses DocumentEditor (single-user Tiptap) with manual save via updateBlockContent()",
     "prdRefs": ["F09", "F15"],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F14",

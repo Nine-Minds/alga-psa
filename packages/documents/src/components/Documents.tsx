@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { BlockNoteEditor, PartialBlock } from '@blocknote/core';
+import type { Editor } from '@tiptap/react';
 import type { IDocument, DocumentFilters } from '@alga-psa/types';
 import DocumentStorageCard from './DocumentStorageCard';
 import DocumentUpload from './DocumentUpload';
@@ -124,6 +125,9 @@ const Documents = ({
   const [collabConnectionStatus, setCollabConnectionStatus] = useState<CollabConnectionStatus>('connecting');
   const [isFallbackMode, setIsFallbackMode] = useState(false);
   const collabStatusRef = useRef<CollabConnectionStatus>('connecting');
+  const fallbackEditorRef = useRef<Editor | null>(null);
+  const [fallbackContent, setFallbackContent] = useState<Record<string, any> | null>(null);
+  const [fallbackHasUnsavedChanges, setFallbackHasUnsavedChanges] = useState(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isCreatingNew, setIsCreatingNew] = useState(false);
   const [newDocumentName, setNewDocumentName] = useState('');
@@ -207,7 +211,7 @@ const Documents = ({
     return null;
   });
   const [selectedDocumentsForMove, setSelectedDocumentsForMove] = useState<Set<string>>(new Set());
-  const isCollaborativeEdit = Boolean(!isCreatingNew && selectedDocument && isEditModeInDrawer);
+  const isCollaborativeEdit = Boolean(!isCreatingNew && selectedDocument && isEditModeInDrawer && !isFallbackMode);
 
   useEffect(() => {
     collabStatusRef.current = collabConnectionStatus;
@@ -573,6 +577,9 @@ const Documents = ({
     setIsDrawerOpen(false);
     setDrawerError(null);
     setHasContentChanged(false);
+    setFallbackHasUnsavedChanges(false);
+    setFallbackContent(null);
+    setIsFallbackMode(false);
     // Reset form fields to their saved values
     if (isCreatingNew) {
       setNewDocumentName('');
@@ -774,6 +781,41 @@ const Documents = ({
       setIsDrawerOpen(false);
     } catch (error) {
       console.error('Error saving document snapshot:', error);
+      setDrawerError(
+        tDoc('messages.saveFailed', 'Failed to save document')
+      );
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleSaveFallback = async () => {
+    try {
+      if (!selectedDocument) return;
+      setIsSaving(true);
+
+      if (documentName !== selectedDocument.document_name) {
+        await updateDocument(selectedDocument.document_id, {
+          document_name: documentName,
+          edited_by: userId
+        });
+      }
+
+      const content = fallbackEditorRef.current?.getJSON()
+        || fallbackContent
+        || { type: 'doc', content: [{ type: 'paragraph' }] };
+
+      await updateBlockContent(selectedDocument.document_id, {
+        block_data: JSON.stringify(content),
+        user_id: currentUserId || userId
+      });
+
+      setFallbackHasUnsavedChanges(false);
+      setEditedDocumentId(selectedDocument.document_id);
+      setRefreshTimestamp(Date.now());
+      setIsDrawerOpen(false);
+    } catch (error) {
+      console.error('Error saving fallback document content:', error);
       setDrawerError(
         tDoc('messages.saveFailed', 'Failed to save document')
       );
@@ -1364,6 +1406,10 @@ const Documents = ({
                       <DocumentEditor
                         documentId={selectedDocument.document_id}
                         userId={currentUserId || userId}
+                        editorRef={fallbackEditorRef}
+                        onContentChange={setFallbackContent}
+                        onUnsavedChangesChange={setFallbackHasUnsavedChanges}
+                        hideSaveButton={true}
                       />
                     ) : (
                       <CollaborativeEditor
@@ -1402,14 +1448,22 @@ const Documents = ({
                     onClick={
                       isCreatingNew
                         ? handleSaveNewDocument
-                        : isCollaborativeEdit
-                          ? handleSaveCollabSnapshot
-                          : handleSaveChanges
+                        : isFallbackMode
+                          ? handleSaveFallback
+                          : isCollaborativeEdit
+                            ? handleSaveCollabSnapshot
+                            : handleSaveChanges
                     }
                     disabled={
                       isSaving
                       || (
+                        isFallbackMode
+                          ? !fallbackHasUnsavedChanges && documentName === selectedDocument?.document_name
+                          : false
+                      )
+                      || (
                         !isCollaborativeEdit
+                        && !isFallbackMode
                         && !hasContentChanged
                         && !isCreatingNew
                         && documentName === selectedDocument?.document_name
