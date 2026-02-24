@@ -383,7 +383,7 @@
   {
     "id": "T045",
     "description": "OAuth callback flow for unknown users remains unchanged (no discovery-specific account-existence messaging).",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F029"
     ]
