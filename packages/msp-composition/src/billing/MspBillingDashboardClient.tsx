@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback } from 'react';
-import { BillingDashboard } from '@alga-psa/billing';
+import { BillingDashboard } from '@alga-psa/billing/components';
 import ClientDetails from '@alga-psa/clients/components/clients/ClientDetails';
 import type { IClient } from '@alga-psa/types';
 

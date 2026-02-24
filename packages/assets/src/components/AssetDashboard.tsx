@@ -1,3 +1,5 @@
+'use client';
+
 import type { ReactNode } from 'react';
 import AssetDashboardClient from './AssetDashboardClient';
 import type { AssetListResponse, IClient } from '@alga-psa/types';
