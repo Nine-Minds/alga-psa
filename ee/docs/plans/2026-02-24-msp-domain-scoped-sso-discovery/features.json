@@ -26,7 +26,7 @@
   {
     "id": "F005",
     "description": "Normalize login domains to lowercase and validate domain syntax in settings actions.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Functional Requirements #1", "Functional Requirements #2"]
   },
   {
