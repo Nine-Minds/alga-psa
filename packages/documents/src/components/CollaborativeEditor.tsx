@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { EditorContent, useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Link from '@tiptap/extension-link';
@@ -8,7 +8,16 @@ import Underline from '@tiptap/extension-underline';
 import Collaboration from '@tiptap/extension-collaboration';
 import CollaborationCaret from '@tiptap/extension-collaboration-caret';
 import { prosemirrorJSONToYXmlFragment } from 'y-prosemirror';
-import { Emoticon, createYjsProvider } from '@alga-psa/ui/editor';
+import {
+  Emoticon,
+  createYjsProvider,
+  EmojiSuggestionExtension,
+  EmojiSuggestionPopup,
+  MentionNode,
+  MentionSuggestionExtension,
+  MentionSuggestionPopup,
+} from '@alga-psa/ui/editor';
+import type { EmojiSuggestionState, MentionSuggestionState, MentionSuggestionUser } from '@alga-psa/ui/editor';
 import AvatarIcon from '@alga-psa/ui/components/AvatarIcon';
 import { Card } from '@alga-psa/ui/components/Card';
 import { EditorToolbar } from './EditorToolbar';
@@ -30,6 +39,7 @@ interface CollaborativeEditorProps {
   userId: string;
   userName: string;
   placeholder?: string;
+  searchMentions?: (query: string) => Promise<MentionSuggestionUser[]>;
   onConnectionStatusChange?: (status: ConnectionStatus) => void;
   onSyncStateChange?: (synced: boolean) => void;
   onUsersChange?: (users: PresenceUser[]) => void;
@@ -100,6 +110,7 @@ export function CollaborativeEditor({
   userId,
   userName,
   placeholder,
+  searchMentions,
   onConnectionStatusChange,
   onSyncStateChange,
   onUsersChange,
@@ -122,7 +133,17 @@ export function CollaborativeEditor({
   const [isSynced, setIsSynced] = useState(false);
   const [editorReady, setEditorReady] = useState(false);
   const [connectedUsers, setConnectedUsers] = useState<PresenceUser[]>([]);
+  const [emojiState, setEmojiState] = useState<EmojiSuggestionState>(null);
+  const [mentionState, setMentionState] = useState<MentionSuggestionState>(null);
   const hasInitializedContent = useRef(false);
+
+  const handleEmojiStateChange = useCallback((state: EmojiSuggestionState) => {
+    setEmojiState(state);
+  }, []);
+
+  const handleMentionStateChange = useCallback((state: MentionSuggestionState) => {
+    setMentionState(state);
+  }, []);
 
   const editor = useEditor({
     immediatelyRender: false,
@@ -141,6 +162,13 @@ export function CollaborativeEditor({
       }),
       Underline,
       Emoticon,
+      MentionNode,
+      EmojiSuggestionExtension.configure({
+        onStateChange: handleEmojiStateChange,
+      }),
+      MentionSuggestionExtension.configure({
+        onStateChange: handleMentionStateChange,
+      }),
       Collaboration.configure({
         document: ydoc,
       }),
@@ -328,9 +356,18 @@ export function CollaborativeEditor({
         <div
           className={styles.editorContainer}
           data-placeholder={placeholder || 'Start writing...'}
+          style={{ position: 'relative' }}
         >
           <EditorToolbar editor={editor} />
           <EditorContent editor={editor} />
+          <EmojiSuggestionPopup editor={editor} suggestionState={emojiState} />
+          {searchMentions && (
+            <MentionSuggestionPopup
+              editor={editor}
+              suggestionState={mentionState}
+              searchMentions={searchMentions}
+            />
+          )}
         </div>
       ) : (
         <div className="flex justify-center items-center h-64">Initializing editor...</div>
