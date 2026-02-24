@@ -72,3 +72,5 @@
 - Document name input remains editable and wired to update document name on save in both collab and fallback modes.
 - Unsaved changes warning now accounts for fallback editor changes before closing the drawer.
 - BlockNote-to-ProseMirror conversion now persists converted JSON back to `document_block_content`.
+- Added drawer test coverage to ensure CollaborativeEditor renders on edit of in-app documents.
+- Synced entity-mode drawer rendering with collaborative/fallback editor logic (avoids legacy BlockNote path).

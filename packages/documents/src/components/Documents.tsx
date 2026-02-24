@@ -1792,6 +1792,7 @@ const Documents = ({
                     if (isCreatingNew || isEditModeInDrawer) {
                       if (isCreatingNew) {
                         setNewDocumentName(e.target.value);
+                        setDocumentName(e.target.value);
                         setDrawerError(null); // Clear error when user types
                       } else {
                         setDocumentName(e.target.value);
@@ -1805,24 +1806,46 @@ const Documents = ({
 
               <div className="flex-1 overflow-y-auto mb-4 p-2">
                 <div className="h-full w-full">
+                  {isFallbackMode && (
+                    <div className="mb-2 rounded border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-700">
+                      Offline — manual save mode
+                    </div>
+                  )}
                   {isLoadingContent ? (
                     <div className="flex justify-center items-center h-full">
                       <Spinner size="sm" />
                     </div>
-                  ) : isCreatingNew || (selectedDocument && isEditModeInDrawer) ? (
+                  ) : isCreatingNew && !selectedDocument ? (
                     <TextEditor
-                      key={isCreatingNew ? "editor-new" : `editor-${selectedDocument?.document_id}`}
+                      key="editor-new"
                       id={`${id}-editor`}
                       initialContent={currentContent}
                       onContentChange={handleContentChange}
                       editorRef={editorRef}
                       searchMentions={searchUsersForMentions}
                     />
+                  ) : selectedDocument && (isEditModeInDrawer || isCreatingNew) ? (
+                    isFallbackMode ? (
+                      <DocumentEditor
+                        documentId={selectedDocument.document_id}
+                        userId={currentUserId || userId}
+                        editorRef={fallbackEditorRef}
+                        onContentChange={setFallbackContent}
+                        onUnsavedChangesChange={setFallbackHasUnsavedChanges}
+                        hideSaveButton={true}
+                      />
+                    ) : (
+                      <CollaborativeEditor
+                        documentId={selectedDocument.document_id}
+                        tenantId={selectedDocument.tenant ?? currentTenantId}
+                        userId={currentUserId || userId}
+                        userName={currentUserName || userId}
+                        searchMentions={searchUsersForMentions}
+                        onConnectionStatusChange={setCollabConnectionStatus}
+                      />
+                    )
                   ) : selectedDocument ? (
-                    <RichTextViewer
-                      id={`${id}-viewer`}
-                      content={currentContent}
-                    />
+                    <DocumentViewer content={currentContent} />
                   ) : (
                     <div className="flex justify-center items-center h-full text-gray-500">
                       Select a document or create a new one.
@@ -1842,8 +1865,34 @@ const Documents = ({
                 {(isCreatingNew || isEditModeInDrawer) && (
                   <Button
                     id={`${id}-save-btn`}
-                    onClick={isCreatingNew ? handleSaveNewDocument : handleSaveChanges}
-                    disabled={isSaving || (!hasContentChanged && !isCreatingNew && documentName === selectedDocument?.document_name)}
+                    onClick={
+                      isCreatingNew
+                        ? selectedDocument
+                          ? isFallbackMode
+                            ? handleSaveFallback
+                            : handleSaveCollabSnapshot
+                          : handleSaveNewDocument
+                        : isFallbackMode
+                          ? handleSaveFallback
+                          : isCollaborativeEdit
+                            ? handleSaveCollabSnapshot
+                            : handleSaveChanges
+                    }
+                    disabled={
+                      isSaving
+                      || (
+                        isFallbackMode
+                          ? !fallbackHasUnsavedChanges && documentName === selectedDocument?.document_name
+                          : false
+                      )
+                      || (
+                        !isCollaborativeEdit
+                        && !isFallbackMode
+                        && !hasContentChanged
+                        && !isCreatingNew
+                        && documentName === selectedDocument?.document_name
+                      )
+                    }
                     variant="default"
                     className={isCreatingNew && !newDocumentName.trim() ? 'opacity-50' : ''}
                   >

@@ -3,7 +3,7 @@
     "id": "T01",
     "description": "Drawer opens CollaborativeEditor when clicking an in-app document in edit mode",
     "featureIds": ["F01"],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T02",
