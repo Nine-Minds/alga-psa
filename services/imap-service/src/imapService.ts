@@ -95,6 +95,39 @@ function normalizeImapError(error: any): {
   };
 }
 
+function applyOauthMechanismOverride(client: ImapFlow, mechanism: 'XOAUTH2' | 'OAUTHBEARER'): void {
+  if (mechanism !== 'XOAUTH2') return;
+
+  const anyClient = client as any;
+  const commands: Map<string, any> | undefined = anyClient.commands;
+  if (!commands?.get) return;
+
+  const originalAuthenticate = commands.get('AUTHENTICATE');
+  if (typeof originalAuthenticate !== 'function') return;
+
+  const patchedCommands = new Map(commands);
+  patchedCommands.set('AUTHENTICATE', async (connection: any, username: string, authOpts: any) => {
+    if (authOpts?.accessToken) {
+      const caps = connection?.capabilities;
+      const hadOauthBearer = Boolean(caps?.has?.('AUTH=OAUTHBEARER'));
+      const hasXoauth = Boolean(caps?.has?.('AUTH=XOAUTH') || caps?.has?.('AUTH=XOAUTH2'));
+
+      if (hadOauthBearer && hasXoauth && caps?.delete && caps?.set) {
+        caps.delete('AUTH=OAUTHBEARER');
+        try {
+          return await originalAuthenticate(connection, username, authOpts);
+        } finally {
+          caps.set('AUTH=OAUTHBEARER', true);
+        }
+      }
+    }
+
+    return await originalAuthenticate(connection, username, authOpts);
+  });
+
+  anyClient.commands = patchedCommands;
+}
+
 interface ImapProviderRow {
   id: string;
   tenant: string;
@@ -412,9 +445,11 @@ class ImapFolderListener {
       user: this.provider.username,
     };
 
+    const oauthMechanism = process.env.IMAP_OAUTH_AUTH_MECHANISM === 'OAUTHBEARER' ? 'OAUTHBEARER' : 'XOAUTH2';
+
     if (this.provider.auth_type === 'oauth2') {
       auth.accessToken = this.provider.access_token;
-      auth.method = process.env.IMAP_OAUTH_AUTH_MECHANISM === 'OAUTHBEARER' ? 'OAUTHBEARER' : 'XOAUTH2';
+      auth.method = oauthMechanism;
     } else {
       auth.pass = await this.getPasswordSecret();
     }
@@ -429,7 +464,7 @@ class ImapFolderListener {
     const tlsOptions = (secure || this.provider.allow_starttls)
       ? { rejectUnauthorized }
       : undefined;
-    return new ImapFlow({
+    const client = new ImapFlow({
       host: this.provider.host,
       port: Number(this.provider.port),
       secure,
@@ -438,6 +473,10 @@ class ImapFolderListener {
       logger: false,
       tls: tlsOptions,
     });
+
+    applyOauthMechanismOverride(client, oauthMechanism);
+
+    return client;
   }
 
   private async connectWithTimeout(client: ImapFlow) {
