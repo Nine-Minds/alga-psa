@@ -154,7 +154,7 @@
   {
     "id": "T019",
     "description": "Discovery endpoint rate-limited calls return the same neutral response schema.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F012",
       "F018"

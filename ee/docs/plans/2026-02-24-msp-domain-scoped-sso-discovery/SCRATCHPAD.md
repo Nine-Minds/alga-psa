@@ -120,3 +120,4 @@ Working notes for shifting MSP SSO provider enablement from user-based pre-auth 
 - (2026-02-24) Completed T016: Providers UI shows conflict/ambiguity error state with neutral language.
 - (2026-02-24) Completed T017: Discovery endpoint returns `{ ok: true, providers: [] }` for invalid email input.
 - (2026-02-24) Completed T018: Discovery endpoint normalizes email and extracts domain correctly from mixed-case input.
+- (2026-02-24) Completed T019: Discovery endpoint rate-limited calls return the same neutral response schema.
