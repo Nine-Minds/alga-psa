@@ -9,7 +9,7 @@
     "id": "T02",
     "description": "CollaborativeEditor connects to correct Hocuspocus room (document:<tenantId>:<documentId>)",
     "featureIds": ["F02"],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T03",
