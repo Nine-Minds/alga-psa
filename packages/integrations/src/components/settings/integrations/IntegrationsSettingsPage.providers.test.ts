@@ -12,7 +12,9 @@ describe('IntegrationsSettingsPage providers tab', () => {
 
     expect(source).toContain("import { GoogleIntegrationSettings } from './GoogleIntegrationSettings'");
     expect(source).toContain("import { MicrosoftIntegrationSettings } from './MicrosoftIntegrationSettings'");
+    expect(source).toContain("import { MspSsoLoginDomainsSettings } from './MspSsoLoginDomainsSettings'");
     expect(source).toContain('<GoogleIntegrationSettings />');
     expect(source).toContain('<MicrosoftIntegrationSettings />');
+    expect(source).toContain('<MspSsoLoginDomainsSettings />');
   });
 });

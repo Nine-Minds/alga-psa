@@ -133,7 +133,7 @@ export const saveMspSsoLoginDomains = withAuth(async (
 
         return {
           success: false,
-          error: 'One or more domains are already claimed by another tenant.',
+          error: 'One or more domains are already in use.',
           conflicts: conflictDomains,
         };
       }

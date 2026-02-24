@@ -199,7 +199,7 @@ describe('msp sso domain actions', () => {
 
     await expect(saveMspSsoLoginDomains({ domains: ['acme.com'] })).resolves.toEqual({
       success: false,
-      error: 'One or more domains are already claimed by another tenant.',
+      error: 'One or more domains are already in use.',
       conflicts: ['acme.com'],
     });
   });

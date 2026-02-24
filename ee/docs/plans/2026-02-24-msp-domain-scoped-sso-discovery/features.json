@@ -38,7 +38,7 @@
   {
     "id": "F007",
     "description": "Add Providers settings UI section for tenant MSP SSO login domains.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Functional Requirements #2", "Acceptance Criteria #1"]
   },
   {

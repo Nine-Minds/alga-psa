@@ -28,6 +28,7 @@ Working notes for shifting MSP SSO provider enablement from user-based pre-auth 
 - (2026-02-24) `saveMspSsoLoginDomains` now supports create/update/remove via desired-state writes: inserts new domains, re-activates existing matches, and deactivates removed rows.
 - (2026-02-24) Domain save path normalizes inputs (Unicode cleanup, trim, lowercase, optional leading `@` strip) and rejects malformed domains with deterministic validation errors.
 - (2026-02-24) Domain write-time conflict policy: reject saves when any desired active domain is already active for another tenant; response includes neutral error + conflicting domain list for admin remediation.
+- (2026-02-24) Added Providers UI section `MspSsoLoginDomainsSettings` and wired it into `IntegrationsSettingsPage` providers tab below Google/Microsoft credential cards.
 
 ## Commands / Runbooks
 

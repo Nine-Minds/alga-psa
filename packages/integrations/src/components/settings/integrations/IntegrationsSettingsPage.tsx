@@ -27,6 +27,7 @@ import { EmailProviderConfiguration } from '@alga-psa/integrations/components';
 import { CalendarIntegrationsSettings } from '@alga-psa/integrations/components';
 import { GoogleIntegrationSettings } from './GoogleIntegrationSettings';
 import { MicrosoftIntegrationSettings } from './MicrosoftIntegrationSettings';
+import { MspSsoLoginDomainsSettings } from './MspSsoLoginDomainsSettings';
 import dynamic from 'next/dynamic';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
@@ -189,11 +190,13 @@ const IntegrationsSettingsPage: React.FC = () => {
                   <CardTitle>Provider Credentials</CardTitle>
                   <CardDescription>
                     Configure Google and Microsoft first, then connect provider accounts from the Inbound Email and Calendar integration screens.
+                    MSP SSO domain discovery uses these provider credentials with tenant login-domain mappings.
                   </CardDescription>
                 </CardHeader>
               </Card>
               <GoogleIntegrationSettings />
               <MicrosoftIntegrationSettings />
+              <MspSsoLoginDomainsSettings />
             </div>
           ),
         },
