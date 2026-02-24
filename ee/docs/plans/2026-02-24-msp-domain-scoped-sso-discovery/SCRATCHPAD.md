@@ -150,3 +150,4 @@ Working notes for shifting MSP SSO provider enablement from user-based pre-auth 
 - (2026-02-24) Completed T046: MSP credentials sign-in flow remains functional and independent from SSO discovery outcome.
 - (2026-02-24) Completed T047: Client portal sign-in flow remains unchanged with no MSP discovery behavior bleed-through.
 - (2026-02-24) Completed T048: CE/EE SSO component wiring continues to route MSP login through shared discovery-enabled SSO entrypoint.
+- (2026-02-24) Completed T049: DB-backed integration happy path: mapped tenant domain + tenant Microsoft secrets yields discovery providers `["azure-ad"]`.

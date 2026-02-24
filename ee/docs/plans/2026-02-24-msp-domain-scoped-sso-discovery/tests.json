@@ -415,7 +415,7 @@
   {
     "id": "T049",
     "description": "DB-backed integration happy path: mapped tenant domain + tenant Microsoft secrets yields discovery providers `[\"azure-ad\"]`.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F013",
       "F016",
