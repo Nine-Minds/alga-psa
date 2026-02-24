@@ -158,7 +158,7 @@
   {
     "id": "F027",
     "description": "When discovery context is missing/invalid, resolver falls back to app-level provider path only.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Functional Requirements #9", "Acceptance Criteria #3"]
   },
   {
