@@ -146,7 +146,7 @@
   {
     "id": "T018",
     "description": "Discovery endpoint normalizes email and extracts domain correctly from mixed-case input.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F011"
     ]
