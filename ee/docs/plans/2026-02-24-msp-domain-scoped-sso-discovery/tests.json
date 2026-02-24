@@ -477,7 +477,7 @@
   {
     "id": "T056",
     "description": "Backfill migration populates initial login-domain entries from tenant primary email domain only when unambiguous.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F001",
       "F035"

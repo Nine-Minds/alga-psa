@@ -157,3 +157,4 @@ Working notes for shifting MSP SSO provider enablement from user-based pre-auth 
 - (2026-02-24) Completed T053: Environment/docs contract explains unresolved-domain app-fallback provider behavior.
 - (2026-02-24) Completed T054: Route contract verifies `/auth/msp/signin` path remains unchanged after discovery rollout.
 - (2026-02-24) Completed T055: Callback URL passthrough remains intact for MSP login redirects when SSO discovery is active.
+- (2026-02-24) Completed T056: Backfill migration populates initial login-domain entries from tenant primary email domain only when unambiguous.
