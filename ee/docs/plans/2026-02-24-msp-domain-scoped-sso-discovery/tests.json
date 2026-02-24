@@ -367,7 +367,7 @@
   {
     "id": "T043",
     "description": "Resolver rate-limit failures preserve the same generic response shape and wording.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F028"
     ]

@@ -144,3 +144,4 @@ Working notes for shifting MSP SSO provider enablement from user-based pre-auth 
 - (2026-02-24) Completed T040: Resolver rejects provider attempts not included in discovered allowed provider set using generic failure response.
 - (2026-02-24) Completed T041: Resolver falls back to app-level behavior when discovery cookie is missing, invalid, or expired.
 - (2026-02-24) Completed T042: Unknown-user and known-user paths remain externally indistinguishable in resolver responses.
+- (2026-02-24) Completed T043: Resolver rate-limit failures preserve the same generic response shape and wording.
