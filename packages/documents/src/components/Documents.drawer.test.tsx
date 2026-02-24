@@ -150,6 +150,10 @@ describe('Documents drawer', () => {
     }
   });
 
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it('opens CollaborativeEditor when editing an in-app document', async () => {
     render(
       <Documents
@@ -212,6 +216,43 @@ describe('Documents drawer', () => {
     });
 
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => {
+      expect(syncCollabSnapshot).toHaveBeenCalledWith('doc-1');
+    });
+  });
+
+  it('triggers a snapshot when closing the drawer', async () => {
+    render(
+      <Documents
+        id="documents"
+        documents={[
+          {
+            document_id: 'doc-1',
+            document_name: 'Runbook',
+            type_id: null,
+            user_id: 'user-1',
+            order_number: 0,
+            created_by: 'user-1',
+            type_name: 'text/plain',
+            tenant: 'tenant-1',
+          },
+        ]}
+        gridColumns={3}
+        userId="user-1"
+        entityId="entity-1"
+        entityType="asset"
+        isLoading={false}
+      />
+    );
+
+    fireEvent.click(screen.getByTestId('doc-card'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('collab-editor')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
 
     await waitFor(() => {
       expect(syncCollabSnapshot).toHaveBeenCalledWith('doc-1');

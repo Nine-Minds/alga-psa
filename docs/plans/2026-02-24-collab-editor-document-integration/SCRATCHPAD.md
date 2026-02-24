@@ -105,3 +105,5 @@
 - Ran `npx vitest run ../packages/documents/src/components/CollaborativeEditor.init.test.tsx`.
 - Extended `Documents.drawer.test.tsx` to assert Save triggers `syncCollabSnapshot` in collaborative mode (T19) and adjusted mock to set connection status via `useEffect`.
 - Ran `npx vitest run ../packages/documents/src/components/Documents.drawer.test.tsx`.
+- Added drawer close snapshot test in `Documents.drawer.test.tsx` and marked T20 complete.
+- Ran `npx vitest run ../packages/documents/src/components/Documents.drawer.test.tsx`.

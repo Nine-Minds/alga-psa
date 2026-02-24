@@ -117,7 +117,7 @@
     "id": "T20",
     "description": "Closing drawer triggers snapshot (best-effort, doesn't block close)",
     "featureIds": ["F11"],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T21",
