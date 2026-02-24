@@ -146,7 +146,7 @@
   {
     "id": "F025",
     "description": "Update `/api/auth/msp/sso/resolve` to consume discovery-context cookie for tenant/provider source selection.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Functional Requirements #8", "Existing endpoint updates"]
   },
   {
