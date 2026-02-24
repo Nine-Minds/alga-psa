@@ -32,7 +32,7 @@
   {
     "id": "F006",
     "description": "Implement domain conflict/ambiguity handling policy in domain-management actions.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Open Questions #1", "Security / Permissions #3"]
   },
   {
