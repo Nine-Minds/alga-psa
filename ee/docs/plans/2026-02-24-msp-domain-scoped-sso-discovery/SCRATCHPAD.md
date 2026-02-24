@@ -1,0 +1,54 @@
+# Scratchpad — MSP Domain-Scoped SSO Discovery
+
+- Plan slug: `2026-02-24-msp-domain-scoped-sso-discovery`
+- Created: `2026-02-24`
+
+## What This Is
+
+Working notes for shifting MSP SSO provider enablement from user-based pre-auth checks to domain-based tenant discovery, while preserving anti-enumeration posture.
+
+## Decisions
+
+- (2026-02-24) Do not ship per-user provider enablement on public login because it introduces user-enumeration risk.
+- (2026-02-24) Use domain-level tenant discovery for MSP login provider filtering.
+- (2026-02-24) Keep `/auth/msp/signin` and existing email links unchanged (no hostname migration requirement in this phase).
+- (2026-02-24) Keep client portal out of scope.
+- (2026-02-24) Keep unknown-user behavior non-reactive/generic in resolver responses.
+
+## Discoveries / Constraints
+
+- (2026-02-24) Existing MSP SSO buttons are currently email-gated only, then call `/api/auth/msp/sso/resolve`.
+- (2026-02-24) Existing resolver logic in `packages/auth/src/lib/sso/mspSsoResolution.ts` currently performs user lookup for source selection.
+- (2026-02-24) Prior implementation plan exists at `ee/docs/plans/2026-02-23-msp-tenant-first-sso-provider-resolution` and should be treated as superseded for pre-auth provider enablement strategy.
+- (2026-02-24) Domain-level discovery can still reveal tenant/provider posture for a domain; this is acceptable for this phase, while user-existence signals remain prohibited.
+- (2026-02-24) Added `server/migrations/20260224103000_create_msp_sso_tenant_login_domains.cjs` with table `msp_sso_tenant_login_domains` (`tenant`, `id`, `domain`, `is_active`, audit actor/timestamps), plus backfill from `tenants.email` only for globally-unambiguous domains.
+- (2026-02-24) Cross-tenant duplicate domains are intentionally allowed in persistence; uniqueness is enforced only per-tenant via `(tenant, lower(domain))` so runtime discovery can fail-closed on ambiguity.
+
+## Commands / Runbooks
+
+- (2026-02-24) Scaffoled this plan:
+  - `python3 /Users/roberisaacs/.codex/skills/alga-plan/scripts/scaffold_plan.py "MSP Domain-Scoped SSO Discovery" --slug msp-domain-scoped-sso-discovery`
+- (2026-02-24) Validate this plan bundle:
+  - `python3 /Users/roberisaacs/.codex/skills/alga-plan/scripts/validate_plan.py ee/docs/plans/2026-02-24-msp-domain-scoped-sso-discovery`
+- (2026-02-24) Validate migration contract test:
+  - `cd server && npx vitest run src/test/unit/migrations/mspSsoTenantLoginDomainsMigration.test.ts`
+
+## Links / References
+
+- Previous plan (superseded approach):
+  - `ee/docs/plans/2026-02-23-msp-tenant-first-sso-provider-resolution/PRD.md`
+- MSP login + SSO buttons:
+  - `packages/auth/src/components/MspLoginForm.tsx`
+  - `packages/auth/src/components/SsoProviderButtons.tsx`
+- Current resolver endpoint:
+  - `server/src/app/api/auth/msp/sso/resolve/route.ts`
+- Resolver helper library:
+  - `packages/auth/src/lib/sso/mspSsoResolution.ts`
+- Provider readiness/actions:
+  - `packages/integrations/src/actions/integrations/providerReadiness.ts`
+
+## Open Questions
+
+- Should domain conflicts be hard-blocked at write-time or tolerated and treated as unresolved at read-time?
+- Should unresolved-domain app-fallback provider exposure be configurable by environment?
+- Should remembered provider preference be localStorage only or include signed cookie metadata?
