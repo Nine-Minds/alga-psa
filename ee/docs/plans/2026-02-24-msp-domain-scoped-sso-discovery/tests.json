@@ -314,7 +314,7 @@
   {
     "id": "T037",
     "description": "Remembered provider is only auto-selected when it is still present in discovered provider list.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F024",
       "F023"
