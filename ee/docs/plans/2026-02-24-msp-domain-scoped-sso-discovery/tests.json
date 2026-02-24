@@ -26,7 +26,7 @@
   {
     "id": "T004",
     "description": "List login-domain action denies unauthorized users and client users.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F003"
     ]

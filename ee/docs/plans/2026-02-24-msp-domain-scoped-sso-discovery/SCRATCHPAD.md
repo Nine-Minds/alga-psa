@@ -105,3 +105,4 @@ Working notes for shifting MSP SSO provider enablement from user-based pre-auth 
 - (2026-02-24) Completed T001: Migration creates tenant MSP SSO login-domain persistence model with expected columns.
 - (2026-02-24) Completed T002: Migration rollback removes tenant MSP SSO login-domain persistence objects cleanly.
 - (2026-02-24) Completed T003: Schema includes indexes supporting fast lookup by normalized domain and tenant domain listing.
+- (2026-02-24) Completed T004: List login-domain action denies unauthorized users and client users.
