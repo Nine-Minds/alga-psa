@@ -135,7 +135,8 @@ vi.mock('@alga-psa/ui/components/Alert', () => ({
 }));
 
 vi.mock('@alga-psa/ui/components/ConfirmationDialog', () => ({
-  ConfirmationDialog: () => null,
+  ConfirmationDialog: ({ isOpen, title }: { isOpen: boolean; title: string }) =>
+    isOpen ? <div data-testid="confirmation-dialog">{title}</div> : null,
 }));
 
 vi.mock('@alga-psa/ui/ui-reflection/ReflectionContainer', () => ({
@@ -506,5 +507,46 @@ describe('Documents drawer', () => {
     fireEvent.change(nameInput, { target: { value: 'Updated Name' } });
 
     expect(nameInput).toHaveValue('Updated Name');
+  });
+
+  it('shows unsaved changes warning when closing in fallback mode', async () => {
+    mockCollabStatus = null;
+    mockFallbackUnsaved = true;
+    vi.useFakeTimers();
+
+    render(
+      <Documents
+        id="documents"
+        documents={[
+          {
+            document_id: 'doc-4',
+            document_name: 'Runbook',
+            type_id: null,
+            user_id: 'user-1',
+            order_number: 0,
+            created_by: 'user-1',
+            type_name: 'text/plain',
+            tenant: 'tenant-1',
+          },
+        ]}
+        gridColumns={3}
+        userId="user-1"
+        entityId="entity-1"
+        entityType="asset"
+        isLoading={false}
+      />
+    );
+
+    fireEvent.click(screen.getByTestId('doc-card'));
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3000);
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+
+    expect(screen.getByTestId('confirmation-dialog')).toHaveTextContent('Unsaved Changes');
+
+    vi.useRealTimers();
   });
 });

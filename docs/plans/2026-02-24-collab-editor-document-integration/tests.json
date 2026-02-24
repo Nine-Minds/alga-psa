@@ -177,7 +177,7 @@
     "id": "T30",
     "description": "Unsaved changes warning appears when closing drawer in fallback mode with pending changes",
     "featureIds": ["F19"],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T31",
