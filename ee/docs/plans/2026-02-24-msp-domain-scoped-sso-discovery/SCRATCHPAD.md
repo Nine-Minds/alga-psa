@@ -34,6 +34,7 @@ Working notes for shifting MSP SSO provider enablement from user-based pre-auth 
 - (2026-02-24) Added discovery endpoint `POST /api/auth/msp/sso/discover` with invariant response shape `{ ok: true, providers: [] }` and signed discovery cookie issuance on valid requests.
 - (2026-02-24) Discovery route normalizes/validates email before lookup and derives a normalized domain via shared helper (`extractDomainFromEmail`).
 - (2026-02-24) Discovery route uses per-IP/per-email-hash memory rate limiting and returns the same neutral `{ ok: true, providers: [] }` payload on limit hits.
+- (2026-02-24) Tenant discovery now resolves only from `msp_sso_tenant_login_domains` by domain and does not query full email/user records.
 
 ## Commands / Runbooks
 

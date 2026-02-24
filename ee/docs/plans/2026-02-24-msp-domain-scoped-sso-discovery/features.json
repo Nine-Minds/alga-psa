@@ -74,7 +74,7 @@
   {
     "id": "F013",
     "description": "Resolve tenant context from domain mapping without any full-email user existence lookup.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Functional Requirements #4", "Acceptance Criteria #4"]
   },
   {
