@@ -256,7 +256,7 @@
   {
     "id": "T030",
     "description": "Discovery endpoint rotates cookie on valid requests and clears stale context on invalid input.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F020"
     ]

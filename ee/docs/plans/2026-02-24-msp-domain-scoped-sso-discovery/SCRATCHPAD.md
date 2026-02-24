@@ -131,3 +131,4 @@ Working notes for shifting MSP SSO provider enablement from user-based pre-auth 
 - (2026-02-24) Completed T027: Discovery logs avoid raw email and include only safe domain/hash metadata.
 - (2026-02-24) Completed T028: Discovery context cookie is signed and excludes OAuth client IDs/secrets.
 - (2026-02-24) Completed T029: Discovery context cookie expires according to configured short TTL.
+- (2026-02-24) Completed T030: Discovery endpoint rotates cookie on valid requests and clears stale context on invalid input.
