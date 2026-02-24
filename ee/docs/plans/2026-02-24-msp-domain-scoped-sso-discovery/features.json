@@ -92,7 +92,7 @@
   {
     "id": "F016",
     "description": "Compute tenant-scoped Microsoft readiness from tenant provider secrets when tenant is resolved.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Functional Requirements #5"]
   },
   {

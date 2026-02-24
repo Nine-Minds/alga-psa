@@ -37,6 +37,7 @@ Working notes for shifting MSP SSO provider enablement from user-based pre-auth 
 - (2026-02-24) Tenant discovery now resolves only from `msp_sso_tenant_login_domains` by domain and does not query full email/user records.
 - (2026-02-24) Domain lookup treats multi-tenant matches as ambiguous/unresolved and falls back to app-level provider evaluation (fail-closed for tenant context).
 - (2026-02-24) Tenant-scoped discovery computes Google readiness via tenant secrets (`google_client_id` + `google_client_secret`).
+- (2026-02-24) Tenant-scoped discovery computes Microsoft readiness via tenant secrets (`microsoft_client_id` + `microsoft_client_secret`).
 
 ## Commands / Runbooks
 
