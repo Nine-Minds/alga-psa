@@ -306,7 +306,7 @@
   {
     "id": "T036",
     "description": "Last-selected provider preference is persisted locally when user completes provider click.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F024"
     ]
