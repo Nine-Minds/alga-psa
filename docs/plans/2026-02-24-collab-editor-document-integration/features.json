@@ -45,7 +45,7 @@
     "id": "F08",
     "description": "BlockNote-to-ProseMirror conversion function: checkListItem, codeBlock, blockquote, table blocks",
     "prdRefs": ["F05"],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F09",

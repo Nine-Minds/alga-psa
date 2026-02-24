@@ -77,6 +77,46 @@ const emptyDoc = (): ProseMirrorDoc => ({
   content: [{ type: 'paragraph' }],
 });
 
+const extractInlineText = (content: BlockNoteBlock['content']): string => {
+  if (!content) return '';
+  if (typeof content === 'string') return content;
+  if (!Array.isArray(content)) return '';
+  return content
+    .map((item) => {
+      if (!item || typeof item !== 'object') return '';
+      if (item.type === 'text') return item.text || '';
+      if (item.type === 'link') {
+        const linkContent = extractInlineText((item as { content?: BlockNoteInline[] }).content);
+        return linkContent || (item.text as string) || '';
+      }
+      if (item.type === 'mention') {
+        const label = (item as { label?: string; name?: string; username?: string }).label
+          || (item as { name?: string }).name
+          || (item as { username?: string }).username
+          || (item as { id?: string }).id
+          || 'mention';
+        return `@${label}`;
+      }
+      return '';
+    })
+    .join('');
+};
+
+const extractTextFromUnknown = (value: unknown): string => {
+  if (!value) return '';
+  if (typeof value === 'string') return value;
+  if (Array.isArray(value)) {
+    return value.map(extractTextFromUnknown).filter(Boolean).join(' ');
+  }
+  if (typeof value === 'object') {
+    const record = value as Record<string, unknown>;
+    if (typeof record.text === 'string') return record.text;
+    if (record.content) return extractTextFromUnknown(record.content);
+    return Object.values(record).map(extractTextFromUnknown).filter(Boolean).join(' ');
+  }
+  return '';
+};
+
 const convertInlineContent = (content: BlockNoteBlock['content']): ProseMirrorNode[] => {
   if (!content) return [];
   if (typeof content === 'string') {
@@ -198,6 +238,49 @@ const convertBlockNoteBlock = (block: BlockNoteBlock): ProseMirrorNode | null =>
         attrs: { order },
         content: [listItem],
       };
+    }
+    case 'checkListItem': {
+      const isChecked = Boolean(block.props?.checked);
+      const prefix = isChecked ? '[x] ' : '[ ] ';
+      const content = convertInlineContent(block.content);
+      const paragraphContent: ProseMirrorNode[] = [
+        { type: 'text', text: prefix },
+        ...content,
+      ];
+      return {
+        type: 'bullet_list',
+        content: [
+          {
+            type: 'list_item',
+            content: [
+              paragraphContent.length > 0
+                ? { type: 'paragraph', content: paragraphContent }
+                : { type: 'paragraph' },
+            ],
+          },
+        ],
+      };
+    }
+    case 'codeBlock': {
+      const codeText = extractInlineText(block.content);
+      return {
+        type: 'code_block',
+        content: codeText ? [{ type: 'text', text: codeText }] : [],
+      };
+    }
+    case 'blockquote': {
+      const content = convertInlineContent(block.content);
+      return {
+        type: 'blockquote',
+        content: [
+          content.length > 0 ? { type: 'paragraph', content } : { type: 'paragraph' },
+        ],
+      };
+    }
+    case 'table': {
+      const tableText = extractTextFromUnknown(block.content);
+      const content = tableText ? [{ type: 'text', text: tableText }] : [];
+      return content.length > 0 ? { type: 'paragraph', content } : { type: 'paragraph' };
     }
     default:
       return null;
