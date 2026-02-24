@@ -87,7 +87,7 @@
     "id": "F15",
     "description": "Presence bar and collaboration cursors work in drawer context (existing CollaborativeEditor features)",
     "prdRefs": ["F11", "F12"],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F16",
