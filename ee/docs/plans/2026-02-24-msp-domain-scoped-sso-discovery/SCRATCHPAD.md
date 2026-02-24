@@ -116,3 +116,4 @@ Working notes for shifting MSP SSO provider enablement from user-based pre-auth 
 - (2026-02-24) Completed T012: Providers settings page renders MSP SSO login-domain management section.
 - (2026-02-24) Completed T013: Providers UI add-domain flow invokes save action and refreshes rendered domain list.
 - (2026-02-24) Completed T014: Providers UI remove-domain flow invokes save action and removes domain row from view.
+- (2026-02-24) Completed T015: Providers UI shows malformed-domain validation errors without exposing backend internals.

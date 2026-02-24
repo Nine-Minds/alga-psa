@@ -119,7 +119,7 @@
   {
     "id": "T015",
     "description": "Providers UI shows malformed-domain validation errors without exposing backend internals.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F009"
     ]
