@@ -207,4 +207,29 @@ describe('detectBlockContentFormat', () => {
       ],
     });
   });
+
+  it('converts mention inline content to plain text with @ prefix', () => {
+    const blocknote = [
+      {
+        type: 'paragraph',
+        props: {},
+        content: [
+          {
+            type: 'mention',
+            label: 'Alice',
+          },
+        ],
+      },
+    ];
+
+    expect(blockNoteJsonToProsemirrorJson(blocknote)).toEqual({
+      type: 'doc',
+      content: [
+        {
+          type: 'paragraph',
+          content: [{ type: 'text', text: '@Alice' }],
+        },
+      ],
+    });
+  });
 });

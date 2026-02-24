@@ -69,7 +69,7 @@
     "id": "T12",
     "description": "Convert BlockNote mention inline content to ProseMirror (preserve or drop gracefully)",
     "featureIds": ["F07"],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T13",

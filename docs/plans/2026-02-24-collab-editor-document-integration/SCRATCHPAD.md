@@ -90,3 +90,5 @@
 - Ran `npx vitest run ../packages/documents/src/lib/blockContentFormat.test.ts`.
 - Added link inline conversion test in `packages/documents/src/lib/blockContentFormat.test.ts` and marked T11 complete.
 - Ran `npx vitest run ../packages/documents/src/lib/blockContentFormat.test.ts`.
+- Added mention inline conversion test in `packages/documents/src/lib/blockContentFormat.test.ts` and marked T12 complete.
+- Ran `npx vitest run ../packages/documents/src/lib/blockContentFormat.test.ts` (tests passed but the command hit the 10s timeout after printing results).
