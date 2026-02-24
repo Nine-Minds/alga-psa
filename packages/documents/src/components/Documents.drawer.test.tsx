@@ -444,4 +444,35 @@ describe('Documents drawer', () => {
       expect(screen.getByTestId('collab-editor')).toBeInTheDocument();
     });
   });
+
+  it('renders read-only viewer when document is not editable', async () => {
+    render(
+      <Documents
+        id="documents"
+        documents={[
+          {
+            document_id: 'doc-2',
+            document_name: 'Policy',
+            type_id: null,
+            user_id: 'user-1',
+            order_number: 0,
+            created_by: 'user-1',
+            type_name: 'application/pdf',
+            tenant: 'tenant-1',
+          },
+        ]}
+        gridColumns={3}
+        userId="user-1"
+        entityId="entity-1"
+        entityType="asset"
+        isLoading={false}
+      />
+    );
+
+    fireEvent.click(screen.getByTestId('doc-card'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('viewer')).toBeInTheDocument();
+    });
+  });
 });

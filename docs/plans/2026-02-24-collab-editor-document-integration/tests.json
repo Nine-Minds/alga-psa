@@ -165,7 +165,7 @@
     "id": "T28",
     "description": "Read-only view mode renders document content without editing",
     "featureIds": ["F17"],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T29",
