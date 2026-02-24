@@ -8,7 +8,7 @@
   {
     "id": "F002",
     "description": "Add indexes to support fast domain lookup and tenant-scoped domain management operations.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Data / API / Integrations"]
   },
   {

@@ -23,6 +23,7 @@ Working notes for shifting MSP SSO provider enablement from user-based pre-auth 
 - (2026-02-24) Domain-level discovery can still reveal tenant/provider posture for a domain; this is acceptable for this phase, while user-existence signals remain prohibited.
 - (2026-02-24) Added `server/migrations/20260224103000_create_msp_sso_tenant_login_domains.cjs` with table `msp_sso_tenant_login_domains` (`tenant`, `id`, `domain`, `is_active`, audit actor/timestamps), plus backfill from `tenants.email` only for globally-unambiguous domains.
 - (2026-02-24) Cross-tenant duplicate domains are intentionally allowed in persistence; uniqueness is enforced only per-tenant via `(tenant, lower(domain))` so runtime discovery can fail-closed on ambiguity.
+- (2026-02-24) Added domain-management indexes: `msp_sso_tenant_login_domains_domain_active_idx`, `msp_sso_tenant_login_domains_tenant_active_idx`, and unique tenant-local `msp_sso_tenant_login_domains_tenant_domain_uniq`.
 
 ## Commands / Runbooks
 
