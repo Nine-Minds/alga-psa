@@ -98,7 +98,7 @@
   {
     "id": "F017",
     "description": "Compute app-fallback provider availability when tenant is unresolved.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Functional Requirements #5", "Acceptance Criteria #3"]
   },
   {
