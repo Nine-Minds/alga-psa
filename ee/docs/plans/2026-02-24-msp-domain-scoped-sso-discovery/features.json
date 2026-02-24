@@ -62,7 +62,7 @@
   {
     "id": "F011",
     "description": "Parse and validate input email in discovery endpoint and derive normalized domain.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Functional Requirements #4", "Endpoint"]
   },
   {
