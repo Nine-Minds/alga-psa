@@ -298,7 +298,7 @@
   {
     "id": "T035",
     "description": "MSP login keeps unsupported provider buttons disabled based on discovery response.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F023"
     ]
