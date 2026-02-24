@@ -135,7 +135,7 @@
     "id": "T23",
     "description": "Fallback mode shows 'Offline — manual save mode' status indicator",
     "featureIds": ["F14"],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T24",

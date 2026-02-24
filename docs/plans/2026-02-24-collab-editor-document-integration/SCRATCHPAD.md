@@ -112,3 +112,4 @@
 - Fixed fallback mode timing loop by separating `isEditingDocument` from `isCollaborativeEdit` so the timeout can set fallback without immediately clearing it. Files: `packages/documents/src/components/Documents.tsx`.
 - Test T21 now passes by waiting for the 3s timeout to switch to the fallback editor. Test: `packages/documents/src/components/Documents.drawer.test.tsx`.
 - Added fallback mode save test (T22) asserting `updateBlockContent` runs when manual save is enabled. Enhanced `DocumentEditor` mock to drive unsaved state and content for fallback save. File: `packages/documents/src/components/Documents.drawer.test.tsx`.
+- Added T23 test to confirm offline indicator appears in fallback mode (`Offline — manual save mode`). File: `packages/documents/src/components/Documents.drawer.test.tsx`.

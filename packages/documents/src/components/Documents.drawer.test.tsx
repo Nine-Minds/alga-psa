@@ -378,4 +378,42 @@ describe('Documents drawer', () => {
 
     vi.useRealTimers();
   });
+
+  it('shows offline status indicator in fallback mode', async () => {
+    mockCollabStatus = null;
+    vi.useFakeTimers();
+
+    render(
+      <Documents
+        id="documents"
+        documents={[
+          {
+            document_id: 'doc-1',
+            document_name: 'Runbook',
+            type_id: null,
+            user_id: 'user-1',
+            order_number: 0,
+            created_by: 'user-1',
+            type_name: 'text/plain',
+            tenant: 'tenant-1',
+          },
+        ]}
+        gridColumns={3}
+        userId="user-1"
+        entityId="entity-1"
+        entityType="asset"
+        isLoading={false}
+      />
+    );
+
+    fireEvent.click(screen.getByTestId('doc-card'));
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3000);
+    });
+
+    expect(screen.getByText('Offline — manual save mode')).toBeInTheDocument();
+
+    vi.useRealTimers();
+  });
 });
