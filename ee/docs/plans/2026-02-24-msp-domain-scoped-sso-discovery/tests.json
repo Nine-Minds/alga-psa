@@ -468,7 +468,7 @@
   {
     "id": "T055",
     "description": "Callback URL passthrough remains intact for MSP login redirects when SSO discovery is active.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F035",
       "F030"
