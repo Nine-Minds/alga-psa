@@ -45,6 +45,7 @@ import {
   createBlockDocument
 } from '../actions/documentBlockContentActions';
 import { syncCollabSnapshot } from '../actions/collaborativeEditingActions';
+import { DocumentEditor } from './DocumentEditor';
 
 const DEFAULT_BLOCKS: PartialBlock[] = [{
   type: "paragraph",
@@ -65,6 +66,7 @@ const DOCUMENT_GRID_PAGE_SIZE_SETTING = 'documents_grid_page_size';
 const DOCUMENT_LIST_PAGE_SIZE_SETTING = 'documents_list_page_size';
 
 type DocumentsNamespace = 'common' | 'features/documents';
+type CollabConnectionStatus = 'connecting' | 'connected' | 'disconnected';
 
 interface DocumentsProps {
   id?: string;
@@ -119,6 +121,9 @@ const Documents = ({
   const [currentUserName, setCurrentUserName] = useState('');
   const [currentTenantId, setCurrentTenantId] = useState('');
   const [currentUserId, setCurrentUserId] = useState(userId);
+  const [collabConnectionStatus, setCollabConnectionStatus] = useState<CollabConnectionStatus>('connecting');
+  const [isFallbackMode, setIsFallbackMode] = useState(false);
+  const collabStatusRef = useRef<CollabConnectionStatus>('connecting');
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isCreatingNew, setIsCreatingNew] = useState(false);
   const [newDocumentName, setNewDocumentName] = useState('');
@@ -203,6 +208,31 @@ const Documents = ({
   });
   const [selectedDocumentsForMove, setSelectedDocumentsForMove] = useState<Set<string>>(new Set());
   const isCollaborativeEdit = Boolean(!isCreatingNew && selectedDocument && isEditModeInDrawer);
+
+  useEffect(() => {
+    collabStatusRef.current = collabConnectionStatus;
+  }, [collabConnectionStatus]);
+
+  useEffect(() => {
+    if (!isCollaborativeEdit || !selectedDocument) {
+      setIsFallbackMode(false);
+      return;
+    }
+
+    setIsFallbackMode(false);
+    setCollabConnectionStatus('connecting');
+    collabStatusRef.current = 'connecting';
+
+    const timeout = setTimeout(() => {
+      if (collabStatusRef.current !== 'connected') {
+        setIsFallbackMode(true);
+      }
+    }, 3000);
+
+    return () => {
+      clearTimeout(timeout);
+    };
+  }, [isCollaborativeEdit, selectedDocument?.document_id]);
 
   useEffect(() => {
     let mounted = true;
@@ -1330,13 +1360,21 @@ const Documents = ({
                       searchMentions={searchUsersForMentions}
                     />
                   ) : selectedDocument && isEditModeInDrawer ? (
-                    <CollaborativeEditor
-                      documentId={selectedDocument.document_id}
-                      tenantId={selectedDocument.tenant ?? currentTenantId}
-                      userId={currentUserId || userId}
-                      userName={currentUserName || userId}
-                      searchMentions={searchUsersForMentions}
-                    />
+                    isFallbackMode ? (
+                      <DocumentEditor
+                        documentId={selectedDocument.document_id}
+                        userId={currentUserId || userId}
+                      />
+                    ) : (
+                      <CollaborativeEditor
+                        documentId={selectedDocument.document_id}
+                        tenantId={selectedDocument.tenant ?? currentTenantId}
+                        userId={currentUserId || userId}
+                        userName={currentUserName || userId}
+                        searchMentions={searchUsersForMentions}
+                        onConnectionStatusChange={setCollabConnectionStatus}
+                      />
+                    )
                   ) : selectedDocument ? (
                     <RichTextViewer
                       id={`${id}-viewer`}

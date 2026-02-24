@@ -69,7 +69,7 @@
     "id": "F12",
     "description": "Graceful fallback: detect Hocuspocus unreachable (3s timeout) and switch to single-user Tiptap editor with manual save",
     "prdRefs": ["F09", "F10"],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F13",

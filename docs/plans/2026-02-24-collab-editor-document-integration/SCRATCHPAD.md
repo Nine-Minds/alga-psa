@@ -63,3 +63,4 @@
 - Collaborative editor now initializes Y.js state from existing block_data with BlockNote conversion when needed.
 - Save button in drawer now triggers collaborative snapshot sync when using the collab editor.
 - Added best-effort snapshot on drawer close for collaborative sessions.
+- Added 3s Hocuspocus timeout handling to switch drawer editor into fallback mode.
