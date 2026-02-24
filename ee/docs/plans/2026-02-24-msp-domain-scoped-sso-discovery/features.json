@@ -86,7 +86,7 @@
   {
     "id": "F015",
     "description": "Compute tenant-scoped Google readiness from tenant provider secrets when tenant is resolved.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Functional Requirements #5"]
   },
   {
