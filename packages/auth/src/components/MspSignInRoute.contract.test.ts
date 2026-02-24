@@ -11,7 +11,7 @@ function read(relPath: string): string {
 }
 
 describe('MSP sign-in route and callback contracts', () => {
-  it('preserves the /auth/msp/signin route contract', () => {
+  it('T054: preserves the /auth/msp/signin route contract', () => {
     const pageSource = read('server/src/app/auth/msp/signin/page.tsx');
     const clientPortalSource = read('packages/auth/src/components/ClientPortalSignIn.tsx');
 
@@ -19,7 +19,7 @@ describe('MSP sign-in route and callback contracts', () => {
     expect(clientPortalSource).toContain('href="/auth/msp/signin"');
   });
 
-  it('keeps callbackUrl passthrough/default behavior for MSP sign-in', () => {
+  it('T055: keeps callbackUrl passthrough/default behavior for MSP sign-in', () => {
     const pageSource = read('server/src/app/auth/msp/signin/page.tsx');
     const mspSource = read('packages/auth/src/components/MspSignIn.tsx');
 

@@ -35,4 +35,17 @@ describe('msp sso tenant login domains migration', () => {
     expect(migration).toContain('msp_sso_tenant_login_domains_tenant_active_idx');
     expect(migration).toContain('ON msp_sso_tenant_login_domains (tenant, is_active, domain);');
   });
+
+  it('T056: backfill migration seeds domains from tenant primary email only when unambiguous', () => {
+    expect(migration).toContain('WITH candidate_domains AS (');
+    expect(migration).toContain('lower(split_part(trim(t.email), \'@\', 2)) AS domain');
+    expect(migration).toContain('unambiguous_domains AS (');
+    expect(migration).toContain('HAVING count(*) = 1');
+    expect(migration).toContain('INSERT INTO msp_sso_tenant_login_domains');
+  });
+
+  it('T057: backfill migration skips conflicting candidates deterministically via unambiguous filter + conflict no-op', () => {
+    expect(migration).toContain('INNER JOIN unambiguous_domains ud ON ud.domain = nd.domain');
+    expect(migration).toContain('ON CONFLICT DO NOTHING;');
+  });
 });

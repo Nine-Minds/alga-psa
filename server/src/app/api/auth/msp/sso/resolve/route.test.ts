@@ -181,6 +181,25 @@ describe('POST /api/auth/msp/sso/resolve', () => {
     });
   });
 
+  it('T042: unknown-user and known-user resolver misses are externally indistinguishable', async () => {
+    resolveSourceMock.mockResolvedValue({ resolved: false });
+
+    const unknownLikeResponse = await POST(
+      buildRequest({ provider: 'google', email: 'ghost@example.com', callbackUrl: '/msp' }) as any
+    );
+    const knownLikeResponse = await POST(
+      buildRequest({ provider: 'google', email: 'known@example.com', callbackUrl: '/msp' }) as any
+    );
+
+    const expected = {
+      ok: false,
+      message: "We couldn't start SSO sign-in. Please verify provider setup and try again.",
+    };
+
+    await expect(unknownLikeResponse.json()).resolves.toEqual(expected);
+    await expect(knownLikeResponse.json()).resolves.toEqual(expected);
+  });
+
   it('T043: resolver rate-limit failures preserve the generic response shape', async () => {
     consumeLimiterMock.mockRejectedValueOnce(new Error('rate limited'));
 

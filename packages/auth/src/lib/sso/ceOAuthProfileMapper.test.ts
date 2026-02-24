@@ -109,4 +109,16 @@ describe('CE OAuth profile mapper', () => {
       } as any)
     ).rejects.toThrow('OAuth user is not an internal MSP account');
   });
+
+  it('T045: unknown OAuth users still fail at callback mapping stage with existing generic authorization failure', async () => {
+    findUserByEmailAndTypeMock.mockResolvedValueOnce(null);
+
+    await expect(
+      mapCeOAuthProfileToExtendedUser({
+        provider: 'google',
+        email: 'ghost@example.com',
+        profile: {},
+      } as any)
+    ).rejects.toThrow('OAuth user is not authorized for MSP sign-in');
+  });
 });

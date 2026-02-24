@@ -20,7 +20,7 @@ describe('MSP SSO docs and comments contracts', () => {
     expect(routeSource).toContain('Anti-enumeration rule: lookup outcomes only affect internal source selection, never external messaging.');
   });
 
-  it('T061: .env.example documents CE MSP fallback usage for GOOGLE_OAUTH_* and MICROSOFT_OAUTH_*', () => {
+  it('T053: .env.example documents unresolved-domain MSP fallback usage for GOOGLE_OAUTH_* and MICROSOFT_OAUTH_*', () => {
     const envExample = read(path.resolve(repoRoot, '.env.example'));
 
     expect(envExample).toContain('GOOGLE_OAUTH_CLIENT_ID');
@@ -30,10 +30,11 @@ describe('MSP SSO docs and comments contracts', () => {
     expect(envExample).toContain('fallback for MSP SSO');
   });
 
-  it('T062: integration docs describe Providers-first setup order for Google/Microsoft', () => {
+  it('T052: integration docs describe Providers-first setup order including login-domain setup', () => {
     const doc = read(path.resolve(repoRoot, 'docs/integrations/provider-setup-order.md'));
 
     expect(doc).toContain('Configure provider credentials first');
+    expect(doc).toContain('Configure MSP SSO login domains');
     expect(doc).toContain('Settings -> Integrations -> Providers');
     expect(doc).toContain('Google');
     expect(doc).toContain('Microsoft');

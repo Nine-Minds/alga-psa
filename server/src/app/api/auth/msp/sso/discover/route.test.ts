@@ -113,7 +113,7 @@ describe('POST /api/auth/msp/sso/discover', () => {
     });
   });
 
-  it('sets signed discovery cookie on valid requests and logs safe metadata', async () => {
+  it('T027/T030: sets signed discovery cookie on valid requests and logs safe metadata', async () => {
     discoverMock.mockResolvedValueOnce({
       source: 'tenant',
       tenantId: 'tenant-1',
@@ -162,5 +162,22 @@ describe('POST /api/auth/msp/sso/discover', () => {
       providers: [],
     });
     expect(warnSpy).toHaveBeenCalled();
+  });
+
+  it('T030: rotates cookie value across successful discovery requests', async () => {
+    createCookieMock
+      .mockReturnValueOnce({ value: 'signed-discovery-cookie-one' })
+      .mockReturnValueOnce({ value: 'signed-discovery-cookie-two' });
+
+    await POST(buildRequest({ email: 'user@example.com' }) as any);
+    await POST(buildRequest({ email: 'user@example.com' }) as any);
+
+    const cookieValues = setCookieMock.mock.calls
+      .map((call) => call[0])
+      .filter((cookie) => cookie?.name === 'msp_sso_discovery' && cookie.value)
+      .map((cookie) => cookie.value);
+
+    expect(cookieValues[cookieValues.length - 2]).toBe('signed-discovery-cookie-one');
+    expect(cookieValues[cookieValues.length - 1]).toBe('signed-discovery-cookie-two');
   });
 });

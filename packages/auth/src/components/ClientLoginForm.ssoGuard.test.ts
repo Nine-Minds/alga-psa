@@ -10,7 +10,7 @@ function read(fileName: string): string {
 }
 
 describe('Client portal login SSO guard', () => {
-  it('T029: client portal login remains unchanged with SSO section disabled/commented', () => {
+  it('T047: client portal login remains unchanged with SSO section disabled/commented', () => {
     const source = read('ClientLoginForm.tsx');
 
     expect(source).toContain('SSO not supported for client portal');
@@ -18,7 +18,7 @@ describe('Client portal login SSO guard', () => {
     expect(source).toContain('/* SSO not supported for client portal');
   });
 
-  it('T072: client portal flow keeps SSO affordances disabled in end-to-end contract', () => {
+  it('T047: client portal flow keeps SSO affordances disabled in end-to-end contract', () => {
     const source = read('ClientLoginForm.tsx');
 
     expect(source).toContain('SSO not supported for client portal');

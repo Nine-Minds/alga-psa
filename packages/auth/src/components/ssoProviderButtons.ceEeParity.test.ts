@@ -11,7 +11,7 @@ function read(relPath: string): string {
 }
 
 describe('MSP SSO CE/EE parity contract', () => {
-  it('uses discovery + resolver endpoints in both CE and EE provider button implementations', () => {
+  it('T048/T058: uses discovery + resolver endpoints in both CE and EE provider button implementations', () => {
     const ceSource = read('packages/auth/src/components/SsoProviderButtons.tsx');
     const eeSource = read('ee/server/src/components/auth/SsoProviderButtons.tsx');
 

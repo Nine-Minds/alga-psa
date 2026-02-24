@@ -10,7 +10,7 @@ function read(relativeFile: string): string {
 }
 
 describe('MSP credentials flow contract', () => {
-  it('T071: credentials login path remains unaffected by resolver cookie behavior', () => {
+  it('T046: credentials login path remains unaffected by resolver cookie behavior', () => {
     const formSource = read('MspLoginForm.tsx');
 
     expect(formSource).toContain("signIn('credentials'");
