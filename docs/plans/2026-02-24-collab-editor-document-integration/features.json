@@ -3,7 +3,7 @@
     "id": "F01",
     "description": "Documents.tsx drawer renders CollaborativeEditor instead of TextEditor when editing an in-app document",
     "prdRefs": ["F01"],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F02",

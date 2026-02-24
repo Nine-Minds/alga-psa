@@ -49,3 +49,7 @@
 
 - How many existing documents are in BlockNote format vs ProseMirror format?
 - Should we convert existing documents eagerly (migration) or lazily (on first open)?
+
+## Progress
+
+- Replaced drawer edit mode for existing in-app documents to render `CollaborativeEditor` (kept BlockNote editor only for new-document flow for now). Placeholder tenant/user display info used until F02 wiring.

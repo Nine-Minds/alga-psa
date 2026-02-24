@@ -14,6 +14,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import Drawer from '@alga-psa/ui/components/Drawer';
 import { Input } from '@alga-psa/ui/components/Input';
 import { RichTextViewer, TextEditor } from '@alga-psa/ui/editor';
+import { CollaborativeEditor } from './CollaborativeEditor';
 import FolderTreeView from './FolderTreeView';
 import FolderManager from './FolderManager';
 import DocumentListView from './DocumentListView';
@@ -1252,13 +1253,21 @@ const Documents = ({
                     <div className="flex justify-center items-center h-full">
                       <Spinner size="sm" />
                     </div>
-                  ) : isCreatingNew || (selectedDocument && isEditModeInDrawer) ? (
+                  ) : isCreatingNew ? (
                     <TextEditor
-                      key={isCreatingNew ? "editor-new" : `editor-${selectedDocument?.document_id}`}
+                      key="editor-new"
                       id={`${id}-editor`}
                       initialContent={currentContent}
                       onContentChange={handleContentChange}
                       editorRef={editorRef}
+                      searchMentions={searchUsersForMentions}
+                    />
+                  ) : selectedDocument && isEditModeInDrawer ? (
+                    <CollaborativeEditor
+                      documentId={selectedDocument.document_id}
+                      tenantId={selectedDocument.tenant ?? ''}
+                      userId={userId}
+                      userName={selectedDocument.created_by_full_name ?? userId}
                       searchMentions={searchUsersForMentions}
                     />
                   ) : selectedDocument ? (
