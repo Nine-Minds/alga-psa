@@ -67,3 +67,4 @@
 - Fallback editor now uses `DocumentEditor` with drawer-level save via `updateBlockContent` and shared toolbar/styling.
 - Added fallback status banner: "Offline — manual save mode".
 - Presence bar and collaboration cursors are available via `CollaborativeEditor` in the drawer context.
+- New document creation now pre-creates document + block_content and opens the collaborative editor in the new room.

@@ -93,7 +93,7 @@
     "id": "F16",
     "description": "New document creation in drawer: create document record + block_content, then open CollaborativeEditor in new room",
     "prdRefs": ["F13"],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F17",

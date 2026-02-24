@@ -511,33 +511,54 @@ const Documents = ({
     // In folder mode: auto-save to current folder if browsing one
     if (inFolderMode && currentFolder) {
       setDocumentFolderPath(currentFolder);
-      // Open drawer directly without folder selector
-      setIsCreatingNew(true);
-      setNewDocumentName('');
-      setCurrentContent(DEFAULT_BLOCKS);
-      setSelectedDocument(null);
-      setIsLoadingContent(false);
-      setIsEditModeInDrawer(true);
-      setHasContentChanged(false);
-      setIsDrawerOpen(true);
+      await handleDocumentFolderSelected(currentFolder);
     } else {
       // Entity mode or root folder: show folder selector
       setShowDocumentFolderModal(true);
     }
   };
 
-  const handleDocumentFolderSelected = (folderPath: string | null) => {
+  const handleDocumentFolderSelected = async (folderPath: string | null) => {
     setDocumentFolderPath(folderPath);
     setShowDocumentFolderModal(false);
-    // Now open the drawer to create the document
-    setIsCreatingNew(true);
-    setNewDocumentName('');
-    setCurrentContent(DEFAULT_BLOCKS);
-    setSelectedDocument(null);
-    setIsLoadingContent(false);
-    setIsEditModeInDrawer(true);
-    setHasContentChanged(false);
-    setIsDrawerOpen(true);
+
+    const initialName = newDocumentName.trim() || tDoc('untitledDocument', 'Untitled Document');
+    const emptyDoc = { type: 'doc', content: [{ type: 'paragraph' }] };
+
+    try {
+      setIsLoadingContent(true);
+      const result = await createBlockDocument({
+        document_name: initialName,
+        user_id: currentUserId || userId,
+        block_data: JSON.stringify(emptyDoc),
+        entityId,
+        entityType,
+        folder_path: folderPath
+      });
+
+      setIsCreatingNew(true);
+      setNewDocumentName(initialName);
+      setDocumentName(initialName);
+      setSelectedDocument({
+        document_id: result.document_id,
+        document_name: initialName,
+        type_id: null,
+        user_id: currentUserId || userId,
+        order_number: 0,
+        created_by: currentUserId || userId,
+        tenant: currentTenantId,
+      } as IDocument);
+      setIsEditModeInDrawer(true);
+      setHasContentChanged(false);
+      setIsDrawerOpen(true);
+    } catch (error) {
+      console.error('Error creating document:', error);
+      setDrawerError(
+        tDoc('messages.createFailed', 'Failed to create document')
+      );
+    } finally {
+      setIsLoadingContent(false);
+    }
   };
 
   const handleContentChange = (blocks: PartialBlock[]) => {
@@ -1375,6 +1396,7 @@ const Documents = ({
                     if (isCreatingNew || isEditModeInDrawer) {
                       if (isCreatingNew) {
                         setNewDocumentName(e.target.value);
+                        setDocumentName(e.target.value);
                         setDrawerError(null);
                       } else {
                         setDocumentName(e.target.value);
@@ -1397,7 +1419,7 @@ const Documents = ({
                     <div className="flex justify-center items-center h-full">
                       <Spinner size="sm" />
                     </div>
-                  ) : isCreatingNew ? (
+                  ) : isCreatingNew && !selectedDocument ? (
                     <TextEditor
                       key="editor-new"
                       id={`${id}-editor`}
@@ -1406,7 +1428,7 @@ const Documents = ({
                       editorRef={editorRef}
                       searchMentions={searchUsersForMentions}
                     />
-                  ) : selectedDocument && isEditModeInDrawer ? (
+                  ) : selectedDocument && (isEditModeInDrawer || isCreatingNew) ? (
                     isFallbackMode ? (
                       <DocumentEditor
                         documentId={selectedDocument.document_id}
@@ -1452,7 +1474,11 @@ const Documents = ({
                     id={`${id}-save-btn`}
                     onClick={
                       isCreatingNew
-                        ? handleSaveNewDocument
+                        ? selectedDocument
+                          ? isFallbackMode
+                            ? handleSaveFallback
+                            : handleSaveCollabSnapshot
+                          : handleSaveNewDocument
                         : isFallbackMode
                           ? handleSaveFallback
                           : isCollaborativeEdit
