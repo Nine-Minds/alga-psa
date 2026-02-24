@@ -282,7 +282,7 @@
   {
     "id": "T033",
     "description": "MSP login enables only Microsoft button when discovery returns `azure-ad` only.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F023"
     ]
