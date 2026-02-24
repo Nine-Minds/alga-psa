@@ -33,6 +33,7 @@ export function DocumentEditor({ documentId, userId, placeholder }: DocumentEdit
 
   // Initialize the editor
   const editor = useEditor({
+    immediatelyRender: false,
     extensions: [
       StarterKit,
       Link.configure({

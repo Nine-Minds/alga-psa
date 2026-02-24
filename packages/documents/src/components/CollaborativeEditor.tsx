@@ -125,9 +125,10 @@ export function CollaborativeEditor({
   const hasInitializedContent = useRef(false);
 
   const editor = useEditor({
+    immediatelyRender: false,
     extensions: [
       StarterKit.configure({
-        history: false,
+        undoRedo: false,
       }),
       Link.configure({
         openOnClick: false,
@@ -149,6 +150,19 @@ export function CollaborativeEditor({
           id: userId,
           name: userName,
           color: userColor,
+        },
+        render: (user) => {
+          const cursor = document.createElement('span');
+          cursor.classList.add('collaboration-caret');
+          cursor.style.borderColor = user.color;
+
+          const label = document.createElement('span');
+          label.classList.add('collaboration-caret__label');
+          label.style.backgroundColor = user.color;
+          label.textContent = user.name;
+          cursor.appendChild(label);
+
+          return cursor;
         },
       }),
     ],

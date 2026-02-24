@@ -92,19 +92,25 @@
   text-decoration-color: rgb(var(--badge-info-text));
 }
 
-.editorContainer :global(.collaboration-caret__label),
-.editorContainer :global(.collaboration-cursor__label) {
-  padding: 2px 6px;
+.editorContainer :global(.collaboration-caret) {
+  position: relative;
+  border-left: 2px solid;
+  margin-left: -1px;
+  margin-right: -1px;
+}
+
+.editorContainer :global(.collaboration-caret__label) {
+  position: absolute;
+  bottom: 100%;
+  left: -1px;
+  white-space: nowrap;
+  padding: 1px 6px;
   border-radius: 6px;
   font-size: 11px;
   font-weight: 600;
-  color: rgb(var(--color-text-0));
-  box-shadow: 0 1px 2px rgba(var(--color-text-900), 0.2);
-}
-
-.editorContainer :global(.collaboration-caret__caret),
-.editorContainer :global(.collaboration-cursor__caret) {
-  border-left-width: 2px;
-  border-left-style: solid;
-  margin-left: -1px;
+  line-height: 1.2;
+  color: #fff;
+  pointer-events: none;
+  user-select: none;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
