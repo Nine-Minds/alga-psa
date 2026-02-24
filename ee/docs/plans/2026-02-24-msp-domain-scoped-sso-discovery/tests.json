@@ -10,7 +10,7 @@
   {
     "id": "T002",
     "description": "Migration rollback removes tenant MSP SSO login-domain persistence objects cleanly.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F001"
     ]
