@@ -80,7 +80,7 @@
   {
     "id": "F014",
     "description": "Treat ambiguous domain mappings as unresolved (fail-closed for tenant resolution).",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Data / API / Integrations", "Security / Permissions #3"]
   },
   {
