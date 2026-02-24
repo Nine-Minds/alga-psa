@@ -63,7 +63,7 @@
     "id": "F11",
     "description": "On drawer close, trigger a best-effort snapshot to persist content",
     "prdRefs": ["F08"],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F12",

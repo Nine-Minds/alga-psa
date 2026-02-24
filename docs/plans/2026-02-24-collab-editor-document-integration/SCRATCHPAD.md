@@ -62,3 +62,4 @@
 - Added conversion support for checklists, code blocks, blockquotes, and table fallbacks.
 - Collaborative editor now initializes Y.js state from existing block_data with BlockNote conversion when needed.
 - Save button in drawer now triggers collaborative snapshot sync when using the collab editor.
+- Added best-effort snapshot on drawer close for collaborative sessions.

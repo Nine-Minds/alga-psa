@@ -529,6 +529,16 @@ const Documents = ({
   // Execute the actual drawer close (after confirmation or when no unsaved changes)
   // Resets all editor state back to saved values, matching the pattern in ContractDetail
   const executeDrawerClose = useCallback(() => {
+    const snapshotDocumentId = isCollaborativeEdit && selectedDocument
+      ? selectedDocument.document_id
+      : null;
+
+    if (snapshotDocumentId) {
+      void syncCollabSnapshot(snapshotDocumentId).catch((snapshotError) => {
+        console.error('[Documents] Failed to sync snapshot on close:', snapshotError);
+      });
+    }
+
     setShowUnsavedChangesDialog(false);
     setIsDrawerOpen(false);
     setDrawerError(null);
@@ -543,7 +553,7 @@ const Documents = ({
       setIsEditModeInDrawer(false);
     }
     setSelectedDocument(null);
-  }, [isCreatingNew, selectedDocument]);
+  }, [isCollaborativeEdit, isCreatingNew, selectedDocument]);
 
   // Handle drawer close with unsaved changes check
   const handleDrawerClose = useCallback(() => {
