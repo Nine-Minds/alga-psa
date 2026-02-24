@@ -136,7 +136,7 @@
   {
     "id": "T017",
     "description": "Discovery endpoint returns `{ ok: true, providers: [] }` for invalid email input.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F010",
       "F011",

@@ -118,3 +118,4 @@ Working notes for shifting MSP SSO provider enablement from user-based pre-auth 
 - (2026-02-24) Completed T014: Providers UI remove-domain flow invokes save action and removes domain row from view.
 - (2026-02-24) Completed T015: Providers UI shows malformed-domain validation errors without exposing backend internals.
 - (2026-02-24) Completed T016: Providers UI shows conflict/ambiguity error state with neutral language.
+- (2026-02-24) Completed T017: Discovery endpoint returns `{ ok: true, providers: [] }` for invalid email input.
