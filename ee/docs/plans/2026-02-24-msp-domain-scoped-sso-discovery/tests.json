@@ -358,7 +358,7 @@
   {
     "id": "T042",
     "description": "Unknown-user and known-user paths remain externally indistinguishable in resolver responses.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F028",
       "F029"

@@ -143,3 +143,4 @@ Working notes for shifting MSP SSO provider enablement from user-based pre-auth 
 - (2026-02-24) Completed T039: Resolver consumes valid discovery cookie and uses tenant/source metadata for provider start.
 - (2026-02-24) Completed T040: Resolver rejects provider attempts not included in discovered allowed provider set using generic failure response.
 - (2026-02-24) Completed T041: Resolver falls back to app-level behavior when discovery cookie is missing, invalid, or expired.
+- (2026-02-24) Completed T042: Unknown-user and known-user paths remain externally indistinguishable in resolver responses.
