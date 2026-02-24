@@ -9,7 +9,7 @@
     "id": "F02",
     "description": "CollaborativeEditor receives documentId, tenantId, userId, userName from drawer and connects to Hocuspocus room",
     "prdRefs": ["F02"],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F03",

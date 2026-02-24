@@ -29,7 +29,7 @@ import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { useRegisterUnsavedChanges } from '@alga-psa/ui/context';
 import { useUserPreference } from '@alga-psa/users/hooks';
-import { searchUsersForMentions } from '@alga-psa/users/actions';
+import { getCurrentUser, searchUsersForMentions } from '@alga-psa/users/actions';
 import {
   getDocumentsByEntity,
   getDocumentsByFolder,
@@ -115,6 +115,9 @@ const Documents = ({
   const [showSelector, setShowSelector] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedDocument, setSelectedDocument] = useState<IDocument | null>(null);
+  const [currentUserName, setCurrentUserName] = useState('');
+  const [currentTenantId, setCurrentTenantId] = useState('');
+  const [currentUserId, setCurrentUserId] = useState(userId);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isCreatingNew, setIsCreatingNew] = useState(false);
   const [newDocumentName, setNewDocumentName] = useState('');
@@ -198,6 +201,30 @@ const Documents = ({
     return null;
   });
   const [selectedDocumentsForMove, setSelectedDocumentsForMove] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    let mounted = true;
+
+    const loadCurrentUser = async () => {
+      try {
+        const user = await getCurrentUser();
+        if (!mounted || !user) return;
+        const nameParts = [user.first_name, user.last_name].filter(Boolean);
+        const displayName = nameParts.join(' ').trim() || user.email || 'User';
+        setCurrentUserName(displayName);
+        setCurrentTenantId(user.tenant ?? '');
+        setCurrentUserId(user.user_id);
+      } catch (loadError) {
+        console.error('[Documents] Failed to load current user for collab editor:', loadError);
+      }
+    };
+
+    void loadCurrentUser();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   // Sync currentFolder with URL changes (for breadcrumb navigation)
   useEffect(() => {
@@ -1265,9 +1292,9 @@ const Documents = ({
                   ) : selectedDocument && isEditModeInDrawer ? (
                     <CollaborativeEditor
                       documentId={selectedDocument.document_id}
-                      tenantId={selectedDocument.tenant ?? ''}
-                      userId={userId}
-                      userName={selectedDocument.created_by_full_name ?? userId}
+                      tenantId={selectedDocument.tenant ?? currentTenantId}
+                      userId={currentUserId || userId}
+                      userName={currentUserName || userId}
                       searchMentions={searchUsersForMentions}
                     />
                   ) : selectedDocument ? (

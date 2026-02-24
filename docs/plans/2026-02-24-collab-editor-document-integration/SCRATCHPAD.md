@@ -53,3 +53,4 @@
 ## Progress
 
 - Replaced drawer edit mode for existing in-app documents to render `CollaborativeEditor` (kept BlockNote editor only for new-document flow for now). Placeholder tenant/user display info used until F02 wiring.
+- Wired current user lookup in `Documents.tsx` to supply tenant/user identity to `CollaborativeEditor` for proper Hocuspocus room naming.
