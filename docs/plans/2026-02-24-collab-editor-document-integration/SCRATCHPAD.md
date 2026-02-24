@@ -57,3 +57,4 @@
 - Added `blockContentFormat` helper with JSON parsing + format detection (BlockNote vs ProseMirror vs empty/unknown).
 - Implemented initial BlockNote-to-ProseMirror conversion for paragraph blocks in `blockContentFormat`.
 - Added heading block conversion with level mapping to ProseMirror heading nodes.
+- Added BlockNote list item conversion to ProseMirror bullet/ordered list nodes.

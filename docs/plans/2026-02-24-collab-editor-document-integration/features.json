@@ -33,7 +33,7 @@
     "id": "F06",
     "description": "BlockNote-to-ProseMirror conversion function: bulletListItem and numberedListItem blocks",
     "prdRefs": ["F05"],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F07",

@@ -119,6 +119,35 @@ const convertBlockNoteBlock = (block: BlockNoteBlock): ProseMirrorNode | null =>
       }
       return headingNode;
     }
+    case 'bulletListItem': {
+      const content = convertInlineContent(block.content);
+      const listItem: ProseMirrorNode = {
+        type: 'list_item',
+        content: [
+          content.length > 0 ? { type: 'paragraph', content } : { type: 'paragraph' },
+        ],
+      };
+      return {
+        type: 'bullet_list',
+        content: [listItem],
+      };
+    }
+    case 'numberedListItem': {
+      const content = convertInlineContent(block.content);
+      const listItem: ProseMirrorNode = {
+        type: 'list_item',
+        content: [
+          content.length > 0 ? { type: 'paragraph', content } : { type: 'paragraph' },
+        ],
+      };
+      const orderRaw = block.props?.number;
+      const order = typeof orderRaw === 'number' && orderRaw > 0 ? orderRaw : 1;
+      return {
+        type: 'ordered_list',
+        attrs: { order },
+        content: [listItem],
+      };
+    }
     default:
       return null;
   }
