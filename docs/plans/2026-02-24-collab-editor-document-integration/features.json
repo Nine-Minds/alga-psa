@@ -21,7 +21,7 @@
     "id": "F04",
     "description": "BlockNote-to-ProseMirror conversion function: paragraph blocks",
     "prdRefs": ["F05"],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F05",

@@ -55,3 +55,4 @@
 - Replaced drawer edit mode for existing in-app documents to render `CollaborativeEditor` (kept BlockNote editor only for new-document flow for now). Placeholder tenant/user display info used until F02 wiring.
 - Wired current user lookup in `Documents.tsx` to supply tenant/user identity to `CollaborativeEditor` for proper Hocuspocus room naming.
 - Added `blockContentFormat` helper with JSON parsing + format detection (BlockNote vs ProseMirror vs empty/unknown).
+- Implemented initial BlockNote-to-ProseMirror conversion for paragraph blocks in `blockContentFormat`.

@@ -40,3 +40,93 @@ export const detectBlockContentFormat = (blockData: unknown): BlockContentFormat
 
   return 'unknown';
 };
+
+type BlockNoteInline =
+  | {
+      type: 'text';
+      text?: string;
+      styles?: Record<string, unknown>;
+    }
+  | {
+      type: string;
+      [key: string]: unknown;
+    };
+
+type BlockNoteBlock = {
+  type?: string;
+  content?: BlockNoteInline[] | string;
+  props?: Record<string, unknown>;
+  children?: BlockNoteBlock[];
+};
+
+type ProseMirrorNode = {
+  type: string;
+  attrs?: Record<string, unknown>;
+  content?: ProseMirrorNode[];
+  text?: string;
+  marks?: Array<{ type: string; attrs?: Record<string, unknown> }>;
+};
+
+type ProseMirrorDoc = {
+  type: 'doc';
+  content: ProseMirrorNode[];
+};
+
+const emptyDoc = (): ProseMirrorDoc => ({
+  type: 'doc',
+  content: [{ type: 'paragraph' }],
+});
+
+const convertInlineContent = (content: BlockNoteBlock['content']): ProseMirrorNode[] => {
+  if (!content) return [];
+  if (typeof content === 'string') {
+    return content.length > 0 ? [{ type: 'text', text: content }] : [];
+  }
+  if (!Array.isArray(content)) return [];
+
+  return content
+    .map((item) => {
+      if (!item || typeof item !== 'object') return null;
+      if (item.type === 'text') {
+        return {
+          type: 'text',
+          text: item.text || '',
+        } as ProseMirrorNode;
+      }
+      return null;
+    })
+    .filter(Boolean) as ProseMirrorNode[];
+};
+
+const convertBlockNoteBlock = (block: BlockNoteBlock): ProseMirrorNode | null => {
+  if (!block || typeof block !== 'object') return null;
+
+  switch (block.type) {
+    case 'paragraph': {
+      const content = convertInlineContent(block.content);
+      return content.length > 0 ? { type: 'paragraph', content } : { type: 'paragraph' };
+    }
+    default:
+      return null;
+  }
+};
+
+export const blockNoteJsonToProsemirrorJson = (blockData: unknown): ProseMirrorDoc => {
+  const parsed = parseBlockContent(blockData);
+  if (!Array.isArray(parsed)) {
+    return emptyDoc();
+  }
+
+  const content = parsed
+    .map((block) => convertBlockNoteBlock(block as BlockNoteBlock))
+    .filter(Boolean) as ProseMirrorNode[];
+
+  if (content.length === 0) {
+    return emptyDoc();
+  }
+
+  return {
+    type: 'doc',
+    content,
+  };
+};
