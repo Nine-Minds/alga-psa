@@ -98,3 +98,5 @@
 - Ran `npx vitest run ../packages/documents/src/lib/blockContentFormat.test.ts`.
 - Added empty block conversion test in `packages/documents/src/lib/blockContentFormat.test.ts` and marked T15 complete.
 - Ran `npx vitest run ../packages/documents/src/lib/blockContentFormat.test.ts`.
+- Added recursive conversion to flatten `children` blocks in `packages/documents/src/lib/blockContentFormat.ts` plus a nested children test in `packages/documents/src/lib/blockContentFormat.test.ts` (T16).
+- Ran `npx vitest run ../packages/documents/src/lib/blockContentFormat.test.ts`.

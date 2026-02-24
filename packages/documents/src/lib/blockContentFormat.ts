@@ -287,15 +287,30 @@ const convertBlockNoteBlock = (block: BlockNoteBlock): ProseMirrorNode | null =>
   }
 };
 
+const convertBlockNoteBlocks = (blocks: BlockNoteBlock[]): ProseMirrorNode[] => {
+  const result: ProseMirrorNode[] = [];
+
+  for (const block of blocks) {
+    const node = convertBlockNoteBlock(block);
+    if (node) {
+      result.push(node);
+    }
+
+    if (Array.isArray(block.children) && block.children.length > 0) {
+      result.push(...convertBlockNoteBlocks(block.children));
+    }
+  }
+
+  return result;
+};
+
 export const blockNoteJsonToProsemirrorJson = (blockData: unknown): ProseMirrorDoc => {
   const parsed = parseBlockContent(blockData);
   if (!Array.isArray(parsed)) {
     return emptyDoc();
   }
 
-  const content = parsed
-    .map((block) => convertBlockNoteBlock(block as BlockNoteBlock))
-    .filter(Boolean) as ProseMirrorNode[];
+  const content = convertBlockNoteBlocks(parsed as BlockNoteBlock[]);
 
   if (content.length === 0) {
     return emptyDoc();

@@ -292,4 +292,45 @@ describe('detectBlockContentFormat', () => {
       content: [{ type: 'paragraph' }],
     });
   });
+
+  it('converts nested children blocks by flattening them', () => {
+    const blocknote = [
+      {
+        type: 'bulletListItem',
+        props: {},
+        content: [{ type: 'text', text: 'Parent', styles: {} }],
+        children: [
+          {
+            type: 'paragraph',
+            props: {},
+            content: [{ type: 'text', text: 'Child', styles: {} }],
+          },
+        ],
+      },
+    ];
+
+    expect(blockNoteJsonToProsemirrorJson(blocknote)).toEqual({
+      type: 'doc',
+      content: [
+        {
+          type: 'bullet_list',
+          content: [
+            {
+              type: 'list_item',
+              content: [
+                {
+                  type: 'paragraph',
+                  content: [{ type: 'text', text: 'Parent' }],
+                },
+              ],
+            },
+          ],
+        },
+        {
+          type: 'paragraph',
+          content: [{ type: 'text', text: 'Child' }],
+        },
+      ],
+    });
+  });
 });

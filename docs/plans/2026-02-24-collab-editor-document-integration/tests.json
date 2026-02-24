@@ -93,7 +93,7 @@
     "id": "T16",
     "description": "Conversion handles nested children blocks",
     "featureIds": ["F06", "F08"],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T17",
