@@ -134,7 +134,7 @@
   {
     "id": "F023",
     "description": "Enable only providers returned by discovery and keep unsupported providers disabled.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Functional Requirements #7", "Acceptance Criteria #2"]
   },
   {
