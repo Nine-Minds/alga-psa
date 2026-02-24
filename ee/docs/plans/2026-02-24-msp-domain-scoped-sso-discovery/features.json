@@ -164,7 +164,7 @@
   {
     "id": "F028",
     "description": "Keep resolver external failure behavior generic/non-enumerating across unknown user and known user paths.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Functional Requirements #9", "Non-functional Requirements #1", "Acceptance Criteria #4"]
   },
   {
