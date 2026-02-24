@@ -86,7 +86,7 @@
   {
     "id": "T011",
     "description": "Removing/deactivating a tenant login domain updates subsequent listing and discovery reads.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F004",
       "F006"
