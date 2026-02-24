@@ -399,7 +399,7 @@
   {
     "id": "T047",
     "description": "Client portal sign-in flow remains unchanged with no MSP discovery behavior bleed-through.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F031"
     ]

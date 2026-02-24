@@ -148,3 +148,4 @@ Working notes for shifting MSP SSO provider enablement from user-based pre-auth 
 - (2026-02-24) Completed T044: Resolver logging excludes raw email and other sensitive identifiers.
 - (2026-02-24) Completed T045: OAuth callback flow for unknown users remains unchanged (no discovery-specific account-existence messaging).
 - (2026-02-24) Completed T046: MSP credentials sign-in flow remains functional and independent from SSO discovery outcome.
+- (2026-02-24) Completed T047: Client portal sign-in flow remains unchanged with no MSP discovery behavior bleed-through.
