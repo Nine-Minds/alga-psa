@@ -56,3 +56,4 @@
 - Wired current user lookup in `Documents.tsx` to supply tenant/user identity to `CollaborativeEditor` for proper Hocuspocus room naming.
 - Added `blockContentFormat` helper with JSON parsing + format detection (BlockNote vs ProseMirror vs empty/unknown).
 - Implemented initial BlockNote-to-ProseMirror conversion for paragraph blocks in `blockContentFormat`.
+- Added heading block conversion with level mapping to ProseMirror heading nodes.

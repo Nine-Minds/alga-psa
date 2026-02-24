@@ -106,6 +106,19 @@ const convertBlockNoteBlock = (block: BlockNoteBlock): ProseMirrorNode | null =>
       const content = convertInlineContent(block.content);
       return content.length > 0 ? { type: 'paragraph', content } : { type: 'paragraph' };
     }
+    case 'heading': {
+      const content = convertInlineContent(block.content);
+      const levelRaw = block.props?.level;
+      const level = typeof levelRaw === 'number' && levelRaw >= 1 && levelRaw <= 6 ? levelRaw : 1;
+      const headingNode: ProseMirrorNode = {
+        type: 'heading',
+        attrs: { level },
+      };
+      if (content.length > 0) {
+        headingNode.content = content;
+      }
+      return headingNode;
+    }
     default:
       return null;
   }

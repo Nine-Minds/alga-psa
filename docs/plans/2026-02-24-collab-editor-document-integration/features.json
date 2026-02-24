@@ -27,7 +27,7 @@
     "id": "F05",
     "description": "BlockNote-to-ProseMirror conversion function: heading blocks with level prop",
     "prdRefs": ["F05"],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F06",
