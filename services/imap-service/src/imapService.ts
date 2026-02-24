@@ -61,6 +61,40 @@ function stateLog(event: string, fields: Record<string, unknown> = {}) {
   }
 }
 
+function normalizeImapError(error: any): {
+  message: string;
+  responseStatus?: string;
+  responseText?: string;
+  serverResponseCode?: string;
+  executedCommand?: string;
+  authenticationFailed?: boolean;
+  oauthError?: string;
+} {
+  const oauthError = error?.oauthError;
+  let oauthErrorText: string | undefined;
+  if (oauthError !== undefined) {
+    if (typeof oauthError === 'string') {
+      oauthErrorText = oauthError;
+    } else {
+      try {
+        oauthErrorText = JSON.stringify(oauthError);
+      } catch {
+        oauthErrorText = String(oauthError);
+      }
+    }
+  }
+
+  return {
+    message: error?.message || String(error),
+    responseStatus: error?.responseStatus,
+    responseText: error?.responseText,
+    serverResponseCode: error?.serverResponseCode,
+    executedCommand: error?.executedCommand,
+    authenticationFailed: error?.authenticationFailed,
+    oauthError: oauthErrorText,
+  };
+}
+
 interface ImapProviderRow {
   id: string;
   tenant: string;
@@ -758,20 +792,21 @@ class ImapFolderListener {
         await this.syncNewMessages(this.client);
         await this.idleLoop(this.client);
       } catch (error: any) {
+        const errorDetails = normalizeImapError(error);
         logger.error('[IMAP] Folder listener error', {
           providerId: this.provider.id,
           tenant: this.provider.tenant,
           folder: this.folder,
-          message: error?.message || error,
+          ...errorDetails,
         });
         stateLog('folder_listener_error', {
           providerId: this.provider.id,
           tenant: this.provider.tenant,
           folder: this.folder,
           listenerId: this.listenerId,
-          message: error?.message || String(error),
+          ...errorDetails,
         });
-        await this.updateProviderStatus('error', error?.message || 'IMAP connection error');
+        await this.updateProviderStatus('error', errorDetails.message || 'IMAP connection error');
         await this.persistFolderState({ last_seen_at: new Date().toISOString() });
         await this.delayWithBackoff();
       } finally {
