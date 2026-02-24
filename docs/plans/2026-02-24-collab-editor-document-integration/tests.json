@@ -159,7 +159,7 @@
     "id": "T27",
     "description": "New document creation: drawer opens with empty CollaborativeEditor, document record created in DB",
     "featureIds": ["F16"],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T28",

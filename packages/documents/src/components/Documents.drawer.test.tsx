@@ -5,17 +5,19 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import Documents from './Documents.tsx';
 import { syncCollabSnapshot } from '../actions/collaborativeEditingActions';
-import { updateBlockContent } from '../actions/documentBlockContentActions';
+import { updateBlockContent, createBlockDocument } from '../actions/documentBlockContentActions';
+import { getDocumentsByFolder } from '../actions/documentActions';
 
 const mockRefresh = vi.fn();
 const mockReplace = vi.fn();
+let mockSearchParams = new URLSearchParams();
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
     refresh: mockRefresh,
     replace: mockReplace,
   }),
-  useSearchParams: () => new URLSearchParams(),
+  useSearchParams: () => mockSearchParams,
 }));
 
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
@@ -176,6 +178,11 @@ describe('Documents drawer', () => {
     mockCollabStatus = 'connected';
     mockFallbackUnsaved = false;
     mockFallbackContent = null;
+    mockSearchParams = new URLSearchParams();
+    (getDocumentsByFolder as unknown as { mockResolvedValue: (value: unknown) => void }).mockResolvedValue({
+      documents: [],
+      total: 0,
+    });
   });
 
   it('opens CollaborativeEditor when editing an in-app document', async () => {
@@ -415,5 +422,26 @@ describe('Documents drawer', () => {
     expect(screen.getByText('Offline — manual save mode')).toBeInTheDocument();
 
     vi.useRealTimers();
+  });
+
+  it('creates a new document and opens the collab editor', async () => {
+    mockSearchParams = new URLSearchParams('folder=Root');
+
+    render(
+      <Documents
+        id="documents"
+        documents={[]}
+        gridColumns={3}
+        userId="user-1"
+        isLoading={false}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'New Document' }));
+
+    await waitFor(() => {
+      expect(createBlockDocument).toHaveBeenCalled();
+      expect(screen.getByTestId('collab-editor')).toBeInTheDocument();
+    });
   });
 });

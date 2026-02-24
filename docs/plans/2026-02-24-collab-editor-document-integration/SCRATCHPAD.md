@@ -117,3 +117,4 @@
   - Presence bar renders connected users from awareness state.
   - Collaboration caret render callback produces labeled cursor.
   - Collaboration extension configured with Yjs document for real-time sync.
+- Added T27 test to ensure folder-mode new document creation calls `createBlockDocument` and opens the collab editor. Test: `packages/documents/src/components/Documents.drawer.test.tsx`.
