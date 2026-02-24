@@ -194,7 +194,7 @@
   {
     "id": "F033",
     "description": "Update env/docs guidance for app-fallback behavior when domain is unresolved.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Functional Requirements #11", "Open Questions #2"]
   },
   {
