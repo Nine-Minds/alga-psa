@@ -34,7 +34,7 @@
   {
     "id": "T005",
     "description": "List login-domain action returns normalized, deduplicated tenant domains.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F003",
       "F005"
