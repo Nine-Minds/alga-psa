@@ -117,6 +117,6 @@
     "id": "F20",
     "description": "After format conversion from BlockNote to ProseMirror, persist the converted format back to document_block_content",
     "prdRefs": ["F04", "F05"],
-    "implemented": false
+    "implemented": true
   }
 ]

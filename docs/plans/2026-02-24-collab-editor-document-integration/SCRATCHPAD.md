@@ -71,3 +71,4 @@
 - Added read-only `DocumentViewer` (Tiptap) for drawer view mode to render BlockNote or ProseMirror content.
 - Document name input remains editable and wired to update document name on save in both collab and fallback modes.
 - Unsaved changes warning now accounts for fallback editor changes before closing the drawer.
+- BlockNote-to-ProseMirror conversion now persists converted JSON back to `document_block_content`.

@@ -23,7 +23,7 @@ import { Card } from '@alga-psa/ui/components/Card';
 import { EditorToolbar } from './EditorToolbar';
 import { handleMarkdownPaste } from './markdownPaste';
 import styles from './CollaborativeEditor.module.css';
-import { getBlockContent } from '../actions/documentBlockContentActions';
+import { getBlockContent, updateBlockContent } from '../actions/documentBlockContentActions';
 import {
   blockNoteJsonToProsemirrorJson,
   detectBlockContentFormat,
@@ -304,6 +304,14 @@ export function CollaborativeEditor({
           if (format === 'blocknote') {
             const converted = blockNoteJsonToProsemirrorJson(existing.block_data);
             prosemirrorJSONToYXmlFragment(editor.schema, converted, fragment);
+            try {
+              await updateBlockContent(documentId, {
+                block_data: JSON.stringify(converted),
+                user_id: userId,
+              });
+            } catch (persistError) {
+              console.error('[CollaborativeEditor] Failed to persist converted block content:', persistError);
+            }
           } else if (format === 'prosemirror') {
             const parsed = parseBlockContent(existing.block_data);
             prosemirrorJSONToYXmlFragment(editor.schema, parsed, fragment);
