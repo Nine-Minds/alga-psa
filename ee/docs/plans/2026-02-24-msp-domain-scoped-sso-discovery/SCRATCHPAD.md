@@ -50,6 +50,7 @@ Working notes for shifting MSP SSO provider enablement from user-based pre-auth 
 - (2026-02-24) Resolver/source helper enforces discovered provider allow-list; provider attempts outside cookie-allowed set fail with generic response.
 - (2026-02-24) Resolver fallback behavior: when discovery cookie is missing/invalid/expired, source resolution uses app-level provider readiness only.
 - (2026-02-24) Resolver maintains one external generic failure schema/message for invalid payload, limit hits, disallowed provider, missing credentials, and internal errors.
+- (2026-02-24) OAuth callback/user mapping path was left unchanged; discovery/resolver changes only affect pre-auth provider eligibility and source selection.
 
 ## Commands / Runbooks
 

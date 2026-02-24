@@ -170,7 +170,7 @@
   {
     "id": "F029",
     "description": "Keep OAuth callback user mapping behavior unchanged for unknown users (no pre-auth user detection path).",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Functional Requirements #10"]
   },
   {
