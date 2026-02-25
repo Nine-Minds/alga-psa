@@ -341,7 +341,7 @@
   {
     "id": "T041",
     "description": "End-to-end notification test: watcher receives ticket-updated email as separate message.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F017",
       "F023"
