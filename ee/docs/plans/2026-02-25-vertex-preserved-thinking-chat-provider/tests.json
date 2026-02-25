@@ -234,7 +234,7 @@
   {
     "id": "T028",
     "description": "Tool call identifiers remain stable between proposed call and function result replay",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F016",
       "F026"

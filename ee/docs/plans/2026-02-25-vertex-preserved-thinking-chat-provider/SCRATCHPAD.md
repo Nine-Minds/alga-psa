@@ -116,3 +116,4 @@ Working notes for implementing a new chat provider abstraction with Vertex GLM-5
 - (2026-02-25) Implemented `T025`: execute-after-approval unit coverage now verifies continuation requests replay preserved assistant context plus tool result before follow-up completion.
 - (2026-02-25) Implemented `T026`: decline-path unit coverage verifies endpoint execution is skipped while continuation messaging remains consistent and usable.
 - (2026-02-25) Implemented `T027`: added explicit `handleExecute` guard test returning 400 when function call metadata is missing.
+- (2026-02-25) Implemented `T028`: added assertions that tool call IDs remain stable from proposal through tool-result replay in execute continuation flow.
