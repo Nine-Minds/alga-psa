@@ -134,7 +134,7 @@
   {
     "id": "T016",
     "description": "Reasoning extraction derives reasoning_content from legacy <think> content when explicit reasoning_content is absent",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F013",
       "F014"
