@@ -97,6 +97,22 @@ export type CompletionResponse =
   | AssistantMessageResponse
   | ErrorResponse;
 
+export type ChatCompletionStreamEvent =
+  | {
+      type: 'content_delta';
+      delta: string;
+    }
+  | {
+      type: 'reasoning_delta';
+      delta: string;
+    }
+  | ({
+      type: 'function_proposed';
+    } & FunctionProposedResponse)
+  | {
+      type: 'done';
+    };
+
 interface InitialCompletionParams {
   messages: ChatCompletionMessage[];
   chatId?: string | null;
@@ -116,12 +132,158 @@ interface ExecuteCompletionParams {
   cookieHeader?: string;
 }
 
+type StreamedToolCallState = {
+  id?: string;
+  name?: string;
+  argumentsText: string;
+};
+
 export class ChatCompletionsService {
   static async createRawCompletionStream(
     conversation: ChatCompletionMessage[],
   ): Promise<AsyncIterable<OpenAI.Chat.Completions.ChatCompletionChunk>> {
     const provider = await resolveChatProvider();
     return this.generateStreamingCompletion(provider, conversation);
+  }
+
+  static async *createStructuredCompletionStream(
+    messages: ChatCompletionMessage[],
+    options: { signal?: AbortSignal } = {},
+  ): AsyncGenerator<ChatCompletionStreamEvent> {
+    const provider = await resolveChatProvider();
+    let conversation = this.normalizeConversationHistory(messages);
+
+    for (let iteration = 0; iteration < MAX_TOOL_ITERATIONS; iteration += 1) {
+      if (options.signal?.aborted) {
+        return;
+      }
+
+      const completionStream = await this.generateStreamingCompletion(provider, conversation);
+      const streamedToolCalls = new Map<number, StreamedToolCallState>();
+      let streamedContent = '';
+      let streamedReasoning = '';
+
+      for await (const chunk of completionStream) {
+        if (options.signal?.aborted) {
+          return;
+        }
+
+        const choice = chunk?.choices?.[0] as
+          | OpenAI.Chat.Completions.ChatCompletionChunk.Choice
+          | undefined;
+        const delta = choice?.delta as Record<string, unknown> | undefined;
+        if (!delta) {
+          continue;
+        }
+
+        const reasoningDelta = this.readReasoningDelta(delta);
+        if (reasoningDelta) {
+          streamedReasoning += reasoningDelta;
+          yield {
+            type: 'reasoning_delta',
+            delta: reasoningDelta,
+          };
+        }
+
+        const contentDelta = this.readContentDelta(delta);
+        if (contentDelta) {
+          streamedContent += contentDelta;
+          yield {
+            type: 'content_delta',
+            delta: contentDelta,
+          };
+        }
+
+        this.mergeStreamedToolCalls(streamedToolCalls, delta.tool_calls);
+      }
+
+      const parsedContent = parseAssistantContent(streamedContent, streamedReasoning);
+      const toolCalls = this.materializeStreamedToolCalls(streamedToolCalls);
+
+      if (toolCalls.length > 0) {
+        const toolCall = toolCalls[0];
+        const functionName = toolCall.function?.name;
+        const parsedArgs = this.ensureArguments(toolCall.function?.arguments);
+        const toolCallId = toolCall.id ?? uuid();
+
+        if (!functionName) {
+          yield { type: 'done' };
+          return;
+        }
+
+        const assistantMessage: ChatCompletionMessage = {
+          role: 'assistant',
+          content: parsedContent.raw || undefined,
+          reasoning: parsedContent.reasoning,
+          reasoning_content: parsedContent.reasoning,
+          function_call: {
+            name: functionName,
+            arguments: parsedArgs,
+          },
+          tool_call_id: toolCallId,
+        };
+        conversation = [...conversation, assistantMessage];
+
+        if (functionName === SEARCH_TOOL_NAME) {
+          const results = this.searchRegistry(parsedArgs.query, parsedArgs.limit);
+          conversation = [
+            ...conversation,
+            {
+              role: 'function',
+              name: SEARCH_TOOL_NAME,
+              content: JSON.stringify({ results }),
+              tool_call_id: toolCallId,
+            },
+          ];
+          continue;
+        }
+
+        if (functionName === EXECUTE_TOOL_NAME) {
+          const entry = this.resolveRegistryEntry(
+            parsedArgs.entryId ?? parsedArgs.id ?? parsedArgs.name,
+            parsedArgs,
+          );
+          if (!entry) {
+            yield { type: 'done' };
+            return;
+          }
+
+          const preparedArgs = { ...parsedArgs };
+          this.populatePathParameters(entry, preparedArgs);
+          assistantMessage.function_call!.arguments = preparedArgs;
+          const metadata = this.buildFunctionMetadata(entry, preparedArgs);
+          const assistantPreview = this.buildFunctionPreview(parsedContent, entry);
+          yield {
+            type: 'function_proposed',
+            function: metadata,
+            assistantPreview,
+            assistantReasoning: parsedContent.reasoning,
+            functionCall: {
+              name: functionName,
+              arguments: preparedArgs,
+              toolCallId,
+              entryId: entry.id,
+            },
+            nextMessages: this.sanitizeMessagesForClient(conversation),
+            modelMessages: conversation,
+          };
+          yield { type: 'done' };
+          return;
+        }
+
+        yield { type: 'done' };
+        return;
+      }
+
+      if (!this.hasMeaningfulContent(parsedContent)) {
+        continue;
+      }
+
+      yield { type: 'done' };
+      return;
+    }
+
+    yield { type: 'done' };
   }
 
   static async handleRequest(req: NextRequest): Promise<Response> {
@@ -902,6 +1064,87 @@ export class ChatCompletionsService {
     });
 
     return [systemPrompt, ...converted];
+  }
+
+  private static readReasoningDelta(delta: Record<string, unknown>): string {
+    const parsed = parseAssistantContent(
+      '',
+      delta.reasoning_content ?? delta.reasoning,
+    );
+    return parsed.reasoning ?? '';
+  }
+
+  private static readContentDelta(delta: Record<string, unknown>): string {
+    const content = delta.content;
+    if (typeof content === 'string') {
+      return content;
+    }
+    if (content === undefined || content === null) {
+      return '';
+    }
+    return parseAssistantContent(content, undefined).display;
+  }
+
+  private static mergeStreamedToolCalls(
+    streamedToolCalls: Map<number, StreamedToolCallState>,
+    toolCallsDelta: unknown,
+  ) {
+    if (!Array.isArray(toolCallsDelta)) {
+      return;
+    }
+
+    toolCallsDelta.forEach((candidate, fallbackIndex) => {
+      if (!candidate || typeof candidate !== 'object' || Array.isArray(candidate)) {
+        return;
+      }
+      const toolCall = candidate as Record<string, unknown>;
+      const index = typeof toolCall.index === 'number' ? toolCall.index : fallbackIndex;
+      const existing = streamedToolCalls.get(index) ?? {
+        argumentsText: '',
+      };
+
+      if (typeof toolCall.id === 'string') {
+        existing.id = toolCall.id;
+      }
+
+      if (
+        toolCall.function &&
+        typeof toolCall.function === 'object' &&
+        !Array.isArray(toolCall.function)
+      ) {
+        const fn = toolCall.function as Record<string, unknown>;
+        if (typeof fn.name === 'string') {
+          existing.name = fn.name;
+        }
+        if (typeof fn.arguments === 'string') {
+          existing.argumentsText += fn.arguments;
+        }
+      }
+
+      streamedToolCalls.set(index, existing);
+    });
+  }
+
+  private static materializeStreamedToolCalls(
+    streamedToolCalls: Map<number, StreamedToolCallState>,
+  ): OpenAI.Chat.Completions.ChatCompletionMessageToolCall[] {
+    return Array.from(streamedToolCalls.entries())
+      .sort(([left], [right]) => left - right)
+      .flatMap(([, entry]) => {
+        if (!entry.name) {
+          return [];
+        }
+        return [
+          {
+            id: entry.id ?? uuid(),
+            type: 'function',
+            function: {
+              name: entry.name,
+              arguments: entry.argumentsText || '{}',
+            },
+          } as OpenAI.Chat.Completions.ChatCompletionMessageToolCall,
+        ];
+      });
   }
 
   private static extractContent(choice: OpenAI.Chat.Completions.ChatCompletion.Choice): ParsedAssistantContent {

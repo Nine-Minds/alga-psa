@@ -32,6 +32,9 @@ Working notes for implementing a new chat provider abstraction with Vertex GLM-5
   - `cat ee/docs/plans/2026-02-25-vertex-preserved-thinking-chat-provider/tests.json | jq .`
 - (2026-02-25) Feature validation for provider resolver wiring:
   - `cd server && npx vitest src/test/unit/services/chatCompletionsService.streaming.test.ts --run`
+- (2026-02-25) Structured streaming validation:
+  - `cd server && npx vitest src/test/unit/readAssistantContentFromSse.test.ts src/test/unit/api/chatCompletionsStream.route.exists.test.ts src/test/unit/Chat.streamingIncrementalState.test.tsx --run`
+  - `cd server && npx vitest src/test/unit/QuickAskOverlay.streaming.test.tsx src/test/unit/RightSidebar.streaming.test.tsx --run`
 
 ## Links / References
 - Chat UI shared flow:
@@ -70,3 +73,4 @@ Working notes for implementing a new chat provider abstraction with Vertex GLM-5
 - (2026-02-25) Implemented `F014`: assistant messages appended during tool-call iterations now include preserved `reasoning_content` in in-memory conversation state.
 - (2026-02-25) Implemented `F015`: `function_proposed` responses now return conversation snapshots (`nextMessages`/`modelMessages`) that carry preserved `reasoning_content`.
 - (2026-02-25) Implemented `F016`: execute-after-approval continuation now reuses validated prior messages (including `reasoning_content`) before replaying tool results and requesting follow-up completion.
+- (2026-02-25) Implemented `F017`: replaced token-only stream route behavior with structured event orchestration (`content_delta`, `reasoning_delta`, `function_proposed`, `done`) via a new `ChatCompletionsService.createStructuredCompletionStream` loop.

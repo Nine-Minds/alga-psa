@@ -14,7 +14,10 @@ import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dia
 import { Button } from '@alga-psa/ui/components/Button';
 import { Switch } from '@alga-psa/ui/components/Switch';
 
-import { readAssistantContentFromSse } from './readAssistantContentFromSse';
+import {
+  readAssistantContentFromSse,
+  type SseFunctionProposal,
+} from './readAssistantContentFromSse';
 
 import './chat.css';
 
@@ -503,6 +506,7 @@ export const Chat: React.FC<ChatProps> = ({
     setFunctionError(null);
     setFullMessageStatus(null);
     setFullMessageStatusDetail(null);
+    setFullReasoning(null);
     pendingAssistantMessageIdRef.current = null;
     setGeneratingResponse(true);
     setIsFunction(true);
@@ -610,6 +614,8 @@ export const Chat: React.FC<ChatProps> = ({
       streamingTextRef.current = '';
       let renderScheduled = false;
       let sawToken = false;
+      let shouldContinueStreaming = true;
+      let streamedFunctionProposal: PendingFunctionState | null = null;
 
       const scheduleIncomingRender = () => {
         if (renderScheduled) {
@@ -627,7 +633,8 @@ export const Chat: React.FC<ChatProps> = ({
 
       const { content: finalAssistantContent, doneReceived } =
         await readAssistantContentFromSse(response, {
-          shouldContinue: () => generationIdRef.current === generationId,
+          shouldContinue: () =>
+            generationIdRef.current === generationId && shouldContinueStreaming,
           onToken: (_token, accumulated) => {
             streamingTextRef.current = accumulated;
             if (!sawToken) {
@@ -636,9 +643,41 @@ export const Chat: React.FC<ChatProps> = ({
             }
             scheduleIncomingRender();
           },
+          onReasoning: (_token, accumulated) => {
+            if (generationIdRef.current !== generationId) {
+              return;
+            }
+            setFullReasoning(accumulated);
+          },
+          onToolCalls: (proposal: SseFunctionProposal) => {
+            const modelMessages = (proposal.modelMessages ??
+              proposal.nextMessages) as ChatCompletionMessage[];
+            streamedFunctionProposal = {
+              metadata: proposal.function,
+              assistantPreview: proposal.assistantPreview,
+              assistantReasoning: proposal.assistantReasoning,
+              functionCall: proposal.functionCall,
+              nextMessages: modelMessages,
+              chatId: createdChatId ?? chatId,
+            };
+            shouldContinueStreaming = false;
+          },
         });
 
       if (generationIdRef.current !== generationId) {
+        return;
+      }
+
+      if (streamedFunctionProposal) {
+        setConversation(streamedFunctionProposal.nextMessages);
+        setPendingFunction(streamedFunctionProposal);
+        setPendingFunctionStatus('awaiting');
+        setPendingFunctionAction('none');
+        setIncomingMessage('');
+        setIsFunction(true);
+        setGeneratingResponse(false);
+        streamingTextRef.current = null;
+        streamAbortControllerRef.current = null;
         return;
       }
 
@@ -664,10 +703,11 @@ export const Chat: React.FC<ChatProps> = ({
         {
           role: 'assistant',
           content: finalAssistantContent,
+          reasoning: fullReasoning ?? undefined,
+          reasoning_content: fullReasoning ?? undefined,
         },
       ]);
 
-      setFullReasoning(null);
       setIsFunction(false);
       setIncomingMessage('');
       streamingTextRef.current = null;
@@ -713,6 +753,7 @@ export const Chat: React.FC<ChatProps> = ({
     conversation,
     userId,
     userMessageId,
+    fullReasoning,
     autoResizeTextarea,
     addAssistantMessageToPersistence,
   ]);
@@ -1040,6 +1081,7 @@ export const Chat: React.FC<ChatProps> = ({
                   role="bot"
                   isFunction={isFunction}
                   content={incomingMessage}
+                  reasoning={fullReasoning ?? undefined}
                   showStreamingCursor={generatingResponse && !isFunction}
                 />
               )}

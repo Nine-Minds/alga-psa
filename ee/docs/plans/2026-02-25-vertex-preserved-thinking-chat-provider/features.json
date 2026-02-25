@@ -98,7 +98,7 @@
   {
     "id": "F017",
     "description": "Replace raw token-only stream route behavior with structured stream events that can represent reasoning/content/function states",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Problem", "Functional Requirements"]
   },
   {

@@ -24,16 +24,17 @@ type IncomingChatMessage = {
 };
 
 type RawCompletionChunk = {
-  choices?: Array<{
-    delta?: {
-      content?: unknown;
-    };
-  }>;
+  type?: unknown;
+  delta?: unknown;
+  content?: unknown;
+  done?: unknown;
+  [key: string]: unknown;
 };
 
 type ChatCompletionsServiceLike = {
-  createRawCompletionStream: (
+  createStructuredCompletionStream: (
     conversation: IncomingChatMessage[],
+    options?: { signal?: AbortSignal },
   ) => Promise<AsyncIterable<RawCompletionChunk>>;
 };
 
@@ -177,21 +178,68 @@ export async function POST(req: NextRequest) {
         const mod = (await import('@product/chat/entry')) as unknown as {
           ChatCompletionsService: ChatCompletionsServiceLike;
         };
-        const completionStream = await mod.ChatCompletionsService.createRawCompletionStream(messages);
+        const completionStream = await mod.ChatCompletionsService.createStructuredCompletionStream(
+          messages,
+          { signal: req.signal },
+        );
 
-        for await (const chunk of completionStream) {
+        let doneSent = false;
+        for await (const event of completionStream) {
           if (req.signal.aborted) {
             break;
           }
 
-          const token = chunk?.choices?.[0]?.delta?.content;
-          if (typeof token === 'string' && token.length > 0) {
-            tryEnqueue(controller, encodeSseData(encoder, { content: token, done: false }));
+          const eventType = typeof event?.type === 'string' ? event.type : undefined;
+          if (eventType === 'content_delta') {
+            const token = typeof event.delta === 'string' ? event.delta : '';
+            if (token.length > 0) {
+              tryEnqueue(
+                controller,
+                encodeSseData(encoder, {
+                  type: 'content_delta',
+                  delta: token,
+                  content: token,
+                  done: false,
+                }),
+              );
+            }
+            continue;
+          }
+
+          if (eventType === 'reasoning_delta') {
+            const token = typeof event.delta === 'string' ? event.delta : '';
+            if (token.length > 0) {
+              tryEnqueue(
+                controller,
+                encodeSseData(encoder, {
+                  type: 'reasoning_delta',
+                  delta: token,
+                }),
+              );
+            }
+            continue;
+          }
+
+          if (eventType === 'function_proposed') {
+            tryEnqueue(controller, encodeSseData(encoder, event));
+            continue;
+          }
+
+          if (eventType === 'done') {
+            doneSent = true;
+            tryEnqueue(
+              controller,
+              encodeSseData(encoder, { type: 'done', content: '', done: true }),
+            );
+            continue;
           }
         }
 
-        if (!req.signal.aborted) {
-          tryEnqueue(controller, encodeSseData(encoder, { content: '', done: true }));
+        if (!req.signal.aborted && !doneSent) {
+          tryEnqueue(
+            controller,
+            encodeSseData(encoder, { type: 'done', content: '', done: true }),
+          );
         }
       })()
         .catch((error) => {
