@@ -80,7 +80,7 @@
   {
     "id": "F014",
     "description": "Attach preserved reasoning_content to assistant messages added to in-memory model conversation during tool loops",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Goals", "Functional Requirements"]
   },
   {
