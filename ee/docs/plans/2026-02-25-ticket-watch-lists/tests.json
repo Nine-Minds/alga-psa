@@ -300,7 +300,7 @@
   {
     "id": "T036",
     "description": "Subscriber unit: watcher recipients dedupe against primary contact/client recipient.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F021"
     ]
