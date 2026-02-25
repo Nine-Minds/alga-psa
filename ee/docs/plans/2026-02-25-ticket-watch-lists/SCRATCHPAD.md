@@ -80,3 +80,4 @@ Working notes for the ticket watch-list feature plan. This log captures clarifie
 - (2026-02-25) Implemented T11: added or updated automated coverage for this planned test scenario during watch-list delivery.
 - (2026-02-25) Implemented T12: added or updated automated coverage for this planned test scenario during watch-list delivery.
 - (2026-02-25) Implemented T13: added or updated automated coverage for this planned test scenario during watch-list delivery.
+- (2026-02-25) Implemented T14: added or updated automated coverage for this planned test scenario during watch-list delivery.
