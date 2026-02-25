@@ -176,7 +176,7 @@
   {
     "id": "T021",
     "description": "Non-stream completion path uses provider-resolved model/client for OpenRouter",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F010"
     ]
