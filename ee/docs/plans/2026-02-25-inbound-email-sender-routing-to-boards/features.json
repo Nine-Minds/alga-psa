@@ -119,7 +119,7 @@
   {
     "id": "F014",
     "description": "Update `ClientDetails` UI to manage client inbound destination",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Resolution Integration Points"

@@ -95,3 +95,4 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
   - domain matching remains explicit via `client_inbound_email_domains`
 - (2026-02-25) Completed `F012` by adding server actions for inbound destination option reads and client destination updates with explicit client permission checks.
 - (2026-02-25) Completed `F013` by adding contact destination update action with explicit contact permission checks and tenant-scoped destination validation.
+- (2026-02-25) Completed `F014` by adding an inbound ticket destination selector to `ClientDetails` with clear-to-provider-default behavior.

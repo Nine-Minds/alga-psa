@@ -32,6 +32,7 @@ import {
   listClientInboundEmailDomains,
   addClientInboundEmailDomain,
   removeClientInboundEmailDomain,
+  listInboundTicketDestinationOptions,
   startClientEntraSync,
 } from '@alga-psa/clients/actions';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
@@ -912,6 +913,8 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   const [inboundEmailDomains, setInboundEmailDomains] = useState<Array<{ id: string; domain: string }>>([]);
   const [inboundDomainDraft, setInboundDomainDraft] = useState('');
   const [isInboundDomainBusy, setIsInboundDomainBusy] = useState(false);
+  const [inboundDestinationOptions, setInboundDestinationOptions] = useState<SelectOption[]>([]);
+  const [isInboundDestinationOptionsLoading, setIsInboundDestinationOptionsLoading] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -929,6 +932,35 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       cancelled = true;
     };
   }, [editedClient.client_id]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setIsInboundDestinationOptionsLoading(true);
+      try {
+        const rows = await listInboundTicketDestinationOptions();
+        if (cancelled) return;
+        const options = (rows ?? []).map((row: any) => ({
+          value: row.id,
+          label: row.is_active
+            ? `${row.display_name} (${row.short_name})`
+            : `${row.display_name} (${row.short_name}) [inactive]`,
+        })) as SelectOption[];
+        setInboundDestinationOptions(options);
+      } catch (error) {
+        if (cancelled) return;
+        console.error('Failed to load inbound ticket destination options:', error);
+        setInboundDestinationOptions([]);
+      } finally {
+        if (!cancelled) {
+          setIsInboundDestinationOptionsLoading(false);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const normalizeInboundDomain = useCallback((raw: string) => {
     const trimmed = (raw ?? '').trim().toLowerCase();
@@ -1022,6 +1054,29 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
                   clientId={editedClient.client_id}
                   label="Default contact"
                   placeholder={clientActiveContacts.length ? "Select default contact" : "No active contacts"}
+                />
+              </FieldContainer>
+
+              <FieldContainer
+                label="Inbound ticket destination"
+                fieldType="select"
+                value={editedClient.inbound_ticket_defaults_id || ''}
+                helperText="Used for inbound senders that map to this client and have no contact override."
+                automationId="client-inbound-ticket-destination-field"
+              >
+                <Text as="label" size="2" className="text-gray-700 font-medium">Inbound ticket destination</Text>
+                <CustomSelect
+                  id="client-inbound-ticket-destination-select"
+                  value={editedClient.inbound_ticket_defaults_id || ''}
+                  onValueChange={(value) => handleFieldChange('inbound_ticket_defaults_id', value)}
+                  options={inboundDestinationOptions}
+                  allowClear={true}
+                  placeholder={
+                    isInboundDestinationOptionsLoading
+                      ? 'Loading destinations...'
+                      : 'Provider default'
+                  }
+                  disabled={isInboundDestinationOptionsLoading}
                 />
               </FieldContainer>
 
@@ -1411,6 +1466,8 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     handleBillingConfigSave, 
     contacts, 
     handleDefaultContactChange,
+    inboundDestinationOptions,
+    isInboundDestinationOptionsLoading,
     currentUser, 
     documents, 
     memoizedRouter,
