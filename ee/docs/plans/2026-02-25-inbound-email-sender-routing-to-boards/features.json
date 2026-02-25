@@ -20,7 +20,7 @@
   {
     "id": "F003",
     "description": "Add contact-level inbound destination override reference (`contacts.inbound_ticket_defaults_id` or equivalent persisted field)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations > Proposed Data Model"
