@@ -53,7 +53,7 @@
   {
     "id": "T007",
     "description": "Unit: merge reactivates existing inactive watcher when recipient is re-seen.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F014"
     ]
