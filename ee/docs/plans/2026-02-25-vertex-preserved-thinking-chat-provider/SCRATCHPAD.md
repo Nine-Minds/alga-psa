@@ -91,3 +91,4 @@ Working notes for implementing a new chat provider abstraction with Vertex GLM-5
 - (2026-02-25) Implemented `F032`: preserved existing chat persistence flow with no schema/migration changes while adding structured streaming + function proposal handling.
 - (2026-02-25) Implemented `T001`: added provider resolver unit coverage verifying default fallback to `openrouter` when `AI_CHAT_PROVIDER` is unset.
 - (2026-02-25) Implemented `T002`: verified resolver returns configured OpenRouter client/model when OpenRouter settings are present.
+- (2026-02-25) Implemented `T003`: verified resolver returns Vertex client/model when `AI_CHAT_PROVIDER=vertex` with required config.

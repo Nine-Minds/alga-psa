@@ -20,7 +20,7 @@
   {
     "id": "T003",
     "description": "Provider resolver returns Vertex client/model when AI_CHAT_PROVIDER=vertex and required config exists",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F001",
       "F004"
