@@ -98,7 +98,7 @@
   {
     "id": "T012",
     "description": "Conversation normalization preserves reasoning_content values on assistant messages",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F007",
       "F009"
