@@ -172,7 +172,7 @@
   {
     "id": "F021",
     "description": "Deduplicate watcher recipients against existing recipients for each event send path.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Functional Requirements"
     ]
