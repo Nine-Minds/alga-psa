@@ -20,7 +20,7 @@
   {
     "id": "F004",
     "description": "Resolve Vertex credentials, model, and endpoint settings from secret/env sources in provider resolver",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Data / API / Integrations"]
   },
   {
