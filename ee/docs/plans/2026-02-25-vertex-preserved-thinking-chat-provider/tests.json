@@ -388,7 +388,7 @@
   {
     "id": "T046",
     "description": "Approve action posts /api/chat/v1/execute with streamed functionCall metadata",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F026"
     ]
