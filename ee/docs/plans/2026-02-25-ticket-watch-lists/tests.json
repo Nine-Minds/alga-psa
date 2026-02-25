@@ -209,7 +209,7 @@
   {
     "id": "T025",
     "description": "DB integration (happy path): upsert watch-list recipients writes expected JSON in `tickets.attributes.watch_list`.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F001",
       "F013"
