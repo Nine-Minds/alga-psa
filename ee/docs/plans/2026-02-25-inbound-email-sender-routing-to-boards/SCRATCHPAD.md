@@ -101,3 +101,6 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
   - `packages/clients/src/components/contacts/ContactDetailsEdit.tsx`
 - (2026-02-25) Completed `F016` by adding explicit precedence helper text in both client and contact destination controls:
   - Contact override -> Client destination -> Provider default
+- (2026-02-25) Completed `F017` by emitting structured resolution logs:
+  - destination source (`contact_override`, `client_default_from_contact`, `client_default_from_domain`, `provider_default`)
+  - fallback warnings with configured invalid destination IDs and fallback reason

@@ -145,7 +145,7 @@
   {
     "id": "F017",
     "description": "Add structured logging for destination resolution source and fallback reasons",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Observability"
     ]
