@@ -8,7 +8,7 @@
   {
     "id": "F002",
     "description": "Default provider selection to OpenRouter when provider config is missing or invalid",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Non-functional Requirements", "Rollout / Migration"]
   },
   {
