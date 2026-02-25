@@ -146,7 +146,7 @@
   {
     "id": "F025",
     "description": "Update Chat streaming path to populate pendingFunction from streamed function proposal events",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Problem", "Users and Primary Flows"]
   },
   {
