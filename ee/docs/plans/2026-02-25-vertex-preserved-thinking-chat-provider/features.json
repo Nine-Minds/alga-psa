@@ -62,7 +62,7 @@
   {
     "id": "F011",
     "description": "Refactor streaming completion path to use provider resolver instead of hardcoded OpenRouter client",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Goals", "Functional Requirements"]
   },
   {
