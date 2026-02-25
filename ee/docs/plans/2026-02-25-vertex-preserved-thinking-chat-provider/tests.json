@@ -29,7 +29,7 @@
   {
     "id": "T004",
     "description": "Vertex provider uses explicit VERTEX_OPENAPI_BASE_URL when provided",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F004",
       "F005"
