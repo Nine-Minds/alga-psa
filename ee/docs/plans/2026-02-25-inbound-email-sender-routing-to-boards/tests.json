@@ -44,7 +44,7 @@
   {
     "id": "T008",
     "description": "Resolver precedence: no contact/domain destination falls back to provider default",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F005"]
   },
   {

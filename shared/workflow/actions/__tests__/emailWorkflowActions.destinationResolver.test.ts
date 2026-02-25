@@ -196,4 +196,35 @@ describe('resolveEffectiveInboundTicketDefaults precedence', () => {
     expect(result.fallbackReason).toBeUndefined();
     expect(tablesCalled).not.toContain('contacts');
   });
+
+  it('T008: no contact/domain destination falls back to provider default', async () => {
+    const providerDefaults = {
+      board_id: 'board-provider-default',
+      status_id: 'status-provider-default',
+      priority_id: 'priority-provider-default',
+      client_id: null,
+      entered_by: 'user-1',
+      category_id: null,
+      subcategory_id: null,
+      location_id: null,
+    };
+
+    const { trx, tablesCalled } = createTrxForQueryPlan([]);
+    trxImpl = trx;
+
+    const { resolveEffectiveInboundTicketDefaults } = await import('../emailWorkflowActions');
+    const result = await resolveEffectiveInboundTicketDefaults({
+      tenant: 'tenant-1',
+      providerId: 'provider-1',
+      providerDefaults,
+      matchedContactId: null,
+      matchedContactClientId: null,
+      domainMatchedClientId: null,
+    });
+
+    expect(result.source).toBe('provider_default');
+    expect(result.defaults).toEqual(providerDefaults);
+    expect(result.fallbackReason).toBeUndefined();
+    expect(tablesCalled).toHaveLength(0);
+  });
 });

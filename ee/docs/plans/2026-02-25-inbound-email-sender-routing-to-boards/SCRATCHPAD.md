@@ -140,3 +140,6 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
 - (2026-02-25) Completed `T007` by extending shared resolver unit coverage for domain path:
   - when no exact contact is provided and domain client is matched, resolves `source=client_default_from_domain`
   - returns domain client's active defaults
+- (2026-02-25) Completed `T008` by extending shared resolver unit coverage for fallback path:
+  - when neither exact-contact nor domain destination applies, resolves `source=provider_default`
+  - returns provider defaults unchanged with no fallback reason
