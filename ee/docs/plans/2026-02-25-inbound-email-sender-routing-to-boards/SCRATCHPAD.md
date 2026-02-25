@@ -85,3 +85,4 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
   - `shared/workflow/runtime/actions/registerEmailWorkflowActions.ts`
 - (2026-02-25) Completed `F006` by passing domain-matched client context into the shared resolver in both in-app and workflow-runtime paths.
 - (2026-02-25) Completed `F007` by enforcing tenant+active validation on contact/client destination IDs before applying defaults.
+- (2026-02-25) Completed `F008` by using shared destination resolution in `processInboundEmailInApp` before new-ticket create, while preserving existing reply-token/thread branches.

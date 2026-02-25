@@ -65,7 +65,7 @@
   {
     "id": "F008",
     "description": "Apply effective destination resolution in `processInboundEmailInApp` new-ticket creation path",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Resolution Integration Points"
