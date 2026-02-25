@@ -140,7 +140,7 @@
   {
     "id": "F017",
     "description": "Send watcher notifications for ticket-updated events in both accumulator and non-accumulator paths.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Functional Requirements"
     ]
