@@ -197,7 +197,7 @@
   {
     "id": "F024",
     "description": "Allow any email, including technician/internal addresses, to be included as watchers via email-based list management.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Goals",
       "Users and Primary Flows"
