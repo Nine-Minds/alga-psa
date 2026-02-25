@@ -276,7 +276,7 @@
   {
     "id": "T033",
     "description": "Subscriber unit: internal comment does not send watcher notifications.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F019"
     ]
