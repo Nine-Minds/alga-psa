@@ -430,7 +430,7 @@
   {
     "id": "T051",
     "description": "DB-backed happy path: approved function execution completes and persists final assistant message for the chat",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F016",
       "F026",
