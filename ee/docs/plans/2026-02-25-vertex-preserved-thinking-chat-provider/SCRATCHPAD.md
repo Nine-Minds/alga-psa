@@ -99,3 +99,4 @@ Working notes for implementing a new chat provider abstraction with Vertex GLM-5
 - (2026-02-25) Implemented `T008`: covered Vertex turn-level thinking disable payload when `VERTEX_ENABLE_THINKING=false`.
 - (2026-02-25) Implemented `T009`: verified OpenRouter provider overrides never include Vertex-specific thinking payload.
 - (2026-02-25) Implemented `T010`: added unit coverage in `chatCompletionsService.unit.test.ts` proving completion validation accepts assistant `reasoning_content` strings.
+- (2026-02-25) Implemented `T011`: added unit coverage in `chatCompletionsService.unit.test.ts` rejecting invalid non-string `reasoning_content` values during completion validation.

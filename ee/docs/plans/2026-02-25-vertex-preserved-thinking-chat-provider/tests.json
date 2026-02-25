@@ -90,7 +90,7 @@
   {
     "id": "T011",
     "description": "Completion request validation rejects invalid reasoning_content types",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F008"
     ]
