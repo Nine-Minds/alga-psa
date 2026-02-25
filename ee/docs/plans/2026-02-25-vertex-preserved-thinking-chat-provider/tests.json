@@ -184,7 +184,7 @@
   {
     "id": "T022",
     "description": "Non-stream completion path uses provider-resolved model/client for Vertex",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F010"
     ]
