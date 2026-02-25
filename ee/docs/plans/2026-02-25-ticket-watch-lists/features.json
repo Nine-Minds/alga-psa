@@ -156,7 +156,7 @@
   {
     "id": "F019",
     "description": "Send watcher notifications for ticket-comment-added events only when the comment is customer-visible.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Functional Requirements"
     ]
