@@ -94,7 +94,7 @@
   {
     "id": "T012",
     "description": "UI: adding a valid manual watcher triggers persistence callback and refreshes displayed list.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F006",
       "F009"
