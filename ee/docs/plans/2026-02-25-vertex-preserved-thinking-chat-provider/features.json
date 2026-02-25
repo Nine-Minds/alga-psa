@@ -176,7 +176,7 @@
   {
     "id": "F030",
     "description": "Keep EE and aiAssistant API gating unchanged across completions, execute, and stream endpoints",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Functional Requirements", "Security / Permissions"]
   },
   {

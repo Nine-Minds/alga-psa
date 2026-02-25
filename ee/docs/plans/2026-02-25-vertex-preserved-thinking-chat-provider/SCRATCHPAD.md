@@ -86,3 +86,4 @@ Working notes for implementing a new chat provider abstraction with Vertex GLM-5
 - (2026-02-25) Implemented `F027`: Quick Ask inherits restored streaming function-calling behavior through the shared `Chat` component stream consumer path.
 - (2026-02-25) Implemented `F028`: Right Sidebar chat inherits restored streaming function-calling behavior through the shared `Chat` component stream consumer path.
 - (2026-02-25) Implemented `F029`: stream payloads remain backward-compatible by preserving legacy `content`/`done` fields alongside structured event typing.
+- (2026-02-25) Implemented `F030`: kept existing EE + `aiAssistant` gating checks unchanged for completions, execute, and stream routes.
