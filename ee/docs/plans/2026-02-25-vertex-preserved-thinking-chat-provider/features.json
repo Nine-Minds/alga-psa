@@ -152,7 +152,7 @@
   {
     "id": "F026",
     "description": "Preserve existing approve/decline execution handshake with /api/chat/v1/execute using streamed proposal metadata",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Functional Requirements", "Security / Permissions"]
   },
   {
