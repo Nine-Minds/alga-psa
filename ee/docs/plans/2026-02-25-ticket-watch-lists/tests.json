@@ -316,7 +316,7 @@
   {
     "id": "T038",
     "description": "Subscriber unit: comment author is suppressed for watcher sends when author email matches watcher entry.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F022"
     ]
