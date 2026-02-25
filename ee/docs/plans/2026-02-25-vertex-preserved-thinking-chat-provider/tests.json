@@ -479,7 +479,7 @@
   {
     "id": "T056",
     "description": "Unknown provider value falls back safely to OpenRouter behavior",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F002"
     ]
