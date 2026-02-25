@@ -61,7 +61,7 @@
   {
     "id": "T008",
     "description": "Unit: serialization removes `watch_list` key when resulting list is empty.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F001",
       "F002"
