@@ -29,7 +29,7 @@
   {
     "id": "F004",
     "description": "Add indexes and migration safety for new client/contact destination fields",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data / API / Integrations > Proposed Data Model",
       "Rollout / Migration"

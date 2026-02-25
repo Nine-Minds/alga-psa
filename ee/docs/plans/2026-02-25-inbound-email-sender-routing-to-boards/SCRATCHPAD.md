@@ -25,6 +25,9 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
 - (2026-02-25) `ClientDetails` already includes inbound-domain and default-contact controls, making client-level destination a natural extension.
 - (2026-02-25) `clients` currently had no dedicated inbound destination field; persisted client destination now starts with nullable `clients.inbound_ticket_defaults_id`.
 - (2026-02-25) `contacts` currently had no dedicated inbound destination override; persisted contact override now starts with nullable `contacts.inbound_ticket_defaults_id`.
+- (2026-02-25) Added explicit tenant-scoped indexes for lookup safety/perf:
+  - `idx_clients_tenant_inbound_ticket_defaults`
+  - `idx_contacts_tenant_inbound_ticket_defaults`
 
 ## Commands / Runbooks
 
@@ -41,6 +44,8 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
   - `server/migrations/20260225120000_add_client_inbound_ticket_defaults_id.cjs`
 - (2026-02-25) Add contact override schema migration:
   - `server/migrations/20260225120500_add_contact_inbound_ticket_defaults_id.cjs`
+- (2026-02-25) Add lookup index migration:
+  - `server/migrations/20260225121000_add_inbound_ticket_defaults_lookup_indexes.cjs`
 
 ## Links / References
 
@@ -68,3 +73,4 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
 - (2026-02-25) Marked `F001` implemented in `features.json` and committed as the first checklist checkpoint.
 - (2026-02-25) Completed `F002` by adding migration `20260225120000_add_client_inbound_ticket_defaults_id.cjs` to persist `clients.inbound_ticket_defaults_id`.
 - (2026-02-25) Completed `F003` by adding migration `20260225120500_add_contact_inbound_ticket_defaults_id.cjs` to persist `contacts.inbound_ticket_defaults_id`.
+- (2026-02-25) Completed `F004` by adding migration `20260225121000_add_inbound_ticket_defaults_lookup_indexes.cjs` with safe create/drop index behavior.
