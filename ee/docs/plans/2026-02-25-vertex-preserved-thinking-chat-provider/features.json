@@ -74,7 +74,7 @@
   {
     "id": "F013",
     "description": "Parse provider reasoning fields into canonical assistant content handling while retaining existing OpenRouter behavior",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Functional Requirements", "Non-functional Requirements"]
   },
   {
