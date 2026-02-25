@@ -404,7 +404,7 @@
   {
     "id": "T048",
     "description": "Chat marks interrupted stream state correctly on stop/abort without false completion",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F022",
       "F024",
