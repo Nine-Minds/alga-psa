@@ -56,6 +56,9 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
 - (2026-02-25) Targeted migration integration test attempted:
   - `cd server && npx vitest run src/test/integration/inboundTicketDestinationMigrations.integration.test.ts --reporter=dot`
   - Blocker in local env: Vitest startup fails because `vitest` package is not installed in this worktree.
+- (2026-02-25) Targeted in-app routing integration test attempted:
+  - `cd server && npx vitest run src/test/integration/inboundEmailInApp.webhooks.integration.test.ts --reporter=dot`
+  - Blocker in local env: Vitest startup fails because `vitest` package is not installed in this worktree.
 - (2026-02-25) Targeted resolver unit test attempted:
   - `npx vitest run shared/workflow/actions/__tests__/emailWorkflowActions.destinationResolver.test.ts --reporter=dot`
   - Blocker in local env: Vitest startup fails because `dotenv` package is missing from active root node_modules resolution path.
@@ -149,3 +152,5 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
 - (2026-02-25) Completed `T010` by extending shared resolver unit coverage for invalid client destination safety:
   - invalid/inactive client destination (from exact-contact client path) falls back to `source=provider_default`
   - emits `fallbackReason=invalid_or_inactive_client_default_from_contact`
+- (2026-02-25) Completed `T011` by confirming in-app integration coverage exists in `server/src/test/integration/inboundEmailInApp.webhooks.integration.test.ts`:
+  - test case `Routing destination: exact sender contact override uses contact override defaults board` asserts board/client/contact routing from contact override defaults.

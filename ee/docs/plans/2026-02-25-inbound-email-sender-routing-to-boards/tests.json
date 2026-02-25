@@ -62,7 +62,7 @@
   {
     "id": "T011",
     "description": "In-app integration: exact sender contact override routes new ticket to override defaults board",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F008", "F018"]
   },
   {
