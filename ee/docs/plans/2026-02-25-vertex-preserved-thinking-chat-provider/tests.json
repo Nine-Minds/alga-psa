@@ -63,7 +63,7 @@
   {
     "id": "T008",
     "description": "Vertex request includes turn-level thinking disable payload when VERTEX_ENABLE_THINKING=false",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F006",
       "F030"
