@@ -122,7 +122,7 @@
   {
     "id": "F021",
     "description": "Emit a terminal done event consistently for completed streams",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Functional Requirements"]
   },
   {
