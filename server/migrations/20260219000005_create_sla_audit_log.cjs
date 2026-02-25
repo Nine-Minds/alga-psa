@@ -82,8 +82,7 @@ exports.up = async function(knex) {
             ALTER TABLE sla_audit_log
             ADD CONSTRAINT sla_audit_log_ticket_fkey
             FOREIGN KEY (tenant, ticket_id)
-            REFERENCES tickets(tenant, ticket_id)
-            ON DELETE CASCADE;
+            REFERENCES tickets(tenant, ticket_id);
         END IF;
     END $$;
   `);
@@ -96,8 +95,7 @@ exports.up = async function(knex) {
             ALTER TABLE sla_audit_log
             ADD CONSTRAINT sla_audit_log_user_fkey
             FOREIGN KEY (tenant, triggered_by)
-            REFERENCES users(tenant, user_id)
-            ON DELETE SET NULL;
+            REFERENCES users(tenant, user_id);
         END IF;
     END $$;
   `);

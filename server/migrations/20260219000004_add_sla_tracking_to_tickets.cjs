@@ -21,91 +21,44 @@ exports.up = async function(knex) {
   console.log('Adding SLA tracking columns to tickets table...');
 
   // First, drop indexes on legacy columns that we're removing
-  await knex.schema.alterTable('tickets', (table) => {
-    // These indexes may or may not exist depending on environment
-    try {
-      table.dropIndex(['sla_breach']);
-    } catch (e) {
-      // Index may not exist
+  await knex.raw(`DROP INDEX IF EXISTS tickets_sla_breach_index`);
+
+  // =========================================================================
+  // ADD: New comprehensive SLA tracking fields (each checked individually)
+  // =========================================================================
+  const newColumns = [
+    { name: 'sla_policy_id', sql: 'uuid' },
+    { name: 'sla_started_at', sql: 'timestamptz' },
+    { name: 'sla_response_due_at', sql: 'timestamptz' },
+    { name: 'sla_response_at', sql: 'timestamptz' },
+    { name: 'sla_response_met', sql: 'boolean' },
+    { name: 'sla_resolution_due_at', sql: 'timestamptz' },
+    { name: 'sla_resolution_at', sql: 'timestamptz' },
+    { name: 'sla_resolution_met', sql: 'boolean' },
+    { name: 'sla_paused_at', sql: 'timestamptz' },
+    { name: 'sla_total_pause_minutes', sql: 'integer NOT NULL DEFAULT 0' },
+  ];
+  for (const col of newColumns) {
+    if (!(await knex.schema.hasColumn('tickets', col.name))) {
+      await knex.raw(`ALTER TABLE tickets ADD COLUMN ${col.name} ${col.sql}`);
     }
-    // NOTE: escalated/escalation_level indexes are kept (used by escalation service)
-  }).catch(() => {
-    // Ignore errors if indexes don't exist
-  });
+  }
 
-  await knex.schema.alterTable('tickets', (table) => {
-    // =========================================================================
-    // ADD: New comprehensive SLA tracking fields
-    // =========================================================================
+  // Create indexes for common queries
+  await knex.raw(`CREATE INDEX IF NOT EXISTS tickets_sla_policy_id_index ON tickets (sla_policy_id)`);
+  await knex.raw(`CREATE INDEX IF NOT EXISTS tickets_sla_response_due_at_index ON tickets (sla_response_due_at)`);
+  await knex.raw(`CREATE INDEX IF NOT EXISTS tickets_sla_resolution_due_at_index ON tickets (sla_resolution_due_at)`);
+  await knex.raw(`CREATE INDEX IF NOT EXISTS tickets_sla_paused_at_index ON tickets (sla_paused_at)`);
 
-    // SLA Policy assignment (foreign key added separately via raw SQL for composite key)
-    table.uuid('sla_policy_id')
-      .nullable()
-      .comment('The SLA policy applied to this ticket');
-
-    table.timestamp('sla_started_at', { useTz: true })
-      .nullable()
-      .comment('When the SLA clock started (usually ticket creation time)');
-
-    // Response SLA tracking
-    table.timestamp('sla_response_due_at', { useTz: true })
-      .nullable()
-      .comment('When the first response is due (calculated from policy)');
-
-    table.timestamp('sla_response_at', { useTz: true })
-      .nullable()
-      .comment('When the first meaningful response was made');
-
-    table.boolean('sla_response_met')
-      .nullable()
-      .comment('Whether the response SLA was met (null = not yet responded)');
-
-    // Resolution SLA tracking
-    table.timestamp('sla_resolution_due_at', { useTz: true })
-      .nullable()
-      .comment('When resolution is due (calculated from policy)');
-
-    table.timestamp('sla_resolution_at', { useTz: true })
-      .nullable()
-      .comment('When the ticket was resolved/closed');
-
-    table.boolean('sla_resolution_met')
-      .nullable()
-      .comment('Whether the resolution SLA was met (null = not yet resolved)');
-
-    // Pause tracking
-    table.timestamp('sla_paused_at', { useTz: true })
-      .nullable()
-      .comment('When the SLA was paused (null = not paused)');
-
-    table.integer('sla_total_pause_minutes')
-      .defaultTo(0)
-      .notNullable()
-      .comment('Cumulative pause time in minutes (carries across multiple pauses)');
-
-    // Indexes for common queries
-    table.index(['sla_policy_id']);
-    table.index(['sla_response_due_at']);
-    table.index(['sla_resolution_due_at']);
-    table.index(['sla_paused_at']);
-
-    // =========================================================================
-    // DROP: Legacy unused ITIL/SLA fields
-    // =========================================================================
-
-    // Problem management fields (never implemented)
-    table.dropColumn('resolution_code');
-    table.dropColumn('root_cause');
-    table.dropColumn('workaround');
-    table.dropColumn('related_problem_id');
-
-    // Legacy SLA fields (superseded by new tracking)
-    table.dropColumn('sla_target');
-    table.dropColumn('sla_breach');
-
-    // NOTE: escalated, escalation_level, escalated_at, escalated_by are kept
-    // because the SLA escalation service actively uses them.
-  });
+  // =========================================================================
+  // DROP: Legacy unused ITIL/SLA fields
+  // =========================================================================
+  const legacyColumns = ['resolution_code', 'root_cause', 'workaround', 'related_problem_id', 'sla_target', 'sla_breach'];
+  for (const col of legacyColumns) {
+    if (await knex.schema.hasColumn('tickets', col)) {
+      await knex.raw(`ALTER TABLE tickets DROP COLUMN ${col}`);
+    }
+  }
 
   // Ensure escalation columns exist (they may have been dropped by an earlier
   // version of this migration). Using raw SQL with IF NOT EXISTS to be idempotent.
@@ -116,38 +69,39 @@ exports.up = async function(knex) {
     { name: 'escalated_by', sql: 'uuid' },
   ];
   for (const col of escalationCols) {
-    const exists = await knex.raw(`
-      SELECT 1 FROM information_schema.columns
-      WHERE table_name = 'tickets' AND column_name = ?
-    `, [col.name]);
-    if (exists.rows.length === 0) {
+    if (!(await knex.schema.hasColumn('tickets', col.name))) {
       await knex.raw(`ALTER TABLE tickets ADD COLUMN ${col.name} ${col.sql}`);
       console.log(`  Restored missing column: ${col.name}`);
     }
   }
 
   // Ensure escalation_level check constraint exists
-  const checkExists = await knex.raw(`
-    SELECT 1 FROM pg_constraint
-    WHERE conname = 'tickets_escalation_level_check'
-    AND conrelid = 'tickets'::regclass
+  await knex.raw(`
+    DO $$ BEGIN
+        IF NOT EXISTS (
+            SELECT 1 FROM pg_constraint
+            WHERE conname = 'tickets_escalation_level_check'
+            AND conrelid = 'tickets'::regclass
+        ) THEN
+            ALTER TABLE tickets
+            ADD CONSTRAINT tickets_escalation_level_check
+            CHECK (escalation_level IS NULL OR (escalation_level >= 1 AND escalation_level <= 3));
+        END IF;
+    END $$;
   `);
-  if (checkExists.rows.length === 0) {
-    await knex.raw(`
-      ALTER TABLE tickets
-      ADD CONSTRAINT tickets_escalation_level_check
-      CHECK (escalation_level IS NULL OR (escalation_level >= 1 AND escalation_level <= 3))
-    `);
-    console.log('  Restored escalation_level check constraint');
-  }
 
   // Add composite foreign key for sla_policy_id (must reference tenant + sla_policy_id)
   await knex.raw(`
-    ALTER TABLE tickets
-    ADD CONSTRAINT tickets_sla_policy_fkey
-    FOREIGN KEY (tenant, sla_policy_id)
-    REFERENCES sla_policies(tenant, sla_policy_id)
-    ON DELETE SET NULL
+    DO $$ BEGIN
+        IF NOT EXISTS (
+            SELECT 1 FROM pg_constraint WHERE conname = 'tickets_sla_policy_fkey'
+        ) THEN
+            ALTER TABLE tickets
+            ADD CONSTRAINT tickets_sla_policy_fkey
+            FOREIGN KEY (tenant, sla_policy_id)
+            REFERENCES sla_policies(tenant, sla_policy_id);
+        END IF;
+    END $$;
   `);
 
   console.log('SLA tracking columns added and legacy fields removed from tickets table');
