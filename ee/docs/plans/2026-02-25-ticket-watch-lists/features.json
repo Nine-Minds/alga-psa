@@ -164,7 +164,7 @@
   {
     "id": "F020",
     "description": "Send watcher notifications for ticket-closed events with customer-visible context.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Functional Requirements"
     ]
