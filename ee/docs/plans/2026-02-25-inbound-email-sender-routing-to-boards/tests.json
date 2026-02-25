@@ -146,7 +146,7 @@
   {
     "id": "T025",
     "description": "ClientDetails UI can set and clear client inbound destination and persists correctly",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F014", "F016"]
   },
   {

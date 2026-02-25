@@ -68,6 +68,9 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
 - (2026-02-25) Targeted clients actions unit test attempted:
   - `npx vitest run packages/clients/src/actions/inboundTicketDestinationActions.test.ts --reporter=dot`
   - Blocker in local env: Vitest startup fails because `dotenv` package is missing from active root node_modules resolution path.
+- (2026-02-25) Targeted ClientDetails inbound destination wiring test attempted:
+  - `npx vitest run packages/clients/src/components/clients/ClientDetails.inboundDestination.wiring.test.ts --reporter=dot`
+  - Blocker in local env: Vitest startup fails because `dotenv` package is missing from active root node_modules resolution path.
 
 ## Links / References
 
@@ -188,3 +191,6 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
 - (2026-02-25) Completed `T024` by extending `packages/clients/src/actions/inboundTicketDestinationActions.test.ts` coverage for contact destination actions:
   - rejects updates without `contact:update` permission
   - rejects cross-tenant destination IDs via tenant-scoped `inbound_ticket_defaults` validation
+- (2026-02-25) Completed `T025` by adding `packages/clients/src/components/clients/ClientDetails.inboundDestination.wiring.test.ts`:
+  - verifies client UI destination select wiring (`value`, `allowClear`, `onValueChange`)
+  - verifies persistence path calls `updateClient(...)` and that server-side client update normalizes cleared empty strings to `null`
