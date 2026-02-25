@@ -354,7 +354,7 @@
   {
     "id": "T042",
     "description": "SSE reader ignores malformed JSON lines without crashing",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F023",
       "F029"
