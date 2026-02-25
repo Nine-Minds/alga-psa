@@ -164,7 +164,7 @@
   {
     "id": "F028",
     "description": "Ensure Sidebar Chat flow inherits restored streaming function-calling behavior through shared Chat component",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Users and Primary Flows", "UX / UI Notes"]
   },
   {
