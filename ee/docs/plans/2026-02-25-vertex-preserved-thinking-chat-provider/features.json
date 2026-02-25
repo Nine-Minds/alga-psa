@@ -44,7 +44,7 @@
   {
     "id": "F008",
     "description": "Update completion/execute/stream request validation to accept reasoning_content on assistant messages",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Functional Requirements"]
   },
   {
