@@ -70,3 +70,4 @@ Working notes for the ticket watch-list feature plan. This log captures clarifie
 - (2026-02-25) Implemented T01: added or updated automated coverage for this planned test scenario during watch-list delivery.
 - (2026-02-25) Implemented T02: added or updated automated coverage for this planned test scenario during watch-list delivery.
 - (2026-02-25) Implemented T03: added or updated automated coverage for this planned test scenario during watch-list delivery.
+- (2026-02-25) Implemented T04: added or updated automated coverage for this planned test scenario during watch-list delivery.
