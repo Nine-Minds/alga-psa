@@ -128,7 +128,7 @@
   {
     "id": "F022",
     "description": "Maintain safe stream cancellation/abort handling without leaking partial invalid state",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes", "Non-functional Requirements"]
   },
   {
