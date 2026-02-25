@@ -111,3 +111,4 @@ Working notes for implementing a new chat provider abstraction with Vertex GLM-5
 - (2026-02-25) Implemented `T020`: added final-response assertions ensuring non-tool assistant messages still carry preserved `reasoning_content`.
 - (2026-02-25) Implemented `T021`: added non-stream completion coverage asserting OpenRouter requests use provider-resolved client/model wiring.
 - (2026-02-25) Implemented `T022`: added non-stream completion coverage asserting Vertex requests use provider-resolved client/model wiring.
+- (2026-02-25) Implemented `T023`: completion request tests now assert `tool_choice: "auto"` is preserved for both OpenRouter and Vertex providers.
