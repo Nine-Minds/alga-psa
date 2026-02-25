@@ -146,3 +146,6 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
 - (2026-02-25) Completed `T009` by extending shared resolver unit coverage for invalid override safety:
   - invalid/inactive contact override destination falls back to `source=provider_default`
   - emits `fallbackReason=invalid_or_inactive_contact_override`
+- (2026-02-25) Completed `T010` by extending shared resolver unit coverage for invalid client destination safety:
+  - invalid/inactive client destination (from exact-contact client path) falls back to `source=provider_default`
+  - emits `fallbackReason=invalid_or_inactive_client_default_from_contact`

@@ -56,7 +56,7 @@
   {
     "id": "T010",
     "description": "Resolver falls back to provider default when client destination is inactive/invalid",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F007"]
   },
   {

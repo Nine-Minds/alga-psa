@@ -268,4 +268,50 @@ describe('resolveEffectiveInboundTicketDefaults precedence', () => {
     expect(result.defaults).toEqual(providerDefaults);
     expect(result.fallbackReason).toBe('invalid_or_inactive_contact_override');
   });
+
+  it('T010: falls back to provider default when client destination is inactive/invalid', async () => {
+    const providerDefaults = {
+      board_id: 'board-provider-default',
+      status_id: 'status-provider-default',
+      priority_id: 'priority-provider-default',
+      client_id: null,
+      entered_by: 'user-1',
+      category_id: null,
+      subcategory_id: null,
+      location_id: null,
+    };
+
+    const { trx } = createTrxForQueryPlan([
+      {
+        table: 'contacts',
+        where: { tenant: 'tenant-1', contact_name_id: 'contact-10' },
+        row: { inbound_ticket_defaults_id: null, client_id: 'client-10' },
+      },
+      {
+        table: 'clients',
+        where: { tenant: 'tenant-1', client_id: 'client-10' },
+        row: { inbound_ticket_defaults_id: 'defaults-client-invalid' },
+      },
+      {
+        table: 'inbound_ticket_defaults',
+        where: { tenant: 'tenant-1', id: 'defaults-client-invalid', is_active: true },
+        row: null,
+      },
+    ]);
+    trxImpl = trx;
+
+    const { resolveEffectiveInboundTicketDefaults } = await import('../emailWorkflowActions');
+    const result = await resolveEffectiveInboundTicketDefaults({
+      tenant: 'tenant-1',
+      providerId: 'provider-1',
+      providerDefaults,
+      matchedContactId: 'contact-10',
+      matchedContactClientId: 'client-10',
+      domainMatchedClientId: null,
+    });
+
+    expect(result.source).toBe('provider_default');
+    expect(result.defaults).toEqual(providerDefaults);
+    expect(result.fallbackReason).toBe('invalid_or_inactive_client_default_from_contact');
+  });
 });
