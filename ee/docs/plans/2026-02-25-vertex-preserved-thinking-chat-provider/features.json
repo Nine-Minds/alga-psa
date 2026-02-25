@@ -1,0 +1,194 @@
+[
+  {
+    "id": "F001",
+    "description": "Add a chat provider resolver module that returns provider id, model, OpenAI-compatible client, and provider-specific request overrides",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements"]
+  },
+  {
+    "id": "F002",
+    "description": "Default provider selection to OpenRouter when provider config is missing or invalid",
+    "implemented": false,
+    "prdRefs": ["Non-functional Requirements", "Rollout / Migration"]
+  },
+  {
+    "id": "F003",
+    "description": "Resolve OpenRouter credentials and model from secret/env sources in provider resolver",
+    "implemented": false,
+    "prdRefs": ["Data / API / Integrations"]
+  },
+  {
+    "id": "F004",
+    "description": "Resolve Vertex credentials, model, and endpoint settings from secret/env sources in provider resolver",
+    "implemented": false,
+    "prdRefs": ["Data / API / Integrations"]
+  },
+  {
+    "id": "F005",
+    "description": "Support explicit Vertex base URL override with project/location-derived URL fallback",
+    "implemented": false,
+    "prdRefs": ["Data / API / Integrations"]
+  },
+  {
+    "id": "F006",
+    "description": "Support provider-scoped turn-level thinking override payload for Vertex requests",
+    "implemented": false,
+    "prdRefs": ["Goals", "Functional Requirements"]
+  },
+  {
+    "id": "F007",
+    "description": "Extend chat completion message contract with optional reasoning_content field in EE server and client types",
+    "implemented": false,
+    "prdRefs": ["Functional Requirements", "Data / API / Integrations"]
+  },
+  {
+    "id": "F008",
+    "description": "Update completion/execute/stream request validation to accept reasoning_content on assistant messages",
+    "implemented": false,
+    "prdRefs": ["Functional Requirements"]
+  },
+  {
+    "id": "F009",
+    "description": "Preserve reasoning_content through conversation normalization and model-message conversion",
+    "implemented": false,
+    "prdRefs": ["Goals", "Functional Requirements"]
+  },
+  {
+    "id": "F010",
+    "description": "Refactor non-stream completion path to use provider resolver instead of hardcoded OpenRouter client",
+    "implemented": false,
+    "prdRefs": ["Goals", "Functional Requirements"]
+  },
+  {
+    "id": "F011",
+    "description": "Refactor streaming completion path to use provider resolver instead of hardcoded OpenRouter client",
+    "implemented": false,
+    "prdRefs": ["Goals", "Functional Requirements"]
+  },
+  {
+    "id": "F012",
+    "description": "Keep tool definitions and tool_choice:auto semantics consistent across OpenRouter and Vertex providers",
+    "implemented": false,
+    "prdRefs": ["Goals", "Functional Requirements"]
+  },
+  {
+    "id": "F013",
+    "description": "Parse provider reasoning fields into canonical assistant content handling while retaining existing OpenRouter behavior",
+    "implemented": false,
+    "prdRefs": ["Functional Requirements", "Non-functional Requirements"]
+  },
+  {
+    "id": "F014",
+    "description": "Attach preserved reasoning_content to assistant messages added to in-memory model conversation during tool loops",
+    "implemented": false,
+    "prdRefs": ["Goals", "Functional Requirements"]
+  },
+  {
+    "id": "F015",
+    "description": "Ensure function_proposed responses include conversation state that retains preserved reasoning_content",
+    "implemented": false,
+    "prdRefs": ["Functional Requirements"]
+  },
+  {
+    "id": "F016",
+    "description": "Ensure execute-after-approval continuation keeps preserved assistant reasoning when replaying tool result",
+    "implemented": false,
+    "prdRefs": ["Functional Requirements", "Users and Primary Flows"]
+  },
+  {
+    "id": "F017",
+    "description": "Replace raw token-only stream route behavior with structured stream events that can represent reasoning/content/function states",
+    "implemented": false,
+    "prdRefs": ["Problem", "Functional Requirements"]
+  },
+  {
+    "id": "F018",
+    "description": "Define and emit structured SSE content-delta events",
+    "implemented": false,
+    "prdRefs": ["Data / API / Integrations"]
+  },
+  {
+    "id": "F019",
+    "description": "Define and emit structured SSE reasoning-delta events",
+    "implemented": false,
+    "prdRefs": ["Goals", "Data / API / Integrations"]
+  },
+  {
+    "id": "F020",
+    "description": "Define and emit structured SSE function-proposal events from streaming tool decisions",
+    "implemented": false,
+    "prdRefs": ["Problem", "Users and Primary Flows"]
+  },
+  {
+    "id": "F021",
+    "description": "Emit a terminal done event consistently for completed streams",
+    "implemented": false,
+    "prdRefs": ["Functional Requirements"]
+  },
+  {
+    "id": "F022",
+    "description": "Maintain safe stream cancellation/abort handling without leaking partial invalid state",
+    "implemented": false,
+    "prdRefs": ["UX / UI Notes", "Non-functional Requirements"]
+  },
+  {
+    "id": "F023",
+    "description": "Extend readAssistantContentFromSse utility to parse structured event payloads for content, reasoning, function proposals, and done",
+    "implemented": false,
+    "prdRefs": ["Functional Requirements", "UX / UI Notes"]
+  },
+  {
+    "id": "F024",
+    "description": "Update Chat send/stream flow to consume structured reasoning and content events",
+    "implemented": false,
+    "prdRefs": ["UX / UI Notes", "Users and Primary Flows"]
+  },
+  {
+    "id": "F025",
+    "description": "Update Chat streaming path to populate pendingFunction from streamed function proposal events",
+    "implemented": false,
+    "prdRefs": ["Problem", "Users and Primary Flows"]
+  },
+  {
+    "id": "F026",
+    "description": "Preserve existing approve/decline execution handshake with /api/chat/v1/execute using streamed proposal metadata",
+    "implemented": false,
+    "prdRefs": ["Functional Requirements", "Security / Permissions"]
+  },
+  {
+    "id": "F027",
+    "description": "Ensure Quick Ask flow inherits restored streaming function-calling behavior through shared Chat component",
+    "implemented": false,
+    "prdRefs": ["Users and Primary Flows", "UX / UI Notes"]
+  },
+  {
+    "id": "F028",
+    "description": "Ensure Sidebar Chat flow inherits restored streaming function-calling behavior through shared Chat component",
+    "implemented": false,
+    "prdRefs": ["Users and Primary Flows", "UX / UI Notes"]
+  },
+  {
+    "id": "F029",
+    "description": "Keep backward-compatible stream payload handling during transition so existing content-token rendering does not regress",
+    "implemented": false,
+    "prdRefs": ["Non-functional Requirements", "Acceptance Criteria (Definition of Done)"]
+  },
+  {
+    "id": "F030",
+    "description": "Keep EE and aiAssistant API gating unchanged across completions, execute, and stream endpoints",
+    "implemented": false,
+    "prdRefs": ["Functional Requirements", "Security / Permissions"]
+  },
+  {
+    "id": "F031",
+    "description": "Document provider configuration contract for OpenRouter and Vertex in root and EE env examples",
+    "implemented": false,
+    "prdRefs": ["Data / API / Integrations", "Acceptance Criteria (Definition of Done)"]
+  },
+  {
+    "id": "F032",
+    "description": "Preserve existing message persistence behavior without requiring new database schema",
+    "implemented": false,
+    "prdRefs": ["Non-goals", "Non-functional Requirements"]
+  }
+]

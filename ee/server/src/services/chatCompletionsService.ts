@@ -8,9 +8,12 @@ import {
   ChatApiRegistryEntry,
 } from '../chat/registry/apiRegistry.schema';
 import { TemporaryApiKeyService } from './temporaryApiKeyService';
-import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { parseAssistantContent, ParsedAssistantContent } from '../utils/chatContent';
 import { reprovisionExtension } from '../lib/actions/extensionDomainActions';
+import {
+  resolveChatProvider,
+  type ResolvedChatProvider,
+} from './chatProviderResolver';
 
 const isEnterpriseEdition = () =>
   process.env.NEXT_PUBLIC_EDITION === 'enterprise' ||
@@ -114,8 +117,8 @@ export class ChatCompletionsService {
   static async createRawCompletionStream(
     conversation: ChatCompletionMessage[],
   ): Promise<AsyncIterable<OpenAI.Chat.Completions.ChatCompletionChunk>> {
-    const client = await this.getOpenRouterClient();
-    return this.generateStreamingCompletion(client, conversation);
+    const provider = await resolveChatProvider();
+    return this.generateStreamingCompletion(provider, conversation);
   }
 
   static async handleRequest(req: NextRequest): Promise<Response> {
@@ -518,7 +521,7 @@ export class ChatCompletionsService {
     userId: string;
   }): Promise<CompletionResponse> {
     const { messages, chatId, baseUrl, tenantId, userId } = params;
-    const client = await this.getOpenRouterClient();
+    const provider = await resolveChatProvider();
     let conversation = this.normalizeConversationHistory(messages);
 
     for (let iteration = 0; iteration < MAX_TOOL_ITERATIONS; iteration += 1) {
@@ -529,7 +532,7 @@ export class ChatCompletionsService {
 
       try {
         ({ completion, choice, parsedContent, toolCalls } =
-          await this.generateCompletionWithRetry(client, conversation));
+          await this.generateCompletionWithRetry(provider, conversation));
       } catch (error) {
         if (error instanceof Error) {
           if (error.message === EMPTY_RESPONSE_ERROR) {
@@ -850,22 +853,37 @@ export class ChatCompletionsService {
       };
     }
 
-    return parseAssistantContent(message.content, (message as any)?.reasoning);
+    return parseAssistantContent(
+      message.content,
+      (message as any)?.reasoning_content ?? (message as any)?.reasoning,
+    );
+  }
+
+  private static buildCompletionCreateRequest(
+    provider: ResolvedChatProvider,
+    conversation: ChatCompletionMessage[],
+    stream: boolean,
+  ): Record<string, unknown> {
+    return {
+      model: provider.model,
+      messages: this.buildOpenAiMessages(conversation),
+      tools: this.buildToolDefinitions(),
+      tool_choice: 'auto',
+      temperature: 1.0,
+      top_p: 0.95,
+      ...provider.requestOverrides.resolveTurnOverrides(),
+      stream,
+    };
   }
 
   private static async generateCompletionWithRetry(
-    client: OpenAI,
+    provider: ResolvedChatProvider,
     conversation: ChatCompletionMessage[],
   ) {
     for (let attempt = 0; attempt < MAX_MODEL_RETRIES; attempt += 1) {
-      const completion = await client.chat.completions.create({
-        model: process.env.OPENROUTER_CHAT_MODEL ?? 'minimax/minimax-m2',
-        messages: this.buildOpenAiMessages(conversation),
-        tools: this.buildToolDefinitions(),
-        tool_choice: 'auto',
-        temperature: 1.0,
-        top_p: 0.95,
-      });
+      const completion = await provider.client.chat.completions.create(
+        this.buildCompletionCreateRequest(provider, conversation, false) as any,
+      );
 
       const choice = completion.choices[0];
       if (!choice) {
@@ -873,7 +891,8 @@ export class ChatCompletionsService {
       }
 
       console.info(
-        '[ChatCompletionsService] OpenRouter raw completion\n%s',
+        '[ChatCompletionsService] Raw completion (%s)\n%s',
+        provider.providerId,
         JSON.stringify(
           {
             finishReason: choice.finish_reason,
@@ -885,7 +904,7 @@ export class ChatCompletionsService {
       );
 
       const parsedContent = this.extractContent(choice);
-      console.info('[ChatCompletionsService] OpenRouter parsed content', {
+      console.info('[ChatCompletionsService] Parsed content (%s)', provider.providerId, {
         raw: parsedContent.raw,
         display: parsedContent.display,
         reasoning: parsedContent.reasoning,
@@ -913,18 +932,12 @@ export class ChatCompletionsService {
   }
 
   private static async generateStreamingCompletion(
-    client: OpenAI,
+    provider: ResolvedChatProvider,
     conversation: ChatCompletionMessage[],
   ) {
-    return client.chat.completions.create({
-      model: process.env.OPENROUTER_CHAT_MODEL ?? 'minimax/minimax-m2',
-      messages: this.buildOpenAiMessages(conversation),
-      tools: this.buildToolDefinitions(),
-      tool_choice: 'auto',
-      temperature: 1.0,
-      top_p: 0.95,
-      stream: true,
-    });
+    return provider.client.chat.completions.create(
+      this.buildCompletionCreateRequest(provider, conversation, true) as any,
+    );
   }
 
   private static hasMeaningfulContent(content: ParsedAssistantContent): boolean {
@@ -1237,22 +1250,6 @@ export class ChatCompletionsService {
 
   private static shouldRedactHeader(headerName: string) {
     return /^(authorization|cookie|x-api-key|x-openai-api-key|proxy-authorization)$/i.test(headerName);
-  }
-
-  private static async getOpenRouterClient() {
-    const secretProvider = await getSecretProviderInstance();
-    const apiKey =
-      (await secretProvider.getAppSecret('OPENROUTER_API_KEY')) ||
-      process.env.OPENROUTER_API_KEY;
-
-    if (!apiKey) {
-      throw new Error('OpenRouter API key is not configured');
-    }
-
-    return new OpenAI({
-      apiKey,
-      baseURL: 'https://openrouter.ai/api/v1',
-    });
   }
 
   private static populatePathParameters(entry: ChatApiRegistryEntry, args: Record<string, unknown>) {
