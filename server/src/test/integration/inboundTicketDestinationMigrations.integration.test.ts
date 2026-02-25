@@ -30,4 +30,21 @@ describe('inbound ticket destination migrations (integration)', () => {
     expect(column?.is_nullable).toBe('YES');
     expect(column?.data_type).toBe('uuid');
   });
+
+  it('T002: migration adds contacts.inbound_ticket_defaults_id as nullable UUID', async () => {
+    await expect(knex.schema.hasColumn('contacts', 'inbound_ticket_defaults_id')).resolves.toBe(true);
+
+    const column = await knex('information_schema.columns')
+      .where({
+        table_schema: 'public',
+        table_name: 'contacts',
+        column_name: 'inbound_ticket_defaults_id',
+      })
+      .select<{ is_nullable: string; data_type: string }[]>('is_nullable', 'data_type')
+      .first();
+
+    expect(column).toBeTruthy();
+    expect(column?.is_nullable).toBe('YES');
+    expect(column?.data_type).toBe('uuid');
+  });
 });

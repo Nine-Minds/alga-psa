@@ -120,3 +120,4 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
   - explicit board-unchanged assertions on reply-token and thread-header reply flows
   - existing idempotency tests for duplicate reply/new-email processing remain in place and continue to validate dedupe behavior
 - (2026-02-25) Completed `T001` by adding migration integration coverage in `server/src/test/integration/inboundTicketDestinationMigrations.integration.test.ts` to assert `clients.inbound_ticket_defaults_id` exists, is nullable, and is UUID-typed.
+- (2026-02-25) Completed `T002` by extending the same migration integration suite to assert `contacts.inbound_ticket_defaults_id` exists, is nullable, and is UUID-typed.
