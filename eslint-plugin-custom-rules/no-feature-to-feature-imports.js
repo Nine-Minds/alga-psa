@@ -10,6 +10,7 @@ const VERTICAL_PACKAGES = new Set([
   'surveys',
   'integrations',
   'client-portal',
+  'users',
 ]);
 
 function getSourcePackage(filename) {

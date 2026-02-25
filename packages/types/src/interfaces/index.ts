@@ -3,6 +3,7 @@ export interface TenantEntity {
 }
 
 export * from './accountingExport.interfaces';
+export * from './accountingExportAdapter.interfaces';
 export * from './activity.interfaces';
 export * from './asset.interfaces';
 export type {
