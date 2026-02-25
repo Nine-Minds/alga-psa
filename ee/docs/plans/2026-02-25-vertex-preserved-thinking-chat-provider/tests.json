@@ -450,7 +450,7 @@
   {
     "id": "T053",
     "description": "OpenRouter provider compatibility: streaming text-only responses still render correctly when no tool call occurs",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F002",
       "F029"
