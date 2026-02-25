@@ -86,7 +86,7 @@
   {
     "id": "T015",
     "description": "Workflow integration: resolve_inbound_ticket_context returns contact-override destination outcome",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F009", "F019"]
   },
   {

@@ -59,6 +59,9 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
 - (2026-02-25) Targeted in-app routing integration test attempted:
   - `cd server && npx vitest run src/test/integration/inboundEmailInApp.webhooks.integration.test.ts --reporter=dot`
   - Blocker in local env: Vitest startup fails because `vitest` package is not installed in this worktree.
+- (2026-02-25) Targeted workflow destination routing integration test attempted:
+  - `cd server && npx vitest run src/test/integration/resolveInboundTicketContext.destinationRouting.integration.test.ts --reporter=dot`
+  - Blocker in local env: Vitest startup fails because `vitest` package is not installed in this worktree.
 - (2026-02-25) Targeted resolver unit test attempted:
   - `npx vitest run shared/workflow/actions/__tests__/emailWorkflowActions.destinationResolver.test.ts --reporter=dot`
   - Blocker in local env: Vitest startup fails because `dotenv` package is missing from active root node_modules resolution path.
@@ -160,3 +163,5 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
   - test case `Routing destination: unknown sender + domain-matched client uses domain client destination defaults` asserts domain-matched unknown-contact routing.
 - (2026-02-25) Completed `T014` by confirming in-app integration coverage exists in `server/src/test/integration/inboundEmailInApp.webhooks.integration.test.ts`:
   - test case `Unmatched sender: system follows the defined behavior without throwing` asserts provider-default board/client fallback for unmatched routing.
+- (2026-02-25) Completed `T015` by confirming workflow integration coverage exists in `server/src/test/integration/resolveInboundTicketContext.destinationRouting.integration.test.ts`:
+  - test case `returns contact override destination outcome for exact sender` asserts `resolve_inbound_ticket_context` returns contact-override destination.
