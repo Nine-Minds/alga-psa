@@ -188,7 +188,7 @@
   {
     "id": "F023",
     "description": "Guarantee watcher delivery mode is separate individual emails (no outbound CC batching).",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Summary",
       "Functional Requirements"
