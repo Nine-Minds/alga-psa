@@ -125,7 +125,7 @@
   {
     "id": "T015",
     "description": "OpenRouter message builder omits reasoning_content while maintaining compatible assistant payload",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F009",
       "F013"
