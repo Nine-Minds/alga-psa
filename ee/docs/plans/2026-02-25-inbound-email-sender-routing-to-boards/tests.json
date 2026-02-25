@@ -104,7 +104,7 @@
   {
     "id": "T018",
     "description": "Workflow and in-app destination selection parity for same sender/provider input",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F009", "F019"]
   },
   {
