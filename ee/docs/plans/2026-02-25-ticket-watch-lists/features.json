@@ -115,7 +115,7 @@
   {
     "id": "F014",
     "description": "Reactivate inactive watcher entries when the same email appears again in inbound `To`/`CC`.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Functional Requirements"
     ]
