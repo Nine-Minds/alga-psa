@@ -59,3 +59,4 @@ Working notes for implementing a new chat provider abstraction with Vertex GLM-5
 - (2026-02-25) Implemented `F003`: OpenRouter provider resolution now reads `OPENROUTER_API_KEY` and `OPENROUTER_CHAT_MODEL` from secret provider first, with env fallback.
 - (2026-02-25) Implemented `F004`: Vertex provider resolution now reads `GOOGLE_CLOUD_ACCESS_TOKEN`, `VERTEX_CHAT_MODEL`, and endpoint settings from secrets/env and returns an OpenAI-compatible client.
 - (2026-02-25) Implemented `F005`: Vertex resolver now prefers explicit `VERTEX_OPENAPI_BASE_URL` and falls back to derived project/location endpoint synthesis.
+- (2026-02-25) Implemented `F006`: provider request overrides now expose Vertex turn-level thinking disable payload (`extra_body.thinking.enabled=false`) driven by `VERTEX_ENABLE_THINKING` or explicit per-turn override.

@@ -32,7 +32,7 @@
   {
     "id": "F006",
     "description": "Support provider-scoped turn-level thinking override payload for Vertex requests",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Goals", "Functional Requirements"]
   },
   {
