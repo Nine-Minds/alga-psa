@@ -65,6 +65,9 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
 - (2026-02-25) Targeted resolver unit test attempted:
   - `npx vitest run shared/workflow/actions/__tests__/emailWorkflowActions.destinationResolver.test.ts --reporter=dot`
   - Blocker in local env: Vitest startup fails because `dotenv` package is missing from active root node_modules resolution path.
+- (2026-02-25) Targeted clients actions unit test attempted:
+  - `npx vitest run packages/clients/src/actions/inboundTicketDestinationActions.test.ts --reporter=dot`
+  - Blocker in local env: Vitest startup fails because `dotenv` package is missing from active root node_modules resolution path.
 
 ## Links / References
 
@@ -179,3 +182,6 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
   - test case `Contact match: sender email is normalized from display-name format` asserts contact/client IDs still resolve from exact sender match semantics.
 - (2026-02-25) Completed `T022` by confirming explicit-domain matching regression coverage exists in `server/src/test/integration/inboundEmailInApp.webhooks.integration.test.ts`:
   - test case `Domain fallback: does not match by domain unless the domain is explicitly configured` asserts no inferred domain ownership from contact records.
+- (2026-02-25) Completed `T023` by adding `packages/clients/src/actions/inboundTicketDestinationActions.test.ts` coverage for client destination actions:
+  - rejects updates without `client:update` permission
+  - rejects cross-tenant destination IDs via tenant-scoped `inbound_ticket_defaults` validation

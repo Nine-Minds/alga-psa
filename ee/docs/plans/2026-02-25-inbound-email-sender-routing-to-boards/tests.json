@@ -134,7 +134,7 @@
   {
     "id": "T023",
     "description": "Client destination API/action enforces client update permission and tenant scoping",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F012"]
   },
   {
