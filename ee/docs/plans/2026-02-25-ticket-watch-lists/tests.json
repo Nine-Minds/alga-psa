@@ -2,265 +2,376 @@
   {
     "id": "T001",
     "description": "Unit: parsing watch list from null attributes returns empty array.",
-    "implemented": false,
-    "featureIds": ["F001", "F002"]
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F002"
+    ]
   },
   {
     "id": "T002",
     "description": "Unit: parsing watch list from legacy string email array normalizes into active entries.",
     "implemented": false,
-    "featureIds": ["F002"]
+    "featureIds": [
+      "F002"
+    ]
   },
   {
     "id": "T003",
     "description": "Unit: parser normalizes mixed-case emails to lowercase.",
     "implemented": false,
-    "featureIds": ["F001", "F002"]
+    "featureIds": [
+      "F001",
+      "F002"
+    ]
   },
   {
     "id": "T004",
     "description": "Unit: duplicate watcher entries collapse to a single normalized email entry.",
     "implemented": false,
-    "featureIds": ["F003"]
+    "featureIds": [
+      "F003"
+    ]
   },
   {
     "id": "T005",
     "description": "Unit: merge preserves optional metadata when available and non-empty.",
     "implemented": false,
-    "featureIds": ["F004"]
+    "featureIds": [
+      "F004"
+    ]
   },
   {
     "id": "T006",
     "description": "Unit: merge adds new watcher entry with active=true by default.",
     "implemented": false,
-    "featureIds": ["F001", "F003"]
+    "featureIds": [
+      "F001",
+      "F003"
+    ]
   },
   {
     "id": "T007",
     "description": "Unit: merge reactivates existing inactive watcher when recipient is re-seen.",
     "implemented": false,
-    "featureIds": ["F014"]
+    "featureIds": [
+      "F014"
+    ]
   },
   {
     "id": "T008",
     "description": "Unit: serialization removes `watch_list` key when resulting list is empty.",
     "implemented": false,
-    "featureIds": ["F001", "F002"]
+    "featureIds": [
+      "F001",
+      "F002"
+    ]
   },
   {
     "id": "T009",
     "description": "Unit: inbound recipient builder includes both To and CC entries with source tags.",
     "implemented": false,
-    "featureIds": ["F010"]
+    "featureIds": [
+      "F010"
+    ]
   },
   {
     "id": "T010",
     "description": "Unit: inbound recipient builder excludes sender/provider mailbox/excluded addresses.",
     "implemented": false,
-    "featureIds": ["F011"]
+    "featureIds": [
+      "F011"
+    ]
   },
   {
     "id": "T011",
     "description": "UI: ticket properties render Watch List card and existing watchers.",
     "implemented": false,
-    "featureIds": ["F005"]
+    "featureIds": [
+      "F005"
+    ]
   },
   {
     "id": "T012",
     "description": "UI: adding a valid manual watcher triggers persistence callback and refreshes displayed list.",
     "implemented": false,
-    "featureIds": ["F006", "F009"]
+    "featureIds": [
+      "F006",
+      "F009"
+    ]
   },
   {
     "id": "T013",
     "description": "UI: adding invalid email shows validation error and does not persist.",
     "implemented": false,
-    "featureIds": ["F006"]
+    "featureIds": [
+      "F006"
+    ]
   },
   {
     "id": "T014",
     "description": "UI: adding existing inactive watcher reactivates instead of creating duplicate row.",
     "implemented": false,
-    "featureIds": ["F006", "F014"]
+    "featureIds": [
+      "F006",
+      "F014"
+    ]
   },
   {
     "id": "T015",
     "description": "UI: unchecking watcher updates active=false and persists.",
     "implemented": false,
-    "featureIds": ["F007", "F009"]
+    "featureIds": [
+      "F007",
+      "F009"
+    ]
   },
   {
     "id": "T016",
     "description": "UI: checking inactive watcher updates active=true and persists.",
     "implemented": false,
-    "featureIds": ["F007", "F009"]
+    "featureIds": [
+      "F007",
+      "F009"
+    ]
   },
   {
     "id": "T017",
     "description": "UI: removing watcher deletes row and persists attribute update.",
     "implemented": false,
-    "featureIds": ["F008", "F009"]
+    "featureIds": [
+      "F008",
+      "F009"
+    ]
   },
   {
     "id": "T018",
     "description": "UI: watcher save controls disable while request is in-flight to prevent double submits.",
     "implemented": false,
-    "featureIds": ["F005", "F009"]
+    "featureIds": [
+      "F005",
+      "F009"
+    ]
   },
   {
     "id": "T019",
     "description": "Inbound unit: new ticket path includes watch-list attributes from To/CC recipients.",
     "implemented": false,
-    "featureIds": ["F012", "F010"]
+    "featureIds": [
+      "F012",
+      "F010"
+    ]
   },
   {
     "id": "T020",
     "description": "Inbound unit: new ticket watch-list seed excludes sender email.",
     "implemented": false,
-    "featureIds": ["F011", "F012"]
+    "featureIds": [
+      "F011",
+      "F012"
+    ]
   },
   {
     "id": "T021",
     "description": "Inbound unit: new ticket watch-list seed excludes provider mailbox.",
     "implemented": false,
-    "featureIds": ["F011", "F012"]
+    "featureIds": [
+      "F011",
+      "F012"
+    ]
   },
   {
     "id": "T022",
     "description": "Inbound unit: reply-token path calls watch-list upsert for existing ticket.",
     "implemented": false,
-    "featureIds": ["F013"]
+    "featureIds": [
+      "F013"
+    ]
   },
   {
     "id": "T023",
     "description": "Inbound unit: thread-header path calls watch-list upsert for existing ticket.",
     "implemented": false,
-    "featureIds": ["F013"]
+    "featureIds": [
+      "F013"
+    ]
   },
   {
     "id": "T024",
     "description": "Inbound unit: when no To/CC recipients remain after exclusions, no watch-list upsert is attempted.",
     "implemented": false,
-    "featureIds": ["F010", "F011", "F013"]
+    "featureIds": [
+      "F010",
+      "F011",
+      "F013"
+    ]
   },
   {
     "id": "T025",
     "description": "DB integration (happy path): upsert watch-list recipients writes expected JSON in `tickets.attributes.watch_list`.",
     "implemented": false,
-    "featureIds": ["F001", "F013"]
+    "featureIds": [
+      "F001",
+      "F013"
+    ]
   },
   {
     "id": "T026",
     "description": "DB integration (guard case): upsert with only excluded/invalid recipients performs no ticket attribute mutation.",
     "implemented": false,
-    "featureIds": ["F011", "F013"]
+    "featureIds": [
+      "F011",
+      "F013"
+    ]
   },
   {
     "id": "T027",
     "description": "Subscriber unit: active watcher extraction ignores inactive entries.",
     "implemented": false,
-    "featureIds": ["F015"]
+    "featureIds": [
+      "F015"
+    ]
   },
   {
     "id": "T028",
     "description": "Subscriber unit: ticket-created sends watcher notification with customer-visible context.",
     "implemented": false,
-    "featureIds": ["F016"]
+    "featureIds": [
+      "F016"
+    ]
   },
   {
     "id": "T029",
     "description": "Subscriber unit: ticket-updated accumulator path includes watchers in accumulation set.",
     "implemented": false,
-    "featureIds": ["F017"]
+    "featureIds": [
+      "F017"
+    ]
   },
   {
     "id": "T030",
     "description": "Subscriber unit: ticket-updated non-accumulator path sends watcher notifications immediately.",
     "implemented": false,
-    "featureIds": ["F017"]
+    "featureIds": [
+      "F017"
+    ]
   },
   {
     "id": "T031",
     "description": "Subscriber unit: ticket-assigned sends watcher notifications once per unique recipient.",
     "implemented": false,
-    "featureIds": ["F018", "F021"]
+    "featureIds": [
+      "F018",
+      "F021"
+    ]
   },
   {
     "id": "T032",
     "description": "Subscriber unit: public internal-agent comment sends watcher notifications.",
     "implemented": false,
-    "featureIds": ["F019"]
+    "featureIds": [
+      "F019"
+    ]
   },
   {
     "id": "T033",
     "description": "Subscriber unit: internal comment does not send watcher notifications.",
     "implemented": false,
-    "featureIds": ["F019"]
+    "featureIds": [
+      "F019"
+    ]
   },
   {
     "id": "T034",
     "description": "Subscriber unit: public client-authored comment does not trigger watcher sends when customer-visible rule requires agent-authored updates.",
     "implemented": false,
-    "featureIds": ["F019"]
+    "featureIds": [
+      "F019"
+    ]
   },
   {
     "id": "T035",
     "description": "Subscriber unit: ticket-closed sends watcher notifications with customer-visible context.",
     "implemented": false,
-    "featureIds": ["F020"]
+    "featureIds": [
+      "F020"
+    ]
   },
   {
     "id": "T036",
     "description": "Subscriber unit: watcher recipients dedupe against primary contact/client recipient.",
     "implemented": false,
-    "featureIds": ["F021"]
+    "featureIds": [
+      "F021"
+    ]
   },
   {
     "id": "T037",
     "description": "Subscriber unit: watcher recipients dedupe against assigned/additional resource recipients.",
     "implemented": false,
-    "featureIds": ["F021"]
+    "featureIds": [
+      "F021"
+    ]
   },
   {
     "id": "T038",
     "description": "Subscriber unit: comment author is suppressed for watcher sends when author email matches watcher entry.",
     "implemented": false,
-    "featureIds": ["F022"]
+    "featureIds": [
+      "F022"
+    ]
   },
   {
     "id": "T039",
     "description": "Subscriber unit: watcher send function issues one send call per watcher email (no aggregated CC payload).",
     "implemented": false,
-    "featureIds": ["F023"]
+    "featureIds": [
+      "F023"
+    ]
   },
   {
     "id": "T040",
     "description": "End-to-end notification test: watcher receives ticket-created email as separate message.",
     "implemented": false,
-    "featureIds": ["F016", "F023"]
+    "featureIds": [
+      "F016",
+      "F023"
+    ]
   },
   {
     "id": "T041",
     "description": "End-to-end notification test: watcher receives ticket-updated email as separate message.",
     "implemented": false,
-    "featureIds": ["F017", "F023"]
+    "featureIds": [
+      "F017",
+      "F023"
+    ]
   },
   {
     "id": "T042",
     "description": "End-to-end notification test: watcher receives public comment email and not internal-note email.",
     "implemented": false,
-    "featureIds": ["F019", "F023"]
+    "featureIds": [
+      "F019",
+      "F023"
+    ]
   },
   {
     "id": "T043",
     "description": "End-to-end notification test: watcher receives ticket-closed email as separate message.",
     "implemented": false,
-    "featureIds": ["F020", "F023"]
+    "featureIds": [
+      "F020",
+      "F023"
+    ]
   },
   {
     "id": "T044",
     "description": "Compatibility test: technician/internal email can be added manually as watcher and remains persisted/active.",
     "implemented": false,
-    "featureIds": ["F024", "F006"]
+    "featureIds": [
+      "F024",
+      "F006"
+    ]
   }
 ]
