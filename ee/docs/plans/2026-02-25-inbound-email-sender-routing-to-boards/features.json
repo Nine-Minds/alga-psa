@@ -11,7 +11,7 @@
   {
     "id": "F002",
     "description": "Add client-level inbound destination reference (`clients.inbound_ticket_defaults_id` or equivalent persisted field)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations > Proposed Data Model"

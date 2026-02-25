@@ -23,6 +23,7 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
 - (2026-02-25) `processInboundEmailInApp` currently sets ticket board from provider defaults (`defaults.board_id`) and does not vary by sender.
 - (2026-02-25) `resolve_inbound_ticket_context` currently resolves target client/contact/location only; it does not yet compute sender-based destination defaults.
 - (2026-02-25) `ClientDetails` already includes inbound-domain and default-contact controls, making client-level destination a natural extension.
+- (2026-02-25) `clients` currently had no dedicated inbound destination field; persisted client destination now starts with nullable `clients.inbound_ticket_defaults_id`.
 
 ## Commands / Runbooks
 
@@ -35,6 +36,8 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
 - (2026-02-25) Scaffold and validate plan:
   - `python3 /Users/roberisaacs/.codex/skills/alga-plan/scripts/scaffold_plan.py "Inbound Email Sender Routing to Boards" --slug inbound-email-sender-routing-to-boards`
   - `python3 /Users/roberisaacs/.codex/skills/alga-plan/scripts/validate_plan.py ee/docs/plans/2026-02-25-inbound-email-sender-routing-to-boards`
+- (2026-02-25) Add client destination schema migration:
+  - `server/migrations/20260225120000_add_client_inbound_ticket_defaults_id.cjs`
 
 ## Links / References
 
@@ -60,3 +63,4 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
 ## Implementation Log
 
 - (2026-02-25) Marked `F001` implemented in `features.json` and committed as the first checklist checkpoint.
+- (2026-02-25) Completed `F002` by adding migration `20260225120000_add_client_inbound_ticket_defaults_id.cjs` to persist `clients.inbound_ticket_defaults_id`.
