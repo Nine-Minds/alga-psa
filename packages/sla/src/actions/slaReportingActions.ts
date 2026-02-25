@@ -152,7 +152,7 @@ export const getAverageTimesMetrics = withAuth(async (
           AVG(EXTRACT(EPOCH FROM (t.sla_resolution_at - t.sla_started_at)) / 60) as avg_resolution_minutes
         `)
       )
-      .first();
+      .first() as unknown as { avg_response_minutes: number; avg_resolution_minutes: number } | undefined;
 
     // Get average target times from policy targets
     let targetQuery = trx('tickets as t')
@@ -172,7 +172,7 @@ export const getAverageTimesMetrics = withAuth(async (
           AVG(spt.resolution_time_minutes) as avg_target_resolution_minutes
         `)
       )
-      .first();
+      .first() as unknown as { avg_target_response_minutes: number; avg_target_resolution_minutes: number } | undefined;
 
     return {
       avgResponseMinutes: Math.round(avgTimes?.avg_response_minutes || 0),
@@ -371,9 +371,9 @@ export const getSlaTrend = withAuth(async (
         `)
       )
       .groupByRaw('DATE(t.closed_at)')
-      .orderBy('date');
+      .orderBy('date') as any[];
 
-    return results.map(row => {
+    return results.map((row: any) => {
       const ticketCount = parseInt(row.ticket_count);
       const breachCount = parseInt(row.breach_count);
       const metCount = ticketCount - breachCount;
@@ -631,7 +631,7 @@ export const getSlaOverview = withAuth(async (
           END) as breached_count
         `)
       )
-      .first();
+      .first() as unknown as { active_count: string; paused_count: string; breached_count: string } | undefined;
 
     // Get at-risk count (simplified - tickets > 75% elapsed)
     const atRiskTickets = await getTicketsAtRisk(100);

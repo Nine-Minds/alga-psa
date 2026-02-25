@@ -45,10 +45,14 @@ describe('TemporalSlaBackend', () => {
       'policy-1',
       [
         {
+          target_id: 'target-1',
           sla_policy_id: 'policy-1',
           priority_id: 'priority-1',
           response_time_minutes: 60,
           resolution_time_minutes: 120,
+          escalation_1_percent: 50,
+          escalation_2_percent: 75,
+          escalation_3_percent: 90,
           is_24x7: true,
         },
       ],
@@ -119,10 +123,14 @@ describe('TemporalSlaBackend', () => {
         'policy-1',
         [
           {
+            target_id: 'target-1',
             sla_policy_id: 'policy-1',
             priority_id: 'priority-1',
             response_time_minutes: 60,
             resolution_time_minutes: 120,
+            escalation_1_percent: 50,
+            escalation_2_percent: 75,
+            escalation_3_percent: 90,
             is_24x7: true,
           },
         ],

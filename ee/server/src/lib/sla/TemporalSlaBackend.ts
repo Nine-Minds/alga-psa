@@ -110,7 +110,7 @@ export class TemporalSlaBackend implements ISlaBackend {
 
   private async resolveTenantId(ticketId: string): Promise<string> {
     const knex = await getConnection(null);
-    const ticket = await knex<{ tenant: string }>('tickets')
+    const ticket = await knex<{ tenant: string; ticket_id: string }>('tickets')
       .where({ ticket_id: ticketId })
       .select('tenant')
       .first();
