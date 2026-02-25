@@ -116,7 +116,7 @@
   {
     "id": "F020",
     "description": "Define and emit structured SSE function-proposal events from streaming tool decisions",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Problem", "Users and Primary Flows"]
   },
   {

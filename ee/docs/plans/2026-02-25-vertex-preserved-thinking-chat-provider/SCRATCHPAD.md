@@ -76,3 +76,4 @@ Working notes for implementing a new chat provider abstraction with Vertex GLM-5
 - (2026-02-25) Implemented `F017`: replaced token-only stream route behavior with structured event orchestration (`content_delta`, `reasoning_delta`, `function_proposed`, `done`) via a new `ChatCompletionsService.createStructuredCompletionStream` loop.
 - (2026-02-25) Implemented `F018`: stream route now emits explicit `content_delta` SSE events while keeping legacy `{content, done:false}` compatibility fields.
 - (2026-02-25) Implemented `F019`: stream route now emits explicit `reasoning_delta` SSE events sourced from provider reasoning delta fields.
+- (2026-02-25) Implemented `F020`: structured streaming now emits `function_proposed` events with function metadata + continuation conversation state when the model selects `call_api_endpoint`.
