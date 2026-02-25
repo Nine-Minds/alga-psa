@@ -164,7 +164,7 @@
   {
     "id": "T028",
     "description": "Idempotency regression: duplicate processing of same inbound message remains deduped under new routing model",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F020"]
   }
 ]

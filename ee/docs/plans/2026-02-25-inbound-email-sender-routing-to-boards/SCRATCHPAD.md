@@ -203,3 +203,6 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
 - (2026-02-25) Completed `T027` by extending `shared/workflow/actions/__tests__/emailWorkflowActions.destinationResolver.test.ts`:
   - asserts `console.warn` metadata includes `source=contact_override` and `fallback=provider_default` for invalid override fallbacks
   - asserts terminal `console.debug` metadata includes `source=provider_default` with `fallbackReason=invalid_or_inactive_contact_override`
+- (2026-02-25) Completed `T028` by extending `server/src/test/integration/inboundEmailInApp.webhooks.integration.test.ts`:
+  - added routed idempotency case `Idempotency: replay same routed contact-override email does not create duplicate routed tickets`
+  - asserts first run creates routed ticket on override board and second run dedupes, preserving single ticket/comment under sender-based routing

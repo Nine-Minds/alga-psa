@@ -1948,4 +1948,91 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
       await db('tickets').where({ tenant: tenantId, ticket_id: tickets[0].ticket_id }).delete();
     });
   });
+
+  it('Idempotency: replay same routed contact-override email does not create duplicate routed tickets', async () => {
+    const providerId = uuidv4();
+    const mailbox = `support-idem-routed-${uuidv4().slice(0, 6)}@example.com`;
+    const { defaultsId: providerDefaultsId } = await setupInboundDefaults({ providerId, mailbox });
+
+    cleanup.push(async () => {
+      await db('gmail_processed_history').where({ tenant: tenantId, provider_id: providerId }).delete();
+      await db('google_email_provider_config').where({ tenant: tenantId, email_provider_id: providerId }).delete();
+      await db('email_providers').where({ tenant: tenantId, id: providerId }).delete();
+      await db('inbound_ticket_defaults').where({ tenant: tenantId, id: providerDefaultsId }).delete();
+    });
+
+    const overrideBoardId = await createRoutingBoardVariant('idem-routed-override-board');
+    const contactOverrideDefaultsId = await createInboundRoutingDefaults({
+      boardId: overrideBoardId,
+      descriptionPrefix: 'idem-routed-contact-override',
+    });
+    cleanup.push(async () => {
+      await db('inbound_ticket_defaults').where({ tenant: tenantId, id: contactOverrideDefaultsId }).delete();
+      await db('boards').where({ tenant: tenantId, board_id: overrideBoardId }).delete();
+    });
+
+    const contactClientId = uuidv4();
+    await db('clients').insert({
+      tenant: tenantId,
+      client_id: contactClientId,
+      client_name: `Idempotency Routed Client ${uuidv4().slice(0, 6)}`,
+      created_at: db.fn.now(),
+      updated_at: db.fn.now(),
+    });
+    cleanup.push(async () => {
+      await db('clients').where({ tenant: tenantId, client_id: contactClientId }).delete();
+    });
+
+    const contactId = uuidv4();
+    const senderEmail = `idem-routed-${uuidv4().slice(0, 6)}@example.com`;
+    await db('contacts').insert({
+      tenant: tenantId,
+      contact_name_id: contactId,
+      full_name: 'Idempotency Routed Sender',
+      email: senderEmail,
+      client_id: contactClientId,
+      inbound_ticket_defaults_id: contactOverrideDefaultsId,
+      is_inactive: false,
+      created_at: db.fn.now(),
+      updated_at: db.fn.now(),
+    });
+    cleanup.push(async () => {
+      await db('contacts').where({ tenant: tenantId, contact_name_id: contactId }).delete();
+    });
+
+    const subject = `Idem routed subject ${uuidv4().slice(0, 6)}`;
+    const emailId = `new-email-${uuidv4()}`;
+    const emailData = {
+      id: emailId,
+      provider: 'google',
+      providerId,
+      tenant: tenantId,
+      receivedAt: new Date().toISOString(),
+      from: { email: senderEmail, name: 'Idempotency Routed Sender' },
+      to: [{ email: mailbox, name: 'Support' }],
+      subject,
+      body: { text: 'Hello', html: undefined },
+      attachments: [],
+    } as any;
+
+    const first = await processInboundEmailInApp({ tenantId, providerId, emailData });
+    expect(first.outcome).toBe('created');
+
+    const second = await processInboundEmailInApp({ tenantId, providerId, emailData });
+    expect(second.outcome).toBe('deduped');
+
+    const tickets = await db('tickets').where({ tenant: tenantId, title: subject });
+    expect(tickets).toHaveLength(1);
+    expect(tickets[0].board_id).toBe(overrideBoardId);
+    expect(tickets[0].client_id).toBe(contactClientId);
+    expect(tickets[0].contact_name_id).toBe(contactId);
+
+    const comments = await db('comments').where({ tenant: tenantId, ticket_id: tickets[0].ticket_id });
+    expect(comments).toHaveLength(1);
+
+    cleanup.push(async () => {
+      await db('comments').where({ tenant: tenantId, ticket_id: tickets[0].ticket_id }).delete();
+      await db('tickets').where({ tenant: tenantId, ticket_id: tickets[0].ticket_id }).delete();
+    });
+  });
 });
