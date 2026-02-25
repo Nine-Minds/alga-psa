@@ -216,6 +216,9 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
                   }
                   disabled={isInboundDestinationOptionsLoading}
                 />
+                <Text size="1" className="text-gray-500">
+                  Precedence: Contact override -&gt; Client destination -&gt; Provider default.
+                </Text>
               </td>
             </tr>
             <tr>

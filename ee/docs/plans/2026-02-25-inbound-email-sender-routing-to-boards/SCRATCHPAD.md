@@ -99,3 +99,5 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
 - (2026-02-25) Completed `F015` by adding optional contact override selectors to:
   - `packages/clients/src/components/contacts/ContactDetails.tsx`
   - `packages/clients/src/components/contacts/ContactDetailsEdit.tsx`
+- (2026-02-25) Completed `F016` by adding explicit precedence helper text in both client and contact destination controls:
+  - Contact override -> Client destination -> Provider default

@@ -137,7 +137,7 @@
   {
     "id": "F016",
     "description": "Add precedence helper text in client/contact UIs and ensure clear fallback semantics",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes"
     ]

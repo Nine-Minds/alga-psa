@@ -1061,7 +1061,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
                 label="Inbound ticket destination"
                 fieldType="select"
                 value={editedClient.inbound_ticket_defaults_id || ''}
-                helperText="Used for inbound senders that map to this client and have no contact override."
+                helperText="Used for inbound senders that map to this client and have no contact override. Precedence: Contact override -> Client destination -> Provider default."
                 automationId="client-inbound-ticket-destination-field"
               >
                 <Text as="label" size="2" className="text-gray-700 font-medium">Inbound ticket destination</Text>
@@ -1078,6 +1078,9 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
                   }
                   disabled={isInboundDestinationOptionsLoading}
                 />
+                <Text size="1" className="text-gray-500">
+                  Precedence: Contact override -&gt; Client destination -&gt; Provider default.
+                </Text>
               </FieldContainer>
 
               <FieldContainer

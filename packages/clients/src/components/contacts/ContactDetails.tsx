@@ -757,6 +757,9 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
                 }
                 disabled={isInboundDestinationOptionsLoading}
               />
+              <Text size="1" className="text-gray-500">
+                If set, this overrides the client destination for this exact sender contact. Precedence: Contact override -&gt; Client destination -&gt; Provider default.
+              </Text>
             </div>
             <div className="space-y-2">
               <PhoneInput
