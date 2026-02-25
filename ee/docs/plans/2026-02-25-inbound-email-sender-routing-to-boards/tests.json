@@ -128,7 +128,7 @@
   {
     "id": "T022",
     "description": "Domain-to-client matching remains explicit via `client_inbound_email_domains` and does not infer from contacts",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F011"]
   },
   {
