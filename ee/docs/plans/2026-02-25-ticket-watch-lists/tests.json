@@ -19,7 +19,7 @@
   {
     "id": "T003",
     "description": "Unit: parser normalizes mixed-case emails to lowercase.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F001",
       "F002"
