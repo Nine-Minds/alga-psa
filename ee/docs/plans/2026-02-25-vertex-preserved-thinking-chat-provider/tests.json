@@ -200,7 +200,7 @@
   {
     "id": "T024",
     "description": "function_proposed response includes nextMessages/modelMessages with preserved reasoning context",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F015"
     ]
