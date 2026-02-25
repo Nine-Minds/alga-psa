@@ -31,6 +31,7 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
 - (2026-02-25) Added explicit tenant-scoped indexes for lookup safety/perf:
   - `idx_clients_tenant_inbound_ticket_defaults`
   - `idx_contacts_tenant_inbound_ticket_defaults`
+- (2026-02-25) Local worktree currently has no installed npm dependencies (`npm ls vitest --depth=0` is empty), so targeted Vitest runs fail at startup before test execution.
 
 ## Commands / Runbooks
 
@@ -52,6 +53,9 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
 - (2026-02-25) Targeted unit tests attempted for shared/runtime email routing changes:
   - `npx vitest run shared/services/email/__tests__/processInboundEmailInApp.test.ts shared/services/email/__tests__/processInboundEmailInApp.additionalPaths.test.ts shared/workflow/runtime/actions/__tests__/registerEmailWorkflowActions.contactAuthorship.test.ts`
   - Blocker in local env: Vitest startup fails because `dotenv` package is missing from active node_modules resolution path.
+- (2026-02-25) Targeted migration integration test attempted:
+  - `cd server && npx vitest run src/test/integration/inboundTicketDestinationMigrations.integration.test.ts --reporter=dot`
+  - Blocker in local env: Vitest startup fails because `vitest` package is not installed in this worktree.
 
 ## Links / References
 
@@ -115,3 +119,4 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
 - (2026-02-25) Completed `F020` by extending regression coverage:
   - explicit board-unchanged assertions on reply-token and thread-header reply flows
   - existing idempotency tests for duplicate reply/new-email processing remain in place and continue to validate dedupe behavior
+- (2026-02-25) Completed `T001` by adding migration integration coverage in `server/src/test/integration/inboundTicketDestinationMigrations.integration.test.ts` to assert `clients.inbound_ticket_defaults_id` exists, is nullable, and is UUID-typed.

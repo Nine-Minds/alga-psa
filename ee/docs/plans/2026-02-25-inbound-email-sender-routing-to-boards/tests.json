@@ -2,7 +2,7 @@
   {
     "id": "T001",
     "description": "Migration adds `clients.inbound_ticket_defaults_id` as nullable field (or configured equivalent)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F002"]
   },
   {
