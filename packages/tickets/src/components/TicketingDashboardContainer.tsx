@@ -145,6 +145,9 @@ export default function TicketingDashboardContainer({
     if (filters.responseState && filters.responseState !== 'all') {
       params.set('responseState', filters.responseState);
     }
+    if (filters.slaStatusFilter && filters.slaStatusFilter !== 'all') {
+      params.set('slaStatusFilter', filters.slaStatusFilter);
+    }
     if (filters.bundleView && filters.bundleView !== 'bundled') {
       params.set('bundleView', filters.bundleView);
     }
@@ -187,6 +190,7 @@ export default function TicketingDashboardContainer({
         dueDateFrom: filters.dueDateFrom || undefined,
         dueDateTo: filters.dueDateTo || undefined,
         responseState: filters.responseState || undefined,
+        slaStatusFilter: filters.slaStatusFilter || undefined,
         sortBy: effectiveSortBy,
         sortDirection: effectiveSortDirection,
         bundleView: filters.bundleView || 'bundled'

@@ -1121,12 +1121,12 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                     showIcon={true}
                   />
                   {ticket.sla_response_met === false && (
-                    <span className="text-xs text-red-600 bg-red-50 px-2 py-1 rounded">
+                    <span className="text-xs text-[rgb(var(--badge-error-text))] bg-[rgb(var(--badge-error-bg))] border border-[rgb(var(--badge-error-border))] px-2 py-1 rounded-full">
                       Response SLA breached
                     </span>
                   )}
                   {ticket.sla_resolution_met === false && (
-                    <span className="text-xs text-red-600 bg-red-50 px-2 py-1 rounded">
+                    <span className="text-xs text-[rgb(var(--badge-error-text))] bg-[rgb(var(--badge-error-bg))] border border-[rgb(var(--badge-error-border))] px-2 py-1 rounded-full">
                       Resolution SLA breached
                     </span>
                   )}

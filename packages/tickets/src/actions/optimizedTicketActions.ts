@@ -967,6 +967,66 @@ export const getTicketsForList = withAuth(async (
       }
     }
 
+    // Apply SLA status filter
+    if (validatedFilters.slaStatusFilter && validatedFilters.slaStatusFilter !== 'all') {
+      const nowIso = Temporal.Now.instant().toString();
+
+      switch (validatedFilters.slaStatusFilter) {
+        case 'has_sla':
+          baseQuery = baseQuery.whereNotNull('t.sla_policy_id');
+          break;
+
+        case 'no_sla':
+          baseQuery = baseQuery.whereNull('t.sla_policy_id');
+          break;
+
+        case 'on_track':
+          baseQuery = baseQuery
+            .whereNotNull('t.sla_policy_id')
+            .whereNull('t.sla_paused_at')
+            .where(function() {
+              this.whereNotNull('t.sla_response_at')
+                .orWhereNull('t.sla_response_due_at')
+                .orWhere('t.sla_response_due_at', '>=', nowIso);
+            })
+            .where(function() {
+              this.whereNotNull('t.sla_resolution_at')
+                .orWhereNull('t.sla_resolution_due_at')
+                .orWhere('t.sla_resolution_due_at', '>=', nowIso);
+            })
+            .where(function() {
+              this.whereNull('t.sla_response_met').orWhere('t.sla_response_met', true);
+            })
+            .where(function() {
+              this.whereNull('t.sla_resolution_met').orWhere('t.sla_resolution_met', true);
+            });
+          break;
+
+        case 'breached':
+          baseQuery = baseQuery
+            .whereNotNull('t.sla_policy_id')
+            .where(function() {
+              this.where(function() {
+                this.where('t.sla_response_due_at', '<', nowIso)
+                  .whereNull('t.sla_response_at');
+              })
+              .orWhere(function() {
+                this.where('t.sla_resolution_due_at', '<', nowIso)
+                  .whereNull('t.sla_resolution_at');
+              })
+              .orWhere('t.sla_response_met', false)
+              .orWhere('t.sla_resolution_met', false);
+            });
+          break;
+
+        case 'paused':
+          baseQuery = baseQuery
+            .whereNotNull('t.sla_policy_id')
+            .whereNotNull('t.sla_paused_at');
+          break;
+      }
+    }
+
     const sortBy = validatedFilters.sortBy ?? 'entered_at';
     const sortDirection: 'asc' | 'desc' = validatedFilters.sortDirection ?? 'desc';
     const sortColumnMap: Record<string, { column?: string; rawExpression?: string }> = {

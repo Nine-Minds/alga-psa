@@ -57,7 +57,6 @@ function getStatusConfig(status: SlaTimerStatus, isPaused?: boolean) {
     return {
       icon: PauseCircle,
       label: 'Paused',
-      colorClass: 'bg-gray-100 text-gray-700 border-gray-200',
       variant: 'secondary' as const
     };
   }
@@ -67,14 +66,12 @@ function getStatusConfig(status: SlaTimerStatus, isPaused?: boolean) {
       return {
         icon: CheckCircle,
         label: 'On Track',
-        colorClass: 'bg-emerald-100 text-emerald-700 border-emerald-200',
         variant: 'success' as const
       };
     case 'at_risk':
       return {
         icon: AlertTriangle,
         label: 'At Risk',
-        colorClass: 'bg-amber-100 text-amber-700 border-amber-200',
         variant: 'warning' as const
       };
     case 'response_breached':
@@ -82,14 +79,12 @@ function getStatusConfig(status: SlaTimerStatus, isPaused?: boolean) {
       return {
         icon: XCircle,
         label: 'Breached',
-        colorClass: 'bg-red-100 text-red-700 border-red-200',
-        variant: 'destructive' as const
+        variant: 'error' as const
       };
     default:
       return {
         icon: Clock,
         label: 'Unknown',
-        colorClass: 'bg-gray-100 text-gray-700 border-gray-200',
         variant: 'secondary' as const
       };
   }
@@ -188,9 +183,9 @@ export function SlaStatusBadge({
 
   const badgeContent = (
     <Badge
+      variant={config.variant}
       className={cn(
         'gap-1.5 font-medium',
-        config.colorClass,
         sizeClasses[size],
         className
       )}
@@ -276,10 +271,10 @@ export function SlaIndicator({
     <span
       className={cn(
         'inline-flex items-center gap-1 text-xs',
-        isPaused || status === 'paused' ? 'text-gray-500' :
-        status === 'on_track' ? 'text-emerald-600' :
-        status === 'at_risk' ? 'text-amber-600' :
-        'text-red-600',
+        isPaused || status === 'paused' ? 'text-[rgb(var(--badge-secondary-text))]' :
+        status === 'on_track' ? 'text-[rgb(var(--badge-success-text))]' :
+        status === 'at_risk' ? 'text-[rgb(var(--badge-warning-text))]' :
+        'text-[rgb(var(--badge-error-text))]',
         className
       )}
     >

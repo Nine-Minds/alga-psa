@@ -166,6 +166,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const [selectedResponseState, setSelectedResponseState] = useState<'awaiting_client' | 'awaiting_internal' | 'none' | 'all'>(
     initialFilterValues.responseState ?? 'all'
   );
+  const [selectedSlaStatus, setSelectedSlaStatus] = useState<string>(initialFilterValues.slaStatusFilter ?? 'all');
   const [bundleView, setBundleView] = useState<'bundled' | 'individual'>(initialFilterValues.bundleView ?? 'bundled');
   const [ticketListDensityLevel, setTicketListDensityLevel] = useState<number>(50);
 
@@ -184,9 +185,10 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       initialFilterValues.includeUnassigned ||
       (initialFilterValues.dueDateFilter && initialFilterValues.dueDateFilter !== 'all') ||
       initialFilterValues.dueDateFrom ||
-      initialFilterValues.dueDateTo
+      initialFilterValues.dueDateTo ||
+      (initialFilterValues.slaStatusFilter && initialFilterValues.slaStatusFilter !== 'all')
     );
-  }, [initialFilterValues.boardId, initialFilterValues.clientId, initialFilterValues.statusId, initialFilterValues.priorityId, initialFilterValues.categoryId, initialFilterValues.tags, initialFilterValues.assignedToIds, initialFilterValues.includeUnassigned, initialFilterValues.dueDateFilter, initialFilterValues.dueDateFrom, initialFilterValues.dueDateTo]);
+  }, [initialFilterValues.boardId, initialFilterValues.clientId, initialFilterValues.statusId, initialFilterValues.priorityId, initialFilterValues.categoryId, initialFilterValues.tags, initialFilterValues.assignedToIds, initialFilterValues.includeUnassigned, initialFilterValues.dueDateFilter, initialFilterValues.dueDateFrom, initialFilterValues.dueDateTo, initialFilterValues.slaStatusFilter]);
 
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
   const [isLoadingSelf, setIsLoadingSelf] = useState(false);
@@ -210,8 +212,9 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       selectedAssignees.length > 0 ||
       includeUnassigned ||
       selectedDueDateFilter !== 'all' ||
-      selectedResponseState !== 'all';
-  }, [selectedBoard, selectedClient, selectedStatus, selectedPriority, selectedCategories, searchQuery, selectedTags, selectedAssignees, includeUnassigned, selectedDueDateFilter, selectedResponseState]);
+      selectedResponseState !== 'all' ||
+      selectedSlaStatus !== 'all';
+  }, [selectedBoard, selectedClient, selectedStatus, selectedPriority, selectedCategories, searchQuery, selectedTags, selectedAssignees, includeUnassigned, selectedDueDateFilter, selectedResponseState, selectedSlaStatus]);
 
   const handleTableSortChange = useCallback((columnId: string, direction: 'asc' | 'desc') => {
     if (columnId === sortBy && direction === sortDirection) {
@@ -421,6 +424,9 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     if (selectedResponseState && selectedResponseState !== 'all') {
       params.set('responseState', selectedResponseState);
     }
+    if (selectedSlaStatus && selectedSlaStatus !== 'all') {
+      params.set('slaStatusFilter', selectedSlaStatus);
+    }
     if (selectedTags.length > 0) {
       params.set('tags', selectedTags.join(','));
     }
@@ -463,6 +469,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       dueDateFrom: selectedDueDateFilter === 'after' && dueDateFilterValue ? dueDateFilterValue.toISOString() : undefined,
       dueDateTo: selectedDueDateFilter === 'before' && dueDateFilterValue ? dueDateFilterValue.toISOString() : undefined,
       responseState: selectedResponseState !== 'all' ? selectedResponseState : undefined,
+      slaStatusFilter: selectedSlaStatus !== 'all' ? selectedSlaStatus as ITicketListFilters['slaStatusFilter'] : undefined,
       bundleView,
     };
 
@@ -484,6 +491,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     selectedDueDateFilter,
     dueDateFilterValue,
     selectedResponseState,
+    selectedSlaStatus,
     // onFiltersChanged intentionally omitted - we want to trigger only when filter values change, not when the callback changes
     filtersHaveInitialValues
   ]);
@@ -1240,6 +1248,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     const defaultBoardFilterState: 'active' | 'inactive' | 'all' = 'active';
     const defaultDueDateFilter: string = 'all';
     const defaultResponseState: 'awaiting_client' | 'awaiting_internal' | 'none' | 'all' = 'all';
+    const defaultSlaStatus: string = 'all';
     const defaultBundleView: 'bundled' | 'individual' = 'bundled';
 
     setSelectedBoard(defaultBoard);
@@ -1257,6 +1266,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     setSelectedDueDateFilter(defaultDueDateFilter);
     setDueDateFilterValue(undefined);
     setSelectedResponseState(defaultResponseState);
+    setSelectedSlaStatus(defaultSlaStatus);
 
     setClientFilterState('active');
     setClientTypeFilter('all');
@@ -1278,6 +1288,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       dueDateFrom: undefined,
       dueDateTo: undefined,
       responseState: undefined,
+      slaStatusFilter: undefined,
       bundleView: defaultBundleView,
     });
   }, [onFiltersChanged, clearSelection]);
@@ -1421,6 +1432,20 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                     />
                   )}
                 </div>
+                <CustomSelect
+                  data-automation-id={`${id}-sla-status-filter`}
+                  options={[
+                    { value: 'all', label: 'All SLA Status' },
+                    { value: 'has_sla', label: 'Has SLA' },
+                    { value: 'no_sla', label: 'No SLA' },
+                    { value: 'on_track', label: 'On Track' },
+                    { value: 'breached', label: 'Breached' },
+                    { value: 'paused', label: 'Paused' },
+                  ]}
+                  value={selectedSlaStatus}
+                  onValueChange={(value) => setSelectedSlaStatus(value)}
+                  placeholder="SLA Status"
+                />
               </div>
 
               {/* Row 2: Category, search, tags, reset, bundled, density */}

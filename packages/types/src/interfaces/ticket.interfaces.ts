@@ -113,6 +113,7 @@ export interface ITicketListFilters {
   sortBy?: string;
   sortDirection?: 'asc' | 'desc';
   responseState?: 'awaiting_client' | 'awaiting_internal' | 'none' | 'all';
+  slaStatusFilter?: 'all' | 'has_sla' | 'no_sla' | 'on_track' | 'breached' | 'paused';
   bundleView?: 'bundled' | 'individual';
 }
 
