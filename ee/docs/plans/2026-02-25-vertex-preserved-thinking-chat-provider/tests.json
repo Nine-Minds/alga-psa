@@ -208,7 +208,7 @@
   {
     "id": "T025",
     "description": "execute-after-approval continuation sends preserved assistant context and tool result before requesting follow-up completion",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F016",
       "F026"
