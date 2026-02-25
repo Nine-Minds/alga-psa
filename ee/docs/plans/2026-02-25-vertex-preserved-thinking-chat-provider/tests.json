@@ -469,7 +469,7 @@
   {
     "id": "T055",
     "description": "Vertex preserved-thinking loop: second request after tool result includes prior assistant reasoning_content",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F009",
       "F014",

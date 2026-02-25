@@ -143,3 +143,4 @@ Working notes for implementing a new chat provider abstraction with Vertex GLM-5
 - (2026-02-25) Implemented `T052`: same DB-backed integration suite now verifies declined/failed guard behavior by asserting no false completed assistant message is persisted.
 - (2026-02-25) Implemented `T053`: Chat streaming incremental tests continue to validate text-only stream rendering without tool proposals, preserving OpenRouter-compatible behavior.
 - (2026-02-25) Implemented `T054`: Chat stream tests now cover combined reasoning/content deltas resolving to a final assistant response, matching Vertex-style non-tool streaming behavior.
+- (2026-02-25) Implemented `T055`: completion-service unit coverage verifies Vertex follow-up requests after tool replay include prior assistant `reasoning_content` context.
