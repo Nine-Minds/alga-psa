@@ -702,18 +702,21 @@ class ImapFolderListener {
   }
 
   private async idleLoop(client: ImapFlow) {
+    const idlePollMs = Number(process.env.IMAP_IDLE_POLL_MS || DEFAULT_IDLE_POLL_MS);
     while (this.running) {
       try {
-        await Promise.race([
-          client.idle(),
-          new Promise((resolve) => setTimeout(resolve, jitterMs(DEFAULT_IDLE_POLL_MS, this.jitterPct))).then(async () => {
-            try {
-              await client.noop();
-            } catch {
-              // ignore noop failures
-            }
-          })
-        ]);
+        const idlePromise = client
+          .idle()
+          .then(() => ({ kind: 'idle' as const }))
+          .catch((error) => ({ kind: 'error' as const, error }));
+
+        const wakePromise = sleep(jitterMs(idlePollMs, this.jitterPct)).then(() => ({ kind: 'timer' as const }));
+        const wake: { kind: 'idle' | 'timer' | 'error'; error?: any } = await Promise.race([idlePromise, wakePromise]);
+
+        if (wake.kind === 'error') {
+          throw wake.error;
+        }
+
         if (!this.running) return;
         await this.syncNewMessages(client);
         this.idleFailures = 0;
