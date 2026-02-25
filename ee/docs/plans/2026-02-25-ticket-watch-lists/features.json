@@ -20,7 +20,7 @@
   {
     "id": "F003",
     "description": "Deduplicate watch-list entries by normalized email during parse/merge operations.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Functional Requirements"
     ]
