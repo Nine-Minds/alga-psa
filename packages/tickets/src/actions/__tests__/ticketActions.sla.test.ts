@@ -82,7 +82,7 @@ describe('ticketActions deleteTicket', () => {
 
     const { deleteTicket } = await import('../ticketActions');
 
-    await deleteTicket(
+    await (deleteTicket as any)(
       {
         user_id: 'user-1',
         first_name: 'Test',

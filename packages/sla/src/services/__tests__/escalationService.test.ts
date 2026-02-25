@@ -53,7 +53,7 @@ const createMockTransaction = (mockData: MockData = {
       insert: vi.fn().mockResolvedValue([]),
       update: vi.fn().mockResolvedValue(1),
       fn: { now: vi.fn().mockReturnValue('NOW()') },
-      raw: vi.fn((sql: string) => sql),
+      raw: vi.fn((sql) => sql),
     };
 
     return builder;
@@ -70,7 +70,7 @@ const createMockTransaction = (mockData: MockData = {
 
   // Add fn.now() to the mock transaction itself
   (mockTrx as any).fn = { now: vi.fn().mockReturnValue('NOW()') };
-  (mockTrx as any).raw = vi.fn((sql: string) => sql);
+  (mockTrx as any).raw = vi.fn((sql) => sql);
 
   return {
     trx: mockTrx,
@@ -141,7 +141,7 @@ describe('escalateTicket', () => {
         insert: vi.fn().mockResolvedValue([]),
         update: vi.fn().mockResolvedValue(1),
         fn: { now: vi.fn().mockReturnValue('NOW()') },
-        raw: vi.fn((sql: string) => sql),
+        raw: vi.fn((sql) => sql),
       };
 
       mockTrx.tableBuilders['escalation_managers as em'] = {
@@ -153,7 +153,7 @@ describe('escalateTicket', () => {
         insert: vi.fn().mockResolvedValue([]),
         update: vi.fn().mockResolvedValue(1),
         fn: { now: vi.fn().mockReturnValue('NOW()') },
-        raw: vi.fn((sql: string) => sql),
+        raw: vi.fn((sql) => sql),
       };
 
       mockTrx.tableBuilders['ticket_resources'] = {
@@ -165,7 +165,7 @@ describe('escalateTicket', () => {
         insert: vi.fn().mockResolvedValue([]),
         update: vi.fn().mockResolvedValue(1),
         fn: { now: vi.fn().mockReturnValue('NOW()') },
-        raw: vi.fn((sql: string) => sql),
+        raw: vi.fn((sql) => sql),
       };
 
       mockTrx.tableBuilders['internal_notifications'] = {
@@ -177,7 +177,7 @@ describe('escalateTicket', () => {
         insert: vi.fn().mockResolvedValue([]),
         update: vi.fn().mockResolvedValue(1),
         fn: { now: vi.fn().mockReturnValue('NOW()') },
-        raw: vi.fn((sql: string) => sql),
+        raw: vi.fn((sql) => sql),
       };
 
       mockTrx.tableBuilders['sla_audit_log'] = {
@@ -189,7 +189,7 @@ describe('escalateTicket', () => {
         insert: vi.fn().mockResolvedValue([]),
         update: vi.fn().mockResolvedValue(1),
         fn: { now: vi.fn().mockReturnValue('NOW()') },
-        raw: vi.fn((sql: string) => sql),
+        raw: vi.fn((sql) => sql),
       };
 
       const result = await escalateTicket(mockTrx.trx, TENANT, TICKET_ID, 1);
@@ -230,7 +230,7 @@ describe('escalateTicket', () => {
         insert: vi.fn().mockResolvedValue([]),
         update: vi.fn().mockResolvedValue(1),
         fn: { now: vi.fn().mockReturnValue('NOW()') },
-        raw: vi.fn((sql: string) => sql),
+        raw: vi.fn((sql) => sql),
         andWhere: vi.fn().mockReturnThis(),
       };
 
@@ -242,7 +242,7 @@ describe('escalateTicket', () => {
         insert: vi.fn().mockResolvedValue([]),
         update: vi.fn().mockResolvedValue(1),
         fn: { now: vi.fn().mockReturnValue('NOW()') },
-        raw: vi.fn((sql: string) => sql),
+        raw: vi.fn((sql) => sql),
         andWhere: vi.fn().mockReturnThis(),
       };
 
@@ -254,7 +254,7 @@ describe('escalateTicket', () => {
         insert: vi.fn().mockResolvedValue([]),
         update: vi.fn().mockResolvedValue(1),
         fn: { now: vi.fn().mockReturnValue('NOW()') },
-        raw: vi.fn((sql: string) => sql),
+        raw: vi.fn((sql) => sql),
         andWhere: vi.fn().mockReturnThis(),
       };
 
@@ -266,7 +266,7 @@ describe('escalateTicket', () => {
         insert: vi.fn().mockResolvedValue([]),
         update: vi.fn().mockResolvedValue(1),
         fn: { now: vi.fn().mockReturnValue('NOW()') },
-        raw: vi.fn((sql: string) => sql),
+        raw: vi.fn((sql) => sql),
         andWhere: vi.fn().mockReturnThis(),
       };
 
@@ -278,7 +278,7 @@ describe('escalateTicket', () => {
         insert: vi.fn().mockResolvedValue([]),
         update: vi.fn().mockResolvedValue(1),
         fn: { now: vi.fn().mockReturnValue('NOW()') },
-        raw: vi.fn((sql: string) => sql),
+        raw: vi.fn((sql) => sql),
         andWhere: vi.fn().mockReturnThis(),
       };
 
@@ -320,7 +320,7 @@ describe('escalateTicket', () => {
         insert: vi.fn().mockResolvedValue([]),
         update: vi.fn().mockResolvedValue(1),
         fn: { now: vi.fn().mockReturnValue('NOW()') },
-        raw: vi.fn((sql: string) => sql),
+        raw: vi.fn((sql) => sql),
         andWhere: vi.fn().mockReturnThis(),
       };
 
@@ -332,7 +332,7 @@ describe('escalateTicket', () => {
         insert: vi.fn().mockResolvedValue([]),
         update: vi.fn().mockResolvedValue(1),
         fn: { now: vi.fn().mockReturnValue('NOW()') },
-        raw: vi.fn((sql: string) => sql),
+        raw: vi.fn((sql) => sql),
         andWhere: vi.fn().mockReturnThis(),
       };
 
@@ -344,7 +344,7 @@ describe('escalateTicket', () => {
         insert: vi.fn().mockResolvedValue([]),
         update: vi.fn().mockResolvedValue(1),
         fn: { now: vi.fn().mockReturnValue('NOW()') },
-        raw: vi.fn((sql: string) => sql),
+        raw: vi.fn((sql) => sql),
         andWhere: vi.fn().mockReturnThis(),
       };
 
@@ -356,7 +356,7 @@ describe('escalateTicket', () => {
         insert: vi.fn().mockResolvedValue([]),
         update: vi.fn().mockResolvedValue(1),
         fn: { now: vi.fn().mockReturnValue('NOW()') },
-        raw: vi.fn((sql: string) => sql),
+        raw: vi.fn((sql) => sql),
         andWhere: vi.fn().mockReturnThis(),
       };
 
@@ -368,7 +368,7 @@ describe('escalateTicket', () => {
         insert: vi.fn().mockResolvedValue([]),
         update: vi.fn().mockResolvedValue(1),
         fn: { now: vi.fn().mockReturnValue('NOW()') },
-        raw: vi.fn((sql: string) => sql),
+        raw: vi.fn((sql) => sql),
         andWhere: vi.fn().mockReturnThis(),
       };
 
@@ -401,7 +401,7 @@ describe('escalateTicket', () => {
         insert: vi.fn().mockResolvedValue([]),
         update: vi.fn().mockResolvedValue(1),
         fn: { now: vi.fn().mockReturnValue('NOW()') },
-        raw: vi.fn((sql: string) => sql),
+        raw: vi.fn((sql) => sql),
         andWhere: vi.fn().mockReturnThis(),
       };
 
@@ -430,7 +430,7 @@ describe('escalateTicket', () => {
         insert: vi.fn().mockResolvedValue([]),
         update: vi.fn().mockResolvedValue(1),
         fn: { now: vi.fn().mockReturnValue('NOW()') },
-        raw: vi.fn((sql: string) => sql),
+        raw: vi.fn((sql) => sql),
         andWhere: vi.fn().mockReturnThis(),
       };
 
@@ -451,7 +451,7 @@ describe('escalateTicket', () => {
         insert: vi.fn().mockResolvedValue([]),
         update: vi.fn().mockResolvedValue(1),
         fn: { now: vi.fn().mockReturnValue('NOW()') },
-        raw: vi.fn((sql: string) => sql),
+        raw: vi.fn((sql) => sql),
         andWhere: vi.fn().mockReturnThis(),
       };
 
@@ -482,7 +482,7 @@ describe('escalateTicket', () => {
         insert: vi.fn().mockResolvedValue([]),
         update: vi.fn().mockResolvedValue(1),
         fn: { now: vi.fn().mockReturnValue('NOW()') },
-        raw: vi.fn((sql: string) => sql),
+        raw: vi.fn((sql) => sql),
         andWhere: vi.fn().mockReturnThis(),
       };
 
@@ -494,7 +494,7 @@ describe('escalateTicket', () => {
         insert: vi.fn().mockResolvedValue([]),
         update: vi.fn().mockResolvedValue(1),
         fn: { now: vi.fn().mockReturnValue('NOW()') },
-        raw: vi.fn((sql: string) => sql),
+        raw: vi.fn((sql) => sql),
         andWhere: vi.fn().mockReturnThis(),
       };
 
@@ -506,7 +506,7 @@ describe('escalateTicket', () => {
         insert: vi.fn().mockResolvedValue([]),
         update: vi.fn().mockResolvedValue(1),
         fn: { now: vi.fn().mockReturnValue('NOW()') },
-        raw: vi.fn((sql: string) => sql),
+        raw: vi.fn((sql) => sql),
         andWhere: vi.fn().mockReturnThis(),
       };
 
@@ -550,7 +550,7 @@ describe('escalateTicket', () => {
         insert: vi.fn().mockResolvedValue([]),
         update: vi.fn().mockResolvedValue(1),
         fn: { now: vi.fn().mockReturnValue('NOW()') },
-        raw: vi.fn((sql: string) => sql),
+        raw: vi.fn((sql) => sql),
         andWhere: vi.fn().mockReturnThis(),
       };
 
@@ -562,7 +562,7 @@ describe('escalateTicket', () => {
         insert: vi.fn().mockResolvedValue([]),
         update: vi.fn().mockResolvedValue(1),
         fn: { now: vi.fn().mockReturnValue('NOW()') },
-        raw: vi.fn((sql: string) => sql),
+        raw: vi.fn((sql) => sql),
         andWhere: vi.fn().mockReturnThis(),
       };
 
@@ -574,7 +574,7 @@ describe('escalateTicket', () => {
         insert: vi.fn().mockResolvedValue([]),
         update: vi.fn().mockResolvedValue(1),
         fn: { now: vi.fn().mockReturnValue('NOW()') },
-        raw: vi.fn((sql: string) => sql),
+        raw: vi.fn((sql) => sql),
         andWhere: vi.fn().mockReturnThis(),
       };
 
@@ -586,7 +586,7 @@ describe('escalateTicket', () => {
         insert: vi.fn().mockResolvedValue([]),
         update: vi.fn().mockResolvedValue(1),
         fn: { now: vi.fn().mockReturnValue('NOW()') },
-        raw: vi.fn((sql: string) => sql),
+        raw: vi.fn((sql) => sql),
         andWhere: vi.fn().mockReturnThis(),
       };
 
@@ -598,7 +598,7 @@ describe('escalateTicket', () => {
         insert: vi.fn().mockResolvedValue([]),
         update: vi.fn().mockResolvedValue(1),
         fn: { now: vi.fn().mockReturnValue('NOW()') },
-        raw: vi.fn((sql: string) => sql),
+        raw: vi.fn((sql) => sql),
         andWhere: vi.fn().mockReturnThis(),
       };
 
@@ -640,7 +640,7 @@ describe('escalateTicket', () => {
         insert: vi.fn().mockResolvedValue([]),
         update: vi.fn().mockResolvedValue(1),
         fn: { now: vi.fn().mockReturnValue('NOW()') },
-        raw: vi.fn((sql: string) => sql),
+        raw: vi.fn((sql) => sql),
         andWhere: vi.fn().mockReturnThis(),
       };
 
@@ -652,7 +652,7 @@ describe('escalateTicket', () => {
         insert: vi.fn().mockResolvedValue([]),
         update: vi.fn().mockResolvedValue(1),
         fn: { now: vi.fn().mockReturnValue('NOW()') },
-        raw: vi.fn((sql: string) => sql),
+        raw: vi.fn((sql) => sql),
         andWhere: vi.fn().mockReturnThis(),
       };
 
@@ -664,7 +664,7 @@ describe('escalateTicket', () => {
         insert: vi.fn().mockResolvedValue([]),
         update: vi.fn().mockResolvedValue(1),
         fn: { now: vi.fn().mockReturnValue('NOW()') },
-        raw: vi.fn((sql: string) => sql),
+        raw: vi.fn((sql) => sql),
         andWhere: vi.fn().mockReturnThis(),
       };
 
@@ -676,7 +676,7 @@ describe('escalateTicket', () => {
         insert: vi.fn().mockResolvedValue([]),
         update: vi.fn().mockResolvedValue(1),
         fn: { now: vi.fn().mockReturnValue('NOW()') },
-        raw: vi.fn((sql: string) => sql),
+        raw: vi.fn((sql) => sql),
         andWhere: vi.fn().mockReturnThis(),
       };
 
@@ -688,7 +688,7 @@ describe('escalateTicket', () => {
         insert: vi.fn().mockResolvedValue([]),
         update: vi.fn().mockResolvedValue(1),
         fn: { now: vi.fn().mockReturnValue('NOW()') },
-        raw: vi.fn((sql: string) => sql),
+        raw: vi.fn((sql) => sql),
         andWhere: vi.fn().mockReturnThis(),
       };
 
@@ -719,7 +719,7 @@ describe('escalateTicket', () => {
         insert: vi.fn().mockResolvedValue([]),
         update: vi.fn().mockResolvedValue(1),
         fn: { now: vi.fn().mockReturnValue('NOW()') },
-        raw: vi.fn((sql: string) => sql),
+        raw: vi.fn((sql) => sql),
         andWhere: vi.fn().mockReturnThis(),
       };
 
@@ -731,7 +731,7 @@ describe('escalateTicket', () => {
         insert: vi.fn().mockResolvedValue([]),
         update: vi.fn().mockResolvedValue(1),
         fn: { now: vi.fn().mockReturnValue('NOW()') },
-        raw: vi.fn((sql: string) => sql),
+        raw: vi.fn((sql) => sql),
         andWhere: vi.fn().mockReturnThis(),
       };
 
@@ -744,7 +744,7 @@ describe('escalateTicket', () => {
         insert: slaAuditLogInsert,
         update: vi.fn().mockResolvedValue(1),
         fn: { now: vi.fn().mockReturnValue('NOW()') },
-        raw: vi.fn((sql: string) => sql),
+        raw: vi.fn((sql) => sql),
         andWhere: vi.fn().mockReturnThis(),
       };
 
@@ -795,7 +795,7 @@ describe('checkEscalationNeeded', () => {
         insert: vi.fn().mockResolvedValue([]),
         update: vi.fn().mockResolvedValue(1),
         fn: { now: vi.fn().mockReturnValue('NOW()') },
-        raw: vi.fn((sql: string) => sql),
+        raw: vi.fn((sql) => sql),
         andWhere: vi.fn().mockReturnThis(),
       };
 
@@ -807,7 +807,7 @@ describe('checkEscalationNeeded', () => {
         insert: vi.fn().mockResolvedValue([]),
         update: vi.fn().mockResolvedValue(1),
         fn: { now: vi.fn().mockReturnValue('NOW()') },
-        raw: vi.fn((sql: string) => sql),
+        raw: vi.fn((sql) => sql),
         andWhere: vi.fn().mockReturnThis(),
       };
 
@@ -837,7 +837,7 @@ describe('checkEscalationNeeded', () => {
         insert: vi.fn().mockResolvedValue([]),
         update: vi.fn().mockResolvedValue(1),
         fn: { now: vi.fn().mockReturnValue('NOW()') },
-        raw: vi.fn((sql: string) => sql),
+        raw: vi.fn((sql) => sql),
         andWhere: vi.fn().mockReturnThis(),
       };
 
@@ -849,7 +849,7 @@ describe('checkEscalationNeeded', () => {
         insert: vi.fn().mockResolvedValue([]),
         update: vi.fn().mockResolvedValue(1),
         fn: { now: vi.fn().mockReturnValue('NOW()') },
-        raw: vi.fn((sql: string) => sql),
+        raw: vi.fn((sql) => sql),
         andWhere: vi.fn().mockReturnThis(),
       };
 
@@ -879,7 +879,7 @@ describe('checkEscalationNeeded', () => {
         insert: vi.fn().mockResolvedValue([]),
         update: vi.fn().mockResolvedValue(1),
         fn: { now: vi.fn().mockReturnValue('NOW()') },
-        raw: vi.fn((sql: string) => sql),
+        raw: vi.fn((sql) => sql),
         andWhere: vi.fn().mockReturnThis(),
       };
 
@@ -891,7 +891,7 @@ describe('checkEscalationNeeded', () => {
         insert: vi.fn().mockResolvedValue([]),
         update: vi.fn().mockResolvedValue(1),
         fn: { now: vi.fn().mockReturnValue('NOW()') },
-        raw: vi.fn((sql: string) => sql),
+        raw: vi.fn((sql) => sql),
         andWhere: vi.fn().mockReturnThis(),
       };
 
@@ -923,7 +923,7 @@ describe('checkEscalationNeeded', () => {
         insert: vi.fn().mockResolvedValue([]),
         update: vi.fn().mockResolvedValue(1),
         fn: { now: vi.fn().mockReturnValue('NOW()') },
-        raw: vi.fn((sql: string) => sql),
+        raw: vi.fn((sql) => sql),
         andWhere: vi.fn().mockReturnThis(),
       };
 
@@ -935,7 +935,7 @@ describe('checkEscalationNeeded', () => {
         insert: vi.fn().mockResolvedValue([]),
         update: vi.fn().mockResolvedValue(1),
         fn: { now: vi.fn().mockReturnValue('NOW()') },
-        raw: vi.fn((sql: string) => sql),
+        raw: vi.fn((sql) => sql),
         andWhere: vi.fn().mockReturnThis(),
       };
 
@@ -959,7 +959,7 @@ describe('checkEscalationNeeded', () => {
         insert: vi.fn().mockResolvedValue([]),
         update: vi.fn().mockResolvedValue(1),
         fn: { now: vi.fn().mockReturnValue('NOW()') },
-        raw: vi.fn((sql: string) => sql),
+        raw: vi.fn((sql) => sql),
         andWhere: vi.fn().mockReturnThis(),
       };
 
@@ -983,7 +983,7 @@ describe('checkEscalationNeeded', () => {
         insert: vi.fn().mockResolvedValue([]),
         update: vi.fn().mockResolvedValue(1),
         fn: { now: vi.fn().mockReturnValue('NOW()') },
-        raw: vi.fn((sql: string) => sql),
+        raw: vi.fn((sql) => sql),
         andWhere: vi.fn().mockReturnThis(),
       };
 
@@ -1001,7 +1001,7 @@ describe('checkEscalationNeeded', () => {
         insert: vi.fn().mockResolvedValue([]),
         update: vi.fn().mockResolvedValue(1),
         fn: { now: vi.fn().mockReturnValue('NOW()') },
-        raw: vi.fn((sql: string) => sql),
+        raw: vi.fn((sql) => sql),
         andWhere: vi.fn().mockReturnThis(),
       };
 
@@ -1025,7 +1025,7 @@ describe('checkEscalationNeeded', () => {
         insert: vi.fn().mockResolvedValue([]),
         update: vi.fn().mockResolvedValue(1),
         fn: { now: vi.fn().mockReturnValue('NOW()') },
-        raw: vi.fn((sql: string) => sql),
+        raw: vi.fn((sql) => sql),
         andWhere: vi.fn().mockReturnThis(),
       };
 
@@ -1037,7 +1037,7 @@ describe('checkEscalationNeeded', () => {
         insert: vi.fn().mockResolvedValue([]),
         update: vi.fn().mockResolvedValue(1),
         fn: { now: vi.fn().mockReturnValue('NOW()') },
-        raw: vi.fn((sql: string) => sql),
+        raw: vi.fn((sql) => sql),
         andWhere: vi.fn().mockReturnThis(),
       };
 
@@ -1069,7 +1069,7 @@ describe('checkEscalationNeeded', () => {
         insert: vi.fn().mockResolvedValue([]),
         update: vi.fn().mockResolvedValue(1),
         fn: { now: vi.fn().mockReturnValue('NOW()') },
-        raw: vi.fn((sql: string) => sql),
+        raw: vi.fn((sql) => sql),
         andWhere: vi.fn().mockReturnThis(),
       };
 
@@ -1081,7 +1081,7 @@ describe('checkEscalationNeeded', () => {
         insert: vi.fn().mockResolvedValue([]),
         update: vi.fn().mockResolvedValue(1),
         fn: { now: vi.fn().mockReturnValue('NOW()') },
-        raw: vi.fn((sql: string) => sql),
+        raw: vi.fn((sql) => sql),
         andWhere: vi.fn().mockReturnThis(),
       };
 
@@ -1112,7 +1112,7 @@ describe('checkEscalationNeeded', () => {
         insert: vi.fn().mockResolvedValue([]),
         update: vi.fn().mockResolvedValue(1),
         fn: { now: vi.fn().mockReturnValue('NOW()') },
-        raw: vi.fn((sql: string) => sql),
+        raw: vi.fn((sql) => sql),
         andWhere: vi.fn().mockReturnThis(),
       };
 
@@ -1124,7 +1124,7 @@ describe('checkEscalationNeeded', () => {
         insert: vi.fn().mockResolvedValue([]),
         update: vi.fn().mockResolvedValue(1),
         fn: { now: vi.fn().mockReturnValue('NOW()') },
-        raw: vi.fn((sql: string) => sql),
+        raw: vi.fn((sql) => sql),
         andWhere: vi.fn().mockReturnThis(),
       };
 
@@ -1155,7 +1155,7 @@ describe('checkEscalationNeeded', () => {
         insert: vi.fn().mockResolvedValue([]),
         update: vi.fn().mockResolvedValue(1),
         fn: { now: vi.fn().mockReturnValue('NOW()') },
-        raw: vi.fn((sql: string) => sql),
+        raw: vi.fn((sql) => sql),
         andWhere: vi.fn().mockReturnThis(),
       };
 
@@ -1167,7 +1167,7 @@ describe('checkEscalationNeeded', () => {
         insert: vi.fn().mockResolvedValue([]),
         update: vi.fn().mockResolvedValue(1),
         fn: { now: vi.fn().mockReturnValue('NOW()') },
-        raw: vi.fn((sql: string) => sql),
+        raw: vi.fn((sql) => sql),
         andWhere: vi.fn().mockReturnThis(),
       };
 
@@ -1198,7 +1198,7 @@ describe('checkEscalationNeeded', () => {
         insert: vi.fn().mockResolvedValue([]),
         update: vi.fn().mockResolvedValue(1),
         fn: { now: vi.fn().mockReturnValue('NOW()') },
-        raw: vi.fn((sql: string) => sql),
+        raw: vi.fn((sql) => sql),
         andWhere: vi.fn().mockReturnThis(),
       };
 
@@ -1210,7 +1210,7 @@ describe('checkEscalationNeeded', () => {
         insert: vi.fn().mockResolvedValue([]),
         update: vi.fn().mockResolvedValue(1),
         fn: { now: vi.fn().mockReturnValue('NOW()') },
-        raw: vi.fn((sql: string) => sql),
+        raw: vi.fn((sql) => sql),
         andWhere: vi.fn().mockReturnThis(),
       };
 
@@ -1242,7 +1242,7 @@ describe('checkEscalationNeeded', () => {
         insert: vi.fn().mockResolvedValue([]),
         update: vi.fn().mockResolvedValue(1),
         fn: { now: vi.fn().mockReturnValue('NOW()') },
-        raw: vi.fn((sql: string) => sql),
+        raw: vi.fn((sql) => sql),
         andWhere: vi.fn().mockReturnThis(),
       };
 
@@ -1254,7 +1254,7 @@ describe('checkEscalationNeeded', () => {
         insert: vi.fn().mockResolvedValue([]),
         update: vi.fn().mockResolvedValue(1),
         fn: { now: vi.fn().mockReturnValue('NOW()') },
-        raw: vi.fn((sql: string) => sql),
+        raw: vi.fn((sql) => sql),
         andWhere: vi.fn().mockReturnThis(),
       };
 
@@ -1284,7 +1284,7 @@ describe('checkEscalationNeeded', () => {
         insert: vi.fn().mockResolvedValue([]),
         update: vi.fn().mockResolvedValue(1),
         fn: { now: vi.fn().mockReturnValue('NOW()') },
-        raw: vi.fn((sql: string) => sql),
+        raw: vi.fn((sql) => sql),
         andWhere: vi.fn().mockReturnThis(),
       };
 
@@ -1296,7 +1296,7 @@ describe('checkEscalationNeeded', () => {
         insert: vi.fn().mockResolvedValue([]),
         update: vi.fn().mockResolvedValue(1),
         fn: { now: vi.fn().mockReturnValue('NOW()') },
-        raw: vi.fn((sql: string) => sql),
+        raw: vi.fn((sql) => sql),
         andWhere: vi.fn().mockReturnThis(),
       };
 
@@ -1349,7 +1349,7 @@ describe('getEscalationManagerForTicket', () => {
         insert: vi.fn().mockResolvedValue([]),
         update: vi.fn().mockResolvedValue(1),
         fn: { now: vi.fn().mockReturnValue('NOW()') },
-        raw: vi.fn((sql: string) => sql),
+        raw: vi.fn((sql) => sql),
         andWhere: vi.fn().mockReturnThis(),
       };
 
@@ -1361,7 +1361,7 @@ describe('getEscalationManagerForTicket', () => {
         insert: vi.fn().mockResolvedValue([]),
         update: vi.fn().mockResolvedValue(1),
         fn: { now: vi.fn().mockReturnValue('NOW()') },
-        raw: vi.fn((sql: string) => sql),
+        raw: vi.fn((sql) => sql),
         andWhere: vi.fn().mockReturnThis(),
       };
 
@@ -1397,7 +1397,7 @@ describe('getEscalationManagerForTicket', () => {
         insert: vi.fn().mockResolvedValue([]),
         update: vi.fn().mockResolvedValue(1),
         fn: { now: vi.fn().mockReturnValue('NOW()') },
-        raw: vi.fn((sql: string) => sql),
+        raw: vi.fn((sql) => sql),
         andWhere: vi.fn().mockReturnThis(),
       };
 
@@ -1409,7 +1409,7 @@ describe('getEscalationManagerForTicket', () => {
         insert: vi.fn().mockResolvedValue([]),
         update: vi.fn().mockResolvedValue(1),
         fn: { now: vi.fn().mockReturnValue('NOW()') },
-        raw: vi.fn((sql: string) => sql),
+        raw: vi.fn((sql) => sql),
         andWhere: vi.fn().mockReturnThis(),
       };
 
@@ -1444,7 +1444,7 @@ describe('getEscalationManagerForTicket', () => {
         insert: vi.fn().mockResolvedValue([]),
         update: vi.fn().mockResolvedValue(1),
         fn: { now: vi.fn().mockReturnValue('NOW()') },
-        raw: vi.fn((sql: string) => sql),
+        raw: vi.fn((sql) => sql),
         andWhere: vi.fn().mockReturnThis(),
       };
 
@@ -1456,7 +1456,7 @@ describe('getEscalationManagerForTicket', () => {
         insert: vi.fn().mockResolvedValue([]),
         update: vi.fn().mockResolvedValue(1),
         fn: { now: vi.fn().mockReturnValue('NOW()') },
-        raw: vi.fn((sql: string) => sql),
+        raw: vi.fn((sql) => sql),
         andWhere: vi.fn().mockReturnThis(),
       };
 
@@ -1482,7 +1482,7 @@ describe('getEscalationManagerForTicket', () => {
         insert: vi.fn().mockResolvedValue([]),
         update: vi.fn().mockResolvedValue(1),
         fn: { now: vi.fn().mockReturnValue('NOW()') },
-        raw: vi.fn((sql: string) => sql),
+        raw: vi.fn((sql) => sql),
         andWhere: vi.fn().mockReturnThis(),
       };
 
@@ -1494,7 +1494,7 @@ describe('getEscalationManagerForTicket', () => {
         insert: vi.fn().mockResolvedValue([]),
         update: vi.fn().mockResolvedValue(1),
         fn: { now: vi.fn().mockReturnValue('NOW()') },
-        raw: vi.fn((sql: string) => sql),
+        raw: vi.fn((sql) => sql),
         andWhere: vi.fn().mockReturnThis(),
       };
 
@@ -1512,7 +1512,7 @@ describe('getEscalationManagerForTicket', () => {
         insert: vi.fn().mockResolvedValue([]),
         update: vi.fn().mockResolvedValue(1),
         fn: { now: vi.fn().mockReturnValue('NOW()') },
-        raw: vi.fn((sql: string) => sql),
+        raw: vi.fn((sql) => sql),
         andWhere: vi.fn().mockReturnThis(),
       };
 
@@ -1534,7 +1534,7 @@ describe('getEscalationManagerForTicket', () => {
         insert: vi.fn().mockResolvedValue([]),
         update: vi.fn().mockResolvedValue(1),
         fn: { now: vi.fn().mockReturnValue('NOW()') },
-        raw: vi.fn((sql: string) => sql),
+        raw: vi.fn((sql) => sql),
         andWhere: vi.fn().mockReturnThis(),
       };
 
@@ -1585,7 +1585,7 @@ describe('getEscalationManagerForTicket', () => {
         insert: vi.fn().mockResolvedValue([]),
         update: vi.fn().mockResolvedValue(1),
         fn: { now: vi.fn().mockReturnValue('NOW()') },
-        raw: vi.fn((sql: string) => sql),
+        raw: vi.fn((sql) => sql),
         andWhere: vi.fn().mockReturnThis(),
       };
 
@@ -1597,7 +1597,7 @@ describe('getEscalationManagerForTicket', () => {
         insert: vi.fn().mockResolvedValue([]),
         update: vi.fn().mockResolvedValue(1),
         fn: { now: vi.fn().mockReturnValue('NOW()') },
-        raw: vi.fn((sql: string) => sql),
+        raw: vi.fn((sql) => sql),
         andWhere: vi.fn().mockReturnThis(),
       };
 

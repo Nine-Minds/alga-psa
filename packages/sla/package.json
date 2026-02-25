@@ -25,6 +25,16 @@
       "types": "./dist/types/index.d.ts",
       "import": "./dist/types/index.mjs",
       "require": "./dist/types/index.js"
+    },
+    "./services": {
+      "types": "./dist/services/index.d.ts",
+      "import": "./dist/services/index.mjs",
+      "require": "./dist/services/index.js"
+    },
+    "./services/slaNotificationService": {
+      "types": "./dist/services/slaNotificationService.d.ts",
+      "import": "./dist/services/slaNotificationService.mjs",
+      "require": "./dist/services/slaNotificationService.js"
     }
   },
   "scripts": {
