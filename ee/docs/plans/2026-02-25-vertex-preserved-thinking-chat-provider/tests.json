@@ -372,7 +372,7 @@
   {
     "id": "T044",
     "description": "Chat component updates in-progress reasoning state when reasoning stream events arrive",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F024"
     ]
