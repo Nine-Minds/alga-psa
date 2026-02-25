@@ -47,7 +47,7 @@
   {
     "id": "T006",
     "description": "Vertex provider returns clear configuration error when required access token is missing",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F004"
     ]
