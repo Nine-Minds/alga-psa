@@ -158,7 +158,7 @@
   {
     "id": "F027",
     "description": "Ensure Quick Ask flow inherits restored streaming function-calling behavior through shared Chat component",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Users and Primary Flows", "UX / UI Notes"]
   },
   {

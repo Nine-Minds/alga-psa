@@ -83,3 +83,4 @@ Working notes for implementing a new chat provider abstraction with Vertex GLM-5
 - (2026-02-25) Implemented `F024`: Chat streaming flow now consumes structured reasoning/content deltas and updates in-progress reasoning state while rendering streamed content.
 - (2026-02-25) Implemented `F025`: Chat now captures streamed `function_proposed` events into `pendingFunction` state and halts stream token collection to enter approval mode.
 - (2026-02-25) Implemented `F026`: streamed proposal metadata (`functionCall`, `nextMessages`) now feeds unchanged approve/decline posts to `/api/chat/v1/execute`.
+- (2026-02-25) Implemented `F027`: Quick Ask inherits restored streaming function-calling behavior through the shared `Chat` component stream consumer path.
