@@ -147,7 +147,7 @@
   {
     "id": "T018",
     "description": "UI: watcher save controls disable while request is in-flight to prevent double submits.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F005",
       "F009"
