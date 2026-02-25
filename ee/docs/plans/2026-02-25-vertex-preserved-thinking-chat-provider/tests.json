@@ -287,7 +287,7 @@
   {
     "id": "T034",
     "description": "Streaming route stops emission cleanly when request signal is aborted",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F022"
     ]
