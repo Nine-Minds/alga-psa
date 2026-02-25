@@ -346,7 +346,7 @@
   {
     "id": "T041",
     "description": "SSE reader stops and returns doneReceived=true on done event",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F023"
     ]

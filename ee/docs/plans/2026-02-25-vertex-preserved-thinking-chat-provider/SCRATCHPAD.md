@@ -129,3 +129,4 @@ Working notes for implementing a new chat provider abstraction with Vertex GLM-5
 - (2026-02-25) Implemented `T038`: SSE reader tests now assert structured `content_delta` chunks accumulate correctly and emit incremental token callbacks.
 - (2026-02-25) Implemented `T039`: SSE reader coverage verifies `onReasoning` callback invocation and accumulation for streamed `reasoning_delta` events.
 - (2026-02-25) Implemented `T040`: SSE reader tests assert `onToolCalls` receives structured `function_proposed` payloads with tool-call metadata.
+- (2026-02-25) Implemented `T041`: SSE reader tests verify typed `done` events terminate parsing and return `doneReceived=true`.
