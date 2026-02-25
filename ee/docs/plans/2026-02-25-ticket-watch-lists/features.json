@@ -53,7 +53,7 @@
   {
     "id": "F007",
     "description": "Add watcher active/inactive checkbox behavior in UI and persist it to ticket attributes.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Functional Requirements",
       "UX / UI Notes"
