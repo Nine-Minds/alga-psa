@@ -81,7 +81,7 @@
   {
     "id": "T010",
     "description": "Completion request validation accepts assistant messages with string reasoning_content",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F007",
       "F008"
