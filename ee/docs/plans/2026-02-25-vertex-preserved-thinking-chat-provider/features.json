@@ -170,7 +170,7 @@
   {
     "id": "F029",
     "description": "Keep backward-compatible stream payload handling during transition so existing content-token rendering does not regress",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Non-functional Requirements", "Acceptance Criteria (Definition of Done)"]
   },
   {
