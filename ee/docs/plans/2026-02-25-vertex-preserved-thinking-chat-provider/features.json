@@ -134,7 +134,7 @@
   {
     "id": "F023",
     "description": "Extend readAssistantContentFromSse utility to parse structured event payloads for content, reasoning, function proposals, and done",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Functional Requirements", "UX / UI Notes"]
   },
   {
