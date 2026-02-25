@@ -83,7 +83,7 @@
   {
     "id": "F010",
     "description": "Keep reply-token and thread-header existing-ticket flows unchanged",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Non-goals",
       "Requirements > Functional Requirements"

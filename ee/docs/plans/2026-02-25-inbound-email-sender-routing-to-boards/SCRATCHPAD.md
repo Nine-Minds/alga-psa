@@ -87,3 +87,4 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
 - (2026-02-25) Completed `F007` by enforcing tenant+active validation on contact/client destination IDs before applying defaults.
 - (2026-02-25) Completed `F008` by using shared destination resolution in `processInboundEmailInApp` before new-ticket create, while preserving existing reply-token/thread branches.
 - (2026-02-25) Completed `F009` by using the same shared destination resolver in `resolve_inbound_ticket_context` (runtime v2 action registry) for parity with in-app processing.
+- (2026-02-25) Completed `F010` by keeping reply-token/thread-header branches untouched; only new-ticket destination selection path was changed.
