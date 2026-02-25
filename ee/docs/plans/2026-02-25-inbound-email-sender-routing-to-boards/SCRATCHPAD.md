@@ -63,6 +63,8 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
   - `shared/workflow/actions/emailWorkflowActions.ts`
 - Existing client inbound domain actions:
   - `packages/clients/src/actions/clientInboundEmailDomainActions.ts`
+- New inbound destination actions:
+  - `packages/clients/src/actions/inboundTicketDestinationActions.ts`
 - Client details UI:
   - `packages/clients/src/components/clients/ClientDetails.tsx`
 - Contact UI surfaces:
@@ -91,3 +93,4 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
 - (2026-02-25) Completed `F011` by retaining existing sender identity matching semantics:
   - exact contact remains the only source for comment authorship
   - domain matching remains explicit via `client_inbound_email_domains`
+- (2026-02-25) Completed `F012` by adding server actions for inbound destination option reads and client destination updates with explicit client permission checks.

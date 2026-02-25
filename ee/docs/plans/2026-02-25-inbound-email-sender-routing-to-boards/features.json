@@ -101,7 +101,7 @@
   {
     "id": "F012",
     "description": "Add server actions/API support for reading/updating client inbound destination with existing client permissions",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Security / Permissions"
