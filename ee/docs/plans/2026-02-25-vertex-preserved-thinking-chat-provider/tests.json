@@ -495,7 +495,7 @@
   {
     "id": "T058",
     "description": "No migration required: chat persistence schema remains unchanged and existing read/write flows still pass",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F032"
     ]
