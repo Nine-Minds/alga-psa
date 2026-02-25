@@ -268,7 +268,7 @@
   {
     "id": "T032",
     "description": "Subscriber unit: public internal-agent comment sends watcher notifications.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F019"
     ]
