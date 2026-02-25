@@ -28,7 +28,7 @@
   {
     "id": "F004",
     "description": "Support watcher metadata fields (name/source/timestamps) without breaking minimum contract.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data / API / Integrations"
     ]

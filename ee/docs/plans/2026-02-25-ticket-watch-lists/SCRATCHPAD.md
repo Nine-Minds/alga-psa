@@ -46,3 +46,4 @@ Working notes for the ticket watch-list feature plan. This log captures clarifie
 - (2026-02-25) Implemented F001 by introducing shared watch-list utilities and contract (`shared/lib/tickets/watchList.ts`) with normalized lowercase `email` + `active` booleans persisted in `tickets.attributes.watch_list`.
 - (2026-02-25) Implemented F002: completed planned scope for this feature item in the ticket watch-list delivery.
 - (2026-02-25) Implemented F003: completed planned scope for this feature item in the ticket watch-list delivery.
+- (2026-02-25) Implemented F004: completed planned scope for this feature item in the ticket watch-list delivery.
