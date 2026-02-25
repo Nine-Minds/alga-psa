@@ -120,7 +120,7 @@
   {
     "id": "T015",
     "description": "UI: unchecking watcher updates active=false and persists.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F007",
       "F009"
