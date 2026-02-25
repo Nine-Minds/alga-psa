@@ -14,6 +14,7 @@ import { getTicketCategories } from '@alga-psa/tickets/actions';
 import { ColumnDefinition } from '@alga-psa/types';
 import { ITicketListItem, ITicketCategory, TicketResponseState } from '@alga-psa/types';
 import { ResponseStateBadge, CategoryPicker } from '@alga-psa/tickets/components';
+import { getTicketingDisplaySettings } from '@alga-psa/tickets/actions/ticketDisplaySettings';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
@@ -66,6 +67,14 @@ export function TicketList() {
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [additionalAgentAvatarUrls, setAdditionalAgentAvatarUrls] = useState<Record<string, string | null>>({});
+  const [responseStateTrackingEnabled, setResponseStateTrackingEnabled] = useState<boolean>(true);
+
+  // Load response state tracking setting
+  useEffect(() => {
+    getTicketingDisplaySettings()
+      .then((s) => setResponseStateTrackingEnabled(s?.responseStateTrackingEnabled ?? true))
+      .catch(() => {});
+  }, []);
 
   // Debounce search query to avoid triggering loadTickets on every keystroke
   const debouncedSearchQuery = useDebounce(searchQuery, 500);
@@ -375,7 +384,7 @@ export function TicketList() {
                   ))}
               </DropdownMenu.Content>
             </DropdownMenu.Root>
-            {responseState && (
+            {responseStateTrackingEnabled && responseState && (
               <ResponseStateBadge
                 responseState={responseState}
                 isClientPortal={true}
@@ -553,24 +562,26 @@ export function TicketList() {
             placeholder="Select Status"
           />
 
-          <CustomSelect
-            options={[
-              { value: 'all', label: t('filters.allResponseStatuses', 'All Response Statuses') },
-              { value: 'awaiting_client', label: t('responseState.awaitingYourResponse', 'Awaiting Your Response') },
-              { value: 'awaiting_internal', label: t('responseState.awaitingSupportResponse', 'Awaiting Support Response') },
-              { value: 'none', label: t('responseState.none', 'No Response Pending') },
-            ]}
-            value={selectedResponseStatus}
-            onValueChange={(value) => {
-              const nextValue =
-                value === 'awaiting_client' || value === 'awaiting_internal' || value === 'none'
-                  ? value
-                  : 'all';
-              setSelectedResponseStatus(nextValue);
-              setCurrentPage(1);
-            }}
-            placeholder={t('filters.responseStatus', 'Response Status')}
-          />
+          {responseStateTrackingEnabled && (
+            <CustomSelect
+              options={[
+                { value: 'all', label: t('filters.allResponseStatuses', 'All Response Statuses') },
+                { value: 'awaiting_client', label: t('responseState.awaitingYourResponse', 'Awaiting Your Response') },
+                { value: 'awaiting_internal', label: t('responseState.awaitingSupportResponse', 'Awaiting Support Response') },
+                { value: 'none', label: t('responseState.none', 'No Response Pending') },
+              ]}
+              value={selectedResponseStatus}
+              onValueChange={(value) => {
+                const nextValue =
+                  value === 'awaiting_client' || value === 'awaiting_internal' || value === 'none'
+                    ? value
+                    : 'all';
+                setSelectedResponseStatus(nextValue);
+                setCurrentPage(1);
+              }}
+              placeholder={t('filters.responseStatus', 'Response Status')}
+            />
+          )}
 
           <CustomSelect
             options={priorityOptions}

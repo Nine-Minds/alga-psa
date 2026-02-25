@@ -463,10 +463,24 @@ export class TicketService extends BaseService<ITicket> {
 
       // Publish appropriate events
       if (data.status_id && data.status_id !== currentTicket.status_id) {
-        // Check if ticket is being closed
+        // Check if ticket is being closed or reopened
         const newStatus = await trx('statuses')
           .where({ status_id: data.status_id, tenant: context.tenant })
           .first();
+        const oldStatus = await trx('statuses')
+          .where({ status_id: currentTicket.status_id, tenant: context.tenant })
+          .first();
+
+        // Record closed_at / closed_by when transitioning to/from closed status
+        if (newStatus?.is_closed && !oldStatus?.is_closed) {
+          await trx('tickets')
+            .where({ ticket_id: id, tenant: context.tenant })
+            .update({ closed_at: new Date(), closed_by: context.userId });
+        } else if (!newStatus?.is_closed && oldStatus?.is_closed) {
+          await trx('tickets')
+            .where({ ticket_id: id, tenant: context.tenant })
+            .update({ closed_at: null, closed_by: null });
+        }
 
         if (newStatus?.is_closed) {
           await this.safePublishEvent('TicketClosed', {
