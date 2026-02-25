@@ -303,7 +303,7 @@
   {
     "id": "T036",
     "description": "Streaming route preserves aiAssistant feature gating response semantics",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F030"
     ]

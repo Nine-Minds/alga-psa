@@ -124,3 +124,4 @@ Working notes for implementing a new chat provider abstraction with Vertex GLM-5
 - (2026-02-25) Implemented `T033`: stream route events test now asserts a terminal typed `done` SSE payload is emitted on successful completion.
 - (2026-02-25) Implemented `T034`: stream route event tests cover abort handling and verify no post-abort chunks are emitted.
 - (2026-02-25) Implemented `T035`: stream route coverage asserts malformed message payloads return HTTP 400 and never invoke the completion stream service.
+- (2026-02-25) Implemented `T036`: stream endpoint tests keep `aiAssistant` feature-gating semantics by asserting the existing 403 response path.
