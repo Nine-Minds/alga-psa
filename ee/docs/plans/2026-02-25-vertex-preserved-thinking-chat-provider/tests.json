@@ -363,7 +363,7 @@
   {
     "id": "T043",
     "description": "SSE reader cancels underlying reader when shouldContinue returns false",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F022",
       "F023"
