@@ -86,7 +86,7 @@
   {
     "id": "F015",
     "description": "Ensure function_proposed responses include conversation state that retains preserved reasoning_content",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Functional Requirements"]
   },
   {
