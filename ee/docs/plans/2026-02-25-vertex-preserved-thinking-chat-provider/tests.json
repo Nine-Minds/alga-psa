@@ -261,7 +261,7 @@
   {
     "id": "T031",
     "description": "Streaming route emits structured reasoning-delta SSE events",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F017",
       "F019"
