@@ -11,7 +11,7 @@
   {
     "id": "T002",
     "description": "Provider resolver returns OpenRouter client/model when OpenRouter config is present",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F001",
       "F003"
