@@ -308,7 +308,7 @@
   {
     "id": "T037",
     "description": "Subscriber unit: watcher recipients dedupe against assigned/additional resource recipients.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F021"
     ]
