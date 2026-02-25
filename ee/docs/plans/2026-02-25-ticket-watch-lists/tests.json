@@ -359,7 +359,7 @@
   {
     "id": "T043",
     "description": "End-to-end notification test: watcher receives ticket-closed email as separate message.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F020",
       "F023"
