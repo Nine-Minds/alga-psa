@@ -148,19 +148,19 @@ async function handleTicketUpdatedEvent(event: unknown): Promise<void> {
       await withTransaction(knex, async (trx: Knex.Transaction) => {
         // Handle priority change
         if (changes.priority_id) {
-          const newPriorityId = changes.priority_id as { to?: string };
-          if (newPriorityId.to) {
+          const priorityChange = changes.priority_id as { old?: string; new?: string };
+          if (priorityChange.new) {
             logger.info('[SlaSubscriber] Priority changed, recalculating SLA deadlines', {
               tenantId,
               ticketId,
-              newPriorityId: newPriorityId.to
+              newPriorityId: priorityChange.new
             });
 
             await handlePriorityChange(
               trx,
               tenantId,
               ticketId,
-              newPriorityId.to,
+              priorityChange.new,
               userId
             );
           }
@@ -168,21 +168,21 @@ async function handleTicketUpdatedEvent(event: unknown): Promise<void> {
 
         // Handle status change (for pause/resume)
         if (changes.status_id) {
-          const statusChange = changes.status_id as { from?: string; to?: string };
-          if (statusChange.to) {
+          const statusChange = changes.status_id as { old?: string; new?: string };
+          if (statusChange.new) {
             logger.info('[SlaSubscriber] Status changed, checking SLA pause state', {
               tenantId,
               ticketId,
-              fromStatus: statusChange.from,
-              toStatus: statusChange.to
+              fromStatus: statusChange.old,
+              toStatus: statusChange.new
             });
 
             const result = await handleStatusChange(
               trx,
               tenantId,
               ticketId,
-              statusChange.from || null,
-              statusChange.to,
+              statusChange.old || null,
+              statusChange.new,
               userId
             );
 
@@ -199,20 +199,20 @@ async function handleTicketUpdatedEvent(event: unknown): Promise<void> {
 
         // Handle SLA policy change
         if (changes.sla_policy_id) {
-          const policyChange = changes.sla_policy_id as { from?: string | null; to?: string | null };
-          if (policyChange.to !== undefined) {
+          const policyChange = changes.sla_policy_id as { old?: string | null; new?: string | null };
+          if (policyChange.new !== undefined) {
             logger.info('[SlaSubscriber] SLA policy changed, restarting SLA tracking', {
               tenantId,
               ticketId,
-              fromPolicyId: policyChange.from,
-              toPolicyId: policyChange.to
+              fromPolicyId: policyChange.old,
+              toPolicyId: policyChange.new
             });
 
             await handlePolicyChange(
               trx,
               tenantId,
               ticketId,
-              policyChange.to ?? null,
+              policyChange.new ?? null,
               userId
             );
           }
@@ -331,21 +331,34 @@ async function handleTicketCommentAddedEvent(event: unknown): Promise<void> {
  */
 async function handleResponseStateChangedEvent(event: unknown): Promise<void> {
   try {
-    // The TICKET_RESPONSE_STATE_CHANGED event uses the same schema as TICKET_UPDATED
-    const validated = EventSchemas.TICKET_UPDATED.parse(event) as TicketUpdatedEvent;
-    const { tenantId, ticketId, userId, changes } = validated.payload;
+    const validated = EventSchemas.TICKET_RESPONSE_STATE_CHANGED.parse(event);
+    const payload = validated.payload as {
+      tenantId: string;
+      ticketId: string;
+      userId?: string | null;
+      previousState?: string | null;
+      newState?: string | null;
+      // v2 schema fields
+      previousResponseState?: string | null;
+      newResponseState?: string | null;
+    };
 
-    if (!changes?.response_state) {
+    const tenantId = payload.tenantId;
+    const ticketId = payload.ticketId;
+    const userId = payload.userId ?? null;
+    // Support both legacy (previousState/newState) and v2 (previousResponseState/newResponseState) formats
+    const previousState = payload.previousState ?? payload.previousResponseState ?? null;
+    const newState = payload.newState ?? payload.newResponseState ?? null;
+
+    if (!previousState && !newState) {
       return;
     }
-
-    const responseStateChange = changes.response_state as { from?: string | null; to?: string | null };
 
     logger.info('[SlaSubscriber] Handling TICKET_RESPONSE_STATE_CHANGED', {
       tenantId,
       ticketId,
-      fromState: responseStateChange.from,
-      toState: responseStateChange.to
+      fromState: previousState,
+      toState: newState
     });
 
     await runWithTenant(tenantId, async () => {
@@ -367,9 +380,9 @@ async function handleResponseStateChangedEvent(event: unknown): Promise<void> {
           trx,
           tenantId,
           ticketId,
-          responseStateChange.from || null,
-          responseStateChange.to || null,
-          userId
+          previousState,
+          newState,
+          userId ?? undefined
         );
 
         if (result.was_paused !== result.is_now_paused) {

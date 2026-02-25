@@ -1676,6 +1676,25 @@ export const updateTicketWithCache = withAuth(async (user, { tenant }, id: strin
       });
     }
 
+    // Publish response state change event if response_state was explicitly changed
+    if ('response_state' in updateData && updateData.response_state !== currentTicket.response_state) {
+      try {
+        await publishEvent({
+          eventType: 'TICKET_RESPONSE_STATE_CHANGED',
+          payload: {
+            tenantId: tenant,
+            ticketId: id,
+            userId: user.user_id,
+            previousState: currentTicket.response_state || null,
+            newState: updateData.response_state || null,
+            trigger: 'manual',
+          },
+        });
+      } catch (error) {
+        console.warn('[updateTicketWithCache] Failed to publish TICKET_RESPONSE_STATE_CHANGED:', error);
+      }
+    }
+
     // If this is a bundle master in sync_updates mode, propagate selected workflow updates to children.
     const bundleSettings = await trx('ticket_bundle_settings')
       .where({ tenant, master_ticket_id: id })

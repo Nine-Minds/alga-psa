@@ -4,6 +4,7 @@ import { registerSurveySubscriber, unregisterSurveySubscriber } from './surveySu
 import { registerCalendarSyncSubscriber, unregisterCalendarSyncSubscriber } from './calendarSyncSubscriber';
 import { registerInternalNotificationSubscriber, unregisterInternalNotificationSubscriber } from './internalNotificationSubscriber';
 import { registerSlaSubscriber, unregisterSlaSubscriber } from './slaSubscriber';
+import { registerSlaNotificationSubscriber, unregisterSlaNotificationSubscriber } from './slaNotificationSubscriber';
 
 export async function registerAllSubscribers(): Promise<void> {
   try {
@@ -13,6 +14,7 @@ export async function registerAllSubscribers(): Promise<void> {
     await registerCalendarSyncSubscriber();
     await registerInternalNotificationSubscriber();
     await registerSlaSubscriber();
+    await registerSlaNotificationSubscriber();
   } catch (error) {
     console.error('Failed to register subscribers:', error);
   }
@@ -26,6 +28,7 @@ export async function unregisterAllSubscribers(): Promise<void> {
     await unregisterCalendarSyncSubscriber();
     await unregisterInternalNotificationSubscriber();
     await unregisterSlaSubscriber();
+    await unregisterSlaNotificationSubscriber();
   } catch (error) {
     console.error('Failed to unregister subscribers:', error);
   }

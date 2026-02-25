@@ -166,12 +166,23 @@ export async function startSlaForTicket(
     });
 
     try {
+      // Query configured notification thresholds for this policy
+      const thresholdRows = await trx('sla_notification_thresholds')
+        .where({ tenant, sla_policy_id: policy.sla_policy_id })
+        .select('threshold_percent')
+        .orderBy('threshold_percent', 'asc');
+
+      const notificationThresholds = thresholdRows.map(
+        (r: { threshold_percent: number }) => r.threshold_percent
+      );
+
       const backend = await SlaBackendFactory.getBackend();
       await backend.startSlaTracking(
         ticketId,
         policy.sla_policy_id,
         [target],
-        schedule
+        schedule,
+        notificationThresholds
       );
     } catch (error) {
       console.warn('Failed to start SLA backend tracking:', error);

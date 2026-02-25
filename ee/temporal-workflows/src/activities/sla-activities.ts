@@ -1,20 +1,18 @@
 import { Context } from '@temporalio/activity';
+import { v4 as uuidv4 } from 'uuid';
 import { createTenantKnex, withTransaction } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import type {
   IBusinessHoursScheduleWithEntries,
 } from '@alga-psa/sla/types';
-import type { SlaNotificationContext } from '@alga-psa/sla/services/slaNotificationService';
 import {
   calculateDeadline,
 } from '@alga-psa/sla/services/businessHoursCalculator';
 import {
-  sendSlaNotification as sendSlaNotificationService,
-} from '@alga-psa/sla/services/slaNotificationService';
-import {
   checkEscalationNeeded,
   escalateTicket,
 } from '@alga-psa/sla/services/escalationService';
+import { getRedisStreamClient } from '@shared/workflow/streams';
 
 const logger = () => Context.current().log;
 
@@ -44,83 +42,46 @@ export async function sendSlaNotification(input: {
   thresholdPercent: number;
 }): Promise<void> {
   const log = logger();
+  const now = new Date().toISOString();
+  const eventId = uuidv4();
 
-  await withTenantTransaction(input.tenantId, async (trx) => {
-    const ticket = await trx('tickets as t')
-      .leftJoin('clients as c', function() {
-        this.on('t.client_id', 'c.client_id').andOn('t.tenant', 'c.tenant');
-      })
-      .leftJoin('priorities as p', function() {
-        this.on('t.priority_id', 'p.priority_id').andOn('t.tenant', 'p.tenant');
-      })
-      .where('t.tenant', input.tenantId)
-      .where('t.ticket_id', input.ticketId)
-      .select(
-        't.ticket_id',
-        't.ticket_number',
-        't.title',
-        't.assigned_to',
-        't.board_id',
-        't.sla_policy_id',
-        't.sla_response_due_at',
-        't.sla_resolution_due_at',
-        'c.client_name as client_name',
-        'p.priority_name'
-      )
-      .first();
-
-    if (!ticket || !ticket.sla_policy_id) {
-      log.warn('SLA notification skipped; ticket or policy missing', {
-        ticketId: input.ticketId,
-      });
-      return;
-    }
-
-    const dueAt =
-      input.phase === 'response'
-        ? new Date(ticket.sla_response_due_at)
-        : new Date(ticket.sla_resolution_due_at);
-
-    const remainingMinutes = Math.floor(
-      (dueAt.getTime() - Date.now()) / 60000
-    );
-
-    const context: SlaNotificationContext = {
-      tenant: input.tenantId,
-      ticketId: ticket.ticket_id,
-      ticketNumber: ticket.ticket_number,
-      ticketTitle: ticket.title,
-      clientName: ticket.client_name,
-      priorityName: ticket.priority_name,
-      assigneeId: ticket.assigned_to,
-      boardId: ticket.board_id,
-      slaPolicyId: ticket.sla_policy_id,
-      thresholdPercent: input.thresholdPercent,
-      slaType: input.phase,
-      remainingMinutes,
-      dueAt,
-    };
-
-    log.info('Sending SLA notification', {
+  const event = {
+    id: eventId,
+    eventType: 'TICKET_SLA_THRESHOLD_REACHED',
+    timestamp: now,
+    payload: {
+      tenantId: input.tenantId,
+      occurredAt: now,
       ticketId: input.ticketId,
-      ticketNumber: ticket.ticket_number,
       phase: input.phase,
       thresholdPercent: input.thresholdPercent,
-      remainingMinutes,
-      dueAt: dueAt.toISOString(),
-    });
+    },
+  };
 
-    const notifResult = await sendSlaNotificationService(trx, context);
+  const streamName = getEventStreamName('TICKET_SLA_THRESHOLD_REACHED');
 
-    log.info('SLA notification result', {
-      ticketId: input.ticketId,
-      thresholdPercent: input.thresholdPercent,
-      recipientCount: notifResult.recipientCount,
-      inAppSent: notifResult.inAppSent,
-      emailSent: notifResult.emailSent,
-      errors: notifResult.errors.length > 0 ? notifResult.errors : undefined,
-    });
+  log.info('Publishing SLA threshold reached event', {
+    ticketId: input.ticketId,
+    phase: input.phase,
+    thresholdPercent: input.thresholdPercent,
+    streamName,
   });
+
+  await getRedisStreamClient().publishToStream(streamName, {
+    event: JSON.stringify(event),
+    channel: 'global',
+  });
+
+  log.info('SLA threshold reached event published', {
+    ticketId: input.ticketId,
+    eventId,
+  });
+}
+
+function getEventStreamName(eventType: string): string {
+  const prefix = process.env.REDIS_PREFIX || 'alga-psa:';
+  const streamPrefix = process.env.REDIS_EVENT_STREAM_PREFIX || 'event-stream:';
+  return `${prefix}${streamPrefix}global:${eventType}`;
 }
 
 export async function checkAndEscalate(input: {

@@ -10,7 +10,8 @@ export interface ISlaBackend {
     ticketId: string,
     policyId: string,
     targets: ISlaPolicyTarget[],
-    schedule: IBusinessHoursScheduleWithEntries
+    schedule: IBusinessHoursScheduleWithEntries,
+    notificationThresholds?: number[]
   ): Promise<void>;
   pauseSla(ticketId: string, reason: SlaPauseReason): Promise<void>;
   resumeSla(ticketId: string): Promise<void>;

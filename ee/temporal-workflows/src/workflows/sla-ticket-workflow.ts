@@ -19,6 +19,8 @@ export interface SlaTicketWorkflowInput {
   tenantId: string;
   policyTargets: ISlaPolicyTarget[];
   businessHoursSchedule: IBusinessHoursScheduleWithEntries;
+  /** Configured notification thresholds from sla_notification_thresholds table. 100% is always included for breach detection. */
+  notificationThresholds?: number[];
 }
 
 export interface SlaTicketWorkflowState {
@@ -107,7 +109,7 @@ export const getStateQuery = defineQuery<SlaTicketWorkflowQueryResult>('getState
 export async function slaTicketWorkflow(
   input: SlaTicketWorkflowInput
 ): Promise<void> {
-  const { ticketId, tenantId, policyTargets, businessHoursSchedule } = input;
+  const { ticketId, tenantId, policyTargets, businessHoursSchedule, notificationThresholds } = input;
   const startedAt = new Date();
 
   const target = policyTargets[0];
@@ -252,7 +254,11 @@ export async function slaTicketWorkflow(
 
     state.currentPhase = phase.phase;
 
-    const thresholds = [50, 75, 90, 100];
+    // Use configured thresholds, always ensuring 100% is included for breach detection
+    const configuredThresholds = notificationThresholds && notificationThresholds.length > 0
+      ? notificationThresholds
+      : [50, 75, 90];
+    const thresholds = [...new Set([...configuredThresholds, 100])].sort((a, b) => a - b);
     for (const threshold of thresholds) {
       if (cancelled || resolutionCompleted) {
         break;
@@ -262,8 +268,15 @@ export async function slaTicketWorkflow(
         break;
       }
 
-      while (state.pauseState.isPaused && !cancelled && !resolutionCompleted) {
-        await condition(() => !state.pauseState.isPaused || cancelled);
+      while (state.pauseState.isPaused && !cancelled && !resolutionCompleted &&
+             !(phase.phase === 'response' && responseCompleted)) {
+        await condition(
+          () =>
+            !state.pauseState.isPaused ||
+            cancelled ||
+            resolutionCompleted ||
+            (phase.phase === 'response' && responseCompleted)
+        );
       }
 
       if (cancelled || resolutionCompleted) {
@@ -316,14 +329,14 @@ export async function slaTicketWorkflow(
       if (!state.notifiedThresholds[phase.phase].includes(threshold)) {
         state.notifiedThresholds[phase.phase].push(threshold);
 
-        if (threshold < 100) {
-          await activities.sendSlaNotification({
-            tenantId,
-            ticketId,
-            phase: phase.phase,
-            thresholdPercent: threshold,
-          });
-        } else {
+        await activities.sendSlaNotification({
+          tenantId,
+          ticketId,
+          phase: phase.phase,
+          thresholdPercent: threshold,
+        });
+
+        if (threshold === 100) {
           await activities.updateSlaStatus({
             tenantId,
             ticketId,

@@ -30,9 +30,10 @@ exports.up = async function(knex) {
 exports.down = async function(knex) {
   console.log('Removing SLA internal notification templates...');
 
-  // Delete templates
+  // Delete templates (includes legacy per-threshold names and the consolidated name)
   await knex('internal_notification_templates')
     .whereIn('name', [
+      'sla-warning',
       'sla-warning-50',
       'sla-warning-75',
       'sla-warning-90',

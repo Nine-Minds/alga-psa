@@ -12,38 +12,14 @@
  */
 
 const TEMPLATES = [
-  // -- sla-warning (50% threshold) -------------------------------------------
+  // -- sla-warning (any threshold < 100%) -------------------------------------
   {
-    templateName: 'sla-warning-50',
+    templateName: 'sla-warning',
     subtypeName: 'sla-warning',
     translations: {
       en: {
-        title: 'SLA Warning: 50% Time Elapsed',
-        message: 'Ticket #{{ticketNumber}} "{{ticketTitle}}" is at 50% of its {{slaType}} SLA. Time remaining: {{timeRemaining}}. Policy: {{policyName}}.',
-      },
-    },
-  },
-
-  // -- sla-warning (75% threshold) -------------------------------------------
-  {
-    templateName: 'sla-warning-75',
-    subtypeName: 'sla-warning',
-    translations: {
-      en: {
-        title: 'SLA Warning: 75% Time Elapsed',
-        message: 'Ticket #{{ticketNumber}} "{{ticketTitle}}" is at 75% of its {{slaType}} SLA. Time remaining: {{timeRemaining}}. Immediate attention recommended.',
-      },
-    },
-  },
-
-  // -- sla-warning (90% threshold) -------------------------------------------
-  {
-    templateName: 'sla-warning-90',
-    subtypeName: 'sla-warning',
-    translations: {
-      en: {
-        title: 'SLA Critical: 90% Time Elapsed',
-        message: 'URGENT: Ticket #{{ticketNumber}} "{{ticketTitle}}" is at 90% of its {{slaType}} SLA. Only {{timeRemaining}} remaining before breach!',
+        title: 'SLA Warning: {{thresholdPercent}}% Time Elapsed',
+        message: 'Ticket #{{ticketNumber}} "{{ticketTitle}}" is at {{thresholdPercent}}% of its {{slaType}} SLA. Time remaining: {{remainingTime}}.',
       },
     },
   },

@@ -23,7 +23,7 @@ import { ResponseStateDisplay } from '../ResponseStateSelect';
 import styles from './TicketDetails.module.css';
 import { getTicketCategories, getTicketCategoriesByBoard, BoardCategoryData } from '@alga-psa/tickets/actions';
 import { ItilLabels, calculateItilPriority } from '@alga-psa/tickets/lib/itilUtils';
-import { Pencil, Check, X, HelpCircle, Save, AlertCircle } from 'lucide-react';
+import { Pencil, Check, X, HelpCircle, Save, AlertCircle, PauseCircle } from 'lucide-react';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
@@ -1030,8 +1030,15 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                 const existingTime = effectiveDueDate ? format(effectiveDueDate, 'HH:mm') : undefined;
                 const isMidnight = existingTime === '00:00';
 
+                // Check if due date is SLA-driven (matches sla_resolution_due_at within 60s)
+                const isSlaDriven = effectiveDueDate && ticket.sla_resolution_due_at &&
+                  Math.abs(effectiveDueDate.getTime() - new Date(ticket.sla_resolution_due_at).getTime()) < 60000;
+                const isDueDatePaused = isSlaDriven && slaStatus?.isPaused;
+
                 let containerClass = '';
-                if (effectiveDueDate) {
+                if (isDueDatePaused) {
+                  containerClass = '[&_button]:border-gray-300 [&_button]:text-gray-400 dark:[&_button]:text-gray-500 [&_button]:bg-gray-500/5';
+                } else if (effectiveDueDate) {
                   const now = new Date();
                   const hoursUntilDue = (effectiveDueDate.getTime() - now.getTime()) / (1000 * 60 * 60);
                   if (hoursUntilDue < 0) {
@@ -1097,6 +1104,12 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                         >
                           ✕
                         </Button>
+                      )}
+                      {isDueDatePaused && (
+                        <span className="inline-flex items-center gap-1 text-xs text-gray-500 bg-gray-100 dark:bg-gray-800 dark:text-gray-400 px-2 py-1 rounded-full">
+                          <PauseCircle className="w-3 h-3" />
+                          Paused
+                        </span>
                       )}
                     </div>
                     {effectiveDueDate && isMidnight && (

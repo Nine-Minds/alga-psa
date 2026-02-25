@@ -15,7 +15,8 @@ export class PgBossSlaBackend implements ISlaBackend {
     _ticketId: string,
     _policyId: string,
     _targets: ISlaPolicyTarget[],
-    _schedule: IBusinessHoursScheduleWithEntries
+    _schedule: IBusinessHoursScheduleWithEntries,
+    _notificationThresholds?: number[]
   ): Promise<void> {
     // No-op placeholder; CE polling handles SLA timers.
   }

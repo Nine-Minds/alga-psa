@@ -20,7 +20,8 @@ export class TemporalSlaBackend implements ISlaBackend {
     ticketId: string,
     _policyId: string,
     targets: ISlaPolicyTarget[],
-    schedule: IBusinessHoursScheduleWithEntries
+    schedule: IBusinessHoursScheduleWithEntries,
+    notificationThresholds?: number[]
   ): Promise<void> {
     const tenantId = schedule.tenant;
     if (!tenantId) {
@@ -38,6 +39,7 @@ export class TemporalSlaBackend implements ISlaBackend {
             tenantId,
             policyTargets: targets,
             businessHoursSchedule: schedule,
+            notificationThresholds,
           },
         ],
         taskQueue: this.getTaskQueue(),
