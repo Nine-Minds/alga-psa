@@ -86,7 +86,7 @@
   {
     "id": "T011",
     "description": "UI: ticket properties render Watch List card and existing watchers.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F005"
     ]
