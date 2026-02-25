@@ -226,7 +226,7 @@
   {
     "id": "T027",
     "description": "handleExecute returns 400 for missing function call data",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F026"
     ]
