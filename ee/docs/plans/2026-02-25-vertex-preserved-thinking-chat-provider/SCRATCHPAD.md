@@ -93,3 +93,4 @@ Working notes for implementing a new chat provider abstraction with Vertex GLM-5
 - (2026-02-25) Implemented `T002`: verified resolver returns configured OpenRouter client/model when OpenRouter settings are present.
 - (2026-02-25) Implemented `T003`: verified resolver returns Vertex client/model when `AI_CHAT_PROVIDER=vertex` with required config.
 - (2026-02-25) Implemented `T004`: covered explicit Vertex base URL override behavior via `VERTEX_OPENAPI_BASE_URL`.
+- (2026-02-25) Implemented `T005`: covered Vertex derived endpoint synthesis from `VERTEX_PROJECT_ID` + `VERTEX_LOCATION`.

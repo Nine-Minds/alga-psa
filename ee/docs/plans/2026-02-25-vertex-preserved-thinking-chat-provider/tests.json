@@ -38,7 +38,7 @@
   {
     "id": "T005",
     "description": "Vertex provider derives base URL from VERTEX_PROJECT_ID and VERTEX_LOCATION when explicit URL is absent",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F004",
       "F005"
