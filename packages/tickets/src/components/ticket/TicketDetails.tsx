@@ -63,6 +63,10 @@ import type { SurveyTicketSatisfactionSummary } from '@alga-psa/types';
 import { buildTicketTimeEntryContext, createTicketTimeEntryOnComplete } from '../../lib/timeEntryContext';
 import { getTicketOrigin } from '../../lib/ticketOrigin';
 import {
+    setTicketWatchListOnAttributes,
+    type TicketWatchListEntry,
+} from '@shared/lib/tickets/watchList';
+import {
     addChildrenToBundleAction,
     findTicketByNumberAction,
     promoteBundleMasterAction,
@@ -249,6 +253,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const [isUpdatingBundleSettings, setIsUpdatingBundleSettings] = useState(false);
     const [isAddChildMultiClientConfirmOpen, setIsAddChildMultiClientConfirmOpen] = useState(false);
     const [pendingChildToAdd, setPendingChildToAdd] = useState<{ ticket_id: string; ticket_number?: string | null; client_id?: string | null } | null>(null);
+    const [isWatchListSaving, setIsWatchListSaving] = useState(false);
     const ticketOrigin = useMemo(() => getTicketOrigin(ticket as any), [ticket]);
     const ticketOriginLabels = useMemo(() => ({
         internal: t('origin.internal', 'Created Internally'),
@@ -1086,6 +1091,33 @@ const handleClose = () => {
         }
     };
 
+    const handleUpdateWatchList = async (watchList: TicketWatchListEntry[]): Promise<boolean> => {
+        if (!ticket.ticket_id || isWatchListSaving) {
+            return false;
+        }
+
+        setIsWatchListSaving(true);
+        try {
+            const updatedAttributes = setTicketWatchListOnAttributes(ticket.attributes, watchList);
+            await updateTicketWithCache(ticket.ticket_id, {
+                attributes: updatedAttributes ?? null,
+            });
+
+            setTicket((prevTicket) => ({
+                ...prevTicket,
+                attributes: updatedAttributes ?? null,
+                updated_at: new Date().toISOString(),
+            }));
+            return true;
+        } catch (error) {
+            console.error('Error updating watch list:', error);
+            toast.error('Failed to update watch list');
+            return false;
+        } finally {
+            setIsWatchListSaving(false);
+        }
+    };
+
     const handleChangeContact = () => {
         setIsChangeContactDialogOpen(true);
     };
@@ -1909,6 +1941,8 @@ const handleClose = () => {
                                 allTagTexts={allTags.filter(tag => tag.tagged_type === 'ticket').map(tag => tag.tag_text)}
                                 onTagsChange={handleTagsChange}
                                 onItilFieldChange={handleItilFieldChange}
+                                onUpdateWatchList={handleUpdateWatchList}
+                                watchListSaving={isWatchListSaving}
                                 surveySummary={surveySummary}
                                 renderIntervalManagement={renderIntervalManagement}
                             />

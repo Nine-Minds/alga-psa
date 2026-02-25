@@ -7,6 +7,10 @@ const findTicketByReplyTokenMock = vi.fn();
 const findTicketByEmailThreadMock = vi.fn();
 const resolveInboundTicketDefaultsMock = vi.fn();
 const findContactByEmailMock = vi.fn();
+const findClientIdByInboundEmailDomainMock = vi.fn();
+const findValidClientPrimaryContactIdMock = vi.fn();
+const findEmailProviderMailboxAddressMock = vi.fn();
+const upsertTicketWatchListRecipientsMock = vi.fn();
 const createTicketFromEmailMock = vi.fn();
 const createCommentFromEmailMock = vi.fn();
 const processEmailAttachmentMock = vi.fn();
@@ -61,6 +65,10 @@ vi.mock('../../../workflow/actions/emailWorkflowActions', () => ({
   findTicketByEmailThread: (...args: any[]) => findTicketByEmailThreadMock(...args),
   resolveInboundTicketDefaults: (...args: any[]) => resolveInboundTicketDefaultsMock(...args),
   findContactByEmail: (...args: any[]) => findContactByEmailMock(...args),
+  findClientIdByInboundEmailDomain: (...args: any[]) => findClientIdByInboundEmailDomainMock(...args),
+  findValidClientPrimaryContactId: (...args: any[]) => findValidClientPrimaryContactIdMock(...args),
+  findEmailProviderMailboxAddress: (...args: any[]) => findEmailProviderMailboxAddressMock(...args),
+  upsertTicketWatchListRecipients: (...args: any[]) => upsertTicketWatchListRecipientsMock(...args),
   createTicketFromEmail: (...args: any[]) => createTicketFromEmailMock(...args),
   createCommentFromEmail: (...args: any[]) => createCommentFromEmailMock(...args),
   processEmailAttachment: (...args: any[]) => processEmailAttachmentMock(...args),
@@ -102,6 +110,10 @@ describe('processInboundEmailInApp additional authorship paths', () => {
       location_id: undefined,
       entered_by: 'entered-by-user',
     });
+    findClientIdByInboundEmailDomainMock.mockResolvedValue(null);
+    findValidClientPrimaryContactIdMock.mockResolvedValue(null);
+    findEmailProviderMailboxAddressMock.mockResolvedValue('support@example.com');
+    upsertTicketWatchListRecipientsMock.mockResolvedValue({ updated: true, watchList: [] });
     createTicketFromEmailMock.mockResolvedValue({
       ticket_id: 'ticket-1',
       ticket_number: 'T-1',

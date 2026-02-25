@@ -1,0 +1,206 @@
+[
+  {
+    "id": "F001",
+    "description": "Define ticket watch-list attribute contract in `tickets.attributes.watch_list` with normalized email and active state.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "Implement watch-list parsing that tolerates null/legacy attribute shapes and produces normalized entries.",
+    "implemented": false,
+    "prdRefs": [
+      "Non-functional Requirements",
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "Deduplicate watch-list entries by normalized email during parse/merge operations.",
+    "implemented": false,
+    "prdRefs": [
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "Support watcher metadata fields (name/source/timestamps) without breaking minimum contract.",
+    "implemented": false,
+    "prdRefs": [
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "Add a Watch List section to ticket properties UI with recipient list visibility.",
+    "implemented": false,
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "Add manual watcher email entry with validation and duplicate handling.",
+    "implemented": false,
+    "prdRefs": [
+      "Functional Requirements",
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "Add watcher active/inactive checkbox behavior in UI and persist it to ticket attributes.",
+    "implemented": false,
+    "prdRefs": [
+      "Functional Requirements",
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "Add watcher removal action in UI and persist deletion to ticket attributes.",
+    "implemented": false,
+    "prdRefs": [
+      "Functional Requirements",
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "Wire Watch List UI actions to existing ticket update action flow with permission enforcement.",
+    "implemented": false,
+    "prdRefs": [
+      "Security / Permissions",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "Derive inbound watcher candidates from `To` and `CC` recipient lists during email ingestion.",
+    "implemented": false,
+    "prdRefs": [
+      "Functional Requirements",
+      "Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "Exclude sender and configured provider mailbox from inbound watcher candidate set.",
+    "implemented": false,
+    "prdRefs": [
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "Seed watch-list attributes on new ticket creation from inbound email recipients.",
+    "implemented": false,
+    "prdRefs": [
+      "Functional Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "Upsert watch-list recipients on reply-to-existing-ticket inbound paths.",
+    "implemented": false,
+    "prdRefs": [
+      "Functional Requirements",
+      "Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "Reactivate inactive watcher entries when the same email appears again in inbound `To`/`CC`.",
+    "implemented": false,
+    "prdRefs": [
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "Read active watcher emails in ticket email subscriber from ticket attributes for outbound fan-out.",
+    "implemented": false,
+    "prdRefs": [
+      "Data / API / Integrations",
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "Send watcher notifications for ticket-created events using customer-visible context.",
+    "implemented": false,
+    "prdRefs": [
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "Send watcher notifications for ticket-updated events in both accumulator and non-accumulator paths.",
+    "implemented": false,
+    "prdRefs": [
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F018",
+    "description": "Send watcher notifications for ticket-assigned events when customer-visible assignment notifications are emitted.",
+    "implemented": false,
+    "prdRefs": [
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F019",
+    "description": "Send watcher notifications for ticket-comment-added events only when the comment is customer-visible.",
+    "implemented": false,
+    "prdRefs": [
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F020",
+    "description": "Send watcher notifications for ticket-closed events with customer-visible context.",
+    "implemented": false,
+    "prdRefs": [
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F021",
+    "description": "Deduplicate watcher recipients against existing recipients for each event send path.",
+    "implemented": false,
+    "prdRefs": [
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F022",
+    "description": "Ensure comment-author suppression applies to watcher sends for public comment notifications.",
+    "implemented": false,
+    "prdRefs": [
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F023",
+    "description": "Guarantee watcher delivery mode is separate individual emails (no outbound CC batching).",
+    "implemented": false,
+    "prdRefs": [
+      "Summary",
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F024",
+    "description": "Allow any email, including technician/internal addresses, to be included as watchers via email-based list management.",
+    "implemented": false,
+    "prdRefs": [
+      "Goals",
+      "Users and Primary Flows"
+    ]
+  }
+]
