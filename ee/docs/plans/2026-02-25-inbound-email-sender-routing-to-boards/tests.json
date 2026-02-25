@@ -122,7 +122,7 @@
   {
     "id": "T021",
     "description": "Exact sender contact matching still resolves target client/contact IDs as before",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F011", "F020"]
   },
   {

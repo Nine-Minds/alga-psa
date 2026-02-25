@@ -175,3 +175,5 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
   - test case `Reply threading: reply token resolves ticket and creates exactly 1 new comment` now asserts ticket board remains unchanged after reply threading.
 - (2026-02-25) Completed `T020` by confirming thread-header regression coverage exists in `server/src/test/integration/inboundEmailInApp.webhooks.integration.test.ts`:
   - test case `Reply threading: thread headers resolve ticket and create exactly 1 new comment` now asserts ticket board remains unchanged after thread-header matching.
+- (2026-02-25) Completed `T021` by confirming exact-contact matching regression coverage exists in `server/src/test/integration/inboundEmailInApp.webhooks.integration.test.ts`:
+  - test case `Contact match: sender email is normalized from display-name format` asserts contact/client IDs still resolve from exact sender match semantics.
