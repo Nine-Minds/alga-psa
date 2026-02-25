@@ -152,7 +152,7 @@
   {
     "id": "T026",
     "description": "Contact UI can set and clear contact inbound destination override and persists correctly",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F015", "F016"]
   },
   {
