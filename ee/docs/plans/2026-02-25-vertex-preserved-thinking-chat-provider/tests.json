@@ -487,7 +487,7 @@
   {
     "id": "T057",
     "description": "Env example documentation includes both provider setup blocks and required keys",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F031"
     ]

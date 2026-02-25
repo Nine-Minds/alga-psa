@@ -145,3 +145,4 @@ Working notes for implementing a new chat provider abstraction with Vertex GLM-5
 - (2026-02-25) Implemented `T054`: Chat stream tests now cover combined reasoning/content deltas resolving to a final assistant response, matching Vertex-style non-tool streaming behavior.
 - (2026-02-25) Implemented `T055`: completion-service unit coverage verifies Vertex follow-up requests after tool replay include prior assistant `reasoning_content` context.
 - (2026-02-25) Implemented `T056`: provider resolver unit tests cover unknown `AI_CHAT_PROVIDER` fallback to safe OpenRouter defaults.
+- (2026-02-25) Implemented `T057`: added env-example contract test asserting both root and EE `.env.example` files include required OpenRouter/Vertex provider keys and optional Vertex override/toggle keys.
