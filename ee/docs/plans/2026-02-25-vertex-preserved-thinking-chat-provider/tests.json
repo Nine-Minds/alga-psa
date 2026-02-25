@@ -380,7 +380,7 @@
   {
     "id": "T045",
     "description": "Chat component sets pendingFunction when function proposal stream event arrives",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F025"
     ]

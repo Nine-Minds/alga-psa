@@ -133,3 +133,4 @@ Working notes for implementing a new chat provider abstraction with Vertex GLM-5
 - (2026-02-25) Implemented `T042`: SSE reader tests confirm malformed JSON lines are ignored without crashing stream consumption.
 - (2026-02-25) Implemented `T043`: SSE reader tests ensure `shouldContinue=false` cancels the underlying reader and exits early.
 - (2026-02-25) Implemented `T044`: Chat streaming UI tests verify in-progress reasoning state updates as `reasoning_delta` events arrive.
+- (2026-02-25) Implemented `T045`: Chat stream tests now assert pending function state is populated from streamed `function_proposed` events.
