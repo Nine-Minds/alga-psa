@@ -107,7 +107,7 @@
   {
     "id": "T013",
     "description": "Client-facing message sanitization does not drop reasoning_content needed for continuation",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F009",
       "F015"
