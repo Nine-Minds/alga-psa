@@ -227,7 +227,7 @@
   {
     "id": "T027",
     "description": "Subscriber unit: active watcher extraction ignores inactive entries.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F015"
     ]
