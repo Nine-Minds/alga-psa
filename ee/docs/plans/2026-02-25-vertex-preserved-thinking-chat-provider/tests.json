@@ -159,7 +159,7 @@
   {
     "id": "T019",
     "description": "Assistant message appended during tool-call turn includes preserved reasoning_content",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F014",
       "F015"
