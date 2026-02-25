@@ -324,7 +324,7 @@
   {
     "id": "T039",
     "description": "Subscriber unit: watcher send function issues one send call per watcher email (no aggregated CC payload).",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F023"
     ]
