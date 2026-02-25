@@ -284,7 +284,7 @@
   {
     "id": "T034",
     "description": "Subscriber unit: public client-authored comment does not trigger watcher sends when customer-visible rule requires agent-authored updates.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F019"
     ]
