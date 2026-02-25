@@ -368,7 +368,7 @@
   {
     "id": "T044",
     "description": "Compatibility test: technician/internal email can be added manually as watcher and remains persisted/active.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F024",
       "F006"
