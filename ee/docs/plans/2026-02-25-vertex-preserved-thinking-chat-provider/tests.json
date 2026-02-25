@@ -151,7 +151,7 @@
   {
     "id": "T018",
     "description": "Response parsing falls back to reasoning field when reasoning_content is absent",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F013"
     ]
