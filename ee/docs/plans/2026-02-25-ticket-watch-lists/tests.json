@@ -350,7 +350,7 @@
   {
     "id": "T042",
     "description": "End-to-end notification test: watcher receives public comment email and not internal-note email.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F019",
       "F023"
