@@ -167,3 +167,5 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
   - test case `returns contact override destination outcome for exact sender` asserts `resolve_inbound_ticket_context` returns contact-override destination.
 - (2026-02-25) Completed `T016` by confirming workflow integration coverage exists in `server/src/test/integration/resolveInboundTicketContext.destinationRouting.integration.test.ts`:
   - test case `returns client's destination outcome when exact sender has no contact override` asserts workflow action returns client-default destination.
+- (2026-02-25) Completed `T017` by confirming workflow integration coverage exists in `server/src/test/integration/resolveInboundTicketContext.destinationRouting.integration.test.ts`:
+  - test case `returns domain-matched client destination outcome when sender is unknown contact` asserts domain-matched destination resolution.
