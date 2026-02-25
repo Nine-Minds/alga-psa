@@ -137,3 +137,6 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
 - (2026-02-25) Completed `T006` by extending shared resolver unit coverage for precedence path:
   - exact sender contact with no override resolves `source=client_default_from_contact`
   - uses the matched contact's client `inbound_ticket_defaults_id`
+- (2026-02-25) Completed `T007` by extending shared resolver unit coverage for domain path:
+  - when no exact contact is provided and domain client is matched, resolves `source=client_default_from_domain`
+  - returns domain client's active defaults
