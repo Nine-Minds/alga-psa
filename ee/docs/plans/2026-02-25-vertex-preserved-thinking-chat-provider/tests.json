@@ -279,7 +279,7 @@
   {
     "id": "T033",
     "description": "Streaming route emits terminal done event after successful completion",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F021"
     ]
