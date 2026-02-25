@@ -56,3 +56,4 @@ Working notes for implementing a new chat provider abstraction with Vertex GLM-5
 - (2026-02-25) Created this ALGA plan (`PRD.md`, `features.json`, `tests.json`, `SCRATCHPAD.md`) for implementation-first follow-up.
 - (2026-02-25) Implemented `F001`: added `chatProviderResolver` abstraction and switched chat completion + streaming model calls to resolve provider/model/client/request overrides through it.
 - (2026-02-25) Implemented `F002`: provider normalization now safely falls back to `openrouter` for missing/invalid `AI_CHAT_PROVIDER`.
+- (2026-02-25) Implemented `F003`: OpenRouter provider resolution now reads `OPENROUTER_API_KEY` and `OPENROUTER_CHAT_MODEL` from secret provider first, with env fallback.

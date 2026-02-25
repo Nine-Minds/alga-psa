@@ -14,7 +14,7 @@
   {
     "id": "F003",
     "description": "Resolve OpenRouter credentials and model from secret/env sources in provider resolver",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Data / API / Integrations"]
   },
   {
