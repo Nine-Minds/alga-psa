@@ -422,7 +422,7 @@
   {
     "id": "T050",
     "description": "Right Sidebar chat path can receive streamed function proposal and complete approve->execute loop",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F028"
     ]
