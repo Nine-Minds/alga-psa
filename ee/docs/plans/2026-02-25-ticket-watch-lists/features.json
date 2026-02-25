@@ -80,7 +80,7 @@
   {
     "id": "F010",
     "description": "Derive inbound watcher candidates from `To` and `CC` recipient lists during email ingestion.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Functional Requirements",
       "Users and Primary Flows"
