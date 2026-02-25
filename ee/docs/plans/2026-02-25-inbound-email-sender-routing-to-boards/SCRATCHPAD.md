@@ -16,6 +16,7 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
 - (2026-02-25) Precedence for new-ticket creation: contact override -> client destination -> provider default.
 - (2026-02-25) Existing-ticket reply flows remain unchanged; no rerouting for threaded replies.
 - (2026-02-25) `F001` completed as a plan-model checkpoint: implementation work proceeds only with client/contact-owned routing and does not introduce provider-level sender-rule tables.
+- (2026-02-25) Shared resolver `resolveEffectiveInboundTicketDefaults` is the single precedence source for contact override / contact-client default / provider fallback used by both in-app and runtime context paths.
 
 ## Discoveries / Constraints
 
@@ -46,6 +47,9 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
   - `server/migrations/20260225120500_add_contact_inbound_ticket_defaults_id.cjs`
 - (2026-02-25) Add lookup index migration:
   - `server/migrations/20260225121000_add_inbound_ticket_defaults_lookup_indexes.cjs`
+- (2026-02-25) Targeted unit tests attempted for shared/runtime email routing changes:
+  - `npx vitest run shared/services/email/__tests__/processInboundEmailInApp.test.ts shared/services/email/__tests__/processInboundEmailInApp.additionalPaths.test.ts shared/workflow/runtime/actions/__tests__/registerEmailWorkflowActions.contactAuthorship.test.ts`
+  - Blocker in local env: Vitest startup fails because `dotenv` package is missing from active node_modules resolution path.
 
 ## Links / References
 
@@ -74,3 +78,6 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
 - (2026-02-25) Completed `F002` by adding migration `20260225120000_add_client_inbound_ticket_defaults_id.cjs` to persist `clients.inbound_ticket_defaults_id`.
 - (2026-02-25) Completed `F003` by adding migration `20260225120500_add_contact_inbound_ticket_defaults_id.cjs` to persist `contacts.inbound_ticket_defaults_id`.
 - (2026-02-25) Completed `F004` by adding migration `20260225121000_add_inbound_ticket_defaults_lookup_indexes.cjs` with safe create/drop index behavior.
+- (2026-02-25) Completed `F005` by adding shared resolver logic in `shared/workflow/actions/emailWorkflowActions.ts` and wiring it into:
+  - `shared/services/email/processInboundEmailInApp.ts`
+  - `shared/workflow/runtime/actions/registerEmailWorkflowActions.ts`

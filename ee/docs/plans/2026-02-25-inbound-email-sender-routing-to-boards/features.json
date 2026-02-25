@@ -38,7 +38,7 @@
   {
     "id": "F005",
     "description": "Implement shared effective-destination resolver with precedence: contact override -> client default -> provider default",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Acceptance Criteria (Definition of Done)"
