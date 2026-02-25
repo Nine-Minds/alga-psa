@@ -140,7 +140,7 @@
   {
     "id": "F024",
     "description": "Update Chat send/stream flow to consume structured reasoning and content events",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes", "Users and Primary Flows"]
   },
   {
