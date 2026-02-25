@@ -20,7 +20,7 @@
   {
     "id": "T004",
     "description": "Migration down path cleanly removes added fields/indexes",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F004"]
   },
   {

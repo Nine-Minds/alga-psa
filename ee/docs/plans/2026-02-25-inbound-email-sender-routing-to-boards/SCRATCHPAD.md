@@ -124,3 +124,7 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
 - (2026-02-25) Completed `T003` by adding index coverage in the same migration integration suite, asserting:
   - `idx_clients_tenant_inbound_ticket_defaults` on `clients(tenant, inbound_ticket_defaults_id)`
   - `idx_contacts_tenant_inbound_ticket_defaults` on `contacts(tenant, inbound_ticket_defaults_id)`
+- (2026-02-25) Completed `T004` by adding rollback-path coverage in the same migration integration suite:
+  - executes migration `down` functions inside a transaction and asserts both columns/indexes are removed
+  - executes migration `up` functions inside the same transaction and asserts both columns/indexes are restored
+  - rolls back transaction to avoid mutating shared integration DB state

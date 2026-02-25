@@ -1,7 +1,10 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { Knex } from 'knex';
+import { createRequire } from 'node:module';
 
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
+
+const require = createRequire(import.meta.url);
 
 describe('inbound ticket destination migrations (integration)', () => {
   let knex: Knex;
@@ -72,5 +75,71 @@ describe('inbound ticket destination migrations (integration)', () => {
 
     expect(contactsIndex?.tablename).toBe('contacts');
     expect(contactsIndex?.indexdef).toContain('(tenant, inbound_ticket_defaults_id)');
+  });
+
+  it('T004: migration down path removes added columns/indexes and up restores them', async () => {
+    const clientDestinationMigration = require('../../../../migrations/20260225120000_add_client_inbound_ticket_defaults_id.cjs');
+    const contactDestinationMigration = require('../../../../migrations/20260225120500_add_contact_inbound_ticket_defaults_id.cjs');
+    const indexMigration = require('../../../../migrations/20260225121000_add_inbound_ticket_defaults_lookup_indexes.cjs');
+
+    const trx = await knex.transaction();
+    let testError: unknown = null;
+
+    try {
+      await indexMigration.down(trx);
+      await contactDestinationMigration.down(trx);
+      await clientDestinationMigration.down(trx);
+
+      await expect(trx.schema.hasColumn('clients', 'inbound_ticket_defaults_id')).resolves.toBe(false);
+      await expect(trx.schema.hasColumn('contacts', 'inbound_ticket_defaults_id')).resolves.toBe(false);
+
+      const downIndexesResult = await trx.raw<{
+        rows: Array<{ indexname: string }>;
+      }>(`
+        SELECT indexname
+        FROM pg_indexes
+        WHERE schemaname = 'public'
+          AND indexname IN (
+            'idx_clients_tenant_inbound_ticket_defaults',
+            'idx_contacts_tenant_inbound_ticket_defaults'
+          )
+      `);
+
+      expect(downIndexesResult.rows ?? []).toHaveLength(0);
+
+      await clientDestinationMigration.up(trx);
+      await contactDestinationMigration.up(trx);
+      await indexMigration.up(trx);
+
+      await expect(trx.schema.hasColumn('clients', 'inbound_ticket_defaults_id')).resolves.toBe(true);
+      await expect(trx.schema.hasColumn('contacts', 'inbound_ticket_defaults_id')).resolves.toBe(true);
+
+      const upIndexesResult = await trx.raw<{
+        rows: Array<{ indexname: string }>;
+      }>(`
+        SELECT indexname
+        FROM pg_indexes
+        WHERE schemaname = 'public'
+          AND indexname IN (
+            'idx_clients_tenant_inbound_ticket_defaults',
+            'idx_contacts_tenant_inbound_ticket_defaults'
+          )
+      `);
+
+      expect((upIndexesResult.rows ?? []).map((row) => row.indexname)).toEqual(
+        expect.arrayContaining([
+          'idx_clients_tenant_inbound_ticket_defaults',
+          'idx_contacts_tenant_inbound_ticket_defaults',
+        ])
+      );
+    } catch (error) {
+      testError = error;
+    } finally {
+      await trx.rollback();
+    }
+
+    if (testError) {
+      throw testError;
+    }
   });
 });
