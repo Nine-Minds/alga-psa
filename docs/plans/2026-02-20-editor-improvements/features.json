@@ -194,5 +194,94 @@
     "prdRefs": [
       "F-P1-16"
     ]
+  },
+  {
+    "id": "F025",
+    "description": "EmojiSuggestionExtension: ProseMirror plugin detects ':query' (2+ chars) and emits state changes; EmojiSuggestionPopup: React component shows grid of matching emoji from emoji-mart with keyboard navigation (arrows, Enter, Escape)",
+    "implemented": true,
+    "prdRefs": [
+      "F-P1-17"
+    ]
+  },
+  {
+    "id": "F026",
+    "description": "CollaborativeEditor integrates EmojiSuggestionExtension and EmojiSuggestionPopup for ':query' emoji picker grid",
+    "implemented": true,
+    "prdRefs": [
+      "F-P1-17"
+    ]
+  },
+  {
+    "id": "F027",
+    "description": "MentionNode: Tiptap Node extension (inline, atom) that renders mention badges with userId/username/displayName attributes, matching BlockNote Mention styling",
+    "implemented": true,
+    "prdRefs": [
+      "F-P1-18"
+    ]
+  },
+  {
+    "id": "F028",
+    "description": "MentionSuggestionExtension: ProseMirror plugin detects '@query' and emits state changes; MentionSuggestionPopup: React component shows searchable user list with @everyone option, keyboard navigation (arrows, Enter/Tab, Escape)",
+    "implemented": true,
+    "prdRefs": [
+      "F-P1-18"
+    ]
+  },
+  {
+    "id": "F029",
+    "description": "CollaborativeEditor accepts optional searchMentions prop and integrates MentionNode + MentionSuggestionExtension + MentionSuggestionPopup; Collab test page passes searchUsersForMentions",
+    "implemented": true,
+    "prdRefs": [
+      "F-P1-18"
+    ]
+  },
+  {
+    "id": "F030",
+    "description": "yjs-config.ts getHocuspocusUrl() derives WebSocket URL from window.location in browser (wss://<host>/hocuspocus), falls back to NEXT_PUBLIC_HOCUSPOCUS_URL env var or ws://localhost:1234",
+    "implemented": true,
+    "prdRefs": [
+      "F-P1-19"
+    ]
+  },
+  {
+    "id": "F031",
+    "description": "RichTextViewer: sanitizeBlocks() validates block types and coerces non-string .text fields; extractTextFromProseMirror() handles Tiptap JSON {type:'doc'} format; RichTextErrorBoundary catches render crashes with plain-text fallback",
+    "implemented": true,
+    "prdRefs": [
+      "F-P1-20"
+    ]
+  },
+  {
+    "id": "F032",
+    "description": "TextEditor isTextContent guard checks typeof content.text === 'string' to prevent .trim() crash on non-string text fields in old documents",
+    "implemented": true,
+    "prdRefs": [
+      "F-P1-20"
+    ]
+  },
+  {
+    "id": "F033",
+    "description": "resolveEveryoneMention checks for @everyone once and does a single DB query instead of looping; mention handlers early-exit when no new mentions found; notifications created in parallel via Promise.all",
+    "implemented": true,
+    "prdRefs": [
+      "F-P1-21"
+    ]
+  },
+  {
+    "id": "F034",
+    "description": "EmojiSuggestion and MentionSuggestion exports added to @alga-psa/ui/editor index.ts (EmojiSuggestionExtension, EmojiSuggestionPopup, EmojiSuggestionState, MentionNode, MentionSuggestionExtension, MentionSuggestionPopup, MentionSuggestionState, MentionSuggestionUser)",
+    "implemented": true,
+    "prdRefs": [
+      "F-P1-17",
+      "F-P1-18"
+    ]
+  },
+  {
+    "id": "F035",
+    "description": "Phase 2 cleanup: Audit and delete DocumentEditor.jsx, BlockEditor.jsx, and DocumentEditor.tsx after confirming zero remaining imports. Verify comments (TextEditor) and read-only display (RichTextViewer) are unaffected.",
+    "implemented": false,
+    "prdRefs": [
+      "F-P2-01"
+    ]
   }
 ]
