@@ -28,7 +28,7 @@
   {
     "id": "T004",
     "description": "Unit: duplicate watcher entries collapse to a single normalized email entry.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F003"
     ]
