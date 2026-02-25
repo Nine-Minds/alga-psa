@@ -62,7 +62,7 @@
   {
     "id": "F008",
     "description": "Add watcher removal action in UI and persist deletion to ticket attributes.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Functional Requirements",
       "UX / UI Notes"
