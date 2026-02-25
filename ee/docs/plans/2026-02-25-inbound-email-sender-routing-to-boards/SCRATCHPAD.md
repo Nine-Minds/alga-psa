@@ -134,3 +134,6 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
 - (2026-02-25) Completed `T005` by adding shared resolver unit coverage in `shared/workflow/actions/__tests__/emailWorkflowActions.destinationResolver.test.ts` for precedence path:
   - exact sender contact + contact override resolves `source=contact_override`
   - returns contact override defaults and does not consult client defaults
+- (2026-02-25) Completed `T006` by extending shared resolver unit coverage for precedence path:
+  - exact sender contact with no override resolves `source=client_default_from_contact`
+  - uses the matched contact's client `inbound_ticket_defaults_id`

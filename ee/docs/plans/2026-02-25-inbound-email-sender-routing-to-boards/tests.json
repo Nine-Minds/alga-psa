@@ -32,7 +32,7 @@
   {
     "id": "T006",
     "description": "Resolver precedence: exact sender contact without override selects contact's client destination",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F005"]
   },
   {
