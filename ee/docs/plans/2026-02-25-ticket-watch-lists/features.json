@@ -180,7 +180,7 @@
   {
     "id": "F022",
     "description": "Ensure comment-author suppression applies to watcher sends for public comment notifications.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Functional Requirements"
     ]
