@@ -97,7 +97,7 @@
   {
     "id": "F012",
     "description": "Seed watch-list attributes on new ticket creation from inbound email recipients.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Functional Requirements",
       "Data / API / Integrations"
