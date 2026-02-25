@@ -213,6 +213,58 @@ async function setupMicrosoftProvider(params: {
   return { defaultsId };
 }
 
+async function createRoutingBoardVariant(namePrefix: string): Promise<string> {
+  const sourceBoard = await db('boards')
+    .where({ tenant: tenantId, board_id: boardId })
+    .first<any>();
+  if (!sourceBoard) {
+    throw new Error('Expected source board for routing variant');
+  }
+
+  const newBoardId = uuidv4();
+  const {
+    board_id: _sourceBoardId,
+    created_at: _sourceCreatedAt,
+    updated_at: _sourceUpdatedAt,
+    ...sourceRest
+  } = sourceBoard;
+
+  await db('boards').insert({
+    ...sourceRest,
+    board_id: newBoardId,
+    board_name: `${namePrefix}-${newBoardId.slice(0, 6)}`,
+    created_at: db.fn.now(),
+    updated_at: db.fn.now(),
+  });
+
+  return newBoardId;
+}
+
+async function createInboundRoutingDefaults(params: {
+  boardId: string;
+  clientId?: string | null;
+  descriptionPrefix: string;
+}): Promise<string> {
+  const defaultsId = uuidv4();
+  await db('inbound_ticket_defaults').insert({
+    id: defaultsId,
+    tenant: tenantId,
+    short_name: `${params.descriptionPrefix}-${defaultsId.slice(0, 6)}`,
+    display_name: `${params.descriptionPrefix}-${defaultsId.slice(0, 6)}`,
+    description: `${params.descriptionPrefix} defaults`,
+    board_id: params.boardId,
+    status_id: statusId,
+    priority_id: priorityId,
+    client_id: params.clientId ?? null,
+    entered_by: enteredByUserId,
+    is_active: true,
+    is_default: false,
+    created_at: db.fn.now(),
+    updated_at: db.fn.now(),
+  });
+  return defaultsId;
+}
+
 describeDb('Inbound email in-app processing via webhooks (integration)', () => {
   const cleanup: Array<() => Promise<void>> = [];
 
@@ -482,6 +534,12 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
 
     const comments = await db('comments').where({ tenant: tenantId, ticket_id: ticketId });
     expect(comments).toHaveLength(1);
+
+    const ticketAfterReply = await db('tickets')
+      .where({ tenant: tenantId, ticket_id: ticketId })
+      .first<any>();
+    expect(ticketAfterReply).toBeDefined();
+    expect(ticketAfterReply.board_id).toBe(boardId);
   });
 
   it('Reply threading: In-Reply-To/References resolves ticket and creates exactly 1 new comment', async () => {
@@ -547,6 +605,12 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
 
     const comments = await db('comments').where({ tenant: tenantId, ticket_id: ticketId });
     expect(comments).toHaveLength(1);
+
+    const ticketAfterReply = await db('tickets')
+      .where({ tenant: tenantId, ticket_id: ticketId })
+      .first<any>();
+    expect(ticketAfterReply).toBeDefined();
+    expect(ticketAfterReply.board_id).toBe(boardId);
   });
 
   it("Contact match: sender email matches existing contact and ticket uses contact's client_id/contact_id", async () => {
@@ -965,6 +1029,258 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
     });
   });
 
+  it('Routing destination: exact sender contact override uses contact override defaults board', async () => {
+    const providerId = uuidv4();
+    const mailbox = `support-contact-override-${uuidv4().slice(0, 6)}@example.com`;
+    const { defaultsId: providerDefaultsId } = await setupInboundDefaults({ providerId, mailbox });
+
+    cleanup.push(async () => {
+      await db('gmail_processed_history').where({ tenant: tenantId, provider_id: providerId }).delete();
+      await db('google_email_provider_config').where({ tenant: tenantId, email_provider_id: providerId }).delete();
+      await db('email_providers').where({ tenant: tenantId, id: providerId }).delete();
+      await db('inbound_ticket_defaults').where({ tenant: tenantId, id: providerDefaultsId }).delete();
+    });
+
+    const overrideBoardId = await createRoutingBoardVariant('contact-override-board');
+    const contactOverrideDefaultsId = await createInboundRoutingDefaults({
+      boardId: overrideBoardId,
+      descriptionPrefix: 'contact-override',
+    });
+    cleanup.push(async () => {
+      await db('inbound_ticket_defaults').where({ tenant: tenantId, id: contactOverrideDefaultsId }).delete();
+      await db('boards').where({ tenant: tenantId, board_id: overrideBoardId }).delete();
+    });
+
+    const contactClientId = uuidv4();
+    await db('clients').insert({
+      tenant: tenantId,
+      client_id: contactClientId,
+      client_name: `Contact Override Client ${uuidv4().slice(0, 6)}`,
+      created_at: db.fn.now(),
+      updated_at: db.fn.now(),
+    });
+    cleanup.push(async () => {
+      await db('clients').where({ tenant: tenantId, client_id: contactClientId }).delete();
+    });
+
+    const contactId = uuidv4();
+    const senderEmail = `override-${uuidv4().slice(0, 6)}@example.com`;
+    await db('contacts').insert({
+      tenant: tenantId,
+      contact_name_id: contactId,
+      full_name: 'Contact Override Sender',
+      email: senderEmail,
+      client_id: contactClientId,
+      inbound_ticket_defaults_id: contactOverrideDefaultsId,
+      is_inactive: false,
+      created_at: db.fn.now(),
+      updated_at: db.fn.now(),
+    });
+    cleanup.push(async () => {
+      await db('contacts').where({ tenant: tenantId, contact_name_id: contactId }).delete();
+    });
+
+    const subject = `Contact override routing ${uuidv4().slice(0, 6)}`;
+    const result = await processInboundEmailInApp({
+      tenantId,
+      providerId,
+      emailData: {
+        id: `new-email-${uuidv4()}`,
+        provider: 'google',
+        providerId,
+        tenant: tenantId,
+        receivedAt: new Date().toISOString(),
+        from: { email: senderEmail, name: 'Contact Override Sender' },
+        to: [{ email: mailbox, name: 'Support' }],
+        subject,
+        body: { text: 'Hello', html: undefined },
+        attachments: [],
+      } as any,
+    });
+
+    expect(result.outcome).toBe('created');
+
+    const ticket = await db('tickets')
+      .where({ tenant: tenantId, title: subject })
+      .first<any>();
+    expect(ticket).toBeDefined();
+    expect(ticket.board_id).toBe(overrideBoardId);
+    expect(ticket.client_id).toBe(contactClientId);
+    expect(ticket.contact_name_id).toBe(contactId);
+
+    cleanup.push(async () => {
+      await db('comments').where({ tenant: tenantId, ticket_id: ticket.ticket_id }).delete();
+      await db('tickets').where({ tenant: tenantId, ticket_id: ticket.ticket_id }).delete();
+    });
+  });
+
+  it("Routing destination: exact sender without contact override uses contact's client destination defaults", async () => {
+    const providerId = uuidv4();
+    const mailbox = `support-client-default-${uuidv4().slice(0, 6)}@example.com`;
+    const { defaultsId: providerDefaultsId } = await setupInboundDefaults({ providerId, mailbox });
+
+    cleanup.push(async () => {
+      await db('gmail_processed_history').where({ tenant: tenantId, provider_id: providerId }).delete();
+      await db('google_email_provider_config').where({ tenant: tenantId, email_provider_id: providerId }).delete();
+      await db('email_providers').where({ tenant: tenantId, id: providerId }).delete();
+      await db('inbound_ticket_defaults').where({ tenant: tenantId, id: providerDefaultsId }).delete();
+    });
+
+    const clientDefaultBoardId = await createRoutingBoardVariant('client-default-board');
+    const clientDefaultDefaultsId = await createInboundRoutingDefaults({
+      boardId: clientDefaultBoardId,
+      descriptionPrefix: 'client-default',
+    });
+    cleanup.push(async () => {
+      await db('inbound_ticket_defaults').where({ tenant: tenantId, id: clientDefaultDefaultsId }).delete();
+      await db('boards').where({ tenant: tenantId, board_id: clientDefaultBoardId }).delete();
+    });
+
+    const destinationClientId = uuidv4();
+    await db('clients').insert({
+      tenant: tenantId,
+      client_id: destinationClientId,
+      client_name: `Client Default Destination ${uuidv4().slice(0, 6)}`,
+      inbound_ticket_defaults_id: clientDefaultDefaultsId,
+      created_at: db.fn.now(),
+      updated_at: db.fn.now(),
+    });
+    cleanup.push(async () => {
+      await db('clients').where({ tenant: tenantId, client_id: destinationClientId }).delete();
+    });
+
+    const contactId = uuidv4();
+    const senderEmail = `client-default-${uuidv4().slice(0, 6)}@example.com`;
+    await db('contacts').insert({
+      tenant: tenantId,
+      contact_name_id: contactId,
+      full_name: 'Client Destination Sender',
+      email: senderEmail,
+      client_id: destinationClientId,
+      is_inactive: false,
+      created_at: db.fn.now(),
+      updated_at: db.fn.now(),
+    });
+    cleanup.push(async () => {
+      await db('contacts').where({ tenant: tenantId, contact_name_id: contactId }).delete();
+    });
+
+    const subject = `Client destination routing ${uuidv4().slice(0, 6)}`;
+    const result = await processInboundEmailInApp({
+      tenantId,
+      providerId,
+      emailData: {
+        id: `new-email-${uuidv4()}`,
+        provider: 'google',
+        providerId,
+        tenant: tenantId,
+        receivedAt: new Date().toISOString(),
+        from: { email: senderEmail, name: 'Client Destination Sender' },
+        to: [{ email: mailbox, name: 'Support' }],
+        subject,
+        body: { text: 'Hello', html: undefined },
+        attachments: [],
+      } as any,
+    });
+
+    expect(result.outcome).toBe('created');
+
+    const ticket = await db('tickets')
+      .where({ tenant: tenantId, title: subject })
+      .first<any>();
+    expect(ticket).toBeDefined();
+    expect(ticket.board_id).toBe(clientDefaultBoardId);
+    expect(ticket.client_id).toBe(destinationClientId);
+    expect(ticket.contact_name_id).toBe(contactId);
+
+    cleanup.push(async () => {
+      await db('comments').where({ tenant: tenantId, ticket_id: ticket.ticket_id }).delete();
+      await db('tickets').where({ tenant: tenantId, ticket_id: ticket.ticket_id }).delete();
+    });
+  });
+
+  it('Routing destination: unknown sender + domain-matched client uses domain client destination defaults', async () => {
+    const providerId = uuidv4();
+    const mailbox = `support-domain-destination-${uuidv4().slice(0, 6)}@example.com`;
+    const { defaultsId: providerDefaultsId } = await setupInboundDefaults({ providerId, mailbox });
+
+    cleanup.push(async () => {
+      await db('gmail_processed_history').where({ tenant: tenantId, provider_id: providerId }).delete();
+      await db('google_email_provider_config').where({ tenant: tenantId, email_provider_id: providerId }).delete();
+      await db('email_providers').where({ tenant: tenantId, id: providerId }).delete();
+      await db('inbound_ticket_defaults').where({ tenant: tenantId, id: providerDefaultsId }).delete();
+    });
+
+    const domainDestinationBoardId = await createRoutingBoardVariant('domain-destination-board');
+    const domainDestinationDefaultsId = await createInboundRoutingDefaults({
+      boardId: domainDestinationBoardId,
+      descriptionPrefix: 'domain-default',
+    });
+    cleanup.push(async () => {
+      await db('inbound_ticket_defaults').where({ tenant: tenantId, id: domainDestinationDefaultsId }).delete();
+      await db('boards').where({ tenant: tenantId, board_id: domainDestinationBoardId }).delete();
+    });
+
+    const domainClientId = uuidv4();
+    const domain = `routing-${uuidv4().slice(0, 6)}.com`;
+    await db('clients').insert({
+      tenant: tenantId,
+      client_id: domainClientId,
+      client_name: `Domain Destination Client ${uuidv4().slice(0, 6)}`,
+      inbound_ticket_defaults_id: domainDestinationDefaultsId,
+      created_at: db.fn.now(),
+      updated_at: db.fn.now(),
+    });
+    cleanup.push(async () => {
+      await db('clients').where({ tenant: tenantId, client_id: domainClientId }).delete();
+    });
+
+    const domainMappingId = uuidv4();
+    await db('client_inbound_email_domains').insert({
+      tenant: tenantId,
+      id: domainMappingId,
+      client_id: domainClientId,
+      domain,
+      created_at: db.fn.now(),
+      updated_at: db.fn.now(),
+    });
+    cleanup.push(async () => {
+      await db('client_inbound_email_domains').where({ tenant: tenantId, id: domainMappingId }).delete();
+    });
+
+    const subject = `Domain destination routing ${uuidv4().slice(0, 6)}`;
+    const result = await processInboundEmailInApp({
+      tenantId,
+      providerId,
+      emailData: {
+        id: `new-email-${uuidv4()}`,
+        provider: 'google',
+        providerId,
+        tenant: tenantId,
+        receivedAt: new Date().toISOString(),
+        from: { email: `new.person@${domain}`, name: 'New Person' },
+        to: [{ email: mailbox, name: 'Support' }],
+        subject,
+        body: { text: 'Hello', html: undefined },
+        attachments: [],
+      } as any,
+    });
+
+    expect(result.outcome).toBe('created');
+
+    const ticket = await db('tickets')
+      .where({ tenant: tenantId, title: subject })
+      .first<any>();
+    expect(ticket).toBeDefined();
+    expect(ticket.board_id).toBe(domainDestinationBoardId);
+    expect(ticket.client_id).toBe(domainClientId);
+
+    cleanup.push(async () => {
+      await db('comments').where({ tenant: tenantId, ticket_id: ticket.ticket_id }).delete();
+      await db('tickets').where({ tenant: tenantId, ticket_id: ticket.ticket_id }).delete();
+    });
+  });
+
   it("Domain fallback: applies client's default contact when configured (client.properties.primary_contact_id)", async () => {
     const providerId = uuidv4();
     const mailbox = `support-domain-default-${uuidv4().slice(0, 6)}@example.com`;
@@ -1257,6 +1573,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
       .where({ tenant: tenantId, title: 'Unmatched sender subject' })
       .first<any>();
     expect(ticket).toBeDefined();
+    expect(ticket.board_id).toBe(boardId);
     expect(ticket.client_id).toBe(clientId);
     expect(ticket.contact_name_id ?? null).toBeNull();
 

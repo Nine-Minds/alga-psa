@@ -104,3 +104,14 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
 - (2026-02-25) Completed `F017` by emitting structured resolution logs:
   - destination source (`contact_override`, `client_default_from_contact`, `client_default_from_domain`, `provider_default`)
   - fallback warnings with configured invalid destination IDs and fallback reason
+- (2026-02-25) Completed `F018` by adding in-app integration cases in `server/src/test/integration/inboundEmailInApp.webhooks.integration.test.ts` for:
+  - exact contact override destination routing
+  - exact contact using client destination
+  - domain-matched client destination
+  - unmatched sender using provider destination
+- (2026-02-25) Completed `F019` by adding workflow-runtime integration coverage in:
+  - `server/src/test/integration/resolveInboundTicketContext.destinationRouting.integration.test.ts`
+  - includes direct parity assertion against `processInboundEmailInApp` for identical sender/provider input
+- (2026-02-25) Completed `F020` by extending regression coverage:
+  - explicit board-unchanged assertions on reply-token and thread-header reply flows
+  - existing idempotency tests for duplicate reply/new-email processing remain in place and continue to validate dedupe behavior
