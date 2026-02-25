@@ -116,7 +116,7 @@
   {
     "id": "T020",
     "description": "Thread-header reply path unchanged: matching replies append comment and do not reroute board/defaults",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F010", "F020"]
   },
   {
