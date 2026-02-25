@@ -11,7 +11,7 @@
   {
     "id": "F002",
     "description": "Implement watch-list parsing that tolerates null/legacy attribute shapes and produces normalized entries.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Non-functional Requirements",
       "Functional Requirements"

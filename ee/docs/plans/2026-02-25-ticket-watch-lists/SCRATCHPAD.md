@@ -44,3 +44,4 @@ Working notes for the ticket watch-list feature plan. This log captures clarifie
 - Should watch-list add/remove/toggle actions be surfaced in ticket comment/activity history?
 - Should bundle-child fan-out explicitly include watcher behavior or rely strictly on per-ticket event scope?
 - (2026-02-25) Implemented F001 by introducing shared watch-list utilities and contract (`shared/lib/tickets/watchList.ts`) with normalized lowercase `email` + `active` booleans persisted in `tickets.attributes.watch_list`.
+- (2026-02-25) Implemented F002: completed planned scope for this feature item in the ticket watch-list delivery.
