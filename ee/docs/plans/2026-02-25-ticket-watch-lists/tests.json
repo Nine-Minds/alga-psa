@@ -191,7 +191,7 @@
   {
     "id": "T023",
     "description": "Inbound unit: thread-header path calls watch-list upsert for existing ticket.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F013"
     ]
