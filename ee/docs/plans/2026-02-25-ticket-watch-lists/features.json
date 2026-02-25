@@ -106,7 +106,7 @@
   {
     "id": "F013",
     "description": "Upsert watch-list recipients on reply-to-existing-ticket inbound paths.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Functional Requirements",
       "Users and Primary Flows"
