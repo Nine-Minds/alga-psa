@@ -182,7 +182,7 @@
   {
     "id": "F031",
     "description": "Document provider configuration contract for OpenRouter and Vertex in root and EE env examples",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Data / API / Integrations", "Acceptance Criteria (Definition of Done)"]
   },
   {
