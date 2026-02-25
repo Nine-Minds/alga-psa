@@ -129,7 +129,7 @@
   {
     "id": "T016",
     "description": "UI: checking inactive watcher updates active=true and persists.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F007",
       "F009"
