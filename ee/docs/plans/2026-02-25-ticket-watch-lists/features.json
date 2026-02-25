@@ -132,7 +132,7 @@
   {
     "id": "F016",
     "description": "Send watcher notifications for ticket-created events using customer-visible context.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Functional Requirements"
     ]
