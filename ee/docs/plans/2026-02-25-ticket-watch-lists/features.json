@@ -89,7 +89,7 @@
   {
     "id": "F011",
     "description": "Exclude sender and configured provider mailbox from inbound watcher candidate set.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Functional Requirements"
     ]
