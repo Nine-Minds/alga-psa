@@ -319,7 +319,7 @@
   {
     "id": "T038",
     "description": "SSE reader accumulates content tokens correctly from structured events",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F023",
       "F024"

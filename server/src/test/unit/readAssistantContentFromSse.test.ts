@@ -56,6 +56,28 @@ describe('readAssistantContentFromSse()', () => {
     await expect(readPromise).resolves.toEqual({ content: 'Hello', doneReceived: true });
   });
 
+  it('accumulates structured content_delta tokens incrementally', async () => {
+    const sse = createControlledSseResponse();
+    const tokens: Array<{ token: string; accumulated: string }> = [];
+
+    const readPromise = readAssistantContentFromSse(sse.response, {
+      onToken: (token, accumulated) => {
+        tokens.push({ token, accumulated });
+      },
+    });
+
+    sse.send('data: {"type":"content_delta","delta":"Hel"}\n\n');
+    sse.send('data: {"type":"content_delta","delta":"lo"}\n\n');
+    sse.send('data: {"type":"done","done":true}\n\n');
+    sse.close();
+
+    await expect(readPromise).resolves.toEqual({ content: 'Hello', doneReceived: true });
+    expect(tokens).toEqual([
+      { token: 'Hel', accumulated: 'Hel' },
+      { token: 'lo', accumulated: 'Hello' },
+    ]);
+  });
+
   it('invokes onReasoning callback for reasoning events', async () => {
     const sse = createControlledSseResponse();
     const reasoningTokens: Array<{ token: string; accumulated: string }> = [];

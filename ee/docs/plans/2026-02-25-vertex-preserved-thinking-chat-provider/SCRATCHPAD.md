@@ -126,3 +126,4 @@ Working notes for implementing a new chat provider abstraction with Vertex GLM-5
 - (2026-02-25) Implemented `T035`: stream route coverage asserts malformed message payloads return HTTP 400 and never invoke the completion stream service.
 - (2026-02-25) Implemented `T036`: stream endpoint tests keep `aiAssistant` feature-gating semantics by asserting the existing 403 response path.
 - (2026-02-25) Implemented `T037`: stream endpoint tests preserve EE gating behavior by asserting CE deployments still return the prior 404 contract.
+- (2026-02-25) Implemented `T038`: SSE reader tests now assert structured `content_delta` chunks accumulate correctly and emit incremental token callbacks.
