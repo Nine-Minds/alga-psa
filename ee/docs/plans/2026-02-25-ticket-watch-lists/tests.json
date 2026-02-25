@@ -44,7 +44,7 @@
   {
     "id": "T006",
     "description": "Unit: merge adds new watcher entry with active=true by default.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F001",
       "F003"
