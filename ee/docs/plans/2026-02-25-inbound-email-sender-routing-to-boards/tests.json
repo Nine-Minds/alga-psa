@@ -1,0 +1,170 @@
+[
+  {
+    "id": "T001",
+    "description": "Migration adds `clients.inbound_ticket_defaults_id` as nullable field (or configured equivalent)",
+    "implemented": false,
+    "featureIds": ["F002"]
+  },
+  {
+    "id": "T002",
+    "description": "Migration adds `contacts.inbound_ticket_defaults_id` as nullable field (or configured equivalent)",
+    "implemented": false,
+    "featureIds": ["F003"]
+  },
+  {
+    "id": "T003",
+    "description": "Migration adds expected indexes for client/contact destination lookup and integrity",
+    "implemented": false,
+    "featureIds": ["F004"]
+  },
+  {
+    "id": "T004",
+    "description": "Migration down path cleanly removes added fields/indexes",
+    "implemented": false,
+    "featureIds": ["F004"]
+  },
+  {
+    "id": "T005",
+    "description": "Resolver precedence: exact sender contact with contact override selects contact destination",
+    "implemented": false,
+    "featureIds": ["F005"]
+  },
+  {
+    "id": "T006",
+    "description": "Resolver precedence: exact sender contact without override selects contact's client destination",
+    "implemented": false,
+    "featureIds": ["F005"]
+  },
+  {
+    "id": "T007",
+    "description": "Resolver precedence: no exact contact + domain-matched client selects domain-matched client destination",
+    "implemented": false,
+    "featureIds": ["F005", "F006"]
+  },
+  {
+    "id": "T008",
+    "description": "Resolver precedence: no contact/domain destination falls back to provider default",
+    "implemented": false,
+    "featureIds": ["F005"]
+  },
+  {
+    "id": "T009",
+    "description": "Resolver falls back to provider default when contact override destination is inactive/invalid",
+    "implemented": false,
+    "featureIds": ["F007"]
+  },
+  {
+    "id": "T010",
+    "description": "Resolver falls back to provider default when client destination is inactive/invalid",
+    "implemented": false,
+    "featureIds": ["F007"]
+  },
+  {
+    "id": "T011",
+    "description": "In-app integration: exact sender contact override routes new ticket to override defaults board",
+    "implemented": false,
+    "featureIds": ["F008", "F018"]
+  },
+  {
+    "id": "T012",
+    "description": "In-app integration: exact sender contact without override routes to client default destination",
+    "implemented": false,
+    "featureIds": ["F008", "F018"]
+  },
+  {
+    "id": "T013",
+    "description": "In-app integration: unknown contact with domain-matched client routes to that client destination",
+    "implemented": false,
+    "featureIds": ["F008", "F018"]
+  },
+  {
+    "id": "T014",
+    "description": "In-app integration: unmatched sender uses provider default destination",
+    "implemented": false,
+    "featureIds": ["F008", "F018"]
+  },
+  {
+    "id": "T015",
+    "description": "Workflow integration: resolve_inbound_ticket_context returns contact-override destination outcome",
+    "implemented": false,
+    "featureIds": ["F009", "F019"]
+  },
+  {
+    "id": "T016",
+    "description": "Workflow integration: resolve_inbound_ticket_context returns client-default destination outcome",
+    "implemented": false,
+    "featureIds": ["F009", "F019"]
+  },
+  {
+    "id": "T017",
+    "description": "Workflow integration: resolve_inbound_ticket_context returns domain-matched client destination outcome",
+    "implemented": false,
+    "featureIds": ["F009", "F019"]
+  },
+  {
+    "id": "T018",
+    "description": "Workflow and in-app destination selection parity for same sender/provider input",
+    "implemented": false,
+    "featureIds": ["F009", "F019"]
+  },
+  {
+    "id": "T019",
+    "description": "Reply-token path unchanged: matching replies append comment and do not reroute board/defaults",
+    "implemented": false,
+    "featureIds": ["F010", "F020"]
+  },
+  {
+    "id": "T020",
+    "description": "Thread-header reply path unchanged: matching replies append comment and do not reroute board/defaults",
+    "implemented": false,
+    "featureIds": ["F010", "F020"]
+  },
+  {
+    "id": "T021",
+    "description": "Exact sender contact matching still resolves target client/contact IDs as before",
+    "implemented": false,
+    "featureIds": ["F011", "F020"]
+  },
+  {
+    "id": "T022",
+    "description": "Domain-to-client matching remains explicit via `client_inbound_email_domains` and does not infer from contacts",
+    "implemented": false,
+    "featureIds": ["F011"]
+  },
+  {
+    "id": "T023",
+    "description": "Client destination API/action enforces client update permission and tenant scoping",
+    "implemented": false,
+    "featureIds": ["F012"]
+  },
+  {
+    "id": "T024",
+    "description": "Contact override API/action enforces contact update permission and tenant scoping",
+    "implemented": false,
+    "featureIds": ["F013"]
+  },
+  {
+    "id": "T025",
+    "description": "ClientDetails UI can set and clear client inbound destination and persists correctly",
+    "implemented": false,
+    "featureIds": ["F014", "F016"]
+  },
+  {
+    "id": "T026",
+    "description": "Contact UI can set and clear contact inbound destination override and persists correctly",
+    "implemented": false,
+    "featureIds": ["F015", "F016"]
+  },
+  {
+    "id": "T027",
+    "description": "Structured logs include destination source classification and fallback reason when applicable",
+    "implemented": false,
+    "featureIds": ["F017"]
+  },
+  {
+    "id": "T028",
+    "description": "Idempotency regression: duplicate processing of same inbound message remains deduped under new routing model",
+    "implemented": false,
+    "featureIds": ["F020"]
+  }
+]

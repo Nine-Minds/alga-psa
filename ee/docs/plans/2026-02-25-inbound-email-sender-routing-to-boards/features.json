@@ -1,0 +1,178 @@
+[
+  {
+    "id": "F001",
+    "description": "Adopt client/contact-owned inbound routing model and de-scope provider-level sender-rule table approach",
+    "implemented": true,
+    "prdRefs": [
+      "Summary",
+      "Data / API / Integrations > Approach Options"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "Add client-level inbound destination reference (`clients.inbound_ticket_defaults_id` or equivalent persisted field)",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations > Proposed Data Model"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "Add contact-level inbound destination override reference (`contacts.inbound_ticket_defaults_id` or equivalent persisted field)",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations > Proposed Data Model"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "Add indexes and migration safety for new client/contact destination fields",
+    "implemented": false,
+    "prdRefs": [
+      "Data / API / Integrations > Proposed Data Model",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "Implement shared effective-destination resolver with precedence: contact override -> client default -> provider default",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "Resolve domain-matched client destination via existing `client_inbound_email_domains` when exact contact is absent",
+    "implemented": false,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "Validate resolved destination defaults are tenant-owned and active; fallback to provider default when invalid",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Observability"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "Apply effective destination resolution in `processInboundEmailInApp` new-ticket creation path",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Resolution Integration Points"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "Apply the same resolution logic in workflow runtime (`resolve_inbound_ticket_context` + create path) for parity",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Resolution Integration Points"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "Keep reply-token and thread-header existing-ticket flows unchanged",
+    "implemented": false,
+    "prdRefs": [
+      "Non-goals",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "Preserve exact-contact and domain-to-client matching behavior while introducing destination routing",
+    "implemented": false,
+    "prdRefs": [
+      "Goals",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "Add server actions/API support for reading/updating client inbound destination with existing client permissions",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "Add server actions/API support for reading/updating contact inbound destination override with existing contact permissions",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "Update `ClientDetails` UI to manage client inbound destination",
+    "implemented": false,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Resolution Integration Points"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "Update contact UI to manage optional contact inbound destination override",
+    "implemented": false,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Resolution Integration Points"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "Add precedence helper text in client/contact UIs and ensure clear fallback semantics",
+    "implemented": false,
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "Add structured logging for destination resolution source and fallback reasons",
+    "implemented": false,
+    "prdRefs": [
+      "Observability"
+    ]
+  },
+  {
+    "id": "F018",
+    "description": "Add integration coverage for in-app inbound routing across contact override, client default, domain, and provider fallback",
+    "implemented": false,
+    "prdRefs": [
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F019",
+    "description": "Add integration coverage for workflow-runtime parity with in-app destination resolution",
+    "implemented": false,
+    "prdRefs": [
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F020",
+    "description": "Add regression coverage for idempotency/dedupe and unchanged reply behavior",
+    "implemented": false,
+    "prdRefs": [
+      "Non-functional Requirements",
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  }
+]
