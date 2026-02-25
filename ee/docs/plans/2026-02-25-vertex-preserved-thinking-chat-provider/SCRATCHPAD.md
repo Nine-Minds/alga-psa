@@ -88,3 +88,4 @@ Working notes for implementing a new chat provider abstraction with Vertex GLM-5
 - (2026-02-25) Implemented `F029`: stream payloads remain backward-compatible by preserving legacy `content`/`done` fields alongside structured event typing.
 - (2026-02-25) Implemented `F030`: kept existing EE + `aiAssistant` gating checks unchanged for completions, execute, and stream routes.
 - (2026-02-25) Implemented `F031`: documented AI chat provider env contract in root `.env.example` and `ee/server/.env.example` for OpenRouter + Vertex configuration.
+- (2026-02-25) Implemented `F032`: preserved existing chat persistence flow with no schema/migration changes while adding structured streaming + function proposal handling.

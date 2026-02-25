@@ -188,7 +188,7 @@
   {
     "id": "F032",
     "description": "Preserve existing message persistence behavior without requiring new database schema",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Non-goals", "Non-functional Requirements"]
   }
 ]
