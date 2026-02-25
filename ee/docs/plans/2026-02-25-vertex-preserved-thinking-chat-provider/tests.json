@@ -459,7 +459,7 @@
   {
     "id": "T054",
     "description": "Vertex provider compatibility: reasoning+content streaming without tools still yields final assistant response",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F004",
       "F019",
