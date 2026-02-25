@@ -270,7 +270,7 @@
   {
     "id": "T032",
     "description": "Streaming route emits function-proposal SSE event when model chooses tool call",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F017",
       "F020"
