@@ -110,7 +110,7 @@
   {
     "id": "F013",
     "description": "Add server actions/API support for reading/updating contact inbound destination override with existing contact permissions",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Security / Permissions"

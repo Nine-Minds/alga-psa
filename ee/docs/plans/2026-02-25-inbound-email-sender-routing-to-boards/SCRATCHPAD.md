@@ -94,3 +94,4 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
   - exact contact remains the only source for comment authorship
   - domain matching remains explicit via `client_inbound_email_domains`
 - (2026-02-25) Completed `F012` by adding server actions for inbound destination option reads and client destination updates with explicit client permission checks.
+- (2026-02-25) Completed `F013` by adding contact destination update action with explicit contact permission checks and tenant-scoped destination validation.
