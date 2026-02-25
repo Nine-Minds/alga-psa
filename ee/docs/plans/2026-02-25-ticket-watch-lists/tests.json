@@ -332,7 +332,7 @@
   {
     "id": "T040",
     "description": "End-to-end notification test: watcher receives ticket-created email as separate message.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F016",
       "F023"
