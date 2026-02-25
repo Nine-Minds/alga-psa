@@ -140,3 +140,4 @@ Working notes for implementing a new chat provider abstraction with Vertex GLM-5
 - (2026-02-25) Implemented `T049`: Quick Ask expanded chat tests now cover streamed function proposal handling through approve→execute continuation.
 - (2026-02-25) Implemented `T050`: expanded `RightSidebar.streaming.test.tsx` to cover streamed function proposal approval and `/api/chat/v1/execute` continuation wiring, plus test isolation cleanup hooks.
 - (2026-02-25) Implemented `T051`: added `chatPersistenceExecution.integration.test.ts` DB-backed happy-path coverage verifying approved-execution assistant output is persisted as final bot message in chat history.
+- (2026-02-25) Implemented `T052`: same DB-backed integration suite now verifies declined/failed guard behavior by asserting no false completed assistant message is persisted.

@@ -440,7 +440,7 @@
   {
     "id": "T052",
     "description": "DB-backed guard path: declined or failed execution does not persist a false completed assistant message",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F022",
       "F026",
