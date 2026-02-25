@@ -116,7 +116,7 @@
   {
     "id": "T014",
     "description": "Vertex message builder includes reasoning_content for assistant messages with preserved thinking",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F009",
       "F014"

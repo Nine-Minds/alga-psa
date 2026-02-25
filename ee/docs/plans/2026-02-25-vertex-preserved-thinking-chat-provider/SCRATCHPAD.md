@@ -102,3 +102,4 @@ Working notes for implementing a new chat provider abstraction with Vertex GLM-5
 - (2026-02-25) Implemented `T011`: added unit coverage in `chatCompletionsService.unit.test.ts` rejecting invalid non-string `reasoning_content` values during completion validation.
 - (2026-02-25) Implemented `T012`: covered conversation normalization preserving assistant `reasoning_content` values end-to-end in completion preprocessing.
 - (2026-02-25) Implemented `T013`: added sanitization coverage confirming client-facing assistant content retains `reasoning_content` needed for function-call continuation context.
+- (2026-02-25) Implemented `T014`: added provider message builder assertions confirming Vertex assistant payload conversion includes preserved `reasoning_content` during tool-loop replay.
