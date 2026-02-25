@@ -72,7 +72,7 @@
   {
     "id": "T009",
     "description": "OpenRouter requests never include Vertex-specific thinking override payload",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F003",
       "F006"
