@@ -328,7 +328,7 @@
   {
     "id": "T039",
     "description": "SSE reader invokes onReasoning callback for reasoning events",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F023",
       "F024"
