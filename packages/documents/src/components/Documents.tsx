@@ -69,6 +69,8 @@ const DOCUMENT_LIST_PAGE_SIZE_SETTING = 'documents_list_page_size';
 
 type DocumentsNamespace = 'common' | 'features/documents';
 type CollabConnectionStatus = 'connecting' | 'connected' | 'disconnected';
+type ProseMirrorDoc = { type: 'doc'; content: Record<string, unknown>[] };
+type DocumentContent = PartialBlock[] | ProseMirrorDoc;
 
 interface DocumentsProps {
   id?: string;
@@ -127,15 +129,17 @@ const Documents = ({
   const [isFallbackMode, setIsFallbackMode] = useState(false);
   const collabStatusRef = useRef<CollabConnectionStatus>('connecting');
   const fallbackEditorRef = useRef<Editor | null>(null);
+  const collabEditorRef = useRef<{ getJSON: () => Record<string, unknown> | null } | null>(null);
   const [fallbackContent, setFallbackContent] = useState<Record<string, any> | null>(null);
   const [fallbackHasUnsavedChanges, setFallbackHasUnsavedChanges] = useState(false);
+  const preCreatedDocIdRef = useRef<string | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isCreatingNew, setIsCreatingNew] = useState(false);
   const [newDocumentName, setNewDocumentName] = useState('');
   const [documentName, setDocumentName] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [isLoadingContent, setIsLoadingContent] = useState(false);
-  const [currentContent, setCurrentContent] = useState<any>(DEFAULT_BLOCKS);
+  const [currentContent, setCurrentContent] = useState<DocumentContent>(DEFAULT_BLOCKS);
   const [hasContentChanged, setHasContentChanged] = useState(false);
   const editorRef = useRef<BlockNoteEditor | null>(null);
   const [isEditModeInDrawer, setIsEditModeInDrawer] = useState(false);
@@ -215,9 +219,10 @@ const Documents = ({
   const isEditingDocument = Boolean(!isCreatingNew && selectedDocument && isEditModeInDrawer);
   const isCollaborativeEdit = Boolean(isEditingDocument && !isFallbackMode);
 
-  useEffect(() => {
-    collabStatusRef.current = collabConnectionStatus;
-  }, [collabConnectionStatus]);
+  const handleCollabConnectionStatusChange = useCallback((status: CollabConnectionStatus) => {
+    collabStatusRef.current = status;
+    setCollabConnectionStatus(status);
+  }, []);
 
   useEffect(() => {
     if (!isEditingDocument || !selectedDocument) {
@@ -538,9 +543,10 @@ const Documents = ({
         folder_path: folderPath
       });
 
+      preCreatedDocIdRef.current = result.document_id;
       setIsCreatingNew(true);
-      setNewDocumentName(initialName);
-      setDocumentName(initialName);
+      setNewDocumentName('');
+      setDocumentName('');
       setSelectedDocument({
         document_id: result.document_id,
         document_name: initialName,
@@ -599,13 +605,17 @@ const Documents = ({
   // Execute the actual drawer close (after confirmation or when no unsaved changes)
   // Resets all editor state back to saved values, matching the pattern in ContractDetail
   const executeDrawerClose = useCallback(() => {
-    const snapshotDocumentId = isCollaborativeEdit && selectedDocument
-      ? selectedDocument.document_id
-      : null;
+    // NOTE: Do NOT call syncCollabSnapshot here. The drawer close unmounts
+    // CollaborativeEditor which disconnects from Hocuspocus. The server-side
+    // snapshot would race with that disconnect and read an empty room,
+    // overwriting saved content. Content is saved explicitly via the Save button.
 
-    if (snapshotDocumentId) {
-      void syncCollabSnapshot(snapshotDocumentId).catch((snapshotError) => {
-        console.error('[Documents] Failed to sync snapshot on close:', snapshotError);
+    // Clean up pre-created documents that were never fully saved
+    if (preCreatedDocIdRef.current) {
+      const orphanedId = preCreatedDocIdRef.current;
+      preCreatedDocIdRef.current = null;
+      void deleteDocument(orphanedId, userId).catch((deleteError) => {
+        console.error('[Documents] Failed to clean up pre-created document:', deleteError);
       });
     }
 
@@ -626,7 +636,7 @@ const Documents = ({
       setIsEditModeInDrawer(false);
     }
     setSelectedDocument(null);
-  }, [isCollaborativeEdit, isCreatingNew, selectedDocument]);
+  }, [isCreatingNew, selectedDocument, userId]);
 
   // Handle drawer close with unsaved changes check
   const handleDrawerClose = useCallback(() => {
@@ -722,23 +732,34 @@ const Documents = ({
 
   const handleSaveNewDocument = async () => {
     try {
-      if (!newDocumentName.trim()) {
-        setDrawerError(
-          tDoc('validation.nameRequired', 'Document name is required')
-        );
-        return;
-      }
+      const finalName = newDocumentName.trim() || tDoc('untitledDocument', 'Untitled Document');
 
       setIsSaving(true);
       setDrawerError(null);
-      const result = await createBlockDocument({
-        document_name: newDocumentName,
-        user_id: userId,
-        block_data: JSON.stringify(currentContent),
-        entityId,
-        entityType,
-        folder_path: documentFolderPath
-      });
+
+      if (preCreatedDocIdRef.current) {
+        // Update the pre-created document with final name and content
+        const docId = preCreatedDocIdRef.current;
+        await updateDocument(docId, {
+          document_name: finalName,
+          edited_by: userId
+        });
+        await updateBlockContent(docId, {
+          block_data: JSON.stringify(currentContent),
+          user_id: userId
+        });
+        preCreatedDocIdRef.current = null;
+      } else {
+        // Fallback: create new if pre-creation didn't happen
+        await createBlockDocument({
+          document_name: finalName,
+          user_id: userId,
+          block_data: JSON.stringify(currentContent),
+          entityId,
+          entityType,
+          folder_path: documentFolderPath
+        });
+      }
 
       // Refresh the document list (triggers router.refresh() in entity mode)
       await refreshDocuments();
@@ -802,19 +823,46 @@ const Documents = ({
       if (!selectedDocument) return;
       setIsSaving(true);
 
-      if (documentName !== selectedDocument.document_name) {
+      // For new documents or when the name changed, update the document name
+      const finalName = isCreatingNew
+        ? (newDocumentName.trim() || tDoc('untitledDocument', 'Untitled Document'))
+        : documentName;
+
+      if (finalName !== selectedDocument.document_name) {
         await updateDocument(selectedDocument.document_id, {
-          document_name: documentName,
+          document_name: finalName,
           edited_by: userId
         });
       }
 
-      await syncCollabSnapshot(selectedDocument.document_id);
+      const result = await syncCollabSnapshot(selectedDocument.document_id);
+      if (!result.success) {
+        // Fallback: save content directly from the client-side editor
+        const editorJson = collabEditorRef.current?.getJSON();
+        if (editorJson) {
+          await updateBlockContent(selectedDocument.document_id, {
+            block_data: JSON.stringify(editorJson),
+            user_id: userId
+          });
+        } else {
+          setDrawerError(result.message || tDoc('messages.saveFailed', 'Failed to save document'));
+          return;
+        }
+      }
 
+      preCreatedDocIdRef.current = null;
       setEditedDocumentId(selectedDocument.document_id);
       setRefreshTimestamp(Date.now());
 
       setIsDrawerOpen(false);
+      setDrawerError(null);
+      setHasContentChanged(false);
+      setFallbackHasUnsavedChanges(false);
+      setFallbackContent(null);
+      setIsFallbackMode(false);
+      setIsCreatingNew(false);
+      setIsEditModeInDrawer(false);
+      setSelectedDocument(null);
     } catch (error) {
       console.error('Error saving document snapshot:', error);
       setDrawerError(
@@ -830,9 +878,13 @@ const Documents = ({
       if (!selectedDocument) return;
       setIsSaving(true);
 
-      if (documentName !== selectedDocument.document_name) {
+      const finalName = isCreatingNew
+        ? (newDocumentName.trim() || tDoc('untitledDocument', 'Untitled Document'))
+        : documentName;
+
+      if (finalName !== selectedDocument.document_name) {
         await updateDocument(selectedDocument.document_id, {
-          document_name: documentName,
+          document_name: finalName,
           edited_by: userId
         });
       }
@@ -846,10 +898,19 @@ const Documents = ({
         user_id: currentUserId || userId
       });
 
-      setFallbackHasUnsavedChanges(false);
+      preCreatedDocIdRef.current = null;
       setEditedDocumentId(selectedDocument.document_id);
       setRefreshTimestamp(Date.now());
+
       setIsDrawerOpen(false);
+      setDrawerError(null);
+      setHasContentChanged(false);
+      setFallbackHasUnsavedChanges(false);
+      setFallbackContent(null);
+      setIsFallbackMode(false);
+      setIsCreatingNew(false);
+      setIsEditModeInDrawer(false);
+      setSelectedDocument(null);
     } catch (error) {
       console.error('Error saving fallback document content:', error);
       setDrawerError(
@@ -1001,6 +1062,186 @@ const Documents = ({
       );
     });
   };
+
+  const getSaveHandler = () => {
+    if (isCreatingNew) {
+      return selectedDocument
+        ? isFallbackMode ? handleSaveFallback : handleSaveCollabSnapshot
+        : handleSaveNewDocument;
+    }
+    if (isFallbackMode) return handleSaveFallback;
+    if (isCollaborativeEdit) return handleSaveCollabSnapshot;
+    return handleSaveChanges;
+  };
+
+  const isSaveDisabled =
+    isSaving
+    || (isFallbackMode
+      ? !fallbackHasUnsavedChanges && documentName === selectedDocument?.document_name
+      : false)
+    || (!isCollaborativeEdit
+      && !isFallbackMode
+      && !hasContentChanged
+      && !isCreatingNew
+      && documentName === selectedDocument?.document_name);
+
+  const renderDrawerBody = () => (
+    <div className="flex flex-col h-full">
+      <div className="flex justify-between items-center mb-4 pb-4">
+        <h2 className="text-lg font-semibold">
+          {isCreatingNew ? tDoc('newDocument', 'New Document') : (isEditModeInDrawer ? tDoc('editDocument', 'Edit Document') : tDoc('viewDocument', 'View Document'))}
+        </h2>
+        <div className="flex items-center space-x-2">
+          {selectedDocument &&
+            (selectedDocument.type_name === 'text/plain' ||
+             selectedDocument.type_name === 'text/markdown' ||
+             (!selectedDocument.type_name && !selectedDocument.file_id)
+            ) && (
+            <Button
+              id={`${id}-download-pdf-btn`}
+              onClick={async () => {
+                if (selectedDocument) {
+                  const downloadUrl = `/api/documents/download/${selectedDocument.document_id}?format=pdf`;
+                  const filename = `${selectedDocument.document_name || 'document'}.pdf`;
+                  try {
+                    await downloadDocument(downloadUrl, filename, true);
+                  } catch (error) {
+                    console.error('Download failed:', error);
+                  }
+                }
+              }}
+              variant="outline"
+              size="sm"
+            >
+              <Download className="w-4 h-4 mr-2" />
+              PDF
+            </Button>
+          )}
+          {!isCreatingNew && !isEditModeInDrawer && selectedDocument && (
+            <Button
+              id={`${id}-edit-document-btn`}
+              onClick={() => setIsEditModeInDrawer(true)}
+              variant="outline"
+              size="sm"
+            >
+              <Edit3 className="w-4 h-4 mr-2" />
+              Edit
+            </Button>
+          )}
+          {!isInDrawer && (
+            <Button
+              id={`${id}-close-drawer-btn`}
+              onClick={handleDrawerClose}
+              variant="ghost"
+            >
+              ×
+            </Button>
+          )}
+        </div>
+      </div>
+
+      <div className="flex-1 min-h-0 flex flex-col">
+        {drawerError && (
+          <Alert variant="destructive" className="mb-4">
+            <AlertDescription>{drawerError}</AlertDescription>
+          </Alert>
+        )}
+        <div className="mb-4 relative p-0.5">
+          <Input
+            id={`${id}-document-name`}
+            type="text"
+            placeholder={tDoc('untitledDocument', 'Untitled Document')}
+            value={isCreatingNew ? newDocumentName : documentName}
+            onChange={(e) => {
+              if (isCreatingNew || isEditModeInDrawer) {
+                if (isCreatingNew) {
+                  setNewDocumentName(e.target.value);
+                  setDocumentName(e.target.value);
+                  setDrawerError(null);
+                } else {
+                  setDocumentName(e.target.value);
+                }
+              }
+            }}
+            readOnly={!isCreatingNew && !isEditModeInDrawer}
+            className={(!isCreatingNew && !isEditModeInDrawer) ? "bg-gray-100 cursor-default" : ""}
+          />
+        </div>
+
+        <div className="flex-1 overflow-y-auto mb-4 p-2">
+          <div className="h-full w-full">
+            {isFallbackMode && (
+              <div className="mb-2 rounded border border-amber-200 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/30 px-3 py-2 text-sm text-amber-700 dark:text-amber-300">
+                {tDoc('offlineManualSave', 'Offline — manual save mode')}
+              </div>
+            )}
+            {isLoadingContent ? (
+              <div className="flex justify-center items-center h-full">
+                <Spinner size="sm" />
+              </div>
+            ) : isCreatingNew && !selectedDocument ? (
+              <TextEditor
+                key="editor-new"
+                id={`${id}-editor`}
+                initialContent={currentContent as PartialBlock[]}
+                onContentChange={handleContentChange}
+                editorRef={editorRef}
+                searchMentions={searchUsersForMentions}
+              />
+            ) : selectedDocument && (isEditModeInDrawer || isCreatingNew) ? (
+              isFallbackMode ? (
+                <DocumentEditor
+                  documentId={selectedDocument.document_id}
+                  userId={currentUserId || userId}
+                  editorRef={fallbackEditorRef}
+                  onContentChange={setFallbackContent}
+                  onUnsavedChangesChange={setFallbackHasUnsavedChanges}
+                  hideSaveButton={true}
+                />
+              ) : (
+                <CollaborativeEditor
+                  documentId={selectedDocument.document_id}
+                  tenantId={selectedDocument.tenant ?? currentTenantId}
+                  userId={currentUserId || userId}
+                  userName={currentUserName || userId}
+                  editorRef={collabEditorRef}
+                  searchMentions={searchUsersForMentions}
+                  onConnectionStatusChange={handleCollabConnectionStatusChange}
+                />
+              )
+            ) : selectedDocument ? (
+              <DocumentViewer content={currentContent} />
+            ) : (
+              <div className="flex justify-center items-center h-full text-gray-500">
+                Select a document or create a new one.
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="flex justify-end space-x-2">
+          <Button
+            id={`${id}-cancel-btn`}
+            onClick={handleDrawerClose}
+            variant="outline"
+          >
+            Cancel
+          </Button>
+          {(isCreatingNew || isEditModeInDrawer) && (
+            <Button
+              id={`${id}-save-btn`}
+              onClick={getSaveHandler()}
+              disabled={isSaveDisabled}
+              variant="default"
+              className={isCreatingNew && !newDocumentName.trim() ? 'opacity-50' : ''}
+            >
+              {isSaving ? 'Saving...' : 'Save'}
+            </Button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
 
   // Folder mode: show folder tree sidebar and new layout
   if (inFolderMode) {
@@ -1341,186 +1582,7 @@ const Documents = ({
             hideCloseButton={true}
             drawerVariant="document"
           >
-          <div className="flex flex-col h-full">
-            <div className="flex justify-between items-center mb-4 pb-4">
-              <h2 className="text-lg font-semibold">
-                {isCreatingNew ? tDoc('newDocument', 'New Document') : (isEditModeInDrawer ? tDoc('editDocument', 'Edit Document') : tDoc('viewDocument', 'View Document'))}
-              </h2>
-              <div className="flex items-center space-x-2">
-                {selectedDocument &&
-                  (selectedDocument.type_name === 'text/plain' ||
-                   selectedDocument.type_name === 'text/markdown' ||
-                   (!selectedDocument.type_name && !selectedDocument.file_id)
-                  ) && (
-                  <Button
-                    id={`${id}-download-pdf-btn`}
-                    onClick={async () => {
-                      if (selectedDocument) {
-                        const downloadUrl = `/api/documents/download/${selectedDocument.document_id}?format=pdf`;
-                        const filename = `${selectedDocument.document_name || 'document'}.pdf`;
-                        try {
-                          await downloadDocument(downloadUrl, filename, true);
-                        } catch (error) {
-                          console.error('Download failed:', error);
-                        }
-                      }
-                    }}
-                    variant="outline"
-                    size="sm"
-                  >
-                    <Download className="w-4 h-4 mr-2" />
-                    PDF
-                  </Button>
-                )}
-                {!isCreatingNew && !isEditModeInDrawer && selectedDocument && (
-                  <Button
-                    id={`${id}-edit-document-btn`}
-                    onClick={() => setIsEditModeInDrawer(true)}
-                    variant="outline"
-                    size="sm"
-                  >
-                    <Edit3 className="w-4 h-4 mr-2" />
-                    Edit
-                  </Button>
-                )}
-                {!isInDrawer && (
-                  <Button
-                    id={`${id}-close-drawer-btn`}
-                    onClick={handleDrawerClose}
-                    variant="ghost"
-                  >
-                    ×
-                  </Button>
-                )}
-              </div>
-            </div>
-
-            <div className="flex-1 overflow-hidden flex flex-col">
-              {drawerError && (
-                <Alert variant="destructive" className="mb-4">
-                  <AlertDescription>{drawerError}</AlertDescription>
-                </Alert>
-              )}
-              <div className="mb-4 relative p-0.5">
-                <Input
-                  id={`${id}-document-name`}
-                  type="text"
-                  placeholder="Document Name *"
-                  value={isCreatingNew ? newDocumentName : documentName}
-                  onChange={(e) => {
-                    if (isCreatingNew || isEditModeInDrawer) {
-                      if (isCreatingNew) {
-                        setNewDocumentName(e.target.value);
-                        setDocumentName(e.target.value);
-                        setDrawerError(null);
-                      } else {
-                        setDocumentName(e.target.value);
-                      }
-                    }
-                  }}
-                  readOnly={!isCreatingNew && !isEditModeInDrawer}
-                  className={(!isCreatingNew && !isEditModeInDrawer) ? "bg-gray-100 cursor-default" : ""}
-                />
-              </div>
-
-              <div className="flex-1 overflow-y-auto mb-4 p-2">
-                <div className="h-full w-full">
-                  {isFallbackMode && (
-                    <div className="mb-2 rounded border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-700">
-                      Offline — manual save mode
-                    </div>
-                  )}
-                  {isLoadingContent ? (
-                    <div className="flex justify-center items-center h-full">
-                      <Spinner size="sm" />
-                    </div>
-                  ) : isCreatingNew && !selectedDocument ? (
-                    <TextEditor
-                      key="editor-new"
-                      id={`${id}-editor`}
-                      initialContent={currentContent}
-                      onContentChange={handleContentChange}
-                      editorRef={editorRef}
-                      searchMentions={searchUsersForMentions}
-                    />
-                  ) : selectedDocument && (isEditModeInDrawer || isCreatingNew) ? (
-                    isFallbackMode ? (
-                      <DocumentEditor
-                        documentId={selectedDocument.document_id}
-                        userId={currentUserId || userId}
-                        editorRef={fallbackEditorRef}
-                        onContentChange={setFallbackContent}
-                        onUnsavedChangesChange={setFallbackHasUnsavedChanges}
-                        hideSaveButton={true}
-                      />
-                    ) : (
-                      <CollaborativeEditor
-                        documentId={selectedDocument.document_id}
-                        tenantId={selectedDocument.tenant ?? currentTenantId}
-                        userId={currentUserId || userId}
-                        userName={currentUserName || userId}
-                        searchMentions={searchUsersForMentions}
-                        onConnectionStatusChange={setCollabConnectionStatus}
-                      />
-                    )
-                  ) : selectedDocument ? (
-                    <DocumentViewer content={currentContent} />
-                  ) : (
-                    <div className="flex justify-center items-center h-full text-gray-500">
-                      Select a document or create a new one.
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="flex justify-end space-x-2">
-                <Button
-                  id={`${id}-cancel-btn`}
-                  onClick={handleDrawerClose}
-                  variant="outline"
-                >
-                  Cancel
-                </Button>
-                {(isCreatingNew || isEditModeInDrawer) && (
-                  <Button
-                    id={`${id}-save-btn`}
-                    onClick={
-                      isCreatingNew
-                        ? selectedDocument
-                          ? isFallbackMode
-                            ? handleSaveFallback
-                            : handleSaveCollabSnapshot
-                          : handleSaveNewDocument
-                        : isFallbackMode
-                          ? handleSaveFallback
-                          : isCollaborativeEdit
-                            ? handleSaveCollabSnapshot
-                            : handleSaveChanges
-                    }
-                    disabled={
-                      isSaving
-                      || (
-                        isFallbackMode
-                          ? !fallbackHasUnsavedChanges && documentName === selectedDocument?.document_name
-                          : false
-                      )
-                      || (
-                        !isCollaborativeEdit
-                        && !isFallbackMode
-                        && !hasContentChanged
-                        && !isCreatingNew
-                        && documentName === selectedDocument?.document_name
-                      )
-                    }
-                    variant="default"
-                    className={isCreatingNew && !newDocumentName.trim() ? 'opacity-50' : ''}
-                  >
-                    {isSaving ? 'Saving...' : 'Save'}
-                  </Button>
-                )}
-              </div>
-            </div>
-          </div>
+          {renderDrawerBody()}
           </Drawer>
         </div>
 
@@ -1723,186 +1785,7 @@ const Documents = ({
             hideCloseButton={true}
             drawerVariant="document"
           >
-          <div className="flex flex-col h-full">
-            <div className="flex justify-between items-center mb-4 pb-4">
-              <h2 className="text-lg font-semibold">
-                {isCreatingNew ? tDoc('newDocument', 'New Document') : (isEditModeInDrawer ? tDoc('editDocument', 'Edit Document') : tDoc('viewDocument', 'View Document'))}
-              </h2>
-              <div className="flex items-center space-x-2">
-                {selectedDocument &&
-                  (selectedDocument.type_name === 'text/plain' ||
-                   selectedDocument.type_name === 'text/markdown' ||
-                   (!selectedDocument.type_name && !selectedDocument.file_id)
-                  ) && (
-                  <Button
-                    id={`${id}-download-pdf-btn`}
-                    onClick={async () => {
-                      if (selectedDocument) {
-                        const downloadUrl = `/api/documents/download/${selectedDocument.document_id}?format=pdf`;
-                        const filename = `${selectedDocument.document_name || 'document'}.pdf`;
-                        try {
-                          await downloadDocument(downloadUrl, filename, true);
-                        } catch (error) {
-                          console.error('Download failed:', error);
-                        }
-                      }
-                    }}
-                    variant="outline"
-                    size="sm"
-                  >
-                    <Download className="w-4 h-4 mr-2" />
-                    PDF
-                  </Button>
-                )}
-                {!isCreatingNew && !isEditModeInDrawer && selectedDocument && (
-                  <Button
-                    id={`${id}-edit-document-btn`}
-                    onClick={() => setIsEditModeInDrawer(true)}
-                    variant="outline"
-                    size="sm"
-                  >
-                    <Edit3 className="w-4 h-4 mr-2" />
-                    Edit
-                  </Button>
-                )}
-                {!isInDrawer && (
-                  <Button
-                    id={`${id}-close-drawer-btn`}
-                    onClick={handleDrawerClose}
-                    variant="ghost"
-                  >
-                    ×
-                  </Button>
-                )}
-              </div>
-            </div>
-
-            <div className="flex-1 overflow-hidden flex flex-col">
-              {drawerError && (
-                <Alert variant="destructive" className="mb-4">
-                  <AlertDescription>{drawerError}</AlertDescription>
-                </Alert>
-              )}
-              <div className="mb-4 relative p-0.5">
-                <Input
-                  id={`${id}-document-name`}
-                  type="text"
-                  placeholder="Document Name *"
-                  value={isCreatingNew ? newDocumentName : documentName}
-                  onChange={(e) => {
-                    if (isCreatingNew || isEditModeInDrawer) {
-                      if (isCreatingNew) {
-                        setNewDocumentName(e.target.value);
-                        setDocumentName(e.target.value);
-                        setDrawerError(null); // Clear error when user types
-                      } else {
-                        setDocumentName(e.target.value);
-                      }
-                    }
-                  }}
-                  readOnly={!isCreatingNew && !isEditModeInDrawer}
-                  className={(!isCreatingNew && !isEditModeInDrawer) ? "bg-gray-100 cursor-default" : ""}
-                />
-              </div>
-
-              <div className="flex-1 overflow-y-auto mb-4 p-2">
-                <div className="h-full w-full">
-                  {isFallbackMode && (
-                    <div className="mb-2 rounded border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-700">
-                      Offline — manual save mode
-                    </div>
-                  )}
-                  {isLoadingContent ? (
-                    <div className="flex justify-center items-center h-full">
-                      <Spinner size="sm" />
-                    </div>
-                  ) : isCreatingNew && !selectedDocument ? (
-                    <TextEditor
-                      key="editor-new"
-                      id={`${id}-editor`}
-                      initialContent={currentContent}
-                      onContentChange={handleContentChange}
-                      editorRef={editorRef}
-                      searchMentions={searchUsersForMentions}
-                    />
-                  ) : selectedDocument && (isEditModeInDrawer || isCreatingNew) ? (
-                    isFallbackMode ? (
-                      <DocumentEditor
-                        documentId={selectedDocument.document_id}
-                        userId={currentUserId || userId}
-                        editorRef={fallbackEditorRef}
-                        onContentChange={setFallbackContent}
-                        onUnsavedChangesChange={setFallbackHasUnsavedChanges}
-                        hideSaveButton={true}
-                      />
-                    ) : (
-                      <CollaborativeEditor
-                        documentId={selectedDocument.document_id}
-                        tenantId={selectedDocument.tenant ?? currentTenantId}
-                        userId={currentUserId || userId}
-                        userName={currentUserName || userId}
-                        searchMentions={searchUsersForMentions}
-                        onConnectionStatusChange={setCollabConnectionStatus}
-                      />
-                    )
-                  ) : selectedDocument ? (
-                    <DocumentViewer content={currentContent} />
-                  ) : (
-                    <div className="flex justify-center items-center h-full text-gray-500">
-                      Select a document or create a new one.
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="flex justify-end space-x-2">
-                <Button
-                  id={`${id}-cancel-btn`}
-                  onClick={handleDrawerClose}
-                  variant="outline"
-                >
-                  Cancel
-                </Button>
-                {(isCreatingNew || isEditModeInDrawer) && (
-                  <Button
-                    id={`${id}-save-btn`}
-                    onClick={
-                      isCreatingNew
-                        ? selectedDocument
-                          ? isFallbackMode
-                            ? handleSaveFallback
-                            : handleSaveCollabSnapshot
-                          : handleSaveNewDocument
-                        : isFallbackMode
-                          ? handleSaveFallback
-                          : isCollaborativeEdit
-                            ? handleSaveCollabSnapshot
-                            : handleSaveChanges
-                    }
-                    disabled={
-                      isSaving
-                      || (
-                        isFallbackMode
-                          ? !fallbackHasUnsavedChanges && documentName === selectedDocument?.document_name
-                          : false
-                      )
-                      || (
-                        !isCollaborativeEdit
-                        && !isFallbackMode
-                        && !hasContentChanged
-                        && !isCreatingNew
-                        && documentName === selectedDocument?.document_name
-                      )
-                    }
-                    variant="default"
-                    className={isCreatingNew && !newDocumentName.trim() ? 'opacity-50' : ''}
-                  >
-                    {isSaving ? 'Saving...' : 'Save'}
-                  </Button>
-                )}
-              </div>
-            </div>
-          </div>
+          {renderDrawerBody()}
           </Drawer>
         </div>
 

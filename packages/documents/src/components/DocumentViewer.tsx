@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo } from 'react';
-import { EditorContent, useEditor } from '@tiptap/react';
+import { EditorContent, useEditor, type JSONContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Link from '@tiptap/extension-link';
 import Underline from '@tiptap/extension-underline';
@@ -15,13 +15,13 @@ interface DocumentViewerProps {
   content: unknown;
 }
 
-const getProseMirrorContent = (content: unknown) => {
+const getProseMirrorContent = (content: unknown): JSONContent => {
   const format = detectBlockContentFormat(content);
   if (format === 'blocknote') {
-    return blockNoteJsonToProsemirrorJson(content);
+    return blockNoteJsonToProsemirrorJson(content) as JSONContent;
   }
   if (format === 'prosemirror') {
-    return parseBlockContent(content);
+    return parseBlockContent(content) as JSONContent;
   }
   return { type: 'doc', content: [{ type: 'paragraph' }] };
 };

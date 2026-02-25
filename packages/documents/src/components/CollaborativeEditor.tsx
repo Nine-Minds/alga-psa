@@ -38,12 +38,17 @@ type PresenceUser = {
   color: string;
 };
 
+export interface CollaborativeEditorHandle {
+  getJSON: () => Record<string, unknown> | null;
+}
+
 interface CollaborativeEditorProps {
   documentId: string;
   tenantId: string;
   userId: string;
   userName: string;
   placeholder?: string;
+  editorRef?: React.MutableRefObject<CollaborativeEditorHandle | null>;
   searchMentions?: (query: string) => Promise<MentionSuggestionUser[]>;
   onConnectionStatusChange?: (status: ConnectionStatus) => void;
   onSyncStateChange?: (synced: boolean) => void;
@@ -115,6 +120,7 @@ export function CollaborativeEditor({
   userId,
   userName,
   placeholder,
+  editorRef,
   searchMentions,
   onConnectionStatusChange,
   onSyncStateChange,
@@ -176,6 +182,7 @@ export function CollaborativeEditor({
       }),
       Collaboration.configure({
         document: ydoc,
+        field: 'prosemirror',
       }),
       CollaborationCaret.configure({
         provider,
@@ -225,6 +232,15 @@ export function CollaborativeEditor({
       setEditorReady(false);
     },
   });
+
+  // Expose editor handle to parent via ref
+  useEffect(() => {
+    if (!editorRef) return;
+    editorRef.current = editor && editorReady && !editor.isDestroyed
+      ? { getJSON: () => editor.getJSON() }
+      : null;
+    return () => { if (editorRef) editorRef.current = null; };
+  }, [editor, editorReady, editorRef]);
 
   useEffect(() => {
     provider.awareness?.setLocalStateField('user', {

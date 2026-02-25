@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { Extension, Node, mergeAttributes } from '@tiptap/core';
 import { Plugin, PluginKey } from '@tiptap/pm/state';
 import { ReactNodeViewRenderer, NodeViewWrapper } from '@tiptap/react';
@@ -258,35 +259,34 @@ export function MentionSuggestionPopup({
       }
     };
 
-    document.addEventListener('keydown', handleKeyDown, true);
-    return () => document.removeEventListener('keydown', handleKeyDown, true);
+    const target = editor.view.dom;
+    target.addEventListener('keydown', handleKeyDown, true);
+    return () => target.removeEventListener('keydown', handleKeyDown, true);
   }, [suggestionState?.active, items, selectedIndex, insertMention, editor]);
 
-  // Position popup near cursor
+  // Position popup near cursor (fixed so it escapes overflow containers)
   useEffect(() => {
     if (!popupRef.current || !suggestionState?.active) return;
 
     const view = editor.view;
     const coords = view.coordsAtPos(suggestionState.from);
-    const editorRect = view.dom.closest('.ProseMirror')?.getBoundingClientRect();
-    if (!editorRect) return;
 
-    popupRef.current.style.left = `${coords.left - editorRect.left}px`;
-    popupRef.current.style.top = `${coords.bottom - editorRect.top + 4}px`;
+    popupRef.current.style.left = `${coords.left}px`;
+    popupRef.current.style.top = `${coords.bottom + 4}px`;
   }, [editor, suggestionState]);
 
   if (!suggestionState?.active || (items.length === 0 && !loading)) {
     return null;
   }
 
-  return (
+  return createPortal(
     <div
       ref={popupRef}
       style={{
-        position: 'absolute',
-        zIndex: 50,
-        background: 'var(--bn-colors-menu-background, #fff)',
-        border: '1px solid var(--bn-colors-menu-border, #e2e8f0)',
+        position: 'fixed',
+        zIndex: 9999,
+        background: 'rgb(var(--color-card, 255 255 255))',
+        border: '1px solid rgb(var(--color-border-200, 226 232 240))',
         borderRadius: '6px',
         boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
         padding: '4px',
@@ -301,7 +301,7 @@ export function MentionSuggestionPopup({
           style={{
             padding: '8px 12px',
             fontSize: '13px',
-            color: 'var(--bn-colors-menu-text, #718096)',
+            color: 'rgb(var(--color-text-400, 113 128 150))',
           }}
         >
           Loading...
@@ -318,9 +318,10 @@ export function MentionSuggestionPopup({
               padding: '6px 10px',
               borderRadius: '4px',
               fontSize: '13px',
+              color: 'rgb(var(--color-text-700, 45 55 72))',
               background:
                 i === selectedIndex
-                  ? 'var(--bn-colors-menu-hover, #edf2f7)'
+                  ? 'rgb(var(--color-border-100, 237 242 247))'
                   : 'transparent',
               display: 'flex',
               flexDirection: 'column',
@@ -332,7 +333,7 @@ export function MentionSuggestionPopup({
               <span
                 style={{
                   fontSize: '11px',
-                  color: 'var(--bn-colors-menu-text, #718096)',
+                  color: 'rgb(var(--color-text-400, 113 128 150))',
                   opacity: 0.7,
                 }}
               >
@@ -342,6 +343,7 @@ export function MentionSuggestionPopup({
           </div>
         ))
       )}
-    </div>
+    </div>,
+    document.body
   );
 }

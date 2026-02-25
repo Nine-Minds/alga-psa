@@ -333,4 +333,102 @@ describe('detectBlockContentFormat', () => {
       ],
     });
   });
+
+  it('merges consecutive bullet list items into a single bullet_list', () => {
+    const blocknote = [
+      {
+        type: 'bulletListItem',
+        props: {},
+        content: [{ type: 'text', text: 'First', styles: {} }],
+      },
+      {
+        type: 'bulletListItem',
+        props: {},
+        content: [{ type: 'text', text: 'Second', styles: {} }],
+      },
+      {
+        type: 'bulletListItem',
+        props: {},
+        content: [{ type: 'text', text: 'Third', styles: {} }],
+      },
+    ];
+
+    expect(blockNoteJsonToProsemirrorJson(blocknote)).toEqual({
+      type: 'doc',
+      content: [
+        {
+          type: 'bullet_list',
+          content: [
+            {
+              type: 'list_item',
+              content: [{ type: 'paragraph', content: [{ type: 'text', text: 'First' }] }],
+            },
+            {
+              type: 'list_item',
+              content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Second' }] }],
+            },
+            {
+              type: 'list_item',
+              content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Third' }] }],
+            },
+          ],
+        },
+      ],
+    });
+  });
+
+  it('merges consecutive numbered list items into a single ordered_list', () => {
+    const blocknote = [
+      {
+        type: 'numberedListItem',
+        props: {},
+        content: [{ type: 'text', text: 'Step 1', styles: {} }],
+      },
+      {
+        type: 'numberedListItem',
+        props: {},
+        content: [{ type: 'text', text: 'Step 2', styles: {} }],
+      },
+    ];
+
+    expect(blockNoteJsonToProsemirrorJson(blocknote)).toEqual({
+      type: 'doc',
+      content: [
+        {
+          type: 'ordered_list',
+          attrs: { order: 1 },
+          content: [
+            {
+              type: 'list_item',
+              content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Step 1' }] }],
+            },
+            {
+              type: 'list_item',
+              content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Step 2' }] }],
+            },
+          ],
+        },
+      ],
+    });
+  });
+
+  it('does not merge different list types', () => {
+    const blocknote = [
+      {
+        type: 'bulletListItem',
+        props: {},
+        content: [{ type: 'text', text: 'Bullet', styles: {} }],
+      },
+      {
+        type: 'numberedListItem',
+        props: {},
+        content: [{ type: 'text', text: 'Numbered', styles: {} }],
+      },
+    ];
+
+    const result = blockNoteJsonToProsemirrorJson(blocknote);
+    expect(result.content).toHaveLength(2);
+    expect(result.content[0].type).toBe('bullet_list');
+    expect(result.content[1].type).toBe('ordered_list');
+  });
 });

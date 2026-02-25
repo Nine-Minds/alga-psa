@@ -147,7 +147,7 @@ const convertInlineContent = (content: BlockNoteBlock['content']): ProseMirrorNo
         }
         const textNode: ProseMirrorNode = {
           type: 'text',
-          text: item.text || '',
+          text: typeof item.text === 'string' ? item.text : '',
         };
         if (marks.length > 0) {
           textNode.marks = marks;
@@ -287,13 +287,22 @@ const convertBlockNoteBlock = (block: BlockNoteBlock): ProseMirrorNode | null =>
   }
 };
 
+const isListType = (type: string): boolean =>
+  type === 'bullet_list' || type === 'ordered_list';
+
 const convertBlockNoteBlocks = (blocks: BlockNoteBlock[]): ProseMirrorNode[] => {
   const result: ProseMirrorNode[] = [];
 
   for (const block of blocks) {
     const node = convertBlockNoteBlock(block);
     if (node) {
-      result.push(node);
+      const prev = result[result.length - 1];
+      // Merge consecutive list items of the same type into one list node
+      if (prev && isListType(node.type) && prev.type === node.type) {
+        prev.content = [...(prev.content ?? []), ...(node.content ?? [])];
+      } else {
+        result.push(node);
+      }
     }
 
     if (Array.isArray(block.children) && block.children.length > 0) {

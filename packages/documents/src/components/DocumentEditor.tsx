@@ -100,6 +100,7 @@ export function DocumentEditor({
       // Only track changes after initial content has been loaded
       if (contentLoadedRef.current) {
         setHasUnsavedChanges(true);
+        onUnsavedChangesChange?.(true);
         if (editor) {
           onContentChange?.(editor.getJSON());
         }
@@ -156,6 +157,7 @@ export function DocumentEditor({
         user_id: userId
       });
       setHasUnsavedChanges(false);
+      onUnsavedChangesChange?.(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save document');
     } finally {
@@ -170,10 +172,6 @@ export function DocumentEditor({
       editorRef.current = null;
     };
   }, [editor, editorRef]);
-
-  useEffect(() => {
-    onUnsavedChangesChange?.(hasUnsavedChanges);
-  }, [hasUnsavedChanges, onUnsavedChangesChange]);
 
   // Cleanup on unmount
   useEffect(() => {
