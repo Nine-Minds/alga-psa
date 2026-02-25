@@ -259,7 +259,7 @@
   {
     "id": "T031",
     "description": "Subscriber unit: ticket-assigned sends watcher notifications once per unique recipient.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F018",
       "F021"
