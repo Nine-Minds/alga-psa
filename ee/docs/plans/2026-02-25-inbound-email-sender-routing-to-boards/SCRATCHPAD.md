@@ -171,3 +171,5 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
   - test case `returns domain-matched client destination outcome when sender is unknown contact` asserts domain-matched destination resolution.
 - (2026-02-25) Completed `T018` by confirming workflow/in-app parity coverage exists in `server/src/test/integration/resolveInboundTicketContext.destinationRouting.integration.test.ts`:
   - test case `matches in-app destination selection for the same sender/provider input` compares runtime action output with `processInboundEmailInApp` ticket results.
+- (2026-02-25) Completed `T019` by confirming reply-token regression coverage exists in `server/src/test/integration/inboundEmailInApp.webhooks.integration.test.ts`:
+  - test case `Reply threading: reply token resolves ticket and creates exactly 1 new comment` now asserts ticket board remains unchanged after reply threading.
