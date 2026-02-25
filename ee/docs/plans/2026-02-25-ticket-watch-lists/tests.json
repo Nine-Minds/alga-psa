@@ -235,7 +235,7 @@
   {
     "id": "T028",
     "description": "Subscriber unit: ticket-created sends watcher notification with customer-visible context.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F016"
     ]
