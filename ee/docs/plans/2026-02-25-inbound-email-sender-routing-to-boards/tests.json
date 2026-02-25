@@ -14,7 +14,7 @@
   {
     "id": "T003",
     "description": "Migration adds expected indexes for client/contact destination lookup and integrity",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F004"]
   },
   {

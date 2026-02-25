@@ -47,4 +47,30 @@ describe('inbound ticket destination migrations (integration)', () => {
     expect(column?.is_nullable).toBe('YES');
     expect(column?.data_type).toBe('uuid');
   });
+
+  it('T003: migration adds tenant-scoped lookup indexes for client/contact destination columns', async () => {
+    const result = await knex.raw<{
+      rows: Array<{ indexname: string; tablename: string; indexdef: string }>;
+    }>(`
+      SELECT indexname, tablename, indexdef
+      FROM pg_indexes
+      WHERE schemaname = 'public'
+        AND indexname IN (
+          'idx_clients_tenant_inbound_ticket_defaults',
+          'idx_contacts_tenant_inbound_ticket_defaults'
+        )
+    `);
+
+    const rows = result.rows ?? [];
+    const byName = new Map(rows.map((row) => [row.indexname, row]));
+
+    const clientsIndex = byName.get('idx_clients_tenant_inbound_ticket_defaults');
+    const contactsIndex = byName.get('idx_contacts_tenant_inbound_ticket_defaults');
+
+    expect(clientsIndex?.tablename).toBe('clients');
+    expect(clientsIndex?.indexdef).toContain('(tenant, inbound_ticket_defaults_id)');
+
+    expect(contactsIndex?.tablename).toBe('contacts');
+    expect(contactsIndex?.indexdef).toContain('(tenant, inbound_ticket_defaults_id)');
+  });
 });
