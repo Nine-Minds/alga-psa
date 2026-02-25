@@ -142,6 +142,46 @@ describe('POST /api/chat/v1/completions/stream (structured events)', () => {
     );
   });
 
+  it('emits structured content-delta SSE events', async () => {
+    isExperimentalFeatureEnabledMock.mockResolvedValue(true);
+    createStructuredCompletionStreamMock.mockResolvedValue(
+      (async function* () {
+        yield { type: 'content_delta', delta: 'Hel' };
+        yield { type: 'content_delta', delta: 'lo' };
+        yield { type: 'done' };
+      })(),
+    );
+
+    vi.resetModules();
+    const { POST } = await import('@/app/api/chat/v1/completions/stream/route');
+
+    const response = await POST(
+      makeRequest({
+        messages: [{ role: 'user', content: 'say hello' }],
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    const payloads = await readSsePayloads(response);
+
+    expect(payloads).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          type: 'content_delta',
+          delta: 'Hel',
+          content: 'Hel',
+          done: false,
+        }),
+        expect.objectContaining({
+          type: 'content_delta',
+          delta: 'lo',
+          content: 'lo',
+          done: false,
+        }),
+      ]),
+    );
+  });
+
   it('emits function-proposal SSE events when model chooses a tool call', async () => {
     isExperimentalFeatureEnabledMock.mockResolvedValue(true);
     createStructuredCompletionStreamMock.mockResolvedValue(
@@ -192,6 +232,35 @@ describe('POST /api/chat/v1/completions/stream (structured events)', () => {
         }),
       ]),
     );
+  });
+
+  it('emits terminal done event after successful completion', async () => {
+    isExperimentalFeatureEnabledMock.mockResolvedValue(true);
+    createStructuredCompletionStreamMock.mockResolvedValue(
+      (async function* () {
+        yield { type: 'content_delta', delta: 'Final response' };
+        yield { type: 'done' };
+      })(),
+    );
+
+    vi.resetModules();
+    const { POST } = await import('@/app/api/chat/v1/completions/stream/route');
+
+    const response = await POST(
+      makeRequest({
+        messages: [{ role: 'user', content: 'done?' }],
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    const payloads = await readSsePayloads(response);
+    const lastPayload = payloads[payloads.length - 1];
+
+    expect(lastPayload).toMatchObject({
+      type: 'done',
+      content: '',
+      done: true,
+    });
   });
 
   it('stops stream emission cleanly when request signal is aborted', async () => {

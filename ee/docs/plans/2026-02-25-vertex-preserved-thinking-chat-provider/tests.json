@@ -252,7 +252,7 @@
   {
     "id": "T030",
     "description": "Streaming route emits structured content-delta SSE events",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F017",
       "F018"

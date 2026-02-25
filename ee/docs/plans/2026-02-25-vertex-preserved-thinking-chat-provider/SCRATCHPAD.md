@@ -118,3 +118,4 @@ Working notes for implementing a new chat provider abstraction with Vertex GLM-5
 - (2026-02-25) Implemented `T027`: added explicit `handleExecute` guard test returning 400 when function call metadata is missing.
 - (2026-02-25) Implemented `T028`: added assertions that tool call IDs remain stable from proposal through tool-result replay in execute continuation flow.
 - (2026-02-25) Implemented `T029`: stream route events test now validates assistant `reasoning_content` is accepted in request payload schema.
+- (2026-02-25) Implemented `T030`: expanded stream route event coverage with explicit assertions for typed `content_delta` SSE payload emission (including compatibility `content`/`done:false` fields).
