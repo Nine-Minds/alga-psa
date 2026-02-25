@@ -56,7 +56,7 @@
   {
     "id": "F007",
     "description": "Validate resolved destination defaults are tenant-owned and active; fallback to provider default when invalid",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Observability"

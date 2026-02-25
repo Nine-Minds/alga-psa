@@ -18,6 +18,7 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
 - (2026-02-25) `F001` completed as a plan-model checkpoint: implementation work proceeds only with client/contact-owned routing and does not introduce provider-level sender-rule tables.
 - (2026-02-25) Shared resolver `resolveEffectiveInboundTicketDefaults` is the single precedence source for contact override / contact-client default / provider fallback used by both in-app and runtime context paths.
 - (2026-02-25) Domain-matched client routing now contributes to destination resolution via the same shared resolver (`client_default_from_domain` before provider fallback).
+- (2026-02-25) Destination IDs from contacts/clients are runtime-validated against `inbound_ticket_defaults` with `(tenant, id, is_active=true)` before use; invalid/inactive mappings now warn and fallback.
 
 ## Discoveries / Constraints
 
@@ -83,3 +84,4 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
   - `shared/services/email/processInboundEmailInApp.ts`
   - `shared/workflow/runtime/actions/registerEmailWorkflowActions.ts`
 - (2026-02-25) Completed `F006` by passing domain-matched client context into the shared resolver in both in-app and workflow-runtime paths.
+- (2026-02-25) Completed `F007` by enforcing tenant+active validation on contact/client destination IDs before applying defaults.
