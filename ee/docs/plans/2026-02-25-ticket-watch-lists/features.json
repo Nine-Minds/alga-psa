@@ -44,7 +44,7 @@
   {
     "id": "F006",
     "description": "Add manual watcher email entry with validation and duplicate handling.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Functional Requirements",
       "UX / UI Notes"
