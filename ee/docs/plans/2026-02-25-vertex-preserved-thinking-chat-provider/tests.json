@@ -143,7 +143,7 @@
   {
     "id": "T017",
     "description": "Response parsing prioritizes reasoning_content field over fallback reasoning field when both exist",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F013"
     ]

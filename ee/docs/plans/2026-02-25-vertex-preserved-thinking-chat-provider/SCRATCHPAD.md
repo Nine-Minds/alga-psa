@@ -105,3 +105,4 @@ Working notes for implementing a new chat provider abstraction with Vertex GLM-5
 - (2026-02-25) Implemented `T014`: added provider message builder assertions confirming Vertex assistant payload conversion includes preserved `reasoning_content` during tool-loop replay.
 - (2026-02-25) Implemented `T015`: added OpenRouter conversion coverage ensuring assistant payloads remain compatible without forwarding `reasoning_content` fields.
 - (2026-02-25) Implemented `T016`: verified reasoning extraction falls back to legacy `<think>` blocks when explicit `reasoning_content` is unavailable.
+- (2026-02-25) Implemented `T017`: response parsing coverage now asserts `reasoning_content` is preferred over fallback `reasoning` when both are present.
