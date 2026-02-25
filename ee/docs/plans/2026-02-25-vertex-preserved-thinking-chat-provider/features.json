@@ -68,7 +68,7 @@
   {
     "id": "F012",
     "description": "Keep tool definitions and tool_choice:auto semantics consistent across OpenRouter and Vertex providers",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Goals", "Functional Requirements"]
   },
   {

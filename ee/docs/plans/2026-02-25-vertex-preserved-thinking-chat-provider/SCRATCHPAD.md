@@ -65,3 +65,4 @@ Working notes for implementing a new chat provider abstraction with Vertex GLM-5
 - (2026-02-25) Implemented `F009`: `reasoning_content` is preserved through conversation normalization and injected into Vertex assistant message payloads during OpenAI-compatible conversion.
 - (2026-02-25) Implemented `F010`: non-stream completion calls now resolve provider/model/client from `chatProviderResolver` rather than hardcoded OpenRouter config.
 - (2026-02-25) Implemented `F011`: streaming completion creation now resolves provider/model/client from `chatProviderResolver` instead of direct OpenRouter client construction.
+- (2026-02-25) Implemented `F012`: both providers now share the same tool definitions and preserve `tool_choice: \"auto\"` in request construction.
