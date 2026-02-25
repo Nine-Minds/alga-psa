@@ -1071,27 +1071,29 @@ export const getDocumentCountsForEntities = withAuth(async (
   const { knex } = await createTenantKnex();
   
   try {
-    const counts = await knex('document_associations')
-      .select('entity_id')
-      .count('document_id as count')
-      .where('tenant', tenant)
-      .whereIn('entity_id', entityIds)
-      .where('entity_type', entityType)
-      .groupBy('entity_id');
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const counts = await trx('document_associations')
+        .select('entity_id')
+        .count('document_id as count')
+        .where('tenant', tenant)
+        .whereIn('entity_id', entityIds)
+        .where('entity_type', entityType)
+        .groupBy('entity_id');
 
-    const countMap = new Map<string, number>();
-    for (const row of counts) {
-      countMap.set(String(row.entity_id), Number(row.count));
-    }
-
-    // Ensure all requested entities have a count (0 if no documents)
-    for (const entityId of entityIds) {
-      if (!countMap.has(entityId)) {
-        countMap.set(entityId, 0);
+      const countMap = new Map<string, number>();
+      for (const row of counts) {
+        countMap.set(String(row.entity_id), Number(row.count));
       }
-    }
 
-    return countMap;
+      // Ensure all requested entities have a count (0 if no documents)
+      for (const entityId of entityIds) {
+        if (!countMap.has(entityId)) {
+          countMap.set(entityId, 0);
+        }
+      }
+
+      return countMap;
+    });
   } catch (error) {
     console.error('Error fetching document counts:', error);
     throw error;
