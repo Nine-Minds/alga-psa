@@ -218,7 +218,7 @@
   {
     "id": "T026",
     "description": "DB integration (guard case): upsert with only excluded/invalid recipients performs no ticket attribute mutation.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F011",
       "F013"
