@@ -50,7 +50,7 @@
   {
     "id": "T009",
     "description": "Resolver falls back to provider default when contact override destination is inactive/invalid",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F007"]
   },
   {

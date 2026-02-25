@@ -227,4 +227,45 @@ describe('resolveEffectiveInboundTicketDefaults precedence', () => {
     expect(result.fallbackReason).toBeUndefined();
     expect(tablesCalled).toHaveLength(0);
   });
+
+  it('T009: falls back to provider default when contact override destination is inactive/invalid', async () => {
+    const providerDefaults = {
+      board_id: 'board-provider-default',
+      status_id: 'status-provider-default',
+      priority_id: 'priority-provider-default',
+      client_id: null,
+      entered_by: 'user-1',
+      category_id: null,
+      subcategory_id: null,
+      location_id: null,
+    };
+
+    const { trx } = createTrxForQueryPlan([
+      {
+        table: 'contacts',
+        where: { tenant: 'tenant-1', contact_name_id: 'contact-9' },
+        row: { inbound_ticket_defaults_id: 'defaults-contact-invalid', client_id: null },
+      },
+      {
+        table: 'inbound_ticket_defaults',
+        where: { tenant: 'tenant-1', id: 'defaults-contact-invalid', is_active: true },
+        row: null,
+      },
+    ]);
+    trxImpl = trx;
+
+    const { resolveEffectiveInboundTicketDefaults } = await import('../emailWorkflowActions');
+    const result = await resolveEffectiveInboundTicketDefaults({
+      tenant: 'tenant-1',
+      providerId: 'provider-1',
+      providerDefaults,
+      matchedContactId: 'contact-9',
+      matchedContactClientId: null,
+      domainMatchedClientId: null,
+    });
+
+    expect(result.source).toBe('provider_default');
+    expect(result.defaults).toEqual(providerDefaults);
+    expect(result.fallbackReason).toBe('invalid_or_inactive_contact_override');
+  });
 });

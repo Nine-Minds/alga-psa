@@ -143,3 +143,6 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
 - (2026-02-25) Completed `T008` by extending shared resolver unit coverage for fallback path:
   - when neither exact-contact nor domain destination applies, resolves `source=provider_default`
   - returns provider defaults unchanged with no fallback reason
+- (2026-02-25) Completed `T009` by extending shared resolver unit coverage for invalid override safety:
+  - invalid/inactive contact override destination falls back to `source=provider_default`
+  - emits `fallbackReason=invalid_or_inactive_contact_override`
