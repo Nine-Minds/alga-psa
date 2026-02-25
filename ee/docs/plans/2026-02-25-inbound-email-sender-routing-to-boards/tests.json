@@ -140,7 +140,7 @@
   {
     "id": "T024",
     "description": "Contact override API/action enforces contact update permission and tenant scoping",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F013"]
   },
   {

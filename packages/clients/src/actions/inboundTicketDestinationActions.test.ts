@@ -115,4 +115,42 @@ describe('inboundTicketDestinationActions permissions and tenant scoping', () =>
     expect(calls.some((entry) => entry.table === 'inbound_ticket_defaults' && entry.op === 'first')).toBe(true);
     expect(calls.some((entry) => entry.table === 'clients' && entry.op === 'returning')).toBe(false);
   });
+
+  it('T024: updateContactInboundTicketDestination enforces contact update permission', async () => {
+    hasPermissionAsyncMock.mockResolvedValue(false);
+
+    const { updateContactInboundTicketDestination } = await import('./inboundTicketDestinationActions');
+    await expect(
+      updateContactInboundTicketDestination(
+        { user_id: 'user-1' } as any,
+        { tenant: 'tenant-1' } as any,
+        'contact-1',
+        'defaults-1'
+      )
+    ).rejects.toThrow('Permission denied: Cannot update contacts');
+
+    expect(createTenantKnexMock).not.toHaveBeenCalled();
+  });
+
+  it('T024: updateContactInboundTicketDestination validates destination tenant scoping', async () => {
+    hasPermissionAsyncMock.mockResolvedValue(true);
+    const { trx, calls } = createTrx({
+      contactExists: true,
+      destinationInTenant: false,
+    });
+    trxImpl = trx;
+
+    const { updateContactInboundTicketDestination } = await import('./inboundTicketDestinationActions');
+    await expect(
+      updateContactInboundTicketDestination(
+        { user_id: 'user-1' } as any,
+        { tenant: 'tenant-1' } as any,
+        'contact-1',
+        'defaults-foreign'
+      )
+    ).rejects.toThrow('Inbound ticket destination was not found for this tenant');
+
+    expect(calls.some((entry) => entry.table === 'inbound_ticket_defaults' && entry.op === 'first')).toBe(true);
+    expect(calls.some((entry) => entry.table === 'contacts' && entry.op === 'returning')).toBe(false);
+  });
 });
