@@ -137,3 +137,4 @@ Working notes for implementing a new chat provider abstraction with Vertex GLM-5
 - (2026-02-25) Implemented `T046`: Chat approve-path tests verify `/api/chat/v1/execute` receives streamed `functionCall` metadata unchanged.
 - (2026-02-25) Implemented `T047`: Chat decline-path tests verify `/api/chat/v1/execute` posts `action=decline` while preserving usable conversation state.
 - (2026-02-25) Implemented `T048`: Chat streaming tests cover stop/abort/interruption behavior and assert failed execute flows do not persist false completed assistant messages.
+- (2026-02-25) Implemented `T049`: Quick Ask expanded chat tests now cover streamed function proposal handling through approve→execute continuation.

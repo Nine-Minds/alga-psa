@@ -414,7 +414,7 @@
   {
     "id": "T049",
     "description": "Quick Ask expanded chat path can receive streamed function proposal and complete approve->execute loop",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F027"
     ]
