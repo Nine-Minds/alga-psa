@@ -243,7 +243,7 @@
   {
     "id": "T029",
     "description": "Streaming route request validation accepts assistant reasoning_content",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F008",
       "F017"
