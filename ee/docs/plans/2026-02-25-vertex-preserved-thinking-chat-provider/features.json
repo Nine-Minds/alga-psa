@@ -56,7 +56,7 @@
   {
     "id": "F010",
     "description": "Refactor non-stream completion path to use provider resolver instead of hardcoded OpenRouter client",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Goals", "Functional Requirements"]
   },
   {
