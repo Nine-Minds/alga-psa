@@ -55,7 +55,7 @@
   {
     "id": "T007",
     "description": "Vertex request does not include thinking override payload when VERTEX_ENABLE_THINKING is true or unset",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F006"
     ]

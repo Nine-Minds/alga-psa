@@ -95,3 +95,4 @@ Working notes for implementing a new chat provider abstraction with Vertex GLM-5
 - (2026-02-25) Implemented `T004`: covered explicit Vertex base URL override behavior via `VERTEX_OPENAPI_BASE_URL`.
 - (2026-02-25) Implemented `T005`: covered Vertex derived endpoint synthesis from `VERTEX_PROJECT_ID` + `VERTEX_LOCATION`.
 - (2026-02-25) Implemented `T006`: added resolver error-path coverage when Vertex access token configuration is missing.
+- (2026-02-25) Implemented `T007`: covered Vertex thinking override default/true paths where no disable payload is emitted.
