@@ -36,7 +36,7 @@
   {
     "id": "F005",
     "description": "Add a Watch List section to ticket properties UI with recipient list visibility.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes"
     ]
