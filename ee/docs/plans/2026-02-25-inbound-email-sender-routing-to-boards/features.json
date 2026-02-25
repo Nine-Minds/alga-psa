@@ -74,7 +74,7 @@
   {
     "id": "F009",
     "description": "Apply the same resolution logic in workflow runtime (`resolve_inbound_ticket_context` + create path) for parity",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Resolution Integration Points"
