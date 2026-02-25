@@ -295,7 +295,7 @@
   {
     "id": "T035",
     "description": "Streaming route returns 400 for malformed messages payload",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F017"
     ]
