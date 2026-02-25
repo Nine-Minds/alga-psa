@@ -158,3 +158,5 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
   - test case `Routing destination: exact sender without contact override uses contact's client destination defaults` asserts exact-contact fallback to client destination defaults.
 - (2026-02-25) Completed `T013` by confirming in-app integration coverage exists in `server/src/test/integration/inboundEmailInApp.webhooks.integration.test.ts`:
   - test case `Routing destination: unknown sender + domain-matched client uses domain client destination defaults` asserts domain-matched unknown-contact routing.
+- (2026-02-25) Completed `T014` by confirming in-app integration coverage exists in `server/src/test/integration/inboundEmailInApp.webhooks.integration.test.ts`:
+  - test case `Unmatched sender: system follows the defined behavior without throwing` asserts provider-default board/client fallback for unmatched routing.
