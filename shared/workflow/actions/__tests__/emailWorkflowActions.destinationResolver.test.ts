@@ -314,4 +314,66 @@ describe('resolveEffectiveInboundTicketDefaults precedence', () => {
     expect(result.defaults).toEqual(providerDefaults);
     expect(result.fallbackReason).toBe('invalid_or_inactive_client_default_from_contact');
   });
+
+  it('T027: structured logs include destination source and fallback reason metadata', async () => {
+    const providerDefaults = {
+      board_id: 'board-provider-default',
+      status_id: 'status-provider-default',
+      priority_id: 'priority-provider-default',
+      client_id: null,
+      entered_by: 'user-1',
+      category_id: null,
+      subcategory_id: null,
+      location_id: null,
+    };
+
+    const { trx } = createTrxForQueryPlan([
+      {
+        table: 'contacts',
+        where: { tenant: 'tenant-1', contact_name_id: 'contact-27' },
+        row: { inbound_ticket_defaults_id: 'defaults-contact-invalid-27', client_id: null },
+      },
+      {
+        table: 'inbound_ticket_defaults',
+        where: { tenant: 'tenant-1', id: 'defaults-contact-invalid-27', is_active: true },
+        row: null,
+      },
+    ]);
+    trxImpl = trx;
+
+    const debugSpy = vi.spyOn(console, 'debug').mockImplementation(() => {});
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    try {
+      const { resolveEffectiveInboundTicketDefaults } = await import('../emailWorkflowActions');
+      await resolveEffectiveInboundTicketDefaults({
+        tenant: 'tenant-1',
+        providerId: 'provider-1',
+        providerDefaults,
+        matchedContactId: 'contact-27',
+        matchedContactClientId: null,
+        domainMatchedClientId: null,
+      });
+
+      expect(warnSpy).toHaveBeenCalledWith(
+        'resolveEffectiveInboundTicketDefaults: invalid contact override destination; using fallback',
+        expect.objectContaining({
+          source: 'contact_override',
+          fallback: 'provider_default',
+          configuredDefaultsId: 'defaults-contact-invalid-27',
+        })
+      );
+
+      expect(debugSpy).toHaveBeenCalledWith(
+        'resolveEffectiveInboundTicketDefaults: resolved destination',
+        expect.objectContaining({
+          source: 'provider_default',
+          fallbackReason: 'invalid_or_inactive_contact_override',
+        })
+      );
+    } finally {
+      debugSpy.mockRestore();
+      warnSpy.mockRestore();
+    }
+  });
 });

@@ -200,3 +200,6 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
 - (2026-02-25) Completed `T026` by:
   - extending `packages/clients/src/actions/contact-actions/contactActions.tsx` to persist `inbound_ticket_defaults_id` updates, normalize clears to `null`, and tenant-validate destination IDs
   - adding `packages/clients/src/components/contacts/ContactDetails.inboundDestination.wiring.test.ts` to verify contact UI set/clear wiring and save-path persistence through `updateContact(...)`
+- (2026-02-25) Completed `T027` by extending `shared/workflow/actions/__tests__/emailWorkflowActions.destinationResolver.test.ts`:
+  - asserts `console.warn` metadata includes `source=contact_override` and `fallback=provider_default` for invalid override fallbacks
+  - asserts terminal `console.debug` metadata includes `source=provider_default` with `fallbackReason=invalid_or_inactive_contact_override`

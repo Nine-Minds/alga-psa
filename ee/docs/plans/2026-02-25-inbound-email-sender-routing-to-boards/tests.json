@@ -158,7 +158,7 @@
   {
     "id": "T027",
     "description": "Structured logs include destination source classification and fallback reason when applicable",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F017"]
   },
   {
