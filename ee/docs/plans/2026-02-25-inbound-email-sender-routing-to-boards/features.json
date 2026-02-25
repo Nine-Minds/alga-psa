@@ -128,7 +128,7 @@
   {
     "id": "F015",
     "description": "Update contact UI to manage optional contact inbound destination override",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Resolution Integration Points"

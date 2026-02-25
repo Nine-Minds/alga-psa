@@ -23,7 +23,7 @@ import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { Card } from '@alga-psa/ui/components/Card';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { getCurrentUserAsync, getContactAvatarUrlActionAsync } from '../../lib/usersHelpers';
-import { updateContact, getContactByContactNameId, deleteContact } from '@alga-psa/clients/actions';
+import { updateContact, getContactByContactNameId, deleteContact, listInboundTicketDestinationOptions } from '@alga-psa/clients/actions';
 import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
 import { validateEmailAddress, validatePhoneNumber, validateContactName, validateRole } from '@alga-psa/validation';
 import Documents from '@alga-psa/documents/components/Documents';
@@ -212,6 +212,8 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
     users?: IUser[];
   } | null>(null);
   const [countries, setCountries] = useState<ICountry[]>([]);
+  const [inboundDestinationOptions, setInboundDestinationOptions] = useState<SelectOption[]>([]);
+  const [isInboundDestinationOptionsLoading, setIsInboundDestinationOptionsLoading] = useState(false);
   const [countryCode, setCountryCode] = useState(() => {
     // Enterprise locale detection
     try {
@@ -312,6 +314,37 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
     };
     fetchCountries();
   }, [countries.length]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setIsInboundDestinationOptionsLoading(true);
+      try {
+        const rows = await listInboundTicketDestinationOptions();
+        if (cancelled) return;
+        setInboundDestinationOptions(
+          (rows ?? []).map((row: any) => ({
+            value: row.id,
+            label: row.is_active
+              ? `${row.display_name} (${row.short_name})`
+              : `${row.display_name} (${row.short_name}) [inactive]`,
+          }))
+        );
+      } catch (error) {
+        if (!cancelled) {
+          console.error('Error loading inbound ticket destination options:', error);
+          setInboundDestinationOptions([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setIsInboundDestinationOptionsLoading(false);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Fetch contact avatar URL and tags
   useEffect(() => {
@@ -709,6 +742,22 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
               automationId="role-field"
               validate={validateRole}
             />
+            <div className="space-y-2">
+              <Text as="label" size="2" className="text-gray-700 font-medium">Inbound ticket destination override</Text>
+              <CustomSelect
+                id="contact-inbound-ticket-destination-select"
+                value={(editedContact as any).inbound_ticket_defaults_id || ''}
+                onValueChange={(value) => handleFieldChange('inbound_ticket_defaults_id', value)}
+                options={inboundDestinationOptions}
+                allowClear={true}
+                placeholder={
+                  isInboundDestinationOptionsLoading
+                    ? 'Loading destinations...'
+                    : 'Use client destination'
+                }
+                disabled={isInboundDestinationOptionsLoading}
+              />
+            </div>
             <div className="space-y-2">
               <PhoneInput
                 id="contact-phone-number"
