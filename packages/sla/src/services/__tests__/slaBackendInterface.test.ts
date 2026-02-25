@@ -4,12 +4,12 @@ import type { ISlaBackend } from '../backends/ISlaBackend';
 describe('ISlaBackend', () => {
   it('has required method signatures', () => {
     type RequiredMethods = {
-      startSlaTracking: (...args: unknown[]) => Promise<void>;
-      pauseSla: (...args: unknown[]) => Promise<void>;
-      resumeSla: (...args: unknown[]) => Promise<void>;
-      completeSla: (...args: unknown[]) => Promise<void>;
-      cancelSla: (...args: unknown[]) => Promise<void>;
-      getSlaStatus: (...args: unknown[]) => Promise<unknown>;
+      startSlaTracking: (...args: any[]) => Promise<void>;
+      pauseSla: (...args: any[]) => Promise<void>;
+      resumeSla: (...args: any[]) => Promise<void>;
+      completeSla: (...args: any[]) => Promise<void>;
+      cancelSla: (...args: any[]) => Promise<void>;
+      getSlaStatus: (...args: any[]) => Promise<any>;
     };
 
     expectTypeOf<ISlaBackend>().toMatchTypeOf<RequiredMethods>();

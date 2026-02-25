@@ -353,9 +353,10 @@ async function sendEscalationInAppNotification(
   try {
     // Insert notification directly into internal_notifications table
     await trx('internal_notifications').insert({
-      notification_id: crypto.randomUUID(),
       tenant,
       user_id: userId,
+      template_name: 'sla-escalation',
+      language_code: 'en',
       type: 'warning',
       title: `Ticket Escalated to Level ${level}`,
       message: `Ticket #${ticketNumber}: "${ticketTitle}" has been escalated to level ${level} and requires your attention.`,
@@ -366,8 +367,9 @@ async function sendEscalationInAppNotification(
         escalation_level: level,
         subtype: 'sla-escalation'
       }),
-      read: false,
-      created_at: trx.fn.now()
+      is_read: false,
+      delivery_status: 'pending',
+      delivery_attempts: 0
     });
 
     return true;

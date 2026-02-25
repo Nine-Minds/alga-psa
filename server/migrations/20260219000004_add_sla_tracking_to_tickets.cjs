@@ -11,7 +11,7 @@
  * 2. Removes legacy ITIL/SLA fields that were added but never used:
  *    - resolution_code, root_cause, workaround, related_problem_id
  *    - sla_target, sla_breach (superseded by new tracking fields)
- *    - escalated, escalation_level, escalated_at, escalated_by
+ *    (escalated, escalation_level, escalated_at, escalated_by are kept for the escalation service)
  *
  * These legacy fields were added in migration 20250910120000_add_itil_fields_to_tickets.cjs
  * but were never implemented in the UI or business logic.
@@ -28,16 +28,7 @@ exports.up = async function(knex) {
     } catch (e) {
       // Index may not exist
     }
-    try {
-      table.dropIndex(['escalated']);
-    } catch (e) {
-      // Index may not exist
-    }
-    try {
-      table.dropIndex(['escalation_level']);
-    } catch (e) {
-      // Index may not exist
-    }
+    // NOTE: escalated/escalation_level indexes are kept (used by escalation service)
   }).catch(() => {
     // Ignore errors if indexes don't exist
   });
@@ -112,12 +103,43 @@ exports.up = async function(knex) {
     table.dropColumn('sla_target');
     table.dropColumn('sla_breach');
 
-    // Legacy escalation fields (never implemented)
-    table.dropColumn('escalated');
-    table.dropColumn('escalation_level');
-    table.dropColumn('escalated_at');
-    table.dropColumn('escalated_by');
+    // NOTE: escalated, escalation_level, escalated_at, escalated_by are kept
+    // because the SLA escalation service actively uses them.
   });
+
+  // Ensure escalation columns exist (they may have been dropped by an earlier
+  // version of this migration). Using raw SQL with IF NOT EXISTS to be idempotent.
+  const escalationCols = [
+    { name: 'escalated', sql: 'boolean DEFAULT false' },
+    { name: 'escalation_level', sql: 'integer' },
+    { name: 'escalated_at', sql: 'timestamptz' },
+    { name: 'escalated_by', sql: 'uuid' },
+  ];
+  for (const col of escalationCols) {
+    const exists = await knex.raw(`
+      SELECT 1 FROM information_schema.columns
+      WHERE table_name = 'tickets' AND column_name = ?
+    `, [col.name]);
+    if (exists.rows.length === 0) {
+      await knex.raw(`ALTER TABLE tickets ADD COLUMN ${col.name} ${col.sql}`);
+      console.log(`  Restored missing column: ${col.name}`);
+    }
+  }
+
+  // Ensure escalation_level check constraint exists
+  const checkExists = await knex.raw(`
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'tickets_escalation_level_check'
+    AND conrelid = 'tickets'::regclass
+  `);
+  if (checkExists.rows.length === 0) {
+    await knex.raw(`
+      ALTER TABLE tickets
+      ADD CONSTRAINT tickets_escalation_level_check
+      CHECK (escalation_level IS NULL OR (escalation_level >= 1 AND escalation_level <= 3))
+    `);
+    console.log('  Restored escalation_level check constraint');
+  }
 
   // Add composite foreign key for sla_policy_id (must reference tenant + sla_policy_id)
   await knex.raw(`
@@ -176,27 +198,55 @@ exports.down = async function(knex) {
     // Legacy SLA fields
     table.string('sla_target', 255).nullable();
     table.boolean('sla_breach').defaultTo(false);
-
-    // Legacy escalation fields
-    table.boolean('escalated').defaultTo(false);
-    table.integer('escalation_level').nullable();
-    table.timestamp('escalated_at', { useTz: true }).nullable();
-    table.uuid('escalated_by').nullable();
   });
+
+  // Restore escalation columns only if missing (they may already exist if the
+  // up migration kept them or the self-healing code re-added them)
+  const escalationCols = [
+    { name: 'escalated', sql: 'boolean DEFAULT false' },
+    { name: 'escalation_level', sql: 'integer' },
+    { name: 'escalated_at', sql: 'timestamptz' },
+    { name: 'escalated_by', sql: 'uuid' },
+  ];
+  for (const col of escalationCols) {
+    const exists = await knex.raw(`
+      SELECT 1 FROM information_schema.columns
+      WHERE table_name = 'tickets' AND column_name = ?
+    `, [col.name]);
+    if (exists.rows.length === 0) {
+      await knex.raw(`ALTER TABLE tickets ADD COLUMN ${col.name} ${col.sql}`);
+      console.log(`  Restored missing column: ${col.name}`);
+    }
+  }
 
   // Restore indexes on legacy columns
   await knex.schema.alterTable('tickets', (table) => {
     table.index(['sla_breach']);
-    table.index(['escalated']);
-    table.index(['escalation_level']);
   });
 
-  // Restore check constraint
-  await knex.raw(`
-    ALTER TABLE tickets
-    ADD CONSTRAINT tickets_escalation_level_check
-    CHECK (escalation_level IS NULL OR (escalation_level >= 1 AND escalation_level <= 3))
+  for (const colName of ['escalated', 'escalation_level']) {
+    const idxExists = await knex.raw(`
+      SELECT 1 FROM pg_indexes
+      WHERE tablename = 'tickets' AND indexname = ?
+    `, [`tickets_${colName}_index`]);
+    if (idxExists.rows.length === 0) {
+      await knex.raw(`CREATE INDEX tickets_${colName}_index ON tickets (${colName})`);
+    }
+  }
+
+  // Restore check constraint if missing
+  const checkExists = await knex.raw(`
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'tickets_escalation_level_check'
+    AND conrelid = 'tickets'::regclass
   `);
+  if (checkExists.rows.length === 0) {
+    await knex.raw(`
+      ALTER TABLE tickets
+      ADD CONSTRAINT tickets_escalation_level_check
+      CHECK (escalation_level IS NULL OR (escalation_level >= 1 AND escalation_level <= 3))
+    `);
+  }
 
   console.log('SLA tracking columns removed and legacy fields restored');
 };

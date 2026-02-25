@@ -99,7 +99,7 @@ describe('CE SLA lifecycle', () => {
 
     const sendNotificationSpy = vi
       .spyOn(notificationService, 'sendSlaNotification')
-      .mockResolvedValue({ recipientCount: 1, errors: [] });
+      .mockResolvedValue({ success: true, recipientCount: 1, inAppSent: 1, emailSent: 0, errors: [] });
 
     const trx = createAdvancedMockTrx();
     const createdAt = new Date('2024-01-01T00:00:00Z');

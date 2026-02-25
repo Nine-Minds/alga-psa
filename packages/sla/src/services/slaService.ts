@@ -132,14 +132,27 @@ export async function startSlaForTicket(
     }
 
     // 5. Update ticket with SLA tracking fields
+    // Check if due_date should be auto-filled from SLA resolution target
+    const currentTicket = await trx('tickets')
+      .where({ tenant, ticket_id: ticketId })
+      .select('due_date')
+      .first();
+
+    const slaUpdateData: Record<string, any> = {
+      sla_policy_id: policy.sla_policy_id,
+      sla_started_at: createdAt,
+      sla_response_due_at: responseDueAt,
+      sla_resolution_due_at: resolutionDueAt
+    };
+
+    // Auto-fill due_date from SLA resolution target if not manually set
+    if (!currentTicket?.due_date && resolutionDueAt) {
+      slaUpdateData.due_date = resolutionDueAt;
+    }
+
     await trx('tickets')
       .where({ tenant, ticket_id: ticketId })
-      .update({
-        sla_policy_id: policy.sla_policy_id,
-        sla_started_at: createdAt,
-        sla_response_due_at: responseDueAt,
-        sla_resolution_due_at: resolutionDueAt
-      });
+      .update(slaUpdateData);
 
     // 6. Log SLA started event
     await logSlaEvent(trx, tenant, ticketId, 'sla_started', {
@@ -226,14 +239,10 @@ export async function recordFirstResponse(
     }
 
     // Calculate if SLA was met
+    // Due dates are already shifted forward on resume, so compare directly
     let met: boolean | null = null;
     if (ticket.sla_response_due_at) {
-      // Account for pause time by adjusting the due date
-      const adjustedDueAt = new Date(
-        new Date(ticket.sla_response_due_at).getTime() +
-        (ticket.sla_total_pause_minutes || 0) * 60000
-      );
-      met = respondedAt <= adjustedDueAt;
+      met = respondedAt <= new Date(ticket.sla_response_due_at);
     }
 
     // Update ticket
@@ -249,7 +258,7 @@ export async function recordFirstResponse(
       responded_at: respondedAt.toISOString(),
       responded_by: respondedBy,
       due_at: ticket.sla_response_due_at,
-      pause_minutes: ticket.sla_total_pause_minutes,
+      total_pause_minutes: ticket.sla_total_pause_minutes,
       met
     });
 
@@ -316,14 +325,10 @@ export async function recordResolution(
     }
 
     // Calculate if SLA was met
+    // Due dates are already shifted forward on resume, so compare directly
     let met: boolean | null = null;
     if (ticket.sla_resolution_due_at) {
-      // Account for pause time by adjusting the due date
-      const adjustedDueAt = new Date(
-        new Date(ticket.sla_resolution_due_at).getTime() +
-        (ticket.sla_total_pause_minutes || 0) * 60000
-      );
-      met = resolvedAt <= adjustedDueAt;
+      met = resolvedAt <= new Date(ticket.sla_resolution_due_at);
     }
 
     // Update ticket
@@ -339,7 +344,7 @@ export async function recordResolution(
       resolved_at: resolvedAt.toISOString(),
       resolved_by: resolvedBy,
       due_at: ticket.sla_resolution_due_at,
-      pause_minutes: ticket.sla_total_pause_minutes,
+      total_pause_minutes: ticket.sla_total_pause_minutes,
       met
     });
 
@@ -412,7 +417,10 @@ export async function getSlaStatus(
     );
   }
 
-  const effectivePauseMinutes = totalPauseMinutes + currentPauseMinutes;
+  // Due dates are shifted forward on each resume, so completed pauses are
+  // already reflected in the stored values. Only the ongoing pause (if any)
+  // needs to be added for real-time remaining time calculations.
+  const effectivePauseMinutes = currentPauseMinutes;
 
   // Calculate remaining times
   let responseRemaining: number | undefined;
@@ -501,10 +509,12 @@ export async function handlePriorityChange(
       'sla_started_at',
       'sla_response_at',
       'sla_resolution_at',
+      'sla_resolution_due_at',
       'sla_total_pause_minutes',
       'client_id',
       'board_id',
-      'priority_id'
+      'priority_id',
+      'due_date'
     )
     .first();
 
@@ -538,13 +548,35 @@ export async function handlePriorityChange(
     newResolutionDue = calculateDeadline(schedule, startedAt, newTarget.resolution_time_minutes);
   }
 
+  // Shift new due dates by accumulated pause time (since due dates are
+  // shifted forward on each resume, recalculated dates need the same shift)
+  const totalPauseMs = (ticket.sla_total_pause_minutes || 0) * 60000;
+  if (newResponseDue && totalPauseMs > 0) {
+    newResponseDue = new Date(newResponseDue.getTime() + totalPauseMs);
+  }
+  if (newResolutionDue && totalPauseMs > 0) {
+    newResolutionDue = new Date(newResolutionDue.getTime() + totalPauseMs);
+  }
+
+  // Build update data
+  const priorityUpdateData: Record<string, any> = {
+    sla_response_due_at: ticket.sla_response_at ? undefined : newResponseDue,
+    sla_resolution_due_at: ticket.sla_resolution_at ? undefined : newResolutionDue
+  };
+
+  // Keep due_date in sync if it matches the old SLA resolution deadline
+  if (newResolutionDue && ticket.due_date && ticket.sla_resolution_due_at) {
+    const oldResolutionDue = new Date(ticket.sla_resolution_due_at);
+    const dueDate = new Date(ticket.due_date);
+    if (Math.abs(dueDate.getTime() - oldResolutionDue.getTime()) < 60000) {
+      priorityUpdateData.due_date = newResolutionDue;
+    }
+  }
+
   // Update ticket
   await trx('tickets')
     .where({ tenant, ticket_id: ticketId })
-    .update({
-      sla_response_due_at: ticket.sla_response_at ? undefined : newResponseDue,
-      sla_resolution_due_at: ticket.sla_resolution_at ? undefined : newResolutionDue
-    });
+    .update(priorityUpdateData);
 
   // Log event
   await logSlaEvent(trx, tenant, ticketId, 'priority_changed', {
@@ -552,6 +584,7 @@ export async function handlePriorityChange(
     new_priority_id: newPriorityId,
     new_response_due_at: newResponseDue?.toISOString(),
     new_resolution_due_at: newResolutionDue?.toISOString(),
+    total_pause_minutes_applied: ticket.sla_total_pause_minutes,
     changed_by: changedBy
   });
 }
@@ -573,9 +606,12 @@ export async function handlePolicyChange(
     .where({ tenant, ticket_id: ticketId })
     .select(
       'sla_started_at',
+      'sla_resolution_due_at',
+      'sla_total_pause_minutes',
       'priority_id',
       'client_id',
-      'board_id'
+      'board_id',
+      'due_date'
     )
     .first();
 
@@ -626,26 +662,47 @@ export async function handlePolicyChange(
   const schedule = await getBusinessHoursSchedule(trx, tenant, policy, target);
   const startedAt = ticket.sla_started_at ? new Date(ticket.sla_started_at) : new Date();
 
-  const responseDueAt = target.response_time_minutes
+  let responseDueAt = target.response_time_minutes
     ? calculateDeadline(schedule, startedAt, target.response_time_minutes)
     : null;
-  const resolutionDueAt = target.resolution_time_minutes
+  let resolutionDueAt = target.resolution_time_minutes
     ? calculateDeadline(schedule, startedAt, target.resolution_time_minutes)
     : null;
 
+  // Shift new due dates by accumulated pause time
+  const totalPauseMs = (ticket.sla_total_pause_minutes || 0) * 60000;
+  if (responseDueAt && totalPauseMs > 0) {
+    responseDueAt = new Date(responseDueAt.getTime() + totalPauseMs);
+  }
+  if (resolutionDueAt && totalPauseMs > 0) {
+    resolutionDueAt = new Date(resolutionDueAt.getTime() + totalPauseMs);
+  }
+
+  const policyUpdateData: Record<string, any> = {
+    sla_policy_id: policy.sla_policy_id,
+    sla_started_at: startedAt,
+    sla_response_due_at: responseDueAt,
+    sla_resolution_due_at: resolutionDueAt
+  };
+
+  // Keep due_date in sync if it matches the old SLA resolution deadline
+  if (resolutionDueAt && ticket.due_date && ticket.sla_resolution_due_at) {
+    const oldResolutionDue = new Date(ticket.sla_resolution_due_at);
+    const dueDate = new Date(ticket.due_date);
+    if (Math.abs(dueDate.getTime() - oldResolutionDue.getTime()) < 60000) {
+      policyUpdateData.due_date = resolutionDueAt;
+    }
+  }
+
   await trx('tickets')
     .where({ tenant, ticket_id: ticketId })
-    .update({
-      sla_policy_id: policy.sla_policy_id,
-      sla_started_at: startedAt,
-      sla_response_due_at: responseDueAt,
-      sla_resolution_due_at: resolutionDueAt
-    });
+    .update(policyUpdateData);
 
   await logSlaEvent(trx, tenant, ticketId, 'sla_policy_changed', {
     new_policy_id: policy.sla_policy_id,
     response_due_at: responseDueAt?.toISOString(),
     resolution_due_at: resolutionDueAt?.toISOString(),
+    total_pause_minutes_applied: ticket.sla_total_pause_minutes,
     changed_by: changedBy
   });
 

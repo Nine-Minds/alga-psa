@@ -434,20 +434,24 @@ async function getRecipients(
     }
   }
 
-  // Get escalation manager (from SLA policy)
-  if (threshold.notify_escalation_manager) {
-    const policy = await trx('sla_policies')
-      .where({ tenant, sla_policy_id: context.slaPolicyId })
-      .select('escalation_manager_id')
-      .first();
+  // Get escalation managers (from escalation_managers table, keyed by board)
+  if (threshold.notify_escalation_manager && context.boardId) {
+    const escalationManagers = await trx('escalation_managers as em')
+      .join('users as u', function() {
+        this.on('em.manager_user_id', 'u.user_id')
+            .andOn('em.tenant', 'u.tenant');
+      })
+      .where('em.tenant', tenant)
+      .where('em.board_id', context.boardId)
+      .select(
+        'u.user_id',
+        'u.email',
+        'u.first_name',
+        'u.last_name'
+      );
 
-    if (policy?.escalation_manager_id && !seenUserIds.has(policy.escalation_manager_id)) {
-      const manager = await trx('users')
-        .where({ tenant, user_id: policy.escalation_manager_id })
-        .select('user_id', 'email', 'first_name', 'last_name')
-        .first();
-
-      if (manager) {
+    for (const manager of escalationManagers) {
+      if (!seenUserIds.has(manager.user_id)) {
         recipients.push(manager);
         seenUserIds.add(manager.user_id);
       }

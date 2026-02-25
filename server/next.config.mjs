@@ -414,6 +414,7 @@ const nextConfig = {
     '@product/settings-extensions',
     '@product/billing',
     '@alga-psa/workflows',
+    '@alga-psa/sla',
     // New aliasing packages
     '@alga-psa/product-extension-actions',
     '@alga-psa/product-auth-ee',

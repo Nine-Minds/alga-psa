@@ -138,10 +138,15 @@ export async function resumeSla(
   options?: { skipBackend?: boolean }
 ): Promise<PauseResult> {
   try {
-    // Get current ticket state
+    // Get current ticket state (including due dates for shifting)
     const ticket = await trx('tickets')
       .where({ tenant, ticket_id: ticketId })
-      .select('sla_policy_id', 'sla_paused_at', 'sla_total_pause_minutes', 'status_id')
+      .select(
+        'sla_policy_id', 'sla_paused_at', 'sla_total_pause_minutes', 'status_id',
+        'sla_response_due_at', 'sla_response_at',
+        'sla_resolution_due_at', 'sla_resolution_at',
+        'due_date'
+      )
       .first();
 
     if (!ticket) {
@@ -162,14 +167,40 @@ export async function resumeSla(
     const pausedAt = new Date(ticket.sla_paused_at);
     const pauseDurationMinutes = Math.floor((now.getTime() - pausedAt.getTime()) / 60000);
     const newTotalPauseMinutes = (ticket.sla_total_pause_minutes || 0) + pauseDurationMinutes;
+    const shiftMs = pauseDurationMinutes * 60000;
 
-    // Resume the SLA
+    // Resume the SLA and shift due dates forward by pause duration
+    const updateData: Record<string, any> = {
+      sla_paused_at: null,
+      sla_total_pause_minutes: newTotalPauseMinutes
+    };
+
+    // Shift response due date forward (only if not yet responded)
+    if (ticket.sla_response_due_at && !ticket.sla_response_at) {
+      updateData.sla_response_due_at = new Date(
+        new Date(ticket.sla_response_due_at).getTime() + shiftMs
+      );
+    }
+
+    // Shift resolution due date forward (only if not yet resolved)
+    if (ticket.sla_resolution_due_at && !ticket.sla_resolution_at) {
+      const oldResolutionDue = new Date(ticket.sla_resolution_due_at);
+      const newResolutionDue = new Date(oldResolutionDue.getTime() + shiftMs);
+      updateData.sla_resolution_due_at = newResolutionDue;
+
+      // Keep due_date in sync if it matches the old SLA resolution deadline
+      // (i.e., it was auto-filled from SLA and not manually changed)
+      if (ticket.due_date) {
+        const dueDate = new Date(ticket.due_date);
+        if (Math.abs(dueDate.getTime() - oldResolutionDue.getTime()) < 60000) {
+          updateData.due_date = newResolutionDue;
+        }
+      }
+    }
+
     await trx('tickets')
       .where({ tenant, ticket_id: ticketId })
-      .update({
-        sla_paused_at: null,
-        sla_total_pause_minutes: newTotalPauseMinutes
-      });
+      .update(updateData);
 
     // Log the resume event
     await logPauseEvent(trx, tenant, ticketId, 'resumed', null, {
@@ -177,6 +208,7 @@ export async function resumeSla(
       paused_at: pausedAt.toISOString(),
       pause_duration_minutes: pauseDurationMinutes,
       new_total_pause_minutes: newTotalPauseMinutes,
+      due_dates_shifted: shiftMs > 0,
       status_id: ticket.status_id,
       triggered_by: triggeredBy
     });

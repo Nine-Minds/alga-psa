@@ -50,7 +50,7 @@ function setupMockData(
 ) {
   const originalImpl = trx;
 
-  vi.mocked(trx).mockImplementation((table: string) => {
+  (vi.mocked(trx) as any).mockImplementation((table: any) => {
     const mockChain = {
       where: vi.fn().mockReturnThis(),
       select: vi.fn().mockReturnThis(),

@@ -319,11 +319,16 @@ export function SlaPolicyForm({ policyId, onSave, onCancel }: SlaPolicyFormProps
     }
 
     // Validate thresholds
+    const seenPercents = new Set<number>();
     for (let i = 0; i < thresholds.length; i++) {
       const threshold = thresholds[i];
       if (threshold.threshold_percent < 0 || threshold.threshold_percent > 200) {
         errors[`threshold_percent_${i}`] = 'Must be between 0 and 200';
       }
+      if (seenPercents.has(threshold.threshold_percent)) {
+        errors[`threshold_percent_${i}`] = 'Duplicate threshold percentage';
+      }
+      seenPercents.add(threshold.threshold_percent);
       if (threshold.channels.length === 0) {
         errors[`threshold_channels_${i}`] = 'At least one channel is required';
       }

@@ -101,7 +101,25 @@ export async function sendSlaNotification(input: {
       dueAt,
     };
 
-    await sendSlaNotificationService(trx, context);
+    log.info('Sending SLA notification', {
+      ticketId: input.ticketId,
+      ticketNumber: ticket.ticket_number,
+      phase: input.phase,
+      thresholdPercent: input.thresholdPercent,
+      remainingMinutes,
+      dueAt: dueAt.toISOString(),
+    });
+
+    const notifResult = await sendSlaNotificationService(trx, context);
+
+    log.info('SLA notification result', {
+      ticketId: input.ticketId,
+      thresholdPercent: input.thresholdPercent,
+      recipientCount: notifResult.recipientCount,
+      inAppSent: notifResult.inAppSent,
+      emailSent: notifResult.emailSent,
+      errors: notifResult.errors.length > 0 ? notifResult.errors : undefined,
+    });
   });
 }
 
@@ -122,11 +140,21 @@ export async function checkAndEscalate(input: {
     );
 
     if (!escalationLevel) {
+      log.info('No escalation needed', {
+        ticketId: input.ticketId,
+        thresholdPercent: input.thresholdPercent,
+      });
       return;
     }
 
+    log.info('Escalating ticket', {
+      ticketId: input.ticketId,
+      escalationLevel,
+      thresholdPercent: input.thresholdPercent,
+    });
+
     await escalateTicket(trx, input.tenantId, input.ticketId, escalationLevel);
-    log.info('SLA escalation triggered', {
+    log.info('SLA escalation completed', {
       ticketId: input.ticketId,
       escalationLevel,
     });
@@ -139,6 +167,13 @@ export async function updateSlaStatus(input: {
   phase: 'response' | 'resolution';
   breached: boolean;
 }): Promise<void> {
+  const log = logger();
+  log.info('Updating SLA status', {
+    ticketId: input.ticketId,
+    phase: input.phase,
+    breached: input.breached,
+  });
+
   await withTenantTransaction(input.tenantId, async (trx) => {
     if (input.phase === 'response') {
       await trx('tickets')

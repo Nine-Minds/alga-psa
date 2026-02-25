@@ -172,7 +172,7 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
       col: {
         title: 'Ticket Number',
         dataIndex: 'ticket_number',
-        width: '10%',
+        width: '7%',
         render: (value: string, record: ITicketListItem) => (
           <div className="flex flex-col gap-1">
             <span className="flex items-center gap-2">
@@ -245,7 +245,7 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
     col: {
       title: 'Title',
       dataIndex: 'title',
-      width: tagsInlineUnderTitle ? '26%' : '20%',
+      width: tagsInlineUnderTitle ? '20%' : '16%',
       render: (value: string, record: ITicketListItem) => (
         <div className="flex flex-col gap-1 overflow-hidden">
           <Link
@@ -281,7 +281,7 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
       col: {
         title: 'Status',
         dataIndex: 'status_name',
-        width: '12%',
+        width: '8%',
         render: (value: string, record: ITicketListItem) => {
           // Get response_state from the record - it may be on the record if fetched
           const responseState = (record as any).response_state as TicketResponseState | undefined;
@@ -310,7 +310,7 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
       col: {
         title: 'Priority',
         dataIndex: 'priority_name',
-        width: '10%',
+        width: '7%',
         render: (value: string, record: ITicketListItem) => {
           // All tickets now use the unified priority system with priority_name and priority_color
           return (
@@ -334,7 +334,7 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
       col: {
         title: 'SLA',
         dataIndex: 'sla_policy_id',
-        width: '8%',
+        width: '5%',
         sortable: false,
         render: (_value: string | null, record: ITicketListItem) => {
           const slaStatus = calculateSlaStatus(record);
@@ -362,7 +362,7 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
       col: {
         title: 'Board',
         dataIndex: 'board_name',
-        width: '10%',
+        width: '7%',
       }
     });
   }
@@ -374,7 +374,7 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
       col: {
         title: 'Category',
         dataIndex: 'category_name',
-        width: '10%',
+        width: '7%',
         render: (_value: string, record: ITicketListItem) => {
           const categoryId = record.category_id || null;
 
@@ -406,7 +406,7 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
       col: {
         title: 'Client',
         dataIndex: 'client_name',
-        width: '15%',
+        width: '9%',
         render: onClientClick ? (value: string, record: ITicketListItem) => (
           <button
             onClick={(e) => {
@@ -442,7 +442,7 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
       col: {
         title: 'Assigned To',
         dataIndex: 'assigned_to_name',
-        width: '12%',
+        width: '8%',
         render: (value: string | null, record: ITicketListItem) => {
           const additionalCount = record.additional_agent_count || 0;
           const additionalAgents = record.additional_agents || [];
@@ -493,7 +493,7 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
       col: {
         title: 'Due Date',
         dataIndex: 'due_date',
-        width: '12%',
+        width: '9%',
         render: (value: string | null) => {
           if (!value) {
             return <div className="text-sm text-[rgb(var(--color-text-500))]">-</div>;
@@ -538,7 +538,7 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
       col: {
         title: 'Created',
         dataIndex: 'entered_at',
-        width: '12%',
+        width: '10%',
         render: (value: string | null) => (
           <div className="text-sm text-gray-500">
             {value ? format(new Date(value), dateTimeFormat) : '-'}
@@ -555,7 +555,7 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
       col: {
         title: 'Created By',
         dataIndex: 'entered_by_name',
-        width: '12%',
+        width: '6%',
       }
     });
   }
@@ -567,7 +567,7 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
       col: {
         title: 'Tags',
         dataIndex: 'tags',
-        width: '13%',
+        width: '8%',
         sortable: false,
         render: (_value: string, record: ITicketListItem) => {
           if (!record.ticket_id) return null;

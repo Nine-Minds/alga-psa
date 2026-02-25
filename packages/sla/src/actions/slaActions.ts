@@ -659,8 +659,14 @@ export const upsertSlaNotificationThresholds = withAuth(async (
         return [];
       }
 
+      // Deduplicate by threshold_percent (keep last occurrence if duplicates exist)
+      const deduped = new Map<number, ISlaNotificationThresholdInput>();
+      for (const threshold of thresholds) {
+        deduped.set(threshold.threshold_percent, threshold);
+      }
+
       // Insert new thresholds
-      const inserts = thresholds.map(threshold => ({
+      const inserts = Array.from(deduped.values()).map(threshold => ({
         tenant,
         threshold_id: crypto.randomUUID(),
         sla_policy_id: policyId,
