@@ -156,6 +156,33 @@ This document provides a high-level architectural overview of the open-source MS
     - Efficient database indexing
     - Optimized assignment queries
 
+* **SLA Management:** Comprehensive Service Level Agreement system for tracking ticket response and resolution times with configurable policies, business hours, and automated escalation.
+  * Core Components:
+    - Policy management with per-priority targets (response and resolution minutes)
+    - Policy resolution hierarchy: Client > Board > Tenant Default
+    - Business hours schedules with IANA timezone support and holiday calendars
+    - Two-phase SLA timer (response + resolution)
+    - Pause/resume mechanics (status-based and awaiting-client triggers)
+    - Threshold-based notifications (in-app and email)
+    - 3-level escalation system with board-specific manager assignments
+    - CE/EE backend split: PgBoss polling (CE) vs Temporal workflows (EE)
+  * Key Files:
+    - Package: `packages/sla/` (types, services, actions, components)
+    - Event subscribers: `server/src/lib/eventBus/subscribers/slaSubscriber.ts`, `slaNotificationSubscriber.ts`
+    - CE timer job: `server/src/lib/jobs/handlers/slaTimerHandler.ts`
+    - EE Temporal workflow: `ee/temporal-workflows/src/workflows/sla-ticket-workflow.ts`
+    - Settings UI: `server/src/app/msp/settings/sla/page.tsx`
+    - Migrations: `server/migrations/20260219000001` through `20260219000008`
+  * Features:
+    - Automated SLA start on ticket creation via event bus
+    - First response detection from public internal-user comments
+    - Resolution recording on ticket close
+    - Business hours calculation with DST handling via date-fns-tz
+    - ITIL Standard auto-configuration for ITIL priority boards
+    - SLA compliance dashboard with metrics, trends, and breach analysis
+    - Configurable notification thresholds with duplicate prevention
+    - Full audit log for SLA compliance reporting
+
 * **Security:** Implements security measures. RBAC and ABAC logic is under `server/src/lib/auth/`. Authentication is handled through NextAuth.js with multi-portal support:
   * Authentication Routes:
     - **MSP Portal**: `/auth/msp/signin` (purple theme, internal users)
