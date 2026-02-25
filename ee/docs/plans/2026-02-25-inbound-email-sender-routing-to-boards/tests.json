@@ -68,7 +68,7 @@
   {
     "id": "T012",
     "description": "In-app integration: exact sender contact without override routes to client default destination",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F008", "F018"]
   },
   {
