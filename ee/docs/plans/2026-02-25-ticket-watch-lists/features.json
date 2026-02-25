@@ -71,7 +71,7 @@
   {
     "id": "F009",
     "description": "Wire Watch List UI actions to existing ticket update action flow with permission enforcement.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Security / Permissions",
       "Data / API / Integrations"
