@@ -111,7 +111,7 @@
   {
     "id": "T014",
     "description": "UI: adding existing inactive watcher reactivates instead of creating duplicate row.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F006",
       "F014"
