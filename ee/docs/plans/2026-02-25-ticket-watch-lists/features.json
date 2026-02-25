@@ -148,7 +148,7 @@
   {
     "id": "F018",
     "description": "Send watcher notifications for ticket-assigned events when customer-visible assignment notifications are emitted.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Functional Requirements"
     ]
