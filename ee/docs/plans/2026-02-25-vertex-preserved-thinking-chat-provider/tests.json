@@ -217,7 +217,7 @@
   {
     "id": "T026",
     "description": "Declined execution path preserves conversation consistency and returns assistant follow-up without executing endpoint",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F016",
       "F026"

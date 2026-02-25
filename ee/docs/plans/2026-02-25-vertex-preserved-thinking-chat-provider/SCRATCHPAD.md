@@ -114,3 +114,4 @@ Working notes for implementing a new chat provider abstraction with Vertex GLM-5
 - (2026-02-25) Implemented `T023`: completion request tests now assert `tool_choice: "auto"` is preserved for both OpenRouter and Vertex providers.
 - (2026-02-25) Implemented `T024`: added assertions that `function_proposed` responses include `nextMessages` and `modelMessages` with preserved reasoning context.
 - (2026-02-25) Implemented `T025`: execute-after-approval unit coverage now verifies continuation requests replay preserved assistant context plus tool result before follow-up completion.
+- (2026-02-25) Implemented `T026`: decline-path unit coverage verifies endpoint execution is skipped while continuation messaging remains consistent and usable.
