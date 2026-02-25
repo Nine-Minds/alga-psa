@@ -75,3 +75,4 @@ Working notes for implementing a new chat provider abstraction with Vertex GLM-5
 - (2026-02-25) Implemented `F016`: execute-after-approval continuation now reuses validated prior messages (including `reasoning_content`) before replaying tool results and requesting follow-up completion.
 - (2026-02-25) Implemented `F017`: replaced token-only stream route behavior with structured event orchestration (`content_delta`, `reasoning_delta`, `function_proposed`, `done`) via a new `ChatCompletionsService.createStructuredCompletionStream` loop.
 - (2026-02-25) Implemented `F018`: stream route now emits explicit `content_delta` SSE events while keeping legacy `{content, done:false}` compatibility fields.
+- (2026-02-25) Implemented `F019`: stream route now emits explicit `reasoning_delta` SSE events sourced from provider reasoning delta fields.

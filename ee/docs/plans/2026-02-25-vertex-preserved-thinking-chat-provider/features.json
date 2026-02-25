@@ -110,7 +110,7 @@
   {
     "id": "F019",
     "description": "Define and emit structured SSE reasoning-delta events",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Goals", "Data / API / Integrations"]
   },
   {
