@@ -92,7 +92,7 @@
   {
     "id": "T016",
     "description": "Workflow integration: resolve_inbound_ticket_context returns client-default destination outcome",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F009", "F019"]
   },
   {
