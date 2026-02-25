@@ -128,6 +128,38 @@ function applyOauthMechanismOverride(client: ImapFlow, mechanism: 'XOAUTH2' | 'O
   anyClient.commands = patchedCommands;
 }
 
+function extractMessageIds(value: unknown): string[] {
+  const entries: string[] = Array.isArray(value)
+    ? value.filter((entry): entry is string => typeof entry === 'string')
+    : typeof value === 'string'
+      ? [value]
+      : [];
+
+  const normalized = new Set<string>();
+
+  for (const entry of entries) {
+    const trimmed = entry.trim();
+    if (!trimmed) continue;
+
+    const matches = trimmed.match(/<[^<>]+>/g);
+    if (matches?.length) {
+      for (const match of matches) {
+        const cleaned = match.trim();
+        if (cleaned.length > 2) {
+          normalized.add(cleaned);
+        }
+      }
+      continue;
+    }
+
+    if (trimmed.length > 2 && trimmed !== '<' && trimmed !== '>') {
+      normalized.add(trimmed);
+    }
+  }
+
+  return Array.from(normalized);
+}
+
 interface ImapProviderRow {
   id: string;
   tenant: string;
@@ -635,6 +667,9 @@ class ImapFolderListener {
     const cc = parsed.cc?.value || [];
     const baseId = parsed.messageId || this.computeFallbackMessageId(parsed, uid);
     const attachmentLimit = Number(process.env.IMAP_MAX_ATTACHMENT_BYTES || 0);
+    const references = extractMessageIds(parsed.references);
+    const inReplyTo = extractMessageIds(parsed.inReplyTo)[0];
+    const threadId = references[0] || inReplyTo;
 
     return {
       id: baseId,
@@ -668,9 +703,9 @@ class ImapFolderListener {
           size: att.size || 0,
           contentId: att.contentId,
         })),
-      threadId: parsed.references?.[0],
-      references: parsed.references || undefined,
-      inReplyTo: parsed.inReplyTo || undefined,
+      threadId: threadId || undefined,
+      references: references.length ? references : undefined,
+      inReplyTo: inReplyTo || undefined,
       headers: parsed.headers ? Object.fromEntries(parsed.headers) : undefined,
     } as EmailMessageDetails;
   }

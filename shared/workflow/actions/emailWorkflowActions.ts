@@ -387,6 +387,42 @@ export async function createOrFindContact(
 // EMAIL TICKET THREADING ACTIONS
 // =============================================================================
 
+function normalizeThreadLookupValue(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  if (trimmed === '<' || trimmed === '>' || trimmed === '<>') return null;
+  return trimmed;
+}
+
+function normalizeThreadLookupList(value: unknown): string[] {
+  const entries: string[] = Array.isArray(value)
+    ? value.filter((entry): entry is string => typeof entry === 'string')
+    : typeof value === 'string'
+      ? [value]
+      : [];
+
+  const normalized = new Set<string>();
+  for (const entry of entries) {
+    const trimmed = entry.trim();
+    if (!trimmed) continue;
+
+    const matches = trimmed.match(/<[^<>]+>/g);
+    if (matches?.length) {
+      for (const match of matches) {
+        const cleaned = normalizeThreadLookupValue(match);
+        if (cleaned) normalized.add(cleaned);
+      }
+      continue;
+    }
+
+    const cleaned = normalizeThreadLookupValue(trimmed);
+    if (cleaned) normalized.add(cleaned);
+  }
+
+  return Array.from(normalized);
+}
+
 /**
  * Find existing ticket by email thread information
  */
@@ -397,29 +433,34 @@ export async function findTicketByEmailThread(
   const { withAdminTransaction } = await import('@alga-psa/db');
 
   return await withAdminTransaction(async (trx: Knex.Transaction) => {
+      const threadId = normalizeThreadLookupValue(input.threadId);
+      const inReplyTo = normalizeThreadLookupValue(input.inReplyTo);
+      const references = normalizeThreadLookupList((input as any).references);
+      const originalMessageId = normalizeThreadLookupValue(input.originalMessageId);
+
       // Strategy 1: Search by thread ID if available
-      if (input.threadId) {
-        const ticket = await findTicketByThreadId(trx, tenant, input.threadId);
+      if (threadId) {
+        const ticket = await findTicketByThreadId(trx, tenant, threadId);
         if (ticket) return ticket;
       }
 
       // Strategy 2: Search by In-Reply-To header (most reliable)
-      if (input.inReplyTo) {
-        const ticket = await findTicketByOriginalMessageId(trx, tenant, input.inReplyTo);
+      if (inReplyTo) {
+        const ticket = await findTicketByOriginalMessageId(trx, tenant, inReplyTo);
         if (ticket) return ticket;
       }
 
       // Strategy 3: Search by References headers
-      if (input.references && input.references.length > 0) {
-        for (const messageId of input.references) {
+      if (references.length > 0) {
+        for (const messageId of references) {
           const ticket = await findTicketByOriginalMessageId(trx, tenant, messageId);
           if (ticket) return ticket;
         }
       }
 
       // Strategy 4: Search by original message ID directly
-      if (input.originalMessageId) {
-        const ticket = await findTicketByOriginalMessageId(trx, tenant, input.originalMessageId);
+      if (originalMessageId) {
+        const ticket = await findTicketByOriginalMessageId(trx, tenant, originalMessageId);
         if (ticket) return ticket;
       }
 
