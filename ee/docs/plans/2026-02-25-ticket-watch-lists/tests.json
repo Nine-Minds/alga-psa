@@ -36,7 +36,7 @@
   {
     "id": "T005",
     "description": "Unit: merge preserves optional metadata when available and non-empty.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F004"
     ]
