@@ -251,7 +251,7 @@
   {
     "id": "T030",
     "description": "Subscriber unit: ticket-updated non-accumulator path sends watcher notifications immediately.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F017"
     ]
