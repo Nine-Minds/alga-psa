@@ -108,3 +108,4 @@ Working notes for implementing a new chat provider abstraction with Vertex GLM-5
 - (2026-02-25) Implemented `T017`: response parsing coverage now asserts `reasoning_content` is preferred over fallback `reasoning` when both are present.
 - (2026-02-25) Implemented `T018`: response parsing coverage includes fallback to `reasoning` when `reasoning_content` is absent.
 - (2026-02-25) Implemented `T019`: added tool-turn assertions proving assistant messages appended during function proposal include preserved `reasoning_content`.
+- (2026-02-25) Implemented `T020`: added final-response assertions ensuring non-tool assistant messages still carry preserved `reasoning_content`.

@@ -168,7 +168,7 @@
   {
     "id": "T020",
     "description": "Assistant message appended on final non-tool response includes preserved reasoning_content",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F014"
     ]
