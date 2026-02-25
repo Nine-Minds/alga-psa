@@ -103,7 +103,7 @@
   {
     "id": "T013",
     "description": "UI: adding invalid email shows validation error and does not persist.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F006"
     ]

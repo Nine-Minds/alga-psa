@@ -124,3 +124,4 @@ Working notes for the ticket watch-list feature plan. This log captures clarifie
 - (2026-02-25) Bookkeeping: set `tests.json` implemented=true for T010 after validating watch-list test coverage.
 - (2026-02-25) Bookkeeping: set `tests.json` implemented=true for T011 after validating watch-list test coverage.
 - (2026-02-25) Bookkeeping: set `tests.json` implemented=true for T012 after validating watch-list test coverage.
+- (2026-02-25) Bookkeeping: set `tests.json` implemented=true for T013 after validating watch-list test coverage.
