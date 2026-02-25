@@ -499,6 +499,42 @@ export async function resolveEffectiveInboundTicketDefaults(
       }
     }
 
+    if (input.domainMatchedClientId) {
+      const domainClientDefaultsId = await getClientInboundDestinationDefaultsId(
+        trx,
+        input.tenant,
+        input.domainMatchedClientId
+      );
+      if (domainClientDefaultsId) {
+        const domainClientDefaults = await getActiveInboundTicketDefaultsById(
+          trx,
+          input.tenant,
+          domainClientDefaultsId
+        );
+
+        if (domainClientDefaults) {
+          console.debug('resolveEffectiveInboundTicketDefaults: resolved destination', {
+            ...logBase,
+            source: 'client_default_from_domain',
+            resolvedClientId: input.domainMatchedClientId,
+          });
+          return {
+            defaults: domainClientDefaults,
+            source: 'client_default_from_domain',
+          };
+        }
+
+        fallbackReason = fallbackReason ?? 'invalid_or_inactive_client_default_from_domain';
+        console.warn('resolveEffectiveInboundTicketDefaults: invalid domain client default destination; using fallback', {
+          ...logBase,
+          source: 'client_default_from_domain',
+          resolvedClientId: input.domainMatchedClientId,
+          configuredDefaultsId: domainClientDefaultsId,
+          fallback: 'provider_default',
+        });
+      }
+    }
+
     console.debug('resolveEffectiveInboundTicketDefaults: resolved destination', {
       ...logBase,
       source: 'provider_default',

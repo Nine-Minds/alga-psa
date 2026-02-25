@@ -401,12 +401,29 @@ export function registerEmailWorkflowActionsV2(): void {
         };
       }
 
+      let domainMatchedClientId: string | null = null;
+      let domainMatchedContactId: string | null = null;
+      if (!matchedClient?.contact_id) {
+        try {
+          const domain = extractEmailDomain(input.senderEmail);
+          if (domain) {
+            domainMatchedClientId = await findClientIdByInboundEmailDomain(domain, tenant);
+            if (domainMatchedClientId) {
+              domainMatchedContactId = await findValidClientPrimaryContactId(domainMatchedClientId, tenant);
+            }
+          }
+        } catch {
+          // Best-effort only; fall back to defaults.
+        }
+      }
+
       const destinationResolution = await resolveEffectiveInboundTicketDefaults({
         tenant,
         providerId,
         providerDefaults,
         matchedContactId: matchedClient?.contact_id ?? null,
         matchedContactClientId: matchedClient?.client_id ?? null,
+        domainMatchedClientId,
       });
 
       const ticketDefaults = destinationResolution.defaults;
@@ -433,20 +450,10 @@ export function registerEmailWorkflowActionsV2(): void {
       let targetContactId = matchedClient?.contact_id ?? null;
       const targetAuthorUserId = matchedClient?.user_id ?? null;
 
-      // Domain fallback: if no exact contact match, match a client via explicitly configured inbound domains.
-      if (!matchedClient?.contact_id) {
-        try {
-          const domain = extractEmailDomain(input.senderEmail);
-          if (domain) {
-            const domainMatchedClientId = await findClientIdByInboundEmailDomain(domain, tenant);
-            if (domainMatchedClientId) {
-              targetClientId = domainMatchedClientId;
-              targetContactId = await findValidClientPrimaryContactId(domainMatchedClientId, tenant);
-            }
-          }
-        } catch {
-          // Best-effort only; fall back to defaults.
-        }
+      // Domain fallback: if no exact contact match, use explicit domain-mapped client/contact.
+      if (!matchedClient?.contact_id && domainMatchedClientId) {
+        targetClientId = domainMatchedClientId;
+        targetContactId = domainMatchedContactId;
       }
 
       const targetLocationId =

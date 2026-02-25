@@ -47,7 +47,7 @@
   {
     "id": "F006",
     "description": "Resolve domain-matched client destination via existing `client_inbound_email_domains` when exact contact is absent",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "Requirements > Functional Requirements"

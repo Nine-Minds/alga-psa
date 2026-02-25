@@ -465,12 +465,25 @@ export async function processInboundEmailInApp(
     defaultClientId: providerDefaults.client_id ?? null,
   });
 
+  let domainMatchedClientId: string | null = null;
+  let domainMatchedContactId: string | null = null;
+  if (!matchedSenderContact && senderEmail) {
+    const senderDomain = extractEmailDomain(senderEmail);
+    if (senderDomain) {
+      domainMatchedClientId = await findClientIdByInboundEmailDomain(senderDomain, tenantId);
+      if (domainMatchedClientId) {
+        domainMatchedContactId = await findValidClientPrimaryContactId(domainMatchedClientId, tenantId);
+      }
+    }
+  }
+
   const destinationResolution = await resolveEffectiveInboundTicketDefaults({
     tenant: tenantId,
     providerId,
     providerDefaults,
     matchedContactId: matchedSenderContact?.contact_id ?? null,
     matchedContactClientId: matchedSenderContact?.client_id ?? null,
+    domainMatchedClientId,
   });
 
   const defaults = destinationResolution.defaults;
@@ -495,17 +508,10 @@ export async function processInboundEmailInApp(
   let targetClientId = matchedSenderContact?.client_id ?? defaults.client_id;
   let targetContactId = matchedSenderContact?.contact_id;
 
-  // Domain fallback: if no exact contact match, try to match a client from explicitly configured inbound domains.
-  if (!matchedSenderContact && senderEmail) {
-    const senderDomain = extractEmailDomain(senderEmail);
-    if (senderDomain) {
-      const domainMatchedClientId = await findClientIdByInboundEmailDomain(senderDomain, tenantId);
-      if (domainMatchedClientId) {
-        targetClientId = domainMatchedClientId;
-        targetContactId =
-          (await findValidClientPrimaryContactId(domainMatchedClientId, tenantId)) ?? undefined;
-      }
-    }
+  // Domain fallback: if no exact contact match, use explicitly configured inbound-domain client mapping.
+  if (!matchedSenderContact && domainMatchedClientId) {
+    targetClientId = domainMatchedClientId;
+    targetContactId = domainMatchedContactId ?? undefined;
   }
 
   // Only treat the email as authored by a contact when we have an exact sender email match.
