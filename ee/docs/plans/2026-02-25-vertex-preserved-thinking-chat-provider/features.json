@@ -50,7 +50,7 @@
   {
     "id": "F009",
     "description": "Preserve reasoning_content through conversation normalization and model-message conversion",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Goals", "Functional Requirements"]
   },
   {

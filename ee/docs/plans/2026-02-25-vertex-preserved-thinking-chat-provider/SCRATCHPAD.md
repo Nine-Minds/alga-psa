@@ -62,3 +62,4 @@ Working notes for implementing a new chat provider abstraction with Vertex GLM-5
 - (2026-02-25) Implemented `F006`: provider request overrides now expose Vertex turn-level thinking disable payload (`extra_body.thinking.enabled=false`) driven by `VERTEX_ENABLE_THINKING` or explicit per-turn override.
 - (2026-02-25) Implemented `F007`: added optional `reasoning_content` to shared chat message contracts in EE chat client + server chat completion service types.
 - (2026-02-25) Implemented `F008`: completion/execute and streaming request validators now accept `reasoning_content` and reject malformed non-string values.
+- (2026-02-25) Implemented `F009`: `reasoning_content` is preserved through conversation normalization and injected into Vertex assistant message payloads during OpenAI-compatible conversion.
