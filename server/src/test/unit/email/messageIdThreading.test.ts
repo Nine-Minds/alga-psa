@@ -368,6 +368,85 @@ describe('Message-ID Based Email Threading', () => {
 
       expect(result).toBeNull();
     });
+
+    it('should ignore malformed placeholder thread IDs and fallback to In-Reply-To', async () => {
+      const malformedThreadTicketId = uuidv4();
+      const correctTicketId = uuidv4();
+      const targetMessageId = `<target-${Date.now()}@example.com>`;
+
+      await knex('tickets').insert([
+        {
+          tenant: testTenant,
+          ticket_id: malformedThreadTicketId,
+          ticket_number: `#${Date.now()}-a`,
+          client_id: testClientId,
+          title: 'Malformed ThreadId Ticket',
+          email_metadata: {
+            threadId: '<',
+            messageId: `<other-${Date.now()}@example.com>`
+          },
+          entered_at: new Date(),
+          updated_at: new Date()
+        },
+        {
+          tenant: testTenant,
+          ticket_id: correctTicketId,
+          ticket_number: `#${Date.now()}-b`,
+          client_id: testClientId,
+          title: 'Correct In-Reply-To Ticket',
+          email_metadata: {
+            messageId: targetMessageId
+          },
+          entered_at: new Date(),
+          updated_at: new Date()
+        }
+      ]);
+      cleanup.push(async () => {
+        await knex('tickets').whereIn('ticket_id', [malformedThreadTicketId, correctTicketId]).andWhere({ tenant: testTenant }).del();
+      });
+
+      const result = await findTicketByEmailThread(
+        {
+          threadId: '<',
+          inReplyTo: targetMessageId,
+        },
+        testTenant
+      );
+
+      expect(result).not.toBeNull();
+      expect(result!.ticketId).toBe(correctTicketId);
+    });
+
+    it('should normalize single-string references payloads', async () => {
+      const ticketId = uuidv4();
+      const referencedMessageId = `<ref-single-${Date.now()}@example.com>`;
+
+      await knex('tickets').insert({
+        tenant: testTenant,
+        ticket_id: ticketId,
+        ticket_number: `#${Date.now()}`,
+        client_id: testClientId,
+        title: 'Single String References Ticket',
+        email_metadata: {
+          messageId: referencedMessageId
+        },
+        entered_at: new Date(),
+        updated_at: new Date()
+      });
+      cleanup.push(async () => {
+        await knex('tickets').where({ tenant: testTenant, ticket_id: ticketId }).del();
+      });
+
+      const result = await findTicketByEmailThread(
+        {
+          references: referencedMessageId as unknown as string[],
+        },
+        testTenant
+      );
+
+      expect(result).not.toBeNull();
+      expect(result!.ticketId).toBe(ticketId);
+    });
   });
 
   describe('findTicketByEmailThread - Tenant Isolation', () => {

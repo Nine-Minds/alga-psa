@@ -43,6 +43,10 @@ spec:
         {{- end }}
     spec:
       serviceAccountName: {{ include "imap-service.serviceAccountName" . }}
+      {{- if .Values.image.credentials }}
+      imagePullSecrets:
+        - name: {{ .Values.image.credentials | quote }}
+      {{- end }}
       {{- with .Values.podSecurityContext }}
       securityContext:
         {{- toYaml . | nindent 8 }}

@@ -95,6 +95,71 @@ function normalizeImapError(error: any): {
   };
 }
 
+function applyOauthMechanismOverride(client: ImapFlow, mechanism: 'XOAUTH2' | 'OAUTHBEARER'): void {
+  if (mechanism !== 'XOAUTH2') return;
+
+  const anyClient = client as any;
+  const commands: Map<string, any> | undefined = anyClient.commands;
+  if (!commands?.get) return;
+
+  const originalAuthenticate = commands.get('AUTHENTICATE');
+  if (typeof originalAuthenticate !== 'function') return;
+
+  const patchedCommands = new Map(commands);
+  patchedCommands.set('AUTHENTICATE', async (connection: any, username: string, authOpts: any) => {
+    if (authOpts?.accessToken) {
+      const caps = connection?.capabilities;
+      const hadOauthBearer = Boolean(caps?.has?.('AUTH=OAUTHBEARER'));
+      const hasXoauth = Boolean(caps?.has?.('AUTH=XOAUTH') || caps?.has?.('AUTH=XOAUTH2'));
+
+      if (hadOauthBearer && hasXoauth && caps?.delete && caps?.set) {
+        caps.delete('AUTH=OAUTHBEARER');
+        try {
+          return await originalAuthenticate(connection, username, authOpts);
+        } finally {
+          caps.set('AUTH=OAUTHBEARER', true);
+        }
+      }
+    }
+
+    return await originalAuthenticate(connection, username, authOpts);
+  });
+
+  anyClient.commands = patchedCommands;
+}
+
+function extractMessageIds(value: unknown): string[] {
+  const entries: string[] = Array.isArray(value)
+    ? value.filter((entry): entry is string => typeof entry === 'string')
+    : typeof value === 'string'
+      ? [value]
+      : [];
+
+  const normalized = new Set<string>();
+
+  for (const entry of entries) {
+    const trimmed = entry.trim();
+    if (!trimmed) continue;
+
+    const matches = trimmed.match(/<[^<>]+>/g);
+    if (matches?.length) {
+      for (const match of matches) {
+        const cleaned = match.trim();
+        if (cleaned.length > 2) {
+          normalized.add(cleaned);
+        }
+      }
+      continue;
+    }
+
+    if (trimmed.length > 2 && trimmed !== '<' && trimmed !== '>') {
+      normalized.add(trimmed);
+    }
+  }
+
+  return Array.from(normalized);
+}
+
 interface ImapProviderRow {
   id: string;
   tenant: string;
@@ -412,9 +477,11 @@ class ImapFolderListener {
       user: this.provider.username,
     };
 
+    const oauthMechanism = process.env.IMAP_OAUTH_AUTH_MECHANISM === 'OAUTHBEARER' ? 'OAUTHBEARER' : 'XOAUTH2';
+
     if (this.provider.auth_type === 'oauth2') {
       auth.accessToken = this.provider.access_token;
-      auth.method = process.env.IMAP_OAUTH_AUTH_MECHANISM === 'OAUTHBEARER' ? 'OAUTHBEARER' : 'XOAUTH2';
+      auth.method = oauthMechanism;
     } else {
       auth.pass = await this.getPasswordSecret();
     }
@@ -429,7 +496,7 @@ class ImapFolderListener {
     const tlsOptions = (secure || this.provider.allow_starttls)
       ? { rejectUnauthorized }
       : undefined;
-    return new ImapFlow({
+    const client = new ImapFlow({
       host: this.provider.host,
       port: Number(this.provider.port),
       secure,
@@ -438,6 +505,10 @@ class ImapFolderListener {
       logger: false,
       tls: tlsOptions,
     });
+
+    applyOauthMechanismOverride(client, oauthMechanism);
+
+    return client;
   }
 
   private async connectWithTimeout(client: ImapFlow) {
@@ -507,7 +578,9 @@ class ImapFolderListener {
 
       let uids: number[] | string = range;
       try {
-        const searchResult = await client.search({ uid: range });
+        // Always use UID mode. Default search/fetch behavior in imapflow is sequence-number based,
+        // and mixing sequence numbers with UID cursors causes new-message detection gaps.
+        const searchResult = await client.search({ uid: range }, { uid: true });
         if (Array.isArray(searchResult) && searchResult.length > 0) {
           const filtered = searchResult.filter((uid) => uid >= startUid);
           if (filtered.length > 0) {
@@ -516,7 +589,7 @@ class ImapFolderListener {
             await this.updateLastSyncAt();
             return;
           }
-        } else {
+        } else if (Array.isArray(searchResult) && searchResult.length === 0) {
           await this.updateLastSyncAt();
           return;
         }
@@ -524,7 +597,7 @@ class ImapFolderListener {
         // fallback to fetch range
       }
 
-      for await (const message of client.fetch(uids, { uid: true, source: true })) {
+      for await (const message of client.fetch(uids, { uid: true, source: true }, { uid: true })) {
         if (!message?.source) continue;
         if (message.uid && message.uid < startUid) continue;
         if (message.uid && message.uid > maxUid) {
@@ -594,6 +667,9 @@ class ImapFolderListener {
     const cc = parsed.cc?.value || [];
     const baseId = parsed.messageId || this.computeFallbackMessageId(parsed, uid);
     const attachmentLimit = Number(process.env.IMAP_MAX_ATTACHMENT_BYTES || 0);
+    const references = extractMessageIds(parsed.references);
+    const inReplyTo = extractMessageIds(parsed.inReplyTo)[0];
+    const threadId = references[0] || inReplyTo;
 
     return {
       id: baseId,
@@ -627,9 +703,9 @@ class ImapFolderListener {
           size: att.size || 0,
           contentId: att.contentId,
         })),
-      threadId: parsed.references?.[0],
-      references: parsed.references || undefined,
-      inReplyTo: parsed.inReplyTo || undefined,
+      threadId: threadId || undefined,
+      references: references.length ? references : undefined,
+      inReplyTo: inReplyTo || undefined,
       headers: parsed.headers ? Object.fromEntries(parsed.headers) : undefined,
     } as EmailMessageDetails;
   }
@@ -661,18 +737,21 @@ class ImapFolderListener {
   }
 
   private async idleLoop(client: ImapFlow) {
+    const idlePollMs = Number(process.env.IMAP_IDLE_POLL_MS || DEFAULT_IDLE_POLL_MS);
     while (this.running) {
       try {
-        await Promise.race([
-          client.idle(),
-          new Promise((resolve) => setTimeout(resolve, jitterMs(DEFAULT_IDLE_POLL_MS, this.jitterPct))).then(async () => {
-            try {
-              await client.noop();
-            } catch {
-              // ignore noop failures
-            }
-          })
-        ]);
+        const idlePromise = client
+          .idle()
+          .then(() => ({ kind: 'idle' as const }))
+          .catch((error) => ({ kind: 'error' as const, error }));
+
+        const wakePromise = sleep(jitterMs(idlePollMs, this.jitterPct)).then(() => ({ kind: 'timer' as const }));
+        const wake: { kind: 'idle' | 'timer' | 'error'; error?: any } = await Promise.race([idlePromise, wakePromise]);
+
+        if (wake.kind === 'error') {
+          throw wake.error;
+        }
+
         if (!this.running) return;
         await this.syncNewMessages(client);
         this.idleFailures = 0;
