@@ -1,0 +1,102 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+type QueryPlanRow = {
+  table: string;
+  where: Record<string, unknown>;
+  row: any;
+};
+
+const withAdminTransactionMock = vi.fn();
+let trxImpl: any = null;
+
+vi.mock('@alga-psa/db', () => ({
+  withAdminTransaction: (callback: (trx: any) => Promise<any>) =>
+    withAdminTransactionMock(callback),
+}));
+
+vi.mock('@alga-psa/event-bus/publishers', () => ({
+  publishWorkflowEvent: vi.fn(),
+}));
+
+function whereMatches(actual: Record<string, unknown>, expected: Record<string, unknown>): boolean {
+  return Object.entries(expected).every(([key, value]) => actual[key] === value);
+}
+
+function createTrxForQueryPlan(plan: QueryPlanRow[]) {
+  const tablesCalled: string[] = [];
+
+  const trx = (table: string) => {
+    tablesCalled.push(table);
+    let whereClause: Record<string, unknown> = {};
+    const builder: any = {
+      select: vi.fn(() => builder),
+      where: vi.fn((value: Record<string, unknown>) => {
+        whereClause = value ?? {};
+        return builder;
+      }),
+      first: vi.fn(async () => {
+        const match = plan.find((entry) => entry.table === table && whereMatches(whereClause, entry.where));
+        return match?.row ?? null;
+      }),
+    };
+
+    return builder;
+  };
+
+  return { trx, tablesCalled };
+}
+
+describe('resolveEffectiveInboundTicketDefaults precedence', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    withAdminTransactionMock.mockImplementation(async (callback: (trx: any) => Promise<any>) =>
+      callback(trxImpl)
+    );
+  });
+
+  it('T005: exact sender contact with contact override selects contact destination', async () => {
+    const contactDefaults = {
+      board_id: 'board-contact-1',
+      status_id: 'status-1',
+      priority_id: 'priority-1',
+      client_id: 'client-contact',
+      entered_by: 'user-1',
+      category_id: null,
+      subcategory_id: null,
+      location_id: null,
+    };
+
+    const { trx, tablesCalled } = createTrxForQueryPlan([
+      {
+        table: 'contacts',
+        where: { tenant: 'tenant-1', contact_name_id: 'contact-1' },
+        row: { inbound_ticket_defaults_id: 'defaults-contact-1', client_id: 'client-contact' },
+      },
+      {
+        table: 'inbound_ticket_defaults',
+        where: { tenant: 'tenant-1', id: 'defaults-contact-1', is_active: true },
+        row: contactDefaults,
+      },
+    ]);
+    trxImpl = trx;
+
+    const { resolveEffectiveInboundTicketDefaults } = await import('../emailWorkflowActions');
+    const result = await resolveEffectiveInboundTicketDefaults({
+      tenant: 'tenant-1',
+      providerId: 'provider-1',
+      providerDefaults: {
+        board_id: 'board-provider',
+        status_id: 'status-provider',
+        priority_id: 'priority-provider',
+      },
+      matchedContactId: 'contact-1',
+      matchedContactClientId: 'client-contact',
+      domainMatchedClientId: null,
+    });
+
+    expect(result.source).toBe('contact_override');
+    expect(result.defaults).toEqual(contactDefaults);
+    expect(result.fallbackReason).toBeUndefined();
+    expect(tablesCalled).not.toContain('clients');
+  });
+});

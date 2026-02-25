@@ -56,6 +56,9 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
 - (2026-02-25) Targeted migration integration test attempted:
   - `cd server && npx vitest run src/test/integration/inboundTicketDestinationMigrations.integration.test.ts --reporter=dot`
   - Blocker in local env: Vitest startup fails because `vitest` package is not installed in this worktree.
+- (2026-02-25) Targeted resolver unit test attempted:
+  - `npx vitest run shared/workflow/actions/__tests__/emailWorkflowActions.destinationResolver.test.ts --reporter=dot`
+  - Blocker in local env: Vitest startup fails because `dotenv` package is missing from active root node_modules resolution path.
 
 ## Links / References
 
@@ -128,3 +131,6 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
   - executes migration `down` functions inside a transaction and asserts both columns/indexes are removed
   - executes migration `up` functions inside the same transaction and asserts both columns/indexes are restored
   - rolls back transaction to avoid mutating shared integration DB state
+- (2026-02-25) Completed `T005` by adding shared resolver unit coverage in `shared/workflow/actions/__tests__/emailWorkflowActions.destinationResolver.test.ts` for precedence path:
+  - exact sender contact + contact override resolves `source=contact_override`
+  - returns contact override defaults and does not consult client defaults
