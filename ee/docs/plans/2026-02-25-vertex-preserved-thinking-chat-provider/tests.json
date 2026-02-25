@@ -396,7 +396,7 @@
   {
     "id": "T047",
     "description": "Decline action posts /api/chat/v1/execute with action=decline and keeps conversation usable",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F026"
     ]

@@ -135,3 +135,4 @@ Working notes for implementing a new chat provider abstraction with Vertex GLM-5
 - (2026-02-25) Implemented `T044`: Chat streaming UI tests verify in-progress reasoning state updates as `reasoning_delta` events arrive.
 - (2026-02-25) Implemented `T045`: Chat stream tests now assert pending function state is populated from streamed `function_proposed` events.
 - (2026-02-25) Implemented `T046`: Chat approve-path tests verify `/api/chat/v1/execute` receives streamed `functionCall` metadata unchanged.
+- (2026-02-25) Implemented `T047`: Chat decline-path tests verify `/api/chat/v1/execute` posts `action=decline` while preserving usable conversation state.
