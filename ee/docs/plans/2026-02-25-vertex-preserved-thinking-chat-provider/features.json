@@ -38,7 +38,7 @@
   {
     "id": "F007",
     "description": "Extend chat completion message contract with optional reasoning_content field in EE server and client types",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Functional Requirements", "Data / API / Integrations"]
   },
   {

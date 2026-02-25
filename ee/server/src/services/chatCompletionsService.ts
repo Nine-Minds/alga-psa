@@ -12,6 +12,7 @@ import { parseAssistantContent, ParsedAssistantContent } from '../utils/chatCont
 import { reprovisionExtension } from '../lib/actions/extensionDomainActions';
 import {
   resolveChatProvider,
+  type ChatProviderId,
   type ResolvedChatProvider,
 } from './chatProviderResolver';
 
@@ -31,6 +32,7 @@ export type ChatCompletionMessage = {
   role: 'user' | 'assistant' | 'function';
   content?: string;
   reasoning?: string;
+  reasoning_content?: string;
   name?: string;
   function_call?: {
     name: string;
@@ -73,6 +75,7 @@ export interface AssistantMessageResponse {
     role: 'assistant';
     content: string;
     reasoning?: string;
+    reasoning_content?: string;
   };
   functionCall?: {
     name: string;
@@ -568,6 +571,7 @@ export class ChatCompletionsService {
           role: 'assistant',
           content: parsedContent.raw || undefined,
           reasoning: parsedContent.reasoning,
+          reasoning_content: parsedContent.reasoning,
           function_call: {
             name: functionName,
             arguments: parsedArgs,
@@ -632,6 +636,7 @@ export class ChatCompletionsService {
         role: 'assistant',
         content: parsedContent.raw || undefined,
         reasoning: parsedContent.reasoning,
+        reasoning_content: parsedContent.reasoning,
       };
 
       const nextMessages = [...conversation, assistantMessage];
@@ -642,6 +647,7 @@ export class ChatCompletionsService {
           role: 'assistant',
           content: this.buildUserFacingContent(parsedContent),
           reasoning: parsedContent.reasoning,
+          reasoning_content: parsedContent.reasoning,
         },
         nextMessages: this.sanitizeMessagesForClient(nextMessages),
         modelMessages: nextMessages,
@@ -660,11 +666,12 @@ export class ChatCompletionsService {
     }
 
     return raw.map((item) => {
-      if (!item || typeof item !== 'object') {
+      if (!item || typeof item !== 'object' || Array.isArray(item)) {
         throw new Error('Invalid messages payload');
       }
 
-      const role = (item as any).role;
+      const messageRecord = item as Record<string, unknown>;
+      const role = messageRecord.role;
       if (role !== 'user' && role !== 'assistant' && role !== 'function') {
         throw new Error('Invalid messages payload');
       }
@@ -674,22 +681,38 @@ export class ChatCompletionsService {
       };
 
       if (role === 'function') {
-        message.name = typeof (item as any).name === 'string' ? (item as any).name : undefined;
-        message.content = typeof (item as any).content === 'string' ? (item as any).content : undefined;
-        message.tool_call_id =
-          typeof (item as any).tool_call_id === 'string' ? (item as any).tool_call_id : undefined;
+        message.name = this.readOptionalStringField(messageRecord, 'name');
+        message.content = this.readOptionalStringField(messageRecord, 'content');
+        message.tool_call_id = this.readOptionalStringField(messageRecord, 'tool_call_id');
         if (!message.name) {
           throw new Error('Invalid messages payload');
         }
         return message;
       }
 
-      if ((item as any).content && typeof (item as any).content === 'string') {
-        message.content = (item as any).content;
+      message.content = this.readOptionalStringField(messageRecord, 'content');
+      message.reasoning = this.readOptionalStringField(messageRecord, 'reasoning');
+      message.reasoning_content = this.readOptionalStringField(
+        messageRecord,
+        'reasoning_content',
+      );
+      if (!message.reasoning_content && message.reasoning) {
+        message.reasoning_content = message.reasoning;
+      }
+      if (!message.reasoning && message.reasoning_content) {
+        message.reasoning = message.reasoning_content;
       }
 
-      if ((item as any).function_call) {
-        const fn = (item as any).function_call;
+      if (messageRecord.function_call !== undefined) {
+        if (
+          !messageRecord.function_call ||
+          typeof messageRecord.function_call !== 'object' ||
+          Array.isArray(messageRecord.function_call)
+        ) {
+          throw new Error('Invalid messages payload');
+        }
+
+        const fn = messageRecord.function_call as Record<string, unknown>;
         if (typeof fn.name !== 'string') {
           throw new Error('Invalid messages payload');
         }
@@ -697,12 +720,24 @@ export class ChatCompletionsService {
           name: fn.name,
           arguments: this.ensureArguments(fn.arguments),
         };
-        message.tool_call_id =
-          typeof (item as any).tool_call_id === 'string' ? (item as any).tool_call_id : undefined;
+        message.tool_call_id = this.readOptionalStringField(messageRecord, 'tool_call_id');
       }
 
       return message;
     });
+  }
+
+  private static readOptionalStringField(
+    record: Record<string, unknown>,
+    key: string,
+  ): string | undefined {
+    if (!(key in record) || record[key] === undefined) {
+      return undefined;
+    }
+    if (typeof record[key] !== 'string') {
+      throw new Error('Invalid messages payload');
+    }
+    return record[key] as string;
   }
 
   private static ensureArguments(args: unknown): Record<string, unknown> {
@@ -793,7 +828,10 @@ export class ChatCompletionsService {
     });
   }
 
-  private static buildOpenAiMessages(messages: ChatCompletionMessage[]) {
+  private static buildOpenAiMessages(
+    messages: ChatCompletionMessage[],
+    providerId: ChatProviderId,
+  ) {
     const systemPrompt = {
       role: 'system' as const,
       content:
@@ -818,7 +856,7 @@ export class ChatCompletionsService {
       }
 
       if (message.role === 'assistant' && message.function_call) {
-        return {
+        const assistantMessage: Record<string, unknown> = {
           role: 'assistant' as const,
           content: message.content ?? '',
           tool_calls: [
@@ -832,6 +870,29 @@ export class ChatCompletionsService {
             },
           ],
         };
+        if (
+          providerId === 'vertex' &&
+          typeof message.reasoning_content === 'string' &&
+          message.reasoning_content.trim().length > 0
+        ) {
+          assistantMessage.reasoning_content = message.reasoning_content;
+        }
+        return assistantMessage;
+      }
+
+      if (message.role === 'assistant') {
+        const assistantMessage: Record<string, unknown> = {
+          role: message.role,
+          content: message.content ?? '',
+        };
+        if (
+          providerId === 'vertex' &&
+          typeof message.reasoning_content === 'string' &&
+          message.reasoning_content.trim().length > 0
+        ) {
+          assistantMessage.reasoning_content = message.reasoning_content;
+        }
+        return assistantMessage;
       }
 
       return {
@@ -866,7 +927,7 @@ export class ChatCompletionsService {
   ): Record<string, unknown> {
     return {
       model: provider.model,
-      messages: this.buildOpenAiMessages(conversation),
+      messages: this.buildOpenAiMessages(conversation, provider.providerId),
       tools: this.buildToolDefinitions(),
       tool_choice: 'auto',
       temperature: 1.0,

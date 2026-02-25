@@ -22,6 +22,7 @@ type ChatCompletionMessage = {
   role: 'user' | 'assistant' | 'function';
   content?: string;
   reasoning?: string;
+  reasoning_content?: string;
   name?: string;
   function_call?: {
     name: string;
@@ -191,7 +192,8 @@ const mapMessagesFromProps = (records: any[]): ChatCompletionMessage[] =>
   records.map((record: any) => ({
     role: record.chat_role === 'bot' ? 'assistant' : 'user',
     content: record.content ?? '',
-    reasoning: record.reasoning ?? undefined,
+    reasoning: record.reasoning ?? record.reasoning_content ?? undefined,
+    reasoning_content: record.reasoning_content ?? record.reasoning ?? undefined,
   }));
 
 
@@ -772,7 +774,8 @@ export const Chat: React.FC<ChatProps> = ({
       if (data.type === 'assistant_message') {
         const modelMessages = data.modelMessages ?? data.nextMessages;
         const assistantContentRaw = (data.message?.content ?? '').trim();
-        const assistantReasoning: string | null = data.message?.reasoning ?? null;
+        const assistantReasoning: string | null =
+          data.message?.reasoning_content ?? data.message?.reasoning ?? null;
         let finalAssistantContent =
           assistantContentRaw.length > 0
             ? assistantContentRaw
@@ -799,6 +802,7 @@ export const Chat: React.FC<ChatProps> = ({
               role: 'assistant',
               content: finalAssistantContent,
               reasoning: assistantReasoning ?? undefined,
+              reasoning_content: assistantReasoning ?? undefined,
             },
           ],
         );

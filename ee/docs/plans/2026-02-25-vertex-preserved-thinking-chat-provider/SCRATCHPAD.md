@@ -60,3 +60,4 @@ Working notes for implementing a new chat provider abstraction with Vertex GLM-5
 - (2026-02-25) Implemented `F004`: Vertex provider resolution now reads `GOOGLE_CLOUD_ACCESS_TOKEN`, `VERTEX_CHAT_MODEL`, and endpoint settings from secrets/env and returns an OpenAI-compatible client.
 - (2026-02-25) Implemented `F005`: Vertex resolver now prefers explicit `VERTEX_OPENAPI_BASE_URL` and falls back to derived project/location endpoint synthesis.
 - (2026-02-25) Implemented `F006`: provider request overrides now expose Vertex turn-level thinking disable payload (`extra_body.thinking.enabled=false`) driven by `VERTEX_ENABLE_THINKING` or explicit per-turn override.
+- (2026-02-25) Implemented `F007`: added optional `reasoning_content` to shared chat message contracts in EE chat client + server chat completion service types.

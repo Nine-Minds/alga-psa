@@ -14,6 +14,7 @@ type IncomingChatMessage = {
   role: 'user' | 'assistant' | 'function';
   content?: string;
   reasoning?: string;
+  reasoning_content?: string;
   name?: string;
   function_call?: {
     name: string;
@@ -47,6 +48,16 @@ function readString(value: unknown): string | undefined {
   return typeof value === 'string' ? value : undefined;
 }
 
+function readOptionalStringField(record: Record<string, unknown>, key: string): string | undefined {
+  if (!(key in record) || record[key] === undefined) {
+    return undefined;
+  }
+  if (typeof record[key] !== 'string') {
+    throw new Error('Invalid messages payload');
+  }
+  return record[key] as string;
+}
+
 function validateMessages(raw: unknown): IncomingChatMessage[] {
   if (!Array.isArray(raw) || raw.length === 0) {
     throw new Error('Invalid messages payload');
@@ -62,9 +73,9 @@ function validateMessages(raw: unknown): IncomingChatMessage[] {
     const message: IncomingChatMessage = { role };
 
     if (role === 'function') {
-      message.name = readString(obj.name);
-      message.content = readString(obj.content);
-      message.tool_call_id = readString(obj.tool_call_id);
+      message.name = readOptionalStringField(obj, 'name');
+      message.content = readOptionalStringField(obj, 'content');
+      message.tool_call_id = readOptionalStringField(obj, 'tool_call_id');
 
       if (!message.name) {
         throw new Error('Invalid messages payload');
@@ -73,10 +84,14 @@ function validateMessages(raw: unknown): IncomingChatMessage[] {
       return message;
     }
 
-    message.content = readString(obj.content);
-    message.reasoning = readString(obj.reasoning);
+    message.content = readOptionalStringField(obj, 'content');
+    message.reasoning = readOptionalStringField(obj, 'reasoning');
+    message.reasoning_content = readOptionalStringField(obj, 'reasoning_content');
+    if (!message.reasoning_content && message.reasoning) {
+      message.reasoning_content = message.reasoning;
+    }
 
-    if (obj.function_call) {
+    if (obj.function_call !== undefined) {
       const fn = asRecord(obj.function_call);
       const fnName = readString(fn.name);
       if (!fnName) {
@@ -92,7 +107,7 @@ function validateMessages(raw: unknown): IncomingChatMessage[] {
               ? (fnArguments as Record<string, unknown>)
               : {},
       };
-      message.tool_call_id = readString(obj.tool_call_id);
+      message.tool_call_id = readOptionalStringField(obj, 'tool_call_id');
     }
 
     return message;
