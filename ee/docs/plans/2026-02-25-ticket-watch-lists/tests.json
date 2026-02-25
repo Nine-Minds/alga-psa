@@ -183,7 +183,7 @@
   {
     "id": "T022",
     "description": "Inbound unit: reply-token path calls watch-list upsert for existing ticket.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F013"
     ]
