@@ -92,7 +92,7 @@
   {
     "id": "F011",
     "description": "Preserve exact-contact and domain-to-client matching behavior while introducing destination routing",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Goals",
       "Requirements > Functional Requirements"
