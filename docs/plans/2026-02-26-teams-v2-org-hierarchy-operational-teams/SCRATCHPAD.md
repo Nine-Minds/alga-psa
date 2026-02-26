@@ -90,3 +90,4 @@
 - (2026-02-26) `fetchTimeSheetsForApproval` now includes reports_to subordinates when `teams-v2` is enabled, using a recursive CTE for subordinate IDs.
 - (2026-02-26) AvailabilitySettings now unions reports_to subordinates with team members when `teams-v2` is enabled.
 - (2026-02-26) Added `getReportsToSubordinates` action and updated SchedulePage to grant availability access for reports_to managers when `teams-v2` is enabled.
+- (2026-02-26) Added migrations for team member roles: `server/migrations/20260226171000_add_role_to_team_members.cjs` and backfill lead roles in `20260226171500_seed_team_member_leads.cjs`.

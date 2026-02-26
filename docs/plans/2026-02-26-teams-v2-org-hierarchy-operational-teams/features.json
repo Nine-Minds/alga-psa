@@ -98,13 +98,13 @@
   {
     "id": "F017",
     "description": "Migration: Add `role TEXT DEFAULT 'member'` column to `team_members` table",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-2.1"]
   },
   {
     "id": "F018",
     "description": "Migration: Set `role = 'lead'` for existing team members whose user_id matches their team's `manager_id`",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-2.2"]
   },
   {
