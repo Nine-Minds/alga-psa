@@ -114,7 +114,7 @@
   {
     "id": "T015",
     "description": "User edit form: saving a valid `reports_to` value persists to database",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F006"
     ]
