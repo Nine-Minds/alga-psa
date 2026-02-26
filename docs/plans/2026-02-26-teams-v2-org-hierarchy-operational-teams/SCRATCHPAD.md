@@ -88,3 +88,4 @@
 - (2026-02-26) Added `User.isInReportsToChain` in `packages/db/src/models/user.ts` using a recursive CTE and refactored reports_to cycle check to use it.
 - (2026-02-26) Extended timesheet delegation auth to honor `reports_to` chain when `teams-v2` is enabled (using `User.isInReportsToChain`).
 - (2026-02-26) `fetchTimeSheetsForApproval` now includes reports_to subordinates when `teams-v2` is enabled, using a recursive CTE for subordinate IDs.
+- (2026-02-26) AvailabilitySettings now unions reports_to subordinates with team members when `teams-v2` is enabled.

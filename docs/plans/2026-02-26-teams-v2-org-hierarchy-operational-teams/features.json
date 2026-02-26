@@ -86,7 +86,7 @@
   {
     "id": "F015",
     "description": "Update AvailabilitySettings to additionally scope managed users by `reports_to` when flag is on",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-1.9"]
   },
   {
