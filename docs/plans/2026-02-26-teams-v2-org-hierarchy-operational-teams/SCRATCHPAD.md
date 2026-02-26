@@ -111,3 +111,4 @@
 - (2026-02-26) Keep-all option clears only `assigned_team_id`, preserving existing ticket resources.
 - (2026-02-26) Added selective team-member checkboxes in the removal dialog.
 - (2026-02-26) Team removal actions preserve the primary `assigned_to` user.
+- (2026-02-26) Team assignments are independent of individual agent add/remove flows.

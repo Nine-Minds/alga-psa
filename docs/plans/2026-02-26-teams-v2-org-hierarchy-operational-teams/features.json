@@ -260,7 +260,7 @@
   {
     "id": "F044",
     "description": "Adding/removing individual agents does NOT affect team assignment — team badge and agent chips are independent",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-2.16"]
   },
   {
