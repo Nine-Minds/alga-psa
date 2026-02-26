@@ -148,7 +148,7 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
     title: true,
     status: true,
     priority: true,
-    sla: true,
+    sla: false,
     board: true,
     category: true,
     client: true,
