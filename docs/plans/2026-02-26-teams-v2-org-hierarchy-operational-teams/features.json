@@ -8,7 +8,7 @@
   {
     "id": "F002",
     "description": "Migration: Auto-seed `reports_to` from existing team_members/teams data (team member → team manager_id, skip self-references)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-1.2"]
   },
   {
