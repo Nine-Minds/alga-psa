@@ -138,7 +138,7 @@
   {
     "id": "T018",
     "description": "Org chart: displays tree with correct parent-child relationships based on `reports_to`",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F008"
     ]
