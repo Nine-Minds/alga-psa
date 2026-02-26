@@ -290,7 +290,7 @@
   {
     "id": "F049",
     "description": "Extend `tickets.create` workflow action to support `assignee: { type: 'team', id: uuid }` matching `projects.create_task` pattern",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-2.20"]
   },
   {
