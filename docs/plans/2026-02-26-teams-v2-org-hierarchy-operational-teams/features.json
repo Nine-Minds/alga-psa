@@ -200,7 +200,7 @@
   {
     "id": "F034",
     "description": "Feature flag swap: ticket detail renders `UserAndTeamPicker` instead of `UserPicker` when `teams-v2` flag is on",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-2.9", "NFR-1"]
   },
   {
