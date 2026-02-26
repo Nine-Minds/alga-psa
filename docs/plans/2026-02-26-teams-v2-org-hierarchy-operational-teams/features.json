@@ -212,7 +212,7 @@
   {
     "id": "F036",
     "description": "When flag is off, existing `UserPicker` renders unchanged (zero risk)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-2.9", "NFR-1"]
   },
   {
