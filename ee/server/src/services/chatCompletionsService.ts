@@ -1573,37 +1573,33 @@ export class ChatCompletionsService {
     init: RequestInit,
     baseUrl: string,
   ): Promise<Response> {
-    try {
-      return await fetch(url, init);
-    } catch (error) {
-      if (!this.shouldRetryWithHttp(error, url, baseUrl)) {
-        throw error;
-      }
+    if (!this.shouldTryHttpFirst(url, baseUrl)) {
+      return fetch(url, init);
+    }
 
-      const fallbackUrl = this.toHttpUrl(url);
+    const httpUrl = this.toHttpUrl(url);
+    try {
+      return await fetch(httpUrl, init);
+    } catch (error) {
       console.warn(
-        '[ChatCompletionsService] Retrying API tool call with HTTP after TLS protocol mismatch.',
+        '[ChatCompletionsService] HTTP-first API tool call failed; retrying with HTTPS.',
         {
-          originalUrl: url,
-          fallbackUrl,
+          httpUrl,
+          httpsUrl: url,
+          error: error instanceof Error ? error.message : String(error),
         },
       );
-      return fetch(fallbackUrl, init);
+      return fetch(url, init);
     }
   }
 
-  private static shouldRetryWithHttp(
-    error: unknown,
+  private static shouldTryHttpFirst(
     requestUrl: string,
     baseUrl: string,
   ): boolean {
     if (!requestUrl.startsWith('https://')) {
       return false;
     }
-    if (!this.isTlsPacketLengthMismatch(error)) {
-      return false;
-    }
-
     try {
       const request = new URL(requestUrl);
       const base = new URL(baseUrl);
@@ -1611,34 +1607,6 @@ export class ChatCompletionsService {
     } catch {
       return false;
     }
-  }
-
-  private static isTlsPacketLengthMismatch(error: unknown): boolean {
-    const directCode =
-      typeof error === 'object' && error !== null
-        ? (error as { code?: unknown }).code
-        : undefined;
-    const cause =
-      typeof error === 'object' && error !== null
-        ? (error as { cause?: unknown }).cause
-        : undefined;
-    const causeCode =
-      typeof cause === 'object' && cause !== null
-        ? (cause as { code?: unknown }).code
-        : undefined;
-    const causeReason =
-      typeof cause === 'object' && cause !== null
-        ? (cause as { reason?: unknown }).reason
-        : undefined;
-    const message = error instanceof Error ? error.message : '';
-
-    return (
-      directCode === 'ERR_SSL_PACKET_LENGTH_TOO_LONG' ||
-      causeCode === 'ERR_SSL_PACKET_LENGTH_TOO_LONG' ||
-      causeReason === 'packet length too long' ||
-      message.includes('ERR_SSL_PACKET_LENGTH_TOO_LONG') ||
-      message.toLowerCase().includes('packet length too long')
-    );
   }
 
   private static toHttpUrl(url: string): string {

@@ -734,20 +734,11 @@ describe('ChatCompletionsService (unit)', () => {
     sleepSpy.mockRestore();
   });
 
-  it('retries internal https tool calls over http on TLS packet-length mismatch', async () => {
+  it('prefers http first for internal https tool calls', async () => {
     const { ChatCompletionsService } = await import('@ee/services/chatCompletionsService');
 
-    const tlsError = new TypeError('fetch failed') as TypeError & {
-      cause?: { code?: string; reason?: string };
-    };
-    tlsError.cause = {
-      code: 'ERR_SSL_PACKET_LENGTH_TOO_LONG',
-      reason: 'packet length too long',
-    };
-
     expect(
-      (ChatCompletionsService as any).shouldRetryWithHttp(
-        tlsError,
+      (ChatCompletionsService as any).shouldTryHttpFirst(
         'https://sebastian.msp.svc.cluster.local:3000/api/v1/tickets',
         'https://sebastian.msp.svc.cluster.local:3000',
       ),
@@ -759,24 +750,41 @@ describe('ChatCompletionsService (unit)', () => {
     ).toBe('http://sebastian.msp.svc.cluster.local:3000/api/v1/tickets');
   });
 
-  it('does not retry over http for non-matching hosts', async () => {
+  it('does not prefer http first for non-matching hosts', async () => {
     const { ChatCompletionsService } = await import('@ee/services/chatCompletionsService');
 
-    const tlsError = new TypeError('fetch failed') as TypeError & {
-      cause?: { code?: string; reason?: string };
-    };
-    tlsError.cause = {
-      code: 'ERR_SSL_PACKET_LENGTH_TOO_LONG',
-      reason: 'packet length too long',
-    };
-
     expect(
-      (ChatCompletionsService as any).shouldRetryWithHttp(
-        tlsError,
+      (ChatCompletionsService as any).shouldTryHttpFirst(
         'https://external.example.com/api/v1/tickets',
         'https://sebastian.msp.svc.cluster.local:3000',
       ),
     ).toBe(false);
+  });
+
+  it('falls back to https when http-first tool call fails', async () => {
+    const { ChatCompletionsService } = await import('@ee/services/chatCompletionsService');
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockRejectedValueOnce(new Error('connect ECONNREFUSED'))
+      .mockResolvedValueOnce(
+        new Response('{}', { status: 200, headers: { 'Content-Type': 'application/json' } }),
+      );
+
+    const response = await (ChatCompletionsService as any).fetchWithProtocolFallback(
+      'https://sebastian.msp.svc.cluster.local:3000/api/v1/tickets',
+      { method: 'GET' },
+      'https://sebastian.msp.svc.cluster.local:3000',
+    );
+
+    expect(response.status).toBe(200);
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+    expect(fetchSpy.mock.calls[0]?.[0]).toBe(
+      'http://sebastian.msp.svc.cluster.local:3000/api/v1/tickets',
+    );
+    expect(fetchSpy.mock.calls[1]?.[0]).toBe(
+      'https://sebastian.msp.svc.cluster.local:3000/api/v1/tickets',
+    );
+    fetchSpy.mockRestore();
   });
 
   it('decline execution path skips endpoint call and keeps conversation usable', async () => {
