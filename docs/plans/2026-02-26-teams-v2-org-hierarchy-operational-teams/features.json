@@ -242,7 +242,7 @@
   {
     "id": "F041",
     "description": "Team removal dialog: 'Keep all team members as individual agents' option clears `assigned_team_id` only, resources stay",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-2.13"]
   },
   {
