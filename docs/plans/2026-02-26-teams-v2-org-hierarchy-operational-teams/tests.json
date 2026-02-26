@@ -557,7 +557,7 @@
   {
     "id": "T070",
     "description": "'Assigned To' filter: shows teams in dropdown alongside users when flag is on",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F046"
     ]
