@@ -178,7 +178,7 @@
   {
     "id": "T023",
     "description": "`isInReportsToChain(D, A)` returns true for deep chain A→B→C→D (three+ levels)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F011"
     ]
