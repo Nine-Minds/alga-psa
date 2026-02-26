@@ -525,7 +525,7 @@
   {
     "id": "T066",
     "description": "Independence: adding a new individual agent does not affect team badge or `assigned_team_id`",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F044"
     ]
