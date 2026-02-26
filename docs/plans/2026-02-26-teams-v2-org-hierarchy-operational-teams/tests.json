@@ -154,7 +154,7 @@
   {
     "id": "T020",
     "description": "Org chart: hidden when `teams-v2` flag is off",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F010"
     ]
