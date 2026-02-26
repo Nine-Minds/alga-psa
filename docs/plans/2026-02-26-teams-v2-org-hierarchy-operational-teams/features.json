@@ -272,7 +272,7 @@
   {
     "id": "F046",
     "description": "'Assigned To' filter in ticket list: shows teams alongside users when `teams-v2` flag is on",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-2.18"]
   },
   {

@@ -113,3 +113,4 @@
 - (2026-02-26) Team removal actions preserve the primary `assigned_to` user.
 - (2026-02-26) Team assignments are independent of individual agent add/remove flows.
 - (2026-02-26) Team assignment resources are treated as a snapshot (no auto updates on roster changes).
+- (2026-02-26) Ticket list "Assigned To" filter now includes teams when `teams-v2` is enabled.
