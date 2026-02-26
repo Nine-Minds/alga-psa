@@ -164,7 +164,7 @@
   {
     "id": "F028",
     "description": "Build `UserAndTeamPicker` component: shows users and teams in grouped sections with separator",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-2.8"]
   },
   {

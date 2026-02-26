@@ -883,16 +883,24 @@ export const getTicketsForList = withAuth(async (
     }
 
     // Apply assignee filter if provided
-    if (validatedFilters.assignedToIds?.length || validatedFilters.includeUnassigned) {
+    if (validatedFilters.assignedToIds?.length || validatedFilters.assignedTeamIds?.length || validatedFilters.includeUnassigned) {
       baseQuery = baseQuery.where(function(this: any) {
         // Handle specific assignee IDs
         if (validatedFilters.assignedToIds?.length) {
           this.whereIn('t.assigned_to', validatedFilters.assignedToIds);
         }
 
+        if (validatedFilters.assignedTeamIds?.length) {
+          if (validatedFilters.assignedToIds?.length) {
+            this.orWhereIn('t.assigned_team_id', validatedFilters.assignedTeamIds);
+          } else {
+            this.whereIn('t.assigned_team_id', validatedFilters.assignedTeamIds);
+          }
+        }
+
         // Handle unassigned (OR condition if both specified)
         if (validatedFilters.includeUnassigned) {
-          if (validatedFilters.assignedToIds?.length) {
+          if (validatedFilters.assignedToIds?.length || validatedFilters.assignedTeamIds?.length) {
             this.orWhereNull('t.assigned_to');
           } else {
             this.whereNull('t.assigned_to');

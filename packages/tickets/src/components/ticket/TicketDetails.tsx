@@ -45,7 +45,8 @@ import { updateTicketWithCache } from "../../actions/optimizedTicketActions";
 import { updateTicket } from "../../actions/ticketActions";
 import { getTicketStatuses } from "@alga-psa/reference-data/actions";
 import { getAllPriorities } from "@alga-psa/reference-data/actions";
-import { addTicketResource, getTicketResources, removeTicketResource } from "@alga-psa/tickets/actions";
+import { addTicketResource, getTicketResources, removeTicketResource, assignTeamToTicket, removeTeamFromTicket } from "@alga-psa/tickets/actions";
+import { getTeamById, getTeams } from '@alga-psa/teams/actions';
 import AgentScheduleDrawer from "./AgentScheduleDrawer";
 import { Button } from "@alga-psa/ui/components/Button";
 import { Input } from "@alga-psa/ui/components/Input";
@@ -202,6 +203,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const { data: session } = useSession();
     const [hasHydrated, setHasHydrated] = useState(false);
     const { enabled: emailLogsEnabled } = useFeatureFlag('email-logs', { defaultValue: false });
+    const { enabled: teamsV2Enabled } = useFeatureFlag('teams-v2', { defaultValue: false });
 
     useEffect(() => {
         setHasHydrated(true);
@@ -297,6 +299,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const [currentTimePeriod, setCurrentTimePeriod] = useState<ITimePeriodView | null>(null);
 
     const [team, setTeam] = useState<ITeam | null>(null);
+    const [teams, setTeams] = useState<ITeam[]>([]);
     const [isChangeContactDialogOpen, setIsChangeContactDialogOpen] = useState(false);
     const [isChangeClientDialogOpen, setIsChangeClientDialogOpen] = useState(false);
     const [clientFilterState, setClientFilterState] = useState<'all' | 'active' | 'inactive'>('all');
@@ -335,6 +338,50 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const router = useRouter();
     // Create a single instance of the service
     const intervalService = useMemo(() => new IntervalTrackingService(), []);
+
+    useEffect(() => {
+        if (!teamsV2Enabled) {
+            setTeams([]);
+            return;
+        }
+        const loadTeams = async () => {
+            try {
+                const fetchedTeams = await getTeams();
+                setTeams(fetchedTeams);
+            } catch (error) {
+                console.error('Failed to load teams:', error);
+            }
+        };
+        loadTeams();
+    }, [teamsV2Enabled]);
+
+    useEffect(() => {
+        if (!teamsV2Enabled) {
+            setTeam(null);
+            return;
+        }
+        if (!ticket.assigned_team_id) {
+            setTeam(null);
+            return;
+        }
+
+        const cached = teams.find(t => t.team_id === ticket.assigned_team_id);
+        if (cached) {
+            setTeam(cached);
+            return;
+        }
+
+        const loadTeam = async () => {
+            try {
+                const fetchedTeam = await getTeamById(ticket.assigned_team_id!);
+                setTeam(fetchedTeam);
+            } catch (error) {
+                console.error('Failed to load assigned team:', error);
+                setTeam(null);
+            }
+        };
+        loadTeam();
+    }, [teamsV2Enabled, ticket.assigned_team_id, teams]);
 
     // Timer logic
     const tick = useCallback(() => {
@@ -762,6 +809,57 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             setTicket(prevTicket => ({ ...prevTicket, [field]: previousValue }));
         }
     };
+
+    const handleAssignTeam = useCallback(async (teamId: string) => {
+        try {
+            await assignTeamToTicket(ticket.ticket_id || '', teamId);
+
+            const teamDetails = teams.find(t => t.team_id === teamId) || await getTeamById(teamId);
+            const assignedTo = ticket.assigned_to || teamDetails?.manager_id || ticket.assigned_to;
+
+            setTicket(prevTicket => ({
+                ...prevTicket,
+                assigned_team_id: teamId,
+                assigned_to: assignedTo
+            }));
+            setTeam(teamDetails || null);
+
+            if (ticket.ticket_id) {
+                const resources = await getTicketResources(ticket.ticket_id);
+                setAdditionalAgents(resources);
+            }
+
+            toast.success('Team assigned successfully');
+        } catch (error) {
+            console.error('Error assigning team:', error);
+            toast.error('Failed to assign team');
+        }
+    }, [ticket.ticket_id, ticket.assigned_to, teams]);
+
+    const handleRemoveTeamAssignment = useCallback(async (
+        mode: 'remove_all' | 'keep_all' | 'selective',
+        keepUserIds?: string[]
+    ) => {
+        try {
+            await removeTeamFromTicket(ticket.ticket_id || '', { mode, keepUserIds });
+
+            setTicket(prevTicket => ({
+                ...prevTicket,
+                assigned_team_id: null
+            }));
+            setTeam(null);
+
+            if (ticket.ticket_id) {
+                const resources = await getTicketResources(ticket.ticket_id);
+                setAdditionalAgents(resources);
+            }
+
+            toast.success('Team removed successfully');
+        } catch (error) {
+            console.error('Error removing team assignment:', error);
+            toast.error('Failed to remove team assignment');
+        }
+    }, [ticket.ticket_id]);
 
     const [editorKey, setEditorKey] = useState(0);
 
@@ -1840,6 +1938,8 @@ const handleClose = () => {
                                     isBundledChild={Boolean(bundle?.isBundleChild)}
                                     responseStateTrackingEnabled={responseStateTrackingEnabled}
                                     renderProjectTaskActions={renderCreateProjectTask}
+                                    teams={teams}
+                                    onAssignTeam={handleAssignTeam}
                                     additionalAgents={additionalAgents.map(a => ({
                                         user_id: a.additional_user_id || a.assigned_to,
                                         name: availableAgents.find(u => u.user_id === (a.additional_user_id || a.assigned_to))
@@ -1907,9 +2007,9 @@ const handleClose = () => {
                     </div>
                     <div className={isInDrawer ? "w-96" : "w-1/4"} id="ticket-properties-container">
                         <Suspense fallback={<div id="ticket-properties-skeleton" className="animate-pulse bg-gray-200 h-96 rounded-lg mb-6"></div>}>
-                            <TicketProperties
-                                id={`${id}-properties`}
-                                ticket={ticket}
+                                <TicketProperties
+                                    id={`${id}-properties`}
+                                    ticket={ticket}
                                 client={client}
                                 contactInfo={contactInfo}
                                 createdByUser={createdByUser}
@@ -1955,8 +2055,9 @@ const handleClose = () => {
                                 allContactsForWatchListLoading={allContactsForWatchListLoading}
                                 onLoadAllContactsForWatchList={handleLoadAllContactsForWatchList}
                                 surveySummary={surveySummary}
-                                renderIntervalManagement={renderIntervalManagement}
-                            />
+                                    renderIntervalManagement={renderIntervalManagement}
+                                    onRemoveTeamAssignment={handleRemoveTeamAssignment}
+                                />
                         </Suspense>
                         
                         {associatedAssets ? <div className="mt-6" id="associated-assets-container">{associatedAssets}</div> : null}

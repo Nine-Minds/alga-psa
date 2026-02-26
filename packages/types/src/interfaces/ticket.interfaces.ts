@@ -106,6 +106,7 @@ export interface ITicketListFilters {
   showOpenOnly?: boolean;
   tags?: string[];
   assignedToIds?: string[];        // Array of user IDs to filter by
+  assignedTeamIds?: string[];      // Array of team IDs to filter by
   includeUnassigned?: boolean;     // Include tickets with no assignee
   // Due date filters
   dueDateFilter?: 'all' | 'overdue' | 'upcoming' | 'today' | 'no_due_date' | 'before' | 'after' | 'custom';

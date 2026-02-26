@@ -36,6 +36,10 @@ export function registerTicketActions(): void {
       status_id: uuidSchema.describe('Status id'),
       priority_id: uuidSchema.describe('Priority id'),
       assigned_to: uuidSchema.nullable().optional().describe('Assigned user id'),
+      assignee: z.object({
+        type: z.enum(['user', 'team']).describe('Assignee type'),
+        id: uuidSchema.describe('User id or team id')
+      }).optional().describe('Optional assignee (user or team)'),
       category_id: uuidSchema.nullable().optional().describe('Category id'),
       subcategory_id: uuidSchema.nullable().optional().describe('Subcategory id'),
       tags: z.array(z.string()).optional().describe('Optional tags (stored in ticket attributes)'),
@@ -88,6 +92,27 @@ export function registerTicketActions(): void {
 
       let created: any;
       try {
+        let assignedTo = input.assigned_to ?? null;
+        let assignedTeamId: string | null = null;
+
+        if (input.assignee) {
+          if (input.assignee.type === 'user') {
+            assignedTo = input.assignee.id;
+          } else {
+            assignedTeamId = input.assignee.id;
+            const team = await tx.trx('teams')
+              .where({ tenant: tx.tenantId, team_id: input.assignee.id })
+              .first();
+            if (!team) {
+              throwActionError(ctx, { category: 'ActionError', code: 'NOT_FOUND', message: 'Team not found' });
+            }
+            if (!team.manager_id) {
+              throwActionError(ctx, { category: 'ActionError', code: 'VALIDATION_ERROR', message: 'Team lead not found' });
+            }
+            assignedTo = team.manager_id ?? null;
+          }
+        }
+
         created = await TicketModel.createTicket(
           {
             title: input.title,
@@ -97,7 +122,8 @@ export function registerTicketActions(): void {
             board_id: input.board_id,
             status_id: input.status_id,
             priority_id: input.priority_id,
-            assigned_to: input.assigned_to ?? undefined,
+            assigned_to: assignedTo ?? undefined,
+            assigned_team_id: assignedTeamId ?? undefined,
             category_id: input.category_id ?? undefined,
             subcategory_id: input.subcategory_id ?? undefined,
             entered_by: tx.actorUserId,
@@ -112,6 +138,39 @@ export function registerTicketActions(): void {
         );
       } catch (error) {
         rethrowAsStandardError(ctx, error);
+      }
+
+      if (input.assignee?.type === 'team') {
+        const teamMembers = await tx.trx('team_members')
+          .where({ tenant: tx.tenantId, team_id: input.assignee.id })
+          .select('user_id');
+
+        const memberIds = teamMembers
+          .map((member: { user_id: string }) => member.user_id)
+          .filter((userId: string) => userId && userId !== created.assigned_to);
+
+        if (memberIds.length > 0) {
+          const existingResources = await tx.trx('ticket_resources')
+            .where({ tenant: tx.tenantId, ticket_id: created.ticket_id })
+            .whereIn('additional_user_id', memberIds)
+            .select('additional_user_id');
+
+          const existingIds = new Set(existingResources.map((row: { additional_user_id: string }) => row.additional_user_id));
+          const toInsert = memberIds.filter((userId) => !existingIds.has(userId));
+
+          if (toInsert.length > 0) {
+            await tx.trx('ticket_resources').insert(
+              toInsert.map((userId) => ({
+                tenant: tx.tenantId,
+                ticket_id: created.ticket_id,
+                assigned_to: created.assigned_to,
+                additional_user_id: userId,
+                role: 'team_member',
+                assigned_at: new Date()
+              }))
+            );
+          }
+        }
       }
 
       if (input.initial_comment?.body) {

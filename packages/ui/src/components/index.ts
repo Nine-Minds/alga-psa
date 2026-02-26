@@ -103,6 +103,8 @@ export { default as TreeSelect } from './TreeSelect';
 export * from './UnitOfMeasureInput';
 export * from './UserAvatar';
 export { default as UserAvatar } from './UserAvatar';
+export * from './UserAndTeamPicker';
+export { default as UserAndTeamPicker } from './UserAndTeamPicker';
 export * from './UserPicker';
 export { default as UserPicker } from './UserPicker';
 export * from './ViewDensityControl';

@@ -86,3 +86,55 @@ export const assignTeamToTicket = withAuth(async (
     );
   });
 });
+
+export type RemoveTeamFromTicketMode = 'remove_all' | 'keep_all' | 'selective';
+
+export interface RemoveTeamFromTicketOptions {
+  mode: RemoveTeamFromTicketMode;
+  keepUserIds?: string[];
+}
+
+export const removeTeamFromTicket = withAuth(async (
+  user,
+  { tenant },
+  ticketId: string,
+  options: RemoveTeamFromTicketOptions
+): Promise<void> => {
+  const { knex: db } = await createTenantKnex();
+  return withTransaction(db, async (trx: Knex.Transaction) => {
+    if (!await hasPermission(user, 'ticket', 'update', trx)) {
+      throw new Error('Permission denied: Cannot remove team from ticket');
+    }
+
+    const ticket = await trx('tickets')
+      .where({ ticket_id: ticketId, tenant })
+      .first();
+
+    if (!ticket) {
+      throw new Error('Ticket not found');
+    }
+
+    const mode = options.mode;
+    if (mode === 'remove_all') {
+      await trx('ticket_resources')
+        .where({ ticket_id: ticketId, tenant, role: 'team_member' })
+        .delete();
+    }
+
+    if (mode === 'selective') {
+      const keepIds = new Set(options.keepUserIds ?? []);
+      await trx('ticket_resources')
+        .where({ ticket_id: ticketId, tenant, role: 'team_member' })
+        .whereNotIn('additional_user_id', Array.from(keepIds))
+        .delete();
+    }
+
+    await trx('tickets')
+      .where({ ticket_id: ticketId, tenant })
+      .update({
+        assigned_team_id: null,
+        updated_by: user.user_id,
+        updated_at: new Date()
+      });
+  });
+});

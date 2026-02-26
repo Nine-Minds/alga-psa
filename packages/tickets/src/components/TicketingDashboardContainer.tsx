@@ -70,6 +70,7 @@ export default function TicketingDashboardContainer({
       categoryId: undefined,
       clientId: undefined,
       assignedToIds: undefined,
+      assignedTeamIds: undefined,
       includeUnassigned: false,
       dueDateFilter: undefined,
       sortBy: defaultSortBy,
@@ -129,6 +130,9 @@ export default function TicketingDashboardContainer({
     if (filters.assignedToIds && Array.isArray(filters.assignedToIds) && filters.assignedToIds.length > 0) {
       params.set('assignedToIds', filters.assignedToIds.join(','));
     }
+    if (filters.assignedTeamIds && Array.isArray(filters.assignedTeamIds) && filters.assignedTeamIds.length > 0) {
+      params.set('assignedTeamIds', filters.assignedTeamIds.join(','));
+    }
     if (filters.includeUnassigned) {
       params.set('includeUnassigned', 'true');
     }
@@ -184,6 +188,7 @@ export default function TicketingDashboardContainer({
         showOpenOnly: (filters.statusId === 'open') || (filters.showOpenOnly === true),
         tags: filters.tags && filters.tags.length > 0 ? Array.from(new Set(filters.tags)) : undefined,
         assignedToIds: filters.assignedToIds && filters.assignedToIds.length > 0 ? filters.assignedToIds : undefined,
+        assignedTeamIds: filters.assignedTeamIds && filters.assignedTeamIds.length > 0 ? filters.assignedTeamIds : undefined,
         includeUnassigned: filters.includeUnassigned || undefined,
         dueDateFilter: filters.dueDateFilter || undefined,
         dueDateFrom: filters.dueDateFrom || undefined,

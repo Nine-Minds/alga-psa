@@ -70,6 +70,12 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
         filtersFromURL.assignedToIds = assignedToIds;
       }
     }
+    if (params?.assignedTeamIds && typeof params.assignedTeamIds === 'string') {
+      const assignedTeamIds = params.assignedTeamIds.split(',').filter(id => id.trim().length > 0);
+      if (assignedTeamIds.length > 0) {
+        filtersFromURL.assignedTeamIds = assignedTeamIds;
+      }
+    }
     if (params?.includeUnassigned === 'true') {
       filtersFromURL.includeUnassigned = true;
     }
@@ -153,6 +159,7 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
       showOpenOnly: (initialFilters.statusId === 'open') || false,
       tags: initialFilters.tags || undefined,
       assignedToIds: initialFilters.assignedToIds || undefined,
+      assignedTeamIds: initialFilters.assignedTeamIds || undefined,
       includeUnassigned: initialFilters.includeUnassigned || undefined,
       dueDateFilter: initialFilters.dueDateFilter || undefined,
       dueDateFrom: initialFilters.dueDateFrom || undefined,

@@ -13,6 +13,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { PrioritySelect } from '@alga-psa/ui/components';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
+import UserAndTeamPicker from '@alga-psa/ui/components/UserAndTeamPicker';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
 import { CategoryPicker } from '../CategoryPicker';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
@@ -31,6 +32,8 @@ import { useRegisterUnsavedChanges } from '@alga-psa/ui/context';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { SlaStatusBadge } from '@alga-psa/sla/components';
 import type { SlaTimerStatus } from '@alga-psa/sla/types';
+import { useFeatureFlag } from '@alga-psa/ui/hooks';
+import type { ITeam } from '@alga-psa/types';
 
 
 interface TicketInfoProps {
@@ -62,6 +65,8 @@ interface TicketInfoProps {
   renderProjectTaskActions?: (args: { ticket: ITicket; additionalAgents?: { user_id: string; name: string }[] }) => React.ReactNode;
   additionalAgents?: { user_id: string; name: string }[];
   responseStateTrackingEnabled?: boolean;
+  teams?: ITeam[];
+  onAssignTeam?: (teamId: string) => Promise<void>;
 }
 
 const TicketInfo: React.FC<TicketInfoProps> = ({
@@ -90,7 +95,10 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
   renderProjectTaskActions,
   additionalAgents,
   responseStateTrackingEnabled = true,
+  teams = [],
+  onAssignTeam,
 }) => {
+  const { enabled: teamsV2Enabled } = useFeatureFlag('teams-v2', { defaultValue: false });
   // Use initialCategories from server to avoid timing issues on first render
   const [categories, setCategories] = useState<ITicketCategory[]>(initialCategories);
   const [boardConfig, setBoardConfig] = useState<BoardCategoryData['boardConfig']>({
@@ -814,18 +822,39 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
             </div>
             <div>
               <h5 className="font-bold mb-2">Assigned To</h5>
-              <UserPicker
-                value={pendingChanges.assigned_to ?? originalTicketValues.assigned_to ?? ''}
-                onValueChange={(value) => handlePendingChange('assigned_to', value)}
-                users={usersList}
-                getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
-                labelStyle="none"
-                buttonWidth="fit"
-                size="sm"
-                className="!w-fit"
-                placeholder="Not assigned"
-                disabled={workflowLocked}
-              />
+              {teamsV2Enabled ? (
+                <UserAndTeamPicker
+                  value={pendingChanges.assigned_to ?? originalTicketValues.assigned_to ?? ''}
+                  onValueChange={(value) => handlePendingChange('assigned_to', value)}
+                  onTeamSelect={async (teamId) => {
+                    if (onAssignTeam) {
+                      await onAssignTeam(teamId);
+                    }
+                  }}
+                  users={usersList}
+                  teams={teams}
+                  getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
+                  labelStyle="none"
+                  buttonWidth="fit"
+                  size="sm"
+                  className="!w-fit"
+                  placeholder="Not assigned"
+                  disabled={workflowLocked}
+                />
+              ) : (
+                <UserPicker
+                  value={pendingChanges.assigned_to ?? originalTicketValues.assigned_to ?? ''}
+                  onValueChange={(value) => handlePendingChange('assigned_to', value)}
+                  users={usersList}
+                  getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
+                  labelStyle="none"
+                  buttonWidth="fit"
+                  size="sm"
+                  className="!w-fit"
+                  placeholder="Not assigned"
+                  disabled={workflowLocked}
+                />
+              )}
             </div>
 
             {/* Row 2: Board + Category */}
