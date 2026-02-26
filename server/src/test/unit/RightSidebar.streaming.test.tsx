@@ -2,8 +2,8 @@
  * @vitest-environment jsdom
  */
 import React from 'react';
-import { describe, expect, it, vi } from 'vitest';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 
 import RightSidebar from '@ee/components/layout/RightSidebar';
@@ -61,7 +61,7 @@ const createControlledSseResponse = () => {
 
   return {
     response,
-    send: (payload: { content: string; done: boolean }) => {
+    send: (payload: Record<string, unknown>) => {
       try {
         controller.enqueue(encoder.encode(`data: ${JSON.stringify(payload)}\n\n`));
       } catch {
@@ -79,6 +79,17 @@ const createControlledSseResponse = () => {
 };
 
 describe('RightSidebar (streaming)', () => {
+  beforeEach(() => {
+    vi.mocked(createNewChatAction).mockReset();
+    vi.mocked(addMessageToChatAction).mockReset();
+  });
+
+  afterEach(() => {
+    cleanup();
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
   it('renders streaming Chat and posts to the streaming completions endpoint', async () => {
     expect(RightSidebar).toBeDefined();
 
@@ -141,5 +152,125 @@ describe('RightSidebar (streaming)', () => {
       sse.close();
     });
   });
-});
 
+  it('handles function proposal approval via /api/chat/v1/execute in sidebar chat', async () => {
+    expect(RightSidebar).toBeDefined();
+
+    vi.spyOn(globalThis, 'requestAnimationFrame').mockImplementation((cb) => {
+      cb(0);
+      return 0;
+    });
+
+    Object.defineProperty(window, 'localStorage', {
+      configurable: true,
+      value: {
+        removeItem: vi.fn(),
+        getItem: vi.fn(),
+        setItem: vi.fn(),
+      },
+    });
+
+    vi.mocked(createNewChatAction).mockResolvedValueOnce({ _id: 'chat-1' });
+    vi
+      .mocked(addMessageToChatAction)
+      .mockResolvedValueOnce({ _id: 'user-message-id' })
+      .mockResolvedValueOnce({ _id: 'assistant-message-id' });
+
+    const sse = createControlledSseResponse();
+    const executeBodies: Record<string, unknown>[] = [];
+    const fetchMock = vi.fn(async (url: unknown, init?: RequestInit) => {
+      if (url === '/api/chat/v1/completions/stream') {
+        return sse.response;
+      }
+
+      if (url === '/api/chat/v1/execute') {
+        executeBodies.push(JSON.parse(String(init?.body ?? '{}')) as Record<string, unknown>);
+        return new Response(
+          JSON.stringify({
+            type: 'assistant_message',
+            message: { role: 'assistant', content: 'Execution complete.' },
+            nextMessages: [{ role: 'assistant', content: 'Execution complete.' }],
+            modelMessages: [{ role: 'assistant', content: 'Execution complete.' }],
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        );
+      }
+
+      throw new Error(`Unexpected fetch URL: ${String(url)}`);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(
+      <RightSidebar
+        isOpen
+        setIsOpen={vi.fn()}
+        clientUrl="https://example.invalid"
+        accountId="account-1"
+        messages={[]}
+        userId="user-1"
+        userRole="admin"
+        selectedAccount="account-1"
+        handleSelectAccount={vi.fn()}
+        auth_token="token"
+        setChatTitle={vi.fn()}
+        isTitleLocked={false}
+      />,
+    );
+
+    fireEvent.change(await screen.findByPlaceholderText('Send a message'), {
+      target: { value: 'Ping' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'SEND' }));
+
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/chat/v1/completions/stream',
+        expect.objectContaining({ method: 'POST' }),
+      ),
+    );
+
+    await act(async () => {
+      sse.send({
+        type: 'function_proposed',
+        function: {
+          id: 'tickets.list',
+          displayName: 'List tickets',
+          description: 'Lists tickets',
+          approvalRequired: true,
+          arguments: { entryId: 'tickets.list' },
+        },
+        assistantPreview: 'I need to run this endpoint first.',
+        assistantReasoning: 'Collect context first',
+        functionCall: {
+          name: 'call_api_endpoint',
+          arguments: { entryId: 'tickets.list' },
+          toolCallId: 'sidebar-tool-1',
+          entryId: 'tickets.list',
+        },
+        nextMessages: [{ role: 'assistant', content: 'I need to run this endpoint first.' }],
+        modelMessages: [{ role: 'assistant', content: 'I need to run this endpoint first.' }],
+      });
+      sse.send({ type: 'done', done: true });
+      sse.close();
+    });
+
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Approve' })).toBeInTheDocument(),
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Approve' }));
+
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/chat/v1/execute',
+        expect.objectContaining({ method: 'POST' }),
+      ),
+    );
+    expect(executeBodies[0]).toMatchObject({
+      action: 'approve',
+      functionCall: {
+        name: 'call_api_endpoint',
+        toolCallId: 'sidebar-tool-1',
+      },
+    });
+  });
+});

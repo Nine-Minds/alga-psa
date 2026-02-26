@@ -5,9 +5,12 @@ const isExperimentalFeatureEnabledMock = vi.hoisted(() =>
   vi.fn<(featureKey: string) => Promise<boolean>>(),
 );
 
-const createRawCompletionStreamMock = vi.hoisted(() =>
+const createStructuredCompletionStreamMock = vi.hoisted(() =>
   vi.fn<
-    (conversation: Array<{ role: string; content?: string }>) => Promise<AsyncIterable<unknown>>
+    (
+      conversation: Array<{ role: string; content?: string }>,
+      options?: { signal?: AbortSignal },
+    ) => Promise<AsyncIterable<unknown>>
   >(),
 );
 
@@ -17,7 +20,7 @@ vi.mock('@alga-psa/tenancy/actions', () => ({
 
 vi.mock('@product/chat/entry', () => ({
   ChatCompletionsService: {
-    createRawCompletionStream: createRawCompletionStreamMock,
+    createStructuredCompletionStream: createStructuredCompletionStreamMock,
   },
 }));
 
@@ -27,7 +30,7 @@ describe('POST /api/chat/v1/completions/stream', () => {
 
   beforeEach(() => {
     isExperimentalFeatureEnabledMock.mockReset();
-    createRawCompletionStreamMock.mockReset();
+    createStructuredCompletionStreamMock.mockReset();
     process.env.EDITION = 'ee';
     delete process.env.NEXT_PUBLIC_EDITION;
   });
@@ -50,9 +53,10 @@ describe('POST /api/chat/v1/completions/stream', () => {
 
   it('exports POST and accepts a valid POST request', async () => {
     isExperimentalFeatureEnabledMock.mockResolvedValue(true);
-    createRawCompletionStreamMock.mockResolvedValue(
+    createStructuredCompletionStreamMock.mockResolvedValue(
       (async function* () {
-        yield { choices: [{ delta: { content: 'Hello' } }] };
+        yield { type: 'content_delta', delta: 'Hello' };
+        yield { type: 'done' };
       })(),
     );
 
@@ -85,14 +89,15 @@ describe('POST /api/chat/v1/completions/stream', () => {
     }
 
     expect(isExperimentalFeatureEnabledMock).toHaveBeenCalledWith('aiAssistant');
-    expect(createRawCompletionStreamMock).toHaveBeenCalledTimes(1);
+    expect(createStructuredCompletionStreamMock).toHaveBeenCalledTimes(1);
   });
 
   it('returns Content-Type: text/event-stream', async () => {
     isExperimentalFeatureEnabledMock.mockResolvedValue(true);
-    createRawCompletionStreamMock.mockResolvedValue(
+    createStructuredCompletionStreamMock.mockResolvedValue(
       (async function* () {
-        yield { choices: [{ delta: { content: 'Hello' } }] };
+        yield { type: 'content_delta', delta: 'Hello' };
+        yield { type: 'done' };
       })(),
     );
 
@@ -126,10 +131,11 @@ describe('POST /api/chat/v1/completions/stream', () => {
 
   it('streams SSE chunks with data: prefix', async () => {
     isExperimentalFeatureEnabledMock.mockResolvedValue(true);
-    createRawCompletionStreamMock.mockResolvedValue(
+    createStructuredCompletionStreamMock.mockResolvedValue(
       (async function* () {
-        yield { choices: [{ delta: { content: 'Hel' } }] };
-        yield { choices: [{ delta: { content: 'lo' } }] };
+        yield { type: 'content_delta', delta: 'Hel' };
+        yield { type: 'content_delta', delta: 'lo' };
+        yield { type: 'done' };
       })(),
     );
 
@@ -180,10 +186,11 @@ describe('POST /api/chat/v1/completions/stream', () => {
 
   it('streams SSE chunks containing JSON with content and done fields', async () => {
     isExperimentalFeatureEnabledMock.mockResolvedValue(true);
-    createRawCompletionStreamMock.mockResolvedValue(
+    createStructuredCompletionStreamMock.mockResolvedValue(
       (async function* () {
-        yield { choices: [{ delta: { content: 'Hel' } }] };
-        yield { choices: [{ delta: { content: 'lo' } }] };
+        yield { type: 'content_delta', delta: 'Hel' };
+        yield { type: 'content_delta', delta: 'lo' };
+        yield { type: 'done' };
       })(),
     );
 
@@ -240,10 +247,11 @@ describe('POST /api/chat/v1/completions/stream', () => {
 
   it('ends with a final SSE message containing done: true', async () => {
     isExperimentalFeatureEnabledMock.mockResolvedValue(true);
-    createRawCompletionStreamMock.mockResolvedValue(
+    createStructuredCompletionStreamMock.mockResolvedValue(
       (async function* () {
-        yield { choices: [{ delta: { content: 'Hel' } }] };
-        yield { choices: [{ delta: { content: 'lo' } }] };
+        yield { type: 'content_delta', delta: 'Hel' };
+        yield { type: 'content_delta', delta: 'lo' };
+        yield { type: 'done' };
       })(),
     );
 
@@ -298,6 +306,10 @@ describe('POST /api/chat/v1/completions/stream', () => {
       expect(payload.content.length).toBeGreaterThan(0);
     }
 
-    expect(payloads[payloads.length - 1]).toEqual({ content: '', done: true });
+    expect(payloads[payloads.length - 1]).toMatchObject({
+      type: 'done',
+      content: '',
+      done: true,
+    });
   });
 });

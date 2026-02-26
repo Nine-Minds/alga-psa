@@ -28,6 +28,8 @@ type MessageProps = {
   statusDetail?: string;
   reasoning?: string;
   functionCallMeta?: FunctionCallMeta;
+  onRetry?: () => void;
+  onEdit?: () => void;
 };
 
 const classNames = (...values: Array<string | false | null | undefined>) =>
@@ -113,6 +115,8 @@ export const Message: React.FC<MessageProps> = ({
   statusDetail,
   reasoning,
   functionCallMeta,
+  onRetry,
+  onEdit,
 }) => {
   const transformMessage = (value: any) => {
     if (value == null) {
@@ -232,12 +236,75 @@ export const Message: React.FC<MessageProps> = ({
                     </span>
                   ) : null}
                 </div>
-                {statusLabel ? (
-                  <span className="message-status" role="status">
-                    <span className="message-status__dot" aria-hidden="true" />
-                    {statusLabel}
-                  </span>
-                ) : null}
+                <div className="message-header__actions">
+                  {statusLabel ? (
+                    <span className="message-status" role="status">
+                      <span className="message-status__dot" aria-hidden="true" />
+                      {statusLabel}
+                    </span>
+                  ) : null}
+                  {isUserMessage && onEdit ? (
+                    <button
+                      type="button"
+                      className="message-action-button"
+                      onClick={onEdit}
+                      aria-label="Edit this message"
+                      title="Edit this message"
+                    >
+                      <svg viewBox="0 0 20 20" aria-hidden="true">
+                        <path
+                          d="M4 14.5V16h1.5l8-8-1.5-1.5-8 8Z"
+                          stroke="currentColor"
+                          strokeWidth="1.4"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          fill="none"
+                        />
+                        <path
+                          d="M11.5 6.5 13 8"
+                          stroke="currentColor"
+                          strokeWidth="1.4"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                        <path
+                          d="M3.5 16.5h13"
+                          stroke="currentColor"
+                          strokeWidth="1.4"
+                          strokeLinecap="round"
+                        />
+                      </svg>
+                    </button>
+                  ) : null}
+                  {isUserMessage && onRetry ? (
+                    <button
+                      type="button"
+                      className="message-action-button"
+                      onClick={onRetry}
+                      aria-label="Regenerate from this message"
+                      title="Regenerate from this message"
+                    >
+                      <svg viewBox="0 0 20 20" aria-hidden="true">
+                        <path
+                          d="M4 10a6 6 0 1 1 2 4.47"
+                          stroke="currentColor"
+                          strokeWidth="1.6"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          fill="none"
+                        />
+                        <polyline
+                          points="4 14 6.4 14.4 6 16.8"
+                          stroke="currentColor"
+                          strokeWidth="1.6"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          fill="none"
+                        />
+                      </svg>
+                    </button>
+                  ) : null}
+                </div>
               </div>
             )}
             <div className="message-content">
