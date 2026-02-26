@@ -453,7 +453,7 @@
   {
     "id": "T057",
     "description": "Team badge: chip shows generic team icon + team name + x button",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F037"
     ]
