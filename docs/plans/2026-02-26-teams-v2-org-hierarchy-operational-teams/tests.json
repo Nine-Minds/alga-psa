@@ -517,7 +517,7 @@
   {
     "id": "T065",
     "description": "Team removal: manually-added agents (not `role = 'team_member'`) are not affected by 'Remove all'",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F040"
     ]
