@@ -146,7 +146,7 @@
   {
     "id": "T019",
     "description": "Org chart: users with `reports_to = NULL` appear as top-level root nodes",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F009"
     ]
