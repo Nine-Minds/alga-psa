@@ -461,7 +461,7 @@
   {
     "id": "T058",
     "description": "Team badge: chip follows same styling as Additional Agents chips",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F037"
     ]
