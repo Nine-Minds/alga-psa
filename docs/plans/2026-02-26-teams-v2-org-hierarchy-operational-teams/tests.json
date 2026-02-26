@@ -244,7 +244,7 @@
   {
     "id": "T031",
     "description": "`fetchTimeSheetsForApproval` returns timesheets from `reports_to` subordinates when flag is on",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F014"
     ]
