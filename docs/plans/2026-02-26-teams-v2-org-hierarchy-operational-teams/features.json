@@ -26,7 +26,7 @@
   {
     "id": "F005",
     "description": "User edit form: Add 'Reports To' dropdown field showing all users in tenant (behind `teams-v2` flag)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-1.4"]
   },
   {

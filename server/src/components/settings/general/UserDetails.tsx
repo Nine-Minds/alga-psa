@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { IUser, IUserWithRoles, IRole } from '@alga-psa/types';
-import { findUserById, updateUser, adminChangeUserPassword, getCurrentUser } from '@alga-psa/users/actions';
+import { findUserById, updateUser, adminChangeUserPassword, getCurrentUser, getAllUsers } from '@alga-psa/users/actions';
 import { getRoles, getUserRoles, assignRoleToUser, removeRoleFromUser } from '@alga-psa/users/actions';
 import { useDrawer } from "@alga-psa/ui";
 import { Text, Flex } from '@radix-ui/themes';
@@ -10,11 +10,12 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { Card } from '@alga-psa/ui/components/Card';
-import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { Eye, EyeOff, ChevronDown, ChevronUp } from 'lucide-react';
 import CollapsiblePasswordChangeForm from './CollapsiblePasswordChangeForm';
 import { getLicenseUsageAction } from '@alga-psa/licensing/actions';
 import toast from 'react-hot-toast';
+import { useFeatureFlag } from '@alga-psa/ui/hooks';
 
 interface UserDetailsProps {
   userId: string;
@@ -31,9 +32,12 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
   const [roles, setRoles] = useState<IRole[]>([]);
   const [availableRoles, setAvailableRoles] = useState<IRole[]>([]);
   const [selectedRole, setSelectedRole] = useState<string>('');
+  const [reportsTo, setReportsTo] = useState<string>('');
+  const [reportsToOptions, setReportsToOptions] = useState<SelectOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { closeDrawer } = useDrawer();
+  const { enabled: isTeamsV2Enabled } = useFeatureFlag('teams-v2', { defaultValue: false });
 
   // Admin password change states
   const [isAdmin, setIsAdmin] = useState(false);
@@ -54,6 +58,40 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
       fetchAvailableRoles();
     }
   }, [user]);
+
+  useEffect(() => {
+    if (user) {
+      setReportsTo(user.reports_to || '');
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (!isTeamsV2Enabled) {
+      return;
+    }
+
+    const fetchReportsToOptions = async () => {
+      try {
+        const allUsers = await getAllUsers(true);
+        const options: SelectOption[] = allUsers
+          .filter((item) => item.user_id !== userId)
+          .map((item) => {
+            const displayName = [item.first_name, item.last_name].filter(Boolean).join(' ').trim();
+            const label = displayName || item.email;
+            return {
+              value: item.user_id,
+              label: item.is_inactive ? `${label} (Inactive)` : label,
+              is_inactive: item.is_inactive,
+            };
+          });
+        setReportsToOptions(options);
+      } catch (err) {
+        console.error('Error fetching reports_to options:', err);
+      }
+    };
+
+    fetchReportsToOptions();
+  }, [isTeamsV2Enabled, userId]);
 
   const fetchCurrentUser = async () => {
     try {
@@ -163,6 +201,10 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
           email: email,
           is_inactive: !isActive,
         };
+
+        if (isTeamsV2Enabled) {
+          updatedUserData.reports_to = reportsTo || null;
+        }
         
         const updatedUser = await updateUser(user.user_id, updatedUserData);
         if (updatedUser) {
@@ -283,6 +325,22 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
             className="w-full"
           />
         </div>
+
+        {isTeamsV2Enabled && (
+          <div>
+            <Text as="label" size="2" weight="medium" className="mb-2 block">
+              Reports To
+            </Text>
+            <CustomSelect
+              options={reportsToOptions}
+              value={reportsTo}
+              onValueChange={setReportsTo}
+              className="w-full"
+              placeholder="Select manager"
+              allowClear
+            />
+          </div>
+        )}
 
         {/* Last Login Info */}
         {user?.last_login_at && (
