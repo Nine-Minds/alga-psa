@@ -84,3 +84,4 @@
 - (2026-02-26) Added Reports To dropdown to User Management details (`server/src/components/settings/general/UserDetails.tsx`) behind `teams-v2`, with tenant user list, clearable selection, and save wiring.
 - (2026-02-26) Reports To selection now saved via `updateUser` when `teams-v2` is enabled (cycle validation enforced server-side).
 - (2026-02-26) Reports To field rendering is gated behind `teams-v2` feature flag.
+- (2026-02-26) Added Org Chart view to User Management (`server/src/components/settings/general/UserManagement.tsx`) using reports_to hierarchy; roots include users with null/missing reports_to and rendering is gated by `teams-v2`.

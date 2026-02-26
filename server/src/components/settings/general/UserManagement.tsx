@@ -26,6 +26,7 @@ import { LicenseUsage } from '@alga-psa/licensing/lib/get-license-usage';
 import { validateContactName, validateEmailAddress, validatePassword, getPasswordRequirements } from '@alga-psa/validation';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
+import { useFeatureFlag } from '@alga-psa/ui/hooks';
 
 const UserManagement = (): React.JSX.Element => {
   const [users, setUsers] = useState<IUser[]>([]);
@@ -65,6 +66,8 @@ const UserManagement = (): React.JSX.Element => {
   });
   const [contactValidationError, setContactValidationError] = useState<string | null>(null);
   const [isCopyingPortalLink, setIsCopyingPortalLink] = useState(false);
+  const [userView, setUserView] = useState<'list' | 'org'>('list');
+  const { enabled: isTeamsV2Enabled } = useFeatureFlag('teams-v2', { defaultValue: false });
 
   const extractErrorMessage = (error: unknown): string => {
     if (typeof error === 'string') {
@@ -127,6 +130,12 @@ const UserManagement = (): React.JSX.Element => {
       fetchContacts();
     }
   }, [portalType]);
+
+  useEffect(() => {
+    if (!isTeamsV2Enabled || portalType !== 'msp') {
+      setUserView('list');
+    }
+  }, [isTeamsV2Enabled, portalType]);
 
   useEffect(() => {
     if (portalType === 'client') {
@@ -510,6 +519,72 @@ const fetchContacts = async (): Promise<void> => {
     { value: 'client', label: 'Client Portal' }
   ];
 
+  const userViewOptions: ViewSwitcherOption<'list' | 'org'>[] = [
+    { value: 'list', label: 'List' },
+    { value: 'org', label: 'Org Chart' }
+  ];
+
+  const getDisplayName = (user: IUser) => {
+    const fullName = `${user.first_name || ''} ${user.last_name || ''}`.trim();
+    return fullName || user.email;
+  };
+
+  const buildOrgTree = (allUsers: IUser[]) => {
+    const nodes = new Map<string, { user: IUser; children: IUser[] }>();
+    allUsers.forEach((user) => {
+      nodes.set(user.user_id, { user, children: [] });
+    });
+
+    const roots: IUser[] = [];
+
+    allUsers.forEach((user) => {
+      if (user.reports_to && nodes.has(user.reports_to)) {
+        nodes.get(user.reports_to)?.children.push(user);
+      } else {
+        roots.push(user);
+      }
+    });
+
+    const sortUsers = (list: IUser[]) => {
+      list.sort((a, b) => getDisplayName(a).localeCompare(getDisplayName(b)));
+    };
+
+    const sortTree = (usersToSort: IUser[]) => {
+      sortUsers(usersToSort);
+      usersToSort.forEach((item) => {
+        const node = nodes.get(item.user_id);
+        if (node) {
+          sortTree(node.children);
+        }
+      });
+    };
+
+    sortTree(roots);
+
+    return { roots, nodes };
+  };
+
+  const renderOrgNode = (user: IUser, nodes: Map<string, { user: IUser; children: IUser[] }>) => {
+    const node = nodes.get(user.user_id);
+    const children = node?.children || [];
+
+    return (
+      <li key={user.user_id} className="py-1">
+        <div className="flex items-center gap-2">
+          <span className="font-medium">{getDisplayName(user)}</span>
+          {user.is_inactive && (
+            <span className="text-xs text-muted-foreground">(Inactive)</span>
+          )}
+        </div>
+        {children.length > 0 && (
+          <ul className="pl-4 mt-2 border-l border-gray-200 space-y-1">
+            {children.map((child) => renderOrgNode(child, nodes))}
+          </ul>
+        )}
+      </li>
+    );
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -548,64 +623,85 @@ const fetchContacts = async (): Promise<void> => {
             </AlertDescription>
           </Alert>
         )}
-        <div className="flex justify-between mb-4">
-          <div className="flex gap-6 items-center">
-            <div className="relative p-0.5">
-              <Input
-                type="text"
-                placeholder="Search users"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="border-2 border-gray-200 focus:border-purple-500 rounded-md pl-10 pr-4 py-2 w-64 outline-none bg-white"
-              />
-              <Search size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-            </div>
-            <div>
-              <CustomSelect
-                value={filterStatus}
-                onValueChange={(value) => setFilterStatus(value as 'all' | 'active' | 'inactive')}
-                options={statusOptions}
-                placeholder="Select Status"
-              />
-            </div>
-            {portalType === 'client' && (
+        {userView === 'list' && (
+          <div className="flex justify-between mb-4">
+            <div className="flex gap-6 items-center">
+              <div className="relative p-0.5">
+                <Input
+                  type="text"
+                  placeholder="Search users"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="border-2 border-gray-200 focus:border-purple-500 rounded-md pl-10 pr-4 py-2 w-64 outline-none bg-white"
+                />
+                <Search size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+              </div>
               <div>
-                <ClientPicker
-                  id="user-management-client-filter"
-                  clients={clients}
-                  selectedClientId={selectedClientId}
-                  onSelect={(clientId) => setSelectedClientId(clientId)}
-                  filterState={clientFilterState}
-                  onFilterStateChange={(state) => setClientFilterState(state)}
-                  clientTypeFilter={clientClientTypeFilter}
-                  onClientTypeFilterChange={(filter) => setClientClientTypeFilter(filter)}
-                  placeholder="Select client"
-                  fitContent={true}
+                <CustomSelect
+                  value={filterStatus}
+                  onValueChange={(value) => setFilterStatus(value as 'all' | 'active' | 'inactive')}
+                  options={statusOptions}
+                  placeholder="Select Status"
                 />
               </div>
-            )}
+              {portalType === 'client' && (
+                <div>
+                  <ClientPicker
+                    id="user-management-client-filter"
+                    clients={clients}
+                    selectedClientId={selectedClientId}
+                    onSelect={(clientId) => setSelectedClientId(clientId)}
+                    filterState={clientFilterState}
+                    onFilterStateChange={(state) => setClientFilterState(state)}
+                    clientTypeFilter={clientClientTypeFilter}
+                    onClientTypeFilterChange={(filter) => setClientClientTypeFilter(filter)}
+                    placeholder="Select client"
+                    fitContent={true}
+                  />
+                </div>
+              )}
+            </div>
+            <div className="flex items-center gap-3">
+              {isTeamsV2Enabled && portalType === 'msp' && (
+                <ViewSwitcher
+                  currentView={userView}
+                  onChange={setUserView}
+                  options={userViewOptions}
+                />
+              )}
+              {portalType === 'client' && (
+                <Button
+                  id="copy-client-portal-link-button"
+                  variant="outline"
+                  onClick={handleCopyPortalLink}
+                  disabled={isCopyingPortalLink}
+                >
+                  {isCopyingPortalLink ? 'Copying...' : 'Copy Portal Login Link'}
+                </Button>
+              )}
+              {!showNewUserForm && (
+                <Button
+                  id={`create-new-${portalType}-user-btn`}
+                  onClick={() => setShowNewUserForm(true)}
+                >
+                  Create New {portalType === 'msp' ? 'User' : 'Client User'}
+                </Button>
+              )}
+            </div>
           </div>
-          <div className="flex items-center gap-3">
-            {portalType === 'client' && (
-              <Button
-                id="copy-client-portal-link-button"
-                variant="outline"
-                onClick={handleCopyPortalLink}
-                disabled={isCopyingPortalLink}
-              >
-                {isCopyingPortalLink ? 'Copying...' : 'Copy Portal Login Link'}
-              </Button>
-            )}
-            {!showNewUserForm && (
-              <Button
-                id={`create-new-${portalType}-user-btn`}
-                onClick={() => setShowNewUserForm(true)}
-              >
-                Create New {portalType === 'msp' ? 'User' : 'Client User'}
-              </Button>
-            )}
+        )}
+        {userView === 'org' && isTeamsV2Enabled && portalType === 'msp' && (
+          <div className="flex justify-between mb-4">
+            <div className="text-sm text-muted-foreground">
+              Reporting hierarchy for internal users.
+            </div>
+            <ViewSwitcher
+              currentView={userView}
+              onChange={setUserView}
+              options={userViewOptions}
+            />
           </div>
-        </div>
+        )}
         {showNewUserForm && (
           <div className="mb-4 p-4 border rounded-md">
             <h3 className="text-lg font-semibold mb-2">
@@ -859,6 +955,17 @@ const fetchContacts = async (): Promise<void> => {
               text="Loading users..."
               spinnerProps={{ size: 'md' }}
             />
+          </div>
+        ) : userView === 'org' && isTeamsV2Enabled && portalType === 'msp' ? (
+          <div className="border rounded-md p-4 bg-white">
+            {(() => {
+              const { roots, nodes } = buildOrgTree(users);
+              return (
+                <ul className="space-y-2">
+                  {roots.map((root) => renderOrgNode(root, nodes))}
+                </ul>
+              );
+            })()}
           </div>
         ) : (
           <UserList 

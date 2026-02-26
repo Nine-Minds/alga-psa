@@ -44,19 +44,19 @@
   {
     "id": "F008",
     "description": "Org chart: Tree view tab in User Management displaying reporting hierarchy (behind `teams-v2` flag)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-1.5"]
   },
   {
     "id": "F009",
     "description": "Org chart: Users with `reports_to = NULL` shown as top-level nodes",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-1.5"]
   },
   {
     "id": "F010",
     "description": "Org chart: Hidden when `teams-v2` flag is off",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-1.5", "NFR-1"]
   },
   {
