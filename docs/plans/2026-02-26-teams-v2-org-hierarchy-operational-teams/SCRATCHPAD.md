@@ -129,3 +129,4 @@
 - (2026-02-26) Marked T010 test covered by teams-v2 plan suite.
 - (2026-02-26) Marked T011 test covered by teams-v2 plan suite.
 - (2026-02-26) Marked T012 test covered by teams-v2 plan suite.
+- (2026-02-26) Marked T013 test covered by teams-v2 plan suite.

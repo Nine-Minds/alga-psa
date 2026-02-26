@@ -98,7 +98,7 @@
   {
     "id": "T013",
     "description": "User edit form: 'Reports To' dropdown is hidden when `teams-v2` flag is off",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F007"
     ]
