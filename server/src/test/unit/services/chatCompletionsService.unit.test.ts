@@ -734,6 +734,51 @@ describe('ChatCompletionsService (unit)', () => {
     sleepSpy.mockRestore();
   });
 
+  it('retries internal https tool calls over http on TLS packet-length mismatch', async () => {
+    const { ChatCompletionsService } = await import('@ee/services/chatCompletionsService');
+
+    const tlsError = new TypeError('fetch failed') as TypeError & {
+      cause?: { code?: string; reason?: string };
+    };
+    tlsError.cause = {
+      code: 'ERR_SSL_PACKET_LENGTH_TOO_LONG',
+      reason: 'packet length too long',
+    };
+
+    expect(
+      (ChatCompletionsService as any).shouldRetryWithHttp(
+        tlsError,
+        'https://sebastian.msp.svc.cluster.local:3000/api/v1/tickets',
+        'https://sebastian.msp.svc.cluster.local:3000',
+      ),
+    ).toBe(true);
+    expect(
+      (ChatCompletionsService as any).toHttpUrl(
+        'https://sebastian.msp.svc.cluster.local:3000/api/v1/tickets',
+      ),
+    ).toBe('http://sebastian.msp.svc.cluster.local:3000/api/v1/tickets');
+  });
+
+  it('does not retry over http for non-matching hosts', async () => {
+    const { ChatCompletionsService } = await import('@ee/services/chatCompletionsService');
+
+    const tlsError = new TypeError('fetch failed') as TypeError & {
+      cause?: { code?: string; reason?: string };
+    };
+    tlsError.cause = {
+      code: 'ERR_SSL_PACKET_LENGTH_TOO_LONG',
+      reason: 'packet length too long',
+    };
+
+    expect(
+      (ChatCompletionsService as any).shouldRetryWithHttp(
+        tlsError,
+        'https://external.example.com/api/v1/tickets',
+        'https://sebastian.msp.svc.cluster.local:3000',
+      ),
+    ).toBe(false);
+  });
+
   it('decline execution path skips endpoint call and keeps conversation usable', async () => {
     const { ChatCompletionsService } = await import('@ee/services/chatCompletionsService');
 
