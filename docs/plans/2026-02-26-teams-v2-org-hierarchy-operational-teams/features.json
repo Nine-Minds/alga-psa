@@ -170,7 +170,7 @@
   {
     "id": "F029",
     "description": "`UserAndTeamPicker`: typing filters both users and teams simultaneously",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-2.8"]
   },
   {
