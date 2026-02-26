@@ -224,7 +224,7 @@
   {
     "id": "F038",
     "description": "Team badge is hidden when `teams-v2` flag is off (even if `assigned_team_id` has a value)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-2.10", "NFR-1"]
   },
   {
