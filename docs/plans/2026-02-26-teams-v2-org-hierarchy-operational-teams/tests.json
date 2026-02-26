@@ -308,7 +308,7 @@
   {
     "id": "T039",
     "description": "`IProjectTask` interface includes optional `assigned_team_id`",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F023"
     ]
