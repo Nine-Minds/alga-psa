@@ -1,0 +1,302 @@
+[
+  {
+    "id": "F001",
+    "description": "Migration: Add `reports_to` nullable UUID column to `users` table with FK to `users(user_id)`",
+    "implemented": false,
+    "prdRefs": ["FR-1.1"]
+  },
+  {
+    "id": "F002",
+    "description": "Migration: Auto-seed `reports_to` from existing team_members/teams data (team member → team manager_id, skip self-references)",
+    "implemented": false,
+    "prdRefs": ["FR-1.2"]
+  },
+  {
+    "id": "F003",
+    "description": "Server-side cycle prevention: validate that setting `reports_to` does not create a circular chain",
+    "implemented": false,
+    "prdRefs": ["FR-1.3"]
+  },
+  {
+    "id": "F004",
+    "description": "Update `IUser` interface to include optional `reports_to` field",
+    "implemented": false,
+    "prdRefs": ["FR-1.1"]
+  },
+  {
+    "id": "F005",
+    "description": "User edit form: Add 'Reports To' dropdown field showing all users in tenant (behind `teams-v2` flag)",
+    "implemented": false,
+    "prdRefs": ["FR-1.4"]
+  },
+  {
+    "id": "F006",
+    "description": "User edit form: Saving 'Reports To' persists the value and triggers cycle validation",
+    "implemented": false,
+    "prdRefs": ["FR-1.4", "FR-1.3"]
+  },
+  {
+    "id": "F007",
+    "description": "User edit form: 'Reports To' dropdown is hidden when `teams-v2` flag is off",
+    "implemented": false,
+    "prdRefs": ["FR-1.4", "NFR-1"]
+  },
+  {
+    "id": "F008",
+    "description": "Org chart: Tree view tab in User Management displaying reporting hierarchy (behind `teams-v2` flag)",
+    "implemented": false,
+    "prdRefs": ["FR-1.5"]
+  },
+  {
+    "id": "F009",
+    "description": "Org chart: Users with `reports_to = NULL` shown as top-level nodes",
+    "implemented": false,
+    "prdRefs": ["FR-1.5"]
+  },
+  {
+    "id": "F010",
+    "description": "Org chart: Hidden when `teams-v2` flag is off",
+    "implemented": false,
+    "prdRefs": ["FR-1.5", "NFR-1"]
+  },
+  {
+    "id": "F011",
+    "description": "Implement `isInReportsToChain(managerUserId, employeeUserId)` function using iterative/CTE approach (no recursion stack overflow)",
+    "implemented": false,
+    "prdRefs": ["FR-1.6", "NFR-5"]
+  },
+  {
+    "id": "F012",
+    "description": "Extend `canApprove` / delegation auth: add `reports_to` chain check alongside existing team-manager check (flag-gated)",
+    "implemented": false,
+    "prdRefs": ["FR-1.7"]
+  },
+  {
+    "id": "F013",
+    "description": "Existing `isManagerOfSubject()` team-based check remains active and unchanged regardless of flag",
+    "implemented": false,
+    "prdRefs": ["FR-1.7", "NFR-3"]
+  },
+  {
+    "id": "F014",
+    "description": "Update `fetchTimeSheetsForApproval()` to additionally include timesheets from `reports_to` subordinates when flag is on",
+    "implemented": false,
+    "prdRefs": ["FR-1.8"]
+  },
+  {
+    "id": "F015",
+    "description": "Update AvailabilitySettings to additionally scope managed users by `reports_to` when flag is on",
+    "implemented": false,
+    "prdRefs": ["FR-1.9"]
+  },
+  {
+    "id": "F016",
+    "description": "Update SchedulePage to additionally scope managed users by `reports_to` when flag is on",
+    "implemented": false,
+    "prdRefs": ["FR-1.10"]
+  },
+  {
+    "id": "F017",
+    "description": "Migration: Add `role TEXT DEFAULT 'member'` column to `team_members` table",
+    "implemented": false,
+    "prdRefs": ["FR-2.1"]
+  },
+  {
+    "id": "F018",
+    "description": "Migration: Set `role = 'lead'` for existing team members whose user_id matches their team's `manager_id`",
+    "implemented": false,
+    "prdRefs": ["FR-2.2"]
+  },
+  {
+    "id": "F019",
+    "description": "Update `ITeamMember` / team member interfaces to include `role: 'member' | 'lead'`",
+    "implemented": false,
+    "prdRefs": ["FR-2.1"]
+  },
+  {
+    "id": "F020",
+    "description": "Migration: Add nullable `assigned_team_id UUID` column to `tickets` table with FK to `teams(team_id)`",
+    "implemented": false,
+    "prdRefs": ["FR-2.3"]
+  },
+  {
+    "id": "F021",
+    "description": "Migration: Add nullable `assigned_team_id UUID` column to `project_tasks` table with FK to `teams(team_id)`",
+    "implemented": false,
+    "prdRefs": ["FR-2.4"]
+  },
+  {
+    "id": "F022",
+    "description": "Update `ITicket` interface to include optional `assigned_team_id`",
+    "implemented": false,
+    "prdRefs": ["FR-2.21"]
+  },
+  {
+    "id": "F023",
+    "description": "Update `IProjectTask` interface to include optional `assigned_team_id`",
+    "implemented": false,
+    "prdRefs": ["FR-2.21"]
+  },
+  {
+    "id": "F024",
+    "description": "Server action `assignTeamToTicket()`: sets `assigned_team_id`, assigns lead as primary if `assigned_to` is NULL, expands other members into `ticket_resources` with `role = 'team_member'`",
+    "implemented": false,
+    "prdRefs": ["FR-2.5"]
+  },
+  {
+    "id": "F025",
+    "description": "Team assignment: when `assigned_to` is already set, add all team members as resources EXCEPT whoever is already `assigned_to`",
+    "implemented": false,
+    "prdRefs": ["FR-2.6"]
+  },
+  {
+    "id": "F026",
+    "description": "Team assignment: team lead is NOT added as `ticket_resources` when they are the primary assignee (respects DB constraint)",
+    "implemented": false,
+    "prdRefs": ["FR-2.7"]
+  },
+  {
+    "id": "F027",
+    "description": "Server action `assignTeamToProjectTask()`: same logic as ticket team assignment but for project tasks",
+    "implemented": false,
+    "prdRefs": ["FR-2.5", "FR-2.6", "FR-2.7"]
+  },
+  {
+    "id": "F028",
+    "description": "Build `UserAndTeamPicker` component: shows users and teams in grouped sections with separator",
+    "implemented": false,
+    "prdRefs": ["FR-2.8"]
+  },
+  {
+    "id": "F029",
+    "description": "`UserAndTeamPicker`: typing filters both users and teams simultaneously",
+    "implemented": false,
+    "prdRefs": ["FR-2.8"]
+  },
+  {
+    "id": "F030",
+    "description": "`UserAndTeamPicker`: teams show member count and lead name for context",
+    "implemented": false,
+    "prdRefs": ["FR-2.8"]
+  },
+  {
+    "id": "F031",
+    "description": "`UserAndTeamPicker`: visual distinction — generic team icon for teams vs user avatar for individuals",
+    "implemented": false,
+    "prdRefs": ["FR-2.8"]
+  },
+  {
+    "id": "F032",
+    "description": "`UserAndTeamPicker`: selecting a team triggers team assignment action (sets `assigned_team_id`, assigns lead, expands members)",
+    "implemented": false,
+    "prdRefs": ["FR-2.8", "FR-2.5"]
+  },
+  {
+    "id": "F033",
+    "description": "`UserAndTeamPicker`: selecting a user works identically to existing `UserPicker` behavior",
+    "implemented": false,
+    "prdRefs": ["FR-2.8"]
+  },
+  {
+    "id": "F034",
+    "description": "Feature flag swap: ticket detail renders `UserAndTeamPicker` instead of `UserPicker` when `teams-v2` flag is on",
+    "implemented": false,
+    "prdRefs": ["FR-2.9", "NFR-1"]
+  },
+  {
+    "id": "F035",
+    "description": "Feature flag swap: task detail renders `UserAndTeamPicker` instead of `UserPicker` when `teams-v2` flag is on",
+    "implemented": false,
+    "prdRefs": ["FR-2.9", "NFR-1"]
+  },
+  {
+    "id": "F036",
+    "description": "When flag is off, existing `UserPicker` renders unchanged (zero risk)",
+    "implemented": false,
+    "prdRefs": ["FR-2.9", "NFR-1"]
+  },
+  {
+    "id": "F037",
+    "description": "Team badge on 'Agent team' card: chip with generic team icon + team name + x button, matching Additional Agents chip style",
+    "implemented": false,
+    "prdRefs": ["FR-2.10"]
+  },
+  {
+    "id": "F038",
+    "description": "Team badge is hidden when `teams-v2` flag is off (even if `assigned_team_id` has a value)",
+    "implemented": false,
+    "prdRefs": ["FR-2.10", "NFR-1"]
+  },
+  {
+    "id": "F039",
+    "description": "Team removal: clicking 'x' on team badge opens confirmation dialog",
+    "implemented": false,
+    "prdRefs": ["FR-2.11"]
+  },
+  {
+    "id": "F040",
+    "description": "Team removal dialog: 'Remove all team members' option removes `ticket_resources` with `role = 'team_member'` and clears `assigned_team_id`",
+    "implemented": false,
+    "prdRefs": ["FR-2.12"]
+  },
+  {
+    "id": "F041",
+    "description": "Team removal dialog: 'Keep all team members as individual agents' option clears `assigned_team_id` only, resources stay",
+    "implemented": false,
+    "prdRefs": ["FR-2.13"]
+  },
+  {
+    "id": "F042",
+    "description": "Team removal dialog: individual checkboxes for each team member to select who to keep/remove",
+    "implemented": false,
+    "prdRefs": ["FR-2.14"]
+  },
+  {
+    "id": "F043",
+    "description": "Team removal: primary `assigned_to` is never automatically removed when clearing team assignment",
+    "implemented": false,
+    "prdRefs": ["FR-2.15"]
+  },
+  {
+    "id": "F044",
+    "description": "Adding/removing individual agents does NOT affect team assignment — team badge and agent chips are independent",
+    "implemented": false,
+    "prdRefs": ["FR-2.16"]
+  },
+  {
+    "id": "F045",
+    "description": "Team assignment is a snapshot — later team roster changes do not update existing ticket resources",
+    "implemented": false,
+    "prdRefs": ["FR-2.17"]
+  },
+  {
+    "id": "F046",
+    "description": "'Assigned To' filter in ticket list: shows teams alongside users when `teams-v2` flag is on",
+    "implemented": false,
+    "prdRefs": ["FR-2.18"]
+  },
+  {
+    "id": "F047",
+    "description": "'Assigned To' filter: selecting a team filters by `tickets.assigned_team_id`",
+    "implemented": false,
+    "prdRefs": ["FR-2.19"]
+  },
+  {
+    "id": "F048",
+    "description": "'Assigned To' filter: works exactly as before (users only) when flag is off",
+    "implemented": false,
+    "prdRefs": ["FR-2.18", "NFR-1"]
+  },
+  {
+    "id": "F049",
+    "description": "Extend `tickets.create` workflow action to support `assignee: { type: 'team', id: uuid }` matching `projects.create_task` pattern",
+    "implemented": false,
+    "prdRefs": ["FR-2.20"]
+  },
+  {
+    "id": "F050",
+    "description": "Update tenant export to include `reports_to`, `assigned_team_id`, and `role` columns",
+    "implemented": false,
+    "prdRefs": ["FR-2.22"]
+  }
+]
