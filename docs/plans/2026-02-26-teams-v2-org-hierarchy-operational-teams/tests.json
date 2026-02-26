@@ -405,7 +405,7 @@
   {
     "id": "T051",
     "description": "`UserAndTeamPicker`: selecting a team triggers team assignment action",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F032"
     ]
