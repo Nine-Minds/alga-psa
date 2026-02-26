@@ -397,7 +397,7 @@
   {
     "id": "T050",
     "description": "`UserAndTeamPicker`: teams use generic team icon, users use avatar",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F031"
     ]
