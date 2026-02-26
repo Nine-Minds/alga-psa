@@ -413,7 +413,7 @@
   {
     "id": "T052",
     "description": "`UserAndTeamPicker`: selecting a user works identically to existing `UserPicker`",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F033"
     ]
