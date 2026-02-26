@@ -349,7 +349,7 @@
   {
     "id": "T044",
     "description": "Team assignment: resources added via team have `role = 'team_member'` in `ticket_resources`",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F024"
     ]
