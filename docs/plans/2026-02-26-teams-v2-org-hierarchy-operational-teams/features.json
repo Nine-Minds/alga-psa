@@ -116,13 +116,13 @@
   {
     "id": "F020",
     "description": "Migration: Add nullable `assigned_team_id UUID` column to `tickets` table with FK to `teams(team_id)`",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-2.3"]
   },
   {
     "id": "F021",
     "description": "Migration: Add nullable `assigned_team_id UUID` column to `project_tasks` table with FK to `teams(team_id)`",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-2.4"]
   },
   {
