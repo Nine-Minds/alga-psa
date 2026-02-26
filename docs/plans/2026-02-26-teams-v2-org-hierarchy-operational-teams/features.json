@@ -278,7 +278,7 @@
   {
     "id": "F047",
     "description": "'Assigned To' filter: selecting a team filters by `tickets.assigned_team_id`",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-2.19"]
   },
   {
