@@ -102,3 +102,4 @@
 - (2026-02-26) Team selection in `UserAndTeamPicker` now triggers ticket/task team assignment actions.
 - (2026-02-26) User selection flow in `UserAndTeamPicker` matches existing `UserPicker` behavior.
 - (2026-02-26) Ticket detail "Assigned To" field now swaps to `UserAndTeamPicker` when `teams-v2` is enabled.
+- (2026-02-26) Project task detail "Assigned To" field now swaps to `UserAndTeamPicker` under `teams-v2`.
