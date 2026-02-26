@@ -276,7 +276,7 @@
   {
     "id": "T035",
     "description": "Migration: existing team members matching `teams.manager_id` have `role = 'lead'`",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F018"
     ]
