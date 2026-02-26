@@ -122,6 +122,12 @@
   gap: 0.5rem;
 }
 
+.message-header__actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
 .message-author {
   display: inline-flex;
   align-items: center;
@@ -179,6 +185,36 @@
 
 .message-bubble--user .message-status__dot {
   background: rgb(var(--color-text-600));
+}
+
+.message-action-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.45rem;
+  height: 1.45rem;
+  border-radius: 0.35rem;
+  border: 1px solid rgb(var(--color-border-300));
+  background: rgb(var(--color-border-100));
+  color: rgb(var(--color-text-700));
+  cursor: pointer;
+  transition: background-color 120ms ease, color 120ms ease, border-color 120ms ease;
+}
+
+.message-action-button:hover {
+  background: rgb(var(--color-border-200));
+  border-color: rgb(var(--color-border-400));
+  color: rgb(var(--color-text-900));
+}
+
+.message-action-button:focus-visible {
+  outline: 2px solid rgb(var(--color-primary-400));
+  outline-offset: 1px;
+}
+
+.message-action-button svg {
+  width: 0.9rem;
+  height: 0.9rem;
 }
 
 .message-content {

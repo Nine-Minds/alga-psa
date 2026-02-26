@@ -148,7 +148,12 @@ describe('EE Chat (streaming state)', () => {
       />,
     );
 
-    fireEvent.change(screen.getByPlaceholderText('Send a message'), {
+    const latestInput = screen.getAllByPlaceholderText('Send a message').at(-1);
+    if (!latestInput) {
+      throw new Error('Expected chat input to be rendered');
+    }
+
+    fireEvent.change(latestInput, {
       target: { value: 'Ping' },
     });
     fireEvent.click(screen.getByRole('button', { name: 'SEND' }));
@@ -446,6 +451,134 @@ describe('EE Chat (streaming state)', () => {
     await waitFor(() =>
       expect(document.querySelector('.message-streaming-cursor')).toBeNull(),
     );
+  });
+
+  it('sends on Enter in single-line mode', async () => {
+    expect(Chat).toBeDefined();
+
+    vi
+      .mocked(addMessageToChatAction)
+      .mockResolvedValueOnce({ _id: 'user-message-id' })
+      .mockResolvedValueOnce({ _id: 'assistant-message-id' });
+
+    vi.spyOn(globalThis, 'requestAnimationFrame').mockImplementation((cb) => {
+      cb(0);
+      return 0;
+    });
+
+    Object.defineProperty(window, 'localStorage', {
+      configurable: true,
+      value: {
+        removeItem: vi.fn(),
+        getItem: vi.fn(),
+        setItem: vi.fn(),
+      },
+    });
+
+    const sse = createControlledSseResponse();
+    const fetchMock = vi.fn().mockResolvedValue(sse.response);
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(
+      <Chat
+        clientUrl="https://example.invalid"
+        accountId="account-1"
+        messages={[]}
+        userRole="admin"
+        userId="user-1"
+        selectedAccount="account-1"
+        handleSelectAccount={vi.fn()}
+        auth_token="token"
+        setChatTitle={vi.fn()}
+        isTitleLocked={false}
+        onUserInput={vi.fn()}
+        hf={null}
+        initialChatId="chat-1"
+      />,
+    );
+
+    const input = screen.getByPlaceholderText('Send a message');
+    fireEvent.change(input, {
+      target: { value: 'Ping from Enter' },
+    });
+    fireEvent.keyDown(input, { key: 'Enter', code: 'Enter' });
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+
+    sse.send({ content: 'Done', done: false });
+    sse.send({ content: '', done: true });
+    sse.close();
+    await waitFor(() => expect(screen.getByRole('button', { name: 'SEND' })).toBeEnabled());
+  });
+
+  it('uses multiline mode after Shift+Enter and sends with Ctrl+Enter', async () => {
+    expect(Chat).toBeDefined();
+
+    vi
+      .mocked(addMessageToChatAction)
+      .mockResolvedValueOnce({ _id: 'user-message-id' })
+      .mockResolvedValueOnce({ _id: 'assistant-message-id' });
+
+    vi.spyOn(globalThis, 'requestAnimationFrame').mockImplementation((cb) => {
+      cb(0);
+      return 0;
+    });
+
+    Object.defineProperty(window, 'localStorage', {
+      configurable: true,
+      value: {
+        removeItem: vi.fn(),
+        getItem: vi.fn(),
+        setItem: vi.fn(),
+      },
+    });
+
+    const sse = createControlledSseResponse();
+    const fetchMock = vi.fn().mockResolvedValue(sse.response);
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(
+      <Chat
+        clientUrl="https://example.invalid"
+        accountId="account-1"
+        messages={[]}
+        userRole="admin"
+        userId="user-1"
+        selectedAccount="account-1"
+        handleSelectAccount={vi.fn()}
+        auth_token="token"
+        setChatTitle={vi.fn()}
+        isTitleLocked={false}
+        onUserInput={vi.fn()}
+        hf={null}
+        initialChatId="chat-1"
+      />,
+    );
+
+    const input = screen.getByPlaceholderText('Send a message');
+    fireEvent.change(input, {
+      target: { value: 'Line 1' },
+    });
+
+    fireEvent.keyDown(input, { key: 'Enter', code: 'Enter', shiftKey: true });
+    expect(
+      screen.getByText('Multiline mode: Enter adds a new line. Ctrl+Enter or ⌘+Enter sends.'),
+    ).toBeInTheDocument();
+
+    fireEvent.keyDown(input, { key: 'Enter', code: 'Enter' });
+    expect(fetchMock).toHaveBeenCalledTimes(0);
+
+    fireEvent.change(input, {
+      target: { value: 'Line 1\nLine 2' },
+    });
+    fireEvent.keyDown(input, { key: 'Enter', code: 'Enter', ctrlKey: true });
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+
+    sse.send({ content: 'Multiline complete', done: false });
+    sse.send({ content: '', done: true });
+    sse.close();
+    await waitFor(() => expect(screen.getByRole('button', { name: 'SEND' })).toBeEnabled());
   });
 
   it('shows the partial response when a network error occurs mid-stream', async () => {
@@ -769,7 +902,95 @@ describe('EE Chat (streaming state)', () => {
     sse.close();
 
     await waitFor(() => expect(screen.getByRole('button', { name: 'SEND' })).toBeEnabled());
-    expect(getIncomingAssistantContent()).toHaveTextContent('Vertex answer');
+    await waitFor(() =>
+      expect(getIncomingAssistantContent()).toHaveTextContent('Vertex answer'),
+    );
+  });
+
+  it('includes prior assistant reasoning_content in the next streamed request payload', async () => {
+    expect(Chat).toBeDefined();
+
+    vi.mocked(addMessageToChatAction).mockResolvedValue({ _id: 'message-id' });
+
+    vi.spyOn(globalThis, 'requestAnimationFrame').mockImplementation((cb) => {
+      cb(0);
+      return 0;
+    });
+
+    Object.defineProperty(window, 'localStorage', {
+      configurable: true,
+      value: {
+        removeItem: vi.fn(),
+        getItem: vi.fn(),
+        setItem: vi.fn(),
+      },
+    });
+
+    const firstSse = createControlledSseResponse();
+    const secondSse = createControlledSseResponse();
+    const requestBodies: Array<Record<string, unknown>> = [];
+    const fetchMock = vi.fn(async (url: unknown, init?: RequestInit) => {
+      if (url !== '/api/chat/v1/completions/stream') {
+        throw new Error(`Unexpected fetch URL: ${String(url)}`);
+      }
+
+      requestBodies.push(JSON.parse(String(init?.body ?? '{}')) as Record<string, unknown>);
+      return requestBodies.length === 1 ? firstSse.response : secondSse.response;
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(
+      <Chat
+        clientUrl="https://example.invalid"
+        accountId="account-1"
+        messages={[]}
+        userRole="admin"
+        userId="user-1"
+        selectedAccount="account-1"
+        handleSelectAccount={vi.fn()}
+        auth_token="token"
+        setChatTitle={vi.fn()}
+        isTitleLocked={false}
+        onUserInput={vi.fn()}
+        hf={null}
+        initialChatId="chat-1"
+      />,
+    );
+
+    fireEvent.change(screen.getByPlaceholderText('Send a message'), {
+      target: { value: 'First prompt' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'SEND' }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+
+    firstSse.send({ type: 'reasoning_delta', delta: 'Check current ticket state first.' });
+    firstSse.send({ type: 'content_delta', delta: 'First answer' });
+    firstSse.send({ type: 'done', done: true });
+    firstSse.close();
+
+    await waitFor(() => expect(screen.getByRole('button', { name: 'SEND' })).toBeEnabled());
+    await waitFor(() => expect(screen.getByText('First answer')).toBeInTheDocument());
+
+    fireEvent.change(screen.getByPlaceholderText('Send a message'), {
+      target: { value: 'Second prompt' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'SEND' }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+
+    const secondRequestMessages = (requestBodies[1]?.messages ?? []) as Array<Record<string, unknown>>;
+    const priorAssistantMessage = secondRequestMessages.find(
+      (message) => message.role === 'assistant' && message.content === 'First answer',
+    );
+    expect(priorAssistantMessage).toMatchObject({
+      reasoning_content: 'Check current ticket state first.',
+    });
+
+    secondSse.send({ type: 'content_delta', delta: 'Second answer' });
+    secondSse.send({ type: 'done', done: true });
+    secondSse.close();
+    await waitFor(() => expect(screen.getByRole('button', { name: 'SEND' })).toBeEnabled());
   });
 
   it('sets pending function state when a function proposal stream event arrives', async () => {
@@ -1180,5 +1401,223 @@ describe('EE Chat (streaming state)', () => {
       expect(screen.getByText('Execution failed')).toBeInTheDocument(),
     );
     expect(addMessageToChatAction).toHaveBeenCalledTimes(1);
+  });
+
+  it('regenerates from a user message after stream failure and trims later messages', async () => {
+    expect(Chat).toBeDefined();
+
+    vi
+      .mocked(addMessageToChatAction)
+      .mockResolvedValueOnce({ _id: 'user-message-id' })
+      .mockResolvedValueOnce({ _id: 'assistant-message-id' });
+
+    vi.spyOn(globalThis, 'requestAnimationFrame').mockImplementation((cb) => {
+      cb(0);
+      return 0;
+    });
+
+    Object.defineProperty(window, 'localStorage', {
+      configurable: true,
+      value: {
+        removeItem: vi.fn(),
+        getItem: vi.fn(),
+        setItem: vi.fn(),
+      },
+    });
+
+    const firstSse = createControlledSseResponse();
+    const secondSse = createControlledSseResponse();
+    let requestCount = 0;
+    const fetchMock = vi.fn((_url: unknown) => {
+      requestCount += 1;
+      return Promise.resolve(requestCount === 1 ? firstSse.response : secondSse.response);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(
+      <Chat
+        clientUrl="https://example.invalid"
+        accountId="account-1"
+        messages={[]}
+        userRole="admin"
+        userId="user-1"
+        selectedAccount="account-1"
+        handleSelectAccount={vi.fn()}
+        auth_token="token"
+        setChatTitle={vi.fn()}
+        isTitleLocked={false}
+        onUserInput={vi.fn()}
+        hf={null}
+        initialChatId="chat-1"
+      />,
+    );
+
+    fireEvent.change(screen.getByPlaceholderText('Send a message'), {
+      target: { value: 'Ping' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'SEND' }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    firstSse.send({ content: 'Hello', done: false });
+    await waitFor(() => expect(getIncomingAssistantContent()).toHaveTextContent('Hello'));
+
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    firstSse.error(new Error('Network down'));
+
+    await waitFor(() => expect(screen.getByText('Interrupted')).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Regenerate from this message' })).toBeInTheDocument(),
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Regenerate from this message' }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+
+    secondSse.send({ content: 'Recovered', done: false });
+    secondSse.send({ content: '', done: true });
+    secondSse.close();
+
+    await waitFor(() => expect(screen.getByText('Recovered')).toBeInTheDocument());
+    expect(screen.queryByText('Hello')).not.toBeInTheDocument();
+    expect(screen.getAllByText('Ping')).toHaveLength(1);
+    expect(addMessageToChatAction).toHaveBeenCalledTimes(2);
+    consoleErrorSpy.mockRestore();
+  });
+
+  it('shows regenerate and edit actions on user messages after a successful response', async () => {
+    expect(Chat).toBeDefined();
+
+    vi
+      .mocked(addMessageToChatAction)
+      .mockResolvedValueOnce({ _id: 'user-message-id' })
+      .mockResolvedValueOnce({ _id: 'assistant-message-id' });
+
+    vi.spyOn(globalThis, 'requestAnimationFrame').mockImplementation((cb) => {
+      cb(0);
+      return 0;
+    });
+
+    Object.defineProperty(window, 'localStorage', {
+      configurable: true,
+      value: {
+        removeItem: vi.fn(),
+        getItem: vi.fn(),
+        setItem: vi.fn(),
+      },
+    });
+
+    const sse = createControlledSseResponse();
+    const fetchMock = vi.fn().mockResolvedValue(sse.response);
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(
+      <Chat
+        clientUrl="https://example.invalid"
+        accountId="account-1"
+        messages={[]}
+        userRole="admin"
+        userId="user-1"
+        selectedAccount="account-1"
+        handleSelectAccount={vi.fn()}
+        auth_token="token"
+        setChatTitle={vi.fn()}
+        isTitleLocked={false}
+        onUserInput={vi.fn()}
+        hf={null}
+        initialChatId="chat-1"
+      />,
+    );
+
+    fireEvent.change(screen.getByPlaceholderText('Send a message'), {
+      target: { value: 'Ping' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'SEND' }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    sse.send({ content: 'Hello world', done: false });
+    sse.send({ content: '', done: true });
+    sse.close();
+
+    await waitFor(() => expect(screen.getByText('Hello world')).toBeInTheDocument());
+    expect(screen.getByRole('button', { name: 'Regenerate from this message' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Edit this message' })).toBeInTheDocument();
+  });
+
+  it('edits a user message and regenerates from that point', async () => {
+    expect(Chat).toBeDefined();
+
+    vi.mocked(addMessageToChatAction).mockResolvedValue({ _id: 'message-id' });
+
+    vi.spyOn(globalThis, 'requestAnimationFrame').mockImplementation((cb) => {
+      cb(0);
+      return 0;
+    });
+
+    Object.defineProperty(window, 'localStorage', {
+      configurable: true,
+      value: {
+        removeItem: vi.fn(),
+        getItem: vi.fn(),
+        setItem: vi.fn(),
+      },
+    });
+
+    const firstSse = createControlledSseResponse();
+    const secondSse = createControlledSseResponse();
+    let requestCount = 0;
+    const fetchMock = vi.fn((_url: unknown) => {
+      requestCount += 1;
+      return Promise.resolve(requestCount === 1 ? firstSse.response : secondSse.response);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(
+      <Chat
+        clientUrl="https://example.invalid"
+        accountId="account-1"
+        messages={[]}
+        userRole="admin"
+        userId="user-1"
+        selectedAccount="account-1"
+        handleSelectAccount={vi.fn()}
+        auth_token="token"
+        setChatTitle={vi.fn()}
+        isTitleLocked={false}
+        onUserInput={vi.fn()}
+        hf={null}
+        initialChatId="chat-1"
+      />,
+    );
+
+    fireEvent.change(screen.getByPlaceholderText('Send a message'), {
+      target: { value: 'Ping' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'SEND' }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    firstSse.send({ content: 'Original answer', done: false });
+    firstSse.send({ content: '', done: true });
+    firstSse.close();
+
+    await waitFor(() => expect(screen.getByText('Original answer')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit this message' }));
+
+    const input = screen.getByPlaceholderText('Send a message') as HTMLTextAreaElement;
+    expect(input.value).toBe('Ping');
+
+    fireEvent.change(input, {
+      target: { value: 'Updated ping' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'SEND' }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    secondSse.send({ content: 'Updated answer', done: false });
+    secondSse.send({ content: '', done: true });
+    secondSse.close();
+
+    await waitFor(() => expect(screen.getByText('Updated answer')).toBeInTheDocument());
+    expect(screen.queryByText('Original answer')).not.toBeInTheDocument();
+    expect(screen.getAllByText('Updated ping')).toHaveLength(1);
+    expect(screen.queryByText(/^Ping$/)).not.toBeInTheDocument();
   });
 });
