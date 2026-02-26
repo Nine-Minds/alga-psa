@@ -34,7 +34,7 @@
   {
     "id": "T005",
     "description": "Migration seed: users in multiple teams (same manager) get correct `reports_to` value",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F002"
     ]
