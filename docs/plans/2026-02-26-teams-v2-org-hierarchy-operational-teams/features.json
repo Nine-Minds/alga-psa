@@ -194,7 +194,7 @@
   {
     "id": "F033",
     "description": "`UserAndTeamPicker`: selecting a user works identically to existing `UserPicker` behavior",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-2.8"]
   },
   {
