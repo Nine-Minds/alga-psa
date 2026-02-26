@@ -365,7 +365,7 @@
   {
     "id": "T046",
     "description": "Team assignment to project task: same logic works for `project_tasks`",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F027"
     ]
