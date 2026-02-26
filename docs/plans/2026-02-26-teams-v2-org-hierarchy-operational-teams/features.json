@@ -38,7 +38,7 @@
   {
     "id": "F007",
     "description": "User edit form: 'Reports To' dropdown is hidden when `teams-v2` flag is off",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-1.4", "NFR-1"]
   },
   {
