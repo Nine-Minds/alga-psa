@@ -88,7 +88,7 @@ export default function CollabTestPageClient({ userId, userName, tenantId }: Col
       return;
     }
     setDocError(null);
-    router.push(`/msp/collab-test?doc=${encodeURIComponent(documentIdInput.trim())}`);
+    router.push(`/msp/test/collab?doc=${encodeURIComponent(documentIdInput.trim())}`);
   };
 
   const handleCreateDocument = async () => {
@@ -101,7 +101,7 @@ export default function CollabTestPageClient({ userId, userName, tenantId }: Col
         user_id: userId,
         block_data: DEFAULT_DOC_CONTENT,
       });
-      router.push(`/msp/collab-test?doc=${encodeURIComponent(result.document_id)}`);
+      router.push(`/msp/test/collab?doc=${encodeURIComponent(result.document_id)}`);
     } catch (error) {
       console.error('[collab-test] Failed to create document:', error);
       setDocError('Failed to create document.');
