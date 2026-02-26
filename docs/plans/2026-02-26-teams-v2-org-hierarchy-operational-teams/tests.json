@@ -186,7 +186,7 @@
   {
     "id": "T024",
     "description": "`isInReportsToChain(X, A)` returns false when X is not in A's reporting chain",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F011"
     ]
