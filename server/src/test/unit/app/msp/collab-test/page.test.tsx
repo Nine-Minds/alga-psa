@@ -30,11 +30,11 @@ vi.mock('@alga-psa/ui/components/Card', () => ({
   Card: CardMock,
 }));
 
-vi.mock('server/src/app/msp/collab-test/CollabTestPageClient', () => ({
+vi.mock('server/src/app/msp/test/collab/CollabTestPageClient', () => ({
   default: CollabTestPageClientMock,
 }));
 
-const { default: CollabTestPage } = await import('server/src/app/msp/collab-test/page');
+const { default: CollabTestPage } = await import('server/src/app/msp/test/collab/page');
 
 describe('CollabTestPage', () => {
   beforeEach(() => {
