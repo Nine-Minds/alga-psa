@@ -110,7 +110,7 @@
   {
     "id": "F019",
     "description": "Update `ITeamMember` / team member interfaces to include `role: 'member' | 'lead'`",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-2.1"]
   },
   {

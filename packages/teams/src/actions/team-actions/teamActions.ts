@@ -1,7 +1,7 @@
 'use server'
 
 import Team from '../../models/team';
-import type { DeletionValidationResult, IRole, ITeam, IUser, IUserWithRoles } from '@alga-psa/types';
+import type { DeletionValidationResult, IRole, ITeam, ITeamMember, IUser, IUserWithRoles } from '@alga-psa/types';
 import { withTransaction } from '@alga-psa/db';
 import { createTenantKnex } from '@alga-psa/db';
 import { Knex } from 'knex';
@@ -11,12 +11,13 @@ import { deleteEntityWithValidation } from '@alga-psa/core';
 async function getUsersWithRoles(
   trx: Knex | Knex.Transaction,
   tenant: string,
-  userIds: string[],
-): Promise<IUserWithRoles[]> {
-  if (userIds.length === 0) {
+  members: Array<{ user_id: string; role: 'member' | 'lead' }>,
+): Promise<ITeamMember[]> {
+  if (members.length === 0) {
     return [];
   }
 
+  const userIds = members.map((member) => member.user_id);
   const users = await trx<IUser>('users')
     .select('*')
     .whereIn('user_id', userIds)
@@ -42,9 +43,12 @@ async function getUsersWithRoles(
     rolesByUser.set(userId, list);
   }
 
+  const roleByUser = new Map(members.map((member) => [member.user_id, member.role]));
+
   return users.map((user) => ({
     ...(user as any),
     roles: rolesByUser.get(user.user_id) ?? [],
+    role: roleByUser.get(user.user_id) ?? 'member',
   }));
 }
 
@@ -67,22 +71,24 @@ export const createTeam = withAuth(async (user, { tenant }, teamData: Omit<ITeam
       const team = await Team.create(trx, tenant, teamDataWithoutMembers);
 
       // Collect all member IDs including the manager
-      const allMemberIds = new Set<string>();
+      const allMemberRoles = new Map<string, 'member' | 'lead'>();
 
       // Add provided members
       if (members && members.length > 0) {
-        members.forEach(member => allMemberIds.add(member.user_id));
+        members.forEach(member => allMemberRoles.set(member.user_id, 'member'));
       }
 
       // Add manager as a member if specified
       if (teamDataWithoutMembers.manager_id) {
-        allMemberIds.add(teamDataWithoutMembers.manager_id);
+        allMemberRoles.set(teamDataWithoutMembers.manager_id, 'lead');
       }
 
       // Add all members to the team
-      if (allMemberIds.size > 0) {
+      if (allMemberRoles.size > 0) {
         await Promise.all(
-          Array.from(allMemberIds).map((userId): Promise<void> => Team.addMember(trx, tenant, team.team_id, userId))
+          Array.from(allMemberRoles.entries()).map(([userId, role]): Promise<void> =>
+            Team.addMember(trx, tenant, team.team_id, userId, role)
+          )
         );
       }
 
@@ -103,8 +109,8 @@ async function getTeamByIdInternal(knex: Knex, tenant: string, teamId: string): 
   if (!team) {
     throw new Error('Team not found');
   }
-  const memberIds = await Team.getMembers(knex, tenant, teamId);
-  const members = await getUsersWithRoles(knex, tenant, memberIds);
+  const memberEntries = await Team.getMembers(knex, tenant, teamId);
+  const members = await getUsersWithRoles(knex, tenant, memberEntries);
 
   return { ...team, members };
 }
@@ -187,8 +193,8 @@ export const getTeams = withAuth(async (user, { tenant }): Promise<ITeam[]> => {
     const { knex } = await createTenantKnex();
     const teams = await Team.getAll(knex, tenant);
     const teamsWithMembers = await Promise.all(teams.map(async (team): Promise<ITeam> => {
-      const memberIds = await Team.getMembers(knex, tenant, team.team_id);
-      const members = await getUsersWithRoles(knex, tenant, memberIds);
+      const memberEntries = await Team.getMembers(knex, tenant, team.team_id);
+      const members = await getUsersWithRoles(knex, tenant, memberEntries);
       return { ...team, members };
     }));
     return teamsWithMembers;
