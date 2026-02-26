@@ -581,7 +581,7 @@
   {
     "id": "T073",
     "description": "'Assigned To' filter: shows only users (no teams) when flag is off",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F048"
     ]
