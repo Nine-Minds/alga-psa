@@ -32,7 +32,7 @@
   {
     "id": "F006",
     "description": "User edit form: Saving 'Reports To' persists the value and triggers cycle validation",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-1.4", "FR-1.3"]
   },
   {

@@ -82,3 +82,4 @@
 - (2026-02-26) Added server-side cycle prevention in `packages/users/src/actions/user-actions/userActions.ts` for `reports_to` updates (self-reference + recursive chain detection).
 - (2026-02-26) Added optional `reports_to` to canonical IUser interfaces in `shared/interfaces/user.interfaces.ts` and `packages/types/src/interfaces/user.interfaces.ts`.
 - (2026-02-26) Added Reports To dropdown to User Management details (`server/src/components/settings/general/UserDetails.tsx`) behind `teams-v2`, with tenant user list, clearable selection, and save wiring.
+- (2026-02-26) Reports To selection now saved via `updateUser` when `teams-v2` is enabled (cycle validation enforced server-side).
