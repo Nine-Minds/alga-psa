@@ -202,7 +202,7 @@
   {
     "id": "T026",
     "description": "Timesheet approval: manager can approve direct report's timesheet via `reports_to` chain when flag is on",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F012",
       "F014"
