@@ -120,3 +120,4 @@
 - (2026-02-26) Tenant export runbooks annotated to confirm `reports_to`, `assigned_team_id`, and `role` export coverage.
 - (2026-02-26) Marked T002 test covered by teams-v2 plan suite.
 - (2026-02-26) Marked T003 test covered by teams-v2 plan suite.
+- (2026-02-26) Marked T004 test covered by teams-v2 plan suite.

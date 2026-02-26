@@ -26,7 +26,7 @@
   {
     "id": "T004",
     "description": "Migration seed: team managers do not get `reports_to` set to themselves",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F002"
     ]
