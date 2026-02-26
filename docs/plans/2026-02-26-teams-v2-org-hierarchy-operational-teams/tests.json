@@ -389,7 +389,7 @@
   {
     "id": "T049",
     "description": "`UserAndTeamPicker`: teams display member count and lead name",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F030"
     ]
