@@ -98,3 +98,4 @@
 - (2026-02-26) Added `UserAndTeamPicker` component with grouped user/team sections for teams-v2 assignments.
 - (2026-02-26) `UserAndTeamPicker` search now filters both users and teams together.
 - (2026-02-26) Team options in `UserAndTeamPicker` now show member count and lead name.
+- (2026-02-26) Added generic team icon rendering in `UserAndTeamPicker` (distinct from user avatars).

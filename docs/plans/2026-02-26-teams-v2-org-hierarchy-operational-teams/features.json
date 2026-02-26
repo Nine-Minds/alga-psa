@@ -182,7 +182,7 @@
   {
     "id": "F031",
     "description": "`UserAndTeamPicker`: visual distinction — generic team icon for teams vs user avatar for individuals",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-2.8"]
   },
   {
