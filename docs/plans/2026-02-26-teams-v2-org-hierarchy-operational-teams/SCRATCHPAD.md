@@ -156,3 +156,4 @@
 - (2026-02-26) Marked T037 test covered by teams-v2 plan suite.
 - (2026-02-26) Marked T038 test covered by teams-v2 plan suite.
 - (2026-02-26) Marked T039 test covered by teams-v2 plan suite.
+- (2026-02-26) Marked T040 test covered by teams-v2 plan suite.

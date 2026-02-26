@@ -316,7 +316,7 @@
   {
     "id": "T040",
     "description": "Team assignment to ticket (no primary): sets `assigned_team_id`, sets lead as `assigned_to`, adds other members as `ticket_resources`",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F024"
     ]
