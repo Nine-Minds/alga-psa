@@ -6,7 +6,8 @@ exports.up = async function up(knex) {
 
   if (!hasReportsTo) {
     await knex.schema.alterTable('users', (table) => {
-      table.uuid('reports_to').nullable().references('user_id').inTable('users');
+      table.uuid('reports_to').nullable();
+      table.foreign(['tenant', 'reports_to']).references(['tenant', 'user_id']).inTable('users');
     });
   }
 };

@@ -7,7 +7,8 @@ exports.up = async function up(knex) {
   const hasAssignedTeam = await knex.schema.hasColumn('tickets', 'assigned_team_id');
   if (!hasAssignedTeam) {
     await knex.schema.alterTable('tickets', (table) => {
-      table.uuid('assigned_team_id').nullable().references('team_id').inTable('teams');
+      table.uuid('assigned_team_id').nullable();
+      table.foreign(['tenant', 'assigned_team_id']).references(['tenant', 'team_id']).inTable('teams');
     });
   }
 };
