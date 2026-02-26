@@ -236,7 +236,7 @@
   {
     "id": "F040",
     "description": "Team removal dialog: 'Remove all team members' option removes `ticket_resources` with `role = 'team_member'` and clears `assigned_team_id`",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-2.12"]
   },
   {
