@@ -605,7 +605,7 @@
   {
     "id": "T076",
     "description": "Tenant export includes `reports_to` column from users",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F050"
     ]
