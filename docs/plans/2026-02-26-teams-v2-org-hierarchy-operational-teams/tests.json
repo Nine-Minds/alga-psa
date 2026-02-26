@@ -541,7 +541,7 @@
   {
     "id": "T068",
     "description": "Independence: SLA escalation adding an agent does not trigger team removal",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F044"
     ]
