@@ -613,7 +613,7 @@
   {
     "id": "T077",
     "description": "Tenant export includes `assigned_team_id` from tickets and project_tasks",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F050"
     ]
