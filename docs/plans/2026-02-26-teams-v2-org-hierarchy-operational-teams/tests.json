@@ -340,7 +340,7 @@
   {
     "id": "T043",
     "description": "Team assignment to ticket (existing primary is the lead): lead not double-assigned, other members added as resources",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F025",
       "F026"
