@@ -296,7 +296,7 @@
   {
     "id": "F050",
     "description": "Update tenant export to include `reports_to`, `assigned_team_id`, and `role` columns",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-2.22"]
   }
 ]

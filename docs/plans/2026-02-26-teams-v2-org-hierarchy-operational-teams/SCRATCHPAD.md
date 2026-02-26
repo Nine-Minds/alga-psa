@@ -117,3 +117,4 @@
 - (2026-02-26) Team selections in the ticket list filter now map to `assigned_team_id`.
 - (2026-02-26) Ticket list assignee filter reverts to user-only behavior when `teams-v2` is disabled.
 - (2026-02-26) `tickets.create` workflow action now supports team assignee payloads and expands team members.
+- (2026-02-26) Tenant export runbooks annotated to confirm `reports_to`, `assigned_team_id`, and `role` export coverage.
