@@ -469,7 +469,7 @@
   {
     "id": "T059",
     "description": "Team badge: hidden when `teams-v2` flag is off even if `assigned_team_id` has a value",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F038"
     ]
