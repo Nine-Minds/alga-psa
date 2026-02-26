@@ -2,11 +2,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { NextRequest } from 'next/server';
 
 const openAiCreateSpy = vi.hoisted(() => vi.fn());
-const getSecretMock = vi.hoisted(() => vi.fn(async () => 'test-secret'));
-const getSecretProviderInstanceMock = vi.hoisted(() => vi.fn());
+const getSecretMock = vi.hoisted(() => vi.fn());
 const getCurrentUserMock = vi.hoisted(() => vi.fn());
 const getRegistryMock = vi.hoisted(() => vi.fn());
 const secretState = vi.hoisted(() => ({ values: {} as Record<string, string | undefined> }));
+const googleAccessTokenState = vi.hoisted(() => ({ token: 'adc-token' as string | undefined }));
 
 vi.mock('openai', () => {
   class OpenAI {
@@ -27,7 +27,6 @@ vi.mock('@alga-psa/core/secrets', async () => {
   return {
     ...actual,
     getSecret: getSecretMock,
-    getSecretProviderInstance: getSecretProviderInstanceMock,
   };
 });
 
@@ -39,16 +38,29 @@ vi.mock('@ee/chat/registry/apiRegistry.indexer', () => ({
   getRegistry: getRegistryMock,
 }));
 
+vi.mock('google-auth-library', () => ({
+  GoogleAuth: class {
+    constructor(_config: unknown) {}
+
+    async getClient() {
+      return {
+        getAccessToken: async () =>
+          googleAccessTokenState.token
+            ? { token: googleAccessTokenState.token }
+            : null,
+      };
+    }
+  },
+}));
+
 const MANAGED_ENV_KEYS = [
   'AI_CHAT_PROVIDER',
   'OPENROUTER_API_KEY',
   'OPENROUTER_CHAT_MODEL',
-  'GOOGLE_CLOUD_ACCESS_TOKEN',
   'VERTEX_PROJECT_ID',
   'VERTEX_LOCATION',
   'VERTEX_CHAT_MODEL',
   'VERTEX_OPENAPI_BASE_URL',
-  'VERTEX_ENABLE_THINKING',
   'EDITION',
   'NEXT_PUBLIC_EDITION',
 ] as const;
@@ -98,19 +110,51 @@ const buildCompletion = (message: Record<string, unknown>) => ({
   ],
 });
 
+const buildChunkStream = (chunks: Array<Record<string, unknown>>) => ({
+  async *[Symbol.asyncIterator]() {
+    for (const chunk of chunks) {
+      yield chunk;
+    }
+  },
+});
+
+const buildRateLimitError = (retryAfter?: string) => {
+  const error = new Error('Rate limited') as Error & {
+    status?: number;
+    headers?: Record<string, string>;
+  };
+  error.status = 429;
+  if (retryAfter !== undefined) {
+    error.headers = { 'retry-after': retryAfter };
+  }
+  return error;
+};
+
 describe('ChatCompletionsService (unit)', () => {
   beforeEach(() => {
     vi.resetModules();
     openAiCreateSpy.mockReset();
-    getSecretMock.mockClear();
+    getSecretMock.mockReset();
     getCurrentUserMock.mockReset();
     getRegistryMock.mockReset();
-    getSecretProviderInstanceMock.mockReset();
     resetManagedEnv();
+    secretState.values = {};
+    googleAccessTokenState.token = 'adc-token';
+    getSecretMock.mockImplementation(
+      async (secretName: string, envVar: string, defaultValue: string = '') => {
+        const providerValue = secretState.values[secretName];
+        if (providerValue !== undefined && providerValue !== '') {
+          return providerValue;
+        }
 
-    getSecretProviderInstanceMock.mockResolvedValue({
-      getAppSecret: vi.fn(async (key: string) => secretState.values[key] ?? null),
-    });
+        const envValue = envVar ? process.env[envVar] : undefined;
+        if (envValue !== undefined) {
+          return envValue;
+        }
+
+        return defaultValue;
+      },
+    );
 
     getRegistryMock.mockReturnValue([registryEntry]);
   });
@@ -244,6 +288,20 @@ describe('ChatCompletionsService (unit)', () => {
     expect(assistant).not.toHaveProperty('reasoning_content');
   });
 
+  it('includes document in-app content guidance in the system prompt', async () => {
+    const { ChatCompletionsService } = await import('@ee/services/chatCompletionsService');
+
+    const converted = (ChatCompletionsService as any).buildOpenAiMessages(
+      [{ role: 'user', content: 'Read the ticket attachment' }],
+      'openrouter',
+    );
+
+    const systemPrompt = converted[0] as Record<string, unknown>;
+    expect(systemPrompt.role).toBe('system');
+    expect(systemPrompt.content).toContain('GET /api/documents/{documentId}/content');
+    expect(systemPrompt.content).toContain('null file_id');
+  });
+
   it('extracts reasoning from legacy <think> content when reasoning_content is absent', async () => {
     const { ChatCompletionsService } = await import('@ee/services/chatCompletionsService');
 
@@ -282,6 +340,56 @@ describe('ChatCompletionsService (unit)', () => {
     });
 
     expect(parsed.reasoning).toBe('fallback reasoning');
+  });
+
+  it('streams a visible fallback message when execute tool proposal targets an unknown function entry', async () => {
+    process.env.AI_CHAT_PROVIDER = 'openrouter';
+    setSecrets({
+      OPENROUTER_API_KEY: 'openrouter-key',
+      OPENROUTER_CHAT_MODEL: 'openrouter/model',
+    });
+
+    openAiCreateSpy.mockResolvedValueOnce(
+      buildChunkStream([
+        {
+          choices: [
+            {
+              index: 0,
+              delta: {
+                tool_calls: [
+                  {
+                    index: 0,
+                    id: 'tool-call-missing-entry',
+                    type: 'function',
+                    function: {
+                      name: 'call_api_endpoint',
+                      arguments: JSON.stringify({ entryId: 'missing.entry' }),
+                    },
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      ]),
+    );
+
+    const { ChatCompletionsService } = await import('@ee/services/chatCompletionsService');
+
+    const streamedEvents: Array<{ type: string; delta?: string }> = [];
+    for await (const event of ChatCompletionsService.createStructuredCompletionStream([
+      { role: 'user', content: 'Execute missing entry' },
+    ])) {
+      streamedEvents.push(event as { type: string; delta?: string });
+    }
+
+    expect(streamedEvents).toEqual([
+      {
+        type: 'content_delta',
+        delta: 'I couldn\'t run "missing.entry" because that function is not available.',
+      },
+      { type: 'done' },
+    ]);
   });
 
   it('appends assistant reasoning_content during tool-call proposal turns', async () => {
@@ -394,10 +502,9 @@ describe('ChatCompletionsService (unit)', () => {
     expect(request.tool_choice).toBe('auto');
   });
 
-  it('uses provider-resolved Vertex model/client for non-stream completions and keeps tool_choice:auto', async () => {
+  it('uses provider-resolved Vertex model/client for non-stream completions and omits tool_choice', async () => {
     process.env.AI_CHAT_PROVIDER = 'vertex';
     setSecrets({
-      GOOGLE_CLOUD_ACCESS_TOKEN: 'vertex-token',
       VERTEX_PROJECT_ID: 'proj-1',
       VERTEX_LOCATION: 'us-central1',
       VERTEX_CHAT_MODEL: 'glm-5-maas',
@@ -420,8 +527,8 @@ describe('ChatCompletionsService (unit)', () => {
     });
 
     const request = openAiCreateSpy.mock.calls.at(-1)?.[0] as Record<string, unknown>;
-    expect(request.model).toBe('glm-5-maas');
-    expect(request.tool_choice).toBe('auto');
+    expect(request.model).toBe('zai-org/glm-5-maas');
+    expect(request.tool_choice).toBeUndefined();
   });
 
   it('returns function_proposed with nextMessages/modelMessages preserving reasoning context', async () => {
@@ -543,6 +650,90 @@ describe('ChatCompletionsService (unit)', () => {
     });
   });
 
+  it('retries non-stream completion requests on 429 with backoff', async () => {
+    process.env.AI_CHAT_PROVIDER = 'openrouter';
+    setSecrets({
+      OPENROUTER_API_KEY: 'openrouter-key',
+      OPENROUTER_CHAT_MODEL: 'openrouter/model',
+    });
+
+    openAiCreateSpy
+      .mockRejectedValueOnce(buildRateLimitError())
+      .mockResolvedValueOnce(
+        buildCompletion({
+          content: 'Recovered after rate limit.',
+        }),
+      );
+
+    const { ChatCompletionsService } = await import('@ee/services/chatCompletionsService');
+    const sleepSpy = vi
+      .spyOn(ChatCompletionsService as any, 'sleep')
+      .mockResolvedValue(undefined);
+
+    const result = await (ChatCompletionsService as any).processModelInteraction({
+      messages: [{ role: 'user', content: 'Hello' }],
+      chatId: 'chat-1',
+      baseUrl: 'https://example.invalid',
+      tenantId: 'tenant-1',
+      userId: 'user-1',
+    });
+
+    expect(result).toMatchObject({
+      type: 'assistant_message',
+      message: expect.objectContaining({ content: 'Recovered after rate limit.' }),
+    });
+    expect(openAiCreateSpy).toHaveBeenCalledTimes(2);
+    expect(sleepSpy).toHaveBeenCalledWith(500);
+    sleepSpy.mockRestore();
+  });
+
+  it('retries streaming requests on 429 and honors Retry-After header', async () => {
+    process.env.AI_CHAT_PROVIDER = 'openrouter';
+    setSecrets({
+      OPENROUTER_API_KEY: 'openrouter-key',
+      OPENROUTER_CHAT_MODEL: 'openrouter/model',
+    });
+
+    openAiCreateSpy
+      .mockRejectedValueOnce(buildRateLimitError('1'))
+      .mockResolvedValueOnce(
+        buildChunkStream([
+          {
+            choices: [
+              {
+                index: 0,
+                delta: {
+                  content: 'Recovered stream response',
+                },
+              },
+            ],
+          },
+        ]),
+      );
+
+    const { ChatCompletionsService } = await import('@ee/services/chatCompletionsService');
+    const sleepSpy = vi
+      .spyOn(ChatCompletionsService as any, 'sleep')
+      .mockResolvedValue(undefined);
+
+    const events: Array<{ type: string; delta?: string }> = [];
+    for await (const event of ChatCompletionsService.createStructuredCompletionStream([
+      { role: 'user', content: 'Hello' },
+    ])) {
+      events.push(event as { type: string; delta?: string });
+    }
+
+    expect(events).toEqual(
+      expect.arrayContaining([
+        { type: 'content_delta', delta: 'Recovered stream response' },
+        { type: 'done' },
+      ]),
+    );
+    expect(openAiCreateSpy).toHaveBeenCalledTimes(2);
+    expect(sleepSpy).toHaveBeenCalledWith(1000);
+    sleepSpy.mockRestore();
+  });
+
   it('decline execution path skips endpoint call and keeps conversation usable', async () => {
     const { ChatCompletionsService } = await import('@ee/services/chatCompletionsService');
 
@@ -651,7 +842,6 @@ describe('ChatCompletionsService (unit)', () => {
   it('Vertex follow-up request after tool replay preserves assistant reasoning_content in outbound messages', async () => {
     process.env.AI_CHAT_PROVIDER = 'vertex';
     setSecrets({
-      GOOGLE_CLOUD_ACCESS_TOKEN: 'vertex-token',
       VERTEX_PROJECT_ID: 'proj-55',
       VERTEX_LOCATION: 'us-central1',
       VERTEX_CHAT_MODEL: 'glm-5-maas',

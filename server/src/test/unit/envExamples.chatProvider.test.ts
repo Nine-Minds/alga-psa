@@ -11,13 +11,12 @@ const requiredProviderKeys = [
   'AI_CHAT_PROVIDER',
   'OPENROUTER_API_KEY',
   'OPENROUTER_CHAT_MODEL',
-  'GOOGLE_CLOUD_ACCESS_TOKEN',
   'VERTEX_PROJECT_ID',
   'VERTEX_LOCATION',
   'VERTEX_CHAT_MODEL',
 ];
 
-const optionalProviderKeys = ['VERTEX_OPENAPI_BASE_URL', 'VERTEX_ENABLE_THINKING'];
+const optionalProviderKeys = ['VERTEX_OPENAPI_BASE_URL', 'GOOGLE_APPLICATION_CREDENTIALS'];
 
 describe('chat provider env example documentation', () => {
   it('includes OpenRouter and Vertex provider keys in both env examples', () => {

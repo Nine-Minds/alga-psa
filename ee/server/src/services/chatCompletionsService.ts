@@ -24,6 +24,10 @@ const isEnterpriseEdition = () =>
 const EMPTY_RESPONSE_ERROR = 'EMPTY_MODEL_RESPONSE';
 const NO_MODEL_CHOICES_ERROR = 'NO_MODEL_CHOICES';
 const MAX_MODEL_RETRIES = 2;
+const MAX_RATE_LIMIT_RETRIES = 3;
+const RATE_LIMIT_BASE_DELAY_MS = 500;
+const RATE_LIMIT_MAX_DELAY_MS = 5000;
+const MIN_RATE_LIMIT_DELAY_MS = 100;
 const SEARCH_TOOL_NAME = 'search_api_registry';
 const EXECUTE_TOOL_NAME = 'call_api_endpoint';
 const MAX_TOOL_ITERATIONS = 6;
@@ -244,6 +248,13 @@ export class ChatCompletionsService {
             parsedArgs,
           );
           if (!entry) {
+            yield {
+              type: 'content_delta',
+              delta: this.buildUnavailableFunctionMessage(
+                functionName,
+                parsedArgs.entryId ?? parsedArgs.id ?? parsedArgs.name,
+              ),
+            };
             yield { type: 'done' };
             return;
           }
@@ -271,6 +282,10 @@ export class ChatCompletionsService {
           return;
         }
 
+        yield {
+          type: 'content_delta',
+          delta: this.buildUnavailableFunctionMessage(functionName),
+        };
         yield { type: 'done' };
         return;
       }
@@ -509,7 +524,9 @@ export class ChatCompletionsService {
     return response;
   }
 
-  private static buildToolDefinitions() {
+  private static buildToolDefinitions(providerId: ChatProviderId) {
+    const isVertex = providerId === 'vertex';
+
     return [
       {
         type: 'function' as const,
@@ -525,9 +542,7 @@ export class ChatCompletionsService {
                 description: 'Natural language description of what you want to do (e.g., "list active service categories").',
               },
               limit: {
-                type: 'integer',
-                minimum: 1,
-                maximum: 25,
+                type: isVertex ? 'number' : 'integer',
                 description: 'Maximum number of results to return (default 5).',
               },
             },
@@ -552,57 +567,63 @@ export class ChatCompletionsService {
               method: {
                 type: 'string',
                 description: 'HTTP method to use when invoking the endpoint (defaults to the documented method).',
-                enum: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+                ...(isVertex ? {} : { enum: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'] }),
               },
               path: {
                 type: 'object',
                 description: 'Values for path parameters, keyed by parameter name.',
-                additionalProperties: true,
+                ...(isVertex ? {} : { additionalProperties: true }),
               },
               query: {
                 type: 'object',
                 description: 'Values for query string parameters.',
-                additionalProperties: true,
+                ...(isVertex ? {} : { additionalProperties: true }),
               },
               headers: {
                 type: 'object',
                 description: 'Additional headers required by the endpoint.',
-                additionalProperties: true,
+                ...(isVertex ? {} : { additionalProperties: true }),
               },
-              body: {
-                description: 'JSON payload for POST/PUT/PATCH requests.',
-                oneOf: [
-                  {
-                    type: 'object',
-                    description: 'Structured JSON object payload.',
-                    additionalProperties: true,
-                  },
-                  {
-                    type: 'array',
-                    description: 'Array payload (e.g., bulk operations).',
-                    items: {},
-                  },
-                  {
-                    type: 'string',
-                    description: 'Raw string payload.',
-                  },
-                  {
-                    type: 'number',
-                    description: 'Numeric payload.',
-                  },
-                  {
-                    type: 'boolean',
-                    description: 'Boolean payload.',
-                  },
-                  {
-                    type: 'null',
-                    description: 'Explicit null payload.',
-                  },
-                ],
-              },
+              body:
+                isVertex
+                  ? {
+                      type: 'object',
+                      description: 'JSON object payload for POST/PUT/PATCH requests.',
+                    }
+                  : {
+                      description: 'JSON payload for POST/PUT/PATCH requests.',
+                      oneOf: [
+                        {
+                          type: 'object',
+                          description: 'Structured JSON object payload.',
+                          additionalProperties: true,
+                        },
+                        {
+                          type: 'array',
+                          description: 'Array payload (e.g., bulk operations).',
+                          items: {},
+                        },
+                        {
+                          type: 'string',
+                          description: 'Raw string payload.',
+                        },
+                        {
+                          type: 'number',
+                          description: 'Numeric payload.',
+                        },
+                        {
+                          type: 'boolean',
+                          description: 'Boolean payload.',
+                        },
+                        {
+                          type: 'null',
+                          description: 'Explicit null payload.',
+                        },
+                      ],
+                    },
             },
             required: ['entryId'],
-            additionalProperties: true,
+            ...(isVertex ? {} : { additionalProperties: true }),
           },
         },
       },
@@ -1004,6 +1025,7 @@ export class ChatCompletionsService {
         'Clearly explain the plan before each tool call, execute the necessary lookup calls to satisfy all requirements, then call the target endpoint once the inputs are ready. ' +
         'Use the documented request schemas exactly as written—populate *_id fields with the UUIDs you retrieved (never human-friendly names), and skip optional fields when you do not have authoritative values. ' +
         'Never include properties that are not defined for the selected endpoint; if the user mentions data that cannot be expressed with the documented schema (for example a project name when the ticket create payload does not accept project_id), acknowledge it in the natural-language response but leave it out of the API request. ' +
+        'When handling documents, do not assume null file_id means empty content; in-app documents may store content in document_block_content or document_content. Call GET /api/documents/{documentId}/content to retrieve readable content before concluding the document has no data. ' +
         'Do not create or modify unrelated master data (such as categories, boards, or projects) unless the user explicitly asks for that; prefer reusing existing records you just looked up. ' +
         'After a function result is provided, summarize the outcome for the user and outline any follow-up you will handle automatically.',
     };
@@ -1168,16 +1190,148 @@ export class ChatCompletionsService {
     conversation: ChatCompletionMessage[],
     stream: boolean,
   ): Record<string, unknown> {
-    return {
+    const request: Record<string, unknown> = {
       model: provider.model,
       messages: this.buildOpenAiMessages(conversation, provider.providerId),
-      tools: this.buildToolDefinitions(),
-      tool_choice: 'auto',
-      temperature: 1.0,
-      top_p: 0.95,
+      tools: this.buildToolDefinitions(provider.providerId),
       ...provider.requestOverrides.resolveTurnOverrides(),
       stream,
     };
+
+    if (provider.providerId !== 'vertex') {
+      request.tool_choice = 'auto';
+    }
+
+    // Vertex OpenAPI is stricter than OpenRouter; omit optional sampling params
+    // unless we explicitly tune them for that provider.
+    if (provider.providerId !== 'vertex') {
+      request.temperature = 1.0;
+      request.top_p = 0.95;
+    }
+
+    return request;
+  }
+
+  private static async sleep(ms: number): Promise<void> {
+    await new Promise<void>((resolve) => {
+      setTimeout(resolve, ms);
+    });
+  }
+
+  private static isRateLimitError(error: unknown): boolean {
+    return (
+      typeof error === 'object' &&
+      error !== null &&
+      (error as { status?: unknown }).status === 429
+    );
+  }
+
+  private static readHeader(
+    headers: unknown,
+    headerName: string,
+  ): string | undefined {
+    if (!headers) {
+      return undefined;
+    }
+    const normalizedName = headerName.toLowerCase();
+
+    if (headers instanceof Headers) {
+      return headers.get(headerName) ?? headers.get(normalizedName) ?? undefined;
+    }
+
+    if (
+      typeof headers === 'object' &&
+      headers !== null &&
+      'get' in headers &&
+      typeof (headers as { get?: unknown }).get === 'function'
+    ) {
+      const value = (headers as { get: (name: string) => unknown }).get(headerName)
+        ?? (headers as { get: (name: string) => unknown }).get(normalizedName);
+      return typeof value === 'string' ? value : undefined;
+    }
+
+    if (Array.isArray(headers)) {
+      for (const item of headers) {
+        if (!Array.isArray(item) || item.length < 2) {
+          continue;
+        }
+        const [name, value] = item;
+        if (
+          typeof name === 'string' &&
+          name.toLowerCase() === normalizedName &&
+          typeof value === 'string'
+        ) {
+          return value;
+        }
+      }
+      return undefined;
+    }
+
+    if (typeof headers === 'object' && headers !== null) {
+      for (const [name, value] of Object.entries(headers as Record<string, unknown>)) {
+        if (name.toLowerCase() !== normalizedName) {
+          continue;
+        }
+        if (typeof value === 'string') {
+          return value;
+        }
+        if (typeof value === 'number') {
+          return String(value);
+        }
+      }
+    }
+
+    return undefined;
+  }
+
+  private static resolveRateLimitDelayMs(error: unknown, attempt: number): number {
+    const headers =
+      typeof error === 'object' && error !== null
+        ? (error as { headers?: unknown }).headers
+        : undefined;
+    const retryAfterRaw = this.readHeader(headers, 'retry-after');
+    if (retryAfterRaw) {
+      const numericSeconds = Number(retryAfterRaw);
+      if (Number.isFinite(numericSeconds) && numericSeconds >= 0) {
+        return Math.max(MIN_RATE_LIMIT_DELAY_MS, Math.ceil(numericSeconds * 1000));
+      }
+
+      const retryAt = Date.parse(retryAfterRaw);
+      if (Number.isFinite(retryAt)) {
+        return Math.max(MIN_RATE_LIMIT_DELAY_MS, retryAt - Date.now());
+      }
+    }
+
+    const exponential = Math.min(
+      RATE_LIMIT_BASE_DELAY_MS * 2 ** attempt,
+      RATE_LIMIT_MAX_DELAY_MS,
+    );
+    return Math.max(MIN_RATE_LIMIT_DELAY_MS, exponential);
+  }
+
+  private static async createWithRateLimitRetry<T>(
+    createRequest: () => Promise<T>,
+    contextLabel: string,
+  ): Promise<T> {
+    for (let attempt = 0; ; attempt += 1) {
+      try {
+        return await createRequest();
+      } catch (error) {
+        if (!this.isRateLimitError(error) || attempt >= MAX_RATE_LIMIT_RETRIES) {
+          throw error;
+        }
+
+        const delayMs = this.resolveRateLimitDelayMs(error, attempt);
+        console.warn(
+          '[ChatCompletionsService] Received 429 from %s; retrying in %dms (attempt %d/%d).',
+          contextLabel,
+          delayMs,
+          attempt + 1,
+          MAX_RATE_LIMIT_RETRIES,
+        );
+        await this.sleep(delayMs);
+      }
+    }
   }
 
   private static async generateCompletionWithRetry(
@@ -1185,8 +1339,10 @@ export class ChatCompletionsService {
     conversation: ChatCompletionMessage[],
   ) {
     for (let attempt = 0; attempt < MAX_MODEL_RETRIES; attempt += 1) {
-      const completion = await provider.client.chat.completions.create(
-        this.buildCompletionCreateRequest(provider, conversation, false) as any,
+      const request = this.buildCompletionCreateRequest(provider, conversation, false);
+      const completion = await this.createWithRateLimitRetry(
+        () => provider.client.chat.completions.create(request as any),
+        `${provider.providerId} completion`,
       );
 
       const choice = completion.choices[0];
@@ -1239,8 +1395,10 @@ export class ChatCompletionsService {
     provider: ResolvedChatProvider,
     conversation: ChatCompletionMessage[],
   ) {
-    return provider.client.chat.completions.create(
-      this.buildCompletionCreateRequest(provider, conversation, true) as any,
+    const request = this.buildCompletionCreateRequest(provider, conversation, true);
+    return await this.createWithRateLimitRetry(
+      () => provider.client.chat.completions.create(request as any),
+      `${provider.providerId} stream`,
     );
   }
 
@@ -1300,6 +1458,14 @@ export class ChatCompletionsService {
     }
 
     return 'I need to run an API call to continue.';
+  }
+
+  private static buildUnavailableFunctionMessage(functionName: string, entryId?: unknown): string {
+    const target =
+      typeof entryId === 'string' && entryId.trim().length > 0
+        ? entryId.trim()
+        : functionName;
+    return `I couldn't run "${target}" because that function is not available.`;
   }
 
   private static buildFunctionMetadata(entry: ChatApiRegistryEntry, args: Record<string, unknown>): FunctionMetadata {

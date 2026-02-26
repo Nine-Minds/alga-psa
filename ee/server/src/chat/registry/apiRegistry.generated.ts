@@ -409,14 +409,25 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "id": "get-_api_documents_download_fileid",
     "method": "get",
     "path": "/api/documents/download/{fileId}",
-    "displayName": "GET documents",
-    "summary": "GET documents",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+    "displayName": "Download Document File by File ID",
+    "summary": "Download binary file content by file ID",
+    "description": "Downloads file-backed document content from storage using fileId. This does not return in-app BlockNote or document_content text.",
     "tags": [
       "documents"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "fileId",
+        "in": "path",
+        "required": true,
+        "description": "External file identifier to download.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -443,14 +454,53 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "id": "get-_api_documents_documentid_download",
     "method": "get",
     "path": "/api/documents/{documentId}/download",
-    "displayName": "GET documents",
-    "summary": "GET documents",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+    "displayName": "Download Document by Document ID",
+    "summary": "Download binary file content by document ID",
+    "description": "Downloads file-backed document content for a document. If file_id is null, use GET /api/documents/{documentId}/content to read in-app content.",
     "tags": [
       "documents"
     ],
     "approvalRequired": false,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "documentId",
+        "in": "path",
+        "required": true,
+        "description": "Document identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "id": "get-_api_documents_documentid_content",
+    "method": "get",
+    "path": "/api/documents/{documentId}/content",
+    "displayName": "Get Document In-App Content",
+    "summary": "Retrieve BlockNote or text content for a document",
+    "description": "Returns in-app document content from document_block_content and document_content tables, including extracted_text for BlockNote documents. Use this when file_id is null or when you need readable document text.",
+    "tags": [
+      "documents"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "documentId",
+        "in": "path",
+        "required": true,
+        "description": "Document identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -8511,6 +8561,36 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     ],
     "approvalRequired": false,
     "parameters": [],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "id": "get-_api_v1_tickets_id_documents",
+    "method": "get",
+    "path": "/api/v1/tickets/{id}/documents",
+    "displayName": "List Ticket Documents",
+    "summary": "List documents attached to a ticket",
+    "description": "Returns document metadata associated with the specified ticket. Some documents are in-app documents with null file_id; for those, call GET /api/documents/{documentId}/content to retrieve actual text/block content.",
+    "tags": [
+      "tickets",
+      "documents"
+    ],
+    "rbacResource": "ticket",
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Ticket identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}

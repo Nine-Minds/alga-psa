@@ -1,20 +1,20 @@
 import OpenAI from 'openai';
+import { GoogleAuth } from 'google-auth-library';
 
-import { getSecretProviderInstance } from '@alga-psa/core/secrets';
+import { getSecret } from '@alga-psa/core/secrets';
 
 const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1';
 const OPENROUTER_DEFAULT_MODEL = 'minimax/minimax-m2';
-const VERTEX_DEFAULT_MODEL = 'glm-5-maas';
-const FALSE_LIKE_VALUES = new Set(['0', 'false', 'no', 'off']);
+const VERTEX_DEFAULT_MODEL = 'zai-org/glm-5-maas';
+const VERTEX_AUTH_SCOPE = 'https://www.googleapis.com/auth/cloud-platform';
+const VERTEX_PLACEHOLDER_API_KEY = 'vertex-managed-access-token';
+
+let googleAuthClient: GoogleAuth | null = null;
 
 export type ChatProviderId = 'openrouter' | 'vertex';
 
-type TurnOptions = {
-  disableThinking?: boolean;
-};
-
 export type ChatProviderRequestOverrides = {
-  resolveTurnOverrides: (options?: TurnOptions) => Record<string, unknown>;
+  resolveTurnOverrides: () => Record<string, unknown>;
 };
 
 export type ResolvedChatProvider = {
@@ -22,10 +22,6 @@ export type ResolvedChatProvider = {
   model: string;
   client: OpenAI;
   requestOverrides: ChatProviderRequestOverrides;
-};
-
-type SecretProviderLike = {
-  getAppSecret: (key: string) => Promise<string | null | undefined>;
 };
 
 const normalizeProvider = (providerValue: unknown): ChatProviderId => {
@@ -45,25 +41,28 @@ const trimString = (value: unknown): string | undefined => {
   return trimmed.length > 0 ? trimmed : undefined;
 };
 
-const readSecretOrEnv = async (
-  secretProvider: SecretProviderLike,
-  key: string,
-  aliases: string[] = [],
-): Promise<string | undefined> => {
-  const candidates = [key, ...aliases];
-  for (const candidate of candidates) {
-    const fromSecret = trimString(await secretProvider.getAppSecret(candidate));
-    if (fromSecret) {
-      return fromSecret;
-    }
+const readSecret = async (key: string): Promise<string | undefined> => {
+  return trimString(await getSecret(key, key, ''));
+};
 
-    const fromEnv = trimString(process.env[candidate]);
-    if (fromEnv) {
-      return fromEnv;
-    }
+const getGoogleAuth = (): GoogleAuth => {
+  if (!googleAuthClient) {
+    googleAuthClient = new GoogleAuth({
+      scopes: [VERTEX_AUTH_SCOPE],
+    });
   }
+  return googleAuthClient;
+};
 
-  return undefined;
+const readGoogleCloudAccessToken = async (): Promise<string | undefined> => {
+  const auth = getGoogleAuth();
+  const client = await auth.getClient();
+  const tokenResponse = await client.getAccessToken();
+  const token =
+    typeof tokenResponse === 'string'
+      ? tokenResponse
+      : tokenResponse?.token;
+  return trimString(token);
 };
 
 const resolveVertexBaseUrl = ({
@@ -87,22 +86,22 @@ const resolveVertexBaseUrl = ({
 
   const normalizedProject = projectId.trim();
   const normalizedLocation = location.trim();
-  return `https://${normalizedLocation}-aiplatform.googleapis.com/v1beta1/projects/${normalizedProject}/locations/${normalizedLocation}/endpoints/openapi`;
+  const host =
+    normalizedLocation.toLowerCase() === 'global'
+      ? 'aiplatform.googleapis.com'
+      : `${normalizedLocation}-aiplatform.googleapis.com`;
+  return `https://${host}/v1/projects/${normalizedProject}/locations/${normalizedLocation}/endpoints/openapi`;
 };
 
-const resolveOpenRouterProvider = async (
-  secretProvider: SecretProviderLike,
-): Promise<ResolvedChatProvider> => {
-  const apiKey = await readSecretOrEnv(secretProvider, 'OPENROUTER_API_KEY');
+const resolveOpenRouterProvider = async (): Promise<ResolvedChatProvider> => {
+  const apiKey = await readSecret('OPENROUTER_API_KEY');
   if (!apiKey) {
     throw new Error('OpenRouter API key is not configured');
   }
 
   return {
     providerId: 'openrouter',
-    model:
-      (await readSecretOrEnv(secretProvider, 'OPENROUTER_CHAT_MODEL')) ??
-      OPENROUTER_DEFAULT_MODEL,
+    model: (await readSecret('OPENROUTER_CHAT_MODEL')) ?? OPENROUTER_DEFAULT_MODEL,
     client: new OpenAI({
       apiKey,
       baseURL: OPENROUTER_BASE_URL,
@@ -113,49 +112,42 @@ const resolveOpenRouterProvider = async (
   };
 };
 
-const resolveVertexProvider = async (
-  secretProvider: SecretProviderLike,
-): Promise<ResolvedChatProvider> => {
-  const accessToken = await readSecretOrEnv(secretProvider, 'GOOGLE_CLOUD_ACCESS_TOKEN', [
-    'VERTEX_ACCESS_TOKEN',
-  ]);
-  if (!accessToken) {
-    throw new Error(
-      'Vertex provider requires GOOGLE_CLOUD_ACCESS_TOKEN (or VERTEX_ACCESS_TOKEN).',
-    );
-  }
-
-  const explicitBaseUrl = await readSecretOrEnv(secretProvider, 'VERTEX_OPENAPI_BASE_URL');
-  const projectId = await readSecretOrEnv(secretProvider, 'VERTEX_PROJECT_ID');
-  const location = await readSecretOrEnv(secretProvider, 'VERTEX_LOCATION');
+const resolveVertexProvider = async (): Promise<ResolvedChatProvider> => {
+  const explicitBaseUrl = await readSecret('VERTEX_OPENAPI_BASE_URL');
+  const projectId = await readSecret('VERTEX_PROJECT_ID');
+  const location = await readSecret('VERTEX_LOCATION');
   const baseURL = resolveVertexBaseUrl({ explicitBaseUrl, projectId, location });
+  const configuredModel = await readSecret('VERTEX_CHAT_MODEL');
+  const model =
+    configuredModel === 'glm-5-maas'
+      ? 'zai-org/glm-5-maas'
+      : configuredModel ?? VERTEX_DEFAULT_MODEL;
 
-  const thinkingFlag = trimString(process.env.VERTEX_ENABLE_THINKING)?.toLowerCase();
-  const disableThinkingFromEnv = thinkingFlag
-    ? FALSE_LIKE_VALUES.has(thinkingFlag)
-    : false;
+  const resolveBearerToken = async (): Promise<string> => {
+    const refreshedToken = await readGoogleCloudAccessToken();
+    if (refreshedToken) {
+      return refreshedToken;
+    }
+    throw new Error('Vertex provider requires Google ADC credentials.');
+  };
 
   return {
     providerId: 'vertex',
-    model:
-      (await readSecretOrEnv(secretProvider, 'VERTEX_CHAT_MODEL')) ??
-      VERTEX_DEFAULT_MODEL,
+    model,
     client: new OpenAI({
-      apiKey: accessToken,
+      apiKey: VERTEX_PLACEHOLDER_API_KEY,
       baseURL,
+      fetch: async (input, init) => {
+        const headers = new Headers(init?.headers ?? {});
+        headers.set('Authorization', `Bearer ${await resolveBearerToken()}`);
+        return fetch(input, {
+          ...init,
+          headers,
+        });
+      },
     }),
     requestOverrides: {
-      resolveTurnOverrides: (options = {}) => {
-        const disableThinking = options.disableThinking ?? disableThinkingFromEnv;
-        if (!disableThinking) {
-          return {};
-        }
-        return {
-          extra_body: {
-            thinking: { enabled: false },
-          },
-        };
-      },
+      resolveTurnOverrides: () => ({}),
     },
   };
 };
@@ -163,11 +155,10 @@ const resolveVertexProvider = async (
 export async function resolveChatProvider(
   providerOverride?: ChatProviderId,
 ): Promise<ResolvedChatProvider> {
-  const secretProvider = (await getSecretProviderInstance()) as SecretProviderLike;
   const providerId = normalizeProvider(providerOverride ?? process.env.AI_CHAT_PROVIDER);
   if (providerId === 'vertex') {
-    return resolveVertexProvider(secretProvider);
+    return resolveVertexProvider();
   }
 
-  return resolveOpenRouterProvider(secretProvider);
+  return resolveOpenRouterProvider();
 }
