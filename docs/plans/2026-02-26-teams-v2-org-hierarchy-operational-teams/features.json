@@ -128,13 +128,13 @@
   {
     "id": "F022",
     "description": "Update `ITicket` interface to include optional `assigned_team_id`",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-2.21"]
   },
   {
     "id": "F023",
     "description": "Update `IProjectTask` interface to include optional `assigned_team_id`",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-2.21"]
   },
   {

@@ -93,3 +93,4 @@
 - (2026-02-26) Added migrations for team member roles: `server/migrations/20260226171000_add_role_to_team_members.cjs` and backfill lead roles in `20260226171500_seed_team_member_leads.cjs`.
 - (2026-02-26) Added `ITeamMember` type with `role` and updated team actions/model to return member roles and set lead role for managers.
 - (2026-02-26) Added migrations for `assigned_team_id` on tickets and project_tasks: `server/migrations/20260226172000_add_assigned_team_id_to_tickets.cjs` and `20260226172500_add_assigned_team_id_to_project_tasks.cjs`.
+- (2026-02-26) Added `assigned_team_id` to ITicket and IProjectTask interfaces.

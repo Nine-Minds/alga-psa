@@ -42,6 +42,7 @@ export interface ITicket extends TenantEntity, ITaggable {
   updated_by: string | null;
   closed_by: string | null;
   assigned_to: string | null;
+  assigned_team_id?: string | null;
   entered_at: string | null; // Changed from Date to string
   updated_at: string | null; // Changed from Date to string
   closed_at: string | null;  // Changed from Date to string
