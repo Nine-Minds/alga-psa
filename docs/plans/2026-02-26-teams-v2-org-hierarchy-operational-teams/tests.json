@@ -106,7 +106,7 @@
   {
     "id": "T014",
     "description": "User edit form: 'Reports To' dropdown lists all users in the tenant except the current user",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F005"
     ]
