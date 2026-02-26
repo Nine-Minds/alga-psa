@@ -266,7 +266,7 @@
   {
     "id": "F045",
     "description": "Team assignment is a snapshot — later team roster changes do not update existing ticket resources",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-2.17"]
   },
   {

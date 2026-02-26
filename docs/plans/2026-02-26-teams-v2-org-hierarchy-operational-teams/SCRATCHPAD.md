@@ -112,3 +112,4 @@
 - (2026-02-26) Added selective team-member checkboxes in the removal dialog.
 - (2026-02-26) Team removal actions preserve the primary `assigned_to` user.
 - (2026-02-26) Team assignments are independent of individual agent add/remove flows.
+- (2026-02-26) Team assignment resources are treated as a snapshot (no auto updates on roster changes).
