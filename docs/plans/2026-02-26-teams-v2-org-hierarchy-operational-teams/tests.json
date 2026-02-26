@@ -162,7 +162,7 @@
   {
     "id": "T021",
     "description": "`isInReportsToChain(B, A)` returns true when A.reports_to = B (direct report)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F011"
     ]
