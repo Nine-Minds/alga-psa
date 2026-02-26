@@ -485,7 +485,7 @@
   {
     "id": "T061",
     "description": "Team removal: 'Remove all' removes `ticket_resources` with `role = 'team_member'` and clears `assigned_team_id`",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F040"
     ]
