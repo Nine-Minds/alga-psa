@@ -56,7 +56,7 @@ import { useFeatureFlag, useTicketTimeTracking } from "@alga-psa/ui/hooks";
 import { IntervalTrackingService } from "@alga-psa/ui/services";
 import { convertBlockNoteToMarkdown } from "@alga-psa/formatting/blocknoteUtils";
 import BackNav from '@alga-psa/ui/components/BackNav';
-import { ResponseStateBadge } from '../ResponseStateBadge';
+import { ResponseStateBadge } from '@alga-psa/ui/components';
 import TicketOriginBadge from '../TicketOriginBadge';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { SurveyTicketSatisfactionSummary } from '@alga-psa/types';
@@ -205,13 +205,6 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     // Use passed currentUser if available (for drawer), otherwise fallback to session
     const userId = currentUser?.user_id || session?.user?.id;
     const tenant = initialTicket.tenant;
-    if (!tenant) {
-        return (
-            <div id="ticket-error-message" className="p-4">
-                Error: tenant is not defined
-            </div>
-        );
-    }
 
     const [ticket, setTicket] = useState(initialTicket);
     const [bundle, setBundle] = useState<any>(initialBundle);
@@ -1494,6 +1487,14 @@ const handleClose = () => {
             setIsUpdatingBundleSettings(false);
         }
     }, [ticket.ticket_id, bundle?.isBundleMaster, bundle?.mode, router]);
+
+    if (!tenant) {
+        return (
+            <div id="ticket-error-message" className="p-4">
+                Error: tenant is not defined
+            </div>
+        );
+    }
 
     return (
         <ReflectionContainer id={id} label={`Ticket Details - ${ticket.ticket_number}`}>

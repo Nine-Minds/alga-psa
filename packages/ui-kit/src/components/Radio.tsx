@@ -46,7 +46,8 @@ export function RadioGroup({
   orientation = 'vertical',
   size = 'md',
 }: RadioGroupProps) {
-  const groupName = name || React.useId();
+  const generatedName = React.useId();
+  const groupName = name || generatedName;
   const dims = sizeMap[size];
 
   const containerStyle: React.CSSProperties = {

@@ -26,7 +26,7 @@ vi.mock('../actions/ticketFormActions', () => ({
 
 vi.mock('@alga-psa/ui/components/ClientPicker', () => ({
   __esModule: true,
-  default: ({ onSelect, selectedClientId }: any) => {
+  default: function ClientPickerMock({ onSelect, selectedClientId }: any) {
     useEffect(() => {
       if (!selectedClientId) {
         onSelect('client-1');
@@ -38,7 +38,7 @@ vi.mock('@alga-psa/ui/components/ClientPicker', () => ({
 
 vi.mock('@alga-psa/ui/components/UserPicker', () => ({
   __esModule: true,
-  default: ({ onValueChange }: any) => {
+  default: function UserPickerMock({ onValueChange }: any) {
     useEffect(() => {
       onValueChange('user-1');
     }, [onValueChange]);

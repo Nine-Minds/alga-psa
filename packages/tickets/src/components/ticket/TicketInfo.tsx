@@ -11,7 +11,7 @@ import { ITag } from '@alga-psa/types';
 import { TicketResponseState } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
-import { PrioritySelect } from '../PrioritySelect';
+import { PrioritySelect } from '@alga-psa/ui/components';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
 import { CategoryPicker } from '../CategoryPicker';

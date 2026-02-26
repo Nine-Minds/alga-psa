@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
+import CustomSelect, { SelectOption } from '../CustomSelect';
 
 interface PriorityOption extends SelectOption {
   color?: string;
