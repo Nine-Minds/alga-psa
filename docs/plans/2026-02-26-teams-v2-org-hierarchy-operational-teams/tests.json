@@ -252,7 +252,7 @@
   {
     "id": "T032",
     "description": "AvailabilitySettings: shows `reports_to` subordinates in user list when flag is on",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F015"
     ]
