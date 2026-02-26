@@ -300,7 +300,7 @@
   {
     "id": "T038",
     "description": "`ITicket` interface includes optional `assigned_team_id`",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F022"
     ]
