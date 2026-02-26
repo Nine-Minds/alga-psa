@@ -220,7 +220,7 @@
   {
     "id": "T028",
     "description": "Timesheet approval: existing team-manager approval still works regardless of flag state",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F013"
     ]
