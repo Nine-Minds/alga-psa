@@ -194,7 +194,7 @@
   {
     "id": "T025",
     "description": "`isInReportsToChain` handles arbitrarily deep chains without stack overflow",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F011"
     ]
