@@ -33,7 +33,8 @@ export function Switch({
   id,
 }: SwitchProps) {
   const sizeConfig = sizes[size];
-  const switchId = id || React.useId();
+  const generatedId = React.useId();
+  const switchId = id || generatedId;
 
   const trackStyle: React.CSSProperties = {
     position: 'relative',

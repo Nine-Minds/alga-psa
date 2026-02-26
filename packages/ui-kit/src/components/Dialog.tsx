@@ -148,10 +148,11 @@ export function ConfirmDialog({
       <p style={{ ...messageStyle, whiteSpace: 'pre-line' }}>{message}</p>
       {children}
       <div style={actionsStyle}>
-        <Button variant="secondary" onClick={onCancel}>
+        <Button id="confirm-dialog-cancel" variant="secondary" onClick={onCancel}>
           {cancelLabel}
         </Button>
         <Button
+          id="confirm-dialog-confirm"
           variant={variant === 'danger' ? 'destructive' : 'primary'}
           onClick={onConfirm}
           disabled={confirmDisabled}
