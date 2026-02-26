@@ -381,7 +381,7 @@
   {
     "id": "T048",
     "description": "`UserAndTeamPicker`: typing in search filters both users and teams",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F029"
     ]
