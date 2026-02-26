@@ -597,7 +597,7 @@
   {
     "id": "T075",
     "description": "Workflow: `tickets.create` with `assignee: { type: 'user', id: userId }` still works (existing behavior)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F049"
     ]
