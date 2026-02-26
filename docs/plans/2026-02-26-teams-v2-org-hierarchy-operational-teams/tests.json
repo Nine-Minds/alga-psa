@@ -211,7 +211,7 @@
   {
     "id": "T027",
     "description": "Timesheet approval: manager-of-manager can approve indirect report's timesheet via `reports_to` chain when flag is on",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F012",
       "F014"
