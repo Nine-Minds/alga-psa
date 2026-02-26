@@ -68,13 +68,13 @@
   {
     "id": "F012",
     "description": "Extend `canApprove` / delegation auth: add `reports_to` chain check alongside existing team-manager check (flag-gated)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-1.7"]
   },
   {
     "id": "F013",
     "description": "Existing `isManagerOfSubject()` team-based check remains active and unchanged regardless of flag",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-1.7", "NFR-3"]
   },
   {

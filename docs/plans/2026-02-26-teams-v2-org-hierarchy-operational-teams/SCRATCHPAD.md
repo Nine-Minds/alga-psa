@@ -86,3 +86,4 @@
 - (2026-02-26) Reports To field rendering is gated behind `teams-v2` feature flag.
 - (2026-02-26) Added Org Chart view to User Management (`server/src/components/settings/general/UserManagement.tsx`) using reports_to hierarchy; roots include users with null/missing reports_to and rendering is gated by `teams-v2`.
 - (2026-02-26) Added `User.isInReportsToChain` in `packages/db/src/models/user.ts` using a recursive CTE and refactored reports_to cycle check to use it.
+- (2026-02-26) Extended timesheet delegation auth to honor `reports_to` chain when `teams-v2` is enabled (using `User.isInReportsToChain`).
