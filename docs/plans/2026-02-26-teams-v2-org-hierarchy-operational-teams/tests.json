@@ -332,7 +332,7 @@
   {
     "id": "T042",
     "description": "Team assignment to ticket (existing primary): `assigned_to` stays unchanged, all team members added as resources except current `assigned_to`",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F025"
     ]
