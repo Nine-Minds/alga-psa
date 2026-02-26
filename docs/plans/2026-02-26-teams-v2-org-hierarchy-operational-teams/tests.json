@@ -260,7 +260,7 @@
   {
     "id": "T033",
     "description": "SchedulePage: includes `reports_to` subordinates in managed users scope when flag is on",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F016"
     ]
