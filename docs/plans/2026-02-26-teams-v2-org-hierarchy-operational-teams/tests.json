@@ -122,7 +122,7 @@
   {
     "id": "T016",
     "description": "User edit form: saving a `reports_to` value that creates a cycle shows error",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F006"
     ]
