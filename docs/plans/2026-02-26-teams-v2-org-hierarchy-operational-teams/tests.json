@@ -629,7 +629,7 @@
   {
     "id": "T079",
     "description": "Multi-tenant: `reports_to` queries are tenant-scoped",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F001",
       "F011"
