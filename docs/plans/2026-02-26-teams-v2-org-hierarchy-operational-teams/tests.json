@@ -357,7 +357,7 @@
   {
     "id": "T045",
     "description": "Team assignment: members already present as individual `ticket_resources` are not duplicated",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F024"
     ]
