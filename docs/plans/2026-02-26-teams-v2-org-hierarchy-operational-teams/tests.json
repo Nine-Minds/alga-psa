@@ -638,7 +638,7 @@
   {
     "id": "T080",
     "description": "Multi-tenant: team assignment queries are tenant-scoped",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F024"
     ]
