@@ -501,7 +501,7 @@
   {
     "id": "T063",
     "description": "Team removal: individual checkboxes allow selective member removal",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F042"
     ]
