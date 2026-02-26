@@ -421,7 +421,7 @@
   {
     "id": "T053",
     "description": "Feature flag swap: `UserAndTeamPicker` renders on ticket detail when `teams-v2` is on",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F034"
     ]
