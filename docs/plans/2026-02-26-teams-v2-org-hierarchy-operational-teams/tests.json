@@ -284,7 +284,7 @@
   {
     "id": "T036",
     "description": "Migration: `assigned_team_id` column exists on `tickets` table and is nullable",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F020"
     ]
