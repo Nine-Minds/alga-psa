@@ -140,25 +140,25 @@
   {
     "id": "F024",
     "description": "Server action `assignTeamToTicket()`: sets `assigned_team_id`, assigns lead as primary if `assigned_to` is NULL, expands other members into `ticket_resources` with `role = 'team_member'`",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-2.5"]
   },
   {
     "id": "F025",
     "description": "Team assignment: when `assigned_to` is already set, add all team members as resources EXCEPT whoever is already `assigned_to`",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-2.6"]
   },
   {
     "id": "F026",
     "description": "Team assignment: team lead is NOT added as `ticket_resources` when they are the primary assignee (respects DB constraint)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-2.7"]
   },
   {
     "id": "F027",
     "description": "Server action `assignTeamToProjectTask()`: same logic as ticket team assignment but for project tasks",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-2.5", "FR-2.6", "FR-2.7"]
   },
   {
