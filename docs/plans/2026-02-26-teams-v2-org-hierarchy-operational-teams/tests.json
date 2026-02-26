@@ -18,7 +18,7 @@
   {
     "id": "T003",
     "description": "Migration seed: users who are team members get `reports_to` set to their team's `manager_id`",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F002"
     ]
