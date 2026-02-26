@@ -324,7 +324,7 @@
   {
     "id": "T041",
     "description": "Team assignment to ticket (no primary): lead is NOT added as `ticket_resources` (would violate DB constraint)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F026"
     ]
