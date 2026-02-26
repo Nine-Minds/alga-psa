@@ -9,6 +9,7 @@ export type TicketListColumnKey =
   | 'title'
   | 'status'
   | 'priority'
+  | 'sla'
   | 'board'
   | 'category'
   | 'client'
@@ -50,6 +51,7 @@ export const getTicketingDisplaySettings = withAuth(async (_user, { tenant }): P
           title: display?.list?.columnVisibility?.title ?? true,
           status: display?.list?.columnVisibility?.status ?? true,
           priority: display?.list?.columnVisibility?.priority ?? true,
+          sla: display?.list?.columnVisibility?.sla ?? false,
           board: display?.list?.columnVisibility?.board ?? true,
           category: display?.list?.columnVisibility?.category ?? true,
           client: display?.list?.columnVisibility?.client ?? true,
@@ -74,6 +76,7 @@ export const getTicketingDisplaySettings = withAuth(async (_user, { tenant }): P
           title: true,
           status: true,
           priority: true,
+          sla: false,
           board: true,
           category: true,
           client: true,
