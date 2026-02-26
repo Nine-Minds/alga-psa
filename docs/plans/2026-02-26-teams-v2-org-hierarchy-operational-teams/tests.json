@@ -549,7 +549,7 @@
   {
     "id": "T069",
     "description": "Snapshot: changing team roster after assignment does not update existing ticket resources",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F045"
     ]
