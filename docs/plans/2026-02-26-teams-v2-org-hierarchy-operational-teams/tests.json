@@ -445,7 +445,7 @@
   {
     "id": "T056",
     "description": "Team badge: chip appears on 'Agent team' card when `assigned_team_id` is set and flag is on",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F037"
     ]
