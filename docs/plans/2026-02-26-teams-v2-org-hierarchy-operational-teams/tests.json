@@ -50,7 +50,7 @@
   {
     "id": "T007",
     "description": "Cycle prevention: setting A.reports_to = B where B.reports_to = A is rejected",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F003"
     ]
