@@ -97,3 +97,4 @@
 - (2026-02-26) Added `assignTeamToTicket` and `assignTeamToProjectTask` actions to set assigned_team_id, set lead as primary if needed, and expand team members into resources with role `team_member`.
 - (2026-02-26) Added `UserAndTeamPicker` component with grouped user/team sections for teams-v2 assignments.
 - (2026-02-26) `UserAndTeamPicker` search now filters both users and teams together.
+- (2026-02-26) Team options in `UserAndTeamPicker` now show member count and lead name.

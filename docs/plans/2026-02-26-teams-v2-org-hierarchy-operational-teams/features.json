@@ -176,7 +176,7 @@
   {
     "id": "F030",
     "description": "`UserAndTeamPicker`: teams show member count and lead name for context",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-2.8"]
   },
   {
