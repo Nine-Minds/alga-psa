@@ -248,7 +248,7 @@
   {
     "id": "F042",
     "description": "Team removal dialog: individual checkboxes for each team member to select who to keep/remove",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-2.14"]
   },
   {

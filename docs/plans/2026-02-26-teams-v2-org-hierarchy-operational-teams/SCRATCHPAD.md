@@ -109,3 +109,4 @@
 - (2026-02-26) Team badge remove button now opens a confirmation dialog.
 - (2026-02-26) Remove-all option clears `assigned_team_id` and deletes `team_member` ticket resources.
 - (2026-02-26) Keep-all option clears only `assigned_team_id`, preserving existing ticket resources.
+- (2026-02-26) Added selective team-member checkboxes in the removal dialog.
