@@ -254,7 +254,7 @@
   {
     "id": "F043",
     "description": "Team removal: primary `assigned_to` is never automatically removed when clearing team assignment",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-2.15"]
   },
   {
