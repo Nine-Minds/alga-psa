@@ -130,7 +130,7 @@
   {
     "id": "T017",
     "description": "User edit form: clearing `reports_to` (set to NULL) persists correctly",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F006"
     ]
