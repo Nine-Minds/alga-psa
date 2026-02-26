@@ -75,3 +75,6 @@
 ## Open Questions
 
 - (None remaining — all questions resolved during analysis phase)
+
+## Updates
+- (2026-02-26) Added migration `server/migrations/20260226170000_add_reports_to_to_users.cjs` to create nullable `users.reports_to` with FK to `users.user_id`.

@@ -2,7 +2,7 @@
   {
     "id": "F001",
     "description": "Migration: Add `reports_to` nullable UUID column to `users` table with FK to `users(user_id)`",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-1.1"]
   },
   {
