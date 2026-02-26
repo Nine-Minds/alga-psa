@@ -92,7 +92,7 @@
   {
     "id": "F016",
     "description": "Update SchedulePage to additionally scope managed users by `reports_to` when flag is on",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-1.10"]
   },
   {

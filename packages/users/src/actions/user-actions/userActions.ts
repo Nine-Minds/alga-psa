@@ -337,6 +337,50 @@ export const getAllUsers = withAuth(async (
   }
 });
 
+export const getReportsToSubordinates = withAuth(async (
+  currentUser,
+  { tenant },
+  managerUserId?: string
+): Promise<IUser[]> => {
+  try {
+    const { knex } = await createTenantKnex();
+    return await withTransaction(knex, async (trx) => {
+      const targetManagerId = managerUserId || currentUser.user_id;
+      const canReadUsers = await hasPermission(currentUser, 'user', 'read', trx);
+
+      if (targetManagerId !== currentUser.user_id && !canReadUsers) {
+        throw new Error('Permission denied: Cannot read other users reporting chains');
+      }
+
+      const { rows } = await trx.raw(
+        `
+          WITH RECURSIVE reports_to_chain AS (
+            SELECT u.user_id
+            FROM users u
+            WHERE u.reports_to = ?
+              AND u.tenant = ?
+            UNION ALL
+            SELECT u2.user_id
+            FROM users u2
+            JOIN reports_to_chain rtc ON u2.reports_to = rtc.user_id
+            WHERE u2.tenant = ?
+          )
+          SELECT u.*
+          FROM users u
+          JOIN reports_to_chain rtc ON u.user_id = rtc.user_id
+          WHERE u.tenant = ?
+        `,
+        [targetManagerId, tenant, tenant, tenant]
+      );
+
+      return rows as IUser[];
+    });
+  } catch (error) {
+    logger.error('Failed to fetch reports_to subordinates:', error);
+    throw new Error('Failed to fetch reports_to subordinates');
+  }
+});
+
 export const updateUser = withAuth(async (
   currentUser,
   { tenant },
