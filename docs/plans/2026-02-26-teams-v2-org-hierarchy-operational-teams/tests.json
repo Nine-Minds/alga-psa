@@ -42,7 +42,7 @@
   {
     "id": "T006",
     "description": "Migration seed: users not in any team have `reports_to = NULL`",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F002"
     ]
