@@ -429,7 +429,7 @@
   {
     "id": "T054",
     "description": "Feature flag swap: `UserAndTeamPicker` renders on task detail when `teams-v2` is on",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F035"
     ]
