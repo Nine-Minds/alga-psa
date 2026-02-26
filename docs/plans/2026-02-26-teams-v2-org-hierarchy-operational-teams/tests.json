@@ -573,7 +573,7 @@
   {
     "id": "T072",
     "description": "'Assigned To' filter: selecting a user still filters by `assigned_to` (existing behavior preserved)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F047"
     ]
