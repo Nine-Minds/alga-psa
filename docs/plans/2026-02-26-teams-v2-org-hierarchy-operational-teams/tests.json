@@ -646,7 +646,7 @@
   {
     "id": "T081",
     "description": "Multi-tenant: `assigned_team_id` filter queries are tenant-scoped",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F047"
     ]
