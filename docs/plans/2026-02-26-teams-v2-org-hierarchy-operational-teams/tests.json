@@ -565,7 +565,7 @@
   {
     "id": "T071",
     "description": "'Assigned To' filter: selecting a team filters tickets by `assigned_team_id`",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F047"
     ]
