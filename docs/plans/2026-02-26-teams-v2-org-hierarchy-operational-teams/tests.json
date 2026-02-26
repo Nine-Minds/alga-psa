@@ -509,7 +509,7 @@
   {
     "id": "T064",
     "description": "Team removal: primary `assigned_to` is never automatically removed",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F043"
     ]
