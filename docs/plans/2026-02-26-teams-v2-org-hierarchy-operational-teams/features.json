@@ -80,7 +80,7 @@
   {
     "id": "F014",
     "description": "Update `fetchTimeSheetsForApproval()` to additionally include timesheets from `reports_to` subordinates when flag is on",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-1.8"]
   },
   {
