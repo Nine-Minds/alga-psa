@@ -373,7 +373,7 @@
   {
     "id": "T047",
     "description": "`UserAndTeamPicker`: renders users section and teams section with visible separator",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F028"
     ]
