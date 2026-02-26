@@ -20,7 +20,7 @@
   {
     "id": "F004",
     "description": "Update `IUser` interface to include optional `reports_to` field",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-1.1"]
   },
   {
