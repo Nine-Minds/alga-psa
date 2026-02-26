@@ -58,7 +58,7 @@
   {
     "id": "T008",
     "description": "Cycle prevention: setting A.reports_to = A (self-reference) is rejected",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F003"
     ]
