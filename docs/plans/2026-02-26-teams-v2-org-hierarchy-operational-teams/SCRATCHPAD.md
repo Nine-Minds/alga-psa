@@ -115,3 +115,4 @@
 - (2026-02-26) Team assignment resources are treated as a snapshot (no auto updates on roster changes).
 - (2026-02-26) Ticket list "Assigned To" filter now includes teams when `teams-v2` is enabled.
 - (2026-02-26) Team selections in the ticket list filter now map to `assigned_team_id`.
+- (2026-02-26) Ticket list assignee filter reverts to user-only behavior when `teams-v2` is disabled.
