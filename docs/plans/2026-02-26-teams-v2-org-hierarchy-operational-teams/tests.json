@@ -533,7 +533,7 @@
   {
     "id": "T067",
     "description": "Independence: removing an individual agent does not affect team badge or `assigned_team_id`",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F044"
     ]
