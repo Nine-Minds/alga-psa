@@ -271,6 +271,7 @@ export const Chat: React.FC<ChatProps> = ({
       functionCallMeta?: FunctionCallMeta;
       status?: 'interrupted';
       statusDetail?: string;
+      tool_call_id?: string;
     }[]
   >([]);
   const [fullMessage, setFullMessage] = useState('');

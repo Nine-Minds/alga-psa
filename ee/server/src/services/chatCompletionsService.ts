@@ -1394,12 +1394,13 @@ export class ChatCompletionsService {
   private static async generateStreamingCompletion(
     provider: ResolvedChatProvider,
     conversation: ChatCompletionMessage[],
-  ) {
+  ): Promise<AsyncIterable<OpenAI.Chat.Completions.ChatCompletionChunk>> {
     const request = this.buildCompletionCreateRequest(provider, conversation, true);
-    return await this.createWithRateLimitRetry(
+    const stream = await this.createWithRateLimitRetry(
       () => provider.client.chat.completions.create(request as any),
       `${provider.providerId} stream`,
     );
+    return stream as unknown as AsyncIterable<OpenAI.Chat.Completions.ChatCompletionChunk>;
   }
 
   private static hasMeaningfulContent(content: ParsedAssistantContent): boolean {

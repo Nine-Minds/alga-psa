@@ -137,11 +137,12 @@ const resolveVertexProvider = async (): Promise<ResolvedChatProvider> => {
     client: new OpenAI({
       apiKey: VERTEX_PLACEHOLDER_API_KEY,
       baseURL,
-      fetch: async (input, init) => {
+      fetch: async (...args: unknown[]) => {
+        const [input, init] = args as [RequestInfo | URL, RequestInit | undefined];
         const headers = new Headers(init?.headers ?? {});
         headers.set('Authorization', `Bearer ${await resolveBearerToken()}`);
         return fetch(input, {
-          ...init,
+          ...(init ?? {}),
           headers,
         });
       },
