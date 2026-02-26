@@ -170,7 +170,7 @@
   {
     "id": "T022",
     "description": "`isInReportsToChain(C, A)` returns true when A→B→C (transitive — two levels)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F011"
     ]
