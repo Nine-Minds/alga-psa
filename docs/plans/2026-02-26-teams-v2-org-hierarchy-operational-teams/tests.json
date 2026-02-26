@@ -82,7 +82,7 @@
   {
     "id": "T011",
     "description": "`IUser` interface includes optional `reports_to` field",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F004"
     ]
