@@ -493,7 +493,7 @@
   {
     "id": "T062",
     "description": "Team removal: 'Keep all' clears `assigned_team_id` only, all resources stay",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F041"
     ]
