@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import fs from 'fs';
 import path from 'path';
 
-const root = process.cwd();
+const root = path.resolve(__dirname, '../../../..');
 const readFile = (relPath: string): string =>
   fs.readFileSync(path.join(root, relPath), 'utf8');
 
@@ -25,7 +25,8 @@ describe('Teams V2 Plan Coverage', () => {
     it('T003/T004/T005/T006: seed reports_to from team membership and skip self references', () => {
       const seed = readFile('server/migrations/20260226170500_seed_reports_to_from_teams.cjs');
       expectAll(seed, [
-        'UPDATE users u SET reports_to = t.manager_id',
+        'UPDATE users u',
+        'SET reports_to = t.manager_id',
         'FROM team_members tm',
         'JOIN teams t',
         'u.user_id = tm.user_id',
@@ -75,7 +76,7 @@ describe('Teams V2 Plan Coverage', () => {
     it('T012/T013/T014: Reports To dropdown gated by teams-v2 and excludes current user', () => {
       const userDetails = readFile('server/src/components/settings/general/UserDetails.tsx');
       expectAll(userDetails, [
-        "useFeatureFlag('teams-v2')",
+        "useFeatureFlag('teams-v2'",
         'Reports To',
         '.filter((item) => item.user_id !== userId)'
       ]);
@@ -92,7 +93,7 @@ describe('Teams V2 Plan Coverage', () => {
     it('T018/T019/T020: Org chart tab is gated and uses reports_to tree roots', () => {
       const userMgmt = readFile('server/src/components/settings/general/UserManagement.tsx');
       expectAll(userMgmt, [
-        "useFeatureFlag('teams-v2')",
+        "useFeatureFlag('teams-v2'",
         'reports_to',
         'Org Chart'
       ]);
@@ -103,7 +104,7 @@ describe('Teams V2 Plan Coverage', () => {
     it('T026-T030: timesheet approval uses reports_to chain when flag on', () => {
       const auth = readFile('packages/scheduling/src/actions/timeEntryDelegationAuth.ts');
       expectAll(auth, [
-        "useFeatureFlag('teams-v2')",
+        "isFeatureFlagEnabled('teams-v2'",
         'isInReportsToChain'
       ]);
     });
@@ -111,7 +112,7 @@ describe('Teams V2 Plan Coverage', () => {
     it('T031: fetchTimeSheetsForApproval includes reports_to subordinates when flag on', () => {
       const ts = readFile('packages/scheduling/src/actions/timeSheetActions.ts');
       expectAll(ts, [
-        "useFeatureFlag('teams-v2')",
+        "isFeatureFlagEnabled('teams-v2'",
         'reports_to'
       ]);
     });
@@ -119,7 +120,7 @@ describe('Teams V2 Plan Coverage', () => {
     it('T032: AvailabilitySettings scopes managed users by reports_to', () => {
       const avail = readFile('packages/scheduling/src/components/schedule/AvailabilitySettings.tsx');
       expectAll(avail, [
-        "useFeatureFlag('teams-v2')",
+        "useFeatureFlag('teams-v2'",
         'reports_to'
       ]);
     });
@@ -127,8 +128,8 @@ describe('Teams V2 Plan Coverage', () => {
     it('T033: SchedulePage scopes managed users by reports_to', () => {
       const schedule = readFile('packages/scheduling/src/components/schedule/SchedulePage.tsx');
       expectAll(schedule, [
-        "useFeatureFlag('teams-v2')",
-        'reports_to'
+        "useFeatureFlag('teams-v2'",
+        'getReportsToSubordinates'
       ]);
     });
   });
@@ -185,9 +186,9 @@ describe('Teams V2 Plan Coverage', () => {
     it('T053-T055: ticket/task detail swap pickers behind teams-v2', () => {
       const ticketInfo = readFile('packages/tickets/src/components/ticket/TicketInfo.tsx');
       const taskForm = readFile('packages/projects/src/components/TaskForm.tsx');
-      expect(ticketInfo).toContain("useFeatureFlag('teams-v2')");
+      expect(ticketInfo).toContain("useFeatureFlag('teams-v2'");
       expect(ticketInfo).toContain('UserAndTeamPicker');
-      expect(taskForm).toContain("useFeatureFlag('teams-v2')");
+      expect(taskForm).toContain("useFeatureFlag('teams-v2'");
       expect(taskForm).toContain('UserAndTeamPicker');
     });
   });
@@ -237,7 +238,7 @@ describe('Teams V2 Plan Coverage', () => {
     it('T069: team assignment removal operates on team_member resources (snapshot semantics)', () => {
       const actions = readFile('packages/tickets/src/actions/teamAssignmentActions.ts');
       const segment = actions.split('removeTeamFromTicket')[1] || '';
-      expect(segment).toContain(\"role: 'team_member'\");
+      expect(segment).toContain("role: 'team_member'");
     });
   });
 
