@@ -11,6 +11,7 @@ const VERTICAL_PACKAGES = new Set([
   'integrations',
   'client-portal',
   'users',
+  'sla',
 ]);
 
 function getSourcePackage(filename) {
