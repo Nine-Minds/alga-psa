@@ -228,7 +228,7 @@
   {
     "id": "T029",
     "description": "Timesheet approval: `reports_to` chain check is NOT active when flag is off",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F012"
     ]
