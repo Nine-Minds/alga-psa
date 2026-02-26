@@ -621,7 +621,7 @@
   {
     "id": "T078",
     "description": "Tenant export includes `role` from team_members",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F050"
     ]
