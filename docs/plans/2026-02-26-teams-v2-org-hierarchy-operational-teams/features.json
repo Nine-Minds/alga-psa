@@ -230,7 +230,7 @@
   {
     "id": "F039",
     "description": "Team removal: clicking 'x' on team badge opens confirmation dialog",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-2.11"]
   },
   {
