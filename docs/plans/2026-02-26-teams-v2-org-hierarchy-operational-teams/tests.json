@@ -437,7 +437,7 @@
   {
     "id": "T055",
     "description": "Feature flag swap: `UserPicker` renders unchanged when `teams-v2` is off",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F036"
     ]
