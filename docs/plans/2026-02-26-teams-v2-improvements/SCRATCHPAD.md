@@ -1,0 +1,64 @@
+# Scratchpad — Teams V2 Improvements
+
+- Plan slug: `teams-v2-improvements`
+- Created: `2026-02-26`
+- Parent plan: `docs/plans/2026-02-26-teams-v2-org-hierarchy-operational-teams/`
+
+## Decisions
+
+- (2026-02-26) Reversing the original non-goal: "Team logos or custom team icons" — now adding team avatar infrastructure.
+- (2026-02-26) Tab name changed from "Org Chart" to "Structure" (user confirmed).
+- (2026-02-26) Node click in org chart opens UserDetails drawer (user confirmed) — reuses existing drawer pattern from UserList.
+- (2026-02-26) Using ReactFlow for org chart (already installed v11.11.4, extensively used in workflow visualization).
+- (2026-02-26) Merging two ViewSwitchers into one row in CardHeader — eliminates duplicate list/org toggle.
+- (2026-02-26) Team avatars use existing `document_associations` + `EntityImageService` pattern — no new storage infrastructure needed.
+- (2026-02-26) `TeamAvatar` component follows exact pattern of `UserAvatar` (thin wrapper around `EntityAvatar`).
+- (2026-02-26) Extract team logic from `MultiUserPicker` into a new `MultiUserAndTeamPicker` component (user confirmed). Follows the same pattern as `UserPicker` → `UserAndTeamPicker`. `MultiUserPicker` stays team-free. Call sites swap via `teams-v2` feature flag.
+
+## Discoveries / Constraints
+
+- (2026-02-26) `EntityType` is defined in 4 separate files that all need updating:
+  - `packages/media/src/lib/avatarUtils.ts` (canonical backend)
+  - `packages/users/src/lib/avatarUtils.ts` (user-specific copy)
+  - `packages/formatting/src/avatarUtils.ts` (formatting copy)
+  - `packages/ui/src/components/EntityImageUpload.tsx` (UI component)
+- (2026-02-26) `document_associations` CHECK constraint currently allows: `'asset','client','contact','contract','project_task','tenant','ticket','user'` — need to add `'team'`.
+- (2026-02-26) Latest constraint migration: `server/migrations/20251020000001_add_document_folders_preview_and_contract_association.cjs` uses `NOT VALID` pattern.
+- (2026-02-26) `document_associations` is distributed in Citus — migration needs `exports.config = { transaction: false }`.
+- (2026-02-26) `reactflow` v11.11.4 is already a dependency in both root and server `package.json`.
+- (2026-02-26) ReactFlow needs dynamic import with `{ ssr: false }` in Next.js — proven pattern in `packages/workflows/src/components/visualization/DynamicReactFlow.tsx`.
+- (2026-02-26) Current org chart is simple recursive `<ul>` list at `UserManagement.tsx` lines 535-589 (buildOrgTree) and 570-589 (renderOrgNode).
+- (2026-02-26) Two duplicate ViewSwitchers for list/org toggle exist at lines 668-673 (list view) and 701-705 (org view).
+- (2026-02-26) `UserAndTeamPicker.tsx` lines 404-407 uses hardcoded gray circle + TeamIcon — 1 location to update.
+- (2026-02-26) `MultiUserPicker.tsx` has 4 locations with hardcoded TeamIcon (lines ~352, ~376, ~465, ~641).
+- (2026-02-26) `MultiUserPicker` has team logic deeply baked in: team props (lines 34-37), team filtering (lines 143-150), team rendering in trigger (lines 348-389, 458-488), team rendering in dropdown (lines 614-649), stale value cleanup (lines 116-127). This logic will move to `MultiUserAndTeamPicker`.
+- (2026-02-26) `packages/teams/package.json` currently only depends on `@alga-psa/core`, `@alga-psa/db`, `@alga-psa/types`, `@alga-psa/validation`. Needs: `@alga-psa/media`, `@alga-psa/auth`, `swr`.
+- (2026-02-26) Teams package has `./actions` and `./hooks` exports in package.json already.
+- (2026-02-26) `useUserAvatar.ts` is 29 lines — SWR hook pattern to replicate for teams.
+- (2026-02-26) User avatar actions in `userActions.ts` lines 1019-1179 — `uploadUserAvatar`, `deleteUserAvatar` — pattern to follow.
+
+## Links / References
+
+- Original teams-v2 plan: `docs/plans/2026-02-26-teams-v2-org-hierarchy-operational-teams/`
+- EntityAvatar component: `packages/ui/src/components/EntityAvatar.tsx`
+- UserAvatar component: `packages/ui/src/components/UserAvatar.tsx`
+- EntityImageUpload component: `packages/ui/src/components/EntityImageUpload.tsx`
+- EntityImageService: `packages/media/src/services/EntityImageService.ts`
+- Avatar utils (media): `packages/media/src/lib/avatarUtils.ts`
+- User avatar actions: `packages/users/src/actions/user-actions/userActions.ts` (lines 1019-1179)
+- User avatar hook: `packages/users/src/hooks/useUserAvatar.ts`
+- UserManagement: `server/src/components/settings/general/UserManagement.tsx`
+- UserDetails drawer: `server/src/components/settings/general/UserDetails.tsx`
+- TeamDetails: `server/src/components/settings/general/TeamDetails.tsx`
+- UserAndTeamPicker: `packages/ui/src/components/UserAndTeamPicker.tsx`
+- MultiUserPicker: `packages/ui/src/components/MultiUserPicker.tsx`
+- MultiUserAndTeamPicker (new): `packages/ui/src/components/MultiUserAndTeamPicker.tsx`
+- ViewSwitcher: `packages/ui/src/components/ViewSwitcher.tsx`
+- DynamicReactFlow pattern: `packages/workflows/src/components/visualization/DynamicReactFlow.tsx`
+- Workflow nodes: `packages/workflows/src/components/visualization/nodes/`
+- Team actions: `packages/teams/src/actions/team-actions/teamActions.ts`
+- Team model: `packages/teams/src/models/team.ts`
+
+## Open Questions
+
+- (None remaining — all questions resolved during planning)
