@@ -74,7 +74,7 @@
   {
     "id": "T010",
     "description": "Cycle prevention: valid chain (A→B→C, setting D→C) is accepted",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F003"
     ]
