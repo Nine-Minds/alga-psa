@@ -14,7 +14,7 @@
   {
     "id": "F003",
     "description": "Server-side cycle prevention: validate that setting `reports_to` does not create a circular chain",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-1.3"]
   },
   {

@@ -79,3 +79,4 @@
 ## Updates
 - (2026-02-26) Added migration `server/migrations/20260226170000_add_reports_to_to_users.cjs` to create nullable `users.reports_to` with FK to `users.user_id`.
 - (2026-02-26) Added migration `server/migrations/20260226170500_seed_reports_to_from_teams.cjs` to backfill `users.reports_to` from team membership and manager_id (skips self, respects existing values).
+- (2026-02-26) Added server-side cycle prevention in `packages/users/src/actions/user-actions/userActions.ts` for `reports_to` updates (self-reference + recursive chain detection).

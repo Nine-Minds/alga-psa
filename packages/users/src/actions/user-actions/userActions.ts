@@ -362,6 +362,40 @@ export const updateUser = withAuth(async (
           .update({ default_assigned_to: null });
       }
 
+      if (userData.reports_to !== undefined) {
+        if (userData.reports_to === userId) {
+          throw new Error('reports_to cannot reference the user itself');
+        }
+
+        if (userData.reports_to) {
+          const { rows } = await trx.raw(
+            `
+              WITH RECURSIVE chain AS (
+                SELECT u.reports_to
+                FROM users u
+                WHERE u.user_id = ?
+                  AND u.tenant = ?
+                UNION ALL
+                SELECT u2.reports_to
+                FROM users u2
+                JOIN chain c ON u2.user_id = c.reports_to
+                WHERE u2.tenant = ?
+                  AND c.reports_to IS NOT NULL
+              )
+              SELECT 1
+              FROM chain
+              WHERE reports_to = ?
+              LIMIT 1
+            `,
+            [userData.reports_to, tenant, tenant, userId]
+          );
+
+          if (rows.length > 0) {
+            throw new Error('reports_to would create a circular reporting chain');
+          }
+        }
+      }
+
       await User.update(trx, userId, userData);
       const updatedUser = await User.getUserWithRoles(trx, userId);
       return updatedUser || null;
