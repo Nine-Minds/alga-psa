@@ -62,7 +62,7 @@
   {
     "id": "F011",
     "description": "Implement `isInReportsToChain(managerUserId, employeeUserId)` function using iterative/CTE approach (no recursion stack overflow)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-1.6", "NFR-5"]
   },
   {
