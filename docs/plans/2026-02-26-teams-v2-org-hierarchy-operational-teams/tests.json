@@ -236,7 +236,7 @@
   {
     "id": "T030",
     "description": "Timesheet approval: user with `timesheet:read_all` can still approve anyone (unchanged)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F013"
     ]
