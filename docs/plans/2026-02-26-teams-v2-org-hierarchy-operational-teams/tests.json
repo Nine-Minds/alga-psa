@@ -292,7 +292,7 @@
   {
     "id": "T037",
     "description": "Migration: `assigned_team_id` column exists on `project_tasks` table and is nullable",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F021"
     ]
