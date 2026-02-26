@@ -21,6 +21,7 @@ import {
   MicrosoftWebhookRenewalJobData,
   GooglePubSubVerificationJobData
 } from './handlers/calendarWebhookMaintenanceHandler';
+import { slaTimerHandler, SlaTimerJobData } from './handlers/slaTimerHandler';
 import { JobService } from '../../services/job.service';
 import { getConnection } from '../db/db';
 import { StorageService } from '../../lib/storage/StorageService';
@@ -159,6 +160,14 @@ export const initializeScheduler = async (storageService?: StorageService) => {
       }
     );
 
+    // Register SLA timer handler
+    jobScheduler.registerJobHandler<SlaTimerJobData>(
+      'sla-timer',
+      async (job: Job<SlaTimerJobData>) => {
+        await slaTimerHandler(job.data);
+      }
+    );
+
     // Note: Password reset token cleanup is handled automatically during token operations
     // No pg-boss job needed
 
@@ -181,7 +190,8 @@ export type {
   GoogleGmailWatchRenewalJobData,
   AssetImportJobData,
   EmailWebhookMaintenanceJobData,
-  RenewalQueueProcessorJobData
+  RenewalQueueProcessorJobData,
+  SlaTimerJobData
 };
 // Export job scheduling helper functions
 export const scheduleInvoiceGeneration = async (
@@ -388,5 +398,25 @@ export const scheduleRenewalQueueProcessingJob = async (
     'process-renewal-queue',
     cronExpression,
     { tenantId, horizonDays }
+  );
+};
+
+/**
+ * Schedule a recurring job to check SLA thresholds and send notifications.
+ * This job monitors all active tickets for SLA warnings and breaches.
+ *
+ * @param tenantId The tenant ID
+ * @param cronExpression Cron expression for job scheduling (default: every 5 minutes)
+ * @returns Job ID if successful, null otherwise
+ */
+export const scheduleSlaTimerJob = async (
+  tenantId: string,
+  cronExpression: string = '*/5 * * * *' // Default: every 5 minutes
+): Promise<string | null> => {
+  const scheduler = await initializeScheduler();
+  return await scheduler.scheduleRecurringJob<SlaTimerJobData>(
+    'sla-timer',
+    cronExpression,
+    { tenantId }
   );
 };

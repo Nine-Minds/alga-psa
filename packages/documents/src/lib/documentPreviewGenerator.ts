@@ -17,7 +17,7 @@
 
 import { PDFDocument } from 'pdf-lib';
 import { fromPath } from 'pdf2pic';
-import { StorageService } from '../storage/StorageService';
+import { StorageService } from '@alga-psa/storage/StorageService';
 import { createTenantKnex, getTenantContext } from '@alga-psa/db';
 import type { IDocument } from '@alga-psa/types';
 import { getCurrentUser } from '@alga-psa/auth/getCurrentUser';

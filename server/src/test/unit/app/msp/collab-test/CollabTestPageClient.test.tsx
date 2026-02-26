@@ -47,7 +47,7 @@ vi.mock('@alga-psa/ui/components/Input', () => ({
 }));
 
 const { default: CollabTestPageClient } = await import(
-  '@/app/msp/collab-test/CollabTestPageClient'
+  '@/app/msp/test/collab/CollabTestPageClient'
 );
 
 describe('CollabTestPageClient', () => {
@@ -75,7 +75,7 @@ describe('CollabTestPageClient', () => {
       user_id: 'user-1',
       block_data: expect.any(Object),
     });
-    expect(pushMock).toHaveBeenCalledWith('/msp/collab-test?doc=doc-123');
+    expect(pushMock).toHaveBeenCalledWith('/msp/test/collab?doc=doc-123');
   });
 
   it('loads an existing document from the query string', async () => {

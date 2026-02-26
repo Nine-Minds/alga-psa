@@ -1,15 +1,18 @@
 /**
- * Documents helpers for media package
+ * Dynamic import wrappers for media package
  *
- * These are dynamic import wrappers to avoid circular dependency:
+ * These use dynamic imports to avoid circular dependency:
  * media -> documents -> users -> media
  *
  * Dynamic imports break the synchronous dependency cycle while still
  * allowing the bundler to process and resolve the import paths.
+ *
+ * Note: StorageService imports from @alga-psa/storage (no cycle).
+ * Document action imports still go through @alga-psa/documents (cycle-breaker).
  */
 
 export async function getStorageServiceAsync() {
-  const module = await import('@alga-psa/documents/storage/StorageService');
+  const module = await import('@alga-psa/storage/StorageService');
   return (module as any).StorageService;
 }
 

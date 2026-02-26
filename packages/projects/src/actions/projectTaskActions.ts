@@ -1437,9 +1437,10 @@ export const getTaskTypes = withAuth(async (
     { tenant }
 ): Promise<ITaskType[]> => {
     const {knex: db} = await createTenantKnex();
-    await checkPermission(user, 'project', 'read', db);
-
-    return await TaskTypeModel.getAllTaskTypes(db, tenant);
+    return await withTransaction(db, async (trx: Knex.Transaction) => {
+        await checkPermission(user, 'project', 'read', trx);
+        return await TaskTypeModel.getAllTaskTypes(trx, tenant);
+    });
 });
 
 export const createCustomTaskType = withAuth(async (
@@ -1633,16 +1634,18 @@ export const getTaskById = withAuth(async (
 ): Promise<IProjectTask | null> => {
     try {
         const {knex: db} = await createTenantKnex();
-        await checkPermission(user, 'project', 'read', db);
+        return await withTransaction(db, async (trx: Knex.Transaction) => {
+            await checkPermission(user, 'project', 'read', trx);
 
-        const task = await db('project_tasks')
-            .where({
-                'project_tasks.task_id': taskId,
-                'project_tasks.tenant': tenant
-            })
-            .first();
+            const task = await trx('project_tasks')
+                .where({
+                    'project_tasks.task_id': taskId,
+                    'project_tasks.tenant': tenant
+                })
+                .first();
 
-        return task || null;
+            return task || null;
+        });
     } catch (error) {
         console.error('Error fetching task by ID:', error);
         throw error;
@@ -1800,21 +1803,22 @@ export const getPhaseTaskCounts = withAuth(async (
     projectId: string
 ): Promise<Record<string, number>> => {
     const { knex: db } = await createTenantKnex();
+    return await withTransaction(db, async (trx: Knex.Transaction) => {
+        await checkPermission(user, 'project', 'read', trx);
 
-    await checkPermission(user, 'project', 'read', db);
+        const counts = await trx('project_tasks as pt')
+            .join('project_phases as pp', function() {
+                this.on('pt.phase_id', 'pp.phase_id').andOn('pt.tenant', 'pp.tenant');
+            })
+            .where({ 'pp.project_id': projectId, 'pt.tenant': tenant })
+            .groupBy('pt.phase_id')
+            .select('pt.phase_id')
+            .count('pt.task_id as count');
 
-    const counts = await db('project_tasks as pt')
-        .join('project_phases as pp', function() {
-            this.on('pt.phase_id', 'pp.phase_id').andOn('pt.tenant', 'pp.tenant');
-        })
-        .where({ 'pp.project_id': projectId, 'pt.tenant': tenant })
-        .groupBy('pt.phase_id')
-        .select('pt.phase_id')
-        .count('pt.task_id as count');
-
-    const result: Record<string, number> = {};
-    for (const row of counts) {
-        result[row.phase_id] = Number(row.count);
-    }
-    return result;
+        const result: Record<string, number> = {};
+        for (const row of counts) {
+            result[row.phase_id] = Number(row.count);
+        }
+        return result;
+    });
 });

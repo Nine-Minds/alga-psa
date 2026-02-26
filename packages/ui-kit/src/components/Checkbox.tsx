@@ -57,7 +57,8 @@ export function Checkbox({
     }
   }, [indeterminate]);
 
-  const checkboxId = id || React.useId();
+  const generatedId = React.useId();
+  const checkboxId = id || generatedId;
 
   return (
     <div style={containerStyle}>

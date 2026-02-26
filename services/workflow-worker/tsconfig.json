@@ -84,6 +84,8 @@
       "@alga-psa/onboarding/*": ["packages/onboarding/src/*"],
       "@alga-psa/licensing": ["packages/licensing/src"],
       "@alga-psa/licensing/*": ["packages/licensing/src/*"],
+      "@alga-psa/sla": ["packages/sla/src"],
+      "@alga-psa/sla/*": ["packages/sla/src/*"],
       "@alga-psa/analytics": ["packages/analytics/src"],
       "@alga-psa/analytics/*": ["packages/analytics/src/*"],
       "@alga-psa/email": ["packages/email/src"],

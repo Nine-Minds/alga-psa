@@ -13,6 +13,7 @@ import { TicketResponseState } from '@alga-psa/types';
 import { maybeReopenBundleMasterFromChildReply } from '@alga-psa/tickets/actions/ticketBundleUtils';
 import { withAuth } from '@alga-psa/auth';
 import { buildTicketCommunicationWorkflowEvents } from '../../lib/workflowTicketCommunicationEvents';
+import { isResponseStateTrackingEnabled } from '../../lib/responseStateSettings';
 
 /**
  * Helper function to determine the new response state based on comment properties
@@ -31,6 +32,12 @@ async function updateTicketResponseState(
   isInternal: boolean,
   userId: string | null
 ): Promise<{ previousState: TicketResponseState; newState: TicketResponseState }> {
+  // Skip response state tracking when disabled for this tenant
+  const trackingEnabled = await isResponseStateTrackingEnabled(tenant, trx);
+  if (!trackingEnabled) {
+    return { previousState: null, newState: null };
+  }
+
   // Get current ticket response state
   const ticket = await trx('tickets')
     .select('response_state')
