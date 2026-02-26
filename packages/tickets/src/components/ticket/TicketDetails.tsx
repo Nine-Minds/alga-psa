@@ -56,7 +56,7 @@ import { useFeatureFlag, useTicketTimeTracking } from "@alga-psa/ui/hooks";
 import { IntervalTrackingService } from "@alga-psa/ui/services";
 import { convertBlockNoteToMarkdown } from "@alga-psa/formatting/blocknoteUtils";
 import BackNav from '@alga-psa/ui/components/BackNav';
-import { ResponseStateBadge } from '../ResponseStateBadge';
+import { ResponseStateBadge } from '@alga-psa/ui/components';
 import TicketOriginBadge from '../TicketOriginBadge';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { SurveyTicketSatisfactionSummary } from '@alga-psa/types';

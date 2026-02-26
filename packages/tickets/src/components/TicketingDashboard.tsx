@@ -7,7 +7,7 @@ import { ITag } from '@alga-psa/types';
 import { QuickAddTicket } from './QuickAddTicket';
 import { CategoryPicker } from './CategoryPicker';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
-import { PrioritySelect } from './PrioritySelect';
+import { PrioritySelect } from '@alga-psa/ui/components';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Input } from '@alga-psa/ui/components/Input';
