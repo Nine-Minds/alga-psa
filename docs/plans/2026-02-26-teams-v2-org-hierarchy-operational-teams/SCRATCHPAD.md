@@ -99,3 +99,4 @@
 - (2026-02-26) `UserAndTeamPicker` search now filters both users and teams together.
 - (2026-02-26) Team options in `UserAndTeamPicker` now show member count and lead name.
 - (2026-02-26) Added generic team icon rendering in `UserAndTeamPicker` (distinct from user avatars).
+- (2026-02-26) Team selection in `UserAndTeamPicker` now triggers ticket/task team assignment actions.

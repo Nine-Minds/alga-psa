@@ -188,7 +188,7 @@
   {
     "id": "F032",
     "description": "`UserAndTeamPicker`: selecting a team triggers team assignment action (sets `assigned_team_id`, assigns lead, expands members)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-2.8", "FR-2.5"]
   },
   {
