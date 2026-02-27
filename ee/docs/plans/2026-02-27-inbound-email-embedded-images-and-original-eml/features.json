@@ -19,7 +19,7 @@
   {
     "id": "F003",
     "description": "Decode and validate extracted data URL images (base64 decode, mime detection, byte size)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Security / Permissions"
