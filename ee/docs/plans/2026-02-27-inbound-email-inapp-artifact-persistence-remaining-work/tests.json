@@ -224,7 +224,7 @@
   {
     "id": "T240",
     "description": "Integration: Microsoft in-app path uses shared artifact orchestrator and persists all artifact classes",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F233"
     ]

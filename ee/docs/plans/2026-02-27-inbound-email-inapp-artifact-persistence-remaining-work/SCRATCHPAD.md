@@ -289,3 +289,8 @@ Create a clean, implementation-ready plan containing only remaining work for inb
 - Validation:
   - `cd server && npx vitest run src/test/integration/inboundEmailInApp.webhooks.integration.test.ts -t "shared artifact orchestrator" --coverage.enabled=false`
   - Environment note: DB-gated integration suite was skipped in this local session (`describeDb`).
+- 2026-02-27: Completed `T240`.
+  - Added Microsoft webhook integration scenario in `server/src/test/integration/inboundEmailInApp.webhooks.integration.test.ts` mirroring Google artifact coverage.
+  - Test verifies in-app processing persists regular attachment, embedded extraction artifact, and deterministic `.eml` for Microsoft path through the shared orchestrator.
+- Validation:
+  - Reused targeted integration command from `T239`.
