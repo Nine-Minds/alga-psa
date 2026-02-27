@@ -504,7 +504,7 @@
   {
     "id": "T144",
     "description": "MultiUserPicker: renders only users \u2014 no team sections, no TeamIcon, no team chips",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F089"
     ]
