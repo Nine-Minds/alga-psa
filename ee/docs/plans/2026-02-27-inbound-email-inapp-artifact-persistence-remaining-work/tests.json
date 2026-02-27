@@ -157,7 +157,7 @@
   {
     "id": "T232",
     "description": "Webhook integration: total attachment byte cap skips overflow attachments with attachment_total_bytes_exceeded reason",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F227",
       "F228"

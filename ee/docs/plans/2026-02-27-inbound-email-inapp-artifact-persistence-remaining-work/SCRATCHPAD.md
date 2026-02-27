@@ -247,3 +247,8 @@ Create a clean, implementation-ready plan containing only remaining work for inb
   - Test enforces low `IMAP_MAX_ATTACHMENT_BYTES` and asserts skip reason `attachment_over_max_bytes` with dropped attachment from normalized payload.
 - Validation:
   - Reused full IMAP webhook integration run from `T229`.
+- 2026-02-27: Completed `T232`.
+  - Added IMAP webhook total-bytes cap scenario in `server/src/test/integration/imapWebhookHandoff.integration.test.ts`.
+  - Test configures per-attachment + total cap and asserts overflow artifact skip reason `attachment_total_bytes_exceeded`.
+- Validation:
+  - Reused full IMAP webhook integration run from `T229`.
