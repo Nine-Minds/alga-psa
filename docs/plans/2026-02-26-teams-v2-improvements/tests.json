@@ -170,7 +170,7 @@
   {
     "id": "T103",
     "description": "`useTeamAvatar` hook returns `{ avatarUrl, refreshAvatar, isLoading }` via SWR",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F064"
     ]
