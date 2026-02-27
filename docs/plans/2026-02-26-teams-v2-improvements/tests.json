@@ -42,7 +42,7 @@
   {
     "id": "T087",
     "description": "EntityType in formatting avatarUtils includes 'team'",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F054"
     ]
