@@ -144,7 +144,7 @@ sebastian_server_ce  | 2025-02-10 15:12:23 [INFO   ]: **************************
 
 > Copy the credentials before stopping the logs. After you sign in, update the password for production use.
 
-The CE stack now includes the `workflow-worker` service by default, giving you a production-like asynchronous processing setup without additional compose overrides. The `ALGA_IMAGE_TAG` value determines which prebuilt image is retrieved; compose does not fall back to `latest` unless you leave the variable unset.
+The CE stack does not include the `workflow-worker` service by default. The `ALGA_IMAGE_TAG` value determines which prebuilt image is retrieved; compose does not fall back to `latest` unless you leave the variable unset.
 
 ## Production Setup (Persistent Storage)
 
