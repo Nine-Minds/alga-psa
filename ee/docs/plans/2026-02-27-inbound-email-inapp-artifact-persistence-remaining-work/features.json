@@ -74,7 +74,7 @@
   {
     "id": "F226",
     "description": "Wire IMAP webhook to in-app processing mode (direct or app-local async worker) with explicit fallback behavior",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements", "Rollout"]
   },
   {

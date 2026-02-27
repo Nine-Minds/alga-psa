@@ -49,6 +49,7 @@ export interface ProcessInboundEmailArtifactsInput {
   ticketId: string;
   emailData: EmailMessageDetails;
   scopeLabel: 'new-ticket' | 'reply';
+  maxAttachmentConcurrency?: number;
 }
 
 function isUniqueViolation(error: any): boolean {
@@ -57,6 +58,45 @@ function isUniqueViolation(error: any): boolean {
 
 function isBase64(value: string): boolean {
   return /^[A-Za-z0-9+/=\s]+$/.test(value);
+}
+
+function resolveAttachmentConcurrency(
+  explicitLimit?: number
+): number {
+  if (Number.isFinite(explicitLimit) && (explicitLimit as number) > 0) {
+    return Math.max(1, Math.min(8, Math.floor(explicitLimit as number)));
+  }
+
+  const raw =
+    process.env.IMAP_INBOUND_EMAIL_IN_APP_ARTIFACT_CONCURRENCY ||
+    process.env.INBOUND_EMAIL_IN_APP_ARTIFACT_CONCURRENCY;
+  if (!raw) return 1;
+  const parsed = Number(raw);
+  if (!Number.isFinite(parsed) || parsed <= 0) return 1;
+  return Math.max(1, Math.min(8, Math.floor(parsed)));
+}
+
+async function runWithConcurrency<T>(
+  items: T[],
+  limit: number,
+  worker: (item: T) => Promise<void>
+): Promise<void> {
+  if (items.length === 0) return;
+  const concurrency = Math.max(1, Math.min(limit, items.length));
+  let index = 0;
+
+  const runners = Array.from({ length: concurrency }, async () => {
+    while (true) {
+      const current = index;
+      index += 1;
+      if (current >= items.length) {
+        break;
+      }
+      await worker(items[current]);
+    }
+  });
+
+  await Promise.all(runners);
 }
 
 async function getAdminKnex(): Promise<any> {
@@ -858,7 +898,8 @@ export async function processInboundEmailArtifactsBestEffort(
   }
 
   const allAttachments = [...baseAttachments, ...embeddedAttachments];
-  for (const attachment of allAttachments) {
+  const attachmentConcurrency = resolveAttachmentConcurrency(input.maxAttachmentConcurrency);
+  await runWithConcurrency(allAttachments, attachmentConcurrency, async (attachment) => {
     try {
       await persistInboundEmailAttachment({
         tenantId: input.tenantId,
@@ -891,7 +932,7 @@ export async function processInboundEmailArtifactsBestEffort(
         error: error instanceof Error ? error.message : String(error),
       });
     }
-  }
+  });
 
   try {
     const originalResult = await persistInboundOriginalEmail({

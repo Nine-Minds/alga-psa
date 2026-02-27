@@ -28,3 +28,34 @@ export function isInboundEmailInAppProcessingEnabled(params: {
   );
 }
 
+export function isImapInboundEmailInAppProcessingEnabled(params: {
+  tenantId: string;
+  providerId: string;
+}): boolean {
+  const imapGloballyEnabled =
+    typeof process.env.IMAP_INBOUND_EMAIL_IN_APP_PROCESSING_ENABLED === 'string' &&
+    TRUE_VALUES.has(process.env.IMAP_INBOUND_EMAIL_IN_APP_PROCESSING_ENABLED.toLowerCase());
+  const enabledImapTenants = parseCsv(process.env.IMAP_INBOUND_EMAIL_IN_APP_TENANT_IDS);
+  const enabledImapProviders = parseCsv(process.env.IMAP_INBOUND_EMAIL_IN_APP_PROVIDER_IDS);
+
+  return (
+    isInboundEmailInAppProcessingEnabled(params) ||
+    imapGloballyEnabled ||
+    enabledImapTenants.has(params.tenantId) ||
+    enabledImapProviders.has(params.providerId)
+  );
+}
+
+export function isImapInboundEmailInAppAsyncModeEnabled(): boolean {
+  return (
+    typeof process.env.IMAP_INBOUND_EMAIL_IN_APP_ASYNC_ENABLED === 'string' &&
+    TRUE_VALUES.has(process.env.IMAP_INBOUND_EMAIL_IN_APP_ASYNC_ENABLED.toLowerCase())
+  );
+}
+
+export function isImapInboundEmailInAppEventBusFallbackEnabled(): boolean {
+  return (
+    typeof process.env.IMAP_INBOUND_EMAIL_IN_APP_EVENT_BUS_FALLBACK_ENABLED === 'string' &&
+    TRUE_VALUES.has(process.env.IMAP_INBOUND_EMAIL_IN_APP_EVENT_BUS_FALLBACK_ENABLED.toLowerCase())
+  );
+}

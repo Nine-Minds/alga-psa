@@ -90,3 +90,8 @@ Create a clean, implementation-ready plan containing only remaining work for inb
     - per-attachment failures are logged and processing continues
     - `.eml` persistence failures are logged and do not interrupt ticket/comment return path.
   - `processInboundEmailInApp` now always returns reply/new-ticket outcomes independent of artifact persistence failures.
+- 2026-02-27: Completed `F226`.
+  - Reworked IMAP webhook route (`packages/integrations/src/webhooks/email/imap.ts`) to support:
+    - direct in-app processing handoff (`handoff: "in_app"`)
+    - app-local async in-process queue handoff (`handoff: "in_app_async"`)
+    - explicit event-bus fallback on in-app failure (`handoff: "event_bus_fallback"`) when configured.
