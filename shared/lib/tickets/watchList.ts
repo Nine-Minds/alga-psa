@@ -1,12 +1,15 @@
 import { normalizeEmailAddress } from '../email/addressUtils';
 
 export type TicketWatchListSource = 'manual' | 'inbound_to' | 'inbound_cc';
+export type TicketWatchListEntityType = 'user' | 'contact';
 
 export interface TicketWatchListEntry {
   email: string;
   active: boolean;
   name?: string;
   source?: string;
+  entity_type?: TicketWatchListEntityType;
+  entity_id?: string;
   created_at?: string;
   updated_at?: string;
   last_seen_at?: string;
@@ -17,6 +20,8 @@ export interface TicketWatchListRecipientInput {
   active?: boolean;
   name?: string | null;
   source?: string | null;
+  entity_type?: string | null;
+  entity_id?: string | null;
   created_at?: string | null;
   updated_at?: string | null;
   last_seen_at?: string | null;
@@ -54,6 +59,14 @@ function normalizeActive(value: unknown): boolean {
   }
 
   return true;
+}
+
+function asEntityType(value: unknown): TicketWatchListEntityType | undefined {
+  const normalized = asOptionalString(value)?.toLowerCase();
+  if (normalized === 'user' || normalized === 'contact') {
+    return normalized;
+  }
+  return undefined;
 }
 
 function mergeEntries(existing: TicketWatchListEntry, incoming: TicketWatchListEntry): TicketWatchListEntry {
@@ -103,6 +116,16 @@ function normalizeEntry(raw: unknown): TicketWatchListEntry | null {
   const source = asOptionalString(record.source);
   if (source) {
     entry.source = source;
+  }
+
+  const entityType = asEntityType(record.entity_type);
+  if (entityType) {
+    entry.entity_type = entityType;
+  }
+
+  const entityId = asOptionalString(record.entity_id);
+  if (entityId) {
+    entry.entity_id = entityId;
   }
 
   const createdAt = asOptionalString(record.created_at);
@@ -192,6 +215,16 @@ export function mergeTicketWatchListRecipients(
     const candidateSource = asOptionalString(recipient.source);
     if (candidateSource) {
       candidate.source = candidateSource;
+    }
+
+    const candidateEntityType = asEntityType(recipient.entity_type);
+    if (candidateEntityType) {
+      candidate.entity_type = candidateEntityType;
+    }
+
+    const candidateEntityId = asOptionalString(recipient.entity_id);
+    if (candidateEntityId) {
+      candidate.entity_id = candidateEntityId;
     }
 
     const createdAt = asOptionalString(recipient.created_at);

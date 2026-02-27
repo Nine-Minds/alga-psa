@@ -11,6 +11,12 @@ Working notes for the ticket watch-list feature plan. This log captures clarifie
 - (2026-02-25) Watchers are notified for **customer-visible** ticket updates only.
 - (2026-02-25) Initial persistence strategy is `tickets.attributes.watch_list` (no schema migration in v1).
 - (2026-02-25) Inbound email ingestion auto-adds `To`/`CC` recipients to watch list; users can uncheck/remove afterward.
+- (2026-02-27) Scope expansion approved: Watch List add flow now includes **internal users + contacts** in addition to manual email entry.
+- (2026-02-27) Persistence decision: store **email + optional entity metadata** (`entity_type`, `entity_id`) for picker-added watchers; email remains canonical for dedupe/send.
+- (2026-02-27) UX decision: optimize for common workflow with **client-first contact picker** (ticket-associated client contacts by default).
+- (2026-02-27) Fallback decision: provide secondary `Search all contacts` path for cross-client additions.
+- (2026-02-27) Contact-scope decision: all-contacts fallback includes **active contacts only** by default.
+- (2026-02-27) Inactive identity behavior: do **not** auto-disable watcher sends when linked user/contact becomes inactive; active watcher + valid email still sends.
 
 ## Discoveries / Constraints
 - (2026-02-25) Existing ticket notification fan-out is centralized in `server/src/lib/eventBus/subscribers/ticketEmailSubscriber.ts` across created/updated/assigned/comment/closed handlers.
@@ -18,6 +24,10 @@ Working notes for the ticket watch-list feature plan. This log captures clarifie
 - (2026-02-25) Shared workflow actions (`shared/workflow/actions/emailWorkflowActions.ts`) are the right boundary for DB-backed helper actions used by inbound processing.
 - (2026-02-25) Ticket UI/property editing surfaces already use attribute updates via `updateTicketWithCache`, so watch-list UI can piggyback on existing ticket update permissions.
 - (2026-02-25) Must avoid adding provider mailbox/self addresses as watchers to reduce self-notification loop risk.
+- (2026-02-27) `TicketDetails` already loads `availableAgents` (all users for tenant); internal-user watch-list picker can reuse this dataset without new backend lookups.
+- (2026-02-27) `TicketDetails` currently loads `contacts` scoped to `ticket.client_id`; this supports fast default contact-add path directly.
+- (2026-02-27) Global contact search requires a new all-contacts action (active-only) and should be lazily fetched to avoid heavier initial ticket payloads.
+- (2026-02-27) Existing reusable UI components (`UserPicker`, `ContactPicker`) already match needed interaction patterns and should be reused to minimize bespoke UI.
 
 ## Commands / Runbooks
 - (2026-02-25) Scaffold plan:
@@ -28,6 +38,12 @@ Working notes for the ticket watch-list feature plan. This log captures clarifie
   - `rg -n "ticketEmailSubscriber|processInboundEmailInApp|updateTicketWithCache" packages server shared -S`
   - `sed -n '1,260p' server/src/lib/eventBus/subscribers/ticketEmailSubscriber.ts`
   - `sed -n '1,320p' shared/services/email/processInboundEmailInApp.ts`
+- (2026-02-27) Scope-expansion discovery commands:
+  - `rg -n "Watch List|watch_list|onUpdateWatchList|upsertTicketWatchListRecipients|extractActiveWatcherEmails" packages/tickets shared server -S`
+  - `sed -n '1,260p' packages/tickets/src/components/ticket/TicketWatchListCard.tsx`
+  - `sed -n '1,260p' packages/ui/src/components/ContactPicker.tsx`
+  - `sed -n '1,260p' packages/ui/src/components/UserPicker.tsx`
+  - `sed -n '220,430p' packages/tickets/src/actions/optimizedTicketActions.ts`
 
 ## Links / References
 - Customer requirement summary (captured in chat):
@@ -156,3 +172,5 @@ Working notes for the ticket watch-list feature plan. This log captures clarifie
 - (2026-02-25) Bookkeeping: set `tests.json` implemented=true for T042 after validating watch-list test coverage.
 - (2026-02-25) Bookkeeping: set `tests.json` implemented=true for T043 after validating watch-list test coverage.
 - (2026-02-25) Bookkeeping: set `tests.json` implemented=true for T044 after validating watch-list test coverage.
+- (2026-02-27) Implemented F025 by extending `shared/lib/tickets/watchList.ts` contract types and normalization to accept/persist optional `entity_type` (`user|contact`) and `entity_id` metadata while keeping normalized email as canonical.
+- (2026-02-27) Validation run for F025: `cd shared && npx vitest run lib/tickets/__tests__/watchList.test.ts --config vitest.config.ts`.
