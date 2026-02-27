@@ -74,7 +74,9 @@ Rolling notes for the 5-phase documents system overhaul: entity-scoped folders, 
 - (2026-02-27) **F003 implemented**: Added migration `server/migrations/20260227172000_add_is_client_visible_to_documents.cjs` to add `documents.is_client_visible` as non-null boolean defaulting to `false`, with idempotent guards in both `up` and `down`.
 - (2026-02-27) **F004 implemented**: Added migration `server/migrations/20260227173000_add_is_client_visible_to_document_folders.cjs` to add `document_folders.is_client_visible` as non-null boolean defaulting to `false`, with idempotent guards in both `up` and `down`.
 - (2026-02-27) **F005 implemented**: Added migration `server/migrations/20260227174000_add_document_folders_rls_policies.cjs` to enable RLS on `document_folders` and enforce tenant isolation via `tenant_isolation_policy` (USING) and `tenant_isolation_insert_policy` (FOR INSERT WITH CHECK), with idempotent `DROP POLICY IF EXISTS` guards and reversible down migration.
+- (2026-02-27) **F006 implemented**: Added migration `server/migrations/20260227175000_add_documents_client_visibility_partial_index.cjs` to create partial index `idx_documents_tenant_client_visible_true` on `documents(tenant, is_client_visible)` with predicate `WHERE is_client_visible = true`, guarded by idempotent table/column existence checks and reversible `DROP INDEX IF EXISTS` in down.
 
 ## Recent Validation
 
 - (2026-02-27) Verified migration module exports load: `node -e "const m=require('./server/migrations/20260227174000_add_document_folders_rls_policies.cjs'); console.log(typeof m.up, typeof m.down);"` → `function function`.
+- (2026-02-27) Verified migration module exports load: `node -e "const m=require('./server/migrations/20260227175000_add_documents_client_visibility_partial_index.cjs'); console.log(typeof m.up, typeof m.down);"` → `function function`.
