@@ -215,3 +215,4 @@ Working notes for the ticket watch-list feature plan. This log captures clarifie
 - (2026-02-27) Implemented T058 in `packages/tickets/src/actions/clientLookupActions.watchList.test.ts` validating all-contact lookup action wiring and default ascending full-name sort path.
 - (2026-02-27) Implemented T059 in `packages/tickets/src/actions/clientLookupActions.watchList.test.ts` validating guard-path behavior for active-only lookup and explicit sort-direction override.
 - (2026-02-27) Implemented T060 by extending `shared/workflow/actions/__tests__/emailWorkflowActions.watchList.test.ts` with a happy-path assertion that picker metadata persists to `tickets.attributes.watch_list`.
+- (2026-02-27) Implemented T061 by extending `emailWorkflowActions.watchList.test.ts` with guard assertions that metadata-only recipients lacking valid emails are ignored without ticket mutation.

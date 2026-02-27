@@ -519,7 +519,7 @@
   {
     "id": "T061",
     "description": "DB integration (guard case): upsert ignores recipient inputs that include entity metadata but no valid email.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F030",
       "F034"
