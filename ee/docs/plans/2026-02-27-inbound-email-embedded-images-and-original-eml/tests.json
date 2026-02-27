@@ -167,7 +167,7 @@
   {
     "id": "T020",
     "description": "Unit: MailHog source-message fallback generates deterministic RFC822 payload when raw source is absent",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F015"
     ]
