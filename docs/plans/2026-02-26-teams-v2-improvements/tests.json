@@ -74,7 +74,7 @@
   {
     "id": "T091",
     "description": "TeamAvatar shows colored initials when avatarUrl is null",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F057"
     ]
