@@ -29,6 +29,8 @@ interface ClientPickerProps {
   onFilterStateChange: (state: 'all' | 'active' | 'inactive') => void;
   clientTypeFilter: 'all' | 'company' | 'individual';
   onClientTypeFilterChange: (type: 'all' | 'company' | 'individual') => void;
+  disabledClientIds?: Set<string>;
+  disabledTooltip?: string;
   fitContent?: boolean;
   className?: string;
   placeholder?: string;
@@ -70,6 +72,8 @@ export const ClientPicker: React.FC<ClientPickerProps & AutomationProps> = ({
   onFilterStateChange,
   clientTypeFilter,
   onClientTypeFilterChange,
+  disabledClientIds,
+  disabledTooltip = 'Has active contract',
   fitContent = false,
   className = '',
   placeholder = 'Select Client',
@@ -115,8 +119,13 @@ export const ClientPicker: React.FC<ClientPickerProps & AutomationProps> = ({
 
         return matchesSearch && matchesState && matchesClientType;
       })
-      .sort((a, b) => a.client_name.localeCompare(b.client_name));
-  }, [clients, filterState, clientTypeFilter, searchTerm]);
+      .sort((a, b) => {
+        const aDisabled = disabledClientIds?.has(a.client_id) ?? false;
+        const bDisabled = disabledClientIds?.has(b.client_id) ?? false;
+        if (aDisabled !== bDisabled) return aDisabled ? 1 : -1;
+        return a.client_name.localeCompare(b.client_name);
+      });
+  }, [clients, filterState, clientTypeFilter, searchTerm, disabledClientIds]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -186,6 +195,8 @@ export const ClientPicker: React.FC<ClientPickerProps & AutomationProps> = ({
   const handleSelect = (clientId: string, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+
+    if (disabledClientIds?.has(clientId)) return;
 
     if (clientId !== selectedClientId) {
       onSelect(clientId);
@@ -298,26 +309,34 @@ export const ClientPicker: React.FC<ClientPickerProps & AutomationProps> = ({
         {filteredClients.length === 0 ? (
           <div className="p-4 text-sm text-gray-500">No clients found.</div>
         ) : (
-          filteredClients.map((client) => (
-            <OptionButton
-              key={client.client_id}
-              id={`${id}-option-${client.client_id}`}
-              label={client.client_name}
-              onClick={(e) => handleSelect(client.client_id, e)}
-              className={`flex items-center gap-2 p-3 cursor-pointer hover:bg-gray-50 ${
-                client.client_id === selectedClientId ? 'bg-gray-50' : ''
-              }`}
-            >
-              <ClientAvatar clientId={client.client_id} clientName={client.client_name} logoUrl={(client as any).logoUrl} size={size} />
-              <div className="flex-1 min-w-0">
-                <div className="text-sm font-medium text-gray-900 truncate">{client.client_name}</div>
-                <div className="text-xs text-gray-500 truncate">
-                  {client.client_type ? client.client_type : '—'}
-                  {client.is_inactive ? ' • Inactive' : ''}
+          filteredClients.map((client) => {
+            const isDisabled = disabledClientIds?.has(client.client_id) ?? false;
+            return (
+              <OptionButton
+                key={client.client_id}
+                id={`${id}-option-${client.client_id}`}
+                label={client.client_name}
+                onClick={(e) => handleSelect(client.client_id, e)}
+                className={`flex items-center gap-2 p-3 ${
+                  isDisabled
+                    ? 'opacity-50 cursor-not-allowed'
+                    : `cursor-pointer hover:bg-gray-50 ${client.client_id === selectedClientId ? 'bg-gray-50' : ''}`
+                }`}
+              >
+                <ClientAvatar clientId={client.client_id} clientName={client.client_name} logoUrl={(client as any).logoUrl} size={size} />
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-medium text-gray-900 truncate">{client.client_name}</div>
+                  <div className="text-xs text-gray-500 truncate">
+                    {client.client_type ? client.client_type : '—'}
+                    {client.is_inactive ? ' • Inactive' : ''}
+                  </div>
                 </div>
-              </div>
-            </OptionButton>
-          ))
+                {isDisabled && (
+                  <span className="text-xs text-gray-400 whitespace-nowrap">{disabledTooltip}</span>
+                )}
+              </OptionButton>
+            );
+          })
         )}
       </div>
     </div>

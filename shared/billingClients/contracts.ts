@@ -26,6 +26,29 @@ export async function hasActiveContractForClient(
   return Number(result?.count ?? 0) > 0;
 }
 
+export async function getClientIdsWithActiveContracts(
+  knexOrTrx: Knex | Knex.Transaction,
+  tenant: string,
+  excludeContractId?: string
+): Promise<string[]> {
+  let query = knexOrTrx('client_contracts as cc')
+    .join('contracts as c', function joinContracts() {
+      this.on('cc.contract_id', '=', 'c.contract_id').andOn('cc.tenant', '=', 'c.tenant');
+    })
+    .where({
+      'cc.tenant': tenant,
+      'c.status': 'active',
+    })
+    .andWhere((builder) => builder.whereNull('c.is_template').orWhere('c.is_template', false));
+
+  if (excludeContractId) {
+    query = query.andWhere('c.contract_id', '!=', excludeContractId);
+  }
+
+  const rows = await query.distinct('cc.client_id');
+  return rows.map((r: { client_id: string }) => r.client_id);
+}
+
 export async function checkAndReactivateExpiredContract(
   knexOrTrx: Knex | Knex.Transaction,
   tenant: string,

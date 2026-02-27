@@ -9,7 +9,7 @@ import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { IContract } from '@alga-psa/types';
 import { IContractLinePreset } from '@alga-psa/types';
-import { createContract, updateContract, checkClientHasActiveContract } from '@alga-psa/billing/actions/contractActions';
+import { createContract, updateContract, checkClientHasActiveContract, fetchClientIdsWithActiveContracts } from '@alga-psa/billing/actions/contractActions';
 import { getContractLinePresets, copyPresetToContractLine } from '@alga-psa/billing/actions/contractLinePresetActions';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
@@ -75,6 +75,7 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
   const [checkingActiveContract, setCheckingActiveContract] = useState(false);
   const [filterState, setFilterState] = useState<'all' | 'active' | 'inactive'>('active');
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
+  const [disabledClientIds, setDisabledClientIds] = useState<Set<string>>(new Set());
 
   // Contract line presets state
   const [availableContractLinePresets, setAvailableContractLinePresets] = useState<IContractLinePreset[]>([]);
@@ -115,8 +116,12 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
 
   const loadClients = async () => {
     try {
-      const fetchedClients = await getAllClientsForBilling();
+      const [fetchedClients, activeContractClientIds] = await Promise.all([
+        getAllClientsForBilling(),
+        fetchClientIdsWithActiveContracts(editingContract?.contract_id),
+      ]);
       setClients(fetchedClients);
+      setDisabledClientIds(new Set(activeContractClientIds));
     } catch (error) {
       console.error('Error loading clients:', error);
     } finally {
@@ -552,6 +557,7 @@ export function ContractDialog({ onContractSaved, editingContract, onClose, trig
                 onFilterStateChange={setFilterState}
                 clientTypeFilter={clientTypeFilter}
                 onClientTypeFilterChange={setClientTypeFilter}
+                disabledClientIds={disabledClientIds}
                 placeholder="Select a client"
                 className="w-full"
               />
