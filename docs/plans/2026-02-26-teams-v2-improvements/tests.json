@@ -373,7 +373,7 @@
   {
     "id": "T128",
     "description": "No ViewSwitcher for list/org appears in the list view toolbar area",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F077"
     ]
