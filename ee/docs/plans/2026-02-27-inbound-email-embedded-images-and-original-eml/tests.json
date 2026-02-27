@@ -72,7 +72,7 @@
   {
     "id": "T009",
     "description": "Unit: deterministic embedded filename generation produces sanitized, extension-appropriate names",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F006",
       "F024"

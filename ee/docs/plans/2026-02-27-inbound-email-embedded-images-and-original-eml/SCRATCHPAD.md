@@ -96,3 +96,4 @@ Rolling notes for embedded inbound-email image extraction + source `.eml` persis
 - (2026-02-27) Completed T006 — Covered by emailAttachmentHelpers.test.ts: maps cid references only to matching inline image MIME parts.
 - (2026-02-27) Completed T007 — Covered by emailAttachmentHelpers.test.ts: skips unreferenced inline CID MIME parts.
 - (2026-02-27) Completed T008 — Covered by emailAttachmentHelpers.test.ts: deterministic embedded IDs are stable across retries.
+- (2026-02-27) Completed T009 — Covered by emailAttachmentHelpers.test.ts: deterministic embedded filenames are extension-appropriate and sanitized.
