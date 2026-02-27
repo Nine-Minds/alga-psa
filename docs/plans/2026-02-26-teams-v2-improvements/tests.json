@@ -292,7 +292,7 @@
   {
     "id": "T118",
     "description": "OrgChart calls `fitView` on initial render to show all nodes",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F072"
     ]
