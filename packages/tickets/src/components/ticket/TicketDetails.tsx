@@ -39,7 +39,7 @@ import { findUserById, getCurrentUser } from "@alga-psa/users/actions";
 import { findBoardById, getAllBoards } from "@alga-psa/tickets/actions";
 import { findCommentsByTicketId, deleteComment, createComment, updateComment, findCommentById } from "@alga-psa/tickets/actions";
 import { getDocumentByTicketId } from "@alga-psa/documents/actions/documentActions";
-import { getContactByContactNameId, getContactsByClient, getClientById, getAllClients } from "../../actions/clientLookupActions";
+import { getAllActiveContacts, getContactByContactNameId, getContactsByClient, getClientById, getAllClients } from "../../actions/clientLookupActions";
 import { updateTicketWithCache } from "../../actions/optimizedTicketActions";
 import { updateTicket } from "../../actions/ticketActions";
 import { getTicketStatuses } from "@alga-psa/reference-data/actions";
@@ -62,6 +62,10 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { SurveyTicketSatisfactionSummary } from '@alga-psa/types';
 import { buildTicketTimeEntryContext, createTicketTimeEntryOnComplete } from '../../lib/timeEntryContext';
 import { getTicketOrigin } from '../../lib/ticketOrigin';
+import {
+    setTicketWatchListOnAttributes,
+    type TicketWatchListEntry,
+} from '@shared/lib/tickets/watchList';
 import {
     addChildrenToBundleAction,
     findTicketByNumberAction,
@@ -243,6 +247,9 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const [isUpdatingBundleSettings, setIsUpdatingBundleSettings] = useState(false);
     const [isAddChildMultiClientConfirmOpen, setIsAddChildMultiClientConfirmOpen] = useState(false);
     const [pendingChildToAdd, setPendingChildToAdd] = useState<{ ticket_id: string; ticket_number?: string | null; client_id?: string | null } | null>(null);
+    const [isWatchListSaving, setIsWatchListSaving] = useState(false);
+    const [allContactsForWatchList, setAllContactsForWatchList] = useState<IContact[]>([]);
+    const [allContactsForWatchListLoading, setAllContactsForWatchListLoading] = useState(false);
     const ticketOrigin = useMemo(() => getTicketOrigin(ticket as any), [ticket]);
     const ticketOriginLabels = useMemo(() => ({
         internal: t('origin.internal', 'Created Internally'),
@@ -1081,6 +1088,50 @@ const handleClose = () => {
         }
     };
 
+    const handleUpdateWatchList = async (watchList: TicketWatchListEntry[]): Promise<boolean> => {
+        if (!ticket.ticket_id || isWatchListSaving) {
+            return false;
+        }
+
+        setIsWatchListSaving(true);
+        try {
+            const updatedAttributes = setTicketWatchListOnAttributes(ticket.attributes, watchList);
+            await updateTicketWithCache(ticket.ticket_id, {
+                attributes: updatedAttributes ?? null,
+            });
+
+            setTicket((prevTicket) => ({
+                ...prevTicket,
+                attributes: updatedAttributes ?? null,
+                updated_at: new Date().toISOString(),
+            }));
+            return true;
+        } catch (error) {
+            console.error('Error updating watch list:', error);
+            toast.error('Failed to update watch list');
+            return false;
+        } finally {
+            setIsWatchListSaving(false);
+        }
+    };
+
+    const handleLoadAllContactsForWatchList = useCallback(async () => {
+        if (allContactsForWatchListLoading || allContactsForWatchList.length > 0) {
+            return;
+        }
+
+        setAllContactsForWatchListLoading(true);
+        try {
+            const allContacts = await getAllActiveContacts('asc');
+            setAllContactsForWatchList(allContacts || []);
+        } catch (error) {
+            console.error('Error loading all contacts for watch list:', error);
+            toast.error('Failed to load all contacts');
+        } finally {
+            setAllContactsForWatchListLoading(false);
+        }
+    }, [allContactsForWatchList.length, allContactsForWatchListLoading]);
+
     const handleChangeContact = () => {
         setIsChangeContactDialogOpen(true);
     };
@@ -1913,6 +1964,11 @@ const handleClose = () => {
                                 allTagTexts={allTags.filter(tag => tag.tagged_type === 'ticket').map(tag => tag.tag_text)}
                                 onTagsChange={handleTagsChange}
                                 onItilFieldChange={handleItilFieldChange}
+                                onUpdateWatchList={handleUpdateWatchList}
+                                watchListSaving={isWatchListSaving}
+                                allContactsForWatchList={allContactsForWatchList}
+                                allContactsForWatchListLoading={allContactsForWatchListLoading}
+                                onLoadAllContactsForWatchList={handleLoadAllContactsForWatchList}
                                 surveySummary={surveySummary}
                                 renderIntervalManagement={renderIntervalManagement}
                             />

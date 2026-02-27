@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { getScheduledHoursForTicket, getTicketAppointmentRequests } from '../../actions/ticketActions';
-import { ITicket, ITimeSheet, ITimePeriod, ITimePeriodView, ITimeEntry, IAgentSchedule, IClient, IClientLocation } from '@alga-psa/types'; // Added IClient and IClientLocation
+import { ITicket, ITimeSheet, ITimePeriod, ITimePeriodView, ITimeEntry, IAgentSchedule, IClient, IClientLocation, IContact } from '@alga-psa/types'; // Added IClient and IClientLocation
 import { IUserWithRoles, ITeam } from '@alga-psa/types';
 import { ITicketResource } from '@alga-psa/types';
 import { ITag } from '@alga-psa/types';
@@ -11,7 +11,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
-import { Clock, Edit2, Play, Pause, StopCircle, UserPlus, X, AlertCircle, Calendar as CalendarIcon, Building, Users, CalendarCheck } from 'lucide-react';
+import { Clock, Edit2, Play, Pause, StopCircle, UserPlus, X, Calendar as CalendarIcon, Building, Users, CalendarCheck } from 'lucide-react';
 import { formatMinutesAsHoursAndMinutes } from '@alga-psa/core';
 import styles from './TicketDetails.module.css';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
@@ -28,8 +28,10 @@ import { getUserContactId } from '@alga-psa/users/actions';
 import { utcToLocal, formatDateTime, getUserTimeZone } from '@alga-psa/core';
 import { getTicketingDisplaySettings } from '../../actions/ticketDisplaySettings';
 import type { SurveyTicketSatisfactionSummary } from '@alga-psa/types';
+import type { TicketWatchListEntry } from '@shared/lib/tickets/watchList';
 import TicketMaterialsCard from './TicketMaterialsCard';
 import TicketSurveySummaryCard from './TicketSurveySummaryCard';
+import TicketWatchListCard from './TicketWatchListCard';
 import { useRegisterUnsavedChanges } from '@alga-psa/ui/context';
 import { useDrawer } from '@alga-psa/ui';
 
@@ -75,6 +77,11 @@ interface TicketPropertiesProps {
   allTagTexts?: string[];
   onTagsChange?: (tags: ITag[]) => void;
   onItilFieldChange?: (field: string, value: any) => void;
+  onUpdateWatchList?: (watchList: TicketWatchListEntry[]) => Promise<boolean>;
+  watchListSaving?: boolean;
+  allContactsForWatchList?: IContact[];
+  allContactsForWatchListLoading?: boolean;
+  onLoadAllContactsForWatchList?: () => Promise<void>;
   surveySummary?: SurveyTicketSatisfactionSummary | null;
   renderIntervalManagement?: (args: { ticketId: string; userId: string }) => React.ReactNode;
 }
@@ -148,6 +155,11 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
   allTagTexts = [],
   onTagsChange,
   onItilFieldChange,
+  onUpdateWatchList,
+  watchListSaving = false,
+  allContactsForWatchList = [],
+  allContactsForWatchListLoading = false,
+  onLoadAllContactsForWatchList,
   surveySummary = null,
   renderIntervalManagement,
 }) => {
@@ -891,6 +903,18 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
           </div>
         </div>
       </div>
+
+      <TicketWatchListCard
+        id={`${id}-watch-list`}
+        attributes={ticket.attributes}
+        onUpdateWatchList={onUpdateWatchList}
+        watchListSaving={watchListSaving}
+        internalUsers={availableAgents}
+        clientContacts={contacts}
+        allContacts={allContactsForWatchList}
+        allContactsLoading={allContactsForWatchListLoading}
+        onLoadAllContacts={onLoadAllContactsForWatchList}
+      />
 
 
       {ticket.ticket_id && ticket.client_id && (

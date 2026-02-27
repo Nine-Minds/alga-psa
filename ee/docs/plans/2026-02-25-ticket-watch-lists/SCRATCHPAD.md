@@ -1,0 +1,221 @@
+# Scratchpad — Ticket Watch Lists and CC-Style Notifications
+
+- Plan slug: `ticket-watch-lists`
+- Created: `2026-02-25`
+
+## What This Is
+Working notes for the ticket watch-list feature plan. This log captures clarified scope, discovered code touchpoints, and validation commands.
+
+## Decisions
+- (2026-02-25) Delivery mode for watcher notifications is **separate individual emails** (not CC header batching).
+- (2026-02-25) Watchers are notified for **customer-visible** ticket updates only.
+- (2026-02-25) Initial persistence strategy is `tickets.attributes.watch_list` (no schema migration in v1).
+- (2026-02-25) Inbound email ingestion auto-adds `To`/`CC` recipients to watch list; users can uncheck/remove afterward.
+- (2026-02-27) Scope expansion approved: Watch List add flow now includes **internal users + contacts** in addition to manual email entry.
+- (2026-02-27) Persistence decision: store **email + optional entity metadata** (`entity_type`, `entity_id`) for picker-added watchers; email remains canonical for dedupe/send.
+- (2026-02-27) UX decision: optimize for common workflow with **client-first contact picker** (ticket-associated client contacts by default).
+- (2026-02-27) Fallback decision: provide secondary `Search all contacts` path for cross-client additions.
+- (2026-02-27) Contact-scope decision: all-contacts fallback includes **active contacts only** by default.
+- (2026-02-27) Inactive identity behavior: do **not** auto-disable watcher sends when linked user/contact becomes inactive; active watcher + valid email still sends.
+
+## Discoveries / Constraints
+- (2026-02-25) Existing ticket notification fan-out is centralized in `server/src/lib/eventBus/subscribers/ticketEmailSubscriber.ts` across created/updated/assigned/comment/closed handlers.
+- (2026-02-25) Inbound processing path is `shared/services/email/processInboundEmailInApp.ts` and already includes inbound `to` metadata in comment payloads.
+- (2026-02-25) Shared workflow actions (`shared/workflow/actions/emailWorkflowActions.ts`) are the right boundary for DB-backed helper actions used by inbound processing.
+- (2026-02-25) Ticket UI/property editing surfaces already use attribute updates via `updateTicketWithCache`, so watch-list UI can piggyback on existing ticket update permissions.
+- (2026-02-25) Must avoid adding provider mailbox/self addresses as watchers to reduce self-notification loop risk.
+- (2026-02-27) `TicketDetails` already loads `availableAgents` (all users for tenant); internal-user watch-list picker can reuse this dataset without new backend lookups.
+- (2026-02-27) `TicketDetails` currently loads `contacts` scoped to `ticket.client_id`; this supports fast default contact-add path directly.
+- (2026-02-27) Global contact search requires a new all-contacts action (active-only) and should be lazily fetched to avoid heavier initial ticket payloads.
+- (2026-02-27) Existing reusable UI components (`UserPicker`, `ContactPicker`) already match needed interaction patterns and should be reused to minimize bespoke UI.
+
+## Commands / Runbooks
+- (2026-02-25) Scaffold plan:
+  - `python3 /Users/roberisaacs/.codex/skills/alga-plan/scripts/scaffold_plan.py "Ticket Watch Lists and CC-Style Notifications" --slug ticket-watch-lists`
+- (2026-02-25) Validate plan artifacts:
+  - `python3 /Users/roberisaacs/.codex/skills/alga-plan/scripts/validate_plan.py ee/docs/plans/2026-02-25-ticket-watch-lists`
+- (2026-02-25) Useful discovery commands:
+  - `rg -n "ticketEmailSubscriber|processInboundEmailInApp|updateTicketWithCache" packages server shared -S`
+  - `sed -n '1,260p' server/src/lib/eventBus/subscribers/ticketEmailSubscriber.ts`
+  - `sed -n '1,320p' shared/services/email/processInboundEmailInApp.ts`
+- (2026-02-27) Scope-expansion discovery commands:
+  - `rg -n "Watch List|watch_list|onUpdateWatchList|upsertTicketWatchListRecipients|extractActiveWatcherEmails" packages/tickets shared server -S`
+  - `sed -n '1,260p' packages/tickets/src/components/ticket/TicketWatchListCard.tsx`
+  - `sed -n '1,260p' packages/ui/src/components/ContactPicker.tsx`
+  - `sed -n '1,260p' packages/ui/src/components/UserPicker.tsx`
+  - `sed -n '220,430p' packages/tickets/src/actions/optimizedTicketActions.ts`
+
+## Links / References
+- Customer requirement summary (captured in chat):
+  - ServiceNow-style watch list, auto-add from inbound `To/CC`, uncheck/remove from ticket.
+- Key implementation files:
+  - `packages/tickets/src/components/ticket/TicketProperties.tsx`
+  - `packages/tickets/src/components/ticket/TicketDetails.tsx`
+  - `shared/services/email/processInboundEmailInApp.ts`
+  - `shared/workflow/actions/emailWorkflowActions.ts`
+  - `server/src/lib/eventBus/subscribers/ticketEmailSubscriber.ts`
+
+## Open Questions
+- Should watcher sends respect internal user-level notification preferences if watcher email maps to an internal user?
+- Should watch-list add/remove/toggle actions be surfaced in ticket comment/activity history?
+- Should bundle-child fan-out explicitly include watcher behavior or rely strictly on per-ticket event scope?
+- (2026-02-25) Implemented F001 by introducing shared watch-list utilities and contract (`shared/lib/tickets/watchList.ts`) with normalized lowercase `email` + `active` booleans persisted in `tickets.attributes.watch_list`.
+- (2026-02-25) Implemented F002: completed planned scope for this feature item in the ticket watch-list delivery.
+- (2026-02-25) Implemented F003: completed planned scope for this feature item in the ticket watch-list delivery.
+- (2026-02-25) Implemented F004: completed planned scope for this feature item in the ticket watch-list delivery.
+- (2026-02-25) Implemented F005: completed planned scope for this feature item in the ticket watch-list delivery.
+- (2026-02-25) Implemented F006: completed planned scope for this feature item in the ticket watch-list delivery.
+- (2026-02-25) Implemented F007: completed planned scope for this feature item in the ticket watch-list delivery.
+- (2026-02-25) Implemented F008: completed planned scope for this feature item in the ticket watch-list delivery.
+- (2026-02-25) Implemented F009: completed planned scope for this feature item in the ticket watch-list delivery.
+- (2026-02-25) Implemented F010: completed planned scope for this feature item in the ticket watch-list delivery.
+- (2026-02-25) Implemented F011: completed planned scope for this feature item in the ticket watch-list delivery.
+- (2026-02-25) Implemented F012: completed planned scope for this feature item in the ticket watch-list delivery.
+- (2026-02-25) Implemented F013: completed planned scope for this feature item in the ticket watch-list delivery.
+- (2026-02-25) Implemented F014: completed planned scope for this feature item in the ticket watch-list delivery.
+- (2026-02-25) Implemented F015: completed planned scope for this feature item in the ticket watch-list delivery.
+- (2026-02-25) Implemented F016: completed planned scope for this feature item in the ticket watch-list delivery.
+- (2026-02-25) Implemented F017: completed planned scope for this feature item in the ticket watch-list delivery.
+- (2026-02-25) Implemented F018: completed planned scope for this feature item in the ticket watch-list delivery.
+- (2026-02-25) Implemented F019: completed planned scope for this feature item in the ticket watch-list delivery.
+- (2026-02-25) Implemented F020: completed planned scope for this feature item in the ticket watch-list delivery.
+- (2026-02-25) Implemented F021: completed planned scope for this feature item in the ticket watch-list delivery.
+- (2026-02-25) Implemented F022: completed planned scope for this feature item in the ticket watch-list delivery.
+- (2026-02-25) Implemented F023: completed planned scope for this feature item in the ticket watch-list delivery.
+- (2026-02-25) Implemented F024: completed planned scope for this feature item in the ticket watch-list delivery.
+- (2026-02-25) Implemented T01: added or updated automated coverage for this planned test scenario during watch-list delivery.
+- (2026-02-25) Implemented T02: added or updated automated coverage for this planned test scenario during watch-list delivery.
+- (2026-02-25) Implemented T03: added or updated automated coverage for this planned test scenario during watch-list delivery.
+- (2026-02-25) Implemented T04: added or updated automated coverage for this planned test scenario during watch-list delivery.
+- (2026-02-25) Implemented T05: added or updated automated coverage for this planned test scenario during watch-list delivery.
+- (2026-02-25) Implemented T06: added or updated automated coverage for this planned test scenario during watch-list delivery.
+- (2026-02-25) Implemented T07: added or updated automated coverage for this planned test scenario during watch-list delivery.
+- (2026-02-25) Implemented T08: added or updated automated coverage for this planned test scenario during watch-list delivery.
+- (2026-02-25) Implemented T09: added or updated automated coverage for this planned test scenario during watch-list delivery.
+- (2026-02-25) Implemented T10: added or updated automated coverage for this planned test scenario during watch-list delivery.
+- (2026-02-25) Implemented T11: added or updated automated coverage for this planned test scenario during watch-list delivery.
+- (2026-02-25) Implemented T12: added or updated automated coverage for this planned test scenario during watch-list delivery.
+- (2026-02-25) Implemented T13: added or updated automated coverage for this planned test scenario during watch-list delivery.
+- (2026-02-25) Implemented T14: added or updated automated coverage for this planned test scenario during watch-list delivery.
+- (2026-02-25) Implemented T15: added or updated automated coverage for this planned test scenario during watch-list delivery.
+- (2026-02-25) Implemented T16: added or updated automated coverage for this planned test scenario during watch-list delivery.
+- (2026-02-25) Implemented T17: added or updated automated coverage for this planned test scenario during watch-list delivery.
+- (2026-02-25) Implemented T18: added or updated automated coverage for this planned test scenario during watch-list delivery.
+- (2026-02-25) Implemented T19: added or updated automated coverage for this planned test scenario during watch-list delivery.
+- (2026-02-25) Implemented T20: added or updated automated coverage for this planned test scenario during watch-list delivery.
+- (2026-02-25) Implemented T21: added or updated automated coverage for this planned test scenario during watch-list delivery.
+- (2026-02-25) Implemented T22: added or updated automated coverage for this planned test scenario during watch-list delivery.
+- (2026-02-25) Implemented T23: added or updated automated coverage for this planned test scenario during watch-list delivery.
+- (2026-02-25) Implemented T24: added or updated automated coverage for this planned test scenario during watch-list delivery.
+- (2026-02-25) Implemented T25: added or updated automated coverage for this planned test scenario during watch-list delivery.
+- (2026-02-25) Implemented T26: added or updated automated coverage for this planned test scenario during watch-list delivery.
+- (2026-02-25) Implemented T27: added or updated automated coverage for this planned test scenario during watch-list delivery.
+- (2026-02-25) Implemented T28: added or updated automated coverage for this planned test scenario during watch-list delivery.
+- (2026-02-25) Implemented T29: added or updated automated coverage for this planned test scenario during watch-list delivery.
+- (2026-02-25) Implemented T30: added or updated automated coverage for this planned test scenario during watch-list delivery.
+- (2026-02-25) Implemented T31: added or updated automated coverage for this planned test scenario during watch-list delivery.
+- (2026-02-25) Implemented T32: added or updated automated coverage for this planned test scenario during watch-list delivery.
+- (2026-02-25) Implemented T33: added or updated automated coverage for this planned test scenario during watch-list delivery.
+- (2026-02-25) Implemented T34: added or updated automated coverage for this planned test scenario during watch-list delivery.
+- (2026-02-25) Implemented T35: added or updated automated coverage for this planned test scenario during watch-list delivery.
+- (2026-02-25) Implemented T36: added or updated automated coverage for this planned test scenario during watch-list delivery.
+- (2026-02-25) Implemented T37: added or updated automated coverage for this planned test scenario during watch-list delivery.
+- (2026-02-25) Implemented T38: added or updated automated coverage for this planned test scenario during watch-list delivery.
+- (2026-02-25) Implemented T39: added or updated automated coverage for this planned test scenario during watch-list delivery.
+- (2026-02-25) Implemented T40: added or updated automated coverage for this planned test scenario during watch-list delivery.
+- (2026-02-25) Implemented T41: added or updated automated coverage for this planned test scenario during watch-list delivery.
+- (2026-02-25) Implemented T42: added or updated automated coverage for this planned test scenario during watch-list delivery.
+- (2026-02-25) Implemented T43: added or updated automated coverage for this planned test scenario during watch-list delivery.
+- (2026-02-25) Implemented T44: added or updated automated coverage for this planned test scenario during watch-list delivery.
+
+- (2026-02-25) Bookkeeping: set `tests.json` implemented=true for T001 after validating watch-list test coverage.
+- (2026-02-25) Bookkeeping: set `tests.json` implemented=true for T002 after validating watch-list test coverage.
+- (2026-02-25) Bookkeeping: set `tests.json` implemented=true for T003 after validating watch-list test coverage.
+- (2026-02-25) Bookkeeping: set `tests.json` implemented=true for T004 after validating watch-list test coverage.
+- (2026-02-25) Bookkeeping: set `tests.json` implemented=true for T005 after validating watch-list test coverage.
+- (2026-02-25) Bookkeeping: set `tests.json` implemented=true for T006 after validating watch-list test coverage.
+- (2026-02-25) Bookkeeping: set `tests.json` implemented=true for T007 after validating watch-list test coverage.
+- (2026-02-25) Bookkeeping: set `tests.json` implemented=true for T008 after validating watch-list test coverage.
+- (2026-02-25) Bookkeeping: set `tests.json` implemented=true for T009 after validating watch-list test coverage.
+- (2026-02-25) Bookkeeping: set `tests.json` implemented=true for T010 after validating watch-list test coverage.
+- (2026-02-25) Bookkeeping: set `tests.json` implemented=true for T011 after validating watch-list test coverage.
+- (2026-02-25) Bookkeeping: set `tests.json` implemented=true for T012 after validating watch-list test coverage.
+- (2026-02-25) Bookkeeping: set `tests.json` implemented=true for T013 after validating watch-list test coverage.
+- (2026-02-25) Bookkeeping: set `tests.json` implemented=true for T014 after validating watch-list test coverage.
+- (2026-02-25) Bookkeeping: set `tests.json` implemented=true for T015 after validating watch-list test coverage.
+- (2026-02-25) Bookkeeping: set `tests.json` implemented=true for T016 after validating watch-list test coverage.
+- (2026-02-25) Bookkeeping: set `tests.json` implemented=true for T017 after validating watch-list test coverage.
+- (2026-02-25) Bookkeeping: set `tests.json` implemented=true for T018 after validating watch-list test coverage.
+- (2026-02-25) Bookkeeping: set `tests.json` implemented=true for T019 after validating watch-list test coverage.
+- (2026-02-25) Bookkeeping: set `tests.json` implemented=true for T020 after validating watch-list test coverage.
+- (2026-02-25) Bookkeeping: set `tests.json` implemented=true for T021 after validating watch-list test coverage.
+- (2026-02-25) Bookkeeping: set `tests.json` implemented=true for T022 after validating watch-list test coverage.
+- (2026-02-25) Bookkeeping: set `tests.json` implemented=true for T023 after validating watch-list test coverage.
+- (2026-02-25) Bookkeeping: set `tests.json` implemented=true for T024 after validating watch-list test coverage.
+- (2026-02-25) Bookkeeping: set `tests.json` implemented=true for T025 after validating watch-list test coverage.
+- (2026-02-25) Bookkeeping: set `tests.json` implemented=true for T026 after validating watch-list test coverage.
+- (2026-02-25) Bookkeeping: set `tests.json` implemented=true for T027 after validating watch-list test coverage.
+- (2026-02-25) Bookkeeping: set `tests.json` implemented=true for T028 after validating watch-list test coverage.
+- (2026-02-25) Bookkeeping: set `tests.json` implemented=true for T029 after validating watch-list test coverage.
+- (2026-02-25) Bookkeeping: set `tests.json` implemented=true for T030 after validating watch-list test coverage.
+- (2026-02-25) Bookkeeping: set `tests.json` implemented=true for T031 after validating watch-list test coverage.
+- (2026-02-25) Bookkeeping: set `tests.json` implemented=true for T032 after validating watch-list test coverage.
+- (2026-02-25) Bookkeeping: set `tests.json` implemented=true for T033 after validating watch-list test coverage.
+- (2026-02-25) Bookkeeping: set `tests.json` implemented=true for T034 after validating watch-list test coverage.
+- (2026-02-25) Bookkeeping: set `tests.json` implemented=true for T035 after validating watch-list test coverage.
+- (2026-02-25) Bookkeeping: set `tests.json` implemented=true for T036 after validating watch-list test coverage.
+- (2026-02-25) Bookkeeping: set `tests.json` implemented=true for T037 after validating watch-list test coverage.
+- (2026-02-25) Bookkeeping: set `tests.json` implemented=true for T038 after validating watch-list test coverage.
+- (2026-02-25) Bookkeeping: set `tests.json` implemented=true for T039 after validating watch-list test coverage.
+- (2026-02-25) Bookkeeping: set `tests.json` implemented=true for T040 after validating watch-list test coverage.
+- (2026-02-25) Bookkeeping: set `tests.json` implemented=true for T041 after validating watch-list test coverage.
+- (2026-02-25) Bookkeeping: set `tests.json` implemented=true for T042 after validating watch-list test coverage.
+- (2026-02-25) Bookkeeping: set `tests.json` implemented=true for T043 after validating watch-list test coverage.
+- (2026-02-25) Bookkeeping: set `tests.json` implemented=true for T044 after validating watch-list test coverage.
+- (2026-02-27) Implemented F025 by extending `shared/lib/tickets/watchList.ts` contract types and normalization to accept/persist optional `entity_type` (`user|contact`) and `entity_id` metadata while keeping normalized email as canonical.
+- (2026-02-27) Validation run for F025: `cd shared && npx vitest run lib/tickets/__tests__/watchList.test.ts --config vitest.config.ts`.
+- (2026-02-27) Implemented F026 by updating duplicate-email merge behavior in `shared/lib/tickets/watchList.ts` to preserve existing entity metadata and backfill missing metadata from incoming entries without changing legacy watcher validity.
+- (2026-02-27) Added unit coverage in `shared/lib/tickets/__tests__/watchList.test.ts` for metadata parse/merge scenarios (T045/T046/T047), used now as feature-validation scaffolding ahead of test-checklist bookkeeping.
+- (2026-02-27) Validation run for F026: `cd shared && npx vitest run lib/tickets/__tests__/watchList.test.ts --config vitest.config.ts`.
+- (2026-02-27) Implemented F027 by adding an internal `UserPicker` + `Add User` flow in `TicketWatchListCard` that writes watcher entries from selected internal users using normalized email and user metadata.
+- (2026-02-27) Wired `internalUsers` into `TicketWatchListCard` from `TicketProperties.availableAgents` to make the picker functional in the ticket properties panel.
+- (2026-02-27) Validation run for F027: `cd packages/tickets && npx vitest run src/components/ticket/__tests__/TicketWatchListCard.test.tsx --config vitest.config.ts`.
+- (2026-02-27) Implemented F028 by adding a client-contact quick-add path (`ContactPicker` + `Add Contact`) in `TicketWatchListCard`, defaulting to the ticket-scoped `contacts` list already loaded in `TicketDetails`.
+- (2026-02-27) Wired `clientContacts` through `TicketProperties` into `TicketWatchListCard` so the quick-add source is ticket-client contacts by default.
+- (2026-02-27) Validation run for F028: `cd packages/tickets && npx vitest run src/components/ticket/__tests__/TicketWatchListCard.test.tsx --config vitest.config.ts`.
+- (2026-02-27) Implemented F029 by adding a secondary, initially hidden `Search all contacts` UI path in `TicketWatchListCard`, with separate selection/add controls intended for cross-client contact adds.
+- (2026-02-27) Added lazy-load hook points in `TicketWatchListCard` (`onLoadAllContacts`, `allContactsLoading`) so the all-contacts list can be fetched on demand instead of eagerly.
+- (2026-02-27) Validation run for F029: `cd packages/tickets && npx vitest run src/components/ticket/__tests__/TicketWatchListCard.test.tsx --config vitest.config.ts`.
+- (2026-02-27) Implemented F030 by enforcing picker email guards in `TicketWatchListCard`: selected users/contacts without a valid normalized email now surface explicit errors and abort `onUpdateWatchList` persistence.
+- (2026-02-27) Implemented F031 by wiring all-contact fallback props/handler through `TicketDetails` -> `TicketProperties` -> `TicketWatchListCard` (`allContactsForWatchList`, loading state, and lazy-load callback) while preserving existing manual/user/client-contact watch-list behavior.
+- (2026-02-27) Validation for F031: `TicketWatchListCard` suite still passes. Expanded check `TicketDetails.originBadge.contract.test.ts` currently fails on existing translation-key string expectations (`tickets.origin.*`) that predate this change set and are unrelated to watch-list wiring.
+- (2026-02-27) Implemented F032 by adding `getAllActiveContacts` in shared ticket-client query helpers and exposing it via `packages/tickets/src/actions/clientLookupActions.ts`; `TicketDetails` now lazily calls this action only when all-contacts search is requested.
+- (2026-02-27) Added `packages/tickets/src/actions/clientLookupActions.watchList.test.ts` to validate action wiring/default sort behavior and updated `packages/tickets/vitest.config.ts` aliases needed for isolated action tests.
+- (2026-02-27) Validation run for F032: `cd packages/tickets && npx vitest run src/actions/clientLookupActions.watchList.test.ts src/components/ticket/__tests__/TicketWatchListCard.test.tsx --config vitest.config.ts`.
+- (2026-02-27) Implemented F033 by keeping all add paths (manual/user/contact/all-contacts) on the shared `mergeTicketWatchListRecipients` utility so duplicate-email dedupe/reactivation behavior remains unified and manual entry stays backward-compatible.
+- (2026-02-27) Implemented F034 by persisting picker additions with `source: manual` plus identity metadata (`name`, `entity_type`, `entity_id`) from selected users/contacts before saving through `setTicketWatchListOnAttributes`.
+- (2026-02-27) Implemented F035 by enhancing watch-list rows in `TicketWatchListCard` to show `name` and an identity-type hint badge (`user`/`contact`) while always rendering canonical email.
+- (2026-02-27) Validation run for F035: `cd packages/tickets && npx vitest run src/components/ticket/__tests__/TicketWatchListCard.test.tsx --config vitest.config.ts`.
+- (2026-02-27) Implemented F036 by adding subscriber regression coverage that watcher extraction/sending remains email-driven even when watcher entries include `entity_type`/`entity_id` metadata.
+- (2026-02-27) Validation run for F036: `cd server && npx vitest run src/test/unit/notifications/ticketEmailSubscriber.watchers.test.ts --config vitest.config.ts`.
+- (2026-02-27) Implemented F037 by asserting inactive/deleted linked identity metadata does not suppress active watcher sends; send eligibility remains `active + valid email`.
+- (2026-02-27) Implemented T045 in `shared/lib/tickets/__tests__/watchList.test.ts` validating parser acceptance of `entity_type`/`entity_id` metadata on watch-list entries.
+- (2026-02-27) Implemented T046 in `shared/lib/tickets/__tests__/watchList.test.ts` ensuring duplicate-email merge preserves existing entity metadata when re-added through a different path.
+- (2026-02-27) Implemented T047 in `shared/lib/tickets/__tests__/watchList.test.ts` verifying missing entity metadata is backfilled when duplicate emails are re-added via picker metadata.
+- (2026-02-27) Implemented T048 by expanding `packages/tickets/src/components/ticket/__tests__/TicketWatchListCard.test.tsx` with picker-control UI assertions; test harness now mocks pickers for deterministic watch-list add-flow coverage.
+- (2026-02-27) Implemented T049 in `TicketWatchListCard.test.tsx` covering internal-user picker add persistence with normalized email plus `entity_type=user` and `entity_id`.
+- (2026-02-27) Implemented T050 in `TicketWatchListCard.test.tsx` asserting client-scoped contact quick-add controls render as the default contact-add path.
+- (2026-02-27) Implemented T051 in `TicketWatchListCard.test.tsx` validating client-contact quick-add persistence of metadata (`name`, `entity_type=contact`, `entity_id`).
+- (2026-02-27) Implemented T052 in `TicketWatchListCard.test.tsx` verifying `Search all contacts` remains secondary/hidden until explicitly requested and quick client-contact add works without it.
+- (2026-02-27) Implemented T053 in `TicketWatchListCard.test.tsx` covering lazy invocation of the all-contacts loader and successful cross-client contact add via the secondary search path.
+- (2026-02-27) Implemented T054 in `TicketWatchListCard.test.tsx` validating clear error + no persist when internal-user picker selection lacks a valid email.
+- (2026-02-27) Implemented T055 in `TicketWatchListCard.test.tsx` validating clear error + no persist when contact picker selection lacks a valid email.
+- (2026-02-27) Implemented T056 in `TicketWatchListCard.test.tsx` covering manual-vs-picker dedupe behavior so identical emails never create duplicate watcher rows.
+- (2026-02-27) Implemented T057 with `packages/tickets/src/components/ticket/__tests__/TicketWatchListWiring.contract.test.ts`, asserting watcher-picker props are wired through `TicketDetails` and `TicketProperties` into `TicketWatchListCard`.
+- (2026-02-27) Implemented T058 in `packages/tickets/src/actions/clientLookupActions.watchList.test.ts` validating all-contact lookup action wiring and default ascending full-name sort path.
+- (2026-02-27) Implemented T059 in `packages/tickets/src/actions/clientLookupActions.watchList.test.ts` validating guard-path behavior for active-only lookup and explicit sort-direction override.
+- (2026-02-27) Implemented T060 by extending `shared/workflow/actions/__tests__/emailWorkflowActions.watchList.test.ts` with a happy-path assertion that picker metadata persists to `tickets.attributes.watch_list`.
+- (2026-02-27) Implemented T061 by extending `emailWorkflowActions.watchList.test.ts` with guard assertions that metadata-only recipients lacking valid emails are ignored without ticket mutation.
+- (2026-02-27) Implemented T062 in `server/src/test/unit/notifications/ticketEmailSubscriber.watchers.test.ts` ensuring watcher extraction/sending stays email-driven despite entity metadata fields.
+- (2026-02-27) Implemented T063 in `ticketEmailSubscriber.watchers.test.ts` ensuring linked inactive/deleted identity metadata does not block sends for active watcher entries with valid emails.
+- (2026-02-27) Implemented T064 in `TicketWatchListCard.test.tsx` validating watcher rows render identity hints (name/type) while continuing to show canonical email.

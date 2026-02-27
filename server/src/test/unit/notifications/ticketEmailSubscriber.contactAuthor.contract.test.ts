@@ -13,7 +13,7 @@ describe('ticketEmailSubscriber contact-author exclusion contract', () => {
 
     expect(source).toContain("let commentAuthorContactId: string | null = null");
     expect(source).toContain("let commentAuthorEmail = ''");
-    expect(source).toContain("if (commentAuthorEmail && key === normalizeEmail(commentAuthorEmail))");
+    expect(source).toContain("if (commentAuthorEmail && key === normalizeRecipientEmail(commentAuthorEmail))");
     expect(source).toContain('const isPrimaryContactAuthor = Boolean(');
     expect(source).toContain('const isChildContactAuthor = Boolean(');
   });
