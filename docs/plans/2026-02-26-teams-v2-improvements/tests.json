@@ -348,7 +348,7 @@
   {
     "id": "T125",
     "description": "CardHeader shows both ViewSwitchers in one row: [List|Structure] and [MSP|Client Portal]",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F076"
     ]
