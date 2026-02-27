@@ -210,3 +210,4 @@ Working notes for the ticket watch-list feature plan. This log captures clarifie
 - (2026-02-27) Implemented T053 in `TicketWatchListCard.test.tsx` covering lazy invocation of the all-contacts loader and successful cross-client contact add via the secondary search path.
 - (2026-02-27) Implemented T054 in `TicketWatchListCard.test.tsx` validating clear error + no persist when internal-user picker selection lacks a valid email.
 - (2026-02-27) Implemented T055 in `TicketWatchListCard.test.tsx` validating clear error + no persist when contact picker selection lacks a valid email.
+- (2026-02-27) Implemented T056 in `TicketWatchListCard.test.tsx` covering manual-vs-picker dedupe behavior so identical emails never create duplicate watcher rows.

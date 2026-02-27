@@ -477,7 +477,7 @@
   {
     "id": "T056",
     "description": "UI: dedupe prevents duplicate watcher row when same email is added via manual input and picker paths.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F033",
       "F026"
