@@ -250,7 +250,7 @@
   {
     "id": "T030",
     "description": "Schema contract test: event schema changes remain backward compatible with existing provider payloads",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F023"
     ]
