@@ -151,7 +151,7 @@
   {
     "id": "T018",
     "description": "Unit: Microsoft source-message method returns raw MIME bytes for valid message id",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F014"
     ]

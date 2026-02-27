@@ -105,3 +105,4 @@ Rolling notes for embedded inbound-email image extraction + source `.eml` persis
 - (2026-02-27) Completed T015 — Covered by emailAttachmentIngestion.integration.test.ts: duplicate synthetic embedded processing remains idempotent.
 - (2026-02-27) Completed T016 — Covered by combined tests: emailAttachmentIngestion.integration.test.ts records failed processing; workflow integration keeps ticket/comment flow successful.
 - (2026-02-27) Completed T017 — Covered by GmailAdapter.listMessagesSince.test.ts: downloadMessageSource returns raw MIME bytes.
+- (2026-02-27) Completed T018 — Covered by MicrosoftGraphAdapter.diagnostics.test.ts: downloadMessageSource returns raw MIME bytes.
