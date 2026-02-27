@@ -208,7 +208,7 @@
   {
     "id": "T238",
     "description": "Contract: malformed attachment content payloads fail validation safely without crashing callback",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F231"
     ]

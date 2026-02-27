@@ -267,3 +267,8 @@ Create a clean, implementation-ready plan containing only remaining work for inb
   - Test verifies webhook accepts `attachments[].content/isInline/contentId` and MIME source fields (`sourceMimeBase64`) and forwards normalized values.
 - Validation:
   - Reused full IMAP webhook integration run from `T229`.
+- 2026-02-27: Completed `T238`.
+  - Added malformed payload validation scenario in `server/src/test/integration/imapWebhookHandoff.integration.test.ts`.
+  - Test sends non-string `attachments[].content` and asserts safe `400` validation response without invoking publish/in-app handlers.
+- Validation:
+  - Reused full IMAP webhook integration run from `T229`.
