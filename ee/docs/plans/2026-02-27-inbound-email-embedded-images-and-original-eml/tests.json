@@ -278,7 +278,7 @@
   {
     "id": "T033",
     "description": "E2E: inbound email creates .eml document visible in Ticket Documents for both new and reply paths",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F016",
       "F018",
