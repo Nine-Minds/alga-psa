@@ -79,3 +79,9 @@ Create a clean, implementation-ready plan containing only remaining work for inb
   - When no source bytes are available, `.eml` fallback generation uses deterministic RFC822 assembly (`buildDeterministicRfc822Message(...)`).
 - 2026-02-27: Completed `F223`.
   - `.eml` persistence now uses deterministic file naming via `buildOriginalEmailFileName(messageId)` with `original-email-<sanitized-message-id>.eml` convention.
+- 2026-02-27: Completed `F224`.
+  - Added artifact-level idempotent claiming via `email_processed_attachments` primary key `(tenant, provider_id, email_id, attachment_id)`.
+  - Deterministic attachment IDs now cover:
+    - provider attachments (`attachment.id`)
+    - synthetic embedded artifacts (`embedded-data-*`, `embedded-cid-*`)
+    - original email source (`__original_email_source__`).

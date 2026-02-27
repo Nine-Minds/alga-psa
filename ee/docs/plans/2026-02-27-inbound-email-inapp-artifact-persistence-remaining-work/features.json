@@ -62,7 +62,7 @@
   {
     "id": "F224",
     "description": "Implement artifact-level idempotency keys for provider attachments, embedded synthetic attachments, and .eml artifacts",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements", "Acceptance Criteria"]
   },
   {
