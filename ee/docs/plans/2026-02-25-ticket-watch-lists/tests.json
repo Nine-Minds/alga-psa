@@ -537,7 +537,7 @@
   {
     "id": "T063",
     "description": "Subscriber regression: watcher with linked inactive/deleted identity metadata still sends when watcher entry is active and email is valid.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F037",
       "F036"
