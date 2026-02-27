@@ -35,7 +35,7 @@
   {
     "id": "F055",
     "description": "Add 'team' to EntityType union in `packages/ui/src/components/EntityImageUpload.tsx`",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-3A.2"
     ]

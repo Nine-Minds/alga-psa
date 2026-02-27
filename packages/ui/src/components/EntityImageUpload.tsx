@@ -12,7 +12,7 @@ import ClientAvatar from './ClientAvatar';
 import { ConfirmationDialog } from './ConfirmationDialog';
 import { useTranslation } from '../lib/i18n/client';
 
-export type EntityType = 'user' | 'contact' | 'client' | 'tenant';
+export type EntityType = 'user' | 'contact' | 'client' | 'tenant' | 'team';
 
 export type LinkDocumentAsAvatarResult = {
   success: boolean;
