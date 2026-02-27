@@ -307,7 +307,7 @@
   {
     "id": "T036",
     "description": "Integration guard: IMAP webhook request with invalid/missing secret is rejected before any async handoff work",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F026"
     ]
