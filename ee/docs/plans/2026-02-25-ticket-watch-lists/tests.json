@@ -486,7 +486,7 @@
   {
     "id": "T057",
     "description": "Component integration: TicketDetails/TicketProperties pass client contacts, all-contact fallback hooks, and internal users into TicketWatchListCard without prop regression.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F031"
     ]
