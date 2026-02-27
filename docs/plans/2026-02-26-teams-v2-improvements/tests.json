@@ -520,7 +520,7 @@
   {
     "id": "T146",
     "description": "Ticket detail picker passes `getTeamAvatarUrlsBatchAction` to UserAndTeamPicker",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F091"
     ]

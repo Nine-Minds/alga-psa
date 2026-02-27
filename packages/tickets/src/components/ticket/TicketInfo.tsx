@@ -15,6 +15,7 @@ import { PrioritySelect } from '@alga-psa/ui/components';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import UserAndTeamPicker from '@alga-psa/ui/components/UserAndTeamPicker';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
+import { getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
 import { CategoryPicker } from '../CategoryPicker';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { TimePicker } from '@alga-psa/ui/components/TimePicker';
@@ -834,6 +835,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                   users={usersList}
                   teams={teams}
                   getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
+                  getTeamAvatarUrlsBatch={getTeamAvatarUrlsBatchAction}
                   labelStyle="none"
                   buttonWidth="fit"
                   size="sm"
