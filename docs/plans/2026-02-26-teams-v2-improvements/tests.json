@@ -413,7 +413,7 @@
   {
     "id": "T133",
     "description": "Structure view and toggle are invisible when `teams-v2` flag is off",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F082"
     ]
