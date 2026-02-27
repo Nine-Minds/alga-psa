@@ -260,7 +260,7 @@
   {
     "id": "T114",
     "description": "OrgChart builds tree from users with `reports_to` relationships",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F070"
     ]
