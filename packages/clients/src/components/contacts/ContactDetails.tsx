@@ -33,7 +33,7 @@ import ContactTickets from './ContactTickets';
 import { getTicketFormOptions } from '@alga-psa/tickets/actions/optimizedTicketActions';
 import { ITicketCategory } from '@alga-psa/types';
 import { IBoard } from '@alga-psa/types';
-import { SelectOption } from '@alga-psa/ui/components/CustomSelect';
+import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { ClientPicker } from '../clients/ClientPicker';
 import { TagManager } from '@alga-psa/tags/components';
 import { findTagsByEntityIds } from '@alga-psa/tags/actions';

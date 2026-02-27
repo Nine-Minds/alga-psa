@@ -14,7 +14,9 @@ describe('inbound ticket destination migrations (integration)', () => {
   });
 
   afterAll(async () => {
-    await knex.destroy();
+    if (knex) {
+      await knex.destroy();
+    }
   });
 
   it('T001: migration adds clients.inbound_ticket_defaults_id as nullable UUID', async () => {
@@ -77,15 +79,47 @@ describe('inbound ticket destination migrations (integration)', () => {
     expect(contactsIndex?.indexdef).toContain('(tenant, inbound_ticket_defaults_id)');
   });
 
-  it('T004: migration down path removes added columns/indexes and up restores them', async () => {
+  it('T004: migration adds tenant-scoped foreign keys for client/contact destination columns', async () => {
+    const result = await knex.raw<{
+      rows: Array<{ conname: string; conrelid: string; pg_get_constraintdef: string }>;
+    }>(`
+      SELECT
+        conname,
+        conrelid::regclass::text AS conrelid,
+        pg_get_constraintdef(oid) AS pg_get_constraintdef
+      FROM pg_constraint
+      WHERE conname IN (
+        'fk_clients_inbound_ticket_defaults',
+        'fk_contacts_inbound_ticket_defaults'
+      )
+    `);
+
+    const rows = result.rows ?? [];
+    const byName = new Map(rows.map((row) => [row.conname, row]));
+
+    const clientsConstraint = byName.get('fk_clients_inbound_ticket_defaults');
+    const contactsConstraint = byName.get('fk_contacts_inbound_ticket_defaults');
+
+    expect(clientsConstraint?.conrelid).toBe('clients');
+    expect(clientsConstraint?.pg_get_constraintdef).toContain('FOREIGN KEY (inbound_ticket_defaults_id, tenant)');
+    expect(clientsConstraint?.pg_get_constraintdef).toContain('REFERENCES inbound_ticket_defaults(id, tenant)');
+
+    expect(contactsConstraint?.conrelid).toBe('contacts');
+    expect(contactsConstraint?.pg_get_constraintdef).toContain('FOREIGN KEY (inbound_ticket_defaults_id, tenant)');
+    expect(contactsConstraint?.pg_get_constraintdef).toContain('REFERENCES inbound_ticket_defaults(id, tenant)');
+  });
+
+  it('T005: migration down path removes added columns/indexes/constraints and up restores them', async () => {
     const clientDestinationMigration = require('../../../../migrations/20260225120000_add_client_inbound_ticket_defaults_id.cjs');
     const contactDestinationMigration = require('../../../../migrations/20260225120500_add_contact_inbound_ticket_defaults_id.cjs');
     const indexMigration = require('../../../../migrations/20260225121000_add_inbound_ticket_defaults_lookup_indexes.cjs');
+    const foreignKeyMigration = require('../../../../migrations/20260225121500_add_inbound_ticket_defaults_destination_foreign_keys.cjs');
 
     const trx = await knex.transaction();
     let testError: unknown = null;
 
     try {
+      await foreignKeyMigration.down(trx);
       await indexMigration.down(trx);
       await contactDestinationMigration.down(trx);
       await clientDestinationMigration.down(trx);
@@ -107,9 +141,23 @@ describe('inbound ticket destination migrations (integration)', () => {
 
       expect(downIndexesResult.rows ?? []).toHaveLength(0);
 
+      const downConstraintsResult = await trx.raw<{
+        rows: Array<{ conname: string }>;
+      }>(`
+        SELECT conname
+        FROM pg_constraint
+        WHERE conname IN (
+          'fk_clients_inbound_ticket_defaults',
+          'fk_contacts_inbound_ticket_defaults'
+        )
+      `);
+
+      expect(downConstraintsResult.rows ?? []).toHaveLength(0);
+
       await clientDestinationMigration.up(trx);
       await contactDestinationMigration.up(trx);
       await indexMigration.up(trx);
+      await foreignKeyMigration.up(trx);
 
       await expect(trx.schema.hasColumn('clients', 'inbound_ticket_defaults_id')).resolves.toBe(true);
       await expect(trx.schema.hasColumn('contacts', 'inbound_ticket_defaults_id')).resolves.toBe(true);
@@ -130,6 +178,24 @@ describe('inbound ticket destination migrations (integration)', () => {
         expect.arrayContaining([
           'idx_clients_tenant_inbound_ticket_defaults',
           'idx_contacts_tenant_inbound_ticket_defaults',
+        ])
+      );
+
+      const upConstraintsResult = await trx.raw<{
+        rows: Array<{ conname: string }>;
+      }>(`
+        SELECT conname
+        FROM pg_constraint
+        WHERE conname IN (
+          'fk_clients_inbound_ticket_defaults',
+          'fk_contacts_inbound_ticket_defaults'
+        )
+      `);
+
+      expect((upConstraintsResult.rows ?? []).map((row) => row.conname)).toEqual(
+        expect.arrayContaining([
+          'fk_clients_inbound_ticket_defaults',
+          'fk_contacts_inbound_ticket_defaults',
         ])
       );
     } catch (error) {
