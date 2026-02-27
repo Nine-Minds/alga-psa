@@ -177,3 +177,6 @@ Working notes for the ticket watch-list feature plan. This log captures clarifie
 - (2026-02-27) Implemented F026 by updating duplicate-email merge behavior in `shared/lib/tickets/watchList.ts` to preserve existing entity metadata and backfill missing metadata from incoming entries without changing legacy watcher validity.
 - (2026-02-27) Added unit coverage in `shared/lib/tickets/__tests__/watchList.test.ts` for metadata parse/merge scenarios (T045/T046/T047), used now as feature-validation scaffolding ahead of test-checklist bookkeeping.
 - (2026-02-27) Validation run for F026: `cd shared && npx vitest run lib/tickets/__tests__/watchList.test.ts --config vitest.config.ts`.
+- (2026-02-27) Implemented F027 by adding an internal `UserPicker` + `Add User` flow in `TicketWatchListCard` that writes watcher entries from selected internal users using normalized email and user metadata.
+- (2026-02-27) Wired `internalUsers` into `TicketWatchListCard` from `TicketProperties.availableAgents` to make the picker functional in the ticket properties panel.
+- (2026-02-27) Validation run for F027: `cd packages/tickets && npx vitest run src/components/ticket/__tests__/TicketWatchListCard.test.tsx --config vitest.config.ts`.

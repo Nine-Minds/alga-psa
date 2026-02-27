@@ -224,7 +224,7 @@
   {
     "id": "F027",
     "description": "Add an internal-user picker add path in Watch List UI to create watcher entries from selected internal users.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Functional Requirements"
