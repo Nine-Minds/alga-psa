@@ -97,3 +97,4 @@
 - (2026-02-27) Removed legacy `buildOrgTree` and `renderOrgNode` helpers from `UserManagement`.
 - (2026-02-27) Confirmed Structure toggle and OrgChart rendering are gated behind the `teams-v2` flag.
 - (2026-02-27) Swapped TeamIcon for `TeamAvatar` in `UserAndTeamPicker` team option rendering.
+- (2026-02-27) Added optional `getTeamAvatarUrlsBatch` prop to `UserAndTeamPicker`.

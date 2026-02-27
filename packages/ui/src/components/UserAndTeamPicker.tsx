@@ -14,6 +14,8 @@ import { useRegisterUIComponent } from '../ui-reflection/useRegisterUIComponent'
 import { CommonActions } from '../ui-reflection/actionBuilders';
 import type { GetUserAvatarUrlsBatch } from './UserPicker';
 
+export type GetTeamAvatarUrlsBatch = (teamIds: string[], tenant: string) => Promise<Map<string, string | null>>;
+
 interface UserAndTeamPickerProps {
   id?: string;
   label?: string;
@@ -24,6 +26,7 @@ interface UserAndTeamPickerProps {
   users: IUser[];
   teams: ITeam[];
   getUserAvatarUrlsBatch?: GetUserAvatarUrlsBatch;
+  getTeamAvatarUrlsBatch?: GetTeamAvatarUrlsBatch;
   disabled?: boolean;
   className?: string;
   labelStyle?: 'bold' | 'medium' | 'normal' | 'none';
@@ -72,6 +75,7 @@ const UserAndTeamPicker = ({
   users,
   teams,
   getUserAvatarUrlsBatch,
+  getTeamAvatarUrlsBatch,
   disabled,
   className,
   labelStyle = 'bold',
