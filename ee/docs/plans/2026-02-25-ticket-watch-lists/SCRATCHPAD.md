@@ -218,3 +218,4 @@ Working notes for the ticket watch-list feature plan. This log captures clarifie
 - (2026-02-27) Implemented T061 by extending `emailWorkflowActions.watchList.test.ts` with guard assertions that metadata-only recipients lacking valid emails are ignored without ticket mutation.
 - (2026-02-27) Implemented T062 in `server/src/test/unit/notifications/ticketEmailSubscriber.watchers.test.ts` ensuring watcher extraction/sending stays email-driven despite entity metadata fields.
 - (2026-02-27) Implemented T063 in `ticketEmailSubscriber.watchers.test.ts` ensuring linked inactive/deleted identity metadata does not block sends for active watcher entries with valid emails.
+- (2026-02-27) Implemented T064 in `TicketWatchListCard.test.tsx` validating watcher rows render identity hints (name/type) while continuing to show canonical email.

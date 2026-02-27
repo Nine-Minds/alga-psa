@@ -546,7 +546,7 @@
   {
     "id": "T064",
     "description": "UI: watcher row shows name/type hint for picker-added entries while continuing to display canonical email.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F035"
     ]
