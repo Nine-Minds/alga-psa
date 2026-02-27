@@ -8,7 +8,7 @@
   {
     "id": "F215",
     "description": "Add an in-app artifact processing orchestrator invoked from processInboundEmailInApp for both new-ticket and reply flows",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements", "Users and Primary Flows"]
   },
   {

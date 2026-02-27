@@ -11,6 +11,7 @@ const findContactByEmailMock = vi.fn();
 const createTicketFromEmailMock = vi.fn();
 const createCommentFromEmailMock = vi.fn();
 const processEmailAttachmentMock = vi.fn();
+const processInboundEmailArtifactsBestEffortMock = vi.fn();
 
 function buildEmailData(
   overrides: Partial<EmailMessageDetails> = {}
@@ -66,6 +67,11 @@ vi.mock('../../../workflow/actions/emailWorkflowActions', () => ({
   createTicketFromEmail: (...args: any[]) => createTicketFromEmailMock(...args),
   createCommentFromEmail: (...args: any[]) => createCommentFromEmailMock(...args),
   processEmailAttachment: (...args: any[]) => processEmailAttachmentMock(...args),
+}));
+
+vi.mock('../processInboundEmailArtifacts', () => ({
+  processInboundEmailArtifactsBestEffort: (...args: any[]) =>
+    processInboundEmailArtifactsBestEffortMock(...args),
 }));
 
 describe('processInboundEmailInApp', () => {
@@ -125,6 +131,7 @@ describe('processInboundEmailInApp', () => {
     processEmailAttachmentMock.mockResolvedValue({
       success: true,
     });
+    processInboundEmailArtifactsBestEffortMock.mockResolvedValue(undefined);
   });
 
   it('new inbound email with matched contact+user forwards both author_id and contact_id', async () => {

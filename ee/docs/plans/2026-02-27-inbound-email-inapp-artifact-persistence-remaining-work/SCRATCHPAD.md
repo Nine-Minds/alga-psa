@@ -38,3 +38,15 @@ Create a clean, implementation-ready plan containing only remaining work for inb
   - `ee/docs/plans/2026-02-27-inbound-email-inapp-artifact-persistence-remaining-work/tests.json`
   - `ee/docs/plans/2026-02-27-inbound-email-inapp-artifact-persistence-remaining-work/SCRATCHPAD.md`
 - Rationale: The plan scope existed but had all checklist entries disabled; flipping `F214` records that the remaining-work scope artifact is now established and tracked as implementation source-of-truth.
+- 2026-02-27: Completed `F215` by extracting artifact execution into shared orchestrator modules:
+  - `shared/services/email/processInboundEmailArtifacts.ts`
+  - `shared/services/email/inboundEmailArtifactHelpers.ts`
+  - Wired call-sites in `shared/services/email/processInboundEmailInApp.ts` for:
+    - reply-token flow
+    - thread-header flow
+    - new-ticket flow
+- Decision: Keep orchestration in shared service layer so Google/Microsoft/IMAP in-app paths naturally converge via existing `processInboundEmailInApp` entrypoint.
+- Validation:
+  - `npx tsc -p shared/tsconfig.json --noEmit`
+- Gotcha:
+  - Repo Vitest config only includes `server/src` + `../packages`; direct `shared/services/email/__tests__` file filters are not discovered by default runner config.

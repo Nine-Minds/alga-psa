@@ -1,6 +1,7 @@
 import type { EmailMessageDetails } from '../../interfaces/inbound-email.interfaces';
 import { convertHtmlToBlockNote, convertMarkdownToBlocks } from '../../lib/utils/contentConversion';
 import { extractEmailDomain, normalizeEmailAddress } from '../../lib/email/addressUtils';
+import { processInboundEmailArtifactsBestEffort } from './processInboundEmailArtifacts';
 
 export interface ProcessInboundEmailInAppInput {
   tenantId: string;
@@ -127,56 +128,6 @@ async function findExistingEmailTicket(params: {
       .first();
     return row?.ticketId ? { ticketId: row.ticketId, ticketNumber: row.ticketNumber } : null;
   });
-}
-
-async function processEmailAttachmentsBestEffort(params: {
-  tenantId: string;
-  providerId: string;
-  emailId: string;
-  ticketId: string;
-  attachments?: Array<{
-    id: string;
-    name: string;
-    contentType: string;
-    size: number;
-    contentId?: string;
-  }>;
-}) {
-  const { processEmailAttachment } = await import(
-    '../../workflow/actions/emailWorkflowActions'
-  );
-
-  const attachments = params.attachments ?? [];
-  for (const attachment of attachments) {
-    try {
-      await processEmailAttachment(
-        {
-          emailId: params.emailId,
-          attachmentId: attachment.id,
-          ticketId: params.ticketId,
-          tenant: params.tenantId,
-          providerId: params.providerId,
-          attachmentData: {
-            id: attachment.id,
-            name: attachment.name,
-            contentType: attachment.contentType,
-            size: attachment.size,
-            contentId: attachment.contentId,
-          },
-        },
-        params.tenantId
-      );
-    } catch (error) {
-      console.warn('processInboundEmailInApp: attachment processing failed (continuing)', {
-        tenantId: params.tenantId,
-        providerId: params.providerId,
-        emailId: params.emailId,
-        ticketId: params.ticketId,
-        attachmentId: attachment.id,
-        error: error instanceof Error ? error.message : String(error),
-      });
-    }
-  }
 }
 
 export async function processInboundEmailInApp(
@@ -311,18 +262,12 @@ export async function processInboundEmailInApp(
           tenantId
         );
 
-        await processEmailAttachmentsBestEffort({
+        await processInboundEmailArtifactsBestEffort({
           tenantId,
           providerId,
-          emailId: emailData.id,
           ticketId: match.ticketId,
-          attachments: emailData.attachments?.map((a) => ({
-            id: a.id,
-            name: a.name,
-            contentType: a.contentType,
-            size: a.size,
-            contentId: a.contentId,
-          })),
+          emailData,
+          scopeLabel: 'reply',
         });
 
         return {
@@ -428,18 +373,12 @@ export async function processInboundEmailInApp(
       tenantId
     );
 
-    await processEmailAttachmentsBestEffort({
+    await processInboundEmailArtifactsBestEffort({
       tenantId,
       providerId,
-      emailId: emailData.id,
       ticketId: threadedTicketId,
-      attachments: emailData.attachments?.map((a) => ({
-        id: a.id,
-        name: a.name,
-        contentType: a.contentType,
-        size: a.size,
-        contentId: a.contentId,
-      })),
+      emailData,
+      scopeLabel: 'reply',
     });
 
     return {
@@ -609,18 +548,12 @@ export async function processInboundEmailInApp(
     tenantId
   );
 
-  await processEmailAttachmentsBestEffort({
+  await processInboundEmailArtifactsBestEffort({
     tenantId,
     providerId,
-    emailId: emailData.id,
     ticketId: ticketResult.ticket_id,
-    attachments: emailData.attachments?.map((a) => ({
-      id: a.id,
-      name: a.name,
-      contentType: a.contentType,
-      size: a.size,
-      contentId: a.contentId,
-    })),
+    emailData,
+    scopeLabel: 'new-ticket',
   });
 
   return {
