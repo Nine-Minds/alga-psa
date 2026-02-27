@@ -114,15 +114,18 @@ exports.up = async function(knex) {
         `);
     }
 
-    // Create indexes
-    await knex.raw(`
-        CREATE INDEX IF NOT EXISTS idx_business_hours_schedules_tenant ON business_hours_schedules(tenant);
-        CREATE INDEX IF NOT EXISTS idx_business_hours_schedules_default ON business_hours_schedules(tenant, is_default) WHERE is_default = true;
-        CREATE INDEX IF NOT EXISTS idx_business_hours_entries_schedule ON business_hours_entries(tenant, schedule_id);
-        CREATE INDEX IF NOT EXISTS idx_holidays_tenant ON holidays(tenant);
-        CREATE INDEX IF NOT EXISTS idx_holidays_schedule ON holidays(tenant, schedule_id);
-        CREATE INDEX IF NOT EXISTS idx_holidays_date ON holidays(tenant, holiday_date);
-    `);
+    // Execute index DDL one statement at a time (PostgreSQL prepared statements reject multi-command strings)
+    const indexCreateStatements = [
+        'CREATE INDEX IF NOT EXISTS idx_business_hours_schedules_tenant ON business_hours_schedules(tenant)',
+        'CREATE INDEX IF NOT EXISTS idx_business_hours_schedules_default ON business_hours_schedules(tenant, is_default) WHERE is_default = true',
+        'CREATE INDEX IF NOT EXISTS idx_business_hours_entries_schedule ON business_hours_entries(tenant, schedule_id)',
+        'CREATE INDEX IF NOT EXISTS idx_holidays_tenant ON holidays(tenant)',
+        'CREATE INDEX IF NOT EXISTS idx_holidays_schedule ON holidays(tenant, schedule_id)',
+        'CREATE INDEX IF NOT EXISTS idx_holidays_date ON holidays(tenant, holiday_date)',
+    ];
+    for (const statement of indexCreateStatements) {
+        await knex.raw(statement);
+    }
 };
 
 /**
@@ -145,15 +148,18 @@ exports.down = async function(knex) {
         }
     }
 
-    // Drop indexes
-    await knex.raw(`
-        DROP INDEX IF EXISTS idx_business_hours_schedules_tenant;
-        DROP INDEX IF EXISTS idx_business_hours_schedules_default;
-        DROP INDEX IF EXISTS idx_business_hours_entries_schedule;
-        DROP INDEX IF EXISTS idx_holidays_tenant;
-        DROP INDEX IF EXISTS idx_holidays_schedule;
-        DROP INDEX IF EXISTS idx_holidays_date;
-    `);
+    // Execute index drops one statement at a time for the same prepared statement compatibility
+    const indexDropStatements = [
+        'DROP INDEX IF EXISTS idx_business_hours_schedules_tenant',
+        'DROP INDEX IF EXISTS idx_business_hours_schedules_default',
+        'DROP INDEX IF EXISTS idx_business_hours_entries_schedule',
+        'DROP INDEX IF EXISTS idx_holidays_tenant',
+        'DROP INDEX IF EXISTS idx_holidays_schedule',
+        'DROP INDEX IF EXISTS idx_holidays_date',
+    ];
+    for (const statement of indexDropStatements) {
+        await knex.raw(statement);
+    }
 
     // Drop tables in reverse order (respecting foreign key constraints)
     await knex.schema.dropTableIfExists('holidays');
