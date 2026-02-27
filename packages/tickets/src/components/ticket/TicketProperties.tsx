@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { getScheduledHoursForTicket, getTicketAppointmentRequests } from '../../actions/ticketActions';
-import { ITicket, ITimeSheet, ITimePeriod, ITimePeriodView, ITimeEntry, IAgentSchedule, IClient, IClientLocation } from '@alga-psa/types'; // Added IClient and IClientLocation
+import { ITicket, ITimeSheet, ITimePeriod, ITimePeriodView, ITimeEntry, IAgentSchedule, IClient, IClientLocation, IContact } from '@alga-psa/types'; // Added IClient and IClientLocation
 import { IUserWithRoles, ITeam } from '@alga-psa/types';
 import { ITicketResource } from '@alga-psa/types';
 import { ITag } from '@alga-psa/types';
@@ -79,6 +79,9 @@ interface TicketPropertiesProps {
   onItilFieldChange?: (field: string, value: any) => void;
   onUpdateWatchList?: (watchList: TicketWatchListEntry[]) => Promise<boolean>;
   watchListSaving?: boolean;
+  allContactsForWatchList?: IContact[];
+  allContactsForWatchListLoading?: boolean;
+  onLoadAllContactsForWatchList?: () => Promise<void>;
   surveySummary?: SurveyTicketSatisfactionSummary | null;
   renderIntervalManagement?: (args: { ticketId: string; userId: string }) => React.ReactNode;
 }
@@ -154,6 +157,9 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
   onItilFieldChange,
   onUpdateWatchList,
   watchListSaving = false,
+  allContactsForWatchList = [],
+  allContactsForWatchListLoading = false,
+  onLoadAllContactsForWatchList,
   surveySummary = null,
   renderIntervalManagement,
 }) => {
@@ -905,6 +911,9 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
         watchListSaving={watchListSaving}
         internalUsers={availableAgents}
         clientContacts={contacts}
+        allContacts={allContactsForWatchList}
+        allContactsLoading={allContactsForWatchListLoading}
+        onLoadAllContacts={onLoadAllContactsForWatchList}
       />
 
 

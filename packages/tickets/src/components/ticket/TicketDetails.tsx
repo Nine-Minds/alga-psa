@@ -254,6 +254,8 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const [isAddChildMultiClientConfirmOpen, setIsAddChildMultiClientConfirmOpen] = useState(false);
     const [pendingChildToAdd, setPendingChildToAdd] = useState<{ ticket_id: string; ticket_number?: string | null; client_id?: string | null } | null>(null);
     const [isWatchListSaving, setIsWatchListSaving] = useState(false);
+    const [allContactsForWatchList, setAllContactsForWatchList] = useState<IContact[]>([]);
+    const [allContactsForWatchListLoading, setAllContactsForWatchListLoading] = useState(false);
     const ticketOrigin = useMemo(() => getTicketOrigin(ticket as any), [ticket]);
     const ticketOriginLabels = useMemo(() => ({
         internal: t('origin.internal', 'Created Internally'),
@@ -1118,6 +1120,20 @@ const handleClose = () => {
         }
     };
 
+    const handleLoadAllContactsForWatchList = useCallback(async () => {
+        if (allContactsForWatchListLoading) {
+            return;
+        }
+
+        setAllContactsForWatchListLoading(true);
+        try {
+            // Loaded on-demand by the Watch List card; wired to tenant-wide action in follow-up feature step.
+            setAllContactsForWatchList((existing) => existing);
+        } finally {
+            setAllContactsForWatchListLoading(false);
+        }
+    }, [allContactsForWatchListLoading]);
+
     const handleChangeContact = () => {
         setIsChangeContactDialogOpen(true);
     };
@@ -1943,6 +1959,9 @@ const handleClose = () => {
                                 onItilFieldChange={handleItilFieldChange}
                                 onUpdateWatchList={handleUpdateWatchList}
                                 watchListSaving={isWatchListSaving}
+                                allContactsForWatchList={allContactsForWatchList}
+                                allContactsForWatchListLoading={allContactsForWatchListLoading}
+                                onLoadAllContactsForWatchList={handleLoadAllContactsForWatchList}
                                 surveySummary={surveySummary}
                                 renderIntervalManagement={renderIntervalManagement}
                             />

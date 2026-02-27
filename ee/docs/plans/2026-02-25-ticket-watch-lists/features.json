@@ -260,7 +260,7 @@
   {
     "id": "F031",
     "description": "Wire new watch-list picker data and handlers through TicketDetails -> TicketProperties -> TicketWatchListCard without regressing existing ticket properties behavior.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data / API / Integrations",
       "UX / UI Notes"
