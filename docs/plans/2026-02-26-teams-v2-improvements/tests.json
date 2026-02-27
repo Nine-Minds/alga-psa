@@ -447,7 +447,7 @@
   {
     "id": "T137",
     "description": "UserAndTeamPicker: `getTeamAvatarUrlsBatch` prop is optional \u2014 component works without it",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F084"
     ]
