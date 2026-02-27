@@ -66,3 +66,7 @@ Rolling notes for the 5-phase documents system overhaul: entity-scoped folders, 
 - Should the client portal Documents page be behind a feature flag initially?
 - Should folder templates be seeded with defaults (e.g., "MSP Client Default") or start empty?
 - For KB articles, should `audience = 'public'` articles be accessible without any login at all (fully public)?
+
+## Work Log
+
+- (2026-02-27) **F001 implemented**: Added migration `server/migrations/20260227170000_add_entity_scope_to_document_folders.cjs` to add nullable `entity_id` (uuid) and `entity_type` (text) columns to `document_folders` with idempotent checks and inline `distributeIfCitus(knex, 'document_folders')` call.
