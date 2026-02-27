@@ -264,7 +264,7 @@
   {
     "id": "F031",
     "description": "IMAP inbound path persists one original .eml document per inbound message from provided raw MIME bytes with deterministic filename/idempotency",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Scoped Implementation Checklist (Phase 1)",
       "Requirements"
