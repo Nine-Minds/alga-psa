@@ -363,9 +363,21 @@ const TicketWatchListCard: React.FC<TicketWatchListCardProps> = ({
                     disabled={isWatchListSaving}
                     onChange={(event) => void handleToggleWatcher(entry.email, event.target.checked)}
                   />
-                  <span className={`text-sm ${entry.active ? 'text-gray-900' : 'text-gray-500'}`}>
-                    {entry.email}
-                  </span>
+                  <div className="min-w-0">
+                    <div className={`text-sm truncate ${entry.active ? 'text-gray-900' : 'text-gray-500'}`}>
+                      {entry.email}
+                    </div>
+                    {(entry.name || entry.entity_type) ? (
+                      <div className="flex items-center gap-2 text-xs text-gray-500">
+                        {entry.name ? <span className="truncate">{entry.name}</span> : null}
+                        {entry.entity_type ? (
+                          <span className="inline-flex items-center rounded bg-gray-100 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-gray-600">
+                            {entry.entity_type}
+                          </span>
+                        ) : null}
+                      </div>
+                    ) : null}
+                  </div>
                 </label>
                 <Button
                   {...withDataAutomationId({ id: `${id}-remove-btn-${entry.email}` })}

@@ -194,3 +194,5 @@ Working notes for the ticket watch-list feature plan. This log captures clarifie
 - (2026-02-27) Validation run for F032: `cd packages/tickets && npx vitest run src/actions/clientLookupActions.watchList.test.ts src/components/ticket/__tests__/TicketWatchListCard.test.tsx --config vitest.config.ts`.
 - (2026-02-27) Implemented F033 by keeping all add paths (manual/user/contact/all-contacts) on the shared `mergeTicketWatchListRecipients` utility so duplicate-email dedupe/reactivation behavior remains unified and manual entry stays backward-compatible.
 - (2026-02-27) Implemented F034 by persisting picker additions with `source: manual` plus identity metadata (`name`, `entity_type`, `entity_id`) from selected users/contacts before saving through `setTicketWatchListOnAttributes`.
+- (2026-02-27) Implemented F035 by enhancing watch-list rows in `TicketWatchListCard` to show `name` and an identity-type hint badge (`user`/`contact`) while always rendering canonical email.
+- (2026-02-27) Validation run for F035: `cd packages/tickets && npx vitest run src/components/ticket/__tests__/TicketWatchListCard.test.tsx --config vitest.config.ts`.

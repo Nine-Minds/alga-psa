@@ -296,7 +296,7 @@
   {
     "id": "F035",
     "description": "Display picker-added watcher identity hints (name and optional type badge) in the Watch List row UI while always showing recipient email.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes"
     ]
