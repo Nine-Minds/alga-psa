@@ -472,7 +472,7 @@
   {
     "id": "T140",
     "description": "MultiUserAndTeamPicker: accepts teams prop, teamFilterFn, and all team-related props from original MultiUserPicker",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F086"
     ]
