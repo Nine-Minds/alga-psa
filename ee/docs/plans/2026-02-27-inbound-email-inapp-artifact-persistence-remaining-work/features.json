@@ -110,7 +110,7 @@
   {
     "id": "F232",
     "description": "Add IMAP in-app processing feature-flag controls and document expected flag/env combinations",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Rollout"]
   },
   {

@@ -126,3 +126,9 @@ Create a clean, implementation-ready plan containing only remaining work for inb
     - attachments `content`, `isInline`, `contentId`
     - MIME source fields `rawMimeBase64` / `sourceMimeBase64` / `rawSourceBase64`.
   - Malformed contract inputs return safe `400` responses instead of crashing callback execution.
+- 2026-02-27: Completed `F232`.
+  - Added IMAP-specific feature-flag helpers in `shared/services/email/inboundEmailInAppFeatureFlag.ts`:
+    - `isImapInboundEmailInAppProcessingEnabled`
+    - `isImapInboundEmailInAppAsyncModeEnabled`
+    - `isImapInboundEmailInAppEventBusFallbackEnabled`
+  - Documented supported flag/env combinations in `docs/inbound-email/setup/imap.md`.
