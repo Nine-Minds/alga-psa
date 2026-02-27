@@ -450,7 +450,7 @@
   {
     "id": "T053",
     "description": "UI: triggering `Search all contacts` lazily loads active all-tenant contacts and allows selecting a cross-client contact.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F029",
       "F032"
