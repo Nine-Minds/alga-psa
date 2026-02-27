@@ -67,3 +67,4 @@
 - (2026-02-27) Added migration `server/migrations/20260227000001_add_team_to_document_associations_entity_type.cjs` to include `team` in document_associations entity_type constraint with NOT VALID and transaction disabled.
 - (2026-02-27) Added `team` to media `EntityType` union in `packages/media/src/lib/avatarUtils.ts`.
 - (2026-02-27) Added `team` to users `EntityType` union in `packages/users/src/lib/avatarUtils.ts`.
+- (2026-02-27) Added `team` to formatting `EntityType` union in `packages/formatting/src/avatarUtils.ts`.
