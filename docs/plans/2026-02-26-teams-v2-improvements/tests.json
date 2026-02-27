@@ -405,7 +405,7 @@
   {
     "id": "T132",
     "description": "No `buildOrgTree` or `renderOrgNode` functions remain in UserManagement.tsx",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F081"
     ]
