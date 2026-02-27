@@ -257,7 +257,7 @@
   {
     "id": "F082",
     "description": "OrgChart and Structure toggle hidden when `teams-v2` flag is off",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-3B.11",
       "NFR-3.1"
