@@ -47,7 +47,7 @@
   {
     "id": "T006",
     "description": "Unit: cid references in HTML map only to matching inline MIME parts",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F004"
     ]
