@@ -315,7 +315,7 @@
   {
     "id": "T037",
     "description": "Integration: per-attachment cap enforcement skips oversized attachment payloads at IMAP ingress with structured skip reason",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F027",
       "F033"

@@ -94,6 +94,9 @@ Rolling notes for embedded inbound-email image extraction + source `.eml` persis
 - (2026-02-27) IMAP webhook handoff integration tests:
   - `cd server && npx vitest run src/test/integration/imapWebhookHandoff.integration.test.ts --config vitest.config.ts`
   - validates queued handoff-only behavior and unauthorized short-circuit.
+- (2026-02-27) IMAP ingress cap tests:
+  - `cd services/imap-service && npx vitest run src/imapService.ingressCaps.test.ts`
+  - covers per-attachment, total-bytes, count, and raw-MIME cap behavior with structured skip reasons.
 
 ## Links / References
 
@@ -148,6 +151,7 @@ Rolling notes for embedded inbound-email image extraction + source `.eml` persis
 - (2026-02-27) Completed T034 — Added Playwright duplicate-guard scenario that verifies single embedded/.eml document rows and visibility on the ticket.
 - (2026-02-27) Completed T035 — Added IMAP webhook integration test asserting auth/validation + event handoff response with no inline persistence table access.
 - (2026-02-27) Completed T036 — Added IMAP webhook auth-guard integration coverage for invalid secret rejection before DB lookup/event publish.
+- (2026-02-27) Completed T037 — Added IMAP ingress cap test for per-attachment byte limit with structured `attachment_over_max_bytes` skip reason.
 - (2026-02-27) Completed F026 — Refactored IMAP webhook route to auth/validate/handoff only by publishing `INBOUND_EMAIL_RECEIVED` and returning queued success without inline persistence.
 - (2026-02-27) Completed F027 — Added IMAP ingress hard-cap enforcement for per-attachment bytes, total attachment bytes, attachment count, and raw MIME bytes prior to payload encoding/dispatch.
 - (2026-02-27) Completed F028 — IMAP webhook payload now carries capped raw MIME base64 and attachment byte fields needed for downstream document + `.eml` persistence.

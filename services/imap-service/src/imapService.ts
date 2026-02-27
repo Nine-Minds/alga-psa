@@ -6,7 +6,10 @@ import logger from '@alga-psa/core/logger';
 import { getAdminConnection } from '@alga-psa/db/admin';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import axios from 'axios';
-import type { EmailMessageDetails } from '@alga-psa/shared/interfaces/inbound-email.interfaces';
+import type {
+  EmailMessageDetails,
+  EmailIngressSkipReason,
+} from '@alga-psa/shared/interfaces/inbound-email.interfaces';
 
 const DEFAULT_REFRESH_MS = 60_000;
 const DEFAULT_RECONNECT_BASE_MS = 2_000;
@@ -32,6 +35,20 @@ interface IngressCapConfig {
   maxTotalAttachmentBytes: number;
   maxAttachmentCount: number;
   maxRawMimeBytes: number;
+}
+
+export interface ImapIngressCapResult {
+  attachments: Array<{
+    id: string;
+    name: string;
+    contentType: string;
+    size: number;
+    contentId?: string;
+    isInline: boolean;
+    content?: string;
+  }>;
+  rawMimeBase64?: string;
+  ingressSkipReasons: EmailIngressSkipReason[];
 }
 
 function clampNumber(value: number, min: number, max: number): number {
@@ -62,6 +79,113 @@ function getIngressCapConfig(): IngressCapConfig {
     maxTotalAttachmentBytes: Math.max(maxTotalAttachmentBytes, maxAttachmentBytes),
     maxAttachmentCount,
     maxRawMimeBytes,
+  };
+}
+
+export function applyImapIngressCaps(params: {
+  parsedAttachments?: any[] | null;
+  rawMimeBuffer: Buffer;
+  caps?: Partial<IngressCapConfig>;
+}): ImapIngressCapResult {
+  const resolvedCaps = {
+    ...getIngressCapConfig(),
+    ...(params.caps || {}),
+  };
+  const caps: IngressCapConfig = {
+    maxAttachmentBytes: Math.max(1, Math.floor(resolvedCaps.maxAttachmentBytes)),
+    maxTotalAttachmentBytes: Math.max(1, Math.floor(resolvedCaps.maxTotalAttachmentBytes)),
+    maxAttachmentCount: Math.max(1, Math.floor(resolvedCaps.maxAttachmentCount)),
+    maxRawMimeBytes: Math.max(1, Math.floor(resolvedCaps.maxRawMimeBytes)),
+  };
+
+  let includedAttachmentBytes = 0;
+  const parsedAttachments = Array.isArray(params.parsedAttachments) ? params.parsedAttachments : [];
+  const ingressSkipReasons: EmailIngressSkipReason[] = [];
+  const attachments: ImapIngressCapResult['attachments'] = [];
+
+  for (const att of parsedAttachments) {
+    const content = Buffer.isBuffer(att?.content)
+      ? att.content
+      : typeof att?.content === 'string'
+        ? Buffer.from(att.content)
+        : null;
+    const size = Number(att?.size || content?.length || 0);
+    const attachmentId = String(att?.contentId || att?.checksum || uuidv4());
+    const attachmentName = String(att?.filename || 'attachment');
+
+    if (!Number.isFinite(size) || size <= 0) {
+      continue;
+    }
+
+    if (attachments.length >= caps.maxAttachmentCount) {
+      ingressSkipReasons.push({
+        type: 'attachment',
+        reason: 'attachment_count_exceeded',
+        attachmentId,
+        attachmentName,
+        size,
+        cap: caps.maxAttachmentCount,
+      });
+      continue;
+    }
+
+    if (size > caps.maxAttachmentBytes) {
+      ingressSkipReasons.push({
+        type: 'attachment',
+        reason: 'attachment_over_max_bytes',
+        attachmentId,
+        attachmentName,
+        size,
+        cap: caps.maxAttachmentBytes,
+      });
+      continue;
+    }
+
+    if (includedAttachmentBytes + size > caps.maxTotalAttachmentBytes) {
+      ingressSkipReasons.push({
+        type: 'attachment',
+        reason: 'attachment_total_bytes_exceeded',
+        attachmentId,
+        attachmentName,
+        size,
+        cap: caps.maxTotalAttachmentBytes,
+      });
+      continue;
+    }
+
+    includedAttachmentBytes += size;
+
+    const contentDisposition = String(att?.contentDisposition || '').toLowerCase();
+    const isInline = contentDisposition.includes('inline') || Boolean(att?.contentId) || Boolean(att?.related);
+    attachments.push({
+      id: attachmentId,
+      name: attachmentName,
+      contentType: String(att?.contentType || 'application/octet-stream'),
+      size,
+      contentId: att?.contentId,
+      isInline,
+      content: content ? content.toString('base64') : undefined,
+    });
+  }
+
+  const rawMimeBytes = params.rawMimeBuffer.length;
+  const rawMimeBase64 = rawMimeBytes <= caps.maxRawMimeBytes
+    ? params.rawMimeBuffer.toString('base64')
+    : undefined;
+
+  if (!rawMimeBase64) {
+    ingressSkipReasons.push({
+      type: 'raw_mime',
+      reason: 'raw_mime_over_max_bytes',
+      size: rawMimeBytes,
+      cap: caps.maxRawMimeBytes,
+    });
+  }
+
+  return {
+    attachments,
+    rawMimeBase64,
+    ingressSkipReasons,
   };
 }
 
@@ -706,113 +830,14 @@ class ImapFolderListener {
     const to = parsed.to?.value || [];
     const cc = parsed.cc?.value || [];
     const baseId = parsed.messageId || this.computeFallbackMessageId(parsed, uid);
-    const caps = getIngressCapConfig();
-    const ingressSkipReasons: Array<{
-      type: 'attachment' | 'raw_mime';
-      reason:
-        | 'attachment_over_max_bytes'
-        | 'attachment_count_exceeded'
-        | 'attachment_total_bytes_exceeded'
-        | 'raw_mime_over_max_bytes';
-      attachmentId?: string;
-      attachmentName?: string;
-      size: number;
-      cap: number;
-    }> = [];
+    const ingressResult = applyImapIngressCaps({
+      parsedAttachments: parsed.attachments,
+      rawMimeBuffer,
+    });
+    const { attachments, rawMimeBase64, ingressSkipReasons } = ingressResult;
     const references = extractMessageIds(parsed.references);
     const inReplyTo = extractMessageIds(parsed.inReplyTo)[0];
     const threadId = references[0] || inReplyTo;
-
-    let includedAttachmentBytes = 0;
-    const parsedAttachments = Array.isArray(parsed.attachments) ? parsed.attachments : [];
-    const attachments: Array<{
-      id: string;
-      name: string;
-      contentType: string;
-      size: number;
-      contentId?: string;
-      isInline: boolean;
-      content?: string;
-    }> = [];
-
-    for (const att of parsedAttachments) {
-      const content = Buffer.isBuffer(att?.content)
-        ? att.content
-        : typeof att?.content === 'string'
-          ? Buffer.from(att.content)
-          : null;
-      const size = Number(att?.size || content?.length || 0);
-      const attachmentId = String(att?.contentId || att?.checksum || uuidv4());
-      const attachmentName = String(att?.filename || 'attachment');
-
-      if (!Number.isFinite(size) || size <= 0) {
-        continue;
-      }
-
-      if (attachments.length >= caps.maxAttachmentCount) {
-        ingressSkipReasons.push({
-          type: 'attachment',
-          reason: 'attachment_count_exceeded',
-          attachmentId,
-          attachmentName,
-          size,
-          cap: caps.maxAttachmentCount,
-        });
-        continue;
-      }
-
-      if (size > caps.maxAttachmentBytes) {
-        ingressSkipReasons.push({
-          type: 'attachment',
-          reason: 'attachment_over_max_bytes',
-          attachmentId,
-          attachmentName,
-          size,
-          cap: caps.maxAttachmentBytes,
-        });
-        continue;
-      }
-
-      if (includedAttachmentBytes + size > caps.maxTotalAttachmentBytes) {
-        ingressSkipReasons.push({
-          type: 'attachment',
-          reason: 'attachment_total_bytes_exceeded',
-          attachmentId,
-          attachmentName,
-          size,
-          cap: caps.maxTotalAttachmentBytes,
-        });
-        continue;
-      }
-
-      includedAttachmentBytes += size;
-
-      const contentDisposition = String(att?.contentDisposition || '').toLowerCase();
-      const isInline = contentDisposition.includes('inline') || Boolean(att?.contentId) || Boolean(att?.related);
-      attachments.push({
-        id: attachmentId,
-        name: attachmentName,
-        contentType: String(att?.contentType || 'application/octet-stream'),
-        size,
-        contentId: att?.contentId,
-        isInline,
-        content: content ? content.toString('base64') : undefined,
-      });
-    }
-
-    const rawMimeBytes = rawMimeBuffer.length;
-    const rawMimeBase64 = rawMimeBytes <= caps.maxRawMimeBytes
-      ? rawMimeBuffer.toString('base64')
-      : undefined;
-
-    if (!rawMimeBase64) {
-      ingressSkipReasons.push({
-        type: 'raw_mime',
-        reason: 'raw_mime_over_max_bytes',
-        size: rawMimeBytes,
-        cap: caps.maxRawMimeBytes,
-      });
-    }
 
     if (ingressSkipReasons.length > 0) {
       stateLog('imap_ingress_artifacts_skipped', {
