@@ -266,7 +266,7 @@
   {
     "id": "F083",
     "description": "`UserAndTeamPicker`: replace hardcoded gray circle + TeamIcon with `TeamAvatar` component",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-3C.1"
     ]

@@ -96,3 +96,4 @@
 - (2026-02-27) Replaced nested-list org chart rendering with `OrgChart` component in `UserManagement`.
 - (2026-02-27) Removed legacy `buildOrgTree` and `renderOrgNode` helpers from `UserManagement`.
 - (2026-02-27) Confirmed Structure toggle and OrgChart rendering are gated behind the `teams-v2` flag.
+- (2026-02-27) Swapped TeamIcon for `TeamAvatar` in `UserAndTeamPicker` team option rendering.

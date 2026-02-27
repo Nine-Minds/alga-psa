@@ -3,8 +3,9 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { IUser, ITeam } from '@alga-psa/types';
-import { ChevronDown, Search, Users as TeamIcon } from 'lucide-react';
+import { ChevronDown, Search } from 'lucide-react';
 import UserAvatar from './UserAvatar';
+import TeamAvatar from './TeamAvatar';
 import { AutomationProps, ButtonComponent, ContainerComponent } from '../ui-reflection/types';
 import { Input } from './Input';
 import { Button } from './Button';
@@ -402,9 +403,12 @@ const UserAndTeamPicker = ({
                 parentId={pickerId}
               >
                 <div className="flex items-center gap-2">
-                  <div className="h-7 w-7 rounded-full bg-gray-200 flex items-center justify-center text-gray-600">
-                    <TeamIcon className="h-4 w-4" />
-                  </div>
+                  <TeamAvatar
+                    teamId={team.team_id}
+                    teamName={team.team_name || 'Unnamed Team'}
+                    avatarUrl={null}
+                    size="sm"
+                  />
                   <div className="flex flex-col">
                     <span>{team.team_name || 'Unnamed Team'}</span>
                     <span className="text-xs text-gray-500">{memberCount} members · Lead: {leadName}</span>
