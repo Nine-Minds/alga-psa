@@ -202,7 +202,7 @@
   {
     "id": "T107",
     "description": "TeamDetails shows avatar upload area above team name field",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F066"
     ]

@@ -131,3 +131,4 @@
 - (2026-02-27) Marked T104 covered by teams-v2 improvements test suite.
 - (2026-02-27) Marked T105 covered by teams-v2 improvements test suite.
 - (2026-02-27) Marked T106 covered by teams-v2 improvements test suite.
+- (2026-02-27) Marked T107 covered by teams-v2 improvements test suite.
