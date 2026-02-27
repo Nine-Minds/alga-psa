@@ -255,7 +255,7 @@
   {
     "id": "F030",
     "description": "IMAP inbound path executes embedded extraction for HTML data URLs and referenced CID images before persistence",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Scoped Implementation Checklist (Phase 1)",
       "Requirements"

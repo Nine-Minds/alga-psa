@@ -147,3 +147,4 @@ Rolling notes for embedded inbound-email image extraction + source `.eml` persis
 - (2026-02-27) Completed F027 — Added IMAP ingress hard-cap enforcement for per-attachment bytes, total attachment bytes, attachment count, and raw MIME bytes prior to payload encoding/dispatch.
 - (2026-02-27) Completed F028 — IMAP webhook payload now carries capped raw MIME base64 and attachment byte fields needed for downstream document + `.eml` persistence.
 - (2026-02-27) Completed F029 — IMAP inbound attachment bytes now persist through the existing storage-backed/idempotent attachment action path (no metadata-only fallback path).
+- (2026-02-27) Completed F030 — IMAP webhook handoff now runs through the system email workflow path that performs embedded `data:image` + referenced CID extraction before attachment persistence.
