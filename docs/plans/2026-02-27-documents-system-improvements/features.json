@@ -34,7 +34,7 @@
   {
     "id": "F005",
     "description": "Migration: Add RLS tenant isolation policies to document_folders (SELECT and INSERT)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-1.11"
     ]
