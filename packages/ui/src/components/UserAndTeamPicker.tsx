@@ -91,7 +91,9 @@ const UserAndTeamPicker = ({
   const [dropdownPosition, setDropdownPosition] = useState<'bottom' | 'top'>('bottom');
   const [dropdownCoords, setDropdownCoords] = useState<{ top: number; left: number; width: number }>({ top: 0, left: 0, width: 220 });
   const [avatarUrls, setAvatarUrls] = useState<Record<string, string | null>>({});
+  const [teamAvatarUrls, setTeamAvatarUrls] = useState<Record<string, string | null>>({});
   const fetchedUserIdsRef = useRef<Set<string>>(new Set());
+  const fetchedTeamIdsRef = useRef<Set<string>>(new Set());
   const containerRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -132,6 +134,41 @@ const UserAndTeamPicker = ({
   const selectedUserName = currentUser
     ? `${currentUser.first_name || ''} ${currentUser.last_name || ''}`.trim() || 'Unnamed User'
     : placeholder;
+
+  useEffect(() => {
+    if (!isOpen || !getTeamAvatarUrlsBatch || teamEntries.length === 0) {
+      return;
+    }
+
+    const tenant = teamEntries[0]?.tenant;
+    if (!tenant) {
+      return;
+    }
+
+    const teamIdsToFetch = teamEntries
+      .map((team) => team.team_id)
+      .filter((teamId) => !fetchedTeamIdsRef.current.has(teamId));
+
+    if (teamIdsToFetch.length === 0) {
+      return;
+    }
+
+    const fetchTeamAvatars = async () => {
+      try {
+        const map = await getTeamAvatarUrlsBatch(teamIdsToFetch, tenant);
+        const record: Record<string, string | null> = {};
+        map.forEach((value, key) => {
+          record[key] = value;
+        });
+        teamIdsToFetch.forEach((teamId) => fetchedTeamIdsRef.current.add(teamId));
+        setTeamAvatarUrls((prev) => ({ ...prev, ...record }));
+      } catch (error) {
+        console.error('Error fetching team avatar URLs:', error);
+      }
+    };
+
+    fetchTeamAvatars();
+  }, [isOpen, teamEntries, getTeamAvatarUrlsBatch]);
 
   useRegisterUIComponent<ContainerComponent>({
     type: 'container',
@@ -410,7 +447,7 @@ const UserAndTeamPicker = ({
                   <TeamAvatar
                     teamId={team.team_id}
                     teamName={team.team_name || 'Unnamed Team'}
-                    avatarUrl={null}
+                    avatarUrl={teamAvatarUrls[team.team_id] ?? null}
                     size="sm"
                   />
                   <div className="flex flex-col">

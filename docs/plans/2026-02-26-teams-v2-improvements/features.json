@@ -282,7 +282,7 @@
   {
     "id": "F085",
     "description": "`UserAndTeamPicker`: batch-fetch team avatar URLs when dropdown opens or teams change",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-3C.3"
     ]
