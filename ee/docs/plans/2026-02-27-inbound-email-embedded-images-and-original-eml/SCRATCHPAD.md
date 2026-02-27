@@ -87,3 +87,5 @@ Rolling notes for embedded inbound-email image extraction + source `.eml` persis
 - Final `.eml` filename format preference.
 
 - (2026-02-27) Completed F001 — Define embedded-image extraction scope to include HTML data URLs and HTML-referenced CID inline images.
+
+- (2026-02-27) Completed T001 — Covered by emailAttachmentHelpers.test.ts: extracts data:image payload from a single <img> tag.
