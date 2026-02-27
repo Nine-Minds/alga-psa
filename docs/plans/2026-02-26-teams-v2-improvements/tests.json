@@ -308,7 +308,7 @@
   {
     "id": "T120",
     "description": "OrgChart nodes are not draggable",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F072"
     ]
