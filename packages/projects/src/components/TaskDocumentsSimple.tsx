@@ -25,7 +25,7 @@ import { updateDocument } from '@alga-psa/documents/actions/documentActions';
 import { downloadDocumentInBrowser } from '@alga-psa/documents/actions';
 import { downloadDocument } from '@alga-psa/documents/lib/documentUtils';
 import { toast } from 'react-hot-toast';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { useRegisterUnsavedChanges } from '@alga-psa/ui/context';
 import FolderSelectorModal from '@alga-psa/documents/components/FolderSelectorModal';
@@ -152,6 +152,10 @@ export default function TaskDocumentsSimple({
     try {
       setLoading(true);
       const response = await getDocumentsByEntity(taskId!, 'project_task');
+      if (isActionPermissionError(response)) {
+        handleError(response.permissionError);
+        return;
+      }
       setDocuments(response.documents);
       setDocumentsLoaded(true);
     } catch (error) {
@@ -176,6 +180,10 @@ export default function TaskDocumentsSimple({
     try {
       setLoading(true);
       const response = await getDocumentsByEntity(taskId!, 'project_task');
+      if (isActionPermissionError(response)) {
+        handleError(response.permissionError);
+        return;
+      }
       setDocuments(response.documents);
       setDocumentsLoaded(true);
     } catch (error) {

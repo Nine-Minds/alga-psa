@@ -25,7 +25,7 @@ import { Plus, Link, FileText, Edit3, Download, Grid, List as ListIcon, FolderPl
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { downloadDocument, getDocumentDownloadUrl } from '@alga-psa/documents/lib/documentUtils';
 import toast from 'react-hot-toast';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
@@ -343,6 +343,15 @@ const Documents = ({
 
         const response = await getDocumentsByFolder(folderToFetch, includeSubfolders, currentPage, pageSize, filters);
 
+        if (isActionPermissionError(response)) {
+          if (!cancelled) {
+            handleError(response.permissionError);
+            setDocumentsToDisplay([]);
+            setTotalPages(1);
+          }
+          return;
+        }
+
         if (!cancelled) {
           setDocumentsToDisplay(response.documents);
           setTotalDocuments(response.total);
@@ -390,6 +399,10 @@ const Documents = ({
         const includeSubfolders = filters?.showAllDocuments || false;
         const folderToFetch = filters?.showAllDocuments ? null : currentFolder;
         const response = await getDocumentsByFolder(folderToFetch, includeSubfolders, currentPage, pageSize, filters);
+        if (isActionPermissionError(response)) {
+          handleError(response.permissionError);
+          return;
+        }
         setDocumentsToDisplay(response.documents);
         setTotalDocuments(response.total);
         setTotalPages(Math.ceil(response.total / pageSize));

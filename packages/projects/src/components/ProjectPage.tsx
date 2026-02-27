@@ -6,6 +6,7 @@ import ProjectDetail from './ProjectDetail';
 import { useEffect, useState, useCallback } from 'react';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import type { IClient, IProject, IProjectPhase, IProjectTask, IProjectTicketLinkWithDetails, ITag, IUserWithRoles, ProjectStatus } from '@alga-psa/types';
+import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
 interface ProjectMetadata {
   project: IProject;
@@ -41,6 +42,10 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
 
     const fetchProjectMetadata = async () => {
       const metadata = await getProjectMetadata(projectId);
+      if (isActionPermissionError(metadata)) {
+        handleError(metadata.permissionError);
+        return;
+      }
       setProjectMetadata(metadata);
     };
     fetchProjectMetadata();
@@ -48,13 +53,21 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
 
   const handleAssignedUserChange = async (userId: string | null) => {
     if (!projectId) return;
-    
+
     try {
-      await updateProject(projectId, {
+      const result = await updateProject(projectId, {
         assigned_to: userId
       });
+      if (isActionPermissionError(result)) {
+        handleError(result.permissionError);
+        return;
+      }
       // Refresh project metadata after update
       const updatedMetadata = await getProjectMetadata(projectId);
+      if (isActionPermissionError(updatedMetadata)) {
+        handleError(updatedMetadata.permissionError);
+        return;
+      }
       setProjectMetadata(updatedMetadata);
     } catch (error) {
       console.error('Error updating assigned user:', error);
@@ -63,13 +76,21 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
 
   const handleContactChange = async (contactId: string | null) => {
     if (!projectId) return;
-    
+
     try {
-      await updateProject(projectId, {
+      const result = await updateProject(projectId, {
         contact_name_id: contactId
       });
+      if (isActionPermissionError(result)) {
+        handleError(result.permissionError);
+        return;
+      }
       // Refresh project metadata after update
       const updatedMetadata = await getProjectMetadata(projectId);
+      if (isActionPermissionError(updatedMetadata)) {
+        handleError(updatedMetadata.permissionError);
+        return;
+      }
       setProjectMetadata(updatedMetadata);
     } catch (error) {
       console.error('Error updating contact:', error);
@@ -78,11 +99,19 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
 
   const handleProjectUpdate = async (updatedProject: IProject) => {
     if (!projectId) return;
-    
+
     try {
-      await updateProject(projectId, updatedProject);
+      const result = await updateProject(projectId, updatedProject);
+      if (isActionPermissionError(result)) {
+        handleError(result.permissionError);
+        return;
+      }
       // Refresh project metadata after update
       const updatedMetadata = await getProjectMetadata(projectId);
+      if (isActionPermissionError(updatedMetadata)) {
+        handleError(updatedMetadata.permissionError);
+        return;
+      }
       setProjectMetadata(updatedMetadata);
     } catch (error) {
       console.error('Error updating project:', error);

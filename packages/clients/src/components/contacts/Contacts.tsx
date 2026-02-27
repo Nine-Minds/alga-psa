@@ -29,6 +29,7 @@ import { DeleteEntityDialog } from '@alga-psa/ui';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { getCurrentUserAsync } from '../../lib/usersHelpers';
 import { getDocumentsByEntity } from '@alga-psa/documents/actions/documentActions';
+import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import ContactAvatar from '@alga-psa/ui/components/ContactAvatar';
@@ -280,17 +281,19 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
         }));
 
         const existingDocuments = documents[contact.contact_name_id];
-        
+
         if (!existingDocuments || existingDocuments.length === 0) {
           const response = await getDocumentsByEntity(contact.contact_name_id, 'contact');
-          
-          setDocuments(prev => {
-            const newDocuments = { ...prev };
-            newDocuments[contact.contact_name_id] = Array.isArray(response)
-              ? response
-              : response.documents || [];
-            return newDocuments;
-          });
+
+          if (!isActionPermissionError(response)) {
+            setDocuments(prev => {
+              const newDocuments = { ...prev };
+              newDocuments[contact.contact_name_id] = Array.isArray(response)
+                ? response
+                : response.documents || [];
+              return newDocuments;
+            });
+          }
         }
 
         openDrawer(
@@ -304,14 +307,16 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
             onDocumentCreated={async () => {
               try {
                 const updatedResponse = await getDocumentsByEntity(contact.contact_name_id, 'contact');
-                
-                setDocuments(prev => {
-                  const newDocuments = { ...prev };
-                  newDocuments[contact.contact_name_id] = Array.isArray(updatedResponse)
-                    ? updatedResponse
-                    : updatedResponse.documents || [];
-                  return newDocuments;
-                });
+
+                if (!isActionPermissionError(updatedResponse)) {
+                  setDocuments(prev => {
+                    const newDocuments = { ...prev };
+                    newDocuments[contact.contact_name_id] = Array.isArray(updatedResponse)
+                      ? updatedResponse
+                      : updatedResponse.documents || [];
+                    return newDocuments;
+                  });
+                }
               } catch (err) {
                 console.error('Error refreshing documents:', err);
               }
@@ -340,17 +345,19 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
         }));
 
         const existingDocuments = documents[contact.contact_name_id];
-        
+
         if (!existingDocuments || existingDocuments.length === 0) {
           const response = await getDocumentsByEntity(contact.contact_name_id, 'contact');
-          
-          setDocuments(prev => {
-            const newDocuments = { ...prev };
-            newDocuments[contact.contact_name_id] = Array.isArray(response)
-              ? response
-              : response.documents || [];
-            return newDocuments;
-          });
+
+          if (!isActionPermissionError(response)) {
+            setDocuments(prev => {
+              const newDocuments = { ...prev };
+              newDocuments[contact.contact_name_id] = Array.isArray(response)
+                ? response
+                : response.documents || [];
+              return newDocuments;
+            });
+          }
         }
 
         openDrawer(
@@ -364,14 +371,16 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
             onDocumentCreated={async () => {
               try {
                 const updatedResponse = await getDocumentsByEntity(contact.contact_name_id, 'contact');
-                
-                setDocuments(prev => {
-                  const newDocuments = { ...prev };
-                  newDocuments[contact.contact_name_id] = Array.isArray(updatedResponse)
-                    ? updatedResponse
-                    : updatedResponse.documents || [];
-                  return newDocuments;
-                });
+
+                if (!isActionPermissionError(updatedResponse)) {
+                  setDocuments(prev => {
+                    const newDocuments = { ...prev };
+                    newDocuments[contact.contact_name_id] = Array.isArray(updatedResponse)
+                      ? updatedResponse
+                      : updatedResponse.documents || [];
+                    return newDocuments;
+                  });
+                }
               } catch (err) {
                 console.error('Error refreshing documents:', err);
               }

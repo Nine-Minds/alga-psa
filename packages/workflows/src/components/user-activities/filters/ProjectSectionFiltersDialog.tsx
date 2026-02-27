@@ -18,6 +18,7 @@ import { StringDateRangePicker } from "@alga-psa/ui/components/DateRangePicker";
 import { ActivityFilters, ActivityPriority } from "@alga-psa/types";
 import { ISO8601String } from '@alga-psa/types';
 import CustomSelect from "@alga-psa/ui/components/CustomSelect";
+import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { IProject, IProjectPhase } from "@alga-psa/types";
 
 interface ProjectSectionFiltersDialogProps {
@@ -66,6 +67,10 @@ useEffect(() => {
         // Use getProjectDetails to get phases for the selected project
         const { getProjectDetails } = await import("@alga-psa/projects/actions/projectActions");
         const projectDetails = await getProjectDetails(selectedProjectId);
+        if (isActionPermissionError(projectDetails)) {
+          setProjectPhases([]);
+          return;
+        }
         setProjectPhases(projectDetails.phases);
       } catch (error) {
         console.error('Error loading project phases:', error);

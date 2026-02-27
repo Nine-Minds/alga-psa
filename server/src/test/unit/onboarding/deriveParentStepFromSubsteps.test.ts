@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { deriveParentStepFromSubsteps } from '@alga-psa/onboarding/lib/deriveParentStepFromSubsteps';
+import { deriveParentStepFromSubsteps } from '@alga-psa/onboarding/lib';
 
 describe('deriveParentStepFromSubsteps', () => {
   it('marks complete only when all sub-steps complete', () => {

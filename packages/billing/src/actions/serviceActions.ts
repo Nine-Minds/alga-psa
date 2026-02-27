@@ -10,6 +10,8 @@ import { validateArray } from '@alga-psa/validation';
 import { ServiceTypeModel } from '../models/serviceType'; // Import ServiceTypeModel
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
+import { permissionError } from '@alga-psa/ui/lib/errorHandling';
+import type { ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { deleteEntityWithValidation } from '@alga-psa/core';
 
 
@@ -332,7 +334,12 @@ export const createService = withAuth(async (
     user,
     { tenant },
     serviceData: CreateServiceInput
-): Promise<IService> => {
+): Promise<IService | ActionPermissionError> => {
+    const canCreate = await hasPermission(user, 'service', 'create');
+    if (!canCreate) {
+      return permissionError('Permission denied: Cannot create services/products');
+    }
+
     try {
         console.log('[serviceActions] createService called with data:', serviceData);
         const { custom_service_type_id } = serviceData;
@@ -343,10 +350,6 @@ export const createService = withAuth(async (
 
         const { knex: db } = await createTenantKnex();
         return withTransaction(db, async (trx: Knex.Transaction) => {
-        const canCreate = await hasPermission(user, 'service', 'create');
-        if (!canCreate) {
-          throw new Error('Permission denied: Cannot create services/products');
-        }
 
         // 1. Verify the custom service type exists
         const customServiceType = await trx<IServiceType>('service_types')
@@ -394,14 +397,15 @@ export const updateService = withAuth(async (
     { tenant },
     serviceId: string,
     serviceData: Partial<IService>
-): Promise<IService> => {
+): Promise<IService | ActionPermissionError> => {
+    const canUpdate = await hasPermission(user, 'service', 'update');
+    if (!canUpdate) {
+      return permissionError('Permission denied: Cannot update services/products');
+    }
+
     const { knex: db } = await createTenantKnex();
     try {
         return await withTransaction(db, async (trx: Knex.Transaction) => {
-            const canUpdate = await hasPermission(user, 'service', 'update');
-            if (!canUpdate) {
-              throw new Error('Permission denied: Cannot update services/products');
-            }
             const updatedService = await Service.update(trx, serviceId, serviceData);
             safeRevalidate('/msp/billing'); // Revalidate the billing page
 
@@ -581,16 +585,16 @@ export const checkProductCanBeDeleted = withAuth(async (user, { tenant }, servic
  * Permanently delete a product/service.
  * Will fail if the product has any associations (invoices, contracts, etc.)
  */
-export const deleteProductPermanently = withAuth(async (user, { tenant }, serviceId: string): Promise<void> => {
+export const deleteProductPermanently = withAuth(async (user, { tenant }, serviceId: string): Promise<void | ActionPermissionError> => {
+    const canDelete = await hasPermission(user, 'service', 'delete');
+    if (!canDelete) {
+      return permissionError('Permission denied: Cannot delete services/products');
+    }
+
     const { knex: db } = await createTenantKnex();
 
     try {
         await withTransaction(db, async (trx: Knex.Transaction) => {
-            const canDelete = await hasPermission(user, 'service', 'delete');
-            if (!canDelete) {
-              throw new Error('Permission denied: Cannot delete services/products');
-            }
-
             // Re-check associations within the transaction to prevent race conditions
             const check = await checkProductCanBeDeleted(serviceId);
             if (!check.canDelete) {
@@ -929,14 +933,15 @@ export const setServicePrice = withAuth(async (
   serviceId: string,
   currencyCode: string,
   rate: number
-): Promise<IServicePrice> => {
+): Promise<IServicePrice | ActionPermissionError> => {
+  const canUpdate = await hasPermission(user, 'service', 'update');
+  if (!canUpdate) {
+    return permissionError('Permission denied: Cannot update service pricing');
+  }
+
   const { knex: db } = await createTenantKnex();
   try {
     return await withTransaction(db, async (trx: Knex.Transaction) => {
-      const canUpdate = await hasPermission(user, 'service', 'update');
-      if (!canUpdate) {
-        throw new Error('Permission denied: Cannot update service pricing');
-      }
       const result = await Service.setPrice(trx, serviceId, currencyCode, rate);
       safeRevalidate('/msp/billing');
       return result;
@@ -955,14 +960,15 @@ export const setServicePrices = withAuth(async (
   { tenant },
   serviceId: string,
   prices: Array<{ currency_code: string; rate: number }>
-): Promise<IServicePrice[]> => {
+): Promise<IServicePrice[] | ActionPermissionError> => {
+  const canUpdate = await hasPermission(user, 'service', 'update');
+  if (!canUpdate) {
+    return permissionError('Permission denied: Cannot update service pricing');
+  }
+
   const { knex: db } = await createTenantKnex();
   try {
     return await withTransaction(db, async (trx: Knex.Transaction) => {
-      const canUpdate = await hasPermission(user, 'service', 'update');
-      if (!canUpdate) {
-        throw new Error('Permission denied: Cannot update service pricing');
-      }
       const result = await Service.setPrices(trx, serviceId, prices);
       safeRevalidate('/msp/billing');
       return result;
@@ -976,14 +982,15 @@ export const setServicePrices = withAuth(async (
 /**
  * Remove a specific price for a service
  */
-export const removeServicePrice = withAuth(async (user, { tenant }, serviceId: string, currencyCode: string): Promise<boolean> => {
+export const removeServicePrice = withAuth(async (user, { tenant }, serviceId: string, currencyCode: string): Promise<boolean | ActionPermissionError> => {
+  const canUpdate = await hasPermission(user, 'service', 'update');
+  if (!canUpdate) {
+    return permissionError('Permission denied: Cannot update service pricing');
+  }
+
   const { knex: db } = await createTenantKnex();
   try {
     return await withTransaction(db, async (trx: Knex.Transaction) => {
-      const canUpdate = await hasPermission(user, 'service', 'update');
-      if (!canUpdate) {
-        throw new Error('Permission denied: Cannot update service pricing');
-      }
       const result = await Service.removePrice(trx, serviceId, currencyCode);
       safeRevalidate('/msp/billing');
       return result;

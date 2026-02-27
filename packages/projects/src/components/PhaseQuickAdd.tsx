@@ -6,7 +6,7 @@ import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { addProjectPhase } from '../actions/projectActions';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 
@@ -51,6 +51,10 @@ const PhaseQuickAdd: React.FC<PhaseQuickAddProps> = ({
       };
 
       const newPhase = await addProjectPhase(phaseData);
+      if (isActionPermissionError(newPhase)) {
+        handleError(newPhase.permissionError);
+        return;
+      }
       onPhaseAdded(newPhase);
       onClose();
     } catch (error) {

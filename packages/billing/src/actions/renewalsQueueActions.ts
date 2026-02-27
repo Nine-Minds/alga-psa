@@ -4,6 +4,8 @@ import { randomUUID } from 'node:crypto';
 import { createTenantKnex } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
+import { permissionError } from '@alga-psa/ui/lib/errorHandling';
+import type { ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import type { RenewalWorkItemStatus } from '@alga-psa/types';
 import { normalizeClientContract } from '@alga-psa/shared/billingClients/clientContracts';
 import { TicketModel } from '@shared/models/ticketModel';
@@ -62,15 +64,17 @@ const isRenewalWorkItemStatus = (value: unknown): value is RenewalWorkItemStatus
 const toRenewalWorkItemStatus = (value: unknown): RenewalWorkItemStatus =>
   isRenewalWorkItemStatus(value) ? value : 'pending';
 const getTodayDateOnly = (): string => new Date().toISOString().slice(0, 10);
-const requireBillingReadPermission = async (user: unknown): Promise<void> => {
+const requireBillingReadPermission = async (user: unknown): Promise<ActionPermissionError | null> => {
   if (!await hasPermission(user as any, 'billing', 'read')) {
-    throw new Error('Permission denied: Cannot read renewals queue');
+    return permissionError('Permission denied: Cannot read renewals queue');
   }
+  return null;
 };
-const requireBillingUpdatePermission = async (user: unknown): Promise<void> => {
+const requireBillingUpdatePermission = async (user: unknown): Promise<ActionPermissionError | null> => {
   if (!await hasPermission(user as any, 'billing', 'update')) {
-    throw new Error('Permission denied: Cannot update renewals queue');
+    return permissionError('Permission denied: Cannot update renewals queue');
   }
+  return null;
 };
 const resolveActorUserId = (user: unknown): string | null => {
   const candidate = (user as { user_id?: unknown } | null | undefined)?.user_id;
@@ -293,8 +297,9 @@ export const listRenewalQueueRows = withAuth(async (
   user,
   { tenant },
   horizonDays: number = DEFAULT_RENEWALS_HORIZON_DAYS
-): Promise<RenewalQueueRow[]> => {
-  await requireBillingReadPermission(user);
+): Promise<RenewalQueueRow[] | ActionPermissionError> => {
+  const denied = await requireBillingReadPermission(user);
+  if (denied) return denied;
 
   const { knex } = await createTenantKnex();
   await assertRenewalSchemaReady(knex);
@@ -384,8 +389,9 @@ export const markRenewalQueueItemRenewing = withAuth(async (
   { tenant },
   clientContractId: string,
   note?: string
-): Promise<RenewalQueueMutationResult> => {
-  await requireBillingUpdatePermission(user);
+): Promise<RenewalQueueMutationResult | ActionPermissionError> => {
+  const denied = await requireBillingUpdatePermission(user);
+  if (denied) return denied;
 
   if (typeof clientContractId !== 'string' || clientContractId.trim().length === 0) {
     throw new Error('Client contract id is required');
@@ -450,8 +456,9 @@ export const markRenewalQueueItemNonRenewing = withAuth(async (
   { tenant },
   clientContractId: string,
   note?: string
-): Promise<RenewalQueueMutationResult> => {
-  await requireBillingUpdatePermission(user);
+): Promise<RenewalQueueMutationResult | ActionPermissionError> => {
+  const denied = await requireBillingUpdatePermission(user);
+  if (denied) return denied;
 
   if (typeof clientContractId !== 'string' || clientContractId.trim().length === 0) {
     throw new Error('Client contract id is required');
@@ -516,8 +523,9 @@ export const createRenewalDraftForQueueItem = withAuth(async (
   { tenant },
   clientContractId: string,
   note?: string
-): Promise<RenewalDraftCreationResult> => {
-  await requireBillingUpdatePermission(user);
+): Promise<RenewalDraftCreationResult | ActionPermissionError> => {
+  const denied = await requireBillingUpdatePermission(user);
+  if (denied) return denied;
 
   if (typeof clientContractId !== 'string' || clientContractId.trim().length === 0) {
     throw new Error('Client contract id is required');
@@ -671,8 +679,9 @@ export const snoozeRenewalQueueItem = withAuth(async (
   clientContractId: string,
   snoozedUntil: string,
   note?: string
-): Promise<RenewalSnoozeResult> => {
-  await requireBillingUpdatePermission(user);
+): Promise<RenewalSnoozeResult | ActionPermissionError> => {
+  const denied = await requireBillingUpdatePermission(user);
+  if (denied) return denied;
 
   if (typeof clientContractId !== 'string' || clientContractId.trim().length === 0) {
     throw new Error('Client contract id is required');
@@ -750,8 +759,9 @@ export const assignRenewalQueueItemOwner = withAuth(async (
   clientContractId: string,
   assignedTo: string | null,
   note?: string
-): Promise<RenewalAssignmentResult> => {
-  await requireBillingUpdatePermission(user);
+): Promise<RenewalAssignmentResult | ActionPermissionError> => {
+  const denied = await requireBillingUpdatePermission(user);
+  if (denied) return denied;
 
   if (typeof clientContractId !== 'string' || clientContractId.trim().length === 0) {
     throw new Error('Client contract id is required');
@@ -837,8 +847,9 @@ export const completeRenewalQueueItemForActivation = withAuth(async (
   clientContractId: string,
   activatedContractId?: string,
   note?: string
-): Promise<RenewalCompletionResult> => {
-  await requireBillingUpdatePermission(user);
+): Promise<RenewalCompletionResult | ActionPermissionError> => {
+  const denied = await requireBillingUpdatePermission(user);
+  if (denied) return denied;
 
   if (typeof clientContractId !== 'string' || clientContractId.trim().length === 0) {
     throw new Error('Client contract id is required');
@@ -939,8 +950,9 @@ export const completeRenewalQueueItemForNonRenewal = withAuth(async (
   { tenant },
   clientContractId: string,
   note?: string
-): Promise<RenewalQueueMutationResult> => {
-  await requireBillingUpdatePermission(user);
+): Promise<RenewalQueueMutationResult | ActionPermissionError> => {
+  const denied = await requireBillingUpdatePermission(user);
+  if (denied) return denied;
 
   if (typeof clientContractId !== 'string' || clientContractId.trim().length === 0) {
     throw new Error('Client contract id is required');
@@ -1002,8 +1014,9 @@ export const retryRenewalQueueTicketCreation = withAuth(async (
   user,
   { tenant },
   clientContractId: string
-): Promise<RenewalTicketRetryResult> => {
-  await requireBillingUpdatePermission(user);
+): Promise<RenewalTicketRetryResult | ActionPermissionError> => {
+  const denied = await requireBillingUpdatePermission(user);
+  if (denied) return denied;
 
   if (typeof clientContractId !== 'string' || clientContractId.trim().length === 0) {
     throw new Error('Client contract id is required');

@@ -17,6 +17,7 @@ import {
 } from '../../repositories/accountingExportRepository';
 import { AccountingExportValidation } from '../../validation/accountingExportValidation';
 import { AppError } from '../../errors';
+import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { AccountingExportInvoiceSelector } from '../../services/accountingExportInvoiceSelector';
 import { runWithTenant, createTenantKnex } from '../../db';
 import {
@@ -160,6 +161,10 @@ export class ApiAccountingExportController extends ApiBaseController {
         await this.authorize(apiRequest, 'read');
 
         const data = await getAccountingExportBatch(params.batchId);
+
+        if (isActionPermissionError(data)) {
+          return NextResponse.json({ error: 'forbidden', message: data.permissionError }, { status: 403 });
+        }
 
         if (!data.batch) {
           return NextResponse.json({ error: 'not_found' }, { status: 404 });
@@ -491,6 +496,11 @@ export class ApiAccountingExportController extends ApiBaseController {
 
         try {
           const result = await executeAccountingExportBatch(params.batchId);
+
+          if (isActionPermissionError(result)) {
+            return NextResponse.json({ error: 'forbidden', message: result.permissionError }, { status: 403 });
+          }
+
           const files = (result.metadata as any)?.files ?? [];
 
           if (!Array.isArray(files) || files.length === 0) {

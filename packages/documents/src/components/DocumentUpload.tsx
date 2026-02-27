@@ -4,6 +4,7 @@ import { useState, useRef } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { uploadDocument } from '../actions/documentActions';
 import type { IDocument } from '@alga-psa/types';
+import { isActionPermissionError, handleError } from '@alga-psa/ui/lib/errorHandling';
 import { Upload, X, FileUp } from 'lucide-react';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
@@ -167,6 +168,18 @@ export default function DocumentUpload({
             }
 
             const result = await uploadDocument(formData, options);
+
+            if (isActionPermissionError(result)) {
+                handleError(result.permissionError);
+                setUploadQueue(prev => prev.map((item, idx) =>
+                    idx === index ? {
+                        ...item,
+                        status: 'error' as const,
+                        error: result.permissionError
+                    } : item
+                ));
+                return;
+            }
 
             if (result.success) {
                 // Update status to success

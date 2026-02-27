@@ -60,6 +60,8 @@ export default defineConfig({
       { find: /^@alga-psa\/db\/admin$/, replacement: path.resolve(__dirname, '../packages/db/src/lib/admin.ts') },
       { find: /^@alga-psa\/db\/tenant$/, replacement: path.resolve(__dirname, '../packages/db/src/lib/tenant.ts') },
       { find: /^@alga-psa\/db\/connection$/, replacement: path.resolve(__dirname, '../packages/db/src/lib/connection.ts') },
+      { find: /^@alga-psa\/db\/models$/, replacement: path.resolve(__dirname, '../packages/db/src/models/index.ts') },
+      { find: /^@alga-psa\/db\/models\/(.*)$/, replacement: path.resolve(__dirname, '../packages/db/src/models/$1') },
 
       { find: /^@alga-psa\/types$/, replacement: path.resolve(__dirname, '../packages/types/src/index.ts') },
       { find: /^@alga-psa\/validation$/, replacement: path.resolve(__dirname, '../packages/validation/src/index.ts') },
@@ -83,6 +85,9 @@ export default defineConfig({
       { find: /^@alga-psa\/billing\/(.*)$/, replacement: path.resolve(__dirname, '../packages/billing/src/$1') },
       { find: /^@alga-psa\/projects$/, replacement: path.resolve(__dirname, '../packages/projects/src/index.ts') },
       { find: /^@alga-psa\/projects\/(.*)$/, replacement: path.resolve(__dirname, '../packages/projects/src/$1') },
+      { find: /^@alga-psa\/onboarding$/, replacement: path.resolve(__dirname, '../packages/onboarding/src/index.ts') },
+      { find: /^@alga-psa\/onboarding\/lib$/, replacement: path.resolve(__dirname, '../packages/onboarding/src/lib/index.ts') },
+      { find: /^@alga-psa\/onboarding\/(.*)$/, replacement: path.resolve(__dirname, '../packages/onboarding/src/$1') },
       { find: /^@alga-psa\/tickets$/, replacement: path.resolve(__dirname, '../packages/tickets/src/index.ts') },
       { find: /^@alga-psa\/tickets\/(.*)$/, replacement: path.resolve(__dirname, '../packages/tickets/src/$1') },
       { find: /^@alga-psa\/tags$/, replacement: path.resolve(__dirname, '../packages/tags/src/index.ts') },

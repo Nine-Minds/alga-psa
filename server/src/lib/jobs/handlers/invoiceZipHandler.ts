@@ -2,6 +2,7 @@ import { JobService, JobStepResult } from 'server/src/services/job.service';
 import { getTenantDetails } from '@alga-psa/tenancy/actions';
 import { getInvoiceForRendering } from '@alga-psa/billing/actions/invoiceQueries';
 import { uploadDocument } from '@alga-psa/documents/actions/documentActions';
+import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import type { TenantCompany } from 'server/src/lib/types';
 /// <reference types="formdata-node" />
 // @ts-ignore - Types exist but aren't properly exposed in package.json
@@ -190,6 +191,10 @@ export class InvoiceZipJobHandler {
         userId: data.requesterId,
         clientId: defaultClient.client_id
       });
+
+      if (isActionPermissionError(uploadResult)) {
+        throw new Error('Permission denied: ' + uploadResult.permissionError);
+      }
 
       if (!uploadResult.success) {
         throw new Error((uploadResult as { success: false; error: string }).error || 'Failed to upload zip document');

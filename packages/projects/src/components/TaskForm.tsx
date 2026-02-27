@@ -40,7 +40,7 @@ import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import DuplicateTaskDialog, { DuplicateOptions } from './DuplicateTaskDialog';
 import { Input } from '@alga-psa/ui/components/Input';
 import { toast } from 'react-hot-toast';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { TaskTypeSelector } from './TaskTypeSelector';
 import { getTaskTypes } from '../actions/projectTaskActions';
 import { ITaskType } from '@alga-psa/types';
@@ -286,8 +286,12 @@ export default function TaskForm({
         // Fetch all tasks in the project
         if (phase.project_id) {
           try {
-            const { tasks } = await getProjectDetails(phase.project_id);
-            setAllProjectTasks(tasks);
+            const projectDetailsResult = await getProjectDetails(phase.project_id);
+            if (isActionPermissionError(projectDetailsResult)) {
+              handleError(projectDetailsResult.permissionError);
+            } else {
+              setAllProjectTasks(projectDetailsResult.tasks);
+            }
           } catch (error) {
             console.error('Error fetching project tasks:', error);
           }
@@ -352,7 +356,10 @@ export default function TaskForm({
           // Fall back to fetching the data if not provided
           try {
             const treeData = await getProjectTreeData();
-            if (treeData && Array.isArray(treeData) && treeData.length > 0) {
+            if (isActionPermissionError(treeData)) {
+              handleError(treeData.permissionError);
+              setProjectTreeOptions([]);
+            } else if (treeData && Array.isArray(treeData) && treeData.length > 0) {
               setProjectTreeOptions(treeData);
             } else {
               console.error('Invalid or empty tree data received:', treeData);

@@ -15,7 +15,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Link, Plus, ExternalLink, Trash2, X } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
@@ -403,8 +403,14 @@ const TaskTicketLinks = forwardRef<TaskTicketLinksRef, TaskTicketLinksProps>(fun
 
   const handleCreateTicket = async () => {
     setShouldLinkNewTicket(true);
+    let permissionDenied = false;
     try {
       const project = await getProject(projectId);
+      if (isActionPermissionError(project)) {
+        handleError(project.permissionError);
+        permissionDenied = true;
+        return;
+      }
       if (project?.client_id) {
         setPrefilledClient({
           id: project.client_id,
@@ -417,7 +423,9 @@ const TaskTicketLinks = forwardRef<TaskTicketLinksRef, TaskTicketLinksProps>(fun
       console.error('Error fetching project for ticket prefill:', error);
       setPrefilledClient(undefined);
     } finally {
-      setShowCreateDialog(true);
+      if (!permissionDenied) {
+        setShowCreateDialog(true);
+      }
     }
   };
 

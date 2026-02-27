@@ -4,7 +4,7 @@ import { Label } from "@alga-psa/ui/components/Label";
 import { Input } from "@alga-psa/ui/components/Input";
 import { Button } from "@alga-psa/ui/components/Button";
 import toast from 'react-hot-toast';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { getDefaultBillingSettings, updateDefaultBillingSettings } from "@alga-psa/billing/actions";
 import type { BillingSettings } from "@alga-psa/billing/actions";
 
@@ -40,6 +40,10 @@ const CreditExpirationSettings = (): React.JSX.Element => {
         enableCreditExpiration: checked,
       };
       const result = await updateDefaultBillingSettings(newSettings);
+      if (isActionPermissionError(result)) {
+        handleError(result.permissionError);
+        return;
+      }
       if (result.success) {
         setSettings(newSettings);
         toast.success("Credit expiration settings have been updated.");
@@ -78,6 +82,10 @@ const CreditExpirationSettings = (): React.JSX.Element => {
       };
 
       const result = await updateDefaultBillingSettings(newSettings);
+      if (isActionPermissionError(result)) {
+        handleError(result.permissionError);
+        return;
+      }
       if (result.success) {
         setSettings(newSettings);
         toast.success("Credit expiration settings have been updated.");

@@ -18,6 +18,7 @@ import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContai
 import Pagination from '@alga-psa/ui/components/Pagination';
 import FolderTreeView from './FolderTreeView';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
 interface DocumentSelectorProps {
     id: string;
@@ -114,6 +115,14 @@ export default function DocumentSelector({
                 }, pageToLoad, pageSize);
             }
 
+            if (isActionPermissionError(response)) {
+                handleError(response.permissionError);
+                setDocuments([]);
+                setTotalPages(1);
+                setCurrentPage(1);
+                return;
+            }
+
             if (response && Array.isArray(response.documents)) {
                 // Filter out excluded document IDs without mutating the original response
                 const filteredDocuments = excludeDocumentIds && excludeDocumentIds.length > 0
@@ -193,11 +202,15 @@ export default function DocumentSelector({
                     await onDocumentsSelected(selectedDocs);
                 } else {
                     // Create associations for selected documents
-                    await createDocumentAssociations(
+                    const associationResult = await createDocumentAssociations(
                         entityId!,
                         entityType!,
                         selectedIds
                     );
+                    if (isActionPermissionError(associationResult)) {
+                        handleError(associationResult.permissionError);
+                        return;
+                    }
                     await onDocumentsSelected(selectedDocs);
                 }
             }

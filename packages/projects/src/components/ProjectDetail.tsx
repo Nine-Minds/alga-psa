@@ -27,7 +27,7 @@ import { getProjectTaskStatuses, updatePhase, deletePhase, getProjectTreeData, r
 import { updateTaskStatus, reorderTask, reorderTasksInStatus, moveTaskToPhase, updateTaskWithChecklist, getTaskChecklistItems, getTaskResourcesAction, getTaskTicketLinksAction, duplicateTaskToPhase, deleteTask as deleteTaskAction, getTasksForPhase, getTaskById, getAllProjectTasksForListView, getPhaseTaskCounts } from '../actions/projectTaskActions';
 import styles from './ProjectDetail.module.css';
 import { Toaster, toast } from 'react-hot-toast';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import DuplicateTaskDialog, { DuplicateOptions } from './DuplicateTaskDialog';
 import MoveTaskDialog from './MoveTaskDialog';
@@ -815,6 +815,10 @@ export default function ProjectDetail({
         
         // Fetch project tree data once
         const treeData = await getProjectTreeData();
+        if (isActionPermissionError(treeData)) {
+          handleError(treeData.permissionError);
+          return;
+        }
         setProjectTreeData(treeData);
         
         // Fetch priorities for project tasks
@@ -1303,8 +1307,12 @@ export default function ProjectDetail({
       const draggedPhase = projectPhases.find(p => p.phase_id === draggedPhaseId);
       if (!draggedPhase) return;
       
-      await reorderPhase(draggedPhaseId, beforePhaseId, afterPhaseId);
-      
+      const reorderResult = await reorderPhase(draggedPhaseId, beforePhaseId, afterPhaseId);
+      if (isActionPermissionError(reorderResult)) {
+        handleError(reorderResult.permissionError);
+        return;
+      }
+
       // Calculate the new order key locally for immediate UI update
       
       // Get the order keys for before and after phases
@@ -1684,12 +1692,16 @@ export default function ProjectDetail({
         start_date: editingStartDate || null,
         end_date: editingEndDate || null
       });
-  
+      if (isActionPermissionError(updatedPhase)) {
+        handleError(updatedPhase.permissionError);
+        return;
+      }
+
       setProjectPhases(prevPhases =>
         prevPhases.map((p): IProjectPhase =>
           p.phase_id === phase.phase_id
-            ? { 
-                ...p, 
+            ? {
+                ...p,
                 phase_name: editingPhaseName,
                 description: updatedPhase.description,
                 start_date: updatedPhase.start_date,
@@ -1726,8 +1738,12 @@ export default function ProjectDetail({
     if (!deletePhaseConfirmation) return;
 
     try {
-      await deletePhase(deletePhaseConfirmation.phaseId);
-      setProjectPhases(prevPhases => 
+      const deleteResult = await deletePhase(deletePhaseConfirmation.phaseId);
+      if (isActionPermissionError(deleteResult)) {
+        handleError(deleteResult.permissionError);
+        return;
+      }
+      setProjectPhases(prevPhases =>
         prevPhases.filter(phase => phase.phase_id !== deletePhaseConfirmation.phaseId)
       );
       if (selectedPhase?.phase_id === deletePhaseConfirmation.phaseId) {

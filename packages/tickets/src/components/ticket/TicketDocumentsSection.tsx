@@ -7,6 +7,7 @@ import Documents from '@alga-psa/documents/components/Documents';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { IDocument } from '@alga-psa/types';
 import { getDocumentByTicketId } from '@alga-psa/documents/actions/documentActions';
+import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import styles from './TicketDetails.module.css';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
@@ -51,6 +52,10 @@ const TicketDocumentsSection: React.FC<TicketDocumentsSectionProps> = ({
     setIsLoading(true);
     try {
       const docs = await getDocumentByTicketId(ticketId);
+      if (isActionPermissionError(docs)) {
+        setDocuments([]);
+        return;
+      }
       setDocuments(docs || []);
     } catch (error) {
       console.error('Error fetching documents:', error);
