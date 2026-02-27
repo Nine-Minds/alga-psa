@@ -111,3 +111,4 @@ Rolling notes for embedded inbound-email image extraction + source `.eml` persis
 - (2026-02-27) Completed T021 — Covered by emailAttachmentIngestion.integration.test.ts: process_original_email_attachment uploads .eml and creates file/document rows.
 - (2026-02-27) Completed T022 — Covered by emailAttachmentIngestion.integration.test.ts: process_original_email_attachment associates .eml document to ticket.
 - (2026-02-27) Completed T023 — Covered by emailAttachmentIngestion.integration.test.ts: duplicate process_original_email_attachment is idempotent.
+- (2026-02-27) Completed T024 — Covered by emailAttachmentIngestion.integration.test.ts: source-message retrieval failure records failed status.

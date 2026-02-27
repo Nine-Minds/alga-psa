@@ -201,7 +201,7 @@
   {
     "id": "T024",
     "description": "Action integration guard: provider source-message retrieval failure records failed status without duplicate artifacts",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F017",
       "F021"
