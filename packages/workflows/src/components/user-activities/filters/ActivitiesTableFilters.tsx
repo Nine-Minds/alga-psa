@@ -4,8 +4,8 @@
 import React, { useState, useImperativeHandle, forwardRef } from 'react';
 import {
   ActivityFilters as ActivityFiltersType,
-  ActivityPriority,
-  ActivityType
+  ActivityType,
+  IPriority
 } from "@alga-psa/types";
 import { Button } from "@alga-psa/ui/components/Button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@alga-psa/ui/components/Dialog";
@@ -14,9 +14,13 @@ import { Checkbox } from "@alga-psa/ui/components/Checkbox";
 import { StringDateRangePicker } from "@alga-psa/ui/components/DateRangePicker";
 import CustomSelect from "@alga-psa/ui/components/CustomSelect";
 
+// Activity types that support priority filtering via the priorities table
+const PRIORITY_FILTERABLE_TYPES = new Set([ActivityType.TICKET, ActivityType.PROJECT_TASK]);
+
 interface ActivitiesTableFiltersProps {
   filters: ActivityFiltersType;
   onChange: (filters: ActivityFiltersType) => void;
+  priorities?: IPriority[];
 }
 
 export interface ActivitiesTableFiltersRef {
@@ -24,16 +28,20 @@ export interface ActivitiesTableFiltersRef {
 }
 
 export const ActivitiesTableFilters = forwardRef<ActivitiesTableFiltersRef, ActivitiesTableFiltersProps>(
-  ({ filters, onChange }, ref) => {
+  ({ filters, onChange, priorities = [] }, ref) => {
     const [open, setOpen] = useState(false);
     const [localFilters, setLocalFilters] = useState<ActivityFiltersType>(filters);
-    const [selectedPriority, setSelectedPriority] = useState<string>(filters.priority?.[0] || 'all');
+    const [selectedPriorityId, setSelectedPriorityId] = useState<string>(filters.priorityIds?.[0] || 'all');
+
+    // Determine if priority filter should be enabled based on selected types
+    const isPriorityFilterAvailable = localFilters.types?.length === 1
+      && PRIORITY_FILTERABLE_TYPES.has(localFilters.types[0]);
 
     // Expose openDialog function via ref
     useImperativeHandle(ref, () => ({
       openDialog: () => {
         setLocalFilters(filters); // Ensure local state is synced with parent on open
-        setSelectedPriority(filters.priority?.[0] || 'all');
+        setSelectedPriorityId(filters.priorityIds?.[0] || 'all');
         setOpen(true);
       }
     }));
@@ -48,15 +56,20 @@ export const ActivitiesTableFilters = forwardRef<ActivitiesTableFiltersRef, Acti
         isClosed: false
       };
       setLocalFilters(resetFilters);
-      setSelectedPriority('all');
+      setSelectedPriorityId('all');
     };
 
     // Apply filters and close dialog
     const handleApply = () => {
       const filtersToApply: ActivityFiltersType = {
         ...localFilters,
-        priority: selectedPriority && selectedPriority !== 'all' ? [selectedPriority as ActivityPriority] : [],
+        priorityIds: isPriorityFilterAvailable && selectedPriorityId && selectedPriorityId !== 'all'
+          ? [selectedPriorityId]
+          : undefined,
       };
+      // Clean up priority enum filter (no longer used from this dialog)
+      delete filtersToApply.priority;
+      if (!filtersToApply.priorityIds) delete filtersToApply.priorityIds;
       onChange(filtersToApply);
       setOpen(false);
     };
@@ -88,6 +101,17 @@ export const ActivitiesTableFilters = forwardRef<ActivitiesTableFiltersRef, Acti
       }
 
       handleFilterChange(key, newValues as any);
+
+      // Clear priority selection when activity types change and the result
+      // is no longer a single prioritized type
+      if (key === 'types') {
+        const newTypes = newValues as string[];
+        const stillFilterable = newTypes.length === 1
+          && PRIORITY_FILTERABLE_TYPES.has(newTypes[0] as ActivityType);
+        if (!stillFilterable) {
+          setSelectedPriorityId('all');
+        }
+      }
     };
 
     // Check if a value is selected in an array filter
@@ -136,21 +160,37 @@ export const ActivitiesTableFilters = forwardRef<ActivitiesTableFiltersRef, Acti
               </div>
             </div>
 
-            {/* Priority Filter */}
+            {/* Priority Filter - only available when a single prioritized type is selected */}
             <div className="mt-4">
               <Label htmlFor="priority-select" className="text-lg font-semibold">Priority</Label>
-              <CustomSelect
-                id="priority-select"
-                value={selectedPriority}
-                onValueChange={(value) => setSelectedPriority(value)}
-                options={[
-                  { value: 'all', label: 'All Priorities' },
-                  { value: ActivityPriority.HIGH, label: 'High' },
-                  { value: ActivityPriority.MEDIUM, label: 'Medium' },
-                  { value: ActivityPriority.LOW, label: 'Low' },
-                ]}
-                placeholder="Select Priority..."
-              />
+              {isPriorityFilterAvailable && priorities.length > 0 ? (
+                <CustomSelect
+                  id="priority-select"
+                  value={selectedPriorityId}
+                  onValueChange={(value) => setSelectedPriorityId(value)}
+                  options={[
+                    { value: 'all', label: 'All Priorities' },
+                    ...priorities.map(p => ({
+                      value: p.priority_id,
+                      label: (
+                        <span className="flex items-center gap-2">
+                          <span
+                            className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                            style={{ backgroundColor: p.color || '#94a3b8' }}
+                          />
+                          {p.priority_name}
+                        </span>
+                      ),
+                      textValue: p.priority_name,
+                    }))
+                  ]}
+                  placeholder="Select Priority..."
+                />
+              ) : (
+                <p className="text-sm text-muted-foreground mt-1">
+                  Select a single activity type (Tickets or Project Tasks) to filter by priority.
+                </p>
+              )}
             </div>
 
             {/* Date Range Filter */}

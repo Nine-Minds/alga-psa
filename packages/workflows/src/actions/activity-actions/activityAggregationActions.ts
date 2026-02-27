@@ -404,6 +404,7 @@ export async function fetchProjectActivities(
         status: task.status_name || 'To Do', // Use the status name from standard_statuses
         statusColor: task.status_color || '#3b82f6', // Use the blue color for consistency
         priority,
+        priorityName: task.priority_name || undefined,
         priorityColor: task.priority_color || undefined,
         dueDate: task.due_date ? new Date(task.due_date).toISOString() : undefined,
         assignedTo: task.assigned_to ? [task.assigned_to] : [],
@@ -588,6 +589,7 @@ export async function fetchTicketActivities(
         type: ActivityType.TICKET,
         status: ticket.status_name || 'Unknown',
         priority,
+        priorityName: ticket.priority_name || undefined,
         priorityColor: ticket.priority_color || undefined,
         dueDate: ticket.due_date ? (new Date(ticket.due_date).toString() !== 'Invalid Date' ? new Date(ticket.due_date).toISOString() : undefined) : undefined,
         assignedTo: ticket.assigned_to ? [ticket.assigned_to] : [],

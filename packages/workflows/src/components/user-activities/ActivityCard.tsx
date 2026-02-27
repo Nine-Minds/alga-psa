@@ -3,7 +3,6 @@ import React from 'react';
 import {
   Activity,
   ScheduleActivity,
-  ActivityPriority,
   ActivityType
 } from "@alga-psa/types";
 import { useActivityDrawer } from "./ActivityDrawerProvider";
@@ -11,6 +10,7 @@ import { useRouter } from 'next/navigation';
 import { Card } from "@alga-psa/ui/components/Card";
 import { Badge } from "@alga-psa/ui/components/Badge";
 import { ActivityActionMenu } from "./ActivityActionMenu";
+import { Tooltip } from "@alga-psa/ui/components/Tooltip";
 import { Repeat } from 'lucide-react';
 
 // Format date to a readable format
@@ -45,17 +45,21 @@ export function ActivityCard({ activity, onViewDetails, onActionComplete, render
     [ActivityType.DOCUMENT]: 'border-teal-500',
   };
 
-  // Priority indicator - use actual color from DB if available, otherwise fallback to defaults
+  // Priority indicator - only show when a real priority is set (has color from DB)
   const getPriorityDot = () => {
-    if (activity.priorityColor) {
-      return <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: activity.priorityColor }} />;
+    if (!activity.priorityColor) return null;
+
+    const dot = (
+      <div
+        className="w-2 h-2 rounded-full flex-shrink-0"
+        style={{ backgroundColor: activity.priorityColor }}
+      />
+    );
+
+    if (activity.priorityName) {
+      return <Tooltip content={activity.priorityName}>{dot}</Tooltip>;
     }
-    const defaultColors: Record<ActivityPriority, string> = {
-      [ActivityPriority.LOW]: 'bg-muted-foreground',
-      [ActivityPriority.MEDIUM]: 'bg-warning',
-      [ActivityPriority.HIGH]: 'bg-destructive',
-    };
-    return <div className={`w-2 h-2 rounded-full ${defaultColors[activity.priority]}`} />;
+    return dot;
   };
 
   const router = useRouter();

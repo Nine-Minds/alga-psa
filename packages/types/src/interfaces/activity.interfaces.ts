@@ -74,6 +74,7 @@ export interface ActivityBase extends TenantEntity {
   status: string;
   statusColor?: string;
   priority: ActivityPriority;
+  priorityName?: string;
   priorityColor?: string;
   dueDate?: ISO8601String;
   startDate?: ISO8601String;

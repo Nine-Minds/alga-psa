@@ -15,6 +15,7 @@ import { ColumnDefinition } from '@alga-psa/types';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { formatDistanceToNow } from 'date-fns';
 import { ActivityActionMenu } from './ActivityActionMenu';
+import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { AlertTriangle, Calendar, Briefcase, TicketIcon, Clock, ListChecks, Repeat, Bell } from 'lucide-react';
 
 interface ActivitiesDataTableProps {
@@ -66,21 +67,16 @@ const getActivityTypeIcon = (type: ActivityType) => {
   }
 };
 
-// Get priority icon - uses actual color from DB when available
-const getPriorityIcon = (priority: ActivityPriority, priorityColor?: string) => {
-  if (priorityColor) {
-    return <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: priorityColor }} />;
+// Get priority icon - only renders when a real priority color from DB is available
+const getPriorityIcon = (priorityColor?: string, priorityName?: string) => {
+  if (!priorityColor) return null;
+
+  const dot = <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: priorityColor }} />;
+
+  if (priorityName) {
+    return <Tooltip content={priorityName}>{dot}</Tooltip>;
   }
-  switch (priority) {
-    case ActivityPriority.HIGH:
-      return <AlertTriangle className="h-4 w-4 text-destructive" />;
-    case ActivityPriority.MEDIUM:
-      return <div className="w-2 h-2 rounded-full bg-warning" />;
-    case ActivityPriority.LOW:
-      return <div className="w-2 h-2 rounded-full bg-muted-foreground" />;
-    default:
-      return null;
-  }
+  return dot;
 };
 
 // Get activity type label
@@ -163,12 +159,17 @@ export const ActivitiesDataTable = React.memo(function ActivitiesDataTable({
       title: 'Priority',
       dataIndex: 'priority',
       width: '10%',
-      render: (value, record) => (
-        <div className="flex items-center gap-2">
-          {getPriorityIcon(value as ActivityPriority, record.priorityColor)}
-          <span className="capitalize">{value}</span>
-        </div>
-      ),
+      render: (value, record) => {
+        if (!record.priorityColor) {
+          return <span className="text-muted-foreground">—</span>;
+        }
+        return (
+          <div className="flex items-center gap-2">
+            {getPriorityIcon(record.priorityColor, record.priorityName)}
+            <span>{record.priorityName || value}</span>
+          </div>
+        );
+      },
     },
     {
       title: 'Due Date',

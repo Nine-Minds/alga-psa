@@ -1,11 +1,8 @@
-// @ts-nocheck
-// TODO: ActivityFilters missing import
 'use server';
 
 import {
-  ActivityType,
-  Activity,
-  WorkflowTaskActivity
+  WorkflowTaskActivity,
+  ActivityFilters
 } from "@alga-psa/types";
 import { createTenantKnex } from "@alga-psa/db";
 import { withAuth } from "@alga-psa/auth";
@@ -13,7 +10,6 @@ import { revalidatePath } from "next/cache";
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { fetchWorkflowTaskActivities } from "./activityAggregationActions";
-import { IWorkflowExecution } from "@alga-psa/shared/workflow/persistence/workflowInterfaces";
 
 /**
  * Server action to fetch a workflow task by ID
@@ -28,7 +24,7 @@ export const fetchWorkflowTask = withAuth(async (
 ): Promise<WorkflowTaskActivity | null> => {
   try {
     // Fetch all workflow tasks for the user
-    const tasks = await fetchWorkflowTaskActivities(user.user_id, {}) as WorkflowTaskActivity[];
+    const tasks = await fetchWorkflowTaskActivities(user.user_id, _ctx.tenant, {}) as WorkflowTaskActivity[];
 
     // Find the task with the specified ID
     const task = tasks.find(t => t.id === taskId);
@@ -333,7 +329,7 @@ export const fetchDashboardWorkflowTasks = withAuth(async (
     }
 
     // Fetch workflow tasks for the user
-    const tasks = await fetchWorkflowTaskActivities(user.user_id, dashboardFilters) as WorkflowTaskActivity[];
+    const tasks = await fetchWorkflowTaskActivities(user.user_id, _ctx.tenant, dashboardFilters) as WorkflowTaskActivity[];
 
     // Sort tasks by priority and due date
     const sortedTasks = tasks.sort((a, b) => {
