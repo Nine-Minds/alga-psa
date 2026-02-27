@@ -295,5 +295,109 @@
       "F017",
       "F025"
     ]
+  },
+  {
+    "id": "T035",
+    "description": "Integration: IMAP webhook route returns success quickly after auth/validation/handoff without performing byte persistence inline",
+    "implemented": true,
+    "featureIds": [
+      "F026"
+    ]
+  },
+  {
+    "id": "T036",
+    "description": "Integration guard: IMAP webhook request with invalid/missing secret is rejected before any async handoff work",
+    "implemented": false,
+    "featureIds": [
+      "F026"
+    ]
+  },
+  {
+    "id": "T037",
+    "description": "Integration: per-attachment cap enforcement skips oversized attachment payloads at IMAP ingress with structured skip reason",
+    "implemented": false,
+    "featureIds": [
+      "F027",
+      "F033"
+    ]
+  },
+  {
+    "id": "T038",
+    "description": "Integration: total attachment byte cap enforcement truncates/skips excess artifacts while keeping message processing active",
+    "implemented": false,
+    "featureIds": [
+      "F027",
+      "F033"
+    ]
+  },
+  {
+    "id": "T039",
+    "description": "Integration: attachment-count cap enforcement limits processed artifacts per message and records deterministic skip reasons",
+    "implemented": false,
+    "featureIds": [
+      "F027",
+      "F033"
+    ]
+  },
+  {
+    "id": "T040",
+    "description": "Integration: raw MIME cap enforcement skips .eml persistence when raw source exceeds limit without failing ticket/comment flow",
+    "implemented": false,
+    "featureIds": [
+      "F027",
+      "F031",
+      "F033"
+    ]
+  },
+  {
+    "id": "T041",
+    "description": "Schema contract: IMAP webhook payload includes rawMimeBase64 and attachment content/isInline/contentId/id/name/contentType/size fields",
+    "implemented": false,
+    "featureIds": [
+      "F028"
+    ]
+  },
+  {
+    "id": "T042",
+    "description": "E2E: IMAP inbound with regular attachment bytes in payload creates storage-backed ticket document",
+    "implemented": false,
+    "featureIds": [
+      "F028",
+      "F029"
+    ]
+  },
+  {
+    "id": "T043",
+    "description": "E2E: IMAP inbound with referenced CID and data:image payload creates image documents only for referenced embedded images",
+    "implemented": false,
+    "featureIds": [
+      "F028",
+      "F030"
+    ]
+  },
+  {
+    "id": "T044",
+    "description": "E2E: IMAP inbound with rawMimeBase64 persists one deterministic original-email-*.eml document on ticket",
+    "implemented": false,
+    "featureIds": [
+      "F028",
+      "F031"
+    ]
+  },
+  {
+    "id": "T045",
+    "description": "Integration: async per-message artifact handling runs sequentially (or configured bounded concurrency) and does not fan out unbounded attachment work",
+    "implemented": false,
+    "featureIds": [
+      "F032"
+    ]
+  },
+  {
+    "id": "T046",
+    "description": "E2E guard: over-limit artifacts are skipped with recorded reasons while ticket/comment creation still succeeds",
+    "implemented": false,
+    "featureIds": [
+      "F033"
+    ]
   }
 ]
