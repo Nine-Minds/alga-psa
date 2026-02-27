@@ -448,6 +448,104 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
     expect(() => JSON.parse(comments[0].note)).not.toThrow();
   });
 
+  it('Google: in-app path persists regular attachment, embedded image, and original .eml via shared artifact orchestrator', async () => {
+    const providerId = uuidv4();
+    const mailbox = `support-gmail-artifacts-${uuidv4().slice(0, 6)}@example.com`;
+    const { defaultsId, subscriptionName } = await setupInboundDefaults({ providerId, mailbox });
+
+    cleanup.push(async () => {
+      await db('email_processed_attachments').where({ tenant: tenantId, provider_id: providerId }).delete();
+      await db('gmail_processed_history').where({ tenant: tenantId, provider_id: providerId }).delete();
+      await db('google_email_provider_config').where({ tenant: tenantId, email_provider_id: providerId }).delete();
+      await db('email_providers').where({ tenant: tenantId, id: providerId }).delete();
+      await db('inbound_ticket_defaults').where({ tenant: tenantId, id: defaultsId }).delete();
+    });
+
+    process.env.INBOUND_EMAIL_IN_APP_PROVIDER_IDS = providerId;
+
+    const messageId = `gmail-artifacts-${uuidv4()}@example.com`;
+    const subject = `Gmail artifacts ${uuidv4().slice(0, 6)}`;
+    gmailListMessagesSinceMock = vi.fn().mockResolvedValue([messageId]);
+    gmailGetMessageDetailsMock = vi.fn().mockResolvedValue({
+      id: messageId,
+      provider: 'google',
+      providerId,
+      tenant: tenantId,
+      receivedAt: new Date().toISOString(),
+      from: { email: 'sender@example.com', name: 'Sender' },
+      to: [{ email: mailbox, name: 'Support' }],
+      subject,
+      body: {
+        text: 'Google inbound body',
+        html: `<p>Body<img src="data:image/png;base64,${Buffer.from('gmail-embedded').toString('base64')}" /></p>`,
+      },
+      attachments: [
+        {
+          id: 'att-google-1',
+          name: 'google-regular.txt',
+          contentType: 'text/plain',
+          size: Buffer.from('google-regular').length,
+          content: Buffer.from('google-regular').toString('base64'),
+        },
+      ],
+      rawMimeBase64: Buffer.from('From: sender@example.com\r\n\r\ngmail').toString('base64'),
+      threadId: 'gmail-thread-1',
+      references: [],
+    });
+
+    const token = makeFakeJwt({
+      aud: 'http://localhost:3000/api/email/webhooks/google',
+      iss: 'issuer',
+      sub: 'subject',
+      email: 'pubsub-publishing@system.gserviceaccount.com',
+    });
+    const notification = { emailAddress: mailbox, historyId: '300' };
+    const payload = {
+      message: {
+        data: Buffer.from(JSON.stringify(notification)).toString('base64'),
+        messageId: 'pubsub-gmail-artifacts',
+        publishTime: new Date().toISOString(),
+      },
+      subscription: `projects/project/subscriptions/${subscriptionName}`,
+    };
+
+    const { POST } = await import('@alga-psa/integrations/webhooks/email/google');
+    const req = new NextRequest('http://localhost:3000/api/email/webhooks/google', {
+      method: 'POST',
+      headers: {
+        authorization: `Bearer ${token}`,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+    const res = await POST(req);
+    expect(res.status).toBe(200);
+
+    const ticket = await db('tickets')
+      .where({ tenant: tenantId, title: subject })
+      .first<any>();
+    expect(ticket).toBeDefined();
+
+    cleanup.push(async () => {
+      await db('comments').where({ tenant: tenantId, ticket_id: ticket.ticket_id }).delete();
+      await db('document_associations').where({ tenant: tenantId, entity_id: ticket.ticket_id }).delete();
+      await db('tickets').where({ tenant: tenantId, ticket_id: ticket.ticket_id }).delete();
+    });
+
+    const docs = await db('documents as d')
+      .join('document_associations as da', function () {
+        this.on('d.document_id', 'da.document_id').andOn('d.tenant', 'da.tenant');
+      })
+      .where('d.tenant', tenantId)
+      .andWhere('da.entity_type', 'ticket')
+      .andWhere('da.entity_id', ticket.ticket_id)
+      .select('d.document_name');
+    const docNames = docs.map((d: any) => d.document_name);
+    expect(docNames).toContain('google-regular.txt');
+    expect(docNames).toContain('embedded-image-1.png');
+    expect(docNames).toContain(expectedOriginalEmailFileName(messageId));
+  });
+
   it('Microsoft: webhook processes a new inbound email and creates 1 ticket + 1 initial comment', async () => {
     const providerId = uuidv4();
     const mailbox = `support-ms-${uuidv4().slice(0, 6)}@example.com`;
@@ -521,6 +619,103 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
     const comments = await db('comments').where({ tenant: tenantId, ticket_id: ticketId });
     expect(comments).toHaveLength(1);
     expect(() => JSON.parse(comments[0].note)).not.toThrow();
+  });
+
+  it('Microsoft: in-app path persists regular attachment, embedded image, and original .eml via shared artifact orchestrator', async () => {
+    const providerId = uuidv4();
+    const mailbox = `support-ms-artifacts-${uuidv4().slice(0, 6)}@example.com`;
+    const subscriptionId = `sub-ms-artifacts-${uuidv4()}`;
+    const { defaultsId } = await setupMicrosoftProvider({ providerId, mailbox, subscriptionId });
+
+    cleanup.push(async () => {
+      await db('email_processed_attachments').where({ tenant: tenantId, provider_id: providerId }).delete();
+      await db('microsoft_email_provider_config').where({ tenant: tenantId, email_provider_id: providerId }).delete();
+      await db('email_providers').where({ tenant: tenantId, id: providerId }).delete();
+      await db('inbound_ticket_defaults').where({ tenant: tenantId, id: defaultsId }).delete();
+    });
+
+    process.env.INBOUND_EMAIL_IN_APP_PROVIDER_IDS = providerId;
+
+    const messageId = `ms-artifacts-${uuidv4()}@example.com`;
+    const subject = `MS artifacts ${uuidv4().slice(0, 6)}`;
+    microsoftGetMessageDetailsMock = vi.fn().mockResolvedValue({
+      id: messageId,
+      provider: 'microsoft',
+      providerId,
+      tenant: tenantId,
+      receivedAt: new Date().toISOString(),
+      from: { email: 'sender@example.com', name: 'Sender' },
+      to: [{ email: mailbox, name: 'Support' }],
+      subject,
+      body: {
+        text: 'MS inbound body',
+        html: `<p>Body<img src="data:image/png;base64,${Buffer.from('ms-embedded').toString('base64')}" /></p>`,
+      },
+      attachments: [
+        {
+          id: 'att-ms-1',
+          name: 'ms-regular.txt',
+          contentType: 'text/plain',
+          size: Buffer.from('ms-regular').length,
+          content: Buffer.from('ms-regular').toString('base64'),
+        },
+      ],
+      rawMimeBase64: Buffer.from('From: sender@example.com\r\n\r\nmicrosoft').toString('base64'),
+      threadId: 'ms-thread-1',
+      references: [],
+    });
+
+    const payload = {
+      value: [
+        {
+          changeType: 'created',
+          clientState: 'ignored',
+          resource: `/users/${uuidv4()}/messages/${messageId}`,
+          resourceData: {
+            '@odata.type': '#microsoft.graph.message',
+            '@odata.id': 'ignored',
+            id: messageId,
+            subject,
+          },
+          subscriptionExpirationDateTime: new Date(Date.now() + 60_000).toISOString(),
+          subscriptionId,
+          tenantId: 'ignored',
+        },
+      ],
+    };
+
+    const { POST } = await import('@alga-psa/integrations/webhooks/email/microsoft');
+    const req = new NextRequest('http://localhost:3000/api/email/webhooks/microsoft', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const res = await POST(req);
+    expect(res.status).toBe(200);
+
+    const ticket = await db('tickets')
+      .where({ tenant: tenantId, title: subject })
+      .first<any>();
+    expect(ticket).toBeDefined();
+
+    cleanup.push(async () => {
+      await db('comments').where({ tenant: tenantId, ticket_id: ticket.ticket_id }).delete();
+      await db('document_associations').where({ tenant: tenantId, entity_id: ticket.ticket_id }).delete();
+      await db('tickets').where({ tenant: tenantId, ticket_id: ticket.ticket_id }).delete();
+    });
+
+    const docs = await db('documents as d')
+      .join('document_associations as da', function () {
+        this.on('d.document_id', 'da.document_id').andOn('d.tenant', 'da.tenant');
+      })
+      .where('d.tenant', tenantId)
+      .andWhere('da.entity_type', 'ticket')
+      .andWhere('da.entity_id', ticket.ticket_id)
+      .select('d.document_name');
+    const docNames = docs.map((d: any) => d.document_name);
+    expect(docNames).toContain('ms-regular.txt');
+    expect(docNames).toContain('embedded-image-1.png');
+    expect(docNames).toContain(expectedOriginalEmailFileName(messageId));
   });
 
   it('IMAP in-app path persists regular attachment, embedded image, and original .eml as ticket documents', async () => {

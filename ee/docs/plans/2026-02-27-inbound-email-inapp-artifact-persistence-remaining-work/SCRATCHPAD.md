@@ -283,3 +283,9 @@ Create a clean, implementation-ready plan containing only remaining work for inb
   - Test sets worker env above max (`99`) and verifies active workers cap at `8` with remaining items queued, then drains to idle.
 - Validation:
   - Reused combined webhook + queue vitest run from `T235`.
+- 2026-02-27: Completed `T239`.
+  - Added Google webhook integration scenario in `server/src/test/integration/inboundEmailInApp.webhooks.integration.test.ts` that exercises in-app mode with all artifact classes.
+  - Test asserts ticket-associated documents include provider attachment, extracted embedded image, and deterministic original-email `.eml`, verifying shared artifact orchestrator behavior.
+- Validation:
+  - `cd server && npx vitest run src/test/integration/inboundEmailInApp.webhooks.integration.test.ts -t "shared artifact orchestrator" --coverage.enabled=false`
+  - Environment note: DB-gated integration suite was skipped in this local session (`describeDb`).
