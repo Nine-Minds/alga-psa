@@ -333,7 +333,7 @@
   {
     "id": "T039",
     "description": "Integration: attachment-count cap enforcement limits processed artifacts per message and records deterministic skip reasons",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F027",
       "F033"
