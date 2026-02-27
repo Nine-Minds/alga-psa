@@ -20,10 +20,6 @@ vi.mock('next/navigation', () => ({
   useSearchParams: () => ({ toString: () => '', get: () => null }),
 }));
 
-vi.mock('@alga-psa/ui/hooks', () => ({
-  useFeatureFlag: () => ({ enabled: true, loading: false, error: null }),
-}));
-
 vi.mock('@alga-psa/billing/actions/invoiceTemplates', () => ({
   getInvoiceTemplate: (...args: unknown[]) => getInvoiceTemplateMock(...args),
   saveInvoiceTemplate: (...args: unknown[]) => saveInvoiceTemplateMock(...args),

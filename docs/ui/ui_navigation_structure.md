@@ -22,7 +22,7 @@ DefaultLayout (server/src/components/layout/DefaultLayout.tsx)
 
 - **TenantBadge**: Shows current tenant name
 - **QuickCreateMenu**: Global quick-create dropdown (tickets, clients, contacts, projects, assets, services, products)
-- **ThemeToggle**: Light/dark/system theme switcher (feature-flagged behind `themes-enabled`)
+- **ThemeToggle**: Light/dark/system theme switcher
 - **NotificationBell**: Notification center
 - **JobActivityIndicator**: Background job metrics
 - **User Dropdown**: Profile, account, sign out
