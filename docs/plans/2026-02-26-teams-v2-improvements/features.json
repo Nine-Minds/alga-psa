@@ -233,7 +233,7 @@
   {
     "id": "F079",
     "description": "UserManagement: rename 'Org Chart' label to 'Structure' in userViewOptions",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-3B.9"
     ]

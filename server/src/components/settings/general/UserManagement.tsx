@@ -521,7 +521,7 @@ const fetchContacts = async (): Promise<void> => {
 
   const userViewOptions: ViewSwitcherOption<'list' | 'org'>[] = [
     { value: 'list', label: 'List' },
-    { value: 'org', label: 'Org Chart' }
+    { value: 'org', label: 'Structure' }
   ];
 
   const getDisplayName = (user: IUser) => {
