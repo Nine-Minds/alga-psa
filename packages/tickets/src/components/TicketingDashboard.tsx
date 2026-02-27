@@ -39,6 +39,7 @@ import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { createTicketColumns } from '@alga-psa/tickets/lib';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import MultiUserPicker from '@alga-psa/ui/components/MultiUserPicker';
+import MultiUserAndTeamPicker from '@alga-psa/ui/components/MultiUserAndTeamPicker';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
@@ -1385,22 +1386,38 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                   onClientTypeFilterChange={handleClientTypeFilterChange}
                   fitContent={true}
                 />
-                <MultiUserPicker
-                  id={`${id}-assignee-filter`}
-                  users={initialUsers}
-                  values={selectedAssignees}
-                  onValuesChange={setSelectedAssignees}
-                  teams={teamsV2Enabled ? teams : []}
-                  teamValues={teamsV2Enabled ? selectedTeams : []}
-                  onTeamValuesChange={teamsV2Enabled ? setSelectedTeams : undefined}
-                  getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
-                  filterMode={true}
-                  includeUnassigned={includeUnassigned}
-                  onUnassignedChange={setIncludeUnassigned}
-                  placeholder="All Assignees"
-                  showSearch={true}
-                  compactDisplay={true}
-                />
+                {teamsV2Enabled ? (
+                  <MultiUserAndTeamPicker
+                    id={`${id}-assignee-filter`}
+                    users={initialUsers}
+                    values={selectedAssignees}
+                    onValuesChange={setSelectedAssignees}
+                    teams={teams}
+                    teamValues={selectedTeams}
+                    onTeamValuesChange={setSelectedTeams}
+                    getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
+                    filterMode={true}
+                    includeUnassigned={includeUnassigned}
+                    onUnassignedChange={setIncludeUnassigned}
+                    placeholder="All Assignees"
+                    showSearch={true}
+                    compactDisplay={true}
+                  />
+                ) : (
+                  <MultiUserPicker
+                    id={`${id}-assignee-filter`}
+                    users={initialUsers}
+                    values={selectedAssignees}
+                    onValuesChange={setSelectedAssignees}
+                    getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
+                    filterMode={true}
+                    includeUnassigned={includeUnassigned}
+                    onUnassignedChange={setIncludeUnassigned}
+                    placeholder="All Assignees"
+                    showSearch={true}
+                    compactDisplay={true}
+                  />
+                )}
                 <CustomSelect
                   data-automation-id={`${id}-status-select`}
                   options={statusOptions}

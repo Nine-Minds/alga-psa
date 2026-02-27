@@ -322,7 +322,7 @@
   {
     "id": "F090",
     "description": "Call sites swap `MultiUserPicker` \u2192 `MultiUserAndTeamPicker` when `teams-v2` flag is enabled",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-3D.5"
     ]
