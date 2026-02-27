@@ -99,7 +99,7 @@
   {
     "id": "F012",
     "description": "Add a dedicated workflow action for original-source email persistence as .eml",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements"
     ]
