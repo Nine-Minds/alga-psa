@@ -528,7 +528,7 @@
   {
     "id": "T062",
     "description": "Subscriber regression: watcher recipient extraction/sending remains email-driven and unaffected by presence of entity metadata fields.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F036",
       "F025"
