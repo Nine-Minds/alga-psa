@@ -332,7 +332,7 @@
   {
     "id": "T123",
     "description": "OrgChart nodes show user avatars (fetched in batch)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F074"
     ]
