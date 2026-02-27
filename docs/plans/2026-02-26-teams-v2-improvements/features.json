@@ -43,7 +43,7 @@
   {
     "id": "F056",
     "description": "Add `getTeamAvatarUrl()` helper function in `packages/media/src/lib/avatarUtils.ts`",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-3A.3"
     ]

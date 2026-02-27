@@ -80,3 +80,7 @@ export async function getContactAvatarUrl(contactId: string, tenant: string): Pr
 export async function getClientLogoUrl(clientId: string, tenant: string): Promise<string | null> {
   return getEntityImageUrl('client', clientId, tenant);
 }
+
+export async function getTeamAvatarUrl(teamId: string, tenant: string): Promise<string | null> {
+  return getEntityImageUrl('team', teamId, tenant);
+}
