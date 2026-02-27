@@ -51,7 +51,7 @@
   {
     "id": "F057",
     "description": "Create `TeamAvatar` component in `packages/ui/src/components/TeamAvatar.tsx` (thin wrapper around EntityAvatar, following UserAvatar pattern)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-3A.4"
     ]

@@ -70,3 +70,4 @@
 - (2026-02-27) Added `team` to formatting `EntityType` union in `packages/formatting/src/avatarUtils.ts`.
 - (2026-02-27) Added `team` to UI `EntityType` union in `packages/ui/src/components/EntityImageUpload.tsx`.
 - (2026-02-27) Added `getTeamAvatarUrl` helper to `packages/media/src/lib/avatarUtils.ts`.
+- (2026-02-27) Added `TeamAvatar` component in `packages/ui/src/components/TeamAvatar.tsx` as a thin `EntityAvatar` wrapper.
