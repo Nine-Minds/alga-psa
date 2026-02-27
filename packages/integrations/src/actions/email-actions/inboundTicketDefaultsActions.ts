@@ -218,7 +218,7 @@ export const deleteInboundTicketDefaults = withAuth(async (
   const { knex } = await createTenantKnex();
   
   try {
-    const result = await knex.transaction(async (trx) => {
+    const deletedCount = await knex.transaction<number>(async (trx) => {
       // Clear all known references before deleting the defaults row.
       // This keeps delete behavior consistent with nullable destination references.
       await trx('email_providers')
@@ -248,12 +248,14 @@ export const deleteInboundTicketDefaults = withAuth(async (
           });
       }
 
-      return trx('inbound_ticket_defaults')
+      const rowsDeleted = await trx('inbound_ticket_defaults')
         .where({ id, tenant })
         .delete();
+
+      return Number(rowsDeleted);
     });
 
-    if (result === 0) {
+    if (deletedCount === 0) {
       throw new Error('Defaults configuration not found');
     }
   } catch (error) {
