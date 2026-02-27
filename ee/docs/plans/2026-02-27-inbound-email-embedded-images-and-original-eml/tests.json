@@ -81,7 +81,7 @@
   {
     "id": "T010",
     "description": "Workflow integration: new-ticket inbound path invokes embedded-image processing for extracted images",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F007",
       "F009"
