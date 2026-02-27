@@ -369,7 +369,7 @@
   {
     "id": "T043",
     "description": "E2E: IMAP inbound with referenced CID and data:image payload creates image documents only for referenced embedded images",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F028",
       "F030"

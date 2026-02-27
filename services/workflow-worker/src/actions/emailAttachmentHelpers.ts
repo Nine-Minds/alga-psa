@@ -12,6 +12,7 @@ export interface EmailAttachmentLike {
   size?: number;
   contentId?: string;
   isInline?: boolean;
+  content?: string;
 }
 
 export interface SyntheticEmbeddedAttachment {
@@ -90,7 +91,7 @@ function messageIdForFileName(messageId: string): string {
 
 function extractDataImageUrls(html: string): Array<{ contentType: string; base64: string; index: number }> {
   const matches: Array<{ contentType: string; base64: string; index: number }> = [];
-  const regex = /data:(image\/[a-z0-9.+-]+);base64,([a-z0-9+/=\s]+)/gim;
+  const regex = /data:(image\/[a-z0-9.+-]+);base64,([^"'<>]+)/gim;
   let match: RegExpExecArray | null = null;
   while ((match = regex.exec(html)) !== null) {
     matches.push({
@@ -199,7 +200,19 @@ export function extractEmbeddedImageAttachments(input: {
       }
 
       const declaredSize = typeof matched.size === 'number' ? matched.size : 0;
-      if (declaredSize > maxBytes) {
+      let inlineContent: string | undefined;
+      if (typeof matched.content === 'string' && matched.content.trim()) {
+        const normalizedContent = matched.content.trim().replace(/\s+/g, '');
+        if (isLikelyBase64(normalizedContent)) {
+          inlineContent = normalizedContent;
+        } else {
+          warnings.push(`skipped_invalid_cid_content:${cid}`);
+        }
+      }
+
+      const inferredSize = inlineContent ? estimateBase64DecodedSize(inlineContent) : 0;
+      const effectiveSize = declaredSize > 0 ? declaredSize : inferredSize;
+      if (effectiveSize > maxBytes) {
         warnings.push(`skipped_oversize_cid:${cid}`);
         return;
       }
@@ -215,7 +228,8 @@ export function extractEmbeddedImageAttachments(input: {
         id: `embedded-cid-${deterministicHash}`,
         name,
         contentType,
-        size: declaredSize,
+        size: effectiveSize,
+        content: inlineContent,
         providerAttachmentId,
         source: 'cid',
         allowInlineProcessing: true,

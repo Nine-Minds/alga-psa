@@ -373,6 +373,97 @@ describe('Email attachment ingestion (workflow-worker action override)', () => {
     expect(assoc).toBeTruthy();
   });
 
+  it('T043: IMAP referenced CID + data:image create only referenced embedded image documents', async () => {
+    const { action: extractEmbedded } = await createEmbeddedExtractionAction();
+    const { action: processAttachment } = await createAttachmentAction();
+    const providerId = uuidv4();
+    const ticketId = uuidv4();
+    const emailId = `imap-msg-embedded-${uuidv4()}`;
+
+    await insertImapProvider(db, tenantId, providerId);
+
+    const htmlDataImage = Buffer.from('inline-data-image', 'utf-8').toString('base64');
+    const referencedCidBytes = Buffer.from('cid-referenced-image', 'utf-8').toString('base64');
+    const unreferencedCidBytes = Buffer.from('cid-unreferenced-image', 'utf-8').toString('base64');
+    const attachments = [
+      {
+        id: 'cid-ref-1',
+        name: 'cid-referenced.png',
+        contentType: 'image/png',
+        size: Buffer.from(referencedCidBytes, 'base64').length,
+        contentId: '<cid-ref-1>',
+        isInline: true,
+        content: referencedCidBytes,
+      },
+      {
+        id: 'cid-unref-1',
+        name: 'cid-unreferenced.png',
+        contentType: 'image/png',
+        size: Buffer.from(unreferencedCidBytes, 'base64').length,
+        contentId: '<cid-unref-1>',
+        isInline: true,
+        content: unreferencedCidBytes,
+      },
+    ];
+
+    const extraction = await extractEmbedded.execute(
+      {
+        emailId,
+        html: `<p><img src="data:image/png;base64,${htmlDataImage}" /><img src="cid:cid-ref-1" /></p>`,
+        attachments,
+      },
+      {
+        tenant: tenantId,
+        executionId: 'test',
+        idempotencyKey: 'test',
+        parameters: {},
+        knex: db,
+      } as any
+    );
+
+    expect(extraction).toMatchObject({ success: true });
+    expect(Array.isArray(extraction.attachments)).toBe(true);
+    expect(extraction.attachments).toHaveLength(2);
+    expect(extraction.attachments.map((a: any) => a.source).sort()).toEqual(['cid', 'data-url']);
+
+    for (const syntheticAttachment of extraction.attachments as any[]) {
+      const result = await processAttachment.execute(
+        {
+          emailId,
+          attachmentId: syntheticAttachment.id,
+          ticketId,
+          tenant: tenantId,
+          providerId,
+          attachmentData: syntheticAttachment,
+        },
+        {
+          tenant: tenantId,
+          executionId: 'test',
+          idempotencyKey: `test-${syntheticAttachment.id}`,
+          parameters: {},
+          knex: db,
+        } as any
+      );
+
+      expect(result).toMatchObject({ success: true });
+    }
+
+    const persistedDocs = await db('documents')
+      .where({ tenant: tenantId })
+      .whereIn('document_name', ['embedded-image-1.png', 'cid-referenced.png'])
+      .select('document_name');
+    expect(persistedDocs).toHaveLength(2);
+
+    const unreferencedDoc = await db('documents')
+      .where({ tenant: tenantId, document_name: 'cid-unreferenced.png' })
+      .first();
+    expect(unreferencedDoc).toBeUndefined();
+
+    const assocs = await db('document_associations')
+      .where({ tenant: tenantId, entity_type: 'ticket', entity_id: ticketId });
+    expect(assocs).toHaveLength(2);
+  });
+
   it('retries failed processing without duplicating records', async () => {
     const { action } = await createAttachmentAction();
     const providerId = uuidv4();
