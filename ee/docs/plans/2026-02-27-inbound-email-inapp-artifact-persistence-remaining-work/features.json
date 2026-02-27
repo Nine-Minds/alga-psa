@@ -128,7 +128,7 @@
   {
     "id": "F235",
     "description": "Document local GreenMail/IMAP validation runbook for the in-app artifact path",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Rollout", "References"]
   }
 ]

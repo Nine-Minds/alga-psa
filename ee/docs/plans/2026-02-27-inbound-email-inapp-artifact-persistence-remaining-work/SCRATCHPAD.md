@@ -145,3 +145,7 @@ Create a clean, implementation-ready plan containing only remaining work for inb
 - Validation:
   - `cd server && npx vitest run src/test/integration/inboundEmailInApp.webhooks.integration.test.ts --coverage.enabled=false`
   - Result in this environment: suite discovered but DB-gated tests skipped (`describeDb` guard).
+- 2026-02-27: Completed `F235`.
+  - Added local operator runbook:
+    - `ee/docs/plans/2026-02-27-inbound-email-inapp-artifact-persistence-remaining-work/GREENMAIL-IMAP-INAPP-RUNBOOK.md`
+  - Runbook includes setup, SMTP send step, log checks, DB verification queries, and UI verification for regular/embedded/`.eml` artifact outcomes.
