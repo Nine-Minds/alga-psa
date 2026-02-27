@@ -194,7 +194,7 @@
   {
     "id": "T106",
     "description": "`useTeamAvatar` is exported from teams hooks barrel",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F065"
     ]
