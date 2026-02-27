@@ -159,18 +159,21 @@ exports.up = async function(knex) {
         END $$;
     `);
 
-    // Create indexes for tenant-based queries
-    await knex.raw(`
-        CREATE INDEX IF NOT EXISTS idx_sla_policies_tenant ON sla_policies(tenant);
-        CREATE INDEX IF NOT EXISTS idx_sla_policies_is_default ON sla_policies(tenant, is_default);
-        CREATE INDEX IF NOT EXISTS idx_sla_policy_targets_tenant ON sla_policy_targets(tenant);
-        CREATE INDEX IF NOT EXISTS idx_sla_policy_targets_policy ON sla_policy_targets(tenant, sla_policy_id);
-        CREATE INDEX IF NOT EXISTS idx_sla_policy_targets_priority ON sla_policy_targets(tenant, priority_id);
-        CREATE INDEX IF NOT EXISTS idx_status_sla_pause_config_tenant ON status_sla_pause_config(tenant);
-        CREATE INDEX IF NOT EXISTS idx_status_sla_pause_config_status ON status_sla_pause_config(tenant, status_id);
-        CREATE INDEX IF NOT EXISTS idx_clients_sla_policy ON clients(tenant, sla_policy_id);
-        CREATE INDEX IF NOT EXISTS idx_boards_sla_policy ON boards(tenant, sla_policy_id);
-    `);
+    // Execute index DDL one statement at a time (PostgreSQL prepared statements reject multi-command strings)
+    const indexCreateStatements = [
+        'CREATE INDEX IF NOT EXISTS idx_sla_policies_tenant ON sla_policies(tenant)',
+        'CREATE INDEX IF NOT EXISTS idx_sla_policies_is_default ON sla_policies(tenant, is_default)',
+        'CREATE INDEX IF NOT EXISTS idx_sla_policy_targets_tenant ON sla_policy_targets(tenant)',
+        'CREATE INDEX IF NOT EXISTS idx_sla_policy_targets_policy ON sla_policy_targets(tenant, sla_policy_id)',
+        'CREATE INDEX IF NOT EXISTS idx_sla_policy_targets_priority ON sla_policy_targets(tenant, priority_id)',
+        'CREATE INDEX IF NOT EXISTS idx_status_sla_pause_config_tenant ON status_sla_pause_config(tenant)',
+        'CREATE INDEX IF NOT EXISTS idx_status_sla_pause_config_status ON status_sla_pause_config(tenant, status_id)',
+        'CREATE INDEX IF NOT EXISTS idx_clients_sla_policy ON clients(tenant, sla_policy_id)',
+        'CREATE INDEX IF NOT EXISTS idx_boards_sla_policy ON boards(tenant, sla_policy_id)',
+    ];
+    for (const statement of indexCreateStatements) {
+        await knex.raw(statement);
+    }
 
     // Create unique constraint for sla_policy_targets (one target per policy+priority combination)
     await knex.raw(`
@@ -190,20 +193,23 @@ exports.up = async function(knex) {
  * @returns { Promise<void> }
  */
 exports.down = async function(knex) {
-    // Drop indexes
-    await knex.raw(`
-        DROP INDEX IF EXISTS idx_status_sla_pause_config_unique_status;
-        DROP INDEX IF EXISTS idx_sla_policy_targets_unique_policy_priority;
-        DROP INDEX IF EXISTS idx_boards_sla_policy;
-        DROP INDEX IF EXISTS idx_clients_sla_policy;
-        DROP INDEX IF EXISTS idx_status_sla_pause_config_status;
-        DROP INDEX IF EXISTS idx_status_sla_pause_config_tenant;
-        DROP INDEX IF EXISTS idx_sla_policy_targets_priority;
-        DROP INDEX IF EXISTS idx_sla_policy_targets_policy;
-        DROP INDEX IF EXISTS idx_sla_policy_targets_tenant;
-        DROP INDEX IF EXISTS idx_sla_policies_is_default;
-        DROP INDEX IF EXISTS idx_sla_policies_tenant;
-    `);
+    // Execute index drops one statement at a time for the same prepared statement compatibility
+    const indexDropStatements = [
+        'DROP INDEX IF EXISTS idx_status_sla_pause_config_unique_status',
+        'DROP INDEX IF EXISTS idx_sla_policy_targets_unique_policy_priority',
+        'DROP INDEX IF EXISTS idx_boards_sla_policy',
+        'DROP INDEX IF EXISTS idx_clients_sla_policy',
+        'DROP INDEX IF EXISTS idx_status_sla_pause_config_status',
+        'DROP INDEX IF EXISTS idx_status_sla_pause_config_tenant',
+        'DROP INDEX IF EXISTS idx_sla_policy_targets_priority',
+        'DROP INDEX IF EXISTS idx_sla_policy_targets_policy',
+        'DROP INDEX IF EXISTS idx_sla_policy_targets_tenant',
+        'DROP INDEX IF EXISTS idx_sla_policies_is_default',
+        'DROP INDEX IF EXISTS idx_sla_policies_tenant',
+    ];
+    for (const statement of indexDropStatements) {
+        await knex.raw(statement);
+    }
 
     // Remove foreign key constraint from boards
     await knex.raw(`
