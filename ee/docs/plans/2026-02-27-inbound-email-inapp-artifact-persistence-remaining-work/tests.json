@@ -90,7 +90,7 @@
   {
     "id": "T224",
     "description": "Integration: .eml filename matches original-email-<sanitized-message-id>.eml",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F223"
     ]

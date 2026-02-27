@@ -205,3 +205,9 @@ Create a clean, implementation-ready plan containing only remaining work for inb
 - Validation:
   - `cd server && npx vitest run src/test/integration/inboundEmailInApp.webhooks.integration.test.ts -t "IMAP in-app path persists regular attachment, embedded image, and original .eml as ticket documents" --coverage.enabled=false`
   - Environment note: DB-gated integration suite was skipped in this local session (`describeDb`).
+- 2026-02-27: Completed `T224`.
+  - Existing IMAP integration assertion in `server/src/test/integration/inboundEmailInApp.webhooks.integration.test.ts` verifies deterministic filename format:
+    - `original-email-<sanitized-message-id>.eml`.
+  - Assertion uses the full expected file name derived from message id normalization.
+- Validation:
+  - Reused targeted IMAP integration command from `T223`.
