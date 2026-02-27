@@ -109,3 +109,4 @@ Rolling notes for embedded inbound-email image extraction + source `.eml` persis
 - (2026-02-27) Completed T019 — Covered by emailAttachmentHelpers.test.ts: raw MIME extraction returns bytes when MailHog/test source content is present.
 - (2026-02-27) Completed T020 — Covered by emailAttachmentHelpers.test.ts: deterministic RFC822 fallback is generated when raw source is absent.
 - (2026-02-27) Completed T021 — Covered by emailAttachmentIngestion.integration.test.ts: process_original_email_attachment uploads .eml and creates file/document rows.
+- (2026-02-27) Completed T022 — Covered by emailAttachmentIngestion.integration.test.ts: process_original_email_attachment associates .eml document to ticket.

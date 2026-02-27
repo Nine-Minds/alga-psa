@@ -185,7 +185,7 @@
   {
     "id": "T022",
     "description": "Action integration happy-path: process_original_email_attachment associates .eml document to ticket",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F016"
     ]
