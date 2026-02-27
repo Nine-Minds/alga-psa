@@ -262,3 +262,8 @@ Create a clean, implementation-ready plan containing only remaining work for inb
   - Test asserts `raw_mime_over_max_bytes` reason and confirms normalized payload strips raw MIME source fields before handoff.
 - Validation:
   - Reused full IMAP webhook integration run from `T229`.
+- 2026-02-27: Completed `T237`.
+  - Added payload contract acceptance scenario in `server/src/test/integration/imapWebhookHandoff.integration.test.ts`.
+  - Test verifies webhook accepts `attachments[].content/isInline/contentId` and MIME source fields (`sourceMimeBase64`) and forwards normalized values.
+- Validation:
+  - Reused full IMAP webhook integration run from `T229`.

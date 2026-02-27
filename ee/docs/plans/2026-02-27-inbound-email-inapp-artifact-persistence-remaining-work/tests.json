@@ -200,7 +200,7 @@
   {
     "id": "T237",
     "description": "Contract: inbound payload schema accepts attachments.content/isInline/contentId and MIME source fields",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F231"
     ]
