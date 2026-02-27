@@ -74,6 +74,8 @@ export interface ActivityBase extends TenantEntity {
   status: string;
   statusColor?: string;
   priority: ActivityPriority;
+  priorityName?: string;
+  priorityColor?: string;
   dueDate?: ISO8601String;
   startDate?: ISO8601String;
   endDate?: ISO8601String;
@@ -191,6 +193,7 @@ export interface ActivityFilters {
   types?: ActivityType[];
   status?: string[];
   priority?: ActivityPriority[];
+  priorityIds?: string[];
   assignedTo?: string[];
   dueDateStart?: ISO8601String;
   dueDateEnd?: ISO8601String;
