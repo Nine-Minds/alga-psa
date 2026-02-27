@@ -242,3 +242,8 @@ Create a clean, implementation-ready plan containing only remaining work for inb
   - Test verifies disabled in-app flag returns `handoff: event_bus`, publishes `INBOUND_EMAIL_RECEIVED`, and does not call in-app processor.
 - Validation:
   - Reused full IMAP webhook integration run from `T229`.
+- 2026-02-27: Completed `T231`.
+  - Added IMAP webhook over-limit single-attachment scenario in `server/src/test/integration/imapWebhookHandoff.integration.test.ts`.
+  - Test enforces low `IMAP_MAX_ATTACHMENT_BYTES` and asserts skip reason `attachment_over_max_bytes` with dropped attachment from normalized payload.
+- Validation:
+  - Reused full IMAP webhook integration run from `T229`.

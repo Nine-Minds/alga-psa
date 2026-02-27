@@ -148,7 +148,7 @@
   {
     "id": "T231",
     "description": "Webhook integration: over-limit single attachment is skipped with attachment_over_max_bytes reason",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F227",
       "F228"
