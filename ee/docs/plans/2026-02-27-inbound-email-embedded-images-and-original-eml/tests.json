@@ -38,7 +38,7 @@
   {
     "id": "T005",
     "description": "Unit: oversized embedded image payload is skipped by existing max-size policy",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F003",
       "F024"
