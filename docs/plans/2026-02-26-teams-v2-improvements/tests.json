@@ -162,7 +162,7 @@
   {
     "id": "T102",
     "description": "Teams package.json includes @alga-psa/media, @alga-psa/auth, and swr dependencies",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F063"
     ]
