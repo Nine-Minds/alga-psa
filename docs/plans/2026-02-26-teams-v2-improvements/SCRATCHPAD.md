@@ -82,3 +82,4 @@
 - (2026-02-27) Added team avatar upload UI to `server/src/components/settings/general/TeamDetails.tsx` using `EntityImageUpload`.
 - (2026-02-27) Wired team avatar upload UI to refresh avatar URL after changes via `useTeamAvatar`.
 - (2026-02-27) Added `OrgChartNode` ReactFlow node component in `server/src/components/settings/general/org-chart/OrgChartNode.tsx`.
+- (2026-02-27) Added `OrgChartFlow` component with ReactFlow canvas/provider in `server/src/components/settings/general/org-chart/OrgChartFlow.tsx`.

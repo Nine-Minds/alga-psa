@@ -152,7 +152,7 @@
   {
     "id": "F069",
     "description": "Create `OrgChart` container component with ReactFlow canvas and ReactFlowProvider",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-3B.2",
       "NFR-3.5"
