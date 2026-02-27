@@ -14,7 +14,7 @@
   {
     "id": "F003",
     "description": "Migration: Add is_client_visible boolean column to documents table (default false)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-1.3"]
   },
   {
