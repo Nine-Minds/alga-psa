@@ -269,7 +269,7 @@
   {
     "id": "F032",
     "description": "Add all-tenant active-contact lookup action(s) for watch-list fallback search using shared ticket-client contact query layer.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data / API / Integrations",
       "Functional Requirements"

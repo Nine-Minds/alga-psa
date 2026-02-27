@@ -39,7 +39,7 @@ import { findUserById, getCurrentUser } from "@alga-psa/users/actions";
 import { findBoardById, getAllBoards } from "@alga-psa/tickets/actions";
 import { findCommentsByTicketId, deleteComment, createComment, updateComment, findCommentById } from "@alga-psa/tickets/actions";
 import { getDocumentByTicketId } from "@alga-psa/documents/actions/documentActions";
-import { getContactByContactNameId, getContactsByClient, getClientById, getAllClients } from "../../actions/clientLookupActions";
+import { getAllActiveContacts, getContactByContactNameId, getContactsByClient, getClientById, getAllClients } from "../../actions/clientLookupActions";
 import { updateTicketWithCache } from "../../actions/optimizedTicketActions";
 import { updateTicket } from "../../actions/ticketActions";
 import { getTicketStatuses } from "@alga-psa/reference-data/actions";
@@ -1121,18 +1121,21 @@ const handleClose = () => {
     };
 
     const handleLoadAllContactsForWatchList = useCallback(async () => {
-        if (allContactsForWatchListLoading) {
+        if (allContactsForWatchListLoading || allContactsForWatchList.length > 0) {
             return;
         }
 
         setAllContactsForWatchListLoading(true);
         try {
-            // Loaded on-demand by the Watch List card; wired to tenant-wide action in follow-up feature step.
-            setAllContactsForWatchList((existing) => existing);
+            const allContacts = await getAllActiveContacts('asc');
+            setAllContactsForWatchList(allContacts || []);
+        } catch (error) {
+            console.error('Error loading all contacts for watch list:', error);
+            toast.error('Failed to load all contacts');
         } finally {
             setAllContactsForWatchListLoading(false);
         }
-    }, [allContactsForWatchListLoading]);
+    }, [allContactsForWatchList.length, allContactsForWatchListLoading]);
 
     const handleChangeContact = () => {
         setIsChangeContactDialogOpen(true);
