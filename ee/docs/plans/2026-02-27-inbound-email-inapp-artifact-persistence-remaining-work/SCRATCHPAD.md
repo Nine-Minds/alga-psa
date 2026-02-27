@@ -68,3 +68,6 @@ Create a clean, implementation-ready plan containing only remaining work for inb
 - 2026-02-27: Completed `F220`.
   - Synthetic embedded artifacts are emitted with deterministic IDs (`embedded-data-*`, `embedded-cid-*`) and normalized attachment fields (`id/name/contentType/size/content`).
   - Orchestrator appends these synthetic records to provider attachments and runs one shared persistence path.
+- 2026-02-27: Completed `F221`.
+  - Added `.eml` persistence step (`persistInboundOriginalEmail`) into in-app orchestration for both reply and new-ticket flows.
+  - The original message is persisted as `message/rfc822` through the same storage/document association path as other artifacts.

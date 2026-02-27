@@ -44,7 +44,7 @@
   {
     "id": "F221",
     "description": "Add in-app original-email persistence that creates one .eml document per inbound message",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements", "Acceptance Criteria"]
   },
   {
