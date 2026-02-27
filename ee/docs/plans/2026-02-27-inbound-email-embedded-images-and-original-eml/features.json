@@ -202,7 +202,7 @@
   {
     "id": "F024",
     "description": "Sanitize generated filenames and enforce image-only acceptance for embedded payload extraction",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Security / Permissions",
       "Requirements"
