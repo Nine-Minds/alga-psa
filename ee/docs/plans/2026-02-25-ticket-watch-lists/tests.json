@@ -423,7 +423,7 @@
   {
     "id": "T050",
     "description": "UI: Watch List renders client-scoped contact quick-add controls using ticket-associated client contacts as default source.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F028",
       "F031"
