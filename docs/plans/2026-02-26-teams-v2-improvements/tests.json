@@ -186,7 +186,7 @@
   {
     "id": "T105",
     "description": "`invalidateTeamAvatar` triggers SWR cache invalidation",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F064"
     ]
