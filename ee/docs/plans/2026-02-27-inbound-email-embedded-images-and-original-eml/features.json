@@ -131,7 +131,7 @@
   {
     "id": "F016",
     "description": "Persist one .eml file/document per inbound message and associate it to the target ticket",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Goals",
       "Requirements"
