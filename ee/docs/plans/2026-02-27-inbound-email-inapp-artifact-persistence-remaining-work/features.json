@@ -116,7 +116,7 @@
   {
     "id": "F233",
     "description": "Ensure Google and Microsoft in-app paths reuse the same artifact orchestrator so behavior is provider-consistent",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Users and Primary Flows", "Acceptance Criteria"]
   },
   {

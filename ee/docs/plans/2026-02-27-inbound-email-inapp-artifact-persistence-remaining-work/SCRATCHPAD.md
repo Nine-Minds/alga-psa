@@ -132,3 +132,6 @@ Create a clean, implementation-ready plan containing only remaining work for inb
     - `isImapInboundEmailInAppAsyncModeEnabled`
     - `isImapInboundEmailInAppEventBusFallbackEnabled`
   - Documented supported flag/env combinations in `docs/inbound-email/setup/imap.md`.
+- 2026-02-27: Completed `F233`.
+  - Google and Microsoft webhook handlers already delegate in-app processing to `processInboundEmailInApp(...)`.
+  - Because `processInboundEmailInApp` now routes all artifact handling through `processInboundEmailArtifactsBestEffort(...)`, provider behavior is unified for attachments, embedded extraction, and `.eml` persistence.
