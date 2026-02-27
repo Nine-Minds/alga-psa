@@ -38,12 +38,6 @@ Rolling notes for the 5-phase documents system overhaul: entity-scoped folders, 
 - (2026-02-27) **Vitest config**: `server/vitest.config.ts` has ~50 path aliases. Global setup mocks UI reflection + auth + translations.
 - (2026-02-27) **Test helpers**: `server/test-utils/testContext.ts` (TestContext), `server/test-utils/dbConfig.ts` (createTestDbConnection), `ee/server/src/__tests__/utils/test-context-e2e.ts` (E2ETestContext).
 
-## Workspace Setup
-
-- **Use a separate git worktree** for all implementation work so the user is not blocked on their current branch.
-- Worktree name: `documents-system-improvements`
-- Create via `EnterWorktree` at the start of implementation.
-
 ## Commands / Runbooks
 
 - Run CE migrations: `cd server && npx knex migrate:latest`
