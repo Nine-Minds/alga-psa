@@ -90,7 +90,7 @@
   {
     "id": "T093",
     "description": "`uploadTeamAvatar` action stores file via `uploadEntityImage('team', ...)` and returns avatarUrl",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F058"
     ]
