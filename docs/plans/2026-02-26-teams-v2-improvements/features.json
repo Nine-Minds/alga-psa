@@ -290,7 +290,7 @@
   {
     "id": "F086",
     "description": "Create `MultiUserAndTeamPicker` component in `packages/ui/src/components/MultiUserAndTeamPicker.tsx` (copy of MultiUserPicker with team logic + TeamAvatar)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-3D.1"
     ]
