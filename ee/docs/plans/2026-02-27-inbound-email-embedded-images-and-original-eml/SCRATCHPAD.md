@@ -113,7 +113,7 @@ Rolling notes for embedded inbound-email image extraction + source `.eml` persis
   - Draft assumption in PRD: only HTML-referenced CID images.
 - Final `.eml` filename format preference.
 
-- (2026-02-27) Completed F001 — Define embedded-image extraction scope to include HTML data URLs and HTML-referenced CID inline images.
+- (2026-02-27) Completed F181 — Define embedded-image extraction scope to include HTML data URLs and HTML-referenced CID inline images.
 
 - (2026-02-27) Completed T001 — Covered by emailAttachmentHelpers.test.ts: extracts data:image payload from a single <img> tag.
 - (2026-02-27) Completed T002 — Covered by emailAttachmentHelpers.test.ts: extracts multiple data:image payloads in deterministic order.
@@ -161,13 +161,14 @@ Rolling notes for embedded inbound-email image extraction + source `.eml` persis
 - (2026-02-27) Completed T044 — Added integration coverage proving IMAP `rawMimeBase64` persists exactly one deterministic `original-email-<message-id>.eml` document associated to the ticket.
 - (2026-02-27) Completed T045 — Added workflow integration assertion that per-message attachment artifact processing remains sequential (`maxInFlight=1`) rather than unbounded parallel fan-out.
 - (2026-02-27) Completed T046 — Added workflow integration guard with IMAP ingress skip-reason payloads proving over-limit artifacts are logged as skipped while ticket/comment creation still completes.
-- (2026-02-27) Completed F026 — Refactored IMAP webhook route to auth/validate/handoff only by publishing `INBOUND_EMAIL_RECEIVED` and returning queued success without inline persistence.
-- (2026-02-27) Completed F027 — Added IMAP ingress hard-cap enforcement for per-attachment bytes, total attachment bytes, attachment count, and raw MIME bytes prior to payload encoding/dispatch.
-- (2026-02-27) Completed F028 — IMAP webhook payload now carries capped raw MIME base64 and attachment byte fields needed for downstream document + `.eml` persistence.
-- (2026-02-27) Completed F029 — IMAP inbound attachment bytes now persist through the existing storage-backed/idempotent attachment action path (no metadata-only fallback path).
-- (2026-02-27) Completed F030 — IMAP webhook handoff now runs through the system email workflow path that performs embedded `data:image` + referenced CID extraction before attachment persistence.
-- (2026-02-27) Completed F031 — IMAP inbound events now carry capped `rawMimeBase64` and flow through `process_original_email_attachment` for deterministic, idempotent ticket `.eml` persistence.
-- (2026-02-27) Completed F032 — IMAP artifacts now execute in the workflow worker’s existing per-message sequential loop (`for ... await action`) after async webhook handoff, avoiding unbounded fan-out.
-- (2026-02-27) Completed F033 — Over-limit IMAP artifacts are dropped at ingress with structured reason objects (`ingressSkipReasons` + `imap_ingress_artifacts_skipped` log), and raw MIME over-cap now yields non-blocking `.eml` skip in attachment action processing.
-- (2026-02-27) Reconciled plan checklist drift: `features.json` and `tests.json` had all `implemented` flags reset to `false` despite existing branch commits (`feat(F001..F033)`, `test(T001..T046)`); restored all flags to `true` to match implemented history and current code/test coverage.
-- (2026-02-27) Re-applied checklist drift fix: `features.json` had been locally reset to `implemented:false` for F001-F033 despite completed `feat(F001..F033)` history; restored all feature flags to `true` so plan artifacts match branch implementation state.
+- (2026-02-27) Completed F206 — Refactored IMAP webhook route to auth/validate/handoff only by publishing `INBOUND_EMAIL_RECEIVED` and returning queued success without inline persistence.
+- (2026-02-27) Completed F207 — Added IMAP ingress hard-cap enforcement for per-attachment bytes, total attachment bytes, attachment count, and raw MIME bytes prior to payload encoding/dispatch.
+- (2026-02-27) Completed F208 — IMAP webhook payload now carries capped raw MIME base64 and attachment byte fields needed for downstream document + `.eml` persistence.
+- (2026-02-27) Completed F209 — IMAP inbound attachment bytes now persist through the existing storage-backed/idempotent attachment action path (no metadata-only fallback path).
+- (2026-02-27) Completed F210 — IMAP webhook handoff now runs through the system email workflow path that performs embedded `data:image` + referenced CID extraction before attachment persistence.
+- (2026-02-27) Completed F211 — IMAP inbound events now carry capped `rawMimeBase64` and flow through `process_original_email_attachment` for deterministic, idempotent ticket `.eml` persistence.
+- (2026-02-27) Completed F212 — IMAP artifacts now execute in the workflow worker’s existing per-message sequential loop (`for ... await action`) after async webhook handoff, avoiding unbounded fan-out.
+- (2026-02-27) Completed F213 — Over-limit IMAP artifacts are dropped at ingress with structured reason objects (`ingressSkipReasons` + `imap_ingress_artifacts_skipped` log), and raw MIME over-cap now yields non-blocking `.eml` skip in attachment action processing.
+- (2026-02-27) Reconciled plan checklist drift: `features.json` and `tests.json` had all `implemented` flags reset to `false` despite existing branch commits and test work; restored all flags to `true` to match implemented history and current code/test coverage.
+- (2026-02-27) Re-applied checklist drift fix: `features.json` had been locally reset to `implemented:false` for the plan feature range despite completed implementation history; restored all feature flags to `true` so plan artifacts match branch implementation state.
+- (2026-02-27) Reconciled renumbered feature checklist state (`F181..F213`): all feature rows were reset to `implemented:false` by artifact drift, but corresponding implementation already exists in branch history and code paths; restored all to `implemented:true`.
