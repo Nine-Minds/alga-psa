@@ -241,7 +241,7 @@
   {
     "id": "F080",
     "description": "UserManagement: replace inline nested-list org chart rendering with new OrgChart component",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-3B.10"
     ]

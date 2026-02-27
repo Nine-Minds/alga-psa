@@ -27,6 +27,7 @@ import { validateContactName, validateEmailAddress, validatePassword, getPasswor
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
+import OrgChart from './org-chart/OrgChart';
 
 const UserManagement = (): React.JSX.Element => {
   const [users, setUsers] = useState<IUser[]>([]);
@@ -952,16 +953,7 @@ const fetchContacts = async (): Promise<void> => {
             />
           </div>
         ) : userView === 'org' && isTeamsV2Enabled && portalType === 'msp' ? (
-          <div className="border rounded-md p-4 bg-white">
-            {(() => {
-              const { roots, nodes } = buildOrgTree(users);
-              return (
-                <ul className="space-y-2">
-                  {roots.map((root) => renderOrgNode(root, nodes))}
-                </ul>
-              );
-            })()}
-          </div>
+          <OrgChart users={users} onUserUpdated={fetchUsers} />
         ) : (
           <UserList 
             users={filteredUsers} 

@@ -93,3 +93,4 @@
 - (2026-02-27) Removed duplicate list/structure ViewSwitcher from list view toolbar in `UserManagement`.
 - (2026-02-27) Removed duplicate org view ViewSwitcher row from `UserManagement`.
 - (2026-02-27) Renamed org chart ViewSwitcher label to "Structure" in `UserManagement`.
+- (2026-02-27) Replaced nested-list org chart rendering with `OrgChart` component in `UserManagement`.
