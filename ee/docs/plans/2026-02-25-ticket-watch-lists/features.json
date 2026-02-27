@@ -313,7 +313,7 @@
   {
     "id": "F037",
     "description": "Do not auto-disable watcher sends when linked user/contact becomes inactive; keep stored-email behavior unless user edits watch-list entry.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Functional Requirements",
       "Non-goals"
