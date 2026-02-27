@@ -193,7 +193,7 @@
   {
     "id": "F074",
     "description": "OrgChart: batch-fetch user avatar URLs for all displayed nodes",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-3B.6"
     ]

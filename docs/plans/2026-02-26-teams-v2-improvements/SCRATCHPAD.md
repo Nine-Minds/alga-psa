@@ -87,3 +87,4 @@
 - (2026-02-27) Added smoothstep edges between parent/child nodes in `OrgChart` layout.
 - (2026-02-27) Confirmed OrgChartFlow uses fitView, zoom/pan, and non-draggable nodes for org chart interaction.
 - (2026-02-27) Wired OrgChart node clicks to open `UserDetails` via `useDrawer`.
+- (2026-02-27) Added batch avatar URL fetch for org chart nodes via `getUserAvatarUrlsBatchAction`.

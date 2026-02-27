@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import type { Edge, Node, NodeTypes } from 'reactflow';
 import type { IUser } from '@alga-psa/types';
 import { useDrawer } from '@alga-psa/ui';
+import { getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
 import UserDetails from '../UserDetails';
 import OrgChartFlow from './OrgChartFlow';
 import OrgChartNode, { type OrgChartNodeData } from './OrgChartNode';
@@ -20,6 +21,34 @@ const VERTICAL_GAP = 120;
 
 const OrgChart = ({ users, onUserUpdated }: OrgChartProps) => {
   const { openDrawer } = useDrawer();
+  const [avatarUrls, setAvatarUrls] = useState<Record<string, string | null>>({});
+
+  useEffect(() => {
+    const fetchAvatarUrls = async () => {
+      if (users.length === 0) {
+        setAvatarUrls({});
+        return;
+      }
+
+      const tenant = users[0]?.tenant;
+      if (!tenant) {
+        return;
+      }
+
+      try {
+        const map = await getUserAvatarUrlsBatchAction(users.map((user) => user.user_id), tenant);
+        const record: Record<string, string | null> = {};
+        map.forEach((value, key) => {
+          record[key] = value;
+        });
+        setAvatarUrls(record);
+      } catch (error) {
+        console.error('Failed to load avatar URLs for org chart', error);
+      }
+    };
+
+    fetchAvatarUrls();
+  }, [users]);
   const { nodes, edges } = useMemo(() => {
     if (users.length === 0) {
       return { nodes: [] as Node<OrgChartNodeData>[], edges: [] as Edge[] };
@@ -90,7 +119,7 @@ const OrgChart = ({ users, onUserUpdated }: OrgChartProps) => {
         position: { x, y },
         data: {
           user,
-          avatarUrl: null,
+          avatarUrl: avatarUrls[user.user_id] ?? null,
           roleLabel: user.user_type === 'client' ? 'Client User' : 'Internal User',
         },
       });
@@ -125,7 +154,7 @@ const OrgChart = ({ users, onUserUpdated }: OrgChartProps) => {
     });
 
     return { nodes: positionedNodes, edges: positionedEdges };
-  }, [users]);
+  }, [users, avatarUrls]);
 
   const nodeTypes: NodeTypes = useMemo(() => ({
     orgChartNode: OrgChartNode,
