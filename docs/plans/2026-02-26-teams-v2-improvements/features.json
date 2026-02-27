@@ -136,7 +136,7 @@
   {
     "id": "F067",
     "description": "Team avatar upload refreshes avatar display after successful upload",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-3A.10"
     ]

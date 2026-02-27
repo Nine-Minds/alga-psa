@@ -80,3 +80,4 @@
 - (2026-02-27) Added `useTeamAvatar` SWR hook in `packages/teams/src/hooks/useTeamAvatar.ts`.
 - (2026-02-27) Exported `useTeamAvatar` from `packages/teams/src/hooks/index.ts`.
 - (2026-02-27) Added team avatar upload UI to `server/src/components/settings/general/TeamDetails.tsx` using `EntityImageUpload`.
+- (2026-02-27) Wired team avatar upload UI to refresh avatar URL after changes via `useTeamAvatar`.

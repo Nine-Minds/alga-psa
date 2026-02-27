@@ -33,7 +33,7 @@ const TeamDetails: React.FC<TeamDetailsProps> = ({ teamId, onUpdate }): React.JS
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [userAvatars, setUserAvatars] = useState<Record<string, string | null>>({});
-  const { avatarUrl: teamAvatarUrl } = useTeamAvatar(team?.team_id, team?.tenant);
+  const { avatarUrl: teamAvatarUrl, refreshAvatar: refreshTeamAvatar } = useTeamAvatar(team?.team_id, team?.tenant);
 
   useEffect(() => {
     fetchTeamDetails();
@@ -221,6 +221,7 @@ const TeamDetails: React.FC<TeamDetailsProps> = ({ teamId, onUpdate }): React.JS
         imageUrl={teamAvatarUrl}
         uploadAction={uploadTeamAvatar}
         deleteAction={deleteTeamAvatar}
+        onImageChange={() => refreshTeamAvatar()}
         size="lg"
       />
       
