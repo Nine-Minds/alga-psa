@@ -159,7 +159,7 @@
   {
     "id": "T019",
     "description": "Unit: MailHog source-message path returns MIME bytes when raw source is available",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F015"
     ]
