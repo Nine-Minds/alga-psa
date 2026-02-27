@@ -217,7 +217,7 @@
   {
     "id": "F077",
     "description": "UserManagement: remove duplicate list/org ViewSwitcher from list view toolbar (lines 668-673)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-3B.8"
     ]

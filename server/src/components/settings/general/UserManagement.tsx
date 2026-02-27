@@ -671,13 +671,6 @@ const fetchContacts = async (): Promise<void> => {
               )}
             </div>
             <div className="flex items-center gap-3">
-              {isTeamsV2Enabled && portalType === 'msp' && (
-                <ViewSwitcher
-                  currentView={userView}
-                  onChange={setUserView}
-                  options={userViewOptions}
-                />
-              )}
               {portalType === 'client' && (
                 <Button
                   id="copy-client-portal-link-button"
