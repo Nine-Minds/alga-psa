@@ -176,7 +176,7 @@
   {
     "id": "F021",
     "description": "Keep .eml persistence failures non-blocking for ticket/comment creation",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Goals",
       "Requirements"
