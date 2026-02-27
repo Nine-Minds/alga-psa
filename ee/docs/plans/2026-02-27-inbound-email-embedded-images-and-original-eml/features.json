@@ -90,7 +90,7 @@
   {
     "id": "F011",
     "description": "Apply idempotency for embedded image processing using deterministic synthetic attachment keys per message",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
