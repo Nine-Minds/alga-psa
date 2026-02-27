@@ -621,6 +621,47 @@ export const getUserPreference = withAuth(async (
   }
 });
 
+export const getUserPreferences = withAuth(async (
+  _user,
+  _ctx,
+  userId: string,
+  settingNames: string[]
+): Promise<Record<string, any>> => {
+  if (!Array.isArray(settingNames) || settingNames.length === 0) {
+    return {};
+  }
+
+  try {
+    const uniqueSettingNames = [...new Set(settingNames)];
+    const { knex } = await createTenantKnex();
+
+    const preferences = await knex('user_preferences')
+      .where({ user_id: userId })
+      .whereIn('setting_name', uniqueSettingNames)
+      .select('setting_name', 'setting_value');
+
+    const preferenceMap: Record<string, any> = {};
+    for (const row of preferences) {
+      if (!row?.setting_name) continue;
+      if (row.setting_value === null || row.setting_value === undefined) {
+        preferenceMap[row.setting_name] = null;
+        continue;
+      }
+
+      try {
+        preferenceMap[row.setting_name] = JSON.parse(row.setting_value);
+      } catch {
+        preferenceMap[row.setting_name] = row.setting_value;
+      }
+    }
+
+    return preferenceMap;
+  } catch (error) {
+    logger.error('Failed to get user preferences:', error);
+    throw new Error('Failed to get user preferences');
+  }
+});
+
 export const setUserPreference = withAuth(async (
   _user,
   _ctx,
