@@ -11,7 +11,7 @@
   {
     "id": "F002",
     "description": "Parse inbound email HTML for data:image/*;base64 payloads and emit synthetic attachment records",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements"
     ]
