@@ -113,3 +113,6 @@ Create a clean, implementation-ready plan containing only remaining work for inb
     - `attachment_count_exceeded`
     - `raw_mime_over_max_bytes`
   - Eligible attachments continue through in-app artifact processing.
+- 2026-02-27: Completed `F229`.
+  - Added app-local async IMAP callback queue (`packages/integrations/src/webhooks/email/imapInAppQueue.ts`).
+  - Webhook can now defer in-app processing when `IMAP_INBOUND_EMAIL_IN_APP_ASYNC_ENABLED=true`, returning quickly with queue metadata.

@@ -92,7 +92,7 @@
   {
     "id": "F229",
     "description": "Add optional app-local in-process async queue mode for inbound IMAP callback artifact processing",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Decisions (Locked)", "Safety / Performance"]
   },
   {
