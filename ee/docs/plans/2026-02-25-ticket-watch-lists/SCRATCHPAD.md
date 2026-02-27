@@ -206,3 +206,4 @@ Working notes for the ticket watch-list feature plan. This log captures clarifie
 - (2026-02-27) Implemented T049 in `TicketWatchListCard.test.tsx` covering internal-user picker add persistence with normalized email plus `entity_type=user` and `entity_id`.
 - (2026-02-27) Implemented T050 in `TicketWatchListCard.test.tsx` asserting client-scoped contact quick-add controls render as the default contact-add path.
 - (2026-02-27) Implemented T051 in `TicketWatchListCard.test.tsx` validating client-contact quick-add persistence of metadata (`name`, `entity_type=contact`, `entity_id`).
+- (2026-02-27) Implemented T052 in `TicketWatchListCard.test.tsx` verifying `Search all contacts` remains secondary/hidden until explicitly requested and quick client-contact add works without it.

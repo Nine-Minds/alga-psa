@@ -441,7 +441,7 @@
   {
     "id": "T052",
     "description": "UI: `Search all contacts` path is hidden/secondary and not required for standard ticket-client contact adds.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F029",
       "F028"
