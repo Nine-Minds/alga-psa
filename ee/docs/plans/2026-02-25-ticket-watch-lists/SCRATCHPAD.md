@@ -205,3 +205,4 @@ Working notes for the ticket watch-list feature plan. This log captures clarifie
 - (2026-02-27) Implemented T048 by expanding `packages/tickets/src/components/ticket/__tests__/TicketWatchListCard.test.tsx` with picker-control UI assertions; test harness now mocks pickers for deterministic watch-list add-flow coverage.
 - (2026-02-27) Implemented T049 in `TicketWatchListCard.test.tsx` covering internal-user picker add persistence with normalized email plus `entity_type=user` and `entity_id`.
 - (2026-02-27) Implemented T050 in `TicketWatchListCard.test.tsx` asserting client-scoped contact quick-add controls render as the default contact-add path.
+- (2026-02-27) Implemented T051 in `TicketWatchListCard.test.tsx` validating client-contact quick-add persistence of metadata (`name`, `entity_type=contact`, `entity_id`).

@@ -432,7 +432,7 @@
   {
     "id": "T051",
     "description": "UI: adding a contact from client-scoped quick picker persists watcher metadata (`entity_type=contact`, `entity_id`, name).",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F028",
       "F034"
