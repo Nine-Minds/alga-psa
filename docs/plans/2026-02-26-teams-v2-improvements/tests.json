@@ -10,7 +10,7 @@
   {
     "id": "T083",
     "description": "Migration uses `exports.config = { transaction: false }` for Citus compliance",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F051"
     ]
