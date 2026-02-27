@@ -89,3 +89,4 @@
 - (2026-02-27) Wired OrgChart node clicks to open `UserDetails` via `useDrawer`.
 - (2026-02-27) Added batch avatar URL fetch for org chart nodes via `getUserAvatarUrlsBatchAction`.
 - (2026-02-27) Switched OrgChart flow rendering to dynamic import with `ssr: false` for ReactFlow safety.
+- (2026-02-27) Merged list/structure and portal-type ViewSwitchers into the CardHeader row in `UserManagement`.

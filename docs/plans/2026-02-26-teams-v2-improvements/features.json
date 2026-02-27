@@ -209,7 +209,7 @@
   {
     "id": "F076",
     "description": "UserManagement: merge portal-type and list/structure ViewSwitchers into one row in CardHeader",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-3B.7"
     ]

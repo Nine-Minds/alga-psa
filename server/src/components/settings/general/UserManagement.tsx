@@ -595,11 +595,20 @@ const fetchContacts = async (): Promise<void> => {
               Manage {portalType === 'msp' ? 'MSP users and permissions' : 'client portal users and their access'}
             </CardDescription>
           </div>
-          <ViewSwitcher
-            currentView={portalType}
-            onChange={handlePortalTypeChange}
-            options={viewOptions}
-          />
+          <div className="flex items-center gap-3">
+            {isTeamsV2Enabled && portalType === 'msp' && (
+              <ViewSwitcher
+                currentView={userView}
+                onChange={setUserView}
+                options={userViewOptions}
+              />
+            )}
+            <ViewSwitcher
+              currentView={portalType}
+              onChange={handlePortalTypeChange}
+              options={viewOptions}
+            />
+          </div>
         </div>
       </CardHeader>
       <CardContent>
