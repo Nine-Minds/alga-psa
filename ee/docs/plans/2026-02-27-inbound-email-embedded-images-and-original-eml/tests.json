@@ -99,7 +99,7 @@
   {
     "id": "T012",
     "description": "DB integration happy-path: embedded image processing creates external_files row with expected mime and size",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F009",
       "F010",
