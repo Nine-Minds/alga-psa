@@ -80,7 +80,7 @@
   {
     "id": "F227",
     "description": "Add IMAP ingress caps for per-attachment bytes, total attachment bytes, attachment count, and raw MIME bytes",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Safety / Performance", "Acceptance Criteria"]
   },
   {

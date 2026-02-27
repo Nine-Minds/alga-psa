@@ -95,3 +95,14 @@ Create a clean, implementation-ready plan containing only remaining work for inb
     - direct in-app processing handoff (`handoff: "in_app"`)
     - app-local async in-process queue handoff (`handoff: "in_app_async"`)
     - explicit event-bus fallback on in-app failure (`handoff: "event_bus_fallback"`) when configured.
+- 2026-02-27: Completed `F227`.
+  - IMAP webhook payload normalization now enforces ingress caps for:
+    - per-attachment bytes
+    - total attachment bytes
+    - attachment count
+    - raw MIME bytes.
+  - Caps are driven by existing IMAP env knobs:
+    - `IMAP_MAX_ATTACHMENT_BYTES`
+    - `IMAP_MAX_TOTAL_ATTACHMENT_BYTES`
+    - `IMAP_MAX_ATTACHMENT_COUNT`
+    - `IMAP_MAX_RAW_MIME_BYTES`.
