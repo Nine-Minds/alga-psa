@@ -211,3 +211,10 @@ Create a clean, implementation-ready plan containing only remaining work for inb
   - Assertion uses the full expected file name derived from message id normalization.
 - Validation:
   - Reused targeted IMAP integration command from `T223`.
+- 2026-02-27: Completed `T225`.
+  - Added duplicate-message idempotency integration scenario in `server/src/test/integration/inboundEmailInApp.webhooks.integration.test.ts`.
+  - Scenario calls `processInboundEmailInApp` twice for identical IMAP message and asserts provider attachment document name count remains `1`.
+  - Also corrected deterministic `.eml` expected-name construction in this integration file to match production sanitization.
+- Validation:
+  - `cd server && npx vitest run src/test/integration/inboundEmailInApp.webhooks.integration.test.ts -t "Idempotency: duplicate inbound message does not duplicate provider, embedded, or .eml artifact documents" --coverage.enabled=false`
+  - Environment note: DB-gated integration suite was skipped in this local session (`describeDb`).

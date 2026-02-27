@@ -98,7 +98,7 @@
   {
     "id": "T225",
     "description": "Integration: duplicate inbound message does not create duplicate provider attachment documents",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F224"
     ]

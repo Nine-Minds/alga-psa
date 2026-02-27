@@ -95,6 +95,16 @@ function makeFakeJwt(payload: Record<string, any>): string {
   return `${header}.${body}.sig`;
 }
 
+function expectedOriginalEmailFileName(messageId: string): string {
+  const sanitizedMessageId = String(messageId)
+    .trim()
+    .replace(/^<|>$/g, '')
+    .replace(/[^A-Za-z0-9._-]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+  return `original-email-${sanitizedMessageId || 'unknown-message'}.eml`;
+}
+
 async function setupInboundDefaults(params: { providerId: string; mailbox: string }) {
   const defaultsId = uuidv4();
   await db('inbound_ticket_defaults').insert({
@@ -572,7 +582,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
     const documentNames = docs.map((d: any) => d.document_name).sort();
     expect(documentNames).toContain('regular.txt');
     expect(documentNames).toContain('embedded-image-1.png');
-    expect(documentNames).toContain(`original-email-imap-artifacts-${messageId.split('@')[0]}-example.com.eml`);
+    expect(documentNames).toContain(expectedOriginalEmailFileName(messageId));
     const emlDocs = docs.filter((d: any) => d.document_name.endsWith('.eml'));
     expect(emlDocs).toHaveLength(1);
 
@@ -591,6 +601,96 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
     const embeddedFile = files.find((f: any) => f.file_id === embeddedDoc?.file_id);
     expect(embeddedFile?.mime_type).toBe('image/png');
     expect(Number(embeddedFile?.file_size)).toBe(embeddedDecodedSize);
+  });
+
+  it('Idempotency: duplicate inbound message does not duplicate provider, embedded, or .eml artifact documents', async () => {
+    const providerId = uuidv4();
+    const mailbox = `support-imap-dupe-${uuidv4().slice(0, 6)}@example.com`;
+    const { defaultsId } = await setupImapProvider({ providerId, mailbox });
+
+    cleanup.push(async () => {
+      await db('email_processed_attachments').where({ tenant: tenantId, provider_id: providerId }).delete();
+      await db('email_providers').where({ tenant: tenantId, id: providerId }).delete();
+      await db('inbound_ticket_defaults').where({ tenant: tenantId, id: defaultsId }).delete();
+    });
+
+    process.env.IMAP_INBOUND_EMAIL_IN_APP_PROCESSING_ENABLED = 'true';
+
+    const regularAttachmentBase64 = Buffer.from('duplicate-regular-attachment').toString('base64');
+    const embeddedDataBase64 = Buffer.from('duplicate-embedded-image').toString('base64');
+    const rawMimeBase64 = Buffer.from('From: sender@example.com\r\n\r\nduplicate-body').toString('base64');
+    const subject = `IMAP duplicate artifacts ${uuidv4().slice(0, 6)}`;
+    const messageId = `imap-dupe-${uuidv4()}@example.com`;
+    const emlName = expectedOriginalEmailFileName(messageId);
+
+    const emailData = {
+      id: messageId,
+      provider: 'imap',
+      providerId,
+      tenant: tenantId,
+      receivedAt: new Date().toISOString(),
+      from: { email: 'sender@example.com', name: 'Sender' },
+      to: [{ email: mailbox, name: 'Support' }],
+      subject,
+      body: {
+        text: 'Inbound body',
+        html: `<p>Body<img src="data:image/png;base64,${embeddedDataBase64}" /></p>`,
+      },
+      attachments: [
+        {
+          id: 'att-regular-1',
+          name: 'regular-dupe.txt',
+          contentType: 'text/plain',
+          size: Buffer.from('duplicate-regular-attachment').length,
+          content: regularAttachmentBase64,
+        },
+      ],
+      rawMimeBase64,
+    } as any;
+
+    const first = await processInboundEmailInApp({
+      tenantId,
+      providerId,
+      emailData,
+    });
+    expect(first.outcome).toBe('created');
+
+    const second = await processInboundEmailInApp({
+      tenantId,
+      providerId,
+      emailData,
+    });
+    expect(second.outcome).toBe('deduped');
+
+    const ticket = await db('tickets')
+      .where({ tenant: tenantId, title: subject })
+      .first<any>();
+    expect(ticket).toBeDefined();
+
+    cleanup.push(async () => {
+      await db('comments').where({ tenant: tenantId, ticket_id: ticket.ticket_id }).delete();
+      await db('document_associations').where({ tenant: tenantId, entity_id: ticket.ticket_id }).delete();
+      await db('tickets').where({ tenant: tenantId, ticket_id: ticket.ticket_id }).delete();
+    });
+
+    const docs = await db('documents as d')
+      .join('document_associations as da', function () {
+        this.on('d.document_id', 'da.document_id').andOn('d.tenant', 'da.tenant');
+      })
+      .where('d.tenant', tenantId)
+      .andWhere('da.entity_type', 'ticket')
+      .andWhere('da.entity_id', ticket.ticket_id)
+      .select('d.document_name');
+
+    const countByName = docs.reduce<Record<string, number>>((acc, item: any) => {
+      const key = String(item.document_name);
+      acc[key] = (acc[key] || 0) + 1;
+      return acc;
+    }, {});
+
+    expect(countByName['regular-dupe.txt']).toBe(1);
+    expect(countByName['embedded-image-1.png']).toBe(1);
+    expect(countByName[emlName]).toBe(1);
   });
 
   it('Reply threading: reply token resolves ticket and creates exactly 1 new comment', async () => {
