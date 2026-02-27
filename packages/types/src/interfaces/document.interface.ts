@@ -25,6 +25,7 @@ export interface IDocument extends TenantEntity {
 
     // Folder organization
     folder_path?: string;
+    is_client_visible?: boolean;
 
     // Preview/thumbnail system
     thumbnail_file_id?: string;
