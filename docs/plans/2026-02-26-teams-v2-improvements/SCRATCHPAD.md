@@ -124,3 +124,4 @@
 - (2026-02-27) Marked T097 covered by teams-v2 improvements test suite.
 - (2026-02-27) Marked T098 covered by teams-v2 improvements test suite.
 - (2026-02-27) Marked T099 covered by teams-v2 improvements test suite.
+- (2026-02-27) Marked T100 covered by teams-v2 improvements test suite.
