@@ -31,6 +31,10 @@ Rolling notes for embedded inbound-email image extraction + source `.eml` persis
   - `IMAP_MAX_ATTACHMENT_COUNT` (attachment count)
   - `IMAP_MAX_RAW_MIME_BYTES` (raw source `.eml` payload)
   - skipped artifacts are logged with structured reason objects via `imap_ingress_artifacts_skipped`.
+- (2026-02-27) IMAP payload shaping now includes byte-carrying fields required for worker persistence:
+  - `emailData.rawMimeBase64` (within cap)
+  - `emailData.attachments[].content` (base64)
+  - `emailData.attachments[].isInline`, `contentId`, `id`, `name`, `contentType`, `size`
 
 ## Discoveries / Constraints
 
@@ -140,3 +144,4 @@ Rolling notes for embedded inbound-email image extraction + source `.eml` persis
 - (2026-02-27) Completed T034 — Added Playwright duplicate-guard scenario that verifies single embedded/.eml document rows and visibility on the ticket.
 - (2026-02-27) Completed F026 — Refactored IMAP webhook route to auth/validate/handoff only by publishing `INBOUND_EMAIL_RECEIVED` and returning queued success without inline persistence.
 - (2026-02-27) Completed F027 — Added IMAP ingress hard-cap enforcement for per-attachment bytes, total attachment bytes, attachment count, and raw MIME bytes prior to payload encoding/dispatch.
+- (2026-02-27) Completed F028 — IMAP webhook payload now carries capped raw MIME base64 and attachment byte fields needed for downstream document + `.eml` persistence.
