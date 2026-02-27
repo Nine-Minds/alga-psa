@@ -143,7 +143,7 @@
   {
     "id": "T017",
     "description": "Unit: Gmail source-message method returns raw MIME bytes for valid message id",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F013"
     ]
