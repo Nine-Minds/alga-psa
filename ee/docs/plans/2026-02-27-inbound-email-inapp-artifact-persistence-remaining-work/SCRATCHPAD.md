@@ -160,3 +160,9 @@ Create a clean, implementation-ready plan containing only remaining work for inb
   - Scope validated on reply-token threaded flow in `shared/services/email/__tests__/processInboundEmailInApp.test.ts` using call-order assertion.
 - Validation:
   - `npx vitest run --config shared/vitest.config.ts shared/services/email/__tests__/processInboundEmailInApp.test.ts -t "reply-token path resolves sender contact and forwards contact_id for contact-only sender" --coverage.enabled=false`
+- 2026-02-27: Completed `T216`.
+  - Existing integration scenario `IMAP in-app path persists regular attachment, embedded image, and original .eml as ticket documents` asserts attachment-backed document persistence to `documents` and backing file rows in `external_files`.
+  - This covers base64 attachment bytes in inbound payload flowing into persisted file + document records.
+- Validation:
+  - `cd server && npx vitest run src/test/integration/inboundEmailInApp.webhooks.integration.test.ts -t "IMAP in-app path persists regular attachment, embedded image, and original .eml as ticket documents" --coverage.enabled=false`
+  - Environment note: DB-gated integration suite was skipped in this local session (`describeDb`).

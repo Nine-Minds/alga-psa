@@ -18,7 +18,7 @@
   {
     "id": "T216",
     "description": "Integration: attachment base64 bytes from inbound payload persist to external_files and documents rows",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F216",
       "F217"
