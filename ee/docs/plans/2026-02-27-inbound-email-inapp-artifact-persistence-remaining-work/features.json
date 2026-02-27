@@ -50,7 +50,7 @@
   {
     "id": "F222",
     "description": "Implement MIME source selection precedence in in-app path using rawMimeBase64/sourceMimeBase64/rawSourceBase64 with deterministic fallback assembly",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements"]
   },
   {

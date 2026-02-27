@@ -71,3 +71,9 @@ Create a clean, implementation-ready plan containing only remaining work for inb
 - 2026-02-27: Completed `F221`.
   - Added `.eml` persistence step (`persistInboundOriginalEmail`) into in-app orchestration for both reply and new-ticket flows.
   - The original message is persisted as `message/rfc822` through the same storage/document association path as other artifacts.
+- 2026-02-27: Completed `F222`.
+  - Implemented MIME source selection with precedence in `maybeExtractRawMimeFromEmailData(...)`:
+    - `rawMimeBase64`
+    - `sourceMimeBase64`
+    - `rawSourceBase64`
+  - When no source bytes are available, `.eml` fallback generation uses deterministic RFC822 assembly (`buildDeterministicRfc822Message(...)`).
