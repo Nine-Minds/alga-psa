@@ -1,13 +1,23 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { getTeamById, updateTeam, removeUserFromTeam, assignManagerToTeam, addUserToTeam } from '@alga-psa/teams/actions';
+import {
+  getTeamById,
+  updateTeam,
+  removeUserFromTeam,
+  assignManagerToTeam,
+  addUserToTeam,
+  uploadTeamAvatar,
+  deleteTeamAvatar
+} from '@alga-psa/teams/actions';
+import { useTeamAvatar } from '@alga-psa/teams/hooks';
 import { getAllUsers, getMultipleUsersWithRoles } from '@alga-psa/users/actions';
 import { ITeam, IUser, IRole, IUserWithRoles } from '@alga-psa/types';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import { getUserAvatarUrlAction, getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
 import { Input } from '@alga-psa/ui/components/Input';
+import EntityImageUpload from '@alga-psa/ui/components/EntityImageUpload';
 
 interface TeamDetailsProps {
   teamId: string;
@@ -23,6 +33,7 @@ const TeamDetails: React.FC<TeamDetailsProps> = ({ teamId, onUpdate }): React.JS
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [userAvatars, setUserAvatars] = useState<Record<string, string | null>>({});
+  const { avatarUrl: teamAvatarUrl } = useTeamAvatar(team?.team_id, team?.tenant);
 
   useEffect(() => {
     fetchTeamDetails();
@@ -202,6 +213,16 @@ const TeamDetails: React.FC<TeamDetailsProps> = ({ teamId, onUpdate }): React.JS
   return (
     <div className="space-y-6 p-4 rounded-lg border border-border-200 bg-white">
       {error && <p className="text-accent-500">{error}</p>}
+
+      <EntityImageUpload
+        entityType="team"
+        entityId={team.team_id}
+        entityName={team.team_name}
+        imageUrl={teamAvatarUrl}
+        uploadAction={uploadTeamAvatar}
+        deleteAction={deleteTeamAvatar}
+        size="lg"
+      />
       
       <div>
         <label className="block text-sm font-medium text-text-700 mb-1">Team Name</label>

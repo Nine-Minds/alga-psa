@@ -128,7 +128,7 @@
   {
     "id": "F066",
     "description": "Add team avatar upload UI to `TeamDetails.tsx` using EntityImageUpload (above team name field)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-3A.10"
     ]
