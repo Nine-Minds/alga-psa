@@ -130,7 +130,7 @@
   {
     "id": "T098",
     "description": "`getTeamAvatarUrlAction` returns URL string for existing team avatar",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F060"
     ]
