@@ -553,6 +553,19 @@ export const InboundEmailEventPayloadSchema = BasePayloadSchema.extend({
     rawMimeBase64: z.string().optional(),
     sourceMimeBase64: z.string().optional(),
     rawSourceBase64: z.string().optional(),
+    ingressSkipReasons: z.array(z.object({
+      type: z.enum(['attachment', 'raw_mime']),
+      reason: z.enum([
+        'attachment_over_max_bytes',
+        'attachment_count_exceeded',
+        'attachment_total_bytes_exceeded',
+        'raw_mime_over_max_bytes',
+      ]),
+      attachmentId: z.string().optional(),
+      attachmentName: z.string().optional(),
+      size: z.number(),
+      cap: z.number(),
+    })).optional(),
   }),
 });
 

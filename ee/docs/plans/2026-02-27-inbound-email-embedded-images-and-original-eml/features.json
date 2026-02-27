@@ -282,7 +282,7 @@
   {
     "id": "F033",
     "description": "Oversize/over-limit artifacts are skipped with structured reasons while ticket/comment creation remains successful",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Scoped Implementation Checklist (Phase 1)",
       "Requirements"

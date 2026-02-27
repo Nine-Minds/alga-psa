@@ -282,6 +282,15 @@ export function maybeExtractRawMimeFromEmailData(emailData: any): Buffer | null 
   return null;
 }
 
+export function hasRawMimeOverCapSkipReason(emailData: any): boolean {
+  if (!emailData || typeof emailData !== 'object') {
+    return false;
+  }
+
+  const entries = Array.isArray(emailData.ingressSkipReasons) ? emailData.ingressSkipReasons : [];
+  return entries.some((entry: any) => entry?.reason === 'raw_mime_over_max_bytes');
+}
+
 export function buildDeterministicRfc822Message(emailData: any): Buffer {
   const messageId = sanitizeHeaderValue(emailData?.id || `fallback-${sha256(JSON.stringify(emailData || {})).slice(0, 16)}`);
   const from = formatMailbox(emailData?.from) || 'unknown@example.invalid';

@@ -856,7 +856,7 @@ class ImapFolderListener {
       headers: parsed.headers ? Object.fromEntries(parsed.headers) : undefined,
       rawMimeBase64,
       // Optional diagnostics for ingress cap decisions.
-      ...(ingressSkipReasons.length > 0 ? ({ ingressSkipReasons } as any) : {}),
+      ...(ingressSkipReasons.length > 0 ? { ingressSkipReasons } : {}),
     } as EmailMessageDetails;
   }
 

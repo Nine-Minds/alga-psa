@@ -78,6 +78,19 @@ export interface EmailProviderConfig {
   updated_at: string; // ISO date
 }
 
+export interface EmailIngressSkipReason {
+  type: 'attachment' | 'raw_mime';
+  reason:
+    | 'attachment_over_max_bytes'
+    | 'attachment_count_exceeded'
+    | 'attachment_total_bytes_exceeded'
+    | 'raw_mime_over_max_bytes';
+  attachmentId?: string;
+  attachmentName?: string;
+  size: number;
+  cap: number;
+}
+
 export interface EmailMessage {
   id: string;
   provider: 'microsoft' | 'google' | 'imap';
@@ -117,6 +130,7 @@ export interface EmailMessage {
   rawMimeBase64?: string;
   sourceMimeBase64?: string;
   rawSourceBase64?: string;
+  ingressSkipReasons?: EmailIngressSkipReason[];
 }
 
 export interface EmailMessageDetails extends EmailMessage {
