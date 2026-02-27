@@ -506,5 +506,221 @@
     "testFile": "server/src/test/e2e/collaborativeEditing.e2e.test.ts",
     "vitestName": "two browser contexts see real-time changes and presence",
     "notes": "Requires full app + Hocuspocus. Two browser contexts (different users), same doc URL. Type in context A, assert content in context B within 3s. Verify cursor labels and presence bar."
+  },
+  {
+    "id": "T046",
+    "description": "EmojiSuggestionExtension ProseMirror plugin detects ':query' with 2+ chars and sets active state with correct from/to positions",
+    "implemented": false,
+    "featureIds": ["F025"],
+    "testType": "unit",
+    "testFile": "server/src/test/unit/editor/EmojiSuggestion.test.ts"
+  },
+  {
+    "id": "T047",
+    "description": "EmojiSuggestionExtension does not activate for ':' followed by fewer than 2 characters",
+    "implemented": false,
+    "featureIds": ["F025"],
+    "testType": "unit",
+    "testFile": "server/src/test/unit/editor/EmojiSuggestion.test.ts"
+  },
+  {
+    "id": "T048",
+    "description": "EmojiSuggestionPopup searches emoji-mart and renders up to 30 results in a 10-column grid",
+    "implemented": false,
+    "featureIds": ["F025"],
+    "testType": "unit",
+    "testFile": "server/src/test/unit/editor/EmojiSuggestion.test.ts"
+  },
+  {
+    "id": "T049",
+    "description": "EmojiSuggestionPopup keyboard navigation: ArrowRight/Left moves selection, Enter inserts emoji, Escape dismisses",
+    "implemented": false,
+    "featureIds": ["F025"],
+    "testType": "unit",
+    "testFile": "server/src/test/unit/editor/EmojiSuggestion.test.ts"
+  },
+  {
+    "id": "T050",
+    "description": "EmojiSuggestionPopup inserts selected emoji by replacing the ':query' range and appending the native character",
+    "implemented": false,
+    "featureIds": ["F025"],
+    "testType": "unit",
+    "testFile": "server/src/test/unit/editor/EmojiSuggestion.test.ts"
+  },
+  {
+    "id": "T051",
+    "description": "MentionSuggestionExtension ProseMirror plugin detects '@query' after space or at start of text and sets active state",
+    "implemented": false,
+    "featureIds": ["F028"],
+    "testType": "unit",
+    "testFile": "server/src/test/unit/editor/MentionSuggestion.test.ts"
+  },
+  {
+    "id": "T052",
+    "description": "MentionSuggestionExtension does not activate for '@' inside an email address (e.g., 'user@domain')",
+    "implemented": false,
+    "featureIds": ["F028"],
+    "testType": "unit",
+    "testFile": "server/src/test/unit/editor/MentionSuggestion.test.ts"
+  },
+  {
+    "id": "T053",
+    "description": "MentionSuggestionPopup shows @everyone option when query matches 'everyone' or is empty",
+    "implemented": false,
+    "featureIds": ["F028"],
+    "testType": "unit",
+    "testFile": "server/src/test/unit/editor/MentionSuggestion.test.ts"
+  },
+  {
+    "id": "T054",
+    "description": "MentionSuggestionPopup calls searchMentions with query and renders matching users with display_name and @username",
+    "implemented": false,
+    "featureIds": ["F028"],
+    "testType": "unit",
+    "testFile": "server/src/test/unit/editor/MentionSuggestion.test.ts"
+  },
+  {
+    "id": "T055",
+    "description": "MentionSuggestionPopup inserts MentionNode with correct userId/username/displayName attrs and trailing space",
+    "implemented": false,
+    "featureIds": ["F027", "F028"],
+    "testType": "unit",
+    "testFile": "server/src/test/unit/editor/MentionSuggestion.test.ts"
+  },
+  {
+    "id": "T056",
+    "description": "MentionNode renders as styled inline badge with @username or @displayName text",
+    "implemented": false,
+    "featureIds": ["F027"],
+    "testType": "unit",
+    "testFile": "server/src/test/unit/editor/MentionSuggestion.test.ts"
+  },
+  {
+    "id": "T057",
+    "description": "getHocuspocusUrl returns wss://<host>/hocuspocus when window.location is https",
+    "implemented": false,
+    "featureIds": ["F030"],
+    "testType": "unit",
+    "testFile": "server/src/test/unit/editor/yjsConfig.test.ts"
+  },
+  {
+    "id": "T058",
+    "description": "getHocuspocusUrl returns ws://localhost:1234 when window is undefined (server-side)",
+    "implemented": false,
+    "featureIds": ["F030"],
+    "testType": "unit",
+    "testFile": "server/src/test/unit/editor/yjsConfig.test.ts"
+  },
+  {
+    "id": "T059",
+    "description": "getHocuspocusUrl returns NEXT_PUBLIC_HOCUSPOCUS_URL when env var is set",
+    "implemented": false,
+    "featureIds": ["F030"],
+    "testType": "unit",
+    "testFile": "server/src/test/unit/editor/yjsConfig.test.ts"
+  },
+  {
+    "id": "T060",
+    "description": "sanitizeBlocks converts blocks with unknown types to paragraphs extracting text content",
+    "implemented": false,
+    "featureIds": ["F031"],
+    "testType": "unit",
+    "testFile": "server/src/test/unit/editor/RichTextViewer.test.ts"
+  },
+  {
+    "id": "T061",
+    "description": "sanitizeBlocks coerces non-string .text fields to strings instead of crashing",
+    "implemented": false,
+    "featureIds": ["F031"],
+    "testType": "unit",
+    "testFile": "server/src/test/unit/editor/RichTextViewer.test.ts"
+  },
+  {
+    "id": "T062",
+    "description": "RichTextViewer handles ProseMirror JSON format {type:'doc', content:[...]} by extracting text into paragraphs",
+    "implemented": false,
+    "featureIds": ["F031"],
+    "testType": "unit",
+    "testFile": "server/src/test/unit/editor/RichTextViewer.test.ts"
+  },
+  {
+    "id": "T063",
+    "description": "RichTextErrorBoundary catches BlockNote render error and shows plain text fallback",
+    "implemented": false,
+    "featureIds": ["F031"],
+    "testType": "unit",
+    "testFile": "server/src/test/unit/editor/RichTextViewer.test.ts"
+  },
+  {
+    "id": "T064",
+    "description": "TextEditor isTextContent guard returns false for content items where .text is a number or object",
+    "implemented": false,
+    "featureIds": ["F032"],
+    "testType": "unit",
+    "testFile": "server/src/test/unit/editor/TextEditor.test.ts"
+  },
+  {
+    "id": "T065",
+    "description": "resolveEveryoneMention with single user ID returns that ID without querying the DB",
+    "implemented": false,
+    "featureIds": ["F033"],
+    "testType": "unit",
+    "testFile": "server/src/test/unit/internal-notifications/resolveEveryoneMention.test.ts"
+  },
+  {
+    "id": "T066",
+    "description": "resolveEveryoneMention with @everyone does a single DB query and returns all internal user IDs",
+    "implemented": false,
+    "featureIds": ["F033"],
+    "testType": "unit",
+    "testFile": "server/src/test/unit/internal-notifications/resolveEveryoneMention.test.ts"
+  },
+  {
+    "id": "T067",
+    "description": "resolveEveryoneMention with both @everyone and individual IDs deduplicates the result",
+    "implemented": false,
+    "featureIds": ["F033"],
+    "testType": "unit",
+    "testFile": "server/src/test/unit/internal-notifications/resolveEveryoneMention.test.ts"
+  },
+  {
+    "id": "T068",
+    "description": "handleUserMentionedInDocument early-exits without DB queries when document edit has no new mentions",
+    "implemented": false,
+    "featureIds": ["F033"],
+    "testType": "unit",
+    "testFile": "server/src/test/unit/internal-notifications/mentionNotifications.test.ts"
+  },
+  {
+    "id": "T069",
+    "description": "handleUserMentionedInDocument creates notifications in parallel via Promise.all for multiple mentioned users",
+    "implemented": false,
+    "featureIds": ["F033"],
+    "testType": "unit",
+    "testFile": "server/src/test/unit/internal-notifications/mentionNotifications.test.ts"
+  },
+  {
+    "id": "T070",
+    "description": "After Phase 2 migration: grep -r 'DocumentEditor' across *.ts and *.tsx files returns zero results (no remaining imports or references)",
+    "implemented": false,
+    "featureIds": ["F035"],
+    "testType": "manual",
+    "notes": "Run before deleting files. Verify comments (TextEditor.tsx) and RichTextViewer.tsx are unaffected."
+  },
+  {
+    "id": "T071",
+    "description": "After deleting DocumentEditor.jsx, BlockEditor.jsx, DocumentEditor.tsx: TypeScript build succeeds with zero errors",
+    "implemented": false,
+    "featureIds": ["F035"],
+    "testType": "manual",
+    "notes": "Run npx tsc --noEmit across all packages after deletion."
+  },
+  {
+    "id": "T072",
+    "description": "After cleanup: ticket comments and task comments still render and accept input using TextEditor (BlockNote)",
+    "implemented": false,
+    "featureIds": ["F035"],
+    "testType": "manual",
+    "notes": "Smoke test: create a ticket comment and a task comment, verify editor loads and saves."
   }
 ]

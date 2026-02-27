@@ -313,6 +313,28 @@ export class ApiTicketController extends ApiBaseController {
   }
 
   /**
+   * Get ticket documents
+   */
+  getDocuments() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(req);
+
+        return await runWithTenant(apiRequest.context!.tenant, async () => {
+          await this.checkPermission(apiRequest, this.options.permissions?.read || 'read');
+
+          const ticketId = await this.extractIdFromPath(apiRequest);
+          const documents = await this.ticketService.getTicketDocuments(ticketId, apiRequest.context!);
+
+          return createSuccessResponse(documents);
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
    * Add comment to ticket
    */
   addComment() {

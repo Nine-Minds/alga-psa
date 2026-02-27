@@ -14,7 +14,10 @@ import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dia
 import { Button } from '@alga-psa/ui/components/Button';
 import { Switch } from '@alga-psa/ui/components/Switch';
 
-import { readAssistantContentFromSse } from './readAssistantContentFromSse';
+import {
+  readAssistantContentFromSse,
+  type SseFunctionProposal,
+} from './readAssistantContentFromSse';
 
 import './chat.css';
 
@@ -22,11 +25,25 @@ type ChatCompletionMessage = {
   role: 'user' | 'assistant' | 'function';
   content?: string;
   reasoning?: string;
+  reasoning_content?: string;
   name?: string;
   function_call?: {
     name: string;
     arguments: Record<string, unknown>;
   };
+  tool_call_id?: string;
+};
+
+type DisplayChatMessage = {
+  _id?: string;
+  role?: string;
+  chat_role?: string;
+  content?: string;
+  reasoning?: string;
+  reasoning_content?: string;
+  status?: 'interrupted';
+  statusDetail?: string;
+  functionCallMeta?: FunctionCallMeta;
   tool_call_id?: string;
 };
 
@@ -191,8 +208,35 @@ const mapMessagesFromProps = (records: any[]): ChatCompletionMessage[] =>
   records.map((record: any) => ({
     role: record.chat_role === 'bot' ? 'assistant' : 'user',
     content: record.content ?? '',
-    reasoning: record.reasoning ?? undefined,
+    reasoning: record.reasoning ?? record.reasoning_content ?? undefined,
+    reasoning_content: record.reasoning_content ?? record.reasoning ?? undefined,
   }));
+
+const resolveDisplayMessageRole = (message: DisplayChatMessage): string => {
+  if (typeof message.role === 'string' && message.role.trim().length > 0) {
+    return message.role;
+  }
+  if (typeof message.chat_role === 'string' && message.chat_role.trim().length > 0) {
+    return message.chat_role;
+  }
+  return '';
+};
+
+const mapDisplayMessageToCompletion = (
+  message: DisplayChatMessage,
+): ChatCompletionMessage | null => {
+  const resolvedRole = resolveDisplayMessageRole(message);
+  if (resolvedRole !== 'user' && resolvedRole !== 'bot' && resolvedRole !== 'assistant') {
+    return null;
+  }
+  const assistantReasoning = message.reasoning ?? message.reasoning_content ?? undefined;
+  return {
+    role: resolvedRole === 'user' ? 'user' : 'assistant',
+    content: message.content ?? '',
+    reasoning: assistantReasoning,
+    reasoning_content: assistantReasoning,
+  };
+};
 
 
 export const Chat: React.FC<ChatProps> = ({
@@ -227,6 +271,7 @@ export const Chat: React.FC<ChatProps> = ({
       functionCallMeta?: FunctionCallMeta;
       status?: 'interrupted';
       statusDetail?: string;
+      tool_call_id?: string;
     }[]
   >([]);
   const [fullMessage, setFullMessage] = useState('');
@@ -237,6 +282,9 @@ export const Chat: React.FC<ChatProps> = ({
   );
   const [chatId, setChatId] = useState<string | null>(initialChatId ?? null);
   const [userMessageId, setUserMessageId] = useState<string | null>(null);
+  const [persistedMessageCutoff, setPersistedMessageCutoff] = useState<number | null>(null);
+  const [editingMessageIndex, setEditingMessageIndex] = useState<number | null>(null);
+  const [isMultilineMode, setIsMultilineMode] = useState(false);
   const [conversation, setConversation] = useState<ChatCompletionMessage[]>(() =>
     mapMessagesFromProps(messages),
   );
@@ -253,6 +301,7 @@ export const Chat: React.FC<ChatProps> = ({
   const [validationMessage, setValidationMessage] = useState('');
   const autoSendRef = useRef(false);
   const streamAbortControllerRef = useRef<AbortController | null>(null);
+  const executeAbortControllerRef = useRef<AbortController | null>(null);
   const messageOrderRef = useRef<number>(0);
   const streamingTextRef = useRef<string | null>(null);
   const generationIdRef = useRef<number>(0);
@@ -313,6 +362,7 @@ export const Chat: React.FC<ChatProps> = ({
   useEffect(() => {
     return () => {
       streamAbortControllerRef.current?.abort();
+      executeAbortControllerRef.current?.abort();
     };
   }, []);
 
@@ -394,6 +444,9 @@ export const Chat: React.FC<ChatProps> = ({
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
     setMessageText(value);
+    if (!isMultilineMode && value.includes('\n')) {
+      setIsMultilineMode(true);
+    }
     requestAnimationFrame(autoResizeTextarea);
     if (onUserInput) {
       onUserInput();
@@ -461,7 +514,11 @@ export const Chat: React.FC<ChatProps> = ({
       return;
     }
 
-    handleSend(trimmedMessage);
+    if (editingMessageIndex !== null) {
+      handleEditAndResendFromMessage(editingMessageIndex, trimmedMessage);
+    } else {
+      handleSend(trimmedMessage);
+    }
 
     if (inputRef.current) {
       inputRef.current.focus();
@@ -469,10 +526,28 @@ export const Chat: React.FC<ChatProps> = ({
   };
 
   const handleTextareaKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+    if (e.key !== 'Enter') {
+      return;
+    }
+
+    const commandSend = e.metaKey || e.ctrlKey;
+
+    if (isMultilineMode) {
+      if (!commandSend) {
+        return;
+      }
       e.preventDefault();
       sendMessage();
+      return;
     }
+
+    if (e.shiftKey) {
+      setIsMultilineMode(true);
+      return;
+    }
+
+    e.preventDefault();
+    sendMessage();
   };
 
   const handleClick = () => {
@@ -491,16 +566,26 @@ export const Chat: React.FC<ChatProps> = ({
       setFullMessage(streamingTextRef.current);
       streamingTextRef.current = null;
     }
+    executeAbortControllerRef.current?.abort();
+    executeAbortControllerRef.current = null;
     setGeneratingResponse(false);
     setIsFunction(false);
-    setPendingFunction(null);
+    setPendingFunctionStatus(pendingFunction ? 'awaiting' : 'idle');
+    setPendingFunctionAction('none');
     setIsExecutingFunction(false);
   };
 
-  const handleSend = useCallback(async (trimmedMessage: string) => {
+  const handleSend = useCallback(async (
+    trimmedMessage: string,
+    options?: { reuseExistingUserMessage?: boolean; baseConversation?: ChatCompletionMessage[] },
+  ) => {
+    const reuseExistingUserMessage = options?.reuseExistingUserMessage ?? false;
     setFunctionError(null);
+    setEditingMessageIndex(null);
     setFullMessageStatus(null);
     setFullMessageStatusDetail(null);
+    setFullReasoning(null);
+    setIsMultilineMode(false);
     pendingAssistantMessageIdRef.current = null;
     setGeneratingResponse(true);
     setIsFunction(true);
@@ -513,12 +598,11 @@ export const Chat: React.FC<ChatProps> = ({
       return;
     }
 
-    const userMessage: ChatCompletionMessage = {
-      role: 'user',
-      content: trimmedMessage,
-    };
-
-    const conversationWithUser = [...conversation, userMessage];
+    const baseConversation = options?.baseConversation ?? conversation;
+    const userMessage: ChatCompletionMessage = { role: 'user', content: trimmedMessage };
+    const conversationWithUser = reuseExistingUserMessage
+      ? baseConversation
+      : [...baseConversation, userMessage];
     setConversation(conversationWithUser);
 
     // Create new chat if needed and persist the user message
@@ -538,7 +622,7 @@ export const Chat: React.FC<ChatProps> = ({
         }
       }
 
-      if (createdChatId) {
+      if (createdChatId && !reuseExistingUserMessage) {
         const order = messageOrderRef.current + 1;
         messageOrderRef.current = order;
         const messageInfo = {
@@ -557,17 +641,20 @@ export const Chat: React.FC<ChatProps> = ({
       setFunctionError('Unable to save this message, continuing without persistence for now.');
     }
 
-    setNewChatMessages((prev) => [
-      ...prev,
-      {
-        _id: resolveMessageId(userMessageId),
-        role: 'user',
-        content: trimmedMessage,
-        functionCallMeta: undefined,
-      },
-    ]);
+    if (!reuseExistingUserMessage) {
+      setNewChatMessages((prev) => [
+        ...prev,
+        {
+          _id: resolveMessageId(userMessageId),
+          role: 'user',
+          content: trimmedMessage,
+          functionCallMeta: undefined,
+        },
+      ]);
+    }
 
     setMessageText('');
+    setIsMultilineMode(false);
     if (inputRef.current) {
       inputRef.current.style.height = '';
       requestAnimationFrame(autoResizeTextarea);
@@ -608,6 +695,9 @@ export const Chat: React.FC<ChatProps> = ({
       streamingTextRef.current = '';
       let renderScheduled = false;
       let sawToken = false;
+      let shouldContinueStreaming = true;
+      let streamedFunctionProposal: PendingFunctionState | null = null;
+      let streamedReasoning: string | null = null;
 
       const scheduleIncomingRender = () => {
         if (renderScheduled) {
@@ -625,7 +715,8 @@ export const Chat: React.FC<ChatProps> = ({
 
       const { content: finalAssistantContent, doneReceived } =
         await readAssistantContentFromSse(response, {
-          shouldContinue: () => generationIdRef.current === generationId,
+          shouldContinue: () =>
+            generationIdRef.current === generationId && shouldContinueStreaming,
           onToken: (_token, accumulated) => {
             streamingTextRef.current = accumulated;
             if (!sawToken) {
@@ -634,9 +725,42 @@ export const Chat: React.FC<ChatProps> = ({
             }
             scheduleIncomingRender();
           },
+          onReasoning: (_token, accumulated) => {
+            if (generationIdRef.current !== generationId) {
+              return;
+            }
+            streamedReasoning = accumulated;
+            setFullReasoning(accumulated);
+          },
+          onToolCalls: (proposal: SseFunctionProposal) => {
+            const modelMessages = (proposal.modelMessages ??
+              proposal.nextMessages) as ChatCompletionMessage[];
+            streamedFunctionProposal = {
+              metadata: proposal.function,
+              assistantPreview: proposal.assistantPreview,
+              assistantReasoning: proposal.assistantReasoning,
+              functionCall: proposal.functionCall,
+              nextMessages: modelMessages,
+              chatId: createdChatId ?? chatId,
+            };
+            shouldContinueStreaming = false;
+          },
         });
 
       if (generationIdRef.current !== generationId) {
+        return;
+      }
+
+      if (streamedFunctionProposal) {
+        setConversation(streamedFunctionProposal.nextMessages);
+        setPendingFunction(streamedFunctionProposal);
+        setPendingFunctionStatus('awaiting');
+        setPendingFunctionAction('none');
+        setIncomingMessage('');
+        setIsFunction(true);
+        setGeneratingResponse(false);
+        streamingTextRef.current = null;
+        streamAbortControllerRef.current = null;
         return;
       }
 
@@ -657,15 +781,18 @@ export const Chat: React.FC<ChatProps> = ({
         setFullMessageStatusDetail('Connection interrupted — showing partial response.');
       }
 
+      setFullReasoning(streamedReasoning);
+      const assistantReasoning = streamedReasoning ?? undefined;
       setConversation([
         ...conversationWithUser,
         {
           role: 'assistant',
           content: finalAssistantContent,
+          reasoning: assistantReasoning,
+          reasoning_content: assistantReasoning,
         },
       ]);
 
-      setFullReasoning(null);
       setIsFunction(false);
       setIncomingMessage('');
       streamingTextRef.current = null;
@@ -743,6 +870,10 @@ export const Chat: React.FC<ChatProps> = ({
     setIncomingMessage('');
 
     try {
+      executeAbortControllerRef.current?.abort();
+      const executeAbortController = new AbortController();
+      executeAbortControllerRef.current = executeAbortController;
+
       const response = await fetch('/api/chat/v1/execute', {
         method: 'POST',
         headers: {
@@ -754,6 +885,7 @@ export const Chat: React.FC<ChatProps> = ({
           action,
           chatId: pendingFunction.chatId ?? chatId,
         }),
+        signal: executeAbortController.signal,
       });
 
       const data = await response.json();
@@ -772,7 +904,8 @@ export const Chat: React.FC<ChatProps> = ({
       if (data.type === 'assistant_message') {
         const modelMessages = data.modelMessages ?? data.nextMessages;
         const assistantContentRaw = (data.message?.content ?? '').trim();
-        const assistantReasoning: string | null = data.message?.reasoning ?? null;
+        const assistantReasoning: string | null =
+          data.message?.reasoning_content ?? data.message?.reasoning ?? null;
         let finalAssistantContent =
           assistantContentRaw.length > 0
             ? assistantContentRaw
@@ -799,6 +932,7 @@ export const Chat: React.FC<ChatProps> = ({
               role: 'assistant',
               content: finalAssistantContent,
               reasoning: assistantReasoning ?? undefined,
+              reasoning_content: assistantReasoning ?? undefined,
             },
           ],
         );
@@ -830,6 +964,21 @@ export const Chat: React.FC<ChatProps> = ({
         throw new Error('Unexpected response from the assistant.');
       }
     } catch (error) {
+      if (
+        executeAbortControllerRef.current?.signal.aborted ||
+        (typeof error === 'object' &&
+          error != null &&
+          'name' in error &&
+          (error as { name?: unknown }).name === 'AbortError')
+      ) {
+        setPendingFunctionStatus('awaiting');
+        setPendingFunctionAction('none');
+        setIncomingMessage('');
+        setIsFunction(true);
+        setGeneratingResponse(false);
+        return;
+      }
+
       console.error('Error executing function call', error);
       appendFunctionCallMarker(pendingFunction, action, 'error');
       setFunctionError(
@@ -841,13 +990,225 @@ export const Chat: React.FC<ChatProps> = ({
       setIsFunction(true);
       setGeneratingResponse(false);
     } finally {
+      executeAbortControllerRef.current = null;
       setIsExecutingFunction(false);
     }
   }, [pendingFunction, chatId, addAssistantMessageToPersistence]);
 
-  const displayMessages = [...messages, ...newChatMessages].filter(
-    (message) => message.role !== 'function',
+  const persistedDisplayMessages = (messages as DisplayChatMessage[]).filter(
+    (message) => resolveDisplayMessageRole(message) !== 'function',
   );
+  const activePersistedCount =
+    persistedMessageCutoff == null
+      ? persistedDisplayMessages.length
+      : Math.min(persistedMessageCutoff, persistedDisplayMessages.length);
+  const activePersistedMessages = persistedDisplayMessages.slice(0, activePersistedCount);
+  const displayMessages = [...activePersistedMessages, ...newChatMessages].filter(
+    (message) => resolveDisplayMessageRole(message as DisplayChatMessage) !== 'function',
+  );
+
+  const handleRetryFromMessage = useCallback(
+    (messageIndex: number) => {
+      if (generatingResponse || isFunction || isExecutingFunction || pendingFunction) {
+        return;
+      }
+
+      const selectedMessage = displayMessages[messageIndex] as DisplayChatMessage | undefined;
+      if (!selectedMessage || resolveDisplayMessageRole(selectedMessage) !== 'user') {
+        return;
+      }
+
+      const messageContent = (selectedMessage.content ?? '').trim();
+      if (!messageContent.length) {
+        return;
+      }
+
+      const replayWindow = displayMessages.slice(0, messageIndex + 1) as DisplayChatMessage[];
+      const replayConversation = replayWindow
+        .map(mapDisplayMessageToCompletion)
+        .filter((message): message is ChatCompletionMessage => message != null);
+
+      if (!replayConversation.length || replayConversation.at(-1)?.role !== 'user') {
+        return;
+      }
+
+      streamAbortControllerRef.current?.abort();
+      streamAbortControllerRef.current = null;
+      streamingTextRef.current = null;
+      pendingAssistantMessageIdRef.current = null;
+
+      if (messageIndex < activePersistedCount) {
+        setPersistedMessageCutoff(messageIndex + 1);
+        setNewChatMessages([]);
+      } else {
+        const nextNewMessageCount = messageIndex - activePersistedCount + 1;
+        setNewChatMessages((prev) => prev.slice(0, nextNewMessageCount));
+      }
+
+      setPendingFunction(null);
+      setPendingFunctionStatus('idle');
+      setPendingFunctionAction('none');
+      setFunctionError(null);
+      setEditingMessageIndex(null);
+      setIncomingMessage('');
+      setFullMessage('');
+      setFullReasoning(null);
+      setFullMessageStatus(null);
+      setFullMessageStatusDetail(null);
+
+      void handleSend(messageContent, {
+        reuseExistingUserMessage: true,
+        baseConversation: replayConversation,
+      });
+    },
+    [
+      generatingResponse,
+      isFunction,
+      isExecutingFunction,
+      pendingFunction,
+      displayMessages,
+      activePersistedCount,
+      handleSend,
+    ],
+  );
+
+  const handleEditMessage = useCallback(
+    (messageIndex: number) => {
+      if (generatingResponse || isFunction || isExecutingFunction || pendingFunction) {
+        return;
+      }
+
+      const selectedMessage = displayMessages[messageIndex] as DisplayChatMessage | undefined;
+      if (!selectedMessage || resolveDisplayMessageRole(selectedMessage) !== 'user') {
+        return;
+      }
+
+      const editableContent = (selectedMessage.content ?? '').trim();
+      if (!editableContent.length) {
+        return;
+      }
+
+      setEditingMessageIndex(messageIndex);
+      setMessageText(editableContent);
+      setIsMultilineMode(editableContent.includes('\n'));
+      requestAnimationFrame(() => {
+        autoResizeTextarea();
+        inputRef.current?.focus();
+      });
+    },
+    [
+      generatingResponse,
+      isFunction,
+      isExecutingFunction,
+      pendingFunction,
+      displayMessages,
+      autoResizeTextarea,
+    ],
+  );
+
+  const handleEditAndResendFromMessage = useCallback(
+    (messageIndex: number, updatedMessage: string) => {
+      if (generatingResponse || isFunction || isExecutingFunction || pendingFunction) {
+        return;
+      }
+
+      const selectedMessage = displayMessages[messageIndex] as DisplayChatMessage | undefined;
+      if (!selectedMessage || resolveDisplayMessageRole(selectedMessage) !== 'user') {
+        return;
+      }
+
+      const replacementContent = updatedMessage.trim();
+      if (!replacementContent.length) {
+        setValidationMessage('Please enter a message before sending.');
+        setShowValidationDialog(true);
+        return;
+      }
+
+      const replayWindow = displayMessages
+        .slice(0, messageIndex + 1)
+        .map((message, index) =>
+          index === messageIndex
+            ? { ...message, content: replacementContent }
+            : message,
+        ) as DisplayChatMessage[];
+
+      const replayConversation = replayWindow
+        .map(mapDisplayMessageToCompletion)
+        .filter((message): message is ChatCompletionMessage => message != null);
+
+      if (!replayConversation.length || replayConversation.at(-1)?.role !== 'user') {
+        return;
+      }
+
+      streamAbortControllerRef.current?.abort();
+      streamAbortControllerRef.current = null;
+      streamingTextRef.current = null;
+      pendingAssistantMessageIdRef.current = null;
+
+      if (messageIndex < activePersistedCount) {
+        setPersistedMessageCutoff(messageIndex);
+        setNewChatMessages([
+          {
+            _id: resolveMessageId(selectedMessage._id),
+            role: 'user',
+            content: replacementContent,
+            functionCallMeta: undefined,
+          },
+        ]);
+      } else {
+        const nextNewMessageCount = messageIndex - activePersistedCount;
+        setNewChatMessages((prev) => [
+          ...prev.slice(0, Math.max(0, nextNewMessageCount)),
+          {
+            _id: resolveMessageId(selectedMessage._id),
+            role: 'user',
+            content: replacementContent,
+            functionCallMeta: undefined,
+          },
+        ]);
+      }
+
+      setPendingFunction(null);
+      setPendingFunctionStatus('idle');
+      setPendingFunctionAction('none');
+      setFunctionError(null);
+      setEditingMessageIndex(null);
+      setIncomingMessage('');
+      setFullMessage('');
+      setFullReasoning(null);
+      setFullMessageStatus(null);
+      setFullMessageStatusDetail(null);
+      setIsMultilineMode(false);
+
+      void handleSend(replacementContent, {
+        reuseExistingUserMessage: true,
+        baseConversation: replayConversation,
+      });
+    },
+    [
+      generatingResponse,
+      isFunction,
+      isExecutingFunction,
+      pendingFunction,
+      displayMessages,
+      activePersistedCount,
+      handleSend,
+    ],
+  );
+
+  const handleCancelEdit = useCallback(() => {
+    setEditingMessageIndex(null);
+    setMessageText('');
+    setIsMultilineMode(false);
+    requestAnimationFrame(() => {
+      autoResizeTextarea();
+      inputRef.current?.focus();
+    });
+  }, [autoResizeTextarea]);
+
+  const canModifyHistory =
+    !generatingResponse && !isFunction && !isExecutingFunction && !pendingFunction;
+  const canStop = generatingResponse || isExecutingFunction;
 
   const { method, normalizedMethod, isHttpMethod, endpointLabel } = determineHttpDetails(pendingFunction);
   const autoApprovalEnabledForMethod =
@@ -1022,13 +1383,25 @@ export const Chat: React.FC<ChatProps> = ({
                 <Message
                   key={message._id ?? message.tool_call_id ?? `msg-${index}`}
                   messageId={message._id}
-                  role={message.role}
-                  content={message.content}
+                  role={resolveDisplayMessageRole(message as DisplayChatMessage)}
+                  content={message.content ?? ''}
                   clientUrl={clientUrl}
                   reasoning={message.reasoning}
                   functionCallMeta={message.functionCallMeta}
                   status={message.status}
                   statusDetail={message.statusDetail}
+                  onRetry={
+                    canModifyHistory &&
+                    resolveDisplayMessageRole(message as DisplayChatMessage) === 'user'
+                      ? () => handleRetryFromMessage(index)
+                      : undefined
+                  }
+                  onEdit={
+                    canModifyHistory &&
+                    resolveDisplayMessageRole(message as DisplayChatMessage) === 'user'
+                      ? () => handleEditMessage(index)
+                      : undefined
+                  }
                 />
               ))}
               {!!incomingMessage && (
@@ -1036,6 +1409,7 @@ export const Chat: React.FC<ChatProps> = ({
                   role="bot"
                   isFunction={isFunction}
                   content={incomingMessage}
+                  reasoning={fullReasoning ?? undefined}
                   showStreamingCursor={generatingResponse && !isFunction}
                 />
               )}
@@ -1175,17 +1549,44 @@ export const Chat: React.FC<ChatProps> = ({
               data-automation-id="chat-input"
             />
             <p className="chat-input__hint">
-              Press Ctrl+Enter or ⌘+Enter to send.
+              {isMultilineMode
+                ? 'Multiline mode: Enter adds a new line. Ctrl+Enter or ⌘+Enter sends.'
+                : 'Press Enter to send. Shift+Enter switches to multiline mode.'}
             </p>
+            {editingMessageIndex !== null ? (
+              <p className="chat-input__hint chat-input__hint--editing">
+                Editing selected message. Sending will replace that message and regenerate the
+                thread from there.
+                <button
+                  type="button"
+                  className="chat-input__cancel-edit"
+                  onClick={handleCancelEdit}
+                >
+                  Cancel edit
+                </button>
+              </p>
+            ) : null}
           </div>
 
-          <button
-            onClick={generatingResponse ? handleStop : handleClick}
-            type="submit"
-            className={generatingResponse ? 'chat-action chat-action--stop' : 'chat-action chat-action--send'}
-          >
-            {generatingResponse ? 'STOP' : 'SEND'}
-          </button>
+          <div className="chat-action-group">
+            {canStop ? (
+              <button
+                onClick={handleStop}
+                type="button"
+                className="chat-action chat-action--stop"
+              >
+                STOP
+              </button>
+            ) : null}
+            <button
+              onClick={handleClick}
+              type="submit"
+              className="chat-action chat-action--send"
+              disabled={generatingResponse || isFunction}
+            >
+              SEND
+            </button>
+          </div>
         </div>
       </footer>
 

@@ -967,6 +967,66 @@ export const getTicketsForList = withAuth(async (
       }
     }
 
+    // Apply SLA status filter
+    if (validatedFilters.slaStatusFilter && validatedFilters.slaStatusFilter !== 'all') {
+      const nowIso = Temporal.Now.instant().toString();
+
+      switch (validatedFilters.slaStatusFilter) {
+        case 'has_sla':
+          baseQuery = baseQuery.whereNotNull('t.sla_policy_id');
+          break;
+
+        case 'no_sla':
+          baseQuery = baseQuery.whereNull('t.sla_policy_id');
+          break;
+
+        case 'on_track':
+          baseQuery = baseQuery
+            .whereNotNull('t.sla_policy_id')
+            .whereNull('t.sla_paused_at')
+            .where(function() {
+              this.whereNotNull('t.sla_response_at')
+                .orWhereNull('t.sla_response_due_at')
+                .orWhere('t.sla_response_due_at', '>=', nowIso);
+            })
+            .where(function() {
+              this.whereNotNull('t.sla_resolution_at')
+                .orWhereNull('t.sla_resolution_due_at')
+                .orWhere('t.sla_resolution_due_at', '>=', nowIso);
+            })
+            .where(function() {
+              this.whereNull('t.sla_response_met').orWhere('t.sla_response_met', true);
+            })
+            .where(function() {
+              this.whereNull('t.sla_resolution_met').orWhere('t.sla_resolution_met', true);
+            });
+          break;
+
+        case 'breached':
+          baseQuery = baseQuery
+            .whereNotNull('t.sla_policy_id')
+            .where(function() {
+              this.where(function() {
+                this.where('t.sla_response_due_at', '<', nowIso)
+                  .whereNull('t.sla_response_at');
+              })
+              .orWhere(function() {
+                this.where('t.sla_resolution_due_at', '<', nowIso)
+                  .whereNull('t.sla_resolution_at');
+              })
+              .orWhere('t.sla_response_met', false)
+              .orWhere('t.sla_resolution_met', false);
+            });
+          break;
+
+        case 'paused':
+          baseQuery = baseQuery
+            .whereNotNull('t.sla_policy_id')
+            .whereNotNull('t.sla_paused_at');
+          break;
+      }
+    }
+
     const sortBy = validatedFilters.sortBy ?? 'entered_at';
     const sortDirection: 'asc' | 'desc' = validatedFilters.sortDirection ?? 'desc';
     const sortColumnMap: Record<string, { column?: string; rawExpression?: string }> = {
@@ -1535,6 +1595,21 @@ export const updateTicketWithCache = withAuth(async (user, { tenant }, id: strin
       };
     }
 
+    // Record closed_at / closed_by when transitioning to/from closed status
+    if (newStatus?.is_closed && !oldStatus?.is_closed) {
+      await trx('tickets')
+        .where({ ticket_id: id, tenant: tenant })
+        .update({ closed_at: occurredAt, closed_by: user.user_id });
+      updatedTicket.closed_at = occurredAt;
+      updatedTicket.closed_by = user.user_id;
+    } else if (!newStatus?.is_closed && oldStatus?.is_closed) {
+      await trx('tickets')
+        .where({ ticket_id: id, tenant: tenant })
+        .update({ closed_at: null, closed_by: null });
+      updatedTicket.closed_at = null;
+      updatedTicket.closed_by = null;
+    }
+
     // Publish appropriate event based on the update
     if (newStatus?.is_closed && !oldStatus?.is_closed) {
       // Ticket was closed
@@ -1599,6 +1674,25 @@ export const updateTicketWithCache = withAuth(async (user, { tenant }, id: strin
         ctx: workflowCtx,
         eventName: 'Ticket Updated',
       });
+    }
+
+    // Publish response state change event if response_state was explicitly changed
+    if ('response_state' in updateData && updateData.response_state !== currentTicket.response_state) {
+      try {
+        await publishEvent({
+          eventType: 'TICKET_RESPONSE_STATE_CHANGED',
+          payload: {
+            tenantId: tenant,
+            ticketId: id,
+            userId: user.user_id,
+            previousState: currentTicket.response_state || null,
+            newState: updateData.response_state || null,
+            trigger: 'manual',
+          },
+        });
+      } catch (error) {
+        console.warn('[updateTicketWithCache] Failed to publish TICKET_RESPONSE_STATE_CHANGED:', error);
+      }
     }
 
     // If this is a bundle master in sync_updates mode, propagate selected workflow updates to children.

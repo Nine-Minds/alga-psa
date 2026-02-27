@@ -51,6 +51,7 @@ import {
   buildTicketResolutionSlaStageCompletionEvent,
   buildTicketResolutionSlaStageEnteredEvent,
 } from '../lib/workflowTicketSlaStageEvents';
+import { SlaBackendFactory } from '@alga-psa/sla/services';
 
 // Email event channel constant - inlined to avoid circular dependency with notifications
 // Must match the value in @alga-psa/notifications/emailChannel
@@ -688,6 +689,21 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
         };
       }
 
+      // Record closed_at / closed_by when transitioning to/from closed status
+      if (newStatus?.is_closed && !oldStatus?.is_closed) {
+        await trx('tickets')
+          .where({ ticket_id: id, tenant: tenant })
+          .update({ closed_at: occurredAt, closed_by: user.user_id });
+        updatedTicket.closed_at = occurredAt;
+        updatedTicket.closed_by = user.user_id;
+      } else if (!newStatus?.is_closed && oldStatus?.is_closed) {
+        await trx('tickets')
+          .where({ ticket_id: id, tenant: tenant })
+          .update({ closed_at: null, closed_by: null });
+        updatedTicket.closed_at = null;
+        updatedTicket.closed_by = null;
+      }
+
       // Handle response_state changes
       const previousResponseState = currentTicket.response_state as TicketResponseState;
       let responseStateChanged = false;
@@ -1185,6 +1201,14 @@ async function performTicketDelete(
     .where({ ticket_id: ticketId, tenant })
     .delete();
 
+  // Delete SLA notification tracking records (CitusDB doesn't support ON DELETE CASCADE)
+  await trx('sla_notifications_sent')
+    .where({
+      ticket_id: ticketId,
+      tenant: tenant
+    })
+    .delete();
+
   await trx('tickets')
     .where({ ticket_id: ticketId, tenant })
     .delete();
@@ -1218,6 +1242,13 @@ export const deleteTicket = withAuth(async (
     });
 
     if (result.deleted) {
+      try {
+        const backend = await SlaBackendFactory.getBackend();
+        await backend.cancelSla(ticketId);
+      } catch (error) {
+        console.warn('[deleteTicket] Failed to cancel SLA backend workflow:', error);
+      }
+
       revalidatePath('/msp/tickets');
     }
 
@@ -1260,6 +1291,12 @@ export const deleteTickets = withAuth(async (user, { tenant }, ticketIds: string
       });
 
       if (result.deleted) {
+        try {
+          const backend = await SlaBackendFactory.getBackend();
+          await backend.cancelSla(ticketId);
+        } catch (error) {
+          console.warn('[deleteTickets] Failed to cancel SLA backend workflow:', error);
+        }
         deletedIds.push(ticketId);
       } else {
         failed.push({

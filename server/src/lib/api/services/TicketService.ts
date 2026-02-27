@@ -5,7 +5,8 @@
 
 import { Knex } from 'knex';
 import { BaseService, ServiceContext, ListResult } from '@alga-psa/db';
-import { ITicket } from 'server/src/interfaces/ticket.interfaces';
+import { ITicket, ITicketWithDetails } from 'server/src/interfaces/ticket.interfaces';
+import { IDocument } from 'server/src/interfaces/document.interface';
 import { TICKET_ORIGINS } from '@alga-psa/types';
 import { withTransaction } from '@alga-psa/db';
 import { maybeReopenBundleMasterFromChildReply } from '@alga-psa/tickets/actions/ticketBundleUtils';
@@ -248,12 +249,7 @@ export class TicketService extends BaseService<ITicket> {
    */
   async getById(id: string, context: ServiceContext): Promise<ITicket | null> {
     const { knex } = await this.getKnex();
-    
-    // Validate UUID format before querying
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    if (!uuidRegex.test(id)) {
-      throw new ValidationError('Invalid ticket ID format');
-    }
+    this.assertValidTicketId(id);
 
     const ticket = await knex('tickets as t')
       .leftJoin('clients as comp', function() {
@@ -312,7 +308,60 @@ export class TicketService extends BaseService<ITicket> {
       .where({ 't.ticket_id': id, 't.tenant': context.tenant })
       .first();
 
-    return ticket as ITicket | null;
+    if (!ticket) {
+      return null;
+    }
+
+    const documents = await this.getTicketDocuments(id, context);
+
+    return {
+      ...(ticket as ITicketWithDetails),
+      documents
+    } as ITicketWithDetails;
+  }
+
+  async getTicketDocuments(ticketId: string, context: ServiceContext): Promise<IDocument[]> {
+    const { knex } = await this.getKnex();
+    this.assertValidTicketId(ticketId);
+
+    const documents = await knex('documents as d')
+      .join('document_associations as da', function () {
+        this.on('d.document_id', '=', 'da.document_id')
+          .andOn('d.tenant', '=', 'da.tenant');
+      })
+      .leftJoin('users as u', function () {
+        this.on('d.created_by', '=', 'u.user_id')
+          .andOn('d.tenant', '=', 'u.tenant');
+      })
+      .leftJoin('document_types as dt', function () {
+        this.on('d.type_id', '=', 'dt.type_id')
+          .andOn('d.tenant', '=', 'dt.tenant');
+      })
+      .leftJoin('shared_document_types as sdt', 'd.shared_type_id', 'sdt.type_id')
+      .where({
+        'da.entity_id': ticketId,
+        'da.entity_type': 'ticket',
+        'da.tenant': context.tenant,
+        'd.tenant': context.tenant
+      })
+      .select(
+        'd.*',
+        'da.association_id',
+        'da.created_at as association_created_at',
+        knex.raw("CONCAT(u.first_name, ' ', u.last_name) as created_by_full_name"),
+        knex.raw('COALESCE(dt.type_name, sdt.type_name) as type_name'),
+        knex.raw('COALESCE(dt.icon, sdt.icon) as type_icon')
+      )
+      .orderBy('d.updated_at', 'desc');
+
+    return documents as IDocument[];
+  }
+
+  private assertValidTicketId(id: string): void {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(id)) {
+      throw new ValidationError('Invalid ticket ID format');
+    }
   }
 
   /**
@@ -463,10 +512,24 @@ export class TicketService extends BaseService<ITicket> {
 
       // Publish appropriate events
       if (data.status_id && data.status_id !== currentTicket.status_id) {
-        // Check if ticket is being closed
+        // Check if ticket is being closed or reopened
         const newStatus = await trx('statuses')
           .where({ status_id: data.status_id, tenant: context.tenant })
           .first();
+        const oldStatus = await trx('statuses')
+          .where({ status_id: currentTicket.status_id, tenant: context.tenant })
+          .first();
+
+        // Record closed_at / closed_by when transitioning to/from closed status
+        if (newStatus?.is_closed && !oldStatus?.is_closed) {
+          await trx('tickets')
+            .where({ ticket_id: id, tenant: context.tenant })
+            .update({ closed_at: new Date(), closed_by: context.userId });
+        } else if (!newStatus?.is_closed && oldStatus?.is_closed) {
+          await trx('tickets')
+            .where({ ticket_id: id, tenant: context.tenant })
+            .update({ closed_at: null, closed_by: null });
+        }
 
         if (newStatus?.is_closed) {
           await this.safePublishEvent('TicketClosed', {

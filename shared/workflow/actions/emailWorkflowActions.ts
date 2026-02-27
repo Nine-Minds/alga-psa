@@ -980,14 +980,23 @@ export async function createCommentFromEmail(
         )
       }, tenant, trx, eventPublisher, analyticsTracker, userId);
 
-      if (normalizedAuthorType === 'client') {
-        await trx('tickets')
-          .where({ ticket_id: commentData.ticket_id, tenant })
-          .update({ response_state: 'awaiting_internal' });
-      } else if (normalizedAuthorType === 'internal') {
-        await trx('tickets')
-          .where({ ticket_id: commentData.ticket_id, tenant })
-          .update({ response_state: 'awaiting_client' });
+      // Only update response state if tracking is enabled for this tenant
+      const tenantSettingsRow = await trx('tenant_settings')
+        .select('ticket_display_settings')
+        .where({ tenant })
+        .first();
+      const responseStateEnabled = (tenantSettingsRow?.ticket_display_settings as any)?.responseStateTrackingEnabled ?? true;
+
+      if (responseStateEnabled) {
+        if (normalizedAuthorType === 'client') {
+          await trx('tickets')
+            .where({ ticket_id: commentData.ticket_id, tenant })
+            .update({ response_state: 'awaiting_internal' });
+        } else if (normalizedAuthorType === 'internal') {
+          await trx('tickets')
+            .where({ ticket_id: commentData.ticket_id, tenant })
+            .update({ response_state: 'awaiting_client' });
+        }
       }
 
       return result.comment_id;

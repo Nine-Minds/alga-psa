@@ -629,14 +629,9 @@ export class TicketModel {
       entered_at: now.toISOString(),
       updated_at: now.toISOString(),
       due_date: cleanedInput.due_date || null,
-      // ITIL-specific fields (for UI display only - not stored in DB)
+      // ITIL-specific fields (for priority calculation)
       itil_impact: cleanedInput.itil_impact || null,
       itil_urgency: cleanedInput.itil_urgency || null,
-      resolution_code: cleanedInput.resolution_code || null,
-      root_cause: cleanedInput.root_cause || null,
-      workaround: cleanedInput.workaround || null,
-      related_problem_id: cleanedInput.related_problem_id || null,
-      sla_target: cleanedInput.sla_target || null,
       // Store attributes and email_metadata as JSON
       attributes: Object.keys(attributes).length > 0 ? JSON.stringify(attributes) : null,
       email_metadata: cleanedInput.email_metadata ? JSON.stringify(cleanedInput.email_metadata) : null
@@ -1094,14 +1089,23 @@ export class TicketModel {
     await trx('comments').insert(baseCommentData);
 
     if (!validatedData.is_internal && validatedData.author_type === 'contact') {
-      await trx('tickets')
-        .where({
-          ticket_id: validatedData.ticket_id,
-          tenant,
-        })
-        .update({
-          response_state: 'awaiting_internal',
-        });
+      // Only update response state if tracking is enabled for this tenant
+      const tenantSettingsRow = await trx('tenant_settings')
+        .select('ticket_display_settings')
+        .where({ tenant })
+        .first();
+      const responseStateEnabled = (tenantSettingsRow?.ticket_display_settings as any)?.responseStateTrackingEnabled ?? true;
+
+      if (responseStateEnabled) {
+        await trx('tickets')
+          .where({
+            ticket_id: validatedData.ticket_id,
+            tenant,
+          })
+          .update({
+            response_state: 'awaiting_internal',
+          });
+      }
     }
 
     // Publish comment event if publisher provided

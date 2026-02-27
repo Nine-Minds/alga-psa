@@ -98,6 +98,16 @@ Currently, document editing is single-user with manual save. If two users open t
 
 **F-P1-16**: Editor includes the `Link` extension configured identically to the current `DocumentEditor`: `openOnClick: false`, `autolink: true`, `linkOnPaste: true`, `HTMLAttributes: { target: '_blank', rel: 'noopener noreferrer' }`.
 
+**F-P1-17**: Editor includes an emoji suggestion grid triggered by typing `:` followed by 2+ characters. Uses `emoji-mart` for search. Grid shows up to 30 matching emoji with keyboard navigation (arrows, Enter to select, Escape to dismiss). Feature parity with BlockNote TextEditor's `GridSuggestionMenuController`.
+
+**F-P1-18**: Editor includes @mention support triggered by typing `@`. Shows a searchable dropdown of tenant users (via `searchUsersForMentions` server action) plus an `@everyone` option. Mentions render as styled inline badges matching the BlockNote Mention component appearance. Uses a custom Tiptap `MentionNode` (inline, atom) + `MentionSuggestionExtension` (ProseMirror plugin for detection) + `MentionSuggestionPopup` (React popup).
+
+**F-P1-19**: `yjs-config.ts` derives the Hocuspocus WebSocket URL from `window.location` in the browser (falling back to `NEXT_PUBLIC_HOCUSPOCUS_URL` env var if set, or `ws://localhost:1234` on the server). This ensures the client connects to `wss://<domain>/hocuspocus` in production without requiring a build-time environment variable.
+
+**F-P1-20**: `RichTextViewer` defensively handles old/malformed document content: `sanitizeBlocks()` validates block types and coerces non-string `.text` fields; `extractTextFromProseMirror()` handles Tiptap JSON `{ type: "doc", content: [...] }` format; `RichTextErrorBoundary` catches BlockNote render crashes and shows plain text fallback. Fixes `e.text.trim is not a function` and `Error creating document from blocks passed as initialContent` on legacy documents.
+
+**F-P1-21**: Mention notification handlers in `internalNotificationSubscriber.ts` are optimized: `resolveEveryoneMention` does a single DB query instead of looping; handlers early-exit when no new mentions are found (avoiding unnecessary DB queries on every document edit); notifications are created in parallel via `Promise.all` instead of sequential `for...of await`.
+
 #### Phase 2 — Production Integration
 
 **F-P2-01**: Replace `DocumentEditor` usage across the app with `CollaborativeEditor`.
@@ -166,6 +176,14 @@ Currently, document editing is single-user with manual save. If two users open t
 3. Replace `DocumentEditor` imports with `CollaborativeEditor`.
 4. Remove feature flag gating.
 5. Monitor Hocuspocus resource usage.
+6. **Dead code cleanup**: After migration, audit and delete files that are no longer referenced:
+   - `packages/documents/src/components/DocumentEditor.jsx` (stale .jsx artifact)
+   - `packages/documents/src/components/BlockEditor.jsx` (stale .jsx artifact)
+   - `packages/documents/src/components/DocumentEditor.tsx` (replaced by CollaborativeEditor)
+   - Any `DocumentEditor` imports/re-exports (e.g., in `packages/documents/src/components/index.ts`)
+   - Verify with `grep -r "DocumentEditor" --include='*.ts' --include='*.tsx'` that zero references remain before deleting.
+   - Confirm comments (ticket, task) use `TextEditor.tsx` (BlockNote) — not affected by this cleanup.
+   - Confirm `RichTextViewer.tsx` is not affected — it's read-only display, unrelated to DocumentEditor.
 
 ## Local Testing
 
@@ -226,16 +244,21 @@ These are end-to-end browser tests for real UI collaboration:
 ## Acceptance Criteria (Definition of Done)
 
 ### Phase 1 Done When:
-- [ ] Feature flag `collaborative_editing` exists and defaults to `false`
-- [ ] `/msp/collab-test` page is accessible only when flag is enabled
-- [ ] Two users can open the same document and see each other's cursors with names
-- [ ] Changes from one user appear in real-time for the other
-- [ ] Content persists across page refreshes (Hocuspocus DB persistence works)
-- [ ] "Snapshot to DB" button successfully writes content to `document_block_content`
-- [ ] Tenant isolation: users from different tenants cannot see each other's edits
-- [ ] All existing editor formatting (from PR #1898) works in collaborative mode
-- [ ] Emoticon extension works in collaborative mode (`:)` converts to emoji)
-- [ ] Link auto-detection works (typing a URL auto-links it)
-- [ ] Connection/save status is visible to the user
-- [ ] Programmatic two-provider sync test passes (automated)
-- [ ] Programmatic onConnect tenant rejection test passes (automated)
+- [x] Feature flag `collaborative_editing` exists and defaults to `false`
+- [x] `/msp/collab-test` page is accessible only when flag is enabled
+- [x] Two users can open the same document and see each other's cursors with names
+- [x] Changes from one user appear in real-time for the other
+- [x] Content persists across page refreshes (Hocuspocus DB persistence works)
+- [x] "Snapshot to DB" button successfully writes content to `document_block_content`
+- [x] Tenant isolation: users from different tenants cannot see each other's edits
+- [x] All existing editor formatting (from PR #1898) works in collaborative mode
+- [x] Emoticon extension works in collaborative mode (`:)` converts to emoji)
+- [x] Link auto-detection works (typing a URL auto-links it)
+- [x] Connection/save status is visible to the user
+- [x] Programmatic two-provider sync test passes (automated)
+- [x] Programmatic onConnect tenant rejection test passes (automated)
+- [x] Emoji suggestion grid works (`:ha` shows emoji picker) — feature parity with TextEditor
+- [x] @mention works (`@` shows user search dropdown, inserts mention badge) — feature parity with TextEditor
+- [x] WebSocket connects in production (URL derived from `window.location`, not env var)
+- [x] Old documents render without crashes (sanitizer + error boundary in RichTextViewer)
+- [x] Mention notifications don't cause unnecessary DB queries on every document edit

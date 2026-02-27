@@ -14,6 +14,7 @@ type IncomingChatMessage = {
   role: 'user' | 'assistant' | 'function';
   content?: string;
   reasoning?: string;
+  reasoning_content?: string;
   name?: string;
   function_call?: {
     name: string;
@@ -23,16 +24,17 @@ type IncomingChatMessage = {
 };
 
 type RawCompletionChunk = {
-  choices?: Array<{
-    delta?: {
-      content?: unknown;
-    };
-  }>;
+  type?: unknown;
+  delta?: unknown;
+  content?: unknown;
+  done?: unknown;
+  [key: string]: unknown;
 };
 
 type ChatCompletionsServiceLike = {
-  createRawCompletionStream: (
+  createStructuredCompletionStream: (
     conversation: IncomingChatMessage[],
+    options?: { signal?: AbortSignal },
   ) => Promise<AsyncIterable<RawCompletionChunk>>;
 };
 
@@ -45,6 +47,16 @@ function asRecord(value: unknown): Record<string, unknown> {
 
 function readString(value: unknown): string | undefined {
   return typeof value === 'string' ? value : undefined;
+}
+
+function readOptionalStringField(record: Record<string, unknown>, key: string): string | undefined {
+  if (!(key in record) || record[key] === undefined) {
+    return undefined;
+  }
+  if (typeof record[key] !== 'string') {
+    throw new Error('Invalid messages payload');
+  }
+  return record[key] as string;
 }
 
 function validateMessages(raw: unknown): IncomingChatMessage[] {
@@ -62,9 +74,9 @@ function validateMessages(raw: unknown): IncomingChatMessage[] {
     const message: IncomingChatMessage = { role };
 
     if (role === 'function') {
-      message.name = readString(obj.name);
-      message.content = readString(obj.content);
-      message.tool_call_id = readString(obj.tool_call_id);
+      message.name = readOptionalStringField(obj, 'name');
+      message.content = readOptionalStringField(obj, 'content');
+      message.tool_call_id = readOptionalStringField(obj, 'tool_call_id');
 
       if (!message.name) {
         throw new Error('Invalid messages payload');
@@ -73,10 +85,14 @@ function validateMessages(raw: unknown): IncomingChatMessage[] {
       return message;
     }
 
-    message.content = readString(obj.content);
-    message.reasoning = readString(obj.reasoning);
+    message.content = readOptionalStringField(obj, 'content');
+    message.reasoning = readOptionalStringField(obj, 'reasoning');
+    message.reasoning_content = readOptionalStringField(obj, 'reasoning_content');
+    if (!message.reasoning_content && message.reasoning) {
+      message.reasoning_content = message.reasoning;
+    }
 
-    if (obj.function_call) {
+    if (obj.function_call !== undefined) {
       const fn = asRecord(obj.function_call);
       const fnName = readString(fn.name);
       if (!fnName) {
@@ -92,7 +108,7 @@ function validateMessages(raw: unknown): IncomingChatMessage[] {
               ? (fnArguments as Record<string, unknown>)
               : {},
       };
-      message.tool_call_id = readString(obj.tool_call_id);
+      message.tool_call_id = readOptionalStringField(obj, 'tool_call_id');
     }
 
     return message;
@@ -162,21 +178,68 @@ export async function POST(req: NextRequest) {
         const mod = (await import('@product/chat/entry')) as unknown as {
           ChatCompletionsService: ChatCompletionsServiceLike;
         };
-        const completionStream = await mod.ChatCompletionsService.createRawCompletionStream(messages);
+        const completionStream = await mod.ChatCompletionsService.createStructuredCompletionStream(
+          messages,
+          { signal: req.signal },
+        );
 
-        for await (const chunk of completionStream) {
+        let doneSent = false;
+        for await (const event of completionStream) {
           if (req.signal.aborted) {
             break;
           }
 
-          const token = chunk?.choices?.[0]?.delta?.content;
-          if (typeof token === 'string' && token.length > 0) {
-            tryEnqueue(controller, encodeSseData(encoder, { content: token, done: false }));
+          const eventType = typeof event?.type === 'string' ? event.type : undefined;
+          if (eventType === 'content_delta') {
+            const token = typeof event.delta === 'string' ? event.delta : '';
+            if (token.length > 0) {
+              tryEnqueue(
+                controller,
+                encodeSseData(encoder, {
+                  type: 'content_delta',
+                  delta: token,
+                  content: token,
+                  done: false,
+                }),
+              );
+            }
+            continue;
+          }
+
+          if (eventType === 'reasoning_delta') {
+            const token = typeof event.delta === 'string' ? event.delta : '';
+            if (token.length > 0) {
+              tryEnqueue(
+                controller,
+                encodeSseData(encoder, {
+                  type: 'reasoning_delta',
+                  delta: token,
+                }),
+              );
+            }
+            continue;
+          }
+
+          if (eventType === 'function_proposed') {
+            tryEnqueue(controller, encodeSseData(encoder, event));
+            continue;
+          }
+
+          if (eventType === 'done') {
+            doneSent = true;
+            tryEnqueue(
+              controller,
+              encodeSseData(encoder, { type: 'done', content: '', done: true }),
+            );
+            continue;
           }
         }
 
-        if (!req.signal.aborted) {
-          tryEnqueue(controller, encodeSseData(encoder, { content: '', done: true }));
+        if (!req.signal.aborted && !doneSent) {
+          tryEnqueue(
+            controller,
+            encodeSseData(encoder, { type: 'done', content: '', done: true }),
+          );
         }
       })()
         .catch((error) => {

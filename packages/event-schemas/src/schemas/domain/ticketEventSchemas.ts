@@ -249,6 +249,14 @@ export type TicketSlaStageBreachedEventPayload = z.infer<
   typeof ticketSlaStageBreachedEventPayloadSchema
 >;
 
+export const ticketSlaThresholdReachedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
+  ticketId: ticketIdSchema,
+  phase: z.enum(['response', 'resolution']).describe('SLA phase'),
+  thresholdPercent: z.number().int().min(0).max(100).describe('Threshold percentage reached (e.g., 50, 75, 90, 100)'),
+}).describe('Payload for TICKET_SLA_THRESHOLD_REACHED');
+
+export type TicketSlaThresholdReachedEventPayload = z.infer<typeof ticketSlaThresholdReachedEventPayloadSchema>;
+
 export const ticketApprovalRequestedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
   ticketId: ticketIdSchema,
   approvalRequestId: z.string().uuid(),

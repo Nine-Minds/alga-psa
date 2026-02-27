@@ -5,6 +5,7 @@ import { yXmlFragmentToProsemirrorJSON } from 'y-prosemirror';
 import { withAuth } from '@alga-psa/auth';
 import { createTenantKnex, withTransaction } from '@alga-psa/db';
 import { createYjsProvider } from '@alga-psa/ui/editor';
+import { CacheFactory } from '../cache/CacheFactory';
 
 const SYNC_TIMEOUT_MS = 5000;
 
@@ -70,6 +71,10 @@ export const syncCollabSnapshot = withAuth(async (user, { tenant }, documentId: 
     if (!updated) {
       return { success: false, message: 'Document not found.' };
     }
+
+    // Invalidate preview cache so the grid thumbnail regenerates
+    const cache = CacheFactory.getPreviewCache(tenant);
+    await cache.delete(documentId);
 
     return { success: true };
   } catch (error) {

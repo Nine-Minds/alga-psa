@@ -37,6 +37,14 @@ spec:
           export {{ $k }}="{{ $v }}"
           {{- end -}}
           {{- end }}`}}
+        {{- if .Values.vaultAgent.gcpServiceAccount.secretPath }}
+        vault.hashicorp.com/agent-inject-secret-google-application-credentials: "{{ .Values.vaultAgent.gcpServiceAccount.secretPath }}"
+        vault.hashicorp.com/agent-inject-file-google-application-credentials: "{{ .Values.vaultAgent.gcpServiceAccount.fileName }}"
+        vault.hashicorp.com/agent-inject-template-google-application-credentials: |
+          {{`{{- with secret "`}}{{ .Values.vaultAgent.gcpServiceAccount.secretPath }}{{`" -}}
+          {{- index .Data.data "`}}{{ .Values.vaultAgent.gcpServiceAccount.secretKey }}{{`" -}}
+          {{- end }}`}}
+        {{- end }}
         # Fix for Vault + Istio compatibility - exclude Vault traffic from Istio proxy
         {{- with .Values.istio.sidecar.excludeOutboundPorts }}
         traffic.sidecar.istio.io/excludeOutboundPorts: "{{ join "," . }}"
@@ -109,6 +117,32 @@ spec:
             value: "{{ .Values.server.verify_email}}"
           - name: SERVER_ACTIONS_BODY_LIMIT
             value: "{{ .Values.server.serverActionsBodyLimit | default "200mb" }}"
+          {{- if and .Values.vaultAgent.enabled .Values.vaultAgent.gcpServiceAccount.secretPath }}
+          - name: GOOGLE_APPLICATION_CREDENTIALS
+            value: "/vault/secrets/{{ .Values.vaultAgent.gcpServiceAccount.fileName }}"
+          {{- end }}
+          {{- with .Values.chatProvider }}
+          {{- if .aiChatProvider }}
+          - name: AI_CHAT_PROVIDER
+            value: {{ .aiChatProvider | quote }}
+          {{- end }}
+          {{- if .vertexProjectId }}
+          - name: VERTEX_PROJECT_ID
+            value: {{ .vertexProjectId | quote }}
+          {{- end }}
+          {{- if .vertexLocation }}
+          - name: VERTEX_LOCATION
+            value: {{ .vertexLocation | quote }}
+          {{- end }}
+          {{- if .vertexChatModel }}
+          - name: VERTEX_CHAT_MODEL
+            value: {{ .vertexChatModel | quote }}
+          {{- end }}
+          {{- if .vertexOpenapiBaseUrl }}
+          - name: VERTEX_OPENAPI_BASE_URL
+            value: {{ .vertexOpenapiBaseUrl | quote }}
+          {{- end }}
+          {{- end }}
 
           # ----------- TEMPORAL ----------------
           - name: TEMPORAL_ADDRESS
