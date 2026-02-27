@@ -251,7 +251,7 @@
   {
     "id": "F030",
     "description": "Prevent persistence when picker-selected user/contact has no valid email and surface a clear validation error.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Functional Requirements",
       "Acceptance Criteria (Definition of Done)"
