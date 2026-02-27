@@ -14,6 +14,7 @@ import { Calendar, Clock, User, FileText, AlertCircle, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import toast from 'react-hot-toast';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { getMyAppointmentRequests, cancelAppointmentRequest } from '@alga-psa/client-portal/actions';
 
 /** Safely convert a PG DATE (may be JS Date object) or string to YYYY-MM-DD */
@@ -79,8 +80,7 @@ export default function AppointmentsPage() {
         }
       }
     } catch (error) {
-      console.error('Error loading appointments:', error);
-      toast.error(t('errors.loadFailed'));
+      handleError(error, t('errors.loadFailed'));
       setAppointments([]);
     } finally {
       setLoading(false);
@@ -104,8 +104,7 @@ export default function AppointmentsPage() {
       setAppointmentToCancel(null);
       loadAppointments();
     } catch (error) {
-      console.error('Error cancelling appointment:', error);
-      toast.error(t('messages.cancelFailed'));
+      handleError(error, t('messages.cancelFailed'));
     }
   };
 

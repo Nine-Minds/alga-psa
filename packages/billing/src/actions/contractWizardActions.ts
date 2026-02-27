@@ -253,8 +253,8 @@ export const createContractTemplateFromWizard = withAuth(async (
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     if (!isBypass) {
-      const canCreateBilling = hasPermission(user, 'billing', 'create');
-      const canUpdateBilling = hasPermission(user, 'billing', 'update');
+      const canCreateBilling = await hasPermission(user, 'billing', 'create');
+      const canUpdateBilling = await hasPermission(user, 'billing', 'update');
       if (!canCreateBilling || !canUpdateBilling) {
         throw new Error('Permission denied: Cannot create billing templates');
       }
@@ -697,8 +697,8 @@ export const createClientContractFromWizard = withAuth(async (
 
   const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
     if (!isBypass) {
-      const canCreateBilling = hasPermission(user, 'billing', 'create');
-      const canUpdateBilling = hasPermission(user, 'billing', 'update');
+      const canCreateBilling = await hasPermission(user, 'billing', 'create');
+      const canUpdateBilling = await hasPermission(user, 'billing', 'update');
       if (!canCreateBilling || !canUpdateBilling) {
         throw new Error('Permission denied: Cannot create billing contracts');
       }
@@ -1662,8 +1662,8 @@ export const getDraftContractForResume = withAuth(async (
   const isBypass = process.env.E2E_AUTH_BYPASS === 'true';
 
   if (!isBypass) {
-    const canCreateBilling = hasPermission(user, 'billing', 'create');
-    const canUpdateBilling = hasPermission(user, 'billing', 'update');
+    const canCreateBilling = await hasPermission(user, 'billing', 'create');
+    const canUpdateBilling = await hasPermission(user, 'billing', 'update');
     if (!canCreateBilling || !canUpdateBilling) {
       throw new Error('Permission denied: Cannot resume billing contracts');
     }

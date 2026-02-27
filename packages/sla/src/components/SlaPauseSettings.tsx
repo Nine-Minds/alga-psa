@@ -18,6 +18,7 @@ import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Label } from '@alga-psa/ui/components/Label';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import toast from 'react-hot-toast';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 
 interface StatusPauseState {
   statusId: string;
@@ -71,7 +72,7 @@ export function SlaPauseSettings() {
 
         setStatusPauseStates(states);
       } catch (err) {
-        console.error('Error loading SLA pause settings:', err);
+        handleError(err, 'Failed to load SLA pause settings');
         setError(err instanceof Error ? err.message : 'Failed to load SLA pause settings');
       } finally {
         setIsLoading(false);
@@ -88,8 +89,7 @@ export function SlaPauseSettings() {
       setResponseStateTrackingEnabled(checked);
       toast.success(checked ? 'Response state tracking enabled' : 'Response state tracking disabled');
     } catch (err) {
-      console.error('Error updating response state tracking:', err);
-      toast.error(err instanceof Error ? err.message : 'Failed to update response state tracking');
+      handleError(err, 'Failed to update response state tracking');
     }
   }, []);
 
@@ -104,8 +104,7 @@ export function SlaPauseSettings() {
       setSlaSettings(updatedSettings);
       toast.success('Global SLA settings updated successfully');
     } catch (err) {
-      console.error('Error updating global SLA settings:', err);
-      toast.error(err instanceof Error ? err.message : 'Failed to update global SLA settings');
+      handleError(err, 'Failed to update global SLA settings');
     }
   }, [slaSettings]);
 
@@ -154,8 +153,7 @@ export function SlaPauseSettings() {
 
       toast.success(`Successfully updated ${changedItems.length} status configuration(s)`);
     } catch (err) {
-      console.error('Error saving status pause configs:', err);
-      toast.error(err instanceof Error ? err.message : 'Failed to save status configurations');
+      handleError(err, 'Failed to save status configurations');
     } finally {
       setIsSaving(false);
     }

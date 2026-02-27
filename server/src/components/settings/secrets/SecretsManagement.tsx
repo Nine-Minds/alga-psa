@@ -12,6 +12,7 @@ import {
 } from '@/lib/actions/tenant-secret-actions';
 import type { TenantSecretMetadata } from '@alga-psa/shared/workflow/secrets';
 import { toast } from 'react-hot-toast';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { Plus, Trash2, Edit, Key, AlertTriangle, Search } from 'lucide-react';
 import SecretDialog from './SecretDialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@alga-psa/ui/components/Dialog';
@@ -55,8 +56,7 @@ export default function SecretsManagement() {
       setSecrets(secretsData);
       setSecretUsage(usageData);
     } catch (error) {
-      console.error('Failed to load secrets:', error);
-      toast.error('Failed to load secrets');
+      handleError(error, 'Failed to load secrets');
     } finally {
       setLoading(false);
     }
@@ -98,8 +98,7 @@ export default function SecretsManagement() {
       setSecretToDelete(null);
       await loadSecrets();
     } catch (error) {
-      console.error('Failed to delete secret:', error);
-      toast.error('Failed to delete secret');
+      handleError(error, 'Failed to delete secret');
     } finally {
       setDeleting(false);
     }

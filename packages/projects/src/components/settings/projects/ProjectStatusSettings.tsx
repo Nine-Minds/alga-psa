@@ -11,6 +11,7 @@ import { Switch } from '@alga-psa/ui/components/Switch';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import type { ColumnDefinition } from '@alga-psa/types';
 import { toast } from 'react-hot-toast';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -103,8 +104,7 @@ export function ProjectStatusSettings(): React.JSX.Element {
       ));
       toast.success('Status updated successfully');
     } catch (error) {
-      console.error('Error updating status:', error);
-      toast.error('Failed to update status');
+      handleError(error, 'Failed to update status');
     }
   };
 
@@ -223,8 +223,7 @@ export function ProjectStatusSettings(): React.JSX.Element {
         setSelectedImportStatuses([]);
       }
     } catch (error) {
-      console.error('Error importing statuses:', error);
-      toast.error('Failed to import statuses');
+      handleError(error, 'Failed to import statuses');
     }
   };
 
@@ -255,8 +254,7 @@ export function ProjectStatusSettings(): React.JSX.Element {
       setImportConflicts([]);
       setConflictResolutions({});
     } catch (error) {
-      console.error('Error importing statuses:', error);
-      toast.error('Failed to import statuses');
+      handleError(error, 'Failed to import statuses');
     }
   };
 

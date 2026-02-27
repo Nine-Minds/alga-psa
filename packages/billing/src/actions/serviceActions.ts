@@ -343,7 +343,7 @@ export const createService = withAuth(async (
 
         const { knex: db } = await createTenantKnex();
         return withTransaction(db, async (trx: Knex.Transaction) => {
-        const canCreate = hasPermission(user, 'service', 'create');
+        const canCreate = await hasPermission(user, 'service', 'create');
         if (!canCreate) {
           throw new Error('Permission denied: Cannot create services/products');
         }
@@ -398,7 +398,7 @@ export const updateService = withAuth(async (
     const { knex: db } = await createTenantKnex();
     try {
         return await withTransaction(db, async (trx: Knex.Transaction) => {
-            const canUpdate = hasPermission(user, 'service', 'update');
+            const canUpdate = await hasPermission(user, 'service', 'update');
             if (!canUpdate) {
               throw new Error('Permission denied: Cannot update services/products');
             }
@@ -586,7 +586,7 @@ export const deleteProductPermanently = withAuth(async (user, { tenant }, servic
 
     try {
         await withTransaction(db, async (trx: Knex.Transaction) => {
-            const canDelete = hasPermission(user, 'service', 'delete');
+            const canDelete = await hasPermission(user, 'service', 'delete');
             if (!canDelete) {
               throw new Error('Permission denied: Cannot delete services/products');
             }
@@ -933,7 +933,7 @@ export const setServicePrice = withAuth(async (
   const { knex: db } = await createTenantKnex();
   try {
     return await withTransaction(db, async (trx: Knex.Transaction) => {
-      const canUpdate = hasPermission(user, 'service', 'update');
+      const canUpdate = await hasPermission(user, 'service', 'update');
       if (!canUpdate) {
         throw new Error('Permission denied: Cannot update service pricing');
       }
@@ -943,7 +943,7 @@ export const setServicePrice = withAuth(async (
     });
   } catch (error) {
     console.error(`Error setting price for service ${serviceId} in ${currencyCode}:`, error);
-    throw new Error('Failed to set service price');
+    throw error;
   }
 });
 
@@ -959,7 +959,7 @@ export const setServicePrices = withAuth(async (
   const { knex: db } = await createTenantKnex();
   try {
     return await withTransaction(db, async (trx: Knex.Transaction) => {
-      const canUpdate = hasPermission(user, 'service', 'update');
+      const canUpdate = await hasPermission(user, 'service', 'update');
       if (!canUpdate) {
         throw new Error('Permission denied: Cannot update service pricing');
       }
@@ -969,7 +969,7 @@ export const setServicePrices = withAuth(async (
     });
   } catch (error) {
     console.error(`Error setting prices for service ${serviceId}:`, error);
-    throw new Error('Failed to set service prices');
+    throw error;
   }
 });
 
@@ -980,7 +980,7 @@ export const removeServicePrice = withAuth(async (user, { tenant }, serviceId: s
   const { knex: db } = await createTenantKnex();
   try {
     return await withTransaction(db, async (trx: Knex.Transaction) => {
-      const canUpdate = hasPermission(user, 'service', 'update');
+      const canUpdate = await hasPermission(user, 'service', 'update');
       if (!canUpdate) {
         throw new Error('Permission denied: Cannot update service pricing');
       }
@@ -990,7 +990,7 @@ export const removeServicePrice = withAuth(async (user, { tenant }, serviceId: s
     });
   } catch (error) {
     console.error(`Error removing price for service ${serviceId} in ${currencyCode}:`, error);
-    throw new Error('Failed to remove service price');
+    throw error;
   }
 });
 

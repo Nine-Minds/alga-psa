@@ -4,6 +4,7 @@ import React, { useState, useCallback, useEffect } from 'react';
 import TicketingDashboard from './TicketingDashboard';
 import { fetchTicketsWithPagination } from '../actions/optimizedTicketActions';
 import { toast } from 'react-hot-toast';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { ITicketListItem, ITicketCategory, ITicketListFilters, ITag } from '@alga-psa/types';
 import { IClient } from '@alga-psa/types';
 import { IUser } from '@alga-psa/types';
@@ -209,8 +210,7 @@ export default function TicketingDashboardContainer({
       setSortDirection(effectiveSortDirection);
 
     } catch (error) {
-      console.error('[Container] Error fetching tickets:', error);
-      toast.error('Failed to fetch tickets');
+      handleError(error, 'Failed to fetch tickets');
       setTickets([]);
       setTotalCount(0);
     } finally {

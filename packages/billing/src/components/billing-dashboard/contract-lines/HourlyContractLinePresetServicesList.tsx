@@ -26,6 +26,7 @@ import { BucketOverlayFields } from '../contracts/BucketOverlayFields';
 import { BucketOverlayInput } from '../contracts/ContractWizard';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { toast } from 'react-hot-toast';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 
 const BILLING_METHOD_OPTIONS: Array<{ value: 'fixed' | 'hourly' | 'usage'; label: string }> = [
   { value: 'fixed', label: 'Fixed Price' },
@@ -299,10 +300,9 @@ const HourlyContractLinePresetServicesList: React.FC<HourlyContractLinePresetSer
         onServiceAdded();
       }
     } catch (error) {
-      console.error('Error saving preset services:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to save services';
       setError(errorMessage);
-      toast.error(errorMessage);
+      handleError(error, 'Failed to save services');
     } finally {
       setIsSaving(false);
     }

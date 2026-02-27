@@ -12,6 +12,7 @@ import { getTenantPortalLoginLink } from '@alga-psa/client-portal/actions';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import toast from 'react-hot-toast';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { IUser, IRole } from '@alga-psa/types';
 import { IClient } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -236,8 +237,7 @@ const UserManagement = (): React.JSX.Element => {
         toast.error('Clipboard API is not available in this browser.');
       }
     } catch (error) {
-      console.error('Failed to copy portal login link', error);
-      toast.error('Failed to copy portal login link');
+      handleError(error, 'Failed to copy portal login link');
     } finally {
       setIsCopyingPortalLink(false);
     }
@@ -398,20 +398,16 @@ const fetchContacts = async (): Promise<void> => {
               }
             } catch (contactError: any) {
               // Handle contact creation errors
-              console.error('Error creating contact:', contactError);
-
+              let errorMsg: string;
               if (contactError.message?.includes('EMAIL_EXISTS:')) {
-                const errorMsg = contactError.message.replace('EMAIL_EXISTS:', '').trim();
-                toast.error(errorMsg);
-                setError(errorMsg);
+                errorMsg = contactError.message.replace('EMAIL_EXISTS:', '').trim();
               } else if (contactError.message?.includes('VALIDATION_ERROR:')) {
-                const errorMsg = contactError.message.replace('VALIDATION_ERROR:', '').trim();
-                toast.error(errorMsg);
-                setError(errorMsg);
+                errorMsg = contactError.message.replace('VALIDATION_ERROR:', '').trim();
               } else {
-                toast.error('Failed to create contact: ' + (contactError.message || 'Unknown error'));
-                setError('Failed to create contact: ' + (contactError.message || 'Unknown error'));
+                errorMsg = 'Failed to create contact: ' + (contactError.message || 'Unknown error');
               }
+              handleError(contactError, errorMsg);
+              setError(errorMsg);
               return; // Stop execution to prevent further processing
             }
           }
@@ -472,8 +468,9 @@ const fetchContacts = async (): Promise<void> => {
         email: []
       });
     } catch (error: unknown) {
-      console.error('Error creating user:', error);
-      reportCreateUserError(error);
+      const message = normalizeCreateUserError(error);
+      handleError(error, message);
+      setError(message);
     }
   };
 

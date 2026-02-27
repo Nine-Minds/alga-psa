@@ -11,6 +11,7 @@ import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomat
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { Package, Plus, Loader2, Trash2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import type { IProjectMaterial, IServicePrice } from '@alga-psa/types';
 import {
   listProjectMaterials,
@@ -54,8 +55,7 @@ export default function ProjectMaterialsDrawer({
       const data = await listProjectMaterials(projectId);
       setMaterials(data);
     } catch (error) {
-      console.error('Error loading materials:', error);
-      toast.error('Failed to load materials');
+      handleError(error, 'Failed to load materials');
     } finally {
       setIsLoading(false);
     }
@@ -75,8 +75,7 @@ export default function ProjectMaterialsDrawer({
       });
       setProducts(result.items);
     } catch (error) {
-      console.error('Error loading products:', error);
-      toast.error('Failed to load products');
+      handleError(error, 'Failed to load products');
     } finally {
       setIsLoadingProducts(false);
     }
@@ -171,8 +170,7 @@ export default function ProjectMaterialsDrawer({
       resetAddForm();
       await loadMaterials();
     } catch (error) {
-      console.error('Error adding material:', error);
-      toast.error('Failed to add material');
+      handleError(error, 'Failed to add material');
     } finally {
       setIsAdding(false);
     }
@@ -185,8 +183,7 @@ export default function ProjectMaterialsDrawer({
       toast.success('Material removed');
       await loadMaterials();
     } catch (error) {
-      console.error('Error deleting material:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to remove material');
+      handleError(error, 'Failed to remove material');
     } finally {
       setDeletingId(null);
     }

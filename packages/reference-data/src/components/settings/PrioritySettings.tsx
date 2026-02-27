@@ -11,6 +11,7 @@ import type { IPriority, IStandardPriority, DeletionValidationResult } from '@al
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import type { ColumnDefinition } from '@alga-psa/types';
 import { toast } from 'react-hot-toast';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -188,8 +189,7 @@ const PrioritySettings = ({ onShowConflictDialog, initialPriorityType }: Priorit
         setSelectedImportPriorities([]);
       }
     } catch (error) {
-      console.error('Error importing priorities:', error);
-      toast.error('Failed to import priorities');
+      handleError(error, 'Failed to import priorities');
     }
   };
 
@@ -400,11 +400,10 @@ const PrioritySettings = ({ onShowConflictDialog, initialPriorityType }: Priorit
               setEditingPriority(null);
               setPriorityColor('#6B7280');
             } catch (error) {
-              console.error('Error saving priority:', error);
               if (error instanceof Error && error.message.includes('unique constraint')) {
-                toast.error('This order number is already in use. Please choose a different order number.');
+                handleError(error, 'This order number is already in use. Please choose a different order number.');
               } else {
-                toast.error('Failed to save priority');
+                handleError(error, 'Failed to save priority');
               }
             }
           }}>

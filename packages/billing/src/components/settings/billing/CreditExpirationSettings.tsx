@@ -4,6 +4,7 @@ import { Label } from "@alga-psa/ui/components/Label";
 import { Input } from "@alga-psa/ui/components/Input";
 import { Button } from "@alga-psa/ui/components/Button";
 import toast from 'react-hot-toast';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { getDefaultBillingSettings, updateDefaultBillingSettings } from "@alga-psa/billing/actions";
 import type { BillingSettings } from "@alga-psa/billing/actions";
 
@@ -25,7 +26,7 @@ const CreditExpirationSettings = (): React.JSX.Element => {
         setSettings(currentSettings);
         setNotificationDays(currentSettings.creditExpirationNotificationDays?.join(', ') || '');
       } catch (error) {
-        toast.error(error instanceof Error ? error.message : "Failed to load settings");
+        handleError(error, 'Failed to load settings');
       }
     };
 
@@ -44,7 +45,7 @@ const CreditExpirationSettings = (): React.JSX.Element => {
         toast.success("Credit expiration settings have been updated.");
       }
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to save settings");
+      handleError(error, 'Failed to save settings');
     }
   };
 
@@ -82,7 +83,7 @@ const CreditExpirationSettings = (): React.JSX.Element => {
         toast.success("Credit expiration settings have been updated.");
       }
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to save settings");
+      handleError(error, 'Failed to save settings');
     }
   };
 

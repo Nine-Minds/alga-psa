@@ -8,6 +8,7 @@ import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import type { IStatus, ItemType } from '@alga-psa/types';
 import { createStatus, updateStatus } from '@alga-psa/reference-data/actions';
 import { toast } from 'react-hot-toast';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 
 interface StatusDialogProps {
   open: boolean;
@@ -100,11 +101,10 @@ export const StatusDialog: React.FC<StatusDialogProps> = ({
       setIsClosed(false);
       setIsDefault(false);
     } catch (error) {
-      console.error('Error saving status:', error);
       if (error instanceof Error && error.message.includes('unique_tenant_type_order')) {
-        toast.error('This order number is already in use. Please choose a different order number.');
+        handleError(error, 'This order number is already in use. Please choose a different order number.');
       } else {
-        toast.error(editingStatus ? 'Failed to update status' : 'Failed to create status');
+        handleError(error, editingStatus ? 'Failed to update status' : 'Failed to create status');
       }
     }
   };

@@ -5,6 +5,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import toast from 'react-hot-toast';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { MoreVertical, PlusCircle, Info, AlertTriangle } from 'lucide-react';
 
 import { Button } from '@alga-psa/ui/components/Button';
@@ -92,8 +93,7 @@ export function TaxThresholdEditor({ taxRateId, currency = '$', isReadOnly = fal
       const fetchedThresholds = await getTaxRateThresholdsByTaxRate(taxRateId);
       setThresholds(fetchedThresholds);
     } catch (error) {
-      console.error('Failed to fetch tax thresholds:', error);
-      toast.error('Failed to load tax brackets.');
+      handleError(error, 'Failed to load tax brackets.');
     } finally {
       setIsLoading(false);
     }
@@ -194,8 +194,7 @@ export function TaxThresholdEditor({ taxRateId, currency = '$', isReadOnly = fal
       await fetchThresholds();
       handleCloseDialog();
     } catch (error: any) {
-      console.error(`${errorMessage}:`, error);
-      toast.error(`${errorMessage} ${error?.message ? `(${error.message})` : ''}`);
+      handleError(error, errorMessage);
     } finally {
       setIsSubmitting(false);
     }
@@ -211,8 +210,7 @@ export function TaxThresholdEditor({ taxRateId, currency = '$', isReadOnly = fal
       await fetchThresholds();
       handleCloseDeleteDialog();
     } catch (error: any) {
-      console.error('Failed to delete tax bracket:', error);
-      toast.error(`Failed to delete tax bracket. ${error?.message ? `(${error.message})` : ''}`);
+      handleError(error, 'Failed to delete tax bracket.');
     } finally {
       setIsSubmitting(false);
     }

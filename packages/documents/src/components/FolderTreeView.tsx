@@ -5,6 +5,7 @@ import type { IFolderNode } from '@alga-psa/types';
 import { getFolderTree, deleteFolder } from '../actions/documentActions';
 import { ChevronRight, ChevronDown, Folder, FolderOpen, Trash2, ChevronLeft } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface FolderTreeViewProps {
@@ -52,8 +53,7 @@ export default function FolderTreeView({
       const tree = await getFolderTree();
       setFolderTree(tree);
     } catch (error) {
-      console.error('Failed to load folder tree:', error);
-      toast.error(t('documents.folders.loadFailed', 'Failed to load folder tree'));
+      handleError(error, t('documents.folders.loadFailed', 'Failed to load folder tree'));
     } finally {
       setLoading(false);
     }
@@ -103,12 +103,7 @@ export default function FolderTreeView({
         onFolderSelect(null);
       }
     } catch (error) {
-      console.error('Failed to delete folder:', error);
-      const errorMessage =
-        error instanceof Error && error.message
-          ? error.message
-          : t('documents.folders.deleteFailed', 'Failed to delete folder');
-      toast.error(errorMessage);
+      handleError(error, t('documents.folders.deleteFailed', 'Failed to delete folder'));
     }
   }
 

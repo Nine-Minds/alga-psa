@@ -72,10 +72,10 @@ interface PermissionOverrideContext {
   user?: IUser;
 }
 
-function checkAccountingExportPermission(
+async function checkAccountingExportPermission(
   user: IUserWithRoles,
   action: AccountingExportPermission
-): void {
+): Promise<void> {
   if (user.user_type === 'client') {
     throw new AppError(
       'ACCOUNTING_EXPORT_FORBIDDEN',
@@ -86,7 +86,7 @@ function checkAccountingExportPermission(
   // Accounting exports are currently managed from billing/integrations surfaces; gate with billing settings permissions.
   // Map export actions to billing_settings read/update to align with mapping + CSV export permissions.
   const billingAction = action === 'read' ? 'read' : 'update';
-  const allowed = hasPermission(user, 'billing_settings', billingAction);
+  const allowed = await hasPermission(user, 'billing_settings', billingAction);
   if (!allowed) {
     throw new AppError(
       'ACCOUNTING_EXPORT_FORBIDDEN',

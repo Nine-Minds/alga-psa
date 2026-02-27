@@ -13,6 +13,7 @@ import type { ColumnDefinition } from '@alga-psa/types';
 import { createApiKey, deactivateApiKey, listApiKeys } from '@alga-psa/auth/actions';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 
 export interface ApiKey {
   api_key_id: string;
@@ -208,7 +209,7 @@ export default function ApiKeysSetup() {
                   await navigator.clipboard.writeText(newKeyValue);
                   toast.success('API key copied to clipboard!');
                 } catch (error) {
-                  toast.error('Failed to copy API key to clipboard');
+                  handleError(error, 'Failed to copy API key to clipboard');
                 }
               }}
               className="w-full"

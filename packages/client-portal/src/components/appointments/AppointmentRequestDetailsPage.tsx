@@ -11,6 +11,7 @@ import Spinner from '@alga-psa/ui/components/Spinner';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { getAppointmentRequestDetails, cancelAppointmentRequest } from '@alga-psa/client-portal/actions';
 
 /** Safely convert a PG DATE (may be JS Date object) or string to YYYY-MM-DD */
@@ -98,8 +99,7 @@ export function AppointmentRequestDetailsPage() {
         toast.error(result.error || t('messages.cancelFailed', 'Failed to cancel appointment'));
       }
     } catch (err) {
-      console.error('Error cancelling appointment:', err);
-      toast.error(t('messages.cancelFailed', 'Failed to cancel appointment'));
+      handleError(err, t('messages.cancelFailed', 'Failed to cancel appointment'));
     }
   };
 

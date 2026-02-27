@@ -22,7 +22,7 @@ import { deleteInteraction } from '@alga-psa/clients/actions';
 import { Text, Flex, Heading } from '@radix-ui/themes';
 import { RichTextViewer } from '@alga-psa/ui/editor';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
-import { toast } from 'react-hot-toast';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { findUserByIdAsync, getCurrentUserAsync } from '../../lib/usersHelpers';
 import { buildInteractionTimeEntryContext } from '../../lib/timeEntryContext';
 
@@ -238,8 +238,7 @@ const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: in
         context: buildInteractionTimeEntryContext(interaction),
       });
     } catch (error) {
-      console.error('Error preparing time entry:', error);
-      toast.error('Failed to prepare time entry. Please try again.');
+      handleError(error, 'Failed to prepare time entry. Please try again.');
     }
   };
 

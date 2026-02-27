@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import toast from 'react-hot-toast';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
@@ -272,8 +273,7 @@ export function TicketList() {
       // Refresh tickets by calling loadTickets
       loadTickets(); 
     } catch (error) {
-      console.error('Failed to update ticket status:', error);
-      toast.error(t('messages.statusUpdateError', 'Failed to update ticket status.'));
+      handleError(error, t('messages.statusUpdateError', 'Failed to update ticket status.'));
     } finally {
       setTicketToUpdateStatus(null);
     }

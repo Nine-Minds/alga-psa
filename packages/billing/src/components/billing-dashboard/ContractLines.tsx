@@ -23,6 +23,7 @@ import { getServiceTypesForSelection } from '@alga-psa/billing/actions';
 import { DeletionValidationResult, IContractLine, IContractLineService, IService, IServiceType } from '@alga-psa/types';
 import { useTenant } from '@alga-psa/ui/components/providers/TenantProvider';
 import { toast } from 'react-hot-toast';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { ColumnDefinition } from '@alga-psa/types';
 import { PLAN_TYPE_DISPLAY, BILLING_FREQUENCY_DISPLAY } from '@alga-psa/billing/constants/billing';
@@ -144,7 +145,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ initialServices }) => {
       toast.success('Contract line deleted successfully');
       resetDeleteState();
     } catch (error) {
-      toast.error('Failed to delete contract line');
+      handleError(error, 'Failed to delete contract line');
     } finally {
       setIsDeleteProcessing(false);
     }

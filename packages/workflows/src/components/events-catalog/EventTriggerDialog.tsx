@@ -10,6 +10,7 @@ import { Card } from "@alga-psa/ui/components/Card";
 import { Trash2, Plus, ArrowRight } from "lucide-react";
 import { Alert, AlertDescription } from "@alga-psa/ui/components/Alert";
 import { toast } from "react-hot-toast";
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { IEventCatalogEntry, ICreateWorkflowEventAttachment, ICreateWorkflowTrigger, ICreateWorkflowEventMapping } from "@alga-psa/shared/workflow";
 import { createWorkflowTrigger, createWorkflowEventMappings } from "@alga-psa/workflows/actions/workflow-trigger-actions";
 import { createWorkflowEventAttachment } from "@alga-psa/workflows/actions/workflow-event-attachment-actions";
@@ -71,8 +72,7 @@ export default function EventTriggerDialog({ isOpen, onClose, event }: EventTrig
       
       setWorkflowOptions(options);
     } catch (error) {
-      console.error("Error loading workflows:", error);
-      toast.error("Failed to load workflows");
+      handleError(error, "Failed to load workflows");
     } finally {
       setIsLoadingWorkflows(false);
     }
@@ -174,8 +174,7 @@ export default function EventTriggerDialog({ isOpen, onClose, event }: EventTrig
       toast.success("Workflow attached successfully");
       onClose(true); // Close the dialog and refresh data
     } catch (error) {
-      console.error("Error attaching workflow:", error);
-      toast.error("Failed to attach workflow");
+      handleError(error, "Failed to attach workflow");
     } finally {
       setIsSubmitting(false);
     }

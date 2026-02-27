@@ -181,7 +181,7 @@ export const addContractLine = withAuth(async (
 ): Promise<IContractLineMapping> => {
   const { knex } = await createTenantKnex();
 
-  const canUpdate = hasPermission(user, 'billing', 'delete');
+  const canUpdate = await hasPermission(user, 'billing', 'delete');
   if (!canUpdate) {
     throw new Error('Permission denied: Cannot modify contract lines');
   }
@@ -194,7 +194,7 @@ export const addContractLine = withAuth(async (
 export const removeContractLine = withAuth(async (user, { tenant }, contractId: string, contractLineId: string): Promise<void> => {
   const { knex } = await createTenantKnex();
 
-  const canUpdate = hasPermission(user, 'billing', 'update');
+  const canUpdate = await hasPermission(user, 'billing', 'update');
   if (!canUpdate) {
     throw new Error('Permission denied: Cannot modify contract lines');
   }
@@ -211,7 +211,7 @@ export const updateContractLineAssociation = withAuth(async (
 ): Promise<IContractLineMapping> => {
   const { knex } = await createTenantKnex();
 
-  const canUpdate = hasPermission(user, 'billing', 'update');
+  const canUpdate = await hasPermission(user, 'billing', 'update');
   if (!canUpdate) {
     throw new Error('Permission denied: Cannot modify contract lines');
   }
@@ -229,7 +229,7 @@ export const updateContractLineRate = withAuth(async (
 ): Promise<void> => {
   const { knex } = await createTenantKnex();
 
-  const canUpdate = hasPermission(user, 'billing', 'update');
+  const canUpdate = await hasPermission(user, 'billing', 'update');
   if (!canUpdate) {
     throw new Error('Permission denied: Cannot modify contract lines');
   }
@@ -385,7 +385,7 @@ export const deleteContract = withAuth(async (user, { tenant }, contractId: stri
   try {
     const isBypass = process.env.E2E_AUTH_BYPASS === 'true';
     if (!isBypass) {
-      const canDeleteBilling = hasPermission(user, 'billing', 'delete');
+      const canDeleteBilling = await hasPermission(user, 'billing', 'delete');
       if (!canDeleteBilling) {
         throw new Error('Permission denied: Cannot delete billing contracts');
       }

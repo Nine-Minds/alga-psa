@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -166,8 +167,7 @@ export function ClientDetailsSettings() {
       setHasUnsavedChanges(false);
       toast.success(tProfile('clientSettings.messages.updateSuccess'));
     } catch (error) {
-      console.error('Failed to update client details:', error);
-      toast.error(tProfile('clientSettings.messages.updateError', 'Failed to update client details'));
+      handleError(error, tProfile('clientSettings.messages.updateError', 'Failed to update client details'));
     } finally {
       setIsLoading(false);
     }

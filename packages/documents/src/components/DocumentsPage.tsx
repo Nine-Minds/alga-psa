@@ -10,6 +10,7 @@ import { getDistinctEntityTypes } from '../actions/documentActions';
 import { getCurrentUser, getAllUsersBasic } from '@alga-psa/users/actions';
 import type { IUser } from '@alga-psa/types';
 import { toast } from 'react-hot-toast';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import DocumentFilters from './DocumentFilters';
 import DocumentsPageSkeleton from './DocumentsPageSkeleton';
 import { ChevronLeft, ChevronRight, Filter } from 'lucide-react';
@@ -191,10 +192,9 @@ export default function DocumentsPage() {
 
         setInitialized(true);
       } catch (error) {
-        console.error('Error during initialization:', error);
         if (mounted) {
           setError('Failed to initialize');
-          toast.error('Failed to initialize');
+          handleError(error, 'Failed to initialize');
         }
       }
     };

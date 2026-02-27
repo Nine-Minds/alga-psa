@@ -18,6 +18,7 @@ import { getSlaPolicies } from '@alga-psa/sla/actions';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import { ISlaPolicy } from '@alga-psa/sla/types';
 import { toast } from 'react-hot-toast';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
@@ -264,8 +265,7 @@ const BoardsSettings: React.FC = () => {
           break;
       }
     } catch (error) {
-      console.error('Error deleting board:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to delete board');
+      handleError(error, 'Failed to delete board');
       setDeleteDialog({ isOpen: false, boardId: '', boardName: '' });
     }
   };
@@ -398,8 +398,7 @@ const BoardsSettings: React.FC = () => {
       setConflictResolutions({});
       await fetchBoards();
     } catch (error) {
-      console.error('Error importing boards:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to import boards');
+      handleError(error, 'Failed to import boards');
     }
   };
 
@@ -435,8 +434,7 @@ const BoardsSettings: React.FC = () => {
                 });
                 await fetchBoards();
               } catch (error) {
-                console.error('Error updating board status:', error);
-                toast.error('Failed to update board status');
+                handleError(error, 'Failed to update board status');
               }
             }}
             className="data-[state=checked]:bg-primary-500"
@@ -465,8 +463,7 @@ const BoardsSettings: React.FC = () => {
                 });
                 await fetchBoards();
               } catch (error) {
-                console.error('Error updating default board:', error);
-                toast.error('Failed to update default board');
+                handleError(error, 'Failed to update default board');
               }
             }}
             className="data-[state=checked]:bg-primary-500"
@@ -613,8 +610,7 @@ const BoardsSettings: React.FC = () => {
                 setSelectedImportBoards([]);
                 setShowImportDialog(true);
               } catch (error) {
-                console.error('Error fetching available boards:', error);
-                toast.error('Failed to fetch available boards for import');
+                handleError(error, 'Failed to fetch available boards for import');
               }
             }}
           >

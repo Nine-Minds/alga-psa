@@ -30,6 +30,7 @@ import { getCurrentUser } from '@alga-psa/users/actions';
 import { IStatus } from '@alga-psa/types';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import toast from 'react-hot-toast';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 
 interface TicketDetailsProps {
   ticketId: string;
@@ -226,9 +227,8 @@ export function TicketDetails({
       setTicket(details);
       return true;
     } catch (error) {
-      console.error('Failed to add comment:', error);
       setError(t('messages.commentError', 'Failed to add comment'));
-      toast.error(t('messages.commentError', 'Failed to add comment'));
+      handleError(error, t('messages.commentError', 'Failed to add comment'));
       return false;
     }
   };
@@ -357,9 +357,8 @@ export function TicketDetails({
         return next;
       });
     } catch (error) {
-      console.error('Failed to update comment:', error);
       setError(t('messages.failedToUpdateComment', 'Failed to update comment'));
-      toast.error(t('messages.failedToUpdateComment', 'Failed to update comment'));
+      handleError(error, t('messages.failedToUpdateComment', 'Failed to update comment'));
     }
   };
 
@@ -385,9 +384,8 @@ export function TicketDetails({
       setTicket(details);
       toast.success(t('messages.commentDeleteSuccess', 'Comment deleted successfully'));
     } catch (error) {
-      console.error('Failed to delete comment:', error);
       setError(t('messages.failedToDeleteComment', 'Failed to delete comment'));
-      toast.error(t('messages.failedToDeleteComment', 'Failed to delete comment'));
+      handleError(error, t('messages.failedToDeleteComment', 'Failed to delete comment'));
     }
   };
 
@@ -412,8 +410,7 @@ export function TicketDetails({
       setTicket(prevTicket => ({ ...prevTicket, status_id: newStatusId, status_name: newStatusName }));
 
     } catch (error) {
-      console.error('Failed to update ticket status:', error);
-      toast.error(t('messages.statusUpdateError', 'Failed to update ticket status.'));
+      handleError(error, t('messages.statusUpdateError', 'Failed to update ticket status.'));
     } finally {
       setTicketToUpdateStatus(null);
     }

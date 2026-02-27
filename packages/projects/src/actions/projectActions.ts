@@ -126,7 +126,7 @@ export const getProjectPhase = withAuth(async (user, { tenant }, phaseId: string
         return phase;
     } catch (error) {
         console.error('Error fetching project phase:', error);
-        throw new Error('Failed to fetch project phase');
+        throw error;
     }
 });
 
@@ -231,7 +231,7 @@ export const getProjectTreeData = withAuth(async (user, { tenant }, projectId?: 
     });
   } catch (error) {
     console.error('Error fetching project tree data:', error);
-    throw new Error('Failed to fetch project tree data');
+    throw error;
   }
 });
 
@@ -453,7 +453,7 @@ export const getProjectStatuses = withAuth(async (user, { tenant }): Promise<ISt
     });
   } catch (error) {
     console.error('Error fetching project statuses:', error);
-    throw new Error('Failed to fetch project statuses');
+    throw error;
   }
 });
 
@@ -1108,7 +1108,7 @@ export const updateProjectStatus = withAuth(async (
         return updatedStatus;
     } catch (error) {
         console.error('Error updating project status:', error);
-        throw new Error('Failed to update project status');
+        throw error;
     }
 });
 
@@ -1121,6 +1121,6 @@ export const deleteProjectStatus = withAuth(async (user, { tenant }, statusId: s
         });
     } catch (error) {
         console.error('Error deleting project status:', error);
-        throw new Error('Failed to delete project status');
+        throw error;
     }
 });

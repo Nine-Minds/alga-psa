@@ -31,6 +31,7 @@ import {
 } from '@alga-psa/billing/actions';
 import { getAvailableReferenceData, importReferenceData, checkImportConflicts, ImportConflict } from '@alga-psa/reference-data/actions';
 import { toast } from 'react-hot-toast';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 
 // Type for the data returned by getServiceTypesForSelection
 type ServiceTypeSelectionItem = {
@@ -252,8 +253,7 @@ const ServiceTypeSettings: React.FC = () => {
         await handleImport();
       }
     } catch (error) {
-      console.error('Error checking conflicts:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to check conflicts');
+      handleError(error, 'Failed to check conflicts');
     }
   };
 
@@ -276,8 +276,7 @@ const ServiceTypeSettings: React.FC = () => {
       setConflictResolutions({});
       await fetchTypes();
     } catch (error) {
-      console.error('Error importing service types:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to import service types');
+      handleError(error, 'Failed to import service types');
     }
   };
 

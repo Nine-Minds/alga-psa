@@ -9,6 +9,7 @@ import type { IProject, IProjectPhase, IProjectTask } from '@alga-psa/types';
 import { getProjects, getProjectDetails } from '../actions/projectActions';
 import { addTicketLinkAction } from '../actions/projectTaskActions';
 import { toast } from 'react-hot-toast';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 
 interface LinkTicketToTaskDialogProps {
   ticket: {
@@ -122,8 +123,7 @@ export default function LinkTicketToTaskDialog({
       setSelectedPhaseId('');
       setSelectedTaskId('');
     } catch (error) {
-      console.error('Error linking ticket to task:', error);
-      toast.error('Failed to link ticket to task');
+      handleError(error, 'Failed to link ticket to task');
     } finally {
       setIsLinking(false);
     }

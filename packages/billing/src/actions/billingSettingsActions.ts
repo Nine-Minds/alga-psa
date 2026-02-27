@@ -12,8 +12,8 @@ type RenewalDueDateActionPolicy = 'queue_only' | 'create_ticket';
 const DEFAULT_RENEWAL_MODE: RenewalMode = 'manual';
 const DEFAULT_NOTICE_PERIOD_DAYS = 30;
 const DEFAULT_RENEWAL_DUE_DATE_ACTION_POLICY: RenewalDueDateActionPolicy = 'create_ticket';
-const requireBillingSettingsUpdatePermission = (user: unknown): void => {
-  if (!hasPermission(user as any, 'billing_settings', 'update')) {
+const requireBillingSettingsUpdatePermission = async (user: unknown): Promise<void> => {
+  if (!await hasPermission(user as any, 'billing_settings', 'update')) {
     throw new Error('Permission denied: Cannot update billing settings');
   }
 };
@@ -97,7 +97,7 @@ export const updateDefaultBillingSettings = withAuth(async (
   { tenant },
   data: BillingSettings
 ): Promise<{ success: boolean }> => {
-  requireBillingSettingsUpdatePermission(user);
+  await requireBillingSettingsUpdatePermission(user);
 
   const { knex } = await createTenantKnex();
 

@@ -40,6 +40,7 @@ import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import DuplicateTaskDialog, { DuplicateOptions } from './DuplicateTaskDialog';
 import { Input } from '@alga-psa/ui/components/Input';
 import { toast } from 'react-hot-toast';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { TaskTypeSelector } from './TaskTypeSelector';
 import { getTaskTypes } from '../actions/projectTaskActions';
 import { ITaskType } from '@alga-psa/types';
@@ -359,8 +360,7 @@ export default function TaskForm({
               setProjectTreeOptions([]);
             }
           } catch (error) {
-            console.error('Error fetching projects:', error);
-            toast.error('Error loading project data. Please try again.');
+            handleError(error, 'Error loading project data. Please try again.');
             setProjectTreeOptions([]);
           }
         }
@@ -507,8 +507,7 @@ export default function TaskForm({
       toast.success('Task moved successfully');
       onClose();
     } catch (error) {
-      console.error('Error moving task:', error);
-      toast.error('Failed to move task');
+      handleError(error, 'Failed to move task');
     } finally {
       setIsSubmitting(false);
       setShowMoveConfirmation(false);
@@ -658,8 +657,7 @@ export default function TaskForm({
               }
             }
           } catch (error) {
-            console.error('Error adding resources or linking tickets:', error);
-            toast.error('Task created but failed to link some items');
+            handleError(error, 'Task created but failed to link some items');
             linkingFailed = true;
           }
 
@@ -682,8 +680,7 @@ export default function TaskForm({
         }
       }
     } catch (error) {
-      console.error('Error saving task:', error);
-      toast.error('Failed to save task');
+      handleError(error, 'Failed to save task');
     } finally {
       setIsSubmitting(false);
     }
@@ -946,8 +943,7 @@ export default function TaskForm({
       onSubmit(null);
       onClose();
     } catch (error) {
-      console.error('Error deleting task:', error);
-      toast.error('Failed to delete task');
+      handleError(error, 'Failed to delete task');
     } finally {
       setIsSubmitting(false);
       setShowDeleteConfirm(false);
@@ -994,8 +990,7 @@ export default function TaskForm({
         }),
       });
     } catch (error) {
-      console.error('Error preparing time entry:', error);
-      toast.error('Failed to prepare time entry. Please try again.');
+      handleError(error, 'Failed to prepare time entry. Please try again.');
     }
   };
 
@@ -1026,11 +1021,10 @@ export default function TaskForm({
         }
       }
     } catch (error: any) {
-      console.error('Error adding agent:', error);
       if (error.message?.includes('assigned_to')) {
-        toast.error('Please assign a primary agent first');
+        handleError(error, 'Please assign a primary agent first');
       } else {
-        toast.error(`Failed to add agent: ${error.message || 'Unknown error'}`);
+        handleError(error, 'Failed to add agent');
       }
     }
   };
@@ -1044,8 +1038,7 @@ export default function TaskForm({
         setTempTaskResources(prev => prev.filter(r => r.assignment_id !== assignmentId));
       }
     } catch (error) {
-      console.error('Error removing agent:', error);
-      toast.error('Failed to remove agent');
+      handleError(error, 'Failed to remove agent');
     }
   };
 
@@ -1801,8 +1794,7 @@ export default function TaskForm({
               onSubmit(duplicatedTask);
               onClose();
             } catch (error) {
-              console.error("Error duplicating task:", error);
-              toast.error("Failed to duplicate task.");
+              handleError(error, "Failed to duplicate task.");
               setShowDuplicateConfirm(false);
               setDuplicateTaskDetails(null);
             } finally {

@@ -21,6 +21,7 @@ import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { ColumnDefinition } from '@alga-psa/types';
 import { IContract, IContractWithClient } from '@alga-psa/types';
 import { toast } from 'react-hot-toast';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import {
   checkClientHasActiveContract,
   deleteContract,
@@ -167,8 +168,7 @@ const Contracts: React.FC = () => {
       toast.success('Draft discarded');
       setDraftToDiscard(null);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to discard draft';
-      toast.error(message);
+      handleError(err, 'Failed to discard draft');
     } finally {
       setIsDiscardingDraft(false);
     }

@@ -15,6 +15,7 @@ import { getAllBoards } from '@alga-psa/tickets/actions';
 import type { IBoard } from '@alga-psa/types';
 import { getAvailableReferenceData, importReferenceData, checkImportConflicts, type ImportConflict } from '@alga-psa/reference-data/actions';
 import { toast } from 'react-hot-toast';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
@@ -170,8 +171,7 @@ const CategoriesSettings = (): React.JSX.Element => {
 
       setDeleteValidation(result);
     } catch (error) {
-      console.error('Error deleting category:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to delete category');
+      handleError(error, 'Failed to delete category');
       resetDeleteDialog();
     } finally {
       setIsDeleteProcessing(false);
@@ -289,8 +289,7 @@ const CategoriesSettings = (): React.JSX.Element => {
       setConflictResolutions({});
       await fetchCategories();
     } catch (error) {
-      console.error('Error importing categories:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to import categories');
+      handleError(error, 'Failed to import categories');
     }
   };
 
@@ -462,8 +461,7 @@ const CategoriesSettings = (): React.JSX.Element => {
                 setSelectedImportCategories([]);
                 setShowImportDialog(true);
               } catch (error) {
-                console.error('Error fetching available categories:', error);
-                toast.error('Failed to fetch available categories for import');
+                handleError(error, 'Failed to fetch available categories for import');
               }
             }}
           >

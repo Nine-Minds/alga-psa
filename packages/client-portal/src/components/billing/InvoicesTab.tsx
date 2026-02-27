@@ -23,6 +23,7 @@ import {
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import toast from 'react-hot-toast';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 
 interface InvoicesTabProps {
   formatCurrency: (amount: number, currencyCode?: string) => string;
@@ -121,8 +122,7 @@ const InvoicesTab: React.FC<InvoicesTabProps> = React.memo(({
         toast.error(result.error || t('invoice.downloadFailed', 'Failed to download PDF.'));
       }
     } catch (error) {
-      console.error('Failed to download PDF:', error);
-      toast.error(t('invoice.downloadFailed', 'Failed to download PDF. Please try again.'));
+      handleError(error, t('invoice.downloadFailed', 'Failed to download PDF. Please try again.'));
     } finally {
       setDownloadingInvoices(prev => {
         const next = new Set(prev);
@@ -146,8 +146,7 @@ const InvoicesTab: React.FC<InvoicesTabProps> = React.memo(({
         toast.error(result.error || t('invoice.sendEmailFailed', 'Failed to send email.'));
       }
     } catch (error) {
-      console.error('Failed to send email:', error);
-      toast.error(t('invoice.sendEmailFailed', 'Failed to send invoice email. Please try again.'));
+      handleError(error, t('invoice.sendEmailFailed', 'Failed to send invoice email. Please try again.'));
     } finally {
       setSendingEmails(prev => {
         const next = new Set(prev);

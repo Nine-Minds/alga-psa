@@ -11,6 +11,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { SearchInput } from '@alga-psa/ui/components/SearchInput';
 import { Pen, Eye, CloudDownload, MoreVertical, Upload, Trash2, XCircle, ExternalLink, Power, RotateCcw } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import QuickAddContact from './QuickAddContact';
 import { useDrawer } from "@alga-psa/ui";
@@ -434,8 +435,7 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
         setDeleteValidation(result);
       }
     } catch (err) {
-      console.error('Error deleting contact:', err);
-      toast.error('Failed to delete contact. Please try again.');
+      handleError(err, 'Failed to delete contact. Please try again.');
     } finally {
       setIsDeleteProcessing(false);
     }
@@ -475,12 +475,7 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
       resetDeleteState();
       toast.success(`${contactToDelete.full_name} has been marked as inactive successfully.`);
     } catch (error: any) {
-      console.error('Error marking contact as inactive:', error);
-      if (error.message?.toLowerCase().includes('permission denied')) {
-        toast.error('Permission denied. Please contact your administrator if you need additional access.');
-      } else {
-        toast.error('An error occurred while marking the contact as inactive. Please try again.');
-      }
+      handleError(error, 'An error occurred while marking the contact as inactive. Please try again.');
     }
   };
 

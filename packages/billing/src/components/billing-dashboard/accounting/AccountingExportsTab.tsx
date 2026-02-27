@@ -8,6 +8,7 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@alga-psa/ui/components/Table';
 import toast from 'react-hot-toast';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import {
   createAccountingExportBatch,
   executeAccountingExportBatch,
@@ -107,7 +108,7 @@ export default function AccountingExportsTab(): React.JSX.Element {
       setBatches(Array.isArray(data) ? data : []);
     } catch (e) {
       setBatches([]);
-      toast.error(e instanceof Error ? e.message : 'Failed to load accounting export batches');
+      handleError(e, 'Failed to load accounting export batches');
     } finally {
       setLoading(false);
     }
@@ -120,7 +121,7 @@ export default function AccountingExportsTab(): React.JSX.Element {
       setSelectedDetail(detail);
     } catch (e) {
       setSelectedDetail(null);
-      toast.error(e instanceof Error ? e.message : 'Failed to load batch details');
+      handleError(e, 'Failed to load batch details');
     } finally {
       setDetailLoading(false);
     }
@@ -167,7 +168,7 @@ export default function AccountingExportsTab(): React.JSX.Element {
       setSelectedBatchId(batch.batch_id);
       await loadBatches();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Failed to create export batch');
+      handleError(e, 'Failed to create export batch');
     } finally {
       setCreating(false);
     }
@@ -180,7 +181,7 @@ export default function AccountingExportsTab(): React.JSX.Element {
       await loadBatches();
       await loadBatchDetail(batchId);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Failed to execute batch');
+      handleError(e, 'Failed to execute batch');
     }
   };
 

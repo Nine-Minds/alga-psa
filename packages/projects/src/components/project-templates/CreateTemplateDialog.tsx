@@ -9,6 +9,7 @@ import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import type { IProject } from '@alga-psa/types';
 import { toast } from 'react-hot-toast';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { createTemplateFromProject, getTemplateCategories } from '../../actions/projectTemplateActions';
 import { getProjects } from '../../actions/projectActions';
 
@@ -53,8 +54,7 @@ const CreateTemplateDialog: React.FC<CreateTemplateDialogProps> = ({ onClose, on
         setProjects(projectsData);
         setCategories(categoriesData);
       } catch (error) {
-        console.error('Error fetching data:', error);
-        toast.error('Failed to load projects and categories');
+        handleError(error, 'Failed to load projects and categories');
       }
     };
     fetchData();
@@ -89,8 +89,7 @@ const CreateTemplateDialog: React.FC<CreateTemplateDialogProps> = ({ onClose, on
 
       onClose();
     } catch (error) {
-      console.error('Error creating template:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to create template');
+      handleError(error, 'Failed to create template');
     } finally {
       setIsSubmitting(false);
     }

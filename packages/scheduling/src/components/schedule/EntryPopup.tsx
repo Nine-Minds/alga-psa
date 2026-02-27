@@ -32,6 +32,7 @@ import {
   IAppointmentRequest
 } from '@alga-psa/scheduling/actions';
 import toast from 'react-hot-toast';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { Label } from '@alga-psa/ui/components/Label';
 
 const EntryPopupContext = React.createContext<EntryPopupProps | null>(null);
@@ -502,8 +503,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
         toast.error(result.error || 'Failed to approve request');
       }
     } catch (error) {
-      console.error('Failed to approve request:', error);
-      toast.error('Failed to approve request');
+      handleError(error, 'Failed to approve request');
     } finally {
       setIsProcessing(false);
     }
@@ -537,8 +537,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
         toast.error(result.error || 'Failed to decline request');
       }
     } catch (error) {
-      console.error('Failed to decline request:', error);
-      toast.error('Failed to decline request');
+      handleError(error, 'Failed to decline request');
     } finally {
       setIsProcessing(false);
     }

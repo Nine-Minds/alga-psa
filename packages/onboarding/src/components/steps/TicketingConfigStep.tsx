@@ -28,6 +28,7 @@ import { createBoard, updateBoard } from '@alga-psa/tickets/actions';
 import { createCategory } from '@alga-psa/tickets/actions';
 import { createStatus, createPriority } from '@alga-psa/reference-data/actions';
 import toast from 'react-hot-toast';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
 import { DeleteEntityDialog } from '@alga-psa/ui';
 import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
@@ -415,8 +416,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
       setShowImportDialogs(prev => ({ ...prev, boards: false }));
       await loadAvailableBoards();
     } catch (error) {
-      console.error('Error importing boards:', error);
-      toast.error('Failed to import boards');
+      handleError(error, 'Failed to import boards');
     } finally {
       setIsImporting(prev => ({ ...prev, boards: false }));
     }
@@ -646,8 +646,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
       setCategoryForm({ name: '', parentCategory: '', displayOrder: 0, boardId: '' });
       setShowAddForms(prev => ({ ...prev, category: false }));
     } catch (error) {
-      console.error('Error creating category:', error);
-      toast.error('Failed to create category. Please try again.');
+      handleError(error, 'Failed to create category. Please try again.');
     }
   };
 
@@ -712,8 +711,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
       setPriorityForm({ name: '', color: '#3b82f6', displayOrder: 0 });
       setShowAddForms(prev => ({ ...prev, priority: false }));
     } catch (error) {
-      console.error('Error creating priority:', error);
-      toast.error('Failed to create priority. Please try again.');
+      handleError(error, 'Failed to create priority. Please try again.');
     }
   };
 
@@ -827,8 +825,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
       
       toast.success('Default board updated successfully');
     } catch (error) {
-      console.error('Error setting default board:', error);
-      toast.error('Failed to set default board');
+      handleError(error, 'Failed to set default board');
     }
   };
 
@@ -1073,8 +1070,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
       
       toast.success('Default status updated successfully');
     } catch (error) {
-      console.error('Error setting default status:', error);
-      toast.error('Failed to set default status');
+      handleError(error, 'Failed to set default status');
     }
   };
 
@@ -1371,8 +1367,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                         // Reload available boards for category creation
                         await loadAvailableBoards();
                       } catch (error) {
-                        console.error('Error creating board:', error);
-                        toast.error('Failed to create board. Please try again.');
+                        handleError(error, 'Failed to create board. Please try again.');
                       }
                     }}
                     disabled={!boardForm.name.trim()}
@@ -2213,8 +2208,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                         setStatusForm({ name: '', isClosed: false, isDefault: false, displayOrder: 0 });
                         setShowAddForms(prev => ({ ...prev, status: false }));
                       } catch (error) {
-                        console.error('Error creating status:', error);
-                        toast.error('Failed to create status. Please try again.');
+                        handleError(error, 'Failed to create status. Please try again.');
                       }
                     }}
                     disabled={!statusForm.name.trim()}

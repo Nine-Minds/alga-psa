@@ -23,6 +23,7 @@ import type { IUserWithRoles } from '@alga-psa/types';
 import { PasswordChangeForm } from '@alga-psa/users/components';
 import { SessionManagement } from '@alga-psa/auth/components';
 import { toast } from 'react-hot-toast';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import ContactAvatarUpload from '../contacts/ContactAvatarUpload';
 import { LanguagePreference } from '@alga-psa/ui/components/LanguagePreference';
 import { SupportedLocale } from '@alga-psa/core/i18n/config';
@@ -131,10 +132,9 @@ export function ClientProfile() {
       // - Email notification preferences should be managed through their dedicated section
 
     } catch (err) {
-      console.error('Error saving profile:', err);
       const errorMessage = err instanceof Error ? err.message : tProfile('profile.messages.updateError', 'Failed to save profile');
       setError(errorMessage);
-      toast.error(errorMessage);
+      handleError(err, tProfile('profile.messages.updateError', 'Failed to save profile'));
     }
   };
 

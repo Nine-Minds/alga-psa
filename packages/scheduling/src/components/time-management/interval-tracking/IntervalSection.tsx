@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { toast } from 'react-hot-toast';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { TicketInterval, TicketIntervalGroup } from '@alga-psa/types';
 import { IntervalTrackingService } from '@alga-psa/ui/services';
 import { IntervalItem } from './IntervalItem';
@@ -328,8 +329,7 @@ export function IntervalSection({
                           await loadIntervals();
                         }
                       } catch (error) {
-                        console.error('Error merging intervals:', error);
-                        toast.error('Failed to merge intervals');
+                        handleError(error, 'Failed to merge intervals');
                       }
                     }}
                     id="timesheet-merge-intervals-button"

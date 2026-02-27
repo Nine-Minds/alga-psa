@@ -13,6 +13,7 @@ import { getTicketStatuses } from '@alga-psa/reference-data/actions';
 import { getAllBoards } from '@alga-psa/tickets/actions';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { useRegisterUIComponent } from '@alga-psa/ui/ui-reflection/useRegisterUIComponent';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
 
@@ -58,8 +59,7 @@ export default function CreateTicketFromAssetButton({ asset, defaultBoardId, var
                         setPriorities(fetchedPriorities);
                     })
                     .catch((error) => {
-                        console.error('Error loading priorities:', error);
-                        toast.error('Failed to load priorities');
+                        handleError(error, 'Failed to load priorities');
                     })
                     .finally(() => {
                         setIsLoadingPriorities(false);
@@ -82,8 +82,7 @@ export default function CreateTicketFromAssetButton({ asset, defaultBoardId, var
                         }
                     })
                     .catch((error) => {
-                        console.error('Error loading statuses:', error);
-                        toast.error('Failed to load statuses');
+                        handleError(error, 'Failed to load statuses');
                     })
                     .finally(() => {
                         setIsLoadingStatuses(false);
@@ -111,8 +110,7 @@ export default function CreateTicketFromAssetButton({ asset, defaultBoardId, var
                         }
                     })
                     .catch((error) => {
-                        console.error('Error loading boards:', error);
-                        toast.error('Failed to load boards');
+                        handleError(error, 'Failed to load boards');
                     })
                     .finally(() => {
                         setIsLoadingBoards(false);
@@ -163,8 +161,7 @@ export default function CreateTicketFromAssetButton({ asset, defaultBoardId, var
             // Navigate to the new ticket
             router.push(`/msp/tickets/${ticket.ticket_id}`);
         } catch (error) {
-            console.error('Error creating ticket:', error);
-            toast.error('Failed to create ticket');
+            handleError(error, 'Failed to create ticket');
         } finally {
             setIsSubmitting(false);
         }

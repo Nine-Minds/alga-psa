@@ -49,6 +49,7 @@ import ClientPlanDisambiguationGuide from './ClientPlanDisambiguationGuide';
 import ClientContractAssignment from './ClientContractAssignment'; // Added import
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@alga-psa/ui/components/Tabs';
 import { toast } from 'react-hot-toast';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { ClientBillingSchedule } from './ClientBillingSchedule';
 
 interface BillingConfigurationProps {
@@ -225,9 +226,8 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
 
             toast.success('Billing configuration saved successfully');
         } catch (error) {
-            console.error('Error saving billing configuration:', error);
             setErrorMessage('Failed to save billing configuration');
-            toast.error('Failed to save billing configuration');
+            handleError(error, 'Failed to save billing configuration');
         }
     };
 
@@ -244,7 +244,7 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
             toast.success('Contract line updated successfully');
         } catch (error) {
             setErrorMessage('Failed to update contract line. Please try again.');
-            toast.error('Failed to update contract line');
+            handleError(error, 'Failed to update contract line');
         }
     };
 
@@ -261,7 +261,7 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
             toast.success('Service category updated successfully');
         } catch (error) {
             setErrorMessage('Failed to update service category. Please try again.');
-            toast.error('Failed to update service category');
+            handleError(error, 'Failed to update service category');
         }
     };
 
@@ -278,7 +278,7 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
             toast.success('Contract line added successfully');
         } catch (error: any) {
             setErrorMessage(error.message || 'Failed to add contract line. Please try again.');
-            toast.error(error.message || 'Failed to add contract line');
+            handleError(error, 'Failed to add contract line');
         }
     };
 
@@ -302,7 +302,7 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
         } catch (error: any) {
             // Display the actual error message from the server if available
             setErrorMessage(error.message || 'Failed to remove contract line. Please try again.');
-            toast.error(error.message || 'Failed to remove contract line');
+            handleError(error, 'Failed to remove contract line');
         } finally {
             setContractLineToDelete(null);
         }
@@ -342,7 +342,7 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
             } catch (error: any) {
                 // Display the actual error message from the server if available
                 setErrorMessage(error.message || 'Failed to save changes. Please try again.');
-                toast.error(error.message || 'Failed to save changes');
+                handleError(error, 'Failed to save changes');
             }
         }
     };
@@ -386,9 +386,8 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
             setErrorMessage(null);
             toast.success('Service added successfully');
         } catch (error) {
-            console.error('Error creating service:', error);
             setErrorMessage('Failed to add service. Please try again.');
-            toast.error('Failed to add service');
+            handleError(error, 'Failed to add service');
         }
     };
 
@@ -401,7 +400,7 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
             toast.success('Service updated successfully');
         } catch (error) {
             setErrorMessage('Failed to update service. Please try again.');
-            toast.error('Failed to update service');
+            handleError(error, 'Failed to update service');
         }
     };
 
@@ -414,7 +413,7 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
             toast.success('Service deleted successfully');
         } catch (error) {
             setErrorMessage('Failed to delete service. Please try again.');
-            toast.error('Failed to delete service');
+            handleError(error, 'Failed to delete service');
         }
     };
 
@@ -434,10 +433,9 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
             setErrorMessage(null); // Clear any previous errors
             toast.success('Default tax rate assigned successfully');
         } catch (error: any) {
-            console.error('Failed to assign default tax rate:', error);
             // Set specific error message from the action if available
             setErrorMessage(error.message || 'Failed to assign default tax rate. Please try again.');
-            toast.error(error.message || 'Failed to assign default tax rate');
+            handleError(error, 'Failed to assign default tax rate');
             // Re-throw or handle as needed if parent component needs to know
             throw error;
         }
@@ -455,9 +453,8 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
             setErrorMessage(null); // Clear any previous errors
             toast.success('Default tax rate changed successfully');
         } catch (error: any) {
-            console.error('Failed to change default tax rate:', error);
             setErrorMessage(error.message || 'Failed to change default tax rate. Please try again.');
-            toast.error(error.message || 'Failed to change default tax rate');
+            handleError(error, 'Failed to change default tax rate');
             throw error; // Re-throw so the child component knows it failed
         }
     };
@@ -469,9 +466,8 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
             setTaxRates(updatedTaxRates);
             toast.success('Tax rate created successfully');
         } catch (error) {
-            console.error('Failed to refetch tax rates after creation:', error);
             setErrorMessage('Failed to refresh tax rates list.');
-            toast.error('Failed to refresh tax rates list');
+            handleError(error, 'Failed to refresh tax rates list');
         }
     };
 

@@ -21,6 +21,7 @@ import { getAllUsersBasic, getUserAvatarUrlsBatchAction } from '@alga-psa/users/
 import { findTagsByEntityId } from '@alga-psa/tags/actions';
 import { useTagPermissions } from '@alga-psa/tags/hooks';
 import { toast } from 'react-hot-toast';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { ProjectTaskStatusEditor } from './ProjectTaskStatusEditor';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
@@ -160,10 +161,9 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
       toast.success('Project updated successfully');
       onSave(updatedProject);
     } catch (error) {
-      console.error('Error updating project:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to update project';
       setValidationErrors([errorMessage]);
-      toast.error(errorMessage);
+      handleError(error, 'Failed to update project');
     } finally {
       setIsSubmitting(false);
     }

@@ -12,6 +12,7 @@ import {
 } from '@alga-psa/clients/actions';
 import { getAvailableReferenceData, importReferenceData, checkImportConflicts, ImportConflict } from '@alga-psa/reference-data/actions';
 import { toast } from 'react-hot-toast';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
@@ -103,8 +104,7 @@ const InteractionTypesSettings: React.FC = () => {
     try {
       await validateDeletion(type.type_id);
     } catch (error: any) {
-      console.error('Error validating interaction type deletion:', error);
-      toast.error(error?.message || 'Failed to validate interaction type deletion');
+      handleError(error, 'Failed to validate interaction type deletion');
     }
   };
 
@@ -141,8 +141,7 @@ const InteractionTypesSettings: React.FC = () => {
         await handleImport();
       }
     } catch (error) {
-      console.error('Error checking conflicts:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to check conflicts');
+      handleError(error, 'Failed to check conflicts');
     }
   };
 
@@ -165,8 +164,7 @@ const InteractionTypesSettings: React.FC = () => {
       setConflictResolutions({});
       await fetchTypes();
     } catch (error) {
-      console.error('Error importing interaction types:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to import interaction types');
+      handleError(error, 'Failed to import interaction types');
     }
   };
 
@@ -284,8 +282,7 @@ const InteractionTypesSettings: React.FC = () => {
                 setSelectedImportTypes([]);
                 setShowImportDialog(true);
               } catch (error) {
-                console.error('Error fetching available interaction types:', error);
-                toast.error('Failed to fetch available interaction types for import');
+                handleError(error, 'Failed to fetch available interaction types for import');
               }
             }}
           >
