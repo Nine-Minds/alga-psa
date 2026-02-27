@@ -512,7 +512,7 @@
   {
     "id": "T145",
     "description": "Call sites render `MultiUserAndTeamPicker` when `teams-v2` flag is enabled, `MultiUserPicker` when disabled",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F090"
     ]
