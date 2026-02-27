@@ -26,7 +26,7 @@
   {
     "id": "T085",
     "description": "EntityType in media avatarUtils includes 'team'",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F052"
     ]
