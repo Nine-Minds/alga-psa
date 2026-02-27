@@ -278,3 +278,8 @@ Create a clean, implementation-ready plan containing only remaining work for inb
 - Validation:
   - `cd server && npx vitest run ../packages/integrations/src/webhooks/email/imapInAppQueue.test.ts --coverage.enabled=false`
   - `cd server && npx vitest run src/test/integration/imapWebhookHandoff.integration.test.ts ../packages/integrations/src/webhooks/email/imapInAppQueue.test.ts --coverage.enabled=false`
+- 2026-02-27: Completed `T236`.
+  - Added async queue concurrency-bound assertion in `packages/integrations/src/webhooks/email/imapInAppQueue.test.ts`.
+  - Test sets worker env above max (`99`) and verifies active workers cap at `8` with remaining items queued, then drains to idle.
+- Validation:
+  - Reused combined webhook + queue vitest run from `T235`.

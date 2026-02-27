@@ -192,7 +192,7 @@
   {
     "id": "T236",
     "description": "Integration: app-local async queue enforces bounded per-message artifact concurrency",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F230"
     ]
