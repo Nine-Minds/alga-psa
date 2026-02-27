@@ -228,7 +228,7 @@
   {
     "id": "F027",
     "description": "IMAP ingress enforces hard caps for per-attachment bytes, total attachment bytes, attachment count, and raw MIME bytes before encoding/payload dispatch",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Scoped Implementation Checklist (Phase 1)",
       "Non-functional Requirements"

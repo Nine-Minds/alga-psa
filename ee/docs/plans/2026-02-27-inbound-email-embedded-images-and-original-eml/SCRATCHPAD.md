@@ -25,6 +25,12 @@ Rolling notes for embedded inbound-email image extraction + source `.eml` persis
   - in scope: lightweight webhook handoff, ingress size caps, payload augmentation for bytes, bounded async per-message artifact processing
   - out of scope: queue/global backpressure orchestration and new observability/metrics initiatives
 - (2026-02-27) IMAP webhook route now uses async event handoff (`INBOUND_EMAIL_RECEIVED`) and no longer performs inline ticket/comment/document persistence in the request path.
+- (2026-02-27) IMAP service now enforces ingress hard caps before webhook dispatch:
+  - `IMAP_MAX_ATTACHMENT_BYTES` (per attachment)
+  - `IMAP_MAX_TOTAL_ATTACHMENT_BYTES` (sum across attachments)
+  - `IMAP_MAX_ATTACHMENT_COUNT` (attachment count)
+  - `IMAP_MAX_RAW_MIME_BYTES` (raw source `.eml` payload)
+  - skipped artifacts are logged with structured reason objects via `imap_ingress_artifacts_skipped`.
 
 ## Discoveries / Constraints
 
@@ -77,6 +83,9 @@ Rolling notes for embedded inbound-email image extraction + source `.eml` persis
 - (2026-02-27) IMAP webhook handoff refactor:
   - `nl -ba packages/integrations/src/webhooks/email/imap.ts | sed -n '1,320p'`
   - removed inline `processInboundEmailInApp` path, replaced with event publish handoff.
+- (2026-02-27) IMAP ingress caps implementation:
+  - `nl -ba services/imap-service/src/imapService.ts | sed -n '700,840p'`
+  - switched parsing to `simpleParser(rawMimeBuffer)` and applied cap checks before base64 encoding attachment/raw MIME payload bytes.
 
 ## Links / References
 
@@ -130,3 +139,4 @@ Rolling notes for embedded inbound-email image extraction + source `.eml` persis
 - (2026-02-27) Completed T033 — Added Playwright .eml visibility scenario covering both new-ticket and reply ticket document views.
 - (2026-02-27) Completed T034 — Added Playwright duplicate-guard scenario that verifies single embedded/.eml document rows and visibility on the ticket.
 - (2026-02-27) Completed F026 — Refactored IMAP webhook route to auth/validate/handoff only by publishing `INBOUND_EMAIL_RECEIVED` and returning queued success without inline persistence.
+- (2026-02-27) Completed F027 — Added IMAP ingress hard-cap enforcement for per-attachment bytes, total attachment bytes, attachment count, and raw MIME bytes prior to payload encoding/dispatch.
