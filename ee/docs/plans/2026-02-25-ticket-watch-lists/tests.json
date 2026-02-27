@@ -502,7 +502,7 @@
   {
     "id": "T059",
     "description": "Server action guard: all-contact lookup excludes inactive contacts by default.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F032"
     ]
