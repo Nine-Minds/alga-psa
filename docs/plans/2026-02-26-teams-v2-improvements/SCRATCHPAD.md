@@ -62,3 +62,6 @@
 ## Open Questions
 
 - (None remaining — all questions resolved during planning)
+
+## Updates
+- (2026-02-27) Added migration `server/migrations/20260227000001_add_team_to_document_associations_entity_type.cjs` to include `team` in document_associations entity_type constraint with NOT VALID and transaction disabled.

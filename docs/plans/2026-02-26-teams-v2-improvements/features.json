@@ -2,253 +2,345 @@
   {
     "id": "F051",
     "description": "Migration: Update `document_associations` entity_type CHECK constraint to include 'team' (Citus-compliant, NOT VALID, transaction: false)",
-    "implemented": false,
-    "prdRefs": ["FR-3A.1", "NFR-3.2"]
+    "implemented": true,
+    "prdRefs": [
+      "FR-3A.1",
+      "NFR-3.2"
+    ]
   },
   {
     "id": "F052",
     "description": "Add 'team' to EntityType union in `packages/media/src/lib/avatarUtils.ts`",
     "implemented": false,
-    "prdRefs": ["FR-3A.2"]
+    "prdRefs": [
+      "FR-3A.2"
+    ]
   },
   {
     "id": "F053",
     "description": "Add 'team' to EntityType union in `packages/users/src/lib/avatarUtils.ts`",
     "implemented": false,
-    "prdRefs": ["FR-3A.2"]
+    "prdRefs": [
+      "FR-3A.2"
+    ]
   },
   {
     "id": "F054",
     "description": "Add 'team' to EntityType union in `packages/formatting/src/avatarUtils.ts`",
     "implemented": false,
-    "prdRefs": ["FR-3A.2"]
+    "prdRefs": [
+      "FR-3A.2"
+    ]
   },
   {
     "id": "F055",
     "description": "Add 'team' to EntityType union in `packages/ui/src/components/EntityImageUpload.tsx`",
     "implemented": false,
-    "prdRefs": ["FR-3A.2"]
+    "prdRefs": [
+      "FR-3A.2"
+    ]
   },
   {
     "id": "F056",
     "description": "Add `getTeamAvatarUrl()` helper function in `packages/media/src/lib/avatarUtils.ts`",
     "implemented": false,
-    "prdRefs": ["FR-3A.3"]
+    "prdRefs": [
+      "FR-3A.3"
+    ]
   },
   {
     "id": "F057",
     "description": "Create `TeamAvatar` component in `packages/ui/src/components/TeamAvatar.tsx` (thin wrapper around EntityAvatar, following UserAvatar pattern)",
     "implemented": false,
-    "prdRefs": ["FR-3A.4"]
+    "prdRefs": [
+      "FR-3A.4"
+    ]
   },
   {
     "id": "F058",
     "description": "Create `uploadTeamAvatar` server action in `packages/teams/src/actions/team-actions/avatarActions.ts` using `uploadEntityImage('team', ...)`",
     "implemented": false,
-    "prdRefs": ["FR-3A.5", "FR-3A.11"]
+    "prdRefs": [
+      "FR-3A.5",
+      "FR-3A.11"
+    ]
   },
   {
     "id": "F059",
     "description": "Create `deleteTeamAvatar` server action in `packages/teams/src/actions/team-actions/avatarActions.ts` using `deleteEntityImage('team', ...)`",
     "implemented": false,
-    "prdRefs": ["FR-3A.6", "FR-3A.11"]
+    "prdRefs": [
+      "FR-3A.6",
+      "FR-3A.11"
+    ]
   },
   {
     "id": "F060",
     "description": "Create `getTeamAvatarUrlAction` server action in teams package",
     "implemented": false,
-    "prdRefs": ["FR-3A.7"]
+    "prdRefs": [
+      "FR-3A.7"
+    ]
   },
   {
     "id": "F061",
     "description": "Create `getTeamAvatarUrlsBatchAction` server action in teams package for batch avatar URL fetching",
     "implemented": false,
-    "prdRefs": ["FR-3A.8"]
+    "prdRefs": [
+      "FR-3A.8"
+    ]
   },
   {
     "id": "F062",
     "description": "Export avatar actions from `packages/teams/src/actions/team-actions/index.ts`",
     "implemented": false,
-    "prdRefs": ["FR-3A.5", "FR-3A.6", "FR-3A.7", "FR-3A.8"]
+    "prdRefs": [
+      "FR-3A.5",
+      "FR-3A.6",
+      "FR-3A.7",
+      "FR-3A.8"
+    ]
   },
   {
     "id": "F063",
     "description": "Add `@alga-psa/media`, `@alga-psa/auth`, `swr` dependencies to `packages/teams/package.json`",
     "implemented": false,
-    "prdRefs": ["NFR-3.3"]
+    "prdRefs": [
+      "NFR-3.3"
+    ]
   },
   {
     "id": "F064",
     "description": "Create `useTeamAvatar` SWR hook in `packages/teams/src/hooks/useTeamAvatar.ts` (following useUserAvatar pattern)",
     "implemented": false,
-    "prdRefs": ["FR-3A.9"]
+    "prdRefs": [
+      "FR-3A.9"
+    ]
   },
   {
     "id": "F065",
     "description": "Export `useTeamAvatar` from `packages/teams/src/hooks/index.ts`",
     "implemented": false,
-    "prdRefs": ["FR-3A.9"]
+    "prdRefs": [
+      "FR-3A.9"
+    ]
   },
   {
     "id": "F066",
     "description": "Add team avatar upload UI to `TeamDetails.tsx` using EntityImageUpload (above team name field)",
     "implemented": false,
-    "prdRefs": ["FR-3A.10"]
+    "prdRefs": [
+      "FR-3A.10"
+    ]
   },
   {
     "id": "F067",
     "description": "Team avatar upload refreshes avatar display after successful upload",
     "implemented": false,
-    "prdRefs": ["FR-3A.10"]
+    "prdRefs": [
+      "FR-3A.10"
+    ]
   },
   {
     "id": "F068",
     "description": "Create `OrgChartNode` custom ReactFlow node component (card with UserAvatar, name, role, inactive badge)",
     "implemented": false,
-    "prdRefs": ["FR-3B.1"]
+    "prdRefs": [
+      "FR-3B.1"
+    ]
   },
   {
     "id": "F069",
     "description": "Create `OrgChart` container component with ReactFlow canvas and ReactFlowProvider",
     "implemented": false,
-    "prdRefs": ["FR-3B.2", "NFR-3.5"]
+    "prdRefs": [
+      "FR-3B.2",
+      "NFR-3.5"
+    ]
   },
   {
     "id": "F070",
     "description": "OrgChart: build tree from `reports_to` relationships and compute top-down hierarchical node positions",
     "implemented": false,
-    "prdRefs": ["FR-3B.3"]
+    "prdRefs": [
+      "FR-3B.3"
+    ]
   },
   {
     "id": "F071",
     "description": "OrgChart: create smoothstep edges between parent and child nodes",
     "implemented": false,
-    "prdRefs": ["FR-3B.3"]
+    "prdRefs": [
+      "FR-3B.3"
+    ]
   },
   {
     "id": "F072",
     "description": "OrgChart: `fitView` on initial render with zoom/pan enabled, nodes not draggable",
     "implemented": false,
-    "prdRefs": ["FR-3B.4"]
+    "prdRefs": [
+      "FR-3B.4"
+    ]
   },
   {
     "id": "F073",
     "description": "OrgChart: clicking a node opens UserDetails drawer via `useDrawer`",
     "implemented": false,
-    "prdRefs": ["FR-3B.5"]
+    "prdRefs": [
+      "FR-3B.5"
+    ]
   },
   {
     "id": "F074",
     "description": "OrgChart: batch-fetch user avatar URLs for all displayed nodes",
     "implemented": false,
-    "prdRefs": ["FR-3B.6"]
+    "prdRefs": [
+      "FR-3B.6"
+    ]
   },
   {
     "id": "F075",
     "description": "OrgChart: ReactFlow imported dynamically with `{ ssr: false }` to prevent SSR errors",
     "implemented": false,
-    "prdRefs": ["NFR-3.5"]
+    "prdRefs": [
+      "NFR-3.5"
+    ]
   },
   {
     "id": "F076",
     "description": "UserManagement: merge portal-type and list/structure ViewSwitchers into one row in CardHeader",
     "implemented": false,
-    "prdRefs": ["FR-3B.7"]
+    "prdRefs": [
+      "FR-3B.7"
+    ]
   },
   {
     "id": "F077",
     "description": "UserManagement: remove duplicate list/org ViewSwitcher from list view toolbar (lines 668-673)",
     "implemented": false,
-    "prdRefs": ["FR-3B.8"]
+    "prdRefs": [
+      "FR-3B.8"
+    ]
   },
   {
     "id": "F078",
     "description": "UserManagement: remove duplicate list/org ViewSwitcher from org view header (lines 696-706)",
     "implemented": false,
-    "prdRefs": ["FR-3B.8"]
+    "prdRefs": [
+      "FR-3B.8"
+    ]
   },
   {
     "id": "F079",
     "description": "UserManagement: rename 'Org Chart' label to 'Structure' in userViewOptions",
     "implemented": false,
-    "prdRefs": ["FR-3B.9"]
+    "prdRefs": [
+      "FR-3B.9"
+    ]
   },
   {
     "id": "F080",
     "description": "UserManagement: replace inline nested-list org chart rendering with new OrgChart component",
     "implemented": false,
-    "prdRefs": ["FR-3B.10"]
+    "prdRefs": [
+      "FR-3B.10"
+    ]
   },
   {
     "id": "F081",
     "description": "UserManagement: remove old `buildOrgTree` and `renderOrgNode` functions (logic moved to OrgChart)",
     "implemented": false,
-    "prdRefs": ["FR-3B.10"]
+    "prdRefs": [
+      "FR-3B.10"
+    ]
   },
   {
     "id": "F082",
     "description": "OrgChart and Structure toggle hidden when `teams-v2` flag is off",
     "implemented": false,
-    "prdRefs": ["FR-3B.11", "NFR-3.1"]
+    "prdRefs": [
+      "FR-3B.11",
+      "NFR-3.1"
+    ]
   },
   {
     "id": "F083",
     "description": "`UserAndTeamPicker`: replace hardcoded gray circle + TeamIcon with `TeamAvatar` component",
     "implemented": false,
-    "prdRefs": ["FR-3C.1"]
+    "prdRefs": [
+      "FR-3C.1"
+    ]
   },
   {
     "id": "F084",
     "description": "`UserAndTeamPicker`: add optional `getTeamAvatarUrlsBatch` prop",
     "implemented": false,
-    "prdRefs": ["FR-3C.2"]
+    "prdRefs": [
+      "FR-3C.2"
+    ]
   },
   {
     "id": "F085",
     "description": "`UserAndTeamPicker`: batch-fetch team avatar URLs when dropdown opens or teams change",
     "implemented": false,
-    "prdRefs": ["FR-3C.3"]
+    "prdRefs": [
+      "FR-3C.3"
+    ]
   },
   {
     "id": "F086",
     "description": "Create `MultiUserAndTeamPicker` component in `packages/ui/src/components/MultiUserAndTeamPicker.tsx` (copy of MultiUserPicker with team logic + TeamAvatar)",
     "implemented": false,
-    "prdRefs": ["FR-3D.1"]
+    "prdRefs": [
+      "FR-3D.1"
+    ]
   },
   {
     "id": "F087",
     "description": "`MultiUserAndTeamPicker`: replace all hardcoded TeamIcon instances with `TeamAvatar` component",
     "implemented": false,
-    "prdRefs": ["FR-3D.2"]
+    "prdRefs": [
+      "FR-3D.2"
+    ]
   },
   {
     "id": "F088",
     "description": "`MultiUserAndTeamPicker`: add `getTeamAvatarUrlsBatch` prop and batch-fetch team avatar URLs",
     "implemented": false,
-    "prdRefs": ["FR-3D.3"]
+    "prdRefs": [
+      "FR-3D.3"
+    ]
   },
   {
     "id": "F089",
     "description": "Remove team props and team logic from original `MultiUserPicker` (teams, teamFilterFn, team rendering, stale team cleanup)",
     "implemented": false,
-    "prdRefs": ["FR-3D.4"]
+    "prdRefs": [
+      "FR-3D.4"
+    ]
   },
   {
     "id": "F090",
-    "description": "Call sites swap `MultiUserPicker` → `MultiUserAndTeamPicker` when `teams-v2` flag is enabled",
+    "description": "Call sites swap `MultiUserPicker` \u2192 `MultiUserAndTeamPicker` when `teams-v2` flag is enabled",
     "implemented": false,
-    "prdRefs": ["FR-3D.5"]
+    "prdRefs": [
+      "FR-3D.5"
+    ]
   },
   {
     "id": "F091",
     "description": "Thread `getTeamAvatarUrlsBatchAction` through `MultiUserAndTeamPicker` call sites (ticket detail, task detail, ticket filter)",
     "implemented": false,
-    "prdRefs": ["FR-3D.6"]
+    "prdRefs": [
+      "FR-3D.6"
+    ]
   },
   {
     "id": "F092",
-    "description": "Pickers show colored initials (EntityAvatar fallback) when no team avatar URL is available — no more generic gray circles",
+    "description": "Pickers show colored initials (EntityAvatar fallback) when no team avatar URL is available \u2014 no more generic gray circles",
     "implemented": false,
-    "prdRefs": ["FR-3D.7"]
+    "prdRefs": [
+      "FR-3D.7"
+    ]
   }
 ]
