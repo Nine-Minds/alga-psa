@@ -464,7 +464,7 @@ async function sendEscalationEmailNotification(
       userId,
       subtypeId: subtype?.id || 1,
       emailAddress: email,
-      templateName: 'SLA Escalation',
+      templateName: 'sla-escalation',
       data: templateData as Record<string, string | number | boolean>
     });
 

@@ -64,6 +64,8 @@ export default defineConfig({
       { find: /^@alga-psa\/db\/models\/(.*)$/, replacement: path.resolve(__dirname, '../packages/db/src/models/$1') },
 
       { find: /^@alga-psa\/types$/, replacement: path.resolve(__dirname, '../packages/types/src/index.ts') },
+      { find: /^@alga-psa\/event-schemas$/, replacement: path.resolve(__dirname, '../packages/event-schemas/src/index.ts') },
+      { find: /^@alga-psa\/event-schemas\/(.*)$/, replacement: path.resolve(__dirname, '../packages/event-schemas/src/$1') },
       { find: /^@alga-psa\/validation$/, replacement: path.resolve(__dirname, '../packages/validation/src/index.ts') },
       { find: /^@alga-psa\/auth$/, replacement: path.resolve(__dirname, '../packages/auth/src/index.ts') },
       { find: /^@alga-psa\/auth\/session$/, replacement: path.resolve(__dirname, '../packages/auth/src/lib/session.ts') },

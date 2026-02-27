@@ -1532,7 +1532,7 @@ export class ChatCompletionsService {
       //   headers: requestHeadersForLog,
       //   args,
       // });
-      const response = await fetch(url, init);
+      const response = await this.fetchWithProtocolFallback(url, init, baseUrl);
       const durationMs = Date.now() - requestStarted;
 
       const text = await response.text();
@@ -1566,6 +1566,53 @@ export class ChatCompletionsService {
       });
       throw error;
     }
+  }
+
+  private static async fetchWithProtocolFallback(
+    url: string,
+    init: RequestInit,
+    baseUrl: string,
+  ): Promise<Response> {
+    if (!this.shouldTryHttpFirst(url, baseUrl)) {
+      return fetch(url, init);
+    }
+
+    const httpUrl = this.toHttpUrl(url);
+    try {
+      return await fetch(httpUrl, init);
+    } catch (error) {
+      console.warn(
+        '[ChatCompletionsService] HTTP-first API tool call failed; retrying with HTTPS.',
+        {
+          httpUrl,
+          httpsUrl: url,
+          error: error instanceof Error ? error.message : String(error),
+        },
+      );
+      return fetch(url, init);
+    }
+  }
+
+  private static shouldTryHttpFirst(
+    requestUrl: string,
+    baseUrl: string,
+  ): boolean {
+    if (!requestUrl.startsWith('https://')) {
+      return false;
+    }
+    try {
+      const request = new URL(requestUrl);
+      const base = new URL(baseUrl);
+      return request.host === base.host;
+    } catch {
+      return false;
+    }
+  }
+
+  private static toHttpUrl(url: string): string {
+    const parsed = new URL(url);
+    parsed.protocol = 'http:';
+    return parsed.toString();
   }
 
   private static buildFetchRequest(

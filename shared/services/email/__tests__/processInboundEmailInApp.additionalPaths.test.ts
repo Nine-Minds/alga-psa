@@ -6,7 +6,12 @@ const parseEmailReplyBodyMock = vi.fn();
 const findTicketByReplyTokenMock = vi.fn();
 const findTicketByEmailThreadMock = vi.fn();
 const resolveInboundTicketDefaultsMock = vi.fn();
+const resolveEffectiveInboundTicketDefaultsMock = vi.fn();
 const findContactByEmailMock = vi.fn();
+const findClientIdByInboundEmailDomainMock = vi.fn();
+const findValidClientPrimaryContactIdMock = vi.fn();
+const findEmailProviderMailboxAddressMock = vi.fn();
+const upsertTicketWatchListRecipientsMock = vi.fn();
 const createTicketFromEmailMock = vi.fn();
 const createCommentFromEmailMock = vi.fn();
 const processEmailAttachmentMock = vi.fn();
@@ -60,7 +65,12 @@ vi.mock('../../../workflow/actions/emailWorkflowActions', () => ({
   findTicketByReplyToken: (...args: any[]) => findTicketByReplyTokenMock(...args),
   findTicketByEmailThread: (...args: any[]) => findTicketByEmailThreadMock(...args),
   resolveInboundTicketDefaults: (...args: any[]) => resolveInboundTicketDefaultsMock(...args),
+  resolveEffectiveInboundTicketDefaults: (...args: any[]) => resolveEffectiveInboundTicketDefaultsMock(...args),
   findContactByEmail: (...args: any[]) => findContactByEmailMock(...args),
+  findClientIdByInboundEmailDomain: (...args: any[]) => findClientIdByInboundEmailDomainMock(...args),
+  findValidClientPrimaryContactId: (...args: any[]) => findValidClientPrimaryContactIdMock(...args),
+  findEmailProviderMailboxAddress: (...args: any[]) => findEmailProviderMailboxAddressMock(...args),
+  upsertTicketWatchListRecipients: (...args: any[]) => upsertTicketWatchListRecipientsMock(...args),
   createTicketFromEmail: (...args: any[]) => createTicketFromEmailMock(...args),
   createCommentFromEmail: (...args: any[]) => createCommentFromEmailMock(...args),
   processEmailAttachment: (...args: any[]) => processEmailAttachmentMock(...args),
@@ -101,6 +111,23 @@ describe('processInboundEmailInApp additional authorship paths', () => {
       subcategory_id: undefined,
       location_id: undefined,
       entered_by: 'entered-by-user',
+    });
+    findClientIdByInboundEmailDomainMock.mockResolvedValue(null);
+    findValidClientPrimaryContactIdMock.mockResolvedValue(null);
+    findEmailProviderMailboxAddressMock.mockResolvedValue('support@example.com');
+    upsertTicketWatchListRecipientsMock.mockResolvedValue({ updated: true, watchList: [] });
+    resolveEffectiveInboundTicketDefaultsMock.mockResolvedValue({
+      defaults: {
+        client_id: 'default-client-id',
+        board_id: 'board-id',
+        status_id: 'status-id',
+        priority_id: 'priority-id',
+        category_id: undefined,
+        subcategory_id: undefined,
+        location_id: undefined,
+        entered_by: 'entered-by-user',
+      },
+      source: 'provider_default',
     });
     createTicketFromEmailMock.mockResolvedValue({
       ticket_id: 'ticket-1',

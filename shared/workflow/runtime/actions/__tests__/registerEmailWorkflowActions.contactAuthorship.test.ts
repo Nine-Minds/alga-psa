@@ -28,6 +28,10 @@ vi.mock('../../../actions/emailWorkflowActions', () => ({
   findTicketByEmailThread: vi.fn(),
   findTicketByReplyToken: vi.fn(),
   resolveInboundTicketDefaults: vi.fn(),
+  resolveEffectiveInboundTicketDefaults: vi.fn(async (input: any) => ({
+    defaults: input?.providerDefaults ?? null,
+    source: 'provider_default',
+  })),
   createTicketFromEmail: createTicketFromEmailMock,
   createCommentFromEmail: createCommentFromEmailMock,
   processEmailAttachment: vi.fn(),

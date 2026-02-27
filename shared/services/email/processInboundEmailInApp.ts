@@ -1,6 +1,12 @@
 import type { EmailMessageDetails } from '../../interfaces/inbound-email.interfaces';
 import { convertHtmlToBlockNote, convertMarkdownToBlocks } from '../../lib/utils/contentConversion';
 import { extractEmailDomain, normalizeEmailAddress } from '../../lib/email/addressUtils';
+import {
+  buildInboundWatchListRecipients,
+  mergeTicketWatchListRecipients,
+  setTicketWatchListOnAttributes,
+  type TicketWatchListRecipientInput,
+} from '../../lib/tickets/watchList';
 
 export interface ProcessInboundEmailInAppInput {
   tenantId: string;
@@ -210,9 +216,12 @@ export async function processInboundEmailInApp(
     findTicketByReplyToken,
     findTicketByEmailThread,
     resolveInboundTicketDefaults,
+    resolveEffectiveInboundTicketDefaults,
     findContactByEmail,
     findClientIdByInboundEmailDomain,
     findValidClientPrimaryContactId,
+    findEmailProviderMailboxAddress,
+    upsertTicketWatchListRecipients,
     createTicketFromEmail,
     createCommentFromEmail,
   } = await import('../../workflow/actions/emailWorkflowActions');
@@ -242,6 +251,49 @@ export async function processInboundEmailInApp(
     }
 
     return findContactByEmail(senderEmail, tenantId, context);
+  };
+
+  let inboundWatchListRecipients: TicketWatchListRecipientInput[] = [];
+  try {
+    const providerMailboxEmail = await findEmailProviderMailboxAddress(providerId, tenantId);
+    inboundWatchListRecipients = buildInboundWatchListRecipients({
+      to: emailData.to,
+      cc: emailData.cc,
+      senderEmail: emailData.from?.email,
+      providerMailboxEmail,
+    });
+  } catch (error) {
+    console.warn('processInboundEmailInApp: watch-list candidate build failed (continuing)', {
+      tenantId,
+      providerId,
+      emailId: emailData.id,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+
+  const upsertWatchListBestEffort = async (ticketId: string) => {
+    if (!inboundWatchListRecipients.length) {
+      return;
+    }
+
+    try {
+      await upsertTicketWatchListRecipients(
+        {
+          ticketId,
+          recipients: inboundWatchListRecipients,
+        },
+        tenantId
+      );
+    } catch (error) {
+      console.warn('processInboundEmailInApp: watch-list upsert failed (continuing)', {
+        tenantId,
+        providerId,
+        emailId: emailData.id,
+        ticketId,
+        recipientCount: inboundWatchListRecipients.length,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
   };
 
   const token = extractConversationToken(parsedEmail);
@@ -323,6 +375,8 @@ export async function processInboundEmailInApp(
             contentId: a.contentId,
           })),
         });
+
+        await upsertWatchListBestEffort(match.ticketId);
 
         return {
           outcome: 'replied',
@@ -441,6 +495,8 @@ export async function processInboundEmailInApp(
       })),
     });
 
+    await upsertWatchListBestEffort(threadedTicketId);
+
     return {
       outcome: 'replied',
       matchedBy: 'thread_headers',
@@ -450,8 +506,8 @@ export async function processInboundEmailInApp(
   }
 
   // New ticket path.
-  const defaults = await resolveInboundTicketDefaults(tenantId, providerId);
-  if (!defaults) {
+  const providerDefaults = await resolveInboundTicketDefaults(tenantId, providerId);
+  if (!providerDefaults) {
     console.warn('processInboundEmailInApp: missing inbound ticket defaults; skipping email', {
       tenantId,
       providerId,
@@ -461,22 +517,56 @@ export async function processInboundEmailInApp(
   }
 
   const matchedSenderContact = await resolveSenderContact({
-    defaultClientId: defaults.client_id ?? null,
+    defaultClientId: providerDefaults.client_id ?? null,
+  });
+
+  let domainMatchedClientId: string | null = null;
+  let domainMatchedContactId: string | null = null;
+  if (!matchedSenderContact && senderEmail) {
+    const senderDomain = extractEmailDomain(senderEmail);
+    if (senderDomain) {
+      domainMatchedClientId = await findClientIdByInboundEmailDomain(senderDomain, tenantId);
+      if (domainMatchedClientId) {
+        domainMatchedContactId = await findValidClientPrimaryContactId(domainMatchedClientId, tenantId);
+      }
+    }
+  }
+
+  const destinationResolution = await resolveEffectiveInboundTicketDefaults({
+    tenant: tenantId,
+    providerId,
+    providerDefaults,
+    matchedContactId: matchedSenderContact?.contact_id ?? null,
+    matchedContactClientId: matchedSenderContact?.client_id ?? null,
+    domainMatchedClientId,
+  });
+
+  const defaults = destinationResolution.defaults;
+  if (!defaults) {
+    console.warn('processInboundEmailInApp: no effective inbound destination resolved; skipping email', {
+      tenantId,
+      providerId,
+      emailId: emailData.id,
+      source: destinationResolution.source,
+      fallbackReason: destinationResolution.fallbackReason ?? null,
+    });
+    return { outcome: 'skipped', reason: 'missing_defaults' };
+  }
+
+  console.debug('processInboundEmailInApp: resolved inbound destination source', {
+    tenantId,
+    providerId,
+    emailId: emailData.id,
+    source: destinationResolution.source,
+    fallbackReason: destinationResolution.fallbackReason ?? null,
   });
   let targetClientId = matchedSenderContact?.client_id ?? defaults.client_id;
   let targetContactId = matchedSenderContact?.contact_id;
 
-  // Domain fallback: if no exact contact match, try to match a client from explicitly configured inbound domains.
-  if (!matchedSenderContact && senderEmail) {
-    const senderDomain = extractEmailDomain(senderEmail);
-    if (senderDomain) {
-      const domainMatchedClientId = await findClientIdByInboundEmailDomain(senderDomain, tenantId);
-      if (domainMatchedClientId) {
-        targetClientId = domainMatchedClientId;
-        targetContactId =
-          (await findValidClientPrimaryContactId(domainMatchedClientId, tenantId)) ?? undefined;
-      }
-    }
+  // Domain fallback: if no exact contact match, use explicitly configured inbound-domain client mapping.
+  if (!matchedSenderContact && domainMatchedClientId) {
+    targetClientId = domainMatchedClientId;
+    targetContactId = domainMatchedContactId ?? undefined;
   }
 
   // Only treat the email as authored by a contact when we have an exact sender email match.
@@ -513,6 +603,8 @@ export async function processInboundEmailInApp(
     html: parsedEmail?.sanitizedHtml ?? emailData.body?.html,
     text: parsedEmail?.sanitizedText ?? emailData.body?.text,
   });
+  const seededWatchList = mergeTicketWatchListRecipients([], inboundWatchListRecipients);
+  const seededAttributes = setTicketWatchListOnAttributes(undefined, seededWatchList);
 
   const ticketResult = await createTicketFromEmail(
     {
@@ -537,6 +629,7 @@ export async function processInboundEmailInApp(
         references: emailData.references,
         providerId,
       },
+      attributes: seededAttributes ?? undefined,
     },
     tenantId
   );
