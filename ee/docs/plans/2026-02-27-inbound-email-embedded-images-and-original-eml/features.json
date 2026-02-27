@@ -158,7 +158,7 @@
   {
     "id": "F019",
     "description": "Invoke original .eml persistence action once in threaded-reply flow",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "Requirements"
