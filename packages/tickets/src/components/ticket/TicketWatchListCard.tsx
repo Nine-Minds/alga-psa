@@ -151,6 +151,11 @@ const TicketWatchListCard: React.FC<TicketWatchListCardProps> = ({
     }
 
     const selectedUser = internalUsers.find((user) => user.user_id === selectedUserId);
+    if (!selectedUser) {
+      setWatchListError('Select a user to add.');
+      return;
+    }
+
     const normalizedEmail = normalizeEmailAddress(selectedUser?.email);
     if (!normalizedEmail) {
       setWatchListError('Selected user does not have a valid email address.');
@@ -184,6 +189,11 @@ const TicketWatchListCard: React.FC<TicketWatchListCardProps> = ({
     const selectedContact = availableContacts.find(
       (contact) => contact.contact_name_id === selectedContactId
     );
+    if (!selectedContact) {
+      setWatchListError('Select a contact to add.');
+      return;
+    }
+
     const normalizedEmail = normalizeEmailAddress(selectedContact?.email);
     if (!normalizedEmail) {
       setWatchListError('Selected contact does not have a valid email address.');

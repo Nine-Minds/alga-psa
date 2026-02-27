@@ -229,11 +229,11 @@ describe('TicketWatchListCard', () => {
   });
 
   it('T018: watcher save controls disable while request is in-flight to prevent double submits', async () => {
-    let resolvePersist: ((value: boolean) => void) | null = null;
+    const resolvePersistRef: { current: ((value: boolean) => void) | null } = { current: null };
     const onPersist = vi.fn(
       () =>
         new Promise<boolean>((resolve) => {
-          resolvePersist = resolve;
+          resolvePersistRef.current = resolve;
         })
     );
     const user = userEvent.setup();
@@ -251,7 +251,9 @@ describe('TicketWatchListCard', () => {
     expect(screen.getByRole('checkbox')).toBeDisabled();
     expect(screen.getByRole('button', { name: /remove/i })).toBeDisabled();
 
-    resolvePersist?.(true);
+    if (resolvePersistRef.current) {
+      resolvePersistRef.current(true);
+    }
     await waitFor(() => {
       expect(onPersist).toHaveBeenCalledTimes(1);
     });
@@ -395,7 +397,7 @@ describe('TicketWatchListCard', () => {
   });
 
   it('T052: Search all contacts path is secondary and not required for standard client-contact adds', async () => {
-    const onPersist = vi.fn(async () => true);
+    const onPersist = vi.fn(async (_watchList: TicketWatchListEntry[]) => true);
     const user = userEvent.setup();
 
     renderWatchListCard({
@@ -422,7 +424,10 @@ describe('TicketWatchListCard', () => {
 
     await waitFor(() => {
       expect(onPersist).toHaveBeenCalledTimes(1);
-      expect(onPersist.mock.calls[0][0][0].email).toBe('local.contact@example.com');
+      const firstCall = onPersist.mock.calls.at(0);
+      const firstWatchList = firstCall?.[0];
+      const firstRecipient = firstWatchList?.[0];
+      expect(firstRecipient?.email).toBe('local.contact@example.com');
     });
   });
 
@@ -506,7 +511,7 @@ describe('TicketWatchListCard', () => {
           contact_name_id: 'contact-no-email',
           full_name: 'No Email Contact',
           email: null,
-        } as IContact,
+        } as unknown as IContact,
       ],
     });
 
