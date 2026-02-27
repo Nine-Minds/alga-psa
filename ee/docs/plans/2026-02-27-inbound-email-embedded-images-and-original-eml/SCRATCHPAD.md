@@ -113,3 +113,4 @@ Rolling notes for embedded inbound-email image extraction + source `.eml` persis
 - (2026-02-27) Completed T023 — Covered by emailAttachmentIngestion.integration.test.ts: duplicate process_original_email_attachment is idempotent.
 - (2026-02-27) Completed T024 — Covered by emailAttachmentIngestion.integration.test.ts: source-message retrieval failure records failed status.
 - (2026-02-27) Completed T025 — Covered by systemEmailProcessingWorkflowAttachments.integration.test.ts: new-ticket path invokes process_original_email_attachment exactly once.
+- (2026-02-27) Completed T026 — Covered by systemEmailProcessingWorkflowAttachments.integration.test.ts: reply path invokes process_original_email_attachment exactly once.

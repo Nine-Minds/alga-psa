@@ -218,7 +218,7 @@
   {
     "id": "T026",
     "description": "Workflow integration: reply path invokes process_original_email_attachment exactly once per email",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F019"
     ]
