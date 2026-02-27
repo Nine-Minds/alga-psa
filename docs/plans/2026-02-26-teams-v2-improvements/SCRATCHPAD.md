@@ -100,3 +100,4 @@
 - (2026-02-27) Added optional `getTeamAvatarUrlsBatch` prop to `UserAndTeamPicker`.
 - (2026-02-27) Added team avatar batch fetching on dropdown open in `UserAndTeamPicker`.
 - (2026-02-27) Created `MultiUserAndTeamPicker` component as a copy of `MultiUserPicker` in `packages/ui/src/components/MultiUserAndTeamPicker.tsx`.
+- (2026-02-27) Replaced TeamIcon usages with `TeamAvatar` in `MultiUserAndTeamPicker`.

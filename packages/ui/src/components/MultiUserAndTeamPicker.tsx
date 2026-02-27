@@ -5,13 +5,14 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import UserAvatar from './UserAvatar';
 import type { IUser } from '@alga-psa/types';
-import { ChevronDown, X, Search, UserMinus, Users as TeamIcon } from 'lucide-react';
+import { ChevronDown, X, Search, UserMinus } from 'lucide-react';
 import { AutomationProps } from '../ui-reflection/types';
 import type { GetUserAvatarUrlsBatch } from './UserPicker';
 import { Input } from './Input';
 import { Checkbox } from './Checkbox';
 import { Button } from './Button';
 import type { ITeam } from '@alga-psa/types';
+import TeamAvatar from './TeamAvatar';
 
 interface MultiUserAndTeamPickerProps {
   id?: string;
@@ -349,7 +350,12 @@ const MultiUserAndTeamPicker = ({
         const team = selectedTeams[0];
         return (
           <div className="flex items-center gap-2">
-            <TeamIcon className="w-4 h-4 text-gray-500" />
+            <TeamAvatar
+              teamId={team.team_id}
+              teamName={team.team_name || 'Unnamed Team'}
+              avatarUrl={null}
+              size="xs"
+            />
             <span className="truncate max-w-[120px]">
               {team.team_name || 'Unnamed Team'}
             </span>
@@ -373,7 +379,12 @@ const MultiUserAndTeamPicker = ({
               size="xs"
             />
           ) : firstTeam ? (
-            <TeamIcon className="w-4 h-4 text-gray-500" />
+            <TeamAvatar
+              teamId={firstTeam.team_id}
+              teamName={firstTeam.team_name || 'Team'}
+              avatarUrl={null}
+              size="xs"
+            />
           ) : (
             <UserMinus className="w-4 h-4 text-gray-500" />
           )}
@@ -462,7 +473,12 @@ const MultiUserAndTeamPicker = ({
           >
             <div className="flex items-center gap-1">
               <div className="h-6 w-6 rounded-full bg-gray-200 flex items-center justify-center text-gray-600">
-                <TeamIcon className="w-3 h-3" />
+                <TeamAvatar
+                  teamId={team.team_id}
+                  teamName={team.team_name || 'Unnamed Team'}
+                  avatarUrl={null}
+                  size="xs"
+                />
               </div>
               <span>{team.team_name || 'Unnamed Team'}</span>
             </div>
@@ -638,7 +654,12 @@ const MultiUserAndTeamPicker = ({
                           />
                         </div>
                         <div className="h-7 w-7 rounded-full bg-gray-200 flex items-center justify-center text-gray-600">
-                          <TeamIcon className="w-4 h-4" />
+                          <TeamAvatar
+                            teamId={team.team_id}
+                            teamName={team.team_name || 'Unnamed Team'}
+                            avatarUrl={null}
+                            size="xs"
+                          />
                         </div>
                         <div className="ml-2 flex flex-col">
                           <span>{team.team_name || 'Unnamed Team'}</span>

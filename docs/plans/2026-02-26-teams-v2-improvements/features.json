@@ -298,7 +298,7 @@
   {
     "id": "F087",
     "description": "`MultiUserAndTeamPicker`: replace all hardcoded TeamIcon instances with `TeamAvatar` component",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-3D.2"
     ]
