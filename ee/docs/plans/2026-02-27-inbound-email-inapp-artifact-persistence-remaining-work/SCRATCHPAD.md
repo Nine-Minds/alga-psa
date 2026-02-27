@@ -65,3 +65,6 @@ Create a clean, implementation-ready plan containing only remaining work for inb
 - 2026-02-27: Completed `F219`.
   - Embedded extraction now maps only HTML-referenced `cid:` values to inline MIME parts.
   - Unreferenced inline CID attachments are not synthesized/persisted, matching the locked decision to persist only referenced CID images.
+- 2026-02-27: Completed `F220`.
+  - Synthetic embedded artifacts are emitted with deterministic IDs (`embedded-data-*`, `embedded-cid-*`) and normalized attachment fields (`id/name/contentType/size/content`).
+  - Orchestrator appends these synthetic records to provider attachments and runs one shared persistence path.

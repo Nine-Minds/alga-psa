@@ -38,7 +38,7 @@
   {
     "id": "F220",
     "description": "Convert extracted embedded artifacts into deterministic synthetic attachment records compatible with the in-app attachment pipeline",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements"]
   },
   {
