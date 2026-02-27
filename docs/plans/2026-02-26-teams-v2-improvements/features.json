@@ -185,7 +185,7 @@
   {
     "id": "F073",
     "description": "OrgChart: clicking a node opens UserDetails drawer via `useDrawer`",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-3B.5"
     ]

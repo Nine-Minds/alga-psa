@@ -3,6 +3,8 @@
 import React, { useMemo } from 'react';
 import type { Edge, Node, NodeTypes } from 'reactflow';
 import type { IUser } from '@alga-psa/types';
+import { useDrawer } from '@alga-psa/ui';
+import UserDetails from '../UserDetails';
 import OrgChartFlow from './OrgChartFlow';
 import OrgChartNode, { type OrgChartNodeData } from './OrgChartNode';
 
@@ -16,7 +18,8 @@ const NODE_HEIGHT = 80;
 const HORIZONTAL_GAP = 40;
 const VERTICAL_GAP = 120;
 
-const OrgChart = ({ users }: OrgChartProps) => {
+const OrgChart = ({ users, onUserUpdated }: OrgChartProps) => {
+  const { openDrawer } = useDrawer();
   const { nodes, edges } = useMemo(() => {
     if (users.length === 0) {
       return { nodes: [] as Node<OrgChartNodeData>[], edges: [] as Edge[] };
@@ -138,7 +141,9 @@ const OrgChart = ({ users }: OrgChartProps) => {
         nodes={nodes}
         edges={edges}
         nodeTypes={nodeTypes}
-        onNodeClick={() => undefined}
+        onNodeClick={(_event, node) => {
+          openDrawer(<UserDetails userId={node.id} onUpdate={onUserUpdated} />);
+        }}
       />
     </div>
   );
