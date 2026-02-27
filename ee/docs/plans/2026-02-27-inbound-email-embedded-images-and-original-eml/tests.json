@@ -226,7 +226,7 @@
   {
     "id": "T027",
     "description": "Workflow integration guard: .eml persistence failure does not block ticket creation in new-ticket flow",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F021"
     ]
