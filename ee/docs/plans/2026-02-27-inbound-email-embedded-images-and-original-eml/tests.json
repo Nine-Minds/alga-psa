@@ -378,7 +378,7 @@
   {
     "id": "T044",
     "description": "E2E: IMAP inbound with rawMimeBase64 persists one deterministic original-email-*.eml document on ticket",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F028",
       "F031"

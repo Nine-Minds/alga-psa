@@ -887,6 +887,69 @@ describe('Email attachment ingestion (workflow-worker action override)', () => {
       .andWhere('document_name', 'like', 'original-email-%');
     expect(docs).toHaveLength(0);
   });
+
+  it('T044: IMAP rawMimeBase64 persists one deterministic original-email .eml document', async () => {
+    const { action } = await createOriginalEmailAction();
+    const providerId = uuidv4();
+    const ticketId = uuidv4();
+    const emailId = '<imap-source-1@example.com>';
+    const mime = Buffer.from(
+      [
+        'From: sender@example.com',
+        'To: support@example.com',
+        'Subject: IMAP raw source',
+        '',
+        'raw mime body',
+      ].join('\r\n'),
+      'utf-8'
+    );
+
+    await insertImapProvider(db, tenantId, providerId);
+
+    const res = await action.execute(
+      {
+        emailId,
+        ticketId,
+        tenant: tenantId,
+        providerId,
+        emailData: {
+          id: emailId,
+          from: { email: 'sender@example.com', name: 'Sender' },
+          to: [{ email: 'support@example.com', name: 'Support' }],
+          subject: 'IMAP raw source',
+          body: { text: 'body' },
+          receivedAt: new Date().toISOString(),
+          rawMimeBase64: mime.toString('base64'),
+        },
+      },
+      {
+        tenant: tenantId,
+        executionId: 'test',
+        idempotencyKey: 'test',
+        parameters: {},
+        knex: db,
+      } as any
+    );
+
+    expect(res).toMatchObject({
+      success: true,
+      contentType: 'message/rfc822',
+      fileName: 'original-email-imap-source-1-example.com.eml',
+    });
+
+    expect(uploads).toHaveLength(1);
+    expect(uploads[0]).toMatchObject({ size: mime.length, mime_type: 'message/rfc822' });
+
+    const docs = await db('documents')
+      .where({ tenant: tenantId, document_name: 'original-email-imap-source-1-example.com.eml' })
+      .select('document_id');
+    expect(docs).toHaveLength(1);
+
+    const assoc = await db('document_associations')
+      .where({ tenant: tenantId, entity_type: 'ticket', entity_id: ticketId, document_id: docs[0].document_id })
+      .first();
+    expect(assoc).toBeTruthy();
+  });
 });
 
 async function createRegisteredAttachmentActions(): Promise<Record<string, { execute: (params: any, context: any) => Promise<any> }>> {
