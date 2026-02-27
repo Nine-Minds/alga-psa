@@ -104,3 +104,4 @@
 - (2026-02-27) Added team avatar batch fetching and `getTeamAvatarUrlsBatch` prop to `MultiUserAndTeamPicker`.
 - (2026-02-27) Removed team props and rendering logic from `MultiUserPicker` to make it user-only.
 - (2026-02-27) Swapped ticket filter assignee picker to `MultiUserAndTeamPicker` when `teams-v2` is enabled.
+- (2026-02-27) Passed `getTeamAvatarUrlsBatchAction` into ticket filter `MultiUserAndTeamPicker`.

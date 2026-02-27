@@ -14,7 +14,7 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { Label } from '@alga-psa/ui/components/Label';
 import { getCurrentUser, getCurrentUserPermissions } from '@alga-psa/users/actions';
-import { getTeams } from '@alga-psa/teams/actions';
+import { getTeams, getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
 import { BoardPicker } from '@alga-psa/ui/components/settings/general/BoardPicker';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { findTagsByEntityIds } from '@alga-psa/tags/actions';
@@ -1396,6 +1396,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                     teamValues={selectedTeams}
                     onTeamValuesChange={setSelectedTeams}
                     getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
+                    getTeamAvatarUrlsBatch={getTeamAvatarUrlsBatchAction}
                     filterMode={true}
                     includeUnassigned={includeUnassigned}
                     onUnassignedChange={setIncludeUnassigned}

@@ -330,7 +330,7 @@
   {
     "id": "F091",
     "description": "Thread `getTeamAvatarUrlsBatchAction` through `MultiUserAndTeamPicker` call sites (ticket detail, task detail, ticket filter)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-3D.6"
     ]
