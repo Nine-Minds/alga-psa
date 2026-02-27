@@ -6,7 +6,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { Flex, Text, Heading } from '@radix-ui/themes';
-import { updateContact } from '@alga-psa/clients/actions';
+import { updateContact, listInboundTicketDestinationOptions } from '@alga-psa/clients/actions';
 import { findTagsByEntityIds } from '@alga-psa/tags/actions';
 import { ClientPicker } from '../clients/ClientPicker';
 import { TagManager } from '@alga-psa/tags/components';
@@ -45,6 +45,8 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
   const [error, setError] = useState<string | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [inboundDestinationOptions, setInboundDestinationOptions] = useState<Array<{ value: string; label: string }>>([]);
+  const [isInboundDestinationOptionsLoading, setIsInboundDestinationOptionsLoading] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -62,6 +64,37 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
     };
     fetchData();
   }, [contact.contact_name_id, contact.tenant]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setIsInboundDestinationOptionsLoading(true);
+      try {
+        const rows = await listInboundTicketDestinationOptions();
+        if (cancelled) return;
+        setInboundDestinationOptions(
+          (rows ?? []).map((row: any) => ({
+            value: row.id,
+            label: row.is_active
+              ? `${row.display_name} (${row.short_name})`
+              : `${row.display_name} (${row.short_name}) [inactive]`,
+          }))
+        );
+      } catch (err) {
+        if (!cancelled) {
+          console.error('Error loading inbound ticket destination options:', err);
+          setInboundDestinationOptions([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setIsInboundDestinationOptionsLoading(false);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const handleInputChange = (field: keyof IContact, value: string | boolean) => {
     setContact(prev => ({ ...prev, [field]: value }));
@@ -167,6 +200,27 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
               onChange={(value) => handleInputChange('role', value)} 
               placeholder="e.g., Manager, Developer, etc."
             />
+            <tr>
+              <td className="py-2 font-semibold">Inbound ticket destination override:</td>
+              <td className="py-2">
+                <CustomSelect
+                  id={`${id}-inbound-ticket-destination-select`}
+                  value={(contact as any).inbound_ticket_defaults_id || ''}
+                  onValueChange={(value) => handleInputChange('inbound_ticket_defaults_id', value)}
+                  options={inboundDestinationOptions}
+                  allowClear={true}
+                  placeholder={
+                    isInboundDestinationOptionsLoading
+                      ? 'Loading destinations...'
+                      : 'Use client destination'
+                  }
+                  disabled={isInboundDestinationOptionsLoading}
+                />
+                <Text size="1" className="text-gray-500">
+                  Precedence: Contact override -&gt; Client destination -&gt; Provider default.
+                </Text>
+              </td>
+            </tr>
             <tr>
               <td className="py-2 font-semibold">Client:</td>
               <td className="py-2">

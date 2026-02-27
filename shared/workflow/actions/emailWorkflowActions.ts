@@ -114,6 +114,27 @@ export interface SaveEmailClientAssociationOutput {
   client_id: string;
 }
 
+export type InboundDestinationResolutionSource =
+  | 'contact_override'
+  | 'client_default_from_contact'
+  | 'client_default_from_domain'
+  | 'provider_default';
+
+export interface EffectiveInboundTicketDefaultsInput {
+  tenant: string;
+  providerId: string;
+  providerDefaults: any | null;
+  matchedContactId?: string | null;
+  matchedContactClientId?: string | null;
+  domainMatchedClientId?: string | null;
+}
+
+export interface EffectiveInboundTicketDefaultsResult {
+  defaults: any | null;
+  source: InboundDestinationResolutionSource | null;
+  fallbackReason?: string;
+}
+
 // =============================================================================
 // EMAIL CONTACT ACTIONS
 // =============================================================================
@@ -314,6 +335,216 @@ export async function findValidClientPrimaryContactId(
 
     const validatedId = (contactRow as any)?.contact_name_id;
     return typeof validatedId === 'string' && validatedId ? validatedId : null;
+  });
+}
+
+const INBOUND_DEFAULTS_SELECT_COLUMNS = [
+  'board_id',
+  'status_id',
+  'priority_id',
+  'client_id',
+  'entered_by',
+  'category_id',
+  'subcategory_id',
+  'location_id',
+] as const;
+
+async function getActiveInboundTicketDefaultsById(
+  trx: Knex.Transaction,
+  tenant: string,
+  defaultsId: string
+): Promise<any | null> {
+  if (!defaultsId) return null;
+  return trx('inbound_ticket_defaults')
+    .where({ tenant, id: defaultsId, is_active: true })
+    .select(...INBOUND_DEFAULTS_SELECT_COLUMNS)
+    .first();
+}
+
+async function getContactInboundDestinationConfig(
+  trx: Knex.Transaction,
+  tenant: string,
+  contactId: string
+): Promise<{ inbound_ticket_defaults_id: string | null; client_id: string | null } | null> {
+  try {
+    const row = await trx('contacts')
+      .select('inbound_ticket_defaults_id', 'client_id')
+      .where({ tenant, contact_name_id: contactId })
+      .first();
+
+    if (!row) return null;
+    return {
+      inbound_ticket_defaults_id: (row as any).inbound_ticket_defaults_id ?? null,
+      client_id: (row as any).client_id ?? null,
+    };
+  } catch (error: any) {
+    const message = String(error?.message ?? '');
+    if (message.includes('inbound_ticket_defaults_id') && message.includes('contacts')) {
+      return null;
+    }
+    throw error;
+  }
+}
+
+async function getClientInboundDestinationDefaultsId(
+  trx: Knex.Transaction,
+  tenant: string,
+  clientId: string
+): Promise<string | null> {
+  if (!clientId) return null;
+  try {
+    const row = await trx('clients')
+      .select('inbound_ticket_defaults_id')
+      .where({ tenant, client_id: clientId })
+      .first();
+
+    return (row as any)?.inbound_ticket_defaults_id ?? null;
+  } catch (error: any) {
+    const message = String(error?.message ?? '');
+    if (message.includes('inbound_ticket_defaults_id') && message.includes('clients')) {
+      return null;
+    }
+    throw error;
+  }
+}
+
+export async function resolveEffectiveInboundTicketDefaults(
+  input: EffectiveInboundTicketDefaultsInput
+): Promise<EffectiveInboundTicketDefaultsResult> {
+  if (!input.providerDefaults) {
+    return { defaults: null, source: null };
+  }
+
+  const { withAdminTransaction } = await import('@alga-psa/db');
+  return withAdminTransaction(async (trx: Knex.Transaction) => {
+    let fallbackReason: string | undefined;
+
+    const logBase = {
+      tenant: input.tenant,
+      providerId: input.providerId,
+      matchedContactId: input.matchedContactId ?? null,
+      matchedContactClientId: input.matchedContactClientId ?? null,
+      domainMatchedClientId: input.domainMatchedClientId ?? null,
+    };
+
+    if (input.matchedContactId) {
+      const contactConfig = await getContactInboundDestinationConfig(
+        trx,
+        input.tenant,
+        input.matchedContactId
+      );
+
+      const contactOverrideDefaultsId = contactConfig?.inbound_ticket_defaults_id ?? null;
+      if (contactOverrideDefaultsId) {
+        const contactOverrideDefaults = await getActiveInboundTicketDefaultsById(
+          trx,
+          input.tenant,
+          contactOverrideDefaultsId
+        );
+        if (contactOverrideDefaults) {
+          console.debug('resolveEffectiveInboundTicketDefaults: resolved destination', {
+            ...logBase,
+            source: 'contact_override',
+          });
+          return {
+            defaults: contactOverrideDefaults,
+            source: 'contact_override',
+          };
+        }
+
+        fallbackReason = 'invalid_or_inactive_contact_override';
+        console.warn('resolveEffectiveInboundTicketDefaults: invalid contact override destination; using fallback', {
+          ...logBase,
+          source: 'contact_override',
+          configuredDefaultsId: contactOverrideDefaultsId,
+          fallback: 'provider_default',
+        });
+      }
+
+      const contactClientId = contactConfig?.client_id ?? input.matchedContactClientId ?? null;
+      if (contactClientId) {
+        const clientDefaultsId = await getClientInboundDestinationDefaultsId(
+          trx,
+          input.tenant,
+          contactClientId
+        );
+        if (clientDefaultsId) {
+          const clientDefaults = await getActiveInboundTicketDefaultsById(
+            trx,
+            input.tenant,
+            clientDefaultsId
+          );
+
+          if (clientDefaults) {
+            console.debug('resolveEffectiveInboundTicketDefaults: resolved destination', {
+              ...logBase,
+              source: 'client_default_from_contact',
+              resolvedClientId: contactClientId,
+            });
+            return {
+              defaults: clientDefaults,
+              source: 'client_default_from_contact',
+            };
+          }
+
+          fallbackReason = fallbackReason ?? 'invalid_or_inactive_client_default_from_contact';
+          console.warn('resolveEffectiveInboundTicketDefaults: invalid client default destination; using fallback', {
+            ...logBase,
+            source: 'client_default_from_contact',
+            resolvedClientId: contactClientId,
+            configuredDefaultsId: clientDefaultsId,
+            fallback: 'provider_default',
+          });
+        }
+      }
+    }
+
+    if (input.domainMatchedClientId) {
+      const domainClientDefaultsId = await getClientInboundDestinationDefaultsId(
+        trx,
+        input.tenant,
+        input.domainMatchedClientId
+      );
+      if (domainClientDefaultsId) {
+        const domainClientDefaults = await getActiveInboundTicketDefaultsById(
+          trx,
+          input.tenant,
+          domainClientDefaultsId
+        );
+
+        if (domainClientDefaults) {
+          console.debug('resolveEffectiveInboundTicketDefaults: resolved destination', {
+            ...logBase,
+            source: 'client_default_from_domain',
+            resolvedClientId: input.domainMatchedClientId,
+          });
+          return {
+            defaults: domainClientDefaults,
+            source: 'client_default_from_domain',
+          };
+        }
+
+        fallbackReason = fallbackReason ?? 'invalid_or_inactive_client_default_from_domain';
+        console.warn('resolveEffectiveInboundTicketDefaults: invalid domain client default destination; using fallback', {
+          ...logBase,
+          source: 'client_default_from_domain',
+          resolvedClientId: input.domainMatchedClientId,
+          configuredDefaultsId: domainClientDefaultsId,
+          fallback: 'provider_default',
+        });
+      }
+    }
+
+    console.debug('resolveEffectiveInboundTicketDefaults: resolved destination', {
+      ...logBase,
+      source: 'provider_default',
+      fallbackReason: fallbackReason ?? null,
+    });
+    return {
+      defaults: input.providerDefaults,
+      source: 'provider_default',
+      fallbackReason,
+    };
   });
 }
 
@@ -720,16 +951,7 @@ export async function resolveInboundTicketDefaults(
 
       defaults = await trx('inbound_ticket_defaults')
         .where({ tenant, id: provider.inbound_ticket_defaults_id, is_active: true })
-        .select(
-          'board_id',
-          'status_id',
-          'priority_id',
-          'client_id',
-          'entered_by',
-          'category_id',
-          'subcategory_id',
-          'location_id'
-        )
+        .select(...INBOUND_DEFAULTS_SELECT_COLUMNS)
         .first();
 
       if (!defaults) {
@@ -737,7 +959,7 @@ export async function resolveInboundTicketDefaults(
         const fallback = await trx('inbound_ticket_defaults')
           .where({ tenant, is_active: true })
           .orderBy('updated_at', 'desc')
-          .select('board_id','status_id','priority_id','client_id','entered_by','category_id','subcategory_id','location_id')
+          .select(...INBOUND_DEFAULTS_SELECT_COLUMNS)
           .first();
         if (!fallback) {
           console.warn(`resolveInboundTicketDefaults: no active tenant-level defaults found for tenant ${tenant}`);
