@@ -528,7 +528,7 @@
   {
     "id": "T147",
     "description": "Ticket list filter passes `getTeamAvatarUrlsBatchAction` to MultiUserAndTeamPicker",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F091"
     ]
