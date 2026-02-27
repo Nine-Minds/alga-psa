@@ -324,7 +324,7 @@
   {
     "id": "T038",
     "description": "Integration: total attachment byte cap enforcement truncates/skips excess artifacts while keeping message processing active",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F027",
       "F033"
