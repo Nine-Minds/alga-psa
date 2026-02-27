@@ -284,7 +284,7 @@
   {
     "id": "T117",
     "description": "OrgChart creates smoothstep edges between connected nodes",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F071"
     ]
