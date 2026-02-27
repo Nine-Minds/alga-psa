@@ -232,7 +232,7 @@
   {
     "id": "T241",
     "description": "Integration: IMAP in-app path persists regular attachments, referenced embedded images, and .eml artifacts on ticket",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F226",
       "F234"

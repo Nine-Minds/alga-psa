@@ -294,3 +294,10 @@ Create a clean, implementation-ready plan containing only remaining work for inb
   - Test verifies in-app processing persists regular attachment, embedded extraction artifact, and deterministic `.eml` for Microsoft path through the shared orchestrator.
 - Validation:
   - Reused targeted integration command from `T239`.
+- 2026-02-27: Completed `T241`.
+  - Existing IMAP integration scenario (`IMAP in-app path persists regular attachment, embedded image, and original .eml as ticket documents`) now serves as explicit coverage for IMAP in-app artifact parity.
+  - Assertions include presence of regular attachment, embedded image artifact, and original-email `.eml` on ticket document associations.
+- Validation:
+  - Reused targeted IMAP integration command from earlier artifact tests:
+    - `cd server && npx vitest run src/test/integration/inboundEmailInApp.webhooks.integration.test.ts -t "IMAP in-app path persists regular attachment, embedded image, and original .eml as ticket documents" --coverage.enabled=false`
+  - Environment note: DB-gated integration suite was skipped in this local session (`describeDb`).
