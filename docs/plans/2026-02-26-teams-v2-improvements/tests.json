@@ -66,7 +66,7 @@
   {
     "id": "T090",
     "description": "TeamAvatar component renders EntityAvatar with correct props (entityId=teamId, entityName=teamName)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F057"
     ]
