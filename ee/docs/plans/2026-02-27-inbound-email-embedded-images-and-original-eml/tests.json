@@ -352,7 +352,7 @@
   {
     "id": "T041",
     "description": "Schema contract: IMAP webhook payload includes rawMimeBase64 and attachment content/isInline/contentId/id/name/contentType/size fields",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F028"
     ]
