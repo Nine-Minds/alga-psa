@@ -324,7 +324,7 @@
   {
     "id": "T122",
     "description": "Closing UserDetails drawer from OrgChart returns to the chart view",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F073"
     ]
