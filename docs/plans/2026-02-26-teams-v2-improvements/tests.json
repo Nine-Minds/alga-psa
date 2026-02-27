@@ -316,7 +316,7 @@
   {
     "id": "T121",
     "description": "Clicking an OrgChart node opens UserDetails drawer with correct userId",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F073"
     ]
