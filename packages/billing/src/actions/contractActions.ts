@@ -539,6 +539,17 @@ export const checkClientHasActiveContract = withAuth(async (user, { tenant }, cl
   }
 });
 
+export const fetchClientIdsWithActiveContracts = withAuth(async (user, { tenant }, excludeContractId?: string): Promise<string[]> => {
+  const { knex } = await createTenantKnex();
+
+  try {
+    return await Contract.getClientIdsWithActiveContracts(knex, tenant, excludeContractId);
+  } catch (error) {
+    console.error('Error fetching client IDs with active contracts:', error);
+    throw error;
+  }
+});
+
 export const getContractAssignments = withAuth(async (user, { tenant }, contractId: string): Promise<IContractAssignmentSummary[]> => {
   try {
     const { knex } = await createTenantKnex();

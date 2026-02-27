@@ -14,6 +14,7 @@ import type { IContract, IContractWithClient, IContractLine } from '@alga-psa/ty
 import { v4 as uuidv4 } from 'uuid';
 import {
   hasActiveContractForClient as hasActiveContractForClientShared,
+  getClientIdsWithActiveContracts as getClientIdsWithActiveContractsShared,
   checkAndReactivateExpiredContract as checkAndReactivateExpiredContractShared,
 } from '@alga-psa/shared/billingClients';
 
@@ -98,6 +99,21 @@ const Contract = {
       console.error(`Error checking active contracts for client ${clientId}:`, error);
       throw error;
     }
+  },
+
+  /**
+   * Get all client IDs that have active (non-template) contracts.
+   */
+  getClientIdsWithActiveContracts: async (
+    knexOrTrx: Knex | Knex.Transaction,
+    tenant: string,
+    excludeContractId?: string
+  ): Promise<string[]> => {
+    if (!tenant) {
+      throw new Error('Tenant context is required for fetching client IDs with active contracts');
+    }
+
+    return getClientIdsWithActiveContractsShared(knexOrTrx, tenant, excludeContractId);
   },
 
   /**
