@@ -1,7 +1,7 @@
 import { createTenantKnex, withTransaction } from '@alga-psa/db';
 import type { Knex } from 'knex';
 
-type EntityType = 'user' | 'contact' | 'client' | 'tenant';
+type EntityType = 'user' | 'contact' | 'client' | 'tenant' | 'team';
 
 async function getImageUrlInternalLite(
   trx: Knex.Transaction,

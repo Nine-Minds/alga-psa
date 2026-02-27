@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Plus, MoreVertical, HelpCircle } from "lucide-react";
-import { IBoard, CategoryType, PriorityType, IPriority, IUser, ColumnDefinition, DeletionValidationResult, DeletionDependency } from '@alga-psa/types';
+import { IBoard, ITeam, CategoryType, PriorityType, IPriority, IUser, ColumnDefinition, DeletionValidationResult, DeletionDependency } from '@alga-psa/types';
 import {
   getAllBoards,
   createBoard,
@@ -16,6 +16,9 @@ import { getAllPriorities } from '@alga-psa/reference-data/actions';
 import { getAllUsers, getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
 import { getSlaPolicies } from '@alga-psa/sla/actions';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
+import UserAndTeamPicker from '@alga-psa/ui/components/UserAndTeamPicker';
+import { getTeams, getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
+import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { ISlaPolicy } from '@alga-psa/sla/types';
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
@@ -39,8 +42,10 @@ import {
 const BoardsSettings: React.FC = () => {
   const [boards, setBoards] = useState<IBoard[]>([]);
   const [users, setUsers] = useState<IUser[]>([]);
+  const [teams, setTeams] = useState<ITeam[]>([]);
   const [priorities, setPriorities] = useState<IPriority[]>([]);
   const [slaPolicies, setSlaPolicies] = useState<ISlaPolicy[]>([]);
+  const { enabled: teamsV2Enabled } = useFeatureFlag('teams-v2', { defaultValue: false });
   const [error, setError] = useState<string | null>(null);
   const [deleteDialog, setDeleteDialog] = useState<{
     isOpen: boolean;
@@ -112,6 +117,7 @@ const BoardsSettings: React.FC = () => {
     priority_type: 'custom' as PriorityType,
     is_itil_compliant: false,
     default_assigned_to: '',
+    default_assigned_team_id: '',
     default_priority_id: '',
     manager_user_id: '',
     sla_policy_id: ''
@@ -133,7 +139,10 @@ const BoardsSettings: React.FC = () => {
     fetchUsers();
     fetchPriorities();
     fetchSlaPolicies();
-  }, []);
+    if (teamsV2Enabled) {
+      fetchTeams();
+    }
+  }, [teamsV2Enabled]);
 
   // Prevent saving a mismatched default priority when toggling ITIL compliance on new boards.
   useEffect(() => {
@@ -172,6 +181,15 @@ const BoardsSettings: React.FC = () => {
     }
   };
 
+  const fetchTeams = async () => {
+    try {
+      const allTeams = await getTeams();
+      setTeams(allTeams);
+    } catch (error) {
+      console.error('Error fetching teams:', error);
+    }
+  };
+
   const fetchPriorities = async () => {
     try {
       const allPriorities = await getAllPriorities('ticket');
@@ -202,6 +220,7 @@ const BoardsSettings: React.FC = () => {
       priority_type: board.priority_type || 'custom',
       is_itil_compliant: board.category_type === 'itil' && board.priority_type === 'itil',
       default_assigned_to: board.default_assigned_to || '',
+      default_assigned_team_id: board.default_assigned_team_id || '',
       default_priority_id: board.default_priority_id || '',
       manager_user_id: board.manager_user_id || '',
       sla_policy_id: board.sla_policy_id || ''
@@ -290,6 +309,7 @@ const BoardsSettings: React.FC = () => {
           category_type: categoryType,
           priority_type: priorityType,
           default_assigned_to: formData.default_assigned_to || null,
+          default_assigned_team_id: formData.default_assigned_team_id || null,
           default_priority_id: formData.default_priority_id || null,
           manager_user_id: formData.manager_user_id || null,
           sla_policy_id: formData.sla_policy_id || null
@@ -304,6 +324,7 @@ const BoardsSettings: React.FC = () => {
           category_type: categoryType,
           priority_type: priorityType,
           default_assigned_to: formData.default_assigned_to || null,
+          default_assigned_team_id: formData.default_assigned_team_id || null,
           default_priority_id: formData.default_priority_id || null,
           manager_user_id: formData.manager_user_id || null,
           sla_policy_id: formData.sla_policy_id || null
@@ -313,7 +334,7 @@ const BoardsSettings: React.FC = () => {
 
       setShowAddEditDialog(false);
       setEditingBoard(null);
-      setFormData({ board_name: '', description: '', display_order: 0, is_inactive: false, category_type: 'custom', priority_type: 'custom', is_itil_compliant: false, default_assigned_to: '', default_priority_id: '', manager_user_id: '', sla_policy_id: '' });
+      setFormData({ board_name: '', description: '', display_order: 0, is_inactive: false, category_type: 'custom', priority_type: 'custom', is_itil_compliant: false, default_assigned_to: '', default_assigned_team_id: '', default_priority_id: '', manager_user_id: '', sla_policy_id: '' });
       await fetchBoards();
     } catch (error) {
       console.error('Error saving board:', error);
@@ -474,13 +495,18 @@ const BoardsSettings: React.FC = () => {
     {
       title: 'Default Agent',
       dataIndex: 'default_assigned_to',
-      render: (value: string | null) => {
-        if (!value) return <span className="text-gray-400">-</span>;
-        const user = users.find(u => u.user_id === value);
-        return user ? (
-          <span className="text-gray-700">{user.first_name} {user.last_name}</span>
-        ) : (
-          <span className="text-gray-400 italic">Unknown</span>
+      render: (value: string | null, record: IBoard) => {
+        const team = record.default_assigned_team_id
+          ? teams.find(t => t.team_id === record.default_assigned_team_id)
+          : null;
+        const user = value ? users.find(u => u.user_id === value) : null;
+
+        if (!team && !user) return <span className="text-gray-400">-</span>;
+
+        return (
+          <span className="text-gray-700">
+            {team ? team.team_name : user ? `${user.first_name} ${user.last_name}` : <span className="text-gray-400 italic">Unknown</span>}
+          </span>
         );
       },
     },
@@ -593,7 +619,7 @@ const BoardsSettings: React.FC = () => {
             id="add-board-button"
             onClick={() => {
               setEditingBoard(null);
-              setFormData({ board_name: '', description: '', display_order: 0, is_inactive: false, category_type: 'custom', priority_type: 'custom', is_itil_compliant: false, default_assigned_to: '', default_priority_id: '', manager_user_id: '', sla_policy_id: '' });
+              setFormData({ board_name: '', description: '', display_order: 0, is_inactive: false, category_type: 'custom', priority_type: 'custom', is_itil_compliant: false, default_assigned_to: '', default_assigned_team_id: '', default_priority_id: '', manager_user_id: '', sla_policy_id: '' });
               setShowAddEditDialog(true);
             }}
             className="bg-primary-500 text-white hover:bg-primary-600"
@@ -669,7 +695,7 @@ const BoardsSettings: React.FC = () => {
         onClose={() => {
           setShowAddEditDialog(false);
           setEditingBoard(null);
-          setFormData({ board_name: '', description: '', display_order: 0, is_inactive: false, category_type: 'custom', priority_type: 'custom', is_itil_compliant: false, default_assigned_to: '', default_priority_id: '', manager_user_id: '', sla_policy_id: '' });
+          setFormData({ board_name: '', description: '', display_order: 0, is_inactive: false, category_type: 'custom', priority_type: 'custom', is_itil_compliant: false, default_assigned_to: '', default_assigned_team_id: '', default_priority_id: '', manager_user_id: '', sla_policy_id: '' });
           setError(null);
         }}
         title={editingBoard ? "Edit Board" : "Add Board"}
@@ -722,19 +748,42 @@ const BoardsSettings: React.FC = () => {
             </div>
             <div>
               <Label htmlFor="default-assigned-agent-picker">Default Assigned Agent</Label>
-              <UserPicker
-                id="default-assigned-agent-picker"
-                value={formData.default_assigned_to}
-                onValueChange={(value) => setFormData({ ...formData, default_assigned_to: value })}
-                users={users}
-                getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
-                userTypeFilter="internal"
-                placeholder="None (manual assignment required)"
-                buttonWidth="full"
-                labelStyle="none"
-              />
+              {teamsV2Enabled ? (
+                <UserAndTeamPicker
+                  id="default-assigned-agent-picker"
+                  value={formData.default_assigned_to}
+                  onValueChange={(value) => setFormData({ ...formData, default_assigned_to: value, default_assigned_team_id: '' })}
+                  onTeamSelect={(teamId) => {
+                    const team = teams.find(t => t.team_id === teamId);
+                    setFormData({
+                      ...formData,
+                      default_assigned_team_id: teamId,
+                      default_assigned_to: team?.manager_id || ''
+                    });
+                  }}
+                  users={users}
+                  teams={teams}
+                  getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
+                  getTeamAvatarUrlsBatch={getTeamAvatarUrlsBatchAction}
+                  placeholder="None (manual assignment required)"
+                  buttonWidth="full"
+                  labelStyle="none"
+                />
+              ) : (
+                <UserPicker
+                  id="default-assigned-agent-picker"
+                  value={formData.default_assigned_to}
+                  onValueChange={(value) => setFormData({ ...formData, default_assigned_to: value })}
+                  users={users}
+                  getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
+                  userTypeFilter="internal"
+                  placeholder="None (manual assignment required)"
+                  buttonWidth="full"
+                  labelStyle="none"
+                />
+              )}
               <p className="text-xs text-muted-foreground mt-1">
-                When set, new tickets on this board will be automatically assigned to this agent. For tickets created via the client portal or email, assignment is automatic. For MSP users, this pre-fills the assigned agent field if empty.
+                When set, new tickets on this board will be automatically assigned to this agent{teamsV2Enabled ? ' or team' : ''}. For tickets created via the client portal or email, assignment is automatic. For MSP users, this pre-fills the assigned agent field if empty.
               </p>
             </div>
             <div>
@@ -842,7 +891,7 @@ const BoardsSettings: React.FC = () => {
             onClick={() => {
               setShowAddEditDialog(false);
               setEditingBoard(null);
-              setFormData({ board_name: '', description: '', display_order: 0, is_inactive: false, category_type: 'custom', priority_type: 'custom', is_itil_compliant: false, default_assigned_to: '', default_priority_id: '', manager_user_id: '', sla_policy_id: '' });
+              setFormData({ board_name: '', description: '', display_order: 0, is_inactive: false, category_type: 'custom', priority_type: 'custom', is_itil_compliant: false, default_assigned_to: '', default_assigned_team_id: '', default_priority_id: '', manager_user_id: '', sla_policy_id: '' });
               setError(null);
             }}
           >

@@ -165,7 +165,7 @@ const SettingsPageContent = ({ initialTabParam }: SettingsPageProps): React.JSX.
         <Card>
           <CardHeader>
             <CardTitle>Team Management</CardTitle>
-            <CardDescription>Manage teams and team members</CardDescription>
+            <CardDescription>Create and manage teams, assign team leads, and organize members across your organization</CardDescription>
           </CardHeader>
           <CardContent className="overflow-visible">
             <Suspense fallback={<SettingsTabSkeleton title="Team Management" description="Loading team configuration..." showTabs={false} />}>

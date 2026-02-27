@@ -21,6 +21,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
+import TeamAvatar from '@alga-psa/ui/components/TeamAvatar';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { ChevronDown, XCircle } from 'lucide-react';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
@@ -28,6 +29,7 @@ import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { ClientAddTicket } from './ClientAddTicket';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
+import { getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
 
 const useDebounce = <T,>(value: T, delay: number): T => {
   const [debouncedValue, setDebouncedValue] = useState<T>(value);
@@ -69,6 +71,7 @@ export function TicketList() {
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [additionalAgentAvatarUrls, setAdditionalAgentAvatarUrls] = useState<Record<string, string | null>>({});
+  const [teamAvatarUrls, setTeamAvatarUrls] = useState<Record<string, string | null>>({});
   const [responseStateTrackingEnabled, setResponseStateTrackingEnabled] = useState<boolean>(true);
 
   // Load response state tracking setting
@@ -112,6 +115,34 @@ export function TicketList() {
     };
 
     fetchAvatarUrls();
+  }, [tickets]);
+
+  // Fetch team avatar URLs when tickets change
+  useEffect(() => {
+    const fetchTeamAvatars = async () => {
+      const teamIds = new Set<string>();
+      tickets.forEach(ticket => {
+        if (ticket.assigned_team_id) {
+          teamIds.add(ticket.assigned_team_id);
+        }
+      });
+      if (teamIds.size === 0) return;
+      const tenant = tickets[0]?.tenant;
+      if (!tenant) return;
+      try {
+        const result = await getTeamAvatarUrlsBatchAction(Array.from(teamIds), tenant);
+        const urls: Record<string, string | null> = {};
+        if (result instanceof Map) {
+          result.forEach((url, id) => { urls[id] = url; });
+        } else {
+          Object.entries(result).forEach(([id, url]) => { urls[id] = url as string | null; });
+        }
+        setTeamAvatarUrls(urls);
+      } catch (error) {
+        console.error('Failed to fetch team avatar URLs:', error);
+      }
+    };
+    fetchTeamAvatars();
   }, [tickets]);
 
   // Load statuses, priorities, and categories
@@ -464,6 +495,18 @@ export function TicketList() {
         return (
           <div className="text-sm flex items-center gap-1.5">
             {value || '-'}
+            {record.assigned_team_id && record.assigned_team_name && (
+              <Tooltip content={record.assigned_team_name}>
+                <span className="inline-flex items-center cursor-help">
+                  <TeamAvatar
+                    teamId={record.assigned_team_id}
+                    teamName={record.assigned_team_name}
+                    avatarUrl={teamAvatarUrls[record.assigned_team_id] ?? null}
+                    size="xs"
+                  />
+                </span>
+              </Tooltip>
+            )}
             {additionalCount > 0 && (
               <Tooltip
                 content={

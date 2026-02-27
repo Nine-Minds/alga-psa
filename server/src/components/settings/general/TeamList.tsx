@@ -2,11 +2,14 @@
 
 import React, { useState, useEffect } from 'react';
 import { createTeam, deleteTeam } from '@alga-psa/teams/actions';
+import { getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
 import { getAllUsers, getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
 import { DeletionValidationResult, ITeam, IUser, IUserWithRoles } from '@alga-psa/types';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
+import TeamAvatar from '@alga-psa/ui/components/TeamAvatar';
 import { DeleteEntityDialog } from '@alga-psa/ui';
 import { Input } from '@alga-psa/ui/components/Input';
+import { Button } from '@alga-psa/ui/components/Button';
 import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
 
 interface TeamListProps {
@@ -24,10 +27,30 @@ const TeamList: React.FC<TeamListProps> = ({ teams, onSelectTeam }) => {
   const [deleteValidation, setDeleteValidation] = useState<DeletionValidationResult | null>(null);
   const [isDeleteValidating, setIsDeleteValidating] = useState(false);
   const [isDeleteProcessing, setIsDeleteProcessing] = useState(false);
+  const [teamAvatars, setTeamAvatars] = useState<Record<string, string | null>>({});
 
   useEffect(() => {
     fetchAllUsers();
   }, []);
+
+  useEffect(() => {
+    if (teams.length === 0) return;
+    const teamIds = teams.map(t => t.team_id);
+    const tenant = teams[0]?.tenant;
+    if (!tenant) return;
+
+    getTeamAvatarUrlsBatchAction(teamIds, tenant)
+      .then((avatarUrlsMap) => {
+        const urlsRecord: Record<string, string | null> = {};
+        if (avatarUrlsMap instanceof Map) {
+          avatarUrlsMap.forEach((url, id) => { urlsRecord[id] = url; });
+        } else {
+          Object.entries(avatarUrlsMap as Record<string, string | null>).forEach(([id, url]) => { urlsRecord[id] = url; });
+        }
+        setTeamAvatars(urlsRecord);
+      })
+      .catch((err) => console.error('Error fetching team avatars:', err));
+  }, [teams]);
 
   const fetchAllUsers = async (): Promise<void> => {
     try {
@@ -117,19 +140,19 @@ const TeamList: React.FC<TeamListProps> = ({ teams, onSelectTeam }) => {
     <div className="p-4 rounded-lg border border-border-200 min-w-0">
       {error && <p className="text-accent-500 mb-4 break-words">{error}</p>}
       {!showAddForm ? (
-        <button
+        <Button
+          id="add-new-team-btn"
           onClick={() => setShowAddForm(true)}
-          className="w-full mb-4 bg-primary-500 text-white p-2 rounded hover:bg-primary-600 transition-colors whitespace-nowrap"
+          className="w-auto mb-4"
         >
           Add New Team
-        </button>
+        </Button>
       ) : (
         <div className="mb-4 space-y-2">
           <Input
             type="text"
             value={newTeamName}
             onChange={(e) => setNewTeamName(e.target.value)}
-            className="w-full p-2 border border-border-200 rounded focus:outline-none focus:border-primary-500"
             placeholder="Enter new team name"
           />
           <UserPicker
@@ -142,43 +165,54 @@ const TeamList: React.FC<TeamListProps> = ({ teams, onSelectTeam }) => {
             placeholder="Select a manager"
           />
           <div className="flex gap-2">
-            <button
+            <Button
+              id="create-team-btn"
               onClick={handleCreateTeam}
               disabled={!newTeamName.trim() || !selectedManagerId}
-              className="flex-1 bg-primary-500 text-white p-2 rounded hover:bg-primary-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+              className="flex-1"
             >
               Create Team
-            </button>
-            <button
+            </Button>
+            <Button
+              id="cancel-create-team-btn"
+              variant="outline"
               onClick={() => {
                 setShowAddForm(false);
                 setNewTeamName('');
                 setSelectedManagerId('');
               }}
-              className="bg-border-200 text-text-700 p-2 rounded hover:bg-border-300 transition-colors whitespace-nowrap"
             >
               Cancel
-            </button>
+            </Button>
           </div>
         </div>
       )}
       <h3 className="text-lg font-semibold mb-2 text-text-800">Teams</h3>
-      <ul className="space-y-2">
+      <ul className="space-y-1">
         {teams.map((team: ITeam): React.ReactNode => (
           <li key={team.team_id} className="flex items-center justify-between gap-2 p-2 rounded hover:bg-border-50 min-w-0">
             <button
               onClick={() => onSelectTeam(team)}
-              className="text-left font-medium text-text-700 hover:text-primary-500 transition-colors flex-1 min-w-0 truncate"
+              className="flex items-center gap-2 text-left font-medium text-text-700 hover:text-primary-500 transition-colors flex-1 min-w-0"
               title={team.team_name}
             >
-              {team.team_name}
+              <TeamAvatar
+                teamId={team.team_id}
+                teamName={team.team_name}
+                avatarUrl={teamAvatars[team.team_id] ?? null}
+                size="sm"
+              />
+              <span className="truncate">{team.team_name}</span>
             </button>
-            <button
+            <Button
+              id={`delete-team-${team.team_id}-btn`}
+              variant="ghost"
+              size="sm"
               onClick={() => handleDeleteTeam(team)}
-              className="bg-accent-500 text-white px-3 py-1 rounded hover:bg-accent-600 transition-colors flex-shrink-0 whitespace-nowrap"
+              className="text-destructive hover:text-destructive flex-shrink-0"
             >
               Delete
-            </button>
+            </Button>
           </li>
         ))}
       </ul>

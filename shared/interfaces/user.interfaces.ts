@@ -25,6 +25,7 @@ export interface IUser {
   is_inactive: boolean;
   tenant: string;
   user_type: 'internal' | 'client';
+  reports_to?: string;
   contact_id?: string;
   phone?: string;
   timezone?: string;

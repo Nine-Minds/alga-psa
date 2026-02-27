@@ -6,6 +6,7 @@ import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuIte
 import { Button } from '@alga-psa/ui/components/Button';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
+import TeamAvatar from '@alga-psa/ui/components/TeamAvatar';
 import { MoreVertical, Trash2, ChevronDown, ChevronRight } from 'lucide-react';
 import { format } from 'date-fns';
 import { ResponseStateBadge } from '@alga-psa/ui/components';
@@ -121,6 +122,8 @@ interface CreateTicketColumnsOptions {
   onClientClick?: (clientId: string) => void;
   /** Map of user IDs to avatar URLs for displaying in additional agents tooltip */
   additionalAgentAvatarUrls?: Record<string, string | null>;
+  /** Map of team IDs to avatar URLs for displaying team badges */
+  teamAvatarUrls?: Record<string, string | null>;
   isBundleExpanded?: (masterTicketId: string) => boolean;
   onToggleBundleExpanded?: (masterTicketId: string) => void;
 }
@@ -139,6 +142,7 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
     showClient = true,
     onClientClick,
     additionalAgentAvatarUrls = {},
+    teamAvatarUrls = {},
     isBundleExpanded,
     onToggleBundleExpanded,
   } = options;
@@ -449,6 +453,18 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
           return (
             <span className="text-gray-700 flex items-center gap-1.5">
               {value || 'Unassigned'}
+              {record.assigned_team_id && record.assigned_team_name && (
+                <Tooltip content={record.assigned_team_name}>
+                  <span className="inline-flex items-center cursor-help">
+                    <TeamAvatar
+                      teamId={record.assigned_team_id}
+                      teamName={record.assigned_team_name}
+                      avatarUrl={teamAvatarUrls[record.assigned_team_id] ?? null}
+                      size="xs"
+                    />
+                  </span>
+                </Tooltip>
+              )}
               {additionalCount > 0 && (
                 <Tooltip
                   content={

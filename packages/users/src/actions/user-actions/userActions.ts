@@ -64,6 +64,7 @@ export const addUser = withAuth(async (
     roleId?: string;
     userType?: 'internal' | 'client';
     contactId?: string;
+    reportsTo?: string;
   }
 ): Promise<IUser> => {
   try {
@@ -139,7 +140,8 @@ export const addUser = withAuth(async (
           hashed_password: await hashPassword(userData.password),
           tenant: tenant || undefined,
           user_type: userData.userType || 'internal', // Default to 'internal' for backward compatibility
-          contact_id: userData.contactId || undefined
+          contact_id: userData.contactId || undefined,
+          reports_to: userData.reportsTo || undefined
         }).returning('*');
 
       await trx('user_roles').insert({
@@ -337,6 +339,50 @@ export const getAllUsers = withAuth(async (
   }
 });
 
+export const getReportsToSubordinates = withAuth(async (
+  currentUser,
+  { tenant },
+  managerUserId?: string
+): Promise<IUser[]> => {
+  try {
+    const { knex } = await createTenantKnex();
+    return await withTransaction(knex, async (trx) => {
+      const targetManagerId = managerUserId || currentUser.user_id;
+      const canReadUsers = await hasPermission(currentUser, 'user', 'read', trx);
+
+      if (targetManagerId !== currentUser.user_id && !canReadUsers) {
+        throw new Error('Permission denied: Cannot read other users reporting chains');
+      }
+
+      const { rows } = await trx.raw(
+        `
+          WITH RECURSIVE reports_to_chain AS (
+            SELECT u.user_id
+            FROM users u
+            WHERE u.reports_to = ?
+              AND u.tenant = ?
+            UNION ALL
+            SELECT u2.user_id
+            FROM users u2
+            JOIN reports_to_chain rtc ON u2.reports_to = rtc.user_id
+            WHERE u2.tenant = ?
+          )
+          SELECT u.*
+          FROM users u
+          JOIN reports_to_chain rtc ON u.user_id = rtc.user_id
+          WHERE u.tenant = ?
+        `,
+        [targetManagerId, tenant, tenant, tenant]
+      );
+
+      return rows as IUser[];
+    });
+  } catch (error) {
+    logger.error('Failed to fetch reports_to subordinates:', error);
+    throw new Error('Failed to fetch reports_to subordinates');
+  }
+});
+
 export const updateUser = withAuth(async (
   currentUser,
   { tenant },
@@ -360,6 +406,19 @@ export const updateUser = withAuth(async (
         await trx('boards')
           .where({ default_assigned_to: userId, tenant })
           .update({ default_assigned_to: null });
+      }
+
+      if (userData.reports_to !== undefined) {
+        if (userData.reports_to === userId) {
+          throw new Error('reports_to cannot reference the user itself');
+        }
+
+        if (userData.reports_to) {
+          const wouldCreateCycle = await User.isInReportsToChain(trx, userId, userData.reports_to);
+          if (wouldCreateCycle) {
+            throw new Error('reports_to would create a circular reporting chain');
+          }
+        }
       }
 
       await User.update(trx, userId, userData);

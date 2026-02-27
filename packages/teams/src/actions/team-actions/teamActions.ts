@@ -1,22 +1,23 @@
 'use server'
 
 import Team from '../../models/team';
-import type { DeletionValidationResult, IRole, ITeam, IUser, IUserWithRoles } from '@alga-psa/types';
+import type { DeletionValidationResult, IRole, ITeam, ITeamMember, IUser, IUserWithRoles } from '@alga-psa/types';
 import { withTransaction } from '@alga-psa/db';
 import { createTenantKnex } from '@alga-psa/db';
 import { Knex } from 'knex';
-import { withAuth } from '@alga-psa/auth';
+import { withAuth, hasPermission } from '@alga-psa/auth';
 import { deleteEntityWithValidation } from '@alga-psa/core';
 
 async function getUsersWithRoles(
   trx: Knex | Knex.Transaction,
   tenant: string,
-  userIds: string[],
-): Promise<IUserWithRoles[]> {
-  if (userIds.length === 0) {
+  members: Array<{ user_id: string; role: 'member' | 'lead' }>,
+): Promise<ITeamMember[]> {
+  if (members.length === 0) {
     return [];
   }
 
+  const userIds = members.map((member) => member.user_id);
   const users = await trx<IUser>('users')
     .select('*')
     .whereIn('user_id', userIds)
@@ -42,13 +43,22 @@ async function getUsersWithRoles(
     rolesByUser.set(userId, list);
   }
 
+  const roleByUser = new Map(members.map((member) => [member.user_id, member.role]));
+
   return users.map((user) => ({
     ...(user as any),
     roles: rolesByUser.get(user.user_id) ?? [],
+    role: roleByUser.get(user.user_id) ?? 'member',
   }));
 }
 
 export const createTeam = withAuth(async (user, { tenant }, teamData: Omit<ITeam, 'members'> & { members?: IUserWithRoles[] }): Promise<ITeam> => {
+  const { knex: db } = await createTenantKnex();
+  const canCreate = await hasPermission(user, 'user_settings', 'create', db);
+  if (!canCreate) {
+    throw new Error('Permission denied: cannot create team.');
+  }
+
   try {
     // Extract members from teamData
     const { members, ...teamDataWithoutMembers } = teamData;
@@ -60,29 +70,29 @@ export const createTeam = withAuth(async (user, { tenant }, teamData: Omit<ITeam
       throw new Error('A team must have a manager. Please specify a manager_id or provide at least one team member.');
     }
 
-    const { knex: db } = await createTenantKnex();
-
     const createdTeam = await withTransaction(db, async (trx: Knex.Transaction) => {
       // Create the team first
       const team = await Team.create(trx, tenant, teamDataWithoutMembers);
 
       // Collect all member IDs including the manager
-      const allMemberIds = new Set<string>();
+      const allMemberRoles = new Map<string, 'member' | 'lead'>();
 
       // Add provided members
       if (members && members.length > 0) {
-        members.forEach(member => allMemberIds.add(member.user_id));
+        members.forEach(member => allMemberRoles.set(member.user_id, 'member'));
       }
 
       // Add manager as a member if specified
       if (teamDataWithoutMembers.manager_id) {
-        allMemberIds.add(teamDataWithoutMembers.manager_id);
+        allMemberRoles.set(teamDataWithoutMembers.manager_id, 'lead');
       }
 
       // Add all members to the team
-      if (allMemberIds.size > 0) {
+      if (allMemberRoles.size > 0) {
         await Promise.all(
-          Array.from(allMemberIds).map((userId): Promise<void> => Team.addMember(trx, tenant, team.team_id, userId))
+          Array.from(allMemberRoles.entries()).map(([userId, role]): Promise<void> =>
+            Team.addMember(trx, tenant, team.team_id, userId, role)
+          )
         );
       }
 
@@ -103,15 +113,20 @@ async function getTeamByIdInternal(knex: Knex, tenant: string, teamId: string): 
   if (!team) {
     throw new Error('Team not found');
   }
-  const memberIds = await Team.getMembers(knex, tenant, teamId);
-  const members = await getUsersWithRoles(knex, tenant, memberIds);
+  const memberEntries = await Team.getMembers(knex, tenant, teamId);
+  const members = await getUsersWithRoles(knex, tenant, memberEntries);
 
   return { ...team, members };
 }
 
 export const updateTeam = withAuth(async (user, { tenant }, teamId: string, teamData: Partial<ITeam>): Promise<ITeam> => {
+  const { knex } = await createTenantKnex();
+  const canUpdate = await hasPermission(user, 'user_settings', 'update', knex);
+  if (!canUpdate) {
+    throw new Error('Permission denied: cannot update team.');
+  }
+
   try {
-    const { knex } = await createTenantKnex();
     await Team.update(knex, tenant, teamId, teamData);
     return await getTeamByIdInternal(knex, tenant, teamId);
   } catch (error) {
@@ -125,8 +140,20 @@ export const deleteTeam = withAuth(async (
   { tenant },
   teamId: string
 ): Promise<DeletionValidationResult & { success: boolean; deleted?: boolean }> => {
+  const { knex } = await createTenantKnex();
+  const canDelete = await hasPermission(user, 'user_settings', 'delete', knex);
+  if (!canDelete) {
+    return {
+      success: false,
+      canDelete: false,
+      code: 'PERMISSION_DENIED',
+      message: 'Permission denied: cannot delete team.',
+      dependencies: [],
+      alternatives: []
+    };
+  }
+
   try {
-    const { knex } = await createTenantKnex();
 
     const result = await deleteEntityWithValidation('team', teamId, knex, tenant, async (trx, tenantId) => {
       await Team.delete(trx, tenantId, teamId);
@@ -151,8 +178,13 @@ export const deleteTeam = withAuth(async (
 });
 
 export const addUserToTeam = withAuth(async (user, { tenant }, teamId: string, userId: string): Promise<ITeam> => {
+  const { knex } = await createTenantKnex();
+  const canUpdate = await hasPermission(user, 'user_settings', 'update', knex);
+  if (!canUpdate) {
+    throw new Error('Permission denied: cannot modify team members.');
+  }
+
   try {
-    const { knex } = await createTenantKnex();
     await Team.addMember(knex, tenant, teamId, userId);
     return await getTeamByIdInternal(knex, tenant, teamId);
   } catch (error) {
@@ -162,8 +194,13 @@ export const addUserToTeam = withAuth(async (user, { tenant }, teamId: string, u
 });
 
 export const removeUserFromTeam = withAuth(async (user, { tenant }, teamId: string, userId: string): Promise<ITeam> => {
+  const { knex } = await createTenantKnex();
+  const canUpdate = await hasPermission(user, 'user_settings', 'update', knex);
+  if (!canUpdate) {
+    throw new Error('Permission denied: cannot modify team members.');
+  }
+
   try {
-    const { knex } = await createTenantKnex();
     await Team.removeMember(knex, tenant, teamId, userId);
     return await getTeamByIdInternal(knex, tenant, teamId);
   } catch (error) {
@@ -173,8 +210,13 @@ export const removeUserFromTeam = withAuth(async (user, { tenant }, teamId: stri
 });
 
 export const getTeamById = withAuth(async (user, { tenant }, teamId: string): Promise<ITeam> => {
+  const { knex } = await createTenantKnex();
+  const canRead = await hasPermission(user, 'user_settings', 'read', knex);
+  if (!canRead) {
+    throw new Error('Permission denied: cannot view team.');
+  }
+
   try {
-    const { knex } = await createTenantKnex();
     return await getTeamByIdInternal(knex, tenant, teamId);
   } catch (error) {
     console.error(error);
@@ -183,12 +225,17 @@ export const getTeamById = withAuth(async (user, { tenant }, teamId: string): Pr
 });
 
 export const getTeams = withAuth(async (user, { tenant }): Promise<ITeam[]> => {
+  const { knex } = await createTenantKnex();
+  const canRead = await hasPermission(user, 'user_settings', 'read', knex);
+  if (!canRead) {
+    throw new Error('Permission denied: cannot view teams.');
+  }
+
   try {
-    const { knex } = await createTenantKnex();
     const teams = await Team.getAll(knex, tenant);
     const teamsWithMembers = await Promise.all(teams.map(async (team): Promise<ITeam> => {
-      const memberIds = await Team.getMembers(knex, tenant, team.team_id);
-      const members = await getUsersWithRoles(knex, tenant, memberIds);
+      const memberEntries = await Team.getMembers(knex, tenant, team.team_id);
+      const members = await getUsersWithRoles(knex, tenant, memberEntries);
       return { ...team, members };
     }));
     return teamsWithMembers;
@@ -199,8 +246,13 @@ export const getTeams = withAuth(async (user, { tenant }): Promise<ITeam[]> => {
 });
 
 export const assignManagerToTeam = withAuth(async (user, { tenant }, teamId: string, userId: string): Promise<ITeam> => {
+  const { knex } = await createTenantKnex();
+  const canUpdate = await hasPermission(user, 'user_settings', 'update', knex);
+  if (!canUpdate) {
+    throw new Error('Permission denied: cannot assign team manager.');
+  }
+
   try {
-    const { knex } = await createTenantKnex();
 
     await withTransaction(knex, async (trx: Knex.Transaction) => {
       // Update team manager

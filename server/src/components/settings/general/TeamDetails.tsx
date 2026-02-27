@@ -1,13 +1,30 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { getTeamById, updateTeam, removeUserFromTeam, assignManagerToTeam, addUserToTeam } from '@alga-psa/teams/actions';
-import { getAllUsers, getMultipleUsersWithRoles } from '@alga-psa/users/actions';
-import { ITeam, IUser, IRole, IUserWithRoles } from '@alga-psa/types';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Pencil, Check, X } from 'lucide-react';
+import {
+  getTeamById,
+  updateTeam,
+  removeUserFromTeam,
+  assignManagerToTeam,
+  addUserToTeam,
+  uploadTeamAvatar,
+  deleteTeamAvatar,
+  getTeamAvatarUrlsBatchAction
+} from '@alga-psa/teams/actions';
+import { getAllUsers } from '@alga-psa/users/actions';
+import { ITeam, ITeamMember, IUserWithRoles, ColumnDefinition } from '@alga-psa/types';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import { getUserAvatarUrlAction, getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
 import { Input } from '@alga-psa/ui/components/Input';
+import { Label } from '@alga-psa/ui/components/Label';
+import { Button } from '@alga-psa/ui/components/Button';
+import { Badge } from '@alga-psa/ui/components/Badge';
+import { Separator } from '@alga-psa/ui/components/Separator';
+import { DataTable } from '@alga-psa/ui/components/DataTable';
+import EntityImageUpload from '@alga-psa/ui/components/EntityImageUpload';
+import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 
 interface TeamDetailsProps {
   teamId: string;
@@ -23,6 +40,8 @@ const TeamDetails: React.FC<TeamDetailsProps> = ({ teamId, onUpdate }): React.JS
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [userAvatars, setUserAvatars] = useState<Record<string, string | null>>({});
+  const [teamAvatarUrl, setTeamAvatarUrl] = useState<string | null>(null);
+  const [isEditingName, setIsEditingName] = useState(false);
 
   useEffect(() => {
     fetchTeamDetails();
@@ -39,11 +58,11 @@ const TeamDetails: React.FC<TeamDetailsProps> = ({ teamId, onUpdate }): React.JS
     const fetchAvatarUrls = async () => {
       // Collect all user IDs (manager + members)
       const userIds = new Set<string>();
-      
+
       if (team.manager_id) {
         userIds.add(team.manager_id);
       }
-      
+
       team.members.forEach(member => {
         userIds.add(member.user_id);
       });
@@ -51,7 +70,7 @@ const TeamDetails: React.FC<TeamDetailsProps> = ({ teamId, onUpdate }): React.JS
       const usersToFetch = Array.from(userIds).filter(
         userId => userAvatars[userId] === undefined
       );
-      
+
       if (usersToFetch.length === 0) {
         return;
       }
@@ -61,11 +80,11 @@ const TeamDetails: React.FC<TeamDetailsProps> = ({ teamId, onUpdate }): React.JS
           const user = allUsers.find(u => u.user_id === userId) ||
                       team.members.find(m => m.user_id === userId);
           if (!user) return { userId, avatarUrl: null };
-          
+
           if (!user.tenant) {
             return { userId, avatarUrl: null };
           }
-          
+
           const avatarUrl = await getUserAvatarUrlAction(userId, user.tenant);
           return { userId, avatarUrl };
         } catch (error) {
@@ -87,6 +106,23 @@ const TeamDetails: React.FC<TeamDetailsProps> = ({ teamId, onUpdate }): React.JS
     fetchAvatarUrls();
   }, [team?.team_id, loading]); // Only re-run when team ID changes or loading state changes
 
+  const fetchTeamAvatarUrl = async (fetchedTeam: ITeam): Promise<void> => {
+    if (!fetchedTeam.tenant) return;
+    try {
+      const avatarUrlsMap = await getTeamAvatarUrlsBatchAction([fetchedTeam.team_id], fetchedTeam.tenant);
+      let url: string | null = null;
+      if (avatarUrlsMap instanceof Map) {
+        url = avatarUrlsMap.get(fetchedTeam.team_id) ?? null;
+      } else {
+        url = (avatarUrlsMap as Record<string, string | null>)[fetchedTeam.team_id] ?? null;
+      }
+      setTeamAvatarUrl(url);
+    } catch (err) {
+      console.error('Error fetching team avatar:', err);
+      setTeamAvatarUrl(null);
+    }
+  };
+
   const fetchTeamDetails = async (): Promise<void> => {
     try {
       setLoading(true);
@@ -96,6 +132,7 @@ const TeamDetails: React.FC<TeamDetailsProps> = ({ teamId, onUpdate }): React.JS
       setSelectedManagerId(fetchedTeam.manager_id || undefined);
       setError(null);
       onUpdate(fetchedTeam);
+      void fetchTeamAvatarUrl(fetchedTeam);
     } catch (err) {
       console.error('Error fetching team details:', err);
       setError('Failed to fetch team details');
@@ -108,9 +145,6 @@ const TeamDetails: React.FC<TeamDetailsProps> = ({ teamId, onUpdate }): React.JS
   const fetchAllUsers = async (): Promise<void> => {
     try {
       const users = await getAllUsers();
-      
-      // No need to check for tenant information now that we know it works
-      
       setAllUsers(users);
     } catch (err) {
       console.error('Error fetching users:', err);
@@ -118,14 +152,10 @@ const TeamDetails: React.FC<TeamDetailsProps> = ({ teamId, onUpdate }): React.JS
     }
   };
 
-  const handleTeamNameChange = (event: React.ChangeEvent<HTMLInputElement>): void => {
-    setTeamName(event.target.value);
-  };
-
-  const handleSaveTeamName = async (): Promise<void> => {
-    if (team && teamName.trim()) {
+  const handleNameSubmit = useCallback(async () => {
+    if (team && teamName.trim() !== '' && teamName.trim() !== team.team_name) {
       try {
-        const updatedTeam = await updateTeam(team.team_id, { team_name: teamName });
+        const updatedTeam = await updateTeam(team.team_id, { team_name: teamName.trim() });
         setTeam(updatedTeam);
         onUpdate(updatedTeam);
         setError(null);
@@ -133,6 +163,21 @@ const TeamDetails: React.FC<TeamDetailsProps> = ({ teamId, onUpdate }): React.JS
         console.error('Error updating team name:', err);
         setError('Failed to update team name');
       }
+    }
+    setIsEditingName(false);
+  }, [team, teamName, onUpdate]);
+
+  const handleNameCancel = useCallback(() => {
+    setTeamName(team?.team_name || '');
+    setIsEditingName(false);
+  }, [team?.team_name]);
+
+  const handleNameKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      handleNameCancel();
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      void handleNameSubmit();
     }
   };
 
@@ -180,67 +225,159 @@ const TeamDetails: React.FC<TeamDetailsProps> = ({ teamId, onUpdate }): React.JS
   };
 
   if (loading) {
-    return <div className="text-text-600">Loading team details...</div>;
+    return (
+      <div className="flex items-center justify-center py-8">
+        <LoadingIndicator
+          layout="stacked"
+          text="Loading team details..."
+          spinnerProps={{ size: 'md' }}
+        />
+      </div>
+    );
   }
 
   if (!team) {
     return <div className="text-text-600">No team found</div>;
   }
 
-  const managerOptions = allUsers.map((user): { value: string; label: string } => ({
-    value: user.user_id,
-    label: `${user.first_name} ${user.last_name}`
-  }));
+  const managerUser = allUsers.find(u => u.user_id === team.manager_id);
+  const managerName = managerUser
+    ? `${managerUser.first_name} ${managerUser.last_name}`
+    : null;
 
-  const memberOptions = allUsers
-    .filter(user => !team.members.some(member => member.user_id === user.user_id))
-    .map((user): { value: string; label: string } => ({
-      value: user.user_id,
-      label: `${user.first_name} ${user.last_name}`
-    }));
+  const memberColumns: ColumnDefinition<ITeamMember>[] = [
+    {
+      title: 'Member',
+      dataIndex: 'user_id',
+      render: (_value: unknown, member: ITeamMember) => (
+        <div className="flex items-center gap-3">
+          <UserAvatar
+            userId={member.user_id}
+            userName={`${member.first_name || ''} ${member.last_name || ''}`}
+            avatarUrl={userAvatars[member.user_id] || null}
+            size="sm"
+          />
+          <span className="font-medium text-text-800">
+            {member.first_name} {member.last_name}
+          </span>
+        </div>
+      ),
+    },
+    {
+      title: 'Role',
+      dataIndex: 'role',
+      width: '120px',
+      render: (_value: unknown, member: ITeamMember) => (
+        <div className="flex items-center gap-2">
+          {member.role === 'lead' && (
+            <Badge variant="primary" size="sm">Lead</Badge>
+          )}
+          <span className="text-sm text-text-600">
+            {member.roles.map((role): string => role.role_name).join(', ')}
+          </span>
+        </div>
+      ),
+    },
+    {
+      title: '',
+      dataIndex: 'user_id',
+      width: '80px',
+      sortable: false,
+      render: (_value: unknown, member: ITeamMember) => (
+        <Button
+          id={`remove-member-${member.user_id}-btn`}
+          variant="ghost"
+          size="sm"
+          onClick={() => handleRemoveMember(member.user_id)}
+          className="text-destructive hover:text-destructive"
+        >
+          Remove
+        </Button>
+      ),
+    },
+  ];
 
   return (
-    <div className="space-y-6 p-4 rounded-lg border border-border-200 bg-white">
+    <div className="space-y-4 p-4 rounded-lg border border-border-200 bg-white">
       {error && <p className="text-accent-500">{error}</p>}
-      
-      <div>
-        <label className="block text-sm font-medium text-text-700 mb-1">Team Name</label>
-        <div className="flex gap-2">
-          <Input
-            type="text"
-            value={teamName}
-            onChange={handleTeamNameChange}
-            className="flex-1 p-2 border border-border-200 rounded focus:outline-none focus:border-primary-500"
-            placeholder="Enter team name"
-          />
-          <button
-            onClick={handleSaveTeamName}
-            className="px-4 py-2 bg-primary-500 text-white rounded hover:bg-primary-600 transition-colors"
-          >
-            Rename
-          </button>
+
+      {/* Header: Avatar + Name + Metadata */}
+      <div className="flex items-start gap-4">
+        <EntityImageUpload
+          entityType="team"
+          entityId={team.team_id}
+          entityName={team.team_name}
+          imageUrl={teamAvatarUrl}
+          uploadAction={uploadTeamAvatar}
+          deleteAction={deleteTeamAvatar}
+          onImageChange={() => {
+            if (team) void fetchTeamAvatarUrl(team);
+          }}
+          size="lg"
+        />
+        <div className="flex-1 min-w-0 pt-1">
+          <div className="flex items-center gap-2 min-w-0">
+            {isEditingName ? (
+              <>
+                <Input
+                  id="team-name-input"
+                  type="text"
+                  value={teamName}
+                  onChange={(e) => setTeamName(e.target.value)}
+                  onKeyDown={handleNameKeyDown}
+                  autoFocus
+                  className="text-xl font-bold flex-1"
+                  containerClassName="mb-0 flex-1"
+                  placeholder="Enter team name"
+                />
+                <Button
+                  id="save-team-name-btn"
+                  variant="default"
+                  size="sm"
+                  onClick={() => void handleNameSubmit()}
+                  className="flex-shrink-0"
+                  title="Save name"
+                >
+                  <Check className="w-4 h-4" />
+                </Button>
+                <Button
+                  id="cancel-team-name-btn"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleNameCancel}
+                  className="flex-shrink-0"
+                  title="Cancel"
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </>
+            ) : (
+              <>
+                <h2 className="text-xl font-bold text-text-800 truncate flex-1">
+                  {team.team_name}
+                </h2>
+                <button
+                  onClick={() => setIsEditingName(true)}
+                  className="p-1 hover:bg-gray-100 rounded-full transition-colors duration-200 flex-shrink-0"
+                  title="Edit name"
+                >
+                  <Pencil className="w-4 h-4 text-gray-500" />
+                </button>
+              </>
+            )}
+          </div>
+          <p className="text-sm text-muted-foreground mt-1">
+            {team.members.length} member{team.members.length !== 1 ? 's' : ''}
+            {managerName && <> · Lead: {managerName}</>}
+          </p>
         </div>
       </div>
 
+      <Separator />
+
+      {/* Team Lead */}
       <div>
-        <label className="block text-sm font-medium text-text-700 mb-1">Team Manager</label>
-        <div className="flex items-center space-x-2 text-text-600 mb-2">
-          {team.manager_id ? (
-            <>
-              <UserAvatar
-                userId={team.manager_id}
-                userName={`${allUsers.find(u => u.user_id === team.manager_id)?.first_name || ''} ${allUsers.find(u => u.user_id === team.manager_id)?.last_name || ''}`}
-                avatarUrl={userAvatars[team.manager_id] || null}
-                size="sm"
-              />
-              <span>
-                {allUsers.find(u => u.user_id === team.manager_id)?.first_name} {allUsers.find(u => u.user_id === team.manager_id)?.last_name}
-              </span>
-            </>
-          ) : (
-            'No manager assigned'
-          )}
-        </div>
+        <Label className="mb-1">Team Lead</Label>
         <div className="flex gap-2">
           <UserPicker
             value={selectedManagerId || ''}
@@ -253,18 +390,22 @@ const TeamDetails: React.FC<TeamDetailsProps> = ({ teamId, onUpdate }): React.JS
             placeholder="Select a manager"
             className="flex-1"
           />
-          <button
+          <Button
+            id="assign-manager-btn"
+            variant="outline"
             onClick={handleAssignManager}
             disabled={!selectedManagerId}
-            className="px-4 py-2 bg-primary-500 text-white rounded hover:bg-primary-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Assign
-          </button>
+          </Button>
         </div>
       </div>
 
+      <Separator />
+
+      {/* Add Team Member */}
       <div>
-        <label className="block text-sm font-medium text-text-700 mb-1">Add Team Member</label>
+        <Label className="mb-1">Add Team Member</Label>
         <div className="flex gap-2">
           <UserPicker
             value={selectedUserId || ''}
@@ -277,46 +418,28 @@ const TeamDetails: React.FC<TeamDetailsProps> = ({ teamId, onUpdate }): React.JS
             placeholder="Select a user"
             className="flex-1"
           />
-          <button
+          <Button
+            id="add-member-btn"
+            variant="outline"
             onClick={handleAddMember}
             disabled={!selectedUserId}
-            className="px-4 py-2 bg-primary-500 text-white rounded hover:bg-primary-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Add
-          </button>
+          </Button>
         </div>
       </div>
 
+      <Separator />
+
+      {/* Team Members */}
       <div>
-        <label className="block text-sm font-medium text-text-700 mb-2">Team Members</label>
-        <ul className="space-y-2">
-          {team.members.map((member): React.JSX.Element => (
-            <li key={member.user_id} className="flex items-center justify-between p-3 rounded border border-border-200 hover:border-primary-200 transition-colors">
-              <div className="flex items-center space-x-3">
-                <UserAvatar
-                  userId={member.user_id}
-                  userName={`${member.first_name || ''} ${member.last_name || ''}`}
-                  avatarUrl={userAvatars[member.user_id] || null}
-                  size="sm"
-                />
-                <div>
-                  <div className="font-medium text-text-800">
-                    {member.first_name} {member.last_name}
-                  </div>
-                  <div className="text-sm text-text-600">
-                    {member.roles.map((role): string => role.role_name).join(', ')}
-                  </div>
-                </div>
-              </div>
-              <button
-                onClick={() => handleRemoveMember(member.user_id)}
-                className="px-3 py-1 text-accent-500 hover:text-accent-600 transition-colors"
-              >
-                Remove
-              </button>
-            </li>
-          ))}
-        </ul>
+        <Label className="mb-2">Team Members</Label>
+        <DataTable
+          columns={memberColumns}
+          data={team.members}
+          pagination={true}
+          pageSize={10}
+        />
       </div>
     </div>
   );

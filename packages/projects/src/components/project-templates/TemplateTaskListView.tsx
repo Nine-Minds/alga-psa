@@ -29,6 +29,7 @@ import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
+import TeamAvatar from '@alga-psa/ui/components/TeamAvatar';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import { useResponsiveColumns, ColumnConfig } from '@alga-psa/ui/hooks';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
@@ -63,6 +64,8 @@ interface TemplateTaskListViewProps {
   onAddTask: (phaseId: string, statusMappingId?: string) => void;
   onTaskMove?: (taskId: string, newStatusMappingId: string, newPhaseId: string, beforeTaskId: string | null, afterTaskId: string | null) => Promise<void>;
   onAssigneeChange?: (taskId: string, newAssigneeId: string | null) => void;
+  teamNames?: Record<string, string>;
+  teamAvatarUrls?: Record<string, string | null>;
 }
 
 interface PhaseGroup {
@@ -87,6 +90,8 @@ export default function TemplateTaskListView({
   onAddTask,
   onTaskMove,
   onAssigneeChange,
+  teamNames = {},
+  teamAvatarUrls = {},
 }: TemplateTaskListViewProps) {
   const [expandedPhases, setExpandedPhases] = useState<Set<string>>(new Set());
   const [expandedStatuses, setExpandedStatuses] = useState<Set<string>>(new Set());
@@ -816,6 +821,18 @@ export default function TemplateTaskListView({
                                               <span className="text-sm text-gray-400">Unassigned</span>
                                             );
                                           })()
+                                        )}
+                                        {task.assigned_team_id && teamNames[task.assigned_team_id] && (
+                                          <Tooltip content={teamNames[task.assigned_team_id]}>
+                                            <span className="inline-flex items-center cursor-help">
+                                              <TeamAvatar
+                                                teamId={task.assigned_team_id}
+                                                teamName={teamNames[task.assigned_team_id]}
+                                                avatarUrl={teamAvatarUrls[task.assigned_team_id] ?? null}
+                                                size="xs"
+                                              />
+                                            </span>
+                                          </Tooltip>
                                         )}
                                         {additionalAssigneesCount > 0 && (() => {
                                           const additionalAssignments = taskAssignments.filter(a => a.template_task_id === task.template_task_id && !a.is_primary);

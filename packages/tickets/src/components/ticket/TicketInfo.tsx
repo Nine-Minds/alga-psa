@@ -13,7 +13,9 @@ import { Button } from '@alga-psa/ui/components/Button';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { PrioritySelect } from '@alga-psa/ui/components';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
+import UserAndTeamPicker from '@alga-psa/ui/components/UserAndTeamPicker';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
+import { getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
 import { CategoryPicker } from '../CategoryPicker';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { TimePicker } from '@alga-psa/ui/components/TimePicker';
@@ -23,7 +25,11 @@ import { ResponseStateDisplay } from '../ResponseStateSelect';
 import styles from './TicketDetails.module.css';
 import { getTicketCategories, getTicketCategoriesByBoard, BoardCategoryData } from '@alga-psa/tickets/actions';
 import { ItilLabels, calculateItilPriority } from '@alga-psa/tickets/lib/itilUtils';
-import { Pencil, Check, X, HelpCircle, Save, AlertCircle, PauseCircle } from 'lucide-react';
+import { Pencil, Check, X, HelpCircle, Save, AlertCircle, PauseCircle, Users } from 'lucide-react';
+import { Tooltip } from '@alga-psa/ui/components/Tooltip';
+import { Badge } from '@alga-psa/ui/components/Badge';
+import UserAvatar from '@alga-psa/ui/components/UserAvatar';
+import TeamAvatar from '@alga-psa/ui/components/TeamAvatar';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
@@ -31,6 +37,8 @@ import { useRegisterUnsavedChanges } from '@alga-psa/ui/context';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { SlaStatusBadge } from '@alga-psa/sla/components';
 import type { SlaTimerStatus } from '@alga-psa/sla/types';
+import { useFeatureFlag } from '@alga-psa/ui/hooks';
+import type { ITeam } from '@alga-psa/types';
 
 
 interface TicketInfoProps {
@@ -62,6 +70,8 @@ interface TicketInfoProps {
   renderProjectTaskActions?: (args: { ticket: ITicket; additionalAgents?: { user_id: string; name: string }[] }) => React.ReactNode;
   additionalAgents?: { user_id: string; name: string }[];
   responseStateTrackingEnabled?: boolean;
+  teams?: ITeam[];
+  onAssignTeam?: (teamId: string) => Promise<void>;
 }
 
 const TicketInfo: React.FC<TicketInfoProps> = ({
@@ -90,7 +100,10 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
   renderProjectTaskActions,
   additionalAgents,
   responseStateTrackingEnabled = true,
+  teams = [],
+  onAssignTeam,
 }) => {
+  const { enabled: teamsV2Enabled } = useFeatureFlag('teams-v2', { defaultValue: false });
   // Use initialCategories from server to avoid timing issues on first render
   const [categories, setCategories] = useState<ITicketCategory[]>(initialCategories);
   const [boardConfig, setBoardConfig] = useState<BoardCategoryData['boardConfig']>({
@@ -112,6 +125,8 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
   const [isFormInitialized, setIsFormInitialized] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [additionalAgentAvatarUrls, setAdditionalAgentAvatarUrls] = useState<Record<string, string | null>>({});
+  const [teamAvatarUrl, setTeamAvatarUrl] = useState<string | null>(null);
 
   // Capture original ticket values when form is initialized
   const [originalTicketValues, setOriginalTicketValues] = useState<Partial<ITicket>>(() => ({
@@ -237,6 +252,51 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
       }
     };
   }, []);
+
+  // Fetch avatar URLs for additional agents
+  useEffect(() => {
+    if (!additionalAgents?.length || !ticket.tenant) {
+      setAdditionalAgentAvatarUrls({});
+      return;
+    }
+    const fetchAvatars = async () => {
+      try {
+        const userIds = additionalAgents.map(a => a.user_id);
+        const result = await getUserAvatarUrlsBatchAction(userIds, ticket.tenant);
+        const urls: Record<string, string | null> = {};
+        if (result && typeof (result as Map<string, string | null>).forEach === 'function') {
+          (result as Map<string, string | null>).forEach((v, k) => { urls[k] = v; });
+        } else {
+          Object.assign(urls, result);
+        }
+        setAdditionalAgentAvatarUrls(urls);
+      } catch {
+        setAdditionalAgentAvatarUrls({});
+      }
+    };
+    fetchAvatars();
+  }, [additionalAgents, ticket.tenant]);
+
+  // Fetch team avatar
+  useEffect(() => {
+    if (!ticket.assigned_team_id || !ticket.tenant) {
+      setTeamAvatarUrl(null);
+      return;
+    }
+    const fetchTeamAvatar = async () => {
+      try {
+        const result = await getTeamAvatarUrlsBatchAction([ticket.assigned_team_id!], ticket.tenant);
+        if (result && typeof (result as Map<string, string | null>).get === 'function') {
+          setTeamAvatarUrl((result as Map<string, string | null>).get(ticket.assigned_team_id!) ?? null);
+        } else {
+          setTeamAvatarUrl((result as unknown as Record<string, string | null>)[ticket.assigned_team_id!] ?? null);
+        }
+      } catch {
+        setTeamAvatarUrl(null);
+      }
+    };
+    fetchTeamAvatar();
+  }, [ticket.assigned_team_id, ticket.tenant]);
 
   // Track current board's priority type in a ref
   const currentPriorityTypeRef = useRef(boardConfig.priority_type);
@@ -814,18 +874,79 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
             </div>
             <div>
               <h5 className="font-bold mb-2">Assigned To</h5>
-              <UserPicker
-                value={pendingChanges.assigned_to ?? originalTicketValues.assigned_to ?? ''}
-                onValueChange={(value) => handlePendingChange('assigned_to', value)}
-                users={usersList}
-                getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
-                labelStyle="none"
-                buttonWidth="fit"
-                size="sm"
-                className="!w-fit"
-                placeholder="Not assigned"
-                disabled={workflowLocked}
-              />
+              <div className="flex items-center gap-1.5">
+                {teamsV2Enabled ? (
+                  <UserAndTeamPicker
+                    value={pendingChanges.assigned_to ?? originalTicketValues.assigned_to ?? ''}
+                    onValueChange={(value) => handlePendingChange('assigned_to', value)}
+                    onTeamSelect={async (teamId) => {
+                      if (onAssignTeam) {
+                        await onAssignTeam(teamId);
+                      }
+                    }}
+                    users={usersList}
+                    teams={teams}
+                    getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
+                    getTeamAvatarUrlsBatch={getTeamAvatarUrlsBatchAction}
+                    labelStyle="none"
+                    buttonWidth="fit"
+                    size="sm"
+                    className="!w-fit"
+                    placeholder="Not assigned"
+                    disabled={workflowLocked}
+                  />
+                ) : (
+                  <UserPicker
+                    value={pendingChanges.assigned_to ?? originalTicketValues.assigned_to ?? ''}
+                    onValueChange={(value) => handlePendingChange('assigned_to', value)}
+                    users={usersList}
+                    getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
+                    labelStyle="none"
+                    buttonWidth="fit"
+                    size="sm"
+                    className="!w-fit"
+                    placeholder="Not assigned"
+                    disabled={workflowLocked}
+                  />
+                )}
+                {teamsV2Enabled && ticket.assigned_team_id && (() => {
+                  const assignedTeam = teams.find(t => t.team_id === ticket.assigned_team_id);
+                  return assignedTeam ? (
+                    <Tooltip content={assignedTeam.team_name}>
+                      <Badge variant="info" size="sm" className="gap-1 cursor-help">
+                        <TeamAvatar
+                          teamId={assignedTeam.team_id}
+                          teamName={assignedTeam.team_name}
+                          avatarUrl={teamAvatarUrl}
+                          size="xs"
+                        />
+                      </Badge>
+                    </Tooltip>
+                  ) : null;
+                })()}
+                {(additionalAgents?.length ?? 0) > 0 && (
+                  <Tooltip content={
+                    <div className="text-xs space-y-1.5">
+                      <div className="font-medium text-gray-300 mb-1">Additional Agents:</div>
+                      {additionalAgents!.map((agent, i) => (
+                        <div key={i} className="flex items-center gap-2">
+                          <UserAvatar
+                            userId={agent.user_id}
+                            userName={agent.name}
+                            avatarUrl={additionalAgentAvatarUrls[agent.user_id] ?? null}
+                            size="xs"
+                          />
+                          <span>{agent.name}</span>
+                        </div>
+                      ))}
+                    </div>
+                  }>
+                    <Badge variant="info" size="sm" className="cursor-help">
+                      +{additionalAgents!.length}
+                    </Badge>
+                  </Tooltip>
+                )}
+              </div>
             </div>
 
             {/* Row 2: Board + Category */}

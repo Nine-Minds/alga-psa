@@ -3,6 +3,8 @@
 import type { IUser } from '@alga-psa/types';
 import type { Knex } from 'knex';
 import { hasPermission } from '@alga-psa/auth';
+import { isFeatureFlagEnabled } from '@alga-psa/core';
+import { User } from '@alga-psa/db';
 
 export type DelegationScope = 'self' | 'tenant-wide' | 'manager';
 
@@ -50,6 +52,14 @@ export async function assertCanActOnBehalf(
   }
 
   if (await isManagerOfSubject(db, tenant, actor.user_id, subjectUserId)) {
+    return 'manager';
+  }
+
+  const reportsToEnabled = await isFeatureFlagEnabled('teams-v2', {
+    userId: actor.user_id,
+    tenantId: tenant
+  });
+  if (reportsToEnabled && await User.isInReportsToChain(db, actor.user_id, subjectUserId)) {
     return 'manager';
   }
 

@@ -21,6 +21,7 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import TaskDocumentUpload from './TaskDocumentUpload';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
+import TeamAvatar from '@alga-psa/ui/components/TeamAvatar';
 import { useResponsiveColumns, ColumnConfig } from '@alga-psa/ui/hooks';
 
 interface Phase {
@@ -43,6 +44,9 @@ interface Task {
   assigned_to_id?: string;
   assigned_to_name?: string;
   assigned_to_avatar?: string | null;
+  assigned_team_id?: string | null;
+  assigned_team_name?: string | null;
+  assigned_team_avatar?: string | null;
   estimated_hours?: number | null;
   actual_hours?: number | null;
   priority_id?: string | null;
@@ -609,6 +613,18 @@ export default function ClientTaskListView({
                                             <span className="text-gray-400">{t('tasks.unassigned', 'Unassigned')}</span>
                                           )}
                                         </span>
+                                        {task.assigned_team_id && task.assigned_team_name && (
+                                          <Tooltip content={task.assigned_team_name}>
+                                            <span className="inline-flex items-center cursor-help">
+                                              <TeamAvatar
+                                                teamId={task.assigned_team_id}
+                                                teamName={task.assigned_team_name}
+                                                avatarUrl={task.assigned_team_avatar || null}
+                                                size="xs"
+                                              />
+                                            </span>
+                                          </Tooltip>
+                                        )}
                                         {task.additional_agents && task.additional_agents.length > 0 && (
                                           <Tooltip
                                             content={

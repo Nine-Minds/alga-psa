@@ -1,0 +1,175 @@
+# Scratchpad — Teams V2 Improvements
+
+- Plan slug: `teams-v2-improvements`
+- Created: `2026-02-26`
+- Parent plan: `docs/plans/2026-02-26-teams-v2-org-hierarchy-operational-teams/`
+
+## Decisions
+
+- (2026-02-26) Reversing the original non-goal: "Team logos or custom team icons" — now adding team avatar infrastructure.
+- (2026-02-26) Tab name changed from "Org Chart" to "Structure" (user confirmed).
+- (2026-02-26) Node click in org chart opens UserDetails drawer (user confirmed) — reuses existing drawer pattern from UserList.
+- (2026-02-26) Using ReactFlow for org chart (already installed v11.11.4, extensively used in workflow visualization).
+- (2026-02-26) Merging two ViewSwitchers into one row in CardHeader — eliminates duplicate list/org toggle.
+- (2026-02-26) Team avatars use existing `document_associations` + `EntityImageService` pattern — no new storage infrastructure needed.
+- (2026-02-26) `TeamAvatar` component follows exact pattern of `UserAvatar` (thin wrapper around `EntityAvatar`).
+- (2026-02-26) Extract team logic from `MultiUserPicker` into a new `MultiUserAndTeamPicker` component (user confirmed). Follows the same pattern as `UserPicker` → `UserAndTeamPicker`. `MultiUserPicker` stays team-free. Call sites swap via `teams-v2` feature flag.
+
+## Discoveries / Constraints
+
+- (2026-02-26) `EntityType` is defined in 4 separate files that all need updating:
+  - `packages/media/src/lib/avatarUtils.ts` (canonical backend)
+  - `packages/users/src/lib/avatarUtils.ts` (user-specific copy)
+  - `packages/formatting/src/avatarUtils.ts` (formatting copy)
+  - `packages/ui/src/components/EntityImageUpload.tsx` (UI component)
+- (2026-02-26) `document_associations` CHECK constraint currently allows: `'asset','client','contact','contract','project_task','tenant','ticket','user'` — need to add `'team'`.
+- (2026-02-26) Latest constraint migration: `server/migrations/20251020000001_add_document_folders_preview_and_contract_association.cjs` uses `NOT VALID` pattern.
+- (2026-02-26) `document_associations` is distributed in Citus — migration needs `exports.config = { transaction: false }`.
+- (2026-02-26) `reactflow` v11.11.4 is already a dependency in both root and server `package.json`.
+- (2026-02-26) ReactFlow needs dynamic import with `{ ssr: false }` in Next.js — proven pattern in `packages/workflows/src/components/visualization/DynamicReactFlow.tsx`.
+- (2026-02-26) Current org chart is simple recursive `<ul>` list at `UserManagement.tsx` lines 535-589 (buildOrgTree) and 570-589 (renderOrgNode).
+- (2026-02-26) Two duplicate ViewSwitchers for list/org toggle exist at lines 668-673 (list view) and 701-705 (org view).
+- (2026-02-26) `UserAndTeamPicker.tsx` lines 404-407 uses hardcoded gray circle + TeamIcon — 1 location to update.
+- (2026-02-26) `MultiUserPicker.tsx` has 4 locations with hardcoded TeamIcon (lines ~352, ~376, ~465, ~641).
+- (2026-02-26) `MultiUserPicker` has team logic deeply baked in: team props (lines 34-37), team filtering (lines 143-150), team rendering in trigger (lines 348-389, 458-488), team rendering in dropdown (lines 614-649), stale value cleanup (lines 116-127). This logic will move to `MultiUserAndTeamPicker`.
+- (2026-02-26) `packages/teams/package.json` currently only depends on `@alga-psa/core`, `@alga-psa/db`, `@alga-psa/types`, `@alga-psa/validation`. Needs: `@alga-psa/media`, `@alga-psa/auth`, `swr`.
+- (2026-02-26) Teams package has `./actions` and `./hooks` exports in package.json already.
+- (2026-02-26) `useUserAvatar.ts` is 29 lines — SWR hook pattern to replicate for teams.
+- (2026-02-26) User avatar actions in `userActions.ts` lines 1019-1179 — `uploadUserAvatar`, `deleteUserAvatar` — pattern to follow.
+
+## Links / References
+
+- Original teams-v2 plan: `docs/plans/2026-02-26-teams-v2-org-hierarchy-operational-teams/`
+- EntityAvatar component: `packages/ui/src/components/EntityAvatar.tsx`
+- UserAvatar component: `packages/ui/src/components/UserAvatar.tsx`
+- EntityImageUpload component: `packages/ui/src/components/EntityImageUpload.tsx`
+- EntityImageService: `packages/media/src/services/EntityImageService.ts`
+- Avatar utils (media): `packages/media/src/lib/avatarUtils.ts`
+- User avatar actions: `packages/users/src/actions/user-actions/userActions.ts` (lines 1019-1179)
+- User avatar hook: `packages/users/src/hooks/useUserAvatar.ts`
+- UserManagement: `server/src/components/settings/general/UserManagement.tsx`
+- UserDetails drawer: `server/src/components/settings/general/UserDetails.tsx`
+- TeamDetails: `server/src/components/settings/general/TeamDetails.tsx`
+- UserAndTeamPicker: `packages/ui/src/components/UserAndTeamPicker.tsx`
+- MultiUserPicker: `packages/ui/src/components/MultiUserPicker.tsx`
+- MultiUserAndTeamPicker (new): `packages/ui/src/components/MultiUserAndTeamPicker.tsx`
+- ViewSwitcher: `packages/ui/src/components/ViewSwitcher.tsx`
+- DynamicReactFlow pattern: `packages/workflows/src/components/visualization/DynamicReactFlow.tsx`
+- Workflow nodes: `packages/workflows/src/components/visualization/nodes/`
+- Team actions: `packages/teams/src/actions/team-actions/teamActions.ts`
+- Team model: `packages/teams/src/models/team.ts`
+
+## Open Questions
+
+- (None remaining — all questions resolved during planning)
+
+## Updates
+- (2026-02-27) Added migration `server/migrations/20260227000001_add_team_to_document_associations_entity_type.cjs` to include `team` in document_associations entity_type constraint with NOT VALID and transaction disabled.
+- (2026-02-27) Added `team` to media `EntityType` union in `packages/media/src/lib/avatarUtils.ts`.
+- (2026-02-27) Added `team` to users `EntityType` union in `packages/users/src/lib/avatarUtils.ts`.
+- (2026-02-27) Added `team` to formatting `EntityType` union in `packages/formatting/src/avatarUtils.ts`.
+- (2026-02-27) Added `team` to UI `EntityType` union in `packages/ui/src/components/EntityImageUpload.tsx`.
+- (2026-02-27) Added `getTeamAvatarUrl` helper to `packages/media/src/lib/avatarUtils.ts`.
+- (2026-02-27) Added `TeamAvatar` component in `packages/ui/src/components/TeamAvatar.tsx` as a thin `EntityAvatar` wrapper.
+- (2026-02-27) Added `uploadTeamAvatar` action with team update permission checks in `packages/teams/src/actions/team-actions/avatarActions.ts`.
+- (2026-02-27) Added `deleteTeamAvatar` action with team update permission checks in `packages/teams/src/actions/team-actions/avatarActions.ts`.
+- (2026-02-27) Added `getTeamAvatarUrlAction` in `packages/teams/src/actions/team-actions/avatarActions.ts`.
+- (2026-02-27) Added `getTeamAvatarUrlsBatchAction` with batch query logic in `packages/teams/src/actions/team-actions/avatarActions.ts`.
+- (2026-02-27) Exported team avatar actions from `packages/teams/src/actions/team-actions/index.ts`.
+- (2026-02-27) Added `@alga-psa/media`, `@alga-psa/auth`, and `swr` dependencies to `packages/teams/package.json`.
+- (2026-02-27) Added `useTeamAvatar` SWR hook in `packages/teams/src/hooks/useTeamAvatar.ts`.
+- (2026-02-27) Exported `useTeamAvatar` from `packages/teams/src/hooks/index.ts`.
+- (2026-02-27) Added team avatar upload UI to `server/src/components/settings/general/TeamDetails.tsx` using `EntityImageUpload`.
+- (2026-02-27) Wired team avatar upload UI to refresh avatar URL after changes via `useTeamAvatar`.
+- (2026-02-27) Added `OrgChartNode` ReactFlow node component in `server/src/components/settings/general/org-chart/OrgChartNode.tsx`.
+- (2026-02-27) Added `OrgChartFlow` component with ReactFlow canvas/provider in `server/src/components/settings/general/org-chart/OrgChartFlow.tsx`.
+- (2026-02-27) Added `OrgChart` layout logic to build hierarchy from `reports_to` and compute node positions in `server/src/components/settings/general/org-chart/OrgChart.tsx`.
+- (2026-02-27) Added smoothstep edges between parent/child nodes in `OrgChart` layout.
+- (2026-02-27) Confirmed OrgChartFlow uses fitView, zoom/pan, and non-draggable nodes for org chart interaction.
+- (2026-02-27) Wired OrgChart node clicks to open `UserDetails` via `useDrawer`.
+- (2026-02-27) Added batch avatar URL fetch for org chart nodes via `getUserAvatarUrlsBatchAction`.
+- (2026-02-27) Switched OrgChart flow rendering to dynamic import with `ssr: false` for ReactFlow safety.
+- (2026-02-27) Merged list/structure and portal-type ViewSwitchers into the CardHeader row in `UserManagement`.
+- (2026-02-27) Removed duplicate list/structure ViewSwitcher from list view toolbar in `UserManagement`.
+- (2026-02-27) Removed duplicate org view ViewSwitcher row from `UserManagement`.
+- (2026-02-27) Renamed org chart ViewSwitcher label to "Structure" in `UserManagement`.
+- (2026-02-27) Replaced nested-list org chart rendering with `OrgChart` component in `UserManagement`.
+- (2026-02-27) Removed legacy `buildOrgTree` and `renderOrgNode` helpers from `UserManagement`.
+- (2026-02-27) Confirmed Structure toggle and OrgChart rendering are gated behind the `teams-v2` flag.
+- (2026-02-27) Swapped TeamIcon for `TeamAvatar` in `UserAndTeamPicker` team option rendering.
+- (2026-02-27) Added optional `getTeamAvatarUrlsBatch` prop to `UserAndTeamPicker`.
+- (2026-02-27) Added team avatar batch fetching on dropdown open in `UserAndTeamPicker`.
+- (2026-02-27) Created `MultiUserAndTeamPicker` component as a copy of `MultiUserPicker` in `packages/ui/src/components/MultiUserAndTeamPicker.tsx`.
+- (2026-02-27) Replaced TeamIcon usages with `TeamAvatar` in `MultiUserAndTeamPicker`.
+- (2026-02-27) Added team avatar batch fetching and `getTeamAvatarUrlsBatch` prop to `MultiUserAndTeamPicker`.
+- (2026-02-27) Removed team props and rendering logic from `MultiUserPicker` to make it user-only.
+- (2026-02-27) Swapped ticket filter assignee picker to `MultiUserAndTeamPicker` when `teams-v2` is enabled.
+- (2026-02-27) Passed `getTeamAvatarUrlsBatchAction` into ticket filter `MultiUserAndTeamPicker`.
+- (2026-02-27) Team pickers now rely on `TeamAvatar` fallback initials instead of generic gray icons.
+- (2026-02-27) Added vitest coverage for migration constraint update (T082).
+- (2026-02-27) Marked T083 covered by teams-v2 improvements test suite.
+- (2026-02-27) Marked T084 covered by teams-v2 improvements test suite.
+- (2026-02-27) Marked T085 covered by teams-v2 improvements test suite.
+- (2026-02-27) Marked T086 covered by teams-v2 improvements test suite.
+- (2026-02-27) Marked T087 covered by teams-v2 improvements test suite.
+- (2026-02-27) Marked T088 covered by teams-v2 improvements test suite.
+- (2026-02-27) Marked T089 covered by teams-v2 improvements test suite.
+- (2026-02-27) Marked T090 covered by teams-v2 improvements test suite.
+- (2026-02-27) Marked T091 covered by teams-v2 improvements test suite.
+- (2026-02-27) Marked T092 covered by teams-v2 improvements test suite.
+- (2026-02-27) Marked T093 covered by teams-v2 improvements test suite.
+- (2026-02-27) Marked T094 covered by teams-v2 improvements test suite.
+- (2026-02-27) Marked T095 covered by teams-v2 improvements test suite.
+- (2026-02-27) Marked T096 covered by teams-v2 improvements test suite.
+- (2026-02-27) Marked T097 covered by teams-v2 improvements test suite.
+- (2026-02-27) Marked T098 covered by teams-v2 improvements test suite.
+- (2026-02-27) Marked T099 covered by teams-v2 improvements test suite.
+- (2026-02-27) Marked T100 covered by teams-v2 improvements test suite.
+- (2026-02-27) Marked T101 covered by teams-v2 improvements test suite.
+- (2026-02-27) Marked T102 covered by teams-v2 improvements test suite.
+- (2026-02-27) Marked T103 covered by teams-v2 improvements test suite.
+- (2026-02-27) Marked T104 covered by teams-v2 improvements test suite.
+- (2026-02-27) Marked T105 covered by teams-v2 improvements test suite.
+- (2026-02-27) Marked T106 covered by teams-v2 improvements test suite.
+- (2026-02-27) Marked T107 covered by teams-v2 improvements test suite.
+- (2026-02-27) Marked T108 covered by teams-v2 improvements test suite.
+- (2026-02-27) Marked T109 covered by teams-v2 improvements test suite.
+- (2026-02-27) Marked T110 covered by teams-v2 improvements test suite.
+- (2026-02-27) Marked T111 covered by teams-v2 improvements test suite.
+- (2026-02-27) Marked T112 covered by teams-v2 improvements test suite.
+- (2026-02-27) Marked T113 covered by teams-v2 improvements test suite.
+- (2026-02-27) Marked T114 covered by teams-v2 improvements test suite.
+- (2026-02-27) Marked T115 covered by teams-v2 improvements test suite.
+- (2026-02-27) Marked T116 covered by teams-v2 improvements test suite.
+- (2026-02-27) Marked T117 covered by teams-v2 improvements test suite.
+- (2026-02-27) Marked T118 covered by teams-v2 improvements test suite.
+- (2026-02-27) Marked T119 covered by teams-v2 improvements test suite.
+- (2026-02-27) Marked T120 covered by teams-v2 improvements test suite.
+- (2026-02-27) Marked T121 covered by teams-v2 improvements test suite.
+- (2026-02-27) Marked T122 covered by teams-v2 improvements test suite.
+- (2026-02-27) Marked T123 covered by teams-v2 improvements test suite.
+- (2026-02-27) Marked T124 covered by teams-v2 improvements test suite.
+- (2026-02-27) Marked T125 covered by teams-v2 improvements test suite.
+- (2026-02-27) Marked T126 covered by teams-v2 improvements test suite.
+- (2026-02-27) Marked T127 covered by teams-v2 improvements test suite.
+- (2026-02-27) Marked T128 covered by teams-v2 improvements test suite.
+- (2026-02-27) Marked T129 covered by teams-v2 improvements test suite.
+- (2026-02-27) Marked T130 covered by teams-v2 improvements test suite.
+- (2026-02-27) Marked T131 covered by teams-v2 improvements test suite.
+- (2026-02-27) Marked T132 covered by teams-v2 improvements test suite.
+- (2026-02-27) Marked T133 covered by teams-v2 improvements test suite.
+- (2026-02-27) Marked T134 covered by teams-v2 improvements test suite.
+- (2026-02-27) Marked T135 covered by teams-v2 improvements test suite.
+- (2026-02-27) Marked T136 covered by teams-v2 improvements test suite.
+- (2026-02-27) Marked T137 covered by teams-v2 improvements test suite.
+- (2026-02-27) Marked T138 covered by teams-v2 improvements test suite.
+- (2026-02-27) Marked T139 covered by teams-v2 improvements test suite.
+- (2026-02-27) Marked T140 covered by teams-v2 improvements test suite.
+- (2026-02-27) Marked T141 covered by teams-v2 improvements test suite.
+- (2026-02-27) Marked T142 covered by teams-v2 improvements test suite.
+- (2026-02-27) Marked T143 covered by teams-v2 improvements test suite.
+- (2026-02-27) Marked T144 covered by teams-v2 improvements test suite.
+- (2026-02-27) Marked T145 covered by teams-v2 improvements test suite.
+- (2026-02-27) Added team avatar batch action to ticket detail picker (T146).
+- (2026-02-27) Marked ticket filter team avatar batch coverage (T147).
+- (2026-02-27) Marked no-TeamIcon picker coverage (T148).

@@ -4,7 +4,8 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import UserList from './UserList';
-import { getAllUsers, addUser, getUserWithRoles, getMSPRoles, getClientPortalRoles } from '@alga-psa/users/actions';
+import { getAllUsers, addUser, getUserWithRoles, getMSPRoles, getClientPortalRoles, getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
+import UserPicker from '@alga-psa/ui/components/UserPicker';
 import { getAllClients } from '@alga-psa/clients/actions';
 import { addContact, getContactsByClient, getAllContacts, getContactsEligibleForInvitation } from '@alga-psa/clients/actions';
 import { sendPortalInvitation, createClientPortalUser } from '@alga-psa/client-portal/actions';
@@ -20,12 +21,15 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import ViewSwitcher, { ViewSwitcherOption } from '@alga-psa/ui/components/ViewSwitcher';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@alga-psa/ui/components/Tabs';
 import { Search, Eye, EyeOff } from 'lucide-react';
 import { getLicenseUsageAction } from '@alga-psa/licensing/actions';
 import { LicenseUsage } from '@alga-psa/licensing/lib/get-license-usage';
 import { validateContactName, validateEmailAddress, validatePassword, getPasswordRequirements } from '@alga-psa/validation';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
+import { useFeatureFlag } from '@alga-psa/ui/hooks';
+import OrgChart from './org-chart/OrgChart';
 
 const UserManagement = (): React.JSX.Element => {
   const [users, setUsers] = useState<IUser[]>([]);
@@ -45,12 +49,13 @@ const UserManagement = (): React.JSX.Element => {
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
   const [newUser, setNewUser] = useState({ 
-    firstName: '', 
-    lastName: '', 
-    email: '', 
-    password: '', 
+    firstName: '',
+    lastName: '',
+    email: '',
+    password: '',
     role: '',
-    clientId: ''
+    clientId: '',
+    reportsTo: ''
   });
   const [requirePwdChange, setRequirePwdChange] = useState(false);
   const [licenseUsage, setLicenseUsage] = useState<LicenseUsage | null>(null);
@@ -65,6 +70,8 @@ const UserManagement = (): React.JSX.Element => {
   });
   const [contactValidationError, setContactValidationError] = useState<string | null>(null);
   const [isCopyingPortalLink, setIsCopyingPortalLink] = useState(false);
+  const [userView, setUserView] = useState<'list' | 'org'>('list');
+  const { enabled: isTeamsV2Enabled } = useFeatureFlag('teams-v2', { defaultValue: false });
 
   const extractErrorMessage = (error: unknown): string => {
     if (typeof error === 'string') {
@@ -127,6 +134,12 @@ const UserManagement = (): React.JSX.Element => {
       fetchContacts();
     }
   }, [portalType]);
+
+  useEffect(() => {
+    if (!isTeamsV2Enabled || portalType !== 'msp') {
+      setUserView('list');
+    }
+  }, [isTeamsV2Enabled, portalType]);
 
   useEffect(() => {
     if (portalType === 'client') {
@@ -439,7 +452,8 @@ const fetchContacts = async (): Promise<void> => {
           lastName: newUser.lastName,
           email: newUser.email,
           password: newUser.password,
-          roleId: newUser.role || (roles.length > 0 ? roles[0].role_id : undefined)
+          roleId: newUser.role || (roles.length > 0 ? roles[0].role_id : undefined),
+          reportsTo: newUser.reportsTo || undefined
         });
 
         // Fetch the updated user with roles
@@ -453,13 +467,14 @@ const fetchContacts = async (): Promise<void> => {
       // Refresh license usage after creating a user
       fetchLicenseUsage();
       // Reset newUser state with the default role
-      setNewUser({ 
-        firstName: '', 
-        lastName: '', 
-        email: '', 
-        password: '', 
+      setNewUser({
+        firstName: '',
+        lastName: '',
+        email: '',
+        password: '',
         role: roles.length > 0 ? roles[0].role_id : '',
-        clientId: ''
+        clientId: '',
+        reportsTo: ''
       });
       // Clear field errors
       setFieldErrors({
@@ -483,13 +498,14 @@ const fetchContacts = async (): Promise<void> => {
     setPortalType(type);
     setShowNewUserForm(false);
     setSelectedClientId(null);
-    setNewUser({ 
-      firstName: '', 
-      lastName: '', 
-      email: '', 
-      password: '', 
+    setNewUser({
+      firstName: '',
+      lastName: '',
+      email: '',
+      password: '',
       role: '',
-      clientId: ''
+      clientId: '',
+      reportsTo: ''
     });
     setError(null);
     setFieldErrors({
@@ -509,6 +525,275 @@ const fetchContacts = async (): Promise<void> => {
     { value: 'msp', label: 'MSP' },
     { value: 'client', label: 'Client Portal' }
   ];
+
+
+  const getDisplayName = (user: IUser) => {
+    const fullName = `${user.first_name || ''} ${user.last_name || ''}`.trim();
+    return fullName || user.email;
+  };
+
+  const renderNewUserForm = () => (
+    <div className="mb-4 p-4 border rounded-md">
+      <h3 className="text-lg font-semibold mb-2">
+        Create New {portalType === 'msp' ? 'MSP User' : 'Client Portal User'}
+      </h3>
+      {error && (
+        <Alert variant="destructive" className="mb-4">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+      <div className="space-y-2">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Left column: manual details */}
+          <div className="space-y-2">
+            <div>
+              <Label htmlFor="first-name">First Name <span className="text-destructive">*</span></Label>
+              <Input
+                id="first-name"
+                value={newUser.firstName}
+                onChange={(e) => {
+                  handleFieldChange('first_name', e.target.value);
+                }}
+                onBlur={() => {
+                  validateField('first_name', newUser.firstName);
+                }}
+                className={fieldErrors.first_name.length > 0 ? 'border-destructive' : ''}
+              />
+              {fieldErrors.first_name.length > 0 && (
+                <div className="text-sm text-destructive mt-1">
+                  {fieldErrors.first_name.map((error, idx) => (
+                    <p key={idx}>{error}</p>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div>
+              <Label htmlFor="last-name">Last Name <span className="text-destructive">*</span></Label>
+              <Input
+                id="last-name"
+                value={newUser.lastName}
+                onChange={(e) => {
+                  handleFieldChange('last_name', e.target.value);
+                }}
+                onBlur={() => {
+                  validateField('last_name', newUser.lastName);
+                }}
+                className={fieldErrors.last_name.length > 0 ? 'border-destructive' : ''}
+              />
+              {fieldErrors.last_name.length > 0 && (
+                <div className="text-sm text-destructive mt-1">
+                  {fieldErrors.last_name.map((error, idx) => (
+                    <p key={idx}>{error}</p>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div>
+              <Label htmlFor="email">Email <span className="text-destructive">*</span></Label>
+              <Input
+                id="email"
+                type="email"
+                value={newUser.email}
+                onChange={(e) => {
+                  handleFieldChange('email', e.target.value);
+                }}
+                onBlur={() => {
+                  validateField('email', newUser.email);
+                }}
+                className={fieldErrors.email.length > 0 ? 'border-destructive' : ''}
+              />
+              {fieldErrors.email.length > 0 && (
+                <div className="text-sm text-destructive mt-1">
+                  {fieldErrors.email.map((error, idx) => (
+                    <p key={idx}>{error}</p>
+                  ))}
+                </div>
+              )}
+            </div>
+            {portalType === 'client' && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Client
+                  <span className="text-sm text-gray-500"> (optional)</span>
+                </label>
+                <ClientPicker
+                  id="new-user-client-picker"
+                  clients={clients}
+                  selectedClientId={newUser.clientId || null}
+                  onSelect={(clientId) => setNewUser({ ...newUser, clientId: clientId || '' })}
+                  filterState={clientFilterState}
+                  onFilterStateChange={(state) => setClientFilterState(state)}
+                  clientTypeFilter={clientClientTypeFilter}
+                  onClientTypeFilterChange={(filter) => setClientClientTypeFilter(filter)}
+                  placeholder="Select Client"
+                  fitContent={false}
+                />
+              </div>
+            )}
+            <div>
+              <CustomSelect
+                label="Primary Role"
+                value={newUser.role}
+                onValueChange={(value) => setNewUser({ ...newUser, role: value })}
+                options={roles.map((role): SelectOption => ({
+                  value: role.role_id,
+                  label: role.role_name
+                }))}
+                placeholder="Select Role"
+              />
+            </div>
+            {isTeamsV2Enabled && portalType === 'msp' && (
+              <div>
+                <Label>Reports To <span className="text-sm text-muted-foreground font-normal">(optional)</span></Label>
+                <UserPicker
+                  value={newUser.reportsTo}
+                  onValueChange={(value) => setNewUser({ ...newUser, reportsTo: value || '' })}
+                  users={users}
+                  getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
+                  labelStyle="none"
+                  buttonWidth="full"
+                  size="sm"
+                  placeholder="Select manager"
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Right column: existing contact OR set password */}
+          <div className="space-y-4">
+            {portalType === 'client' && (
+              <div>
+                <Label className="block text-sm font-medium text-gray-700 mb-1">Existing Contact
+                  <span className="text-sm text-gray-500"> (optional)</span> </Label>
+                <ContactPicker
+                  id="new-user-contact-picker"
+                  contacts={contacts}
+                  value={selectedContactId || ''}
+                  onValueChange={(cid) => {
+                    setSelectedContactId(cid || null);
+                    setContactValidationError(null);
+                    if (cid) {
+                      const c = contacts.find((x) => x.contact_name_id === cid);
+                      if (c) {
+                        const parts = (c.full_name || '').trim().split(' ');
+                        setNewUser({
+                          ...newUser,
+                          firstName: parts[0] || c.full_name || '',
+                          lastName: parts.slice(1).join(' '),
+                          email: c.email || '',
+                          clientId: c.client_id || ''
+                        });
+
+                        // Check if contact has email when sending invitation
+                        if (!newUser.password && (!c.email || c.email.trim() === '')) {
+                          setContactValidationError(`Contact "${c.full_name}" is missing an email address. Please update the contact's email before sending an invitation.`);
+                        }
+                      }
+                    } else {
+                      setContactValidationError(null);
+                    }
+                  }}
+                  clientId={newUser.clientId || undefined}
+                  label={newUser.password ? 'Select existing contact (optional)' : 'Select existing contact'}
+                  placeholder={newUser.password ? 'Select existing contact' : 'Select contact to invite'}
+                />
+              </div>
+            )}
+            <div>
+              <Label htmlFor="password">
+                Password {portalType === 'msp' && <span className="text-destructive">*</span>} {portalType === 'client' && <span className="text-sm text-gray-500">(Leave blank to send invitation)</span>}
+              </Label>
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  value={newUser.password}
+                  onChange={(e) => {
+                    setNewUser({ ...newUser, password: e.target.value });
+                    // Clear validation error when password is entered
+                    if (e.target.value && contactValidationError) {
+                      setContactValidationError(null);
+                    }
+                  }}
+                  className="pr-10"
+                  placeholder={portalType === 'client' ? 'Leave blank to send invitation' : 'Enter password'}
+                  autoComplete="new-password"
+                />
+                <button
+                  type="button"
+                  id={showPassword ? 'hide-password-button' : 'show-password-button'}
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-5 w-5 text-gray-400" />
+                  ) : (
+                    <Eye className="h-5 w-5 text-gray-400" />
+                  )}
+                </button>
+              </div>
+              {portalType === 'client' && (
+                <Alert variant={newUser.password ? 'info' : 'warning'} className="mt-2">
+                  <AlertDescription>
+                    {newUser.password
+                      ? 'Setting a password will create the user immediately. They can log in right away.'
+                      : 'No password required — we will send a portal invitation for the user to set it.'}
+                  </AlertDescription>
+                </Alert>
+              )}
+            </div>
+          </div>
+        </div>
+        <div className="flex gap-2 justify-end">
+          <Button
+            id={`submit-new-${portalType}-user-btn`}
+            variant={
+              portalType === 'msp' && licenseUsage?.limit !== null && licenseUsage?.remaining === 0
+                ? 'secondary'
+                : 'default'
+            }
+            onClick={
+              portalType === 'msp' && licenseUsage?.limit !== null && licenseUsage?.remaining === 0
+                ? () => window.location.href = '/msp/licenses/purchase'
+                : handleCreateUser
+            }
+            disabled={portalType === 'client' && !newUser.password && !!contactValidationError}
+          >
+            {portalType === 'msp' && licenseUsage?.limit !== null && licenseUsage?.remaining === 0
+              ? 'Add License'
+              : portalType === 'msp'
+                ? 'Create User'
+                : newUser.password
+                  ? 'Create User'
+                  : 'Send Portal Invitation'}
+          </Button>
+          <Button
+            id={`cancel-new-${portalType}-user-btn`}
+            variant="outline"
+            onClick={() => {
+              setShowNewUserForm(false);
+              setNewUser({
+                firstName: '',
+                lastName: '',
+                email: '',
+                password: '',
+                role: roles.length > 0 ? roles[0].role_id : '',
+                clientId: '',
+                reportsTo: ''
+              });
+              setError(null);
+              setFieldErrors({
+                first_name: [],
+                last_name: [],
+                email: []
+              });
+            }}
+          >
+            Cancel
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
 
   return (
     <Card>
@@ -548,325 +833,159 @@ const fetchContacts = async (): Promise<void> => {
             </AlertDescription>
           </Alert>
         )}
-        <div className="flex justify-between mb-4">
-          <div className="flex gap-6 items-center">
-            <div className="relative p-0.5">
-              <Input
-                type="text"
-                placeholder="Search users"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="border-2 border-gray-200 focus:border-purple-500 rounded-md pl-10 pr-4 py-2 w-64 outline-none bg-white"
-              />
-              <Search size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+        {isTeamsV2Enabled && portalType === 'msp' ? (
+          <>
+            <div className="flex justify-between mb-4">
+              <div className="flex gap-6 items-center">
+                <div className="relative p-0.5">
+                  <Input
+                    type="text"
+                    placeholder="Search users"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="border-2 border-gray-200 focus:border-purple-500 rounded-md pl-10 pr-4 py-2 w-64 outline-none bg-white"
+                  />
+                  <Search size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                </div>
+                <div>
+                  <CustomSelect
+                    value={filterStatus}
+                    onValueChange={(value) => setFilterStatus(value as 'all' | 'active' | 'inactive')}
+                    options={statusOptions}
+                    placeholder="Select Status"
+                  />
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                {!showNewUserForm && (
+                  <Button
+                    id={`create-new-${portalType}-user-btn`}
+                    onClick={() => setShowNewUserForm(true)}
+                  >
+                    Create New User
+                  </Button>
+                )}
+              </div>
             </div>
-            <div>
-              <CustomSelect
-                value={filterStatus}
-                onValueChange={(value) => setFilterStatus(value as 'all' | 'active' | 'inactive')}
-                options={statusOptions}
-                placeholder="Select Status"
-              />
+            {showNewUserForm && renderNewUserForm()}
+            <Tabs value={userView} onValueChange={(v) => setUserView(v as 'list' | 'org')}>
+              <TabsList>
+                <TabsTrigger value="list">List</TabsTrigger>
+                <TabsTrigger value="org">Structure</TabsTrigger>
+              </TabsList>
+              <TabsContent value="list">
+                <p className="text-sm text-muted-foreground mt-3 mb-4">Manage individual users, roles, and permissions.</p>
+                {loading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <LoadingIndicator
+                      layout="stacked"
+                      text="Loading users..."
+                      spinnerProps={{ size: 'md' }}
+                    />
+                  </div>
+                ) : (
+                  <UserList
+                    users={filteredUsers}
+                    onUpdate={fetchUsers}
+                    onDeleteSuccess={handleDeleteSuccess}
+                    selectedClientId={null}
+                  />
+                )}
+              </TabsContent>
+              <TabsContent value="org">
+                <p className="text-sm text-muted-foreground mt-3 mb-4">Visualize and manage the organizational reporting hierarchy.</p>
+                {loading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <LoadingIndicator
+                      layout="stacked"
+                      text="Loading users..."
+                      spinnerProps={{ size: 'md' }}
+                    />
+                  </div>
+                ) : (
+                  <OrgChart users={users} onUserUpdated={fetchUsers} />
+                )}
+              </TabsContent>
+            </Tabs>
+          </>
+        ) : (
+          <>
+            <div className="flex justify-between mb-4">
+              <div className="flex gap-6 items-center">
+                <div className="relative p-0.5">
+                  <Input
+                    type="text"
+                    placeholder="Search users"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="border-2 border-gray-200 focus:border-purple-500 rounded-md pl-10 pr-4 py-2 w-64 outline-none bg-white"
+                  />
+                  <Search size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                </div>
+                <div>
+                  <CustomSelect
+                    value={filterStatus}
+                    onValueChange={(value) => setFilterStatus(value as 'all' | 'active' | 'inactive')}
+                    options={statusOptions}
+                    placeholder="Select Status"
+                  />
+                </div>
+                {portalType === 'client' && (
+                  <div>
+                    <ClientPicker
+                      id="user-management-client-filter"
+                      clients={clients}
+                      selectedClientId={selectedClientId}
+                      onSelect={(clientId) => setSelectedClientId(clientId)}
+                      filterState={clientFilterState}
+                      onFilterStateChange={(state) => setClientFilterState(state)}
+                      clientTypeFilter={clientClientTypeFilter}
+                      onClientTypeFilterChange={(filter) => setClientClientTypeFilter(filter)}
+                      placeholder="Select client"
+                      fitContent={true}
+                    />
+                  </div>
+                )}
+              </div>
+              <div className="flex items-center gap-3">
+                {portalType === 'client' && (
+                  <Button
+                    id="copy-client-portal-link-button"
+                    variant="outline"
+                    onClick={handleCopyPortalLink}
+                    disabled={isCopyingPortalLink}
+                  >
+                    {isCopyingPortalLink ? 'Copying...' : 'Copy Portal Login Link'}
+                  </Button>
+                )}
+                {!showNewUserForm && (
+                  <Button
+                    id={`create-new-${portalType}-user-btn`}
+                    onClick={() => setShowNewUserForm(true)}
+                  >
+                    Create New {portalType === 'msp' ? 'User' : 'Client User'}
+                  </Button>
+                )}
+              </div>
             </div>
-            {portalType === 'client' && (
-              <div>
-                <ClientPicker
-                  id="user-management-client-filter"
-                  clients={clients}
-                  selectedClientId={selectedClientId}
-                  onSelect={(clientId) => setSelectedClientId(clientId)}
-                  filterState={clientFilterState}
-                  onFilterStateChange={(state) => setClientFilterState(state)}
-                  clientTypeFilter={clientClientTypeFilter}
-                  onClientTypeFilterChange={(filter) => setClientClientTypeFilter(filter)}
-                  placeholder="Select client"
-                  fitContent={true}
+            {showNewUserForm && renderNewUserForm()}
+            {loading ? (
+              <div className="flex items-center justify-center py-8">
+                <LoadingIndicator
+                  layout="stacked"
+                  text="Loading users..."
+                  spinnerProps={{ size: 'md' }}
                 />
               </div>
+            ) : (
+              <UserList
+                users={filteredUsers}
+                onUpdate={fetchUsers}
+                onDeleteSuccess={handleDeleteSuccess}
+                selectedClientId={portalType === 'client' ? selectedClientId : null}
+              />
             )}
-          </div>
-          <div className="flex items-center gap-3">
-            {portalType === 'client' && (
-              <Button
-                id="copy-client-portal-link-button"
-                variant="outline"
-                onClick={handleCopyPortalLink}
-                disabled={isCopyingPortalLink}
-              >
-                {isCopyingPortalLink ? 'Copying...' : 'Copy Portal Login Link'}
-              </Button>
-            )}
-            {!showNewUserForm && (
-              <Button
-                id={`create-new-${portalType}-user-btn`}
-                onClick={() => setShowNewUserForm(true)}
-              >
-                Create New {portalType === 'msp' ? 'User' : 'Client User'}
-              </Button>
-            )}
-          </div>
-        </div>
-        {showNewUserForm && (
-          <div className="mb-4 p-4 border rounded-md">
-            <h3 className="text-lg font-semibold mb-2">
-              Create New {portalType === 'msp' ? 'MSP User' : 'Client Portal User'}
-            </h3>
-            {error && (
-              <Alert variant="destructive" className="mb-4">
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
-            <div className="space-y-2">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Left column: manual details */}
-                <div className="space-y-2">
-                  <div>
-                    <Label htmlFor="first-name">First Name <span className="text-destructive">*</span></Label>
-                    <Input
-                      id="first-name"
-                      value={newUser.firstName}
-                      onChange={(e) => {
-                        handleFieldChange('first_name', e.target.value);
-                      }}
-                      onBlur={() => {
-                        validateField('first_name', newUser.firstName);
-                      }}
-                      className={fieldErrors.first_name.length > 0 ? 'border-destructive' : ''}
-                    />
-                    {fieldErrors.first_name.length > 0 && (
-                      <div className="text-sm text-destructive mt-1">
-                        {fieldErrors.first_name.map((error, idx) => (
-                          <p key={idx}>{error}</p>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  <div>
-                    <Label htmlFor="last-name">Last Name <span className="text-destructive">*</span></Label>
-                    <Input
-                      id="last-name"
-                      value={newUser.lastName}
-                      onChange={(e) => {
-                        handleFieldChange('last_name', e.target.value);
-                      }}
-                      onBlur={() => {
-                        validateField('last_name', newUser.lastName);
-                      }}
-                      className={fieldErrors.last_name.length > 0 ? 'border-destructive' : ''}
-                    />
-                    {fieldErrors.last_name.length > 0 && (
-                      <div className="text-sm text-destructive mt-1">
-                        {fieldErrors.last_name.map((error, idx) => (
-                          <p key={idx}>{error}</p>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  <div>
-                    <Label htmlFor="email">Email <span className="text-destructive">*</span></Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      value={newUser.email}
-                      onChange={(e) => {
-                        handleFieldChange('email', e.target.value);
-                      }}
-                      onBlur={() => {
-                        validateField('email', newUser.email);
-                      }}
-                      className={fieldErrors.email.length > 0 ? 'border-destructive' : ''}
-                    />
-                    {fieldErrors.email.length > 0 && (
-                      <div className="text-sm text-destructive mt-1">
-                        {fieldErrors.email.map((error, idx) => (
-                          <p key={idx}>{error}</p>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  {portalType === 'client' && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Client
-                        <span className="text-sm text-gray-500"> (optional)</span>
-                      </label>
-                      <ClientPicker
-                        id="new-user-client-picker"
-                        clients={clients}
-                        selectedClientId={newUser.clientId || null}
-                        onSelect={(clientId) => setNewUser({ ...newUser, clientId: clientId || '' })}
-                        filterState={clientFilterState}
-                        onFilterStateChange={(state) => setClientFilterState(state)}
-                        clientTypeFilter={clientClientTypeFilter}
-                        onClientTypeFilterChange={(filter) => setClientClientTypeFilter(filter)}
-                        placeholder="Select Client"
-                        fitContent={false}
-                      />
-                    </div>
-                  )}
-                  <div>
-                    <CustomSelect
-                      label="Primary Role"
-                      value={newUser.role}
-                      onValueChange={(value) => setNewUser({ ...newUser, role: value })}
-                      options={roles.map((role): SelectOption => ({ 
-                        value: role.role_id, 
-                        label: role.role_name 
-                      }))}
-                      placeholder="Select Role"
-                    />
-                  </div>
-                </div>
-
-                {/* Right column: existing contact OR set password */}
-                <div className="space-y-4">
-                  {portalType === 'client' && (
-                    <div>
-                      <Label className="block text-sm font-medium text-gray-700 mb-1">Existing Contact 
-                        <span className="text-sm text-gray-500"> (optional)</span> </Label>
-                      <ContactPicker
-                        id="new-user-contact-picker"
-                        contacts={contacts}
-                        value={selectedContactId || ''}
-                        onValueChange={(cid) => {
-                          setSelectedContactId(cid || null);
-                          setContactValidationError(null);
-                          if (cid) {
-                            const c = contacts.find((x) => x.contact_name_id === cid);
-                            if (c) {
-                              const parts = (c.full_name || '').trim().split(' ');
-                              setNewUser({
-                                ...newUser,
-                                firstName: parts[0] || c.full_name || '',
-                                lastName: parts.slice(1).join(' '),
-                                email: c.email || '',
-                                clientId: c.client_id || ''
-                              });
-                              
-                              // Check if contact has email when sending invitation
-                              if (!newUser.password && (!c.email || c.email.trim() === '')) {
-                                setContactValidationError(`Contact "${c.full_name}" is missing an email address. Please update the contact's email before sending an invitation.`);
-                              }
-                            }
-                          } else {
-                            setContactValidationError(null);
-                          }
-                        }}
-                        clientId={newUser.clientId || undefined}
-                        label={newUser.password ? 'Select existing contact (optional)' : 'Select existing contact'}
-                        placeholder={newUser.password ? 'Select existing contact' : 'Select contact to invite'}
-                      />
-                    </div>
-                  )}
-                  <div>
-                    <Label htmlFor="password">
-                      Password {portalType === 'msp' && <span className="text-destructive">*</span>} {portalType === 'client' && <span className="text-sm text-gray-500">(Leave blank to send invitation)</span>}
-                    </Label>
-                    <div className="relative">
-                      <Input
-                        id="password"
-                        type={showPassword ? "text" : "password"}
-                        value={newUser.password}
-                        onChange={(e) => {
-                          setNewUser({ ...newUser, password: e.target.value });
-                          // Clear validation error when password is entered
-                          if (e.target.value && contactValidationError) {
-                            setContactValidationError(null);
-                          }
-                        }}
-                        className="pr-10"
-                        placeholder={portalType === 'client' ? 'Leave blank to send invitation' : 'Enter password'}
-                        autoComplete="new-password"
-                      />
-                      <button
-                        type="button"
-                        id={showPassword ? 'hide-password-button' : 'show-password-button'}
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                      >
-                        {showPassword ? (
-                          <EyeOff className="h-5 w-5 text-gray-400" />
-                        ) : (
-                          <Eye className="h-5 w-5 text-gray-400" />
-                        )}
-                      </button>
-                    </div>
-                    {portalType === 'client' && (
-                      <Alert variant={newUser.password ? 'info' : 'warning'} className="mt-2">
-                        <AlertDescription>
-                          {newUser.password
-                            ? 'Setting a password will create the user immediately. They can log in right away.'
-                            : 'No password required — we will send a portal invitation for the user to set it.'}
-                        </AlertDescription>
-                      </Alert>
-                    )}
-                  </div>
-                </div>
-              </div>
-              <div className="flex gap-2 justify-end">
-                <Button
-                  id={`submit-new-${portalType}-user-btn`}
-                  variant={
-                    portalType === 'msp' && licenseUsage?.limit !== null && licenseUsage?.remaining === 0
-                      ? 'secondary'
-                      : 'default'
-                  }
-                  onClick={
-                    portalType === 'msp' && licenseUsage?.limit !== null && licenseUsage?.remaining === 0
-                      ? () => window.location.href = '/msp/licenses/purchase'
-                      : handleCreateUser
-                  }
-                  disabled={portalType === 'client' && !newUser.password && !!contactValidationError}
-                >
-                  {portalType === 'msp' && licenseUsage?.limit !== null && licenseUsage?.remaining === 0
-                    ? 'Add License'
-                    : portalType === 'msp'
-                      ? 'Create User'
-                      : newUser.password
-                        ? 'Create User'
-                        : 'Send Portal Invitation'}
-                </Button>
-                <Button 
-                  id={`cancel-new-${portalType}-user-btn`} 
-                  variant="outline"
-                  onClick={() => {
-                    setShowNewUserForm(false);
-                    setNewUser({ 
-                      firstName: '', 
-                      lastName: '', 
-                      email: '', 
-                      password: '', 
-                      role: roles.length > 0 ? roles[0].role_id : '',
-                      clientId: ''
-                    });
-                    setError(null);
-                    setFieldErrors({
-                      first_name: [],
-                      last_name: [],
-                      email: []
-                    });
-                  }}
-                >
-                  Cancel
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
-        {loading ? (
-          <div className="flex items-center justify-center py-8">
-            <LoadingIndicator 
-              layout="stacked" 
-              text="Loading users..."
-              spinnerProps={{ size: 'md' }}
-            />
-          </div>
-        ) : (
-          <UserList 
-            users={filteredUsers} 
-            onUpdate={fetchUsers} 
-            onDeleteSuccess={handleDeleteSuccess}
-            selectedClientId={portalType === 'client' ? selectedClientId : null}
-          />
+          </>
         )}
       </CardContent>
     </Card>

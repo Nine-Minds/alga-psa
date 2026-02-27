@@ -46,6 +46,7 @@ export const ticketSchema = z.object({
   updated_by: z.string().uuid().nullable(),
   closed_by: z.string().uuid().nullable(),
   assigned_to: z.string().uuid().nullable(),
+  assigned_team_id: z.string().uuid().nullable().optional(),
   escalated: z.boolean().nullable().optional(),
   escalation_level: z.number().int().min(1).max(3).nullable().optional(),
   escalated_at: z.string().datetime().nullable().optional(),
@@ -92,6 +93,7 @@ const baseTicketSchema = z.object({
   contact_name_id: z.string().uuid().nullable(),
   closed_by: z.string().uuid().nullable(),
   assigned_to: z.string().uuid().nullable(),
+  assigned_team_id: z.string().uuid().nullable().optional(),
   escalated: z.boolean().nullable().optional(),
   escalation_level: z.number().int().min(1).max(3).nullable().optional(),
   escalated_at: z.string().datetime().nullable().optional(),
@@ -142,6 +144,7 @@ export const ticketListFiltersSchema = z.object({
   showOpenOnly: z.boolean().optional(),
   tags: z.array(z.string()).optional(),
   assignedToIds: z.array(z.string().uuid()).optional(),
+  assignedTeamIds: z.array(z.string().uuid()).optional(),
   includeUnassigned: z.boolean().optional(),
   // Due date filters
   dueDateFilter: z

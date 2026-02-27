@@ -14,12 +14,13 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { Label } from '@alga-psa/ui/components/Label';
 import { getCurrentUser, getCurrentUserPermissions } from '@alga-psa/users/actions';
+import { getTeams, getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
 import { BoardPicker } from '@alga-psa/ui/components/settings/general/BoardPicker';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { findTagsByEntityIds } from '@alga-psa/tags/actions';
 import { TagFilter } from '@alga-psa/ui/components';
 import { useTagPermissions } from '@alga-psa/tags/hooks';
-import { IBoard, IClient, IUser } from '@alga-psa/types';
+import { IBoard, IClient, IUser, ITeam } from '@alga-psa/types';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
 import { DeleteEntityDialog } from '@alga-psa/ui';
@@ -31,13 +32,14 @@ import { fetchBundleChildrenForMaster } from '../actions/optimizedTicketActions'
 import { XCircle, Clock } from 'lucide-react';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
-import { useIntervalTracking } from '@alga-psa/ui/hooks';
+import { useIntervalTracking, useFeatureFlag } from '@alga-psa/ui/hooks';
 import type { TicketingDisplaySettings } from '../actions/ticketDisplaySettings';
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { createTicketColumns } from '@alga-psa/tickets/lib';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import MultiUserPicker from '@alga-psa/ui/components/MultiUserPicker';
+import MultiUserAndTeamPicker from '@alga-psa/ui/components/MultiUserAndTeamPicker';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
@@ -114,6 +116,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const BUNDLE_VIEW_STORAGE_KEY = 'tickets_bundle_view';
   // Pre-fetch tag permissions to prevent individual API calls
   useTagPermissions(['ticket']);
+  const { enabled: teamsV2Enabled } = useFeatureFlag('teams-v2', { defaultValue: false });
   
   const [tickets, setTickets] = useState<ITicketListItem[]>(initialTickets);
   const [selectedTicketIds, setSelectedTicketIds] = useState<Set<string>>(new Set());
@@ -129,6 +132,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
   const [bulkDeleteErrors, setBulkDeleteErrors] = useState<Array<{ ticketId: string; message: string }>>([]);
   const [additionalAgentAvatarUrls, setAdditionalAgentAvatarUrls] = useState<Record<string, string | null>>({});
+  const [teamAvatarUrls, setTeamAvatarUrls] = useState<Record<string, string | null>>({});
   const [isBundleDialogOpen, setIsBundleDialogOpen] = useState(false);
   const [bundleMasterTicketId, setBundleMasterTicketId] = useState<string | null>(null);
   const [bundleSyncUpdates, setBundleSyncUpdates] = useState(true);
@@ -155,7 +159,9 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
 
   // Assignee filter state
   const [selectedAssignees, setSelectedAssignees] = useState<string[]>(initialFilterValues.assignedToIds ?? []);
+  const [selectedTeams, setSelectedTeams] = useState<string[]>(initialFilterValues.assignedTeamIds ?? []);
   const [includeUnassigned, setIncludeUnassigned] = useState<boolean>(initialFilterValues.includeUnassigned ?? false);
+  const [teams, setTeams] = useState<ITeam[]>([]);
 
   // Due date filter state
   const [selectedDueDateFilter, setSelectedDueDateFilter] = useState<string>(initialFilterValues.dueDateFilter ?? 'all');
@@ -183,16 +189,34 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       initialFilterValues.categoryId ||
       (initialFilterValues.tags && initialFilterValues.tags.length > 0) ||
       (initialFilterValues.assignedToIds && initialFilterValues.assignedToIds.length > 0) ||
+      (initialFilterValues.assignedTeamIds && initialFilterValues.assignedTeamIds.length > 0) ||
       initialFilterValues.includeUnassigned ||
       (initialFilterValues.dueDateFilter && initialFilterValues.dueDateFilter !== 'all') ||
       initialFilterValues.dueDateFrom ||
       initialFilterValues.dueDateTo ||
       (initialFilterValues.slaStatusFilter && initialFilterValues.slaStatusFilter !== 'all')
     );
-  }, [initialFilterValues.boardId, initialFilterValues.clientId, initialFilterValues.statusId, initialFilterValues.priorityId, initialFilterValues.categoryId, initialFilterValues.tags, initialFilterValues.assignedToIds, initialFilterValues.includeUnassigned, initialFilterValues.dueDateFilter, initialFilterValues.dueDateFrom, initialFilterValues.dueDateTo, initialFilterValues.slaStatusFilter]);
+  }, [initialFilterValues.boardId, initialFilterValues.clientId, initialFilterValues.statusId, initialFilterValues.priorityId, initialFilterValues.categoryId, initialFilterValues.tags, initialFilterValues.assignedToIds, initialFilterValues.assignedTeamIds, initialFilterValues.includeUnassigned, initialFilterValues.dueDateFilter, initialFilterValues.dueDateFrom, initialFilterValues.dueDateTo, initialFilterValues.slaStatusFilter]);
 
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
   const [isLoadingSelf, setIsLoadingSelf] = useState(false);
+
+  useEffect(() => {
+    if (!teamsV2Enabled) {
+      setTeams([]);
+      setSelectedTeams([]);
+      return;
+    }
+    const loadTeams = async () => {
+      try {
+        const fetchedTeams = await getTeams();
+        setTeams(fetchedTeams);
+      } catch (error) {
+        console.error('Failed to load teams:', error);
+      }
+    };
+    loadTeams();
+  }, [teamsV2Enabled]);
 
   // Tag-related state
   const [selectedTags, setSelectedTags] = useState<string[]>(initialFilterValues.tags || []);
@@ -211,11 +235,12 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       searchQuery !== '' ||
       selectedTags.length > 0 ||
       selectedAssignees.length > 0 ||
+      selectedTeams.length > 0 ||
       includeUnassigned ||
       selectedDueDateFilter !== 'all' ||
       selectedResponseState !== 'all' ||
       selectedSlaStatus !== 'all';
-  }, [selectedBoard, selectedClient, selectedStatus, selectedPriority, selectedCategories, searchQuery, selectedTags, selectedAssignees, includeUnassigned, selectedDueDateFilter, selectedResponseState, selectedSlaStatus]);
+  }, [selectedBoard, selectedClient, selectedStatus, selectedPriority, selectedCategories, searchQuery, selectedTags, selectedAssignees, selectedTeams, includeUnassigned, selectedDueDateFilter, selectedResponseState, selectedSlaStatus]);
 
   const handleTableSortChange = useCallback((columnId: string, direction: 'asc' | 'desc') => {
     if (columnId === sortBy && direction === sortDirection) {
@@ -277,6 +302,38 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     };
 
     fetchAvatarUrls();
+  }, [tickets]);
+
+  // Fetch team avatar URLs when tickets change
+  useEffect(() => {
+    const fetchTeamAvatarUrls = async () => {
+      const teamIds = new Set<string>();
+      tickets.forEach(ticket => {
+        if (ticket.assigned_team_id) {
+          teamIds.add(ticket.assigned_team_id);
+        }
+      });
+
+      if (teamIds.size === 0) return;
+
+      const tenant = tickets[0]?.tenant;
+      if (!tenant) return;
+
+      try {
+        const avatarUrlsMap = await getTeamAvatarUrlsBatchAction(Array.from(teamIds), tenant);
+        const urlsRecord: Record<string, string | null> = {};
+        if (avatarUrlsMap instanceof Map) {
+          avatarUrlsMap.forEach((url, id) => { urlsRecord[id] = url; });
+        } else {
+          Object.entries(avatarUrlsMap as Record<string, string | null>).forEach(([id, url]) => { urlsRecord[id] = url; });
+        }
+        setTeamAvatarUrls(urlsRecord);
+      } catch (error) {
+        console.error('Failed to fetch team avatar URLs:', error);
+      }
+    };
+
+    fetchTeamAvatarUrls();
   }, [tickets]);
 
   // Sync selectedTags when initialFilterValues.tags changes (e.g., back/forward navigation)
@@ -404,6 +461,9 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     if (selectedAssignees.length > 0) {
       params.set('assignedToIds', selectedAssignees.join(','));
     }
+    if (teamsV2Enabled && selectedTeams.length > 0) {
+      params.set('assignedTeamIds', selectedTeams.join(','));
+    }
     if (includeUnassigned) {
       params.set('includeUnassigned', 'true');
     }
@@ -441,7 +501,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     if (pageSize !== 10) params.set('pageSize', String(pageSize));
 
     return params.toString();
-  }, [selectedBoard, selectedClient, selectedStatus, selectedPriority, selectedCategories, debouncedSearchQuery, boardFilterState, selectedAssignees, includeUnassigned, selectedDueDateFilter, dueDateFilterValue, bundleView, selectedResponseState, selectedTags, sortBy, sortDirection, currentPage, pageSize]);
+  }, [selectedBoard, selectedClient, selectedStatus, selectedPriority, selectedCategories, debouncedSearchQuery, boardFilterState, selectedAssignees, selectedTeams, includeUnassigned, selectedDueDateFilter, dueDateFilterValue, bundleView, selectedResponseState, selectedTags, sortBy, sortDirection, currentPage, pageSize, teamsV2Enabled]);
 
   const isFirstRender = useRef(true);
 
@@ -465,6 +525,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       showOpenOnly: selectedStatus === 'open',
       tags: selectedTags.length > 0 ? selectedTags : undefined,
       assignedToIds: selectedAssignees.length > 0 ? selectedAssignees : undefined,
+      assignedTeamIds: teamsV2Enabled && selectedTeams.length > 0 ? selectedTeams : undefined,
       includeUnassigned: includeUnassigned || undefined,
       dueDateFilter: selectedDueDateFilter !== 'all' ? selectedDueDateFilter as ITicketListFilters['dueDateFilter'] : undefined,
       dueDateFrom: selectedDueDateFilter === 'after' && dueDateFilterValue ? dueDateFilterValue.toISOString() : undefined,
@@ -488,11 +549,13 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     bundleView,
     selectedTags,
     selectedAssignees,
+    selectedTeams,
     includeUnassigned,
     selectedDueDateFilter,
     dueDateFilterValue,
     selectedResponseState,
     selectedSlaStatus,
+    teamsV2Enabled,
     // onFiltersChanged intentionally omitted - we want to trigger only when filter values change, not when the callback changes
     filtersHaveInitialValues
   ]);
@@ -938,6 +1001,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       showClient: true,
       onClientClick: onQuickViewClient,
       additionalAgentAvatarUrls,
+      teamAvatarUrls,
       isBundleExpanded: bundleView === 'bundled' ? isBundleExpanded : undefined,
       onToggleBundleExpanded: bundleView === 'bundled' ? toggleBundleExpanded : undefined,
     });
@@ -1015,6 +1079,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     handleTicketSelectionChange,
     selectedTicketIds,
     additionalAgentAvatarUrls,
+    teamAvatarUrls,
     isBundleExpanded,
     toggleBundleExpanded,
     bundleView,
@@ -1260,6 +1325,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     setBundleView(defaultBundleView);
     setSelectedTags([]);
     setSelectedAssignees([]);
+    setSelectedTeams([]);
     setIncludeUnassigned(false);
     setSelectedDueDateFilter(defaultDueDateFilter);
     setDueDateFilterValue(undefined);
@@ -1281,6 +1347,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       boardFilterState: defaultBoardFilterState,
       showOpenOnly: defaultStatus === 'open',
       assignedToIds: undefined,
+      assignedTeamIds: undefined,
       includeUnassigned: undefined,
       dueDateFilter: undefined,
       dueDateFrom: undefined,
@@ -1354,19 +1421,39 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                   onClientTypeFilterChange={handleClientTypeFilterChange}
                   fitContent={true}
                 />
-                <MultiUserPicker
-                  id={`${id}-assignee-filter`}
-                  users={initialUsers}
-                  values={selectedAssignees}
-                  onValuesChange={setSelectedAssignees}
-                  getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
-                  filterMode={true}
-                  includeUnassigned={includeUnassigned}
-                  onUnassignedChange={setIncludeUnassigned}
-                  placeholder="All Assignees"
-                  showSearch={true}
-                  compactDisplay={true}
-                />
+                {teamsV2Enabled ? (
+                  <MultiUserAndTeamPicker
+                    id={`${id}-assignee-filter`}
+                    users={initialUsers}
+                    values={selectedAssignees}
+                    onValuesChange={setSelectedAssignees}
+                    teams={teams}
+                    teamValues={selectedTeams}
+                    onTeamValuesChange={setSelectedTeams}
+                    getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
+                    getTeamAvatarUrlsBatch={getTeamAvatarUrlsBatchAction}
+                    filterMode={true}
+                    includeUnassigned={includeUnassigned}
+                    onUnassignedChange={setIncludeUnassigned}
+                    placeholder="All Assignees"
+                    showSearch={true}
+                    compactDisplay={true}
+                  />
+                ) : (
+                  <MultiUserPicker
+                    id={`${id}-assignee-filter`}
+                    users={initialUsers}
+                    values={selectedAssignees}
+                    onValuesChange={setSelectedAssignees}
+                    getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
+                    filterMode={true}
+                    includeUnassigned={includeUnassigned}
+                    onUnassignedChange={setIncludeUnassigned}
+                    placeholder="All Assignees"
+                    showSearch={true}
+                    compactDisplay={true}
+                  />
+                )}
                 <CustomSelect
                   data-automation-id={`${id}-status-select`}
                   options={statusOptions}

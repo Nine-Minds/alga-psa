@@ -6,6 +6,8 @@ import { IUser } from '@shared/interfaces/user.interfaces';
 import { IPriority } from '@alga-psa/types';
 import { ITag } from '@alga-psa/types';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
+import TeamAvatar from '@alga-psa/ui/components/TeamAvatar';
+import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { getProjectTreeData, getProjectDetails } from '../actions/projectActions';
 import { getAllPriorities } from '@alga-psa/reference-data/actions';
 import { getServices } from '@alga-psa/projects/actions/serviceCatalogActions';
@@ -19,6 +21,7 @@ import {
   addTaskResourceAction,
   removeTaskResourceAction,
   getTaskResourcesAction,
+  assignTeamToProjectTask,
   addTicketLinkAction,
   deleteTaskTicketLinksByTicketIdAction,
   duplicateTaskToPhase,
@@ -35,7 +38,9 @@ import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { ListChecks, Plus, Trash2, Clock, Ticket } from 'lucide-react';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
+import UserAndTeamPicker from '@alga-psa/ui/components/UserAndTeamPicker';
 import MultiUserPicker from '@alga-psa/ui/components/MultiUserPicker';
+import MultiUserAndTeamPicker from '@alga-psa/ui/components/MultiUserAndTeamPicker';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import DuplicateTaskDialog, { DuplicateOptions } from './DuplicateTaskDialog';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -59,6 +64,9 @@ import { useSchedulingCallbacks } from '@alga-psa/ui/context';
 import { IExtendedWorkItem, WorkItemType } from '@alga-psa/types';
 import TaskStatusSelect from './TaskStatusSelect';
 import PrefillFromTicketDialog from './PrefillFromTicketDialog';
+import { useFeatureFlag } from '@alga-psa/ui/hooks';
+import { getTeams, getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
+import type { ITeam } from '@alga-psa/types';
 import { TaskPrefillFields } from '../lib/taskTicketMapping';
 import { buildTaskTimeEntryContext } from '../lib/timeEntryContext';
 
@@ -110,6 +118,8 @@ export default function TaskForm({
   const [checklistItems, setChecklistItems] = useState<Omit<ITaskChecklistItem, 'tenant'>[]>(task?.checklist_items || []);
   const [isEditingChecklist, setIsEditingChecklist] = useState(false);
   const [assignedUser, setAssignedUser] = useState<string | null>(task?.assigned_to ?? prefillData?.assigned_to ?? null);
+  const [assignedTeamId, setAssignedTeamId] = useState<string | null>(task?.assigned_team_id ?? null);
+  const [teamAvatarUrl, setTeamAvatarUrl] = useState<string | null>(null);
   const [selectedPhase, setSelectedPhase] = useState<IProjectPhase>(phase);
   const [showMoveConfirmation, setShowMoveConfirmation] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
@@ -121,6 +131,7 @@ export default function TaskForm({
   const [tempTaskId] = useState<string>(`temp-${Date.now()}`);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const { launchTimeEntry } = useSchedulingCallbacks();
+  const { enabled: teamsV2Enabled } = useFeatureFlag('teams-v2', { defaultValue: false });
   // Convert from minutes to hours for display
   const [estimatedHours, setEstimatedHours] = useState<number>(
     task?.estimated_hours !== undefined && task?.estimated_hours !== null
@@ -134,6 +145,7 @@ export default function TaskForm({
       : prefillData?.due_date ?? undefined
   );
   const [taskResources, setTaskResources] = useState<any[]>(task?.task_id ? [] : []);
+  const [teams, setTeams] = useState<ITeam[]>([]);
   const [initialTaskResources, setInitialTaskResources] = useState<any[]>([]);
   const [resourcesLoaded, setResourcesLoaded] = useState(false); // Track if resources have been loaded
   const [tempTaskResources, setTempTaskResources] = useState<any[]>(() => {
@@ -326,6 +338,42 @@ export default function TaskForm({
     fetchInitialData();
   }, [task?.task_id]);
 
+  useEffect(() => {
+    if (!teamsV2Enabled) {
+      setTeams([]);
+      return;
+    }
+    const loadTeams = async () => {
+      try {
+        const fetchedTeams = await getTeams();
+        setTeams(fetchedTeams);
+      } catch (error) {
+        console.error('Failed to load teams:', error);
+      }
+    };
+    loadTeams();
+  }, [teamsV2Enabled]);
+
+  // Fetch team avatar URL when assigned team changes
+  useEffect(() => {
+    if (!assignedTeamId) {
+      setTeamAvatarUrl(null);
+      return;
+    }
+    const team = teams.find(t => t.team_id === assignedTeamId);
+    if (!team?.tenant) return;
+
+    getTeamAvatarUrlsBatchAction([assignedTeamId], team.tenant)
+      .then(result => {
+        if (result instanceof Map) {
+          setTeamAvatarUrl(result.get(assignedTeamId) ?? null);
+        } else {
+          setTeamAvatarUrl((result as Record<string, string | null>)[assignedTeamId] ?? null);
+        }
+      })
+      .catch(() => setTeamAvatarUrl(null));
+  }, [assignedTeamId, teams]);
+
   // Separate effect for loading task dependencies
   useEffect(() => {
     const loadDependencies = async () => {
@@ -499,6 +547,7 @@ export default function TaskForm({
           task_name: taskName,
           description: description,
           assigned_to: assignedUser || null,
+          assigned_team_id: assignedTeamId || null,
           estimated_hours: Math.round(estimatedHours * 60), // Convert hours to minutes for storage
           actual_hours: Math.round(actualHours * 60), // Convert hours to minutes for storage
           due_date: dueDate || null,
@@ -521,6 +570,50 @@ export default function TaskForm({
     }
   };
 
+  const handleAssignTeam = async (teamId: string) => {
+    setAssignedTeamId(teamId);
+    const team = teams.find(t => t.team_id === teamId);
+    const leadId = team?.manager_id || team?.members?.find(member => member.role === 'lead')?.user_id || null;
+
+    // Always set team lead as primary agent
+    if (leadId) {
+      setAssignedUser(leadId);
+    }
+
+    if (task?.task_id) {
+      try {
+        await assignTeamToProjectTask(task.task_id, teamId);
+        const resources = await getTaskResourcesAction(task.task_id);
+        setTaskResources(resources);
+        setInitialTaskResources(resources);
+        toast.success('Team assigned successfully');
+      } catch (error) {
+        console.error('Failed to assign team:', error);
+        toast.error('Failed to assign team');
+      }
+    } else {
+      // New task: populate tempTaskResources with team members (excluding lead who becomes primary)
+      const primaryId = leadId || assignedUser;
+      const memberIds = (team?.members || [])
+        .map(m => m.user_id)
+        .filter(uid => uid && uid !== primaryId);
+
+      const newResources = memberIds.map(uid => {
+        const memberUser = users.find(u => u.user_id === uid);
+        return {
+          additional_user_id: uid,
+          first_name: memberUser?.first_name || '',
+          last_name: memberUser?.last_name || '',
+          assignment_id: `temp-${Date.now()}-${uid}`,
+          role: 'team_member'
+        };
+      });
+
+      // Replace existing temp resources with team members
+      setTempTaskResources(newResources);
+    }
+  };
+
   const clearErrorIfSubmitted = () => {
     if (hasAttemptedSubmit) {
       setValidationErrors([]);
@@ -533,6 +626,10 @@ export default function TaskForm({
 
     const errors: string[] = [];
     if (!taskName.trim()) errors.push('Task name');
+    const currentAgents = task?.task_id ? taskResources : tempTaskResources;
+    if (currentAgents.length > 0 && !assignedUser) {
+      errors.push('Primary agent is required when additional agents are assigned');
+    }
 
     if (errors.length > 0) {
       setValidationErrors(errors);
@@ -603,6 +700,7 @@ export default function TaskForm({
           task_name: taskName,
           description: description,
           assigned_to: finalAssignedTo,
+          assigned_team_id: assignedTeamId || null,
           estimated_hours: Math.round(estimatedHours * 60), // Convert hours to minutes for storage
           actual_hours: Math.round(actualHours * 60), // Convert hours to minutes for storage
           due_date: dueDate || null,
@@ -624,6 +722,7 @@ export default function TaskForm({
           wbs_code: `${phase.wbs_code}.0`,
           description: description,
           assigned_to: finalAssignedTo,
+          assigned_team_id: assignedTeamId || null,
           estimated_hours: Math.round(estimatedHours * 60), // Convert hours to minutes for storage
           actual_hours: Math.round(actualHours * 60), // Convert hours to minutes for storage
           due_date: dueDate || null, // Use selected due date or null
@@ -639,6 +738,9 @@ export default function TaskForm({
         if (resultTask) {
           let linkingFailed = false;
           try {
+            if (assignedTeamId) {
+              await assignTeamToProjectTask(resultTask.task_id, assignedTeamId);
+            }
             // Add task resources
             for (const resource of tempTaskResources) {
               await addTaskResourceAction(resultTask.task_id, resource.additional_user_id);
@@ -709,6 +811,7 @@ export default function TaskForm({
       if (taskName.trim() !== '') return true;
       if (description.trim() !== '') return true;
       if (assignedUser !== null && assignedUser !== currentUserId) return true; // Only if explicitly selected
+      if (assignedTeamId !== null) return true;
       if (checklistItems.length > 0) return true;
       if (estimatedHours > 0) return true; // Only if actually entered a value
       if (actualHours > 0) return true; // Only if actually entered a value
@@ -739,6 +842,7 @@ export default function TaskForm({
     if (estimatedHours !== (Number(task.estimated_hours) / 60 || 0)) return true;
     if (actualHours !== (Number(task.actual_hours) / 60 || 0)) return true;
     if (normalizeNullable(assignedUser) !== normalizeNullable(task.assigned_to)) return true;
+    if (normalizeNullable(assignedTeamId) !== normalizeNullable(task.assigned_team_id)) return true;
     if (normalizeNullable(selectedPriorityId) !== normalizeNullable(task.priority_id)) return true;
     if (normalizeNullable(selectedServiceId) !== normalizeNullable(task.service_id)) return true;
 
@@ -1003,11 +1107,6 @@ export default function TaskForm({
 
   const handleAddAgent = async (userId: string) => {
     try {
-      if (!assignedUser) {
-        toast.error('Please assign a primary agent first');
-        return;
-      }
-
       if (task?.task_id) {
         await addTaskResourceAction(task.task_id, userId);
         const updatedResources = await getTaskResourcesAction(task.task_id);
@@ -1351,36 +1450,89 @@ export default function TaskForm({
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Assigned To</label>
-                  <UserPicker
-                    label=""
-                    value={assignedUser ?? ''}
-                    onValueChange={(value) => {
-                      // Only set to null if explicitly choosing "Not assigned"
-                      setAssignedUser(value === '' ? null : value);
-                    }}
-                    size="sm"
-                    users={users.filter(u =>
-                      !(task?.task_id ? taskResources : tempTaskResources)
-                        .some(r => r.additional_user_id === u.user_id)
-                    )}
-                    getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
-                  />
+                  {teamsV2Enabled ? (
+                    <UserAndTeamPicker
+                      label=""
+                      value={assignedUser ?? ''}
+                      onValueChange={(value) => {
+                        setAssignedUser(value === '' ? null : value);
+                      }}
+                      onTeamSelect={handleAssignTeam}
+                      size="sm"
+                      users={users.filter(u =>
+                        !(task?.task_id ? taskResources : tempTaskResources)
+                          .some(r => r.additional_user_id === u.user_id)
+                      )}
+                      teams={teams}
+                      getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
+                      getTeamAvatarUrlsBatch={getTeamAvatarUrlsBatchAction}
+                    />
+                  ) : (
+                    <UserPicker
+                      label=""
+                      value={assignedUser ?? ''}
+                      onValueChange={(value) => {
+                        // Only set to null if explicitly choosing "Not assigned"
+                        setAssignedUser(value === '' ? null : value);
+                      }}
+                      size="sm"
+                      users={users.filter(u =>
+                        !(task?.task_id ? taskResources : tempTaskResources)
+                          .some(r => r.additional_user_id === u.user_id)
+                      )}
+                      getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
+                    />
+                  )}
+                  {assignedTeamId && (() => {
+                    const assignedTeam = teams.find(t => t.team_id === assignedTeamId);
+                    return assignedTeam ? (
+                      <div className="flex items-center gap-1.5 mt-1.5">
+                        <TeamAvatar
+                          teamId={assignedTeam.team_id}
+                          teamName={assignedTeam.team_name}
+                          avatarUrl={teamAvatarUrl}
+                          size="xs"
+                        />
+                        <span className="text-xs text-gray-500 truncate">{assignedTeam.team_name}</span>
+                      </div>
+                    ) : null;
+                  })()}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Additional Agents</label>
-                  {!assignedUser ? (
-                    <div className="text-sm text-gray-500 italic p-2 bg-gray-50 rounded">
-                      Please assign a primary agent first.
-                    </div>
-                  ) : mode === 'edit' && task?.assigned_to !== assignedUser ? (
-                    <div className="text-sm text-gray-500 italic p-2 bg-gray-50 rounded">
-                      Save task after changing primary agent.
-                    </div>
-                  ) : (
-                    <MultiUserPicker
+                  {teamsV2Enabled ? (
+                    <MultiUserAndTeamPicker
                       id="task-additional-agents"
                       values={(task?.task_id ? taskResources : tempTaskResources).map(r => r.additional_user_id)}
                       getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
+                      getTeamAvatarUrlsBatch={getTeamAvatarUrlsBatchAction}
+                      teams={teams}
+                      teamSectionLabel="Add Team Members"
+                      onTeamValuesChange={(selectedTeamIds) => {
+                        // When a team is selected, expand its members into individual agents
+                        for (const teamId of selectedTeamIds) {
+                          const selectedTeam = teams.find(t => t.team_id === teamId);
+                          if (!selectedTeam?.members) continue;
+
+                          // Assign the team so the team badge appears
+                          setAssignedTeamId(teamId);
+
+                          // Set team lead as primary if no primary agent yet
+                          const leadId = selectedTeam.manager_id || selectedTeam.members.find(m => m.role === 'lead')?.user_id;
+                          if (!assignedUser && leadId) {
+                            setAssignedUser(leadId);
+                          }
+
+                          const primaryId = assignedUser || leadId;
+                          const currentResources = task?.task_id ? taskResources : tempTaskResources;
+                          const currentUserIds = new Set(currentResources.map(r => r.additional_user_id));
+                          const newMembers = selectedTeam.members
+                            .filter(m => m.user_id !== primaryId && !currentUserIds.has(m.user_id));
+                          for (const member of newMembers) {
+                            handleAddAgent(member.user_id);
+                          }
+                        }
+                      }}
                       onValuesChange={async (newUserIds) => {
                         // Prevent race conditions from rapid clicks
                         if (isProcessingAgentsRef.current) {
@@ -1403,6 +1555,42 @@ export default function TaskForm({
                           }
 
                           // Process all removals sequentially
+                          for (const userId of removedUserIds) {
+                            const resource = currentResources.find(r => r.additional_user_id === userId);
+                            if (resource) {
+                              await handleRemoveAgent(resource.assignment_id);
+                            }
+                          }
+                        } finally {
+                          isProcessingAgentsRef.current = false;
+                        }
+                      }}
+                      users={users.filter(u => u.user_id !== assignedUser)}
+                      size="sm"
+                      placeholder="Select additional agents..."
+                    />
+                  ) : (
+                    <MultiUserPicker
+                      id="task-additional-agents"
+                      values={(task?.task_id ? taskResources : tempTaskResources).map(r => r.additional_user_id)}
+                      getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
+                      onValuesChange={async (newUserIds) => {
+                        if (isProcessingAgentsRef.current) {
+                          return;
+                        }
+                        isProcessingAgentsRef.current = true;
+
+                        try {
+                          const currentResources = task?.task_id ? taskResources : tempTaskResources;
+                          const currentUserIds = currentResources.map(r => r.additional_user_id);
+
+                          const addedUserIds = newUserIds.filter(id => !currentUserIds.includes(id));
+                          const removedUserIds = currentUserIds.filter(id => !newUserIds.includes(id));
+
+                          for (const userId of addedUserIds) {
+                            await handleAddAgent(userId);
+                          }
+
                           for (const userId of removedUserIds) {
                             const resource = currentResources.find(r => r.additional_user_id === userId);
                             if (resource) {
