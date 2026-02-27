@@ -20,7 +20,7 @@
   {
     "id": "F217",
     "description": "Ensure in-app attachment persistence writes full external_files/documents/document_associations records instead of metadata-only document rows",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Problem", "Requirements"]
   },
   {

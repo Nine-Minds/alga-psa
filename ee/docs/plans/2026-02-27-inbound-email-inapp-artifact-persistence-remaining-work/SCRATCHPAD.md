@@ -53,3 +53,9 @@ Create a clean, implementation-ready plan containing only remaining work for inb
 - 2026-02-27: Completed `F216`.
   - `persistInboundEmailAttachment(...)` now consumes `attachmentData.content` (base64) when present before any provider download fallback.
   - File bytes are decoded and fed into storage-backed document persistence, enabling in-app callback payloads (including IMAP/local test payloads) to attach real files without workflow-worker execution.
+- 2026-02-27: Completed `F217`.
+  - `persistDocumentForBuffer(...)` now performs full persistence chain for in-app artifacts:
+    - inserts `external_files`
+    - inserts `documents` linked to `file_id`
+    - inserts `document_associations` to the target `ticket`.
+  - This replaces metadata-only attachment behavior in the in-app path.
