@@ -12,6 +12,7 @@ export type {
   IPermission,
   IUserWithRoles,
   ITeam,
+  ITeamMember,
   IRoleWithPermissions,
   IPolicy,
   ICondition,

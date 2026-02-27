@@ -64,6 +64,7 @@ export const addUser = withAuth(async (
     roleId?: string;
     userType?: 'internal' | 'client';
     contactId?: string;
+    reportsTo?: string;
   }
 ): Promise<IUser> => {
   try {
@@ -139,7 +140,8 @@ export const addUser = withAuth(async (
           hashed_password: await hashPassword(userData.password),
           tenant: tenant || undefined,
           user_type: userData.userType || 'internal', // Default to 'internal' for backward compatibility
-          contact_id: userData.contactId || undefined
+          contact_id: userData.contactId || undefined,
+          reports_to: userData.reportsTo || undefined
         }).returning('*');
 
       await trx('user_roles').insert({
