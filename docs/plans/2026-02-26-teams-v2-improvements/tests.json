@@ -58,7 +58,7 @@
   {
     "id": "T089",
     "description": "`getTeamAvatarUrl()` calls `getEntityImageUrl('team', ...)` and returns URL or null",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F056"
     ]
