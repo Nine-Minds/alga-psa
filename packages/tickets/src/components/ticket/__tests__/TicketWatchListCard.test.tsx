@@ -5,12 +5,57 @@ import React, { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import type { IContact, IUser } from '@alga-psa/types';
 import TicketWatchListCard from '../TicketWatchListCard';
 import { setTicketWatchListOnAttributes, type TicketWatchListEntry } from '@shared/lib/tickets/watchList';
+
+vi.mock('@alga-psa/ui/components/UserPicker', () => ({
+  __esModule: true,
+  default: ({ id, value, onValueChange, users, placeholder, disabled }: any) => (
+    <select
+      id={id}
+      aria-label={placeholder ?? 'Select internal user'}
+      value={value}
+      disabled={disabled}
+      onChange={(event) => onValueChange(event.target.value)}
+    >
+      <option value="">None</option>
+      {users.map((user: any) => (
+        <option key={user.user_id} value={user.user_id}>
+          {`${user.first_name || ''} ${user.last_name || ''}`.trim() || user.email || user.user_id}
+        </option>
+      ))}
+    </select>
+  ),
+}));
+
+vi.mock('@alga-psa/ui/components/ContactPicker', () => ({
+  __esModule: true,
+  ContactPicker: ({ id, value, onValueChange, contacts, placeholder, disabled }: any) => (
+    <select
+      id={id}
+      aria-label={placeholder ?? 'Select client contact'}
+      value={value}
+      disabled={disabled}
+      onChange={(event) => onValueChange(event.target.value)}
+    >
+      <option value="">None</option>
+      {contacts.map((contact: any) => (
+        <option key={contact.contact_name_id} value={contact.contact_name_id}>
+          {contact.full_name}
+        </option>
+      ))}
+    </select>
+  ),
+}));
 
 function renderWatchListCard(args?: {
   initialAttributes?: Record<string, unknown> | null;
   onPersist?: (watchList: TicketWatchListEntry[]) => Promise<boolean>;
+  internalUsers?: IUser[];
+  clientContacts?: IContact[];
+  allContacts?: IContact[];
+  onLoadAllContacts?: () => Promise<IContact[]>;
 }) {
   const onPersist =
     args?.onPersist ??
@@ -22,11 +67,22 @@ function renderWatchListCard(args?: {
     const [attributes, setAttributes] = useState<Record<string, unknown> | null>(
       args?.initialAttributes ?? { watch_list: [] }
     );
+    const [allContacts, setAllContacts] = useState<IContact[]>(args?.allContacts ?? []);
 
     return (
       <TicketWatchListCard
         id="ticket-watch-list"
         attributes={attributes}
+        internalUsers={args?.internalUsers ?? []}
+        clientContacts={args?.clientContacts ?? []}
+        allContacts={allContacts}
+        onLoadAllContacts={async () => {
+          if (!args?.onLoadAllContacts) {
+            return;
+          }
+          const loaded = await args.onLoadAllContacts();
+          setAllContacts(loaded);
+        }}
         onUpdateWatchList={async (watchList) => {
           const ok = await onPersist(watchList);
           if (ok) {
@@ -217,5 +273,290 @@ describe('TicketWatchListCard', () => {
 
     expect(screen.getByText('tech@internal.example')).toBeInTheDocument();
     expect(screen.getByRole('checkbox')).toBeChecked();
+  });
+
+  it('T048: Watch List renders internal-user add controls in addition to manual email add controls', () => {
+    renderWatchListCard({
+      initialAttributes: { watch_list: [] },
+      internalUsers: [
+        {
+          user_id: 'user-1',
+          first_name: 'Internal',
+          last_name: 'User',
+          email: 'internal.user@example.com',
+          user_type: 'internal',
+        } as IUser,
+      ],
+    });
+
+    expect(screen.getByPlaceholderText('name@example.com')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Add' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Select internal user')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Add User' })).toBeInTheDocument();
+  });
+
+  it('T049: selecting an internal user and clicking add persists watcher with user metadata', async () => {
+    const onPersist = vi.fn(async () => true);
+    const user = userEvent.setup();
+
+    renderWatchListCard({
+      initialAttributes: { watch_list: [] },
+      onPersist,
+      internalUsers: [
+        {
+          user_id: 'user-42',
+          first_name: 'Jane',
+          last_name: 'Internal',
+          email: 'Jane.Internal@Example.com',
+          user_type: 'internal',
+        } as IUser,
+      ],
+    });
+
+    await user.selectOptions(screen.getByLabelText('Select internal user'), 'user-42');
+    await user.click(screen.getByRole('button', { name: 'Add User' }));
+
+    await waitFor(() => {
+      expect(onPersist).toHaveBeenCalledWith([
+        {
+          email: 'jane.internal@example.com',
+          active: true,
+          source: 'manual',
+          name: 'Jane Internal',
+          entity_type: 'user',
+          entity_id: 'user-42',
+        },
+      ]);
+    });
+  });
+
+  it('T050: Watch List renders client-scoped contact quick-add controls using ticket client contacts by default', () => {
+    renderWatchListCard({
+      initialAttributes: { watch_list: [] },
+      clientContacts: [
+        {
+          contact_name_id: 'contact-1',
+          full_name: 'Client Contact',
+          email: 'client.contact@example.com',
+        } as IContact,
+      ],
+    });
+
+    expect(screen.getByLabelText('Select client contact')).toBeInTheDocument();
+    const addContactButton = document.querySelector(
+      '[data-automation-id="ticket-watch-list-add-contact-btn"]'
+    );
+    expect(addContactButton).toBeTruthy();
+  });
+
+  it('T051: adding a contact from client-scoped quick picker persists contact metadata', async () => {
+    const onPersist = vi.fn(async () => true);
+    const user = userEvent.setup();
+
+    renderWatchListCard({
+      initialAttributes: { watch_list: [] },
+      onPersist,
+      clientContacts: [
+        {
+          contact_name_id: 'contact-44',
+          full_name: 'Client Stakeholder',
+          email: 'Client.Stakeholder@Example.com',
+        } as IContact,
+      ],
+    });
+
+    await user.selectOptions(screen.getByLabelText('Select client contact'), 'contact-44');
+    const addContactButton = document.querySelector(
+      '[data-automation-id="ticket-watch-list-add-contact-btn"]'
+    ) as HTMLButtonElement;
+    await user.click(addContactButton);
+
+    await waitFor(() => {
+      expect(onPersist).toHaveBeenCalledWith([
+        {
+          email: 'client.stakeholder@example.com',
+          active: true,
+          source: 'manual',
+          name: 'Client Stakeholder',
+          entity_type: 'contact',
+          entity_id: 'contact-44',
+        },
+      ]);
+    });
+  });
+
+  it('T052: Search all contacts path is secondary and not required for standard client-contact adds', async () => {
+    const onPersist = vi.fn(async () => true);
+    const user = userEvent.setup();
+
+    renderWatchListCard({
+      initialAttributes: { watch_list: [] },
+      onPersist,
+      clientContacts: [
+        {
+          contact_name_id: 'contact-local',
+          full_name: 'Local Client Contact',
+          email: 'local.contact@example.com',
+        } as IContact,
+      ],
+    });
+
+    expect(screen.getByRole('button', { name: 'Search all contacts' })).toBeInTheDocument();
+    expect(screen.queryByLabelText('Search all contacts')).not.toBeInTheDocument();
+
+    await user.selectOptions(screen.getByLabelText('Select client contact'), 'contact-local');
+    const addContactButton = document.querySelector(
+      '[data-automation-id="ticket-watch-list-add-contact-btn"]'
+    ) as HTMLButtonElement;
+    await user.click(addContactButton);
+
+    await waitFor(() => {
+      expect(onPersist).toHaveBeenCalledTimes(1);
+      expect(onPersist.mock.calls[0][0][0].email).toBe('local.contact@example.com');
+    });
+  });
+
+  it('T053: triggering Search all contacts lazily loads active all-tenant contacts and supports cross-client add', async () => {
+    const onPersist = vi.fn(async () => true);
+    const onLoadAllContacts = vi.fn(async () => [
+      {
+        contact_name_id: 'contact-cross',
+        full_name: 'Cross Client Contact',
+        email: 'cross.client@example.com',
+      } as IContact,
+    ]);
+    const user = userEvent.setup();
+
+    renderWatchListCard({
+      initialAttributes: { watch_list: [] },
+      onPersist,
+      onLoadAllContacts,
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Search all contacts' }));
+    await waitFor(() => {
+      expect(onLoadAllContacts).toHaveBeenCalledTimes(1);
+    });
+
+    await user.selectOptions(screen.getByLabelText('Search all contacts'), 'contact-cross');
+    const addAllContactButton = document.querySelector(
+      '[data-automation-id="ticket-watch-list-add-all-contact-btn"]'
+    ) as HTMLButtonElement;
+    await user.click(addAllContactButton);
+
+    await waitFor(() => {
+      expect(onPersist).toHaveBeenCalledWith([
+        {
+          email: 'cross.client@example.com',
+          active: true,
+          source: 'manual',
+          name: 'Cross Client Contact',
+          entity_type: 'contact',
+          entity_id: 'contact-cross',
+        },
+      ]);
+    });
+  });
+
+  it('T054: selected internal user without valid email shows validation error and does not persist', async () => {
+    const onPersist = vi.fn(async () => true);
+    const user = userEvent.setup();
+
+    renderWatchListCard({
+      initialAttributes: { watch_list: [] },
+      onPersist,
+      internalUsers: [
+        {
+          user_id: 'user-no-email',
+          first_name: 'No',
+          last_name: 'Email',
+          email: '',
+          user_type: 'internal',
+        } as IUser,
+      ],
+    });
+
+    await user.selectOptions(screen.getByLabelText('Select internal user'), 'user-no-email');
+    await user.click(screen.getByRole('button', { name: 'Add User' }));
+
+    expect(screen.getByText('Selected user does not have a valid email address.')).toBeInTheDocument();
+    expect(onPersist).not.toHaveBeenCalled();
+  });
+
+  it('T055: selected contact without valid email shows validation error and does not persist', async () => {
+    const onPersist = vi.fn(async () => true);
+    const user = userEvent.setup();
+
+    renderWatchListCard({
+      initialAttributes: { watch_list: [] },
+      onPersist,
+      clientContacts: [
+        {
+          contact_name_id: 'contact-no-email',
+          full_name: 'No Email Contact',
+          email: null,
+        } as IContact,
+      ],
+    });
+
+    await user.selectOptions(screen.getByLabelText('Select client contact'), 'contact-no-email');
+    const addContactButton = document.querySelector(
+      '[data-automation-id="ticket-watch-list-add-contact-btn"]'
+    ) as HTMLButtonElement;
+    await user.click(addContactButton);
+
+    expect(screen.getByText('Selected contact does not have a valid email address.')).toBeInTheDocument();
+    expect(onPersist).not.toHaveBeenCalled();
+  });
+
+  it('T056: dedupe prevents duplicate watcher row when same email is added via manual and picker paths', async () => {
+    const onPersist = vi.fn(async () => true);
+    const user = userEvent.setup();
+
+    renderWatchListCard({
+      initialAttributes: { watch_list: [] },
+      onPersist,
+      internalUsers: [
+        {
+          user_id: 'user-dup',
+          first_name: 'Dup',
+          last_name: 'User',
+          email: 'dup.user@example.com',
+          user_type: 'internal',
+        } as IUser,
+      ],
+    });
+
+    await user.type(screen.getByPlaceholderText('name@example.com'), 'dup.user@example.com');
+    await user.click(screen.getByRole('button', { name: 'Add' }));
+    await waitFor(() => expect(onPersist).toHaveBeenCalledTimes(1));
+
+    await user.selectOptions(screen.getByLabelText('Select internal user'), 'user-dup');
+    await user.click(screen.getByRole('button', { name: 'Add User' }));
+
+    await waitFor(() => {
+      expect(onPersist).toHaveBeenCalledTimes(2);
+      expect(screen.getAllByText('dup.user@example.com')).toHaveLength(1);
+    });
+  });
+
+  it('T064: watcher row shows name/type hint for picker-added entries while still displaying canonical email', () => {
+    renderWatchListCard({
+      initialAttributes: {
+        watch_list: [
+          {
+            email: 'hinted@example.com',
+            active: true,
+            name: 'Hinted Contact',
+            entity_type: 'contact',
+            entity_id: 'contact-77',
+          },
+        ],
+      },
+    });
+
+    expect(screen.getByText('hinted@example.com')).toBeInTheDocument();
+    expect(screen.getByText('Hinted Contact')).toBeInTheDocument();
+    expect(screen.getByText('contact')).toBeInTheDocument();
   });
 });

@@ -405,7 +405,7 @@
   {
     "id": "T048",
     "description": "UI: Watch List renders internal-user add controls in addition to existing manual email add controls.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F027",
       "F033"

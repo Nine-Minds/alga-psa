@@ -202,3 +202,4 @@ Working notes for the ticket watch-list feature plan. This log captures clarifie
 - (2026-02-27) Implemented T045 in `shared/lib/tickets/__tests__/watchList.test.ts` validating parser acceptance of `entity_type`/`entity_id` metadata on watch-list entries.
 - (2026-02-27) Implemented T046 in `shared/lib/tickets/__tests__/watchList.test.ts` ensuring duplicate-email merge preserves existing entity metadata when re-added through a different path.
 - (2026-02-27) Implemented T047 in `shared/lib/tickets/__tests__/watchList.test.ts` verifying missing entity metadata is backfilled when duplicate emails are re-added via picker metadata.
+- (2026-02-27) Implemented T048 by expanding `packages/tickets/src/components/ticket/__tests__/TicketWatchListCard.test.tsx` with picker-control UI assertions; test harness now mocks pickers for deterministic watch-list add-flow coverage.
