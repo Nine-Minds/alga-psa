@@ -212,3 +212,4 @@ Working notes for the ticket watch-list feature plan. This log captures clarifie
 - (2026-02-27) Implemented T055 in `TicketWatchListCard.test.tsx` validating clear error + no persist when contact picker selection lacks a valid email.
 - (2026-02-27) Implemented T056 in `TicketWatchListCard.test.tsx` covering manual-vs-picker dedupe behavior so identical emails never create duplicate watcher rows.
 - (2026-02-27) Implemented T057 with `packages/tickets/src/components/ticket/__tests__/TicketWatchListWiring.contract.test.ts`, asserting watcher-picker props are wired through `TicketDetails` and `TicketProperties` into `TicketWatchListCard`.
+- (2026-02-27) Implemented T058 in `packages/tickets/src/actions/clientLookupActions.watchList.test.ts` validating all-contact lookup action wiring and default ascending full-name sort path.
