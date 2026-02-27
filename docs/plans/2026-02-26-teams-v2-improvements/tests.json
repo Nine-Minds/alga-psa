@@ -219,7 +219,7 @@
   {
     "id": "T109",
     "description": "TeamDetails avatar updates after successful upload without page reload",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F067"
     ]
