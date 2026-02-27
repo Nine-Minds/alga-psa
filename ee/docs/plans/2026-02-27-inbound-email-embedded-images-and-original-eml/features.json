@@ -28,7 +28,7 @@
   {
     "id": "F004",
     "description": "Resolve cid: image references from HTML and map them to inline MIME parts provided in email attachment metadata",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements"
     ]
