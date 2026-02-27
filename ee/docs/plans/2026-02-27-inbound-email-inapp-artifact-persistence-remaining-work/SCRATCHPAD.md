@@ -181,3 +181,11 @@ Create a clean, implementation-ready plan containing only remaining work for inb
   - Test fixture includes referenced and unreferenced inline attachments; assertion verifies only the referenced CID becomes a synthetic artifact.
 - Validation:
   - Reused helper-unit test command from `T218`.
+- 2026-02-27: Completed `T220`.
+  - Strengthened IMAP artifact integration assertions in `server/src/test/integration/inboundEmailInApp.webhooks.integration.test.ts`:
+    - embedded image document row has `mime_type = image/png`
+    - linked `external_files` row has `mime_type = image/png` and expected decoded `file_size`.
+  - This extends embedded image persistence checks beyond document name presence into persisted type/size contract.
+- Validation:
+  - `cd server && npx vitest run src/test/integration/inboundEmailInApp.webhooks.integration.test.ts -t "IMAP in-app path persists regular attachment, embedded image, and original .eml as ticket documents" --coverage.enabled=false`
+  - Environment note: DB-gated integration suite was skipped in this local session (`describeDb`).

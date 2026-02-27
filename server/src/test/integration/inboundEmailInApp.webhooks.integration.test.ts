@@ -513,6 +513,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
 
     const regularAttachmentBase64 = Buffer.from('regular-attachment-body').toString('base64');
     const embeddedDataBase64 = Buffer.from('embedded-image-body').toString('base64');
+    const embeddedDecodedSize = Buffer.from('embedded-image-body').length;
     const rawMimeBase64 = Buffer.from('From: sender@example.com\r\n\r\nbody').toString('base64');
     const subject = `IMAP artifacts subject ${uuidv4().slice(0, 6)}`;
     const messageId = `imap-artifacts-${uuidv4()}@example.com`;
@@ -566,12 +567,15 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
       .where('d.tenant', tenantId)
       .andWhere('da.entity_type', 'ticket')
       .andWhere('da.entity_id', ticket.ticket_id)
-      .select('d.document_name', 'd.file_id');
+      .select('d.document_name', 'd.file_id', 'd.mime_type');
 
     const documentNames = docs.map((d: any) => d.document_name).sort();
     expect(documentNames).toContain('regular.txt');
     expect(documentNames).toContain('embedded-image-1.png');
     expect(documentNames).toContain(`original-email-imap-artifacts-${messageId.split('@')[0]}-example.com.eml`);
+
+    const embeddedDoc = docs.find((d: any) => d.document_name === 'embedded-image-1.png');
+    expect(embeddedDoc?.mime_type).toBe('image/png');
 
     const fileIds = docs.map((d: any) => d.file_id).filter(Boolean);
     expect(fileIds.length).toBeGreaterThanOrEqual(3);
@@ -579,8 +583,12 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
     const files = await db('external_files')
       .where({ tenant: tenantId })
       .whereIn('file_id', fileIds)
-      .select('file_id');
+      .select('file_id', 'mime_type', 'file_size');
     expect(files).toHaveLength(fileIds.length);
+
+    const embeddedFile = files.find((f: any) => f.file_id === embeddedDoc?.file_id);
+    expect(embeddedFile?.mime_type).toBe('image/png');
+    expect(Number(embeddedFile?.file_size)).toBe(embeddedDecodedSize);
   });
 
   it('Reply threading: reply token resolves ticket and creates exactly 1 new comment', async () => {

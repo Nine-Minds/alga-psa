@@ -54,7 +54,7 @@
   {
     "id": "T220",
     "description": "Integration: extracted embedded images persist as ticket documents with expected content type and size",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F218",
       "F219",
