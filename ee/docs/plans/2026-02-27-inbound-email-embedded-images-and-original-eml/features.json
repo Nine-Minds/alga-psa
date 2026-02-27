@@ -216,5 +216,76 @@
       "Acceptance Criteria",
       "Requirements"
     ]
+  },
+  {
+    "id": "F026",
+    "description": "IMAP webhook route performs only auth/validation + async handoff and returns quickly without byte-heavy processing in request path",
+    "implemented": true,
+    "prdRefs": [
+      "Scoped Implementation Checklist (Phase 1)"
+    ]
+  },
+  {
+    "id": "F027",
+    "description": "IMAP ingress enforces hard caps for per-attachment bytes, total attachment bytes, attachment count, and raw MIME bytes before encoding/payload dispatch",
+    "implemented": false,
+    "prdRefs": [
+      "Scoped Implementation Checklist (Phase 1)",
+      "Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F028",
+    "description": "IMAP webhook payload includes rawMimeBase64 and attachment byte fields (content/isInline/contentId/id/name/contentType/size) sufficient for document and .eml persistence",
+    "implemented": false,
+    "prdRefs": [
+      "Scoped Implementation Checklist (Phase 1)",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F029",
+    "description": "IMAP inbound processing path uses storage-backed/idempotent attachment persistence compatible with current documents schema (no legacy metadata-only insert path)",
+    "implemented": false,
+    "prdRefs": [
+      "Scoped Implementation Checklist (Phase 1)",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F030",
+    "description": "IMAP inbound path executes embedded extraction for HTML data URLs and referenced CID images before persistence",
+    "implemented": false,
+    "prdRefs": [
+      "Scoped Implementation Checklist (Phase 1)",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F031",
+    "description": "IMAP inbound path persists one original .eml document per inbound message from provided raw MIME bytes with deterministic filename/idempotency",
+    "implemented": false,
+    "prdRefs": [
+      "Scoped Implementation Checklist (Phase 1)",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F032",
+    "description": "Per-message attachment artifact processing in async path is sequential or strictly bounded to avoid Node event-loop starvation",
+    "implemented": false,
+    "prdRefs": [
+      "Scoped Implementation Checklist (Phase 1)",
+      "Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F033",
+    "description": "Oversize/over-limit artifacts are skipped with structured reasons while ticket/comment creation remains successful",
+    "implemented": false,
+    "prdRefs": [
+      "Scoped Implementation Checklist (Phase 1)",
+      "Requirements"
+    ]
   }
 ]

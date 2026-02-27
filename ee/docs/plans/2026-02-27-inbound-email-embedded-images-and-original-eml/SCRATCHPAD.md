@@ -21,6 +21,10 @@ Rolling notes for embedded inbound-email image extraction + source `.eml` persis
   - direct raw MIME fields on `emailData` (`rawMime`, `rawMimeBase64`, `sourceMimeBase64`, `rawSourceBase64`)
   - provider retrieval for Gmail/Microsoft
   - deterministic RFC822 fallback assembly.
+- (2026-02-27) Scope refinement approved for current implementation pass:
+  - in scope: lightweight webhook handoff, ingress size caps, payload augmentation for bytes, bounded async per-message artifact processing
+  - out of scope: queue/global backpressure orchestration and new observability/metrics initiatives
+- (2026-02-27) IMAP webhook route now uses async event handoff (`INBOUND_EMAIL_RECEIVED`) and no longer performs inline ticket/comment/document persistence in the request path.
 
 ## Discoveries / Constraints
 
@@ -70,6 +74,9 @@ Rolling notes for embedded inbound-email image extraction + source `.eml` persis
 - (2026-02-27) Attempted targeted vitest execution (blocked by missing dependencies in this workspace):
   - `npm run test:local -- ...` -> dotenv CLI arg parsing failure
   - `npx vitest run ...` -> missing `dotenv` / `vitest` package resolution at runtime.
+- (2026-02-27) IMAP webhook handoff refactor:
+  - `nl -ba packages/integrations/src/webhooks/email/imap.ts | sed -n '1,320p'`
+  - removed inline `processInboundEmailInApp` path, replaced with event publish handoff.
 
 ## Links / References
 
@@ -122,3 +129,4 @@ Rolling notes for embedded inbound-email image extraction + source `.eml` persis
 - (2026-02-27) Completed T032 — Added Playwright CID-inline scenario that validates CID-derived image filenames appear in Ticket Documents.
 - (2026-02-27) Completed T033 — Added Playwright .eml visibility scenario covering both new-ticket and reply ticket document views.
 - (2026-02-27) Completed T034 — Added Playwright duplicate-guard scenario that verifies single embedded/.eml document rows and visibility on the ticket.
+- (2026-02-27) Completed F026 — Refactored IMAP webhook route to auth/validate/handoff only by publishing `INBOUND_EMAIL_RECEIVED` and returning queued success without inline persistence.

@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { timingSafeEqual } from 'crypto';
 import { getAdminConnection } from '@alga-psa/db/admin';
-import { withTransaction } from '@alga-psa/db';
-import { processInboundEmailInApp } from '@alga-psa/shared/services/email/processInboundEmailInApp';
+import { publishEvent } from '@alga-psa/shared/events/publisher';
 import type { EmailMessageDetails } from '@alga-psa/shared/interfaces/inbound-email.interfaces';
 
 interface ImapWebhookPayload {
@@ -16,12 +15,6 @@ function asNonEmptyString(value: unknown): string | null {
   if (typeof value !== 'string') return null;
   const trimmed = value.trim();
   return trimmed.length ? trimmed : null;
-}
-
-function toDateOrNull(value: unknown): Date | null {
-  if (typeof value !== 'string' || !value.trim()) return null;
-  const parsed = new Date(value);
-  return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
 function safeEquals(a: string, b: string): boolean {
@@ -99,116 +92,26 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'emailData.id is required' }, { status: 400 });
     }
 
-    const dedupeWhere = {
-      message_id: emailData.id,
-      provider_id: provider.id,
+    const eventPayload = {
+      tenantId: provider.tenant,
       tenant: provider.tenant,
+      providerId: provider.id,
+      emailData,
     };
 
-    let resultSummary: Record<string, unknown> = {};
-
-    await withTransaction(knex, async (trx) => {
-      const tableExists = await trx.schema.hasTable('email_processed_messages');
-      let canUseProcessedMessages = false;
-      if (tableExists) {
-        // In mixed-schema environments, this table may still reference the legacy
-        // email_provider_configs table. Only use it when the provider exists there.
-        const legacyProviderTableExists = await trx.schema.hasTable('email_provider_configs');
-        if (legacyProviderTableExists) {
-          const legacyProvider = await trx('email_provider_configs')
-            .where({ id: provider.id, tenant: provider.tenant })
-            .first('id');
-          canUseProcessedMessages = Boolean(legacyProvider);
-        }
-      }
-
-      if (canUseProcessedMessages) {
-        const existing = await trx('email_processed_messages').where(dedupeWhere).first();
-        if (existing) {
-          resultSummary = {
-            duplicate: true,
-            outcome: existing.processing_status || 'duplicate',
-            ticketId: existing.ticket_id || null,
-          };
-          return;
-        }
-
-        await trx('email_processed_messages').insert({
-          message_id: emailData.id,
-          provider_id: provider.id,
-          tenant: provider.tenant,
-          processed_at: new Date(),
-          processing_status: 'processing',
-          from_email: emailData.from?.email || null,
-          subject: emailData.subject || null,
-          received_at: toDateOrNull(emailData.receivedAt),
-          attachment_count: emailData.attachments?.length || 0,
-          metadata: JSON.stringify({
-            source: 'imap-webhook',
-            webhookReceivedAt: new Date().toISOString(),
-          }),
-        });
-      }
-
-      let processingStatus = 'success';
-      let errorMessage: string | null = null;
-      let ticketId: string | null = null;
-
-      const inAppResult = await processInboundEmailInApp({
-        tenantId: provider.tenant,
-        providerId: provider.id,
-        emailData,
-      });
-
-      if (inAppResult?.outcome === 'skipped') {
-        processingStatus = 'partial';
-        errorMessage = `skipped:${inAppResult?.reason || 'unknown'}`;
-      } else if (inAppResult?.outcome === 'deduped') {
-        processingStatus = 'duplicate';
-      }
-
-      if (
-        inAppResult &&
-        typeof inAppResult === 'object' &&
-        'ticketId' in inAppResult &&
-        typeof inAppResult.ticketId === 'string'
-      ) {
-        ticketId = inAppResult.ticketId;
-      }
-      resultSummary = {
-        duplicate: false,
-        outcome: inAppResult?.outcome || 'processed',
-        ticketId,
-      };
-
-      await trx('email_providers')
-        .where({ id: provider.id, tenant: provider.tenant })
-        .update({
-          last_sync_at: trx.fn.now(),
-          updated_at: trx.fn.now(),
-        });
-
-      if (canUseProcessedMessages) {
-        await trx('email_processed_messages')
-          .where(dedupeWhere)
-          .update({
-            processing_status: processingStatus,
-            ticket_id: ticketId,
-            from_email: emailData.from?.email || null,
-            subject: emailData.subject || null,
-            received_at: toDateOrNull(emailData.receivedAt),
-            attachment_count: emailData.attachments?.length || 0,
-            error_message: errorMessage,
-          });
-      }
+    await publishEvent({
+      eventType: 'INBOUND_EMAIL_RECEIVED',
+      tenant: provider.tenant,
+      payload: eventPayload,
     });
 
     return NextResponse.json({
       success: true,
+      queued: true,
+      handoff: 'event_bus',
       providerId: provider.id,
       tenant: provider.tenant,
       messageId: emailData.id,
-      ...resultSummary,
     });
   } catch (error: any) {
     console.error('IMAP webhook handler error:', error);
