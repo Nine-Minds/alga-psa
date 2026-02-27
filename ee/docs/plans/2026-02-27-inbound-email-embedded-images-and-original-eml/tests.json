@@ -175,7 +175,7 @@
   {
     "id": "T021",
     "description": "Action integration happy-path: process_original_email_attachment uploads .eml and creates external_files/documents rows",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F012",
       "F016",
