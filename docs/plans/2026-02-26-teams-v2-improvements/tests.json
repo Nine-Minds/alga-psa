@@ -365,7 +365,7 @@
   {
     "id": "T127",
     "description": "Structure toggle is hidden when portal type is 'client'",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F076"
     ]
