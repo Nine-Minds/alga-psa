@@ -213,6 +213,42 @@ async function setupMicrosoftProvider(params: {
   return { defaultsId };
 }
 
+async function setupImapProvider(params: { providerId: string; mailbox: string }) {
+  const defaultsId = uuidv4();
+  await db('inbound_ticket_defaults').insert({
+    id: defaultsId,
+    tenant: tenantId,
+    short_name: `imap-email-${defaultsId.slice(0, 6)}`,
+    display_name: `IMAP Email Defaults ${defaultsId.slice(0, 6)}`,
+    description: 'Test defaults',
+    board_id: boardId,
+    status_id: statusId,
+    priority_id: priorityId,
+    client_id: clientId,
+    entered_by: enteredByUserId,
+    is_active: true,
+    is_default: false,
+    created_at: db.fn.now(),
+    updated_at: db.fn.now(),
+  });
+
+  await db('email_providers').insert({
+    id: params.providerId,
+    tenant: tenantId,
+    provider_type: 'imap',
+    provider_name: 'Test IMAP Provider',
+    mailbox: params.mailbox,
+    is_active: true,
+    status: 'connected',
+    vendor_config: JSON.stringify({}),
+    inbound_ticket_defaults_id: defaultsId,
+    created_at: db.fn.now(),
+    updated_at: db.fn.now(),
+  });
+
+  return { defaultsId };
+}
+
 async function createRoutingBoardVariant(namePrefix: string): Promise<string> {
   const sourceBoard = await db('boards')
     .where({ tenant: tenantId, board_id: boardId })
@@ -460,6 +496,91 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
     const comments = await db('comments').where({ tenant: tenantId, ticket_id: ticketId });
     expect(comments).toHaveLength(1);
     expect(() => JSON.parse(comments[0].note)).not.toThrow();
+  });
+
+  it('IMAP in-app path persists regular attachment, embedded image, and original .eml as ticket documents', async () => {
+    const providerId = uuidv4();
+    const mailbox = `support-imap-${uuidv4().slice(0, 6)}@example.com`;
+    const { defaultsId } = await setupImapProvider({ providerId, mailbox });
+
+    cleanup.push(async () => {
+      await db('email_processed_attachments').where({ tenant: tenantId, provider_id: providerId }).delete();
+      await db('email_providers').where({ tenant: tenantId, id: providerId }).delete();
+      await db('inbound_ticket_defaults').where({ tenant: tenantId, id: defaultsId }).delete();
+    });
+
+    process.env.IMAP_INBOUND_EMAIL_IN_APP_PROCESSING_ENABLED = 'true';
+
+    const regularAttachmentBase64 = Buffer.from('regular-attachment-body').toString('base64');
+    const embeddedDataBase64 = Buffer.from('embedded-image-body').toString('base64');
+    const rawMimeBase64 = Buffer.from('From: sender@example.com\r\n\r\nbody').toString('base64');
+    const subject = `IMAP artifacts subject ${uuidv4().slice(0, 6)}`;
+    const messageId = `imap-artifacts-${uuidv4()}@example.com`;
+
+    const result = await processInboundEmailInApp({
+      tenantId,
+      providerId,
+      emailData: {
+        id: messageId,
+        provider: 'imap',
+        providerId,
+        tenant: tenantId,
+        receivedAt: new Date().toISOString(),
+        from: { email: 'sender@example.com', name: 'Sender' },
+        to: [{ email: mailbox, name: 'Support' }],
+        subject,
+        body: {
+          text: 'Inbound body',
+          html: `<p>Body<img src="data:image/png;base64,${embeddedDataBase64}" /></p>`,
+        },
+        attachments: [
+          {
+            id: 'att-regular-1',
+            name: 'regular.txt',
+            contentType: 'text/plain',
+            size: Buffer.from('regular-attachment-body').length,
+            content: regularAttachmentBase64,
+          },
+        ],
+        rawMimeBase64,
+      } as any,
+    });
+
+    expect(result.outcome).toBe('created');
+
+    const ticket = await db('tickets')
+      .where({ tenant: tenantId, title: subject })
+      .first<any>();
+    expect(ticket).toBeDefined();
+
+    cleanup.push(async () => {
+      await db('comments').where({ tenant: tenantId, ticket_id: ticket.ticket_id }).delete();
+      await db('document_associations').where({ tenant: tenantId, entity_id: ticket.ticket_id }).delete();
+      await db('tickets').where({ tenant: tenantId, ticket_id: ticket.ticket_id }).delete();
+    });
+
+    const docs = await db('documents as d')
+      .join('document_associations as da', function () {
+        this.on('d.document_id', 'da.document_id').andOn('d.tenant', 'da.tenant');
+      })
+      .where('d.tenant', tenantId)
+      .andWhere('da.entity_type', 'ticket')
+      .andWhere('da.entity_id', ticket.ticket_id)
+      .select('d.document_name', 'd.file_id');
+
+    const documentNames = docs.map((d: any) => d.document_name).sort();
+    expect(documentNames).toContain('regular.txt');
+    expect(documentNames).toContain('embedded-image-1.png');
+    expect(documentNames).toContain(`original-email-imap-artifacts-${messageId.split('@')[0]}-example.com.eml`);
+
+    const fileIds = docs.map((d: any) => d.file_id).filter(Boolean);
+    expect(fileIds.length).toBeGreaterThanOrEqual(3);
+
+    const files = await db('external_files')
+      .where({ tenant: tenantId })
+      .whereIn('file_id', fileIds)
+      .select('file_id');
+    expect(files).toHaveLength(fileIds.length);
   });
 
   it('Reply threading: reply token resolves ticket and creates exactly 1 new comment', async () => {

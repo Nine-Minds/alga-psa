@@ -122,7 +122,7 @@
   {
     "id": "F234",
     "description": "Update in-app inbound tests to assert ticket document outcomes for regular attachments, embedded images, and .eml artifacts",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Acceptance Criteria"]
   },
   {

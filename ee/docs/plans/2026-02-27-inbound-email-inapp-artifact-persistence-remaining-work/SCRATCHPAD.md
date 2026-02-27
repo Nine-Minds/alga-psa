@@ -135,3 +135,13 @@ Create a clean, implementation-ready plan containing only remaining work for inb
 - 2026-02-27: Completed `F233`.
   - Google and Microsoft webhook handlers already delegate in-app processing to `processInboundEmailInApp(...)`.
   - Because `processInboundEmailInApp` now routes all artifact handling through `processInboundEmailArtifactsBestEffort(...)`, provider behavior is unified for attachments, embedded extraction, and `.eml` persistence.
+- 2026-02-27: Completed `F234`.
+  - Added in-app integration assertion coverage in:
+    - `server/src/test/integration/inboundEmailInApp.webhooks.integration.test.ts`
+  - New scenario asserts ticket document outcomes for:
+    - regular attachment (`regular.txt`)
+    - embedded extraction artifact (`embedded-image-1.png`)
+    - deterministic original email `.eml` document.
+- Validation:
+  - `cd server && npx vitest run src/test/integration/inboundEmailInApp.webhooks.integration.test.ts --coverage.enabled=false`
+  - Result in this environment: suite discovered but DB-gated tests skipped (`describeDb` guard).
