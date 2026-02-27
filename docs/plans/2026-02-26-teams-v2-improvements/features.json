@@ -144,7 +144,7 @@
   {
     "id": "F068",
     "description": "Create `OrgChartNode` custom ReactFlow node component (card with UserAvatar, name, role, inactive badge)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-3B.1"
     ]
