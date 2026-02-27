@@ -342,7 +342,7 @@
   {
     "id": "T040",
     "description": "Integration: raw MIME cap enforcement skips .eml persistence when raw source exceeds limit without failing ticket/comment flow",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F027",
       "F031",

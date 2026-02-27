@@ -666,6 +666,66 @@ describe('Email attachment ingestion (workflow-worker action override)', () => {
       .first();
     expect(failed?.processing_status).toBe('failed');
   });
+
+  it('process_original_email_attachment skips persistence when raw MIME exceeded ingress cap', async () => {
+    const { action } = await createOriginalEmailAction();
+    const providerId = uuidv4();
+    await insertGoogleProvider(db, tenantId, providerId);
+
+    const emailId = 'source-msg-over-cap@example.com';
+    const ticketId = uuidv4();
+    const res = await action.execute(
+      {
+        emailId,
+        ticketId,
+        tenant: tenantId,
+        providerId,
+        emailData: {
+          id: emailId,
+          from: { email: 'from@example.com' },
+          to: [{ email: 'to@example.com' }],
+          subject: 'Subject',
+          body: { text: 'Body' },
+          receivedAt: new Date().toISOString(),
+          ingressSkipReasons: [
+            {
+              type: 'raw_mime',
+              reason: 'raw_mime_over_max_bytes',
+              size: 2048,
+              cap: 1024,
+            },
+          ],
+        },
+      },
+      {
+        tenant: tenantId,
+        executionId: 'test',
+        idempotencyKey: 'test',
+        parameters: {},
+        knex: db,
+      } as any
+    );
+
+    expect(res).toMatchObject({ success: true, skipped: true, reason: 'raw_mime_over_max_bytes' });
+    expect(uploads).toHaveLength(0);
+
+    const row = await db('email_processed_attachments')
+      .where({
+        tenant: tenantId,
+        provider_id: providerId,
+        email_id: emailId,
+        attachment_id: '__original_email_source__',
+      })
+      .first();
+
+    expect(row?.processing_status).toBe('skipped');
+    expect(String(row?.error_message || '')).toContain('Raw MIME source exceeds ingress cap');
+
+    const docs = await db('documents')
+      .where({ tenant: tenantId })
+      .andWhere('document_name', 'like', 'original-email-%');
+    expect(docs).toHaveLength(0);
+  });
 });
 
 async function createRegisteredAttachmentActions(): Promise<Record<string, { execute: (params: any, context: any) => Promise<any> }>> {

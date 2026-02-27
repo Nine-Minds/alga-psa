@@ -154,6 +154,7 @@ Rolling notes for embedded inbound-email image extraction + source `.eml` persis
 - (2026-02-27) Completed T037 — Added IMAP ingress cap test for per-attachment byte limit with structured `attachment_over_max_bytes` skip reason.
 - (2026-02-27) Completed T038 — Added IMAP ingress cap test asserting total-byte cap skips overflow attachments with `attachment_total_bytes_exceeded`.
 - (2026-02-27) Completed T039 — Added IMAP ingress cap test for attachment-count limits with deterministic `attachment_count_exceeded` reasons.
+- (2026-02-27) Completed T040 — Added action integration coverage proving `raw_mime_over_max_bytes` ingress reason causes `.eml` persistence skip (no document rows/uploads) with non-failing result.
 - (2026-02-27) Completed F026 — Refactored IMAP webhook route to auth/validate/handoff only by publishing `INBOUND_EMAIL_RECEIVED` and returning queued success without inline persistence.
 - (2026-02-27) Completed F027 — Added IMAP ingress hard-cap enforcement for per-attachment bytes, total attachment bytes, attachment count, and raw MIME bytes prior to payload encoding/dispatch.
 - (2026-02-27) Completed F028 — IMAP webhook payload now carries capped raw MIME base64 and attachment byte fields needed for downstream document + `.eml` persistence.
