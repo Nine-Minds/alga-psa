@@ -139,7 +139,7 @@
   {
     "id": "T230",
     "description": "Webhook integration: IMAP callback follows configured fallback path when in-app mode is disabled",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F226",
       "F232"

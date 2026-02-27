@@ -237,3 +237,8 @@ Create a clean, implementation-ready plan containing only remaining work for inb
   - New test verifies `IMAP_INBOUND_EMAIL_IN_APP_PROCESSING_ENABLED=true` routes webhook to `processInboundEmailInApp` and returns `handoff: in_app`.
 - Validation:
   - `cd server && npx vitest run src/test/integration/imapWebhookHandoff.integration.test.ts --coverage.enabled=false`
+- 2026-02-27: Completed `T230`.
+  - Added IMAP webhook fallback-path assertion in `server/src/test/integration/imapWebhookHandoff.integration.test.ts`.
+  - Test verifies disabled in-app flag returns `handoff: event_bus`, publishes `INBOUND_EMAIL_RECEIVED`, and does not call in-app processor.
+- Validation:
+  - Reused full IMAP webhook integration run from `T229`.
