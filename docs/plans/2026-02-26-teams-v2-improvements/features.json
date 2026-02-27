@@ -177,7 +177,7 @@
   {
     "id": "F072",
     "description": "OrgChart: `fitView` on initial render with zoom/pan enabled, nodes not draggable",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-3B.4"
     ]
