@@ -126,10 +126,99 @@ export async function systemEmailProcessingWorkflow(context) {
     }
   };
 
+  const processEmailDocumentsBestEffort = async ({
+    emailData,
+    ticketId,
+    tenant,
+    providerId,
+    actions,
+    scopeLabel,
+  }) => {
+    const baseAttachments = Array.isArray(emailData.attachments) ? emailData.attachments : [];
+    let embeddedAttachments = [];
+
+    if (emailData.body?.html) {
+      try {
+        const extraction = await actions.extract_embedded_email_attachments({
+          emailId: emailData.id,
+          html: emailData.body.html,
+          attachments: baseAttachments,
+        });
+
+        if (extraction?.success && Array.isArray(extraction.attachments)) {
+          embeddedAttachments = extraction.attachments;
+        }
+
+        if (Array.isArray(extraction?.warnings) && extraction.warnings.length > 0) {
+          console.warn(`[${scopeLabel}] embedded image extraction warnings`, {
+            emailId: emailData.id,
+            warnings: extraction.warnings,
+          });
+        }
+      } catch (extractError) {
+        console.warn(
+          `[${scopeLabel}] Failed to extract embedded images: ${
+            extractError?.message || extractError
+          }`
+        );
+      }
+    }
+
+    const allAttachments = [...baseAttachments, ...embeddedAttachments];
+    if (allAttachments.length > 0) {
+      console.log(
+        `[${scopeLabel}] Processing ${allAttachments.length} attachments (${baseAttachments.length} provider + ${embeddedAttachments.length} embedded)`
+      );
+    }
+
+    for (const attachment of allAttachments) {
+      try {
+        await actions.process_email_attachment({
+          emailId: emailData.id,
+          attachmentId: attachment.id,
+          ticketId,
+          tenant,
+          providerId,
+          attachmentData: attachment,
+        });
+      } catch (attachmentError) {
+        console.warn(
+          `[${scopeLabel}] Failed to process attachment ${attachment?.name || attachment?.id}: ${
+            attachmentError?.message || attachmentError
+          }`
+        );
+      }
+    }
+
+    try {
+      const originalResult = await actions.process_original_email_attachment({
+        emailId: emailData.id,
+        ticketId,
+        tenant,
+        providerId,
+        emailData,
+      });
+
+      if (!originalResult?.success) {
+        console.warn(`[${scopeLabel}] Original email persistence failed`, {
+          emailId: emailData.id,
+          providerId,
+          reason: originalResult?.message || originalResult?.reason || 'unknown',
+        });
+      }
+    } catch (originalError) {
+      console.warn(
+        `[${scopeLabel}] Failed to persist original email attachment: ${
+          originalError?.message || originalError
+        }`
+      );
+    }
+  };
+
   /**
    * Handle email reply to existing ticket
    */
-  const handleEmailReply = async (emailData, existingTicket, actions, parsedBody, replyMatchedBy, matchedClient = null) => {
+  const handleEmailReply = async (emailData, existingTicket, actions, parsedBody, replyMatchedBy, matchedClient = null, tenantOverride = null, providerIdOverride = null) => {
     const commentContent = parsedBody.sanitizedHtml || parsedBody.sanitizedText || emailData.body.html || emailData.body.text;
     const commentFormat = parsedBody.sanitizedHtml
       ? 'html'
@@ -169,23 +258,14 @@ export async function systemEmailProcessingWorkflow(context) {
       metadata: parsedBody.metadata
     });
     
-    // Handle attachments for reply
-    if (emailData.attachments && emailData.attachments.length > 0) {
-      for (const attachment of emailData.attachments) {
-        try {
-          await actions.process_email_attachment({
-            emailId: emailData.id,
-            attachmentId: attachment.id,
-            ticketId: existingTicket.ticketId,
-            tenant: emailData.tenant,
-            providerId: emailData.providerId,
-            attachmentData: attachment
-          });
-        } catch (attachmentError) {
-          console.warn(`Failed to process reply attachment ${attachment.name}: ${attachmentError.message}`);
-        }
-      }
-    }
+    await processEmailDocumentsBestEffort({
+      emailData,
+      ticketId: existingTicket.ticketId,
+      tenant: emailData.tenant || tenantOverride,
+      providerId: emailData.providerId || providerIdOverride,
+      actions,
+      scopeLabel: 'reply',
+    });
   };
 
   /**
@@ -349,7 +429,7 @@ export async function systemEmailProcessingWorkflow(context) {
       // This is a reply to an existing ticket - add as comment
       console.log(`Email is part of existing ticket: ${existingTicket.ticketId}`);
       const matchedReplyClient = await findExactEmailMatch(emailData.from.email, actions, { ticketId: existingTicket.ticketId });
-      await handleEmailReply(emailData, existingTicket, actions, parsedEmailBody, replyMatchedBy, matchedReplyClient);
+      await handleEmailReply(emailData, existingTicket, actions, parsedEmailBody, replyMatchedBy, matchedReplyClient, tenant, providerId);
       return; // Exit workflow after handling reply
     }
     
@@ -443,29 +523,15 @@ export async function systemEmailProcessingWorkflow(context) {
     console.log(`Ticket created with ID: ${ticketResult.ticket_id}`);
     data.set('ticketId', ticketResult.ticket_id);
     
-    // Step 5: Handle attachments if present
-    if (emailData.attachments && emailData.attachments.length > 0) {
-      setState('PROCESSING_ATTACHMENTS');
-      console.log(`Processing ${emailData.attachments.length} email attachments`);
-      
-      for (const attachment of emailData.attachments) {
-        try {
-          await actions.process_email_attachment({
-            emailId: emailData.id,
-            attachmentId: attachment.id,
-            ticketId: ticketResult.ticket_id,
-            tenant: tenant,
-            providerId: providerId,
-            attachmentData: attachment
-          });
-        } catch (attachmentError: any) {
-          console.warn(`Failed to process attachment ${attachment.name}: ${attachmentError.message}`);
-          // Continue processing other attachments
-        }
-      }
-      
-      console.log(`Processed ${emailData.attachments.length} attachments`);
-    }
+    setState('PROCESSING_ATTACHMENTS');
+    await processEmailDocumentsBestEffort({
+      emailData,
+      ticketId: ticketResult.ticket_id,
+      tenant,
+      providerId,
+      actions,
+      scopeLabel: 'new-ticket',
+    });
     
     // Step 6: Create initial comment with original email content
     await actions.create_comment_from_email({

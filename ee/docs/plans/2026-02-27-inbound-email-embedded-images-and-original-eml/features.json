@@ -1,0 +1,220 @@
+[
+  {
+    "id": "F001",
+    "description": "Define embedded-image extraction scope to include HTML data URLs and HTML-referenced CID inline images",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "Parse inbound email HTML for data:image/*;base64 payloads and emit synthetic attachment records",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "Decode and validate extracted data URL images (base64 decode, mime detection, byte size)",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "Resolve cid: image references from HTML and map them to inline MIME parts provided in email attachment metadata",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "Skip unreferenced CID inline parts by default and process only HTML-referenced CID images",
+    "implemented": false,
+    "prdRefs": [
+      "Open Questions",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "Generate deterministic synthetic attachment IDs and filenames for extracted embedded images",
+    "implemented": false,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "Run embedded-image extraction and persistence in new-ticket inbound email flow",
+    "implemented": false,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "Run embedded-image extraction and persistence in threaded-reply inbound email flow",
+    "implemented": false,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "Reuse storage-backed attachment ingestion path for embedded image synthetic attachments",
+    "implemented": false,
+    "prdRefs": [
+      "Data / API / Integrations",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "Persist embedded images as external_files/documents and associate to tickets via document_associations",
+    "implemented": false,
+    "prdRefs": [
+      "Data / API / Integrations",
+      "Goals"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "Apply idempotency for embedded image processing using deterministic synthetic attachment keys per message",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "Add a dedicated workflow action for original-source email persistence as .eml",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "Implement Gmail adapter retrieval of raw MIME/source message bytes for .eml persistence",
+    "implemented": false,
+    "prdRefs": [
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "Implement Microsoft adapter retrieval of raw MIME/source message bytes for .eml persistence",
+    "implemented": false,
+    "prdRefs": [
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "Implement MailHog/test path source MIME acquisition or deterministic fallback MIME generation",
+    "implemented": false,
+    "prdRefs": [
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "Persist one .eml file/document per inbound message and associate it to the target ticket",
+    "implemented": false,
+    "prdRefs": [
+      "Goals",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "Apply idempotency for original .eml persistence using a reserved synthetic attachment key per message",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F018",
+    "description": "Invoke original .eml persistence action once in new-ticket flow",
+    "implemented": false,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F019",
+    "description": "Invoke original .eml persistence action once in threaded-reply flow",
+    "implemented": false,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F020",
+    "description": "Keep embedded-image processing failures non-blocking for ticket/comment creation",
+    "implemented": false,
+    "prdRefs": [
+      "Goals",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F021",
+    "description": "Keep .eml persistence failures non-blocking for ticket/comment creation",
+    "implemented": false,
+    "prdRefs": [
+      "Goals",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F022",
+    "description": "Ensure system-user attribution is preserved for embedded-image and .eml created documents",
+    "implemented": false,
+    "prdRefs": [
+      "Security / Permissions",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F023",
+    "description": "Extend inbound email schemas/types to represent fields required for inline image and source MIME processing",
+    "implemented": false,
+    "prdRefs": [
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F024",
+    "description": "Sanitize generated filenames and enforce image-only acceptance for embedded payload extraction",
+    "implemented": false,
+    "prdRefs": [
+      "Security / Permissions",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F025",
+    "description": "Update integration and workflow test fixtures to include embedded-image and source-email scenarios",
+    "implemented": false,
+    "prdRefs": [
+      "Acceptance Criteria",
+      "Requirements"
+    ]
+  }
+]

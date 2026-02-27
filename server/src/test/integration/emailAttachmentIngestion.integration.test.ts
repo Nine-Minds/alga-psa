@@ -12,6 +12,8 @@ let systemUserId: string;
 let microsoftDownloadShouldFail = false;
 let microsoftDownloadUnsupported = false;
 let gmailDownloadShouldFail = false;
+let microsoftSourceShouldFail = false;
+let gmailSourceShouldFail = false;
 
 vi.mock('@alga-psa/core/secrets', () => ({
   getSecretProviderInstance: vi.fn(async () => ({
@@ -56,10 +58,16 @@ vi.mock('@alga-psa/shared/services/email/providers/MicrosoftGraphAdapter', () =>
         buffer,
       };
     }
+    async downloadMessageSource(_messageId: string) {
+      if (microsoftSourceShouldFail) {
+        throw new Error('microsoft source download failed');
+      }
+      return Buffer.from('From: sender@example.com\r\nSubject: Example\r\n\r\nbody', 'utf-8');
+    }
   },
 }));
 
-vi.mock('@/services/email/providers/GmailAdapter', () => ({
+vi.mock('@alga-psa/integrations', () => ({
   GmailAdapter: class GmailAdapter {
     async connect() {}
     async downloadAttachmentBytes(_messageId: string, _attachmentId: string) {
@@ -67,6 +75,12 @@ vi.mock('@/services/email/providers/GmailAdapter', () => ({
         throw new Error('gmail download failed');
       }
       return Buffer.from('zipdata', 'utf-8');
+    }
+    async downloadMessageSource(_messageId: string) {
+      if (gmailSourceShouldFail) {
+        throw new Error('gmail source download failed');
+      }
+      return Buffer.from('From: sender@example.com\r\nSubject: Gmail Example\r\n\r\nbody', 'utf-8');
     }
   },
 }));
@@ -117,10 +131,12 @@ describe('Email attachment ingestion (workflow-worker action override)', () => {
     microsoftDownloadShouldFail = false;
     microsoftDownloadUnsupported = false;
     gmailDownloadShouldFail = false;
+    microsoftSourceShouldFail = false;
+    gmailSourceShouldFail = false;
 
     await db('document_associations').where({ tenant: tenantId, entity_type: 'ticket' }).delete();
-    await db('documents').where({ tenant: tenantId }).andWhere('document_name', 'like', 'email-att-%').delete();
-    await db('external_files').where({ tenant: tenantId }).andWhere('original_name', 'like', 'email-att-%').delete();
+    await db('documents').where({ tenant: tenantId }).delete();
+    await db('external_files').where({ tenant: tenantId }).delete();
     await db('email_processed_attachments').where({ tenant: tenantId }).delete();
     await db('microsoft_email_provider_config').where({ tenant: tenantId }).delete();
     await db('google_email_provider_config').where({ tenant: tenantId }).delete();
@@ -391,9 +407,268 @@ describe('Email attachment ingestion (workflow-worker action override)', () => {
       .first();
     expect(assoc).toBeTruthy();
   });
+
+  it('extracts embedded attachments from HTML data URLs and referenced CID images only', async () => {
+    const { action } = await createEmbeddedExtractionAction();
+    const result = await action.execute(
+      {
+        emailId: 'msg-embedded-1',
+        html: '<p><img src=\"data:image/png;base64,aGVsbG8=\" /><img src=\"cid:cid-1\" /><img src=\"cid:not-found\" /></p>',
+        attachments: [
+          { id: 'real-1', name: 'inline.png', contentType: 'image/png', size: 5, contentId: '<cid-1>', isInline: true },
+          { id: 'real-2', name: 'doc.pdf', contentType: 'application/pdf', size: 100, contentId: '<cid-doc>', isInline: true },
+        ],
+      },
+      {
+        tenant: tenantId,
+        executionId: 'test',
+        idempotencyKey: 'test',
+        parameters: {},
+        knex: db,
+      } as any
+    );
+
+    expect(result.success).toBe(true);
+    expect(result.attachments).toHaveLength(2);
+    expect(result.attachments.map((item: any) => item.source)).toEqual(['data-url', 'cid']);
+    expect(result.attachments[1].providerAttachmentId).toBe('real-1');
+    expect(result.warnings.some((warning: string) => warning.startsWith('missing_cid_attachment'))).toBe(true);
+  });
+
+  it('processes synthetic embedded data URL image attachments', async () => {
+    const { action } = await createAttachmentAction();
+    const providerId = uuidv4();
+    await insertGoogleProvider(db, tenantId, providerId);
+
+    const ticketId = uuidv4();
+    const res = await action.execute(
+      {
+        emailId: 'msg-embedded-2',
+        attachmentId: 'embedded-data-1',
+        ticketId,
+        tenant: tenantId,
+        providerId,
+        attachmentData: {
+          id: 'embedded-data-1',
+          name: 'embedded-image-1.png',
+          contentType: 'image/png',
+          size: 5,
+          content: Buffer.from('hello', 'utf8').toString('base64'),
+          allowInlineProcessing: true,
+        },
+      },
+      {
+        tenant: tenantId,
+        executionId: 'test',
+        idempotencyKey: 'test',
+        parameters: {},
+        knex: db,
+      } as any
+    );
+
+    expect(res).toMatchObject({ success: true, contentType: 'image/png' });
+    const file = await db('external_files')
+      .where({ tenant: tenantId, original_name: 'embedded-image-1.png' })
+      .first();
+    expect(file).toBeTruthy();
+    expect(file?.mime_type).toBe('image/png');
+    expect(Number(file?.file_size)).toBe(5);
+    expect(file?.uploaded_by_id).toBe(systemUserId);
+
+    const doc = await db('documents')
+      .where({ tenant: tenantId, document_name: 'embedded-image-1.png' })
+      .first();
+    expect(doc).toBeTruthy();
+    expect(doc?.mime_type).toBe('image/png');
+    expect(Number(doc?.file_size)).toBe(5);
+    expect(doc?.created_by).toBe(systemUserId);
+
+    const assoc = await db('document_associations')
+      .where({ tenant: tenantId, entity_type: 'ticket', entity_id: ticketId, document_id: doc?.document_id })
+      .first();
+    expect(assoc).toBeTruthy();
+  });
+
+  it('is idempotent for synthetic embedded image processing', async () => {
+    const { action } = await createAttachmentAction();
+    const providerId = uuidv4();
+    await insertGoogleProvider(db, tenantId, providerId);
+    const ticketId = uuidv4();
+
+    const params = {
+      emailId: 'msg-embedded-3',
+      attachmentId: 'embedded-data-idempotent',
+      ticketId,
+      tenant: tenantId,
+      providerId,
+      attachmentData: {
+        id: 'embedded-data-idempotent',
+        name: 'embedded-image-idempotent.png',
+        contentType: 'image/png',
+        size: 5,
+        content: Buffer.from('hello', 'utf8').toString('base64'),
+        allowInlineProcessing: true,
+      },
+    };
+    const context = {
+      tenant: tenantId,
+      executionId: 'test',
+      idempotencyKey: 'test',
+      parameters: {},
+      knex: db,
+    } as any;
+
+    const first = await action.execute(params, context);
+    const second = await action.execute(params, context);
+    expect(first).toMatchObject({ success: true });
+    expect(second).toMatchObject({ success: true, duplicate: true });
+
+    const files = await db('external_files')
+      .where({ tenant: tenantId, original_name: 'embedded-image-idempotent.png' })
+      .select('file_id');
+    const docs = await db('documents')
+      .where({ tenant: tenantId, document_name: 'embedded-image-idempotent.png' })
+      .select('document_id');
+    const assocs = await db('document_associations')
+      .where({ tenant: tenantId, entity_type: 'ticket', entity_id: ticketId });
+
+    expect(files).toHaveLength(1);
+    expect(docs).toHaveLength(1);
+    expect(assocs).toHaveLength(1);
+  });
+
+  it('process_original_email_attachment stores .eml and associates it with ticket', async () => {
+    const { action } = await createOriginalEmailAction();
+    const providerId = uuidv4();
+    await insertGoogleProvider(db, tenantId, providerId);
+    const ticketId = uuidv4();
+
+    const res = await action.execute(
+      {
+        emailId: '<source-msg-1@example.com>',
+        ticketId,
+        tenant: tenantId,
+        providerId,
+        emailData: {
+          id: '<source-msg-1@example.com>',
+          from: { email: 'from@example.com', name: 'From' },
+          to: [{ email: 'to@example.com', name: 'To' }],
+          subject: 'Subject',
+          body: { text: 'Body' },
+          receivedAt: new Date().toISOString(),
+        },
+      },
+      {
+        tenant: tenantId,
+        executionId: 'test',
+        idempotencyKey: 'test',
+        parameters: {},
+        knex: db,
+      } as any
+    );
+
+    expect(res).toMatchObject({ success: true, contentType: 'message/rfc822' });
+    expect(String(res.fileName || '')).toContain('original-email-source-msg-1-example.com.eml');
+
+    const doc = await db('documents')
+      .where({ tenant: tenantId })
+      .andWhere('document_name', 'like', 'original-email-%')
+      .first();
+    expect(doc).toBeTruthy();
+    expect(doc?.mime_type).toBe('message/rfc822');
+    expect(doc?.created_by).toBe(systemUserId);
+
+    const assoc = await db('document_associations')
+      .where({ tenant: tenantId, entity_type: 'ticket', entity_id: ticketId, document_id: doc?.document_id })
+      .first();
+    expect(assoc).toBeTruthy();
+  });
+
+  it('process_original_email_attachment is idempotent on duplicate invocation', async () => {
+    const { action } = await createOriginalEmailAction();
+    const providerId = uuidv4();
+    await insertGoogleProvider(db, tenantId, providerId);
+    const ticketId = uuidv4();
+
+    const params = {
+      emailId: 'source-msg-2@example.com',
+      ticketId,
+      tenant: tenantId,
+      providerId,
+      emailData: {
+        id: 'source-msg-2@example.com',
+        from: { email: 'from@example.com' },
+        to: [{ email: 'to@example.com' }],
+        subject: 'Subject',
+        body: { text: 'Body' },
+        receivedAt: new Date().toISOString(),
+      },
+    };
+    const context = {
+      tenant: tenantId,
+      executionId: 'test',
+      idempotencyKey: 'test',
+      parameters: {},
+      knex: db,
+    } as any;
+
+    const first = await action.execute(params, context);
+    const second = await action.execute(params, context);
+    expect(first).toMatchObject({ success: true });
+    expect(second).toMatchObject({ success: true, duplicate: true });
+
+    const docs = await db('documents')
+      .where({ tenant: tenantId })
+      .andWhere('document_name', 'like', 'original-email-source-msg-2-example.com.eml')
+      .select('document_id');
+    expect(docs).toHaveLength(1);
+  });
+
+  it('process_original_email_attachment records failed status when provider source retrieval fails', async () => {
+    const { action } = await createOriginalEmailAction();
+    const providerId = uuidv4();
+    await insertGoogleProvider(db, tenantId, providerId);
+    gmailSourceShouldFail = true;
+
+    const res = await action.execute(
+      {
+        emailId: 'source-msg-fail@example.com',
+        ticketId: uuidv4(),
+        tenant: tenantId,
+        providerId,
+        emailData: {
+          id: 'source-msg-fail@example.com',
+          from: { email: 'from@example.com' },
+          to: [{ email: 'to@example.com' }],
+          subject: 'Subject',
+          body: { text: 'Body' },
+          receivedAt: new Date().toISOString(),
+        },
+      },
+      {
+        tenant: tenantId,
+        executionId: 'test',
+        idempotencyKey: 'test',
+        parameters: {},
+        knex: db,
+      } as any
+    );
+
+    expect(res).toMatchObject({ success: false });
+
+    const failed = await db('email_processed_attachments')
+      .where({
+        tenant: tenantId,
+        provider_id: providerId,
+        email_id: 'source-msg-fail@example.com',
+      })
+      .andWhere('attachment_id', '__original_email_source__')
+      .first();
+    expect(failed?.processing_status).toBe('failed');
+  });
 });
 
-async function createAttachmentAction(): Promise<{ action: { execute: (params: any, context: any) => Promise<any> } }> {
+async function createRegisteredAttachmentActions(): Promise<Record<string, { execute: (params: any, context: any) => Promise<any> }>> {
   const { ActionRegistry } = await import('@shared/workflow/core/actionRegistry');
   const workflowWorkerModulePath =
     '../../../../' + 'services/workflow-worker/src/actions/registerEmailAttachmentActions';
@@ -401,11 +676,32 @@ async function createAttachmentAction(): Promise<{ action: { execute: (params: a
 
   const registry = new ActionRegistry();
   registerEmailAttachmentActions(registry);
+  return registry.getRegisteredActions() as any;
+}
 
-  const actions = registry.getRegisteredActions();
+async function createAttachmentAction(): Promise<{ action: { execute: (params: any, context: any) => Promise<any> } }> {
+  const actions = await createRegisteredAttachmentActions();
   const action = actions['process_email_attachment'];
   if (!action) {
     throw new Error('process_email_attachment action not registered');
+  }
+  return { action };
+}
+
+async function createOriginalEmailAction(): Promise<{ action: { execute: (params: any, context: any) => Promise<any> } }> {
+  const actions = await createRegisteredAttachmentActions();
+  const action = actions['process_original_email_attachment'];
+  if (!action) {
+    throw new Error('process_original_email_attachment action not registered');
+  }
+  return { action };
+}
+
+async function createEmbeddedExtractionAction(): Promise<{ action: { execute: (params: any, context: any) => Promise<any> } }> {
+  const actions = await createRegisteredAttachmentActions();
+  const action = actions['extract_embedded_email_attachments'];
+  if (!action) {
+    throw new Error('extract_embedded_email_attachments action not registered');
   }
   return { action };
 }

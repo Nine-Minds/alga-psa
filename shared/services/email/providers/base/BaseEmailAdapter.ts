@@ -108,6 +108,7 @@ export abstract class BaseEmailAdapter implements EmailProviderAdapter {
   abstract processWebhookNotification(payload: any): Promise<string[]>;
   abstract markMessageProcessed(messageId: string): Promise<void>;
   abstract getMessageDetails(messageId: string): Promise<EmailMessageDetails>;
+  abstract downloadMessageSource(messageId: string): Promise<Buffer>;
   abstract testConnection(): Promise<{ success: boolean; error?: string; }>;
   abstract disconnect(): Promise<void>;
 }

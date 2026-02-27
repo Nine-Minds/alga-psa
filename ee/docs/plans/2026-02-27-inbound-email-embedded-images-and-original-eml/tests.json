@@ -1,0 +1,206 @@
+[
+  {
+    "id": "T001",
+    "description": "Unit: HTML parser extracts data:image base64 payloads from single <img> tag",
+    "implemented": false,
+    "featureIds": ["F001", "F002"]
+  },
+  {
+    "id": "T002",
+    "description": "Unit: HTML parser extracts multiple data:image payloads and preserves deterministic ordering",
+    "implemented": false,
+    "featureIds": ["F002", "F006"]
+  },
+  {
+    "id": "T003",
+    "description": "Unit: malformed data:image payload is skipped and does not throw workflow-failing error",
+    "implemented": false,
+    "featureIds": ["F003", "F020"]
+  },
+  {
+    "id": "T004",
+    "description": "Unit: non-image data URLs are rejected by embedded extraction rules",
+    "implemented": false,
+    "featureIds": ["F003", "F024"]
+  },
+  {
+    "id": "T005",
+    "description": "Unit: oversized embedded image payload is skipped by existing max-size policy",
+    "implemented": false,
+    "featureIds": ["F003", "F024"]
+  },
+  {
+    "id": "T006",
+    "description": "Unit: cid references in HTML map only to matching inline MIME parts",
+    "implemented": false,
+    "featureIds": ["F004"]
+  },
+  {
+    "id": "T007",
+    "description": "Unit: unreferenced inline CID MIME parts are skipped",
+    "implemented": false,
+    "featureIds": ["F005"]
+  },
+  {
+    "id": "T008",
+    "description": "Unit: deterministic synthetic embedded attachment ID generation is stable across retries",
+    "implemented": false,
+    "featureIds": ["F006", "F011"]
+  },
+  {
+    "id": "T009",
+    "description": "Unit: deterministic embedded filename generation produces sanitized, extension-appropriate names",
+    "implemented": false,
+    "featureIds": ["F006", "F024"]
+  },
+  {
+    "id": "T010",
+    "description": "Workflow integration: new-ticket inbound path invokes embedded-image processing for extracted images",
+    "implemented": false,
+    "featureIds": ["F007", "F009"]
+  },
+  {
+    "id": "T011",
+    "description": "Workflow integration: reply path invokes embedded-image processing for extracted images",
+    "implemented": false,
+    "featureIds": ["F008", "F009"]
+  },
+  {
+    "id": "T012",
+    "description": "DB integration happy-path: embedded image processing creates external_files row with expected mime and size",
+    "implemented": false,
+    "featureIds": ["F009", "F010", "F022"]
+  },
+  {
+    "id": "T013",
+    "description": "DB integration happy-path: embedded image processing creates documents row with expected metadata",
+    "implemented": false,
+    "featureIds": ["F010", "F022"]
+  },
+  {
+    "id": "T014",
+    "description": "DB integration happy-path: embedded image processing creates ticket document_associations row",
+    "implemented": false,
+    "featureIds": ["F010"]
+  },
+  {
+    "id": "T015",
+    "description": "DB integration guard: duplicate embedded-image processing does not create duplicate file/document/association rows",
+    "implemented": false,
+    "featureIds": ["F011"]
+  },
+  {
+    "id": "T016",
+    "description": "DB integration guard: embedded-image failure is recorded and ticket/comment flow remains successful",
+    "implemented": false,
+    "featureIds": ["F020", "F011"]
+  },
+  {
+    "id": "T017",
+    "description": "Unit: Gmail source-message method returns raw MIME bytes for valid message id",
+    "implemented": false,
+    "featureIds": ["F013"]
+  },
+  {
+    "id": "T018",
+    "description": "Unit: Microsoft source-message method returns raw MIME bytes for valid message id",
+    "implemented": false,
+    "featureIds": ["F014"]
+  },
+  {
+    "id": "T019",
+    "description": "Unit: MailHog source-message path returns MIME bytes when raw source is available",
+    "implemented": false,
+    "featureIds": ["F015"]
+  },
+  {
+    "id": "T020",
+    "description": "Unit: MailHog source-message fallback generates deterministic RFC822 payload when raw source is absent",
+    "implemented": false,
+    "featureIds": ["F015"]
+  },
+  {
+    "id": "T021",
+    "description": "Action integration happy-path: process_original_email_attachment uploads .eml and creates external_files/documents rows",
+    "implemented": false,
+    "featureIds": ["F012", "F016", "F022"]
+  },
+  {
+    "id": "T022",
+    "description": "Action integration happy-path: process_original_email_attachment associates .eml document to ticket",
+    "implemented": false,
+    "featureIds": ["F016"]
+  },
+  {
+    "id": "T023",
+    "description": "Action integration guard: duplicate process_original_email_attachment invocation is idempotent",
+    "implemented": false,
+    "featureIds": ["F017"]
+  },
+  {
+    "id": "T024",
+    "description": "Action integration guard: provider source-message retrieval failure records failed status without duplicate artifacts",
+    "implemented": false,
+    "featureIds": ["F017", "F021"]
+  },
+  {
+    "id": "T025",
+    "description": "Workflow integration: new-ticket path invokes process_original_email_attachment exactly once per email",
+    "implemented": false,
+    "featureIds": ["F018"]
+  },
+  {
+    "id": "T026",
+    "description": "Workflow integration: reply path invokes process_original_email_attachment exactly once per email",
+    "implemented": false,
+    "featureIds": ["F019"]
+  },
+  {
+    "id": "T027",
+    "description": "Workflow integration guard: .eml persistence failure does not block ticket creation in new-ticket flow",
+    "implemented": false,
+    "featureIds": ["F021"]
+  },
+  {
+    "id": "T028",
+    "description": "Workflow integration guard: .eml persistence failure does not block comment creation in reply flow",
+    "implemented": false,
+    "featureIds": ["F021"]
+  },
+  {
+    "id": "T029",
+    "description": "Schema contract test: inbound email payload schema accepts isInline/content fields needed by inline-image processing",
+    "implemented": false,
+    "featureIds": ["F023"]
+  },
+  {
+    "id": "T030",
+    "description": "Schema contract test: event schema changes remain backward compatible with existing provider payloads",
+    "implemented": false,
+    "featureIds": ["F023"]
+  },
+  {
+    "id": "T031",
+    "description": "E2E: inbound email with HTML data:image results in image document visible in Ticket Documents",
+    "implemented": false,
+    "featureIds": ["F007", "F010", "F025"]
+  },
+  {
+    "id": "T032",
+    "description": "E2E: inbound email with CID-referenced inline image results in image document visible in Ticket Documents",
+    "implemented": false,
+    "featureIds": ["F008", "F010", "F025"]
+  },
+  {
+    "id": "T033",
+    "description": "E2E: inbound email creates .eml document visible in Ticket Documents for both new and reply paths",
+    "implemented": false,
+    "featureIds": ["F016", "F018", "F019", "F025"]
+  },
+  {
+    "id": "T034",
+    "description": "E2E guard: duplicate inbound webhook/event does not duplicate embedded image or .eml documents",
+    "implemented": false,
+    "featureIds": ["F011", "F017", "F025"]
+  }
+]

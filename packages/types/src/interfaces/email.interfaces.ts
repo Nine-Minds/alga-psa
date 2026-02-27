@@ -107,10 +107,16 @@ export interface EmailMessage {
     contentType: string;
     size: number;
     contentId?: string;
+    isInline?: boolean;
+    content?: string;
   }>;
   threadId?: string;
   references?: string[];
   inReplyTo?: string;
+  rawMime?: string;
+  rawMimeBase64?: string;
+  sourceMimeBase64?: string;
+  rawSourceBase64?: string;
 }
 
 export interface EmailMessageDetails extends EmailMessage {

@@ -25,7 +25,9 @@ const emailAttachmentSchema = z.object({
   name: z.string().describe('Filename'),
   contentType: z.string().describe('MIME content type'),
   size: z.number().int().positive().describe('Size in bytes'),
-  contentId: z.string().optional().describe('Content-ID for inline attachments')
+  contentId: z.string().optional().describe('Content-ID for inline attachments'),
+  isInline: z.boolean().optional().describe('Whether provider marked the attachment as inline'),
+  content: z.string().optional().describe('Optional base64 attachment payload (test/mailhog paths)')
 }).describe('Email attachment metadata');
 
 /**
@@ -46,7 +48,11 @@ const emailDataSchema = z.object({
   attachments: z.array(emailAttachmentSchema).optional().describe('Email attachments'),
   receivedAt: z.string().optional().describe('When the email was received (ISO 8601)'),
   tenant: z.string().optional().describe('Tenant ID'),
-  providerId: z.string().optional().describe('Email provider ID')
+  providerId: z.string().optional().describe('Email provider ID'),
+  rawMime: z.string().optional().describe('Raw RFC822 MIME source as utf8 string'),
+  rawMimeBase64: z.string().optional().describe('Raw RFC822 MIME source as base64'),
+  sourceMimeBase64: z.string().optional().describe('Alternative base64 MIME source field'),
+  rawSourceBase64: z.string().optional().describe('Alternative base64 MIME source field')
 }).describe('Inbound email data from the email provider');
 
 /**

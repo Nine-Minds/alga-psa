@@ -542,10 +542,17 @@ export const InboundEmailEventPayloadSchema = BasePayloadSchema.extend({
       name: z.string(),
       contentType: z.string(),
       size: z.number(),
+      contentId: z.string().optional(),
+      isInline: z.boolean().optional(),
+      content: z.string().optional(),
     })).optional(),
     threadId: z.string().optional(),
     inReplyTo: z.string().optional(),
     references: z.array(z.string()).optional(),
+    rawMime: z.string().optional(),
+    rawMimeBase64: z.string().optional(),
+    sourceMimeBase64: z.string().optional(),
+    rawSourceBase64: z.string().optional(),
   }),
 });
 
