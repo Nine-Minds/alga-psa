@@ -693,15 +693,8 @@ const fetchContacts = async (): Promise<void> => {
           </div>
         )}
         {userView === 'org' && isTeamsV2Enabled && portalType === 'msp' && (
-          <div className="flex justify-between mb-4">
-            <div className="text-sm text-muted-foreground">
-              Reporting hierarchy for internal users.
-            </div>
-            <ViewSwitcher
-              currentView={userView}
-              onChange={setUserView}
-              options={userViewOptions}
-            />
+          <div className="mb-4 text-sm text-muted-foreground">
+            Reporting hierarchy for internal users.
           </div>
         )}
         {showNewUserForm && (

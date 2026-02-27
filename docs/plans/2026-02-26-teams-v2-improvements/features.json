@@ -225,7 +225,7 @@
   {
     "id": "F078",
     "description": "UserManagement: remove duplicate list/org ViewSwitcher from org view header (lines 696-706)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-3B.8"
     ]
