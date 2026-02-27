@@ -3,7 +3,7 @@
 import Team from '../../models/team';
 import { createTenantKnex } from '@alga-psa/db';
 import { withAuth, hasPermission } from '@alga-psa/auth';
-import { uploadEntityImage, deleteEntityImage } from '@alga-psa/media';
+import { uploadEntityImage, deleteEntityImage, getTeamAvatarUrl } from '@alga-psa/media';
 
 interface ActionResult {
   success: boolean;
@@ -111,3 +111,7 @@ export const deleteTeamAvatar = withAuth(async (
     return { success: false, error: error?.message || 'An unexpected error occurred while deleting the avatar.' };
   }
 });
+
+export async function getTeamAvatarUrlAction(teamId: string, tenant: string): Promise<string | null> {
+  return getTeamAvatarUrl(teamId, tenant);
+}

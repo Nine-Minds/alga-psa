@@ -73,3 +73,4 @@
 - (2026-02-27) Added `TeamAvatar` component in `packages/ui/src/components/TeamAvatar.tsx` as a thin `EntityAvatar` wrapper.
 - (2026-02-27) Added `uploadTeamAvatar` action with team update permission checks in `packages/teams/src/actions/team-actions/avatarActions.ts`.
 - (2026-02-27) Added `deleteTeamAvatar` action with team update permission checks in `packages/teams/src/actions/team-actions/avatarActions.ts`.
+- (2026-02-27) Added `getTeamAvatarUrlAction` in `packages/teams/src/actions/team-actions/avatarActions.ts`.

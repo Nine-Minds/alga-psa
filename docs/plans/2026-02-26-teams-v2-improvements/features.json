@@ -77,7 +77,7 @@
   {
     "id": "F060",
     "description": "Create `getTeamAvatarUrlAction` server action in teams package",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-3A.7"
     ]
