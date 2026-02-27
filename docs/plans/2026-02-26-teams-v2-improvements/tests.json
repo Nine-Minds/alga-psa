@@ -421,7 +421,7 @@
   {
     "id": "T134",
     "description": "UserAndTeamPicker: teams show TeamAvatar instead of gray circle with TeamIcon",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F083"
     ]
