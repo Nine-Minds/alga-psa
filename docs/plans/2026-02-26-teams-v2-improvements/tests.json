@@ -496,7 +496,7 @@
   {
     "id": "T143",
     "description": "MultiUserPicker: no team-related props remain (teams, teamFilterFn, etc.)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F089"
     ]
