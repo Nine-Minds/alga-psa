@@ -468,7 +468,7 @@
   {
     "id": "T055",
     "description": "UI: selected contact without valid email shows validation error and does not call persist callback.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F030",
       "F028"
