@@ -104,7 +104,7 @@
   {
     "id": "F231",
     "description": "Normalize/validate in-app payload contract fields for attachments content/isInline/contentId and MIME source fields",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Data / Contract"]
   },
   {

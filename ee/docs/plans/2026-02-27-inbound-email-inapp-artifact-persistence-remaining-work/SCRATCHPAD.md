@@ -121,3 +121,8 @@ Create a clean, implementation-ready plan containing only remaining work for inb
     - `IMAP_INBOUND_EMAIL_IN_APP_ARTIFACT_CONCURRENCY`
     - `INBOUND_EMAIL_IN_APP_ARTIFACT_CONCURRENCY`
   - Async queue worker concurrency is separately bounded by `IMAP_INBOUND_EMAIL_IN_APP_ASYNC_WORKERS`.
+- 2026-02-27: Completed `F231`.
+  - IMAP webhook now validates and normalizes in-app payload contract fields before processing:
+    - attachments `content`, `isInline`, `contentId`
+    - MIME source fields `rawMimeBase64` / `sourceMimeBase64` / `rawSourceBase64`.
+  - Malformed contract inputs return safe `400` responses instead of crashing callback execution.
