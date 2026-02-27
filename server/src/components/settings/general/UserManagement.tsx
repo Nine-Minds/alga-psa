@@ -530,62 +530,6 @@ const fetchContacts = async (): Promise<void> => {
     return fullName || user.email;
   };
 
-  const buildOrgTree = (allUsers: IUser[]) => {
-    const nodes = new Map<string, { user: IUser; children: IUser[] }>();
-    allUsers.forEach((user) => {
-      nodes.set(user.user_id, { user, children: [] });
-    });
-
-    const roots: IUser[] = [];
-
-    allUsers.forEach((user) => {
-      if (user.reports_to && nodes.has(user.reports_to)) {
-        nodes.get(user.reports_to)?.children.push(user);
-      } else {
-        roots.push(user);
-      }
-    });
-
-    const sortUsers = (list: IUser[]) => {
-      list.sort((a, b) => getDisplayName(a).localeCompare(getDisplayName(b)));
-    };
-
-    const sortTree = (usersToSort: IUser[]) => {
-      sortUsers(usersToSort);
-      usersToSort.forEach((item) => {
-        const node = nodes.get(item.user_id);
-        if (node) {
-          sortTree(node.children);
-        }
-      });
-    };
-
-    sortTree(roots);
-
-    return { roots, nodes };
-  };
-
-  const renderOrgNode = (user: IUser, nodes: Map<string, { user: IUser; children: IUser[] }>) => {
-    const node = nodes.get(user.user_id);
-    const children = node?.children || [];
-
-    return (
-      <li key={user.user_id} className="py-1">
-        <div className="flex items-center gap-2">
-          <span className="font-medium">{getDisplayName(user)}</span>
-          {user.is_inactive && (
-            <span className="text-xs text-muted-foreground">(Inactive)</span>
-          )}
-        </div>
-        {children.length > 0 && (
-          <ul className="pl-4 mt-2 border-l border-gray-200 space-y-1">
-            {children.map((child) => renderOrgNode(child, nodes))}
-          </ul>
-        )}
-      </li>
-    );
-  };
-
   return (
     <Card>
       <CardHeader>
