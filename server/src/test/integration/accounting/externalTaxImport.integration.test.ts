@@ -11,7 +11,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 import { TestContext } from '../../../../test-utils/testContext';
 import { createTestService } from '../../../../test-utils/billingTestHelpers';
-import { ExternalInvoiceFetchResult } from '../../../lib/adapters/accounting/accountingExportAdapter';
+import { ExternalInvoiceFetchResult } from '@alga-psa/types';
 
 // We need to import the service after mocking createTenantKnex
 let ExternalTaxImportService: any;

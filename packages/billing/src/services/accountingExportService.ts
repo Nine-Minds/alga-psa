@@ -3,7 +3,7 @@ import {
   AccountingExportError,
   AccountingExportLine,
   AccountingExportStatus
-} from '../../interfaces/accountingExport.interfaces';
+} from '@alga-psa/types';
 import {
   AccountingExportRepository,
   CreateExportBatchInput,
@@ -18,13 +18,16 @@ import {
   AccountingExportTransformResult,
   AccountingExportDocument,
   TaxDelegationMode
-} from '../adapters/accounting/accountingExportAdapter';
-import { AccountingExportValidation } from '../validation/accountingExportValidation';
-import { publishEvent } from '../eventBus/publishers';
-import { AppError } from '../errors';
-import { getExternalTaxImportService } from './externalTaxImportService';
+} from '@alga-psa/types';
+import { AccountingExportValidation } from './accountingExportValidation';
+import { publishEvent } from '@alga-psa/event-bus/publishers';
+import { AppError } from '@alga-psa/core';
 import { getXeroCsvSettings } from '@alga-psa/integrations/actions/integrations/xeroCsvActions';
 import logger from '@alga-psa/core/logger';
+
+export interface ExternalTaxImporter {
+  importTaxForInvoice(invoiceId: string): Promise<{ success: boolean; importedTax?: number; chargesUpdated?: number; error?: string }>;
+}
 
 export interface CreateExportBatchOptions extends CreateExportBatchInput {}
 
@@ -39,15 +42,16 @@ export interface AppendErrorsOptions {
 export class AccountingExportService {
   constructor(
     private readonly repository: AccountingExportRepository,
-    private readonly adapterRegistry: AccountingAdapterRegistry
+    private readonly adapterRegistry: AccountingAdapterRegistry,
+    private readonly taxImporter?: ExternalTaxImporter
   ) {}
 
-  static async create(): Promise<AccountingExportService> {
+  static async create(taxImporter?: ExternalTaxImporter): Promise<AccountingExportService> {
     const [repository, registry] = await Promise.all([
       AccountingExportRepository.create(),
       AccountingAdapterRegistry.createDefault()
     ]);
-    return new AccountingExportService(repository, registry);
+    return new AccountingExportService(repository, registry, taxImporter);
   }
 
   async createBatch(input: CreateExportBatchOptions): Promise<AccountingExportBatch> {
@@ -437,6 +441,13 @@ export class AccountingExportService {
     context: AccountingExportAdapterContext,
     adapter: any
   ): Promise<void> {
+    if (!this.taxImporter) {
+      logger.info('[AccountingExportService] No tax importer configured, skipping external tax import', {
+        batchId: context.batch.batch_id
+      });
+      return;
+    }
+
     // Extract unique invoice IDs from the exported lines
     const invoiceIds = [...new Set(
       context.lines
@@ -457,11 +468,9 @@ export class AccountingExportService {
       adapterType: adapter.type
     });
 
-    const taxImportService = getExternalTaxImportService();
-
     for (const invoiceId of invoiceIds) {
       try {
-        const result = await taxImportService.importTaxForInvoice(invoiceId);
+        const result = await this.taxImporter.importTaxForInvoice(invoiceId);
 
         if (result.success) {
           logger.info('[AccountingExportService] Successfully imported tax for invoice', {

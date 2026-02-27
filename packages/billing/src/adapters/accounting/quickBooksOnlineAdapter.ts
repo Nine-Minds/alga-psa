@@ -12,17 +12,14 @@ import {
   ExternalInvoiceChargeTax,
   ExternalTaxComponent,
   PendingTaxImportRecord
-} from './accountingExportAdapter';
+} from '@alga-psa/types';
 import { createTenantKnex } from '@alga-psa/db';
-import {
-  AccountingMappingResolver,
-  MappingResolution,
-  CompanyAccountingSyncService,
-  KnexCompanyMappingRepository,
-  buildNormalizedCompanyPayload,
-  QuickBooksOnlineCompanyAdapter,
-  KnexInvoiceMappingRepository
-} from '@alga-psa/billing';
+import { AccountingMappingResolver, MappingResolution } from '../../services/accountingMappingResolver';
+import { CompanyAccountingSyncService } from '../../services/companySync/companySyncService';
+import { KnexCompanyMappingRepository } from '../../services/companySync/companyMappingRepository';
+import { buildNormalizedCompanyPayload } from '../../services/companySync/companySyncNormalizer';
+import { QuickBooksOnlineCompanyAdapter } from '../../services/companySync/adapters/quickBooksCompanyAdapter';
+import { KnexInvoiceMappingRepository } from '../../repositories/invoiceMappingRepository';
 import { QboClientService } from '@alga-psa/integrations/lib/qbo/qboClientService';
 import { QboInvoice, QboInvoiceLine, QboSalesItemLineDetail } from '@alga-psa/integrations/lib/qbo/types';
 
@@ -634,7 +631,7 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
       const chargeLineMappings: Array<{ chargeId: string; qboLineId: string }> =
         (mappingRow?.metadata as any)?.chargeLineMappings ?? [];
 
-      // Build reverse map: QBO line ID → Alga charge ID
+      // Build reverse map: QBO line ID -> Alga charge ID
       const qboLineToChargeId = new Map<string, string>();
       for (const mapping of chargeLineMappings) {
         qboLineToChargeId.set(mapping.qboLineId, mapping.chargeId);
@@ -685,7 +682,7 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
         let taxAmount = 0;
 
         if (subtotal > 0 && totalTax > 0) {
-          // Proportional distribution: itemTax = floor((itemNetAmount / totalRegionalNet) × totalGroupTax)
+          // Proportional distribution: itemTax = floor((itemNetAmount / totalRegionalNet) * totalGroupTax)
           taxAmount = Math.floor((item.amount / subtotal) * totalTax);
         }
 

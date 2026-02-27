@@ -47,6 +47,8 @@
     "@alga-psa/shared": "*",
     "@alga-psa/storage": "*",
     "@alga-psa/types": "*",
+    "@alga-psa/event-bus": "*",
+    "@alga-psa/integrations": "*",
     "@alga-psa/validation": "*",
     "zod": "^3.22.4"
   },

@@ -5,7 +5,7 @@ import { TestContext } from '../../../../test-utils/testContext';
 import { setupCommonMocks, createMockUser, mockGetCurrentUser } from '../../../../test-utils/testMocks';
 import { createTestService } from '../../../../test-utils/billingTestHelpers';
 
-import { AccountingMappingResolver } from 'server/src/lib/services/accountingMappingResolver';
+import { AccountingMappingResolver } from '@alga-psa/billing';
 
 const helpers = TestContext.createHelpers();
 const HOOK_TIMEOUT = 120_000;

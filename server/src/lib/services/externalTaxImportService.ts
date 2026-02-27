@@ -6,9 +6,8 @@ import {
   AccountingExportAdapter,
   ExternalInvoiceData,
   ExternalInvoiceFetchResult
-} from '../adapters/accounting/accountingExportAdapter';
-import { QuickBooksOnlineAdapter } from '../adapters/accounting/quickBooksOnlineAdapter';
-import { XeroAdapter } from '../adapters/accounting/xeroAdapter';
+} from '@alga-psa/types';
+import { QuickBooksOnlineAdapter, XeroAdapter } from '@alga-psa/billing/services';
 
 /**
  * Result of a single invoice tax import operation

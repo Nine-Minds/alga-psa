@@ -1,4 +1,4 @@
-import { AccountingExportAdapter } from './accountingExportAdapter';
+import { AccountingExportAdapter } from '@alga-psa/types';
 import { QuickBooksOnlineAdapter } from './quickBooksOnlineAdapter';
 import { QuickBooksDesktopAdapter } from './quickBooksDesktopAdapter';
 import { QuickBooksCSVAdapter } from './quickBooksCSVAdapter';

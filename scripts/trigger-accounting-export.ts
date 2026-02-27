@@ -1,5 +1,5 @@
 #!/usr/bin/env ts-node
-import { AccountingExportService } from '../server/src/lib/services/accountingExportService';
+import { AccountingExportService } from '@alga-psa/billing/services';
 import { createAccountingExportBatch } from '@alga-psa/billing/actions';
 
 const USAGE = `
