@@ -27,7 +27,7 @@
   {
     "id": "T217",
     "description": "Integration: attachment document is associated to target ticket via document_associations",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F216",
       "F217"

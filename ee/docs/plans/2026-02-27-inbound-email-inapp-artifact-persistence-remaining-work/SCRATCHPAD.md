@@ -166,3 +166,8 @@ Create a clean, implementation-ready plan containing only remaining work for inb
 - Validation:
   - `cd server && npx vitest run src/test/integration/inboundEmailInApp.webhooks.integration.test.ts -t "IMAP in-app path persists regular attachment, embedded image, and original .eml as ticket documents" --coverage.enabled=false`
   - Environment note: DB-gated integration suite was skipped in this local session (`describeDb`).
+- 2026-02-27: Completed `T217`.
+  - The same IMAP integration scenario verifies ticket linkage via `document_associations` by selecting `documents` joined through `document_associations` filtered to the created ticket.
+  - Assertion confirms attachment document rows are associated to the ticket entity, not just persisted standalone.
+- Validation:
+  - Reused targeted integration command from `T216` (same assertion source).
