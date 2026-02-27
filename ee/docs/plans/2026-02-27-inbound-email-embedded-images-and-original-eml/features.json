@@ -45,7 +45,7 @@
   {
     "id": "F006",
     "description": "Generate deterministic synthetic attachment IDs and filenames for extracted embedded images",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Requirements"
