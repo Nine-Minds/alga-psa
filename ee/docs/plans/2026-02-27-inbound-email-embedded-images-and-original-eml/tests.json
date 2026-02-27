@@ -268,7 +268,7 @@
   {
     "id": "T032",
     "description": "E2E: inbound email with CID-referenced inline image results in image document visible in Ticket Documents",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F008",
       "F010",
