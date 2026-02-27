@@ -59,7 +59,7 @@
   {
     "id": "F058",
     "description": "Create `uploadTeamAvatar` server action in `packages/teams/src/actions/team-actions/avatarActions.ts` using `uploadEntityImage('team', ...)`",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-3A.5",
       "FR-3A.11"
