@@ -185,7 +185,7 @@
   {
     "id": "F022",
     "description": "Ensure system-user attribution is preserved for embedded-image and .eml created documents",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Security / Permissions",
       "Data / API / Integrations"
