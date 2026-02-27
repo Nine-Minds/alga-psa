@@ -90,7 +90,7 @@
   {
     "id": "T011",
     "description": "Workflow integration: reply path invokes embedded-image processing for extracted images",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F008",
       "F009"

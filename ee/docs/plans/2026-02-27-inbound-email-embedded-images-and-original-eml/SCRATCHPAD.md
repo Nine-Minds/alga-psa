@@ -98,3 +98,4 @@ Rolling notes for embedded inbound-email image extraction + source `.eml` persis
 - (2026-02-27) Completed T008 — Covered by emailAttachmentHelpers.test.ts: deterministic embedded IDs are stable across retries.
 - (2026-02-27) Completed T009 — Covered by emailAttachmentHelpers.test.ts: deterministic embedded filenames are extension-appropriate and sanitized.
 - (2026-02-27) Completed T010 — Covered by systemEmailProcessingWorkflowAttachments.integration.test.ts: new-ticket path invokes embedded extraction/processing.
+- (2026-02-27) Completed T011 — Covered by systemEmailProcessingWorkflowAttachments.integration.test.ts: reply path invokes embedded extraction/processing.
