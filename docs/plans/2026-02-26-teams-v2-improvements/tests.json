@@ -429,7 +429,7 @@
   {
     "id": "T135",
     "description": "UserAndTeamPicker: TeamAvatar shows colored initials when no image is uploaded",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F083",
       "F090"
