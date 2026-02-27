@@ -225,7 +225,7 @@ export async function createNotificationFromTemplateInternal(
         tenantId: request.tenant,
         occurredAt: createdAt,
         actor: { actorType: 'SYSTEM' },
-        correlationId: `notification:${notification.internal_notification_id}`,
+        correlationId: notification.internal_notification_id,
       },
       idempotencyKey: `notification:${notification.internal_notification_id}:sent`,
     });
@@ -310,7 +310,7 @@ export async function createNotificationFromTemplateAction(
         tenantId: request.tenant,
         occurredAt: createdAt,
         actor: { actorType: 'SYSTEM' },
-        correlationId: `notification:${notification.internal_notification_id}`,
+        correlationId: notification.internal_notification_id,
       },
       idempotencyKey: `notification:${notification.internal_notification_id}:sent`,
     });
@@ -578,7 +578,7 @@ export async function markAsReadAction(
       tenantId: tenant,
       occurredAt: readAt,
       actor: { actorType: 'USER', actorUserId: userId },
-      correlationId: `notification:${notificationId}`,
+      correlationId: notificationId,
     },
     idempotencyKey: `notification:${notificationId}:read`,
   });

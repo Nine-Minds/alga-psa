@@ -6,7 +6,7 @@ import { NotificationSettings, EmailTemplates, NotificationCategories, InternalN
 import { CustomTabs } from "@alga-psa/ui/components/CustomTabs";
 import ViewSwitcher, { ViewSwitcherOption } from "@alga-psa/ui/components/ViewSwitcher";
 import { Card } from "@alga-psa/ui/components/Card";
-import { UnsavedChangesProvider, useUnsavedChanges } from "server/src/contexts/UnsavedChangesContext";
+import { UnsavedChangesProvider, useUnsavedChanges } from "@alga-psa/ui";
 
 type NotificationView = 'email' | 'internal';
 

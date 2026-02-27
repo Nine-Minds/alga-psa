@@ -11,6 +11,8 @@ import { TagManager } from '@alga-psa/tags/components';
 import { findTagsByEntityId } from '@alga-psa/tags/actions';
 import { useTags } from '@alga-psa/tags/context';
 import { getAllUsersBasicAsync, getCurrentUserAsync } from '../../lib/usersHelpers';
+import { getSlaPolicies } from '@alga-psa/sla/actions';
+import { ISlaPolicy } from '@alga-psa/sla/types';
 import { BillingCycleType } from '@alga-psa/types';
 import Documents from '@alga-psa/documents/components/Documents';
 import { validateCompanySize, validateAnnualRevenue, validateWebsiteUrl, validateIndustry, validateClientName } from '@alga-psa/validation';
@@ -32,6 +34,7 @@ import {
   listClientInboundEmailDomains,
   addClientInboundEmailDomain,
   removeClientInboundEmailDomain,
+  listInboundTicketDestinationOptions,
   startClientEntraSync,
 } from '@alga-psa/clients/actions';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
@@ -240,6 +243,8 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   const [tags, setTags] = useState<ITag[]>([]);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
+  const [slaPolicies, setSlaPolicies] = useState<ISlaPolicy[]>([]);
+  const [isLoadingSlaPolicies, setIsLoadingSlaPolicies] = useState(false);
   const { tags: allTags } = useTags();
   const router = useRouter();
   const memoizedRouter = useMemo(() => router, [router]);
@@ -654,7 +659,24 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     fetchTags();
   }, [client.client_id]);
 
-  const handleFieldChange = async (field: string, value: string | boolean) => {
+  // Fetch SLA policies
+  useEffect(() => {
+    const fetchSlaPolicies = async () => {
+      if (slaPolicies.length > 0) return;
+      setIsLoadingSlaPolicies(true);
+      try {
+        const policies = await getSlaPolicies();
+        setSlaPolicies(policies);
+      } catch (error) {
+        console.error('Error fetching SLA policies:', error);
+      } finally {
+        setIsLoadingSlaPolicies(false);
+      }
+    };
+    fetchSlaPolicies();
+  }, [slaPolicies.length]);
+
+  const handleFieldChange = async (field: string, value: string | boolean | null) => {
     // Check if client is being deactivated (is_inactive changing from false to true)
     if (field === 'is_inactive' && editedClient.is_inactive === false && value === true) {
       // Fetch active contacts for this client
@@ -912,6 +934,8 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   const [inboundEmailDomains, setInboundEmailDomains] = useState<Array<{ id: string; domain: string }>>([]);
   const [inboundDomainDraft, setInboundDomainDraft] = useState('');
   const [isInboundDomainBusy, setIsInboundDomainBusy] = useState(false);
+  const [inboundDestinationOptions, setInboundDestinationOptions] = useState<SelectOption[]>([]);
+  const [isInboundDestinationOptionsLoading, setIsInboundDestinationOptionsLoading] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -929,6 +953,35 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       cancelled = true;
     };
   }, [editedClient.client_id]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setIsInboundDestinationOptionsLoading(true);
+      try {
+        const rows = await listInboundTicketDestinationOptions();
+        if (cancelled) return;
+        const options = (rows ?? []).map((row: any) => ({
+          value: row.id,
+          label: row.is_active
+            ? `${row.display_name} (${row.short_name})`
+            : `${row.display_name} (${row.short_name}) [inactive]`,
+        })) as SelectOption[];
+        setInboundDestinationOptions(options);
+      } catch (error) {
+        if (cancelled) return;
+        console.error('Failed to load inbound ticket destination options:', error);
+        setInboundDestinationOptions([]);
+      } finally {
+        if (!cancelled) {
+          setIsInboundDestinationOptionsLoading(false);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const normalizeInboundDomain = useCallback((raw: string) => {
     const trimmed = (raw ?? '').trim().toLowerCase();
@@ -1026,6 +1079,32 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
               </FieldContainer>
 
               <FieldContainer
+                label="Inbound ticket destination"
+                fieldType="select"
+                value={editedClient.inbound_ticket_defaults_id || ''}
+                helperText="Used for inbound senders that map to this client and have no contact override. Precedence: Contact override -> Client destination -> Provider default."
+                automationId="client-inbound-ticket-destination-field"
+              >
+                <Text as="label" size="2" className="text-gray-700 font-medium">Inbound ticket destination</Text>
+                <CustomSelect
+                  id="client-inbound-ticket-destination-select"
+                  value={editedClient.inbound_ticket_defaults_id || ''}
+                  onValueChange={(value) => handleFieldChange('inbound_ticket_defaults_id', value)}
+                  options={inboundDestinationOptions}
+                  allowClear={true}
+                  placeholder={
+                    isInboundDestinationOptionsLoading
+                      ? 'Loading destinations...'
+                      : 'Provider default'
+                  }
+                  disabled={isInboundDestinationOptionsLoading}
+                />
+                <Text size="1" className="text-gray-500">
+                  Precedence: Contact override -&gt; Client destination -&gt; Provider default.
+                </Text>
+              </FieldContainer>
+
+              <FieldContainer
                 label="Inbound email domains"
                 fieldType="textField"
                 value={inboundEmailDomains.map((d) => d.domain).join(', ')}
@@ -1078,7 +1157,31 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
                   )}
                 </div>
               </FieldContainer>
-              
+
+              <FieldContainer
+                label="SLA Policy"
+                fieldType="select"
+                value={slaPolicies.find(p => p.sla_policy_id === editedClient.sla_policy_id)?.policy_name || ''}
+                helperText="Select the SLA policy for this client"
+                automationId="sla-policy-field"
+              >
+                <Text as="label" size="2" className="text-gray-700 font-medium">SLA Policy</Text>
+                <CustomSelect
+                  id="sla-policy-select"
+                  value={editedClient.sla_policy_id || ''}
+                  onValueChange={(value) => handleFieldChange('sla_policy_id', value === '' ? null : value)}
+                  options={[
+                    { value: '', label: 'None' },
+                    ...slaPolicies.map((policy) => ({
+                      value: policy.sla_policy_id,
+                      label: policy.is_default ? `${policy.policy_name} (Default)` : policy.policy_name
+                    }))
+                  ]}
+                  disabled={isLoadingSlaPolicies}
+                  placeholder={isLoadingSlaPolicies ? "Loading policies..." : "Select SLA Policy"}
+                />
+              </FieldContainer>
+
               <TextDetailItem
                 label="Website"
                 value={editedClient.properties?.website || ''}
@@ -1390,29 +1493,33 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       )
     }
   ], [
-    editedClient, 
-    internalUsers, 
-    isLoadingUsers, 
-    t, 
-    id, 
-    tags, 
-    handleTagsChange, 
-    isInDrawer, 
-    locationsRefreshKey, 
-    surveySummary, 
-    hasAttemptedSubmit, 
-    fieldErrors, 
-    handleSave, 
-    isSaving, 
-    setIsQuickAddTicketOpen, 
-    ticketFormOptions, 
-    client.client_id, 
-    client.client_name, 
-    handleBillingConfigSave, 
-    contacts, 
+    editedClient,
+    internalUsers,
+    isLoadingUsers,
+    slaPolicies,
+    isLoadingSlaPolicies,
+    t,
+    id,
+    tags,
+    handleTagsChange,
+    isInDrawer,
+    locationsRefreshKey,
+    surveySummary,
+    hasAttemptedSubmit,
+    fieldErrors,
+    handleSave,
+    isSaving,
+    setIsQuickAddTicketOpen,
+    ticketFormOptions,
+    client.client_id,
+    client.client_name,
+    handleBillingConfigSave,
+    contacts,
     handleDefaultContactChange,
-    currentUser, 
-    documents, 
+    inboundDestinationOptions,
+    isInboundDestinationOptionsLoading,
+    currentUser,
+    documents,
     memoizedRouter,
     interactions
   ]);

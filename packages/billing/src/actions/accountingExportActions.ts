@@ -15,7 +15,7 @@ import type {
   CreateExportErrorInput,
   UpdateExportBatchStatusInput
 } from 'server/src/lib/repositories/accountingExportRepository';
-import type { AccountingExportDeliveryResult } from 'server/src/lib/adapters/accounting/accountingExportAdapter';
+import type { AccountingExportDeliveryResult } from '@alga-psa/types';
 import {
   AccountingExportInvoiceSelector,
   type InvoiceSelectionFilters

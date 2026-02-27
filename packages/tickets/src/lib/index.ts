@@ -9,3 +9,4 @@ export type {
 } from './commentAuthorResolution';
 export { getTicketOrigin, TICKET_ORIGIN_OTHER } from './ticketOrigin';
 export type { ResolvedTicketOrigin } from './ticketOrigin';
+export { isResponseStateTrackingEnabled } from './responseStateSettings';

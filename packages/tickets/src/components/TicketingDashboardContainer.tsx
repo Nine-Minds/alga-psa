@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useCallback, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import TicketingDashboard from './TicketingDashboard';
 import { fetchTicketsWithPagination } from '../actions/optimizedTicketActions';
 import { toast } from 'react-hot-toast';
@@ -57,7 +56,6 @@ export default function TicketingDashboardContainer({
   const [pageSize, setPageSize] = useState(initialPageSize);
   const [sortBy, setSortBy] = useState<string>(defaultSortBy);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>(defaultSortDirection);
-  const router = useRouter();
 
   const [activeFilters, setActiveFilters] = useState<Partial<ITicketListFilters>>(() => {
     return {
@@ -145,14 +143,17 @@ export default function TicketingDashboardContainer({
     if (filters.responseState && filters.responseState !== 'all') {
       params.set('responseState', filters.responseState);
     }
+    if (filters.slaStatusFilter && filters.slaStatusFilter !== 'all') {
+      params.set('slaStatusFilter', filters.slaStatusFilter);
+    }
     if (filters.bundleView && filters.bundleView !== 'bundled') {
       params.set('bundleView', filters.bundleView);
     }
 
-    // Update URL without causing a page refresh
+    // Update URL without triggering a server-side re-render
     const newURL = params.toString() ? `/msp/tickets?${params.toString()}` : '/msp/tickets';
-    router.replace(newURL, { scroll: false });
-  }, [router]);
+    window.history.replaceState(null, '', newURL);
+  }, []);
 
   const fetchTickets = useCallback(async (
     filters: Partial<ITicketListFilters>,
@@ -187,6 +188,7 @@ export default function TicketingDashboardContainer({
         dueDateFrom: filters.dueDateFrom || undefined,
         dueDateTo: filters.dueDateTo || undefined,
         responseState: filters.responseState || undefined,
+        slaStatusFilter: filters.slaStatusFilter || undefined,
         sortBy: effectiveSortBy,
         sortDirection: effectiveSortDirection,
         bundleView: filters.bundleView || 'bundled'

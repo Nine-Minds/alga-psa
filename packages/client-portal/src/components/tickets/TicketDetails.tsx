@@ -5,8 +5,10 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { RichTextViewer } from '@alga-psa/ui/editor';
 import { Card } from '@alga-psa/ui/components/Card';
-import { TicketDocumentsSection, ResponseStateBadge, TicketConversation, TicketAppointmentRequests, TicketOriginBadge, type ITicketAppointmentRequest } from '@alga-psa/tickets/components';
+import { TicketDocumentsSection, TicketConversation, TicketAppointmentRequests, TicketOriginBadge, type ITicketAppointmentRequest } from '@alga-psa/tickets/components';
+import { ResponseStateBadge } from '@alga-psa/ui/components';
 import { getTicketOrigin } from '@alga-psa/tickets/lib/ticketOrigin';
+import { getTicketingDisplaySettings } from '@alga-psa/tickets/actions/ticketDisplaySettings';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import {
@@ -66,6 +68,7 @@ export function TicketDetails({
   // Local overrides for comments to ensure immediate UI reflection
   const [commentOverrides, setCommentOverrides] = useState<Record<string, { note?: string; updated_at?: string }>>({});
   const [statusOptions] = useState<IStatus[]>(initialStatusOptions);
+  const [responseStateTrackingEnabled, setResponseStateTrackingEnabled] = useState<boolean>(true);
   const [ticketToUpdateStatus, setTicketToUpdateStatus] = useState<{ ticketId: string; newStatusId: string; currentStatusName: string; newStatusName: string; } | null>(null);
   const [newCommentContent, setNewCommentContent] = useState<PartialBlock[]>([{ 
     type: "paragraph",
@@ -93,6 +96,13 @@ export function TicketDetails({
     api: t('origin.api', 'Created via API'),
     other: t('origin.other', 'Created via Other'),
   }), [t]);
+
+  // Load response state tracking setting
+  useEffect(() => {
+    getTicketingDisplaySettings()
+      .then((s) => setResponseStateTrackingEnabled(s?.responseStateTrackingEnabled ?? true))
+      .catch(() => {});
+  }, []);
 
   // Fetch appointment requests for this ticket
   useEffect(() => {
@@ -473,7 +483,7 @@ export function TicketDetails({
                   className="!w-fit"
                 />
                 {/* Response State Badge - client-friendly wording (F026-F030) */}
-                {(ticket as any).response_state && (
+                {responseStateTrackingEnabled && (ticket as any).response_state && (
                   <ResponseStateBadge
                     responseState={(ticket as any).response_state as TicketResponseState}
                     isClientPortal={true}

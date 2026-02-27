@@ -216,6 +216,7 @@ export async function processInboundEmailInApp(
     findTicketByReplyToken,
     findTicketByEmailThread,
     resolveInboundTicketDefaults,
+    resolveEffectiveInboundTicketDefaults,
     findContactByEmail,
     findClientIdByInboundEmailDomain,
     findValidClientPrimaryContactId,
@@ -505,8 +506,8 @@ export async function processInboundEmailInApp(
   }
 
   // New ticket path.
-  const defaults = await resolveInboundTicketDefaults(tenantId, providerId);
-  if (!defaults) {
+  const providerDefaults = await resolveInboundTicketDefaults(tenantId, providerId);
+  if (!providerDefaults) {
     console.warn('processInboundEmailInApp: missing inbound ticket defaults; skipping email', {
       tenantId,
       providerId,
@@ -516,22 +517,56 @@ export async function processInboundEmailInApp(
   }
 
   const matchedSenderContact = await resolveSenderContact({
-    defaultClientId: defaults.client_id ?? null,
+    defaultClientId: providerDefaults.client_id ?? null,
+  });
+
+  let domainMatchedClientId: string | null = null;
+  let domainMatchedContactId: string | null = null;
+  if (!matchedSenderContact && senderEmail) {
+    const senderDomain = extractEmailDomain(senderEmail);
+    if (senderDomain) {
+      domainMatchedClientId = await findClientIdByInboundEmailDomain(senderDomain, tenantId);
+      if (domainMatchedClientId) {
+        domainMatchedContactId = await findValidClientPrimaryContactId(domainMatchedClientId, tenantId);
+      }
+    }
+  }
+
+  const destinationResolution = await resolveEffectiveInboundTicketDefaults({
+    tenant: tenantId,
+    providerId,
+    providerDefaults,
+    matchedContactId: matchedSenderContact?.contact_id ?? null,
+    matchedContactClientId: matchedSenderContact?.client_id ?? null,
+    domainMatchedClientId,
+  });
+
+  const defaults = destinationResolution.defaults;
+  if (!defaults) {
+    console.warn('processInboundEmailInApp: no effective inbound destination resolved; skipping email', {
+      tenantId,
+      providerId,
+      emailId: emailData.id,
+      source: destinationResolution.source,
+      fallbackReason: destinationResolution.fallbackReason ?? null,
+    });
+    return { outcome: 'skipped', reason: 'missing_defaults' };
+  }
+
+  console.debug('processInboundEmailInApp: resolved inbound destination source', {
+    tenantId,
+    providerId,
+    emailId: emailData.id,
+    source: destinationResolution.source,
+    fallbackReason: destinationResolution.fallbackReason ?? null,
   });
   let targetClientId = matchedSenderContact?.client_id ?? defaults.client_id;
   let targetContactId = matchedSenderContact?.contact_id;
 
-  // Domain fallback: if no exact contact match, try to match a client from explicitly configured inbound domains.
-  if (!matchedSenderContact && senderEmail) {
-    const senderDomain = extractEmailDomain(senderEmail);
-    if (senderDomain) {
-      const domainMatchedClientId = await findClientIdByInboundEmailDomain(senderDomain, tenantId);
-      if (domainMatchedClientId) {
-        targetClientId = domainMatchedClientId;
-        targetContactId =
-          (await findValidClientPrimaryContactId(domainMatchedClientId, tenantId)) ?? undefined;
-      }
-    }
+  // Domain fallback: if no exact contact match, use explicitly configured inbound-domain client mapping.
+  if (!matchedSenderContact && domainMatchedClientId) {
+    targetClientId = domainMatchedClientId;
+    targetContactId = domainMatchedContactId ?? undefined;
   }
 
   // Only treat the email as authored by a contact when we have an exact sender email match.

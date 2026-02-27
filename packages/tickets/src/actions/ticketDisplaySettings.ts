@@ -9,6 +9,7 @@ export type TicketListColumnKey =
   | 'title'
   | 'status'
   | 'priority'
+  | 'sla'
   | 'board'
   | 'category'
   | 'client'
@@ -26,6 +27,7 @@ export type TicketListSettings = {
 
 export type TicketingDisplaySettings = {
   dateTimeFormat?: string; // date-fns format string, e.g. 'MMM d, yyyy h:mm a'
+  responseStateTrackingEnabled?: boolean; // default true — when false, response state is not tracked or displayed
   list?: TicketListSettings;
 };
 
@@ -42,12 +44,14 @@ export const getTicketingDisplaySettings = withAuth(async (_user, { tenant }): P
 
     return {
       dateTimeFormat: display.dateTimeFormat || DEFAULT_TICKETING_DATETIME_FORMAT,
+      responseStateTrackingEnabled: display.responseStateTrackingEnabled ?? true,
       list: {
         columnVisibility: {
           ticket_number: display?.list?.columnVisibility?.ticket_number ?? true,
           title: display?.list?.columnVisibility?.title ?? true,
           status: display?.list?.columnVisibility?.status ?? true,
           priority: display?.list?.columnVisibility?.priority ?? true,
+          sla: display?.list?.columnVisibility?.sla ?? false,
           board: display?.list?.columnVisibility?.board ?? true,
           category: display?.list?.columnVisibility?.category ?? true,
           client: display?.list?.columnVisibility?.client ?? true,
@@ -65,12 +69,14 @@ export const getTicketingDisplaySettings = withAuth(async (_user, { tenant }): P
     // As a last resort return defaults
     return {
       dateTimeFormat: DEFAULT_TICKETING_DATETIME_FORMAT,
+      responseStateTrackingEnabled: true,
       list: {
         columnVisibility: {
           ticket_number: true,
           title: true,
           status: true,
           priority: true,
+          sla: false,
           board: true,
           category: true,
           client: true,

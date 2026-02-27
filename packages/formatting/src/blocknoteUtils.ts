@@ -750,3 +750,203 @@ export function convertBlockNoteToHTML(blocks: any): string {
 
   return output.join('\n');
 }
+
+// ── ProseMirror JSON → HTML conversion ─────────────────────────────
+
+type PMNode = {
+  type: string;
+  attrs?: Record<string, unknown>;
+  content?: PMNode[];
+  text?: string;
+  marks?: Array<{ type: string; attrs?: Record<string, unknown> }>;
+};
+
+function renderPMMarks(text: string, marks: PMNode['marks']): string {
+  if (!marks || marks.length === 0) return text;
+
+  let result = text;
+  for (const mark of marks) {
+    switch (mark.type) {
+      case 'bold':
+        result = `<strong>${result}</strong>`;
+        break;
+      case 'italic':
+        result = `<em>${result}</em>`;
+        break;
+      case 'underline':
+        result = `<u>${result}</u>`;
+        break;
+      case 'strike':
+        result = `<s>${result}</s>`;
+        break;
+      case 'code':
+        result = `<code>${result}</code>`;
+        break;
+      case 'link': {
+        const href = escapeHtml(String(mark.attrs?.href ?? ''));
+        result = `<a href="${href}" target="_blank" rel="noopener noreferrer">${result}</a>`;
+        break;
+      }
+    }
+  }
+  return result;
+}
+
+function renderPMInlineContent(nodes: PMNode[] | undefined): string {
+  if (!nodes || nodes.length === 0) return '';
+
+  return nodes.map(node => {
+    if (node.type === 'text' && node.text != null) {
+      return renderPMMarks(escapeHtml(node.text), node.marks);
+    }
+    if (node.type === 'mention') {
+      const { userId, username, displayName } = (node.attrs ?? {}) as {
+        userId?: string; username?: string; displayName?: string;
+      };
+      const label = username ? `@${username}` : `@${displayName || 'Unknown'}`;
+      const escapedLabel = escapeHtml(label);
+      const dataAttr = userId ? ` data-user-id="${escapeHtml(userId)}"` : '';
+      return `<span style="display:inline-flex;align-items:center;padding:1px 4px;border-radius:3px;background-color:#dbeafe;color:#1e40af;font-weight:500;"${dataAttr}>${escapedLabel}</span>`;
+    }
+    // Unknown inline node — render children if any
+    if (node.content) return renderPMInlineContent(node.content);
+    return '';
+  }).join('');
+}
+
+function renderPMNode(node: PMNode): string {
+  switch (node.type) {
+    case 'doc':
+      return (node.content ?? []).map(renderPMNode).join('\n');
+
+    case 'paragraph': {
+      const inner = renderPMInlineContent(node.content);
+      return `<p>${inner || '<br>'}</p>`;
+    }
+
+    case 'heading': {
+      const level = Math.min(Math.max(Number(node.attrs?.level) || 1, 1), 6);
+      const inner = renderPMInlineContent(node.content);
+      return `<h${level}>${inner}</h${level}>`;
+    }
+
+    case 'bullet_list':
+    case 'bulletList': {
+      const items = (node.content ?? []).map(renderPMNode).join('\n');
+      return `<ul>${items}</ul>`;
+    }
+
+    case 'ordered_list':
+    case 'orderedList': {
+      const start = Number(node.attrs?.order ?? node.attrs?.start ?? 1);
+      const startAttr = start !== 1 ? ` start="${start}"` : '';
+      const items = (node.content ?? []).map(renderPMNode).join('\n');
+      return `<ol${startAttr}>${items}</ol>`;
+    }
+
+    case 'list_item':
+    case 'listItem': {
+      const inner = (node.content ?? []).map(renderPMNode).join('\n');
+      return `<li>${inner}</li>`;
+    }
+
+    case 'blockquote': {
+      const inner = (node.content ?? []).map(renderPMNode).join('\n');
+      return `<blockquote>${inner}</blockquote>`;
+    }
+
+    case 'code_block':
+    case 'codeBlock': {
+      const lang = node.attrs?.language ? ` class="language-${escapeHtml(String(node.attrs.language))}"` : '';
+      const code = (node.content ?? [])
+        .map(n => escapeHtml(n.text ?? ''))
+        .join('\n');
+      return `<pre><code${lang}>${code}</code></pre>`;
+    }
+
+    case 'horizontal_rule':
+    case 'horizontalRule':
+      return '<hr>';
+
+    case 'hard_break':
+    case 'hardBreak':
+      return '<br>';
+
+    case 'text':
+      return renderPMMarks(escapeHtml(node.text ?? ''), node.marks);
+
+    case 'mention': {
+      const { userId, username, displayName } = (node.attrs ?? {}) as {
+        userId?: string; username?: string; displayName?: string;
+      };
+      const label = username ? `@${username}` : `@${displayName || 'Unknown'}`;
+      const escapedLabel = escapeHtml(label);
+      const dataAttr = userId ? ` data-user-id="${escapeHtml(userId)}"` : '';
+      return `<span style="display:inline-flex;align-items:center;padding:1px 4px;border-radius:3px;background-color:#dbeafe;color:#1e40af;font-weight:500;"${dataAttr}>${escapedLabel}</span>`;
+    }
+
+    default: {
+      // Unknown block — try to render children
+      if (node.content) return (node.content).map(renderPMNode).join('\n');
+      if (node.text != null) return escapeHtml(node.text);
+      return `<!-- unsupported node type: ${escapeHtml(String(node.type))} -->`;
+    }
+  }
+}
+
+/**
+ * Converts ProseMirror JSON ({type: 'doc', content: [...]}) to an HTML string.
+ * Handles paragraphs, headings, lists, code blocks, blockquotes, marks
+ * (bold, italic, underline, strike, code, link), mention nodes, and emoji.
+ */
+export function convertProseMirrorToHTML(doc: unknown): string {
+  if (!doc) return '<p>[No content]</p>';
+
+  let parsed: unknown = doc;
+  if (typeof doc === 'string') {
+    try {
+      parsed = JSON.parse(doc);
+    } catch {
+      return '<p>[Invalid content format]</p>';
+    }
+  }
+
+  if (typeof parsed !== 'object' || parsed === null) {
+    return '<p>[Invalid content format]</p>';
+  }
+
+  const pmDoc = parsed as PMNode;
+  if (pmDoc.type !== 'doc') {
+    return '<p>[Invalid ProseMirror document]</p>';
+  }
+
+  return renderPMNode(pmDoc);
+}
+
+/**
+ * Auto-detects whether block_data is BlockNote or ProseMirror format
+ * and converts it to HTML using the appropriate converter.
+ */
+export function convertBlockContentToHTML(blockData: unknown): string {
+  if (!blockData) return '<p>[No content]</p>';
+
+  let parsed: unknown = blockData;
+  if (typeof blockData === 'string') {
+    try {
+      parsed = JSON.parse(blockData);
+    } catch {
+      return convertBlockNoteToHTML(blockData);
+    }
+  }
+
+  // ProseMirror format: {type: 'doc', content: [...]}
+  if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+    const maybeDoc = parsed as { type?: string };
+    if (maybeDoc.type === 'doc') {
+      return convertProseMirrorToHTML(parsed);
+    }
+  }
+
+  // BlockNote format: [{type: '...', props: {...}, content: [...]}]
+  return convertBlockNoteToHTML(blockData);
+}

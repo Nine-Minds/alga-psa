@@ -131,6 +131,10 @@ function getTicketLinks(id: string): HateoasLinks {
       href: `/api/v1/tickets/${id}/comments`,
       method: 'GET'
     },
+    documents: {
+      href: `/api/v1/tickets/${id}/documents`,
+      method: 'GET'
+    },
     assignment: {
       href: `/api/v1/tickets/${id}/assignment`,
       method: 'PUT'

@@ -26,6 +26,7 @@
   "dependencies": {
     "@alga-psa/core": "file:../../packages/core",
     "@alga-psa/db": "file:../../packages/db",
+    "@alga-psa/sla": "file:../../packages/sla",
     "@alga-psa/shared": "file:../../shared",
     "@js-temporal/polyfill": "^0.4.4",
     "@aws-sdk/client-s3": "^3.984.0",

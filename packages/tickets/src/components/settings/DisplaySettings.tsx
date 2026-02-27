@@ -20,6 +20,7 @@ const DisplaySettings = (): React.JSX.Element => {
     title: true,
     status: true,
     priority: true,
+    sla: false,
     board: true,
     category: true,
     client: true,
@@ -31,12 +32,14 @@ const DisplaySettings = (): React.JSX.Element => {
     actions: true,
   });
   const [tagsInlineUnderTitle, setTagsInlineUnderTitle] = useState<boolean>(false);
-  
+  const [responseStateTrackingEnabled, setResponseStateTrackingEnabled] = useState<boolean>(true);
+
   // Track original values to detect changes
   const [originalDisplaySettings, setOriginalDisplaySettings] = useState<{
     dateTimeFormat: string;
     columnVisibility: Record<string, boolean>;
     tagsInlineUnderTitle: boolean;
+    responseStateTrackingEnabled: boolean;
   }>({
     dateTimeFormat: 'MMM d, yyyy h:mm a',
     columnVisibility: {
@@ -55,6 +58,7 @@ const DisplaySettings = (): React.JSX.Element => {
       actions: true,
     },
     tagsInlineUnderTitle: false,
+    responseStateTrackingEnabled: true,
   });
   
   // Check if there are unsaved changes
@@ -62,7 +66,8 @@ const DisplaySettings = (): React.JSX.Element => {
     return (
       dateTimeFormat !== originalDisplaySettings.dateTimeFormat ||
       JSON.stringify(columnVisibility) !== JSON.stringify(originalDisplaySettings.columnVisibility) ||
-      tagsInlineUnderTitle !== originalDisplaySettings.tagsInlineUnderTitle
+      tagsInlineUnderTitle !== originalDisplaySettings.tagsInlineUnderTitle ||
+      responseStateTrackingEnabled !== originalDisplaySettings.responseStateTrackingEnabled
     );
   };
 
@@ -77,6 +82,7 @@ const DisplaySettings = (): React.JSX.Element => {
           title: true,
           status: true,
           priority: true,
+          sla: false,
           board: true,
           category: true,
           client: true,
@@ -88,17 +94,20 @@ const DisplaySettings = (): React.JSX.Element => {
           actions: true,
         };
         const loadedTagsInline = s?.list?.tagsInlineUnderTitle || false;
-        
+        const loadedResponseStateTracking = s?.responseStateTrackingEnabled ?? true;
+
         // Set current values
         setDateTimeFormat(loadedDateFormat);
         setColumnVisibility(loadedColumnVisibility);
         setTagsInlineUnderTitle(loadedTagsInline);
-        
+        setResponseStateTrackingEnabled(loadedResponseStateTracking);
+
         // Store original values for change detection
         setOriginalDisplaySettings({
           dateTimeFormat: loadedDateFormat,
           columnVisibility: loadedColumnVisibility,
           tagsInlineUnderTitle: loadedTagsInline,
+          responseStateTrackingEnabled: loadedResponseStateTracking,
         });
       } catch (e) {
         console.error('Failed to load ticketing display settings', e);
@@ -112,18 +121,20 @@ const DisplaySettings = (): React.JSX.Element => {
       setIsSavingDisplay(true);
       await updateTicketingDisplaySettings({
         dateTimeFormat,
+        responseStateTrackingEnabled,
         list: {
           columnVisibility,
           tagsInlineUnderTitle,
         },
       });
       toast.success('Ticket display settings saved');
-      
+
       // Update original settings after successful save
       setOriginalDisplaySettings({
         dateTimeFormat,
         columnVisibility: { ...columnVisibility },
         tagsInlineUnderTitle,
+        responseStateTrackingEnabled,
       });
     } catch (e) {
       console.error('Failed to save ticket display settings', e);
@@ -141,7 +152,22 @@ const DisplaySettings = (): React.JSX.Element => {
   };
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow-sm">
+    <div className="space-y-6">
+      <div className="bg-white p-6 rounded-lg shadow-sm">
+        <h3 className="text-lg font-semibold text-gray-800 mb-2">Response State Tracking</h3>
+        <p className="text-sm text-gray-600 mb-4">
+          When enabled, tickets automatically track who needs to respond next (awaiting client or awaiting internal response).
+          Disabling this hides response state badges, filters, and related SLA pause options.
+        </p>
+        <Switch
+          id="response-state-tracking-toggle"
+          checked={responseStateTrackingEnabled}
+          onCheckedChange={(v) => setResponseStateTrackingEnabled(Boolean(v))}
+          label={responseStateTrackingEnabled ? 'Response state tracking enabled' : 'Response state tracking disabled'}
+        />
+      </div>
+
+      <div className="bg-white p-6 rounded-lg shadow-sm">
       <h3 className="text-lg font-semibold text-gray-800 mb-2">Ticket Display Preferences</h3>
       <p className="text-sm text-gray-600 mb-4">Configure how your Ticketing dashboard displays columns and timestamps for your team.</p>
       <div className="flex flex-col gap-3 md:flex-row md:items-end md:gap-4">
@@ -170,6 +196,7 @@ const DisplaySettings = (): React.JSX.Element => {
             { key: 'title', label: 'Title', required: true },
             { key: 'status', label: 'Status', required: false },
             { key: 'priority', label: 'Priority', required: false },
+            { key: 'sla', label: 'SLA', required: false },
             { key: 'board', label: 'Board', required: false },
             { key: 'category', label: 'Category', required: false },
             { key: 'client', label: 'Client', required: false },
@@ -221,6 +248,7 @@ const DisplaySettings = (): React.JSX.Element => {
           disabled={isSavingDisplay || !hasUnsavedChanges()}>
           {isSavingDisplay ? 'Saving…' : 'Save'}
         </Button>
+      </div>
       </div>
     </div>
   );
