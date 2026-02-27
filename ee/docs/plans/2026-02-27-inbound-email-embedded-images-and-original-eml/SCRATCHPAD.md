@@ -121,3 +121,4 @@ Rolling notes for embedded inbound-email image extraction + source `.eml` persis
 - (2026-02-27) Completed T031 — Added Playwright scenario in ee/server/src/__tests__/integration/email-attachments-to-ticket-documents.playwright.test.ts that validates embedded data:image attachment filenames are visible in Ticket Documents.
 - (2026-02-27) Completed T032 — Added Playwright CID-inline scenario that validates CID-derived image filenames appear in Ticket Documents.
 - (2026-02-27) Completed T033 — Added Playwright .eml visibility scenario covering both new-ticket and reply ticket document views.
+- (2026-02-27) Completed T034 — Added Playwright duplicate-guard scenario that verifies single embedded/.eml document rows and visibility on the ticket.
