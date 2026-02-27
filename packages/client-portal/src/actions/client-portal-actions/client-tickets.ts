@@ -242,7 +242,8 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
           'p.priority_name',
           'p.color as priority_color',
           'u_creator.user_type as entered_by_user_type',
-          'tm.team_name as assigned_team_name'
+          'tm.team_name as assigned_team_name',
+          trx.raw(`(SELECT COALESCE(json_agg(json_build_object('user_id', uu.user_id, 'name', CONCAT(uu.first_name, ' ', uu.last_name))), '[]'::json) FROM ticket_resources tr2 JOIN users uu ON tr2.additional_user_id = uu.user_id AND tr2.tenant = uu.tenant WHERE tr2.ticket_id = t.ticket_id AND tr2.tenant = t.tenant) as additional_agents`)
         )
         .leftJoin('statuses as s', function() {
           this.on('t.status_id', '=', 's.status_id')

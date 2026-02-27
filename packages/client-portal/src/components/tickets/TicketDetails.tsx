@@ -11,6 +11,7 @@ import { getTicketOrigin } from '@alga-psa/tickets/lib/ticketOrigin';
 import { getTicketingDisplaySettings } from '@alga-psa/tickets/actions/ticketDisplaySettings';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import TeamAvatar from '@alga-psa/ui/components/TeamAvatar';
+import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import {
   getClientTicketDetails,
@@ -544,19 +545,51 @@ export function TicketDetails({
                   <span className="text-sm text-gray-500">-</span>
                 )}
                 {ticket.assigned_team_id && (ticket as any).assigned_team_name && (
-                  <TeamAvatar
-                    teamId={ticket.assigned_team_id}
-                    teamName={(ticket as any).assigned_team_name}
-                    avatarUrl={teamAvatarUrl}
-                    size="sm"
-                  />
+                  <>
+                    <TeamAvatar
+                      teamId={ticket.assigned_team_id}
+                      teamName={(ticket as any).assigned_team_name}
+                      avatarUrl={teamAvatarUrl}
+                      size="sm"
+                    />
+                    <span className="text-xs text-gray-500">{(ticket as any).assigned_team_name}</span>
+                  </>
                 )}
+                {(() => {
+                  const additionalAgents = (ticket as any).additional_agents || [];
+                  if (additionalAgents.length === 0) return null;
+                  return (
+                    <Tooltip
+                      content={
+                        <div className="text-xs space-y-1.5">
+                          <div className="font-medium text-gray-300 mb-1">Additional Agents:</div>
+                          {additionalAgents.map((agent: { user_id: string; name: string }, i: number) => (
+                            <div key={i} className="flex items-center gap-2">
+                              <UserAvatar
+                                userId={agent.user_id}
+                                userName={agent.name}
+                                avatarUrl={ticket.userMap?.[agent.user_id]?.avatarUrl || null}
+                                size="xs"
+                              />
+                              <span>{agent.name}</span>
+                            </div>
+                          ))}
+                        </div>
+                      }
+                    >
+                      <span
+                        className="px-1.5 py-0.5 text-xs font-medium rounded-full cursor-help"
+                        style={{
+                          color: 'rgb(var(--color-primary-500))',
+                          backgroundColor: 'rgb(var(--color-primary-50))'
+                        }}
+                      >
+                        +{additionalAgents.length}
+                      </span>
+                    </Tooltip>
+                  );
+                })()}
               </div>
-              {ticket.assigned_team_id && (ticket as any).assigned_team_name && (
-                <div className="flex items-center gap-1.5 mt-1">
-                  <span className="text-xs text-gray-500">{(ticket as any).assigned_team_name}</span>
-                </div>
-              )}
             </div>
 
             {/* Priority */}
