@@ -438,7 +438,7 @@
   {
     "id": "T136",
     "description": "UserAndTeamPicker: TeamAvatar shows uploaded image when available",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F083",
       "F085"
