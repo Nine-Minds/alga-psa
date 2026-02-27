@@ -169,7 +169,7 @@
   {
     "id": "F071",
     "description": "OrgChart: create smoothstep edges between parent and child nodes",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-3B.3"
     ]

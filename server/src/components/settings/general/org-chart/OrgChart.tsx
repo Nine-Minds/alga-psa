@@ -17,9 +17,9 @@ const HORIZONTAL_GAP = 40;
 const VERTICAL_GAP = 120;
 
 const OrgChart = ({ users }: OrgChartProps) => {
-  const { nodes } = useMemo(() => {
+  const { nodes, edges } = useMemo(() => {
     if (users.length === 0) {
-      return { nodes: [] as Node<OrgChartNodeData>[] };
+      return { nodes: [] as Node<OrgChartNodeData>[], edges: [] as Edge[] };
     }
 
     const nodesById = new Map<string, { user: IUser; children: IUser[] }>();
@@ -74,6 +74,7 @@ const OrgChart = ({ users }: OrgChartProps) => {
     roots.forEach((root) => measure(root.user_id));
 
     const positionedNodes: Node<OrgChartNodeData>[] = [];
+    const positionedEdges: Edge[] = [];
 
     const assignPositions = (user: IUser, depth: number, startX: number) => {
       const width = subtreeWidth.get(user.user_id) ?? NODE_WIDTH;
@@ -99,6 +100,12 @@ const OrgChart = ({ users }: OrgChartProps) => {
       let childStartX = startX;
       node.children.forEach((child) => {
         const childWidth = subtreeWidth.get(child.user_id) ?? NODE_WIDTH;
+        positionedEdges.push({
+          id: `e-${user.user_id}-${child.user_id}`,
+          source: user.user_id,
+          target: child.user_id,
+          type: 'smoothstep',
+        });
         assignPositions(child, depth + 1, childStartX);
         childStartX += childWidth + HORIZONTAL_GAP;
       });
@@ -114,14 +121,12 @@ const OrgChart = ({ users }: OrgChartProps) => {
       currentX += width;
     });
 
-    return { nodes: positionedNodes };
+    return { nodes: positionedNodes, edges: positionedEdges };
   }, [users]);
 
   const nodeTypes: NodeTypes = useMemo(() => ({
     orgChartNode: OrgChartNode,
   }), []);
-
-  const edges: Edge[] = [];
 
   if (users.length === 0) {
     return <div className="text-sm text-muted-foreground">No users available.</div>;
