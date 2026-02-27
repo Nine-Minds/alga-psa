@@ -110,8 +110,8 @@ export function TicketDetails({
     }
     const fetchTeamAvatar = async () => {
       try {
-        const result = await getTeamAvatarUrlsBatchAction([ticket.assigned_team_id!], ticket.tenant);
-        const urls = result instanceof Map ? result : new Map(Object.entries(result));
+        const result = await getTeamAvatarUrlsBatchAction([ticket.assigned_team_id!], ticket.tenant!);
+        const urls: Map<string, string | null> = result instanceof Map ? result : new Map(Object.entries(result) as [string, string | null][]);
         setTeamAvatarUrl(urls.get(ticket.assigned_team_id!) ?? null);
       } catch {
         setTeamAvatarUrl(null);

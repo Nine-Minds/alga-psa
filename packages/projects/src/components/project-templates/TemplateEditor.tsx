@@ -265,7 +265,7 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
 
         const teamIds = fetchedTeams.map((t: ITeam) => t.team_id);
         if (teamIds.length > 0) {
-          const avatarResult = await getTeamAvatarUrlsBatchAction(teamIds, template.tenant);
+          const avatarResult = await getTeamAvatarUrlsBatchAction(teamIds, template.tenant!);
           const urls: Record<string, string | null> = {};
           if (avatarResult instanceof Map) {
             avatarResult.forEach((url, id) => { urls[id] = url; });

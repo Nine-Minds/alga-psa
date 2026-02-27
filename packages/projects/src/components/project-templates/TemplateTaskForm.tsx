@@ -197,7 +197,7 @@ export function TemplateTaskForm({
     const fetchTeamAvatar = async () => {
       try {
         const result = await getTeamAvatarUrlsBatchAction([assignedTeamId], tenant);
-        const urls = result instanceof Map ? result : new Map(Object.entries(result));
+        const urls: Map<string, string | null> = result instanceof Map ? result : new Map(Object.entries(result) as [string, string | null][]);
         setTeamAvatarUrl(urls.get(assignedTeamId) ?? null);
       } catch {
         setTeamAvatarUrl(null);
