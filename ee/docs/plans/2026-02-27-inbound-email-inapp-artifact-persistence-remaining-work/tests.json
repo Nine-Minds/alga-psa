@@ -106,7 +106,7 @@
   {
     "id": "T226",
     "description": "Integration: duplicate inbound message does not create duplicate embedded-image documents",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F224"
     ]

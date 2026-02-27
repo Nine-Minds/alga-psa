@@ -218,3 +218,7 @@ Create a clean, implementation-ready plan containing only remaining work for inb
 - Validation:
   - `cd server && npx vitest run src/test/integration/inboundEmailInApp.webhooks.integration.test.ts -t "Idempotency: duplicate inbound message does not duplicate provider, embedded, or .eml artifact documents" --coverage.enabled=false`
   - Environment note: DB-gated integration suite was skipped in this local session (`describeDb`).
+- 2026-02-27: Completed `T226`.
+  - Duplicate-message idempotency integration scenario added in `T225` asserts embedded image document (`embedded-image-1.png`) remains single-instance after replay.
+- Validation:
+  - Reused targeted duplicate-idempotency integration command from `T225`.
