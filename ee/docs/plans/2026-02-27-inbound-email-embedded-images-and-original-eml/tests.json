@@ -242,7 +242,7 @@
   {
     "id": "T029",
     "description": "Schema contract test: inbound email payload schema accepts isInline/content fields needed by inline-image processing",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F023"
     ]
