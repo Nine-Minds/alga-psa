@@ -226,3 +226,9 @@ Create a clean, implementation-ready plan containing only remaining work for inb
   - Duplicate-message idempotency integration scenario added in `T225` also asserts deterministic original-email `.eml` document remains single-instance after replay.
 - Validation:
   - Reused targeted duplicate-idempotency integration command from `T225`.
+- 2026-02-27: Completed `T228`.
+  - Added integration scenario `Artifact failure: attachment persistence failure is recorded while ticket/comment creation still succeeds` in `server/src/test/integration/inboundEmailInApp.webhooks.integration.test.ts`.
+  - Test injects a storage upload failure via test mock, asserts `processInboundEmailInApp` still returns `created`, comment row exists, and `email_processed_attachments` records `processing_status = failed` with error detail.
+- Validation:
+  - `cd server && npx vitest run src/test/integration/inboundEmailInApp.webhooks.integration.test.ts -t "Artifact failure: attachment persistence failure is recorded while ticket/comment creation still succeeds" --coverage.enabled=false`
+  - Environment note: DB-gated integration suite was skipped in this local session (`describeDb`).

@@ -122,7 +122,7 @@
   {
     "id": "T228",
     "description": "Integration: artifact persistence failure is recorded and ticket/comment creation still succeeds",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F225"
     ]

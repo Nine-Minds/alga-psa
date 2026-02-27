@@ -33,6 +33,7 @@ let enteredByUserId: string;
 let gmailListMessagesSinceMock = vi.fn();
 let gmailGetMessageDetailsMock = vi.fn();
 let microsoftGetMessageDetailsMock = vi.fn();
+let storageUploadMock = vi.fn(async (_buffer: Buffer, storagePath: string) => ({ path: storagePath }));
 
 vi.mock('@alga-psa/core/secrets', () => ({
   getSecretProviderInstance: vi.fn(async () => ({
@@ -88,6 +89,15 @@ vi.mock('@alga-psa/shared/services/email/providers/MicrosoftGraphAdapter', () =>
     },
   };
 });
+
+vi.mock('@alga-psa/storage', () => ({
+  StorageProviderFactory: {
+    createProvider: vi.fn(async () => ({
+      upload: (...args: any[]) => storageUploadMock(...args),
+    })),
+  },
+  generateStoragePath: vi.fn((tenant: string, _prefix: string, fileName: string) => `${tenant}/${fileName}`),
+}));
 
 function makeFakeJwt(payload: Record<string, any>): string {
   const header = Buffer.from(JSON.stringify({ alg: 'none', typ: 'JWT' })).toString('base64url');
@@ -352,6 +362,11 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
     }
     process.env.INBOUND_EMAIL_IN_APP_PROVIDER_IDS = '';
     process.env.INBOUND_EMAIL_IN_APP_PROCESSING_ENABLED = '';
+    process.env.IMAP_INBOUND_EMAIL_IN_APP_PROCESSING_ENABLED = '';
+    storageUploadMock.mockReset();
+    storageUploadMock.mockImplementation(async (_buffer: Buffer, storagePath: string) => ({
+      path: storagePath,
+    }));
   });
 
   afterAll(async () => {
@@ -691,6 +706,80 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
     expect(countByName['regular-dupe.txt']).toBe(1);
     expect(countByName['embedded-image-1.png']).toBe(1);
     expect(countByName[emlName]).toBe(1);
+  });
+
+  it('Artifact failure: attachment persistence failure is recorded while ticket/comment creation still succeeds', async () => {
+    const providerId = uuidv4();
+    const mailbox = `support-imap-failure-${uuidv4().slice(0, 6)}@example.com`;
+    const { defaultsId } = await setupImapProvider({ providerId, mailbox });
+
+    cleanup.push(async () => {
+      await db('email_processed_attachments').where({ tenant: tenantId, provider_id: providerId }).delete();
+      await db('email_providers').where({ tenant: tenantId, id: providerId }).delete();
+      await db('inbound_ticket_defaults').where({ tenant: tenantId, id: defaultsId }).delete();
+    });
+
+    process.env.IMAP_INBOUND_EMAIL_IN_APP_PROCESSING_ENABLED = 'true';
+    storageUploadMock.mockRejectedValueOnce(new Error('simulated upload failure'));
+
+    const subject = `IMAP artifact failure ${uuidv4().slice(0, 6)}`;
+    const messageId = `imap-failure-${uuidv4()}@example.com`;
+    const result = await processInboundEmailInApp({
+      tenantId,
+      providerId,
+      emailData: {
+        id: messageId,
+        provider: 'imap',
+        providerId,
+        tenant: tenantId,
+        receivedAt: new Date().toISOString(),
+        from: { email: 'sender@example.com', name: 'Sender' },
+        to: [{ email: mailbox, name: 'Support' }],
+        subject,
+        body: {
+          text: 'Inbound body',
+          html: '<p>Inbound body</p>',
+        },
+        attachments: [
+          {
+            id: 'att-failure-1',
+            name: 'failure.txt',
+            contentType: 'text/plain',
+            size: Buffer.from('failure-content').length,
+            content: Buffer.from('failure-content').toString('base64'),
+          },
+        ],
+        rawMimeBase64: Buffer.from('From: sender@example.com\r\n\r\nfailure').toString('base64'),
+      } as any,
+    });
+
+    expect(result.outcome).toBe('created');
+
+    const ticket = await db('tickets')
+      .where({ tenant: tenantId, title: subject })
+      .first<any>();
+    expect(ticket).toBeDefined();
+
+    cleanup.push(async () => {
+      await db('comments').where({ tenant: tenantId, ticket_id: ticket.ticket_id }).delete();
+      await db('document_associations').where({ tenant: tenantId, entity_id: ticket.ticket_id }).delete();
+      await db('tickets').where({ tenant: tenantId, ticket_id: ticket.ticket_id }).delete();
+    });
+
+    const comments = await db('comments').where({ tenant: tenantId, ticket_id: ticket.ticket_id });
+    expect(comments).toHaveLength(1);
+
+    const failedAttachmentRow = await db('email_processed_attachments')
+      .where({
+        tenant: tenantId,
+        provider_id: providerId,
+        email_id: messageId,
+        attachment_id: 'att-failure-1',
+      })
+      .first<any>();
+    expect(failedAttachmentRow).toBeDefined();
+    expect(failedAttachmentRow.processing_status).toBe('failed');
+    expect(String(failedAttachmentRow.error_message || '')).toContain('simulated upload failure');
   });
 
   it('Reply threading: reply token resolves ticket and creates exactly 1 new comment', async () => {
