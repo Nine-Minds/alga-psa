@@ -272,3 +272,9 @@ Create a clean, implementation-ready plan containing only remaining work for inb
   - Test sends non-string `attachments[].content` and asserts safe `400` validation response without invoking publish/in-app handlers.
 - Validation:
   - Reused full IMAP webhook integration run from `T229`.
+- 2026-02-27: Completed `T235`.
+  - Added `packages/integrations/src/webhooks/email/imapInAppQueue.test.ts` with async queue acceptance/defer behavior coverage.
+  - Test asserts queue accepts callback payload, returns immediately (non-blocking), and begins asynchronous processing without request-thread waiting.
+- Validation:
+  - `cd server && npx vitest run ../packages/integrations/src/webhooks/email/imapInAppQueue.test.ts --coverage.enabled=false`
+  - `cd server && npx vitest run src/test/integration/imapWebhookHandoff.integration.test.ts ../packages/integrations/src/webhooks/email/imapInAppQueue.test.ts --coverage.enabled=false`

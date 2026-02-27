@@ -184,7 +184,7 @@
   {
     "id": "T235",
     "description": "Unit: app-local async queue mode accepts callback payload and defers byte-heavy artifact processing",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F229"
     ]
