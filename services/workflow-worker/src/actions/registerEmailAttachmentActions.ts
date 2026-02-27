@@ -385,7 +385,7 @@ export function registerEmailAttachmentActions(actionRegistry: ActionRegistry): 
       }
 
       const { StorageProviderFactory, generateStoragePath } = await import(
-        '@alga-psa/documents'
+        '@alga-psa/storage'
       );
       const storageProvider = await StorageProviderFactory.createProvider();
       const storagePath = generateStoragePath(tenant, '', resolvedFileName);
