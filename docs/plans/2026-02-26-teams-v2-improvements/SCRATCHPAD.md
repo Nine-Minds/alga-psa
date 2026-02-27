@@ -110,3 +110,4 @@
 - (2026-02-27) Marked T083 covered by teams-v2 improvements test suite.
 - (2026-02-27) Marked T084 covered by teams-v2 improvements test suite.
 - (2026-02-27) Marked T085 covered by teams-v2 improvements test suite.
+- (2026-02-27) Marked T086 covered by teams-v2 improvements test suite.
