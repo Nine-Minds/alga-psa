@@ -8,7 +8,7 @@
   {
     "id": "F002",
     "description": "Migration: Replace unique constraint on document_folders to include entity scope (COALESCE-based)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-1.2"]
   },
   {
