@@ -63,7 +63,7 @@
   {
     "id": "T008",
     "description": "Unit: deterministic synthetic embedded attachment ID generation is stable across retries",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F006",
       "F011"
