@@ -126,7 +126,7 @@
   {
     "id": "T015",
     "description": "DB integration guard: duplicate embedded-image processing does not create duplicate file/document/association rows",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F011"
     ]
