@@ -115,7 +115,7 @@
   {
     "id": "F014",
     "description": "Implement Microsoft adapter retrieval of raw MIME/source message bytes for .eml persistence",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data / API / Integrations"
     ]
