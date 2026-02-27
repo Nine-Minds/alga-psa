@@ -36,7 +36,7 @@
   {
     "id": "T218",
     "description": "Unit: data:image payload extraction in in-app path emits deterministic synthetic attachment records",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F218",
       "F220"

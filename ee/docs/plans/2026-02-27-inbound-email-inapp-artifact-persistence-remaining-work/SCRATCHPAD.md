@@ -171,3 +171,8 @@ Create a clean, implementation-ready plan containing only remaining work for inb
   - Assertion confirms attachment document rows are associated to the ticket entity, not just persisted standalone.
 - Validation:
   - Reused targeted integration command from `T216` (same assertion source).
+- 2026-02-27: Completed `T218`.
+  - Added `shared/services/email/__tests__/inboundEmailArtifactHelpers.test.ts` with deterministic `data:image` extraction coverage.
+  - Test asserts generated synthetic artifact shape and stable deterministic ID/name/content across repeated extraction calls.
+- Validation:
+  - `npx vitest run --config shared/vitest.config.ts shared/services/email/__tests__/inboundEmailArtifactHelpers.test.ts --coverage.enabled=false`
