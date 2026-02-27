@@ -386,7 +386,7 @@
   {
     "id": "T046",
     "description": "Unit: merge preserves existing entity metadata when duplicate email is re-added from another path.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F025",
       "F026",

@@ -200,3 +200,4 @@ Working notes for the ticket watch-list feature plan. This log captures clarifie
 - (2026-02-27) Validation run for F036: `cd server && npx vitest run src/test/unit/notifications/ticketEmailSubscriber.watchers.test.ts --config vitest.config.ts`.
 - (2026-02-27) Implemented F037 by asserting inactive/deleted linked identity metadata does not suppress active watcher sends; send eligibility remains `active + valid email`.
 - (2026-02-27) Implemented T045 in `shared/lib/tickets/__tests__/watchList.test.ts` validating parser acceptance of `entity_type`/`entity_id` metadata on watch-list entries.
+- (2026-02-27) Implemented T046 in `shared/lib/tickets/__tests__/watchList.test.ts` ensuring duplicate-email merge preserves existing entity metadata when re-added through a different path.
