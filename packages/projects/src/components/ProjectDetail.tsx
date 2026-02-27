@@ -27,6 +27,7 @@ import { getProjectTaskStatuses, updatePhase, deletePhase, getProjectTreeData, r
 import { updateTaskStatus, reorderTask, reorderTasksInStatus, moveTaskToPhase, updateTaskWithChecklist, getTaskChecklistItems, getTaskResourcesAction, getTaskTicketLinksAction, duplicateTaskToPhase, deleteTask as deleteTaskAction, getTasksForPhase, getTaskById, getAllProjectTasksForListView, getPhaseTaskCounts } from '../actions/projectTaskActions';
 import styles from './ProjectDetail.module.css';
 import { Toaster, toast } from 'react-hot-toast';
+import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import DuplicateTaskDialog, { DuplicateOptions } from './DuplicateTaskDialog';
 import MoveTaskDialog from './MoveTaskDialog';
@@ -699,8 +700,7 @@ export default function ProjectDetail({
       const data = await getAllProjectTasksForListView(project.project_id);
       setListViewData(data);
     } catch (error) {
-      console.error('Error loading list view data:', error);
-      toast.error('Failed to load list view data');
+      handleError(error, 'Failed to load list view data');
     } finally {
       setListViewLoading(false);
     }
@@ -759,8 +759,7 @@ export default function ProjectDetail({
       // Refresh list view to show updated data
       refreshListView();
     } catch (error) {
-      console.error('Error moving task:', error);
-      toast.error('Failed to move task');
+      handleError(error, 'Failed to move task');
     }
   }, [listViewData, refreshListView]);
   
@@ -816,6 +815,10 @@ export default function ProjectDetail({
         
         // Fetch project tree data once
         const treeData = await getProjectTreeData();
+        if (isActionPermissionError(treeData)) {
+          handleError(treeData.permissionError);
+          return;
+        }
         setProjectTreeData(treeData);
         
         // Fetch priorities for project tasks
@@ -826,8 +829,7 @@ export default function ProjectDetail({
         const types = await getTaskTypes();
         setTaskTypes(types);
       } catch (error) {
-        console.error('Error fetching initial data:', error);
-        toast.error('Failed to load initial data');
+        handleError(error, 'Failed to load initial data');
       }
     };
     
@@ -926,8 +928,7 @@ export default function ProjectDetail({
         setPhaseTaskResources(taskResources);
         setPhaseTaskDependencies(taskDependencies);
       } catch (error) {
-        console.error('Error fetching phase tasks:', error);
-        toast.error('Failed to load tasks for the selected phase');
+        handleError(error, 'Failed to load tasks for the selected phase');
       } finally {
         setIsLoadingTasks(false);
       }
@@ -1005,8 +1006,7 @@ export default function ProjectDetail({
           onUrlUpdate(taskPhase.phase_id, initialTaskId);
         }
       } catch (error) {
-        console.error('Error loading task from notification:', error);
-        toast.error('Failed to load task');
+        handleError(error, 'Failed to load task');
       }
     };
 
@@ -1163,8 +1163,7 @@ export default function ProjectDetail({
         }, 500);
       }
     } catch (error) {
-      console.error('Error handling drop:', error);
-      toast.error('Failed to move task');
+      handleError(error, 'Failed to move task');
     }
   };
 
@@ -1308,8 +1307,12 @@ export default function ProjectDetail({
       const draggedPhase = projectPhases.find(p => p.phase_id === draggedPhaseId);
       if (!draggedPhase) return;
       
-      await reorderPhase(draggedPhaseId, beforePhaseId, afterPhaseId);
-      
+      const reorderResult = await reorderPhase(draggedPhaseId, beforePhaseId, afterPhaseId);
+      if (isActionPermissionError(reorderResult)) {
+        handleError(reorderResult.permissionError);
+        return;
+      }
+
       // Calculate the new order key locally for immediate UI update
       
       // Get the order keys for before and after phases
@@ -1354,8 +1357,7 @@ export default function ProjectDetail({
       
       toast.success('Phase reordered successfully');
     } catch (error) {
-      console.error('Error reordering phase:', error);
-      toast.error('Failed to reorder phase');
+      handleError(error, 'Failed to reorder phase');
     }
   };
 
@@ -1440,8 +1442,7 @@ export default function ProjectDetail({
 
       toast.success(`Task moved to ${moveConfirmation.targetPhase.phase_name}`);
     } catch (error) {
-      console.error('Error moving task:', error);
-      toast.error('Failed to move task');
+      handleError(error, 'Failed to move task');
     } finally {
       setMoveConfirmation(null);
     }
@@ -1494,8 +1495,7 @@ export default function ProjectDetail({
         toast.error('Error adding new task: Phase mismatch');
       }
     } catch (error) {
-      console.error('Error adding new task:', error);
-      toast.error('Error adding new task. Please try again.');
+      handleError(error, 'Error adding new task. Please try again.');
     } finally {
       setIsAddingTask(false);
     }
@@ -1587,8 +1587,7 @@ export default function ProjectDetail({
 
         toast.success(taskWithChecklist.task_id ? 'Task updated successfully!' : 'Task added successfully!');
       } catch (error) {
-        console.error('Error updating task:', error);
-        toast.error('Failed to update task');
+        handleError(error, 'Failed to update task');
       }
     } else {
       // Task deleted - use ref for reliable access
@@ -1667,8 +1666,7 @@ export default function ProjectDetail({
         toast.success('Task assignee updated successfully!');
       }
     } catch (error) {
-      console.error('Error updating task assignee:', error);
-      toast.error('Failed to update task assignee. Please try again.');
+      handleError(error, 'Failed to update task assignee. Please try again.');
     }
   };
 
@@ -1694,12 +1692,16 @@ export default function ProjectDetail({
         start_date: editingStartDate || null,
         end_date: editingEndDate || null
       });
-  
+      if (isActionPermissionError(updatedPhase)) {
+        handleError(updatedPhase.permissionError);
+        return;
+      }
+
       setProjectPhases(prevPhases =>
         prevPhases.map((p): IProjectPhase =>
           p.phase_id === phase.phase_id
-            ? { 
-                ...p, 
+            ? {
+                ...p,
                 phase_name: editingPhaseName,
                 description: updatedPhase.description,
                 start_date: updatedPhase.start_date,
@@ -1720,8 +1722,7 @@ export default function ProjectDetail({
       setEditingEndDate(undefined);
       toast.success('Phase updated successfully!');
     } catch (error) {
-      console.error('Error updating phase:', error);
-      toast.error('Failed to update phase. Please try again.');
+      handleError(error, 'Failed to update phase. Please try again.');
     }
   };
 
@@ -1737,8 +1738,12 @@ export default function ProjectDetail({
     if (!deletePhaseConfirmation) return;
 
     try {
-      await deletePhase(deletePhaseConfirmation.phaseId);
-      setProjectPhases(prevPhases => 
+      const deleteResult = await deletePhase(deletePhaseConfirmation.phaseId);
+      if (isActionPermissionError(deleteResult)) {
+        handleError(deleteResult.permissionError);
+        return;
+      }
+      setProjectPhases(prevPhases =>
         prevPhases.filter(phase => phase.phase_id !== deletePhaseConfirmation.phaseId)
       );
       if (selectedPhase?.phase_id === deletePhaseConfirmation.phaseId) {
@@ -1746,8 +1751,7 @@ export default function ProjectDetail({
       }
       toast.success('Phase deleted successfully!');
     } catch (error) {
-      console.error('Error deleting phase:', error);
-      toast.error('Failed to delete phase. Please try again.');
+      handleError(error, 'Failed to delete phase. Please try again.');
     } finally {
       setDeletePhaseConfirmation(null);
     }
@@ -1790,8 +1794,7 @@ export default function ProjectDetail({
       setProjectTasks(updatedTasks);
       toast.success('Tasks reordered successfully');
     } catch (error) {
-      console.error('Error reordering tasks:', error);
-      toast.error('Failed to reorder tasks');
+      handleError(error, 'Failed to reorder tasks');
     }
   };
 
@@ -1828,8 +1831,7 @@ export default function ProjectDetail({
         });
         setIsDuplicateDialogOpen(true);
     } catch (error) {
-        console.error("Error preparing duplicate dialog:", error);
-        toast.error("Failed to load task details for duplication.");
+        handleError(error, "Failed to load task details for duplication.");
     }
   };
 
@@ -1879,8 +1881,7 @@ export default function ProjectDetail({
         toast.error("Failed to move task. Please try again.");
       }
     } catch (error) {
-      console.error("Error moving task via dialog:", error);
-      toast.error(`Failed to move task: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      handleError(error, 'Failed to move task');
     } finally {
       setIsMoveTaskDialogOpen(false);
       setTaskToMove(null);
@@ -2726,8 +2727,7 @@ export default function ProjectDetail({
               setTaskToDuplicate(null);
               setDuplicateTaskToggleDetails(null);
             } catch (error) {
-              console.error("Error duplicating task:", error);
-              toast.error("Failed to duplicate task.");
+              handleError(error, "Failed to duplicate task.");
             }
           }}
         />
@@ -2763,8 +2763,7 @@ export default function ProjectDetail({
               toast.success(`Task "${taskToDelete.task_name}" deleted successfully!`);
               setTaskToDelete(null);
             } catch (error) {
-              console.error("Error deleting task:", error);
-              toast.error("Failed to delete task.");
+              handleError(error, "Failed to delete task.");
               setTaskToDelete(null);
             }
           }}

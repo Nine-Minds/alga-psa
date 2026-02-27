@@ -14,6 +14,7 @@ import { useDrawer } from '@alga-psa/ui';
 import { getConsolidatedTicketData } from '@alga-psa/tickets/actions/optimizedTicketActions';
 import TicketDetails from '@alga-psa/tickets/components/ticket/TicketDetails';
 import { toast } from 'react-hot-toast';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 
 interface ServiceHistoryTabProps {
   asset: Asset;
@@ -67,8 +68,7 @@ export const ServiceHistoryTab: React.FC<ServiceHistoryTabProps> = ({ asset }) =
         '50vw'
       );
     } catch (error) {
-      console.error('Error opening ticket:', error);
-      toast.error('Failed to open ticket');
+      handleError(error, 'Failed to open ticket');
     }
   }, [openDrawer]);
 

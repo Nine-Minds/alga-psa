@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import toast from 'react-hot-toast';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@alga-psa/ui/components/Card';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -47,8 +48,7 @@ export function TaxSourceSettings({ isReadOnly = false }: TaxSourceSettingsProps
         setOriginalSettings(mappedSettings);
       }
     } catch (error) {
-      console.error('Failed to fetch tax source settings:', error);
-      toast.error('Failed to load tax source settings.');
+      handleError(error, 'Failed to load tax source settings.');
     } finally {
       setIsLoading(false);
     }
@@ -69,8 +69,7 @@ export function TaxSourceSettings({ isReadOnly = false }: TaxSourceSettingsProps
       setOriginalSettings({ ...settings, allow_external_tax_override: true });
       toast.success('Tax source settings saved successfully.');
     } catch (error: any) {
-      console.error('Failed to save tax source settings:', error);
-      toast.error(`Failed to save settings: ${error?.message || 'Unknown error'}`);
+      handleError(error, 'Failed to save settings.');
     } finally {
       setIsSaving(false);
     }

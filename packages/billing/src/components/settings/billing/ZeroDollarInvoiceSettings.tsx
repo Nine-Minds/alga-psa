@@ -3,6 +3,7 @@ import CustomSelect from "@alga-psa/ui/components/CustomSelect";
 import { Switch } from "@alga-psa/ui/components/Switch";
 import { Label } from "@alga-psa/ui/components/Label";
 import toast from 'react-hot-toast';
+import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { getDefaultBillingSettings, updateDefaultBillingSettings } from "@alga-psa/billing/actions";
 import type { BillingSettings } from "@alga-psa/billing/actions";
 
@@ -18,7 +19,7 @@ const ZeroDollarInvoiceSettings = (): React.JSX.Element => {
         const currentSettings = await getDefaultBillingSettings();
         setSettings(currentSettings);
       } catch (error) {
-        toast.error(error instanceof Error ? error.message : "Failed to load settings");
+        handleError(error, 'Failed to load settings');
       }
     };
 
@@ -32,12 +33,16 @@ const ZeroDollarInvoiceSettings = (): React.JSX.Element => {
         zeroDollarInvoiceHandling: value as 'normal' | 'finalized',
       };
       const result = await updateDefaultBillingSettings(newSettings);
+      if (isActionPermissionError(result)) {
+        handleError(result.permissionError);
+        return;
+      }
       if (result.success) {
         setSettings(newSettings);
         toast.success("Zero-dollar invoice settings have been updated.");
       }
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to save settings");
+      handleError(error, 'Failed to save settings');
     }
   };
 
@@ -48,12 +53,16 @@ const ZeroDollarInvoiceSettings = (): React.JSX.Element => {
         suppressZeroDollarInvoices: checked,
       };
       const result = await updateDefaultBillingSettings(newSettings);
+      if (isActionPermissionError(result)) {
+        handleError(result.permissionError);
+        return;
+      }
       if (result.success) {
         setSettings(newSettings);
         toast.success("Zero-dollar invoice settings have been updated.");
       }
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to save settings");
+      handleError(error, 'Failed to save settings');
     }
   };
 

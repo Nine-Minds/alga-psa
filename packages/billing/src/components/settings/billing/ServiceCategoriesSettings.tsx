@@ -12,6 +12,7 @@ import {
 } from '@alga-psa/billing/actions';
 import { getAvailableReferenceData, importReferenceData, checkImportConflicts, ImportConflict } from '@alga-psa/reference-data/actions';
 import { toast } from 'react-hot-toast';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
@@ -101,8 +102,7 @@ const ServiceCategoriesSettings: React.FC = () => {
       toast.success('Service category deleted successfully');
       await fetchCategories();
     } catch (error) {
-      console.error('Error deleting service category:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to delete service category');
+      handleError(error, 'Failed to delete service category');
     } finally {
       setDeleteDialog({ isOpen: false, categoryId: '', categoryName: '' });
     }
@@ -157,8 +157,7 @@ const ServiceCategoriesSettings: React.FC = () => {
       setConflictResolutions({});
       await fetchCategories();
     } catch (error) {
-      console.error('Error importing service categories:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to import service categories');
+      handleError(error, 'Failed to import service categories');
     }
   };
 
@@ -261,8 +260,7 @@ const ServiceCategoriesSettings: React.FC = () => {
                 setSelectedImportCategories([]);
                 setShowImportDialog(true);
               } catch (error) {
-                console.error('Error fetching available service categories:', error);
-                toast.error('Failed to fetch available service categories for import');
+                handleError(error, 'Failed to fetch available service categories for import');
               }
             }}
           >

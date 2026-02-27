@@ -12,6 +12,7 @@ import useSWR, { useSWRConfig } from 'swr';
 import { createAssetRelationship, deleteAssetRelationship, getAssetRelationships, listAssets } from '../../actions/assetActions';
 import { Input } from '@alga-psa/ui/components/Input';
 import { toast } from 'react-hot-toast';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 
 interface RelatedAssetsTabProps {
   asset: Asset;
@@ -94,8 +95,7 @@ export const RelatedAssetsTab: React.FC<RelatedAssetsTabProps> = ({ asset }) => 
       // Best-effort: also refresh any cached asset fetches
       mutate(['asset', asset.asset_id]);
     } catch (error) {
-      console.error('Failed to link asset:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to link asset');
+      handleError(error, 'Failed to link asset');
     } finally {
       setIsSaving(false);
     }
@@ -108,8 +108,7 @@ export const RelatedAssetsTab: React.FC<RelatedAssetsTabProps> = ({ asset }) => 
       await mutateRelationships();
       mutate(['asset', asset.asset_id]);
     } catch (error) {
-      console.error('Failed to unlink asset:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to unlink asset');
+      handleError(error, 'Failed to unlink asset');
     }
   }, [asset.asset_id, mutate, mutateRelationships]);
 

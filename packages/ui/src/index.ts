@@ -4,7 +4,8 @@
 // Prefer importing from specific subpaths like @alga-psa/ui/lib/utils.
 
 export { cn, filterTagsByText } from './lib/utils';
-export { throwPermissionError, handleError } from './lib/errorHandling';
+export { throwPermissionError, handleError, permissionError, isActionPermissionError } from './lib/errorHandling';
+export type { ActionPermissionError } from './lib/errorHandling';
 export { getDateFnsLocale } from './lib/dateFnsLocale';
 export { useToast } from './hooks/use-toast';
 export { useFeatureFlag } from './hooks/useFeatureFlag';

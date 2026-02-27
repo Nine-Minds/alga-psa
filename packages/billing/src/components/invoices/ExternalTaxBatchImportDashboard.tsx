@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import toast from 'react-hot-toast';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
@@ -74,8 +75,7 @@ export function ExternalTaxBatchImportDashboard() {
       setPendingCount(count);
       setPendingInvoices(invoices);
     } catch (error) {
-      console.error('Failed to load pending invoices:', error);
-      toast.error('Failed to load pending invoices');
+      handleError(error, 'Failed to load pending invoices');
     } finally {
       setIsLoading(false);
     }
@@ -121,8 +121,7 @@ export function ExternalTaxBatchImportDashboard() {
       // Reload data
       await loadData();
     } catch (error: any) {
-      console.error('Batch import failed:', error);
-      toast.error(error.message ?? 'Batch import failed');
+      handleError(error, 'Batch import failed');
       setProgress(prev => ({ ...prev, isRunning: false }));
     }
   };
@@ -138,8 +137,7 @@ export function ExternalTaxBatchImportDashboard() {
         toast.error(result.error ?? 'Failed to import tax');
       }
     } catch (error: any) {
-      console.error('Import failed:', error);
-      toast.error(error.message ?? 'Import failed');
+      handleError(error, 'Import failed');
     }
   };
 

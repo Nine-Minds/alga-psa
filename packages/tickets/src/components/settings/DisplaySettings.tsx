@@ -6,7 +6,8 @@ import { Switch } from '@alga-psa/ui/components/Switch';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { toast } from 'react-hot-toast';
-import { 
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import {
   getTicketingDisplaySettings, 
   updateTicketingDisplaySettings 
 } from '@alga-psa/tickets/actions/ticketDisplaySettings';
@@ -137,15 +138,7 @@ const DisplaySettings = (): React.JSX.Element => {
         responseStateTrackingEnabled,
       });
     } catch (e) {
-      console.error('Failed to save ticket display settings', e);
-      const errorMessage = e instanceof Error ? e.message : 'Failed to save display settings';
-      
-      // Check if it's a permission error
-      if (errorMessage.includes('Permission denied')) {
-        toast.error('You do not have permission to update ticket settings');
-      } else {
-        toast.error(errorMessage);
-      }
+      handleError(e, 'Failed to save display settings');
     } finally {
       setIsSavingDisplay(false);
     }

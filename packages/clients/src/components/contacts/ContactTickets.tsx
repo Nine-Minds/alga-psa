@@ -18,6 +18,7 @@ import { useDrawer } from "@alga-psa/ui";
 import TicketDetails from '@alga-psa/tickets/components/ticket/TicketDetails';
 import { getConsolidatedTicketData } from '@alga-psa/tickets/actions/optimizedTicketActions';
 import { toast } from 'react-hot-toast';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { QuickAddTicket } from '@alga-psa/tickets/components/QuickAddTicket';
 import { createTicketColumns } from '@alga-psa/tickets/lib';
@@ -235,8 +236,7 @@ const ContactTickets: React.FC<ContactTicketsProps> = ({
         />
       );
     } catch (error) {
-      console.error('Error opening ticket:', error);
-      toast.error('Failed to open ticket');
+      handleError(error, 'Failed to open ticket');
     }
   }, [currentUser, openDrawer]);
 
@@ -261,8 +261,7 @@ const ContactTickets: React.FC<ContactTicketsProps> = ({
         toast.error('Client not found');
       }
     } catch (error) {
-      console.error('Error loading client:', error);
-      toast.error('Failed to load client details');
+      handleError(error, 'Failed to load client details');
     }
   }, [openDrawer]);
 

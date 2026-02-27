@@ -17,6 +17,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { ColumnDefinition } from '@alga-psa/types';
 import toast from 'react-hot-toast';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { Plus, Trash2, Save } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import {
@@ -194,8 +195,7 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
         setExceptions(exceptionsResult.data);
       }
     } catch (error) {
-      console.error('Failed to load availability settings:', error);
-      toast.error('Failed to load settings');
+      handleError(error, 'Failed to load settings');
     } finally {
       setIsLoading(false);
     }
@@ -385,8 +385,7 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
         toast.error(result.error || 'Failed to save settings');
       }
     } catch (error) {
-      console.error('Failed to save general settings:', error);
-      toast.error('Failed to save settings');
+      handleError(error, 'Failed to save settings');
     }
   };
 
@@ -426,8 +425,7 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
       // Reload configured users list
       await loadConfiguredUsers();
     } catch (error) {
-      console.error('Failed to save user hours:', error);
-      toast.error('Failed to save user hours');
+      handleError(error, 'Failed to save user hours');
     }
   };
 
@@ -458,8 +456,7 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
         toast.error(result.error || 'Failed to save service rules');
       }
     } catch (error) {
-      console.error('Failed to save service rules:', error);
-      toast.error('Failed to save service rules');
+      handleError(error, 'Failed to save service rules');
     }
   };
 
@@ -494,8 +491,7 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
         toast.error(result.error || 'Failed to add exception');
       }
     } catch (error) {
-      console.error('Failed to add exception:', error);
-      toast.error('Failed to add exception');
+      handleError(error, 'Failed to add exception');
     }
   };
 
@@ -509,8 +505,7 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
         toast.error(result.error || 'Failed to delete exception');
       }
     } catch (error) {
-      console.error('Failed to delete exception:', error);
-      toast.error('Failed to delete exception');
+      handleError(error, 'Failed to delete exception');
     }
   };
 

@@ -25,6 +25,7 @@ import { Plus, Link, FileText, Edit3, Download, Grid, List as ListIcon, FolderPl
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { downloadDocument, getDocumentDownloadUrl } from '@alga-psa/documents/lib/documentUtils';
 import toast from 'react-hot-toast';
+import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
@@ -342,6 +343,15 @@ const Documents = ({
 
         const response = await getDocumentsByFolder(folderToFetch, includeSubfolders, currentPage, pageSize, filters);
 
+        if (isActionPermissionError(response)) {
+          if (!cancelled) {
+            handleError(response.permissionError);
+            setDocumentsToDisplay([]);
+            setTotalPages(1);
+          }
+          return;
+        }
+
         if (!cancelled) {
           setDocumentsToDisplay(response.documents);
           setTotalDocuments(response.total);
@@ -389,6 +399,10 @@ const Documents = ({
         const includeSubfolders = filters?.showAllDocuments || false;
         const folderToFetch = filters?.showAllDocuments ? null : currentFolder;
         const response = await getDocumentsByFolder(folderToFetch, includeSubfolders, currentPage, pageSize, filters);
+        if (isActionPermissionError(response)) {
+          handleError(response.permissionError);
+          return;
+        }
         setDocumentsToDisplay(response.documents);
         setTotalDocuments(response.total);
         setTotalPages(Math.ceil(response.total / pageSize));
@@ -467,12 +481,11 @@ const Documents = ({
       // Refresh the folder tree to show the new folder immediately
       setFolderTreeKey(prev => prev + 1);
     } catch (error) {
-      console.error('Failed to create folder:', error);
+      handleError(error, tDoc('messages.folderCreateFailed', 'Failed to create folder'));
       const errorMessage =
         error instanceof Error && error.message
           ? error.message
           : tDoc('messages.folderCreateFailed', 'Failed to create folder');
-      toast.error(errorMessage);
       setError(errorMessage);
     }
   };
@@ -504,12 +517,11 @@ const Documents = ({
       // Refresh folder tree to update counts
       setFolderTreeKey(prev => prev + 1);
     } catch (error) {
-      console.error('Failed to move documents:', error);
+      handleError(error, tDoc('messages.moveDocumentsFailed', 'Failed to move documents'));
       const errorMessage =
         error instanceof Error && error.message
           ? error.message
           : tDoc('messages.moveDocumentsFailed', 'Failed to move documents');
-      toast.error(errorMessage);
       setError(errorMessage);
     }
   };
@@ -720,12 +732,11 @@ const Documents = ({
       setDocumentToMove(null);
       setShowMoveFolderModal(false);
     } catch (error) {
-      console.error('Failed to move document:', error);
+      handleError(error, tDoc('messages.moveDocumentFailed', 'Failed to move document'));
       const errorMessage =
         error instanceof Error && error.message
           ? error.message
           : tDoc('messages.moveDocumentFailed', 'Failed to move document');
-      toast.error(errorMessage);
       setError(errorMessage);
     }
   };
@@ -995,10 +1006,7 @@ const Documents = ({
     try {
       await downloadDocument(downloadUrl, filename, true);
     } catch (error) {
-      console.error('Download failed:', error);
-      toast.error(
-        tDoc('messages.downloadFailed', 'Failed to download document')
-      );
+      handleError(error, tDoc('messages.downloadFailed', 'Failed to download document'));
     }
   };
 
@@ -1417,10 +1425,7 @@ const Documents = ({
                                 setSelectedDocumentsForMove(new Set());
                                 await refreshDocuments();
                               } catch (error) {
-                                console.error('Error deleting documents:', error);
-                                toast.error(
-                                  tDoc('messages.bulkDeleteFailed', 'Failed to delete some documents')
-                                );
+                                handleError(error, tDoc('messages.bulkDeleteFailed', 'Failed to delete some documents'));
                               }
                             }}
                           >

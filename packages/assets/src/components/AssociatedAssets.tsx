@@ -9,6 +9,7 @@ import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { toast } from 'react-hot-toast';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { RmmStatusIndicator } from './RmmStatusIndicator';
 import { RemoteAccessButton } from './RemoteAccessButton';
@@ -96,8 +97,7 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
             const alreadyAssociatedOnPage = response.assets.length - filteredAssets.length;
             setTotalAssets(Math.max(0, response.total - associatedAssetIds.size));
         } catch (error) {
-            console.error('Error loading available assets:', error);
-            toast.error('Failed to load available assets');
+            handleError(error, 'Failed to load available assets');
         } finally {
             setIsLoadingAssets(false);
         }
@@ -196,8 +196,7 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
 
             setAssociatedAssets(associations);
         } catch (error) {
-            console.error('Error loading associated assets:', error);
-            toast.error('Failed to load associated assets');
+            handleError(error, 'Failed to load associated assets');
         } finally {
             setIsLoading(false);
         }
@@ -236,8 +235,7 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
             handleCloseDialog();
             loadAssociatedAssets();
         } catch (error) {
-            console.error('Error associating assets:', error);
-            toast.error('Failed to associate assets');
+            handleError(error, 'Failed to associate assets');
         }
     };
 
@@ -247,8 +245,7 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
             toast.success('Asset association removed');
             loadAssociatedAssets();
         } catch (error) {
-            console.error('Error removing asset association:', error);
-            toast.error('Failed to remove asset association');
+            handleError(error, 'Failed to remove asset association');
         }
     };
 

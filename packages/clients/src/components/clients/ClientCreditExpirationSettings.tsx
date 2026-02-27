@@ -5,6 +5,7 @@ import { Switch } from '@alga-psa/ui/components/Switch';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Button } from '@alga-psa/ui/components/Button';
 import toast from 'react-hot-toast';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import {
   getClientContractLineSettingsAsync,
   updateClientContractLineSettingsAsync
@@ -40,7 +41,7 @@ const ClientCreditExpirationSettings: React.FC<ClientCreditExpirationSettingsPro
           setUseDefault(true);
         }
       } catch (error) {
-        toast.error(error instanceof Error ? error.message : "Failed to load settings");
+        handleError(error, "Failed to load settings");
       }
     };
 
@@ -62,7 +63,7 @@ const ClientCreditExpirationSettings: React.FC<ClientCreditExpirationSettingsPro
         toast.success("Credit expiration settings have been updated.");
       }
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to save settings");
+      handleError(error, "Failed to save settings");
     }
   };
 
@@ -97,7 +98,7 @@ const ClientCreditExpirationSettings: React.FC<ClientCreditExpirationSettingsPro
         toast.success("Credit expiration period has been updated.");
       }
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to save settings");
+      handleError(error, "Failed to save settings");
     }
   };
 
@@ -124,7 +125,7 @@ const ClientCreditExpirationSettings: React.FC<ClientCreditExpirationSettingsPro
         toast.success("Notification days have been updated.");
       }
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to save settings");
+      handleError(error, "Failed to save settings");
     }
   };
 
@@ -157,7 +158,7 @@ const ClientCreditExpirationSettings: React.FC<ClientCreditExpirationSettingsPro
         }
       }
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to update settings");
+      handleError(error, "Failed to update settings");
     }
   };
 

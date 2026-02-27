@@ -39,6 +39,7 @@ import {
 } from '@alga-psa/billing/actions/renewalsQueueActions';
 import { ContractWizard } from './ContractWizard';
 import { ContractDialog } from './ContractDialog';
+import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
 interface ClientContractsTabProps {
   onRefreshNeeded?: () => void;
@@ -113,6 +114,10 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
 
   const refreshRenewalRows = async () => {
     const rows = await listRenewalQueueRows();
+    if (isActionPermissionError(rows)) {
+      handleError(rows.permissionError);
+      return;
+    }
     syncRenewalRows(rows);
   };
 
@@ -121,6 +126,10 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
       setIsLoading(true);
       const fetchedAssignments = await getContractsWithClients();
       const renewalRows = await listRenewalQueueRows();
+      if (isActionPermissionError(renewalRows)) {
+        handleError(renewalRows.permissionError);
+        return;
+      }
       syncRenewalRows(renewalRows);
       setClientContracts(fetchedAssignments.filter((assignment) => Boolean(assignment.client_id)));
       setError(null);
@@ -194,6 +203,10 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
     try {
       setIsLoading(true);
       const draftData = await getDraftContractForResume(contractId);
+      if (isActionPermissionError(draftData)) {
+        handleError(draftData.permissionError);
+        return;
+      }
       setDraftToResume(draftData);
       setShowClientWizard(true);
     } catch (err) {

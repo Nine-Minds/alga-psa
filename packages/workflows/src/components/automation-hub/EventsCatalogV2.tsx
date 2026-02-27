@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import SearchableSelect from '@alga-psa/ui/components/SearchableSelect';
 import { toast } from 'react-hot-toast';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import {
   BarChart3,
   Briefcase,
@@ -698,7 +699,7 @@ export default function EventsCatalogV2() {
       setEvents((res as any).events ?? []);
       setTotal((res as any).total ?? 0);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Failed to load events');
+      handleError(e, 'Failed to load events');
     } finally {
       setIsLoading(false);
     }
@@ -801,7 +802,7 @@ export default function EventsCatalogV2() {
         router.push(`/msp/workflow-editor/${encodeURIComponent(workflowId)}`);
       }
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Failed to create workflow');
+      handleError(e, 'Failed to create workflow');
     } finally {
       setAttachState({ creating: false });
     }
@@ -821,7 +822,7 @@ export default function EventsCatalogV2() {
         await handleSelectEvent(selectedEvent);
       }
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Failed to detach');
+      handleError(e, 'Failed to detach');
     }
   };
 
@@ -1185,8 +1186,8 @@ export default function EventsCatalogV2() {
                     try {
                       void navigator.clipboard.writeText(JSON.stringify(fullSchema, null, 2));
                       toast.success('Copied');
-                    } catch {
-                      toast.error('Copy failed');
+                    } catch (error) {
+                      handleError(error, 'Copy failed');
                     }
                   }}
                 >
@@ -1261,7 +1262,7 @@ const MetricsDialog: React.FC<{ open: boolean; eventType: string | null; onClose
       const res = await getEventMetricsAction({ eventType, from: fromIso, to: toIso, recentLimit, recentOffset: ro });
       setData(res as any);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Failed to load metrics');
+      handleError(e, 'Failed to load metrics');
       setData(null);
     } finally {
       setLoading(false);
@@ -1529,7 +1530,7 @@ const SimulateDialog: React.FC<{
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Failed to simulate';
       setSubmitError(msg);
-      toast.error(msg);
+      handleError(e, 'Failed to simulate');
     } finally {
       setSubmitting(false);
     }
@@ -1696,8 +1697,8 @@ const DefineCustomEventDialog: React.FC<{ open: boolean; schemaRefs: string[]; o
       if (mode === 'inline') {
         try {
           payloadSchemaJson = JSON.parse(schemaJson || '{}');
-        } catch {
-          toast.error('Payload schema must be valid JSON.');
+        } catch (error) {
+          handleError(error, 'Payload schema must be valid JSON.');
           setSubmitting(false);
           return;
         }
@@ -1714,7 +1715,7 @@ const DefineCustomEventDialog: React.FC<{ open: boolean; schemaRefs: string[]; o
       onClose(true);
       return res;
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Failed to create event');
+      handleError(e, 'Failed to create event');
     } finally {
       setSubmitting(false);
     }

@@ -10,6 +10,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { IProjectTemplate } from '@alga-psa/types';
 import { toast } from 'react-hot-toast';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { ColumnDefinition } from '@alga-psa/types';
 import { getTemplates, getTemplateCategories, deleteTemplate } from '../../actions/projectTemplateActions';
 import CreateTemplateDialog from './CreateTemplateDialog';
@@ -71,8 +72,7 @@ export default function ProjectTemplatesList({ initialTemplates, initialCategori
 
       setTemplates(templatesData);
     } catch (error) {
-      toast.error('Failed to load templates');
-      console.error('Error loading templates:', error);
+      handleError(error, 'Failed to load templates');
     } finally {
       setLoading(false);
     }
@@ -88,8 +88,7 @@ export default function ProjectTemplatesList({ initialTemplates, initialCategori
       toast.success('Template deleted successfully');
       loadData();
     } catch (error) {
-      toast.error('Failed to delete template');
-      console.error('Error deleting template:', error);
+      handleError(error, 'Failed to delete template');
     }
   }
 

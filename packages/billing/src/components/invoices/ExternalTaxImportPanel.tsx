@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import toast from 'react-hot-toast';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { Card, CardHeader, CardTitle, CardContent } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
@@ -124,8 +125,7 @@ export function ExternalTaxImportPanel({
         toast.error(result.error ?? 'Failed to import tax');
       }
     } catch (error: any) {
-      console.error('Failed to import tax:', error);
-      toast.error(error.message ?? 'Failed to import tax');
+      handleError(error, 'Failed to import tax');
     } finally {
       setIsImporting(false);
     }

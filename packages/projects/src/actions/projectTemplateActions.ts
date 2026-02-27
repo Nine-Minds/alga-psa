@@ -20,6 +20,7 @@ import ProjectModel from '@alga-psa/projects/models/project';
 import { SharedNumberingService } from '@shared/services/numberingService';
 import { getProjectStatuses } from './projectActions';
 import type { IUser } from '@alga-psa/types';
+import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { validateData } from '@alga-psa/validation';
 import {
   createTemplateSchema,
@@ -358,6 +359,9 @@ export const applyTemplate = withAuth(async (
     // 2. Create project directly (no need to call createProject which has extra overhead)
     // Get project statuses for the project status field
     const projectStatuses = await getProjectStatuses();
+    if (isActionPermissionError(projectStatuses)) {
+      throw new Error(projectStatuses.permissionError);
+    }
     if (projectStatuses.length === 0) {
       throw new Error('No project statuses found');
     }

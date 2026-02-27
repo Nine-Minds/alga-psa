@@ -19,6 +19,7 @@ import { getAllUsers } from '@alga-psa/users/actions';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import toast from 'react-hot-toast';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { Save, RefreshCw, Info } from 'lucide-react';
 
 interface PendingChange {
@@ -48,7 +49,7 @@ export const EscalationManagerSettings: React.FC = () => {
       setUsers(usersData);
       setPendingChanges(new Map());
     } catch (err) {
-      console.error('Error fetching escalation data:', err);
+      handleError(err, 'Failed to load escalation configurations');
       setError('Failed to load escalation configurations');
     } finally {
       setLoading(false);
@@ -110,8 +111,7 @@ export const EscalationManagerSettings: React.FC = () => {
       toast.success('Escalation managers updated successfully');
       await fetchData();
     } catch (err) {
-      console.error('Error saving escalation managers:', err);
-      toast.error('Failed to save escalation managers');
+      handleError(err, 'Failed to save escalation managers');
       setError('Failed to save changes');
     } finally {
       setSaving(false);

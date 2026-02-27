@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/component
 import { Button } from '@alga-psa/ui/components/Button';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { toast } from 'react-hot-toast';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { formatDistanceToNow } from 'date-fns';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
@@ -39,8 +40,7 @@ export default function SessionManagement() {
       const data = await getUserSessionsAction();
       setSessions(data.sessions);
     } catch (error) {
-      console.error('Failed to fetch sessions:', error);
-      toast.error(t('sessionManagement.errors.loadFailed', 'Failed to load sessions'));
+      handleError(error, t('sessionManagement.errors.loadFailed', 'Failed to load sessions'));
     } finally {
       setLoading(false);
     }
@@ -73,8 +73,7 @@ export default function SessionManagement() {
         await fetchSessions();
       }
     } catch (error) {
-      console.error('Failed to revoke session:', error);
-      toast.error(error instanceof Error ? error.message : t('sessionManagement.errors.revokeFailed', 'Failed to revoke session'));
+      handleError(error, t('sessionManagement.errors.revokeFailed', 'Failed to revoke session'));
     } finally {
       setRevoking(null);
     }
@@ -114,8 +113,7 @@ export default function SessionManagement() {
       toast.success(result.message);
       await fetchSessions();
     } catch (error) {
-      console.error('Failed to revoke sessions:', error);
-      toast.error(error instanceof Error ? error.message : t('sessionManagement.errors.logoutAllFailed', 'Failed to logout from all other devices'));
+      handleError(error, t('sessionManagement.errors.logoutAllFailed', 'Failed to logout from all other devices'));
     } finally {
       setRevokingAll(false);
     }

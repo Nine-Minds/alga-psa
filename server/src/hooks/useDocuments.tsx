@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { DocumentFilters, IDocument } from 'server/src/interfaces/document.interface';
 import { getAllDocuments } from '@alga-psa/documents/actions/documentActions';
+import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { toast } from 'react-hot-toast';
 
 /**
@@ -37,8 +38,12 @@ export function useDocuments(
       console.log('Fetching documents with filters:', debouncedFilters, 'for page:', page);
       
       const response = await getAllDocuments(debouncedFilters, page, pageSize);
-      
-      if (response && Array.isArray(response.documents)) {
+
+      if (isActionPermissionError(response)) {
+        setDocuments([]);
+        setTotalCount(0);
+        setError('You do not have permission to view documents');
+      } else if (response && Array.isArray(response.documents)) {
         setDocuments(response.documents);
         setTotalCount(response.totalCount);
       } else {

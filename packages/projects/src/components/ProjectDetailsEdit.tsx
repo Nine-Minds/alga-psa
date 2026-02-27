@@ -21,6 +21,7 @@ import { getAllUsersBasic, getUserAvatarUrlsBatchAction } from '@alga-psa/users/
 import { findTagsByEntityId } from '@alga-psa/tags/actions';
 import { useTagPermissions } from '@alga-psa/tags/hooks';
 import { toast } from 'react-hot-toast';
+import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { ProjectTaskStatusEditor } from './ProjectTaskStatusEditor';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
@@ -73,13 +74,17 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [allUsers, projectStatuses, projectTagsData] = await Promise.all([
+        const [allUsers, projectStatusesResult, projectTagsData] = await Promise.all([
           getAllUsersBasic(),
           getProjectStatuses(),
           initialProject.project_id ? findTagsByEntityId(initialProject.project_id, 'project') : Promise.resolve([])
         ]);
         setUsers(allUsers);
-        setStatuses(projectStatuses);
+        if (isActionPermissionError(projectStatusesResult)) {
+          handleError(projectStatusesResult.permissionError);
+          return;
+        }
+        setStatuses(projectStatusesResult);
         setProjectTags(projectTagsData);
       } catch (error) {
         console.error('Error fetching data:', error);
@@ -153,17 +158,20 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
         budgeted_hours: budgetedHours,
         client_portal_config: project.client_portal_config,
       });
-      
+      if (isActionPermissionError(updatedProject)) {
+        handleError(updatedProject.permissionError);
+        return;
+      }
+
       // Log for debugging
       console.log('Updated project with budgeted hours:', budgetedHours);
 
       toast.success('Project updated successfully');
       onSave(updatedProject);
     } catch (error) {
-      console.error('Error updating project:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to update project';
       setValidationErrors([errorMessage]);
-      toast.error(errorMessage);
+      handleError(error, 'Failed to update project');
     } finally {
       setIsSubmitting(false);
     }

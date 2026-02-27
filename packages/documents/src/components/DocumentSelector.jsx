@@ -14,6 +14,7 @@ import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContai
 import Pagination from '@alga-psa/ui/components/Pagination';
 import FolderTreeView from './FolderTreeView';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 export default function DocumentSelector({ id, entityId, entityType, onDocumentSelected, onDocumentsSelected, singleSelect = false, isOpen, onClose, typeFilter, title, description }) {
     const [documents, setDocuments] = useState([]);
     const [selectedDocuments, setSelectedDocuments] = useState(new Set());
@@ -63,6 +64,13 @@ export default function DocumentSelector({ id, entityId, entityType, onDocumentS
                     excludeEntityType: entityType,
                     type: typeFilter
                 }, pageToLoad, pageSize);
+            }
+            if (isActionPermissionError(response)) {
+                handleError(response.permissionError);
+                setDocuments([]);
+                setTotalPages(1);
+                setCurrentPage(1);
+                return;
             }
             if (response && Array.isArray(response.documents)) {
                 setDocuments(response.documents);
@@ -138,7 +146,11 @@ export default function DocumentSelector({ id, entityId, entityType, onDocumentS
             }
             else if (onDocumentsSelected) {
                 // Create associations for selected documents
-                await createDocumentAssociations(entityId, entityType, selectedIds);
+                const associationResult = await createDocumentAssociations(entityId, entityType, selectedIds);
+                if (isActionPermissionError(associationResult)) {
+                    handleError(associationResult.permissionError);
+                    return;
+                }
                 await onDocumentsSelected();
             }
             onClose();

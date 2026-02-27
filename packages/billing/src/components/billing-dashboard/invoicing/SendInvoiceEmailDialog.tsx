@@ -10,6 +10,7 @@ import {
   sendInvoiceEmailAction
 } from '@alga-psa/billing/actions/invoiceJobActions';
 import toast from 'react-hot-toast';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 
 interface SendInvoiceEmailDialogProps {
   isOpen: boolean;
@@ -55,7 +56,7 @@ export const SendInvoiceEmailDialog: React.FC<SendInvoiceEmailDialogProps> = ({
       setErrors(result.errors);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to load recipient info';
-      toast.error(errorMessage);
+      handleError(error, 'Failed to load recipient info');
       setErrors([{ invoiceId: 'unknown', error: errorMessage }]);
     } finally {
       setLoading(false);
@@ -99,8 +100,8 @@ export const SendInvoiceEmailDialog: React.FC<SendInvoiceEmailDialogProps> = ({
         onClose();
       }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to send emails';
-      toast.error(errorMessage, { id: toastId });
+      toast.dismiss(toastId);
+      handleError(error, 'Failed to send emails');
     } finally {
       setSending(false);
     }

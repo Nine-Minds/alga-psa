@@ -19,6 +19,7 @@ import { FileStoreModel } from 'server/src/models/storage';
 import logger from '@alga-psa/core/logger';
 import { publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
 import { buildDocumentGeneratedPayload } from '@shared/workflow/streams/domainEventBuilders/documentGeneratedEventBuilders';
+import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
 interface PDFGenerationOptions {
   invoiceId?: string;
@@ -83,6 +84,9 @@ export class PDFGenerationService {
       sourceType = 'document';
 
       const document = await runWithTenant(this.tenant, () => getDocument(options.documentId!));
+      if (isActionPermissionError(document)) {
+        throw new Error(document.permissionError);
+      }
       if (!document) {
         throw new Error(`Document ${options.documentId} not found.`);
       }
@@ -282,6 +286,9 @@ export class PDFGenerationService {
     return runWithTenant(this.tenant, async () => {
       const { knex } = await createTenantKnex();
       const document = await getDocument(documentId);
+      if (isActionPermissionError(document)) {
+        throw new Error(document.permissionError);
+      }
       
       if (!document) {
         throw new Error(`Document ${documentId} not found`);

@@ -9,6 +9,7 @@ import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { IProject, IClient, IStatus } from '@alga-psa/types';
 import { IClientPortalConfig, DEFAULT_CLIENT_PORTAL_CONFIG } from '@alga-psa/types';
 import { toast } from 'react-hot-toast';
+import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { createProject, getProjectStatuses } from '../actions/projectActions';
 import { getTenantProjectStatuses } from '../actions/projectTaskStatusActions';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
@@ -60,13 +61,17 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [allUsers, projectStatuses, projectTaskStatuses] = await Promise.all([
+        const [allUsers, projectStatusesResult, projectTaskStatuses] = await Promise.all([
           getAllUsersBasic(),
           getProjectStatuses(),
           getTenantProjectStatuses()
         ]);
         setUsers(allUsers);
-        setStatuses(projectStatuses);
+        if (isActionPermissionError(projectStatusesResult)) {
+          handleError(projectStatusesResult.permissionError);
+          return;
+        }
+        setStatuses(projectStatusesResult);
         setTaskStatuses(projectTaskStatuses);
         // Default selection is now handled by ProjectTaskStatusSelector component
       } catch (error) {
@@ -144,6 +149,10 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
         .map(s => s.status_id);
 
       const newProject = await createProject(projectData, statusIds);
+      if (isActionPermissionError(newProject)) {
+        handleError(newProject.permissionError);
+        return;
+      }
 
       // Create tags for the new project
       let createdTags: typeof newProject.tags = [];
@@ -166,9 +175,7 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
       // Show success toast *after* potential state updates in parent
       toast.success('Project created successfully');
     } catch (error) {
-      console.error('Error creating project:', error);
-      // Show an error toast to the user
-      toast.error('Failed to create project. Please try again.');
+      handleError(error, 'Failed to create project. Please try again.');
     } finally {
       setIsSubmitting(false);
     }

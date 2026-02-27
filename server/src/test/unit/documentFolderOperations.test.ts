@@ -7,30 +7,37 @@ import {
   getFolderStats,
   createFolder,
   deleteFolder
-} from '../../lib/actions/document-actions/documentActions';
-import { IUser } from '@/interfaces/auth.interfaces';
+} from '@alga-psa/documents/actions/documentActions';
+import type { IUser } from '@alga-psa/types';
 
 // Mock dependencies
-vi.mock('@alga-psa/users/actions', () => ({
-  getCurrentUser: vi.fn()
-}));
-
-vi.mock('../../lib/auth/rbac', () => ({
-  hasPermission: vi.fn()
-}));
-
-vi.mock('../../lib/db', () => ({
+vi.mock('@alga-psa/db', () => ({
   createTenantKnex: vi.fn()
 }));
 
-vi.mock('../../lib/utils/documentPermissionUtils', () => ({
+vi.mock('@alga-psa/auth', () => {
+  const getCurrentUser = vi.fn();
+  const hasPermission = vi.fn();
+  return {
+    getCurrentUser,
+    hasPermission,
+    withAuth: (action: any) => async (...args: any[]) => {
+      const user = await getCurrentUser();
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
+      return action(user, { tenant: user.tenant }, ...args);
+    }
+  };
+});
+
+vi.mock('@alga-psa/documents/lib/documentPermissionUtils', () => ({
   getEntityTypesForUser: vi.fn()
 }));
 
-import { getCurrentUser } from '@alga-psa/users/actions';
-import { hasPermission } from '../../lib/auth/rbac';
-import { createTenantKnex } from '../../lib/db';
-import { getEntityTypesForUser } from '../../lib/utils/documentPermissionUtils';
+import { getCurrentUser, hasPermission } from '@alga-psa/auth';
+import { createTenantKnex } from '@alga-psa/db';
+import { getEntityTypesForUser } from '@alga-psa/documents/lib/documentPermissionUtils';
 
 type MockKnex = ReturnType<typeof createMockKnex>;
 
@@ -61,6 +68,7 @@ function createQueryBuilder(returnTarget?: any) {
   }
 
   builder.count = vi.fn().mockReturnValue(returnTarget ?? builder);
+  builder.countDistinct = vi.fn().mockReturnValue(returnTarget ?? builder);
   builder.leftJoin = vi.fn().mockReturnValue(returnTarget ?? builder);
   builder.on = vi.fn().mockReturnValue(returnTarget ?? builder);
   builder.andOn = vi.fn().mockReturnValue(returnTarget ?? builder);
@@ -128,7 +136,7 @@ describe('Document Folder Operations', () => {
     it('should throw error if user lacks document read permission', async () => {
       vi.mocked(hasPermission).mockResolvedValue(false);
 
-      await expect(getFolderTree()).rejects.toThrow('Permission denied');
+      await expect(getFolderTree()).resolves.toEqual({ permissionError: 'Permission denied' });
     });
 
     it('should build folder tree from explicit and implicit folders', async () => {
@@ -247,7 +255,7 @@ describe('Document Folder Operations', () => {
     it('should require document read permission', async () => {
       vi.mocked(hasPermission).mockResolvedValue(false);
 
-      await expect(getFolders()).rejects.toThrow('Permission denied');
+      await expect(getFolders()).resolves.toEqual({ permissionError: 'Permission denied' });
     });
   });
 
@@ -267,7 +275,7 @@ describe('Document Folder Operations', () => {
 
       // Mock count query
       const clonedQuery = createQueryBuilder();
-      clonedQuery.count = vi.fn().mockResolvedValue([{ count: '1' }]);
+      clonedQuery.countDistinct = vi.fn().mockResolvedValue([{ count: '1' }]);
       mockKnex.clone = vi.fn().mockReturnValue(clonedQuery);
 
       // Mock document query with joins
@@ -275,13 +283,16 @@ describe('Document Folder Operations', () => {
         ...mockKnex,
         select: vi.fn().mockReturnValue({
           ...mockKnex,
-          orderByRaw: vi.fn().mockReturnValue({
+          distinct: vi.fn().mockReturnValue({
             ...mockKnex,
-            limit: vi.fn().mockReturnValue({
+            orderByRaw: vi.fn().mockReturnValue({
               ...mockKnex,
-              offset: vi.fn().mockResolvedValue(mockDocuments)
+              limit: vi.fn().mockReturnValue({
+                ...mockKnex,
+                offset: vi.fn().mockResolvedValue(mockDocuments)
+              })
             })
-          })
+          }),
         })
       });
 
@@ -311,7 +322,7 @@ describe('Document Folder Operations', () => {
 
       const clonedQuery = {
         ...queryBuilder,
-        count: vi.fn().mockResolvedValue([{ count: '2' }])
+        countDistinct: vi.fn().mockResolvedValue([{ count: '2' }])
       };
       queryBuilder.clone = vi.fn().mockReturnValue(clonedQuery);
 
@@ -319,13 +330,16 @@ describe('Document Folder Operations', () => {
         ...queryBuilder,
         select: vi.fn().mockReturnValue({
           ...queryBuilder,
-          orderByRaw: vi.fn().mockReturnValue({
+          distinct: vi.fn().mockReturnValue({
             ...queryBuilder,
-            limit: vi.fn().mockReturnValue({
+            orderByRaw: vi.fn().mockReturnValue({
               ...queryBuilder,
-              offset: vi.fn().mockResolvedValue([])
+              limit: vi.fn().mockReturnValue({
+                ...queryBuilder,
+                offset: vi.fn().mockResolvedValue([])
+              })
             })
-          })
+          }),
         })
       });
 
@@ -364,20 +378,23 @@ describe('Document Folder Operations', () => {
       });
 
       const clonedQuery = createQueryBuilder();
-      clonedQuery.count = vi.fn().mockResolvedValue([{ count: '0' }]);
+      clonedQuery.countDistinct = vi.fn().mockResolvedValue([{ count: '0' }]);
       queryBuilder.clone = vi.fn().mockReturnValue(clonedQuery);
 
       queryBuilder.leftJoin = vi.fn().mockReturnValue({
         ...queryBuilder,
         select: vi.fn().mockReturnValue({
           ...queryBuilder,
-          orderByRaw: vi.fn().mockReturnValue({
+          distinct: vi.fn().mockReturnValue({
             ...queryBuilder,
-            limit: vi.fn().mockReturnValue({
+            orderByRaw: vi.fn().mockReturnValue({
               ...queryBuilder,
-              offset: vi.fn().mockResolvedValue([])
+              limit: vi.fn().mockReturnValue({
+                ...queryBuilder,
+                offset: vi.fn().mockResolvedValue([])
+              })
             })
-          })
+          }),
         })
       });
 
@@ -394,20 +411,23 @@ describe('Document Folder Operations', () => {
       mockKnex.mockImplementation(() => mockKnex);
 
       const clonedQuery = createQueryBuilder();
-      clonedQuery.count = vi.fn().mockResolvedValue([{ count: '0' }]);
+      clonedQuery.countDistinct = vi.fn().mockResolvedValue([{ count: '0' }]);
       mockKnex.clone = vi.fn().mockReturnValue(clonedQuery);
 
       mockKnex.leftJoin = vi.fn().mockReturnValue({
         ...mockKnex,
         select: vi.fn().mockReturnValue({
           ...mockKnex,
-          orderByRaw: vi.fn().mockReturnValue({
+          distinct: vi.fn().mockReturnValue({
             ...mockKnex,
-            limit: vi.fn().mockReturnValue({
+            orderByRaw: vi.fn().mockReturnValue({
               ...mockKnex,
-              offset: vi.fn().mockResolvedValue([])
+              limit: vi.fn().mockReturnValue({
+                ...mockKnex,
+                offset: vi.fn().mockResolvedValue([])
+              })
             })
-          })
+          }),
         })
       });
 
@@ -422,7 +442,7 @@ describe('Document Folder Operations', () => {
       const queryBuilder = createQueryBuilder();
 
       const clonedQuery = createQueryBuilder();
-      clonedQuery.count = vi.fn().mockResolvedValue([{ count: '0' }]);
+      clonedQuery.countDistinct = vi.fn().mockResolvedValue([{ count: '0' }]);
       queryBuilder.clone = vi.fn().mockReturnValue(clonedQuery);
 
       const orderByRawMock = vi.fn().mockReturnValue({
@@ -437,7 +457,10 @@ describe('Document Folder Operations', () => {
         ...queryBuilder,
         select: vi.fn().mockReturnValue({
           ...queryBuilder,
-          orderByRaw: orderByRawMock
+          distinct: vi.fn().mockReturnValue({
+            ...queryBuilder,
+            orderByRaw: orderByRawMock
+          }),
         })
       });
 
@@ -460,7 +483,7 @@ describe('Document Folder Operations', () => {
       mockKnex.mockImplementation(() => mockKnex);
 
       const clonedQuery = createQueryBuilder();
-      clonedQuery.count = vi.fn().mockResolvedValue([{ count: '25' }]);
+      clonedQuery.countDistinct = vi.fn().mockResolvedValue([{ count: '25' }]);
       mockKnex.clone = vi.fn().mockReturnValue(clonedQuery);
 
       let limitCalled = false;
@@ -470,21 +493,24 @@ describe('Document Folder Operations', () => {
         ...mockKnex,
         select: vi.fn().mockReturnValue({
           ...mockKnex,
-          orderByRaw: vi.fn().mockReturnValue({
+          distinct: vi.fn().mockReturnValue({
             ...mockKnex,
-            limit: vi.fn((l) => {
-              limitCalled = true;
-              expect(l).toBe(limit);
-              return {
-                ...mockKnex,
-                offset: vi.fn((o) => {
-                  offsetCalled = true;
-                  expect(o).toBe(expectedOffset);
-                  return Promise.resolve([]);
-                })
-              };
+            orderByRaw: vi.fn().mockReturnValue({
+              ...mockKnex,
+              limit: vi.fn((l) => {
+                limitCalled = true;
+                expect(l).toBe(limit);
+                return {
+                  ...mockKnex,
+                  offset: vi.fn((o) => {
+                    offsetCalled = true;
+                    expect(o).toBe(expectedOffset);
+                    return Promise.resolve([]);
+                  })
+                };
+              })
             })
-          })
+          }),
         })
       });
 
@@ -527,7 +553,7 @@ describe('Document Folder Operations', () => {
         return resource === 'document' && action === 'update' ? false : true;
       });
 
-      await expect(moveDocumentsToFolder(['doc-1'], '/Legal')).rejects.toThrow('Permission denied');
+      await expect(moveDocumentsToFolder(['doc-1'], '/Legal')).resolves.toEqual({ permissionError: 'Permission denied' });
     });
 
     it('should update updated_at timestamp', async () => {
@@ -675,7 +701,7 @@ describe('Document Folder Operations', () => {
         return resource === 'document' && action === 'create' ? false : true;
       });
 
-      await expect(createFolder('/Legal')).rejects.toThrow('Permission denied');
+      await expect(createFolder('/Legal')).resolves.toEqual({ permissionError: 'Permission denied' });
     });
   });
 
@@ -712,7 +738,7 @@ describe('Document Folder Operations', () => {
         return resource === 'document' && action === 'delete' ? false : true;
       });
 
-      await expect(deleteFolder('/Legal')).rejects.toThrow('Permission denied');
+      await expect(deleteFolder('/Legal')).resolves.toEqual({ permissionError: 'Permission denied' });
     });
 
     it('should filter by tenant when checking for documents and subfolders', async () => {

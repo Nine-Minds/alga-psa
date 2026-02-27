@@ -6,6 +6,7 @@ import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import type { IDocument, DeletionValidationResult } from '@alga-psa/types';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import { getDocumentPreview } from '../actions/documentActions';
+import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { getDocumentDownloadUrl, downloadDocument } from '@alga-psa/documents/lib/documentUtils';
 import { Button } from '@alga-psa/ui/components/Button';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -353,6 +354,9 @@ function DocumentStorageCardComponent({
             try {
                 setIsLoading(true);
                 const preview = await getDocumentPreview(identifierForPreview);
+                if (isActionPermissionError(preview)) {
+                    throw new Error(preview.permissionError);
+                }
                 setPreviewContent(preview);
                 setHasLoadedPreview(true);
             } catch (error) {

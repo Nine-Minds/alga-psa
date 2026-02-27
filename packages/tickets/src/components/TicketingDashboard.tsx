@@ -34,6 +34,7 @@ import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomat
 import { useIntervalTracking } from '@alga-psa/ui/hooks';
 import type { TicketingDisplaySettings } from '../actions/ticketDisplaySettings';
 import { toast } from 'react-hot-toast';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { createTicketColumns } from '@alga-psa/tickets/lib';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import MultiUserPicker from '@alga-psa/ui/components/MultiUserPicker';
@@ -683,8 +684,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
           return next;
         });
       } catch (error) {
-        console.error('Failed to load bundle children:', error);
-        toast.error('Failed to load bundled tickets');
+        handleError(error, 'Failed to load bundled tickets');
       }
     }
   }, [bundleView, currentUser, expandedBundleMasters, loadedBundleChildrenMasters]);
@@ -1070,8 +1070,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         setIsBulkDeleteDialogOpen(false);
       }
     } catch (error) {
-      console.error('Failed to delete selected tickets:', error);
-      toast.error('Failed to delete selected tickets');
+      handleError(error, 'Failed to delete selected tickets');
     } finally {
       setIsBulkDeleting(false);
     }
@@ -1112,9 +1111,8 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         bundleView,
       });
     } catch (error) {
-      console.error('Failed to bundle tickets:', error);
       setBundleError(error instanceof Error ? error.message : 'Failed to bundle tickets');
-      toast.error('Failed to bundle tickets');
+      handleError(error, 'Failed to bundle tickets');
     }
   }, [
     selectedTicketIdsArray,

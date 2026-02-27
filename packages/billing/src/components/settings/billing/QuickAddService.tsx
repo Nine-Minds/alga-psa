@@ -17,6 +17,7 @@ import { ITaxRate } from '@alga-psa/types'; // Removed ITaxRegion
 import { getServiceCategories } from '@alga-psa/billing/actions'
 import { IService, IServiceCategory, IServiceType } from '@alga-psa/types' // Added IServiceType
 import { useTenant } from '@alga-psa/ui/components/providers/TenantProvider'
+import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling'
 
 interface QuickAddServiceProps {
   onServiceAdded: () => void;
@@ -252,6 +253,11 @@ console.log('[QuickAddService] Submitting service data:', submitData);
 console.log('[QuickAddService] Unit of measure value:', submitData.unit_of_measure);
 const createdService = await createService(submitData);
 console.log('[QuickAddService] Service created successfully:', createdService);
+
+if (isActionPermissionError(createdService)) {
+  handleError(createdService.permissionError);
+  return;
+}
 
 // Set all prices for the service (multi-currency support)
 if (createdService?.service_id) {

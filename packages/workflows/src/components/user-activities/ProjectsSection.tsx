@@ -12,6 +12,7 @@ import { Filter, XCircle } from 'lucide-react';
 import type { IProject, IProjectPhase } from '@alga-psa/types';
 import { getProjects } from '@alga-psa/projects/actions/projectActions';
 import { useActivityDrawer } from './ActivityDrawerProvider';
+import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
 interface ProjectsSectionProps {
   limit?: number;
@@ -74,6 +75,10 @@ export function ProjectsSection({ limit = 5, onViewAll }: ProjectsSectionProps) 
       try {
         setFilterDataLoading(true);
         const projectsData = await getProjects();
+        if (isActionPermissionError(projectsData)) {
+          handleError(projectsData.permissionError);
+          return;
+        }
         setProjects(projectsData);
       } catch (err) {
         console.error('Error loading filter data:', err);

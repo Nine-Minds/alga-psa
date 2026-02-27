@@ -9,6 +9,7 @@ import { Label } from "@alga-psa/ui/components/Label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@alga-psa/ui/components/Table";
 import { Plus, Trash } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { getTenantDetails, updateTenantName, addClientToTenant, removeClientFromTenant, setDefaultClient, getTenantTimezoneAuth, setTenantTimezone } from "@alga-psa/tenancy/actions";
 import { getAllClients } from "@alga-psa/clients/actions";
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
@@ -43,7 +44,7 @@ const GeneralSettings = () => {
         isDefault: c.is_default
       })));
     } catch (error) {
-      toast.error("Failed to load tenant data");
+      handleError(error, "Failed to load tenant data");
     }
   };
 
@@ -52,7 +53,7 @@ const GeneralSettings = () => {
       await updateTenantName(tenantName);
       toast.success("Tenant name updated successfully");
     } catch (error) {
-      toast.error("Failed to update tenant name");
+      handleError(error, "Failed to update tenant name");
     }
   };
 
@@ -63,7 +64,7 @@ const GeneralSettings = () => {
         toast.success("Default timezone updated successfully");
       }
     } catch (error) {
-      toast.error("Failed to update timezone");
+      handleError(error, "Failed to update timezone");
     }
   };
 
@@ -95,7 +96,7 @@ const GeneralSettings = () => {
 
       toast.success("Client added successfully");
     } catch (error) {
-      toast.error("Failed to add client");
+      handleError(error, "Failed to add client");
     }
   };
 
@@ -105,7 +106,7 @@ const GeneralSettings = () => {
         const clients = await getAllClients();
         setAllClients(clients);
       } catch (error) {
-        toast.error("Failed to load clients");
+        handleError(error, "Failed to load clients");
       }
     };
     loadClients();
@@ -117,7 +118,7 @@ const GeneralSettings = () => {
       setClients(clients.filter(c => c.id !== clientId));
       toast.success("Client removed successfully");
     } catch (error) {
-      toast.error("Failed to remove client");
+      handleError(error, "Failed to remove client");
     }
   };
 
@@ -130,7 +131,7 @@ const GeneralSettings = () => {
       })));
       toast.success("Default client updated successfully");
     } catch (error) {
-      toast.error("Failed to set default client");
+      handleError(error, "Failed to set default client");
     }
   };
 

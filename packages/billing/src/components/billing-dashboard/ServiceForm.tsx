@@ -9,6 +9,7 @@ import { getActiveTaxRegions, getTaxRates } from '@alga-psa/billing/actions/taxS
 import { ITaxRate, ITaxRegion } from '@alga-psa/types';
 import { UnitOfMeasureInput } from '@alga-psa/ui/components/UnitOfMeasureInput';
 import { toast } from 'react-hot-toast';
+import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
 export const ServiceForm: React.FC = () => {
   const [serviceName, setServiceName] = useState('')
@@ -48,10 +49,9 @@ export const ServiceForm: React.FC = () => {
         setTaxRates(rates);
         setTaxRegions(regions);
       } catch (err) {
-        console.error("Failed to fetch tax data:", err);
         const errorMessage = err instanceof Error ? err.message : "Failed to load tax data.";
         setErrorTaxData(errorMessage);
-        toast.error(errorMessage);
+        handleError(err, 'Failed to load tax data.');
       } finally {
         setIsLoadingTaxData(false);
       }
@@ -96,7 +96,11 @@ export const ServiceForm: React.FC = () => {
         custom_service_type_id: serviceTypeId,
       }
 
-      await createService(submitData)
+      const result = await createService(submitData)
+      if (isActionPermissionError(result)) {
+        handleError(result.permissionError);
+        return;
+      }
       setError(null)
       // Clear form fields after successful submission
       setServiceName('')

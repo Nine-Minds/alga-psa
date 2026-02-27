@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { useState, useRef, useTransition } from 'react';
 import { toast } from 'react-hot-toast';
+import { handleError } from '../lib/errorHandling';
 import { Pen, Trash2, Upload, Link } from 'lucide-react';
 import LoadingIndicator from './LoadingIndicator';
 import { Button } from './Button';
@@ -182,16 +183,7 @@ const EntityImageUpload = ({
           throw new Error(result.error || `Failed to upload ${entityType} image.`);
         }
       } catch (err: any) {
-        console.error(`[EntityImageUpload] Failed to upload ${entityType} image:`, {
-          operation: 'handleImageUpload',
-          entityType,
-          entityId,
-          entityName,
-          errorMessage: err.message || 'Unknown error',
-          errorStack: err.stack,
-          errorName: err.name
-        });
-        toast.error(err.message || `Failed to upload ${entityType} image.`);
+        handleError(err, `Failed to upload ${entityType} image.`);
         URL.revokeObjectURL(localImageUrl);
         setCurrentImageUrl(imageUrl);
         // Reset the file input
@@ -224,16 +216,7 @@ const EntityImageUpload = ({
           throw new Error(result.error || result.message || `Failed to delete ${entityType} image.`);
         }
       } catch (err: any) {
-        console.error(`[EntityImageUpload] Failed to delete ${entityType} image:`, {
-          operation: 'confirmDeleteImage',
-          entityType,
-          entityId,
-          entityName,
-          errorMessage: err.message || 'Unknown error',
-          errorStack: err.stack,
-          errorName: err.name
-        });
-        toast.error(err.message || `Failed to delete ${entityType} image.`);
+        handleError(err, `Failed to delete ${entityType} image.`);
       } finally {
         setIsDeleteDialogOpen(false);
       }
@@ -274,17 +257,7 @@ const EntityImageUpload = ({
           throw new Error(result.error || result.message || 'Failed to link document');
         }
       } catch (err: any) {
-        console.error(`[EntityImageUpload] Failed to link document as ${entityType} image:`, {
-          operation: 'handleLinkDocument',
-          entityType,
-          entityId,
-          entityName,
-          documentId,
-          errorMessage: err.message || 'Unknown error',
-          errorStack: err.stack,
-          errorName: err.name
-        });
-        toast.error(err.message || `Failed to link document as ${entityType} image.`);
+        handleError(err, `Failed to link document as ${entityType} image.`);
       }
     });
   };

@@ -317,12 +317,22 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
     setPoAmountInputs({});
 
     try {
-      const [contractData, summaryData, assignmentData, documentsData] = await Promise.all([
+      const [contractData, summaryData, assignmentData] = await Promise.all([
         getContractById(contractId),
         getContractSummary(contractId),
         getContractAssignments(contractId),
-        getDocumentsByContractId(contractId)
       ]);
+
+      // Load documents separately - permission errors should not prevent contract viewing
+      let documentsData: any[] = [];
+      try {
+        const docsResult = await getDocumentsByContractId(contractId);
+        if (docsResult && !('permissionError' in docsResult)) {
+          documentsData = docsResult;
+        }
+      } catch {
+        // User may lack document:read permission - contract is still viewable without documents
+      }
 
       if (!contractData) {
         setError('Contract not found');
@@ -336,7 +346,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
       setContract(contractData);
       setSummary(summaryData);
       setAssignments(assignmentData);
-      setDocuments(documentsData || []);
+      setDocuments(documentsData);
     } catch (err) {
       console.error('Error loading contract details:', err);
       setError('Failed to load contract');

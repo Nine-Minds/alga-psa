@@ -7,6 +7,7 @@ import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { Globe } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { LOCALE_CONFIG, filterPseudoLocales, type SupportedLocale } from '@alga-psa/core/i18n/config';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import {
@@ -69,8 +70,7 @@ const MspLanguageSettings = () => {
       setEnabledLocales(updatedEnabledLocales);
       toast.success(`MSP default language updated to ${LOCALE_CONFIG.localeNames[locale]}`);
     } catch (error) {
-      console.error('Failed to update MSP language settings:', error);
-      toast.error('Failed to update MSP language settings');
+      handleError(error, 'Failed to update MSP language settings');
     } finally {
       setSaving(false);
     }
@@ -87,8 +87,7 @@ const MspLanguageSettings = () => {
       setEnabledLocales(selectedLocales);
       toast.success('Available MSP languages updated');
     } catch (error) {
-      console.error('Failed to update MSP enabled languages:', error);
-      toast.error('Failed to update available MSP languages');
+      handleError(error, 'Failed to update available MSP languages');
     } finally {
       setSaving(false);
     }

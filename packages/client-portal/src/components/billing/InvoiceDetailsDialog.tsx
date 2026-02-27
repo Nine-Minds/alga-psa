@@ -10,6 +10,7 @@ import { Download, X, Mail } from 'lucide-react';
 import { getClientInvoiceById, downloadClientInvoicePdf, sendClientInvoiceEmail } from '@alga-psa/client-portal/actions';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import toast from 'react-hot-toast';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 
 interface InvoiceDetailsDialogProps {
   invoiceId: string | null;
@@ -82,8 +83,7 @@ const InvoiceDetailsDialog: React.FC<InvoiceDetailsDialogProps> = React.memo(({
         toast.error(result.error || t('invoice.downloadFailed', 'Failed to download PDF.'));
       }
     } catch (error) {
-      console.error('Failed to download PDF:', error);
-      toast.error(t('invoice.downloadFailed', 'Failed to download PDF. Please try again.'));
+      handleError(error, t('invoice.downloadFailed', 'Failed to download PDF. Please try again.'));
     } finally {
       setIsDownloading(false);
     }
@@ -105,8 +105,7 @@ const InvoiceDetailsDialog: React.FC<InvoiceDetailsDialogProps> = React.memo(({
         toast.error(result.error || t('invoice.sendEmailFailed', 'Failed to send email.'));
       }
     } catch (error) {
-      console.error('Failed to send email:', error);
-      toast.error(t('invoice.sendEmailFailed', 'Failed to send invoice email. Please try again.'));
+      handleError(error, t('invoice.sendEmailFailed', 'Failed to send invoice email. Please try again.'));
     } finally {
       setIsSendingEmail(false);
     }

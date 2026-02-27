@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef, memo } from 'react';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import { getDocumentPreview } from '../actions/documentActions';
+import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { getDocumentDownloadUrl, downloadDocument } from '@alga-psa/documents/lib/documentUtils';
 import { Button } from '@alga-psa/ui/components/Button';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -237,6 +238,12 @@ function DocumentStorageCardComponent({ id, document, onDelete, onDisassociate, 
             try {
                 setIsLoading(true);
                 const preview = await getDocumentPreview(identifierForPreview);
+                if (isActionPermissionError(preview)) {
+                    setPreviewContent({
+                        error: preview.permissionError
+                    });
+                    return;
+                }
                 setPreviewContent(preview);
                 setHasLoadedPreview(true);
             }

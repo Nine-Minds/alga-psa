@@ -68,6 +68,7 @@ import { getAllUsers } from '@alga-psa/users/actions';
 import { ITaskType } from '@alga-psa/types';
 import { IUserWithRoles } from '@alga-psa/types';
 import { toast } from 'react-hot-toast';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { ApplyTemplateDialog } from './ApplyTemplateDialog';
 import { TemplateTaskForm } from './TemplateTaskForm';
 import { TemplateStatusManager } from './TemplateStatusManager';
@@ -268,8 +269,7 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
       toast.success('Template deleted successfully');
       router.push('/msp/projects/templates');
     } catch (error) {
-      toast.error('Failed to delete template');
-      console.error('Error deleting template:', error);
+      handleError(error, 'Failed to delete template');
     } finally {
       setIsDeleting(false);
     }
@@ -281,8 +281,7 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
       await updateTemplate(template.template_id, { client_portal_config: config });
       toast.success('Client portal settings saved');
     } catch (error) {
-      toast.error('Failed to save client portal settings');
-      console.error('Error saving client portal config:', error);
+      handleError(error, 'Failed to save client portal settings');
     }
   };
 
@@ -307,8 +306,7 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
       setEditingPhaseDuration(undefined);
       setEditingPhaseOffset(0);
     } catch (error) {
-      toast.error('Failed to add phase');
-      console.error(error);
+      handleError(error, 'Failed to add phase');
     }
   };
 
@@ -337,8 +335,7 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
       setEditingPhaseId(null);
       toast.success('Phase updated');
     } catch (error) {
-      toast.error('Failed to update phase');
-      console.error(error);
+      handleError(error, 'Failed to update phase');
     }
   };
 
@@ -355,8 +352,7 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
       }
       toast.success('Phase deleted');
     } catch (error) {
-      toast.error('Failed to delete phase');
-      console.error(error);
+      handleError(error, 'Failed to delete phase');
     }
   };
 
@@ -404,8 +400,7 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
         );
         toast.success(`Task moved to "${targetPhase.phase_name}"`);
       } catch (error) {
-        toast.error('Failed to move task');
-        console.error(error);
+        handleError(error, 'Failed to move task');
       } finally {
         setDraggedTaskId(null);
         document.body.classList.remove('dragging-task');
@@ -445,8 +440,7 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
         prev.map((p) => (p.template_phase_id === draggedPhaseId ? updated : p))
       );
     } catch (error) {
-      toast.error('Failed to reorder phase');
-      console.error(error);
+      handleError(error, 'Failed to reorder phase');
     } finally {
       setDraggedPhaseId(null);
     }
@@ -571,8 +565,7 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
       setShowTaskForm(false);
       setEditingTask(null);
     } catch (error) {
-      toast.error('Failed to save task');
-      console.error(error);
+      handleError(error, 'Failed to save task');
     }
   };
 
@@ -585,8 +578,7 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
       setTasks((prev) => prev.filter((t) => t.template_task_id !== task.template_task_id));
       toast.success('Task deleted');
     } catch (error) {
-      toast.error('Failed to delete task');
-      console.error(error);
+      handleError(error, 'Failed to delete task');
     }
   };
 
@@ -629,8 +621,7 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
         prev.map((t) => (t.template_task_id === draggedTaskId ? updated : t))
       );
     } catch (error) {
-      toast.error('Failed to move task');
-      console.error(error);
+      handleError(error, 'Failed to move task');
     } finally {
       setDraggedTaskId(null);
     }
@@ -673,8 +664,7 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
         );
       }
     } catch (error) {
-      toast.error('Failed to move task');
-      console.error(error);
+      handleError(error, 'Failed to move task');
     }
   };
 
@@ -683,8 +673,7 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
       const updated = await updateTemplateTask(taskId, { assigned_to: assigneeId });
       setTasks((prev) => prev.map((t) => (t.template_task_id === taskId ? updated : t)));
     } catch (error) {
-      toast.error('Failed to update assignee');
-      console.error(error);
+      handleError(error, 'Failed to update assignee');
     }
   };
 

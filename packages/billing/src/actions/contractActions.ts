@@ -18,6 +18,8 @@ import { createTenantKnex } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withAuth } from '@alga-psa/auth/withAuth';
 import { hasPermission } from '@alga-psa/auth/rbac';
+import { permissionError } from '@alga-psa/ui/lib/errorHandling';
+import type { ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import {
   addContractLine as repoAddContractLine,
   fetchContractLineMappings,
@@ -178,12 +180,12 @@ export const addContractLine = withAuth(async (
   contractId: string,
   contractLineId: string,
   customRate?: number
-): Promise<IContractLineMapping> => {
+): Promise<IContractLineMapping | ActionPermissionError> => {
   const { knex } = await createTenantKnex();
 
-  const canUpdate = hasPermission(user, 'billing', 'delete');
+  const canUpdate = await hasPermission(user, 'billing', 'delete');
   if (!canUpdate) {
-    throw new Error('Permission denied: Cannot modify contract lines');
+    return permissionError('Permission denied: Cannot modify contract lines');
   }
 
   return knex.transaction((trx: Knex.Transaction) =>
@@ -191,12 +193,12 @@ export const addContractLine = withAuth(async (
   );
 });
 
-export const removeContractLine = withAuth(async (user, { tenant }, contractId: string, contractLineId: string): Promise<void> => {
+export const removeContractLine = withAuth(async (user, { tenant }, contractId: string, contractLineId: string): Promise<void | ActionPermissionError> => {
   const { knex } = await createTenantKnex();
 
-  const canUpdate = hasPermission(user, 'billing', 'update');
+  const canUpdate = await hasPermission(user, 'billing', 'update');
   if (!canUpdate) {
-    throw new Error('Permission denied: Cannot modify contract lines');
+    return permissionError('Permission denied: Cannot modify contract lines');
   }
 
   await repoRemoveContractLine(knex, tenant, contractId, contractLineId);
@@ -208,12 +210,12 @@ export const updateContractLineAssociation = withAuth(async (
   contractId: string,
   contractLineId: string,
   updateData: Partial<IContractLineMapping>
-): Promise<IContractLineMapping> => {
+): Promise<IContractLineMapping | ActionPermissionError> => {
   const { knex } = await createTenantKnex();
 
-  const canUpdate = hasPermission(user, 'billing', 'update');
+  const canUpdate = await hasPermission(user, 'billing', 'update');
   if (!canUpdate) {
-    throw new Error('Permission denied: Cannot modify contract lines');
+    return permissionError('Permission denied: Cannot modify contract lines');
   }
 
   return repoUpdateContractLine(knex, tenant, contractId, contractLineId, updateData);
@@ -226,12 +228,12 @@ export const updateContractLineRate = withAuth(async (
   contractLineId: string,
   rate: number,
   billingTiming?: 'arrears' | 'advance'
-): Promise<void> => {
+): Promise<void | ActionPermissionError> => {
   const { knex } = await createTenantKnex();
 
-  const canUpdate = hasPermission(user, 'billing', 'update');
+  const canUpdate = await hasPermission(user, 'billing', 'update');
   if (!canUpdate) {
-    throw new Error('Permission denied: Cannot modify contract lines');
+    return permissionError('Permission denied: Cannot modify contract lines');
   }
 
   await knex.transaction(async (trx) => {
@@ -379,15 +381,15 @@ export const checkContractHasInvoices = withAuth(async (user, { tenant }, contra
   return await Contract.hasInvoices(knex, tenant, contractId);
 });
 
-export const deleteContract = withAuth(async (user, { tenant }, contractId: string): Promise<void> => {
+export const deleteContract = withAuth(async (user, { tenant }, contractId: string): Promise<void | ActionPermissionError> => {
   const { knex } = await createTenantKnex();
 
   try {
     const isBypass = process.env.E2E_AUTH_BYPASS === 'true';
     if (!isBypass) {
-      const canDeleteBilling = hasPermission(user, 'billing', 'delete');
+      const canDeleteBilling = await hasPermission(user, 'billing', 'delete');
       if (!canDeleteBilling) {
-        throw new Error('Permission denied: Cannot delete billing contracts');
+        return permissionError('Permission denied: Cannot delete billing contracts');
       }
     }
 

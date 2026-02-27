@@ -5,6 +5,8 @@ import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
+import { permissionError } from '@alga-psa/ui/lib/errorHandling';
+import type { ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
 type RenewalMode = 'none' | 'manual' | 'auto';
 type RenewalDueDateActionPolicy = 'queue_only' | 'create_ticket';
@@ -12,10 +14,11 @@ type RenewalDueDateActionPolicy = 'queue_only' | 'create_ticket';
 const DEFAULT_RENEWAL_MODE: RenewalMode = 'manual';
 const DEFAULT_NOTICE_PERIOD_DAYS = 30;
 const DEFAULT_RENEWAL_DUE_DATE_ACTION_POLICY: RenewalDueDateActionPolicy = 'create_ticket';
-const requireBillingSettingsUpdatePermission = (user: unknown): void => {
-  if (!hasPermission(user as any, 'billing_settings', 'update')) {
-    throw new Error('Permission denied: Cannot update billing settings');
+const requireBillingSettingsUpdatePermission = async (user: unknown): Promise<ActionPermissionError | null> => {
+  if (!await hasPermission(user as any, 'billing_settings', 'update')) {
+    return permissionError('Permission denied: Cannot update billing settings');
   }
+  return null;
 };
 
 export interface BillingSettings {
@@ -96,8 +99,9 @@ export const updateDefaultBillingSettings = withAuth(async (
   user,
   { tenant },
   data: BillingSettings
-): Promise<{ success: boolean }> => {
-  requireBillingSettingsUpdatePermission(user);
+): Promise<{ success: boolean } | ActionPermissionError> => {
+  const denied = await requireBillingSettingsUpdatePermission(user);
+  if (denied) return denied;
 
   const { knex } = await createTenantKnex();
 

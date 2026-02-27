@@ -20,6 +20,7 @@ import { ITaxRate } from '@alga-psa/types';
 import { IService, IServiceCategory } from '@alga-psa/types';
 import { CURRENCY_OPTIONS, getCurrencySymbol } from '@alga-psa/core';
 import { getServiceCategories } from '@alga-psa/billing/actions';
+import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
 const LICENSE_TERM_OPTIONS = [
   { value: 'monthly', label: 'Monthly' },
@@ -226,6 +227,10 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
           license_billing_cadence: formProduct.license_billing_cadence ?? null
         } as any);
 
+        if (isActionPermissionError(created)) {
+          handleError(created.permissionError);
+          return;
+        }
         await setServicePrices(created.service_id, formPrices);
       }
 

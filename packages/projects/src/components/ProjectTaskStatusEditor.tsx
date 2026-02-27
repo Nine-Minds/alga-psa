@@ -13,6 +13,7 @@ import {
   reorderProjectStatuses
 } from '../actions/projectTaskStatusActions';
 import { toast } from 'react-hot-toast';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 
 interface ProjectTaskStatusEditorProps {
   projectId: string;
@@ -43,8 +44,7 @@ export function ProjectTaskStatusEditor({
         setProjectStatusMappings(mappings);
         setAvailableStatuses(tenantStatuses);
       } catch (error) {
-        console.error('Error fetching status data:', error);
-        toast.error('Failed to load task statuses');
+        handleError(error, 'Failed to load task statuses');
       } finally {
         setIsLoading(false);
       }
@@ -83,8 +83,7 @@ export function ProjectTaskStatusEditor({
       onChange?.();
       toast.success('Status added successfully');
     } catch (error) {
-      console.error('Error adding status:', error);
-      toast.error('Failed to add status');
+      handleError(error, 'Failed to add status');
     }
   };
 
@@ -96,9 +95,7 @@ export function ProjectTaskStatusEditor({
       onChange?.();
       toast.success('Status removed successfully');
     } catch (error) {
-      console.error('Error removing status:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to remove status';
-      toast.error(errorMessage);
+      handleError(error, 'Failed to remove status');
     }
   };
 
@@ -126,8 +123,7 @@ export function ProjectTaskStatusEditor({
       setProjectStatusMappings(reordered);
       onChange?.();
     } catch (error) {
-      console.error('Error reordering statuses:', error);
-      toast.error('Failed to reorder statuses');
+      handleError(error, 'Failed to reorder statuses');
     }
   };
 
@@ -155,8 +151,7 @@ export function ProjectTaskStatusEditor({
       setProjectStatusMappings(reordered);
       onChange?.();
     } catch (error) {
-      console.error('Error reordering statuses:', error);
-      toast.error('Failed to reorder statuses');
+      handleError(error, 'Failed to reorder statuses');
     }
   };
 

@@ -124,7 +124,7 @@ export const updateNumberSettings = withAuth(async (
 
 // Check if user can edit numbering settings
 export const canEditNumberingSettings = withAuth(async (user): Promise<boolean> => {
-  return hasPermission(user, 'settings', 'update');
+  return await hasPermission(user, 'settings', 'update');
 });
 
 // Legacy support

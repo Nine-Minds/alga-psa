@@ -33,6 +33,7 @@ import TicketEmailNotifications from "./TicketEmailNotifications";
 import TicketConversation from "./TicketConversation";
 import { useSession } from 'next-auth/react';
 import { toast } from 'react-hot-toast';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { useDrawer } from "@alga-psa/ui";
 import { useSchedulingCallbacks } from '@alga-psa/ui/context';
 import { findUserById, getCurrentUser } from "@alga-psa/users/actions";
@@ -698,8 +699,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                 toast.success('Agent assigned successfully');
             }
         } catch (error) {
-            console.error('Error adding agent:', error);
-            toast.error('Failed to add agent');
+            handleError(error, 'Failed to add agent');
         }
     };  
     
@@ -709,8 +709,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             setAdditionalAgents(prev => prev.filter(agent => agent.assignment_id !== assignmentId));
             toast.success('Agent removed successfully');
         } catch (error) {
-            console.error('Error removing agent:', error);
-            toast.error('Failed to remove agent');
+            handleError(error, 'Failed to remove agent');
         }
     };
 
@@ -968,8 +967,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             setIsEditing(false);
             setCurrentComment(null);
         } catch (error) {
-            console.error("Error saving comment:", error);
-            toast.error("Failed to save comment changes");
+            handleError(error, "Failed to save comment changes");
         }
     };
 const handleClose = () => {
@@ -1054,8 +1052,7 @@ const handleClose = () => {
                 return true;
             }
         } catch (error) {
-            console.error('Error updating description:', error);
-            toast.error('Failed to update description');
+            handleError(error, 'Failed to update description');
             return false;
         }
     };
@@ -1083,8 +1080,7 @@ const handleClose = () => {
                 }),
             });
         } catch (error) {
-            console.error('Error in handleAddTimeEntry:', error);
-            toast.error('An error occurred while preparing the time entry. Please try again.');
+            handleError(error, 'An error occurred while preparing the time entry. Please try again.');
         }
     };
 
@@ -1158,8 +1154,7 @@ const handleClose = () => {
             setIsChangeContactDialogOpen(false);
             toast.success('Contact updated successfully');
         } catch (error) {
-            console.error('Error updating contact:', error);
-            toast.error('Failed to update contact');
+            handleError(error, 'Failed to update contact');
         }
     };
 
@@ -1201,8 +1196,7 @@ const handleClose = () => {
 
             toast.success(`ITIL ${field.replace('itil_', '').replace('_', ' ')} updated successfully`);
         } catch (error) {
-            console.error('Error updating ITIL field:', error);
-            toast.error(`Failed to update ITIL ${field.replace('itil_', '').replace('_', ' ')}`);
+            handleError(error, `Failed to update ITIL ${field.replace('itil_', '').replace('_', ' ')}`);
         }
     };
 
@@ -1264,8 +1258,7 @@ const handleClose = () => {
             setIsChangeClientDialogOpen(false);
             toast.success('Client updated successfully');
         } catch (error) {
-            console.error('Error updating client:', error);
-            toast.error('Failed to update client');
+            handleError(error, 'Failed to update client');
         }
     };
     
@@ -1284,8 +1277,7 @@ const handleClose = () => {
 
             toast.success('Location updated successfully');
         } catch (error) {
-            console.error('Error updating location:', error);
-            toast.error('Failed to update location');
+            handleError(error, 'Failed to update location');
         }
     };
 
@@ -1309,8 +1301,7 @@ const handleClose = () => {
             );
             toast.success('Comment deleted successfully');
         } catch (error) {
-            console.error("Error deleting comment:", error);
-            toast.error('Failed to delete comment');
+            handleError(error, 'Failed to delete comment');
         } finally {
             setIsDeleteDialogOpen(false);
             setCommentToDelete(null);
@@ -1330,8 +1321,7 @@ const handleClose = () => {
             toast.success('Removed ticket from bundle');
             router.refresh();
         } catch (error) {
-            console.error('Failed to remove child from bundle:', error);
-            toast.error(error instanceof Error ? error.message : 'Failed to remove ticket from bundle');
+            handleError(error, 'Failed to remove ticket from bundle');
         }
     }, [router]);
 
@@ -1342,8 +1332,7 @@ const handleClose = () => {
             toast.success('Bundle removed');
             router.refresh();
         } catch (error) {
-            console.error('Failed to unbundle master ticket:', error);
-            toast.error(error instanceof Error ? error.message : 'Failed to unbundle ticket');
+            handleError(error, 'Failed to unbundle ticket');
         }
     }, [ticket.ticket_id, router]);
 
@@ -1401,8 +1390,7 @@ const handleClose = () => {
 
             await performAddChildToBundle(found.ticket_id);
         } catch (error) {
-            console.error('Failed to add child to bundle:', error);
-            toast.error(error instanceof Error ? error.message : 'Failed to add ticket to bundle');
+            handleError(error, 'Failed to add ticket to bundle');
         }
     }, [ticket.ticket_id, ticket.client_id, addChildTicketNumber, selectedChildTicket, performAddChildToBundle]);
 
@@ -1518,8 +1506,7 @@ const handleClose = () => {
             router.push(`/msp/tickets/${childTicketId}`);
             router.refresh();
         } catch (error) {
-            console.error('Failed to promote master:', error);
-            toast.error(error instanceof Error ? error.message : 'Failed to promote master');
+            handleError(error, 'Failed to promote master');
         }
     }, [ticket.ticket_id, router]);
 
@@ -1532,8 +1519,7 @@ const handleClose = () => {
             toast.success('Bundle settings updated');
             router.refresh();
         } catch (error) {
-            console.error('Failed to update bundle settings:', error);
-            toast.error(error instanceof Error ? error.message : 'Failed to update bundle settings');
+            handleError(error, 'Failed to update bundle settings');
         } finally {
             setIsUpdatingBundleSettings(false);
         }
@@ -1654,8 +1640,7 @@ const handleClose = () => {
                         try {
                             await performAddChildToBundle(pendingChildToAdd.ticket_id);
                         } catch (error) {
-                            console.error('Failed to add child to bundle after confirmation:', error);
-                            toast.error(error instanceof Error ? error.message : 'Failed to add ticket to bundle');
+                            handleError(error, 'Failed to add ticket to bundle');
                         } finally {
                             setIsAddChildMultiClientConfirmOpen(false);
                             setPendingChildToAdd(null);

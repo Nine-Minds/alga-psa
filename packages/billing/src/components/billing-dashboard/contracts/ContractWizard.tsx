@@ -19,6 +19,7 @@ import {
   ClientTemplateSnapshot,
 } from '@alga-psa/billing/actions/contractWizardActions';
 import { getDefaultBillingSettings } from '@alga-psa/billing/actions/billingSettingsActions';
+import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
 const STEPS = [
   'Contract Basics',
@@ -546,6 +547,11 @@ export function ContractWizard({
       const submission = await buildSubmissionData();
       const result = await createClientContractFromWizard(submission);
 
+      if (isActionPermissionError(result)) {
+        handleError(result.permissionError);
+        return;
+      }
+
       const completedData: ContractWizardData = {
         ...wizardData,
         contract_id: result.contract_id,
@@ -584,6 +590,11 @@ export function ContractWizard({
     try {
       const submission = await buildSubmissionData();
       const result = await createClientContractFromWizard(submission, { isDraft: true });
+
+      if (isActionPermissionError(result)) {
+        handleError(result.permissionError);
+        return;
+      }
 
       const draftData: ContractWizardData = {
         ...wizardData,

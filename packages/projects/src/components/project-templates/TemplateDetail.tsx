@@ -10,6 +10,7 @@ import { ArrowLeft, Circle, Trash, FileText, MoreVertical, Rocket } from 'lucide
 import { IProjectTemplateWithDetails, IProjectTemplateTask, IProjectTemplatePhase } from '@alga-psa/types';
 import { deleteTemplate } from '../../actions/projectTemplateActions';
 import { toast } from 'react-hot-toast';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -45,8 +46,7 @@ export default function TemplateDetail({ template, onTemplateUpdated }: Template
       toast.success('Template deleted successfully');
       router.push('/msp/projects/templates');
     } catch (error) {
-      toast.error('Failed to delete template');
-      console.error('Error deleting template:', error);
+      handleError(error, 'Failed to delete template');
     } finally {
       setIsDeleting(false);
     }

@@ -13,6 +13,7 @@ import {
 } from '@/lib/actions/tenant-secret-actions';
 import type { TenantSecretMetadata } from '@alga-psa/shared/workflow/secrets';
 import { toast } from 'react-hot-toast';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { Eye, EyeOff, AlertCircle } from 'lucide-react';
 
 interface SecretDialogProps {
@@ -121,8 +122,7 @@ export default function SecretDialog({
 
       onSuccess();
     } catch (error) {
-      console.error('Failed to save secret:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to save secret');
+      handleError(error, 'Failed to save secret');
     } finally {
       setSaving(false);
     }

@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { LOCALE_CONFIG, type SupportedLocale } from '@alga-psa/core/i18n/config';
 import { updateClientLocaleAction, getClientLocaleAction } from '@alga-psa/clients/actions';
 import { toast } from 'react-hot-toast';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 
 interface ClientLanguagePreferenceProps {
@@ -71,8 +72,7 @@ export function ClientLanguagePreference({
       toast.success(`Default language for ${clientName || 'client'} contacts updated to ${LOCALE_CONFIG.localeNames[locale]}`);
       onSave?.(locale);
     } catch (error) {
-      console.error('Failed to update client language preference:', error);
-      toast.error('Failed to update client language preference');
+      handleError(error, 'Failed to update client language preference');
     } finally {
       setIsChanging(false);
     }

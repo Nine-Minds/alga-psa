@@ -14,6 +14,7 @@ import {
   DropdownMenuItem
 } from '@alga-psa/ui/components/DropdownMenu';
 import { toast } from 'react-hot-toast';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import {
   getEventCatalogEntries,
   getEventCategories
@@ -67,8 +68,7 @@ export default function EventsCatalog() {
         }
         setEventAttachments(attachmentsMap);
       } catch (error) {
-        console.error('Error loading events data:', error);
-        toast.error('Failed to load events data');
+        handleError(error, 'Failed to load events data');
       } finally {
         setIsLoading(false);
       }
@@ -132,8 +132,7 @@ export default function EventsCatalog() {
           loadAttachments();
         })
         .catch(error => {
-          console.error('Error refreshing events data:', error);
-          toast.error('Failed to refresh events data');
+          handleError(error, 'Failed to refresh events data');
           setIsLoading(false);
         });
     }
@@ -170,8 +169,7 @@ export default function EventsCatalog() {
       }
       setEventAttachments(attachmentsMap);
     } catch (error) {
-      console.error('Error detaching workflow:', error);
-      toast.error('Failed to detach workflow');
+      handleError(error, 'Failed to detach workflow');
     } finally {
       setIsLoading(false);
       setIsDetachDialogOpen(false);
@@ -203,8 +201,7 @@ export default function EventsCatalog() {
       }
       setEventAttachments(attachmentsMap);
     } catch (error) {
-      console.error('Error toggling workflow active state:', error);
-      toast.error('Failed to update workflow');
+      handleError(error, 'Failed to update workflow');
     } finally {
       setIsLoading(false);
     }

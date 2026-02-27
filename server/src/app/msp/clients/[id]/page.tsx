@@ -1,4 +1,5 @@
 import { getDocumentByClientId } from '@alga-psa/documents/actions/documentActions';
+import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { getContactsByClient } from '@alga-psa/clients/actions';
 import { getClientById } from '@alga-psa/clients/actions';
 import { notFound } from 'next/navigation';
@@ -17,7 +18,7 @@ const ClientPage = async ({ params }: { params: Promise<{ id: string }> }) => {
     }
 
     // Fetch additional data in parallel
-    const [documents, contacts, surveySummary] = await Promise.all([
+    const [documentsResult, contacts, surveySummary] = await Promise.all([
       getDocumentByClientId(id),
       getContactsByClient(id, 'all'),
       getSurveyClientSummary(id).catch((error) => {
@@ -25,6 +26,7 @@ const ClientPage = async ({ params }: { params: Promise<{ id: string }> }) => {
         return null;
       })
     ]);
+    const documents = isActionPermissionError(documentsResult) ? [] : documentsResult;
 
     return (
       <div className="w-full px-4">
