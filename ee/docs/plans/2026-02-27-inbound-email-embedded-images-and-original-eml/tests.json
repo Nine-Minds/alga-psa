@@ -20,7 +20,7 @@
   {
     "id": "T003",
     "description": "Unit: malformed data:image payload is skipped and does not throw workflow-failing error",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F003",
       "F020"
