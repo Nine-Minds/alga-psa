@@ -6,6 +6,7 @@ const tableReads: string[] = [];
 
 const getAdminConnectionMock = vi.fn(async () => knexMock);
 const publishEventMock = vi.fn(async () => 'stream-1');
+const processInboundEmailInAppMock = vi.fn(async () => ({ outcome: 'created', ticketId: 't-1' }));
 
 const whereMock = vi.fn(function where() {
   return this;
@@ -31,9 +32,25 @@ vi.mock('@alga-psa/shared/events/publisher', () => ({
   publishEvent: (...args: any[]) => publishEventMock(...args),
 }));
 
+vi.mock('@alga-psa/shared/services/email/processInboundEmailInApp', () => ({
+  processInboundEmailInApp: (...args: any[]) => processInboundEmailInAppMock(...args),
+}));
+
 describe('IMAP webhook handoff', () => {
   beforeEach(() => {
     process.env.IMAP_WEBHOOK_SECRET = 'imap-secret';
+    process.env.INBOUND_EMAIL_IN_APP_PROCESSING_ENABLED = '';
+    process.env.INBOUND_EMAIL_IN_APP_PROVIDER_IDS = '';
+    process.env.INBOUND_EMAIL_IN_APP_TENANT_IDS = '';
+    process.env.IMAP_INBOUND_EMAIL_IN_APP_PROCESSING_ENABLED = '';
+    process.env.IMAP_INBOUND_EMAIL_IN_APP_PROVIDER_IDS = '';
+    process.env.IMAP_INBOUND_EMAIL_IN_APP_TENANT_IDS = '';
+    process.env.IMAP_INBOUND_EMAIL_IN_APP_ASYNC_ENABLED = '';
+    process.env.IMAP_INBOUND_EMAIL_IN_APP_EVENT_BUS_FALLBACK_ENABLED = '';
+    process.env.IMAP_MAX_ATTACHMENT_BYTES = '';
+    process.env.IMAP_MAX_TOTAL_ATTACHMENT_BYTES = '';
+    process.env.IMAP_MAX_ATTACHMENT_COUNT = '';
+    process.env.IMAP_MAX_RAW_MIME_BYTES = '';
     providerRow = {
       id: 'provider-imap-1',
       tenant: 'tenant-1',
@@ -43,10 +60,39 @@ describe('IMAP webhook handoff', () => {
     tableReads.length = 0;
     getAdminConnectionMock.mockClear();
     publishEventMock.mockClear();
+    processInboundEmailInAppMock.mockClear();
+    processInboundEmailInAppMock.mockResolvedValue({ outcome: 'created', ticketId: 't-1' });
     whereMock.mockClear();
     firstMock.mockClear();
     knexMock.mockClear();
   });
+
+  function makeImapRequest(emailDataOverrides: Record<string, any> = {}, secret = 'imap-secret') {
+    return new NextRequest('http://localhost:3000/api/email/webhooks/imap', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-imap-webhook-secret': secret,
+      },
+      body: JSON.stringify({
+        providerId: providerRow.id,
+        tenant: providerRow.tenant,
+        emailData: {
+          id: 'imap-msg-1',
+          provider: 'imap',
+          providerId: providerRow.id,
+          tenant: providerRow.tenant,
+          receivedAt: new Date().toISOString(),
+          from: { email: 'sender@example.com' },
+          to: [{ email: 'support@example.com' }],
+          subject: 'IMAP inbound',
+          body: { text: 'Body', html: '<p>Body</p>' },
+          attachments: [],
+          ...emailDataOverrides,
+        },
+      }),
+    });
+  }
 
   it('T035: returns success after auth/validation + async handoff without inline persistence work', async () => {
     const { POST } = await import('@alga-psa/integrations/webhooks/email/imap');
@@ -140,5 +186,232 @@ describe('IMAP webhook handoff', () => {
     expect(getAdminConnectionMock).not.toHaveBeenCalled();
     expect(publishEventMock).not.toHaveBeenCalled();
     expect(tableReads).toHaveLength(0);
+  });
+
+  it('T229: IMAP callback processes via in-app mode when IMAP in-app flag is enabled', async () => {
+    process.env.IMAP_INBOUND_EMAIL_IN_APP_PROCESSING_ENABLED = 'true';
+    const { POST } = await import('@alga-psa/integrations/webhooks/email/imap');
+
+    const response = await POST(makeImapRequest());
+    expect(response.status).toBe(200);
+
+    const body = await response.json();
+    expect(body).toMatchObject({
+      success: true,
+      queued: false,
+      handoff: 'in_app',
+      providerId: providerRow.id,
+      tenant: providerRow.tenant,
+      messageId: 'imap-msg-1',
+    });
+
+    expect(processInboundEmailInAppMock).toHaveBeenCalledTimes(1);
+    expect(publishEventMock).not.toHaveBeenCalled();
+  });
+
+  it('T230: IMAP callback follows fallback path when in-app mode is disabled', async () => {
+    process.env.IMAP_INBOUND_EMAIL_IN_APP_PROCESSING_ENABLED = 'false';
+    const { POST } = await import('@alga-psa/integrations/webhooks/email/imap');
+
+    const response = await POST(makeImapRequest());
+    expect(response.status).toBe(200);
+
+    const body = await response.json();
+    expect(body).toMatchObject({
+      success: true,
+      queued: true,
+      handoff: 'event_bus',
+      providerId: providerRow.id,
+      tenant: providerRow.tenant,
+      messageId: 'imap-msg-1',
+    });
+
+    expect(processInboundEmailInAppMock).not.toHaveBeenCalled();
+    expect(publishEventMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('T231: over-limit single attachment is skipped with attachment_over_max_bytes reason', async () => {
+    process.env.IMAP_MAX_ATTACHMENT_BYTES = '3';
+    const { POST } = await import('@alga-psa/integrations/webhooks/email/imap');
+
+    const response = await POST(
+      makeImapRequest({
+        attachments: [
+          {
+            id: 'att-large',
+            name: 'large.bin',
+            contentType: 'application/octet-stream',
+            size: 4,
+            content: Buffer.from('data').toString('base64'),
+          },
+        ],
+      })
+    );
+    expect(response.status).toBe(200);
+    expect(publishEventMock).toHaveBeenCalledTimes(1);
+
+    const event = publishEventMock.mock.calls[0][0];
+    expect(event.payload.emailData.attachments).toEqual([]);
+    expect(event.payload.emailData.ingressSkipReasons).toContainEqual(
+      expect.objectContaining({
+        type: 'attachment',
+        reason: 'attachment_over_max_bytes',
+        attachmentId: 'att-large',
+      })
+    );
+  });
+
+  it('T232: total attachment byte cap skips overflow attachments with attachment_total_bytes_exceeded reason', async () => {
+    process.env.IMAP_MAX_ATTACHMENT_BYTES = '4';
+    process.env.IMAP_MAX_TOTAL_ATTACHMENT_BYTES = '5';
+    const { POST } = await import('@alga-psa/integrations/webhooks/email/imap');
+
+    const response = await POST(
+      makeImapRequest({
+        attachments: [
+          {
+            id: 'att-1',
+            name: 'first.bin',
+            contentType: 'application/octet-stream',
+            size: 3,
+            content: Buffer.from('aaa').toString('base64'),
+          },
+          {
+            id: 'att-2',
+            name: 'second.bin',
+            contentType: 'application/octet-stream',
+            size: 3,
+            content: Buffer.from('bbb').toString('base64'),
+          },
+        ],
+      })
+    );
+    expect(response.status).toBe(200);
+
+    const event = publishEventMock.mock.calls[0][0];
+    expect(event.payload.emailData.attachments).toHaveLength(1);
+    expect(event.payload.emailData.attachments[0].id).toBe('att-1');
+    expect(event.payload.emailData.ingressSkipReasons).toContainEqual(
+      expect.objectContaining({
+        type: 'attachment',
+        reason: 'attachment_total_bytes_exceeded',
+        attachmentId: 'att-2',
+      })
+    );
+  });
+
+  it('T233: attachment count cap emits attachment_count_exceeded for excess attachments', async () => {
+    process.env.IMAP_MAX_ATTACHMENT_COUNT = '1';
+    const { POST } = await import('@alga-psa/integrations/webhooks/email/imap');
+
+    const response = await POST(
+      makeImapRequest({
+        attachments: [
+          {
+            id: 'att-1',
+            name: 'first.bin',
+            contentType: 'application/octet-stream',
+            size: 1,
+            content: Buffer.from('a').toString('base64'),
+          },
+          {
+            id: 'att-2',
+            name: 'second.bin',
+            contentType: 'application/octet-stream',
+            size: 1,
+            content: Buffer.from('b').toString('base64'),
+          },
+        ],
+      })
+    );
+    expect(response.status).toBe(200);
+
+    const event = publishEventMock.mock.calls[0][0];
+    expect(event.payload.emailData.attachments).toHaveLength(1);
+    expect(event.payload.emailData.ingressSkipReasons).toContainEqual(
+      expect.objectContaining({
+        type: 'attachment',
+        reason: 'attachment_count_exceeded',
+        attachmentId: 'att-2',
+      })
+    );
+  });
+
+  it('T234: raw MIME over-cap emits raw_mime_over_max_bytes and strips MIME source fields', async () => {
+    process.env.IMAP_MAX_RAW_MIME_BYTES = '3';
+    const { POST } = await import('@alga-psa/integrations/webhooks/email/imap');
+
+    const response = await POST(
+      makeImapRequest({
+        rawMimeBase64: Buffer.from('mime-too-large').toString('base64'),
+      })
+    );
+    expect(response.status).toBe(200);
+
+    const event = publishEventMock.mock.calls[0][0];
+    expect(event.payload.emailData.rawMimeBase64).toBeUndefined();
+    expect(event.payload.emailData.sourceMimeBase64).toBeUndefined();
+    expect(event.payload.emailData.rawSourceBase64).toBeUndefined();
+    expect(event.payload.emailData.ingressSkipReasons).toContainEqual(
+      expect.objectContaining({
+        type: 'raw_mime',
+        reason: 'raw_mime_over_max_bytes',
+      })
+    );
+  });
+
+  it('T237: payload contract accepts attachment content/isInline/contentId and MIME source fields', async () => {
+    const { POST } = await import('@alga-psa/integrations/webhooks/email/imap');
+    const response = await POST(
+      makeImapRequest({
+        attachments: [
+          {
+            id: 'att-contract',
+            name: 'contract.txt',
+            contentType: 'text/plain',
+            size: 4,
+            contentId: '<cid-contract>',
+            isInline: true,
+            content: Buffer.from('test').toString('base64'),
+          },
+        ],
+        sourceMimeBase64: Buffer.from('source-mime').toString('base64'),
+      })
+    );
+    expect(response.status).toBe(200);
+
+    const event = publishEventMock.mock.calls[0][0];
+    expect(event.payload.emailData.attachments[0]).toMatchObject({
+      id: 'att-contract',
+      contentId: '<cid-contract>',
+      isInline: true,
+      content: Buffer.from('test').toString('base64'),
+    });
+    expect(event.payload.emailData.sourceMimeBase64).toBe(Buffer.from('source-mime').toString('base64'));
+  });
+
+  it('T238: malformed attachment content payload fails validation safely', async () => {
+    const { POST } = await import('@alga-psa/integrations/webhooks/email/imap');
+    const response = await POST(
+      makeImapRequest({
+        attachments: [
+          {
+            id: 'att-bad',
+            name: 'bad.txt',
+            contentType: 'text/plain',
+            size: 4,
+            content: { invalid: true },
+          },
+        ],
+      })
+    );
+
+    expect(response.status).toBe(400);
+    const body = await response.json();
+    expect(body).toMatchObject({
+      error: expect.stringContaining('attachments[0].content'),
+    });
+    expect(processInboundEmailInAppMock).not.toHaveBeenCalled();
+    expect(publishEventMock).not.toHaveBeenCalled();
   });
 });

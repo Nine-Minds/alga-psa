@@ -130,7 +130,7 @@
   {
     "id": "T229",
     "description": "Webhook integration: IMAP callback processes via in-app mode when IMAP in-app flag is enabled",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F226",
       "F232"

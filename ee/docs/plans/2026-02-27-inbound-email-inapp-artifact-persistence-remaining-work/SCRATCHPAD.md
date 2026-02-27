@@ -232,3 +232,8 @@ Create a clean, implementation-ready plan containing only remaining work for inb
 - Validation:
   - `cd server && npx vitest run src/test/integration/inboundEmailInApp.webhooks.integration.test.ts -t "Artifact failure: attachment persistence failure is recorded while ticket/comment creation still succeeds" --coverage.enabled=false`
   - Environment note: DB-gated integration suite was skipped in this local session (`describeDb`).
+- 2026-02-27: Completed `T229`.
+  - Extended `server/src/test/integration/imapWebhookHandoff.integration.test.ts` with explicit IMAP in-app handoff assertions.
+  - New test verifies `IMAP_INBOUND_EMAIL_IN_APP_PROCESSING_ENABLED=true` routes webhook to `processInboundEmailInApp` and returns `handoff: in_app`.
+- Validation:
+  - `cd server && npx vitest run src/test/integration/imapWebhookHandoff.integration.test.ts --coverage.enabled=false`
