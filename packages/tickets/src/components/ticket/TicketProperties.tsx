@@ -904,6 +904,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
         onUpdateWatchList={onUpdateWatchList}
         watchListSaving={watchListSaving}
         internalUsers={availableAgents}
+        clientContacts={contacts}
       />
 
 

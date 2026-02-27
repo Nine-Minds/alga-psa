@@ -5,8 +5,9 @@ import { AlertCircle, X } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
+import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
-import type { IUser } from '@alga-psa/types';
+import type { IContact, IUser } from '@alga-psa/types';
 import { normalizeEmailAddress } from '@shared/lib/email/addressUtils';
 import {
   mergeTicketWatchListRecipients,
@@ -21,6 +22,7 @@ interface TicketWatchListCardProps {
   onUpdateWatchList?: (watchList: TicketWatchListEntry[]) => Promise<boolean>;
   watchListSaving?: boolean;
   internalUsers?: IUser[];
+  clientContacts?: IContact[];
 }
 
 const TicketWatchListCard: React.FC<TicketWatchListCardProps> = ({
@@ -29,9 +31,11 @@ const TicketWatchListCard: React.FC<TicketWatchListCardProps> = ({
   onUpdateWatchList,
   watchListSaving = false,
   internalUsers = [],
+  clientContacts = [],
 }) => {
   const [watchListInput, setWatchListInput] = useState('');
   const [selectedUserId, setSelectedUserId] = useState('');
+  const [selectedContactId, setSelectedContactId] = useState('');
   const [watchListError, setWatchListError] = useState<string | null>(null);
   const [watchListSavingInternal, setWatchListSavingInternal] = useState(false);
   const watchList = React.useMemo(() => parseTicketWatchListAttributes(attributes), [attributes]);
@@ -133,6 +137,43 @@ const TicketWatchListCard: React.FC<TicketWatchListCardProps> = ({
     await persistWatchList(nextWatchList);
   };
 
+  const handleAddClientContact = async () => {
+    if (!selectedContactId) {
+      setWatchListError('Select a contact to add.');
+      return;
+    }
+
+    const selectedContact = clientContacts.find(
+      (contact) => contact.contact_name_id === selectedContactId
+    );
+    const normalizedEmail = normalizeEmailAddress(selectedContact?.email);
+    if (!normalizedEmail) {
+      setWatchListError('Selected contact does not have a valid email address.');
+      return;
+    }
+
+    const mergedWatchList = mergeTicketWatchListRecipients(watchList, [
+      {
+        email: normalizedEmail,
+        source: 'manual',
+        name: selectedContact.full_name || undefined,
+        entity_type: 'contact',
+        entity_id: selectedContact.contact_name_id,
+      },
+    ]);
+
+    if (JSON.stringify(mergedWatchList) === JSON.stringify(watchList)) {
+      setWatchListError(null);
+      setSelectedContactId('');
+      return;
+    }
+
+    const success = await persistWatchList(mergedWatchList);
+    if (success) {
+      setSelectedContactId('');
+    }
+  };
+
   return (
     <div className={`${styles['card']} p-6 space-y-4`}>
       <h2 className={styles['panel-header']}>Watch List</h2>
@@ -182,6 +223,28 @@ const TicketWatchListCard: React.FC<TicketWatchListCardProps> = ({
             size="sm"
           >
             Add User
+          </Button>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <div className="flex-1 min-w-0">
+            <ContactPicker
+              id={`${id}-contact-picker`}
+              contacts={clientContacts}
+              value={selectedContactId}
+              onValueChange={setSelectedContactId}
+              placeholder="Select client contact"
+              disabled={isWatchListSaving}
+            />
+          </div>
+          <Button
+            {...withDataAutomationId({ id: `${id}-add-contact-btn` })}
+            type="button"
+            onClick={handleAddClientContact}
+            disabled={isWatchListSaving || !selectedContactId}
+            size="sm"
+          >
+            Add Contact
           </Button>
         </div>
 

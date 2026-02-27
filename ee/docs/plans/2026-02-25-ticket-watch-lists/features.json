@@ -233,7 +233,7 @@
   {
     "id": "F028",
     "description": "Add a client-first contact picker add path in Watch List UI that defaults to contacts for the ticket's associated client.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Users and Primary Flows"

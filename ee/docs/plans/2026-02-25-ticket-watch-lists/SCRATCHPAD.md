@@ -180,3 +180,6 @@ Working notes for the ticket watch-list feature plan. This log captures clarifie
 - (2026-02-27) Implemented F027 by adding an internal `UserPicker` + `Add User` flow in `TicketWatchListCard` that writes watcher entries from selected internal users using normalized email and user metadata.
 - (2026-02-27) Wired `internalUsers` into `TicketWatchListCard` from `TicketProperties.availableAgents` to make the picker functional in the ticket properties panel.
 - (2026-02-27) Validation run for F027: `cd packages/tickets && npx vitest run src/components/ticket/__tests__/TicketWatchListCard.test.tsx --config vitest.config.ts`.
+- (2026-02-27) Implemented F028 by adding a client-contact quick-add path (`ContactPicker` + `Add Contact`) in `TicketWatchListCard`, defaulting to the ticket-scoped `contacts` list already loaded in `TicketDetails`.
+- (2026-02-27) Wired `clientContacts` through `TicketProperties` into `TicketWatchListCard` so the quick-add source is ticket-client contacts by default.
+- (2026-02-27) Validation run for F028: `cd packages/tickets && npx vitest run src/components/ticket/__tests__/TicketWatchListCard.test.tsx --config vitest.config.ts`.
