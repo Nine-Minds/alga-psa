@@ -2,7 +2,7 @@
   {
     "id": "F001",
     "description": "Migration: Add entity_id and entity_type columns to document_folders table (includes inline distributeIfCitus)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-1.1"]
   },
   {
