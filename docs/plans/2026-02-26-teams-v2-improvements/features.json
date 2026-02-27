@@ -68,7 +68,7 @@
   {
     "id": "F059",
     "description": "Create `deleteTeamAvatar` server action in `packages/teams/src/actions/team-actions/avatarActions.ts` using `deleteEntityImage('team', ...)`",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-3A.6",
       "FR-3A.11"
