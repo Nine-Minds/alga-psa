@@ -194,7 +194,7 @@
   {
     "id": "F023",
     "description": "Extend inbound email schemas/types to represent fields required for inline image and source MIME processing",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data / API / Integrations"
     ]
