@@ -257,3 +257,8 @@ Create a clean, implementation-ready plan containing only remaining work for inb
   - Test sets `IMAP_MAX_ATTACHMENT_COUNT=1` and asserts reason `attachment_count_exceeded` for excess entries.
 - Validation:
   - Reused full IMAP webhook integration run from `T229`.
+- 2026-02-27: Completed `T234`.
+  - Added IMAP webhook raw-MIME cap scenario in `server/src/test/integration/imapWebhookHandoff.integration.test.ts`.
+  - Test asserts `raw_mime_over_max_bytes` reason and confirms normalized payload strips raw MIME source fields before handoff.
+- Validation:
+  - Reused full IMAP webhook integration run from `T229`.

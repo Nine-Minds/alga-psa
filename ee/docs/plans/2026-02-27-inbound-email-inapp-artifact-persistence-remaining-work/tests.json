@@ -175,7 +175,7 @@
   {
     "id": "T234",
     "description": "Webhook integration: raw MIME over-cap emits raw_mime_over_max_bytes and .eml persistence is skipped",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F227",
       "F228"
