@@ -278,7 +278,7 @@
   {
     "id": "F033",
     "description": "Keep manual email add path intact and fully interoperable with picker-added watchers in dedupe/reactivation flows.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Functional Requirements",
       "Non-functional Requirements"
