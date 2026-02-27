@@ -282,6 +282,60 @@ describe('systemEmailProcessingWorkflow: attachment processing behavior', () => 
     expect(states).toContain('EMAIL_PROCESSED');
   });
 
+  it('T045: per-message attachment artifacts are processed sequentially without unbounded fan-out', async () => {
+    const callSequence: string[] = [];
+    let inFlight = 0;
+    let maxInFlight = 0;
+
+    const { context, actions } = createWorkflowHarness({
+      processEmailAttachmentImpl: async (params: any) => {
+        inFlight += 1;
+        maxInFlight = Math.max(maxInFlight, inFlight);
+        callSequence.push(`start:${params.attachmentId}`);
+        await new Promise((resolve) => setTimeout(resolve, 25));
+        callSequence.push(`end:${params.attachmentId}`);
+        inFlight -= 1;
+        return { success: true };
+      },
+      findTicketByEmailThreadResult: { success: true, ticket: null },
+      eventPayload: {
+        tenantId: 'tenant-1',
+        providerId: 'provider-1',
+        emailData: {
+          id: 'msg-sequential-1',
+          subject: 'Attachment sequencing',
+          from: { email: 'from@example.com', name: 'From' },
+          to: [{ email: 'to@example.com', name: 'To' }],
+          body: { text: 'hello', html: undefined },
+          receivedAt: new Date().toISOString(),
+          attachments: [
+            { id: 'a1', name: 'a1.txt', contentType: 'text/plain', size: 1 },
+            { id: 'a2', name: 'a2.txt', contentType: 'text/plain', size: 1 },
+            { id: 'a3', name: 'a3.txt', contentType: 'text/plain', size: 1 },
+          ],
+          threadId: 'thread-sequential-1',
+          inReplyTo: null,
+          references: [],
+          providerId: 'provider-1',
+          tenant: 'tenant-1',
+        },
+      },
+    });
+
+    await expect(systemEmailProcessingWorkflow({ ...context })).resolves.toBeUndefined();
+
+    expect(actions.process_email_attachment).toHaveBeenCalledTimes(3);
+    expect(maxInFlight).toBe(1);
+    expect(callSequence).toEqual([
+      'start:a1',
+      'end:a1',
+      'start:a2',
+      'end:a2',
+      'start:a3',
+      'end:a3',
+    ]);
+  });
+
   it('does not block new-ticket creation when original .eml persistence fails', async () => {
     const { context, actions, states } = createWorkflowHarness({
       processOriginalEmailAttachmentImpl: async () => ({ success: false, message: 'source retrieval failed' }),

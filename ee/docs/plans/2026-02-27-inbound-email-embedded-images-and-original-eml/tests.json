@@ -387,7 +387,7 @@
   {
     "id": "T045",
     "description": "Integration: async per-message artifact handling runs sequentially (or configured bounded concurrency) and does not fan out unbounded attachment work",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F032"
     ]
