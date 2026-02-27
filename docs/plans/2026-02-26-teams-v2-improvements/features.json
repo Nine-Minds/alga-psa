@@ -104,7 +104,7 @@
   {
     "id": "F063",
     "description": "Add `@alga-psa/media`, `@alga-psa/auth`, `swr` dependencies to `packages/teams/package.json`",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "NFR-3.3"
     ]
