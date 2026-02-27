@@ -114,7 +114,7 @@
   {
     "id": "T096",
     "description": "`deleteTeamAvatar` action deletes via `deleteEntityImage('team', ...)`",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F059"
     ]
