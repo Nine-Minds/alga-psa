@@ -140,7 +140,7 @@
   {
     "id": "F017",
     "description": "Apply idempotency for original .eml persistence using a reserved synthetic attachment key per message",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
