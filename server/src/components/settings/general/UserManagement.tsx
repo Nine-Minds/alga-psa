@@ -870,8 +870,8 @@ const fetchContacts = async (): Promise<void> => {
             {showNewUserForm && renderNewUserForm()}
             <Tabs value={userView} onValueChange={(v) => setUserView(v as 'list' | 'org')}>
               <TabsList>
-                <TabsTrigger id="list-view-btn" value="list">List</TabsTrigger>
-                <TabsTrigger id="org-view-btn" value="org">Structure</TabsTrigger>
+                <TabsTrigger value="list">List</TabsTrigger>
+                <TabsTrigger value="org">Structure</TabsTrigger>
               </TabsList>
               <TabsContent value="list">
                 <p className="text-sm text-muted-foreground mt-3 mb-4">Manage individual users, roles, and permissions.</p>

@@ -232,7 +232,7 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
         };
 
         if (isTeamsV2Enabled) {
-          updatedUserData.reports_to = reportsTo || null;
+          updatedUserData.reports_to = reportsTo || undefined;
         }
         
         const updatedUser = await updateUser(user.user_id, updatedUserData);
