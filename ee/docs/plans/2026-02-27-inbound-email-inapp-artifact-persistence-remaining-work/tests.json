@@ -166,7 +166,7 @@
   {
     "id": "T233",
     "description": "Webhook integration: attachment count cap emits attachment_count_exceeded for excess attachments",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F227",
       "F228"
