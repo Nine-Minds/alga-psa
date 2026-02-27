@@ -91,3 +91,4 @@ Rolling notes for embedded inbound-email image extraction + source `.eml` persis
 - (2026-02-27) Completed T001 — Covered by emailAttachmentHelpers.test.ts: extracts data:image payload from a single <img> tag.
 - (2026-02-27) Completed T002 — Covered by emailAttachmentHelpers.test.ts: extracts multiple data:image payloads in deterministic order.
 - (2026-02-27) Completed T003 — Covered by emailAttachmentHelpers.test.ts: skips malformed data:image payload without throwing.
+- (2026-02-27) Completed T004 — Covered by emailAttachmentHelpers.test.ts: rejects non-image data URLs.
