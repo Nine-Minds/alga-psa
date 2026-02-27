@@ -64,7 +64,7 @@
   {
     "id": "T221",
     "description": "Unit: in-app .eml source selection prefers rawMimeBase64 then sourceMimeBase64 then rawSourceBase64",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F221",
       "F222"

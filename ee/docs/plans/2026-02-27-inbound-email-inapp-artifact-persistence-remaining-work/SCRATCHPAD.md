@@ -189,3 +189,8 @@ Create a clean, implementation-ready plan containing only remaining work for inb
 - Validation:
   - `cd server && npx vitest run src/test/integration/inboundEmailInApp.webhooks.integration.test.ts -t "IMAP in-app path persists regular attachment, embedded image, and original .eml as ticket documents" --coverage.enabled=false`
   - Environment note: DB-gated integration suite was skipped in this local session (`describeDb`).
+- 2026-02-27: Completed `T221`.
+  - Added MIME source precedence unit assertions in `shared/services/email/__tests__/inboundEmailArtifactHelpers.test.ts`.
+  - Coverage verifies decode order: `rawMimeBase64` -> `sourceMimeBase64` -> `rawSourceBase64`.
+- Validation:
+  - `npx vitest run --config shared/vitest.config.ts shared/services/email/__tests__/inboundEmailArtifactHelpers.test.ts -t "raw MIME source selection prefers" --coverage.enabled=false`
