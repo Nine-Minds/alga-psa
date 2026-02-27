@@ -19,7 +19,7 @@
   {
     "id": "F053",
     "description": "Add 'team' to EntityType union in `packages/users/src/lib/avatarUtils.ts`",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-3A.2"
     ]
