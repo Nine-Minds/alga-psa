@@ -47,34 +47,12 @@ export function WorkflowTasksSectionFiltersDialog({
 
   // Sync local state when initial filters change from parent
   useEffect(() => {
-    setLocalFilters({ ...initialFilters });
+    const { priority, ...rest } = initialFilters;
+    setLocalFilters(rest);
+    setSelectedPriority(priority?.[0] || 'all');
   }, [initialFilters]);
 
-  const toggleArrayFilter = <K extends keyof ActivityFilters>(
-    key: K,
-    value: string,
-  ) => {
-    // Ensure we only toggle array types like 'priority' here
-    if (key === 'priority') {
-      setLocalFilters((prev) => {
-        const currentValues = (prev[key] as string[] | undefined) || [];
-        const newValues = [...currentValues];
-        const index = newValues.indexOf(value);
-
-        if (index >= 0) {
-          newValues.splice(index, 1);
-        } else {
-          newValues.push(value);
-        }
-        return { ...prev, [key]: newValues };
-      });
-    }
-  };
-
-  const isPrioritySelected = (value: ActivityPriority): boolean => {
-    const currentValues = localFilters.priority || [];
-    return currentValues.includes(value);
-  };
+  const [selectedPriority, setSelectedPriority] = useState<string>(initialFilters.priority?.[0] || 'all');
 
   const handleSingleFilterChange = <K extends keyof Omit<ActivityFilters, 'priority'>>(
     key: K,
@@ -106,9 +84,10 @@ export function WorkflowTasksSectionFiltersDialog({
     // Construct the final filters object
     const filtersToApply: Partial<ActivityFilters> = {
       ...localFilters,
+      priority: selectedPriority && selectedPriority !== 'all' ? [selectedPriority as ActivityPriority] : undefined,
     };
 
-    if (filtersToApply.priority?.length === 0) delete filtersToApply.priority;
+    if (!filtersToApply.priority) delete filtersToApply.priority;
     if (!filtersToApply.executionId || filtersToApply.executionId === 'all') delete filtersToApply.executionId;
 
     onApplyFilters(filtersToApply);
@@ -117,7 +96,6 @@ export function WorkflowTasksSectionFiltersDialog({
 
   const handleClear = () => {
     const clearedFilters: Partial<ActivityFilters> = {
-      priority: [],
       isClosed: undefined,
       dueDateStart: undefined,
       dueDateEnd: undefined,
@@ -126,6 +104,7 @@ export function WorkflowTasksSectionFiltersDialog({
       includeHidden: undefined,
     };
     setLocalFilters(clearedFilters);
+    setSelectedPriority('all');
   };
 
   return (
@@ -167,24 +146,21 @@ export function WorkflowTasksSectionFiltersDialog({
             />
           </div>
 
-          {/* Priority Filters */}
-          <div>
-            <Label className="text-base font-semibold">Priority</Label>
-            <div className="flex items-center space-x-4 pt-1">
-              {[
-                { value: ActivityPriority.LOW, label: 'Low' },
+          {/* Priority Filter */}
+          <div className="space-y-1">
+            <Label htmlFor="workflow-task-priority-select" className="text-base font-semibold">Priority</Label>
+            <CustomSelect
+              id="workflow-task-priority-select"
+              value={selectedPriority}
+              onValueChange={(value) => setSelectedPriority(value)}
+              options={[
+                { value: 'all', label: 'All Priorities' },
+                { value: ActivityPriority.HIGH, label: 'High' },
                 { value: ActivityPriority.MEDIUM, label: 'Medium' },
-                { value: ActivityPriority.HIGH, label: 'High' }
-              ].map((option) => (
-                <Checkbox
-                  key={option.value}
-                  id={`priority-${option.value}`}
-                  label={option.label}
-                  checked={isPrioritySelected(option.value)}
-                  onChange={() => toggleArrayFilter('priority', option.value)}
-                />
-              ))}
-            </div>
+                { value: ActivityPriority.LOW, label: 'Low' },
+              ]}
+              placeholder="Select Priority..."
+            />
           </div>
 
           {/* Due Date Range */}

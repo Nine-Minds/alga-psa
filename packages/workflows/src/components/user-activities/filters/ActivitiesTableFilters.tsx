@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from "@alga-psa/ui/components/Label";
 import { Checkbox } from "@alga-psa/ui/components/Checkbox";
 import { StringDateRangePicker } from "@alga-psa/ui/components/DateRangePicker";
+import CustomSelect from "@alga-psa/ui/components/CustomSelect";
 
 interface ActivitiesTableFiltersProps {
   filters: ActivityFiltersType;
@@ -26,11 +27,13 @@ export const ActivitiesTableFilters = forwardRef<ActivitiesTableFiltersRef, Acti
   ({ filters, onChange }, ref) => {
     const [open, setOpen] = useState(false);
     const [localFilters, setLocalFilters] = useState<ActivityFiltersType>(filters);
+    const [selectedPriority, setSelectedPriority] = useState<string>(filters.priority?.[0] || 'all');
 
     // Expose openDialog function via ref
     useImperativeHandle(ref, () => ({
       openDialog: () => {
         setLocalFilters(filters); // Ensure local state is synced with parent on open
+        setSelectedPriority(filters.priority?.[0] || 'all');
         setOpen(true);
       }
     }));
@@ -45,13 +48,16 @@ export const ActivitiesTableFilters = forwardRef<ActivitiesTableFiltersRef, Acti
         isClosed: false
       };
       setLocalFilters(resetFilters);
-      // Optionally apply immediately or wait for Apply button
-      // onChange(resetFilters); 
+      setSelectedPriority('all');
     };
 
     // Apply filters and close dialog
     const handleApply = () => {
-      onChange(localFilters);
+      const filtersToApply: ActivityFiltersType = {
+        ...localFilters,
+        priority: selectedPriority && selectedPriority !== 'all' ? [selectedPriority as ActivityPriority] : [],
+      };
+      onChange(filtersToApply);
       setOpen(false);
     };
 
@@ -132,22 +138,19 @@ export const ActivitiesTableFilters = forwardRef<ActivitiesTableFiltersRef, Acti
 
             {/* Priority Filter */}
             <div className="mt-4">
-              <Label htmlFor="priority" className="text-lg font-semibold">Priority</Label>
-              <div className="flex space-x-4">
-                {[
-                  { value: ActivityPriority.LOW, label: 'Low' },
+              <Label htmlFor="priority-select" className="text-lg font-semibold">Priority</Label>
+              <CustomSelect
+                id="priority-select"
+                value={selectedPriority}
+                onValueChange={(value) => setSelectedPriority(value)}
+                options={[
+                  { value: 'all', label: 'All Priorities' },
+                  { value: ActivityPriority.HIGH, label: 'High' },
                   { value: ActivityPriority.MEDIUM, label: 'Medium' },
-                  { value: ActivityPriority.HIGH, label: 'High' }
-                ].map(option => (
-                    <Checkbox
-                      key={option.value}
-                      id={`priority-${option.value}`}
-                      label={option.label}
-                      checked={isSelected(option.value, localFilters.priority)}
-                      onChange={() => toggleArrayFilter('priority', option.value, localFilters.priority)}
-                    />
-                ))}
-              </div>
+                  { value: ActivityPriority.LOW, label: 'Low' },
+                ]}
+                placeholder="Select Priority..."
+              />
             </div>
 
             {/* Date Range Filter */}
@@ -163,19 +166,19 @@ export const ActivitiesTableFilters = forwardRef<ActivitiesTableFiltersRef, Acti
                   // If date is empty string, set to undefined
                   const startDate = range.from ? new Date(range.from) : undefined;
                   const endDate = range.to ? new Date(range.to) : undefined;
-                  
+
                   // If we have an end date but no start date, set start date to today
                   const effectiveStartDate = !startDate && endDate ? new Date() : startDate;
-                  
+
                   // Set the time to the beginning of the day for start date and end of the day for end date
                   if (effectiveStartDate) {
                     effectiveStartDate.setHours(0, 0, 0, 0);
                   }
-                  
+
                   if (endDate) {
                     endDate.setHours(23, 59, 59, 999);
                   }
-                  
+
                   handleFilterChange('dueDateStart', effectiveStartDate ? effectiveStartDate.toISOString() as any : undefined);
                   handleFilterChange('dueDateEnd', endDate ? endDate.toISOString() as any : undefined);
                 }}
@@ -208,7 +211,7 @@ export const ActivitiesTableFilters = forwardRef<ActivitiesTableFiltersRef, Acti
               </Button>
               <Button
                 id="apply-filters-button"
-                type="button" 
+                type="button"
                 onClick={handleApply}
               >
                 Apply Filters

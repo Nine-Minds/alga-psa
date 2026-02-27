@@ -45,11 +45,17 @@ export function ActivityCard({ activity, onViewDetails, onActionComplete, render
     [ActivityType.DOCUMENT]: 'border-teal-500',
   };
 
-  // Priority indicator
-  const priorityIndicator = {
-    [ActivityPriority.LOW]: <div className="w-2 h-2 rounded-full bg-muted-foreground" />,
-    [ActivityPriority.MEDIUM]: <div className="w-2 h-2 rounded-full bg-warning" />,
-    [ActivityPriority.HIGH]: <div className="w-2 h-2 rounded-full bg-destructive" />,
+  // Priority indicator - use actual color from DB if available, otherwise fallback to defaults
+  const getPriorityDot = () => {
+    if (activity.priorityColor) {
+      return <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: activity.priorityColor }} />;
+    }
+    const defaultColors: Record<ActivityPriority, string> = {
+      [ActivityPriority.LOW]: 'bg-muted-foreground',
+      [ActivityPriority.MEDIUM]: 'bg-warning',
+      [ActivityPriority.HIGH]: 'bg-destructive',
+    };
+    return <div className={`w-2 h-2 rounded-full ${defaultColors[activity.priority]}`} />;
   };
 
   const router = useRouter();
@@ -70,7 +76,7 @@ export function ActivityCard({ activity, onViewDetails, onActionComplete, render
           )}
         </div>
         <div className="flex items-center gap-2">
-          {priorityIndicator[activity.priority]}
+          {getPriorityDot()}
           <div onClick={(e) => e.stopPropagation()}>
             <ActivityActionMenu 
               activity={activity}

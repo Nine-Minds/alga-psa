@@ -66,8 +66,11 @@ const getActivityTypeIcon = (type: ActivityType) => {
   }
 };
 
-// Get priority icon
-const getPriorityIcon = (priority: ActivityPriority) => {
+// Get priority icon - uses actual color from DB when available
+const getPriorityIcon = (priority: ActivityPriority, priorityColor?: string) => {
+  if (priorityColor) {
+    return <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: priorityColor }} />;
+  }
   switch (priority) {
     case ActivityPriority.HIGH:
       return <AlertTriangle className="h-4 w-4 text-destructive" />;
@@ -162,7 +165,7 @@ export const ActivitiesDataTable = React.memo(function ActivitiesDataTable({
       width: '10%',
       render: (value, record) => (
         <div className="flex items-center gap-2">
-          {getPriorityIcon(value as ActivityPriority)}
+          {getPriorityIcon(value as ActivityPriority, record.priorityColor)}
           <span className="capitalize">{value}</span>
         </div>
       ),
