@@ -36,7 +36,7 @@
   {
     "id": "F005",
     "description": "Skip unreferenced CID inline parts by default and process only HTML-referenced CID images",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Open Questions",
       "Requirements"
