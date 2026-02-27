@@ -268,7 +268,7 @@
   {
     "id": "T115",
     "description": "OrgChart places root nodes (reports_to=null) at top level",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F070"
     ]
