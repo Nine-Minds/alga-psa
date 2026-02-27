@@ -303,6 +303,9 @@ export function QuickAddTicket({
           if (!prefilledAssignedTo && defaultBoard.default_assigned_to) {
             setAssignedTo(defaultBoard.default_assigned_to);
           }
+          if (defaultBoard.default_assigned_team_id) {
+            setAssignedTeamId(defaultBoard.default_assigned_team_id);
+          }
         }
 
         if (defaultStatus?.status_id) {
@@ -507,11 +510,14 @@ export function QuickAddTicket({
 
     const selectedBoard = boards.find(b => b.board_id === newBoardId);
 
-    // Pre-fill assigned agent from board's default if current assignedTo is empty
+    // Pre-fill assigned agent and team from board's defaults if current assignedTo is empty
     if (!assignedTo && newBoardId) {
       if (selectedBoard?.default_assigned_to) {
         setAssignedTo(selectedBoard.default_assigned_to);
       }
+    }
+    if (selectedBoard?.default_assigned_team_id) {
+      setAssignedTeamId(selectedBoard.default_assigned_team_id);
     }
 
     const priorityType = selectedBoard?.priority_type || 'custom';
