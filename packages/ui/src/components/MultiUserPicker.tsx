@@ -5,13 +5,12 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import UserAvatar from './UserAvatar';
 import type { IUser } from '@alga-psa/types';
-import { ChevronDown, X, Search, UserMinus, Users as TeamIcon } from 'lucide-react';
+import { ChevronDown, X, Search, UserMinus } from 'lucide-react';
 import { AutomationProps } from '../ui-reflection/types';
 import type { GetUserAvatarUrlsBatch } from './UserPicker';
 import { Input } from './Input';
 import { Checkbox } from './Checkbox';
 import { Button } from './Button';
-import type { ITeam } from '@alga-psa/types';
 
 interface MultiUserPickerProps {
   id?: string;
@@ -31,10 +30,6 @@ interface MultiUserPickerProps {
   onUnassignedChange?: (value: boolean) => void;
   showSearch?: boolean;
   compactDisplay?: boolean;
-  teams?: ITeam[];
-  teamValues?: string[];
-  onTeamValuesChange?: (values: string[]) => void;
-  teamSectionLabel?: string;
   // Click handler for viewing user details (e.g., opening schedule drawer)
   onUserClick?: (userId: string) => void;
 }
@@ -56,10 +51,6 @@ const MultiUserPicker = ({
   onUnassignedChange,
   showSearch = false,
   compactDisplay = false,
-  teams = [],
-  teamValues = [],
-  onTeamValuesChange,
-  teamSectionLabel = 'Teams',
   onUserClick,
   'data-automation-id': dataAutomationId
 }: MultiUserPickerProps & AutomationProps) => {
@@ -76,7 +67,6 @@ const MultiUserPicker = ({
 
   // Ref to track which values we've already cleaned to prevent infinite loops
   const lastCleanedValuesRef = useRef<string | null>(null);
-  const lastCleanedTeamValuesRef = useRef<string | null>(null);
 
   // Filter for internal users only and exclude inactive users
   const internalUsers = users.filter(user => user.user_type === 'internal' && !user.is_inactive);
@@ -87,8 +77,6 @@ const MultiUserPicker = ({
   // Filter out stale/invalid values that don't match any internal user
   // This handles cases where values contain IDs of inactive/external users from URL or saved state
   const validValues = values.filter(id => internalUserIds.has(id));
-  const teamIds = new Set(teams.map(team => team.team_id));
-  const validTeamValues = teamValues.filter(id => teamIds.has(id));
 
   // If values contained stale IDs, notify parent to clean them up
   // Use a ref to prevent infinite loops - only clean once per unique values array
@@ -113,19 +101,6 @@ const MultiUserPicker = ({
     onValuesChange(validValues);
   }, [filterMode, values, validValues, internalUsers.length, onValuesChange]);
 
-  useEffect(() => {
-    if (!filterMode) return;
-    if (!onTeamValuesChange) return;
-    if (teamValues.length === 0 || teams.length === 0) return;
-    if (validTeamValues.length === teamValues.length) return;
-
-    const valuesKey = teamValues.slice().sort().join(',');
-    if (lastCleanedTeamValuesRef.current === valuesKey) return;
-
-    lastCleanedTeamValuesRef.current = valuesKey;
-    onTeamValuesChange(validTeamValues);
-  }, [filterMode, teamValues, validTeamValues, teams.length, onTeamValuesChange]);
-
   // Apply search filter
   const filteredUsers = internalUsers
     .filter(user => {
@@ -140,14 +115,6 @@ const MultiUserPicker = ({
     });
 
   const selectedUsers = internalUsers.filter(user => validValues.includes(user.user_id));
-  const filteredTeams = teams
-    .filter(team => {
-      if (!searchQuery) return true;
-      const leadName = getTeamLeadName(team).toLowerCase();
-      return `${team.team_name || ''}`.toLowerCase().includes(searchQuery.toLowerCase()) || leadName.includes(searchQuery.toLowerCase());
-    })
-    .sort((a, b) => (a.team_name || '').localeCompare(b.team_name || ''));
-  const selectedTeams = teams.filter(team => validTeamValues.includes(team.team_id));
 
   // Fetch avatar URLs
   useEffect(() => {
@@ -306,12 +273,11 @@ const MultiUserPicker = ({
   const handleClearAll = () => {
     onValuesChange([]);
     onUnassignedChange?.(false);
-    onTeamValuesChange?.([]);
   };
 
   // Render trigger content
   const renderTriggerContent = () => {
-    const hasSelection = selectedUsers.length > 0 || includeUnassigned || selectedTeams.length > 0;
+    const hasSelection = selectedUsers.length > 0 || includeUnassigned;
 
     if (!hasSelection) {
       return <span className="text-gray-500">{loading ? 'Loading users...' : placeholder}</span>;
@@ -319,7 +285,7 @@ const MultiUserPicker = ({
 
     // Compact display mode (for filters)
     if (compactDisplay) {
-      if (selectedUsers.length === 0 && selectedTeams.length === 0 && includeUnassigned) {
+      if (selectedUsers.length === 0 && includeUnassigned) {
         return (
           <div className="flex items-center gap-2">
             <UserMinus className="w-4 h-4 text-gray-500" />
@@ -328,7 +294,7 @@ const MultiUserPicker = ({
         );
       }
 
-      if (selectedUsers.length === 1 && selectedTeams.length === 0 && !includeUnassigned) {
+      if (selectedUsers.length === 1 && !includeUnassigned) {
         const user = selectedUsers[0];
         return (
           <div className="flex items-center gap-2">
@@ -345,22 +311,9 @@ const MultiUserPicker = ({
         );
       }
 
-      if (selectedUsers.length === 0 && selectedTeams.length === 1 && !includeUnassigned) {
-        const team = selectedTeams[0];
-        return (
-          <div className="flex items-center gap-2">
-            <TeamIcon className="w-4 h-4 text-gray-500" />
-            <span className="truncate max-w-[120px]">
-              {team.team_name || 'Unnamed Team'}
-            </span>
-          </div>
-        );
-      }
-
       // Multiple selections - compact
       const firstUser = selectedUsers[0];
-      const firstTeam = selectedTeams[0];
-      const totalSelected = selectedUsers.length + selectedTeams.length + (includeUnassigned ? 1 : 0);
+      const totalSelected = selectedUsers.length + (includeUnassigned ? 1 : 0);
       const additionalCount = totalSelected > 0 ? totalSelected - 1 : 0;
 
       return (
@@ -372,17 +325,13 @@ const MultiUserPicker = ({
               avatarUrl={avatarUrls[firstUser.user_id] || null}
               size="xs"
             />
-          ) : firstTeam ? (
-            <TeamIcon className="w-4 h-4 text-gray-500" />
           ) : (
             <UserMinus className="w-4 h-4 text-gray-500" />
           )}
           <span className="text-sm">
             {firstUser
               ? `${firstUser.first_name || ''} ${firstUser.last_name || ''}`.trim().split(' ')[0]
-              : firstTeam
-                ? (firstTeam.team_name || 'Team')
-                : 'Unassigned'}
+              : 'Unassigned'}
             {additionalCount > 0 && ` +${additionalCount}`}
           </span>
         </div>
@@ -447,37 +396,6 @@ const MultiUserPicker = ({
                   e.stopPropagation();
                   e.preventDefault();
                   removeUser(user.user_id);
-                }
-              }}
-              className="ml-1 p-1 hover:bg-gray-200 rounded-full cursor-pointer"
-            >
-              <X className="w-3 h-3" />
-            </div>
-          </div>
-        ))}
-        {selectedTeams.map((team): React.JSX.Element => (
-          <div
-            key={team.team_id}
-            className="flex items-center gap-1 bg-gray-100 rounded-full pl-1 pr-2 py-1"
-          >
-            <div className="flex items-center gap-1">
-              <div className="h-6 w-6 rounded-full bg-gray-200 flex items-center justify-center text-gray-600">
-                <TeamIcon className="w-3 h-3" />
-              </div>
-              <span>{team.team_name || 'Unnamed Team'}</span>
-            </div>
-            <div
-              role="button"
-              tabIndex={0}
-              onClick={(e) => {
-                e.stopPropagation();
-                onTeamValuesChange?.(teamValues.filter(id => id !== team.team_id));
-              }}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.stopPropagation();
-                  e.preventDefault();
-                  onTeamValuesChange?.(teamValues.filter(id => id !== team.team_id));
                 }
               }}
               className="ml-1 p-1 hover:bg-gray-200 rounded-full cursor-pointer"
@@ -574,7 +492,7 @@ const MultiUserPicker = ({
             <div className="px-3 py-2 text-sm text-red-500">Error loading users</div>
           ) : (
             <>
-              {filteredUsers.length === 0 && filteredTeams.length === 0 ? (
+              {filteredUsers.length === 0 ? (
                 <div className="px-3 py-2 text-sm text-gray-500">
                   {searchQuery ? 'No results found' : 'No users available'}
                 </div>
@@ -611,42 +529,6 @@ const MultiUserPicker = ({
                       </div>
                     );
                   })}
-                  {filteredTeams.length > 0 && (
-                    <div className="px-3 pt-3 pb-1 text-xs uppercase text-gray-500 tracking-wide">
-                      {teamSectionLabel}
-                    </div>
-                  )}
-                  {filteredTeams.map((team): React.JSX.Element => {
-                    const isSelected = teamValues.includes(team.team_id);
-                    const leadName = getTeamLeadName(team);
-                    const memberCount = team.members?.length ?? 0;
-                    return (
-                      <div
-                        key={team.team_id}
-                        className={`
-                          relative flex items-center px-3 py-2 text-sm rounded cursor-pointer
-                          hover:bg-gray-100 dark:hover:bg-[rgb(var(--color-border-100))] ${isSelected ? 'bg-gray-50 dark:bg-[rgb(var(--color-border-50))]' : ''}
-                        `}
-                        onClick={() => onTeamValuesChange?.(isSelected ? teamValues.filter(id => id !== team.team_id) : [...teamValues, team.team_id])}
-                      >
-                        <div onClick={(e) => e.stopPropagation()}>
-                          <Checkbox
-                            id={`team-${team.team_id}`}
-                            checked={isSelected}
-                            onChange={() => onTeamValuesChange?.(isSelected ? teamValues.filter(id => id !== team.team_id) : [...teamValues, team.team_id])}
-                            className="mr-3"
-                          />
-                        </div>
-                        <div className="h-7 w-7 rounded-full bg-gray-200 flex items-center justify-center text-gray-600">
-                          <TeamIcon className="w-4 h-4" />
-                        </div>
-                        <div className="ml-2 flex flex-col">
-                          <span>{team.team_name || 'Unnamed Team'}</span>
-                          <span className="text-xs text-gray-500">{memberCount} members · Lead: {leadName}</span>
-                        </div>
-                      </div>
-                    );
-                  })}
                 </>
               )}
             </>
@@ -654,7 +536,7 @@ const MultiUserPicker = ({
         </div>
 
         {/* Clear all button */}
-        {(values.length > 0 || includeUnassigned || teamValues.length > 0) && (
+        {(values.length > 0 || includeUnassigned) && (
           <div className="border-t border-gray-200 dark:border-[rgb(var(--color-border-200))] p-2">
             <Button
               id={`${id || 'multi-user-picker'}-clear-all`}
@@ -695,23 +577,5 @@ const MultiUserPicker = ({
     </div>
   );
 };
-
-function getTeamLeadName(team: ITeam): string {
-  if (team.members && team.members.length > 0) {
-    const lead = team.members.find(member => member.role === 'lead' || member.user_id === team.manager_id);
-    if (lead) {
-      return `${lead.first_name || ''} ${lead.last_name || ''}`.trim() || 'Unknown Lead';
-    }
-  }
-
-  if (team.manager_id) {
-    const manager = team.members?.find(member => member.user_id === team.manager_id);
-    if (manager) {
-      return `${manager.first_name || ''} ${manager.last_name || ''}`.trim() || 'Unknown Lead';
-    }
-  }
-
-  return 'Unknown Lead';
-}
 
 export default MultiUserPicker;

@@ -314,7 +314,7 @@
   {
     "id": "F089",
     "description": "Remove team props and team logic from original `MultiUserPicker` (teams, teamFilterFn, team rendering, stale team cleanup)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-3D.4"
     ]
