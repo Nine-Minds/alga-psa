@@ -150,6 +150,7 @@ export const ticketListFiltersSchema = z.object({
   dueDateFrom: z.string().datetime().optional(),
   dueDateTo: z.string().datetime().optional(),
   responseState: z.enum(['awaiting_client', 'awaiting_internal', 'none', 'all']).optional(),
+  slaStatusFilter: z.enum(['all', 'has_sla', 'no_sla', 'on_track', 'breached', 'paused']).optional(),
   sortBy: z
     .enum([
       'ticket_number',

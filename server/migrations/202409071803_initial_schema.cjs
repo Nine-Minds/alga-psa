@@ -61,7 +61,7 @@ exports.up = async function(knex) {
 
     await knex.schema.raw('CREATE INDEX "session_user_id_index" ON "sessions"("user_id")');
 
-    await knex.schema.createTable('companies', (table) => {
+    await knex.schema.createTable('companies', (table) => { // ⚠️ RENAMED to 'clients' (see 20251003000001_company_to_client_migration.cjs)
         table.uuid('tenant').notNullable();
         table.uuid('company_id').defaultTo(knex.raw('gen_random_uuid()')).notNullable();
         table.text('company_name').notNullable();
@@ -83,6 +83,7 @@ exports.up = async function(knex) {
         table.primary(['tenant', 'company_id']);
         table.foreign('tenant').references('tenants.tenant');
     });
+    // ⚠️ RENAMED: 'companies' → 'clients' (see 20251003000001_company_to_client_migration.cjs)
 
     await knex.schema.createTable('contacts', (table) => {
         table.uuid('tenant').notNullable();
@@ -114,7 +115,7 @@ exports.up = async function(knex) {
         table.foreign(['tenant', 'created_by']).references(['tenant', 'user_id']).inTable('users');
     });
 
-    await knex.schema.createTable('channels', (table) => {
+    await knex.schema.createTable('channels', (table) => { // ⚠️ RENAMED to 'boards' (see 20250930000001_rename_channels_to_boards.cjs)
         table.uuid('tenant').notNullable();
         table.uuid('channel_id').defaultTo(knex.raw('gen_random_uuid()')).notNullable();
         table.text('channel_name').notNullable();
@@ -131,6 +132,7 @@ exports.up = async function(knex) {
         table.primary(['tenant', 'channel_id']);
         table.foreign('tenant').references('tenants.tenant');
     });
+    // ⚠️ RENAMED: 'channels' → 'boards' (see 20250930000001_rename_channels_to_boards.cjs)
 
     await knex.schema.createTable('categories', (table) => {
         table.uuid('tenant').notNullable();
@@ -393,7 +395,7 @@ exports.up = async function(knex) {
         table.foreign(['tenant', 'ticket_id']).references(['tenant', 'ticket_id']).inTable('tickets');
     });
 
-    await knex.schema.createTable('service_categories', (table) => {
+    await knex.schema.createTable('service_categories', (table) => { // ⚠️ RENAMED to 'ticket_categories' (see 20250327144330_rename_service_categories_to_ticket_categories.cjs)
         table.uuid('tenant').notNullable();
         table.uuid('category_id').defaultTo(knex.raw('gen_random_uuid()')).notNullable();
         table.text('category_name').notNullable();
@@ -401,6 +403,7 @@ exports.up = async function(knex) {
         table.primary(['tenant', 'category_id']);
         table.foreign('tenant').references('tenants.tenant');
     });
+    // ⚠️ RENAMED: 'service_categories' → 'ticket_categories' (see 20250327144330_rename_service_categories_to_ticket_categories.cjs)
 
     await knex.schema.createTable('service_catalog', (table) => {
         table.uuid('tenant').notNullable();
@@ -416,7 +419,7 @@ exports.up = async function(knex) {
         table.foreign(['tenant', 'category_id']).references(['tenant', 'category_id']).inTable('service_categories');
     });
 
-    await knex.schema.createTable('billing_plans', (table) => {
+    await knex.schema.createTable('billing_plans', (table) => { // ⚠️ RENAMED to 'contract_lines' (see 20251008000001_rename_billing_to_contracts.cjs)
         table.uuid('tenant').notNullable();
         table.uuid('plan_id').defaultTo(knex.raw('gen_random_uuid()')).notNullable();
         table.text('plan_name').notNullable();
@@ -427,6 +430,7 @@ exports.up = async function(knex) {
         table.primary(['tenant', 'plan_id']);
         table.foreign('tenant').references('tenants.tenant');
     });
+    // ⚠️ RENAMED: 'billing_plans' → 'contract_lines' (see 20251008000001_rename_billing_to_contracts.cjs)
 
     await knex.schema.createTable('bucket_plans', (table) => {
         table.uuid('tenant').notNullable();

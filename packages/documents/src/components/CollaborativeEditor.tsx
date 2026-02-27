@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { EditorContent, useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Link from '@tiptap/extension-link';
@@ -8,13 +8,27 @@ import Underline from '@tiptap/extension-underline';
 import Collaboration from '@tiptap/extension-collaboration';
 import CollaborationCaret from '@tiptap/extension-collaboration-caret';
 import { prosemirrorJSONToYXmlFragment } from 'y-prosemirror';
-import { Emoticon, createYjsProvider } from '@alga-psa/ui/editor';
+import {
+  Emoticon,
+  createYjsProvider,
+  EmojiSuggestionExtension,
+  EmojiSuggestionPopup,
+  MentionNode,
+  MentionSuggestionExtension,
+  MentionSuggestionPopup,
+} from '@alga-psa/ui/editor';
+import type { EmojiSuggestionState, MentionSuggestionState, MentionSuggestionUser } from '@alga-psa/ui/editor';
 import AvatarIcon from '@alga-psa/ui/components/AvatarIcon';
 import { Card } from '@alga-psa/ui/components/Card';
 import { EditorToolbar } from './EditorToolbar';
 import { handleMarkdownPaste } from './markdownPaste';
 import styles from './CollaborativeEditor.module.css';
-import { getBlockContent } from '../actions/documentBlockContentActions';
+import { getBlockContent, updateBlockContent } from '../actions/documentBlockContentActions';
+import {
+  blockNoteJsonToProsemirrorJson,
+  detectBlockContentFormat,
+  parseBlockContent,
+} from '../lib/blockContentFormat';
 
 type ConnectionStatus = 'connecting' | 'connected' | 'disconnected';
 
@@ -24,12 +38,18 @@ type PresenceUser = {
   color: string;
 };
 
+export interface CollaborativeEditorHandle {
+  getJSON: () => Record<string, unknown> | null;
+}
+
 interface CollaborativeEditorProps {
   documentId: string;
   tenantId: string;
   userId: string;
   userName: string;
   placeholder?: string;
+  editorRef?: React.MutableRefObject<CollaborativeEditorHandle | null>;
+  searchMentions?: (query: string) => Promise<MentionSuggestionUser[]>;
   onConnectionStatusChange?: (status: ConnectionStatus) => void;
   onSyncStateChange?: (synced: boolean) => void;
   onUsersChange?: (users: PresenceUser[]) => void;
@@ -100,6 +120,8 @@ export function CollaborativeEditor({
   userId,
   userName,
   placeholder,
+  editorRef,
+  searchMentions,
   onConnectionStatusChange,
   onSyncStateChange,
   onUsersChange,
@@ -122,7 +144,17 @@ export function CollaborativeEditor({
   const [isSynced, setIsSynced] = useState(false);
   const [editorReady, setEditorReady] = useState(false);
   const [connectedUsers, setConnectedUsers] = useState<PresenceUser[]>([]);
+  const [emojiState, setEmojiState] = useState<EmojiSuggestionState>(null);
+  const [mentionState, setMentionState] = useState<MentionSuggestionState>(null);
   const hasInitializedContent = useRef(false);
+
+  const handleEmojiStateChange = useCallback((state: EmojiSuggestionState) => {
+    setEmojiState(state);
+  }, []);
+
+  const handleMentionStateChange = useCallback((state: MentionSuggestionState) => {
+    setMentionState(state);
+  }, []);
 
   const editor = useEditor({
     immediatelyRender: false,
@@ -141,8 +173,16 @@ export function CollaborativeEditor({
       }),
       Underline,
       Emoticon,
+      MentionNode,
+      EmojiSuggestionExtension.configure({
+        onStateChange: handleEmojiStateChange,
+      }),
+      MentionSuggestionExtension.configure({
+        onStateChange: handleMentionStateChange,
+      }),
       Collaboration.configure({
         document: ydoc,
+        field: 'prosemirror',
       }),
       CollaborationCaret.configure({
         provider,
@@ -192,6 +232,15 @@ export function CollaborativeEditor({
       setEditorReady(false);
     },
   });
+
+  // Expose editor handle to parent via ref
+  useEffect(() => {
+    if (!editorRef) return;
+    editorRef.current = editor && editorReady && !editor.isDestroyed
+      ? { getJSON: () => editor.getJSON() }
+      : null;
+    return () => { if (editorRef) editorRef.current = null; };
+  }, [editor, editorReady, editorRef]);
 
   useEffect(() => {
     provider.awareness?.setLocalStateField('user', {
@@ -267,10 +316,22 @@ export function CollaborativeEditor({
       try {
         const existing = await getBlockContent(documentId);
         if (existing?.block_data) {
-          const parsed = typeof existing.block_data === 'string'
-            ? JSON.parse(existing.block_data)
-            : existing.block_data;
-          prosemirrorJSONToYXmlFragment(editor.schema, parsed, fragment);
+          const format = detectBlockContentFormat(existing.block_data);
+          if (format === 'blocknote') {
+            const converted = blockNoteJsonToProsemirrorJson(existing.block_data);
+            prosemirrorJSONToYXmlFragment(editor.schema, converted, fragment);
+            try {
+              await updateBlockContent(documentId, {
+                block_data: JSON.stringify(converted),
+                user_id: userId,
+              });
+            } catch (persistError) {
+              console.error('[CollaborativeEditor] Failed to persist converted block content:', persistError);
+            }
+          } else if (format === 'prosemirror') {
+            const parsed = parseBlockContent(existing.block_data);
+            prosemirrorJSONToYXmlFragment(editor.schema, parsed, fragment);
+          }
         }
       } catch (error) {
         console.error('[CollaborativeEditor] Failed to initialize from block content:', error);
@@ -328,9 +389,18 @@ export function CollaborativeEditor({
         <div
           className={styles.editorContainer}
           data-placeholder={placeholder || 'Start writing...'}
+          style={{ position: 'relative' }}
         >
           <EditorToolbar editor={editor} />
           <EditorContent editor={editor} />
+          <EmojiSuggestionPopup editor={editor} suggestionState={emojiState} />
+          {searchMentions && (
+            <MentionSuggestionPopup
+              editor={editor}
+              suggestionState={mentionState}
+              searchMentions={searchMentions}
+            />
+          )}
         </div>
       ) : (
         <div className="flex justify-center items-center h-64">Initializing editor...</div>

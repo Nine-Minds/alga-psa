@@ -12,7 +12,7 @@ import type { DateValue, InvoiceTemplateAst, WasmInvoiceViewModel } from '@alga-
 import { browserPoolService, BrowserPoolService } from './browser-pool.service';
 import { IDocument } from 'server/src/interfaces/document.interface';
 import { getDocument } from '@alga-psa/documents/actions/documentActions';
-import { convertBlockNoteToHTML } from '@alga-psa/formatting/blocknoteUtils';
+import { convertBlockContentToHTML } from '@alga-psa/formatting/blocknoteUtils';
 import { v4 as uuidv4 } from 'uuid';
 import { StorageProviderFactory, generateStoragePath } from '@alga-psa/storage';
 import { FileStoreModel } from 'server/src/models/storage';
@@ -295,7 +295,7 @@ export class PDFGenerationService {
         .first();
         
       if (blockContent && blockContent.block_data) {
-        htmlContent = convertBlockNoteToHTML(blockContent.block_data);
+        htmlContent = convertBlockContentToHTML(blockContent.block_data);
       } else {
         // Check for regular text content
         const textContent = await knex('document_content')
@@ -327,14 +327,19 @@ export class PDFGenerationService {
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>${document.document_name || 'Document'}</title>
             <style>
-              body { font-family: sans-serif; margin: 0; padding: 5mm; }
+              body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji'; margin: 0; padding: 5mm; }
               pre { white-space: pre-wrap; word-wrap: break-word; }
               h1, h2, h3, h4, h5, h6 { margin-top: 1em; margin-bottom: 0.5em; }
               p { margin-top: 0; margin-bottom: 1em; }
               table { border-collapse: collapse; width: 100%; margin-bottom: 1em; }
               th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
               ul, ol { padding-left: 20px; margin-top: 0; margin-bottom: 1em; }
+              blockquote { border-left: 3px solid #ddd; margin: 0 0 1em; padding: 0.5em 1em; color: #555; }
               img { max-width: 100%; height: auto; }
+              a { color: #1e40af; text-decoration: underline; }
+              code { background-color: #f1f5f9; padding: 1px 4px; border-radius: 3px; font-size: 0.9em; }
+              pre code { background: none; padding: 0; }
+              pre { background-color: #f8fafc; padding: 12px; border-radius: 6px; border: 1px solid #e2e8f0; }
             </style>
           </head>
           <body>

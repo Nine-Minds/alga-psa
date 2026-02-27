@@ -3,7 +3,7 @@
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
   "sourceRoot": "packages/tags/src",
   "projectType": "library",
-  "tags": ["scope:tags", "type:vertical"],
+  "tags": ["scope:tags", "type:horizontal"],
   "targets": {
     "build": {
       "executor": "nx:noop",

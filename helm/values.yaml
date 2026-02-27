@@ -446,12 +446,27 @@ devEnv:
   enabled: false
   namespace: msp-dev
 
+# Chat provider non-secret runtime settings (optional).
+# Use this for provider selection/model/project/location, while secrets stay in Vault.
+chatProvider:
+  aiChatProvider: ""
+  vertexProjectId: ""
+  vertexLocation: ""
+  vertexChatModel: ""
+  vertexOpenapiBaseUrl: ""
+
 # Vault Agent configuration for secret injection
 vaultAgent:
   enabled: false
   role: alga-psa
   secretPath: secret/data/alga-psa/server
   sharedSecretPath: secret/data/alga-psa/shared
+  gcpServiceAccount:
+    # Optional Vault-injected Google service account JSON for ADC on non-GKE/on-prem.
+    # When secretPath is set, the chart injects a file and sets GOOGLE_APPLICATION_CREDENTIALS.
+    secretPath: ""
+    secretKey: "google_application_credentials_json"
+    fileName: "google-application-credentials.json"
 
 # Istio sidecar configuration (esp. for Vault agent compatibility)
 # By default, exclude Vault's port 8200 from Envoy interception so

@@ -95,8 +95,8 @@ vi.mock('@alga-psa/tickets/components/CategoryPicker', () => ({
   ),
 }));
 
-vi.mock('@alga-psa/tickets/components/PrioritySelect', () => ({
-  __esModule: true,
+vi.mock('@alga-psa/ui/components', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
   PrioritySelect: ({
     id,
     options = [],

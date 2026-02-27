@@ -66,6 +66,75 @@ Working memory for implementing real-time collaborative editing via TipTap + Hoc
 - Run integration tests: `npm run test:integration -- collaborativeEditing`
 - Local collab test: open two tabs to `http://localhost:3000/msp/collab-test?doc=<id>` (one regular, one incognito with different user)
 
+## 2026-02-24 Session — Production fixes + Feature parity
+
+### WebSocket URL Root Cause (F030)
+
+**Problem**: CollaborativeEditor could not connect to Hocuspocus in production. Server logs showed zero WebSocket connections.
+
+**Root cause**: `yjs-config.ts` used `process.env.HOCUSPOCUS_URL` (no `NEXT_PUBLIC_` prefix). Next.js strips non-prefixed env vars from the browser bundle, so the client defaulted to `http://localhost:1234/` — which doesn't exist in production.
+
+**Fix**: Replaced with `getHocuspocusUrl()` that:
+1. Checks `NEXT_PUBLIC_HOCUSPOCUS_URL` env var first
+2. Falls back to deriving from `window.location`: `wss://<host>/hocuspocus`
+3. Falls back to `ws://localhost:1234` on server-side
+
+**Infrastructure**: Hocuspocus is exposed via Istio VirtualService at `/hocuspocus` prefix, routing to `hocuspocus.msp.svc.cluster.local:1234` with 3600s timeout for WebSocket upgrade. The notification system (`useInternalNotifications.ts`) uses the exact same Hocuspocus instance with different room name prefixes (`notifications:*` vs `document:*`).
+
+### Old Document Preview Crashes (F031, F032)
+
+**Problem**: Opening old documents showed "Something went wrong! e.text.trim is not a function" and "Error creating document from blocks passed as initialContent".
+
+**Root cause**: Old documents have content items where `.text` is not a string (could be number, object, null). The `isTextContent` type guard and `autolinkBlocks` assumed `.text` was always a string. Some old documents also stored content in ProseMirror/Tiptap JSON format (`{ type: "doc", content: [...] }`) instead of BlockNote's array-of-blocks format.
+
+**Fixes**:
+- `RichTextViewer.tsx`: Added `typeof (item as any).text === 'string'` to `isTextContent` guard; added `sanitizeBlocks()` to validate block types and coerce non-string text; added `extractTextFromProseMirror()` for Tiptap JSON detection; added `RichTextErrorBoundary` as last-resort catch
+- `TextEditor.tsx`: Fixed `isTextContent` guard with `typeof content?.text === "string"`
+- `RichTextViewer.tsx` `autolinkBlocks`: Added guard `typeof item.text !== 'string'`
+
+### Emoji Suggestion Grid (F025, F026, F034)
+
+**Problem**: The BlockNote TextEditor has a `GridSuggestionMenuController` for `:query` emoji search, but the Tiptap CollaborativeEditor didn't have this since BlockNote components don't work in raw Tiptap.
+
+**Solution**: Created `packages/ui/src/editor/EmojiSuggestion.tsx` with:
+- `EmojiSuggestionExtension` — Tiptap Extension wrapping a ProseMirror plugin that detects `:query` (2+ chars after colon, no spaces)
+- `EmojiSuggestionPopup` — React component: positioned floating 10-column grid, searches via `emoji-mart` `SearchIndex.search()`, keyboard nav (arrows for grid movement, Enter to select, Escape to dismiss), click-to-insert
+- Uses lazy initialization of emoji-mart data via `ensureEmojiInit()`
+
+### @Mention Support (F027, F028, F029, F034)
+
+**Problem**: `@tiptap/extension-mention` and `@tiptap/suggestion` are NOT installed. The existing `Mention.tsx` uses BlockNote's `createReactInlineContentSpec` which doesn't work in raw Tiptap.
+
+**Solution**: Created `packages/ui/src/editor/MentionSuggestion.tsx` with:
+- `MentionNode` — Tiptap Node (inline, atom) with `userId`, `username`, `displayName` attrs; renders via `ReactNodeViewRenderer` as styled badge matching BlockNote Mention appearance
+- `MentionSuggestionExtension` — ProseMirror plugin detecting `@query` (after space or start of text, allows spaces in query for multi-word names)
+- `MentionSuggestionPopup` — React popup with searchable user list, `@everyone` option, keyboard nav (arrows, Enter/Tab, Escape)
+- CollaborativeEditor accepts optional `searchMentions` prop; collab test page passes `searchUsersForMentions`
+
+### Mention Notification Performance (F033)
+
+**Problem**: On every document edit, `USER_MENTIONED_IN_DOCUMENT` event fires. The handler did unnecessary DB queries even when no mentions existed, and `resolveEveryoneMention` queried the DB inside a loop.
+
+**Fixes** in `internalNotificationSubscriber.ts`:
+1. `resolveEveryoneMention`: Checks `mentionedUserIds.includes('@everyone')` once, does a single DB query if true
+2. `handleUserMentionedInDocument`: Early-exits before any DB queries when `mentionedUserIds.length === 0`
+3. All mention handlers: `Promise.all()` for parallel notification creation instead of sequential `for...of await`
+4. Same fixes applied to `handleTicketCommentAdded`, task comment added, and their update variants
+5. Removed per-user `console.log` statements; replaced with single summary log per batch
+
+### New Files Created
+- `packages/ui/src/editor/EmojiSuggestion.tsx` — Emoji suggestion extension + popup
+- `packages/ui/src/editor/MentionSuggestion.tsx` — Mention node + suggestion extension + popup
+
+### Modified Files
+- `packages/ui/src/editor/index.ts` — Added EmojiSuggestion + MentionSuggestion exports
+- `packages/ui/src/editor/yjs-config.ts` — `getHocuspocusUrl()` production fix
+- `packages/ui/src/editor/RichTextViewer.tsx` — sanitizeBlocks, error boundary, ProseMirror JSON detection
+- `packages/ui/src/editor/TextEditor.tsx` — isTextContent guard fix
+- `packages/documents/src/components/CollaborativeEditor.tsx` — Emoji + Mention integration, searchMentions prop
+- `server/src/app/msp/collab-test/CollabTestPageClient.tsx` — Passes searchUsersForMentions to CollaborativeEditor
+- `server/src/lib/eventBus/subscribers/internalNotificationSubscriber.ts` — Mention notification performance fixes
+
 ## Links / References
 
 - PR #1898: Editor improvements (merged to main)
@@ -82,7 +151,10 @@ Working memory for implementing real-time collaborative editing via TipTap + Hoc
 - `server/src/hooks/useFeatureFlag.tsx` — client-side feature flag hook
 - `packages/documents/src/actions/documentBlockContentActions.ts` — document CRUD actions
 - `packages/ui/src/editor/EmoticonExtension.ts` — Emoticon extension (text emoticons → emoji)
-- `packages/ui/src/editor/index.ts` — exports Emoticon extension
+- `packages/ui/src/editor/EmojiSuggestion.tsx` — Emoji suggestion extension + popup for Tiptap
+- `packages/ui/src/editor/MentionSuggestion.tsx` — Mention node + suggestion extension + popup for Tiptap
+- `packages/ui/src/editor/index.ts` — exports Emoticon, EmojiSuggestion, MentionSuggestion
+- `server/src/lib/eventBus/subscribers/internalNotificationSubscriber.ts` — mention notification handlers
 
 ## Open Questions
 

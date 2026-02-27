@@ -5,9 +5,7 @@
  */
 
 export { default as CategoryPicker } from './CategoryPicker';
-export { PrioritySelect } from './PrioritySelect';
 export { QuickAddTicket } from './QuickAddTicket';
-export { default as ResponseStateBadge } from './ResponseStateBadge';
 export { default as ResponseSourceBadge } from './ResponseSourceBadge';
 export { default as TicketOriginBadge } from './TicketOriginBadge';
 export { default as ResponseStateSelect, ResponseStateDisplay } from './ResponseStateSelect';

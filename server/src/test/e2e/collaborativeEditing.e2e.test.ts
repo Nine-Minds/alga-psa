@@ -177,7 +177,7 @@ test.describe('Collaborative editing (Playwright)', () => {
       name: 'Editor Two',
     });
 
-    const url = `${TEST_CONFIG.baseUrl}/msp/collab-test?doc=${documentId}`;
+    const url = `${TEST_CONFIG.baseUrl}/msp/test/collab?doc=${documentId}`;
     await Promise.all([pageA.goto(url), pageB.goto(url)]);
 
     await Promise.all([
