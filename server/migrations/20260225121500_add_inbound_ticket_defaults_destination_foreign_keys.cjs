@@ -14,6 +14,42 @@
 const CLIENTS_CONSTRAINT = 'fk_clients_inbound_ticket_defaults';
 const CONTACTS_CONSTRAINT = 'fk_contacts_inbound_ticket_defaults';
 
+async function isCitusAvailable(knex) {
+  const result = await knex.raw(`
+    SELECT EXISTS (
+      SELECT 1
+      FROM pg_proc
+      WHERE proname = 'create_distributed_table'
+    ) AS exists
+  `);
+  return Boolean(result?.rows?.[0]?.exists);
+}
+
+async function isDistributedTable(knex, tableName) {
+  const result = await knex.raw(
+    `
+      SELECT EXISTS (
+        SELECT 1
+        FROM pg_dist_partition
+        WHERE logicalrelid = ?::regclass
+      ) AS is_distributed
+    `,
+    [tableName]
+  );
+
+  return Boolean(result?.rows?.[0]?.is_distributed);
+}
+
+async function ensureTenantDistributed(knex, tableName) {
+  const citusAvailable = await isCitusAvailable(knex);
+  if (!citusAvailable) return;
+
+  const distributed = await isDistributedTable(knex, tableName);
+  if (distributed) return;
+
+  await knex.raw('SELECT create_distributed_table(?, ?)', [tableName, 'tenant']);
+}
+
 async function hasConstraint(knex, tableName, constraintName) {
   const result = await knex.raw(
     `
@@ -32,6 +68,11 @@ async function hasConstraint(knex, tableName, constraintName) {
 exports.up = async function up(knex) {
   const hasDefaultsTable = await knex.schema.hasTable('inbound_ticket_defaults');
   if (!hasDefaultsTable) return;
+
+  // In Citus environments, clients/contacts are distributed by tenant.
+  // Ensure inbound_ticket_defaults is also distributed before UPDATE/FK steps
+  // to avoid "relation ... is not distributed" planning failures.
+  await ensureTenantDistributed(knex, 'inbound_ticket_defaults');
 
   const hasClientsTable = await knex.schema.hasTable('clients');
   const hasContactsTable = await knex.schema.hasTable('contacts');
@@ -102,3 +143,6 @@ exports.down = async function down(knex) {
     await knex.raw(`ALTER TABLE contacts DROP CONSTRAINT ${CONTACTS_CONSTRAINT}`);
   }
 };
+
+// create_distributed_table cannot run inside a transaction block in Citus
+exports.config = { transaction: false };
