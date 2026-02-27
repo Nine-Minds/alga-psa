@@ -15,7 +15,8 @@
 import { createTenantKnex, withTransaction } from '@alga-psa/db';
 import { runWithTenant } from '@alga-psa/db';
 import { Knex } from 'knex';
-import { checkAndSendThresholdNotifications } from '@alga-psa/sla';
+import { findCrossedThresholds } from '@alga-psa/sla';
+import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import logger from '@alga-psa/core/logger';
 
 export interface SlaTimerJobData extends Record<string, unknown> {
@@ -160,7 +161,7 @@ async function processTicketSla(
       now
     );
 
-    const { notifiedThreshold, result } = await checkAndSendThresholdNotifications(
+    const { highestThreshold } = await findCrossedThresholds(
       trx,
       tenant,
       ticket.ticket_id,
@@ -169,18 +170,29 @@ async function processTicketSla(
       ticket.sla_last_response_threshold_notified || 0
     );
 
-    if (notifiedThreshold > (ticket.sla_last_response_threshold_notified || 0)) {
-      updatedResponseThreshold = notifiedThreshold;
+    if (highestThreshold > (ticket.sla_last_response_threshold_notified || 0)) {
+      updatedResponseThreshold = highestThreshold;
       needsUpdate = true;
 
-      if (result) {
-        logger.info(`Sent response SLA notification for ticket ${ticket.ticket_number}`, {
+      await publishWorkflowEvent({
+        eventType: 'TICKET_SLA_THRESHOLD_REACHED',
+        payload: {
           ticketId: ticket.ticket_id,
-          threshold: notifiedThreshold,
-          elapsedPercent,
-          recipientCount: result.recipientCount
-        });
-      }
+          phase: 'response',
+          thresholdPercent: highestThreshold,
+        },
+        ctx: {
+          tenantId: tenant,
+          occurredAt: new Date().toISOString(),
+          actor: { actorType: 'SYSTEM' as const },
+        },
+      });
+
+      logger.info(`Published response SLA threshold event for ticket ${ticket.ticket_number}`, {
+        ticketId: ticket.ticket_id,
+        threshold: highestThreshold,
+        elapsedPercent,
+      });
     }
 
     // Check if response SLA is breached (100%+) and not already marked
@@ -208,7 +220,7 @@ async function processTicketSla(
       now
     );
 
-    const { notifiedThreshold, result } = await checkAndSendThresholdNotifications(
+    const { highestThreshold: resHighest } = await findCrossedThresholds(
       trx,
       tenant,
       ticket.ticket_id,
@@ -217,18 +229,29 @@ async function processTicketSla(
       ticket.sla_last_resolution_threshold_notified || 0
     );
 
-    if (notifiedThreshold > (ticket.sla_last_resolution_threshold_notified || 0)) {
-      updatedResolutionThreshold = notifiedThreshold;
+    if (resHighest > (ticket.sla_last_resolution_threshold_notified || 0)) {
+      updatedResolutionThreshold = resHighest;
       needsUpdate = true;
 
-      if (result) {
-        logger.info(`Sent resolution SLA notification for ticket ${ticket.ticket_number}`, {
+      await publishWorkflowEvent({
+        eventType: 'TICKET_SLA_THRESHOLD_REACHED',
+        payload: {
           ticketId: ticket.ticket_id,
-          threshold: notifiedThreshold,
-          elapsedPercent,
-          recipientCount: result.recipientCount
-        });
-      }
+          phase: 'resolution',
+          thresholdPercent: resHighest,
+        },
+        ctx: {
+          tenantId: tenant,
+          occurredAt: new Date().toISOString(),
+          actor: { actorType: 'SYSTEM' as const },
+        },
+      });
+
+      logger.info(`Published resolution SLA threshold event for ticket ${ticket.ticket_number}`, {
+        ticketId: ticket.ticket_id,
+        threshold: resHighest,
+        elapsedPercent,
+      });
     }
 
     // Check if resolution SLA is breached (100%+) and not already marked

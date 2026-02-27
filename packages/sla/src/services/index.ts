@@ -46,6 +46,7 @@ export {
   sendSlaResponseMetNotification,
   sendSlaResolutionMetNotification,
   checkAndSendThresholdNotifications,
+  findCrossedThresholds,
   type SlaNotificationContext,
   type NotificationResult
 } from './slaNotificationService';
