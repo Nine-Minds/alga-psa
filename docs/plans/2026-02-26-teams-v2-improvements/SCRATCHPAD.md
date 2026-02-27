@@ -78,3 +78,4 @@
 - (2026-02-27) Exported team avatar actions from `packages/teams/src/actions/team-actions/index.ts`.
 - (2026-02-27) Added `@alga-psa/media`, `@alga-psa/auth`, and `swr` dependencies to `packages/teams/package.json`.
 - (2026-02-27) Added `useTeamAvatar` SWR hook in `packages/teams/src/hooks/useTeamAvatar.ts`.
+- (2026-02-27) Exported `useTeamAvatar` from `packages/teams/src/hooks/index.ts`.

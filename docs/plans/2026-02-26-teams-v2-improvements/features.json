@@ -120,7 +120,7 @@
   {
     "id": "F065",
     "description": "Export `useTeamAvatar` from `packages/teams/src/hooks/index.ts`",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-3A.9"
     ]
