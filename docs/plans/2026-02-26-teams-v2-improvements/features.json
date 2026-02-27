@@ -201,7 +201,7 @@
   {
     "id": "F075",
     "description": "OrgChart: ReactFlow imported dynamically with `{ ssr: false }` to prevent SSR errors",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "NFR-3.5"
     ]
