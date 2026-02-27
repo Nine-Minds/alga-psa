@@ -55,7 +55,7 @@ export default function MspSignIn() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-purple-100 to-indigo-100 dark:bg-none dark:bg-card">
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-purple-100 to-indigo-100 dark:from-purple-950 dark:via-purple-950/80 dark:to-indigo-950">
       <TwoFactorInput
         isOpen={isOpen2FA}
         onClose={() => setIsOpen2FA(false)}
@@ -152,7 +152,7 @@ export default function MspSignIn() {
 
         {/* Right side with login form */}
         <div className="w-full lg:w-1/2 flex items-center justify-center p-8">
-          <Card className="max-w-md w-full bg-card/95 backdrop-blur">
+          <Card className="max-w-md w-full bg-card/95 backdrop-blur dark:bg-card dark:backdrop-blur-none dark:border dark:border-border-200">
             <CardHeader className="space-y-1">
               <CardTitle className="text-2xl font-bold text-center">
                 MSP Dashboard Login
