@@ -134,7 +134,7 @@
   {
     "id": "T016",
     "description": "DB integration guard: embedded-image failure is recorded and ticket/comment flow remains successful",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F020",
       "F011"
