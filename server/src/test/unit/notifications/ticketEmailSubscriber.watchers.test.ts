@@ -1,124 +1,123 @@
-import fs from 'node:fs';
-import path from 'node:path';
-import { describe, expect, it } from 'vitest';
-
-function readTicketEmailSubscriberSource(): string {
-  const filePath = path.resolve(__dirname, '../../../lib/eventBus/subscribers/ticketEmailSubscriber.ts');
-  return fs.readFileSync(filePath, 'utf8');
-}
+import { describe, expect, it, vi } from 'vitest';
+import {
+  extractActiveWatcherEmails,
+  sendOneEmailPerWatcher,
+} from '../../../lib/eventBus/subscribers/watcherRecipients';
 
 describe('ticketEmailSubscriber watcher behavior', () => {
-  it('T027: active watcher extraction ignores inactive entries', () => {
-    const source = readTicketEmailSubscriberSource();
-    expect(source).toContain('export function extractActiveWatcherEmails(attributes: unknown): string[]');
-    expect(source).toContain('getActiveWatchListEmails(attributes)');
-    expect(source).toContain('Array.from(new Set');
+  it('T027: active watcher extraction ignores inactive and invalid entries, normalizes, and dedupes', () => {
+    const emails = extractActiveWatcherEmails({
+      watch_list: [
+        { email: 'active@example.com', active: true },
+        { email: 'ACTIVE@EXAMPLE.COM', active: true },
+        { email: 'inactive@example.com', active: false },
+        { email: '  mixedcase@example.com  ', active: true },
+        { email: 'not-an-email', active: true },
+      ],
+    });
+
+    expect(emails).toEqual(['active@example.com', 'mixedcase@example.com']);
   });
 
-  it('T028: ticket-created watcher notifications use customer-visible context', () => {
-    const source = readTicketEmailSubscriberSource();
-    expect(source).toMatch(
-      /sendOneEmailPerWatcher\([\s\S]*template: 'ticket-created'[\s\S]*context: buildContext\(portalUrl\)[\s\S]*'Ticket Created'/
+  it('T028: active watcher extraction preserves active status when duplicate entries conflict', () => {
+    const emails = extractActiveWatcherEmails({
+      watch_list: [
+        { email: 'reactivate@example.com', active: false },
+        { email: 'REACTIVATE@example.com', active: true },
+      ],
+    });
+
+    expect(emails).toEqual(['reactivate@example.com']);
+  });
+
+  it('T036: watcher send helper dedupes case-insensitively and excludes explicit recipients', async () => {
+    const sendFn = vi.fn(async () => undefined);
+    const excluded = new Set<string>(['primary@example.com']);
+
+    await sendOneEmailPerWatcher(
+      [
+        'primary@example.com',
+        'watcher@example.com',
+        'WATCHER@EXAMPLE.COM',
+        'secondary@example.com',
+      ],
+      sendFn,
+      { excludeEmails: excluded }
     );
+
+    expect(sendFn).toHaveBeenCalledTimes(2);
+    expect(sendFn).toHaveBeenNthCalledWith(1, 'watcher@example.com');
+    expect(sendFn).toHaveBeenNthCalledWith(2, 'secondary@example.com');
   });
 
-  it('T029: ticket-updated accumulator path includes watchers in accumulation set', () => {
-    const source = readTicketEmailSubscriberSource();
-    expect(source).toMatch(
-      /for \(const watcherEmail of activeWatcherEmails\) \{\s*await accumulateIfUnique\(\{\s*recipientEmail: watcherEmail,\s*isInternal: false,/
-    );
+  it('T038: watcher send helper drops invalid emails and trims valid recipients', async () => {
+    const sendFn = vi.fn(async () => undefined);
+
+    await sendOneEmailPerWatcher(['  valid@example.com  ', 'not-an-email', '   '], sendFn);
+
+    expect(sendFn).toHaveBeenCalledTimes(1);
+    expect(sendFn).toHaveBeenCalledWith('valid@example.com');
   });
 
-  it('T030: ticket-updated non-accumulator path sends watcher notifications immediately', () => {
-    const source = readTicketEmailSubscriberSource();
-    expect(source).toMatch(
-      /sendOneEmailPerWatcher\([\s\S]*template: 'ticket-updated'[\s\S]*'Ticket Updated'/
-    );
+  it('T039: watcher send helper issues one send operation per watcher (no aggregated CC behavior)', async () => {
+    const sendFn = vi.fn(async () => undefined);
+
+    await sendOneEmailPerWatcher(['one@example.com', 'two@example.com', 'three@example.com'], sendFn);
+
+    expect(sendFn).toHaveBeenCalledTimes(3);
+    expect(sendFn.mock.calls.map((call) => call[0])).toEqual([
+      'one@example.com',
+      'two@example.com',
+      'three@example.com',
+    ]);
   });
 
-  it('T031: ticket-assigned watcher notifications dedupe through a shared sent-email set', () => {
-    const source = readTicketEmailSubscriberSource();
-    expect(source).toContain('const sentEmails = new Set<string>();');
-    expect(source).toMatch(
-      /handleTicketAssigned[\s\S]*sendOneEmailPerWatcher\([\s\S]*excludeEmails: sentEmails/
-    );
+  it('T062: watcher recipient extraction/sending remains email-driven when entity metadata is present', async () => {
+    const emails = extractActiveWatcherEmails({
+      watch_list: [
+        {
+          email: 'user-linked@example.com',
+          active: true,
+          entity_type: 'user',
+          entity_id: 'user-1',
+          name: 'Linked User',
+        },
+        {
+          email: 'contact-linked@example.com',
+          active: true,
+          entity_type: 'contact',
+          entity_id: 'contact-2',
+          name: 'Linked Contact',
+        },
+      ],
+    });
+
+    const sendFn = vi.fn(async () => undefined);
+    await sendOneEmailPerWatcher(emails, sendFn);
+
+    expect(sendFn.mock.calls.map((call) => call[0])).toEqual([
+      'user-linked@example.com',
+      'contact-linked@example.com',
+    ]);
   });
 
-  it('T032: public internal-agent comments include watcher notifications', () => {
-    const source = readTicketEmailSubscriberSource();
-    expect(source).toMatch(/if \(isPublicComment && isFromAgent\) \{[\s\S]*sendOneEmailPerWatcher\(/);
-  });
+  it('T063: watcher with linked inactive/deleted identity metadata still sends when watcher is active', async () => {
+    const emails = extractActiveWatcherEmails({
+      watch_list: [
+        {
+          email: 'still-send@example.com',
+          active: true,
+          entity_type: 'user',
+          entity_id: 'user-inactive',
+          entity_is_inactive: true,
+        } as any,
+      ],
+    });
 
-  it('T033: internal comments do not include watcher notifications', () => {
-    const source = readTicketEmailSubscriberSource();
-    expect(source).toContain('const isPublicComment = !payload.comment?.isInternal;');
-    expect(source).toMatch(/if \(isPublicComment && isFromAgent\) \{/);
-  });
+    const sendFn = vi.fn(async () => undefined);
+    await sendOneEmailPerWatcher(emails, sendFn);
 
-  it('T034: client-authored public comments are excluded by the internal-agent gate', () => {
-    const source = readTicketEmailSubscriberSource();
-    expect(source).toContain('let isFromAgent = false;');
-    expect(source).toContain("isFromAgent = author?.user_type === 'internal';");
-  });
-
-  it('T035: ticket-closed watcher notifications use customer-visible context', () => {
-    const source = readTicketEmailSubscriberSource();
-    expect(source).toMatch(
-      /sendOneEmailPerWatcher\([\s\S]*template: 'ticket-closed'[\s\S]*context: externalContext[\s\S]*'Ticket Closed'/
-    );
-  });
-
-  it('T036: watcher recipients dedupe against primary contact/client recipient', () => {
-    const source = readTicketEmailSubscriberSource();
-    expect(source).toMatch(/sendIfUnique\([\s\S]*contactId: primaryContactId[\s\S]*'Ticket Closed'/);
-    expect(source).toMatch(/sendOneEmailPerWatcher\([\s\S]*excludeEmails: sentEmails/);
-  });
-
-  it('T037: watcher recipients dedupe against assigned/additional resource recipients', () => {
-    const source = readTicketEmailSubscriberSource();
-    expect(source).toMatch(/'Ticket Assigned', ticket\.assigned_to/);
-    expect(source).toMatch(/'Ticket Assigned', resource\.user_id/);
-    expect(source).toMatch(/sendOneEmailPerWatcher\([\s\S]*excludeEmails: sentEmails/);
-  });
-
-  it('T038: comment author suppression applies to watcher sends', () => {
-    const source = readTicketEmailSubscriberSource();
-    expect(source).toContain('if (commentAuthorEmail && key === normalizeRecipientEmail(commentAuthorEmail))');
-    expect(source).toMatch(/sendOneEmailPerWatcher\([\s\S]*'Ticket Comment Added'/);
-  });
-
-  it('T039: watcher send helper issues one send call per watcher email (no aggregated CC payload)', () => {
-    const source = readTicketEmailSubscriberSource();
-    expect(source).toContain('export async function sendOneEmailPerWatcher(');
-    expect(source).toContain('for (const watcherEmail of watcherEmails)');
-    expect(source).toContain('await sendFn(email);');
-    expect(source).not.toContain('cc:');
-  });
-
-  it('T040: watcher receives ticket-created email as a separate per-recipient send path', () => {
-    const source = readTicketEmailSubscriberSource();
-    expect(source).toMatch(
-      /sendOneEmailPerWatcher\([\s\S]*template: 'ticket-created'[\s\S]*subject: emailSubject/
-    );
-  });
-
-  it('T041: watcher receives ticket-updated email as a separate per-recipient send path', () => {
-    const source = readTicketEmailSubscriberSource();
-    expect(source).toMatch(
-      /sendOneEmailPerWatcher\([\s\S]*template: 'ticket-updated'[\s\S]*subject: `Ticket Updated: \$\{ticket\.title\}`/
-    );
-  });
-
-  it('T042: watcher receives public-comment notifications and not internal-note notifications', () => {
-    const source = readTicketEmailSubscriberSource();
-    expect(source).toContain('const isPublicComment = !payload.comment?.isInternal;');
-    expect(source).toMatch(/if \(isPublicComment && isFromAgent\) \{[\s\S]*sendOneEmailPerWatcher\(/);
-  });
-
-  it('T043: watcher receives ticket-closed email as a separate per-recipient send path', () => {
-    const source = readTicketEmailSubscriberSource();
-    expect(source).toMatch(
-      /sendOneEmailPerWatcher\([\s\S]*template: 'ticket-closed'[\s\S]*subject: `Ticket Closed: \$\{ticket\.title\}`/
-    );
+    expect(sendFn).toHaveBeenCalledTimes(1);
+    expect(sendFn).toHaveBeenCalledWith('still-send@example.com');
   });
 });

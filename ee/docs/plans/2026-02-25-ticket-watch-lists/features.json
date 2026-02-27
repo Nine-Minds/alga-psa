@@ -304,7 +304,7 @@
   {
     "id": "F036",
     "description": "Preserve outbound watcher send behavior as email-based fan-out; entity metadata must not alter send eligibility beyond existing active email logic.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Functional Requirements",
       "Data / API / Integrations"
