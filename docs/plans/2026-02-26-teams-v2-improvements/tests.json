@@ -210,7 +210,7 @@
   {
     "id": "T108",
     "description": "TeamDetails avatar upload successfully uploads an image and displays it",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F066",
       "F067"
