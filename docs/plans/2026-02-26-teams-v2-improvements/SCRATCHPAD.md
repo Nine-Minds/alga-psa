@@ -74,3 +74,4 @@
 - (2026-02-27) Added `uploadTeamAvatar` action with team update permission checks in `packages/teams/src/actions/team-actions/avatarActions.ts`.
 - (2026-02-27) Added `deleteTeamAvatar` action with team update permission checks in `packages/teams/src/actions/team-actions/avatarActions.ts`.
 - (2026-02-27) Added `getTeamAvatarUrlAction` in `packages/teams/src/actions/team-actions/avatarActions.ts`.
+- (2026-02-27) Added `getTeamAvatarUrlsBatchAction` with batch query logic in `packages/teams/src/actions/team-actions/avatarActions.ts`.

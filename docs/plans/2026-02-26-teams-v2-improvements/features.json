@@ -85,7 +85,7 @@
   {
     "id": "F061",
     "description": "Create `getTeamAvatarUrlsBatchAction` server action in teams package for batch avatar URL fetching",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-3A.8"
     ]
