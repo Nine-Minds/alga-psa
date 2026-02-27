@@ -1141,12 +1141,14 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
         </DialogContent>
         <DialogFooter>
           <Button
+            id="remove-team-cancel-btn"
             variant="outline"
             onClick={() => setIsRemoveTeamDialogOpen(false)}
           >
             Cancel
           </Button>
           <Button
+            id="remove-team-confirm-btn"
             variant="default"
             onClick={async () => {
               if (onRemoveTeamAssignment) {
