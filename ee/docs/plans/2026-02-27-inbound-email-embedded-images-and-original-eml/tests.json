@@ -234,7 +234,7 @@
   {
     "id": "T028",
     "description": "Workflow integration guard: .eml persistence failure does not block comment creation in reply flow",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F021"
     ]
