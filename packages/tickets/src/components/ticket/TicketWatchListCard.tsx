@@ -23,6 +23,9 @@ interface TicketWatchListCardProps {
   watchListSaving?: boolean;
   internalUsers?: IUser[];
   clientContacts?: IContact[];
+  allContacts?: IContact[];
+  allContactsLoading?: boolean;
+  onLoadAllContacts?: () => Promise<void>;
 }
 
 const TicketWatchListCard: React.FC<TicketWatchListCardProps> = ({
@@ -32,10 +35,15 @@ const TicketWatchListCard: React.FC<TicketWatchListCardProps> = ({
   watchListSaving = false,
   internalUsers = [],
   clientContacts = [],
+  allContacts = [],
+  allContactsLoading = false,
+  onLoadAllContacts,
 }) => {
   const [watchListInput, setWatchListInput] = useState('');
   const [selectedUserId, setSelectedUserId] = useState('');
   const [selectedContactId, setSelectedContactId] = useState('');
+  const [selectedAllContactId, setSelectedAllContactId] = useState('');
+  const [showAllContactsSearch, setShowAllContactsSearch] = useState(false);
   const [watchListError, setWatchListError] = useState<string | null>(null);
   const [watchListSavingInternal, setWatchListSavingInternal] = useState(false);
   const watchList = React.useMemo(() => parseTicketWatchListAttributes(attributes), [attributes]);
@@ -174,6 +182,48 @@ const TicketWatchListCard: React.FC<TicketWatchListCardProps> = ({
     }
   };
 
+  const handleAddAllContact = async () => {
+    if (!selectedAllContactId) {
+      setWatchListError('Select a contact to add.');
+      return;
+    }
+
+    const selectedContact = allContacts.find((contact) => contact.contact_name_id === selectedAllContactId);
+    const normalizedEmail = normalizeEmailAddress(selectedContact?.email);
+    if (!normalizedEmail) {
+      setWatchListError('Selected contact does not have a valid email address.');
+      return;
+    }
+
+    const mergedWatchList = mergeTicketWatchListRecipients(watchList, [
+      {
+        email: normalizedEmail,
+        source: 'manual',
+        name: selectedContact.full_name || undefined,
+        entity_type: 'contact',
+        entity_id: selectedContact.contact_name_id,
+      },
+    ]);
+
+    if (JSON.stringify(mergedWatchList) === JSON.stringify(watchList)) {
+      setWatchListError(null);
+      setSelectedAllContactId('');
+      return;
+    }
+
+    const success = await persistWatchList(mergedWatchList);
+    if (success) {
+      setSelectedAllContactId('');
+    }
+  };
+
+  const handleShowAllContactsSearch = async () => {
+    setShowAllContactsSearch(true);
+    if (allContacts.length === 0 && onLoadAllContacts) {
+      await onLoadAllContacts();
+    }
+  };
+
   return (
     <div className={`${styles['card']} p-6 space-y-4`}>
       <h2 className={styles['panel-header']}>Watch List</h2>
@@ -247,6 +297,48 @@ const TicketWatchListCard: React.FC<TicketWatchListCardProps> = ({
             Add Contact
           </Button>
         </div>
+
+        {!showAllContactsSearch ? (
+          <div className="flex justify-start">
+            <Button
+              {...withDataAutomationId({ id: `${id}-search-all-contacts-btn` })}
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={isWatchListSaving || allContactsLoading}
+              onClick={() => void handleShowAllContactsSearch()}
+            >
+              Search all contacts
+            </Button>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <div className="flex-1 min-w-0">
+                <ContactPicker
+                  id={`${id}-all-contacts-picker`}
+                  contacts={allContacts}
+                  value={selectedAllContactId}
+                  onValueChange={setSelectedAllContactId}
+                  placeholder={allContactsLoading ? 'Loading contacts...' : 'Search all contacts'}
+                  disabled={isWatchListSaving || allContactsLoading}
+                />
+              </div>
+              <Button
+                {...withDataAutomationId({ id: `${id}-add-all-contact-btn` })}
+                type="button"
+                onClick={handleAddAllContact}
+                disabled={isWatchListSaving || allContactsLoading || !selectedAllContactId}
+                size="sm"
+              >
+                Add Contact
+              </Button>
+            </div>
+            <p className="text-xs text-gray-500">
+              Secondary path for cross-client contacts.
+            </p>
+          </div>
+        )}
 
         {watchListError ? (
           <p className="text-sm text-red-600 flex items-center gap-1">

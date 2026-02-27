@@ -183,3 +183,6 @@ Working notes for the ticket watch-list feature plan. This log captures clarifie
 - (2026-02-27) Implemented F028 by adding a client-contact quick-add path (`ContactPicker` + `Add Contact`) in `TicketWatchListCard`, defaulting to the ticket-scoped `contacts` list already loaded in `TicketDetails`.
 - (2026-02-27) Wired `clientContacts` through `TicketProperties` into `TicketWatchListCard` so the quick-add source is ticket-client contacts by default.
 - (2026-02-27) Validation run for F028: `cd packages/tickets && npx vitest run src/components/ticket/__tests__/TicketWatchListCard.test.tsx --config vitest.config.ts`.
+- (2026-02-27) Implemented F029 by adding a secondary, initially hidden `Search all contacts` UI path in `TicketWatchListCard`, with separate selection/add controls intended for cross-client contact adds.
+- (2026-02-27) Added lazy-load hook points in `TicketWatchListCard` (`onLoadAllContacts`, `allContactsLoading`) so the all-contacts list can be fetched on demand instead of eagerly.
+- (2026-02-27) Validation run for F029: `cd packages/tickets && npx vitest run src/components/ticket/__tests__/TicketWatchListCard.test.tsx --config vitest.config.ts`.
