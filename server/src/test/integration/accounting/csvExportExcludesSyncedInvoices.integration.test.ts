@@ -2,7 +2,7 @@ import { beforeAll, afterAll, beforeEach, afterEach, describe, it, expect } from
 import { v4 as uuidv4 } from 'uuid';
 
 import { TestContext } from '../../../../test-utils/testContext';
-import { AccountingExportInvoiceSelector } from 'server/src/lib/services/accountingExportInvoiceSelector';
+import { AccountingExportInvoiceSelector } from '@alga-psa/billing/services';
 
 const helpers = TestContext.createHelpers();
 const HOOK_TIMEOUT = 120_000;

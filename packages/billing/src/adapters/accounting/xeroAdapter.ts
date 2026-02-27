@@ -11,7 +11,7 @@ import {
   ExternalInvoiceData,
   ExternalInvoiceChargeTax,
   PendingTaxImportRecord
-} from './accountingExportAdapter';
+} from '@alga-psa/types';
 import {
   XeroClientService,
   XeroInvoicePayload,
@@ -20,15 +20,12 @@ import {
   XeroTaxComponentPayload
 } from '@alga-psa/integrations/lib/xero/xeroClientService';
 import { createTenantKnex } from '@alga-psa/db';
-import {
-  AccountingMappingResolver,
-  MappingResolution,
-  CompanyAccountingSyncService,
-  KnexCompanyMappingRepository,
-  buildNormalizedCompanyPayload,
-  XeroCompanyAdapter,
-  KnexInvoiceMappingRepository
-} from '@alga-psa/billing';
+import { AccountingMappingResolver, MappingResolution } from '../../services/accountingMappingResolver';
+import { CompanyAccountingSyncService } from '../../services/companySync/companySyncService';
+import { KnexCompanyMappingRepository } from '../../services/companySync/companyMappingRepository';
+import { buildNormalizedCompanyPayload } from '../../services/companySync/companySyncNormalizer';
+import { XeroCompanyAdapter } from '../../services/companySync/adapters/xeroCompanyAdapter';
+import { KnexInvoiceMappingRepository } from '../../repositories/invoiceMappingRepository';
 import { AppError } from '@alga-psa/core';
 
 export function buildXeroInvoiceReference(baseReference: string, poNumber?: string | null): string {
@@ -610,7 +607,7 @@ export class XeroAdapter implements AccountingExportAdapter {
       const chargeLineMappings: Array<{ chargeId: string; xeroLineItemId: string }> =
         (mappingRow?.metadata as any)?.chargeLineMappings ?? [];
 
-      // Build reverse map: Xero lineItemId → Alga charge ID
+      // Build reverse map: Xero lineItemId -> Alga charge ID
       const xeroLineToChargeId = new Map<string, string>();
       for (const mapping of chargeLineMappings) {
         xeroLineToChargeId.set(mapping.xeroLineItemId, mapping.chargeId);

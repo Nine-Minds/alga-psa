@@ -12,13 +12,11 @@ import { runWithTenant } from '../../db';
 import { handleApiError, ForbiddenError, UnauthorizedError } from '../middleware/apiMiddleware';
 import { BaseService, ListOptions } from './types';
 import { getCSVTaxImportService } from '@alga-psa/integrations/services';
-import { AccountingExportInvoiceSelector } from '../../services/accountingExportInvoiceSelector';
-import { AccountingExportService } from '../../services/accountingExportService';
-import { QuickBooksCSVAdapter } from '../../adapters/accounting/quickBooksCSVAdapter';
+import { AccountingExportInvoiceSelector, AccountingExportService, QuickBooksCSVAdapter } from '@alga-psa/billing/services';
 import { getSession } from '@alga-psa/auth';
 import { findUserById } from '@alga-psa/users/actions';
 import logger from '@alga-psa/core/logger';
-import { AppError } from '../../errors';
+import { AppError } from '@alga-psa/core';
 
 type CSVAccountingPermission = 'export' | 'import';
 

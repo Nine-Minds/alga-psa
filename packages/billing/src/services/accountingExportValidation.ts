@@ -1,6 +1,6 @@
-import { createTenantKnex } from '../db';
+import { createTenantKnex } from '@alga-psa/db';
 import { AccountingExportRepository } from '../repositories/accountingExportRepository';
-import { AccountingMappingResolver } from '@alga-psa/billing';
+import { AccountingMappingResolver } from './accountingMappingResolver';
 
 export class AccountingExportValidation {
   static async ensureMappingsForBatch(batchId: string): Promise<void> {

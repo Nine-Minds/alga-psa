@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
-import { XeroAdapter } from 'server/src/lib/adapters/accounting/xeroAdapter';
-import { AccountingExportAdapterContext } from 'server/src/lib/adapters/accounting/accountingExportAdapter';
-import { AccountingMappingResolver } from 'server/src/lib/services/accountingMappingResolver';
+import { XeroAdapter } from '@alga-psa/billing/services';
+import { AccountingExportAdapterContext } from '@alga-psa/types';
+import { AccountingMappingResolver } from '@alga-psa/billing';
 import { XeroClientService } from 'server/src/lib/xero/xeroClientService';
 import * as dbModule from 'server/src/lib/db';
 
