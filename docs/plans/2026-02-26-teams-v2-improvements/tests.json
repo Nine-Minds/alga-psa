@@ -300,7 +300,7 @@
   {
     "id": "T119",
     "description": "OrgChart supports zoom and pan interactions",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F072"
     ]
