@@ -75,6 +75,8 @@ function mergeEntries(existing: TicketWatchListEntry, incoming: TicketWatchListE
     active: existing.active || incoming.active,
     name: existing.name || incoming.name,
     source: existing.source || incoming.source,
+    entity_type: existing.entity_type || incoming.entity_type,
+    entity_id: existing.entity_id || incoming.entity_id,
     created_at: existing.created_at || incoming.created_at,
     updated_at: incoming.updated_at || existing.updated_at,
     last_seen_at: incoming.last_seen_at || existing.last_seen_at,

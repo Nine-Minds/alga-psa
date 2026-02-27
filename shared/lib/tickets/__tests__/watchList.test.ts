@@ -145,4 +145,85 @@ describe('watchList utilities', () => {
       },
     ]);
   });
+
+  it('T045: parser accepts watch-list entry objects that include entity_type and entity_id metadata', () => {
+    expect(
+      parseTicketWatchListAttributes({
+        watch_list: [
+          {
+            email: 'entity@example.com',
+            active: true,
+            entity_type: 'user',
+            entity_id: 'user-1',
+            name: 'Entity User',
+          },
+        ],
+      })
+    ).toEqual([
+      {
+        email: 'entity@example.com',
+        active: true,
+        entity_type: 'user',
+        entity_id: 'user-1',
+        name: 'Entity User',
+      },
+    ]);
+  });
+
+  it('T046: merge preserves existing entity metadata when duplicate email is re-added from another path', () => {
+    expect(
+      mergeTicketWatchListRecipients(
+        [
+          {
+            email: 'existing@example.com',
+            active: true,
+            entity_type: 'contact',
+            entity_id: 'contact-9',
+            name: 'Existing Contact',
+          },
+        ],
+        [
+          {
+            email: 'existing@example.com',
+            source: 'manual',
+            entity_type: 'user',
+            entity_id: 'user-22',
+          },
+        ]
+      )
+    ).toEqual([
+      {
+        email: 'existing@example.com',
+        active: true,
+        entity_type: 'contact',
+        entity_id: 'contact-9',
+        name: 'Existing Contact',
+        source: 'manual',
+      },
+    ]);
+  });
+
+  it('T047: merge fills missing entity metadata when duplicate email is added with picker metadata', () => {
+    expect(
+      mergeTicketWatchListRecipients(
+        [{ email: 'fill@example.com', active: true }],
+        [
+          {
+            email: 'fill@example.com',
+            entity_type: 'contact',
+            entity_id: 'contact-44',
+            name: 'Fill Contact',
+          },
+        ]
+      )
+    ).toEqual([
+      {
+        email: 'fill@example.com',
+        active: true,
+        entity_type: 'contact',
+        entity_id: 'contact-44',
+        name: 'Fill Contact',
+      },
+    ]);
+  });
 });

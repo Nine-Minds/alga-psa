@@ -215,7 +215,7 @@
   {
     "id": "F026",
     "description": "Update watch-list parse/merge utilities to round-trip and merge entity metadata for duplicate emails without breaking existing legacy entries.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Functional Requirements",
       "Non-functional Requirements"
