@@ -276,7 +276,7 @@
   {
     "id": "T116",
     "description": "OrgChart positions child nodes below their parent with appropriate spacing",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F070"
     ]
