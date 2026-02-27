@@ -303,6 +303,76 @@ describe('Email attachment ingestion (workflow-worker action override)', () => {
     expect(docs.length).toBe(0);
   });
 
+  it('T042: IMAP payload attachment bytes create storage-backed ticket document', async () => {
+    const { action } = await createAttachmentAction();
+    const providerId = uuidv4();
+    const ticketId = uuidv4();
+    const emailId = `imap-msg-${uuidv4()}`;
+    const attachmentId = `imap-att-${uuidv4()}`;
+    const fileName = 'imap-upload.txt';
+    const payloadBytes = Buffer.from('imap payload attachment bytes', 'utf-8');
+
+    await insertImapProvider(db, tenantId, providerId);
+
+    const res = await action.execute(
+      {
+        emailId,
+        attachmentId,
+        ticketId,
+        tenant: tenantId,
+        providerId,
+        attachmentData: {
+          id: attachmentId,
+          name: fileName,
+          contentType: 'text/plain',
+          size: payloadBytes.length,
+          isInline: false,
+          content: payloadBytes.toString('base64'),
+        },
+      },
+      {
+        tenant: tenantId,
+        executionId: 'test',
+        idempotencyKey: 'test',
+        parameters: {},
+        knex: db,
+      } as any
+    );
+
+    expect(res).toMatchObject({
+      success: true,
+      fileName,
+      fileSize: payloadBytes.length,
+      contentType: 'text/plain',
+    });
+    expect(uploads).toHaveLength(1);
+    expect(uploads[0]).toMatchObject({ size: payloadBytes.length, mime_type: 'text/plain' });
+
+    const fileRow = await db('external_files')
+      .where({ tenant: tenantId, original_name: fileName })
+      .first();
+    expect(fileRow).toBeTruthy();
+    expect(fileRow?.mime_type).toBe('text/plain');
+    expect(Number(fileRow?.file_size ?? 0)).toBe(payloadBytes.length);
+
+    const docRow = await db('documents')
+      .where({ tenant: tenantId, document_name: fileName })
+      .first();
+    expect(docRow).toBeTruthy();
+    expect(docRow?.mime_type).toBe('text/plain');
+    expect(Number(docRow?.file_size ?? 0)).toBe(payloadBytes.length);
+
+    const assoc = await db('document_associations')
+      .where({
+        tenant: tenantId,
+        entity_type: 'ticket',
+        entity_id: ticketId,
+        document_id: docRow?.document_id,
+      })
+      .first();
+    expect(assoc).toBeTruthy();
+  });
+
   it('retries failed processing without duplicating records', async () => {
     const { action } = await createAttachmentAction();
     const providerId = uuidv4();
@@ -860,6 +930,20 @@ async function insertGoogleProvider(connection: Knex, tenant: string, providerId
     access_token: 'token',
     refresh_token: 'refresh',
     token_expires_at: connection.fn.now(),
+    created_at: connection.fn.now(),
+    updated_at: connection.fn.now(),
+  });
+}
+
+async function insertImapProvider(connection: Knex, tenant: string, providerId: string): Promise<void> {
+  await connection('email_providers').insert({
+    id: providerId,
+    tenant,
+    provider_type: 'imap',
+    provider_name: 'Test IMAP',
+    mailbox: `imap-${providerId.slice(0, 8)}@example.com`,
+    is_active: true,
+    status: 'connected',
     created_at: connection.fn.now(),
     updated_at: connection.fn.now(),
   });

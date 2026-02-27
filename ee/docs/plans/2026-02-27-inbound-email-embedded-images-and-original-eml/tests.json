@@ -360,7 +360,7 @@
   {
     "id": "T042",
     "description": "E2E: IMAP inbound with regular attachment bytes in payload creates storage-backed ticket document",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F028",
       "F029"
