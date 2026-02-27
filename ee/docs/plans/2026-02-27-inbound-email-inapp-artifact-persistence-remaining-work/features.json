@@ -86,7 +86,7 @@
   {
     "id": "F228",
     "description": "Emit structured ingress/artifact skip reasons for over-limit payload elements and continue processing eligible artifacts",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Safety / Performance", "Acceptance Criteria"]
   },
   {

@@ -106,3 +106,10 @@ Create a clean, implementation-ready plan containing only remaining work for inb
     - `IMAP_MAX_TOTAL_ATTACHMENT_BYTES`
     - `IMAP_MAX_ATTACHMENT_COUNT`
     - `IMAP_MAX_RAW_MIME_BYTES`.
+- 2026-02-27: Completed `F228`.
+  - Over-limit payload elements now emit structured `ingressSkipReasons` entries with deterministic reason enums:
+    - `attachment_over_max_bytes`
+    - `attachment_total_bytes_exceeded`
+    - `attachment_count_exceeded`
+    - `raw_mime_over_max_bytes`
+  - Eligible attachments continue through in-app artifact processing.
