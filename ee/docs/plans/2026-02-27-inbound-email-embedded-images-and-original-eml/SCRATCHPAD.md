@@ -101,3 +101,4 @@ Rolling notes for embedded inbound-email image extraction + source `.eml` persis
 - (2026-02-27) Completed T011 — Covered by systemEmailProcessingWorkflowAttachments.integration.test.ts: reply path invokes embedded extraction/processing.
 - (2026-02-27) Completed T012 — Covered by emailAttachmentIngestion.integration.test.ts: synthetic embedded image creates external_files with expected mime/size.
 - (2026-02-27) Completed T013 — Covered by emailAttachmentIngestion.integration.test.ts: synthetic embedded image creates documents metadata row.
+- (2026-02-27) Completed T014 — Covered by emailAttachmentIngestion.integration.test.ts: synthetic embedded image creates ticket document_associations row.

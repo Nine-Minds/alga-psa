@@ -118,7 +118,7 @@
   {
     "id": "T014",
     "description": "DB integration happy-path: embedded image processing creates ticket document_associations row",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F010"
     ]
