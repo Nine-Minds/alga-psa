@@ -222,3 +222,7 @@ Create a clean, implementation-ready plan containing only remaining work for inb
   - Duplicate-message idempotency integration scenario added in `T225` asserts embedded image document (`embedded-image-1.png`) remains single-instance after replay.
 - Validation:
   - Reused targeted duplicate-idempotency integration command from `T225`.
+- 2026-02-27: Completed `T227`.
+  - Duplicate-message idempotency integration scenario added in `T225` also asserts deterministic original-email `.eml` document remains single-instance after replay.
+- Validation:
+  - Reused targeted duplicate-idempotency integration command from `T225`.

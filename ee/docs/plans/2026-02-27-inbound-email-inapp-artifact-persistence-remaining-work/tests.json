@@ -114,7 +114,7 @@
   {
     "id": "T227",
     "description": "Integration: duplicate inbound message does not create duplicate .eml documents",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F224"
     ]
