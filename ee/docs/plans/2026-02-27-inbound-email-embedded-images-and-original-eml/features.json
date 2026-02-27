@@ -211,7 +211,7 @@
   {
     "id": "F025",
     "description": "Update integration and workflow test fixtures to include embedded-image and source-email scenarios",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Acceptance Criteria",
       "Requirements"
