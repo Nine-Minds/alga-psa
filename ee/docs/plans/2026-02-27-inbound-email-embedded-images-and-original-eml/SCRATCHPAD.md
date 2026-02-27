@@ -118,3 +118,4 @@ Rolling notes for embedded inbound-email image extraction + source `.eml` persis
 - (2026-02-27) Completed T028 — Covered by systemEmailProcessingWorkflowAttachments.integration.test.ts: .eml persistence failure does not block reply flow.
 - (2026-02-27) Completed T029 — Covered by emailWorkflowSchemas.contract.test.ts: schema accepts isInline/content fields for inline processing.
 - (2026-02-27) Completed T030 — Covered by emailWorkflowSchemas.contract.test.ts: schema changes remain backward compatible with legacy provider payloads.
+- (2026-02-27) Completed T031 — Added Playwright scenario in ee/server/src/__tests__/integration/email-attachments-to-ticket-documents.playwright.test.ts that validates embedded data:image attachment filenames are visible in Ticket Documents.

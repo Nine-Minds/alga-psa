@@ -258,7 +258,7 @@
   {
     "id": "T031",
     "description": "E2E: inbound email with HTML data:image results in image document visible in Ticket Documents",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F007",
       "F010",

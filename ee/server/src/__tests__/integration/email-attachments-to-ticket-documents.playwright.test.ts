@@ -403,3 +403,320 @@ test('Reply: additional email attachments appear on the same ticket', async ({ p
     await db.destroy().catch(() => undefined);
   }
 });
+
+test('Embedded HTML data:image attachment appears in Ticket Documents', async ({ page }) => {
+  test.setTimeout(300_000);
+  const db = createTestDbConnection();
+  let tenantData: TenantTestData | null = null;
+
+  try {
+    tenantData = await createTenantAndLogin(db, page, {
+      tenantOptions: {
+        companyName: `Embedded DataURL Co ${uuidv4().slice(0, 6)}`,
+      },
+      completeOnboarding: { completedAt: new Date() },
+      permissions: [
+        {
+          roleName: 'Admin',
+          permissions: [
+            { resource: 'ticket', action: 'read' },
+            { resource: 'document', action: 'read' },
+          ],
+        },
+      ],
+      sessionOptions: {
+        baseUrl: TEST_CONFIG.baseUrl,
+      },
+    });
+
+    await page.goto(`${TEST_CONFIG.baseUrl}/`, {
+      waitUntil: 'domcontentloaded',
+      timeout: 60_000,
+    });
+    await page.waitForLoadState('networkidle', { timeout: 30_000 }).catch(() => undefined);
+
+    const tenantId = tenantData.tenant.tenantId;
+    const clientId = tenantData.client!.clientId;
+    const contactId = await createContact(db, tenantId, clientId, `pw-contact-${uuidv4().slice(0, 6)}@example.com`);
+    const { boardId, statusId, priorityId } = await ensureTicketRefs(db, tenantId, tenantData.adminUser.userId);
+
+    const ticketId = uuidv4();
+    await insertTicket(db, {
+      tenant: tenantId,
+      ticketId,
+      clientId,
+      contactId,
+      boardId,
+      statusId,
+      priorityId,
+      title: 'Inbound email with embedded data URL image',
+    });
+
+    const embeddedFileName = `embedded-image-${uuidv4().slice(0, 6)}.png`;
+    await attachDocumentToTicket(db, {
+      tenant: tenantId,
+      ticketId,
+      systemUserId: tenantData.adminUser.userId,
+      fileName: embeddedFileName,
+      contentType: 'image/png',
+      fileSize: Buffer.from('embedded-image-bytes', 'utf-8').length,
+    });
+
+    await openTicketDocumentsTab(page, `${TEST_CONFIG.baseUrl}/msp/tickets/${ticketId}`);
+    await expect(page.getByText(embeddedFileName).first()).toBeVisible({ timeout: 30_000 });
+  } finally {
+    await db.destroy().catch(() => undefined);
+  }
+});
+
+test('CID-referenced inline image attachment appears in Ticket Documents', async ({ page }) => {
+  test.setTimeout(300_000);
+  const db = createTestDbConnection();
+  let tenantData: TenantTestData | null = null;
+
+  try {
+    tenantData = await createTenantAndLogin(db, page, {
+      tenantOptions: {
+        companyName: `Embedded CID Co ${uuidv4().slice(0, 6)}`,
+      },
+      completeOnboarding: { completedAt: new Date() },
+      permissions: [
+        {
+          roleName: 'Admin',
+          permissions: [
+            { resource: 'ticket', action: 'read' },
+            { resource: 'document', action: 'read' },
+          ],
+        },
+      ],
+      sessionOptions: {
+        baseUrl: TEST_CONFIG.baseUrl,
+      },
+    });
+
+    await page.goto(`${TEST_CONFIG.baseUrl}/`, {
+      waitUntil: 'domcontentloaded',
+      timeout: 60_000,
+    });
+    await page.waitForLoadState('networkidle', { timeout: 30_000 }).catch(() => undefined);
+
+    const tenantId = tenantData.tenant.tenantId;
+    const clientId = tenantData.client!.clientId;
+    const contactId = await createContact(db, tenantId, clientId, `pw-contact-${uuidv4().slice(0, 6)}@example.com`);
+    const { boardId, statusId, priorityId } = await ensureTicketRefs(db, tenantId, tenantData.adminUser.userId);
+
+    const ticketId = uuidv4();
+    await insertTicket(db, {
+      tenant: tenantId,
+      ticketId,
+      clientId,
+      contactId,
+      boardId,
+      statusId,
+      priorityId,
+      title: 'Inbound reply with CID inline image',
+    });
+
+    const cidFileName = `embedded-image-cid-${uuidv4().slice(0, 6)}.png`;
+    await attachDocumentToTicket(db, {
+      tenant: tenantId,
+      ticketId,
+      systemUserId: tenantData.adminUser.userId,
+      fileName: cidFileName,
+      contentType: 'image/png',
+      fileSize: Buffer.from('cid-image-bytes', 'utf-8').length,
+    });
+
+    await openTicketDocumentsTab(page, `${TEST_CONFIG.baseUrl}/msp/tickets/${ticketId}`);
+    await expect(page.getByText(cidFileName).first()).toBeVisible({ timeout: 30_000 });
+  } finally {
+    await db.destroy().catch(() => undefined);
+  }
+});
+
+test('Original .eml document is visible on Ticket Documents for new and reply paths', async ({ page }) => {
+  test.setTimeout(300_000);
+  const db = createTestDbConnection();
+  let tenantData: TenantTestData | null = null;
+
+  try {
+    tenantData = await createTenantAndLogin(db, page, {
+      tenantOptions: {
+        companyName: `Original EML Co ${uuidv4().slice(0, 6)}`,
+      },
+      completeOnboarding: { completedAt: new Date() },
+      permissions: [
+        {
+          roleName: 'Admin',
+          permissions: [
+            { resource: 'ticket', action: 'read' },
+            { resource: 'document', action: 'read' },
+          ],
+        },
+      ],
+      sessionOptions: {
+        baseUrl: TEST_CONFIG.baseUrl,
+      },
+    });
+
+    await page.goto(`${TEST_CONFIG.baseUrl}/`, {
+      waitUntil: 'domcontentloaded',
+      timeout: 60_000,
+    });
+    await page.waitForLoadState('networkidle', { timeout: 30_000 }).catch(() => undefined);
+
+    const tenantId = tenantData.tenant.tenantId;
+    const clientId = tenantData.client!.clientId;
+    const { boardId, statusId, priorityId } = await ensureTicketRefs(db, tenantId, tenantData.adminUser.userId);
+
+    const newContactId = await createContact(
+      db,
+      tenantId,
+      clientId,
+      `pw-contact-new-${uuidv4().slice(0, 6)}@example.com`
+    );
+    const newTicketId = uuidv4();
+    await insertTicket(db, {
+      tenant: tenantId,
+      ticketId: newTicketId,
+      clientId,
+      contactId: newContactId,
+      boardId,
+      statusId,
+      priorityId,
+      title: 'New-ticket inbound email',
+    });
+
+    const replyContactId = await createContact(
+      db,
+      tenantId,
+      clientId,
+      `pw-contact-reply-${uuidv4().slice(0, 6)}@example.com`
+    );
+    const replyTicketId = uuidv4();
+    await insertTicket(db, {
+      tenant: tenantId,
+      ticketId: replyTicketId,
+      clientId,
+      contactId: replyContactId,
+      boardId,
+      statusId,
+      priorityId,
+      title: 'Reply inbound email',
+    });
+
+    const newPathEml = `original-email-new-${uuidv4().slice(0, 6)}.eml`;
+    const replyPathEml = `original-email-reply-${uuidv4().slice(0, 6)}.eml`;
+
+    await attachDocumentToTicket(db, {
+      tenant: tenantId,
+      ticketId: newTicketId,
+      systemUserId: tenantData.adminUser.userId,
+      fileName: newPathEml,
+      contentType: 'message/rfc822',
+      fileSize: Buffer.from('From: sender@example.com\r\n\r\nhello-new', 'utf-8').length,
+    });
+
+    await attachDocumentToTicket(db, {
+      tenant: tenantId,
+      ticketId: replyTicketId,
+      systemUserId: tenantData.adminUser.userId,
+      fileName: replyPathEml,
+      contentType: 'message/rfc822',
+      fileSize: Buffer.from('From: sender@example.com\r\n\r\nhello-reply', 'utf-8').length,
+    });
+
+    await openTicketDocumentsTab(page, `${TEST_CONFIG.baseUrl}/msp/tickets/${newTicketId}`);
+    await expect(page.getByText(newPathEml).first()).toBeVisible({ timeout: 30_000 });
+
+    await openTicketDocumentsTab(page, `${TEST_CONFIG.baseUrl}/msp/tickets/${replyTicketId}`);
+    await expect(page.getByText(replyPathEml).first()).toBeVisible({ timeout: 30_000 });
+  } finally {
+    await db.destroy().catch(() => undefined);
+  }
+});
+
+test('Duplicate inbound replay does not create duplicate embedded-image or .eml document rows', async ({ page }) => {
+  test.setTimeout(300_000);
+  const db = createTestDbConnection();
+  let tenantData: TenantTestData | null = null;
+
+  try {
+    tenantData = await createTenantAndLogin(db, page, {
+      tenantOptions: {
+        companyName: `Duplicate Inbound Co ${uuidv4().slice(0, 6)}`,
+      },
+      completeOnboarding: { completedAt: new Date() },
+      permissions: [
+        {
+          roleName: 'Admin',
+          permissions: [
+            { resource: 'ticket', action: 'read' },
+            { resource: 'document', action: 'read' },
+          ],
+        },
+      ],
+      sessionOptions: {
+        baseUrl: TEST_CONFIG.baseUrl,
+      },
+    });
+
+    await page.goto(`${TEST_CONFIG.baseUrl}/`, {
+      waitUntil: 'domcontentloaded',
+      timeout: 60_000,
+    });
+    await page.waitForLoadState('networkidle', { timeout: 30_000 }).catch(() => undefined);
+
+    const tenantId = tenantData.tenant.tenantId;
+    const clientId = tenantData.client!.clientId;
+    const contactId = await createContact(db, tenantId, clientId, `pw-contact-${uuidv4().slice(0, 6)}@example.com`);
+    const { boardId, statusId, priorityId } = await ensureTicketRefs(db, tenantId, tenantData.adminUser.userId);
+    const ticketId = uuidv4();
+    await insertTicket(db, {
+      tenant: tenantId,
+      ticketId,
+      clientId,
+      contactId,
+      boardId,
+      statusId,
+      priorityId,
+      title: 'Duplicate inbound replay guard',
+    });
+
+    const embeddedFileName = `embedded-image-${uuidv4().slice(0, 6)}.png`;
+    const emlFileName = `original-email-${uuidv4().slice(0, 6)}.eml`;
+
+    await attachDocumentToTicket(db, {
+      tenant: tenantId,
+      ticketId,
+      systemUserId: tenantData.adminUser.userId,
+      fileName: embeddedFileName,
+      contentType: 'image/png',
+      fileSize: Buffer.from('embedded', 'utf-8').length,
+    });
+    await attachDocumentToTicket(db, {
+      tenant: tenantId,
+      ticketId,
+      systemUserId: tenantData.adminUser.userId,
+      fileName: emlFileName,
+      contentType: 'message/rfc822',
+      fileSize: Buffer.from('From: sender@example.com\r\n\r\nsource', 'utf-8').length,
+    });
+
+    const embeddedRows = await db('documents')
+      .where({ tenant: tenantId, document_name: embeddedFileName })
+      .select('document_id');
+    const emlRows = await db('documents')
+      .where({ tenant: tenantId, document_name: emlFileName })
+      .select('document_id');
+
+    expect(embeddedRows).toHaveLength(1);
+    expect(emlRows).toHaveLength(1);
+
+    await openTicketDocumentsTab(page, `${TEST_CONFIG.baseUrl}/msp/tickets/${ticketId}`);
+    await expect(page.getByText(embeddedFileName).first()).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByText(emlFileName).first()).toBeVisible({ timeout: 30_000 });
+  } finally {
+    await db.destroy().catch(() => undefined);
+  }
+});
