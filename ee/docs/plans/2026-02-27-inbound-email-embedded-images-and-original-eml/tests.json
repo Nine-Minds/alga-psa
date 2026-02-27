@@ -19,7 +19,7 @@
   },
   {
     "id": "T003",
-    "description": "Unit: malformed data:image payload is skipped and does not throw workflow-failing error",
+    "description": "Unit: malformed data:image payload is skipped and does not throw processing-failing error",
     "implemented": true,
     "featureIds": [
       "F003",
@@ -80,7 +80,7 @@
   },
   {
     "id": "T010",
-    "description": "Workflow integration: new-ticket inbound path invokes embedded-image processing for extracted images",
+    "description": "In-app integration: new-ticket inbound path invokes embedded-image processing for extracted images",
     "implemented": true,
     "featureIds": [
       "F007",
@@ -89,7 +89,7 @@
   },
   {
     "id": "T011",
-    "description": "Workflow integration: reply path invokes embedded-image processing for extracted images",
+    "description": "In-app integration: reply path invokes embedded-image processing for extracted images",
     "implemented": true,
     "featureIds": [
       "F008",
@@ -209,7 +209,7 @@
   },
   {
     "id": "T025",
-    "description": "Workflow integration: new-ticket path invokes process_original_email_attachment exactly once per email",
+    "description": "In-app integration: new-ticket path persists original .eml exactly once per email",
     "implemented": true,
     "featureIds": [
       "F018"
@@ -217,7 +217,7 @@
   },
   {
     "id": "T026",
-    "description": "Workflow integration: reply path invokes process_original_email_attachment exactly once per email",
+    "description": "In-app integration: reply path persists original .eml exactly once per email",
     "implemented": true,
     "featureIds": [
       "F019"
@@ -225,7 +225,7 @@
   },
   {
     "id": "T027",
-    "description": "Workflow integration guard: .eml persistence failure does not block ticket creation in new-ticket flow",
+    "description": "In-app integration guard: .eml persistence failure does not block ticket creation in new-ticket flow",
     "implemented": true,
     "featureIds": [
       "F021"
@@ -233,7 +233,7 @@
   },
   {
     "id": "T028",
-    "description": "Workflow integration guard: .eml persistence failure does not block comment creation in reply flow",
+    "description": "In-app integration guard: .eml persistence failure does not block comment creation in reply flow",
     "implemented": true,
     "featureIds": [
       "F021"
@@ -249,7 +249,7 @@
   },
   {
     "id": "T030",
-    "description": "Schema contract test: event schema changes remain backward compatible with existing provider payloads",
+    "description": "Schema contract test: inbound payload schema changes remain backward compatible with existing provider payloads",
     "implemented": true,
     "featureIds": [
       "F023"
@@ -288,7 +288,7 @@
   },
   {
     "id": "T034",
-    "description": "E2E guard: duplicate inbound webhook/event does not duplicate embedded image or .eml documents",
+    "description": "E2E guard: duplicate inbound deliveries/retries do not duplicate embedded image or .eml documents",
     "implemented": true,
     "featureIds": [
       "F011",
@@ -298,7 +298,7 @@
   },
   {
     "id": "T035",
-    "description": "Integration: IMAP webhook route returns success quickly after auth/validation/handoff without performing byte persistence inline",
+    "description": "Integration: IMAP webhook route returns success quickly after auth/validation and lightweight in-app dispatch (direct or app-local in-process worker) without performing byte persistence inline",
     "implemented": true,
     "featureIds": [
       "F026"
@@ -306,7 +306,7 @@
   },
   {
     "id": "T036",
-    "description": "Integration guard: IMAP webhook request with invalid/missing secret is rejected before any async handoff work",
+    "description": "Integration guard: IMAP webhook request with invalid/missing secret is rejected before any in-app dispatch work",
     "implemented": true,
     "featureIds": [
       "F026"
