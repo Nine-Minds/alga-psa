@@ -10,7 +10,7 @@
   {
     "id": "T215",
     "description": "Unit: in-app artifact orchestrator is invoked for threaded-reply flow after comment creation",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F215"
     ]
