@@ -128,8 +128,8 @@ export async function sendSlaNotification(
       : 'sla-warning';
 
     const emailTemplateName = notificationType === 'breach'
-      ? 'SLA Breach'
-      : 'SLA Warning';
+      ? 'sla-breach'
+      : 'sla-warning';
 
     // 5. Prepare template data
     const templateData = {
@@ -567,6 +567,40 @@ async function logNotificationEvent(
  * @param slaType - Whether this is for response or resolution
  * @param lastNotifiedThreshold - The last threshold percentage that was notified
  */
+/**
+ * Find which SLA notification thresholds have been crossed since the last check.
+ * Returns the crossed thresholds without sending any notifications.
+ */
+export async function findCrossedThresholds(
+  trx: Knex.Transaction,
+  tenant: string,
+  ticketId: string,
+  elapsedPercent: number,
+  slaType: 'response' | 'resolution',
+  lastNotifiedThreshold: number = 0
+): Promise<{ thresholds: Array<{ threshold_percent: number }>; highestThreshold: number }> {
+  const thresholds = await trx('sla_notification_thresholds as snt')
+    .join('tickets as t', function() {
+      this.on('t.sla_policy_id', 'snt.sla_policy_id')
+          .andOn('t.tenant', 'snt.tenant');
+    })
+    .where('t.tenant', tenant)
+    .where('t.ticket_id', ticketId)
+    .where('snt.threshold_percent', '>', lastNotifiedThreshold)
+    .where('snt.threshold_percent', '<=', elapsedPercent)
+    .orderBy('snt.threshold_percent', 'asc')
+    .select('snt.*');
+
+  if (thresholds.length === 0) {
+    return { thresholds: [], highestThreshold: lastNotifiedThreshold };
+  }
+
+  return {
+    thresholds,
+    highestThreshold: thresholds[thresholds.length - 1].threshold_percent,
+  };
+}
+
 export async function checkAndSendThresholdNotifications(
   trx: Knex.Transaction,
   tenant: string,
