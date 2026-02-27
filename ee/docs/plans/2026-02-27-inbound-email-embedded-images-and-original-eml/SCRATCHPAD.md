@@ -160,6 +160,7 @@ Rolling notes for embedded inbound-email image extraction + source `.eml` persis
 - (2026-02-27) Completed T043 — Added integration coverage for IMAP embedded extraction + persistence: HTML `data:image` plus HTML-referenced CID inline image are persisted, while unreferenced CID inline artifacts are not persisted.
 - (2026-02-27) Completed T044 — Added integration coverage proving IMAP `rawMimeBase64` persists exactly one deterministic `original-email-<message-id>.eml` document associated to the ticket.
 - (2026-02-27) Completed T045 — Added workflow integration assertion that per-message attachment artifact processing remains sequential (`maxInFlight=1`) rather than unbounded parallel fan-out.
+- (2026-02-27) Completed T046 — Added workflow integration guard with IMAP ingress skip-reason payloads proving over-limit artifacts are logged as skipped while ticket/comment creation still completes.
 - (2026-02-27) Completed F026 — Refactored IMAP webhook route to auth/validate/handoff only by publishing `INBOUND_EMAIL_RECEIVED` and returning queued success without inline persistence.
 - (2026-02-27) Completed F027 — Added IMAP ingress hard-cap enforcement for per-attachment bytes, total attachment bytes, attachment count, and raw MIME bytes prior to payload encoding/dispatch.
 - (2026-02-27) Completed F028 — IMAP webhook payload now carries capped raw MIME base64 and attachment byte fields needed for downstream document + `.eml` persistence.

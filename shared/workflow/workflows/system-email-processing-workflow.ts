@@ -135,7 +135,17 @@ export async function systemEmailProcessingWorkflow(context) {
     scopeLabel,
   }) => {
     const baseAttachments = Array.isArray(emailData.attachments) ? emailData.attachments : [];
+    const ingressSkipReasons = Array.isArray(emailData.ingressSkipReasons)
+      ? emailData.ingressSkipReasons
+      : [];
     let embeddedAttachments = [];
+
+    if (ingressSkipReasons.length > 0) {
+      console.warn(`[${scopeLabel}] ingress skipped artifacts`, {
+        emailId: emailData.id,
+        reasons: ingressSkipReasons,
+      });
+    }
 
     if (emailData.body?.html) {
       try {

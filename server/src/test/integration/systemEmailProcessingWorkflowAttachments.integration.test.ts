@@ -134,7 +134,7 @@ describe('systemEmailProcessingWorkflow: attachment processing behavior', () => 
           subject: 'Subject',
           from: { email: 'from@example.com', name: 'From' },
           to: [{ email: 'to@example.com', name: 'To' }],
-          body: { text: 'hello', html: undefined },
+          body: { text: 'hello', html: '<p>hello</p>' },
           receivedAt: new Date().toISOString(),
           attachments: [
             { id: 'a1', name: 'a1.txt', contentType: 'text/plain', size: 1 },
@@ -207,7 +207,7 @@ describe('systemEmailProcessingWorkflow: attachment processing behavior', () => 
           subject: 'Re: Subject',
           from: { email: 'from@example.com', name: 'From' },
           to: [{ email: 'to@example.com', name: 'To' }],
-          body: { text: 'reply', html: undefined },
+          body: { text: 'reply', html: '<p>reply</p>' },
           receivedAt: new Date().toISOString(),
           attachments: [{ id: 'r1', name: 'r1.txt', contentType: 'text/plain', size: 1 }],
           threadId: 'thread-1',
@@ -334,6 +334,81 @@ describe('systemEmailProcessingWorkflow: attachment processing behavior', () => 
       'start:a3',
       'end:a3',
     ]);
+  });
+
+  it('T046: over-limit artifacts are logged as skipped while ticket/comment creation still succeeds', async () => {
+    const processedAttachmentIds: string[] = [];
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    try {
+      const { context, actions, states } = createWorkflowHarness({
+        processEmailAttachmentImpl: async (params: any) => {
+          processedAttachmentIds.push(params.attachmentId);
+          return { success: true };
+        },
+        processOriginalEmailAttachmentImpl: async () => ({
+          success: true,
+          skipped: true,
+          reason: 'raw_mime_over_max_bytes',
+        }),
+        findTicketByEmailThreadResult: { success: true, ticket: null },
+        eventPayload: {
+          tenantId: 'tenant-1',
+          providerId: 'provider-1',
+          emailData: {
+            id: 'msg-over-limit-1',
+            subject: 'Over limit artifacts',
+            from: { email: 'from@example.com', name: 'From' },
+            to: [{ email: 'to@example.com', name: 'To' }],
+            body: { text: 'hello', html: undefined },
+            receivedAt: new Date().toISOString(),
+            attachments: [{ id: 'a1', name: 'a1.txt', contentType: 'text/plain', size: 1 }],
+            ingressSkipReasons: [
+              {
+                type: 'attachment',
+                reason: 'attachment_over_max_bytes',
+                attachmentId: 'a-too-large',
+                attachmentName: 'too-large.bin',
+                size: 4096,
+                cap: 1024,
+              },
+              {
+                type: 'raw_mime',
+                reason: 'raw_mime_over_max_bytes',
+                size: 8192,
+                cap: 2048,
+              },
+            ],
+            threadId: 'thread-over-limit-1',
+            inReplyTo: null,
+            references: [],
+            providerId: 'provider-1',
+            tenant: 'tenant-1',
+          },
+        },
+      });
+
+      await expect(systemEmailProcessingWorkflow({ ...context })).resolves.toBeUndefined();
+
+      expect(actions.create_ticket_from_email).toHaveBeenCalledTimes(1);
+      expect(actions.create_comment_from_email).toHaveBeenCalledTimes(1);
+      expect(actions.process_email_attachment).toHaveBeenCalledTimes(1);
+      expect(actions.process_original_email_attachment).toHaveBeenCalledTimes(1);
+      expect(processedAttachmentIds).toEqual(['a1']);
+      expect(states).toContain('EMAIL_PROCESSED');
+      expect(warnSpy).toHaveBeenCalledWith(
+        '[new-ticket] ingress skipped artifacts',
+        expect.objectContaining({
+          emailId: 'msg-over-limit-1',
+          reasons: expect.arrayContaining([
+            expect.objectContaining({ reason: 'attachment_over_max_bytes' }),
+            expect.objectContaining({ reason: 'raw_mime_over_max_bytes' }),
+          ]),
+        })
+      );
+    } finally {
+      warnSpy.mockRestore();
+    }
   });
 
   it('does not block new-ticket creation when original .eml persistence fails', async () => {

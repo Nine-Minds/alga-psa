@@ -395,7 +395,7 @@
   {
     "id": "T046",
     "description": "E2E guard: over-limit artifacts are skipped with recorded reasons while ticket/comment creation still succeeds",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F033"
     ]
