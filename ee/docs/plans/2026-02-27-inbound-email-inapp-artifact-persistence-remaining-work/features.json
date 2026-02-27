@@ -98,7 +98,7 @@
   {
     "id": "F230",
     "description": "Bound per-message artifact processing concurrency in async mode to avoid Node.js event-loop starvation",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Goals", "Safety / Performance"]
   },
   {

@@ -116,3 +116,8 @@ Create a clean, implementation-ready plan containing only remaining work for inb
 - 2026-02-27: Completed `F229`.
   - Added app-local async IMAP callback queue (`packages/integrations/src/webhooks/email/imapInAppQueue.ts`).
   - Webhook can now defer in-app processing when `IMAP_INBOUND_EMAIL_IN_APP_ASYNC_ENABLED=true`, returning quickly with queue metadata.
+- 2026-02-27: Completed `F230`.
+  - Added explicit attachment artifact concurrency bounding in `processInboundEmailArtifactsBestEffort(...)` via:
+    - `IMAP_INBOUND_EMAIL_IN_APP_ARTIFACT_CONCURRENCY`
+    - `INBOUND_EMAIL_IN_APP_ARTIFACT_CONCURRENCY`
+  - Async queue worker concurrency is separately bounded by `IMAP_INBOUND_EMAIL_IN_APP_ASYNC_WORKERS`.
