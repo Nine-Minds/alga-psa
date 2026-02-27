@@ -210,7 +210,7 @@
   {
     "id": "T025",
     "description": "Workflow integration: new-ticket path invokes process_original_email_attachment exactly once per email",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F018"
     ]
