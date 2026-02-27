@@ -463,7 +463,7 @@
   {
     "id": "T139",
     "description": "MultiUserAndTeamPicker: teams show TeamAvatar in all 4 display contexts (summary single, summary multi, chip, dropdown)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F086",
       "F087"
