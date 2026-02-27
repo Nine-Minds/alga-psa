@@ -45,7 +45,7 @@
   {
     "id": "T219",
     "description": "Unit: only HTML-referenced CID inline parts are extracted; unreferenced inline parts are skipped",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F219",
       "F220"

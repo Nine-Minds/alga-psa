@@ -176,3 +176,8 @@ Create a clean, implementation-ready plan containing only remaining work for inb
   - Test asserts generated synthetic artifact shape and stable deterministic ID/name/content across repeated extraction calls.
 - Validation:
   - `npx vitest run --config shared/vitest.config.ts shared/services/email/__tests__/inboundEmailArtifactHelpers.test.ts --coverage.enabled=false`
+- 2026-02-27: Completed `T219`.
+  - Added CID extraction unit coverage in `shared/services/email/__tests__/inboundEmailArtifactHelpers.test.ts` proving only HTML-referenced CID parts are synthesized.
+  - Test fixture includes referenced and unreferenced inline attachments; assertion verifies only the referenced CID becomes a synthetic artifact.
+- Validation:
+  - Reused helper-unit test command from `T218`.
