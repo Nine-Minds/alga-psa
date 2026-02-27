@@ -338,7 +338,7 @@
   {
     "id": "F092",
     "description": "Pickers show colored initials (EntityAvatar fallback) when no team avatar URL is available \u2014 no more generic gray circles",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-3D.7"
     ]
