@@ -306,7 +306,7 @@
   {
     "id": "F088",
     "description": "`MultiUserAndTeamPicker`: add `getTeamAvatarUrlsBatch` prop and batch-fetch team avatar URLs",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-3D.3"
     ]

@@ -14,6 +14,8 @@ import { Button } from './Button';
 import type { ITeam } from '@alga-psa/types';
 import TeamAvatar from './TeamAvatar';
 
+export type GetTeamAvatarUrlsBatch = (teamIds: string[], tenant: string) => Promise<Map<string, string | null>>;
+
 interface MultiUserAndTeamPickerProps {
   id?: string;
   label?: string;
@@ -22,6 +24,7 @@ interface MultiUserAndTeamPickerProps {
   size?: 'sm' | 'lg';
   users: IUser[];
   getUserAvatarUrlsBatch?: GetUserAvatarUrlsBatch;
+  getTeamAvatarUrlsBatch?: GetTeamAvatarUrlsBatch;
   loading?: boolean;
   error?: string | null;
   disabled?: boolean;
@@ -48,6 +51,7 @@ const MultiUserAndTeamPicker = ({
   size = 'sm',
   users,
   getUserAvatarUrlsBatch,
+  getTeamAvatarUrlsBatch,
   loading = false,
   error = null,
   disabled = false,
@@ -67,9 +71,11 @@ const MultiUserAndTeamPicker = ({
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [avatarUrls, setAvatarUrls] = useState<Record<string, string | null>>({});
+  const [teamAvatarUrls, setTeamAvatarUrls] = useState<Record<string, string | null>>({});
   const [dropdownPosition, setDropdownPosition] = useState<'bottom' | 'top'>('bottom');
   const [dropdownCoords, setDropdownCoords] = useState<{ top: number; left: number; width: number }>({ top: 0, left: 0, width: 250 });
   const fetchedUserIdsRef = useRef<Set<string>>(new Set());
+  const fetchedTeamIdsRef = useRef<Set<string>>(new Set());
   const containerRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -90,6 +96,35 @@ const MultiUserAndTeamPicker = ({
   const validValues = values.filter(id => internalUserIds.has(id));
   const teamIds = new Set(teams.map(team => team.team_id));
   const validTeamValues = teamValues.filter(id => teamIds.has(id));
+
+  useEffect(() => {
+    if (!isOpen || !getTeamAvatarUrlsBatch || teams.length === 0) return;
+
+    const tenant = teams[0]?.tenant;
+    if (!tenant) return;
+
+    const teamIdsToFetch = teams
+      .map((team) => team.team_id)
+      .filter((teamId) => !fetchedTeamIdsRef.current.has(teamId));
+
+    if (teamIdsToFetch.length === 0) return;
+
+    const fetchTeamAvatars = async () => {
+      try {
+        const map = await getTeamAvatarUrlsBatch(teamIdsToFetch, tenant);
+        const record: Record<string, string | null> = {};
+        map.forEach((value, key) => {
+          record[key] = value;
+        });
+        teamIdsToFetch.forEach((teamId) => fetchedTeamIdsRef.current.add(teamId));
+        setTeamAvatarUrls((prev) => ({ ...prev, ...record }));
+      } catch (error) {
+        console.error('Error fetching team avatar URLs:', error);
+      }
+    };
+
+    fetchTeamAvatars();
+  }, [isOpen, teams, getTeamAvatarUrlsBatch]);
 
   // If values contained stale IDs, notify parent to clean them up
   // Use a ref to prevent infinite loops - only clean once per unique values array
@@ -353,7 +388,7 @@ const MultiUserAndTeamPicker = ({
             <TeamAvatar
               teamId={team.team_id}
               teamName={team.team_name || 'Unnamed Team'}
-              avatarUrl={null}
+              avatarUrl={teamAvatarUrls[team.team_id] ?? null}
               size="xs"
             />
             <span className="truncate max-w-[120px]">
@@ -382,7 +417,7 @@ const MultiUserAndTeamPicker = ({
             <TeamAvatar
               teamId={firstTeam.team_id}
               teamName={firstTeam.team_name || 'Team'}
-              avatarUrl={null}
+              avatarUrl={teamAvatarUrls[firstTeam.team_id] ?? null}
               size="xs"
             />
           ) : (
@@ -476,7 +511,7 @@ const MultiUserAndTeamPicker = ({
                 <TeamAvatar
                   teamId={team.team_id}
                   teamName={team.team_name || 'Unnamed Team'}
-                  avatarUrl={null}
+                  avatarUrl={teamAvatarUrls[team.team_id] ?? null}
                   size="xs"
                 />
               </div>
@@ -657,7 +692,7 @@ const MultiUserAndTeamPicker = ({
                           <TeamAvatar
                             teamId={team.team_id}
                             teamName={team.team_name || 'Unnamed Team'}
-                            avatarUrl={null}
+                            avatarUrl={teamAvatarUrls[team.team_id] ?? null}
                             size="xs"
                           />
                         </div>
