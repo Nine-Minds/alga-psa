@@ -340,7 +340,7 @@
   {
     "id": "T124",
     "description": "ReactFlow is dynamically imported with `ssr: false` \u2014 no window/document errors during SSR",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F075"
     ]
