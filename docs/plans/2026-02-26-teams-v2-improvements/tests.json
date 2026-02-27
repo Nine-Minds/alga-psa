@@ -488,7 +488,7 @@
   {
     "id": "T142",
     "description": "MultiUserAndTeamPicker: avatar URLs are batch-fetched when dropdown opens",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F088"
     ]
