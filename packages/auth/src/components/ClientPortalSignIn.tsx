@@ -145,7 +145,7 @@ export default function ClientPortalSignIn({ branding }: ClientPortalSignInProps
   // Generate gradient based on branding colors or use defaults
   const gradientStyle = useMemo(() => {
     if (!branding?.primaryColor || !branding?.secondaryColor) {
-      return 'bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:bg-none dark:bg-card';
+      return 'bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-blue-950 dark:via-indigo-950 dark:to-purple-950';
     }
 
     // Create CSS gradient from hex colors with opacity
@@ -161,7 +161,7 @@ export default function ClientPortalSignIn({ branding }: ClientPortalSignInProps
       };
     }
 
-    return 'bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:bg-none dark:bg-card';
+    return 'bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-blue-950 dark:via-indigo-950 dark:to-purple-950';
   }, [branding]);
 
   // Use branded colors for accents
@@ -270,7 +270,7 @@ export default function ClientPortalSignIn({ branding }: ClientPortalSignInProps
 
         {/* Right side with login form */}
         <div className="w-full lg:w-1/2 flex items-center justify-center p-8">
-          <Card className="max-w-md w-full bg-card shadow-xl">
+          <Card className="max-w-md w-full bg-card shadow-xl dark:border dark:border-border-200">
             <CardHeader className="space-y-1">
               <CardTitle className="text-2xl font-bold text-center">
                 {t('auth.signIn', 'Sign In')}

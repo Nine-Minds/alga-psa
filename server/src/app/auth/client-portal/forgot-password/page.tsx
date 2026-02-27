@@ -42,7 +42,7 @@ const ClientPortalForgotPassword: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col items-center pt-20 min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:bg-none dark:bg-card">
+    <div className="flex flex-col items-center pt-20 min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-blue-950 dark:to-indigo-950">
       <div className="w-full max-w-md p-8 space-y-8 bg-card rounded-lg shadow-lg">
         <div className="text-center">
           <div className="inline-block align-middle content-center">
