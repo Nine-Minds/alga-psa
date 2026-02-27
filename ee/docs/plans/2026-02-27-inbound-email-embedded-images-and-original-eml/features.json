@@ -81,7 +81,7 @@
   {
     "id": "F010",
     "description": "Persist embedded images as external_files/documents and associate to tickets via document_associations",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data / API / Integrations",
       "Goals"
