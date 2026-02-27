@@ -44,6 +44,8 @@ import { generateKeyBetween } from 'fractional-indexing';
 import KanbanBoardSkeleton from '@alga-psa/ui/components/skeletons/KanbanBoardSkeleton';
 import { useUserPreference } from '@alga-psa/users/hooks';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
+import { getTeams, getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
+import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { useTheme } from 'next-themes';
 
 const PROJECT_VIEW_MODE_SETTING = 'project_detail_view_mode';
@@ -223,6 +225,8 @@ export default function ProjectDetail({
     }
   );
 
+  const { enabled: teamsV2Enabled } = useFeatureFlag('teams-v2', { defaultValue: false });
+
   // Kanban view state (existing - phase-scoped)
   const [selectedTask, setSelectedTask] = useState<IProjectTask | null>(null);
   const selectedTaskIdRef = useRef<string | null>(null); // Ref for reliable access in callbacks
@@ -250,6 +254,8 @@ export default function ProjectDetail({
   const [phaseTaskResources, setPhaseTaskResources] = useState<{ [taskId: string]: any[] }>({});
   const [phaseTaskDependencies, setPhaseTaskDependencies] = useState<{ [taskId: string]: { predecessors: IProjectTaskDependency[]; successors: IProjectTaskDependency[] } }>({});
   const [avatarUrls, setAvatarUrls] = useState<Record<string, string | null>>({});
+  const [teamNames, setTeamNames] = useState<Record<string, string>>({});
+  const [teamAvatarUrls, setTeamAvatarUrls] = useState<Record<string, string | null>>({});
   const [projectPhases, setProjectPhases] = useState<IProjectPhase[]>(phases);
   const [projectStatuses, setProjectStatuses] = useState<ProjectStatus[]>(initialStatuses);
   const [isLoadingTasks, setIsLoadingTasks] = useState(false);
@@ -971,6 +977,41 @@ export default function ProjectDetail({
 
     fetchAvatarUrls();
   }, [phaseTaskResources, project.tenant]);
+
+  // Fetch team names and avatar URLs for tasks with assigned teams
+  useEffect(() => {
+    if (!teamsV2Enabled) return;
+
+    const fetchTeamData = async () => {
+      const tenant = project.tenant;
+      if (!tenant) return;
+
+      try {
+        const allTeams = await getTeams();
+        const namesMap: Record<string, string> = {};
+        allTeams.forEach(team => {
+          namesMap[team.team_id] = team.team_name;
+        });
+        setTeamNames(namesMap);
+
+        const teamIds = allTeams.map(t => t.team_id);
+        if (teamIds.length > 0) {
+          const avatarUrlsMap = await getTeamAvatarUrlsBatchAction(teamIds, tenant);
+          const urlsRecord: Record<string, string | null> = {};
+          if (avatarUrlsMap instanceof Map) {
+            avatarUrlsMap.forEach((url, id) => { urlsRecord[id] = url; });
+          } else {
+            Object.entries(avatarUrlsMap as Record<string, string | null>).forEach(([id, url]) => { urlsRecord[id] = url; });
+          }
+          setTeamAvatarUrls(urlsRecord);
+        }
+      } catch (error) {
+        console.error('Failed to fetch team data:', error);
+      }
+    };
+
+    fetchTeamData();
+  }, [teamsV2Enabled, project.tenant]);
 
   // Handle opening task from URL parameter (e.g., from notifications)
   // First effect: Fetch task and select its phase
@@ -2466,6 +2507,8 @@ export default function ProjectDetail({
           onTaskTagsChange={handleTaskTagsChange}
           onAssigneeChange={(taskId, newAssigneeId) => handleAssigneeChange(taskId, newAssigneeId)}
           users={users}
+          teamNames={teamNames}
+          teamAvatarUrls={teamAvatarUrls}
           selectedPriorityFilter={selectedPriorityFilter}
           selectedTaskTags={selectedTaskTags}
           selectedAgentFilter={selectedAgentFilter}
@@ -2517,6 +2560,8 @@ export default function ProjectDetail({
             projectTreeData={projectTreeData}
             animatingTasks={animatingTasks}
             avatarUrls={avatarUrls}
+            teamNames={teamNames}
+            teamAvatarUrls={teamAvatarUrls}
             searchQuery={searchQuery}
             searchCaseSensitive={searchCaseSensitive}
             searchWholeWord={searchWholeWord}

@@ -132,6 +132,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
   const [bulkDeleteErrors, setBulkDeleteErrors] = useState<Array<{ ticketId: string; message: string }>>([]);
   const [additionalAgentAvatarUrls, setAdditionalAgentAvatarUrls] = useState<Record<string, string | null>>({});
+  const [teamAvatarUrls, setTeamAvatarUrls] = useState<Record<string, string | null>>({});
   const [isBundleDialogOpen, setIsBundleDialogOpen] = useState(false);
   const [bundleMasterTicketId, setBundleMasterTicketId] = useState<string | null>(null);
   const [bundleSyncUpdates, setBundleSyncUpdates] = useState(true);
@@ -301,6 +302,38 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     };
 
     fetchAvatarUrls();
+  }, [tickets]);
+
+  // Fetch team avatar URLs when tickets change
+  useEffect(() => {
+    const fetchTeamAvatarUrls = async () => {
+      const teamIds = new Set<string>();
+      tickets.forEach(ticket => {
+        if (ticket.assigned_team_id) {
+          teamIds.add(ticket.assigned_team_id);
+        }
+      });
+
+      if (teamIds.size === 0) return;
+
+      const tenant = tickets[0]?.tenant;
+      if (!tenant) return;
+
+      try {
+        const avatarUrlsMap = await getTeamAvatarUrlsBatchAction(Array.from(teamIds), tenant);
+        const urlsRecord: Record<string, string | null> = {};
+        if (avatarUrlsMap instanceof Map) {
+          avatarUrlsMap.forEach((url, id) => { urlsRecord[id] = url; });
+        } else {
+          Object.entries(avatarUrlsMap as Record<string, string | null>).forEach(([id, url]) => { urlsRecord[id] = url; });
+        }
+        setTeamAvatarUrls(urlsRecord);
+      } catch (error) {
+        console.error('Failed to fetch team avatar URLs:', error);
+      }
+    };
+
+    fetchTeamAvatarUrls();
   }, [tickets]);
 
   // Sync selectedTags when initialFilterValues.tags changes (e.g., back/forward navigation)
@@ -968,6 +1001,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       showClient: true,
       onClientClick: onQuickViewClient,
       additionalAgentAvatarUrls,
+      teamAvatarUrls,
       isBundleExpanded: bundleView === 'bundled' ? isBundleExpanded : undefined,
       onToggleBundleExpanded: bundleView === 'bundled' ? toggleBundleExpanded : undefined,
     });
@@ -1045,6 +1079,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     handleTicketSelectionChange,
     selectedTicketIds,
     additionalAgentAvatarUrls,
+    teamAvatarUrls,
     isBundleExpanded,
     toggleBundleExpanded,
     bundleView,

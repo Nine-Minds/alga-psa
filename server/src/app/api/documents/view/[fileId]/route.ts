@@ -176,6 +176,22 @@ export async function GET(
               }
           }
 
+          // Allow any user within the same tenant to view team avatars
+          if (!hasPermission) {
+              const teamAssoc = associations.find((a: { entity_type: string }) => a.entity_type === 'team');
+              if (teamAssoc) {
+                  const associatedTeam = await knex('teams')
+                      .select('tenant')
+                      .where({ team_id: teamAssoc.entity_id })
+                      .first();
+
+                  if (associatedTeam && associatedTeam.tenant === user.tenant) {
+                      hasPermission = true;
+                      console.log(`User ${user.user_id} granted access to team avatar ${fileId} within the same tenant`);
+                  }
+              }
+          }
+
           // Check project_task association - verify client owns the project
           if (!hasPermission && associatedProjectTaskId && user.contact_id) {
               // Get user's client_id if not already fetched

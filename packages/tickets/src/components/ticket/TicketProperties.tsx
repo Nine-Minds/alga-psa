@@ -15,7 +15,10 @@ import { Clock, Edit2, Play, Pause, StopCircle, UserPlus, X, Calendar as Calenda
 import { formatMinutesAsHoursAndMinutes } from '@alga-psa/core';
 import styles from './TicketDetails.module.css';
 import MultiUserPicker from '@alga-psa/ui/components/MultiUserPicker';
+import MultiUserAndTeamPicker from '@alga-psa/ui/components/MultiUserAndTeamPicker';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
+import TeamAvatar from '@alga-psa/ui/components/TeamAvatar';
+import { getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import { toast } from 'react-hot-toast';
@@ -49,6 +52,7 @@ interface TicketPropertiesProps {
   isTimerLocked?: boolean;
   timeDescription: string;
   team: ITeam | null;
+  teams?: ITeam[];
   additionalAgents: ITicketResource[];
   availableAgents: IUserWithRoles[];
   currentTimeSheet: ITimeSheet | null;
@@ -87,6 +91,7 @@ interface TicketPropertiesProps {
   surveySummary?: SurveyTicketSatisfactionSummary | null;
   renderIntervalManagement?: (args: { ticketId: string; userId: string }) => React.ReactNode;
   onRemoveTeamAssignment?: (mode: 'remove_all' | 'keep_all' | 'selective', keepUserIds?: string[]) => Promise<void>;
+  onAssignTeam?: (teamId: string) => Promise<void>;
 }
 
 // Helper function to format location display
@@ -128,6 +133,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
   isTimerLocked = false,
   timeDescription,
   team,
+  teams = [],
   additionalAgents,
   availableAgents,
   currentTimeSheet,
@@ -166,6 +172,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
   surveySummary = null,
   renderIntervalManagement,
   onRemoveTeamAssignment,
+  onAssignTeam,
 }) => {
   const { openDrawer } = useDrawer();
   const { enabled: teamsV2Enabled } = useFeatureFlag('teams-v2', { defaultValue: false });
@@ -189,6 +196,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
   const [isRemoveTeamDialogOpen, setIsRemoveTeamDialogOpen] = useState(false);
   const [removeTeamMode, setRemoveTeamMode] = useState<'remove_all' | 'keep_all' | 'selective'>('remove_all');
   const [selectedTeamMemberIds, setSelectedTeamMemberIds] = useState<string[]>([]);
+  const [teamAvatarUrl, setTeamAvatarUrl] = useState<string | null>(null);
 
   // Register unsaved changes for contact, client, and location pickers
   // Popup triggers if picker is open AND a different selection is made (but not yet saved)
@@ -219,6 +227,26 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
   const teamMembersOnTicket = React.useMemo(() => {
     return additionalAgents.filter(agent => agent.role === 'team_member');
   }, [additionalAgents]);
+
+  useEffect(() => {
+    if (!ticket.assigned_team_id || !tenant) {
+      setTeamAvatarUrl(null);
+      return;
+    }
+    const fetchTeamAvatar = async () => {
+      try {
+        const map = await getTeamAvatarUrlsBatchAction([ticket.assigned_team_id!], tenant);
+        if (map && typeof (map as Map<string, string | null>).get === 'function') {
+          setTeamAvatarUrl((map as Map<string, string | null>).get(ticket.assigned_team_id!) ?? null);
+        } else {
+          setTeamAvatarUrl((map as unknown as Record<string, string | null>)[ticket.assigned_team_id!] ?? null);
+        }
+      } catch {
+        setTeamAvatarUrl(null);
+      }
+    };
+    fetchTeamAvatar();
+  }, [ticket.assigned_team_id, tenant]);
 
   useEffect(() => {
     if (!isRemoveTeamDialogOpen) return;
@@ -829,9 +857,12 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
           <div className="mb-4">
             <div className="flex items-center gap-2">
               <div className="flex items-center gap-1 bg-gray-100 rounded-full pl-1 pr-2 py-1">
-                <div className="h-6 w-6 rounded-full bg-gray-200 flex items-center justify-center text-gray-600">
-                  <Users className="w-3 h-3" />
-                </div>
+                <TeamAvatar
+                  teamId={ticket.assigned_team_id!}
+                  teamName={team?.team_name || 'Team'}
+                  avatarUrl={teamAvatarUrl}
+                  size="sm"
+                />
                 <span className="text-sm">{team?.team_name || 'Assigned Team'}</span>
                 <div
                   role="button"
@@ -907,48 +938,105 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
           {/* Additional Agents */}
           <div>
             <h5 className="font-bold mb-2">Additional Agents</h5>
-            <MultiUserPicker
-              id={`${id}-additional-agents`}
-              values={additionalAgents.filter(a => a.additional_user_id).map(a => a.additional_user_id!)}
-              getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
-              onValuesChange={async (newUserIds) => {
-                // Prevent race conditions from rapid clicks
-                if (isProcessingAgentsRef.current) {
-                  return;
-                }
-                isProcessingAgentsRef.current = true;
-
-                try {
-                  const currentUserIds = additionalAgents
-                    .filter(a => a.additional_user_id)
-                    .map(a => a.additional_user_id!);
-
-                  // Find added users
-                  const addedUserIds = newUserIds.filter(id => !currentUserIds.includes(id));
-                  // Find removed users
-                  const removedUserIds = currentUserIds.filter(id => !newUserIds.includes(id));
-
-                  // Process all additions sequentially
-                  for (const userId of addedUserIds) {
-                    await onAddAgent(userId);
-                  }
-
-                  // Process all removals sequentially
-                  for (const userId of removedUserIds) {
-                    const agent = additionalAgents.find(a => a.additional_user_id === userId);
-                    if (agent?.assignment_id) {
-                      await onRemoveAgent(agent.assignment_id);
+            {teamsV2Enabled ? (
+              <MultiUserAndTeamPicker
+                id={`${id}-additional-agents`}
+                values={additionalAgents.filter(a => a.additional_user_id).map(a => a.additional_user_id!)}
+                getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
+                getTeamAvatarUrlsBatch={getTeamAvatarUrlsBatchAction}
+                teams={teams}
+                teamSectionLabel="Add Team Members"
+                onTeamValuesChange={(selectedTeamIds) => {
+                  // When a team is selected, assign the team and expand its members into individual agents
+                  for (const teamId of selectedTeamIds) {
+                    const selectedTeam = teams.find(t => t.team_id === teamId);
+                    if (!selectedTeam?.members) continue;
+                    // Assign the team so the team badge appears
+                    if (onAssignTeam) {
+                      onAssignTeam(teamId);
+                    }
+                    const currentUserIds = new Set(
+                      additionalAgents.filter(a => a.additional_user_id).map(a => a.additional_user_id!)
+                    );
+                    const newMembers = selectedTeam.members
+                      .filter(m => m.user_id !== ticket.assigned_to && !currentUserIds.has(m.user_id));
+                    for (const member of newMembers) {
+                      onAddAgent(member.user_id);
                     }
                   }
-                } finally {
-                  isProcessingAgentsRef.current = false;
-                }
-              }}
-              users={availableAgents.filter(agent => agent.user_id !== ticket.assigned_to)}
-              size="sm"
-              placeholder="Select additional agents..."
-              onUserClick={onAgentClick}
-            />
+                }}
+                onValuesChange={async (newUserIds) => {
+                  if (isProcessingAgentsRef.current) {
+                    return;
+                  }
+                  isProcessingAgentsRef.current = true;
+
+                  try {
+                    const currentUserIds = additionalAgents
+                      .filter(a => a.additional_user_id)
+                      .map(a => a.additional_user_id!);
+
+                    const addedUserIds = newUserIds.filter(id => !currentUserIds.includes(id));
+                    const removedUserIds = currentUserIds.filter(id => !newUserIds.includes(id));
+
+                    for (const userId of addedUserIds) {
+                      await onAddAgent(userId);
+                    }
+
+                    for (const userId of removedUserIds) {
+                      const agent = additionalAgents.find(a => a.additional_user_id === userId);
+                      if (agent?.assignment_id) {
+                        await onRemoveAgent(agent.assignment_id);
+                      }
+                    }
+                  } finally {
+                    isProcessingAgentsRef.current = false;
+                  }
+                }}
+                users={availableAgents.filter(agent => agent.user_id !== ticket.assigned_to)}
+                size="sm"
+                placeholder="Select additional agents..."
+                onUserClick={onAgentClick}
+              />
+            ) : (
+              <MultiUserPicker
+                id={`${id}-additional-agents`}
+                values={additionalAgents.filter(a => a.additional_user_id).map(a => a.additional_user_id!)}
+                getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
+                onValuesChange={async (newUserIds) => {
+                  if (isProcessingAgentsRef.current) {
+                    return;
+                  }
+                  isProcessingAgentsRef.current = true;
+
+                  try {
+                    const currentUserIds = additionalAgents
+                      .filter(a => a.additional_user_id)
+                      .map(a => a.additional_user_id!);
+
+                    const addedUserIds = newUserIds.filter(id => !currentUserIds.includes(id));
+                    const removedUserIds = currentUserIds.filter(id => !newUserIds.includes(id));
+
+                    for (const userId of addedUserIds) {
+                      await onAddAgent(userId);
+                    }
+
+                    for (const userId of removedUserIds) {
+                      const agent = additionalAgents.find(a => a.additional_user_id === userId);
+                      if (agent?.assignment_id) {
+                        await onRemoveAgent(agent.assignment_id);
+                      }
+                    }
+                  } finally {
+                    isProcessingAgentsRef.current = false;
+                  }
+                }}
+                users={availableAgents.filter(agent => agent.user_id !== ticket.assigned_to)}
+                size="sm"
+                placeholder="Select additional agents..."
+                onUserClick={onAgentClick}
+              />
+            )}
           </div>
         </div>
       </div>

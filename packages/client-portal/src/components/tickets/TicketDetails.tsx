@@ -10,6 +10,7 @@ import { ResponseStateBadge } from '@alga-psa/ui/components';
 import { getTicketOrigin } from '@alga-psa/tickets/lib/ticketOrigin';
 import { getTicketingDisplaySettings } from '@alga-psa/tickets/actions/ticketDisplaySettings';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
+import TeamAvatar from '@alga-psa/ui/components/TeamAvatar';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import {
   getClientTicketDetails,
@@ -27,6 +28,7 @@ import { IComment } from '@alga-psa/types';
 import { IDocument } from '@alga-psa/types';
 import { PartialBlock } from '@blocknote/core';
 import { getCurrentUser } from '@alga-psa/users/actions';
+import { getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
 import { IStatus } from '@alga-psa/types';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import toast from 'react-hot-toast';
@@ -97,6 +99,25 @@ export function TicketDetails({
     api: t('origin.api', 'Created via API'),
     other: t('origin.other', 'Created via Other'),
   }), [t]);
+
+  // Team avatar URL state
+  const [teamAvatarUrl, setTeamAvatarUrl] = useState<string | null>(null);
+  useEffect(() => {
+    if (!ticket.assigned_team_id || !ticket.tenant) {
+      setTeamAvatarUrl(null);
+      return;
+    }
+    const fetchTeamAvatar = async () => {
+      try {
+        const result = await getTeamAvatarUrlsBatchAction([ticket.assigned_team_id!], ticket.tenant);
+        const urls = result instanceof Map ? result : new Map(Object.entries(result));
+        setTeamAvatarUrl(urls.get(ticket.assigned_team_id!) ?? null);
+      } catch {
+        setTeamAvatarUrl(null);
+      }
+    };
+    fetchTeamAvatar();
+  }, [ticket.assigned_team_id, ticket.tenant]);
 
   // Load response state tracking setting
   useEffect(() => {
@@ -522,7 +543,20 @@ export function TicketDetails({
                 ) : (
                   <span className="text-sm text-gray-500">-</span>
                 )}
+                {ticket.assigned_team_id && (ticket as any).assigned_team_name && (
+                  <TeamAvatar
+                    teamId={ticket.assigned_team_id}
+                    teamName={(ticket as any).assigned_team_name}
+                    avatarUrl={teamAvatarUrl}
+                    size="sm"
+                  />
+                )}
               </div>
+              {ticket.assigned_team_id && (ticket as any).assigned_team_name && (
+                <div className="flex items-center gap-1.5 mt-1">
+                  <span className="text-xs text-gray-500">{(ticket as any).assigned_team_name}</span>
+                </div>
+              )}
             </div>
 
             {/* Priority */}

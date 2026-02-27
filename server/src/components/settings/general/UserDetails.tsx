@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { IUser, IUserWithRoles, IRole } from '@alga-psa/types';
 import { findUserById, updateUser, adminChangeUserPassword, getCurrentUser, getAllUsers } from '@alga-psa/users/actions';
-import { getRoles, getUserRoles, assignRoleToUser, removeRoleFromUser } from '@alga-psa/users/actions';
+import { getRoles, getUserRoles, assignRoleToUser, removeRoleFromUser, getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
 import { useDrawer } from "@alga-psa/ui";
 import { Text, Flex } from '@radix-ui/themes';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -12,6 +12,7 @@ import { Switch } from '@alga-psa/ui/components/Switch';
 import { Card } from '@alga-psa/ui/components/Card';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { Eye, EyeOff, ChevronDown, ChevronUp } from 'lucide-react';
+import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import CollapsiblePasswordChangeForm from './CollapsiblePasswordChangeForm';
 import { getLicenseUsageAction } from '@alga-psa/licensing/actions';
 import toast from 'react-hot-toast';
@@ -73,17 +74,45 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
     const fetchReportsToOptions = async () => {
       try {
         const allUsers = await getAllUsers(true);
-        const options: SelectOption[] = allUsers
-          .filter((item) => item.user_id !== userId)
-          .map((item) => {
-            const displayName = [item.first_name, item.last_name].filter(Boolean).join(' ').trim();
-            const label = displayName || item.email;
-            return {
-              value: item.user_id,
-              label: item.is_inactive ? `${label} (Inactive)` : label,
-              is_inactive: item.is_inactive,
-            };
-          });
+        const filteredUsers = allUsers.filter((item) => item.user_id !== userId);
+
+        // Batch fetch avatar URLs
+        const userIds = filteredUsers.map((u) => u.user_id);
+        let avatarUrls: Record<string, string | null> = {};
+        if (userIds.length > 0 && filteredUsers[0]?.tenant) {
+          const result = await getUserAvatarUrlsBatchAction(userIds, filteredUsers[0].tenant);
+          if (result && typeof (result as Map<string, string | null>).forEach === 'function') {
+            (result as Map<string, string | null>).forEach((value, key) => {
+              avatarUrls[key] = value;
+            });
+          } else {
+            avatarUrls = result as unknown as Record<string, string | null>;
+          }
+        }
+
+        const options: SelectOption[] = filteredUsers.map((item) => {
+          const displayName = [item.first_name, item.last_name].filter(Boolean).join(' ').trim();
+          const nameLabel = displayName || item.email;
+          const avatarUrl = avatarUrls[item.user_id] ?? null;
+          return {
+            value: item.user_id,
+            label: (
+              <span className="flex items-center gap-2">
+                <UserAvatar
+                  userId={item.user_id}
+                  userName={nameLabel}
+                  avatarUrl={avatarUrl}
+                  size="sm"
+                />
+                <span className={item.is_inactive ? 'text-muted-foreground' : ''}>
+                  {item.is_inactive ? `${nameLabel} (Inactive)` : nameLabel}
+                </span>
+              </span>
+            ),
+            textValue: item.is_inactive ? `${nameLabel} (Inactive)` : nameLabel,
+            is_inactive: item.is_inactive,
+          };
+        });
         setReportsToOptions(options);
       } catch (err) {
         console.error('Error fetching reports_to options:', err);

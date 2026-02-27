@@ -26,7 +26,7 @@ export const uploadTeamAvatar = withAuth(async (
       return { success: false, error: 'Team not found.' };
     }
 
-    const canUpdate = await hasPermission(currentUser, 'team', 'update', knex);
+    const canUpdate = await hasPermission(currentUser, 'user_settings', 'update', knex);
     if (!canUpdate) {
       return { success: false, error: 'Permission denied: cannot update team avatar.' };
     }
@@ -84,7 +84,7 @@ export const deleteTeamAvatar = withAuth(async (
       return { success: false, error: 'Team not found.' };
     }
 
-    const canUpdate = await hasPermission(currentUser, 'team', 'update', knex);
+    const canUpdate = await hasPermission(currentUser, 'user_settings', 'update', knex);
     if (!canUpdate) {
       return { success: false, error: 'Permission denied: cannot update team avatar.' };
     }

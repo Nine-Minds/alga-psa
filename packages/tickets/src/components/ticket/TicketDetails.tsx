@@ -2026,6 +2026,7 @@ const handleClose = () => {
                                 onClientClick={handleClientClick}
                                 onContactClick={handleContactClick}
                                 team={team}
+                                teams={teams}
                                 additionalAgents={additionalAgents}
                                 availableAgents={availableAgents}
                                 onAgentClick={handleAgentClick}
@@ -2057,6 +2058,7 @@ const handleClose = () => {
                                 surveySummary={surveySummary}
                                     renderIntervalManagement={renderIntervalManagement}
                                     onRemoveTeamAssignment={handleRemoveTeamAssignment}
+                                    onAssignTeam={handleAssignTeam}
                                 />
                         </Suspense>
                         

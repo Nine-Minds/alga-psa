@@ -12,6 +12,7 @@ import { format } from 'date-fns';
 import { TagList } from '@alga-psa/ui/components';
 import { TagManager } from '@alga-psa/tags/components';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
+import TeamAvatar from '@alga-psa/ui/components/TeamAvatar';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import { useResponsiveColumns, ColumnConfig } from '@alga-psa/ui/hooks';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
@@ -68,6 +69,8 @@ interface TaskListViewProps {
   onTaskTagsChange?: (taskId: string, tags: ITag[]) => void;
   onAssigneeChange?: (taskId: string, newAssigneeId: string | null) => void;
   users: any[];
+  teamNames?: Record<string, string>;
+  teamAvatarUrls?: Record<string, string | null>;
   // Filter props
   selectedPriorityFilter?: string;
   selectedTaskTags?: string[];
@@ -105,6 +108,8 @@ export default function TaskListView({
   onTaskTagsChange,
   onAssigneeChange,
   users,
+  teamNames = {},
+  teamAvatarUrls = {},
   selectedPriorityFilter = 'all',
   selectedTaskTags = [],
   selectedAgentFilter = [],
@@ -1128,6 +1133,18 @@ export default function TaskListView({
                                             <span className="text-sm text-gray-400">Unassigned</span>
                                           );
                                         })()
+                                      )}
+                                      {task.assigned_team_id && teamNames[task.assigned_team_id] && (
+                                        <Tooltip content={teamNames[task.assigned_team_id]}>
+                                          <span className="inline-flex items-center cursor-help">
+                                            <TeamAvatar
+                                              teamId={task.assigned_team_id}
+                                              teamName={teamNames[task.assigned_team_id]}
+                                              avatarUrl={teamAvatarUrls[task.assigned_team_id] ?? null}
+                                              size="xs"
+                                            />
+                                          </span>
+                                        </Tooltip>
                                       )}
                                       {additionalCount > 0 && (
                                         <Tooltip

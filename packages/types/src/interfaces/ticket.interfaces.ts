@@ -89,6 +89,7 @@ export interface ITicketListItem extends Omit<ITicket, 'status_id' | 'priority_i
   assigned_to_name: string | null;
   additional_agent_count?: number;
   additional_agents?: { user_id: string; name: string }[];  // Additional agents for tooltip display with avatars
+  assigned_team_name?: string | null;
   bundle_child_count?: number;
   bundle_master_ticket_number?: string | null;
   bundle_distinct_client_count?: number;

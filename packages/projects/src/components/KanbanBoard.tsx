@@ -30,6 +30,8 @@ interface KanbanBoardProps {
   projectTreeData?: any[];
   animatingTasks: Set<string>;
   avatarUrls?: Record<string, string | null>;
+  teamNames?: Record<string, string>;
+  teamAvatarUrls?: Record<string, string | null>;
   searchQuery?: string;
   searchCaseSensitive?: boolean;
   searchWholeWord?: boolean;
@@ -105,6 +107,8 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   projectTreeData,
   animatingTasks,
   avatarUrls = {},
+  teamNames = {},
+  teamAvatarUrls = {},
   searchQuery = '',
   searchCaseSensitive = false,
   searchWholeWord = false,
@@ -197,6 +201,8 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
             isAddingTask={isAddingTask}
             selectedPhase={selectedPhase}
             avatarUrls={avatarUrls}
+            teamNames={teamNames}
+            teamAvatarUrls={teamAvatarUrls}
             columnWidth={columnWidth}
             cardGap={cardGap}
             zoomLevel={zoomLevel}

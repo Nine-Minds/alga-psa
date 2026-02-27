@@ -9,8 +9,15 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Label } from '@alga-psa/ui/components/Label';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
+import UserAndTeamPicker from '@alga-psa/ui/components/UserAndTeamPicker';
 import MultiUserPicker from '@alga-psa/ui/components/MultiUserPicker';
+import MultiUserAndTeamPicker from '@alga-psa/ui/components/MultiUserAndTeamPicker';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
+import { useFeatureFlag } from '@alga-psa/ui/hooks';
+import { getTeams, getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
+import type { ITeam } from '@alga-psa/types';
+import TeamAvatar from '@alga-psa/ui/components/TeamAvatar';
+import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { TaskTypeSelector } from '../TaskTypeSelector';
 import { ListChecks, Link2, Plus, Trash2, Ban, GitBranch } from 'lucide-react';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
@@ -83,6 +90,8 @@ interface TemplateTaskFormProps {
   allTasks?: IProjectTemplateTask[];
   /** Current dependencies where this task is the successor */
   dependencies?: IProjectTemplateDependency[];
+  /** Tenant for fetching avatar URLs */
+  tenant?: string;
 }
 
 export function TemplateTaskForm({
@@ -99,7 +108,10 @@ export function TemplateTaskForm({
   checklistItems = [],
   allTasks = [],
   dependencies = [],
+  tenant,
 }: TemplateTaskFormProps) {
+  const { enabled: teamsV2Enabled } = useFeatureFlag('teams-v2', { defaultValue: false });
+  const [teams, setTeams] = useState<ITeam[]>([]);
   const [taskName, setTaskName] = useState('');
   const [description, setDescription] = useState('');
   const [estimatedHours, setEstimatedHours] = useState<string>('');
@@ -107,6 +119,7 @@ export function TemplateTaskForm({
   const [taskTypeKey, setTaskTypeKey] = useState('');
   const [priorityId, setPriorityId] = useState('');
   const [assignedTo, setAssignedTo] = useState('');
+  const [assignedTeamId, setAssignedTeamId] = useState<string | null>(null);
   const [additionalAgents, setAdditionalAgents] = useState<string[]>([]);
   const [statusMappingId, setStatusMappingId] = useState('');
   const [serviceId, setServiceId] = useState('');
@@ -136,6 +149,7 @@ export function TemplateTaskForm({
     taskTypeKey: string;
     priorityId: string;
     assignedTo: string;
+    assignedTeamId: string | null;
     additionalAgents: string[];
     statusMappingId: string;
     serviceId: string;
@@ -156,6 +170,42 @@ export function TemplateTaskForm({
     fetchServices();
   }, []);
 
+  // Fetch teams when teams-v2 is enabled
+  useEffect(() => {
+    if (!teamsV2Enabled) {
+      setTeams([]);
+      return;
+    }
+    const fetchTeams = async () => {
+      try {
+        const fetchedTeams = await getTeams();
+        setTeams(fetchedTeams);
+      } catch (err) {
+        console.error('Failed to fetch teams:', err);
+      }
+    };
+    fetchTeams();
+  }, [teamsV2Enabled]);
+
+  // Fetch team avatar URL when assigned team changes
+  const [teamAvatarUrl, setTeamAvatarUrl] = useState<string | null>(null);
+  useEffect(() => {
+    if (!assignedTeamId || !tenant) {
+      setTeamAvatarUrl(null);
+      return;
+    }
+    const fetchTeamAvatar = async () => {
+      try {
+        const result = await getTeamAvatarUrlsBatchAction([assignedTeamId], tenant);
+        const urls = result instanceof Map ? result : new Map(Object.entries(result));
+        setTeamAvatarUrl(urls.get(assignedTeamId) ?? null);
+      } catch {
+        setTeamAvatarUrl(null);
+      }
+    };
+    fetchTeamAvatar();
+  }, [assignedTeamId, tenant]);
+
   // Reset form when dialog opens/closes or task changes
   useEffect(() => {
     if (open) {
@@ -169,6 +219,7 @@ export function TemplateTaskForm({
         const taskTypeKeyVal = task.task_type_key || '';
         const priorityIdVal = task.priority_id || '';
         const assignedToVal = task.assigned_to || '';
+        const assignedTeamIdVal = task.assigned_team_id || null;
         const taskAdditionalAgents = taskAssignments
           .filter(a => a.template_task_id === task.template_task_id)
           .map(a => a.user_id);
@@ -200,6 +251,7 @@ export function TemplateTaskForm({
         setTaskTypeKey(taskTypeKeyVal);
         setPriorityId(priorityIdVal);
         setAssignedTo(assignedToVal);
+        setAssignedTeamId(assignedTeamIdVal);
         setAdditionalAgents(taskAdditionalAgents);
         setStatusMappingId(statusMappingIdVal);
         setServiceId(serviceIdVal);
@@ -215,6 +267,7 @@ export function TemplateTaskForm({
           taskTypeKey: taskTypeKeyVal,
           priorityId: priorityIdVal,
           assignedTo: assignedToVal,
+          assignedTeamId: assignedTeamIdVal,
           additionalAgents: [...taskAdditionalAgents],
           statusMappingId: statusMappingIdVal,
           serviceId: serviceIdVal,
@@ -232,6 +285,7 @@ export function TemplateTaskForm({
         setTaskTypeKey('');
         setPriorityId('');
         setAssignedTo('');
+        setAssignedTeamId(null);
         setAdditionalAgents([]);
         setStatusMappingId(statusMappingIdVal);
         setServiceId('');
@@ -247,6 +301,7 @@ export function TemplateTaskForm({
           taskTypeKey: '',
           priorityId: '',
           assignedTo: '',
+          assignedTeamId: null,
           additionalAgents: [],
           statusMappingId: statusMappingIdVal,
           serviceId: '',
@@ -269,6 +324,11 @@ export function TemplateTaskForm({
 
     if (!taskName.trim()) {
       setError('Task name is required');
+      return;
+    }
+
+    if (additionalAgents.length > 0 && !assignedTo) {
+      setError('Primary agent is required when additional agents are assigned');
       return;
     }
 
@@ -297,6 +357,7 @@ export function TemplateTaskForm({
           task_type_key: taskTypeKey || undefined,
           priority_id: priorityId || undefined,
           assigned_to: assignedTo || undefined,
+          assigned_team_id: assignedTeamId || null,
           template_status_mapping_id: statusMappingId || undefined,
           service_id: serviceId || null,
         },
@@ -403,6 +464,7 @@ export function TemplateTaskForm({
     if (taskTypeKey !== initialValues.taskTypeKey) return true;
     if (priorityId !== initialValues.priorityId) return true;
     if (assignedTo !== initialValues.assignedTo) return true;
+    if (assignedTeamId !== initialValues.assignedTeamId) return true;
     if (statusMappingId !== initialValues.statusMappingId) return true;
     if (serviceId !== initialValues.serviceId) return true;
 
@@ -607,27 +669,81 @@ export function TemplateTaskForm({
               </div>
             </div>
 
-            {/* Assigned To */}
+            {/* Assigned To + Additional Agents */}
+            <div className="grid grid-cols-2 gap-4">
             <div>
               <Label htmlFor="assigned-to" className="block text-sm font-medium text-gray-700 mb-1">
                 Primary Agent
               </Label>
-              <UserPicker
-                id="assigned-to"
-                value={assignedTo}
-                onValueChange={(value) => {
-                  setAssignedTo(value);
-                  // Remove from additional agents if selected as primary
-                  if (value && additionalAgents.includes(value)) {
-                    setAdditionalAgents(additionalAgents.filter(id => id !== value));
-                  }
-                }}
-                users={users}
-                getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
-                placeholder="Select primary agent (optional)"
-                disabled={isSubmitting}
-                buttonWidth="full"
-              />
+              {teamsV2Enabled ? (
+                <UserAndTeamPicker
+                  id="assigned-to"
+                  value={assignedTo}
+                  onValueChange={(value) => {
+                    setAssignedTo(value);
+                    setAssignedTeamId(null);
+                    if (value && additionalAgents.includes(value)) {
+                      setAdditionalAgents(additionalAgents.filter(id => id !== value));
+                    }
+                  }}
+                  onTeamSelect={(teamId) => {
+                    const team = teams.find(t => t.team_id === teamId);
+                    const leadId = team?.manager_id || team?.members?.find(m => m.role === 'lead')?.user_id;
+                    if (leadId) {
+                      setAssignedTo(leadId);
+                    }
+                    setAssignedTeamId(teamId);
+                    // Populate additional agents with team members
+                    if (team?.members) {
+                      const memberIds = team.members
+                        .map(m => m.user_id)
+                        .filter(id => id !== leadId);
+                      setAdditionalAgents(prev => {
+                        const combined = new Set([...prev, ...memberIds]);
+                        return Array.from(combined);
+                      });
+                    }
+                  }}
+                  users={users}
+                  teams={teams}
+                  getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
+                  getTeamAvatarUrlsBatch={getTeamAvatarUrlsBatchAction}
+                  placeholder="Select primary agent (optional)"
+                  disabled={isSubmitting}
+                  buttonWidth="full"
+                />
+              ) : (
+                <UserPicker
+                  id="assigned-to"
+                  value={assignedTo}
+                  onValueChange={(value) => {
+                    setAssignedTo(value);
+                    if (value && additionalAgents.includes(value)) {
+                      setAdditionalAgents(additionalAgents.filter(id => id !== value));
+                    }
+                  }}
+                  users={users}
+                  getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
+                  placeholder="Select primary agent (optional)"
+                  disabled={isSubmitting}
+                  buttonWidth="full"
+                />
+              )}
+              {/* Team indicator */}
+              {assignedTeamId && (() => {
+                const assignedTeam = teams.find(t => t.team_id === assignedTeamId);
+                return assignedTeam ? (
+                  <div className="flex items-center gap-1.5 mt-1.5">
+                    <TeamAvatar
+                      teamId={assignedTeam.team_id}
+                      teamName={assignedTeam.team_name}
+                      avatarUrl={teamAvatarUrl}
+                      size="xs"
+                    />
+                    <span className="text-xs text-gray-500 truncate">{assignedTeam.team_name}</span>
+                  </div>
+                ) : null;
+              })()}
               <p className="text-xs text-gray-500 mt-1">
                 This user will be assigned when the template is applied
               </p>
@@ -638,10 +754,42 @@ export function TemplateTaskForm({
               <Label className="block text-sm font-medium text-gray-700 mb-1">
                 Additional Agents
               </Label>
-              {!assignedTo ? (
-                <div className="text-sm text-gray-500 italic p-2 bg-gray-50 rounded border">
-                  Please assign a primary agent first.
-                </div>
+              {teamsV2Enabled ? (
+                <MultiUserAndTeamPicker
+                  values={additionalAgents}
+                  onValuesChange={(newValues) => {
+                    if (newValues.length > 0 && !assignedTo) {
+                      setError('Primary agent is required when additional agents are assigned');
+                    } else {
+                      setError(null);
+                    }
+                    setAdditionalAgents(newValues);
+                  }}
+                  onTeamValuesChange={(selectedTeamIds) => {
+                    for (const teamId of selectedTeamIds) {
+                      const selectedTeam = teams.find(t => t.team_id === teamId);
+                      if (!selectedTeam?.members) continue;
+                      // Assign the team so the team badge appears
+                      setAssignedTeamId(teamId);
+                      const leadId = selectedTeam.manager_id || selectedTeam.members.find(m => m.role === 'lead')?.user_id;
+                      if (!assignedTo && leadId) {
+                        setAssignedTo(leadId);
+                      }
+                      const primaryId = assignedTo || leadId;
+                      const newMembers = selectedTeam.members
+                        .map(m => m.user_id)
+                        .filter(id => id !== primaryId);
+                      setAdditionalAgents(prev => {
+                        const combined = new Set([...prev, ...newMembers]);
+                        return Array.from(combined);
+                      });
+                    }
+                  }}
+                  users={users.filter(u => u.user_id !== assignedTo)}
+                  teams={teams}
+                  getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
+                  getTeamAvatarUrlsBatch={getTeamAvatarUrlsBatchAction}
+                />
               ) : (
                 <MultiUserPicker
                   values={additionalAgents}
@@ -653,6 +801,7 @@ export function TemplateTaskForm({
               <p className="text-xs text-gray-500 mt-1">
                 Additional team members to assign to this task
               </p>
+            </div>
             </div>
 
             {/* Checklist Items - Same pattern as projects */}

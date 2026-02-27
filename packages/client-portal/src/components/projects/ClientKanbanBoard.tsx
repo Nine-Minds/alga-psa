@@ -11,6 +11,7 @@ import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import TaskDocumentUpload from './TaskDocumentUpload';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
+import TeamAvatar from '@alga-psa/ui/components/TeamAvatar';
 import { useTheme } from 'next-themes';
 import { darkenColor } from '@alga-psa/ui/lib/colorUtils';
 
@@ -52,6 +53,9 @@ interface Task {
   assigned_to_id?: string;
   assigned_to_name?: string;
   assigned_to_avatar?: string | null;
+  assigned_team_id?: string | null;
+  assigned_team_name?: string | null;
+  assigned_team_avatar?: string | null;
   estimated_hours?: number | null;
   actual_hours?: number | null;
   is_closed?: boolean;
@@ -268,6 +272,18 @@ function TaskCard({
               size="sm"
             />
             <span>{task.assigned_to_name}</span>
+            {task.assigned_team_id && task.assigned_team_name && (
+              <Tooltip content={task.assigned_team_name}>
+                <span className="inline-flex items-center cursor-help">
+                  <TeamAvatar
+                    teamId={task.assigned_team_id}
+                    teamName={task.assigned_team_name}
+                    avatarUrl={task.assigned_team_avatar || null}
+                    size="xs"
+                  />
+                </span>
+              </Tooltip>
+            )}
             {task.additional_agents && task.additional_agents.length > 0 && (
               <Tooltip
                 content={

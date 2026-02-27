@@ -111,6 +111,8 @@ export const getClientTickets = withAuth(async (user, { tenant }, status: string
         'cat.category_name',
         db.raw("CONCAT(u.first_name, ' ', u.last_name) as entered_by_name"),
         db.raw("CONCAT(au.first_name, ' ', au.last_name) as assigned_to_name"),
+        't.assigned_team_id',
+        'tm.team_name as assigned_team_name',
         db.raw("(SELECT COUNT(*) FROM ticket_resources tr WHERE tr.ticket_id = t.ticket_id AND tr.tenant = t.tenant AND tr.additional_user_id IS NOT NULL)::int as additional_agent_count"),
         db.raw(`(SELECT COALESCE(json_agg(json_build_object('user_id', uu.user_id, 'name', CONCAT(uu.first_name, ' ', uu.last_name))), '[]'::json) FROM ticket_resources tr2 JOIN users uu ON tr2.additional_user_id = uu.user_id AND tr2.tenant = uu.tenant WHERE tr2.ticket_id = t.ticket_id AND tr2.tenant = t.tenant) as additional_agents`)
       )
@@ -137,6 +139,10 @@ export const getClientTickets = withAuth(async (user, { tenant }, status: string
       .leftJoin('users as au', function() {
         this.on('t.assigned_to', '=', 'au.user_id')
             .andOn('t.tenant', '=', 'au.tenant');
+      })
+      .leftJoin('teams as tm', function() {
+        this.on('t.assigned_team_id', 'tm.team_id')
+            .andOn('t.tenant', 'tm.tenant');
       })
       .where({
         't.tenant': tenant,
@@ -235,7 +241,8 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
           's.name as status_name',
           'p.priority_name',
           'p.color as priority_color',
-          'u_creator.user_type as entered_by_user_type'
+          'u_creator.user_type as entered_by_user_type',
+          'tm.team_name as assigned_team_name'
         )
         .leftJoin('statuses as s', function() {
           this.on('t.status_id', '=', 's.status_id')
@@ -248,6 +255,10 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
         .leftJoin('users as u_creator', function() {
           this.on('t.entered_by', '=', 'u_creator.user_id')
               .andOn('t.tenant', '=', 'u_creator.tenant');
+        })
+        .leftJoin('teams as tm', function() {
+          this.on('t.assigned_team_id', 'tm.team_id')
+              .andOn('t.tenant', 'tm.tenant');
         })
         .where({
           't.ticket_id': ticketId,
