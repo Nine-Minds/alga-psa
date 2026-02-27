@@ -301,3 +301,9 @@ Create a clean, implementation-ready plan containing only remaining work for inb
   - Reused targeted IMAP integration command from earlier artifact tests:
     - `cd server && npx vitest run src/test/integration/inboundEmailInApp.webhooks.integration.test.ts -t "IMAP in-app path persists regular attachment, embedded image, and original .eml as ticket documents" --coverage.enabled=false`
   - Environment note: DB-gated integration suite was skipped in this local session (`describeDb`).
+- 2026-02-27: Completed `T242`.
+  - Added Playwright coverage file:
+    - `server/src/test/e2e/inbound-email-artifacts-documents.playwright.test.ts`
+  - Test seeds a ticket with three associated document artifacts (regular attachment, embedded image, `.eml`), opens ticket detail UI, navigates to Documents tab, and asserts all three are visible.
+- Validation:
+  - `cd server && npx playwright test src/test/e2e/inbound-email-artifacts-documents.playwright.test.ts --list`

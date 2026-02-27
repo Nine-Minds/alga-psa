@@ -241,7 +241,7 @@
   {
     "id": "T242",
     "description": "Playwright: ticket Documents tab shows one regular attachment, one embedded image, and one .eml for inbound message",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F234"
     ]
