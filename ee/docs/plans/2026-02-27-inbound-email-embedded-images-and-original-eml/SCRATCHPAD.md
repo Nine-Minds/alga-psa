@@ -35,6 +35,7 @@ Rolling notes for embedded inbound-email image extraction + source `.eml` persis
   - `emailData.rawMimeBase64` (within cap)
   - `emailData.attachments[].content` (base64)
   - `emailData.attachments[].isInline`, `contentId`, `id`, `name`, `contentType`, `size`
+- (2026-02-27) Worker `process_email_attachment` now consumes provided `attachmentData.content` base64 payloads directly when present (not test-only), allowing IMAP ingress bytes to flow through the existing storage-backed + idempotent document persistence path.
 
 ## Discoveries / Constraints
 
@@ -145,3 +146,4 @@ Rolling notes for embedded inbound-email image extraction + source `.eml` persis
 - (2026-02-27) Completed F026 — Refactored IMAP webhook route to auth/validate/handoff only by publishing `INBOUND_EMAIL_RECEIVED` and returning queued success without inline persistence.
 - (2026-02-27) Completed F027 — Added IMAP ingress hard-cap enforcement for per-attachment bytes, total attachment bytes, attachment count, and raw MIME bytes prior to payload encoding/dispatch.
 - (2026-02-27) Completed F028 — IMAP webhook payload now carries capped raw MIME base64 and attachment byte fields needed for downstream document + `.eml` persistence.
+- (2026-02-27) Completed F029 — IMAP inbound attachment bytes now persist through the existing storage-backed/idempotent attachment action path (no metadata-only fallback path).

@@ -246,7 +246,7 @@
   {
     "id": "F029",
     "description": "IMAP inbound processing path uses storage-backed/idempotent attachment persistence compatible with current documents schema (no legacy metadata-only insert path)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Scoped Implementation Checklist (Phase 1)",
       "Data / API / Integrations"

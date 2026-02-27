@@ -7,6 +7,7 @@ import {
   buildDeterministicRfc822Message,
   buildOriginalEmailFileName,
   extractEmbeddedImageAttachments,
+  hasRawMimeOverCapSkipReason,
   maybeExtractRawMimeFromEmailData,
   sanitizeGeneratedFileName,
 } from './emailAttachmentHelpers';
@@ -610,12 +611,7 @@ export function registerEmailAttachmentActions(actionRegistry: ActionRegistry): 
       let resolvedFileName = requestedFileName;
 
       try {
-        const allowInlineContent =
-          process.env.NODE_ENV === 'test' ||
-          process.env.E2E_EMAIL_ATTACHMENT_INLINE_CONTENT === 'true' ||
-          allowInlineProcessing;
-
-        if (providedContentBase64 && allowInlineContent) {
+        if (providedContentBase64) {
           if (!isBase64(providedContentBase64)) {
             throw new Error('Invalid base64 attachment payload');
           }
@@ -745,6 +741,18 @@ export function registerEmailAttachmentActions(actionRegistry: ActionRegistry): 
 
       if (!claim.claimed) {
         return (claim as { claimed: false; result: Record<string, any> }).result;
+      }
+
+      if (hasRawMimeOverCapSkipReason(emailData)) {
+        await markProcessedAttachment(knex, {
+          tenant,
+          providerId,
+          emailId,
+          attachmentId,
+          status: 'skipped',
+          errorMessage: 'Raw MIME source exceeds ingress cap',
+        });
+        return { success: true, skipped: true, reason: 'raw_mime_over_max_bytes' };
       }
 
       const systemUserId = await resolveSystemUserId(knex, tenant);
