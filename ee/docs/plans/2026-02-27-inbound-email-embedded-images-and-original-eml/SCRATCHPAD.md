@@ -149,3 +149,4 @@ Rolling notes for embedded inbound-email image extraction + source `.eml` persis
 - (2026-02-27) Completed F029 — IMAP inbound attachment bytes now persist through the existing storage-backed/idempotent attachment action path (no metadata-only fallback path).
 - (2026-02-27) Completed F030 — IMAP webhook handoff now runs through the system email workflow path that performs embedded `data:image` + referenced CID extraction before attachment persistence.
 - (2026-02-27) Completed F031 — IMAP inbound events now carry capped `rawMimeBase64` and flow through `process_original_email_attachment` for deterministic, idempotent ticket `.eml` persistence.
+- (2026-02-27) Completed F032 — IMAP artifacts now execute in the workflow worker’s existing per-message sequential loop (`for ... await action`) after async webhook handoff, avoiding unbounded fan-out.

@@ -273,7 +273,7 @@
   {
     "id": "F032",
     "description": "Per-message attachment artifact processing in async path is sequential or strictly bounded to avoid Node event-loop starvation",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Scoped Implementation Checklist (Phase 1)",
       "Non-functional Requirements"
