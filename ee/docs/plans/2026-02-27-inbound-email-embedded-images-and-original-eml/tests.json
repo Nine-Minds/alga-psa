@@ -55,7 +55,7 @@
   {
     "id": "T007",
     "description": "Unit: unreferenced inline CID MIME parts are skipped",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F005"
     ]

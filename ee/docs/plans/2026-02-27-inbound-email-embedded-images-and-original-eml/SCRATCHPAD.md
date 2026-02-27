@@ -94,3 +94,4 @@ Rolling notes for embedded inbound-email image extraction + source `.eml` persis
 - (2026-02-27) Completed T004 — Covered by emailAttachmentHelpers.test.ts: rejects non-image data URLs.
 - (2026-02-27) Completed T005 — Covered by emailAttachmentHelpers.test.ts: skips oversized embedded data URL payloads by max-size policy.
 - (2026-02-27) Completed T006 — Covered by emailAttachmentHelpers.test.ts: maps cid references only to matching inline image MIME parts.
+- (2026-02-27) Completed T007 — Covered by emailAttachmentHelpers.test.ts: skips unreferenced inline CID MIME parts.
