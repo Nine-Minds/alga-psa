@@ -59,3 +59,6 @@ Create a clean, implementation-ready plan containing only remaining work for inb
     - inserts `documents` linked to `file_id`
     - inserts `document_associations` to the target `ticket`.
   - This replaces metadata-only attachment behavior in the in-app path.
+- 2026-02-27: Completed `F218`.
+  - Added shared `extractEmbeddedImageAttachments(...)` helper and wired it in `processInboundEmailArtifactsBestEffort(...)`.
+  - In-app path now extracts HTML `data:image/*;base64,...` artifacts and feeds them through the same persistence pipeline as normal attachments.

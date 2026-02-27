@@ -26,7 +26,7 @@
   {
     "id": "F218",
     "description": "Expose/reuse embedded attachment extraction in the in-app path for HTML data:image payloads",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements", "Decisions (Locked)"]
   },
   {
