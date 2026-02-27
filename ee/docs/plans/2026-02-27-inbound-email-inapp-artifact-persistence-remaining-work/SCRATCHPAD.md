@@ -194,3 +194,8 @@ Create a clean, implementation-ready plan containing only remaining work for inb
   - Coverage verifies decode order: `rawMimeBase64` -> `sourceMimeBase64` -> `rawSourceBase64`.
 - Validation:
   - `npx vitest run --config shared/vitest.config.ts shared/services/email/__tests__/inboundEmailArtifactHelpers.test.ts -t "raw MIME source selection prefers" --coverage.enabled=false`
+- 2026-02-27: Completed `T222`.
+  - Added fallback MIME assembly coverage in `shared/services/email/__tests__/inboundEmailArtifactHelpers.test.ts`.
+  - Test asserts deterministic RFC822 output when raw source fields are absent and validates key header/body content.
+- Validation:
+  - `npx vitest run --config shared/vitest.config.ts shared/services/email/__tests__/inboundEmailArtifactHelpers.test.ts -t "deterministic fallback MIME assembly is stable" --coverage.enabled=false`

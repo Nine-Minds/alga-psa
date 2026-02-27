@@ -73,7 +73,7 @@
   {
     "id": "T222",
     "description": "Unit: deterministic fallback MIME assembly is used when raw source fields are absent",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F222"
     ]
