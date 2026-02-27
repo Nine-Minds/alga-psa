@@ -112,7 +112,7 @@
   {
     "id": "F064",
     "description": "Create `useTeamAvatar` SWR hook in `packages/teams/src/hooks/useTeamAvatar.ts` (following useUserAvatar pattern)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-3A.9"
     ]
