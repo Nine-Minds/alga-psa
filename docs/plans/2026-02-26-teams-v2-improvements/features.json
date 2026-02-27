@@ -93,7 +93,7 @@
   {
     "id": "F062",
     "description": "Export avatar actions from `packages/teams/src/actions/team-actions/index.ts`",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-3A.5",
       "FR-3A.6",
