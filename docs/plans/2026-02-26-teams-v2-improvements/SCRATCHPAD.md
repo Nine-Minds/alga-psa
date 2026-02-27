@@ -106,3 +106,4 @@
 - (2026-02-27) Swapped ticket filter assignee picker to `MultiUserAndTeamPicker` when `teams-v2` is enabled.
 - (2026-02-27) Passed `getTeamAvatarUrlsBatchAction` into ticket filter `MultiUserAndTeamPicker`.
 - (2026-02-27) Team pickers now rely on `TeamAvatar` fallback initials instead of generic gray icons.
+- (2026-02-27) Added vitest coverage for migration constraint update (T082).

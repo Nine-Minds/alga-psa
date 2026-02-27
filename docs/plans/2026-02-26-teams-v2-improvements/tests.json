@@ -2,403 +2,543 @@
   {
     "id": "T082",
     "description": "Migration adds 'team' to document_associations entity_type CHECK constraint without error",
-    "implemented": false,
-    "featureIds": ["F051"]
+    "implemented": true,
+    "featureIds": [
+      "F051"
+    ]
   },
   {
     "id": "T083",
     "description": "Migration uses `exports.config = { transaction: false }` for Citus compliance",
     "implemented": false,
-    "featureIds": ["F051"]
+    "featureIds": [
+      "F051"
+    ]
   },
   {
     "id": "T084",
     "description": "Migration down restores original constraint without 'team'",
     "implemented": false,
-    "featureIds": ["F051"]
+    "featureIds": [
+      "F051"
+    ]
   },
   {
     "id": "T085",
     "description": "EntityType in media avatarUtils includes 'team'",
     "implemented": false,
-    "featureIds": ["F052"]
+    "featureIds": [
+      "F052"
+    ]
   },
   {
     "id": "T086",
     "description": "EntityType in users avatarUtils includes 'team'",
     "implemented": false,
-    "featureIds": ["F053"]
+    "featureIds": [
+      "F053"
+    ]
   },
   {
     "id": "T087",
     "description": "EntityType in formatting avatarUtils includes 'team'",
     "implemented": false,
-    "featureIds": ["F054"]
+    "featureIds": [
+      "F054"
+    ]
   },
   {
     "id": "T088",
     "description": "EntityType in EntityImageUpload includes 'team'",
     "implemented": false,
-    "featureIds": ["F055"]
+    "featureIds": [
+      "F055"
+    ]
   },
   {
     "id": "T089",
     "description": "`getTeamAvatarUrl()` calls `getEntityImageUrl('team', ...)` and returns URL or null",
     "implemented": false,
-    "featureIds": ["F056"]
+    "featureIds": [
+      "F056"
+    ]
   },
   {
     "id": "T090",
     "description": "TeamAvatar component renders EntityAvatar with correct props (entityId=teamId, entityName=teamName)",
     "implemented": false,
-    "featureIds": ["F057"]
+    "featureIds": [
+      "F057"
+    ]
   },
   {
     "id": "T091",
     "description": "TeamAvatar shows colored initials when avatarUrl is null",
     "implemented": false,
-    "featureIds": ["F057"]
+    "featureIds": [
+      "F057"
+    ]
   },
   {
     "id": "T092",
     "description": "TeamAvatar shows uploaded image when avatarUrl is provided",
     "implemented": false,
-    "featureIds": ["F057"]
+    "featureIds": [
+      "F057"
+    ]
   },
   {
     "id": "T093",
     "description": "`uploadTeamAvatar` action stores file via `uploadEntityImage('team', ...)` and returns avatarUrl",
     "implemented": false,
-    "featureIds": ["F058"]
+    "featureIds": [
+      "F058"
+    ]
   },
   {
     "id": "T094",
     "description": "`uploadTeamAvatar` rejects when team not found",
     "implemented": false,
-    "featureIds": ["F058"]
+    "featureIds": [
+      "F058"
+    ]
   },
   {
     "id": "T095",
     "description": "`uploadTeamAvatar` rejects when no file provided",
     "implemented": false,
-    "featureIds": ["F058"]
+    "featureIds": [
+      "F058"
+    ]
   },
   {
     "id": "T096",
     "description": "`deleteTeamAvatar` action deletes via `deleteEntityImage('team', ...)`",
     "implemented": false,
-    "featureIds": ["F059"]
+    "featureIds": [
+      "F059"
+    ]
   },
   {
     "id": "T097",
     "description": "`deleteTeamAvatar` rejects when team not found",
     "implemented": false,
-    "featureIds": ["F059"]
+    "featureIds": [
+      "F059"
+    ]
   },
   {
     "id": "T098",
     "description": "`getTeamAvatarUrlAction` returns URL string for existing team avatar",
     "implemented": false,
-    "featureIds": ["F060"]
+    "featureIds": [
+      "F060"
+    ]
   },
   {
     "id": "T099",
     "description": "`getTeamAvatarUrlAction` returns null when no avatar exists",
     "implemented": false,
-    "featureIds": ["F060"]
+    "featureIds": [
+      "F060"
+    ]
   },
   {
     "id": "T100",
     "description": "`getTeamAvatarUrlsBatchAction` returns Map with URLs for multiple teams",
     "implemented": false,
-    "featureIds": ["F061"]
+    "featureIds": [
+      "F061"
+    ]
   },
   {
     "id": "T101",
     "description": "Avatar actions are exported from teams package actions barrel",
     "implemented": false,
-    "featureIds": ["F062"]
+    "featureIds": [
+      "F062"
+    ]
   },
   {
     "id": "T102",
     "description": "Teams package.json includes @alga-psa/media, @alga-psa/auth, and swr dependencies",
     "implemented": false,
-    "featureIds": ["F063"]
+    "featureIds": [
+      "F063"
+    ]
   },
   {
     "id": "T103",
     "description": "`useTeamAvatar` hook returns `{ avatarUrl, refreshAvatar, isLoading }` via SWR",
     "implemented": false,
-    "featureIds": ["F064"]
+    "featureIds": [
+      "F064"
+    ]
   },
   {
     "id": "T104",
     "description": "`useTeamAvatar` returns null avatarUrl when teamId is undefined",
     "implemented": false,
-    "featureIds": ["F064"]
+    "featureIds": [
+      "F064"
+    ]
   },
   {
     "id": "T105",
     "description": "`invalidateTeamAvatar` triggers SWR cache invalidation",
     "implemented": false,
-    "featureIds": ["F064"]
+    "featureIds": [
+      "F064"
+    ]
   },
   {
     "id": "T106",
     "description": "`useTeamAvatar` is exported from teams hooks barrel",
     "implemented": false,
-    "featureIds": ["F065"]
+    "featureIds": [
+      "F065"
+    ]
   },
   {
     "id": "T107",
     "description": "TeamDetails shows avatar upload area above team name field",
     "implemented": false,
-    "featureIds": ["F066"]
+    "featureIds": [
+      "F066"
+    ]
   },
   {
     "id": "T108",
     "description": "TeamDetails avatar upload successfully uploads an image and displays it",
     "implemented": false,
-    "featureIds": ["F066", "F067"]
+    "featureIds": [
+      "F066",
+      "F067"
+    ]
   },
   {
     "id": "T109",
     "description": "TeamDetails avatar updates after successful upload without page reload",
     "implemented": false,
-    "featureIds": ["F067"]
+    "featureIds": [
+      "F067"
+    ]
   },
   {
     "id": "T110",
     "description": "OrgChartNode renders UserAvatar, user name, and role text",
     "implemented": false,
-    "featureIds": ["F068"]
+    "featureIds": [
+      "F068"
+    ]
   },
   {
     "id": "T111",
     "description": "OrgChartNode shows inactive badge for inactive users",
     "implemented": false,
-    "featureIds": ["F068"]
+    "featureIds": [
+      "F068"
+    ]
   },
   {
     "id": "T112",
     "description": "OrgChartNode has top (target) and bottom (source) ReactFlow handles",
     "implemented": false,
-    "featureIds": ["F068"]
+    "featureIds": [
+      "F068"
+    ]
   },
   {
     "id": "T113",
     "description": "OrgChart component renders inside ReactFlowProvider without SSR errors",
     "implemented": false,
-    "featureIds": ["F069", "F075"]
+    "featureIds": [
+      "F069",
+      "F075"
+    ]
   },
   {
     "id": "T114",
     "description": "OrgChart builds tree from users with `reports_to` relationships",
     "implemented": false,
-    "featureIds": ["F070"]
+    "featureIds": [
+      "F070"
+    ]
   },
   {
     "id": "T115",
     "description": "OrgChart places root nodes (reports_to=null) at top level",
     "implemented": false,
-    "featureIds": ["F070"]
+    "featureIds": [
+      "F070"
+    ]
   },
   {
     "id": "T116",
     "description": "OrgChart positions child nodes below their parent with appropriate spacing",
     "implemented": false,
-    "featureIds": ["F070"]
+    "featureIds": [
+      "F070"
+    ]
   },
   {
     "id": "T117",
     "description": "OrgChart creates smoothstep edges between connected nodes",
     "implemented": false,
-    "featureIds": ["F071"]
+    "featureIds": [
+      "F071"
+    ]
   },
   {
     "id": "T118",
     "description": "OrgChart calls `fitView` on initial render to show all nodes",
     "implemented": false,
-    "featureIds": ["F072"]
+    "featureIds": [
+      "F072"
+    ]
   },
   {
     "id": "T119",
     "description": "OrgChart supports zoom and pan interactions",
     "implemented": false,
-    "featureIds": ["F072"]
+    "featureIds": [
+      "F072"
+    ]
   },
   {
     "id": "T120",
     "description": "OrgChart nodes are not draggable",
     "implemented": false,
-    "featureIds": ["F072"]
+    "featureIds": [
+      "F072"
+    ]
   },
   {
     "id": "T121",
     "description": "Clicking an OrgChart node opens UserDetails drawer with correct userId",
     "implemented": false,
-    "featureIds": ["F073"]
+    "featureIds": [
+      "F073"
+    ]
   },
   {
     "id": "T122",
     "description": "Closing UserDetails drawer from OrgChart returns to the chart view",
     "implemented": false,
-    "featureIds": ["F073"]
+    "featureIds": [
+      "F073"
+    ]
   },
   {
     "id": "T123",
     "description": "OrgChart nodes show user avatars (fetched in batch)",
     "implemented": false,
-    "featureIds": ["F074"]
+    "featureIds": [
+      "F074"
+    ]
   },
   {
     "id": "T124",
-    "description": "ReactFlow is dynamically imported with `ssr: false` — no window/document errors during SSR",
+    "description": "ReactFlow is dynamically imported with `ssr: false` \u2014 no window/document errors during SSR",
     "implemented": false,
-    "featureIds": ["F075"]
+    "featureIds": [
+      "F075"
+    ]
   },
   {
     "id": "T125",
     "description": "CardHeader shows both ViewSwitchers in one row: [List|Structure] and [MSP|Client Portal]",
     "implemented": false,
-    "featureIds": ["F076"]
+    "featureIds": [
+      "F076"
+    ]
   },
   {
     "id": "T126",
     "description": "Structure toggle is hidden when `teams-v2` is disabled",
     "implemented": false,
-    "featureIds": ["F076", "F082"]
+    "featureIds": [
+      "F076",
+      "F082"
+    ]
   },
   {
     "id": "T127",
     "description": "Structure toggle is hidden when portal type is 'client'",
     "implemented": false,
-    "featureIds": ["F076"]
+    "featureIds": [
+      "F076"
+    ]
   },
   {
     "id": "T128",
     "description": "No ViewSwitcher for list/org appears in the list view toolbar area",
     "implemented": false,
-    "featureIds": ["F077"]
+    "featureIds": [
+      "F077"
+    ]
   },
   {
     "id": "T129",
     "description": "No ViewSwitcher for list/org appears above the org chart content",
     "implemented": false,
-    "featureIds": ["F078"]
+    "featureIds": [
+      "F078"
+    ]
   },
   {
     "id": "T130",
     "description": "ViewSwitcher option label reads 'Structure' not 'Org Chart'",
     "implemented": false,
-    "featureIds": ["F079"]
+    "featureIds": [
+      "F079"
+    ]
   },
   {
     "id": "T131",
     "description": "Switching to 'Structure' view renders the ReactFlow OrgChart instead of nested list",
     "implemented": false,
-    "featureIds": ["F080"]
+    "featureIds": [
+      "F080"
+    ]
   },
   {
     "id": "T132",
     "description": "No `buildOrgTree` or `renderOrgNode` functions remain in UserManagement.tsx",
     "implemented": false,
-    "featureIds": ["F081"]
+    "featureIds": [
+      "F081"
+    ]
   },
   {
     "id": "T133",
     "description": "Structure view and toggle are invisible when `teams-v2` flag is off",
     "implemented": false,
-    "featureIds": ["F082"]
+    "featureIds": [
+      "F082"
+    ]
   },
   {
     "id": "T134",
     "description": "UserAndTeamPicker: teams show TeamAvatar instead of gray circle with TeamIcon",
     "implemented": false,
-    "featureIds": ["F083"]
+    "featureIds": [
+      "F083"
+    ]
   },
   {
     "id": "T135",
     "description": "UserAndTeamPicker: TeamAvatar shows colored initials when no image is uploaded",
     "implemented": false,
-    "featureIds": ["F083", "F090"]
+    "featureIds": [
+      "F083",
+      "F090"
+    ]
   },
   {
     "id": "T136",
     "description": "UserAndTeamPicker: TeamAvatar shows uploaded image when available",
     "implemented": false,
-    "featureIds": ["F083", "F085"]
+    "featureIds": [
+      "F083",
+      "F085"
+    ]
   },
   {
     "id": "T137",
-    "description": "UserAndTeamPicker: `getTeamAvatarUrlsBatch` prop is optional — component works without it",
+    "description": "UserAndTeamPicker: `getTeamAvatarUrlsBatch` prop is optional \u2014 component works without it",
     "implemented": false,
-    "featureIds": ["F084"]
+    "featureIds": [
+      "F084"
+    ]
   },
   {
     "id": "T138",
     "description": "UserAndTeamPicker: avatar URLs are batch-fetched when dropdown opens",
     "implemented": false,
-    "featureIds": ["F085"]
+    "featureIds": [
+      "F085"
+    ]
   },
   {
     "id": "T139",
     "description": "MultiUserAndTeamPicker: teams show TeamAvatar in all 4 display contexts (summary single, summary multi, chip, dropdown)",
     "implemented": false,
-    "featureIds": ["F086", "F087"]
+    "featureIds": [
+      "F086",
+      "F087"
+    ]
   },
   {
     "id": "T140",
     "description": "MultiUserAndTeamPicker: accepts teams prop, teamFilterFn, and all team-related props from original MultiUserPicker",
     "implemented": false,
-    "featureIds": ["F086"]
+    "featureIds": [
+      "F086"
+    ]
   },
   {
     "id": "T141",
-    "description": "MultiUserAndTeamPicker: `getTeamAvatarUrlsBatch` prop is optional — component works without it (falls back to colored initials)",
+    "description": "MultiUserAndTeamPicker: `getTeamAvatarUrlsBatch` prop is optional \u2014 component works without it (falls back to colored initials)",
     "implemented": false,
-    "featureIds": ["F088"]
+    "featureIds": [
+      "F088"
+    ]
   },
   {
     "id": "T142",
     "description": "MultiUserAndTeamPicker: avatar URLs are batch-fetched when dropdown opens",
     "implemented": false,
-    "featureIds": ["F088"]
+    "featureIds": [
+      "F088"
+    ]
   },
   {
     "id": "T143",
     "description": "MultiUserPicker: no team-related props remain (teams, teamFilterFn, etc.)",
     "implemented": false,
-    "featureIds": ["F089"]
+    "featureIds": [
+      "F089"
+    ]
   },
   {
     "id": "T144",
-    "description": "MultiUserPicker: renders only users — no team sections, no TeamIcon, no team chips",
+    "description": "MultiUserPicker: renders only users \u2014 no team sections, no TeamIcon, no team chips",
     "implemented": false,
-    "featureIds": ["F089"]
+    "featureIds": [
+      "F089"
+    ]
   },
   {
     "id": "T145",
     "description": "Call sites render `MultiUserAndTeamPicker` when `teams-v2` flag is enabled, `MultiUserPicker` when disabled",
     "implemented": false,
-    "featureIds": ["F090"]
+    "featureIds": [
+      "F090"
+    ]
   },
   {
     "id": "T146",
     "description": "Ticket detail picker passes `getTeamAvatarUrlsBatchAction` to UserAndTeamPicker",
     "implemented": false,
-    "featureIds": ["F091"]
+    "featureIds": [
+      "F091"
+    ]
   },
   {
     "id": "T147",
     "description": "Ticket list filter passes `getTeamAvatarUrlsBatchAction` to MultiUserAndTeamPicker",
     "implemented": false,
-    "featureIds": ["F091"]
+    "featureIds": [
+      "F091"
+    ]
   },
   {
     "id": "T148",
     "description": "No gray circles with generic TeamIcon remain in picker components when teams are displayed",
     "implemented": false,
-    "featureIds": ["F092"]
+    "featureIds": [
+      "F092"
+    ]
   }
 ]
