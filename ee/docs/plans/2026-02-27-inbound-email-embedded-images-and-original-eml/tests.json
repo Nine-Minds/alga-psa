@@ -109,7 +109,7 @@
   {
     "id": "T013",
     "description": "DB integration happy-path: embedded image processing creates documents row with expected metadata",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F010",
       "F022"
