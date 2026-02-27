@@ -397,7 +397,7 @@
   {
     "id": "T131",
     "description": "Switching to 'Structure' view renders the ReactFlow OrgChart instead of nested list",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F080"
     ]
