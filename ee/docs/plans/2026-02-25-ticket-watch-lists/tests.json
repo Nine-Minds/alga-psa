@@ -396,7 +396,7 @@
   {
     "id": "T047",
     "description": "Unit: merge fills missing entity metadata on an existing watcher when duplicate email is added from picker with metadata.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F026",
       "F034"
