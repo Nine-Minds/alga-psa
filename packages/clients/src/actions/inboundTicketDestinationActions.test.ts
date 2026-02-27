@@ -6,11 +6,12 @@ const withTransactionMock = vi.fn();
 let trxImpl: any = null;
 
 vi.mock('@alga-psa/auth', () => ({
-  withAuth: (fn: any) => fn,
+  withAuth: (fn: any) => (...args: any[]) =>
+    fn({ user_id: 'user-1' }, { tenant: 'tenant-1' }, ...args),
 }));
 
 vi.mock('@alga-psa/db', () => ({
-  createTenantKnex: (...args: any[]) => createTenantKnexMock(...args),
+  createTenantKnex: () => createTenantKnexMock(),
   withTransaction: (...args: any[]) => withTransactionMock(...args),
 }));
 
@@ -83,12 +84,7 @@ describe('inboundTicketDestinationActions permissions and tenant scoping', () =>
 
     const { updateClientInboundTicketDestination } = await import('./inboundTicketDestinationActions');
     await expect(
-      updateClientInboundTicketDestination(
-        { user_id: 'user-1' } as any,
-        { tenant: 'tenant-1' } as any,
-        'client-1',
-        'defaults-1'
-      )
+      updateClientInboundTicketDestination('client-1', 'defaults-1')
     ).rejects.toThrow('Permission denied: Cannot update clients');
 
     expect(createTenantKnexMock).not.toHaveBeenCalled();
@@ -104,12 +100,7 @@ describe('inboundTicketDestinationActions permissions and tenant scoping', () =>
 
     const { updateClientInboundTicketDestination } = await import('./inboundTicketDestinationActions');
     await expect(
-      updateClientInboundTicketDestination(
-        { user_id: 'user-1' } as any,
-        { tenant: 'tenant-1' } as any,
-        'client-1',
-        'defaults-foreign'
-      )
+      updateClientInboundTicketDestination('client-1', 'defaults-foreign')
     ).rejects.toThrow('Inbound ticket destination was not found for this tenant');
 
     expect(calls.some((entry) => entry.table === 'inbound_ticket_defaults' && entry.op === 'first')).toBe(true);
@@ -121,12 +112,7 @@ describe('inboundTicketDestinationActions permissions and tenant scoping', () =>
 
     const { updateContactInboundTicketDestination } = await import('./inboundTicketDestinationActions');
     await expect(
-      updateContactInboundTicketDestination(
-        { user_id: 'user-1' } as any,
-        { tenant: 'tenant-1' } as any,
-        'contact-1',
-        'defaults-1'
-      )
+      updateContactInboundTicketDestination('contact-1', 'defaults-1')
     ).rejects.toThrow('Permission denied: Cannot update contacts');
 
     expect(createTenantKnexMock).not.toHaveBeenCalled();
@@ -142,12 +128,7 @@ describe('inboundTicketDestinationActions permissions and tenant scoping', () =>
 
     const { updateContactInboundTicketDestination } = await import('./inboundTicketDestinationActions');
     await expect(
-      updateContactInboundTicketDestination(
-        { user_id: 'user-1' } as any,
-        { tenant: 'tenant-1' } as any,
-        'contact-1',
-        'defaults-foreign'
-      )
+      updateContactInboundTicketDestination('contact-1', 'defaults-foreign')
     ).rejects.toThrow('Inbound ticket destination was not found for this tenant');
 
     expect(calls.some((entry) => entry.table === 'inbound_ticket_defaults' && entry.op === 'first')).toBe(true);

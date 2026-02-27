@@ -3,7 +3,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 let knexImpl: any;
 
 vi.mock('@alga-psa/auth', () => ({
-  withAuth: (fn: any) => fn,
+  withAuth: (fn: any) => (...args: any[]) =>
+    fn({ user_id: 'user-1' }, { tenant: 'tenant-1' }, ...args),
 }));
 
 vi.mock('@alga-psa/db', () => ({
@@ -75,11 +76,7 @@ describe('deleteInboundTicketDefaults reference clearing', () => {
     knexImpl = knex;
 
     const { deleteInboundTicketDefaults } = await import('./inboundTicketDefaultsActions');
-    await deleteInboundTicketDefaults(
-      { user_id: 'user-1' } as any,
-      { tenant: 'tenant-1' } as any,
-      'defaults-1'
-    );
+    await deleteInboundTicketDefaults('defaults-1');
 
     expect(calls).toEqual(
       expect.arrayContaining([
@@ -117,11 +114,7 @@ describe('deleteInboundTicketDefaults reference clearing', () => {
 
     const { deleteInboundTicketDefaults } = await import('./inboundTicketDefaultsActions');
     await expect(
-      deleteInboundTicketDefaults(
-        { user_id: 'user-1' } as any,
-        { tenant: 'tenant-1' } as any,
-        'missing-defaults'
-      )
+      deleteInboundTicketDefaults('missing-defaults')
     ).rejects.toThrow('Defaults configuration not found');
   });
 });
