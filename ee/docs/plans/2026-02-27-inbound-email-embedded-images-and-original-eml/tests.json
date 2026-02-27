@@ -193,7 +193,7 @@
   {
     "id": "T023",
     "description": "Action integration guard: duplicate process_original_email_attachment invocation is idempotent",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F017"
     ]
