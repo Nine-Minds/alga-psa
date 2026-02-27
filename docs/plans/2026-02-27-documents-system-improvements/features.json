@@ -50,7 +50,7 @@
   {
     "id": "F007",
     "description": "Type: Add is_client_visible to IDocument interface",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-1.3"
     ]
