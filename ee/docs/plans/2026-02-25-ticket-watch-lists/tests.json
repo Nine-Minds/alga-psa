@@ -373,5 +373,182 @@
       "F024",
       "F006"
     ]
+  },
+  {
+    "id": "T045",
+    "description": "Unit: parser accepts watch-list entry objects that include `entity_type` and `entity_id` metadata.",
+    "implemented": true,
+    "featureIds": [
+      "F025",
+      "F026"
+    ]
+  },
+  {
+    "id": "T046",
+    "description": "Unit: merge preserves existing entity metadata when duplicate email is re-added from another path.",
+    "implemented": false,
+    "featureIds": [
+      "F025",
+      "F026",
+      "F033"
+    ]
+  },
+  {
+    "id": "T047",
+    "description": "Unit: merge fills missing entity metadata on an existing watcher when duplicate email is added from picker with metadata.",
+    "implemented": false,
+    "featureIds": [
+      "F026",
+      "F034"
+    ]
+  },
+  {
+    "id": "T048",
+    "description": "UI: Watch List renders internal-user add controls in addition to existing manual email add controls.",
+    "implemented": false,
+    "featureIds": [
+      "F027",
+      "F033"
+    ]
+  },
+  {
+    "id": "T049",
+    "description": "UI: selecting an internal user and clicking add persists watcher with normalized email plus `entity_type=user` and `entity_id`.",
+    "implemented": false,
+    "featureIds": [
+      "F027",
+      "F034"
+    ]
+  },
+  {
+    "id": "T050",
+    "description": "UI: Watch List renders client-scoped contact quick-add controls using ticket-associated client contacts as default source.",
+    "implemented": false,
+    "featureIds": [
+      "F028",
+      "F031"
+    ]
+  },
+  {
+    "id": "T051",
+    "description": "UI: adding a contact from client-scoped quick picker persists watcher metadata (`entity_type=contact`, `entity_id`, name).",
+    "implemented": false,
+    "featureIds": [
+      "F028",
+      "F034"
+    ]
+  },
+  {
+    "id": "T052",
+    "description": "UI: `Search all contacts` path is hidden/secondary and not required for standard ticket-client contact adds.",
+    "implemented": false,
+    "featureIds": [
+      "F029",
+      "F028"
+    ]
+  },
+  {
+    "id": "T053",
+    "description": "UI: triggering `Search all contacts` lazily loads active all-tenant contacts and allows selecting a cross-client contact.",
+    "implemented": false,
+    "featureIds": [
+      "F029",
+      "F032"
+    ]
+  },
+  {
+    "id": "T054",
+    "description": "UI: selected internal user without valid email shows validation error and does not call persist callback.",
+    "implemented": false,
+    "featureIds": [
+      "F030",
+      "F027"
+    ]
+  },
+  {
+    "id": "T055",
+    "description": "UI: selected contact without valid email shows validation error and does not call persist callback.",
+    "implemented": false,
+    "featureIds": [
+      "F030",
+      "F028"
+    ]
+  },
+  {
+    "id": "T056",
+    "description": "UI: dedupe prevents duplicate watcher row when same email is added via manual input and picker paths.",
+    "implemented": false,
+    "featureIds": [
+      "F033",
+      "F026"
+    ]
+  },
+  {
+    "id": "T057",
+    "description": "Component integration: TicketDetails/TicketProperties pass client contacts, all-contact fallback hooks, and internal users into TicketWatchListCard without prop regression.",
+    "implemented": false,
+    "featureIds": [
+      "F031"
+    ]
+  },
+  {
+    "id": "T058",
+    "description": "Server action unit: all-contact lookup returns active contacts sorted by full name for watch-list global search.",
+    "implemented": false,
+    "featureIds": [
+      "F032"
+    ]
+  },
+  {
+    "id": "T059",
+    "description": "Server action guard: all-contact lookup excludes inactive contacts by default.",
+    "implemented": false,
+    "featureIds": [
+      "F032"
+    ]
+  },
+  {
+    "id": "T060",
+    "description": "DB integration (happy path): upsertTicketWatchListRecipients persists entity metadata in `tickets.attributes.watch_list` for picker-added entries.",
+    "implemented": false,
+    "featureIds": [
+      "F034",
+      "F025"
+    ]
+  },
+  {
+    "id": "T061",
+    "description": "DB integration (guard case): upsert ignores recipient inputs that include entity metadata but no valid email.",
+    "implemented": false,
+    "featureIds": [
+      "F030",
+      "F034"
+    ]
+  },
+  {
+    "id": "T062",
+    "description": "Subscriber regression: watcher recipient extraction/sending remains email-driven and unaffected by presence of entity metadata fields.",
+    "implemented": false,
+    "featureIds": [
+      "F036",
+      "F025"
+    ]
+  },
+  {
+    "id": "T063",
+    "description": "Subscriber regression: watcher with linked inactive/deleted identity metadata still sends when watcher entry is active and email is valid.",
+    "implemented": false,
+    "featureIds": [
+      "F037",
+      "F036"
+    ]
+  },
+  {
+    "id": "T064",
+    "description": "UI: watcher row shows name/type hint for picker-added entries while continuing to display canonical email.",
+    "implemented": false,
+    "featureIds": [
+      "F035"
+    ]
   }
 ]
