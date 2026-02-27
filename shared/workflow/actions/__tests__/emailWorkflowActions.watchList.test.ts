@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const withAdminTransactionMock = vi.fn();
 const updateMock = vi.fn();
+const publishWorkflowEventMock = vi.fn();
 let firstRow: { attributes?: unknown } | undefined;
 
 const ticketsBuilder: any = {
@@ -21,6 +22,10 @@ const trxMock = vi.fn((table: string) => {
 vi.mock('@alga-psa/db', () => ({
   withAdminTransaction: (callback: (trx: any) => Promise<any>) =>
     withAdminTransactionMock(callback),
+}));
+
+vi.mock('@alga-psa/event-bus/publishers', () => ({
+  publishWorkflowEvent: (...args: any[]) => publishWorkflowEventMock(...args),
 }));
 
 describe('upsertTicketWatchListRecipients', () => {
@@ -79,6 +84,74 @@ describe('upsertTicketWatchListRecipients', () => {
       {
         ticketId: 'ticket-1',
         recipients: [{ email: 'not-an-email' }, { email: null }, { email: '' }],
+      },
+      'tenant-1'
+    );
+
+    expect(result.updated).toBe(false);
+    expect(updateMock).not.toHaveBeenCalled();
+  });
+
+  it('T060: upsert persists entity metadata in tickets.attributes.watch_list for picker-added entries', async () => {
+    firstRow = {
+      attributes: {
+        watch_list: [],
+      },
+    };
+
+    const { upsertTicketWatchListRecipients } = await import('../emailWorkflowActions');
+
+    const result = await upsertTicketWatchListRecipients(
+      {
+        ticketId: 'ticket-1',
+        recipients: [
+          {
+            email: 'picker.user@example.com',
+            source: 'manual',
+            name: 'Picker User',
+            entity_type: 'user',
+            entity_id: 'user-77',
+          },
+        ],
+      },
+      'tenant-1'
+    );
+
+    expect(result.updated).toBe(true);
+    expect(updateMock).toHaveBeenCalledTimes(1);
+    const parsedAttributes = JSON.parse(updateMock.mock.calls[0][0].attributes);
+    expect(parsedAttributes.watch_list).toEqual([
+      {
+        email: 'picker.user@example.com',
+        active: true,
+        source: 'manual',
+        name: 'Picker User',
+        entity_type: 'user',
+        entity_id: 'user-77',
+      },
+    ]);
+  });
+
+  it('T061: upsert ignores recipient inputs with metadata but no valid email', async () => {
+    const { upsertTicketWatchListRecipients } = await import('../emailWorkflowActions');
+
+    const result = await upsertTicketWatchListRecipients(
+      {
+        ticketId: 'ticket-1',
+        recipients: [
+          {
+            email: '',
+            source: 'manual',
+            name: 'Missing Email',
+            entity_type: 'contact',
+            entity_id: 'contact-22',
+          },
+          {
+            email: null,
+            entity_type: 'user',
+            entity_id: 'user-88',
+          },
+        ],
       },
       'tenant-1'
     );

@@ -510,7 +510,7 @@
   {
     "id": "T060",
     "description": "DB integration (happy path): upsertTicketWatchListRecipients persists entity metadata in `tickets.attributes.watch_list` for picker-added entries.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F034",
       "F025"

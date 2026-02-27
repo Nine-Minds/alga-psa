@@ -214,3 +214,4 @@ Working notes for the ticket watch-list feature plan. This log captures clarifie
 - (2026-02-27) Implemented T057 with `packages/tickets/src/components/ticket/__tests__/TicketWatchListWiring.contract.test.ts`, asserting watcher-picker props are wired through `TicketDetails` and `TicketProperties` into `TicketWatchListCard`.
 - (2026-02-27) Implemented T058 in `packages/tickets/src/actions/clientLookupActions.watchList.test.ts` validating all-contact lookup action wiring and default ascending full-name sort path.
 - (2026-02-27) Implemented T059 in `packages/tickets/src/actions/clientLookupActions.watchList.test.ts` validating guard-path behavior for active-only lookup and explicit sort-direction override.
+- (2026-02-27) Implemented T060 by extending `shared/workflow/actions/__tests__/emailWorkflowActions.watchList.test.ts` with a happy-path assertion that picker metadata persists to `tickets.attributes.watch_list`.
