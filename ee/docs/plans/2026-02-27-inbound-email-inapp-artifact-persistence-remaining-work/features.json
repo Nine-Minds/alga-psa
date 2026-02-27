@@ -14,7 +14,7 @@
   {
     "id": "F216",
     "description": "Extend in-app provider attachment handling to consume attachment base64 bytes when supplied and persist real file-backed ticket documents",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements"]
   },
   {

@@ -50,3 +50,6 @@ Create a clean, implementation-ready plan containing only remaining work for inb
   - `npx tsc -p shared/tsconfig.json --noEmit`
 - Gotcha:
   - Repo Vitest config only includes `server/src` + `../packages`; direct `shared/services/email/__tests__` file filters are not discovered by default runner config.
+- 2026-02-27: Completed `F216`.
+  - `persistInboundEmailAttachment(...)` now consumes `attachmentData.content` (base64) when present before any provider download fallback.
+  - File bytes are decoded and fed into storage-backed document persistence, enabling in-app callback payloads (including IMAP/local test payloads) to attach real files without workflow-worker execution.
