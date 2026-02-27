@@ -42,7 +42,7 @@
   {
     "id": "F006",
     "description": "Migration: Add partial index on documents (tenant, is_client_visible) WHERE is_client_visible = true",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-1.3"
     ]
