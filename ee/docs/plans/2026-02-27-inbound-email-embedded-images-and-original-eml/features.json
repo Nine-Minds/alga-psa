@@ -72,7 +72,7 @@
   {
     "id": "F009",
     "description": "Reuse storage-backed attachment ingestion path for embedded image synthetic attachments",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data / API / Integrations",
       "Requirements"
