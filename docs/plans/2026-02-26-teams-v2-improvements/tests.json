@@ -106,7 +106,7 @@
   {
     "id": "T095",
     "description": "`uploadTeamAvatar` rejects when no file provided",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F058"
     ]
