@@ -172,3 +172,4 @@
 - (2026-02-27) Marked T145 covered by teams-v2 improvements test suite.
 - (2026-02-27) Added team avatar batch action to ticket detail picker (T146).
 - (2026-02-27) Marked ticket filter team avatar batch coverage (T147).
+- (2026-02-27) Marked no-TeamIcon picker coverage (T148).

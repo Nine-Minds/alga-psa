@@ -536,7 +536,7 @@
   {
     "id": "T148",
     "description": "No gray circles with generic TeamIcon remain in picker components when teams are displayed",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F092"
     ]
