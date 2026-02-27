@@ -389,7 +389,7 @@
   {
     "id": "T130",
     "description": "ViewSwitcher option label reads 'Structure' not 'Org Chart'",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F079"
     ]
