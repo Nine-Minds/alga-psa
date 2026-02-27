@@ -6,12 +6,14 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
+import { ToggleGroup, ToggleGroupItem } from '@alga-psa/ui/components/ToggleGroup';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
 import type { IContact, IUser } from '@alga-psa/types';
 import { normalizeEmailAddress } from '@shared/lib/email/addressUtils';
 import {
   mergeTicketWatchListRecipients,
   parseTicketWatchListAttributes,
+  type TicketWatchListRecipientInput,
   type TicketWatchListEntry,
 } from '@shared/lib/tickets/watchList';
 import styles from './TicketDetails.module.css';
@@ -28,6 +30,9 @@ interface TicketWatchListCardProps {
   onLoadAllContacts?: () => Promise<void>;
 }
 
+type WatcherAddMode = 'client-contact' | 'internal-user' | 'email';
+type ContactScope = 'client' | 'all';
+
 const TicketWatchListCard: React.FC<TicketWatchListCardProps> = ({
   id,
   attributes,
@@ -40,14 +45,19 @@ const TicketWatchListCard: React.FC<TicketWatchListCardProps> = ({
   onLoadAllContacts,
 }) => {
   const [watchListInput, setWatchListInput] = useState('');
+  const [watcherAddMode, setWatcherAddMode] = useState<WatcherAddMode>('client-contact');
+  const [contactScope, setContactScope] = useState<ContactScope>('client');
   const [selectedUserId, setSelectedUserId] = useState('');
-  const [selectedContactId, setSelectedContactId] = useState('');
+  const [selectedClientContactId, setSelectedClientContactId] = useState('');
   const [selectedAllContactId, setSelectedAllContactId] = useState('');
-  const [showAllContactsSearch, setShowAllContactsSearch] = useState(false);
   const [watchListError, setWatchListError] = useState<string | null>(null);
   const [watchListSavingInternal, setWatchListSavingInternal] = useState(false);
   const watchList = React.useMemo(() => parseTicketWatchListAttributes(attributes), [attributes]);
   const isWatchListSaving = watchListSaving || watchListSavingInternal;
+
+  const selectedContactId = contactScope === 'all' ? selectedAllContactId : selectedClientContactId;
+  const availableContacts = contactScope === 'all' ? allContacts : clientContacts;
+  const isContactScopeLoading = contactScope === 'all' && allContactsLoading;
 
   const persistWatchList = async (nextWatchList: TicketWatchListEntry[]): Promise<boolean> => {
     if (!onUpdateWatchList || isWatchListSaving) {
@@ -71,30 +81,60 @@ const TicketWatchListCard: React.FC<TicketWatchListCardProps> = ({
     }
   };
 
-  const handleAddWatcher = async () => {
+  const handleModeChange = (mode: string) => {
+    if (mode !== 'client-contact' && mode !== 'internal-user' && mode !== 'email') {
+      return;
+    }
+    setWatcherAddMode(mode);
+    setWatchListError(null);
+  };
+
+  const handleContactScopeChange = async (nextScope: string) => {
+    if (nextScope !== 'client' && nextScope !== 'all') {
+      return;
+    }
+
+    if (nextScope === contactScope) {
+      return;
+    }
+    setContactScope(nextScope);
+    setWatchListError(null);
+    if (nextScope === 'all' && allContacts.length === 0 && onLoadAllContacts) {
+      await onLoadAllContacts();
+    }
+  };
+
+  const addRecipient = async (
+    recipient: TicketWatchListRecipientInput,
+    onSuccess: () => void
+  ): Promise<void> => {
+    const mergedWatchList = mergeTicketWatchListRecipients(watchList, [recipient]);
+    if (JSON.stringify(mergedWatchList) === JSON.stringify(watchList)) {
+      setWatchListError(null);
+      onSuccess();
+      return;
+    }
+
+    const success = await persistWatchList(mergedWatchList);
+    if (success) {
+      onSuccess();
+    }
+  };
+
+  const handleAddEmailWatcher = async () => {
     const normalizedEmail = normalizeEmailAddress(watchListInput);
     if (!normalizedEmail) {
       setWatchListError('Enter a valid email address.');
       return;
     }
 
-    const mergedWatchList = mergeTicketWatchListRecipients(watchList, [
+    await addRecipient(
       {
         email: normalizedEmail,
         source: 'manual',
       },
-    ]);
-
-    if (JSON.stringify(mergedWatchList) === JSON.stringify(watchList)) {
-      setWatchListError(null);
-      setWatchListInput('');
-      return;
-    }
-
-    const success = await persistWatchList(mergedWatchList);
-    if (success) {
-      setWatchListInput('');
-    }
+      () => setWatchListInput('')
+    );
   };
 
   const handleToggleWatcher = async (email: string, active: boolean) => {
@@ -118,7 +158,7 @@ const TicketWatchListCard: React.FC<TicketWatchListCardProps> = ({
     }
 
     const displayName = `${selectedUser?.first_name || ''} ${selectedUser?.last_name || ''}`.trim();
-    const mergedWatchList = mergeTicketWatchListRecipients(watchList, [
+    await addRecipient(
       {
         email: normalizedEmail,
         source: 'manual',
@@ -126,18 +166,8 @@ const TicketWatchListCard: React.FC<TicketWatchListCardProps> = ({
         entity_type: 'user',
         entity_id: selectedUser.user_id,
       },
-    ]);
-
-    if (JSON.stringify(mergedWatchList) === JSON.stringify(watchList)) {
-      setWatchListError(null);
-      setSelectedUserId('');
-      return;
-    }
-
-    const success = await persistWatchList(mergedWatchList);
-    if (success) {
-      setSelectedUserId('');
-    }
+      () => setSelectedUserId('')
+    );
   };
 
   const handleRemoveWatcher = async (email: string) => {
@@ -145,13 +175,13 @@ const TicketWatchListCard: React.FC<TicketWatchListCardProps> = ({
     await persistWatchList(nextWatchList);
   };
 
-  const handleAddClientContact = async () => {
+  const handleAddContact = async () => {
     if (!selectedContactId) {
       setWatchListError('Select a contact to add.');
       return;
     }
 
-    const selectedContact = clientContacts.find(
+    const selectedContact = availableContacts.find(
       (contact) => contact.contact_name_id === selectedContactId
     );
     const normalizedEmail = normalizeEmailAddress(selectedContact?.email);
@@ -160,7 +190,7 @@ const TicketWatchListCard: React.FC<TicketWatchListCardProps> = ({
       return;
     }
 
-    const mergedWatchList = mergeTicketWatchListRecipients(watchList, [
+    await addRecipient(
       {
         email: normalizedEmail,
         source: 'manual',
@@ -168,93 +198,137 @@ const TicketWatchListCard: React.FC<TicketWatchListCardProps> = ({
         entity_type: 'contact',
         entity_id: selectedContact.contact_name_id,
       },
-    ]);
-
-    if (JSON.stringify(mergedWatchList) === JSON.stringify(watchList)) {
-      setWatchListError(null);
-      setSelectedContactId('');
-      return;
-    }
-
-    const success = await persistWatchList(mergedWatchList);
-    if (success) {
-      setSelectedContactId('');
-    }
-  };
-
-  const handleAddAllContact = async () => {
-    if (!selectedAllContactId) {
-      setWatchListError('Select a contact to add.');
-      return;
-    }
-
-    const selectedContact = allContacts.find((contact) => contact.contact_name_id === selectedAllContactId);
-    const normalizedEmail = normalizeEmailAddress(selectedContact?.email);
-    if (!normalizedEmail) {
-      setWatchListError('Selected contact does not have a valid email address.');
-      return;
-    }
-
-    const mergedWatchList = mergeTicketWatchListRecipients(watchList, [
-      {
-        email: normalizedEmail,
-        source: 'manual',
-        name: selectedContact.full_name || undefined,
-        entity_type: 'contact',
-        entity_id: selectedContact.contact_name_id,
+      () => {
+        if (contactScope === 'all') {
+          setSelectedAllContactId('');
+        } else {
+          setSelectedClientContactId('');
+        }
       },
-    ]);
+    );
+  };
 
-    if (JSON.stringify(mergedWatchList) === JSON.stringify(watchList)) {
-      setWatchListError(null);
-      setSelectedAllContactId('');
+  const handleAddCurrentMode = async () => {
+    if (watcherAddMode === 'email') {
+      await handleAddEmailWatcher();
       return;
     }
 
-    const success = await persistWatchList(mergedWatchList);
-    if (success) {
-      setSelectedAllContactId('');
+    if (watcherAddMode === 'internal-user') {
+      await handleAddInternalUser();
+      return;
     }
+
+    await handleAddContact();
   };
 
-  const handleShowAllContactsSearch = async () => {
-    setShowAllContactsSearch(true);
-    if (allContacts.length === 0 && onLoadAllContacts) {
-      await onLoadAllContacts();
-    }
-  };
+  const addButtonAutomationId =
+    watcherAddMode === 'email'
+      ? `${id}-add-btn`
+      : watcherAddMode === 'internal-user'
+        ? `${id}-add-user-btn`
+        : contactScope === 'all'
+          ? `${id}-add-all-contact-btn`
+          : `${id}-add-contact-btn`;
+
+  const addButtonDisabled =
+    isWatchListSaving ||
+    (watcherAddMode === 'internal-user' && !selectedUserId) ||
+    (watcherAddMode === 'client-contact' && (!selectedContactId || isContactScopeLoading));
+
+  const addButtonLabel =
+    watcherAddMode === 'email'
+      ? 'Add Email'
+      : watcherAddMode === 'internal-user'
+        ? 'Add User'
+        : 'Add Contact';
 
   return (
     <div className={`${styles['card']} p-6 space-y-4`}>
       <h2 className={styles['panel-header']}>Watch List</h2>
       <div className="space-y-3">
-        <div className="flex items-center gap-2">
-          <Input
-            {...withDataAutomationId({ id: `${id}-email-input` })}
-            value={watchListInput}
-            onChange={(event) => setWatchListInput(event.target.value)}
-            placeholder="name@example.com"
-            disabled={isWatchListSaving}
-            onKeyDown={async (event) => {
-              if (event.key === 'Enter') {
-                event.preventDefault();
-                await handleAddWatcher();
-              }
-            }}
-          />
-          <Button
-            {...withDataAutomationId({ id: `${id}-add-btn` })}
-            type="button"
-            onClick={handleAddWatcher}
-            disabled={isWatchListSaving}
-            size="sm"
+        <div className="rounded-lg border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] p-3 space-y-3">
+          <p className="text-xs font-medium text-[rgb(var(--color-text-600))]">Add by</p>
+          <ToggleGroup
+            type="single"
+            value={watcherAddMode}
+            onValueChange={handleModeChange}
+            aria-label="Choose watcher source"
+            className="w-full grid grid-cols-3"
           >
-            Add
-          </Button>
-        </div>
+            <ToggleGroupItem
+              value="client-contact"
+              className="min-w-0 px-2 text-xs"
+              disabled={isWatchListSaving}
+            >
+              Client
+            </ToggleGroupItem>
+            <ToggleGroupItem
+              value="internal-user"
+              className="min-w-0 px-2 text-xs"
+              disabled={isWatchListSaving}
+            >
+              Internal
+            </ToggleGroupItem>
+            <ToggleGroupItem
+              value="email"
+              className="min-w-0 px-2 text-xs"
+              disabled={isWatchListSaving}
+            >
+              Email
+            </ToggleGroupItem>
+          </ToggleGroup>
 
-        <div className="flex items-center gap-2">
-          <div className="flex-1 min-w-0">
+          {watcherAddMode === 'client-contact' ? (
+            <div className="space-y-2">
+              <ToggleGroup
+                type="single"
+                value={contactScope}
+                onValueChange={(value) => void handleContactScopeChange(value)}
+                aria-label="Choose contact scope"
+                className="w-full grid grid-cols-2"
+              >
+                <ToggleGroupItem
+                  {...withDataAutomationId({ id: `${id}-use-ticket-client-contacts-btn` })}
+                  value="client"
+                  className="min-w-0 px-2 text-xs"
+                  disabled={isWatchListSaving}
+                >
+                  Ticket Client
+                </ToggleGroupItem>
+                <ToggleGroupItem
+                  {...withDataAutomationId({ id: `${id}-search-all-contacts-btn` })}
+                  value="all"
+                  className="min-w-0 px-2 text-xs"
+                  disabled={isWatchListSaving || allContactsLoading}
+                >
+                  All Contacts
+                </ToggleGroupItem>
+              </ToggleGroup>
+              <ContactPicker
+                id={contactScope === 'all' ? `${id}-all-contacts-picker` : `${id}-contact-picker`}
+                contacts={availableContacts}
+                value={selectedContactId}
+                onValueChange={(value) => {
+                  if (contactScope === 'all') {
+                    setSelectedAllContactId(value);
+                  } else {
+                    setSelectedClientContactId(value);
+                  }
+                }}
+                placeholder={
+                  contactScope === 'all'
+                    ? allContactsLoading
+                      ? 'Loading contacts...'
+                      : 'Search all contacts'
+                    : 'Select client contact'
+                }
+                disabled={isWatchListSaving || isContactScopeLoading}
+              />
+            </div>
+          ) : null}
+
+          {watcherAddMode === 'internal-user' ? (
             <UserPicker
               id={`${id}-user-picker`}
               value={selectedUserId}
@@ -264,81 +338,36 @@ const TicketWatchListCard: React.FC<TicketWatchListCardProps> = ({
               size="sm"
               disabled={isWatchListSaving}
             />
-          </div>
-          <Button
-            {...withDataAutomationId({ id: `${id}-add-user-btn` })}
-            type="button"
-            onClick={handleAddInternalUser}
-            disabled={isWatchListSaving || !selectedUserId}
-            size="sm"
-          >
-            Add User
-          </Button>
-        </div>
+          ) : null}
 
-        <div className="flex items-center gap-2">
-          <div className="flex-1 min-w-0">
-            <ContactPicker
-              id={`${id}-contact-picker`}
-              contacts={clientContacts}
-              value={selectedContactId}
-              onValueChange={setSelectedContactId}
-              placeholder="Select client contact"
+          {watcherAddMode === 'email' ? (
+            <Input
+              {...withDataAutomationId({ id: `${id}-email-input` })}
+              value={watchListInput}
+              onChange={(event) => setWatchListInput(event.target.value)}
+              placeholder="name@example.com"
               disabled={isWatchListSaving}
+              onKeyDown={async (event) => {
+                if (event.key === 'Enter') {
+                  event.preventDefault();
+                  await handleAddEmailWatcher();
+                }
+              }}
             />
-          </div>
-          <Button
-            {...withDataAutomationId({ id: `${id}-add-contact-btn` })}
-            type="button"
-            onClick={handleAddClientContact}
-            disabled={isWatchListSaving || !selectedContactId}
-            size="sm"
-          >
-            Add Contact
-          </Button>
-        </div>
+          ) : null}
 
-        {!showAllContactsSearch ? (
-          <div className="flex justify-start">
+          <div className="flex justify-end">
             <Button
-              {...withDataAutomationId({ id: `${id}-search-all-contacts-btn` })}
+              {...withDataAutomationId({ id: addButtonAutomationId })}
               type="button"
-              variant="outline"
+              onClick={handleAddCurrentMode}
+              disabled={addButtonDisabled}
               size="sm"
-              disabled={isWatchListSaving || allContactsLoading}
-              onClick={() => void handleShowAllContactsSearch()}
             >
-              Search all contacts
+              {addButtonLabel}
             </Button>
           </div>
-        ) : (
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <div className="flex-1 min-w-0">
-                <ContactPicker
-                  id={`${id}-all-contacts-picker`}
-                  contacts={allContacts}
-                  value={selectedAllContactId}
-                  onValueChange={setSelectedAllContactId}
-                  placeholder={allContactsLoading ? 'Loading contacts...' : 'Search all contacts'}
-                  disabled={isWatchListSaving || allContactsLoading}
-                />
-              </div>
-              <Button
-                {...withDataAutomationId({ id: `${id}-add-all-contact-btn` })}
-                type="button"
-                onClick={handleAddAllContact}
-                disabled={isWatchListSaving || allContactsLoading || !selectedAllContactId}
-                size="sm"
-              >
-                Add Contact
-              </Button>
-            </div>
-            <p className="text-xs text-gray-500">
-              Secondary path for cross-client contacts.
-            </p>
-          </div>
-        )}
+        </div>
 
         {watchListError ? (
           <p className="text-sm text-red-600 flex items-center gap-1">

@@ -125,8 +125,9 @@ describe('TicketWatchListCard', () => {
       onPersist,
     });
 
+    await user.click(screen.getByRole('radio', { name: 'Email' }));
     await user.type(screen.getByPlaceholderText('name@example.com'), 'newwatch@example.com');
-    await user.click(screen.getByRole('button', { name: 'Add' }));
+    await user.click(screen.getByRole('button', { name: 'Add Email' }));
 
     await waitFor(() => {
       expect(onPersist).toHaveBeenCalledWith([
@@ -145,8 +146,9 @@ describe('TicketWatchListCard', () => {
       onPersist,
     });
 
+    await user.click(screen.getByRole('radio', { name: 'Email' }));
     await user.type(screen.getByPlaceholderText('name@example.com'), 'not-an-email');
-    await user.click(screen.getByRole('button', { name: 'Add' }));
+    await user.click(screen.getByRole('button', { name: 'Add Email' }));
 
     expect(screen.getByText('Enter a valid email address.')).toBeInTheDocument();
     expect(onPersist).not.toHaveBeenCalled();
@@ -163,8 +165,9 @@ describe('TicketWatchListCard', () => {
       onPersist,
     });
 
+    await user.click(screen.getByRole('radio', { name: 'Email' }));
     await user.type(screen.getByPlaceholderText('name@example.com'), 'REACTIVATE@example.com');
-    await user.click(screen.getByRole('button', { name: 'Add' }));
+    await user.click(screen.getByRole('button', { name: 'Add Email' }));
 
     await waitFor(() => {
       expect(onPersist).toHaveBeenCalledWith([
@@ -240,10 +243,11 @@ describe('TicketWatchListCard', () => {
       onPersist,
     });
 
+    await user.click(screen.getByRole('radio', { name: 'Email' }));
     await user.click(screen.getByRole('checkbox'));
 
     expect(screen.getByPlaceholderText('name@example.com')).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Add' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Add Email' })).toBeDisabled();
     expect(screen.getByRole('checkbox')).toBeDisabled();
     expect(screen.getByRole('button', { name: /remove/i })).toBeDisabled();
 
@@ -262,8 +266,9 @@ describe('TicketWatchListCard', () => {
       onPersist,
     });
 
+    await user.click(screen.getByRole('radio', { name: 'Email' }));
     await user.type(screen.getByPlaceholderText('name@example.com'), 'tech@internal.example');
-    await user.click(screen.getByRole('button', { name: 'Add' }));
+    await user.click(screen.getByRole('button', { name: 'Add Email' }));
 
     await waitFor(() => {
       expect(onPersist).toHaveBeenCalledWith([
@@ -275,7 +280,7 @@ describe('TicketWatchListCard', () => {
     expect(screen.getByRole('checkbox')).toBeChecked();
   });
 
-  it('T048: Watch List renders internal-user add controls in addition to manual email add controls', () => {
+  it('T048: Watch List uses one source toggle with client contact as the default quick-add path', () => {
     renderWatchListCard({
       initialAttributes: { watch_list: [] },
       internalUsers: [
@@ -289,10 +294,13 @@ describe('TicketWatchListCard', () => {
       ],
     });
 
-    expect(screen.getByPlaceholderText('name@example.com')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Add' })).toBeInTheDocument();
-    expect(screen.getByLabelText('Select internal user')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Add User' })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: 'Client' })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: 'Internal' })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: 'Email' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Select client contact')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Add Contact' })).toBeInTheDocument();
+    expect(screen.queryByLabelText('Select internal user')).not.toBeInTheDocument();
+    expect(screen.queryByPlaceholderText('name@example.com')).not.toBeInTheDocument();
   });
 
   it('T049: selecting an internal user and clicking add persists watcher with user metadata', async () => {
@@ -313,6 +321,7 @@ describe('TicketWatchListCard', () => {
       ],
     });
 
+    await user.click(screen.getByRole('radio', { name: 'Internal' }));
     await user.selectOptions(screen.getByLabelText('Select internal user'), 'user-42');
     await user.click(screen.getByRole('button', { name: 'Add User' }));
 
@@ -401,7 +410,8 @@ describe('TicketWatchListCard', () => {
       ],
     });
 
-    expect(screen.getByRole('button', { name: 'Search all contacts' })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: 'Ticket Client' })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: 'All Contacts' })).toBeInTheDocument();
     expect(screen.queryByLabelText('Search all contacts')).not.toBeInTheDocument();
 
     await user.selectOptions(screen.getByLabelText('Select client contact'), 'contact-local');
@@ -433,7 +443,7 @@ describe('TicketWatchListCard', () => {
       onLoadAllContacts,
     });
 
-    await user.click(screen.getByRole('button', { name: 'Search all contacts' }));
+    await user.click(screen.getByRole('radio', { name: 'All Contacts' }));
     await waitFor(() => {
       expect(onLoadAllContacts).toHaveBeenCalledTimes(1);
     });
@@ -476,6 +486,7 @@ describe('TicketWatchListCard', () => {
       ],
     });
 
+    await user.click(screen.getByRole('radio', { name: 'Internal' }));
     await user.selectOptions(screen.getByLabelText('Select internal user'), 'user-no-email');
     await user.click(screen.getByRole('button', { name: 'Add User' }));
 
@@ -527,10 +538,12 @@ describe('TicketWatchListCard', () => {
       ],
     });
 
+    await user.click(screen.getByRole('radio', { name: 'Email' }));
     await user.type(screen.getByPlaceholderText('name@example.com'), 'dup.user@example.com');
-    await user.click(screen.getByRole('button', { name: 'Add' }));
+    await user.click(screen.getByRole('button', { name: 'Add Email' }));
     await waitFor(() => expect(onPersist).toHaveBeenCalledTimes(1));
 
+    await user.click(screen.getByRole('radio', { name: 'Internal' }));
     await user.selectOptions(screen.getByLabelText('Select internal user'), 'user-dup');
     await user.click(screen.getByRole('button', { name: 'Add User' }));
 
