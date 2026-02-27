@@ -167,7 +167,7 @@
   {
     "id": "F020",
     "description": "Keep embedded-image processing failures non-blocking for ticket/comment creation",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Goals",
       "Requirements"
