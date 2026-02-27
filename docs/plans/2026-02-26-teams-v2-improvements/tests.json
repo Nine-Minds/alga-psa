@@ -154,7 +154,7 @@
   {
     "id": "T101",
     "description": "Avatar actions are exported from teams package actions barrel",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F062"
     ]
