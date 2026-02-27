@@ -161,7 +161,7 @@
   {
     "id": "F070",
     "description": "OrgChart: build tree from `reports_to` relationships and compute top-down hierarchical node positions",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-3B.3"
     ]
