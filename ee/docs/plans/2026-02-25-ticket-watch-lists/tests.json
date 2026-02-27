@@ -414,7 +414,7 @@
   {
     "id": "T049",
     "description": "UI: selecting an internal user and clicking add persists watcher with normalized email plus `entity_type=user` and `entity_id`.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F027",
       "F034"
