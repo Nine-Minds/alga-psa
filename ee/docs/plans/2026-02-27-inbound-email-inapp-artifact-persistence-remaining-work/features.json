@@ -68,7 +68,7 @@
   {
     "id": "F225",
     "description": "Keep artifact persistence best-effort so failures do not block ticket/comment creation in in-app processing",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Goals", "Requirements"]
   },
   {

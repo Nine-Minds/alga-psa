@@ -85,3 +85,8 @@ Create a clean, implementation-ready plan containing only remaining work for inb
     - provider attachments (`attachment.id`)
     - synthetic embedded artifacts (`embedded-data-*`, `embedded-cid-*`)
     - original email source (`__original_email_source__`).
+- 2026-02-27: Completed `F225`.
+  - Artifact pipeline is explicitly best-effort:
+    - per-attachment failures are logged and processing continues
+    - `.eml` persistence failures are logged and do not interrupt ticket/comment return path.
+  - `processInboundEmailInApp` now always returns reply/new-ticket outcomes independent of artifact persistence failures.
