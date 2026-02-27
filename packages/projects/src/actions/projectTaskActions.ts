@@ -22,12 +22,12 @@ import type {
   IUserWithRoles,
   ProjectStatus,
 } from '@alga-psa/types';
-import { findTagsByEntityIds } from '@alga-psa/tags/actions';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { validateArray, validateData } from '@alga-psa/validation';
 import { createTenantKnex, withTransaction } from '@alga-psa/db';
 import { omit } from 'lodash';
+import { getProjectTaskStatusesInternal } from './projectActions';
 import {
     createTaskSchema,
     updateTaskSchema,
@@ -94,6 +94,38 @@ async function checkPermission(user: IUser, resource: string, action: string, kn
     if (!hasPermissionResult) {
         throw new Error(`Permission denied: Cannot ${action} ${resource}`);
     }
+}
+
+async function getProjectTaskTagsForTasks(
+    trx: Knex.Transaction,
+    tenant: string,
+    taskIds: string[]
+): Promise<ITag[]> {
+    if (taskIds.length === 0) {
+        return [];
+    }
+
+    const tags = await trx('tag_mappings as tm')
+        .join('tag_definitions as td', function() {
+            this.on('tm.tenant', '=', 'td.tenant')
+                .andOn('tm.tag_id', '=', 'td.tag_id');
+        })
+        .where('tm.tenant', tenant)
+        .whereIn('tm.tagged_id', taskIds)
+        .where('tm.tagged_type', 'project_task')
+        .select(
+            'tm.mapping_id as tag_id',
+            'tm.tenant',
+            'td.board_id',
+            'td.tag_text',
+            'tm.tagged_id',
+            'tm.tagged_type',
+            'td.background_color',
+            'td.text_color',
+            'tm.created_by'
+        );
+
+    return tags as ITag[];
 }
 
 export const updateTaskWithChecklist = withAuth(async (
@@ -1432,14 +1464,22 @@ export const cleanupOrderKeysForStatus = withAuth(async (
 });
 
 // Task Type Actions
+export async function getTaskTypesInTransaction(
+    trx: Knex.Transaction,
+    user: IUser,
+    tenant: string
+): Promise<ITaskType[]> {
+    await checkPermission(user, 'project', 'read', trx);
+    return TaskTypeModel.getAllTaskTypes(trx, tenant);
+}
+
 export const getTaskTypes = withAuth(async (
     user,
     { tenant }
 ): Promise<ITaskType[]> => {
     const {knex: db} = await createTenantKnex();
     return await withTransaction(db, async (trx: Knex.Transaction) => {
-        await checkPermission(user, 'project', 'read', trx);
-        return await TaskTypeModel.getAllTaskTypes(trx, tenant);
+        return getTaskTypesInTransaction(trx, user, tenant);
     });
 });
 
@@ -1652,6 +1692,134 @@ export const getTaskById = withAuth(async (
     }
 });
 
+export async function getAllProjectTasksForListViewInTransaction(
+    trx: Knex.Transaction,
+    user: IUser,
+    tenant: string,
+    projectId: string
+): Promise<{
+    phases: IProjectPhase[];
+    tasks: IProjectTask[];
+    statuses: ProjectStatus[];
+    ticketLinks: Record<string, IProjectTicketLinkWithDetails[]>;
+    taskResources: Record<string, any[]>;
+    checklistItems: Record<string, ITaskChecklistItem[]>;
+    taskTags: Record<string, ITag[]>;
+    taskDependencies: Record<string, { predecessors: IProjectTaskDependency[]; successors: IProjectTaskDependency[] }>;
+}> {
+    await checkPermission(user, 'project', 'read', trx);
+
+    const phases = await trx('project_phases')
+        .where({ project_id: projectId, tenant })
+        .orderBy('order_key');
+
+    const phaseIds = phases.map(p => p.phase_id);
+
+    const tasks = phaseIds.length > 0
+        ? await trx('project_tasks')
+            .whereIn('phase_id', phaseIds)
+            .andWhere('tenant', tenant)
+            .orderBy(['phase_id', 'order_key'])
+        : [];
+
+    const taskIds = tasks.map(t => t.task_id);
+    const statuses = await getProjectTaskStatusesInternal(trx, tenant, projectId, user);
+
+    const [ticketLinksArray, taskResourcesArray, checklistItemsArray, tagsArray, predecessorDeps, successorDeps] = await Promise.all([
+        taskIds.length > 0
+            ? ProjectTaskModel.getTaskTicketLinksForTasks(trx, tenant, taskIds)
+            : [],
+        taskIds.length > 0
+            ? ProjectTaskModel.getTaskResourcesForTasks(trx, tenant, taskIds)
+            : [],
+        taskIds.length > 0
+            ? trx('task_checklist_items')
+                .whereIn('task_id', taskIds)
+                .andWhere('tenant', tenant)
+                .orderBy('order_number')
+            : [],
+        taskIds.length > 0
+            ? getProjectTaskTagsForTasks(trx, tenant, taskIds)
+            : [],
+        taskIds.length > 0
+            ? trx('project_task_dependencies as ptd')
+                .whereIn('ptd.successor_task_id', taskIds)
+                .andWhere('ptd.tenant', tenant)
+                .leftJoin('project_tasks as pt', function() {
+                    this.on('ptd.predecessor_task_id', '=', 'pt.task_id')
+                        .andOn('ptd.tenant', '=', 'pt.tenant');
+                })
+                .select('ptd.*', 'pt.task_name as predecessor_task_name', 'pt.wbs_code as predecessor_wbs_code')
+            : [],
+        taskIds.length > 0
+            ? trx('project_task_dependencies as ptd')
+                .whereIn('ptd.predecessor_task_id', taskIds)
+                .andWhere('ptd.tenant', tenant)
+                .leftJoin('project_tasks as pt', function() {
+                    this.on('ptd.successor_task_id', '=', 'pt.task_id')
+                        .andOn('ptd.tenant', '=', 'pt.tenant');
+                })
+                .select('ptd.*', 'pt.task_name as successor_task_name', 'pt.wbs_code as successor_wbs_code')
+            : []
+    ]);
+
+    const ticketLinks: Record<string, IProjectTicketLinkWithDetails[]> = {};
+    const taskResources: Record<string, any[]> = {};
+    const checklistItems: Record<string, ITaskChecklistItem[]> = {};
+    const taskTags: Record<string, ITag[]> = {};
+    const taskDependencies: Record<string, { predecessors: IProjectTaskDependency[]; successors: IProjectTaskDependency[] }> = {};
+
+    for (const link of ticketLinksArray) {
+        if (link.task_id) {
+            (ticketLinks[link.task_id] ??= []).push(link);
+        }
+    }
+    for (const resource of taskResourcesArray) {
+        if (resource.task_id) {
+            (taskResources[resource.task_id] ??= []).push(resource);
+        }
+    }
+    for (const item of checklistItemsArray) {
+        (checklistItems[item.task_id] ??= []).push(item);
+    }
+    for (const tag of tagsArray) {
+        if (tag.tagged_id) {
+            (taskTags[tag.tagged_id] ??= []).push(tag);
+        }
+    }
+
+    for (const dep of predecessorDeps) {
+        const taskId = dep.successor_task_id;
+        if (!taskDependencies[taskId]) {
+            taskDependencies[taskId] = { predecessors: [], successors: [] };
+        }
+        taskDependencies[taskId].predecessors.push({
+            ...dep,
+            predecessor_task: {
+                task_id: dep.predecessor_task_id,
+                task_name: dep.predecessor_task_name,
+                wbs_code: dep.predecessor_wbs_code
+            }
+        });
+    }
+    for (const dep of successorDeps) {
+        const taskId = dep.predecessor_task_id;
+        if (!taskDependencies[taskId]) {
+            taskDependencies[taskId] = { predecessors: [], successors: [] };
+        }
+        taskDependencies[taskId].successors.push({
+            ...dep,
+            successor_task: {
+                task_id: dep.successor_task_id,
+                task_name: dep.successor_task_name,
+                wbs_code: dep.successor_wbs_code
+            }
+        });
+    }
+
+    return { phases, tasks, statuses, ticketLinks, taskResources, checklistItems, taskTags, taskDependencies };
+}
+
 export const getAllProjectTasksForListView = withAuth(async (
     user,
     { tenant },
@@ -1667,130 +1835,8 @@ export const getAllProjectTasksForListView = withAuth(async (
     taskDependencies: Record<string, { predecessors: IProjectTaskDependency[]; successors: IProjectTaskDependency[] }>;
 }> => {
     const { knex: db } = await createTenantKnex();
-
-    return await withTransaction(db, async (trx: Knex.Transaction) => {
-        await checkPermission(user, 'project', 'read', trx);
-
-        // 1. Get all phases for this project
-        const phases = await trx('project_phases')
-            .where({ project_id: projectId, tenant })
-            .orderBy('order_key');
-
-        const phaseIds = phases.map(p => p.phase_id);
-
-        // 2. Get all tasks across all phases (base fields)
-        const tasks = phaseIds.length > 0
-            ? await trx('project_tasks')
-                .whereIn('phase_id', phaseIds)
-                .andWhere('tenant', tenant)
-                .orderBy(['phase_id', 'order_key'])
-            : [];
-
-        const taskIds = tasks.map(t => t.task_id);
-
-        // 3. Get statuses using getProjectTaskStatuses (NOT getProjectStatuses)
-        const { getProjectTaskStatuses } = await import('./projectActions');
-        const statuses = await getProjectTaskStatuses(projectId);
-
-        // 4. Parallel fetch related data (including dependencies)
-        const [ticketLinksArray, taskResourcesArray, checklistItemsArray, tagsArray, predecessorDeps, successorDeps] = await Promise.all([
-            taskIds.length > 0
-                ? ProjectTaskModel.getTaskTicketLinksForTasks(trx, tenant, taskIds)
-                : [],
-            taskIds.length > 0
-                ? ProjectTaskModel.getTaskResourcesForTasks(trx, tenant, taskIds)
-                : [],
-            taskIds.length > 0
-                ? trx('task_checklist_items')
-                    .whereIn('task_id', taskIds)
-                    .andWhere('tenant', tenant)
-                    .orderBy('order_number')
-                : [],
-            taskIds.length > 0
-                ? findTagsByEntityIds(taskIds, 'project_task').catch(() => [])
-                : [],
-            // Fetch dependencies where task is the successor (predecessors of task)
-            taskIds.length > 0
-                ? trx('project_task_dependencies as ptd')
-                    .whereIn('ptd.successor_task_id', taskIds)
-                    .andWhere('ptd.tenant', tenant)
-                    .leftJoin('project_tasks as pt', function() {
-                        this.on('ptd.predecessor_task_id', '=', 'pt.task_id')
-                            .andOn('ptd.tenant', '=', 'pt.tenant');
-                    })
-                    .select('ptd.*', 'pt.task_name as predecessor_task_name', 'pt.wbs_code as predecessor_wbs_code')
-                : [],
-            // Fetch dependencies where task is the predecessor (successors of task)
-            taskIds.length > 0
-                ? trx('project_task_dependencies as ptd')
-                    .whereIn('ptd.predecessor_task_id', taskIds)
-                    .andWhere('ptd.tenant', tenant)
-                    .leftJoin('project_tasks as pt', function() {
-                        this.on('ptd.successor_task_id', '=', 'pt.task_id')
-                            .andOn('ptd.tenant', '=', 'pt.tenant');
-                    })
-                    .select('ptd.*', 'pt.task_name as successor_task_name', 'pt.wbs_code as successor_wbs_code')
-                : []
-        ]);
-
-        // 5. Convert arrays to maps keyed by task_id
-        const ticketLinks: Record<string, IProjectTicketLinkWithDetails[]> = {};
-        const taskResources: Record<string, any[]> = {};
-        const checklistItems: Record<string, ITaskChecklistItem[]> = {};
-        const taskTags: Record<string, ITag[]> = {};
-        const taskDependencies: Record<string, { predecessors: IProjectTaskDependency[]; successors: IProjectTaskDependency[] }> = {};
-
-        for (const link of ticketLinksArray) {
-            if (link.task_id) {
-                (ticketLinks[link.task_id] ??= []).push(link);
-            }
-        }
-        for (const resource of taskResourcesArray) {
-            if (resource.task_id) {
-                (taskResources[resource.task_id] ??= []).push(resource);
-            }
-        }
-        for (const item of checklistItemsArray) {
-            (checklistItems[item.task_id] ??= []).push(item);
-        }
-        // Tags: findTagsByEntityIds returns ITag[] with tagged_id field
-        for (const tag of tagsArray) {
-            if (tag.tagged_id) {
-                (taskTags[tag.tagged_id] ??= []).push(tag);
-            }
-        }
-
-        // Process dependencies - group by task_id
-        for (const dep of predecessorDeps) {
-            const taskId = dep.successor_task_id;
-            if (!taskDependencies[taskId]) {
-                taskDependencies[taskId] = { predecessors: [], successors: [] };
-            }
-            taskDependencies[taskId].predecessors.push({
-                ...dep,
-                predecessor_task: {
-                    task_id: dep.predecessor_task_id,
-                    task_name: dep.predecessor_task_name,
-                    wbs_code: dep.predecessor_wbs_code
-                }
-            });
-        }
-        for (const dep of successorDeps) {
-            const taskId = dep.predecessor_task_id;
-            if (!taskDependencies[taskId]) {
-                taskDependencies[taskId] = { predecessors: [], successors: [] };
-            }
-            taskDependencies[taskId].successors.push({
-                ...dep,
-                successor_task: {
-                    task_id: dep.successor_task_id,
-                    task_name: dep.successor_task_name,
-                    wbs_code: dep.successor_wbs_code
-                }
-            });
-        }
-
-        return { phases, tasks, statuses, ticketLinks, taskResources, checklistItems, taskTags, taskDependencies };
+    return withTransaction(db, async (trx: Knex.Transaction) => {
+        return getAllProjectTasksForListViewInTransaction(trx, user, tenant, projectId);
     });
 });
 

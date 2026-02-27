@@ -130,27 +130,78 @@ export const getProjectPhase = withAuth(async (user, { tenant }, phaseId: string
     }
 });
 
-export const getProjectTreeData = withAuth(async (user, { tenant }, projectId?: string) => {
-  try {
-    const { knex } = await createTenantKnex();
+export async function getProjectTreeDataInTransaction(
+  trx: Knex.Transaction,
+  user: IUser,
+  tenant: string,
+  projectId?: string
+): Promise<Array<{
+  label: string;
+  value: string;
+  type: 'project';
+  children: {
+    label: string;
+    value: string;
+    type: 'phase';
+    children: {
+      label: string;
+      value: string;
+      type: 'status';
+    }[];
+  }[];
+}>> {
+  await checkPermission(user, 'project', 'read', trx);
+  const projects = projectId
+    ? [await ProjectModel.getById(trx, tenant, projectId)]
+    : await ProjectModel.getAll(trx, tenant, true);
 
-    return await withTransaction(knex, async (trx: Knex.Transaction) => {
-      await checkPermission(user, 'project', 'read', trx);
-      const projects = projectId ?
-        [await ProjectModel.getById(trx, tenant, projectId)] :
-        await ProjectModel.getAll(trx, tenant, true);
+  const validProjects = projects.filter((p): p is NonNullable<typeof p> => p !== null);
 
-      const validProjects = projects.filter((p): p is NonNullable<typeof p> => p !== null);
+  if (validProjects.length === 0) {
+    throw new Error('No projects found');
+  }
 
-      if (validProjects.length === 0) {
-        throw new Error('No projects found');
-      }
-
-      const treeData = await Promise.all(validProjects.map(async (project): Promise<{
+  const treeData = await Promise.all(validProjects.map(async (project): Promise<{
+    label: string;
+    value: string;
+    type: 'project';
+    children: {
+      label: string;
+      value: string;
+      type: 'phase';
+      children: {
         label: string;
         value: string;
-        type: 'project';
-        children: {
+        type: 'status';
+      }[];
+    }[];
+  } | null> => {
+    try {
+      const [phases, statusMappings] = await Promise.all([
+        ProjectModel.getPhases(trx, tenant, project.project_id),
+        ProjectModel.getProjectStatusMappings(trx, tenant, project.project_id)
+      ]);
+
+      if (!statusMappings || statusMappings.length === 0) {
+        const standardStatuses = await ProjectModel.getStandardStatusesByType(trx, tenant, 'project_task');
+        await Promise.all(standardStatuses.map((status): Promise<IProjectStatusMapping> =>
+          ProjectModel.addProjectStatusMapping(trx, tenant, project.project_id, {
+            standard_status_id: status.standard_status_id,
+            is_standard: true,
+            custom_name: null,
+            display_order: status.display_order,
+            is_visible: true,
+          })
+        ));
+      }
+
+      const statuses = await getProjectTaskStatusesInternal(trx, tenant, project.project_id, user);
+
+      return {
+        label: project.project_name,
+        value: project.project_id,
+        type: 'project' as const,
+        children: phases.map((phase): {
           label: string;
           value: string;
           type: 'phase';
@@ -159,75 +210,46 @@ export const getProjectTreeData = withAuth(async (user, { tenant }, projectId?: 
             value: string;
             type: 'status';
           }[];
-        }[];
-      } | null> => {
-        try {
-          const [phases, statusMappings] = await Promise.all([
-            ProjectModel.getPhases(trx, tenant, project.project_id),
-            ProjectModel.getProjectStatusMappings(trx, tenant, project.project_id)
-          ]);
-
-          if (!statusMappings || statusMappings.length === 0) {
-            const standardStatuses = await ProjectModel.getStandardStatusesByType(trx, tenant, 'project_task');
-            await Promise.all(standardStatuses.map((status): Promise<IProjectStatusMapping> =>
-              ProjectModel.addProjectStatusMapping(trx, tenant, project.project_id, {
-                standard_status_id: status.standard_status_id,
-                is_standard: true,
-                custom_name: null,
-                display_order: status.display_order,
-                is_visible: true,
-              })
-            ));
-          }
-
-          const statuses = await getProjectTaskStatusesInternal(trx, tenant, project.project_id, user);
-
-        return {
-          label: project.project_name,
-          value: project.project_id,
-          type: 'project' as const,
-          children: phases.map((phase): {
+        } => ({
+          label: phase.phase_name,
+          value: phase.phase_id,
+          type: 'phase' as const,
+          children: statuses.map((status): {
             label: string;
             value: string;
-            type: 'phase';
-            children: {
-              label: string;
-              value: string;
-              type: 'status';
-            }[];
+            type: 'status';
           } => ({
-            label: phase.phase_name,
-            value: phase.phase_id,
-            type: 'phase' as const,
-            children: statuses.map((status): {
-                label: string;
-                value: string;
-                type: 'status';
-              } => ({
-              label: status.custom_name || status.name,
-              value: status.project_status_mapping_id,
-              type: 'status' as const
-            }))
+            label: status.custom_name || status.name,
+            value: status.project_status_mapping_id,
+            type: 'status' as const
           }))
-        };
-      } catch (error) {
-        console.error(`Error processing project ${project.project_id}:`, error);
-        return null;
-      }
-    }));
+        }))
+      };
+    } catch (error) {
+      console.error(`Error processing project ${project.project_id}:`, error);
+      return null;
+    }
+  }));
 
-      const validTreeData = treeData
-        .filter((data): data is NonNullable<typeof data> =>
-          data !== null &&
-          data.children &&
-          data.children.length > 0
-        );
+  const validTreeData = treeData
+    .filter((data): data is NonNullable<typeof data> =>
+      data !== null &&
+      data.children &&
+      data.children.length > 0
+    );
 
-      if (validTreeData.length === 0) {
-        throw new Error('No projects available with valid phases');
-      }
+  if (validTreeData.length === 0) {
+    throw new Error('No projects available with valid phases');
+  }
 
-      return validTreeData;
+  return validTreeData;
+}
+
+export const getProjectTreeData = withAuth(async (user, { tenant }, projectId?: string) => {
+  try {
+    const { knex } = await createTenantKnex();
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      return getProjectTreeDataInTransaction(trx, user, tenant, projectId);
     });
   } catch (error) {
     console.error('Error fetching project tree data:', error);
@@ -900,7 +922,7 @@ async function getProjectTaskStatusesInternal2(tenant: string, projectId: string
 }
 
 // Internal function to get project task statuses within transaction
-async function getProjectTaskStatusesInternal(trx: Knex.Transaction, tenant: string, projectId: string, user: IUser): Promise<ProjectStatus[]> {
+export async function getProjectTaskStatusesInternal(trx: Knex.Transaction, tenant: string, projectId: string, user: IUser): Promise<ProjectStatus[]> {
     if (!await hasPermission(user, 'project', 'read', trx)) {
         throw new Error('Permission denied: Cannot read project');
     }
