@@ -50,7 +50,7 @@
   {
     "id": "T088",
     "description": "EntityType in EntityImageUpload includes 'team'",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F055"
     ]
