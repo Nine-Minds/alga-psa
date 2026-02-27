@@ -178,7 +178,7 @@
   {
     "id": "T104",
     "description": "`useTeamAvatar` returns null avatarUrl when teamId is undefined",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F064"
     ]
