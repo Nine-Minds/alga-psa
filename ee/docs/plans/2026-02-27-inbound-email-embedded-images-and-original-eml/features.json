@@ -149,7 +149,7 @@
   {
     "id": "F018",
     "description": "Invoke original .eml persistence action once in new-ticket flow",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "Requirements"
