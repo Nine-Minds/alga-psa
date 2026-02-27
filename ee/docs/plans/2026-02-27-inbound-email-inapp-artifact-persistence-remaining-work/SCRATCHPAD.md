@@ -62,3 +62,6 @@ Create a clean, implementation-ready plan containing only remaining work for inb
 - 2026-02-27: Completed `F218`.
   - Added shared `extractEmbeddedImageAttachments(...)` helper and wired it in `processInboundEmailArtifactsBestEffort(...)`.
   - In-app path now extracts HTML `data:image/*;base64,...` artifacts and feeds them through the same persistence pipeline as normal attachments.
+- 2026-02-27: Completed `F219`.
+  - Embedded extraction now maps only HTML-referenced `cid:` values to inline MIME parts.
+  - Unreferenced inline CID attachments are not synthesized/persisted, matching the locked decision to persist only referenced CID images.

@@ -32,7 +32,7 @@
   {
     "id": "F219",
     "description": "Expose/reuse referenced CID extraction in the in-app path and skip unreferenced CID inline parts",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements", "Decisions (Locked)"]
   },
   {
