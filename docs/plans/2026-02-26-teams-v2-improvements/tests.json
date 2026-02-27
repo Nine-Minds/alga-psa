@@ -243,7 +243,7 @@
   {
     "id": "T112",
     "description": "OrgChartNode has top (target) and bottom (source) ReactFlow handles",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F068"
     ]
