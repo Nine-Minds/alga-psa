@@ -251,7 +251,7 @@
   {
     "id": "T113",
     "description": "OrgChart component renders inside ReactFlowProvider without SSR errors",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F069",
       "F075"
