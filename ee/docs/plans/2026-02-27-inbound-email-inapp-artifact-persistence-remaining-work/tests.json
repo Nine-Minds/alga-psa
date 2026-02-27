@@ -81,7 +81,7 @@
   {
     "id": "T223",
     "description": "Integration: one .eml document is created and associated per inbound message in in-app flow",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F221",
       "F223"

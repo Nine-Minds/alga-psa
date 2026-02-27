@@ -573,6 +573,8 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
     expect(documentNames).toContain('regular.txt');
     expect(documentNames).toContain('embedded-image-1.png');
     expect(documentNames).toContain(`original-email-imap-artifacts-${messageId.split('@')[0]}-example.com.eml`);
+    const emlDocs = docs.filter((d: any) => d.document_name.endsWith('.eml'));
+    expect(emlDocs).toHaveLength(1);
 
     const embeddedDoc = docs.find((d: any) => d.document_name === 'embedded-image-1.png');
     expect(embeddedDoc?.mime_type).toBe('image/png');

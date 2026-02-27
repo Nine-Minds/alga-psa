@@ -199,3 +199,9 @@ Create a clean, implementation-ready plan containing only remaining work for inb
   - Test asserts deterministic RFC822 output when raw source fields are absent and validates key header/body content.
 - Validation:
   - `npx vitest run --config shared/vitest.config.ts shared/services/email/__tests__/inboundEmailArtifactHelpers.test.ts -t "deterministic fallback MIME assembly is stable" --coverage.enabled=false`
+- 2026-02-27: Completed `T223`.
+  - Enhanced IMAP in-app integration assertions to verify exactly one `.eml` document is associated with the ticket per inbound message.
+  - Assertion added in `server/src/test/integration/inboundEmailInApp.webhooks.integration.test.ts` by filtering associated docs to `.eml` suffix and enforcing cardinality `1`.
+- Validation:
+  - `cd server && npx vitest run src/test/integration/inboundEmailInApp.webhooks.integration.test.ts -t "IMAP in-app path persists regular attachment, embedded image, and original .eml as ticket documents" --coverage.enabled=false`
+  - Environment note: DB-gated integration suite was skipped in this local session (`describeDb`).
