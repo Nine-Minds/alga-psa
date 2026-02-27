@@ -249,7 +249,7 @@
   {
     "id": "T243",
     "description": "Docs: GreenMail/IMAP in-app artifact test runbook includes setup, send message, and verification steps",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F235"
     ]

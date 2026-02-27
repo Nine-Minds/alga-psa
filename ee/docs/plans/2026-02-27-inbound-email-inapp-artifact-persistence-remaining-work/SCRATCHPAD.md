@@ -307,3 +307,9 @@ Create a clean, implementation-ready plan containing only remaining work for inb
   - Test seeds a ticket with three associated document artifacts (regular attachment, embedded image, `.eml`), opens ticket detail UI, navigates to Documents tab, and asserts all three are visible.
 - Validation:
   - `cd server && npx playwright test src/test/e2e/inbound-email-artifacts-documents.playwright.test.ts --list`
+- 2026-02-27: Completed `T243`.
+  - Confirmed runbook coverage in:
+    - `ee/docs/plans/2026-02-27-inbound-email-inapp-artifact-persistence-remaining-work/GREENMAIL-IMAP-INAPP-RUNBOOK.md`
+  - Document includes environment setup, message-send step, and verification sections (logs, DB, UI) for IMAP in-app artifact validation.
+- Validation:
+  - Manual content verification against runbook sections.
