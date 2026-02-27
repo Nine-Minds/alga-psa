@@ -149,3 +149,9 @@ Create a clean, implementation-ready plan containing only remaining work for inb
   - Added local operator runbook:
     - `ee/docs/plans/2026-02-27-inbound-email-inapp-artifact-persistence-remaining-work/GREENMAIL-IMAP-INAPP-RUNBOOK.md`
   - Runbook includes setup, SMTP send step, log checks, DB verification queries, and UI verification for regular/embedded/`.eml` artifact outcomes.
+- 2026-02-27: Completed `T214`.
+  - Added/maintained explicit assertion in `shared/services/email/__tests__/processInboundEmailInApp.test.ts` that `processInboundEmailArtifactsBestEffort(...)` is invoked for the new-ticket flow.
+  - Assertion verifies ordering: comment creation occurs before artifact orchestrator invocation using `invocationCallOrder`.
+  - Added shared Vitest alias config in `shared/vitest.config.ts` and completed workflow-action mock shape updates required by current `processInboundEmailInApp` imports.
+- Validation:
+  - `npx vitest run --config shared/vitest.config.ts shared/services/email/__tests__/processInboundEmailInApp.test.ts -t "contact\\+user forwards both author_id and contact_id" --coverage.enabled=false`

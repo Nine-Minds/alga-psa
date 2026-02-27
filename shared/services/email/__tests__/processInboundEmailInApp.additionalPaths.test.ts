@@ -8,6 +8,8 @@ const findTicketByEmailThreadMock = vi.fn();
 const resolveInboundTicketDefaultsMock = vi.fn();
 const resolveEffectiveInboundTicketDefaultsMock = vi.fn();
 const findContactByEmailMock = vi.fn();
+const findClientIdByInboundEmailDomainMock = vi.fn();
+const findValidClientPrimaryContactIdMock = vi.fn();
 const createTicketFromEmailMock = vi.fn();
 const createCommentFromEmailMock = vi.fn();
 const processEmailAttachmentMock = vi.fn();
@@ -64,6 +66,8 @@ vi.mock('../../../workflow/actions/emailWorkflowActions', () => ({
   resolveInboundTicketDefaults: (...args: any[]) => resolveInboundTicketDefaultsMock(...args),
   resolveEffectiveInboundTicketDefaults: (...args: any[]) => resolveEffectiveInboundTicketDefaultsMock(...args),
   findContactByEmail: (...args: any[]) => findContactByEmailMock(...args),
+  findClientIdByInboundEmailDomain: (...args: any[]) => findClientIdByInboundEmailDomainMock(...args),
+  findValidClientPrimaryContactId: (...args: any[]) => findValidClientPrimaryContactIdMock(...args),
   createTicketFromEmail: (...args: any[]) => createTicketFromEmailMock(...args),
   createCommentFromEmail: (...args: any[]) => createCommentFromEmailMock(...args),
   processEmailAttachment: (...args: any[]) => processEmailAttachmentMock(...args),
@@ -123,6 +127,8 @@ describe('processInboundEmailInApp additional authorship paths', () => {
       },
       source: 'provider_default',
     });
+    findClientIdByInboundEmailDomainMock.mockResolvedValue(null);
+    findValidClientPrimaryContactIdMock.mockResolvedValue(null);
     createTicketFromEmailMock.mockResolvedValue({
       ticket_id: 'ticket-1',
       ticket_number: 'T-1',

@@ -2,181 +2,256 @@
   {
     "id": "T214",
     "description": "Unit: in-app artifact orchestrator is invoked for new-ticket flow after ticket/comment creation",
-    "implemented": false,
-    "featureIds": ["F215"]
+    "implemented": true,
+    "featureIds": [
+      "F215"
+    ]
   },
   {
     "id": "T215",
     "description": "Unit: in-app artifact orchestrator is invoked for threaded-reply flow after comment creation",
     "implemented": false,
-    "featureIds": ["F215"]
+    "featureIds": [
+      "F215"
+    ]
   },
   {
     "id": "T216",
     "description": "Integration: attachment base64 bytes from inbound payload persist to external_files and documents rows",
     "implemented": false,
-    "featureIds": ["F216", "F217"]
+    "featureIds": [
+      "F216",
+      "F217"
+    ]
   },
   {
     "id": "T217",
     "description": "Integration: attachment document is associated to target ticket via document_associations",
     "implemented": false,
-    "featureIds": ["F216", "F217"]
+    "featureIds": [
+      "F216",
+      "F217"
+    ]
   },
   {
     "id": "T218",
     "description": "Unit: data:image payload extraction in in-app path emits deterministic synthetic attachment records",
     "implemented": false,
-    "featureIds": ["F218", "F220"]
+    "featureIds": [
+      "F218",
+      "F220"
+    ]
   },
   {
     "id": "T219",
     "description": "Unit: only HTML-referenced CID inline parts are extracted; unreferenced inline parts are skipped",
     "implemented": false,
-    "featureIds": ["F219", "F220"]
+    "featureIds": [
+      "F219",
+      "F220"
+    ]
   },
   {
     "id": "T220",
     "description": "Integration: extracted embedded images persist as ticket documents with expected content type and size",
     "implemented": false,
-    "featureIds": ["F218", "F219", "F220"]
+    "featureIds": [
+      "F218",
+      "F219",
+      "F220"
+    ]
   },
   {
     "id": "T221",
     "description": "Unit: in-app .eml source selection prefers rawMimeBase64 then sourceMimeBase64 then rawSourceBase64",
     "implemented": false,
-    "featureIds": ["F221", "F222"]
+    "featureIds": [
+      "F221",
+      "F222"
+    ]
   },
   {
     "id": "T222",
     "description": "Unit: deterministic fallback MIME assembly is used when raw source fields are absent",
     "implemented": false,
-    "featureIds": ["F222"]
+    "featureIds": [
+      "F222"
+    ]
   },
   {
     "id": "T223",
     "description": "Integration: one .eml document is created and associated per inbound message in in-app flow",
     "implemented": false,
-    "featureIds": ["F221", "F223"]
+    "featureIds": [
+      "F221",
+      "F223"
+    ]
   },
   {
     "id": "T224",
     "description": "Integration: .eml filename matches original-email-<sanitized-message-id>.eml",
     "implemented": false,
-    "featureIds": ["F223"]
+    "featureIds": [
+      "F223"
+    ]
   },
   {
     "id": "T225",
     "description": "Integration: duplicate inbound message does not create duplicate provider attachment documents",
     "implemented": false,
-    "featureIds": ["F224"]
+    "featureIds": [
+      "F224"
+    ]
   },
   {
     "id": "T226",
     "description": "Integration: duplicate inbound message does not create duplicate embedded-image documents",
     "implemented": false,
-    "featureIds": ["F224"]
+    "featureIds": [
+      "F224"
+    ]
   },
   {
     "id": "T227",
     "description": "Integration: duplicate inbound message does not create duplicate .eml documents",
     "implemented": false,
-    "featureIds": ["F224"]
+    "featureIds": [
+      "F224"
+    ]
   },
   {
     "id": "T228",
     "description": "Integration: artifact persistence failure is recorded and ticket/comment creation still succeeds",
     "implemented": false,
-    "featureIds": ["F225"]
+    "featureIds": [
+      "F225"
+    ]
   },
   {
     "id": "T229",
     "description": "Webhook integration: IMAP callback processes via in-app mode when IMAP in-app flag is enabled",
     "implemented": false,
-    "featureIds": ["F226", "F232"]
+    "featureIds": [
+      "F226",
+      "F232"
+    ]
   },
   {
     "id": "T230",
     "description": "Webhook integration: IMAP callback follows configured fallback path when in-app mode is disabled",
     "implemented": false,
-    "featureIds": ["F226", "F232"]
+    "featureIds": [
+      "F226",
+      "F232"
+    ]
   },
   {
     "id": "T231",
     "description": "Webhook integration: over-limit single attachment is skipped with attachment_over_max_bytes reason",
     "implemented": false,
-    "featureIds": ["F227", "F228"]
+    "featureIds": [
+      "F227",
+      "F228"
+    ]
   },
   {
     "id": "T232",
     "description": "Webhook integration: total attachment byte cap skips overflow attachments with attachment_total_bytes_exceeded reason",
     "implemented": false,
-    "featureIds": ["F227", "F228"]
+    "featureIds": [
+      "F227",
+      "F228"
+    ]
   },
   {
     "id": "T233",
     "description": "Webhook integration: attachment count cap emits attachment_count_exceeded for excess attachments",
     "implemented": false,
-    "featureIds": ["F227", "F228"]
+    "featureIds": [
+      "F227",
+      "F228"
+    ]
   },
   {
     "id": "T234",
     "description": "Webhook integration: raw MIME over-cap emits raw_mime_over_max_bytes and .eml persistence is skipped",
     "implemented": false,
-    "featureIds": ["F227", "F228"]
+    "featureIds": [
+      "F227",
+      "F228"
+    ]
   },
   {
     "id": "T235",
     "description": "Unit: app-local async queue mode accepts callback payload and defers byte-heavy artifact processing",
     "implemented": false,
-    "featureIds": ["F229"]
+    "featureIds": [
+      "F229"
+    ]
   },
   {
     "id": "T236",
     "description": "Integration: app-local async queue enforces bounded per-message artifact concurrency",
     "implemented": false,
-    "featureIds": ["F230"]
+    "featureIds": [
+      "F230"
+    ]
   },
   {
     "id": "T237",
     "description": "Contract: inbound payload schema accepts attachments.content/isInline/contentId and MIME source fields",
     "implemented": false,
-    "featureIds": ["F231"]
+    "featureIds": [
+      "F231"
+    ]
   },
   {
     "id": "T238",
     "description": "Contract: malformed attachment content payloads fail validation safely without crashing callback",
     "implemented": false,
-    "featureIds": ["F231"]
+    "featureIds": [
+      "F231"
+    ]
   },
   {
     "id": "T239",
     "description": "Integration: Google in-app path uses shared artifact orchestrator and persists all artifact classes",
     "implemented": false,
-    "featureIds": ["F233"]
+    "featureIds": [
+      "F233"
+    ]
   },
   {
     "id": "T240",
     "description": "Integration: Microsoft in-app path uses shared artifact orchestrator and persists all artifact classes",
     "implemented": false,
-    "featureIds": ["F233"]
+    "featureIds": [
+      "F233"
+    ]
   },
   {
     "id": "T241",
     "description": "Integration: IMAP in-app path persists regular attachments, referenced embedded images, and .eml artifacts on ticket",
     "implemented": false,
-    "featureIds": ["F226", "F234"]
+    "featureIds": [
+      "F226",
+      "F234"
+    ]
   },
   {
     "id": "T242",
     "description": "Playwright: ticket Documents tab shows one regular attachment, one embedded image, and one .eml for inbound message",
     "implemented": false,
-    "featureIds": ["F234"]
+    "featureIds": [
+      "F234"
+    ]
   },
   {
     "id": "T243",
     "description": "Docs: GreenMail/IMAP in-app artifact test runbook includes setup, send message, and verification steps",
     "implemented": false,
-    "featureIds": ["F235"]
+    "featureIds": [
+      "F235"
+    ]
   }
 ]
