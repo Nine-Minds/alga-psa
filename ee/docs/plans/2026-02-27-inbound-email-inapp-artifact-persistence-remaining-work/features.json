@@ -56,7 +56,7 @@
   {
     "id": "F223",
     "description": "Apply deterministic .eml filename convention original-email-<sanitized-message-id>.eml in in-app processing",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Decisions (Locked)", "Requirements"]
   },
   {

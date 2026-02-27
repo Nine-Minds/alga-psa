@@ -77,3 +77,5 @@ Create a clean, implementation-ready plan containing only remaining work for inb
     - `sourceMimeBase64`
     - `rawSourceBase64`
   - When no source bytes are available, `.eml` fallback generation uses deterministic RFC822 assembly (`buildDeterministicRfc822Message(...)`).
+- 2026-02-27: Completed `F223`.
+  - `.eml` persistence now uses deterministic file naming via `buildOriginalEmailFileName(messageId)` with `original-email-<sanitized-message-id>.eml` convention.
