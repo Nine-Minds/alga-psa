@@ -70,6 +70,7 @@ Rolling notes for the 5-phase documents system overhaul: entity-scoped folders, 
 
 ## Work Log
 
+- (2026-02-28) **F020 implemented**: Updated `packages/documents/src/components/DocumentStorageCard.tsx` to support MSP-only visibility controls (`showVisibilityControls`, `onToggleVisibility`, `isVisibilityUpdating`) with client/internal badge + `VisibilityToggle`; wired card-mode usage in `packages/documents/src/components/Documents.tsx` to hide controls for client users by checking `getCurrentUser().user_type`; added focused coverage in `packages/documents/src/components/DocumentStorageCard.visibility.test.tsx`.
 - (2026-02-28) **F019 implemented**: Updated `packages/documents/src/components/DocumentListView.tsx` to render an MSP-only visibility column with client/internal badge and `VisibilityToggle`, added optimistic per-row toggle wiring in `packages/documents/src/components/Documents.tsx` via `toggleDocumentVisibility`, and added focused coverage in `packages/documents/src/components/DocumentListView.visibility.test.tsx` (visible in MSP context, hidden otherwise, disabled while updating).
 - (2026-02-28) **F018 implemented**: Added `packages/documents/src/components/VisibilityToggle.tsx` (eye/eye-off icon toggle with accessible labels/pressed state), exported it from `packages/documents/src/components/index.ts`, and added focused component tests in `packages/documents/src/components/VisibilityToggle.test.tsx`.
 - (2026-02-28) **F017 implemented**: Updated `packages/documents/src/components/FolderTreeView.tsx` to accept optional `entityId`/`entityType` props and load scoped trees via `getFolderTree(entityId ?? null, entityType ?? null)`; wired these props from both folder-mode and entity-mode `FolderTreeView` usages in `packages/documents/src/components/Documents.tsx`.
@@ -90,6 +91,7 @@ Rolling notes for the 5-phase documents system overhaul: entity-scoped folders, 
 
 ## Recent Validation
 
+- (2026-02-28) Ran focused visibility component tests for list + card views: `cd server && npx vitest run ../packages/documents/src/components/DocumentStorageCard.visibility.test.tsx ../packages/documents/src/components/DocumentListView.visibility.test.tsx --config vitest.config.ts` (pass, 6 tests).
 - (2026-02-28) Ran focused DocumentListView + VisibilityToggle component tests: `cd server && npx vitest run ../packages/documents/src/components/DocumentListView.visibility.test.tsx ../packages/documents/src/components/VisibilityToggle.test.tsx --config vitest.config.ts` (pass, 6 tests).
 - (2026-02-28) Ran focused visibility toggle component tests: `cd server && npx vitest run ../packages/documents/src/components/VisibilityToggle.test.tsx --config vitest.config.ts` (pass, 3 tests).
 - (2026-02-28) Re-ran focused entity-mode sidebar component test with entity scope prop assertions: `cd server && npx vitest run ../packages/documents/src/components/Documents.drawer.test.tsx -t "renders FolderTreeView sidebar in entity mode" --config vitest.config.ts` (pass, 1 test).

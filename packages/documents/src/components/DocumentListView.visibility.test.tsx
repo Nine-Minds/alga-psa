@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 import React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import type { IDocument } from '@alga-psa/types';
 import DocumentListView from './DocumentListView.tsx';
 
@@ -34,6 +34,10 @@ function buildDocument(overrides: Partial<IDocument> = {}): IDocument {
 }
 
 describe('DocumentListView visibility controls', () => {
+  afterEach(() => {
+    cleanup();
+  });
+
   it('renders visibility badge and toggle in MSP context', () => {
     const onToggleVisibility = vi.fn();
     const document = buildDocument({ is_client_visible: true });
