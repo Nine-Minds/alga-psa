@@ -2419,16 +2419,19 @@ export const getFolderTree = withAuth(async (
   // Get explicit folders from document_folders table
   const explicitFolderQuery = knex('document_folders')
     .select('folder_path')
-    .where('tenant', tenant)
-    .orderBy('folder_path', 'asc');
+    .where('tenant', tenant);
 
   if (hasEntityScope) {
     explicitFolderQuery
       .andWhere('entity_id', entityId)
       .andWhere('entity_type', entityType);
+  } else {
+    explicitFolderQuery
+      .whereNull('entity_id')
+      .whereNull('entity_type');
   }
 
-  const explicitFolders = await explicitFolderQuery;
+  const explicitFolders = await explicitFolderQuery.orderBy('folder_path', 'asc');
 
   const explicitPaths = explicitFolders.map((row: any) => row.folder_path);
 
@@ -2447,6 +2450,13 @@ export const getFolderTree = withAuth(async (
         .andWhere('da.tenant', tenant)
         .andWhere('da.entity_id', entityId)
         .andWhere('da.entity_type', entityType);
+    });
+  } else {
+    implicitFoldersQuery.whereNotExists(function() {
+      this.select('*')
+        .from('document_associations as da')
+        .whereRaw('da.document_id = documents.document_id')
+        .andWhere('da.tenant', tenant);
     });
   }
 
@@ -2957,6 +2967,13 @@ async function enrichFolderTreeWithCounts(
         .andWhere('da.tenant', tenant)
         .andWhere('da.entity_id', entityId)
         .andWhere('da.entity_type', entityType);
+    });
+  } else {
+    countsQuery.whereNotExists(function() {
+      this.select('*')
+        .from('document_associations as da')
+        .whereRaw('da.document_id = d.document_id')
+        .andWhere('da.tenant', tenant);
     });
   }
 

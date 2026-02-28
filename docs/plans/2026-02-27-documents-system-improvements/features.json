@@ -74,7 +74,7 @@
   {
     "id": "F010",
     "description": "Action: getFolderTree() returns only global folders (entity_id IS NULL) when no entity params provided",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-1.4"
     ]
