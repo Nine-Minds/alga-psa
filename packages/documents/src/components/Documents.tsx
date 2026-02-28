@@ -39,7 +39,8 @@ import {
   createFolder,
   deleteDocument,
   removeDocumentAssociations,
-  updateDocument
+  updateDocument,
+  toggleDocumentVisibility
 } from '../actions/documentActions';
 import {
   getBlockContent,
@@ -148,6 +149,7 @@ const Documents = ({
   const [editedDocumentId, setEditedDocumentId] = useState<string | null>(null);
   const [refreshTimestamp, setRefreshTimestamp] = useState<number>(0);
   const [showUnsavedChangesDialog, setShowUnsavedChangesDialog] = useState(false);
+  const [visibilityUpdatingIds, setVisibilityUpdatingIds] = useState<Set<string>>(new Set());
 
   // Determine if we're in folder mode (no entity specified) early
   // This affects whether we need user preferences
@@ -1057,6 +1059,66 @@ const Documents = ({
     return moveHandlersRef.current.get(key)!;
   };
 
+  const handleToggleDocumentVisibility = async (document: IDocument, nextValue: boolean) => {
+    const previousValue = Boolean(document.is_client_visible);
+
+    setVisibilityUpdatingIds((previous) => {
+      const next = new Set(previous);
+      next.add(document.document_id);
+      return next;
+    });
+
+    setDocumentsToDisplay((previousDocuments) =>
+      previousDocuments.map((item) =>
+        item.document_id === document.document_id
+          ? { ...item, is_client_visible: nextValue }
+          : item
+      )
+    );
+
+    try {
+      const result = await toggleDocumentVisibility([document.document_id], nextValue);
+
+      if (isActionPermissionError(result)) {
+        handleError(result.permissionError);
+        setDocumentsToDisplay((previousDocuments) =>
+          previousDocuments.map((item) =>
+            item.document_id === document.document_id
+              ? { ...item, is_client_visible: previousValue }
+              : item
+          )
+        );
+        return;
+      }
+
+      if (result === 0) {
+        setDocumentsToDisplay((previousDocuments) =>
+          previousDocuments.map((item) =>
+            item.document_id === document.document_id
+              ? { ...item, is_client_visible: previousValue }
+              : item
+          )
+        );
+        toast.error(tDoc('messages.visibilityToggleFailed', 'Failed to update visibility'));
+      }
+    } catch (error) {
+      setDocumentsToDisplay((previousDocuments) =>
+        previousDocuments.map((item) =>
+          item.document_id === document.document_id
+            ? { ...item, is_client_visible: previousValue }
+            : item
+        )
+      );
+      handleError(error, tDoc('messages.visibilityToggleFailed', 'Failed to update visibility'));
+    } finally {
+      setVisibilityUpdatingIds((previous) => {
+        const next = new Set(previous);
+        next.delete(document.document_id);
+        return next;
+      });
+    }
+  };
+
   // Render document cards - let React handle the re-renders with memo
   const renderDocumentCards = () => {
     return documentsToDisplay.map((document) => {
@@ -1465,6 +1527,9 @@ const Documents = ({
                       onSelectionChange={setSelectedDocumentsForMove}
                       onDelete={(doc) => handleDelete(doc)}
                       onClick={(doc) => handleDocumentClick(doc)}
+                      showVisibilityControls
+                      onToggleVisibility={handleToggleDocumentVisibility}
+                      visibilityUpdatingIds={visibilityUpdatingIds}
                     />
                   ) : (
                     documentsToDisplay.length > 0 ? (

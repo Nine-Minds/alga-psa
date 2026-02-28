@@ -49,6 +49,7 @@ export default defineConfig({
       // Workspace packages are not guaranteed to be linked into node_modules in all dev/test setups.
       // Explicitly alias the most common @alga-psa/* modules to their source entrypoints for Vitest.
       { find: /^@alga-psa\/core$/, replacement: path.resolve(__dirname, '../packages/core/src/index.ts') },
+      { find: /^@alga-psa\/core\/formatters$/, replacement: path.resolve(__dirname, '../packages/core/src/lib/formatters.ts') },
       { find: /^@alga-psa\/core\/logger$/, replacement: path.resolve(__dirname, '../packages/core/src/lib/logger.ts') },
       { find: /^@alga-psa\/core\/features$/, replacement: path.resolve(__dirname, '../packages/core/src/lib/features.ts') },
       { find: /^@alga-psa\/core\/secrets$/, replacement: path.resolve(__dirname, '../packages/core/src/lib/secrets/index.ts') },

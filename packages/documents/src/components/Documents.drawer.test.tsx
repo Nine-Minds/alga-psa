@@ -57,6 +57,7 @@ vi.mock('../actions/documentActions', () => ({
   createFolder: vi.fn(),
   deleteDocument: vi.fn(),
   removeDocumentAssociations: vi.fn(),
+  toggleDocumentVisibility: vi.fn(),
   updateDocument: vi.fn(),
 }));
 
