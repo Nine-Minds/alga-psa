@@ -4,6 +4,7 @@ import {
   getFolders,
   getDocumentsByFolder,
   moveDocumentsToFolder,
+  toggleFolderVisibility,
   getFolderStats,
   createFolder,
   deleteFolder
@@ -611,6 +612,93 @@ describe('Document Folder Operations', () => {
           updated_at: expect.any(Date)
         })
       );
+    });
+  });
+
+  describe('toggleFolderVisibility', () => {
+    it('should toggle folder visibility without cascading documents', async () => {
+      mockKnex.first.mockResolvedValue({
+        folder_id: 'folder-1',
+        folder_path: '/Legal',
+        entity_id: null,
+        entity_type: null,
+      });
+
+      const result = await toggleFolderVisibility('folder-1', true, false);
+
+      expect(result).toEqual({
+        folderUpdated: true,
+        updatedDocuments: 0,
+      });
+      expect(mockKnex.update).toHaveBeenCalledTimes(1);
+      expect(mockKnex.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          is_client_visible: true,
+          updated_at: expect.any(Date),
+        })
+      );
+    });
+
+    it('should cascade visibility to global documents when requested', async () => {
+      mockKnex.first.mockResolvedValue({
+        folder_id: 'folder-1',
+        folder_path: '/Legal',
+        entity_id: null,
+        entity_type: null,
+      });
+      mockKnex.update
+        .mockResolvedValueOnce(1)
+        .mockResolvedValueOnce(3);
+
+      const result = await toggleFolderVisibility('folder-1', false, true);
+
+      expect(result).toEqual({
+        folderUpdated: true,
+        updatedDocuments: 3,
+      });
+      expect(mockKnex.whereNotExists).toHaveBeenCalled();
+      expect(mockKnex.update).toHaveBeenNthCalledWith(
+        2,
+        expect.objectContaining({
+          is_client_visible: false,
+          updated_at: expect.any(Date),
+        })
+      );
+    });
+
+    it('should cascade visibility to entity-scoped documents when folder is entity scoped', async () => {
+      mockKnex.first.mockResolvedValue({
+        folder_id: 'folder-1',
+        folder_path: '/Contracts',
+        entity_id: 'client-123',
+        entity_type: 'client',
+      });
+      mockKnex.update
+        .mockResolvedValueOnce(1)
+        .mockResolvedValueOnce(2);
+
+      const result = await toggleFolderVisibility('folder-1', true, true);
+
+      expect(result).toEqual({
+        folderUpdated: true,
+        updatedDocuments: 2,
+      });
+      expect(mockKnex.whereExists).toHaveBeenCalled();
+    });
+
+    it('should throw when folder does not exist', async () => {
+      mockKnex.first.mockResolvedValue(undefined);
+
+      await expect(toggleFolderVisibility('missing-folder', true, false)).rejects.toThrow('Folder not found');
+      expect(mockKnex.update).not.toHaveBeenCalled();
+    });
+
+    it('should require document update permission', async () => {
+      vi.mocked(hasPermission).mockImplementation(async (user, resource, action) => {
+        return resource === 'document' && action === 'update' ? false : true;
+      });
+
+      await expect(toggleFolderVisibility('folder-1', true, false)).resolves.toEqual({ permissionError: 'Permission denied' });
     });
   });
 
