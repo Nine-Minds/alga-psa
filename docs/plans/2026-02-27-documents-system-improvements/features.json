@@ -98,7 +98,7 @@
   {
     "id": "F013",
     "description": "Action: toggleDocumentVisibility(documentIds, isClientVisible) bulk-toggles visibility",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-1.7"
     ]
