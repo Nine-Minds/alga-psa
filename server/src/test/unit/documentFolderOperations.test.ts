@@ -44,6 +44,7 @@ type MockKnex = ReturnType<typeof createMockKnex>;
 const CHAINABLE_METHODS = [
   'select',
   'where',
+  'whereExists',
   'whereNull',
   'whereNotNull',
   'andWhere',
@@ -352,30 +353,10 @@ describe('Document Folder Operations', () => {
       expect(orWhereCalled).toBe(true);
     });
 
-    it('should filter documents at database level based on user permissions', async () => {
+    it('should scope global folder queries to unassociated documents', async () => {
       vi.mocked(getEntityTypesForUser).mockResolvedValue(['tenant', 'ticket']);
 
-      let whereNotExistsCalled = false;
-      let orWhereExistsCalled = false;
-
       const queryBuilder = createQueryBuilder();
-      queryBuilder.where = vi.fn(function(this: any, ...args: any[]) {
-        if (typeof args[0] === 'function') {
-          const nestedBuilder = {
-            whereNotExists: vi.fn(() => {
-              whereNotExistsCalled = true;
-              return nestedBuilder;
-            }),
-            orWhereExists: vi.fn(() => {
-              orWhereExistsCalled = true;
-              return nestedBuilder;
-            })
-          };
-          args[0].call(nestedBuilder);
-          return queryBuilder;
-        }
-        return queryBuilder;
-      });
 
       const clonedQuery = createQueryBuilder();
       clonedQuery.countDistinct = vi.fn().mockResolvedValue([{ count: '0' }]);
@@ -402,9 +383,75 @@ describe('Document Folder Operations', () => {
 
       await getDocumentsByFolder('/Legal', false, 1, 15);
 
-      // Verify permission filtering was applied
-      expect(whereNotExistsCalled).toBe(true);
-      expect(orWhereExistsCalled).toBe(true);
+      expect(queryBuilder.whereNotExists).toHaveBeenCalled();
+      expect(queryBuilder.whereExists).not.toHaveBeenCalled();
+    });
+
+    it('should scope folder queries to provided entity association when entity params are passed', async () => {
+      const queryBuilder = createQueryBuilder();
+      let sawEntityIdFilter = false;
+      let sawEntityTypeFilter = false;
+      let sawAllowedEntityTypeFilter = false;
+
+      queryBuilder.whereExists = vi.fn(function(this: any, callback: (this: any) => void) {
+        const nestedBuilder: any = {};
+        nestedBuilder.select = vi.fn().mockReturnValue(nestedBuilder);
+        nestedBuilder.from = vi.fn().mockReturnValue(nestedBuilder);
+        nestedBuilder.whereRaw = vi.fn().mockReturnValue(nestedBuilder);
+        nestedBuilder.andWhere = vi.fn((column: string, value: any) => {
+          if (column === 'da.entity_id' && value === 'entity-123') {
+            sawEntityIdFilter = true;
+          }
+
+          if (column === 'da.entity_type' && value === 'client') {
+            sawEntityTypeFilter = true;
+          }
+
+          return nestedBuilder;
+        });
+        nestedBuilder.whereIn = vi.fn((column: string, values: string[]) => {
+          if (column === 'da.entity_type' && Array.isArray(values) && values.includes('client')) {
+            sawAllowedEntityTypeFilter = true;
+          }
+
+          return nestedBuilder;
+        });
+
+        callback.call(nestedBuilder);
+        return queryBuilder;
+      });
+
+      const clonedQuery = createQueryBuilder();
+      clonedQuery.countDistinct = vi.fn().mockResolvedValue([{ count: '0' }]);
+      queryBuilder.clone = vi.fn().mockReturnValue(clonedQuery);
+
+      queryBuilder.leftJoin = vi.fn().mockReturnValue({
+        ...queryBuilder,
+        select: vi.fn().mockReturnValue({
+          ...queryBuilder,
+          distinct: vi.fn().mockReturnValue({
+            ...queryBuilder,
+            orderByRaw: vi.fn().mockReturnValue({
+              ...queryBuilder,
+              limit: vi.fn().mockReturnValue({
+                ...queryBuilder,
+                offset: vi.fn().mockResolvedValue([])
+              })
+            })
+          }),
+        })
+      });
+
+      mockKnex.mockImplementation(() => queryBuilder);
+      vi.mocked(getEntityTypesForUser).mockResolvedValue(['client', 'ticket']);
+
+      await getDocumentsByFolder('/Legal', false, 1, 15, undefined, 'entity-123', 'client');
+
+      expect(queryBuilder.whereExists).toHaveBeenCalled();
+      expect(queryBuilder.whereNotExists).not.toHaveBeenCalled();
+      expect(sawEntityIdFilter).toBe(true);
+      expect(sawEntityTypeFilter).toBe(true);
+      expect(sawAllowedEntityTypeFilter).toBe(true);
     });
 
     it('should handle null folder path (root folder)', async () => {
@@ -639,7 +686,27 @@ describe('Document Folder Operations', () => {
           tenant: 'tenant-123',
           folder_path: folderPath,
           folder_name: 'Contracts',
+          entity_id: null,
+          entity_type: null,
+          is_client_visible: false,
           created_by: 'user-123'
+        })
+      );
+    });
+
+    it('should create an entity-scoped folder with visibility flag', async () => {
+      const folderPath = '/Contracts';
+
+      mockKnex.first.mockResolvedValue(null);
+
+      await createFolder(folderPath, 'client-123', 'client', true);
+
+      expect(mockKnex.insert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          folder_path: folderPath,
+          entity_id: 'client-123',
+          entity_type: 'client',
+          is_client_visible: true,
         })
       );
     });
@@ -694,6 +761,15 @@ describe('Document Folder Operations', () => {
     it('should reject invalid folder paths', async () => {
       await expect(createFolder('InvalidPath')).rejects.toThrow('Folder path must start with /');
       await expect(createFolder('/')).rejects.toThrow('Invalid folder path');
+    });
+
+    it('should require both entityId and entityType when scoping folder', async () => {
+      await expect(createFolder('/Legal', 'client-123')).rejects.toThrow(
+        'Both entityId and entityType are required when scoping a folder to an entity'
+      );
+      await expect(createFolder('/Legal', null, 'client')).rejects.toThrow(
+        'Both entityId and entityType are required when scoping a folder to an entity'
+      );
     });
 
     it('should require document create permission', async () => {
