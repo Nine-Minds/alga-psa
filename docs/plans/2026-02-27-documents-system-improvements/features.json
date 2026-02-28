@@ -58,7 +58,7 @@
   {
     "id": "F008",
     "description": "Type: Add entity_id, entity_type, is_client_visible to IDocumentFolder and IFolderNode interfaces",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-1.1"
     ]

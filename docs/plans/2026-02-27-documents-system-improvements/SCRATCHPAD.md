@@ -69,6 +69,7 @@ Rolling notes for the 5-phase documents system overhaul: entity-scoped folders, 
 
 ## Work Log
 
+- (2026-02-28) **F008 implemented**: Updated `packages/types/src/interfaces/document.interface.ts` to add `IDocumentFolder` (including `entity_id`, `entity_type`, `is_client_visible`) and expanded `IFolderNode` with optional `entity_id`, `entity_type`, and `is_client_visible` fields so folder action/UI contracts can carry Phase 1 entity scope + visibility metadata.
 - (2026-02-27) **F007 implemented**: Updated `packages/types/src/interfaces/document.interface.ts` to add optional `is_client_visible` to `IDocument`, aligning shared type contracts with Phase 1 visibility schema changes and preventing type drift in actions/UI consuming document records.
 - (2026-02-27) **F001 implemented**: Added migration `server/migrations/20260227170000_add_entity_scope_to_document_folders.cjs` to add nullable `entity_id` (uuid) and `entity_type` (text) columns to `document_folders` with idempotent checks and inline `distributeIfCitus(knex, 'document_folders')` call.
 - (2026-02-27) **F002 implemented**: Added migration `server/migrations/20260227171000_expand_document_folder_uniqueness_to_entity_scope.cjs` to replace `(tenant, folder_path)` uniqueness with COALESCE-based entity-scoped uniqueness on `(tenant, folder_path, COALESCE(entity_id), COALESCE(entity_type))`, preserving global-folder behavior when entity scope is null.
@@ -79,5 +80,6 @@ Rolling notes for the 5-phase documents system overhaul: entity-scoped folders, 
 
 ## Recent Validation
 
+- (2026-02-28) Built types package successfully: `npx nx build @alga-psa/types`.
 - (2026-02-27) Verified migration module exports load: `node -e "const m=require('./server/migrations/20260227174000_add_document_folders_rls_policies.cjs'); console.log(typeof m.up, typeof m.down);"` → `function function`.
 - (2026-02-27) Verified migration module exports load: `node -e "const m=require('./server/migrations/20260227175000_add_documents_client_visibility_partial_index.cjs'); console.log(typeof m.up, typeof m.down);"` → `function function`.
