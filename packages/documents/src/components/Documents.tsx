@@ -376,20 +376,30 @@ const Documents = ({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPage, pageSize, inFolderMode, currentFolder, filters]);
 
-  // Entity mode: handle search filtering
+  // Entity mode: handle search + folder filtering
   useEffect(() => {
     if (inFolderMode) return;
 
+    let filtered = initialDocuments;
+
+    if (currentFolder) {
+      filtered = filtered.filter(doc => {
+        if (!doc.folder_path) {
+          return false;
+        }
+
+        return doc.folder_path === currentFolder || doc.folder_path.startsWith(`${currentFolder}/`);
+      });
+    }
+
     if (searchTermFromParent) {
-      const filtered = initialDocuments.filter(doc =>
+      filtered = filtered.filter(doc =>
         doc.document_name.toLowerCase().includes(searchTermFromParent.toLowerCase())
       );
-      setDocumentsToDisplay(filtered);
-    } else {
-      // Restore full list when search is cleared
-      setDocumentsToDisplay(initialDocuments);
     }
-  }, [searchTermFromParent, inFolderMode, initialDocuments]);
+
+    setDocumentsToDisplay(filtered);
+  }, [searchTermFromParent, inFolderMode, initialDocuments, currentFolder]);
 
   // Refresh documents - handles both folder mode and entity mode
   const refreshDocuments = useCallback(async () => {
@@ -1649,22 +1659,85 @@ const Documents = ({
           </div>
         </div>
 
-        {showUpload && (
-          <div ref={uploadFormRef} className="mb-4 p-4 border border-gray-200 dark:border-[rgb(var(--color-border-200))] rounded-md bg-white dark:bg-[rgb(var(--color-card))]">
-            <DocumentUpload
-              id={`${id}-upload`}
-              userId={userId}
-              entityId={entityId}
-              entityType={entityType}
-              onUploadComplete={async () => {
-                setShowUpload(false);
-                // Refresh the documents list (triggers router.refresh() in entity mode)
-                await refreshDocuments();
-              }}
-              onCancel={() => setShowUpload(false)}
-            />
+        <div className="flex overflow-hidden border border-gray-200 dark:border-[rgb(var(--color-border-200))] rounded-md bg-white dark:bg-[rgb(var(--color-card))]">
+          {isFoldersPaneCollapsed && (
+            <div className="flex-shrink-0 border-r border-gray-200 dark:border-[rgb(var(--color-border-200))] flex items-start p-2">
+              <button
+                onClick={() => setIsFoldersPaneCollapsed(false)}
+                className="p-1 hover:bg-gray-100 rounded"
+                title="Show folders"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+
+          {!isFoldersPaneCollapsed && (
+            <div className="w-64 flex-shrink-0 border-r border-gray-200 dark:border-[rgb(var(--color-border-200))]">
+              <FolderTreeView
+                key={folderTreeKey}
+                selectedFolder={currentFolder}
+                onFolderSelect={handleFolderSelect}
+                onFolderDeleted={() => {
+                  refreshDocuments();
+                }}
+                isCollapsed={isFoldersPaneCollapsed}
+                onToggleCollapse={() => setIsFoldersPaneCollapsed(!isFoldersPaneCollapsed)}
+              />
+            </div>
+          )}
+
+          <div className="flex-1 min-w-0 p-4 space-y-4">
+            {showUpload && (
+              <div ref={uploadFormRef} className="p-4 border border-gray-200 dark:border-[rgb(var(--color-border-200))] rounded-md bg-white dark:bg-[rgb(var(--color-card))]">
+                <DocumentUpload
+                  id={`${id}-upload`}
+                  userId={userId}
+                  entityId={entityId}
+                  entityType={entityType}
+                  onUploadComplete={async () => {
+                    setShowUpload(false);
+                    // Refresh the documents list (triggers router.refresh() in entity mode)
+                    await refreshDocuments();
+                  }}
+                  onCancel={() => setShowUpload(false)}
+                />
+              </div>
+            )}
+
+            {error && (
+              <Alert variant="destructive">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+
+            {isLoading ? (
+              <DocumentsGridSkeleton gridColumns={gridColumns} />
+            ) : documentsToDisplay.length > 0 ? (
+              <div className={`grid ${gridColumnsClass} gap-4`}>
+                {renderDocumentCards()}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-gray-500 bg-gray-50 rounded-md">
+                {tDoc('empty.default', 'No documents found')}
+              </div>
+            )}
+
+            {documentsToDisplay.length > 0 && totalPages > 1 && (
+              <div className="mt-4">
+                <DocumentsPagination
+                  id={`${id}-pagination`}
+                  currentPage={currentPage}
+                  totalItems={totalDocuments}
+                  itemsPerPage={pageSize}
+                  onPageChange={handlePageChange}
+                  onItemsPerPageChange={handlePageSizeChange}
+                  itemsPerPageOptions={viewMode === 'grid' ? gridPageSizeOptions : undefined}
+                />
+              </div>
+            )}
           </div>
-        )}
+        </div>
 
         {showSelector && entityId && entityType ? (
           <DocumentSelector
@@ -1680,38 +1753,6 @@ const Documents = ({
             onClose={() => setShowSelector(false)}
           />
         ) : null}
-
-        {error && (
-          <Alert variant="destructive">
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
-
-        {isLoading ? (
-          <DocumentsGridSkeleton gridColumns={gridColumns} />
-        ) : documentsToDisplay.length > 0 ? (
-          <div className={`grid ${gridColumnsClass} gap-4`}>
-            {renderDocumentCards()}
-          </div>
-        ) : (
-          <div className="text-center py-8 text-gray-500 bg-gray-50 rounded-md">
-            {tDoc('empty.default', 'No documents found')}
-          </div>
-        )}
-
-        {documentsToDisplay.length > 0 && totalPages > 1 && (
-          <div className="mt-4">
-            <DocumentsPagination
-              id={`${id}-pagination`}
-              currentPage={currentPage}
-              totalItems={totalDocuments}
-              itemsPerPage={pageSize}
-              onPageChange={handlePageChange}
-              onItemsPerPageChange={handlePageSizeChange}
-              itemsPerPageOptions={viewMode === 'grid' ? gridPageSizeOptions : undefined}
-            />
-          </div>
-        )}
 
         {/* Folder Selector Modal for New Documents (Entity Mode) */}
         <FolderSelectorModal
