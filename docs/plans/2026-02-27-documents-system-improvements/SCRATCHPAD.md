@@ -70,6 +70,7 @@ Rolling notes for the 5-phase documents system overhaul: entity-scoped folders, 
 
 ## Work Log
 
+- (2026-02-28) **F018 implemented**: Added `packages/documents/src/components/VisibilityToggle.tsx` (eye/eye-off icon toggle with accessible labels/pressed state), exported it from `packages/documents/src/components/index.ts`, and added focused component tests in `packages/documents/src/components/VisibilityToggle.test.tsx`.
 - (2026-02-28) **F017 implemented**: Updated `packages/documents/src/components/FolderTreeView.tsx` to accept optional `entityId`/`entityType` props and load scoped trees via `getFolderTree(entityId ?? null, entityType ?? null)`; wired these props from both folder-mode and entity-mode `FolderTreeView` usages in `packages/documents/src/components/Documents.tsx`.
 - (2026-02-28) **F016 implemented**: Updated `packages/documents/src/components/Documents.tsx` entity-mode layout to include `FolderTreeView` sidebar (collapsible, mirrored from folder mode) and added entity-mode folder-path filtering for `documentsToDisplay` so folder selection affects visible docs.
 - (2026-02-28) **F015 implemented**: Added `ensureEntityFolders(entityId, entityType)` Phase 1 stub to `packages/documents/src/actions/documentActions.ts`; enforces `document:read` permission, validates both entity scope inputs are present, and returns empty `IFolderNode[]` pending Phase 2 template/init implementation.
@@ -88,6 +89,7 @@ Rolling notes for the 5-phase documents system overhaul: entity-scoped folders, 
 
 ## Recent Validation
 
+- (2026-02-28) Ran focused visibility toggle component tests: `cd server && npx vitest run ../packages/documents/src/components/VisibilityToggle.test.tsx --config vitest.config.ts` (pass, 3 tests).
 - (2026-02-28) Re-ran focused entity-mode sidebar component test with entity scope prop assertions: `cd server && npx vitest run ../packages/documents/src/components/Documents.drawer.test.tsx -t "renders FolderTreeView sidebar in entity mode" --config vitest.config.ts` (pass, 1 test).
 - (2026-02-28) Ran focused entity-mode sidebar component test: `cd server && npx vitest run ../packages/documents/src/components/Documents.drawer.test.tsx -t "renders FolderTreeView sidebar in entity mode" --config vitest.config.ts` (pass, 1 test).
 - (2026-02-28) Re-ran folder operations unit suite after adding ensureEntityFolders stub coverage: `cd server && npx vitest run src/test/unit/documentFolderOperations.test.ts --config vitest.config.ts` (pass, 41/41).

@@ -22,3 +22,4 @@ export { default as FolderBreadcrumb } from './FolderBreadcrumb';
 export { default as FolderManager } from './FolderManager';
 export { default as FolderSelectorModal } from './FolderSelectorModal';
 export { default as FolderTreeView } from './FolderTreeView';
+export { default as VisibilityToggle } from './VisibilityToggle';
