@@ -146,7 +146,7 @@
   {
     "id": "F019",
     "description": "UI: Visibility badge and toggle shown on DocumentListView rows (MSP context only)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-1.10"
     ]

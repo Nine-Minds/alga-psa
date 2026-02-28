@@ -2,8 +2,12 @@
  * @vitest-environment jsdom
  */
 import React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import VisibilityToggle from './VisibilityToggle';
+
+afterEach(() => {
+  cleanup();
+});
 
 describe('VisibilityToggle', () => {
   it('renders hidden state and toggles to visible value', () => {
@@ -24,7 +28,11 @@ describe('VisibilityToggle', () => {
 
     render(<VisibilityToggle isClientVisible={true} onToggle={onToggle} />);
 
-    const button = screen.getByRole('button', { name: 'Visible to clients' });
+    const button = screen.getAllByRole('button', { name: 'Visible to clients' }).at(-1);
+    expect(button).toBeDefined();
+    if (!button) {
+      throw new Error('Visible visibility toggle button not found');
+    }
     expect(button).toBeInTheDocument();
     expect(button).toHaveAttribute('aria-pressed', 'true');
 
@@ -37,7 +45,11 @@ describe('VisibilityToggle', () => {
 
     render(<VisibilityToggle isClientVisible={true} onToggle={onToggle} disabled />);
 
-    const button = screen.getByRole('button', { name: 'Visible to clients' });
+    const button = screen.getAllByRole('button', { name: 'Visible to clients' }).at(-1);
+    expect(button).toBeDefined();
+    if (!button) {
+      throw new Error('Disabled visibility toggle button not found');
+    }
     fireEvent.click(button);
 
     expect(onToggle).not.toHaveBeenCalled();
