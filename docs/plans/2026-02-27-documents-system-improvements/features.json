@@ -122,7 +122,7 @@
   {
     "id": "F016",
     "description": "UI: Documents component in entity mode shows FolderTreeView sidebar",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-1.9"
     ]

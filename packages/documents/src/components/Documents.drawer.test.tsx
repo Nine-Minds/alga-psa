@@ -11,6 +11,9 @@ import { getDocumentsByFolder } from '../actions/documentActions';
 const mockRefresh = vi.fn();
 const mockReplace = vi.fn();
 let mockSearchParams = new URLSearchParams();
+const mockFolderTreeView = vi.fn((props: { selectedFolder: string | null }) => (
+  <div data-testid="folder-tree-view" data-selected-folder={props.selectedFolder ?? ''} />
+));
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
@@ -72,7 +75,7 @@ vi.mock('./DocumentStorageCard', () => ({
 
 vi.mock('./DocumentUpload', () => ({ default: () => null }));
 vi.mock('./DocumentSelector', () => ({ default: () => null }));
-vi.mock('./FolderTreeView', () => ({ default: () => null }));
+vi.mock('./FolderTreeView', () => ({ default: (props: { selectedFolder: string | null }) => mockFolderTreeView(props) }));
 vi.mock('./FolderManager', () => ({ default: () => null }));
 vi.mock('./FolderSelectorModal', () => ({ default: () => null }));
 vi.mock('./DocumentsPagination', () => ({ default: () => null }));
@@ -184,6 +187,34 @@ describe('Documents drawer', () => {
       documents: [],
       total: 0,
     });
+  });
+
+  it('renders FolderTreeView sidebar in entity mode', async () => {
+    render(
+      <Documents
+        id="documents"
+        documents={[
+          {
+            document_id: 'doc-1',
+            document_name: 'Runbook',
+            type_id: null,
+            user_id: 'user-1',
+            order_number: 0,
+            created_by: 'user-1',
+            type_name: 'text/plain',
+            tenant: 'tenant-1',
+          },
+        ]}
+        gridColumns={3}
+        userId="user-1"
+        entityId="entity-1"
+        entityType="asset"
+        isLoading={false}
+      />
+    );
+
+    expect(screen.getByTestId('folder-tree-view')).toBeInTheDocument();
+    expect(mockFolderTreeView).toHaveBeenCalled();
   });
 
   it('opens CollaborativeEditor when editing an in-app document', async () => {

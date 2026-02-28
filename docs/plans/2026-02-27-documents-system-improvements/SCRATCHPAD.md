@@ -37,6 +37,7 @@ Rolling notes for the 5-phase documents system overhaul: entity-scoped folders, 
   - **Tier 4 (E2E)**: Playwright + real browser + real app. Existing document e2e tests: `document-crud-operations.playwright.test.ts`, `document-entity-associations.playwright.test.ts`, `document-permissions.playwright.test.ts`.
 - (2026-02-27) **Vitest config**: `server/vitest.config.ts` has ~50 path aliases. Global setup mocks UI reflection + auth + translations.
 - (2026-02-27) **Test helpers**: `server/test-utils/testContext.ts` (TestContext), `server/test-utils/dbConfig.ts` (createTestDbConnection), `ee/server/src/__tests__/utils/test-context-e2e.ts` (E2ETestContext).
+- (2026-02-28) `packages/documents` local Vitest config only includes `tests/**/*.test.ts`; component tests under `packages/documents/src/components/*.test.tsx` are exercised via `server/vitest.config.ts` path aliases.
 
 ## Commands / Runbooks
 
@@ -69,6 +70,7 @@ Rolling notes for the 5-phase documents system overhaul: entity-scoped folders, 
 
 ## Work Log
 
+- (2026-02-28) **F016 implemented**: Updated `packages/documents/src/components/Documents.tsx` entity-mode layout to include `FolderTreeView` sidebar (collapsible, mirrored from folder mode) and added entity-mode folder-path filtering for `documentsToDisplay` so folder selection affects visible docs.
 - (2026-02-28) **F015 implemented**: Added `ensureEntityFolders(entityId, entityType)` Phase 1 stub to `packages/documents/src/actions/documentActions.ts`; enforces `document:read` permission, validates both entity scope inputs are present, and returns empty `IFolderNode[]` pending Phase 2 template/init implementation.
 - (2026-02-28) **F014 implemented**: Added `toggleFolderVisibility(folderId, isClientVisible, cascade?)` to `packages/documents/src/actions/documentActions.ts` with `document:update` permission enforcement, tenant-scoped folder update, optional cascade to folder/subfolder documents, and entity-aware cascade filtering (`whereExists` for scoped folders, `whereNotExists` for global-only folders).
 - (2026-02-28) **F013 implemented**: Added `toggleDocumentVisibility(documentIds, isClientVisible)` to `packages/documents/src/actions/documentActions.ts` with `document:update` permission enforcement, tenant-scoped bulk `UPDATE` on `documents.is_client_visible`, empty-input no-op behavior (`0`), and updated `updated_at` stamping for modified rows.
@@ -85,6 +87,7 @@ Rolling notes for the 5-phase documents system overhaul: entity-scoped folders, 
 
 ## Recent Validation
 
+- (2026-02-28) Ran focused entity-mode sidebar component test: `cd server && npx vitest run ../packages/documents/src/components/Documents.drawer.test.tsx -t "renders FolderTreeView sidebar in entity mode" --config vitest.config.ts` (pass, 1 test).
 - (2026-02-28) Re-ran folder operations unit suite after adding ensureEntityFolders stub coverage: `cd server && npx vitest run src/test/unit/documentFolderOperations.test.ts --config vitest.config.ts` (pass, 41/41).
 - (2026-02-28) Ran folder operations unit suite after adding folder visibility toggle unit coverage: `cd server && npx vitest run src/test/unit/documentFolderOperations.test.ts --config vitest.config.ts` (pass, 38/38).
 - (2026-02-28) Ran folder operations unit suite after adding bulk visibility toggle: `cd server && npx vitest run src/test/unit/documentFolderOperations.test.ts --config vitest.config.ts` (pass, 33/33).
