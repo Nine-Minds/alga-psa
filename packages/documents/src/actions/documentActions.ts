@@ -2527,7 +2527,9 @@ export const getDocumentsByFolder = withAuth(async (
   includeSubfolders: boolean = false,
   page: number = 1,
   limit: number = 15,
-  filters?: DocumentFilters
+  filters?: DocumentFilters,
+  entityId?: string | null,
+  entityType?: string | null
 ): Promise<{ documents: IDocument[]; total: number } | ActionPermissionError> => {
   if (!(await hasPermission(user, 'document', 'read'))) {
     return permissionError('Permission denied');
@@ -2537,27 +2539,30 @@ export const getDocumentsByFolder = withAuth(async (
   const allowedEntityTypes = await getEntityTypesForUser(user);
 
   const { knex } = await createTenantKnex();
+  const hasEntityScope = Boolean(entityId && entityType);
 
   // Build base query with permission filtering at DB level
   let query = knex('documents as d')
-    .where('d.tenant', tenant)
-    .where(function() {
-      // Option 1: Document has no associations (tenant-level doc)
-      this.whereNotExists(function() {
-        this.select('*')
-          .from('document_associations as da')
-          .whereRaw('da.document_id = d.document_id')
-          .andWhere('da.tenant', tenant);
-      })
-      // Option 2: Document has associations user has permission for
-      .orWhereExists(function() {
-        this.select('*')
-          .from('document_associations as da')
-          .whereRaw('da.document_id = d.document_id')
-          .andWhere('da.tenant', tenant)
-          .whereIn('da.entity_type', allowedEntityTypes);
-      });
+    .where('d.tenant', tenant);
+
+  if (hasEntityScope) {
+    query = query.whereExists(function() {
+      this.select('*')
+        .from('document_associations as da')
+        .whereRaw('da.document_id = d.document_id')
+        .andWhere('da.tenant', tenant)
+        .andWhere('da.entity_id', entityId)
+        .andWhere('da.entity_type', entityType)
+        .whereIn('da.entity_type', allowedEntityTypes);
     });
+  } else {
+    query = query.whereNotExists(function() {
+      this.select('*')
+        .from('document_associations as da')
+        .whereRaw('da.document_id = d.document_id')
+        .andWhere('da.tenant', tenant);
+    });
+  }
 
   // Add folder filtering
   if (folderPath) {
@@ -2795,9 +2800,19 @@ export const getFolderStats = withAuth(async (
  * Create a new folder explicitly
  *
  * @param folderPath - Full path to the folder (e.g., '/Legal/Contracts')
+ * @param entityId - Optional entity scope ID for entity-specific folders
+ * @param entityType - Optional entity scope type for entity-specific folders
+ * @param isClientVisible - Optional visibility flag for client portal
  * @returns Promise<void>
  */
-export const createFolder = withAuth(async (user, { tenant }, folderPath: string): Promise<void | ActionPermissionError> => {
+export const createFolder = withAuth(async (
+  user,
+  { tenant },
+  folderPath: string,
+  entityId?: string | null,
+  entityType?: string | null,
+  isClientVisible: boolean = false
+): Promise<void | ActionPermissionError> => {
   if (!(await hasPermission(user, 'document', 'create'))) {
     return permissionError('Permission denied');
   }
@@ -2808,6 +2823,12 @@ export const createFolder = withAuth(async (user, { tenant }, folderPath: string
   if (!folderPath || !folderPath.startsWith('/')) {
     throw new Error('Folder path must start with /');
   }
+
+  if ((entityId && !entityType) || (!entityId && entityType)) {
+    throw new Error('Both entityId and entityType are required when scoping a folder to an entity');
+  }
+
+  const hasEntityScope = Boolean(entityId && entityType);
 
   // Extract folder name from path
   const parts = folderPath.split('/').filter(p => p.length > 0);
@@ -2824,10 +2845,21 @@ export const createFolder = withAuth(async (user, { tenant }, folderPath: string
   // Get parent folder ID if exists
   let parentFolderId = null;
   if (parentPath) {
-    const parentFolder = await knex('document_folders')
+    const parentFolderQuery = knex('document_folders')
       .where('tenant', tenant)
-      .where('folder_path', parentPath)
-      .first();
+      .where('folder_path', parentPath);
+
+    if (hasEntityScope) {
+      parentFolderQuery
+        .andWhere('entity_id', entityId)
+        .andWhere('entity_type', entityType);
+    } else {
+      parentFolderQuery
+        .whereNull('entity_id')
+        .whereNull('entity_type');
+    }
+
+    const parentFolder = await parentFolderQuery.first();
 
     if (parentFolder) {
       parentFolderId = parentFolder.folder_id;
@@ -2835,10 +2867,21 @@ export const createFolder = withAuth(async (user, { tenant }, folderPath: string
   }
 
   // Check if folder already exists
-  const existingFolder = await knex('document_folders')
+  const existingFolderQuery = knex('document_folders')
     .where('tenant', tenant)
-    .where('folder_path', folderPath)
-    .first();
+    .where('folder_path', folderPath);
+
+  if (hasEntityScope) {
+    existingFolderQuery
+      .andWhere('entity_id', entityId)
+      .andWhere('entity_type', entityType);
+  } else {
+    existingFolderQuery
+      .whereNull('entity_id')
+      .whereNull('entity_type');
+  }
+
+  const existingFolder = await existingFolderQuery.first();
 
   if (existingFolder) {
     // Folder already exists, that's fine
@@ -2851,6 +2894,9 @@ export const createFolder = withAuth(async (user, { tenant }, folderPath: string
     folder_path: folderPath,
     folder_name: folderName,
     parent_folder_id: parentFolderId,
+    entity_id: hasEntityScope ? entityId : null,
+    entity_type: hasEntityScope ? entityType : null,
+    is_client_visible: isClientVisible,
     created_by: user.user_id,
   });
 });

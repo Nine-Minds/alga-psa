@@ -82,7 +82,7 @@
   {
     "id": "F011",
     "description": "Action: getDocumentsByFolder() respects entity scope parameters",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-1.5"
     ]
@@ -90,7 +90,7 @@
   {
     "id": "F012",
     "description": "Action: createFolder() accepts entityId, entityType, isClientVisible parameters",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-1.6"
     ]
