@@ -5,6 +5,7 @@ import TeamList from './TeamList';
 import TeamDetails from './TeamDetails';
 import { getTeams } from '@alga-psa/teams/actions';
 import { ITeam } from '@alga-psa/types';
+import { Card } from '@alga-psa/ui/components/Card';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 
 const TeamManagement: React.FC = () => {
@@ -88,9 +89,9 @@ const TeamManagement: React.FC = () => {
         {selectedTeam ? (
           <TeamDetails teamId={selectedTeam.team_id} onUpdate={handleTeamUpdate} />
         ) : (
-          <div className="flex items-center justify-center h-full min-h-[400px] p-8 rounded-lg border border-border-200">
+          <Card className="flex items-center justify-center h-full min-h-[400px] p-8">
             <p className="text-lg text-text-500 text-center">Please select a team to manage members</p>
-          </div>
+          </Card>
         )}
       </div>
     </div>

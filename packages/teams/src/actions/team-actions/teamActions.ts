@@ -245,6 +245,82 @@ export const getTeams = withAuth(async (user, { tenant }): Promise<ITeam[]> => {
   }
 });
 
+export interface TeamChanges {
+  managerId?: string;
+  addUserIds: string[];
+  removeUserIds: string[];
+}
+
+export const saveTeamChanges = withAuth(async (user, { tenant }, teamId: string, changes: TeamChanges): Promise<ITeam> => {
+  const { knex } = await createTenantKnex();
+  const canUpdate = await hasPermission(user, 'user_settings', 'update', knex);
+  if (!canUpdate) {
+    throw new Error('Permission denied: cannot modify team.');
+  }
+
+  try {
+    await withTransaction(knex, async (trx: Knex.Transaction) => {
+      // Assign manager if changed
+      if (changes.managerId) {
+        await Team.update(trx, tenant, teamId, { manager_id: changes.managerId });
+
+        // Demote any existing leads to 'member'
+        await trx('team_members')
+          .where({ team_id: teamId, tenant, role: 'lead' })
+          .update({ role: 'member' });
+
+        // Add or promote the new manager
+        const existingMember = await trx('team_members')
+          .where({ team_id: teamId, user_id: changes.managerId, tenant })
+          .first();
+        if (existingMember) {
+          await trx('team_members')
+            .where({ team_id: teamId, user_id: changes.managerId, tenant })
+            .update({ role: 'lead' });
+        } else {
+          await Team.addMember(trx, tenant, teamId, changes.managerId, 'lead');
+        }
+      }
+
+      // Batch remove members
+      if (changes.removeUserIds.length > 0) {
+        await trx('team_members')
+          .where({ team_id: teamId, tenant })
+          .whereIn('user_id', changes.removeUserIds)
+          .del();
+      }
+
+      // Batch add members (with inactive user validation)
+      if (changes.addUserIds.length > 0) {
+        const activeUsers = await trx('users')
+          .select('user_id')
+          .where({ tenant, is_inactive: false })
+          .whereIn('user_id', changes.addUserIds);
+
+        const activeUserIds = new Set(activeUsers.map((u: { user_id: string }) => u.user_id));
+        const inactiveIds = changes.addUserIds.filter(id => !activeUserIds.has(id));
+        if (inactiveIds.length > 0) {
+          throw new Error('Cannot add inactive users to team');
+        }
+
+        await trx('team_members').insert(
+          changes.addUserIds.map(userId => ({
+            team_id: teamId,
+            user_id: userId,
+            tenant,
+            role: 'member' as const,
+          }))
+        );
+      }
+    });
+
+    return await getTeamByIdInternal(knex, tenant, teamId);
+  } catch (error) {
+    console.error(error);
+    throw new Error('Failed to save team changes');
+  }
+});
+
 export const assignManagerToTeam = withAuth(async (user, { tenant }, teamId: string, userId: string): Promise<ITeam> => {
   const { knex } = await createTenantKnex();
   const canUpdate = await hasPermission(user, 'user_settings', 'update', knex);
@@ -258,14 +334,21 @@ export const assignManagerToTeam = withAuth(async (user, { tenant }, teamId: str
       // Update team manager
       await Team.update(trx, tenant, teamId, { manager_id: userId });
 
-      // Check if manager is already a team member
-      const existingMember = await trx('team_members')
-        .where({ team_id: teamId, user_id: userId })
-        .first();
+      // Demote any existing leads to 'member'
+      await trx('team_members')
+        .where({ team_id: teamId, tenant, role: 'lead' })
+        .update({ role: 'member' });
 
-      // Add manager as team member if they're not already a member
-      if (!existingMember) {
-        await Team.addMember(trx, tenant, teamId, userId);
+      // Add or promote the new manager
+      const existingMember = await trx('team_members')
+        .where({ team_id: teamId, user_id: userId, tenant })
+        .first();
+      if (existingMember) {
+        await trx('team_members')
+          .where({ team_id: teamId, user_id: userId, tenant })
+          .update({ role: 'lead' });
+      } else {
+        await Team.addMember(trx, tenant, teamId, userId, 'lead');
       }
     });
 
