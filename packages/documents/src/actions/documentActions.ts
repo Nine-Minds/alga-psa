@@ -2418,7 +2418,7 @@ export const getFolderTree = withAuth(async (
 
   // Get explicit folders from document_folders table
   const explicitFolderQuery = knex('document_folders')
-    .select('folder_path')
+    .select('folder_path', 'entity_id', 'entity_type', 'is_client_visible')
     .where('tenant', tenant);
 
   if (hasEntityScope) {
@@ -2434,6 +2434,20 @@ export const getFolderTree = withAuth(async (
   const explicitFolders = await explicitFolderQuery.orderBy('folder_path', 'asc');
 
   const explicitPaths = explicitFolders.map((row: any) => row.folder_path);
+  const explicitFolderMetadata = new Map<string, Pick<IFolderNode, 'entity_id' | 'entity_type' | 'is_client_visible'>>();
+
+  for (const folder of explicitFolders as Array<{
+    folder_path: string;
+    entity_id?: string | null;
+    entity_type?: string | null;
+    is_client_visible?: boolean;
+  }>) {
+    explicitFolderMetadata.set(folder.folder_path, {
+      entity_id: folder.entity_id ?? null,
+      entity_type: folder.entity_type ?? null,
+      is_client_visible: Boolean(folder.is_client_visible),
+    });
+  }
 
   // Get implicit folder paths from documents
   const implicitFoldersQuery = knex('documents')
@@ -2468,7 +2482,7 @@ export const getFolderTree = withAuth(async (
   const allPaths = Array.from(new Set([...explicitPaths, ...implicitPaths]));
 
   // Build tree structure
-  const tree = buildFolderTreeFromPaths(allPaths);
+  const tree = buildFolderTreeFromPaths(allPaths, explicitFolderMetadata);
 
   // Get document counts for each folder (single query)
   await enrichFolderTreeWithCounts(tree, knex, tenant, entityId, entityType);
@@ -3085,7 +3099,10 @@ export const deleteFolder = withAuth(async (user, { tenant }, folderPath: string
 });
 
 // Helper functions
-function buildFolderTreeFromPaths(paths: string[]): IFolderNode[] {
+function buildFolderTreeFromPaths(
+  paths: string[],
+  explicitFolderMetadata: Map<string, Pick<IFolderNode, 'entity_id' | 'entity_type' | 'is_client_visible'>> = new Map()
+): IFolderNode[] {
   const root: IFolderNode[] = [];
 
   for (const path of paths) {
@@ -3098,13 +3115,22 @@ function buildFolderTreeFromPaths(paths: string[]): IFolderNode[] {
 
       let node = currentLevel.find(n => n.name === part);
       if (!node) {
+        const folderMetadata = explicitFolderMetadata.get(currentPath);
         node = {
           path: currentPath,
           name: part,
           children: [],
           documentCount: 0,
+          ...(folderMetadata ?? {}),
         };
         currentLevel.push(node);
+      }
+
+      const folderMetadata = explicitFolderMetadata.get(currentPath);
+      if (folderMetadata) {
+        node.entity_id = folderMetadata.entity_id ?? null;
+        node.entity_type = folderMetadata.entity_type ?? null;
+        node.is_client_visible = folderMetadata.is_client_visible;
       }
 
       currentLevel = node.children;
