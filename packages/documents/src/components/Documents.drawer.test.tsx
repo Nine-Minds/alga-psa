@@ -11,8 +11,13 @@ import { getDocumentsByFolder } from '../actions/documentActions';
 const mockRefresh = vi.fn();
 const mockReplace = vi.fn();
 let mockSearchParams = new URLSearchParams();
-const mockFolderTreeView = vi.fn((props: { selectedFolder: string | null }) => (
-  <div data-testid="folder-tree-view" data-selected-folder={props.selectedFolder ?? ''} />
+const mockFolderTreeView = vi.fn((props: { selectedFolder: string | null; entityId?: string; entityType?: string }) => (
+  <div
+    data-testid="folder-tree-view"
+    data-selected-folder={props.selectedFolder ?? ''}
+    data-entity-id={props.entityId ?? ''}
+    data-entity-type={props.entityType ?? ''}
+  />
 ));
 
 vi.mock('next/navigation', () => ({
@@ -75,7 +80,9 @@ vi.mock('./DocumentStorageCard', () => ({
 
 vi.mock('./DocumentUpload', () => ({ default: () => null }));
 vi.mock('./DocumentSelector', () => ({ default: () => null }));
-vi.mock('./FolderTreeView', () => ({ default: (props: { selectedFolder: string | null }) => mockFolderTreeView(props) }));
+vi.mock('./FolderTreeView', () => ({
+  default: (props: { selectedFolder: string | null; entityId?: string; entityType?: string }) => mockFolderTreeView(props),
+}));
 vi.mock('./FolderManager', () => ({ default: () => null }));
 vi.mock('./FolderSelectorModal', () => ({ default: () => null }));
 vi.mock('./DocumentsPagination', () => ({ default: () => null }));
@@ -214,6 +221,8 @@ describe('Documents drawer', () => {
     );
 
     expect(screen.getByTestId('folder-tree-view')).toBeInTheDocument();
+    expect(screen.getByTestId('folder-tree-view')).toHaveAttribute('data-entity-id', 'entity-1');
+    expect(screen.getByTestId('folder-tree-view')).toHaveAttribute('data-entity-type', 'asset');
     expect(mockFolderTreeView).toHaveBeenCalled();
   });
 

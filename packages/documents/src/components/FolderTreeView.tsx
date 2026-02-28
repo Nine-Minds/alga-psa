@@ -11,6 +11,8 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 interface FolderTreeViewProps {
   onFolderSelect: (folderPath: string | null) => void;
   selectedFolder: string | null;
+  entityId?: string;
+  entityType?: string;
   onFolderDeleted?: () => void;
   isCollapsed?: boolean;
   onToggleCollapse?: () => void;
@@ -19,6 +21,8 @@ interface FolderTreeViewProps {
 export default function FolderTreeView({
   onFolderSelect,
   selectedFolder,
+  entityId,
+  entityType,
   onFolderDeleted,
   isCollapsed = false,
   onToggleCollapse
@@ -30,7 +34,7 @@ export default function FolderTreeView({
 
   useEffect(() => {
     loadFolderTree();
-  }, []);
+  }, [entityId, entityType]);
 
   // Auto-expand parent folders when a folder is selected
   useEffect(() => {
@@ -50,7 +54,7 @@ export default function FolderTreeView({
 
   async function loadFolderTree() {
     try {
-      const tree = await getFolderTree();
+      const tree = await getFolderTree(entityId ?? null, entityType ?? null);
       if (isActionPermissionError(tree)) {
         handleError(tree.permissionError);
         return;
