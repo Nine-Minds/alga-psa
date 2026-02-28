@@ -282,14 +282,35 @@ export const saveTeamChanges = withAuth(async (user, { tenant }, teamId: string,
         }
       }
 
-      // Remove members
-      for (const userId of changes.removeUserIds) {
-        await Team.removeMember(trx, tenant, teamId, userId);
+      // Batch remove members
+      if (changes.removeUserIds.length > 0) {
+        await trx('team_members')
+          .where({ team_id: teamId, tenant })
+          .whereIn('user_id', changes.removeUserIds)
+          .del();
       }
 
-      // Add members
-      for (const userId of changes.addUserIds) {
-        await Team.addMember(trx, tenant, teamId, userId);
+      // Batch add members (with inactive user validation)
+      if (changes.addUserIds.length > 0) {
+        const activeUsers = await trx('users')
+          .select('user_id')
+          .where({ tenant, is_inactive: false })
+          .whereIn('user_id', changes.addUserIds);
+
+        const activeUserIds = new Set(activeUsers.map((u: { user_id: string }) => u.user_id));
+        const inactiveIds = changes.addUserIds.filter(id => !activeUserIds.has(id));
+        if (inactiveIds.length > 0) {
+          throw new Error('Cannot add inactive users to team');
+        }
+
+        await trx('team_members').insert(
+          changes.addUserIds.map(userId => ({
+            team_id: teamId,
+            user_id: userId,
+            tenant,
+            role: 'member' as const,
+          }))
+        );
       }
     });
 
@@ -320,7 +341,7 @@ export const assignManagerToTeam = withAuth(async (user, { tenant }, teamId: str
 
       // Add or promote the new manager
       const existingMember = await trx('team_members')
-        .where({ team_id: teamId, user_id: userId })
+        .where({ team_id: teamId, user_id: userId, tenant })
         .first();
       if (existingMember) {
         await trx('team_members')
