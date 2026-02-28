@@ -12,6 +12,7 @@ import { Label } from '@alga-psa/ui/components/Label';
 import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Clock, Edit2, Play, Pause, StopCircle, UserPlus, X, Calendar as CalendarIcon, Building, Users, CalendarCheck } from 'lucide-react';
+import { ContentCard } from '@alga-psa/ui/components';
 import { formatMinutesAsHoursAndMinutes } from '@alga-psa/core';
 import styles from './TicketDetails.module.css';
 import MultiUserPicker from '@alga-psa/ui/components/MultiUserPicker';
@@ -187,6 +188,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null);
   const [agentSchedules, setAgentSchedules] = useState<IAgentSchedule[]>([]);
+  const isAgentTeamEmpty = !ticket.assigned_to && additionalAgents.length === 0 && !ticket.assigned_team_id;
   const [primaryAgentAvatarUrl, setPrimaryAgentAvatarUrl] = useState<string | null>(null);
   const [additionalAgentAvatarUrls, setAdditionalAgentAvatarUrls] = useState<Record<string, string | null>>({});
   const [contactAvatarUrl, setContactAvatarUrl] = useState<string | null>(null);
@@ -372,7 +374,6 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <span>Ticket Timer - #{ticket.ticket_number}</span>
-            <Clock className="h-6 w-6" />
           </div>
           <div className={`${styles['digital-clock']} text-2xl flex items-center justify-between px-4`}>
             <span>{formatTime(elapsedTime)}</span>
@@ -713,12 +714,15 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
         </div>
       </div>
 
-      <div className={`${styles['card']} p-6 space-y-4`}>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className={`${styles['panel-header']}`}>
-            <Users className="inline-block w-5 h-5 mr-2" />
-            Agent team
-          </h2>
+      <ContentCard
+        id={`${id}-agent-team`}
+        collapsible
+        defaultExpanded={!isAgentTeamEmpty}
+        title="Agent team"
+        headerIcon={<Users className="w-5 h-5" />}
+        count={(ticket.assigned_to ? 1 : 0) + additionalAgents.length}
+      >
+        <div className="flex items-center justify-end mb-4">
           {/* Appointment Requests Indicator */}
           {appointmentRequests.length > 0 && (
             <div className="relative">
@@ -1039,7 +1043,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
             )}
           </div>
         </div>
-      </div>
+      </ContentCard>
 
       <TicketWatchListCard
         id={`${id}-watch-list`}

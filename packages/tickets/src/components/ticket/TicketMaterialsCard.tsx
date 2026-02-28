@@ -6,11 +6,12 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
-import { Plus, Trash2, Package, Loader2 } from 'lucide-react';
+import { Trash2, Package, Loader2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
+import { ContentCard } from '@alga-psa/ui/components';
 import SearchableSelect from '@alga-psa/ui/components/SearchableSelect';
 import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
 import type { ITicketMaterial, IServicePrice } from '@alga-psa/types';
@@ -22,7 +23,6 @@ import {
   getServicePrices,
   type CatalogPickerItem,
 } from '@alga-psa/billing/actions';
-import styles from './TicketDetails.module.css';
 
 interface TicketMaterialsCardProps {
   id?: string;
@@ -211,25 +211,15 @@ export default function TicketMaterialsCard({
 
   return (
     <ReflectionContainer id={id} label="Ticket Materials">
-      <div {...withDataAutomationId({ id })} className={`${styles['card']} p-6 space-y-4`}>
-        <div className="flex items-center justify-between">
-          <h2 className={`${styles['panel-header']}`}>
-            <Package className="inline-block w-5 h-5 mr-2" />
-            Materials
-          </h2>
-          {clientId && !showAddForm && (
-            <Button
-              {...withDataAutomationId({ id: `${id}-add-btn` })}
-              variant="outline"
-              size="sm"
-              onClick={() => setShowAddForm(true)}
-            >
-              <Plus className="w-4 h-4 mr-1" />
-              Add
-            </Button>
-          )}
-        </div>
-
+      <ContentCard
+        id={id}
+        collapsible
+        defaultExpanded={false}
+        title="Materials"
+        headerIcon={<Package className="w-5 h-5" />}
+        count={materials.length}
+        addButton={clientId && !showAddForm ? { id: `${id}-add-btn`, onClick: () => setShowAddForm(true) } : undefined}
+      >
         {/* Add Form */}
         {showAddForm && clientId && (
           <div className="border rounded-md p-4 space-y-4 bg-gray-50">
@@ -448,7 +438,7 @@ export default function TicketMaterialsCard({
             A client must be assigned to this ticket before materials can be added.
           </div>
         )}
-      </div>
+      </ContentCard>
     </ReflectionContainer>
   );
 }
