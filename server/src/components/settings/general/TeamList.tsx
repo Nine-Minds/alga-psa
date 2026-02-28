@@ -10,6 +10,7 @@ import TeamAvatar from '@alga-psa/ui/components/TeamAvatar';
 import { DeleteEntityDialog } from '@alga-psa/ui';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Button } from '@alga-psa/ui/components/Button';
+import { Card } from '@alga-psa/ui/components/Card';
 import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
 
 interface TeamListProps {
@@ -137,7 +138,7 @@ const TeamList: React.FC<TeamListProps> = ({ teams, onSelectTeam }) => {
   };
 
   return (
-    <div className="p-4 rounded-lg border border-border-200 min-w-0">
+    <Card className="p-4 min-w-0">
       {error && <p className="text-accent-500 mb-4 break-words">{error}</p>}
       {!showAddForm ? (
         <Button
@@ -227,7 +228,7 @@ const TeamList: React.FC<TeamListProps> = ({ teams, onSelectTeam }) => {
         isValidating={isDeleteValidating}
         isDeleting={isDeleteProcessing}
       />
-    </div>
+    </Card>
   );
 };
 

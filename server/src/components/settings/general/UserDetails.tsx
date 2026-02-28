@@ -73,7 +73,7 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
 
     const fetchReportsToOptions = async () => {
       try {
-        const allUsers = await getAllUsers(true);
+        const allUsers = await getAllUsers(false, 'internal');
         const filteredUsers = allUsers.filter((item) => item.user_id !== userId);
 
         // Batch fetch avatar URLs
@@ -232,7 +232,7 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
         };
 
         if (isTeamsV2Enabled) {
-          updatedUserData.reports_to = reportsTo || undefined;
+          updatedUserData.reports_to = reportsTo || null;
         }
         
         const updatedUser = await updateUser(user.user_id, updatedUserData);
@@ -240,6 +240,7 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
           setUser(updatedUser);
           onUpdate();
           closeDrawer();
+          toast.success('User updated successfully');
         } else {
           setError('Failed to update user. User not found.');
         }
