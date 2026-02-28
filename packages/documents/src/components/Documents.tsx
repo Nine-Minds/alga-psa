@@ -1404,6 +1404,7 @@ const Documents = ({
                   onFolderSelect={handleFolderSelect}
                   entityId={entityId}
                   entityType={entityType}
+                  showVisibilityIndicators={showVisibilityControls}
                   onFolderDeleted={() => {
                     refreshDocuments();
                   }}
@@ -1753,6 +1754,7 @@ const Documents = ({
                 onFolderSelect={handleFolderSelect}
                 entityId={entityId}
                 entityType={entityType}
+                showVisibilityIndicators={showVisibilityControls}
                 onFolderDeleted={() => {
                   refreshDocuments();
                 }}

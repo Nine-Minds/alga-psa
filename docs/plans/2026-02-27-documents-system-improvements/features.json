@@ -162,7 +162,7 @@
   {
     "id": "F021",
     "description": "UI: Visibility indicator shown on FolderTreeView folders",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-1.10"
     ]

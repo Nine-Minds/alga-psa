@@ -7,12 +7,14 @@ import { ChevronRight, ChevronDown, Folder, FolderOpen, Trash2, ChevronLeft } fr
 import toast from 'react-hot-toast';
 import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import VisibilityToggle from './VisibilityToggle';
 
 interface FolderTreeViewProps {
   onFolderSelect: (folderPath: string | null) => void;
   selectedFolder: string | null;
   entityId?: string;
   entityType?: string;
+  showVisibilityIndicators?: boolean;
   onFolderDeleted?: () => void;
   isCollapsed?: boolean;
   onToggleCollapse?: () => void;
@@ -23,6 +25,7 @@ export default function FolderTreeView({
   selectedFolder,
   entityId,
   entityType,
+  showVisibilityIndicators = false,
   onFolderDeleted,
   isCollapsed = false,
   onToggleCollapse
@@ -161,6 +164,22 @@ export default function FolderTreeView({
           )}
 
           <span className="text-sm flex-1">{node.name}</span>
+          {showVisibilityIndicators && typeof node.is_client_visible === 'boolean' && (
+            <div
+              className="flex items-center"
+              onClick={(e) => e.stopPropagation()}
+              title={node.is_client_visible
+                ? t('documents.visibility.clientVisible', 'Client visible')
+                : t('documents.visibility.internalOnly', 'Internal only')}
+            >
+              <VisibilityToggle
+                id={`folder-visibility-indicator-${node.path.replace(/\//g, '-')}`}
+                isClientVisible={Boolean(node.is_client_visible)}
+                onToggle={() => undefined}
+                disabled
+              />
+            </div>
+          )}
           <span className="text-xs text-gray-500">
             {node.documentCount}
           </span>
