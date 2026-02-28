@@ -2882,6 +2882,32 @@ export const toggleFolderVisibility = withAuth(async (
 });
 
 /**
+ * Ensure entity-scoped folders are initialized.
+ *
+ * Phase 1 stub: returns an empty tree. Phase 2 fills template/init logic.
+ *
+ * @param entityId - Target entity ID
+ * @param entityType - Target entity type
+ * @returns Promise<IFolderNode[]> - Empty folder tree for now
+ */
+export const ensureEntityFolders = withAuth(async (
+  user,
+  _context,
+  entityId: string,
+  entityType: string
+): Promise<IFolderNode[] | ActionPermissionError> => {
+  if (!(await hasPermission(user, 'document', 'read'))) {
+    return permissionError('Permission denied');
+  }
+
+  if (!entityId || !entityType) {
+    throw new Error('Both entityId and entityType are required');
+  }
+
+  return [];
+});
+
+/**
  * Get folder statistics (document count, total size)
  *
  * @param folderPath - Path to folder
