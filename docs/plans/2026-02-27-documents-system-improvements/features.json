@@ -154,7 +154,7 @@
   {
     "id": "F020",
     "description": "UI: Visibility badge and toggle shown on DocumentCard (MSP context only)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-1.10"
     ]
@@ -273,7 +273,7 @@
   },
   {
     "id": "F036",
-    "description": "Action: ensureEntityFolders() is idempotent \u2014 skips existing folders on re-run",
+    "description": "Action: ensureEntityFolders() is idempotent — skips existing folders on re-run",
     "implemented": false,
     "prdRefs": [
       "FR-2.7"

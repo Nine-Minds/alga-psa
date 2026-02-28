@@ -150,6 +150,7 @@ const Documents = ({
   const [refreshTimestamp, setRefreshTimestamp] = useState<number>(0);
   const [showUnsavedChangesDialog, setShowUnsavedChangesDialog] = useState(false);
   const [visibilityUpdatingIds, setVisibilityUpdatingIds] = useState<Set<string>>(new Set());
+  const [isClientUserContext, setIsClientUserContext] = useState(false);
 
   // Determine if we're in folder mode (no entity specified) early
   // This affects whether we need user preferences
@@ -260,6 +261,7 @@ const Documents = ({
         setCurrentUserName(displayName);
         setCurrentTenantId(user.tenant ?? '');
         setCurrentUserId(user.user_id);
+        setIsClientUserContext(user.user_type === 'client');
       } catch (loadError) {
         console.error('[Documents] Failed to load current user for collab editor:', loadError);
       }
@@ -985,6 +987,7 @@ const Documents = ({
   const gridColumnsClass = gridColumns === 4
     ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
     : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3';
+  const showVisibilityControls = !isClientUserContext;
 
   // Use refs to store click handlers to avoid recreating them
   const clickHandlersRef = useRef<Map<string, () => void>>(new Map());
@@ -1134,6 +1137,9 @@ const Documents = ({
             onMove={getOrCreateMoveHandler(document)}
             showDisassociate={Boolean(entityId && entityType)}
             showMove={inFolderMode}
+            showVisibilityControls={showVisibilityControls}
+            onToggleVisibility={handleToggleDocumentVisibility}
+            isVisibilityUpdating={visibilityUpdatingIds.has(document.document_id)}
             forceRefresh={editedDocumentId === document.document_id ? refreshTimestamp : undefined}
             onClick={getOrCreateClickHandler(document)}
             isContentDocument={!document.file_id}
@@ -1527,7 +1533,7 @@ const Documents = ({
                       onSelectionChange={setSelectedDocumentsForMove}
                       onDelete={(doc) => handleDelete(doc)}
                       onClick={(doc) => handleDocumentClick(doc)}
-                      showVisibilityControls
+                      showVisibilityControls={showVisibilityControls}
                       onToggleVisibility={handleToggleDocumentVisibility}
                       visibilityUpdatingIds={visibilityUpdatingIds}
                     />

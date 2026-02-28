@@ -29,6 +29,7 @@ import {
 } from 'lucide-react';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
+import VisibilityToggle from './VisibilityToggle';
 
 // Helper component for video previews with browser compatibility checking
 interface VideoPreviewProps {
@@ -233,6 +234,9 @@ export interface DocumentStorageCardProps {
     hideActions?: boolean;
     showDisassociate?: boolean;
     showMove?: boolean;
+    showVisibilityControls?: boolean;
+    onToggleVisibility?: (document: IDocument, nextValue: boolean) => void | Promise<void>;
+    isVisibilityUpdating?: boolean;
     onClick?: () => void;
     isContentDocument?: boolean;
     forceRefresh?: number; // Timestamp to trigger preview refresh
@@ -287,6 +291,9 @@ function DocumentStorageCardComponent({
     hideActions = false,
     showDisassociate = false,
     showMove = false,
+    showVisibilityControls = false,
+    onToggleVisibility,
+    isVisibilityUpdating = false,
     onClick,
     isContentDocument = false,
     forceRefresh
@@ -598,6 +605,33 @@ function DocumentStorageCardComponent({
                                     Type: {document.type_name}
                                 </p>
                             )}
+                            {showVisibilityControls && (
+                                <div className="mt-2 flex items-center gap-2">
+                                    <span
+                                        className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                                            document.is_client_visible
+                                                ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300'
+                                                : 'bg-gray-100 text-gray-700 dark:bg-[rgb(var(--color-border-100))] dark:text-[rgb(var(--color-text-400))]'
+                                        }`}
+                                    >
+                                        {document.is_client_visible
+                                            ? t('documents.visibility.clientVisible', 'Client visible')
+                                            : t('documents.visibility.internalOnly', 'Internal')}
+                                    </span>
+                                    {onToggleVisibility && (
+                                        <div onClick={(e) => e.stopPropagation()}>
+                                            <VisibilityToggle
+                                                id={`document-card-visibility-${document.document_id}`}
+                                                isClientVisible={Boolean(document.is_client_visible)}
+                                                onToggle={(nextValue) => {
+                                                    void onToggleVisibility(document, nextValue);
+                                                }}
+                                                disabled={isVisibilityUpdating || isLoading}
+                                            />
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </div>
                     </div>
 
@@ -891,7 +925,11 @@ const DocumentStorageCard = memo(DocumentStorageCardComponent, (prevProps, nextP
         prevProps.hideActions === nextProps.hideActions &&
         prevProps.showDisassociate === nextProps.showDisassociate &&
         prevProps.showMove === nextProps.showMove &&
-        prevProps.isContentDocument === nextProps.isContentDocument
+        prevProps.isContentDocument === nextProps.isContentDocument &&
+        prevProps.showVisibilityControls === nextProps.showVisibilityControls &&
+        prevProps.onToggleVisibility === nextProps.onToggleVisibility &&
+        prevProps.isVisibilityUpdating === nextProps.isVisibilityUpdating &&
+        prevProps.document.is_client_visible === nextProps.document.is_client_visible
     );
 });
 
