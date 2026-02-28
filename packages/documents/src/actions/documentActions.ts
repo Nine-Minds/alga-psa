@@ -2801,6 +2801,87 @@ export const toggleDocumentVisibility = withAuth(async (
 });
 
 /**
+ * Toggle client visibility for a folder and optionally cascade to contained documents
+ *
+ * @param folderId - Folder ID to update
+ * @param isClientVisible - Target client visibility state
+ * @param cascade - Whether to cascade visibility to documents in folder/subfolders
+ * @returns Promise with folder/document update counts
+ */
+export const toggleFolderVisibility = withAuth(async (
+  user,
+  { tenant },
+  folderId: string,
+  isClientVisible: boolean,
+  cascade: boolean = false
+): Promise<{ folderUpdated: boolean; updatedDocuments: number } | ActionPermissionError> => {
+  if (!(await hasPermission(user, 'document', 'update'))) {
+    return permissionError('Permission denied');
+  }
+
+  const { knex } = await createTenantKnex();
+
+  const folder = await knex('document_folders')
+    .select('folder_id', 'folder_path', 'entity_id', 'entity_type')
+    .where('tenant', tenant)
+    .andWhere('folder_id', folderId)
+    .first();
+
+  if (!folder) {
+    throw new Error('Folder not found');
+  }
+
+  const folderUpdatedCount = await knex('document_folders')
+    .where('tenant', tenant)
+    .andWhere('folder_id', folderId)
+    .update({
+      is_client_visible: isClientVisible,
+      updated_at: new Date(),
+    });
+
+  let updatedDocuments = 0;
+
+  if (cascade) {
+    let documentsQuery = knex('documents as d')
+      .where('d.tenant', tenant)
+      .where(function() {
+        this.where('d.folder_path', folder.folder_path)
+          .orWhere('d.folder_path', 'like', `${folder.folder_path}/%`);
+      });
+
+    if (folder.entity_id && folder.entity_type) {
+      documentsQuery = documentsQuery.whereExists(function() {
+        this.select('*')
+          .from('document_associations as da')
+          .whereRaw('da.document_id = d.document_id')
+          .andWhere('da.tenant', tenant)
+          .andWhere('da.entity_id', folder.entity_id)
+          .andWhere('da.entity_type', folder.entity_type);
+      });
+    } else {
+      documentsQuery = documentsQuery.whereNotExists(function() {
+        this.select('*')
+          .from('document_associations as da')
+          .whereRaw('da.document_id = d.document_id')
+          .andWhere('da.tenant', tenant);
+      });
+    }
+
+    const documentUpdatedCount = await documentsQuery.update({
+      is_client_visible: isClientVisible,
+      updated_at: new Date(),
+    });
+
+    updatedDocuments = Number(documentUpdatedCount || 0);
+  }
+
+  return {
+    folderUpdated: Number(folderUpdatedCount || 0) > 0,
+    updatedDocuments,
+  };
+});
+
+/**
  * Get folder statistics (document count, total size)
  *
  * @param folderPath - Path to folder
