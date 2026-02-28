@@ -114,7 +114,7 @@
   {
     "id": "F015",
     "description": "Action: ensureEntityFolders(entityId, entityType) stub that returns empty tree",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-1.12"
     ]

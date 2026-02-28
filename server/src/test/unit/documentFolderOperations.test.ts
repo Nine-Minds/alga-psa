@@ -5,6 +5,7 @@ import {
   getDocumentsByFolder,
   moveDocumentsToFolder,
   toggleFolderVisibility,
+  ensureEntityFolders,
   getFolderStats,
   createFolder,
   deleteFolder
@@ -757,6 +758,25 @@ describe('Document Folder Operations', () => {
 
       expect(stats.documentCount).toBe(0);
       expect(stats.totalSize).toBe(0);
+    });
+  });
+
+  describe('ensureEntityFolders', () => {
+    it('should return empty tree for valid entity scope (phase 1 stub)', async () => {
+      await expect(ensureEntityFolders('entity-123', 'client')).resolves.toEqual([]);
+    });
+
+    it('should require both entityId and entityType', async () => {
+      await expect(ensureEntityFolders('', 'client')).rejects.toThrow('Both entityId and entityType are required');
+      await expect(ensureEntityFolders('entity-123', '')).rejects.toThrow('Both entityId and entityType are required');
+    });
+
+    it('should require document read permission', async () => {
+      vi.mocked(hasPermission).mockImplementation(async (user, resource, action) => {
+        return resource === 'document' && action === 'read' ? false : true;
+      });
+
+      await expect(ensureEntityFolders('entity-123', 'client')).resolves.toEqual({ permissionError: 'Permission denied' });
     });
   });
 

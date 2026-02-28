@@ -69,6 +69,7 @@ Rolling notes for the 5-phase documents system overhaul: entity-scoped folders, 
 
 ## Work Log
 
+- (2026-02-28) **F015 implemented**: Added `ensureEntityFolders(entityId, entityType)` Phase 1 stub to `packages/documents/src/actions/documentActions.ts`; enforces `document:read` permission, validates both entity scope inputs are present, and returns empty `IFolderNode[]` pending Phase 2 template/init implementation.
 - (2026-02-28) **F014 implemented**: Added `toggleFolderVisibility(folderId, isClientVisible, cascade?)` to `packages/documents/src/actions/documentActions.ts` with `document:update` permission enforcement, tenant-scoped folder update, optional cascade to folder/subfolder documents, and entity-aware cascade filtering (`whereExists` for scoped folders, `whereNotExists` for global-only folders).
 - (2026-02-28) **F013 implemented**: Added `toggleDocumentVisibility(documentIds, isClientVisible)` to `packages/documents/src/actions/documentActions.ts` with `document:update` permission enforcement, tenant-scoped bulk `UPDATE` on `documents.is_client_visible`, empty-input no-op behavior (`0`), and updated `updated_at` stamping for modified rows.
 - (2026-02-28) **F010 implemented**: Updated `packages/documents/src/actions/documentActions.ts` so `getFolderTree()` now treats no entity scope as global-only mode. Explicit folders are constrained to `entity_id IS NULL AND entity_type IS NULL`, and implicit/count queries exclude any documents with associations so entity-linked docs/folders do not leak into tenant-global tree results.
@@ -84,6 +85,7 @@ Rolling notes for the 5-phase documents system overhaul: entity-scoped folders, 
 
 ## Recent Validation
 
+- (2026-02-28) Re-ran folder operations unit suite after adding ensureEntityFolders stub coverage: `cd server && npx vitest run src/test/unit/documentFolderOperations.test.ts --config vitest.config.ts` (pass, 41/41).
 - (2026-02-28) Ran folder operations unit suite after adding folder visibility toggle unit coverage: `cd server && npx vitest run src/test/unit/documentFolderOperations.test.ts --config vitest.config.ts` (pass, 38/38).
 - (2026-02-28) Ran folder operations unit suite after adding bulk visibility toggle: `cd server && npx vitest run src/test/unit/documentFolderOperations.test.ts --config vitest.config.ts` (pass, 33/33).
 - (2026-02-28) Re-ran unit tests for folder operations after global-only folder filtering updates: `cd server && npx vitest run src/test/unit/documentFolderOperations.test.ts --config vitest.config.ts` (pass, 30/30).
