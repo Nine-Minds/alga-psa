@@ -25,7 +25,7 @@ export interface IUser {
   is_inactive: boolean;
   tenant: string;
   user_type: 'internal' | 'client';
-  reports_to?: string;
+  reports_to?: string | null;
   contact_id?: string;
   /** The client_id associated with this user (derived from contact_id for client users) */
   clientId?: string;
