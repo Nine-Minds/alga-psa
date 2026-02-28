@@ -130,7 +130,7 @@
   {
     "id": "F017",
     "description": "UI: FolderTreeView accepts optional entityId/entityType props",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-1.9"
     ]

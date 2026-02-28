@@ -1334,6 +1334,8 @@ const Documents = ({
                   key={folderTreeKey}
                   selectedFolder={currentFolder}
                   onFolderSelect={handleFolderSelect}
+                  entityId={entityId}
+                  entityType={entityType}
                   onFolderDeleted={() => {
                     refreshDocuments();
                   }}
@@ -1678,6 +1680,8 @@ const Documents = ({
                 key={folderTreeKey}
                 selectedFolder={currentFolder}
                 onFolderSelect={handleFolderSelect}
+                entityId={entityId}
+                entityType={entityType}
                 onFolderDeleted={() => {
                   refreshDocuments();
                 }}
