@@ -2402,28 +2402,55 @@ export const getDistinctEntityTypes = withAuth(async (user, { tenant }): Promise
  *
  * @returns Promise<IFolderNode[]> - Root level folders with nested children
  */
-export const getFolderTree = withAuth(async (user, { tenant }): Promise<IFolderNode[] | ActionPermissionError> => {
+export const getFolderTree = withAuth(async (
+  user,
+  { tenant },
+  entityId?: string | null,
+  entityType?: string | null
+): Promise<IFolderNode[] | ActionPermissionError> => {
   if (!(await hasPermission(user, 'document', 'read'))) {
     return permissionError('Permission denied');
   }
 
   const { knex } = await createTenantKnex();
 
+  const hasEntityScope = Boolean(entityId && entityType);
+
   // Get explicit folders from document_folders table
-  const explicitFolders = await knex('document_folders')
+  const explicitFolderQuery = knex('document_folders')
     .select('folder_path')
     .where('tenant', tenant)
     .orderBy('folder_path', 'asc');
 
+  if (hasEntityScope) {
+    explicitFolderQuery
+      .andWhere('entity_id', entityId)
+      .andWhere('entity_type', entityType);
+  }
+
+  const explicitFolders = await explicitFolderQuery;
+
   const explicitPaths = explicitFolders.map((row: any) => row.folder_path);
 
   // Get implicit folder paths from documents
-  const implicitFolders = await knex('documents')
+  const implicitFoldersQuery = knex('documents')
     .select('folder_path')
     .where('tenant', tenant)
     .whereNotNull('folder_path')
-    .andWhere('folder_path', '!=', '')
-    .groupBy('folder_path');
+    .andWhere('folder_path', '!=', '');
+
+  if (hasEntityScope) {
+    implicitFoldersQuery.whereExists(function() {
+      this.select('*')
+        .from('document_associations as da')
+        .whereRaw('da.document_id = documents.document_id')
+        .andWhere('da.tenant', tenant)
+        .andWhere('da.entity_id', entityId)
+        .andWhere('da.entity_type', entityType);
+    });
+  }
+
+  const implicitFolders = await implicitFoldersQuery.groupBy('folder_path');
 
   const implicitPaths = implicitFolders.map((row: any) => row.folder_path);
 
@@ -2434,7 +2461,7 @@ export const getFolderTree = withAuth(async (user, { tenant }): Promise<IFolderN
   const tree = buildFolderTreeFromPaths(allPaths);
 
   // Get document counts for each folder (single query)
-  await enrichFolderTreeWithCounts(tree, knex, tenant);
+  await enrichFolderTreeWithCounts(tree, knex, tenant, entityId, entityType);
 
   return tree;
 });
@@ -2893,7 +2920,9 @@ function buildFolderTreeFromPaths(paths: string[]): IFolderNode[] {
 async function enrichFolderTreeWithCounts(
   nodes: IFolderNode[],
   knex: Knex,
-  tenant: string
+  tenant: string,
+  entityId?: string | null,
+  entityType?: string | null
 ): Promise<void> {
   // Collect all folder paths in the tree (including nested)
   const allPaths: string[] = [];
@@ -2916,10 +2945,22 @@ async function enrichFolderTreeWithCounts(
   const allowedEntityTypes = ['ticket', 'client', 'contact', 'asset', 'project_task', 'contract'];
 
   // Single query to get counts for ALL folders at once - with same permission filtering as getDocumentsByFolder
-  const counts = await knex('documents as d')
+  const countsQuery = knex('documents as d')
     .where('d.tenant', tenant)
-    .whereIn('d.folder_path', allPaths)
-    .where(function() {
+    .whereIn('d.folder_path', allPaths);
+
+  if (entityId && entityType) {
+    countsQuery.whereExists(function() {
+      this.select('*')
+        .from('document_associations as da')
+        .whereRaw('da.document_id = d.document_id')
+        .andWhere('da.tenant', tenant)
+        .andWhere('da.entity_id', entityId)
+        .andWhere('da.entity_type', entityType);
+    });
+  }
+
+  const counts = await countsQuery.where(function() {
       // Option 1: Document has no associations (tenant-level doc)
       this.whereNotExists(function() {
         this.select('*')
