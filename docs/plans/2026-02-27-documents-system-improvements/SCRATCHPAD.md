@@ -69,6 +69,7 @@ Rolling notes for the 5-phase documents system overhaul: entity-scoped folders, 
 
 ## Work Log
 
+- (2026-02-28) **F013 implemented**: Added `toggleDocumentVisibility(documentIds, isClientVisible)` to `packages/documents/src/actions/documentActions.ts` with `document:update` permission enforcement, tenant-scoped bulk `UPDATE` on `documents.is_client_visible`, empty-input no-op behavior (`0`), and updated `updated_at` stamping for modified rows.
 - (2026-02-28) **F010 implemented**: Updated `packages/documents/src/actions/documentActions.ts` so `getFolderTree()` now treats no entity scope as global-only mode. Explicit folders are constrained to `entity_id IS NULL AND entity_type IS NULL`, and implicit/count queries exclude any documents with associations so entity-linked docs/folders do not leak into tenant-global tree results.
 - (2026-02-28) **F009 implemented**: Updated `packages/documents/src/actions/documentActions.ts` so `getFolderTree()` now accepts optional `entityId`/`entityType`. When both are provided, explicit folders are filtered by `document_folders.entity_id/entity_type`, implicit folders are filtered via `document_associations` existence for the same entity scope, and folder counts are enriched using the same entity-scoped association constraint. This keeps tenant/global behavior unchanged while enabling entity-scoped folder trees for Phase 1.
 - (2026-02-28) **F008 implemented**: Updated `packages/types/src/interfaces/document.interface.ts` to add `IDocumentFolder` (including `entity_id`, `entity_type`, `is_client_visible`) and expanded `IFolderNode` with optional `entity_id`, `entity_type`, and `is_client_visible` fields so folder action/UI contracts can carry Phase 1 entity scope + visibility metadata.
@@ -82,6 +83,7 @@ Rolling notes for the 5-phase documents system overhaul: entity-scoped folders, 
 
 ## Recent Validation
 
+- (2026-02-28) Ran folder operations unit suite after adding bulk visibility toggle: `cd server && npx vitest run src/test/unit/documentFolderOperations.test.ts --config vitest.config.ts` (pass, 33/33).
 - (2026-02-28) Re-ran unit tests for folder operations after global-only folder filtering updates: `cd server && npx vitest run src/test/unit/documentFolderOperations.test.ts --config vitest.config.ts` (pass, 30/30).
 - (2026-02-28) Ran unit tests for folder operations: `cd server && npx vitest run src/test/unit/documentFolderOperations.test.ts --config vitest.config.ts` (pass, 30/30).
 - (2026-02-28) Built types package successfully: `npx nx build @alga-psa/types`.

@@ -2767,6 +2767,40 @@ export const moveDocumentsToFolder = withAuth(async (
 });
 
 /**
+ * Bulk toggle client visibility for documents
+ *
+ * @param documentIds - Array of document IDs to update
+ * @param isClientVisible - Target client visibility state
+ * @returns Promise<number> - Number of affected rows
+ */
+export const toggleDocumentVisibility = withAuth(async (
+  user,
+  { tenant },
+  documentIds: string[],
+  isClientVisible: boolean
+): Promise<number | ActionPermissionError> => {
+  if (!(await hasPermission(user, 'document', 'update'))) {
+    return permissionError('Permission denied');
+  }
+
+  if (!Array.isArray(documentIds) || documentIds.length === 0) {
+    return 0;
+  }
+
+  const { knex } = await createTenantKnex();
+
+  const updatedCount = await knex('documents')
+    .where('tenant', tenant)
+    .whereIn('document_id', documentIds)
+    .update({
+      is_client_visible: isClientVisible,
+      updated_at: new Date(),
+    });
+
+  return Number(updatedCount || 0);
+});
+
+/**
  * Get folder statistics (document count, total size)
  *
  * @param folderPath - Path to folder
