@@ -17,6 +17,7 @@ function createRedisClientMock() {
     connect: vi.fn(async () => undefined),
     rPush: vi.fn(async () => 1),
     brPopLPush: vi.fn(async () => null),
+    eval: vi.fn(async () => JSON.stringify({ status: 'empty' })),
     multi: vi.fn(() => chain),
     zRangeByScore: vi.fn(async () => []),
     hGet: vi.fn(async () => null),
@@ -107,8 +108,35 @@ describe('Unified inbound pointer queue primitives', () => {
     expect(chain.rPush).toHaveBeenCalledWith('email:inbound:unified:pointer:ready', claim.originalPayload);
   });
 
-  it('T021: failed consume increments attempt count when requeued', async () => {
+  it('T024: claim returns a parsed in-flight record from the atomic Lua envelope', async () => {
     const { module, client } = await loadQueueModule();
+    const claim = buildClaim();
+
+    client.eval.mockResolvedValueOnce(
+      JSON.stringify({
+        status: 'claimed',
+        claim: JSON.stringify(claim),
+      })
+    );
+
+    const claimed = await module.claimUnifiedInboundEmailQueueJob({
+      consumerId: claim.consumerId,
+      blockSeconds: 0,
+      claimTtlMs: 60_000,
+    });
+
+    expect(claimed).toMatchObject({
+      consumerId: claim.consumerId,
+      originalPayload: claim.originalPayload,
+      job: expect.objectContaining({
+        jobId: claim.job.jobId,
+      }),
+    });
+    expect(client.eval).toHaveBeenCalledTimes(1);
+  });
+
+  it('T021: failed consume increments attempt count when requeued', async () => {
+    const { module, chain } = await loadQueueModule();
     const claim = buildClaim({
       job: {
         ...buildClaim().job,
@@ -117,7 +145,7 @@ describe('Unified inbound pointer queue primitives', () => {
       },
     });
 
-    client.rPush.mockResolvedValueOnce(4);
+    chain.exec.mockResolvedValueOnce([1, 1, 1, 4]);
     const result = await module.failUnifiedInboundEmailQueueJob({
       claim,
       error: 'temporary_failure',
@@ -129,13 +157,14 @@ describe('Unified inbound pointer queue primitives', () => {
       queueDepth: 4,
     });
 
-    const [, requeuedPayloadRaw] = client.rPush.mock.calls[0];
+    const [readyQueueKey, requeuedPayloadRaw] = chain.rPush.mock.calls[0];
+    expect(readyQueueKey).toBe('email:inbound:unified:pointer:ready');
     const requeuedPayload = JSON.parse(requeuedPayloadRaw);
     expect(requeuedPayload.attempt).toBe(2);
   });
 
   it('T022: failed consume moves job to DLQ when max attempts are exceeded', async () => {
-    const { module, client } = await loadQueueModule();
+    const { module, chain } = await loadQueueModule();
     const claim = buildClaim({
       job: {
         ...buildClaim().job,
@@ -144,7 +173,7 @@ describe('Unified inbound pointer queue primitives', () => {
       },
     });
 
-    client.rPush.mockResolvedValueOnce(2);
+    chain.exec.mockResolvedValueOnce([1, 1, 1, 2]);
     const result = await module.failUnifiedInboundEmailQueueJob({
       claim,
       error: 'permanent_failure',
@@ -156,7 +185,7 @@ describe('Unified inbound pointer queue primitives', () => {
       queueDepth: 2,
     });
 
-    const [dlqKey, dlqPayloadRaw] = client.rPush.mock.calls[0];
+    const [dlqKey, dlqPayloadRaw] = chain.rPush.mock.calls[0];
     expect(dlqKey).toBe('email:inbound:unified:pointer:dlq');
     const dlqPayload = JSON.parse(dlqPayloadRaw);
     expect(dlqPayload).toMatchObject({
@@ -242,15 +271,15 @@ describe('Unified inbound pointer queue primitives', () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
 
-    const { module, client } = await loadQueueModule();
+    const { module, chain } = await loadQueueModule();
 
-    client.rPush.mockResolvedValueOnce(1);
+    chain.exec.mockResolvedValueOnce([1, 1, 1, 1]);
     await module.failUnifiedInboundEmailQueueJob({
       claim: buildClaim(),
       error: 'transient_error',
     });
 
-    client.rPush.mockResolvedValueOnce(2);
+    chain.exec.mockResolvedValueOnce([1, 1, 1, 2]);
     await module.failUnifiedInboundEmailQueueJob({
       claim: buildClaim({
         job: {

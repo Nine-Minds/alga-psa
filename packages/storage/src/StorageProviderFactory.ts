@@ -2,6 +2,7 @@ import { StorageProviderInterface, StorageError } from './providers/StorageProvi
 import { LocalProviderConfig, S3ProviderConfig } from './types/storage';
 import { getStorageConfig } from './config/storage';
 import { LocalStorageProvider } from './providers/LocalStorageProvider';
+import { S3StorageProvider } from './providers/S3StorageProvider';
 // Type-only import for S3 provider
 // import type { S3StorageProvider } from 'ee/lib/storage/providers/S3StorageProvider';
 export class StorageProviderFactory {
@@ -53,16 +54,7 @@ export class StorageProviderFactory {
                 console.log('StorageProviderFactory: Creating S3StorageProvider');
                 // Use global to access the provider constructor at runtime
                 const S3Provider = (global as any).S3StorageProvider;
-                if (!S3Provider) {
-                    throw new StorageError(
-                        'S3StorageProvider not available',
-                        'PROVIDER_NOT_FOUND',
-                        's3',
-                        'exists',
-                        false
-                    );
-                }
-                this.provider = new S3Provider(s3Config);
+                this.provider = S3Provider ? new S3Provider(s3Config) : new S3StorageProvider(s3Config);
                 console.log('StorageProviderFactory: S3 provider initialized successfully');
                 break;
             }

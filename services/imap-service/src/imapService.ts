@@ -612,7 +612,7 @@ class ImapFolderListener {
           tenant: this.provider.tenant,
           tenantId: this.provider.tenant,
           pointer: {
-            mailbox: this.provider.mailbox,
+            mailbox: this.folder || 'INBOX',
             uid: pointerUid,
             uidValidity: input.uidValidity,
             messageId: input.emailData.id,

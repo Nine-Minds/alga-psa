@@ -35,7 +35,7 @@ vi.mock('@alga-psa/shared/services/email/providers/MicrosoftGraphAdapter', () =>
   },
 }));
 
-vi.mock('@alga-psa/integrations/services/email/providers/GmailAdapter', () => ({
+vi.mock('@alga-psa/shared/services/email/providers/GmailAdapter', () => ({
   GmailAdapter: class GmailAdapter {
     connect(...args: any[]) {
       return gmailConnectMock(...args);
@@ -342,6 +342,64 @@ describe('unified inbound queue processor consume-time provider fetch', () => {
         }),
       })
     );
+  });
+
+  it('T013b: Google history cursor is not advanced when processing fails', async () => {
+    const { db, googleConfigUpdateMock } = createDbMock({
+      googleProviderRow: {
+        id: 'provider-g-1',
+        tenant: 'tenant-1',
+        mailbox: 'support@example.com',
+        is_active: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+      googleConfigRow: {
+        email_provider_id: 'provider-g-1',
+        tenant: 'tenant-1',
+        project_id: 'project-1',
+        history_id: '40',
+      },
+    });
+    getAdminConnectionMock.mockResolvedValue(db);
+
+    gmailListMessagesSinceMock.mockResolvedValue(['g-msg-1']);
+    gmailGetMessageDetailsMock.mockResolvedValue({
+      id: 'g-msg-1',
+      provider: 'google',
+      providerId: 'provider-g-1',
+      tenant: 'tenant-1',
+      receivedAt: new Date().toISOString(),
+      from: { email: 'sender@example.com' },
+      to: [{ email: 'support@example.com' }],
+      subject: 'Google Subject',
+      body: { text: 'Body', html: '<p>Body</p>' },
+      attachments: [],
+    } as any);
+    processInboundEmailInAppMock.mockRejectedValueOnce(new Error('processing failed'));
+
+    const { processUnifiedInboundEmailQueueJob } = await import(
+      '../../services/email/unifiedInboundEmailQueueJobProcessor'
+    );
+
+    await expect(
+      processUnifiedInboundEmailQueueJob({
+        jobId: 'job-g-1b',
+        schemaVersion: 1,
+        tenantId: 'tenant-1',
+        providerId: 'provider-g-1',
+        provider: 'google',
+        pointer: {
+          historyId: '41',
+          emailAddress: 'support@example.com',
+        },
+        enqueuedAt: new Date().toISOString(),
+        attempt: 0,
+        maxAttempts: 5,
+      } as UnifiedInboundEmailQueueJob)
+    ).rejects.toThrow('processing failed');
+
+    expect(googleConfigUpdateMock).not.toHaveBeenCalled();
   });
 
   it('T014: IMAP pointer fetch resolves full email payload before processing', async () => {

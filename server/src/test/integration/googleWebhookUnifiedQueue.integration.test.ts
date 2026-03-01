@@ -123,7 +123,9 @@ describe('Google unified inbound pointer queue ingress', () => {
   });
 
   it('T002: Google ingress enqueues a pointer-only unified queue payload with required identifiers', async () => {
-    const { POST } = await import('@alga-psa/integrations/webhooks/email/google');
+    const { handleGoogleWebhook } = await import(
+      '@alga-psa/integrations/webhooks/email/handlers/googleWebhookHandler'
+    );
 
     const notification = {
       emailAddress: 'support@example.com',
@@ -147,7 +149,7 @@ describe('Google unified inbound pointer queue ingress', () => {
       body: JSON.stringify(pubsubPayload),
     });
 
-    const response = await POST(request);
+    const response = await handleGoogleWebhook(request);
     expect(response.status).toBe(200);
 
     const body = await response.json();
@@ -178,7 +180,9 @@ describe('Google unified inbound pointer queue ingress', () => {
   });
 
   it('T005: Google callback success waits for durable enqueue completion', async () => {
-    const { POST } = await import('@alga-psa/integrations/webhooks/email/google');
+    const { handleGoogleWebhook } = await import(
+      '@alga-psa/integrations/webhooks/email/handlers/googleWebhookHandler'
+    );
 
     let resolveEnqueue!: (value: { job: { jobId: string }; queueDepth: number }) => void;
     const enqueueGate = new Promise<{ job: { jobId: string }; queueDepth: number }>((resolve) => {
@@ -209,7 +213,7 @@ describe('Google unified inbound pointer queue ingress', () => {
     });
 
     let settled = false;
-    const responsePromise = POST(request).then((response) => {
+    const responsePromise = handleGoogleWebhook(request).then((response) => {
       settled = true;
       return response;
     });
@@ -231,7 +235,9 @@ describe('Google unified inbound pointer queue ingress', () => {
   });
 
   it('T007: Google unified ingress returns non-2xx when enqueue fails', async () => {
-    const { POST } = await import('@alga-psa/integrations/webhooks/email/google');
+    const { handleGoogleWebhook } = await import(
+      '@alga-psa/integrations/webhooks/email/handlers/googleWebhookHandler'
+    );
     enqueueUnifiedInboundEmailQueueJobMock.mockRejectedValue(new Error('redis unavailable'));
 
     const notification = {
@@ -256,7 +262,7 @@ describe('Google unified inbound pointer queue ingress', () => {
       body: JSON.stringify(pubsubPayload),
     });
 
-    const response = await POST(request);
+    const response = await handleGoogleWebhook(request);
     expect(response.status).toBe(503);
     const body = await response.json();
     expect(body).toMatchObject({
@@ -265,7 +271,9 @@ describe('Google unified inbound pointer queue ingress', () => {
   });
 
   it('T028: Google JWT verification/auth remains enforced in enqueue-only mode', async () => {
-    const { POST } = await import('@alga-psa/integrations/webhooks/email/google');
+    const { handleGoogleWebhook } = await import(
+      '@alga-psa/integrations/webhooks/email/handlers/googleWebhookHandler'
+    );
 
     const notification = {
       emailAddress: 'support@example.com',
@@ -288,7 +296,7 @@ describe('Google unified inbound pointer queue ingress', () => {
       body: JSON.stringify(pubsubPayload),
     });
 
-    const response = await POST(request);
+    const response = await handleGoogleWebhook(request);
     expect(response.status).toBe(401);
     const body = await response.json();
     expect(body).toMatchObject({

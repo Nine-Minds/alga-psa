@@ -1,4 +1,42 @@
 services:
+  minio:
+    image: minio/minio:latest
+    profiles:
+      - test
+    environment:
+      MINIO_ROOT_USER: ${IMAP_STORAGE_S3_ACCESS_KEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${IMAP_STORAGE_S3_SECRET_KEY:-minioadmin}
+    command: server /data --console-address ":9001"
+    ports:
+      - "${EXPOSE_IMAP_MINIO_API_PORT:-3900}:9000"
+      - "${EXPOSE_IMAP_MINIO_CONSOLE_PORT:-3901}:9001"
+    volumes:
+      - minio_imap_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app-network
+
+  minio-init:
+    image: minio/mc:latest
+    profiles:
+      - test
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set minio http://minio:9000 ${IMAP_STORAGE_S3_ACCESS_KEY:-minioadmin} ${IMAP_STORAGE_S3_SECRET_KEY:-minioadmin};
+      mc mb minio/${IMAP_STORAGE_S3_BUCKET:-inbound-email-artifacts} --ignore-existing;
+      mc anonymous set private minio/${IMAP_STORAGE_S3_BUCKET:-inbound-email-artifacts};
+      "
+    restart: "no"
+    networks:
+      - app-network
+
   imap-test-server:
     image: greenmail/standalone:latest
     profiles:
@@ -15,3 +53,6 @@ services:
       - "${EXPOSE_IMAP_TEST_HTTP_PORT:-8080}:8080"
     networks:
       - app-network
+
+volumes:
+  minio_imap_data:

@@ -420,7 +420,9 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
       subscription: `projects/project/subscriptions/${subscriptionName}`,
     };
 
-    const { POST } = await import('@alga-psa/integrations/webhooks/email/google');
+    const { handleGoogleWebhook } = await import(
+      '@alga-psa/integrations/webhooks/email/handlers/googleWebhookHandler'
+    );
 
     const req = new NextRequest('http://localhost:3000/api/email/webhooks/google', {
       method: 'POST',
@@ -431,7 +433,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
       body: JSON.stringify(payload),
     });
 
-    const res = await POST(req);
+    const res = await handleGoogleWebhook(req);
     expect(res.status).toBe(200);
 
     const tickets = await db('tickets').where({ tenant: tenantId, title: 'Inbound email subject' });
@@ -596,7 +598,9 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
       ],
     };
 
-    const { POST } = await import('@alga-psa/integrations/webhooks/email/microsoft');
+    const { handleMicrosoftWebhookPost } = await import(
+      '@alga-psa/integrations/webhooks/email/handlers/microsoftWebhookHandler'
+    );
 
     const req = new NextRequest('http://localhost:3000/api/email/webhooks/microsoft', {
       method: 'POST',
@@ -604,7 +608,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
       body: JSON.stringify(payload),
     });
 
-    const res = await POST(req);
+    const res = await handleMicrosoftWebhookPost(req);
     expect(res.status).toBe(200);
 
     const tickets = await db('tickets').where({ tenant: tenantId, title: 'Inbound MS email subject' });

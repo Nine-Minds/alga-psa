@@ -364,7 +364,9 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'pointer.uid is required in unified queue mode' }, { status: 400 });
       }
 
-      const mailbox = asNonEmptyString(payload.pointer?.mailbox) || provider.mailbox;
+      const mailbox =
+        asNonEmptyString(payload.pointer?.mailbox) ||
+        'INBOX';
       const messageId =
         asNonEmptyString(payload.pointer?.messageId) || asNonEmptyString(payload.emailData?.id) || undefined;
       const uidValidity = asNonEmptyString(payload.pointer?.uidValidity) || undefined;

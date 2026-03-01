@@ -361,7 +361,10 @@ async function persistDocumentForBuffer(args: {
   mimeType: string;
   buffer: Buffer;
 }): Promise<{ success: boolean; message?: string; documentId?: string; fileId?: string }> {
-  const storageModule: any = await import('@alga-psa/storage');
+  // Keep this specifier non-literal so TypeScript doesn't pull the entire storage/auth tree
+  // into every consumer's compile graph (notably imap-service).
+  const storageModuleSpecifier = '@alga-psa/storage/StorageProviderFactory';
+  const storageModule: any = await import(storageModuleSpecifier);
   const StorageProviderFactory = storageModule.StorageProviderFactory;
   const generateStoragePath = storageModule.generateStoragePath;
 
@@ -492,9 +495,7 @@ async function downloadAttachmentBuffer(args: {
   }
 
   if (providerRow.provider_type === 'google') {
-    const integrationsSpecifier = '@alga-psa/integrations';
-    const integrationsModule: any = await import(integrationsSpecifier);
-    const GmailAdapter = integrationsModule.GmailAdapter;
+    const { GmailAdapter } = await import('@alga-psa/shared/services/email/providers/GmailAdapter');
     const providerConfig = await buildGoogleProviderConfig(args.knex, args.tenantId, providerRow);
     const adapter = new GmailAdapter(providerConfig);
     await adapter.connect();
@@ -537,9 +538,7 @@ async function downloadOriginalMime(args: {
   }
 
   if (providerRow.provider_type === 'google') {
-    const integrationsSpecifier = '@alga-psa/integrations';
-    const integrationsModule: any = await import(integrationsSpecifier);
-    const GmailAdapter = integrationsModule.GmailAdapter;
+    const { GmailAdapter } = await import('@alga-psa/shared/services/email/providers/GmailAdapter');
     const providerConfig = await buildGoogleProviderConfig(args.knex, args.tenantId, providerRow);
     const adapter = new GmailAdapter(providerConfig);
     await adapter.connect();

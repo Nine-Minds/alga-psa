@@ -7,7 +7,14 @@
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
-import { TICKET_ORIGINS, type IEventPublisher } from '@alga-psa/types';
+import type { IEventPublisher } from '@alga-psa/types';
+
+const TICKET_ORIGINS = {
+  INTERNAL: 'internal',
+  CLIENT_PORTAL: 'client_portal',
+  INBOUND_EMAIL: 'inbound_email',
+  API: 'api',
+} as const;
 
 // =============================================================================
 // VALIDATION SCHEMAS

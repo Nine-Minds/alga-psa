@@ -76,7 +76,9 @@ describe('Microsoft unified inbound pointer queue ingress', () => {
   });
 
   it('T001: Microsoft ingress enqueues a pointer-only unified queue payload with required identifiers', async () => {
-    const { POST } = await import('@alga-psa/integrations/webhooks/email/microsoft');
+    const { handleMicrosoftWebhookPost } = await import(
+      '@alga-psa/integrations/webhooks/email/handlers/microsoftWebhookHandler'
+    );
 
     const request = new NextRequest('http://localhost:3000/api/email/webhooks/microsoft', {
       method: 'POST',
@@ -100,7 +102,7 @@ describe('Microsoft unified inbound pointer queue ingress', () => {
       }),
     });
 
-    const response = await POST(request);
+    const response = await handleMicrosoftWebhookPost(request);
     expect(response.status).toBe(200);
 
     const body = await response.json();
@@ -133,7 +135,9 @@ describe('Microsoft unified inbound pointer queue ingress', () => {
   });
 
   it('T004: Microsoft callback success waits for durable enqueue completion', async () => {
-    const { POST } = await import('@alga-psa/integrations/webhooks/email/microsoft');
+    const { handleMicrosoftWebhookPost } = await import(
+      '@alga-psa/integrations/webhooks/email/handlers/microsoftWebhookHandler'
+    );
 
     let resolveEnqueue!: (value: { job: { jobId: string }; queueDepth: number }) => void;
     const enqueueGate = new Promise<{ job: { jobId: string }; queueDepth: number }>((resolve) => {
@@ -164,7 +168,7 @@ describe('Microsoft unified inbound pointer queue ingress', () => {
     });
 
     let settled = false;
-    const responsePromise = POST(request).then((response) => {
+    const responsePromise = handleMicrosoftWebhookPost(request).then((response) => {
       settled = true;
       return response;
     });
@@ -188,7 +192,9 @@ describe('Microsoft unified inbound pointer queue ingress', () => {
   });
 
   it('T007: Microsoft unified ingress returns non-2xx when enqueue fails', async () => {
-    const { POST } = await import('@alga-psa/integrations/webhooks/email/microsoft');
+    const { handleMicrosoftWebhookPost } = await import(
+      '@alga-psa/integrations/webhooks/email/handlers/microsoftWebhookHandler'
+    );
     enqueueUnifiedInboundEmailQueueJobMock.mockRejectedValue(new Error('redis unavailable'));
 
     const request = new NextRequest('http://localhost:3000/api/email/webhooks/microsoft', {
@@ -213,7 +219,7 @@ describe('Microsoft unified inbound pointer queue ingress', () => {
       }),
     });
 
-    const response = await POST(request);
+    const response = await handleMicrosoftWebhookPost(request);
     expect(response.status).toBe(503);
     const body = await response.json();
     expect(body).toMatchObject({
@@ -223,7 +229,9 @@ describe('Microsoft unified inbound pointer queue ingress', () => {
   });
 
   it('T027: Microsoft clientState validation remains enforced in unified enqueue-only mode', async () => {
-    const { POST } = await import('@alga-psa/integrations/webhooks/email/microsoft');
+    const { handleMicrosoftWebhookPost } = await import(
+      '@alga-psa/integrations/webhooks/email/handlers/microsoftWebhookHandler'
+    );
 
     const request = new NextRequest('http://localhost:3000/api/email/webhooks/microsoft', {
       method: 'POST',
@@ -247,7 +255,7 @@ describe('Microsoft unified inbound pointer queue ingress', () => {
       }),
     });
 
-    const response = await POST(request);
+    const response = await handleMicrosoftWebhookPost(request);
     expect(response.status).toBe(200);
     const body = await response.json();
     expect(body).toMatchObject({

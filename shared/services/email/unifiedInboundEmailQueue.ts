@@ -16,8 +16,64 @@ const DEFAULT_DLQ_QUEUE_KEY = 'email:inbound:unified:pointer:dlq';
 const DEFAULT_MAX_ATTEMPTS = 5;
 const DEFAULT_CLAIM_TTL_MS = 60_000;
 const DEFAULT_BLOCK_SECONDS = 1;
+const CLAIM_POLL_INTERVAL_MS = 100;
+
+const CLAIM_JOB_LUA = `
+local ready = KEYS[1]
+local processing = KEYS[2]
+local inflightHash = KEYS[3]
+local inflightLease = KEYS[4]
+local dlq = KEYS[5]
+
+local nowMs = tonumber(ARGV[1])
+local claimTtlMs = tonumber(ARGV[2])
+local consumerId = ARGV[3]
+local claimedAtIso = ARGV[4]
+local leaseExpiresAtIso = ARGV[5]
+local failedAtIso = ARGV[6]
+
+local payload = redis.call('RPOPLPUSH', ready, processing)
+if not payload then
+  return cjson.encode({ status = 'empty' })
+end
+
+local ok, job = pcall(cjson.decode, payload)
+if not ok or type(job) ~= 'table' or job['jobId'] == nil then
+  redis.call('LREM', processing, 1, payload)
+  redis.call('RPUSH', dlq, cjson.encode({
+    failedAt = failedAtIso,
+    reason = 'invalid_queue_payload',
+    rawPayload = payload,
+  }))
+  return cjson.encode({
+    status = 'invalid',
+    payloadLength = string.len(payload),
+  })
+end
+
+local jobId = tostring(job['jobId'])
+local claim = cjson.encode({
+  job = job,
+  originalPayload = payload,
+  consumerId = consumerId,
+  claimedAt = claimedAtIso,
+  leaseExpiresAt = leaseExpiresAtIso,
+})
+
+redis.call('HSET', inflightHash, jobId, claim)
+redis.call('ZADD', inflightLease, nowMs + claimTtlMs, jobId)
+
+return cjson.encode({
+  status = 'claimed',
+  claim = claim,
+})
+`;
 
 let redisClientPromise: Promise<RedisClientType> | null = null;
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 function parsePositiveInteger(value: string | undefined, fallback: number): number {
   const parsed = Number(value);
@@ -223,7 +279,13 @@ function buildUnifiedInboundEmailQueueJob(
 
 function parseClaimRecord(value: string): ClaimedUnifiedInboundEmailQueueJob | null {
   try {
-    return JSON.parse(value) as ClaimedUnifiedInboundEmailQueueJob;
+    const parsed = JSON.parse(value) as ClaimedUnifiedInboundEmailQueueJob;
+    if (!parsed || typeof parsed !== 'object') return null;
+    if (!parsed.job || typeof parsed.job !== 'object') return null;
+    if (typeof parsed.originalPayload !== 'string') return null;
+    if (typeof parsed.consumerId !== 'string') return null;
+    if (typeof (parsed.job as any).jobId !== 'string') return null;
+    return parsed;
   } catch {
     return null;
   }
@@ -304,60 +366,98 @@ export async function claimUnifiedInboundEmailQueueJob(params: {
   const client = await getRedisClient();
   const blockSeconds = Math.max(0, params.blockSeconds ?? queueConfig.claimBlockSeconds);
   const claimTtlMs = Math.max(1, params.claimTtlMs ?? queueConfig.claimTtlMs);
+  const deadline = Date.now() + blockSeconds * 1000;
+  let claimRecord: ClaimedUnifiedInboundEmailQueueJob | null = null;
 
-  const payload = await client.brPopLPush(
-    queueConfig.readyQueueKey,
-    queueConfig.processingQueueKey,
-    blockSeconds
-  );
-  if (!payload) {
-    return null;
-  }
+  while (!claimRecord) {
+    const now = Date.now();
+    const claimedAt = new Date(now).toISOString();
+    const leaseExpiresAt = new Date(now + claimTtlMs).toISOString();
+    const failedAt = claimedAt;
 
-  let job: UnifiedInboundEmailQueueJob;
-  try {
-    job = JSON.parse(payload) as UnifiedInboundEmailQueueJob;
-  } catch {
-    // Poison message path: move bad payload to DLQ and drop from processing queue.
-    await client.multi()
-      .lRem(queueConfig.processingQueueKey, 1, payload)
-      .rPush(
+    const rawResult = await (client as any).eval(CLAIM_JOB_LUA, {
+      keys: [
+        queueConfig.readyQueueKey,
+        queueConfig.processingQueueKey,
+        queueConfig.inflightHashKey,
+        queueConfig.inflightLeaseKey,
         queueConfig.deadLetterQueueKey,
-        JSON.stringify({
-          failedAt: new Date().toISOString(),
-          reason: 'invalid_queue_payload',
-          rawPayload: payload,
-        })
-      )
-      .exec();
-    console.error('[UnifiedInboundEmailQueue] invalid_payload_dlq', {
-      event: 'inbound_email_queue_invalid_payload_dlq',
-      reason: 'invalid_queue_payload',
-      payloadLength: payload.length,
+      ],
+      arguments: [
+        String(now),
+        String(claimTtlMs),
+        params.consumerId,
+        claimedAt,
+        leaseExpiresAt,
+        failedAt,
+      ],
     });
-    return null;
+
+    const parsedResult = typeof rawResult === 'string' ? parseClaimRecord(rawResult) : null;
+    let envelope: any = null;
+    if (!parsedResult) {
+      if (typeof rawResult === 'string') {
+        try {
+          envelope = JSON.parse(rawResult);
+        } catch {
+          envelope = null;
+        }
+      } else {
+        envelope = rawResult;
+      }
+    }
+
+    if (parsedResult) {
+      // Backward compatibility if eval ever returns a direct claim payload.
+      claimRecord = parsedResult;
+      break;
+    }
+
+    if (!envelope || typeof envelope !== 'object') {
+      if (Date.now() >= deadline) {
+        return null;
+      }
+      await sleep(CLAIM_POLL_INTERVAL_MS);
+      continue;
+    }
+
+    if ((envelope as any).status === 'empty') {
+      if (Date.now() >= deadline) {
+        return null;
+      }
+      await sleep(CLAIM_POLL_INTERVAL_MS);
+      continue;
+    }
+
+    if ((envelope as any).status === 'invalid') {
+      console.error('[UnifiedInboundEmailQueue] invalid_payload_dlq', {
+        event: 'inbound_email_queue_invalid_payload_dlq',
+        reason: 'invalid_queue_payload',
+        payloadLength: Number((envelope as any).payloadLength || 0),
+      });
+      if (Date.now() >= deadline) {
+        return null;
+      }
+      continue;
+    }
+
+    if ((envelope as any).status === 'claimed' && typeof (envelope as any).claim === 'string') {
+      const parsedClaim = parseClaimRecord((envelope as any).claim);
+      if (parsedClaim) {
+        claimRecord = parsedClaim;
+        break;
+      }
+    }
+
+    if (Date.now() >= deadline) {
+      return null;
+    }
+    await sleep(CLAIM_POLL_INTERVAL_MS);
   }
-
-  const now = Date.now();
-  const claimRecord: ClaimedUnifiedInboundEmailQueueJob = {
-    job,
-    originalPayload: payload,
-    consumerId: params.consumerId,
-    claimedAt: new Date(now).toISOString(),
-    leaseExpiresAt: new Date(now + claimTtlMs).toISOString(),
-  };
-
-  await client.multi()
-    .hSet(queueConfig.inflightHashKey, job.jobId, JSON.stringify(claimRecord))
-    .zAdd(queueConfig.inflightLeaseKey, {
-      score: now + claimTtlMs,
-      value: job.jobId,
-    })
-    .exec();
 
   console.log('[UnifiedInboundEmailQueue] consume_start', {
     event: 'inbound_email_queue_consume_start',
-    ...getJobLogFields(job),
+    ...getJobLogFields(claimRecord.job),
     consumerId: params.consumerId,
     claimTtlMs,
   });
@@ -393,26 +493,27 @@ export async function failUnifiedInboundEmailQueueJob(params: {
   const nextAttempt = (params.claim.job.attempt || 0) + 1;
   const maxAttempts = params.claim.job.maxAttempts || queueConfig.maxAttempts;
 
-  await client.multi()
-    .lRem(queueConfig.processingQueueKey, 1, params.claim.originalPayload)
-    .hDel(queueConfig.inflightHashKey, params.claim.job.jobId)
-    .zRem(queueConfig.inflightLeaseKey, params.claim.job.jobId)
-    .exec();
-
   const retriedJob: UnifiedInboundEmailQueueJob = {
     ...params.claim.job,
     attempt: nextAttempt,
   };
 
   if (nextAttempt >= maxAttempts) {
-    const queueDepth = await client.rPush(
-      queueConfig.deadLetterQueueKey,
-      JSON.stringify({
-        failedAt: new Date().toISOString(),
-        reason: params.error,
-        job: retriedJob,
-      })
-    );
+    const execResult = await client.multi()
+      .lRem(queueConfig.processingQueueKey, 1, params.claim.originalPayload)
+      .hDel(queueConfig.inflightHashKey, params.claim.job.jobId)
+      .zRem(queueConfig.inflightLeaseKey, params.claim.job.jobId)
+      .rPush(
+        queueConfig.deadLetterQueueKey,
+        JSON.stringify({
+          failedAt: new Date().toISOString(),
+          reason: params.error,
+          job: retriedJob,
+        })
+      )
+      .exec();
+    const queueDepthRaw = Array.isArray(execResult) ? execResult[execResult.length - 1] : null;
+    const queueDepth = Number.isFinite(Number(queueDepthRaw)) ? Number(queueDepthRaw) : 0;
     console.error('[UnifiedInboundEmailQueue] dlq', {
       event: 'inbound_email_queue_dlq',
       ...getJobLogFields(retriedJob),
@@ -429,7 +530,14 @@ export async function failUnifiedInboundEmailQueueJob(params: {
     };
   }
 
-  const queueDepth = await client.rPush(queueConfig.readyQueueKey, JSON.stringify(retriedJob));
+  const execResult = await client.multi()
+    .lRem(queueConfig.processingQueueKey, 1, params.claim.originalPayload)
+    .hDel(queueConfig.inflightHashKey, params.claim.job.jobId)
+    .zRem(queueConfig.inflightLeaseKey, params.claim.job.jobId)
+    .rPush(queueConfig.readyQueueKey, JSON.stringify(retriedJob))
+    .exec();
+  const queueDepthRaw = Array.isArray(execResult) ? execResult[execResult.length - 1] : null;
+  const queueDepth = Number.isFinite(Number(queueDepthRaw)) ? Number(queueDepthRaw) : 0;
   console.warn('[UnifiedInboundEmailQueue] retry', {
     event: 'inbound_email_queue_retry',
     ...getJobLogFields(retriedJob),
