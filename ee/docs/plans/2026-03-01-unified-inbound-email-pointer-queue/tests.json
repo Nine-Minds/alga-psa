@@ -224,7 +224,7 @@
   {
     "id": "T038",
     "description": "E2E: IMAP listener enqueues pointer and worker creates expected ticket/comment/documents through shared processing path",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F004", "F009", "F011"]
   },
   {
