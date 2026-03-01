@@ -173,7 +173,7 @@
   {
     "id": "F020",
     "description": "Ensure existing comment behavior (non-image paste and plain text) is unaffected by clipboard image support",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Acceptance Criteria (Definition of Done)",
       "Non-goals"

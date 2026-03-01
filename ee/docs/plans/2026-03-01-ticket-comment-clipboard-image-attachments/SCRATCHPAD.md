@@ -58,3 +58,4 @@ Working notes for implementing clipboard image paste support in ticket comments,
 - (2026-03-01) F017 implemented: Delete option on cancel now hard-deletes selected draft clipboard images through server action + document deletion pipeline.
 - (2026-03-01) F018 implemented: Draft hard delete now guards against non-owned/not-ticket/non-image/already-referenced artifacts before deletion.
 - (2026-03-01) F019 implemented: Clipboard upload path now validates image MIME prefix and maximum file size before upload begins.
+- (2026-03-01) F020 implemented: Non-image paste/plain-text behavior remains on existing path; clipboard image logic is isolated to image upload flow only.
