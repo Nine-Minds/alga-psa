@@ -141,6 +141,7 @@ Working notes for moving Microsoft, Google, and IMAP inbound email ingress to on
 - (2026-03-01) Completed `T032`: Queue logging tests now assert enqueue success/failure events include provider, tenant, and pointer identifiers.
 - (2026-03-01) Completed `T033`: Queue + consumer logging tests now assert retry/DLQ/skip event payloads include attempt counts and terminal reasons.
 - (2026-03-01) Completed `T034`: Idempotency persistence test coverage confirms first consume writes `email_processed_messages` marker for newly processed identities.
+- (2026-03-01) Completed `T035`: Duplicate-guard test coverage confirms unique-constraint collision blocks second consume and prevents downstream processing.
 
 ## Open Questions
 

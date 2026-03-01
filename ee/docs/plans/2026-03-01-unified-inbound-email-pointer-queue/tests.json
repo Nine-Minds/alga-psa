@@ -206,7 +206,7 @@
   {
     "id": "T035",
     "description": "DB integration guard path: duplicate consume attempt is blocked by idempotency persistence constraint/check",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F010", "F017"]
   },
   {
