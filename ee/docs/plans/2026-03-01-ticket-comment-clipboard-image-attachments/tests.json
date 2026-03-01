@@ -125,7 +125,7 @@
   {
     "id": "T016",
     "description": "Outbound CID: one CID attachment is generated per inline comment image",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F012"
     ]
