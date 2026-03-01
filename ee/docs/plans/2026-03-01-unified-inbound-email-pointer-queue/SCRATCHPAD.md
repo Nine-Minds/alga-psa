@@ -32,6 +32,7 @@ Working notes for moving Microsoft, Google, and IMAP inbound email ingress to on
 - Security checks are still enforced before enqueue-only handoff: Microsoft validation/clientState checks, Google Pub/Sub JWT verification, and IMAP secret header verification all execute before unified-queue enqueue paths.
 - IMAP async-mode gating is now provider-aware and supports explicit legacy-path disablement via `IMAP_INBOUND_EMAIL_IN_APP_ASYNC_DISABLED`, while also auto-disabling async mode whenever unified pointer queue mode is enabled for a provider.
 - Unified queue now emits structured event logs for `enqueue`, `consume_start`, `ack`, `retry`, `dlq`, `reclaim`, and consumer `skip` with job/pointer identifiers and attempt metadata.
+- Microsoft webhook response contract now reports handoff mode (`unified_pointer_queue`/`mixed`/`inline_processing`) plus queue vs inline counts, aligning callback semantics with Google/IMAP queue-mode responses.
 
 ## Commands / Runbooks
 
@@ -87,6 +88,7 @@ Working notes for moving Microsoft, Google, and IMAP inbound email ingress to on
 - (2026-03-01) Completed `F020`: Verified webhook auth/verification behavior is preserved in enqueue-only mode across Microsoft, Google, and IMAP paths (no auth bypass introduced by unified queue branching).
 - (2026-03-01) Completed `F021`: Aligned queue migration flags by extending IMAP async mode evaluation to accept provider context, auto-disable on unified mode, and honor `IMAP_INBOUND_EMAIL_IN_APP_ASYNC_DISABLED` for explicit legacy disablement.
 - (2026-03-01) Completed `F022`: Added structured observability events across queue lifecycle and consumer skip outcomes, including tenant/provider/pointer identifiers, attempts, and terminal reasons for retry/DLQ paths.
+- (2026-03-01) Completed `F023`: Updated provider callback contracts so unified mode explicitly reports queue handoff metadata and avoids inline-processing ambiguity in webhook responses.
 
 ## Open Questions
 

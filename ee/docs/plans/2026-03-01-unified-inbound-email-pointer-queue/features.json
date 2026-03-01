@@ -134,7 +134,7 @@
   {
     "id": "F023",
     "description": "Update provider-specific callback contracts so business processing is no longer performed inline",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Users and Primary Flows", "Acceptance Criteria (Definition of Done)"]
   },
   {

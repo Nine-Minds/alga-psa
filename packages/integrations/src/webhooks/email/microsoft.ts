@@ -107,6 +107,8 @@ export async function POST(request: NextRequest) {
 
     const knex = await getAdminConnection();
     const processedNotifications: string[] = [];
+    let unifiedQueuedCount = 0;
+    let inlineProcessedCount = 0;
     const enqueueFailures: Array<{
       subscriptionId: string;
       messageId: string;
@@ -229,6 +231,7 @@ export async function POST(request: NextRequest) {
             }
 
             processedNotifications.push(messageId);
+            unifiedQueuedCount += 1;
             console.log('✅ Enqueued unified inbound email pointer job (Microsoft)', {
               providerId: row.id,
               tenantId: row.tenant,
@@ -422,6 +425,7 @@ export async function POST(request: NextRequest) {
           }
 
           processedNotifications.push(messageId);
+          inlineProcessedCount += 1;
           console.log(`Published ${details ? 'enriched' : 'minimal'} event for Microsoft email: ${messageId} from ${row.mailbox}`);
         });
       } catch (error: any) {
@@ -444,10 +448,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    return NextResponse.json({ 
-      success: true, 
+    const handoff =
+      unifiedQueuedCount > 0 && inlineProcessedCount === 0
+        ? 'unified_pointer_queue'
+        : unifiedQueuedCount > 0
+          ? 'mixed'
+          : 'inline_processing';
+
+    return NextResponse.json({
+      success: true,
+      queued: unifiedQueuedCount > 0 && inlineProcessedCount === 0,
+      handoff,
+      unifiedQueuedCount,
+      inlineProcessedCount,
       processedCount: processedNotifications.length,
-      messageIds: processedNotifications
+      messageIds: processedNotifications,
     });
 
   } catch (error: any) {
