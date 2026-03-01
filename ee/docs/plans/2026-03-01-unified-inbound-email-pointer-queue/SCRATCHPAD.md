@@ -143,6 +143,7 @@ Working notes for moving Microsoft, Google, and IMAP inbound email ingress to on
 - (2026-03-01) Completed `T034`: Idempotency persistence test coverage confirms first consume writes `email_processed_messages` marker for newly processed identities.
 - (2026-03-01) Completed `T035`: Duplicate-guard test coverage confirms unique-constraint collision blocks second consume and prevents downstream processing.
 - (2026-03-01) Completed `T036`: Combined Microsoft webhook enqueue contract + processor consume-time fetch tests validate callback-to-worker shared processing flow and created-outcome handoff.
+- (2026-03-01) Completed `T037`: Combined Google webhook enqueue contract + processor consume-time fetch tests validate callback-to-worker shared processing flow and created-outcome handoff.
 
 ## Open Questions
 

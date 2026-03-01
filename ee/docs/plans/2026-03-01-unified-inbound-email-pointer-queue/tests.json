@@ -218,7 +218,7 @@
   {
     "id": "T037",
     "description": "E2E: Google callback enqueues pointer and worker creates expected ticket/comment/documents through shared processing path",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F003", "F009", "F011"]
   },
   {
