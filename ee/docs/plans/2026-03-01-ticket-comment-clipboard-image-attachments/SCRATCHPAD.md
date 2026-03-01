@@ -87,3 +87,4 @@ EOF && git add ee/docs/plans/2026-03-01-ticket-comment-clipboard-image-attachmen
 - (2026-03-01) T024 implemented: draft-delete contract test validates permission-denied guard when requester lacks document delete permission.
 - (2026-03-01) T025 implemented: `clipboardImageUtils.test.ts` covers unsupported MIME validation rejection before upload starts.
 - (2026-03-01) T026 implemented: `clipboardImageUtils.test.ts` validates max-size guard rejects oversized clipboard images with explicit error.
+- (2026-03-01) T027 implemented: `TicketDetails.clipboardFlag.contract.test.ts` asserts dedicated feature flag default-off gating for clipboard image paste flow.

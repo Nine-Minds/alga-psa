@@ -214,7 +214,7 @@
   {
     "id": "T027",
     "description": "Feature flag off: clipboard image paste flow is disabled and existing editor behavior remains active",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F021",
       "F020"
