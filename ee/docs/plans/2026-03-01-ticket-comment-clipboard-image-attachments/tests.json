@@ -68,7 +68,7 @@
   {
     "id": "T009",
     "description": "UI: retry action re-attempts failed image upload and transitions to success state",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F007"
     ]
