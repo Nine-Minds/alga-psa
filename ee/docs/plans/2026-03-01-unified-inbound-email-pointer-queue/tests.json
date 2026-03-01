@@ -98,7 +98,7 @@
   {
     "id": "T017",
     "description": "Consumer execution: successful fetch invokes processInboundEmailInApp with full normalized email payload",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F011"]
   },
   {
