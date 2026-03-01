@@ -140,7 +140,7 @@
   {
     "id": "F024",
     "description": "Add queue consumer routing logic per provider type (Microsoft, Google, IMAP)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements", "Data / API / Integrations"]
   },
   {
