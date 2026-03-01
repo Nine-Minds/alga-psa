@@ -70,6 +70,7 @@ Rolling notes for the 5-phase documents system overhaul: entity-scoped folders, 
 
 ## Work Log
 
+- (2026-03-01) **F025 implemented**: Added migration `server/migrations/20260228102000_create_document_entity_folder_init_table.cjs` to create `document_entity_folder_init` with tenant-scoped composite PK (`tenant`, `entity_folder_init_id`), entity-scope uniqueness (`tenant`, `entity_type`, `entity_id`) for one-time initialization tracking, optional `initialized_from_template_id` FK, supporting indexes, and inline `distributeIfCitus(knex, 'document_entity_folder_init')`.
 - (2026-03-01) **F024 implemented**: Added migration `server/migrations/20260228101000_create_document_folder_template_items_table.cjs` to create `document_folder_template_items` with tenant-scoped composite PK (`tenant`, `template_item_id`), template + parent item FKs (cascade delete), folder path uniqueness per template, per-item visibility + sort order metadata, supporting indexes, and inline `distributeIfCitus(knex, 'document_folder_template_items')`.
 - (2026-03-01) **F023 implemented**: Added migration `server/migrations/20260228100000_create_document_folder_templates_table.cjs` to create `document_folder_templates` with tenant-scoped composite PK (`tenant`, `template_id`), `name`, `entity_type`, `is_default`, audit columns, supporting indexes/uniqueness, and inline `distributeIfCitus(knex, 'document_folder_templates')`.
 - (2026-02-28) **F021 implemented**: Updated `packages/documents/src/actions/documentActions.ts` so `getFolderTree()` selects folder visibility metadata from explicit `document_folders` rows and threads it through `buildFolderTreeFromPaths`; updated `packages/documents/src/components/FolderTreeView.tsx` to render MSP-only disabled visibility indicators per folder via `showVisibilityIndicators`; wired `showVisibilityIndicators` from both `FolderTreeView` usages in `packages/documents/src/components/Documents.tsx`; added focused coverage in `packages/documents/src/components/FolderTreeView.visibility.test.tsx`.
@@ -94,6 +95,7 @@ Rolling notes for the 5-phase documents system overhaul: entity-scoped folders, 
 
 ## Recent Validation
 
+- (2026-03-01) Verified migration module exports load: `node -e "const m=require('./server/migrations/20260228102000_create_document_entity_folder_init_table.cjs'); console.log(typeof m.up, typeof m.down);"` → `function function`.
 - (2026-03-01) Verified migration module exports load: `node -e "const m=require('./server/migrations/20260228101000_create_document_folder_template_items_table.cjs'); console.log(typeof m.up, typeof m.down);"` → `function function`.
 - (2026-03-01) Verified migration module exports load: `node -e "const m=require('./server/migrations/20260228100000_create_document_folder_templates_table.cjs'); console.log(typeof m.up, typeof m.down);"` → `function function`.
 - (2026-02-28) Ran focused folder visibility indicator component tests: `cd server && npx vitest run ../packages/documents/src/components/FolderTreeView.visibility.test.tsx --config vitest.config.ts` (pass, 2 tests).

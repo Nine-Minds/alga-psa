@@ -186,7 +186,7 @@
   {
     "id": "F025",
     "description": "Migration: Create document_entity_folder_init tracker table (includes inline distributeIfCitus)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-2.3"
     ]
