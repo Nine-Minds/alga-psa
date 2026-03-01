@@ -11,7 +11,7 @@
   {
     "id": "T002",
     "description": "Unit: pasting multiple images produces one upload job per image in deterministic order",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F001",
       "F002"
