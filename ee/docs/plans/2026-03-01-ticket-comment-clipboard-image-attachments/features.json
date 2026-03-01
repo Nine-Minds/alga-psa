@@ -92,7 +92,7 @@
   {
     "id": "F011",
     "description": "Map attachment-referenced comment images into outbound ticket-comment email image model",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "Data / API / Integrations"

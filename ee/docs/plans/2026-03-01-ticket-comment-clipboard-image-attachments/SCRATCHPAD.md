@@ -49,3 +49,4 @@ Working notes for implementing clipboard image paste support in ticket comments,
 - (2026-03-01) F008 implemented: Comment content now persists attachment-backed image URLs (document view endpoints) instead of raw `data:image` bodies.
 - (2026-03-01) F009 implemented: Ticket comment rendering path now uses saved attachment-serving URLs for inline images in BlockNote-rendered comment content.
 - (2026-03-01) F010 implemented: Attachment image serving auth strengthened in `/api/documents/view/[fileId]` for ticket-associated document access checks.
+- (2026-03-01) F011 implemented: Outbound ticket-comment email flow now maps comment image URLs into ticket document lookup + inline image processing model.
