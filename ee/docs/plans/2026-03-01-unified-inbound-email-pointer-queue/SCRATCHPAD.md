@@ -68,6 +68,7 @@ Working notes for moving Microsoft, Google, and IMAP inbound email ingress to on
 - (2026-03-01) Completed `F008`: Added a reusable consumer loop (`UnifiedInboundEmailQueueConsumer`) plus queue claim/ack/fail/reclaim primitives for processing unified inbound pointer jobs.
 - (2026-03-01) Completed `F009`: Added provider-specific consume-time pointer resolution in `unifiedInboundEmailQueueJobProcessor` for Microsoft (`messageId`), Google (`historyId` -> message IDs), and IMAP (`uid` fetch) before downstream processing.
 - (2026-03-01) Completed `F010`: Added consume-time idempotency insert/check against `email_processed_messages` with duplicate short-circuit when a normalized external identity already exists.
+- (2026-03-01) Completed `F011`: Queue job processor now calls `processInboundEmailInApp` for fetched provider messages and records final processing status back to `email_processed_messages`.
 
 ## Open Questions
 

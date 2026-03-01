@@ -62,7 +62,7 @@
   {
     "id": "F011",
     "description": "Wire consumer to execute existing processInboundEmailInApp pipeline after payload fetch",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Goals", "Requirements"]
   },
   {
