@@ -36,7 +36,7 @@
   {
     "id": "T005",
     "description": "Unit: deterministic filename generator emits expected name pattern for pasted images",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F004"
     ]
