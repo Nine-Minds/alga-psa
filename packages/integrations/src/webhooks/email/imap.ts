@@ -450,7 +450,12 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    if (isImapInboundEmailInAppAsyncModeEnabled()) {
+    if (
+      isImapInboundEmailInAppAsyncModeEnabled({
+        tenantId: provider.tenant,
+        providerId: provider.id,
+      })
+    ) {
       const queued = enqueueImapInAppJob({
         tenantId: provider.tenant,
         providerId: provider.id,

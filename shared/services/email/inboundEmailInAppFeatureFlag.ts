@@ -46,7 +46,28 @@ export function isImapInboundEmailInAppProcessingEnabled(params: {
   );
 }
 
-export function isImapInboundEmailInAppAsyncModeEnabled(): boolean {
+export function isImapInboundEmailInAppAsyncModeEnabled(params?: {
+  tenantId: string;
+  providerId: string;
+}): boolean {
+  const asyncDisabled =
+    typeof process.env.IMAP_INBOUND_EMAIL_IN_APP_ASYNC_DISABLED === 'string' &&
+    TRUE_VALUES.has(process.env.IMAP_INBOUND_EMAIL_IN_APP_ASYNC_DISABLED.toLowerCase());
+
+  if (asyncDisabled) {
+    return false;
+  }
+
+  if (
+    params &&
+    isUnifiedInboundEmailPointerQueueEnabled({
+      tenantId: params.tenantId,
+      providerId: params.providerId,
+    })
+  ) {
+    return false;
+  }
+
   return (
     typeof process.env.IMAP_INBOUND_EMAIL_IN_APP_ASYNC_ENABLED === 'string' &&
     TRUE_VALUES.has(process.env.IMAP_INBOUND_EMAIL_IN_APP_ASYNC_ENABLED.toLowerCase())
