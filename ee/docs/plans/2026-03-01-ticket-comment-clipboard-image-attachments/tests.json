@@ -149,7 +149,7 @@
   {
     "id": "T019",
     "description": "Compose state: pasted draft images are tracked for cancel-flow keep/delete behavior",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F015"
     ]

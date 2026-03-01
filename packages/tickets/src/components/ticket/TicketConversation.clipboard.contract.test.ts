@@ -60,4 +60,25 @@ describe('TicketConversation clipboard upload wiring', () => {
     expect(source).toContain('url: viewUrl');
     expect(source).not.toContain('data:image');
   });
+
+  it('T019: tracks uploaded clipboard draft images in compose state for cancel-flow actions', () => {
+    const source = getTicketConversationSource();
+
+    expect(source).toContain('const [draftClipboardImages, setDraftClipboardImages] = useState<');
+    expect(source).toContain('setDraftClipboardImages((previous) => {');
+    expect(source).toContain('documentId: uploadedDocument.document_id');
+    expect(source).toContain('fileId: uploadedDocument.file_id ||');
+  });
+
+  it('T020/T021: prompts keep-vs-delete on cancel and allows keep path without deletion', () => {
+    const source = getTicketConversationSource();
+
+    expect(source).toContain('if (enableClipboardImageSupport && draftClipboardImages.length > 0)');
+    expect(source).toContain('setShowDraftCancelDialog(true)');
+    expect(source).toContain('const handleKeepDraftClipboardImages = () => {');
+    expect(source).toContain('setDraftClipboardImages([])');
+    expect(source).toContain('setShowEditor(false)');
+    expect(source).toContain('<ConfirmationDialog');
+    expect(source).toContain('onCancel={handleKeepDraftClipboardImages}');
+  });
 });

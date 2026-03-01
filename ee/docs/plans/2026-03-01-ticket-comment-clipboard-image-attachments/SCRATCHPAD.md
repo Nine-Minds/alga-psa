@@ -79,3 +79,4 @@ EOF && git add ee/docs/plans/2026-03-01-ticket-comment-clipboard-image-attachmen
 - (2026-03-01) T016 implemented: outbound inline-image unit test asserts one CID attachment is produced per converted comment image.
 - (2026-03-01) T017 implemented: outbound inline-image test asserts HTML image `src` rewrite from document-view URL to matching `cid:` reference.
 - (2026-03-01) T018 implemented: outbound inline-image test covers storage/CID failure fallback retaining original attachment URL in HTML.
+- (2026-03-01) T019 implemented: contract test now verifies draft clipboard image state tracking and document/file identity capture during upload.
