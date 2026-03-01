@@ -92,7 +92,7 @@
   {
     "id": "T012",
     "description": "Render: saved comment image node resolves to attachment-serving URL and displays inline in ticket thread",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F009"
     ]
