@@ -131,6 +131,7 @@ Working notes for moving Microsoft, Google, and IMAP inbound email ingress to on
 - (2026-03-01) Completed `T022`: Added DLQ-path queue test validating jobs are moved to dead-letter storage once max attempts are reached.
 - (2026-03-01) Completed `T023`: Added IMAP source-unavailable processor test validating deterministic `source_unavailable:*` skip reason and consume-marker persistence.
 - (2026-03-01) Completed `T024`: Added consumer skipped-outcome test validating source-unavailable paths ACK and avoid retry-loop behavior.
+- (2026-03-01) Completed `T025`: Added queue payload-guard test validating enqueue rejects raw-content fields and enforces pointer-only contract.
 
 ## Open Questions
 

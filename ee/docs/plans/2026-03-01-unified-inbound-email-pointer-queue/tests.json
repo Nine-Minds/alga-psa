@@ -146,7 +146,7 @@
   {
     "id": "T025",
     "description": "Payload guard: queue job payload schema excludes attachment bytes and raw MIME fields",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F018"]
   },
   {
