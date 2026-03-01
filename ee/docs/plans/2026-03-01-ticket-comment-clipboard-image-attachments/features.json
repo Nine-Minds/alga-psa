@@ -164,7 +164,7 @@
   {
     "id": "F019",
     "description": "Validate accepted clipboard image MIME types and size constraints before upload",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Security / Permissions",
       "Non-functional Requirements"
