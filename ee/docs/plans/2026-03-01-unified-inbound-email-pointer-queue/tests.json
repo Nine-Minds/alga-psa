@@ -188,7 +188,7 @@
   {
     "id": "T032",
     "description": "Logs: enqueue success/failure events include tenant/provider/pointer identifiers",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F022"]
   },
   {
