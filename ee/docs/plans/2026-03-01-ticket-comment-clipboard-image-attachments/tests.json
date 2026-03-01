@@ -231,7 +231,7 @@
   {
     "id": "T029",
     "description": "Observability: upload success/failure logs include ticket id, user id, and artifact identity",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F022"
     ]

@@ -81,4 +81,20 @@ describe('TicketConversation clipboard upload wiring', () => {
     expect(source).toContain('<ConfirmationDialog');
     expect(source).toContain('onCancel={handleKeepDraftClipboardImages}');
   });
+
+  it('T029/T030: logs upload and cancel-delete outcomes with ticket/user/artifact context', () => {
+    const source = getTicketConversationSource();
+
+    expect(source).toContain("console.info('[TicketConversation] Clipboard image uploaded'");
+    expect(source).toContain('ticketId: ticket.ticket_id');
+    expect(source).toContain('userId: currentUser.id');
+    expect(source).toContain('documentId: uploadedDocument.document_id');
+    expect(source).toContain('fileId: uploadedDocument.file_id');
+
+    expect(source).toContain("console.info('[TicketConversation] Draft cancel action: keep uploaded clipboard images'");
+    expect(source).toContain("console.info('[TicketConversation] Draft cancel action: delete uploaded clipboard images'");
+    expect(source).toContain('requestedCount: draftClipboardImages.length');
+    expect(source).toContain('deletedCount');
+    expect(source).toContain('failedCount');
+  });
 });

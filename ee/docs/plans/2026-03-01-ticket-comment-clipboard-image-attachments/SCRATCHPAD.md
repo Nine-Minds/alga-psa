@@ -89,3 +89,4 @@ EOF && git add ee/docs/plans/2026-03-01-ticket-comment-clipboard-image-attachmen
 - (2026-03-01) T026 implemented: `clipboardImageUtils.test.ts` validates max-size guard rejects oversized clipboard images with explicit error.
 - (2026-03-01) T027 implemented: `TicketDetails.clipboardFlag.contract.test.ts` asserts dedicated feature flag default-off gating for clipboard image paste flow.
 - (2026-03-01) T028 implemented: feature-flag contract coverage verifies enabled state wires `uploadFile` callback to conversation editor flow.
+- (2026-03-01) T029 implemented: contract assertions verify upload logs include ticket/user identifiers plus uploaded document/file artifact identity.
