@@ -157,7 +157,7 @@
   {
     "id": "T020",
     "description": "UI: canceling draft with pasted images prompts keep-vs-delete decision",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F016"
     ]
