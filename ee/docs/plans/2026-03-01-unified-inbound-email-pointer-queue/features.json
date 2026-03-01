@@ -38,7 +38,7 @@
   {
     "id": "F007",
     "description": "Return non-2xx ingress responses when enqueue fails so upstream systems retry",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements", "Users and Primary Flows"]
   },
   {

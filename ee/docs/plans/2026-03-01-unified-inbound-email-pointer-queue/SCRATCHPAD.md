@@ -60,6 +60,7 @@ Working notes for moving Microsoft, Google, and IMAP inbound email ingress to on
 - (2026-03-01) Completed `F004`: IMAP listener/webhook handoff now supports pointer-only ingress (`mailbox`, `uid`, `uidValidity`, optional `messageId`) and enqueues IMAP pointer jobs when unified queue mode is enabled.
 - (2026-03-01) Completed `F005`: Unified pointer ingress is now persisted in Redis list storage via `shared/services/email/unifiedInboundEmailQueue.ts` (`RPUSH` on a configurable queue key).
 - (2026-03-01) Completed `F006`: Unified queue mode ingress responses now acknowledge only after enqueue returns success; enqueue errors return non-success responses so callers can retry.
+- (2026-03-01) Completed `F007`: Microsoft, Google, and IMAP unified-queue paths now return `503` when enqueue fails, preserving upstream retry behavior.
 
 ## Open Questions
 
