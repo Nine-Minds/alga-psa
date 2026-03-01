@@ -30,10 +30,8 @@ import { getUserAvatarUrlAction, getContactAvatarUrlAction, getUserAvatarUrlsBat
 import { getUserContactId } from '@alga-psa/users/actions';
 import { utcToLocal, formatDateTime, getUserTimeZone } from '@alga-psa/core';
 import { getTicketingDisplaySettings } from '../../actions/ticketDisplaySettings';
-import type { SurveyTicketSatisfactionSummary } from '@alga-psa/types';
 import type { TicketWatchListEntry } from '@shared/lib/tickets/watchList';
 import TicketMaterialsCard from './TicketMaterialsCard';
-import TicketSurveySummaryCard from './TicketSurveySummaryCard';
 import TicketWatchListCard from './TicketWatchListCard';
 import { useRegisterUnsavedChanges } from '@alga-psa/ui/context';
 import { useDrawer } from '@alga-psa/ui';
@@ -89,7 +87,7 @@ interface TicketPropertiesProps {
   allContactsForWatchList?: IContact[];
   allContactsForWatchListLoading?: boolean;
   onLoadAllContactsForWatchList?: () => Promise<void>;
-  surveySummary?: SurveyTicketSatisfactionSummary | null;
+  surveySummaryCard?: React.ReactNode;
   renderIntervalManagement?: (args: { ticketId: string; userId: string }) => React.ReactNode;
   onRemoveTeamAssignment?: (mode: 'remove_all' | 'keep_all' | 'selective', keepUserIds?: string[]) => Promise<void>;
   onAssignTeam?: (teamId: string) => Promise<void>;
@@ -170,7 +168,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
   allContactsForWatchList = [],
   allContactsForWatchListLoading = false,
   onLoadAllContactsForWatchList,
-  surveySummary = null,
+  surveySummaryCard,
   renderIntervalManagement,
   onRemoveTeamAssignment,
   onAssignTeam,
@@ -1065,9 +1063,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
         />
       )}
 
-      {surveySummary !== undefined && (
-        <TicketSurveySummaryCard summary={surveySummary} />
-      )}
+      {surveySummaryCard}
 
     </div>
       {teamsV2Enabled && ticket.assigned_team_id && (

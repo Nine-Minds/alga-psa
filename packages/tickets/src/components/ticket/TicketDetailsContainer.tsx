@@ -11,7 +11,6 @@ import {
 } from '../../actions/optimizedTicketActions';
 import TicketDetails from './TicketDetails';
 import { TicketDetailsSkeleton } from './TicketDetailsSkeleton';
-import type { SurveyTicketSatisfactionSummary } from '@alga-psa/types';
 import { UnsavedChangesProvider } from '@alga-psa/ui/context';
 
 interface TicketDetailsContainerProps {
@@ -59,7 +58,7 @@ interface TicketDetailsContainerProps {
     locations: any[];
     agentSchedules: any[];
   };
-  surveySummary?: SurveyTicketSatisfactionSummary | null;
+  surveySummaryCard?: React.ReactNode;
   associatedAssets?: React.ReactNode;
   renderContactDetails?: React.ComponentProps<typeof TicketDetails>['renderContactDetails'];
   renderCreateProjectTask?: React.ComponentProps<typeof TicketDetails>['renderCreateProjectTask'];
@@ -69,7 +68,7 @@ interface TicketDetailsContainerProps {
 
 export default function TicketDetailsContainer({
   ticketData,
-  surveySummary = null,
+  surveySummaryCard,
   associatedAssets = null,
   renderContactDetails,
   renderCreateProjectTask,
@@ -254,7 +253,7 @@ export default function TicketDetailsContainer({
             onAddComment={handleAddComment}
             onUpdateDescription={handleUpdateDescription}
             isSubmitting={isSubmitting}
-          surveySummary={surveySummary}
+          surveySummaryCard={surveySummaryCard}
           associatedAssets={associatedAssets}
           renderContactDetails={renderContactDetails}
           renderCreateProjectTask={renderCreateProjectTask}

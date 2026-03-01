@@ -42,10 +42,12 @@ import { EmptyState } from '@alga-psa/ui/components/EmptyState';
 // Alert
 import { Alert, AlertTitle, AlertDescription } from '@alga-psa/ui/components/Alert';
 // Icons
+import { ContentCard } from '@alga-psa/ui/components'; 
 import {
   Sun, Moon, Monitor, ChevronDown, Settings,
   Plus, Trash2, Edit, Check,
-  Inbox, MoreVertical, Copy, Download, Share2
+  Inbox, MoreVertical, Copy, Download, Share2,                                                               
+  Package, Users, Eye, Star 
 } from 'lucide-react';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -588,6 +590,77 @@ export default function ComponentShowcasePage() {
         </Section>
 
         {/* ═══════════════════════════════════════════════════════════════════ */}
+        {/* CONTENT CARDS (Collapsible) */}                                                                        
+        {/* ═══════════════════════════════════════════════════════════════════ */}                              
+        <Section title="Content Cards (Collapsible)">                                                              
+          <p className="text-sm text-[rgb(var(--color-text-600))] mb-2">                                         
+            ContentCard supports a collapsible mode with chevron toggle, count badge, and optional add button.                                                                                                                 
+          </p>                                                                                                     
+                                                                                                                   
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">                                           
+            {/* Non-collapsible (original API) */}                                                          
+            <ContentCard id="content-card-basic">                                                           
+              <ContentCard.Header>                                                                          
+                <Star className="w-5 h-5 mr-2" />                                                           
+                Non-Collapsible (Original API)                                                              
+              </ContentCard.Header>                                                                         
+              <p className="text-sm text-[rgb(var(--color-text-700))]">                                     
+                This card uses the original ContentCard.Header pattern. No collapse behavior.               
+              </p>                                                                                          
+            </ContentCard>                                                                                  
+                                                                                                            
+            {/* Collapsible – expanded by default */}                                                       
+            <ContentCard                                                                                    
+              id="content-card-expanded"                                                                    
+              collapsible                                                                                   
+              defaultExpanded                                                                               
+              title="Expanded by Default"                                                                   
+              headerIcon={<Users className="w-5 h-5" />}                                                    
+              count={3}                                                                                     
+            >                                                                                               
+              <ul className="text-sm text-[rgb(var(--color-text-700))] space-y-1">                          
+                <li>Agent 1</li>                                                                            
+                <li>Agent 2</li>                                                                            
+                <li>Agent 3</li>                                                                            
+              </ul>                                                                                         
+            </ContentCard>                                                                                  
+                                                                                                            
+            {/* Collapsible – collapsed by default with count badge */}                                     
+            <ContentCard                                                                                    
+              id="content-card-collapsed"                                                                   
+              collapsible                                                                                   
+              defaultExpanded={false}                                                                       
+              title="Collapsed with Count"                                                                  
+              headerIcon={<Package className="w-5 h-5" />}                                                  
+              count={5}                                                                                     
+            >                                                                                               
+              <p className="text-sm text-[rgb(var(--color-text-700))]">                                     
+                This content is hidden by default. The count badge (5) shows when collapsed.                
+              </p>                                                                                          
+            </ContentCard>                                                                                  
+                                                                                                            
+            {/* Collapsible – with add button */}                                                           
+            <ContentCard                                                                                    
+              id="content-card-add"                                                                         
+              collapsible                                                                                   
+              defaultExpanded={false}                                                                       
+              title="With Add Button"                                                                       
+              headerIcon={<Eye className="w-5 h-5" />}                                                      
+              count={0}                                                                                     
+              addButton={{                                                                                  
+                id: 'content-card-add-btn',                                                                 
+                label: 'Add Item',                                                                          
+                onClick: () => alert('Add clicked! Card also auto-expands.'),                               
+              }}                                                                                            
+            >                                                                                               
+              <p className="text-sm text-[rgb(var(--color-text-700))]">                                     
+                Clicking &quot;Add Item&quot; triggers the callback and auto-expands the card if collapsed. 
+              </p>                                                                                          
+            </ContentCard>                                                                                  
+          </div>                                                                                            
+        </Section>                                                                                          
+                                                                                                            
+        {/* ═══════════════════════════════════════════════════════════════════ */}                         
         {/* TABS */}
         {/* ═══════════════════════════════════════════════════════════════════ */}
         <Section title="Tabs">
