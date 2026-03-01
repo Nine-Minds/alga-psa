@@ -387,4 +387,85 @@ describe('processInboundEmailInApp', () => {
       processInboundEmailArtifactsBestEffortMock.mock.invocationCallOrder[0]
     );
   });
+
+  it('rewrites data:image embeds to served attachment URLs in stored comment note after artifacts persist', async () => {
+    const updatedNotes: any[] = [];
+    withAdminTransactionMock.mockImplementation(async (callback: (trx: any) => Promise<any>) => {
+      const trx = vi.fn((table: string) => {
+        if (table === 'tickets as t') {
+          return makeQueryBuilder(undefined);
+        }
+
+        if (table === 'comments as c') {
+          const builder: any = {
+            select: vi.fn().mockReturnThis(),
+            where: vi.fn().mockReturnThis(),
+            andWhereRaw: vi.fn().mockReturnThis(),
+            andWhere: vi.fn((arg: unknown) => {
+              if (typeof arg === 'function') {
+                const scopedWhere: any = {
+                  whereRaw: vi.fn().mockReturnThis(),
+                  orWhereRaw: vi.fn().mockReturnThis(),
+                };
+                arg.call(scopedWhere);
+              }
+              return builder;
+            }),
+            first: vi.fn().mockResolvedValue(undefined),
+            update: vi.fn().mockImplementation(async (payload: any) => {
+              updatedNotes.push(payload);
+              return 1;
+            }),
+          };
+          return builder;
+        }
+
+        throw new Error(`Unexpected table in unit test: ${table}`);
+      });
+
+      return callback(trx);
+    });
+
+    parseEmailReplyBodyMock.mockResolvedValue({
+      sanitizedText: 'body',
+      sanitizedHtml: '<p>Hello<img src="data:image/png;base64,aGVsbG8=" /></p>',
+      confidence: 0.95,
+      strategy: 'plain',
+      appliedHeuristics: [],
+      warnings: [],
+      tokens: {},
+    });
+
+    processInboundEmailArtifactsBestEffortMock.mockResolvedValue({
+      embeddedImageUrlMappings: [
+        {
+          source: 'data-url',
+          reference: 'data:image/png;base64,aGVsbG8=',
+          fileId: 'file-123',
+          documentId: 'doc-123',
+          url: '/api/documents/view/file-123',
+        },
+      ],
+    });
+
+    const { processInboundEmailInApp } = await import('../processInboundEmailInApp');
+
+    const result = await processInboundEmailInApp({
+      tenantId: 'tenant-1',
+      providerId: 'provider-1',
+      emailData: buildEmailData({
+        id: 'email-with-embed',
+        body: {
+          text: 'body',
+          html: '<p>Hello<img src="data:image/png;base64,aGVsbG8=" /></p>',
+        },
+      }),
+    });
+
+    expect(result.outcome).toBe('created');
+    expect(updatedNotes).toHaveLength(1);
+    expect(typeof updatedNotes[0].note).toBe('string');
+    expect(updatedNotes[0].note).toContain('/api/documents/view/file-123');
+    expect(updatedNotes[0].note).not.toContain('data:image/png;base64,aGVsbG8=');
+  });
 });

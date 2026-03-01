@@ -52,12 +52,29 @@ export interface ProcessInboundEmailArtifactsInput {
   maxAttachmentConcurrency?: number;
 }
 
+export interface EmbeddedImageUrlMapping {
+  source: 'data-url' | 'cid';
+  reference: string;
+  fileId: string;
+  documentId: string;
+  url: string;
+}
+
+export interface ProcessInboundEmailArtifactsResult {
+  embeddedImageUrlMappings: EmbeddedImageUrlMapping[];
+}
+
 function isUniqueViolation(error: any): boolean {
   return error?.code === '23505' || String(error?.message || '').toLowerCase().includes('duplicate');
 }
 
 function isBase64(value: string): boolean {
   return /^[A-Za-z0-9+/=\s]+$/.test(value);
+}
+
+function normalizeContentId(value: string | undefined | null): string {
+  if (!value) return '';
+  return String(value).trim().replace(/^cid:/i, '').replace(/^<|>$/g, '').toLowerCase();
 }
 
 function resolveAttachmentConcurrency(
@@ -846,7 +863,11 @@ async function persistInboundOriginalEmail(input: PersistOriginalEmailInput): Pr
 
 export async function processInboundEmailArtifactsBestEffort(
   input: ProcessInboundEmailArtifactsInput
-): Promise<void> {
+): Promise<ProcessInboundEmailArtifactsResult> {
+  const result: ProcessInboundEmailArtifactsResult = {
+    embeddedImageUrlMappings: [],
+  };
+
   const baseAttachments = Array.isArray(input.emailData.attachments) ? input.emailData.attachments : [];
   const ingressSkipReasons = Array.isArray(input.emailData.ingressSkipReasons)
     ? input.emailData.ingressSkipReasons
@@ -864,8 +885,10 @@ export async function processInboundEmailArtifactsBestEffort(
     name: string;
     contentType: string;
     size: number;
+    contentId?: string;
     content?: string;
     providerAttachmentId?: string;
+    source?: 'data-url' | 'cid';
     allowInlineProcessing?: boolean;
   }> = [];
 
@@ -897,10 +920,17 @@ export async function processInboundEmailArtifactsBestEffort(
   }
 
   const allAttachments = [...baseAttachments, ...embeddedAttachments];
+  const baseAttachmentById = new Map<string, any>();
+  for (const attachment of baseAttachments) {
+    if (attachment?.id) {
+      baseAttachmentById.set(String(attachment.id), attachment);
+    }
+  }
+
   const attachmentConcurrency = resolveAttachmentConcurrency(input.maxAttachmentConcurrency);
   await runWithConcurrency(allAttachments, attachmentConcurrency, async (attachment) => {
     try {
-      await persistInboundEmailAttachment({
+      const persistResult = await persistInboundEmailAttachment({
         tenantId: input.tenantId,
         providerId: input.providerId,
         emailId: input.emailData.id,
@@ -923,6 +953,46 @@ export async function processInboundEmailArtifactsBestEffort(
               : undefined,
           allowInlineProcessing: (attachment as any).allowInlineProcessing ? true : undefined,
         },
+      });
+
+      const isEmbedded = Boolean((attachment as any).allowInlineProcessing);
+      const source = (attachment as any).source as 'data-url' | 'cid' | undefined;
+      const fileId =
+        typeof persistResult?.fileId === 'string' && persistResult.fileId.trim().length > 0
+          ? persistResult.fileId
+          : '';
+      const documentId =
+        typeof persistResult?.documentId === 'string' && persistResult.documentId.trim().length > 0
+          ? persistResult.documentId
+          : '';
+      if (!isEmbedded || !source || !fileId || !documentId) {
+        return;
+      }
+
+      let reference = '';
+      if (source === 'data-url') {
+        const contentType = String((attachment as any).contentType || '').toLowerCase();
+        const base64 = typeof (attachment as any).content === 'string' ? (attachment as any).content : '';
+        if (contentType.startsWith('image/') && base64.trim().length > 0) {
+          reference = `data:${contentType};base64,${base64.replace(/\s+/g, '')}`;
+        }
+      } else if (source === 'cid') {
+        const directContentId = normalizeContentId((attachment as any).contentId);
+        const providerAttachmentId = String((attachment as any).providerAttachmentId || '');
+        const providerContentId = normalizeContentId(baseAttachmentById.get(providerAttachmentId)?.contentId);
+        reference = directContentId || providerContentId;
+      }
+
+      if (!reference) {
+        return;
+      }
+
+      result.embeddedImageUrlMappings.push({
+        source,
+        reference,
+        fileId,
+        documentId,
+        url: `/api/documents/view/${fileId}`,
       });
     } catch (error) {
       console.warn(`processInboundEmailInApp:[${input.scopeLabel}] attachment processing failed (continuing)`, {
@@ -956,4 +1026,6 @@ export async function processInboundEmailArtifactsBestEffort(
       }
     );
   }
+
+  return result;
 }
