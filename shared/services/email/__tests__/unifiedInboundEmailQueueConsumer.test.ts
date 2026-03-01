@@ -158,6 +158,7 @@ describe('UnifiedInboundEmailQueueConsumer provider claim/processing flow', () =
   });
 
   it('T024: skipped source-unavailable outcomes are ACKed and do not enter retry loop', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     const claim = buildClaimedJob('imap');
     claimUnifiedInboundEmailQueueJobMock.mockResolvedValue(claim);
 
@@ -177,5 +178,14 @@ describe('UnifiedInboundEmailQueueConsumer provider claim/processing flow', () =
     expect(ackUnifiedInboundEmailQueueJobMock).toHaveBeenCalledTimes(1);
     expect(ackUnifiedInboundEmailQueueJobMock).toHaveBeenCalledWith(claim);
     expect(failUnifiedInboundEmailQueueJobMock).not.toHaveBeenCalled();
+    expect(warnSpy).toHaveBeenCalledWith(
+      '[UnifiedInboundEmailQueueConsumer] Job skipped',
+      expect.objectContaining({
+        event: 'inbound_email_queue_skip',
+        attempt: 0,
+        reason: 'source_unavailable:imap_message_not_found',
+      })
+    );
+    warnSpy.mockRestore();
   });
 });

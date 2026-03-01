@@ -139,6 +139,7 @@ Working notes for moving Microsoft, Google, and IMAP inbound email ingress to on
 - (2026-03-01) Completed `T030`: Existing unified-mode ingress contract tests confirm flag enablement routes Microsoft/Google/IMAP into enqueue-only handoff paths.
 - (2026-03-01) Completed `T031`: Added rollback-path IMAP test validating unified flag disablement preserves legacy `in_app_async` handoff behavior.
 - (2026-03-01) Completed `T032`: Queue logging tests now assert enqueue success/failure events include provider, tenant, and pointer identifiers.
+- (2026-03-01) Completed `T033`: Queue + consumer logging tests now assert retry/DLQ/skip event payloads include attempt counts and terminal reasons.
 
 ## Open Questions
 

@@ -194,7 +194,7 @@
   {
     "id": "T033",
     "description": "Logs: consumer retry, ack, skip, and DLQ events include attempt counts and terminal reason",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F022"]
   },
   {
