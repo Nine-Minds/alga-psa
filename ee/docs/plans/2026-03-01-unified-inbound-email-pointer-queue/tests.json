@@ -86,7 +86,7 @@
   {
     "id": "T015",
     "description": "Idempotency: first consume of message identity processes successfully and records consume marker",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F010", "F017"]
   },
   {

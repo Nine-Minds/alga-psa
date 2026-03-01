@@ -422,4 +422,118 @@ describe('unified inbound queue processor consume-time provider fetch', () => {
       })
     );
   });
+
+  it('T015: first consume processes and persists consume-time idempotency marker', async () => {
+    const { db, emailProcessedInsertMock } = createDbMock({
+      microsoftRow: {
+        id: 'provider-ms-1',
+        tenant: 'tenant-1',
+        mailbox: 'support@example.com',
+        is_active: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+    });
+    getAdminConnectionMock.mockResolvedValue(db);
+
+    microsoftGetMessageDetailsMock.mockResolvedValue({
+      id: 'ms-idempotent-1',
+      provider: 'microsoft',
+      providerId: 'provider-ms-1',
+      tenant: 'tenant-1',
+      receivedAt: new Date().toISOString(),
+      from: { email: 'sender@example.com' },
+      to: [{ email: 'support@example.com' }],
+      subject: 'Idempotent Subject',
+      body: { text: 'Body', html: '<p>Body</p>' },
+      attachments: [],
+    } as any);
+
+    const { processUnifiedInboundEmailQueueJob } = await import(
+      '../../services/email/unifiedInboundEmailQueueJobProcessor'
+    );
+    const result = await processUnifiedInboundEmailQueueJob({
+      jobId: 'job-ms-idempotent-1',
+      schemaVersion: 1,
+      tenantId: 'tenant-1',
+      providerId: 'provider-ms-1',
+      provider: 'microsoft',
+      pointer: {
+        subscriptionId: 'sub-ms-1',
+        messageId: 'ms-idempotent-1',
+      },
+      enqueuedAt: new Date().toISOString(),
+      attempt: 0,
+      maxAttempts: 5,
+    } as UnifiedInboundEmailQueueJob);
+
+    expect(result).toMatchObject({
+      outcome: 'processed',
+      processedCount: 1,
+      dedupedCount: 0,
+    });
+    expect(emailProcessedInsertMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message_id: 'microsoft:ms-idempotent-1',
+        provider_id: 'provider-ms-1',
+        tenant: 'tenant-1',
+        processing_status: 'processing',
+      })
+    );
+    expect(processInboundEmailInAppMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('T016: duplicate consume of the same normalized identity no-ops downstream processing', async () => {
+    const { db, emailProcessedInsertMock } = createDbMock({
+      microsoftRow: {
+        id: 'provider-ms-1',
+        tenant: 'tenant-1',
+        mailbox: 'support@example.com',
+        is_active: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+    });
+    getAdminConnectionMock.mockResolvedValue(db);
+
+    emailProcessedInsertMock.mockRejectedValueOnce({ code: '23505' });
+    microsoftGetMessageDetailsMock.mockResolvedValue({
+      id: 'ms-idempotent-dup-1',
+      provider: 'microsoft',
+      providerId: 'provider-ms-1',
+      tenant: 'tenant-1',
+      receivedAt: new Date().toISOString(),
+      from: { email: 'sender@example.com' },
+      to: [{ email: 'support@example.com' }],
+      subject: 'Duplicate Subject',
+      body: { text: 'Body', html: '<p>Body</p>' },
+      attachments: [],
+    } as any);
+
+    const { processUnifiedInboundEmailQueueJob } = await import(
+      '../../services/email/unifiedInboundEmailQueueJobProcessor'
+    );
+    const result = await processUnifiedInboundEmailQueueJob({
+      jobId: 'job-ms-idempotent-dup-1',
+      schemaVersion: 1,
+      tenantId: 'tenant-1',
+      providerId: 'provider-ms-1',
+      provider: 'microsoft',
+      pointer: {
+        subscriptionId: 'sub-ms-1',
+        messageId: 'ms-idempotent-dup-1',
+      },
+      enqueuedAt: new Date().toISOString(),
+      attempt: 0,
+      maxAttempts: 5,
+    } as UnifiedInboundEmailQueueJob);
+
+    expect(result).toMatchObject({
+      outcome: 'skipped',
+      processedCount: 0,
+      dedupedCount: 1,
+      skippedCount: 1,
+    });
+    expect(processInboundEmailInAppMock).not.toHaveBeenCalled();
+  });
 });
