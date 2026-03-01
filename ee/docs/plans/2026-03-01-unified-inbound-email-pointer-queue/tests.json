@@ -200,7 +200,7 @@
   {
     "id": "T034",
     "description": "DB integration happy path: consume-time idempotency record is persisted for newly processed message",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F010", "F017"]
   },
   {
