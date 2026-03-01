@@ -125,6 +125,7 @@ Working notes for moving Microsoft, Google, and IMAP inbound email ingress to on
 - (2026-03-01) Completed `T016`: Added idempotency duplicate-path test validating unique-constraint collision (`23505`) short-circuits downstream processing with deduped skip outcome.
 - (2026-03-01) Completed `T017`: Processor fetch suite now asserts `processInboundEmailInApp` receives fully resolved provider payloads on successful consume-time fetch paths.
 - (2026-03-01) Completed `T018`: Added queue ACK primitive test validating successful consume removes payload from processing list and clears inflight hash/lease entries.
+- (2026-03-01) Completed `T019`: Added consumer failure-path test validating processing exceptions skip ACK and invoke retry-handling path (`failUnifiedInboundEmailQueueJob`).
 
 ## Open Questions
 

@@ -110,7 +110,7 @@
   {
     "id": "T019",
     "description": "Queue semantics: processing failure does not ACK job and job is eligible for retry",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F013", "F014"]
   },
   {

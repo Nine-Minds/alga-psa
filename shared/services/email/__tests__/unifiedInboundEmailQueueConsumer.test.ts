@@ -130,4 +130,30 @@ describe('UnifiedInboundEmailQueueConsumer provider claim/processing flow', () =
     expect(ackUnifiedInboundEmailQueueJobMock).toHaveBeenCalledTimes(1);
     expect(failUnifiedInboundEmailQueueJobMock).not.toHaveBeenCalled();
   });
+
+  it('T019: processing failure does not ACK and routes claim into retry failure handling', async () => {
+    const claim = buildClaimedJob('microsoft');
+    claimUnifiedInboundEmailQueueJobMock.mockResolvedValue(claim);
+    failUnifiedInboundEmailQueueJobMock.mockResolvedValue({
+      action: 'retried',
+      attempt: 1,
+      queueDepth: 2,
+    } as FailUnifiedInboundEmailQueueJobResult);
+
+    const handleJobMock = vi.fn(async () => {
+      throw new Error('processor_failed');
+    });
+    const consumer = new UnifiedInboundEmailQueueConsumer({ handleJob: handleJobMock });
+
+    const processed = await consumer.runOnce();
+
+    expect(processed).toBe(false);
+    expect(handleJobMock).toHaveBeenCalledTimes(1);
+    expect(ackUnifiedInboundEmailQueueJobMock).not.toHaveBeenCalled();
+    expect(failUnifiedInboundEmailQueueJobMock).toHaveBeenCalledTimes(1);
+    expect(failUnifiedInboundEmailQueueJobMock).toHaveBeenCalledWith({
+      claim,
+      error: 'processor_failed',
+    });
+  });
 });
