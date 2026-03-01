@@ -194,7 +194,7 @@
   {
     "id": "F026",
     "description": "Migration: Partial unique index (tenant, entity_type) WHERE is_default = true on templates",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-2.4"
     ]
