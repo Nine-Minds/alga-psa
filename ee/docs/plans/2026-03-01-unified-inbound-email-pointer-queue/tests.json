@@ -128,7 +128,7 @@
   {
     "id": "T022",
     "description": "Retry policy: job moves to DLQ when max attempts are exceeded",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F015"]
   },
   {
