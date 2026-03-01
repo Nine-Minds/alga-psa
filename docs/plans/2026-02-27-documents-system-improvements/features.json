@@ -226,7 +226,7 @@
   {
     "id": "F030",
     "description": "Action: createFolderTemplate(data) creates template and items",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-2.5"
     ]
