@@ -173,7 +173,7 @@
   {
     "id": "T022",
     "description": "API integration happy path: cancel delete action hard deletes selected pasted draft images from object storage and metadata tables",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F017"
     ]
