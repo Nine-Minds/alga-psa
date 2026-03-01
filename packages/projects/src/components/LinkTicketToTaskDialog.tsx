@@ -9,6 +9,7 @@ import type { IProject, IProjectPhase, IProjectTask } from '@alga-psa/types';
 import { getProjects, getProjectDetails } from '../actions/projectActions';
 import { addTicketLinkAction } from '../actions/projectTaskActions';
 import { toast } from 'react-hot-toast';
+import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
 interface LinkTicketToTaskDialogProps {
   ticket: {
@@ -36,6 +37,10 @@ export default function LinkTicketToTaskDialog({
     const fetchProjects = async () => {
       try {
         const projectList = await getProjects();
+        if (isActionPermissionError(projectList)) {
+          handleError(projectList.permissionError);
+          return;
+        }
         if (ticket.client_id) {
           const sorted = [...projectList].sort((a, b) => {
             const aMatch = a.client_id === ticket.client_id ? 0 : 1;
@@ -61,6 +66,10 @@ export default function LinkTicketToTaskDialog({
         setPhases([]);
         setTasks([]);
         const projectDetails = await getProjectDetails(selectedProjectId);
+        if (isActionPermissionError(projectDetails)) {
+          handleError(projectDetails.permissionError);
+          return;
+        }
         setPhases(projectDetails.phases || []);
         setTasks(projectDetails.tasks || []);
       } catch (error) {
@@ -122,8 +131,7 @@ export default function LinkTicketToTaskDialog({
       setSelectedPhaseId('');
       setSelectedTaskId('');
     } catch (error) {
-      console.error('Error linking ticket to task:', error);
-      toast.error('Failed to link ticket to task');
+      handleError(error, 'Failed to link ticket to task');
     } finally {
       setIsLinking(false);
     }

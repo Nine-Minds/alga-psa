@@ -95,6 +95,7 @@ export interface IProjectTask extends TenantEntity, ITaggable {
   task_name: string;
   description: string | null;
   assigned_to: string | null;
+  assigned_team_id?: string | null;
   estimated_hours: number | null;
   actual_hours: number | null;
   project_status_mapping_id: string;

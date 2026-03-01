@@ -37,6 +37,8 @@ import {
 } from '@shared/workflow/streams/domainEventBuilders/projectLifecycleEventBuilders';
 import { deleteEntityWithValidation } from '@alga-psa/core';
 import { deleteEntityTags, deleteEntitiesTags } from '@alga-psa/tags/lib/tagCleanup';
+import { permissionError } from '@alga-psa/ui/lib/errorHandling';
+import type { ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
 const extendedCreateProjectSchema = createProjectSchema.extend({
   assigned_to: z.string().nullable().optional(),
@@ -58,10 +60,21 @@ const extendedUpdateProjectSchema = updateProjectSchema.extend({
   contact_name_id: data.contact_name_id || null
 }));
 
-async function checkPermission(user: IUser, resource: string, action: string, knexConnection?: Knex | Knex.Transaction): Promise<void> {
-    const hasPermissionResult = await hasPermission(user, resource, action, knexConnection);
-    if (!hasPermissionResult) {
-        throw new Error(`Permission denied: Cannot ${action} ${resource}`);
+async function checkPermission(user: IUser, resource: string, action: string, knexConnection?: Knex | Knex.Transaction): Promise<ActionPermissionError | null> {
+    try {
+        const hasPermissionResult = await hasPermission(user, resource, action, knexConnection);
+        if (!hasPermissionResult) {
+            return permissionError(`Permission denied: Cannot ${action} ${resource}`);
+        }
+        return null;
+    } catch (error) {
+        if (typeof error === 'string' && error.includes('Permission denied')) {
+            return permissionError(error);
+        }
+        if (error instanceof Error && error.message.includes('Permission denied')) {
+            return permissionError(error.message);
+        }
+        throw error;
     }
 }
 
@@ -86,12 +99,14 @@ export const getAllClientsForProjects = withAuth(async (_user, { tenant }): Prom
   return clients as IClient[];
 });
 
-export const getProjects = withAuth(async (user, { tenant }): Promise<IProject[]> => {
+export const getProjects = withAuth(async (user, { tenant }): Promise<IProject[] | ActionPermissionError> => {
     try {
         const { knex } = await createTenantKnex();
 
+        const denied = await checkPermission(user, 'project', 'read', knex);
+        if (denied) return denied;
+
         const projects = await withTransaction(knex, async (trx: Knex.Transaction) => {
-            await checkPermission(user, 'project', 'read', trx);
             return await ProjectModel.getAll(trx, tenant, true);
         });
 
@@ -126,7 +141,7 @@ export const getProjectPhase = withAuth(async (user, { tenant }, phaseId: string
         return phase;
     } catch (error) {
         console.error('Error fetching project phase:', error);
-        throw new Error('Failed to fetch project phase');
+        throw error;
     }
 });
 
@@ -134,8 +149,10 @@ export const getProjectTreeData = withAuth(async (user, { tenant }, projectId?: 
   try {
     const { knex } = await createTenantKnex();
 
+    const denied = await checkPermission(user, 'project', 'read', knex);
+    if (denied) return denied;
+
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
-      await checkPermission(user, 'project', 'read', trx);
       const projects = projectId ?
         [await ProjectModel.getById(trx, tenant, projectId)] :
         await ProjectModel.getAll(trx, tenant, true);
@@ -231,16 +248,18 @@ export const getProjectTreeData = withAuth(async (user, { tenant }, projectId?: 
     });
   } catch (error) {
     console.error('Error fetching project tree data:', error);
-    throw new Error('Failed to fetch project tree data');
+    throw error;
   }
 });
 
-export const updatePhase = withAuth(async (user, { tenant }, phaseId: string, phaseData: Partial<IProjectPhase>): Promise<IProjectPhase> => {
+export const updatePhase = withAuth(async (user, { tenant }, phaseId: string, phaseData: Partial<IProjectPhase>): Promise<IProjectPhase | ActionPermissionError> => {
     try {
         // Skip validation in development mode since we're handling the types correctly
         const { knex } = await createTenantKnex();
+        const denied = await checkPermission(user, 'project', 'update', knex);
+        if (denied) return denied;
+
         const updatedPhase = await withTransaction(knex, async (trx: Knex.Transaction) => {
-            await checkPermission(user, 'project', 'update', trx);
             return await ProjectModel.updatePhase(trx, tenant, phaseId, {
                 ...phaseData,
                 start_date: phaseData.start_date ? new Date(phaseData.start_date) : null,
@@ -251,15 +270,23 @@ export const updatePhase = withAuth(async (user, { tenant }, phaseId: string, ph
         return updatedPhase;
     } catch (error) {
         console.error('Error updating project phase:', error);
+        if (typeof error === 'string' && error.includes('Permission denied')) {
+            return permissionError(error);
+        }
+        if (error instanceof Error && error.message.includes('Permission denied')) {
+            return permissionError(error.message);
+        }
         throw error;
     }
 });
 
-export const deletePhase = withAuth(async (user, { tenant }, phaseId: string): Promise<void> => {
+export const deletePhase = withAuth(async (user, { tenant }, phaseId: string): Promise<void | ActionPermissionError> => {
     try {
         const { knex } = await createTenantKnex();
+        const denied = await checkPermission(user, 'project', 'delete', knex);
+        if (denied) return denied;
+
         await withTransaction(knex, async (trx: Knex.Transaction) => {
-            await checkPermission(user, 'project', 'delete', trx);
             await ProjectModel.deletePhase(trx, tenant, phaseId);
         });
     } catch (error) {
@@ -268,7 +295,7 @@ export const deletePhase = withAuth(async (user, { tenant }, phaseId: string): P
     }
 });
 
-export const addProjectPhase = withAuth(async (user, { tenant }, phaseData: Omit<IProjectPhase, 'phase_id' | 'created_at' | 'updated_at' | 'tenant'>): Promise<IProjectPhase> => {
+export const addProjectPhase = withAuth(async (user, { tenant }, phaseData: Omit<IProjectPhase, 'phase_id' | 'created_at' | 'updated_at' | 'tenant'>): Promise<IProjectPhase | ActionPermissionError> => {
     try {
         const validatedData = validateData(projectPhaseSchema.omit({
             phase_id: true,
@@ -280,8 +307,10 @@ export const addProjectPhase = withAuth(async (user, { tenant }, phaseData: Omit
         // Get the project first to get its WBS code
         const { knex } = await createTenantKnex();
 
+        const denied = await checkPermission(user, 'project', 'update', knex);
+        if (denied) return denied;
+
         return await withTransaction(knex, async (trx: Knex.Transaction) => {
-            await checkPermission(user, 'project', 'update', trx);
             const project = await ProjectModel.getById(trx, tenant, phaseData.project_id);
             if (!project) {
                 throw new Error('Project not found');
@@ -335,11 +364,13 @@ export const addProjectPhase = withAuth(async (user, { tenant }, phaseData: Omit
     }
 });
 
-export const reorderPhase = withAuth(async (user, { tenant }, phaseId: string, beforePhaseId?: string | null, afterPhaseId?: string | null): Promise<void> => {
+export const reorderPhase = withAuth(async (user, { tenant }, phaseId: string, beforePhaseId?: string | null, afterPhaseId?: string | null): Promise<void | ActionPermissionError> => {
     const { knex: db } = await createTenantKnex();
 
+    const denied = await checkPermission(user, 'project', 'update', db);
+    if (denied) return denied;
+
     await withTransaction(db, async (trx: Knex.Transaction) => {
-        await checkPermission(user, 'project', 'update', trx);
         // Get the phase being moved
         const phase = await trx('project_phases')
             .where({ phase_id: phaseId, tenant })
@@ -424,11 +455,13 @@ export const reorderPhase = withAuth(async (user, { tenant }, phaseId: string, b
     });
 });
 
-export const getProject = withAuth(async (user, { tenant }, projectId: string): Promise<IProject | null> => {
+export const getProject = withAuth(async (user, { tenant }, projectId: string): Promise<IProject | null | ActionPermissionError> => {
     try {
         const { knex } = await createTenantKnex();
+        const denied = await checkPermission(user, 'project', 'read', knex);
+        if (denied) return denied;
+
         return await withTransaction(knex, async (trx: Knex.Transaction) => {
-            await checkPermission(user, 'project', 'read', trx);
             return await ProjectModel.getById(trx, tenant, projectId);
         });
     } catch (error) {
@@ -442,28 +475,28 @@ async function getStandardProjectTaskStatusesInternal(trx: Knex.Transaction, ten
     return await ProjectModel.getStandardStatusesByType(trx, tenant, 'project_task');
 }
 
-export const getProjectStatuses = withAuth(async (user, { tenant }): Promise<IStatus[]> => {
+export const getProjectStatuses = withAuth(async (user, { tenant }): Promise<IStatus[] | ActionPermissionError> => {
   try {
     const { knex } = await createTenantKnex();
+    const denied = await checkPermission(user, 'project', 'read', knex);
+    if (denied) return denied;
+
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
-        if (!await hasPermission(user, 'project', 'read', trx)) {
-            throw new Error('Permission denied: Cannot read project');
-        }
         return await ProjectModel.getStatusesByType(trx, tenant, 'project');
     });
   } catch (error) {
     console.error('Error fetching project statuses:', error);
-    throw new Error('Failed to fetch project statuses');
+    throw error;
   }
 });
 
-export const generateNextWbsCode = withAuth(async (user, { tenant }): Promise<string> => {
+export const generateNextWbsCode = withAuth(async (user, { tenant }): Promise<string | ActionPermissionError> => {
     try {
         const { knex } = await createTenantKnex();
+        const denied = await checkPermission(user, 'project', 'read', knex);
+        if (denied) return denied;
+
         return await withTransaction(knex, async (trx: Knex.Transaction) => {
-            if (!await hasPermission(user, 'project', 'read', trx)) {
-                throw new Error('Permission denied: Cannot read project');
-            }
             return await ProjectModel.generateNextWbsCode(trx, tenant, '');
         });
     } catch (error) {
@@ -486,8 +519,12 @@ export const createProject = withAuth(async (
     /** If true, skip publishing events (useful when called within another action's transaction) */
     skipEvents?: boolean;
   }
-): Promise<IProject> => {
+): Promise<IProject | ActionPermissionError> => {
     try {
+        const { knex: permKnex } = await createTenantKnex();
+        const denied = await checkPermission(user, 'project', 'create', permKnex);
+        if (denied) return denied;
+
         // Get project statuses first
         const projectStatuses = await getProjectStatusesInternal(tenant, user);
 
@@ -524,7 +561,7 @@ export const createProject = withAuth(async (
 
         // Helper function for the actual project creation logic
         const createProjectInTransaction = async (trx: Knex.Transaction) => {
-            await checkPermission(user, 'project', 'create', trx);
+            // Permission already checked before transaction
 
             // Generate project number
             const projectNumber = await SharedNumberingService.getNextNumber(
@@ -648,15 +685,16 @@ export const createProject = withAuth(async (
 // Internal helper to get project statuses
 async function getProjectStatusesInternal(tenant: string, user: IUser): Promise<IStatus[]> {
     const { knex } = await createTenantKnex();
+    const hasRead = await hasPermission(user, 'project', 'read', knex);
+    if (!hasRead) {
+        throw new Error('Permission denied: Cannot read project');
+    }
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
-        if (!await hasPermission(user, 'project', 'read', trx)) {
-            throw new Error('Permission denied: Cannot read project');
-        }
         return await ProjectModel.getStatusesByType(trx, tenant, 'project');
     });
 }
 
-export const updateProject = withAuth(async (user, { tenant }, projectId: string, projectData: Partial<IProject>): Promise<IProject> => {
+export const updateProject = withAuth(async (user, { tenant }, projectId: string, projectData: Partial<IProject>): Promise<IProject | ActionPermissionError> => {
     try {
         // Remove tenant field if present in projectData
         const { tenant: tenantField, ...safeProjectData } = projectData;
@@ -664,8 +702,10 @@ export const updateProject = withAuth(async (user, { tenant }, projectId: string
 
         const { knex } = await createTenantKnex();
 
+        const denied = await checkPermission(user, 'project', 'update', knex);
+        if (denied) return denied;
+
         const { beforeProject, updatedProject } = await withTransaction(knex, async (trx: Knex.Transaction) => {
-            await checkPermission(user, 'project', 'update', trx);
             const beforeProject = await ProjectModel.getById(trx, tenant, projectId);
             if (!beforeProject) {
                 throw new Error(`Project ${projectId} not found`);
@@ -765,11 +805,14 @@ export const deleteProject = withAuth(async (
     user,
     { tenant },
     projectId: string
-): Promise<DeletionValidationResult & { success: boolean; deleted?: boolean }> => {
+): Promise<(DeletionValidationResult & { success: boolean; deleted?: boolean }) | ActionPermissionError> => {
     try {
         const { knex } = await createTenantKnex();
+
+        const denied = await checkPermission(user, 'project', 'delete', knex);
+        if (denied) return denied;
+
         const result = await deleteEntityWithValidation('project', projectId, knex, tenant, async (trx, tenantId) => {
-            await checkPermission(user, 'project', 'delete', trx);
 
             await deleteEntityTags(trx, projectId, 'project');
 
@@ -813,7 +856,7 @@ export const deleteProject = withAuth(async (
     }
 });
 
-export const getProjectMetadata = withAuth(async (user, { tenant }, projectId: string): Promise<{
+export const getProjectMetadata = withAuth(async (user, { tenant }, projectId: string): Promise<ActionPermissionError | {
     project: IProject;
     phases: IProjectPhase[];
     statuses: ProjectStatus[];
@@ -832,9 +875,11 @@ export const getProjectMetadata = withAuth(async (user, { tenant }, projectId: s
             getAllClientsForProjectsInternal(tenant)
         ]);
 
+        const denied = await checkPermission(user, 'project', 'read', knex);
+        if (denied) return denied;
+
         // Fetch project-specific data within a transaction
         const projectData = await withTransaction(knex, async (trx: Knex.Transaction) => {
-            await checkPermission(user, 'project', 'read', trx);
             const [project, phases] = await Promise.all([
                 ProjectModel.getById(trx, tenant, projectId),
                 ProjectModel.getPhases(trx, tenant, projectId)
@@ -958,7 +1003,7 @@ async function getProjectTaskStatusesInternal(trx: Knex.Transaction, tenant: str
     return statuses.filter((status): status is ProjectStatus => status !== null);
 }
 
-export const getProjectDetails = withAuth(async (user, { tenant }, projectId: string): Promise<{
+export const getProjectDetails = withAuth(async (user, { tenant }, projectId: string): Promise<ActionPermissionError | {
     project: IProject;
     phases: IProjectPhase[];
     tasks: IProjectTask[];
@@ -979,9 +1024,11 @@ export const getProjectDetails = withAuth(async (user, { tenant }, projectId: st
             getAllClientsForProjectsInternal(tenant)
         ]);
 
+        const denied = await checkPermission(user, 'project', 'read', knex);
+        if (denied) return denied;
+
         // Fetch project-specific data within a transaction
         const projectData = await withTransaction(knex, async (trx: Knex.Transaction) => {
-            await checkPermission(user, 'project', 'read', trx);
             const [project, phases, rawTasks, checklistItemsMap, ticketLinksMap, taskResourcesMap] = await Promise.all([
                 ProjectModel.getById(trx, tenant, projectId),
                 ProjectModel.getPhases(trx, tenant, projectId),
@@ -1038,11 +1085,13 @@ export const getProjectDetails = withAuth(async (user, { tenant }, projectId: st
     }
 });
 
-export const updateProjectStructure = withAuth(async (user, { tenant }, projectId: string, updates: { phases: Partial<IProjectPhase>[]; tasks: Partial<IProjectTask>[] }): Promise<void> => {
+export const updateProjectStructure = withAuth(async (user, { tenant }, projectId: string, updates: { phases: Partial<IProjectPhase>[]; tasks: Partial<IProjectTask>[] }): Promise<void | ActionPermissionError> => {
     try {
         const { knex } = await createTenantKnex();
+        const denied = await checkPermission(user, 'project', 'update', knex);
+        if (denied) return denied;
+
         await withTransaction(knex, async (trx: Knex.Transaction) => {
-            await checkPermission(user, 'project', 'update', trx);
             await ProjectModel.updateStructure(trx, tenant, projectId, updates);
         });
     } catch (error) {
@@ -1064,11 +1113,13 @@ export const getProjectTaskStatuses = withAuth(async (user, { tenant }, projectI
     }
 });
 
-export const addStatusToProject = withAuth(async (user, { tenant }, projectId: string, statusData: Omit<IStatus, 'status_id' | 'created_at' | 'updated_at'>): Promise<IStatus> => {
+export const addStatusToProject = withAuth(async (user, { tenant }, projectId: string, statusData: Omit<IStatus, 'status_id' | 'created_at' | 'updated_at'>): Promise<IStatus | ActionPermissionError> => {
     try {
         const { knex } = await createTenantKnex();
+        const denied = await checkPermission(user, 'project', 'update', knex);
+        if (denied) return denied;
+
         return await withTransaction(knex, async (trx: Knex.Transaction) => {
-            await checkPermission(user, 'project', 'update', trx);
             return await ProjectModel.addStatusToProject(trx, tenant, projectId, statusData);
         });
     } catch (error) {
@@ -1084,11 +1135,13 @@ export const updateProjectStatus = withAuth(async (
     statusId: string,
     statusData: Partial<IStatus>,
     mappingData: Partial<IProjectStatusMapping>
-): Promise<IStatus> => {
+): Promise<IStatus | ActionPermissionError> => {
     try {
         const { knex } = await createTenantKnex();
+        const denied = await checkPermission(user, 'project', 'update', knex);
+        if (denied) return denied;
+
         const updatedStatus = await withTransaction(knex, async (trx: Knex.Transaction) => {
-            await checkPermission(user, 'project', 'update', trx);
             return await ProjectModel.updateProjectStatus(trx, tenant, statusId, statusData, mappingData);
         });
 
@@ -1108,19 +1161,21 @@ export const updateProjectStatus = withAuth(async (
         return updatedStatus;
     } catch (error) {
         console.error('Error updating project status:', error);
-        throw new Error('Failed to update project status');
+        throw error;
     }
 });
 
-export const deleteProjectStatus = withAuth(async (user, { tenant }, statusId: string): Promise<void> => {
+export const deleteProjectStatus = withAuth(async (user, { tenant }, statusId: string): Promise<void | ActionPermissionError> => {
     try {
         const { knex } = await createTenantKnex();
+        const denied = await checkPermission(user, 'project', 'delete', knex);
+        if (denied) return denied;
+
         await withTransaction(knex, async (trx: Knex.Transaction) => {
-            await checkPermission(user, 'project', 'delete', trx);
             await ProjectModel.deleteProjectStatus(trx, tenant, statusId);
         });
     } catch (error) {
         console.error('Error deleting project status:', error);
-        throw new Error('Failed to delete project status');
+        throw error;
     }
 });

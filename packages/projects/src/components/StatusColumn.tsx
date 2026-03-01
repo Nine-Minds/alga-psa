@@ -35,6 +35,8 @@ interface StatusColumnProps {
   projectTreeData?: any[];
   animatingTasks: Set<string>;
   avatarUrls?: Record<string, string | null>;
+  teamNames?: Record<string, string>;
+  teamAvatarUrls?: Record<string, string | null>;
   searchQuery?: string;
   searchCaseSensitive?: boolean;
   searchWholeWord?: boolean;
@@ -78,6 +80,8 @@ export const StatusColumn: React.FC<StatusColumnProps> = ({
   projectTreeData,
   animatingTasks,
   avatarUrls = {},
+  teamNames = {},
+  teamAvatarUrls = {},
   searchQuery = '',
   searchCaseSensitive = false,
   searchWholeWord = false,
@@ -407,6 +411,8 @@ export const StatusColumn: React.FC<StatusColumnProps> = ({
               onDeleteTaskClick={onDeleteTaskClick}
               onTaskTagsChange={onTaskTagsChange}
               avatarUrls={avatarUrls}
+              teamNames={teamNames}
+              teamAvatarUrls={teamAvatarUrls}
             />
             {/* Animated drop placeholder after task */}
             {dragOverTaskId === task.task_id && dropPosition === 'after' && (

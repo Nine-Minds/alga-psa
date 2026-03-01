@@ -68,6 +68,7 @@ import { getAllUsers } from '@alga-psa/users/actions';
 import { ITaskType } from '@alga-psa/types';
 import { IUserWithRoles } from '@alga-psa/types';
 import { toast } from 'react-hot-toast';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { ApplyTemplateDialog } from './ApplyTemplateDialog';
 import { TemplateTaskForm } from './TemplateTaskForm';
 import { TemplateStatusManager } from './TemplateStatusManager';
@@ -77,6 +78,10 @@ import { LayoutGrid, List } from 'lucide-react';
 import styles from '../ProjectDetail.module.css';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
+import TeamAvatar from '@alga-psa/ui/components/TeamAvatar';
+import { useFeatureFlag } from '@alga-psa/ui/hooks';
+import { getTeams, getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
+import type { ITeam } from '@alga-psa/types';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -244,6 +249,38 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
     fetchAvatarUrls();
   }, [taskAssignments, template.tenant]);
 
+  // Teams-v2: fetch teams and team avatar URLs
+  const { enabled: teamsV2Enabled } = useFeatureFlag('teams-v2', { defaultValue: false });
+  const [teamNames, setTeamNames] = useState<Record<string, string>>({});
+  const [teamAvatarUrls, setTeamAvatarUrls] = useState<Record<string, string | null>>({});
+
+  useEffect(() => {
+    if (!teamsV2Enabled) return;
+    const fetchTeams = async () => {
+      try {
+        const fetchedTeams = await getTeams();
+        const names: Record<string, string> = {};
+        fetchedTeams.forEach((t: ITeam) => { names[t.team_id] = t.team_name; });
+        setTeamNames(names);
+
+        const teamIds = fetchedTeams.map((t: ITeam) => t.team_id);
+        if (teamIds.length > 0) {
+          const avatarResult = await getTeamAvatarUrlsBatchAction(teamIds, template.tenant!);
+          const urls: Record<string, string | null> = {};
+          if (avatarResult instanceof Map) {
+            avatarResult.forEach((url, id) => { urls[id] = url; });
+          } else {
+            Object.entries(avatarResult).forEach(([id, url]) => { urls[id] = url as string | null; });
+          }
+          setTeamAvatarUrls(urls);
+        }
+      } catch (error) {
+        console.error('Failed to fetch teams:', error);
+      }
+    };
+    fetchTeams();
+  }, [teamsV2Enabled]);
+
   // Helper to lighten hex color (for background)
   const lightenColor = (hex: string, percent: number) => {
     const num = parseInt(hex.replace('#', ''), 16);
@@ -268,8 +305,7 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
       toast.success('Template deleted successfully');
       router.push('/msp/projects/templates');
     } catch (error) {
-      toast.error('Failed to delete template');
-      console.error('Error deleting template:', error);
+      handleError(error, 'Failed to delete template');
     } finally {
       setIsDeleting(false);
     }
@@ -281,8 +317,7 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
       await updateTemplate(template.template_id, { client_portal_config: config });
       toast.success('Client portal settings saved');
     } catch (error) {
-      toast.error('Failed to save client portal settings');
-      console.error('Error saving client portal config:', error);
+      handleError(error, 'Failed to save client portal settings');
     }
   };
 
@@ -307,8 +342,7 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
       setEditingPhaseDuration(undefined);
       setEditingPhaseOffset(0);
     } catch (error) {
-      toast.error('Failed to add phase');
-      console.error(error);
+      handleError(error, 'Failed to add phase');
     }
   };
 
@@ -337,8 +371,7 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
       setEditingPhaseId(null);
       toast.success('Phase updated');
     } catch (error) {
-      toast.error('Failed to update phase');
-      console.error(error);
+      handleError(error, 'Failed to update phase');
     }
   };
 
@@ -355,8 +388,7 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
       }
       toast.success('Phase deleted');
     } catch (error) {
-      toast.error('Failed to delete phase');
-      console.error(error);
+      handleError(error, 'Failed to delete phase');
     }
   };
 
@@ -404,8 +436,7 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
         );
         toast.success(`Task moved to "${targetPhase.phase_name}"`);
       } catch (error) {
-        toast.error('Failed to move task');
-        console.error(error);
+        handleError(error, 'Failed to move task');
       } finally {
         setDraggedTaskId(null);
         document.body.classList.remove('dragging-task');
@@ -445,8 +476,7 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
         prev.map((p) => (p.template_phase_id === draggedPhaseId ? updated : p))
       );
     } catch (error) {
-      toast.error('Failed to reorder phase');
-      console.error(error);
+      handleError(error, 'Failed to reorder phase');
     } finally {
       setDraggedPhaseId(null);
     }
@@ -507,6 +537,7 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
           task_type_key: taskData.task_type_key,
           priority_id: taskData.priority_id,
           assigned_to: taskData.assigned_to,
+          assigned_team_id: taskData.assigned_team_id,
           template_status_mapping_id: statusMappingIdToUse,
           service_id: taskData.service_id,
         });
@@ -571,8 +602,7 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
       setShowTaskForm(false);
       setEditingTask(null);
     } catch (error) {
-      toast.error('Failed to save task');
-      console.error(error);
+      handleError(error, 'Failed to save task');
     }
   };
 
@@ -585,8 +615,7 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
       setTasks((prev) => prev.filter((t) => t.template_task_id !== task.template_task_id));
       toast.success('Task deleted');
     } catch (error) {
-      toast.error('Failed to delete task');
-      console.error(error);
+      handleError(error, 'Failed to delete task');
     }
   };
 
@@ -629,8 +658,7 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
         prev.map((t) => (t.template_task_id === draggedTaskId ? updated : t))
       );
     } catch (error) {
-      toast.error('Failed to move task');
-      console.error(error);
+      handleError(error, 'Failed to move task');
     } finally {
       setDraggedTaskId(null);
     }
@@ -673,8 +701,7 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
         );
       }
     } catch (error) {
-      toast.error('Failed to move task');
-      console.error(error);
+      handleError(error, 'Failed to move task');
     }
   };
 
@@ -683,8 +710,7 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
       const updated = await updateTemplateTask(taskId, { assigned_to: assigneeId });
       setTasks((prev) => prev.map((t) => (t.template_task_id === taskId ? updated : t)));
     } catch (error) {
-      toast.error('Failed to update assignee');
-      console.error(error);
+      handleError(error, 'Failed to update assignee');
     }
   };
 
@@ -771,6 +797,7 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
           checklistItems={editingTask ? checklistItems.filter(c => c.template_task_id === editingTask.template_task_id) : []}
           allTasks={tasks}
           dependencies={editingTask ? dependencies.filter(d => d.successor_task_id === editingTask.template_task_id) : []}
+          tenant={template.tenant}
         />
       )}
 
@@ -915,6 +942,8 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
                 }}
                 onTaskMove={handleTaskMove}
                 onAssigneeChange={handleAssigneeChange}
+                teamNames={teamNames}
+                teamAvatarUrls={teamAvatarUrls}
               />
             </div>
           ) : (
@@ -1166,6 +1195,8 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
                                 dependencies={dependencies}
                                 allTasks={tasks}
                                 avatarUrls={avatarUrls}
+                                teamNames={teamNames}
+                                teamAvatarUrls={teamAvatarUrls}
                               />
                             );
                           })}
@@ -1214,6 +1245,8 @@ interface StatusColumnProps {
   dependencies: IProjectTemplateDependency[];
   allTasks: IProjectTemplateTask[];
   avatarUrls: Record<string, string | null>;
+  teamNames?: Record<string, string>;
+  teamAvatarUrls?: Record<string, string | null>;
 }
 
 function StatusColumn({
@@ -1238,6 +1271,8 @@ function StatusColumn({
   dependencies,
   allTasks,
   avatarUrls,
+  teamNames,
+  teamAvatarUrls,
 }: StatusColumnProps) {
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === 'dark';
@@ -1385,6 +1420,8 @@ function StatusColumn({
                 }}
                 allTasks={allTasks}
                 avatarUrls={avatarUrls}
+                teamNames={teamNames}
+                teamAvatarUrls={teamAvatarUrls}
               />
             </div>
           ))}
@@ -1420,6 +1457,8 @@ interface TaskCardProps {
   taskDependencies?: { predecessors: IProjectTemplateDependency[]; successors: IProjectTemplateDependency[] };
   allTasks: IProjectTemplateTask[]; // To get task names for dependencies
   avatarUrls: Record<string, string | null>;
+  teamNames?: Record<string, string>;
+  teamAvatarUrls?: Record<string, string | null>;
 }
 
 function TaskCard({
@@ -1438,6 +1477,8 @@ function TaskCard({
   taskDependencies,
   allTasks,
   avatarUrls,
+  teamNames = {},
+  teamAvatarUrls = {},
 }: TaskCardProps) {
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
   const { ref: descriptionRef, isTruncated: isDescriptionTruncated } = useTruncationDetection<HTMLParagraphElement>();
@@ -1557,6 +1598,18 @@ function TaskCard({
           users={users}
           getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
         />
+        {task.assigned_team_id && teamNames[task.assigned_team_id] && (
+          <Tooltip content={teamNames[task.assigned_team_id]}>
+            <span className="inline-flex items-center cursor-help">
+              <TeamAvatar
+                teamId={task.assigned_team_id}
+                teamName={teamNames[task.assigned_team_id]}
+                avatarUrl={teamAvatarUrls[task.assigned_team_id] ?? null}
+                size="xs"
+              />
+            </span>
+          </Tooltip>
+        )}
         {additionalAgentsCount > 0 && (
           <Tooltip
             content={

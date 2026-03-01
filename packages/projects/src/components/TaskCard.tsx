@@ -11,6 +11,7 @@ import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
+import TeamAvatar from '@alga-psa/ui/components/TeamAvatar';
 import { getTaskTicketLinksAction, getTaskResourcesAction } from '../actions/projectTaskActions';
 import { TagList } from '@alga-psa/ui/components';
 import { TagManager } from '@alga-psa/tags/components';
@@ -52,6 +53,8 @@ interface TaskCardProps {
   onDeleteTaskClick: (task: IProjectTask) => void;
   onTaskTagsChange?: (taskId: string, tags: ITag[]) => void;
   avatarUrls?: Record<string, string | null>;
+  teamNames?: Record<string, string>;
+  teamAvatarUrls?: Record<string, string | null>;
 }
 
 const taskTypeIcons: Record<string, React.ComponentType<any>> = {
@@ -90,6 +93,8 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   onDeleteTaskClick,
   onTaskTagsChange,
   avatarUrls = {},
+  teamNames = {},
+  teamAvatarUrls = {},
 }) => {
   // Initialize states based on whether data is already available (empty array) or not yet loaded (null)
   const [taskTickets, setTaskTickets] = useState<IProjectTicketLinkWithDetails[] | null>(
@@ -396,6 +401,18 @@ export const TaskCard: React.FC<TaskCardProps> = ({
             getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
           />
         </div>
+        {task.assigned_team_id && teamNames[task.assigned_team_id] && (
+          <Tooltip content={teamNames[task.assigned_team_id]}>
+            <span className="inline-flex items-center cursor-help">
+              <TeamAvatar
+                teamId={task.assigned_team_id}
+                teamName={teamNames[task.assigned_team_id]}
+                avatarUrl={teamAvatarUrls[task.assigned_team_id] ?? null}
+                size="xs"
+              />
+            </span>
+          </Tooltip>
+        )}
         {displayResources.length > 0 && (
           <Tooltip
             content={

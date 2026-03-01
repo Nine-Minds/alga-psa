@@ -16,6 +16,7 @@ import WorkflowEditor from './WorkflowEditor';
 import WorkflowVersionsDialog from './WorkflowVersionsDialog';
 import TestWorkflowModal from './TestWorkflowModal';
 import { toast } from 'react-hot-toast';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 
 // Default workflow template for new workflows
@@ -93,8 +94,7 @@ export default function WorkflowEditorComponent({ workflowId, onBack }: Workflow
           setWorkflowCode(workflow.code);
           setSavedWorkflowId(workflow.id);
         } catch (error) {
-          console.error("Error loading workflow:", error);
-          toast.error("Failed to load workflow");
+          handleError(error, "Failed to load workflow");
           // Set workflowCode to null to indicate loading error
           setWorkflowCode(null);
         } finally {
@@ -166,8 +166,7 @@ export default function WorkflowEditorComponent({ workflowId, onBack }: Workflow
       }
       onBack(); // Go back to workflow list
     } catch (error) {
-      console.error("Error saving workflow:", error);
-      toast.error("An error occurred while saving the workflow");
+      handleError(error, "An error occurred while saving the workflow");
     } finally {
       setIsSaving(false);
     }
@@ -198,8 +197,7 @@ export default function WorkflowEditorComponent({ workflowId, onBack }: Workflow
         toast.error(result.output);
       }
     } catch (error) {
-      console.error("Error testing workflow:", error);
-      toast.error(error instanceof Error ? error.message : "An error occurred while testing the workflow");
+      handleError(error, "An error occurred while testing the workflow");
     } finally {
       setIsTesting(false);
     }
@@ -258,8 +256,7 @@ export default function WorkflowEditorComponent({ workflowId, onBack }: Workflow
                     
                     toast.success("Workflow version updated");
                   } catch (error) {
-                    console.error("Error loading workflow after version change:", error);
-                    toast.error("Failed to load updated workflow version");
+                    handleError(error, "Failed to load updated workflow version");
                   }
                 }}
               />

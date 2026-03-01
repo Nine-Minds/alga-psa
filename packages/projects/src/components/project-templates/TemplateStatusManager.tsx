@@ -13,6 +13,7 @@ import {
 } from '../../actions/projectTemplateActions';
 import { createTenantProjectStatus } from '../../actions/projectTaskStatusActions';
 import { toast } from 'react-hot-toast';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { QuickAddStatus } from '@alga-psa/ui/components/QuickAddStatus';
 import type { IStatus } from '@alga-psa/types';
 
@@ -61,8 +62,7 @@ export function TemplateStatusManager({
       setSelectedStatusId('');
       toast.success('Status column added');
     } catch (error) {
-      toast.error('Failed to add status column');
-      console.error(error);
+      handleError(error, 'Failed to add status column');
     } finally {
       setIsAdding(false);
     }
@@ -78,8 +78,7 @@ export function TemplateStatusManager({
       onStatusRemoved(mappingId);
       toast.success('Status column removed');
     } catch (error) {
-      toast.error('Failed to remove status column');
-      console.error(error);
+      handleError(error, 'Failed to remove status column');
     }
   };
 
@@ -110,8 +109,7 @@ export function TemplateStatusManager({
       const orderedIds = sortedMappings.map((m) => m.template_status_mapping_id);
       await reorderTemplateStatusMappings(templateId, orderedIds);
     } catch (error) {
-      toast.error('Failed to reorder status columns');
-      console.error(error);
+      handleError(error, 'Failed to reorder status columns');
     } finally {
       setDraggedIndex(null);
     }
@@ -136,8 +134,7 @@ export function TemplateStatusManager({
       onStatusAdded(newMapping);
       toast.success('Status column added');
     } catch (error) {
-      toast.error('Failed to add status column');
-      console.error(error);
+      handleError(error, 'Failed to add status column');
     } finally {
       setIsAdding(false);
     }

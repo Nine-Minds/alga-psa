@@ -4,10 +4,10 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Button } from '@alga-psa/ui/components/Button';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
-import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
+import { ContentCard } from '@alga-psa/ui/components';
 import { getEmailLogsForTicket, type EmailSendingLogRecord } from '@alga-psa/email/actions';
 import type { ColumnDefinition } from '@alga-psa/types';
-import styles from './TicketDetails.module.css';
+import { Mail } from 'lucide-react';
 
 interface TicketEmailNotificationsProps {
   id?: string;
@@ -53,7 +53,6 @@ const TicketEmailNotifications: React.FC<TicketEmailNotificationsProps> = ({
   id = 'ticket-email-notifications',
   ticketId,
 }) => {
-  const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [logs, setLogs] = useState<EmailSendingLogRecord[]>([]);
   const [limit, setLimit] = useState(INITIAL_LIMIT);
@@ -78,9 +77,8 @@ const TicketEmailNotifications: React.FC<TicketEmailNotificationsProps> = ({
   }, [ticketId, limit]);
 
   useEffect(() => {
-    if (!isOpen) return;
     void fetchLogs();
-  }, [isOpen, fetchLogs]);
+  }, [fetchLogs]);
 
   const columns: ColumnDefinition<EmailSendingLogRecord>[] = useMemo(() => {
     return [
@@ -131,41 +129,30 @@ const TicketEmailNotifications: React.FC<TicketEmailNotificationsProps> = ({
 
   return (
     <ReflectionContainer id={id} label="Ticket Email Notifications">
-      <div {...withDataAutomationId({ id })} className={styles['card']}>
-        <button
-          type="button"
-          className="w-full p-6 flex items-start justify-between gap-4"
-          onClick={() => setIsOpen((prev) => !prev)}
-        >
-          <div className="text-left">
-            <h2 className="text-xl font-bold text-[rgb(var(--color-text-900))]">Email Notifications</h2>
-            <p className="text-sm text-[rgb(var(--color-text-500))] mt-1">
-              Outbound email notifications sent for this ticket
-            </p>
-          </div>
-          <span className="text-[rgb(var(--color-text-500))] mt-1 select-none">{isOpen ? 'Hide' : 'Show'}</span>
-        </button>
+      <ContentCard
+        id={id}
+        collapsible
+        defaultExpanded={false}
+        title="Email Notifications"
+        headerIcon={<Mail className="w-5 h-5" />}
+        count={logs.length}
+      >
+        {isLoading ? (
+          <div className="text-sm text-[rgb(var(--color-text-500))]">Loading…</div>
+        ) : logs.length === 0 ? (
+          <div className="text-sm text-[rgb(var(--color-text-500))]">No email notifications found.</div>
+        ) : (
+          <DataTable id={`${id}-table`} data={logs} columns={columns} pagination={false} />
+        )}
 
-        {isOpen && (
-          <div className="px-6 pb-6">
-            {isLoading ? (
-              <div className="text-sm text-[rgb(var(--color-text-500))]">Loading…</div>
-            ) : logs.length === 0 ? (
-              <div className="text-sm text-[rgb(var(--color-text-500))]">No email notifications found.</div>
-            ) : (
-              <DataTable id={`${id}-table`} data={logs} columns={columns} pagination={false} />
-            )}
-
-            {hasMore && !isLoading && (
-              <div className="mt-4 flex justify-center">
-                <Button id={`${id}-load-more`} variant="outline" onClick={() => setLimit((prev) => prev + LOAD_MORE_STEP)}>
-                  Load more
-                </Button>
-              </div>
-            )}
+        {hasMore && !isLoading && (
+          <div className="mt-4 flex justify-center">
+            <Button id={`${id}-load-more`} variant="outline" onClick={() => setLimit((prev) => prev + LOAD_MORE_STEP)}>
+              Load more
+            </Button>
           </div>
         )}
-      </div>
+      </ContentCard>
     </ReflectionContainer>
   );
 };

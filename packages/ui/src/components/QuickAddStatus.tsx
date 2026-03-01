@@ -10,6 +10,7 @@ import ColorPicker, { SOLID_COLORS } from './ColorPicker';
 import { Circle } from 'lucide-react';
 import type { ItemType, IStatus } from '@alga-psa/types';
 import { toast } from 'react-hot-toast';
+import { handleError } from '../lib/errorHandling';
 
 export interface QuickAddStatusProps {
   open: boolean;
@@ -93,10 +94,9 @@ export function QuickAddStatus({
       onStatusCreated(newStatus);
       onOpenChange(false);
     } catch (err) {
-      console.error('Error creating status:', err);
       const message = err instanceof Error ? err.message : 'Failed to create status';
       setError(message);
-      toast.error(message);
+      handleError(err, 'Failed to create status');
     } finally {
       setIsSubmitting(false);
     }

@@ -40,7 +40,7 @@ const MspForgotPassword: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col items-center pt-20 min-h-screen bg-gradient-to-br from-purple-50 via-purple-100 to-indigo-100 dark:bg-none dark:bg-card">
+    <div className="flex flex-col items-center pt-20 min-h-screen bg-gradient-to-br from-purple-50 via-purple-100 to-indigo-100 dark:from-purple-950 dark:via-purple-950/80 dark:to-indigo-950">
       <div className="w-full max-w-md p-8 space-y-8 bg-card rounded-lg shadow-lg">
         <div className="text-center">
           <div className="inline-block align-middle content-center">

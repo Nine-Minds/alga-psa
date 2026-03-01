@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { getDocumentPreview } from '../actions/documentActions';
+import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 const DocumentPreview = ({ document, className }) => {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -22,6 +23,9 @@ const DocumentPreview = ({ document, className }) => {
                 }
                 // Get preview for other file types
                 const result = await getDocumentPreview(document.file_id);
+                if (isActionPermissionError(result)) {
+                    throw new Error(result.permissionError);
+                }
                 if (result.success) {
                     setPreview({
                         content: result.content,

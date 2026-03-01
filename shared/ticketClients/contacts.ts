@@ -55,3 +55,19 @@ export async function getContactsByClient(
   return contacts.map((c) => ({ ...c, avatarUrl: (c as any).avatarUrl ?? null } as IContact));
 }
 
+export async function getAllActiveContacts(
+  knexOrTrx: Knex | Knex.Transaction,
+  tenant: string,
+  sortDirection: 'asc' | 'desc' = 'asc'
+): Promise<IContact[]> {
+  const contacts = (await knexOrTrx('contacts')
+    .select('contacts.*', 'clients.client_name')
+    .leftJoin('clients', function joinClients(this: Knex.JoinClause) {
+      this.on('contacts.client_id', 'clients.client_id').andOn('clients.tenant', 'contacts.tenant');
+    })
+    .where('contacts.tenant', tenant)
+    .andWhere('contacts.is_inactive', false)
+    .orderBy('contacts.full_name', sortDirection)) as IContact[];
+
+  return contacts.map((c) => ({ ...c, avatarUrl: (c as any).avatarUrl ?? null } as IContact));
+}

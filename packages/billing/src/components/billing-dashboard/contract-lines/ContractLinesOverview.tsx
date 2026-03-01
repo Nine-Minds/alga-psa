@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Box, Card, Heading } from '@radix-ui/themes';
 import { toast } from 'react-hot-toast'; // Import toast
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { Button } from '@alga-psa/ui/components/Button';
 import { MoreVertical, Plus, Search, XCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
@@ -82,12 +83,7 @@ const ContractLinesOverview: React.FC = () => {
       await fetchContractLines();
       toast.success('Contract line preset deleted successfully');
     } catch (error) {
-      console.error('Error deleting contract line preset:', error);
-      if (error instanceof Error) {
-        toast.error(error.message);
-      } else {
-        toast.error('An unexpected error occurred while deleting the contract line preset.');
-      }
+      handleError(error, 'An unexpected error occurred while deleting the contract line preset.');
     }
   };
 

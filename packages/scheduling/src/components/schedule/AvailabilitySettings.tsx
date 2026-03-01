@@ -17,6 +17,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { ColumnDefinition } from '@alga-psa/types';
 import toast from 'react-hot-toast';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { Plus, Trash2, Save } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import {
@@ -35,6 +36,7 @@ import { getServices } from '@alga-psa/scheduling/actions';
 import { IService } from '@alga-psa/types';
 import { getTeams } from '@alga-psa/teams/actions';
 import { ITeam } from '@alga-psa/types';
+import { useFeatureFlag } from '@alga-psa/ui/hooks';
 
 const DAYS_OF_WEEK = [
   { value: 0, label: 'Sunday' },
@@ -109,6 +111,37 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
   // Pagination state for configured services table
   const [servicesCurrentPage, setServicesCurrentPage] = useState(1);
   const [servicesPageSize, setServicesPageSize] = useState(10);
+  const { enabled: isTeamsV2Enabled } = useFeatureFlag('teams-v2', { defaultValue: false });
+
+  const buildReportsToUserIds = (usersList: Omit<IUser, 'tenant'>[]) => {
+    if (!isTeamsV2Enabled || !session?.user?.id) {
+      return new Set<string>();
+    }
+
+    const ids = new Set<string>();
+    const queue: string[] = [session.user.id];
+
+    while (queue.length > 0) {
+      const current = queue.shift();
+      if (!current) {
+        continue;
+      }
+
+      allUsers.forEach((user) => {
+        if (user.reports_to === current && !ids.has(user.user_id)) {
+          ids.add(user.user_id);
+          queue.push(user.user_id);
+        }
+      });
+    }
+
+    return ids;
+  };
+
+  const reportsToUserIds = useMemo(
+    () => buildReportsToUserIds(allUsers),
+    [allUsers, isTeamsV2Enabled, session?.user?.id]
+  );
 
   useEffect(() => {
     if (isOpen) {
@@ -161,12 +194,17 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
 
       // Set up users based on manager status
       if (userManagedTeams.length > 0) {
+        const reportsToIds = buildReportsToUserIds(fetchedUsers);
         // Auto-select first team if only one team
         if (userManagedTeams.length === 1) {
           setSelectedTeamId(userManagedTeams[0].team_id);
           // Filter users for this team
           const teamMemberIds = userManagedTeams[0].members?.map(m => m.user_id) || [];
-          const filteredUsers = fetchedUsers.filter(user => teamMemberIds.includes(user.user_id));
+          const allowedIds = new Set(teamMemberIds);
+          if (isTeamsV2Enabled) {
+            reportsToIds.forEach((id) => allowedIds.add(id));
+          }
+          const filteredUsers = fetchedUsers.filter(user => allowedIds.has(user.user_id));
           setUsers(filteredUsers);
         } else {
           // Multiple teams - wait for user to select
@@ -194,8 +232,7 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
         setExceptions(exceptionsResult.data);
       }
     } catch (error) {
-      console.error('Failed to load availability settings:', error);
-      toast.error('Failed to load settings');
+      handleError(error, 'Failed to load settings');
     } finally {
       setIsLoading(false);
     }
@@ -336,11 +373,15 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
       const selectedTeam = managedTeams.find(t => t.team_id === selectedTeamId);
       if (selectedTeam) {
         const teamMemberIds = selectedTeam.members?.map(m => m.user_id) || [];
-        const filteredUsers = allUsers.filter(user => teamMemberIds.includes(user.user_id));
+        const allowedIds = new Set(teamMemberIds);
+        if (isTeamsV2Enabled) {
+          reportsToUserIds.forEach((id) => allowedIds.add(id));
+        }
+        const filteredUsers = allUsers.filter(user => allowedIds.has(user.user_id));
         setUsers(filteredUsers);
       }
     }
-  }, [selectedTeamId, isManager, managedTeams, allUsers]);
+  }, [selectedTeamId, isManager, managedTeams, allUsers, isTeamsV2Enabled, reportsToUserIds]);
 
   useEffect(() => {
     if (selectedUserId && activeTab === 'user-hours') {
@@ -385,8 +426,7 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
         toast.error(result.error || 'Failed to save settings');
       }
     } catch (error) {
-      console.error('Failed to save general settings:', error);
-      toast.error('Failed to save settings');
+      handleError(error, 'Failed to save settings');
     }
   };
 
@@ -426,8 +466,7 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
       // Reload configured users list
       await loadConfiguredUsers();
     } catch (error) {
-      console.error('Failed to save user hours:', error);
-      toast.error('Failed to save user hours');
+      handleError(error, 'Failed to save user hours');
     }
   };
 
@@ -458,8 +497,7 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
         toast.error(result.error || 'Failed to save service rules');
       }
     } catch (error) {
-      console.error('Failed to save service rules:', error);
-      toast.error('Failed to save service rules');
+      handleError(error, 'Failed to save service rules');
     }
   };
 
@@ -494,8 +532,7 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
         toast.error(result.error || 'Failed to add exception');
       }
     } catch (error) {
-      console.error('Failed to add exception:', error);
-      toast.error('Failed to add exception');
+      handleError(error, 'Failed to add exception');
     }
   };
 
@@ -509,8 +546,7 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
         toast.error(result.error || 'Failed to delete exception');
       }
     } catch (error) {
-      console.error('Failed to delete exception:', error);
-      toast.error('Failed to delete exception');
+      handleError(error, 'Failed to delete exception');
     }
   };
 

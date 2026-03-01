@@ -200,6 +200,37 @@ const User = {
     }
   },
 
+  isInReportsToChain: async (
+    knexOrTrx: Knex | Knex.Transaction,
+    managerUserId: string,
+    employeeUserId: string
+  ): Promise<boolean> => {
+    const tenant = await requireTenantId(knexOrTrx);
+    const { rows } = await knexOrTrx.raw(
+      `
+        WITH RECURSIVE chain AS (
+          SELECT u.reports_to
+          FROM users u
+          WHERE u.user_id = ?
+            AND u.tenant = ?
+          UNION ALL
+          SELECT u2.reports_to
+          FROM users u2
+          JOIN chain c ON u2.user_id = c.reports_to
+          WHERE u2.tenant = ?
+            AND c.reports_to IS NOT NULL
+        )
+        SELECT 1
+        FROM chain
+        WHERE reports_to = ?
+        LIMIT 1
+      `,
+      [employeeUserId, tenant, tenant, managerUserId]
+    );
+
+    return rows.length > 0;
+  },
+
   updatePassword: async (email: string, hashed_password: string): Promise<void> => {
     const db = await getAdminConnection();
     try {

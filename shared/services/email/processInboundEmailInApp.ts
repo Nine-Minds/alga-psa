@@ -5,6 +5,12 @@ import {
   processInboundEmailArtifactsBestEffort,
   type ProcessInboundEmailArtifactsResult,
 } from './processInboundEmailArtifacts';
+import {
+  buildInboundWatchListRecipients,
+  mergeTicketWatchListRecipients,
+  setTicketWatchListOnAttributes,
+  type TicketWatchListRecipientInput,
+} from '../../lib/tickets/watchList';
 
 export interface ProcessInboundEmailInAppInput {
   tenantId: string;
@@ -265,6 +271,8 @@ export async function processInboundEmailInApp(
     findContactByEmail,
     findClientIdByInboundEmailDomain,
     findValidClientPrimaryContactId,
+    findEmailProviderMailboxAddress,
+    upsertTicketWatchListRecipients,
     createTicketFromEmail,
     createCommentFromEmail,
   } = await import('../../workflow/actions/emailWorkflowActions');
@@ -294,6 +302,49 @@ export async function processInboundEmailInApp(
     }
 
     return findContactByEmail(senderEmail, tenantId, context);
+  };
+
+  let inboundWatchListRecipients: TicketWatchListRecipientInput[] = [];
+  try {
+    const providerMailboxEmail = await findEmailProviderMailboxAddress(providerId, tenantId);
+    inboundWatchListRecipients = buildInboundWatchListRecipients({
+      to: emailData.to,
+      cc: emailData.cc,
+      senderEmail: emailData.from?.email,
+      providerMailboxEmail,
+    });
+  } catch (error) {
+    console.warn('processInboundEmailInApp: watch-list candidate build failed (continuing)', {
+      tenantId,
+      providerId,
+      emailId: emailData.id,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+
+  const upsertWatchListBestEffort = async (ticketId: string) => {
+    if (!inboundWatchListRecipients.length) {
+      return;
+    }
+
+    try {
+      await upsertTicketWatchListRecipients(
+        {
+          ticketId,
+          recipients: inboundWatchListRecipients,
+        },
+        tenantId
+      );
+    } catch (error) {
+      console.warn('processInboundEmailInApp: watch-list upsert failed (continuing)', {
+        tenantId,
+        providerId,
+        emailId: emailData.id,
+        ticketId,
+        recipientCount: inboundWatchListRecipients.length,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
   };
 
   const token = extractConversationToken(parsedEmail);
@@ -380,6 +431,8 @@ export async function processInboundEmailInApp(
           originalCommentContent: serializedBlocks,
           artifactsResult,
         });
+
+        await upsertWatchListBestEffort(match.ticketId);
 
         return {
           outcome: 'replied',
@@ -503,6 +556,8 @@ export async function processInboundEmailInApp(
       artifactsResult,
     });
 
+    await upsertWatchListBestEffort(threadedTicketId);
+
     return {
       outcome: 'replied',
       matchedBy: 'thread_headers',
@@ -612,6 +667,8 @@ export async function processInboundEmailInApp(
     text: parsedText,
   });
   const serializedBlocks = JSON.stringify(blocks);
+  const seededWatchList = mergeTicketWatchListRecipients([], inboundWatchListRecipients);
+  const seededAttributes = setTicketWatchListOnAttributes(undefined, seededWatchList);
 
   const ticketResult = await createTicketFromEmail(
     {
@@ -636,6 +693,7 @@ export async function processInboundEmailInApp(
         references: emailData.references,
         providerId,
       },
+      attributes: seededAttributes ?? undefined,
     },
     tenantId
   );

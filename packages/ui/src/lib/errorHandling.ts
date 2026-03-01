@@ -2,17 +2,63 @@ import { toast } from 'react-hot-toast';
 import { ShieldAlert } from 'lucide-react';
 import React from 'react';
 
+// --- Permission error return type for server actions ---
+
 /**
- * Check if an error is a permission-related error
+ * Represents a permission error returned from a server action.
+ * Next.js strips thrown error messages during serialization, so permission
+ * errors must be returned as plain objects to reach the client intact.
+ */
+export interface ActionPermissionError {
+  readonly permissionError: string;
+}
+
+/**
+ * Type guard: checks if a server action result is a permission error.
+ */
+export function isActionPermissionError(value: unknown): value is ActionPermissionError {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'permissionError' in value &&
+    typeof (value as any).permissionError === 'string'
+  );
+}
+
+/**
+ * Creates a permission error return value for server actions.
+ * Use instead of `throw new Error('Permission denied: ...')`.
+ */
+export function permissionError(message: string): ActionPermissionError {
+  return { permissionError: message };
+}
+
+// --- Error detection utilities ---
+
+/**
+ * Check if an error is a permission-related error.
+ * Handles Error instances, strings, and ActionPermissionError objects.
  */
 export function isPermissionError(error: unknown): boolean {
-  return error instanceof Error && error.message.includes('Permission denied');
+  if (isActionPermissionError(error)) {
+    return error.permissionError.includes('Permission denied');
+  }
+  if (typeof error === 'string') {
+    return error.includes('Permission denied');
+  }
+  if (error instanceof Error) {
+    return error.message.includes('Permission denied');
+  }
+  return false;
 }
 
 /**
  * Extract a user-friendly message from an error
  */
 export function getErrorMessage(error: unknown): string {
+  if (isActionPermissionError(error)) {
+    return error.permissionError;
+  }
   if (error instanceof Error) {
     return error.message;
   }
@@ -23,28 +69,28 @@ export function getErrorMessage(error: unknown): string {
 }
 
 /**
- * Handle errors with appropriate UI feedback
- * Shows permission errors with a warning icon and other errors normally
+ * Handle errors with appropriate UI feedback.
+ * Shows permission errors with a ShieldAlert icon and other errors normally.
  */
 export function handleError(error: unknown, fallbackMessage?: string): void {
   const message = getErrorMessage(error);
-  
+
   if (isPermissionError(error)) {
     // Show permission errors with an Alert-style layout
     toast.custom((t) => (
       React.createElement('div', {
-        className: `${t.visible ? 'animate-enter' : 'animate-leave'} max-w-md w-full bg-destructive/10 shadow-lg rounded-lg pointer-events-auto flex items-start p-4 border border-destructive/30`,
+        className: `${t.visible ? 'animate-enter' : 'animate-leave'} max-w-md w-full bg-alert-destructive-bg shadow-lg rounded-lg pointer-events-auto flex items-start p-4 border border-destructive/30`,
       }, [
-        React.createElement(ShieldAlert, { 
+        React.createElement(ShieldAlert, {
           key: 'icon',
-          className: 'h-4 w-4 text-red-500 mt-0.5 flex-shrink-0' 
+          className: 'h-4 w-4 text-red-500 mt-0.5 flex-shrink-0'
         }),
         React.createElement('div', {
           key: 'content',
           className: 'ml-3 flex-1',
-        }, 
+        },
           React.createElement('p', {
-            className: 'text-sm leading-relaxed text-red-800',
+            className: 'text-sm leading-relaxed text-destructive',
           }, message)
         )
       ])
@@ -55,7 +101,7 @@ export function handleError(error: unknown, fallbackMessage?: string): void {
     // Show other errors normally
     toast.error(fallbackMessage || message);
   }
-  
+
   // Always log to console for debugging
   console.error(error);
 }
@@ -85,6 +131,7 @@ export function useErrorHandler() {
     handleError,
     isPermissionError,
     getErrorMessage,
+    isActionPermissionError,
   };
 }
 
@@ -99,7 +146,8 @@ export function formatPermissionError(action: string, resource?: string): string
 }
 
 /**
- * Server-side utility to throw consistent permission errors
+ * @deprecated Use `permissionError()` instead, which returns a value rather than throwing.
+ * Thrown errors lose their messages during Next.js server action serialization.
  */
 export function throwPermissionError(action: string, additionalInfo?: string): never {
   const baseMessage = `Permission denied: You don't have permission to ${action}`;

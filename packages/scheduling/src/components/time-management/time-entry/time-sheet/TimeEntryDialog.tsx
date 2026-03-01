@@ -4,6 +4,7 @@ import { useState, useRef, useCallback, memo, useEffect } from 'react';
 import { Temporal } from '@js-temporal/polyfill';
 import { formatISO, parseISO } from 'date-fns';
 import { toast } from 'react-hot-toast';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { deleteTimeEntry, fetchTimeEntriesForTimeSheet } from '../../../../actions/timeEntryActions';
@@ -271,17 +272,7 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
       onClose();
     } catch (error) {
       toast.dismiss(loadingToast);
-      console.error('Error saving time entry:', error);
-      
-      if (error instanceof Error) {
-        if (error.message.includes('Unauthorized')) {
-          toast.error('Please log in to save time entries');
-        } else {
-          toast.error(error.message);
-        }
-      } else {
-        toast.error('Failed to save time entry. Please try again.');
-      }
+      handleError(error, 'Failed to save time entry. Please try again.');
     }
   }, [isEditable, timeSheetId, entries, services, workItem, onSave, onTimeEntriesUpdate, onClose]);
 
@@ -322,8 +313,7 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
         onTimeEntriesUpdate(updatedEntries);
       }
     } catch (error) {
-      console.error('Error deleting time entry:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to delete time entry. Please try again.');
+      handleError(error, 'Failed to delete time entry. Please try again.');
     } finally {
       setDeleteConfirmation({ isOpen: false, index: null });
     }

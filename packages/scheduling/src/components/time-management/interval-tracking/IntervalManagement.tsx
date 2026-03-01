@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dia
 import TimeEntryDialog from '../time-entry/time-sheet/TimeEntryDialog';
 import { saveTimeEntry } from '../../../actions/timeEntryActions';
 import { toast } from 'react-hot-toast';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { getCurrentTimePeriod } from '../../../actions/timePeriodsActions';
 import { fetchOrCreateTimeSheet } from '../../../actions/timeEntryActions';
 
@@ -196,8 +197,7 @@ export function IntervalManagement({
       setTimeEntryData(timeEntry);
       setIsTimeEntryDialogOpen(true);
     } catch (error) {
-      console.error('Error preparing time entry:', error);
-      toast.error('Failed to prepare time entry');
+      handleError(error, 'Failed to prepare time entry');
     }
   };
   
@@ -242,8 +242,7 @@ export function IntervalManagement({
       // Show success message
       toast.success('Time entry saved successfully');
     } catch (error) {
-      console.error('Error saving time entry:', error);
-      toast.error('Failed to save time entry');
+      handleError(error, 'Failed to save time entry');
     }
   };
   

@@ -14,6 +14,7 @@ import {
 } from '@alga-psa/tenancy/actions';
 import { getTenantBrandingAction, updateTenantBrandingAction } from '@alga-psa/tenancy/actions';
 import { toast } from 'react-hot-toast';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -134,8 +135,7 @@ const ClientPortalSettings = () => {
       setEnabledLocales(updatedEnabledLocales);
       toast.success(`Client portal default language updated to ${LOCALE_CONFIG.localeNames[locale]}`);
     } catch (error) {
-      console.error('Failed to update tenant language settings:', error);
-      toast.error('Failed to update tenant language settings');
+      handleError(error, 'Failed to update tenant language settings');
     } finally {
       setSaving(false);
     }
@@ -153,8 +153,7 @@ const ClientPortalSettings = () => {
       setEnabledLocales(selectedLocales);
       toast.success('Available languages updated');
     } catch (error) {
-      console.error('Failed to update enabled languages:', error);
-      toast.error('Failed to update available languages');
+      handleError(error, 'Failed to update available languages');
     } finally {
       setSaving(false);
     }
@@ -196,8 +195,7 @@ const ClientPortalSettings = () => {
         console.error('Failed to re-check custom domain:', error);
       }
     } catch (error) {
-      console.error('Failed to save branding settings:', error);
-      toast.error('Failed to save branding settings');
+      handleError(error, 'Failed to save branding settings');
     } finally {
       setBrandingSaving(false);
     }

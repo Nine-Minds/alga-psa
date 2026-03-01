@@ -1,7 +1,7 @@
 'use client'
 
 // server/src/components/billing-dashboard/InvoiceTemplateEditor.tsx
-import React, { useState, useEffect, useRef, useMemo } from 'react'; // Added useRef
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card, CardHeader, CardContent, CardFooter } from '@alga-psa/ui/components/Card';
@@ -11,7 +11,6 @@ import { getInvoiceTemplate, saveInvoiceTemplate } from '@alga-psa/billing/actio
 import { IInvoiceTemplate } from '@alga-psa/types';
 import BackNav from '@alga-psa/ui/components/BackNav'; // Import BackNav
 import { Editor } from '@monaco-editor/react';
-import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@alga-psa/ui/components/Tabs';
 import { DesignerVisualWorkspace } from '../invoice-designer/DesignerVisualWorkspace';
 import { useInvoiceDesignerStore } from '../invoice-designer/state/designerStore';
@@ -29,17 +28,13 @@ interface InvoiceTemplateEditorProps {
 const InvoiceTemplateEditor: React.FC<InvoiceTemplateEditorProps> = ({ templateId }) => {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { enabled: guiDesignerEnabled, loading: guiDesignerLoading, error: guiDesignerError } = useFeatureFlag(
-    'invoice-template-gui-designer'
-  );
   const [template, setTemplate] = useState<Partial<IInvoiceTemplate> | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null); // For generic errors
-  const [templateAstText, setTemplateAstText] = useState<string>(''); // JSON editor for non-visual editing
+  const [error, setError] = useState<string | null>(null);
   const isNewTemplate = templateId === null;
-  const editorContainerRef = useRef<HTMLDivElement>(null); // Ref for editor container
-  const [editorHeight, setEditorHeight] = useState<string | number>('320px'); // Default height (like h-80)
-  const [editorTab, setEditorTab] = useState<'visual' | 'code'>('code');
+  const editorContainerRef = useRef<HTMLDivElement>(null);
+  const [editorHeight, setEditorHeight] = useState<string | number>('320px');
+  const [editorTab, setEditorTab] = useState<'visual' | 'code'>('visual');
   const [visualWorkspaceTab, setVisualWorkspaceTab] = useState<'design' | 'preview'>('design');
   const designerLoadWorkspace = useInvoiceDesignerStore((state) => state.loadWorkspace);
   const designerResetWorkspace = useInvoiceDesignerStore((state) => state.resetWorkspace);
@@ -51,32 +46,13 @@ const InvoiceTemplateEditor: React.FC<InvoiceTemplateEditorProps> = ({ templateI
   const designerShowRulers = useInvoiceDesignerStore((state) => state.showRulers);
   const designerCanvasScale = useInvoiceDesignerStore((state) => state.canvasScale);
   const [designerHydratedFor, setDesignerHydratedFor] = useState<string | null>(null);
-  const forceLocalDesignerOverride = useMemo(() => {
-    if (typeof window === 'undefined') {
-      return false;
-    }
-    const hostname = window.location.hostname;
-    const isLocalHost = hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '[::1]';
-    if (!isLocalHost) {
-      return false;
-    }
-    const override = searchParams?.get('forceInvoiceDesigner');
-    return override === '1' || override === 'true';
-  }, [searchParams]);
-
-  const canUseDesigner = forceLocalDesignerOverride || (guiDesignerEnabled && !guiDesignerLoading && !guiDesignerError);
   const generatedCodeViewSource = useMemo(() => {
-    if (!canUseDesigner) {
-      return null;
-    }
-
     try {
       return exportWorkspaceToInvoiceTemplateAstJson(designerExportWorkspace());
     } catch {
       return null;
     }
   }, [
-    canUseDesigner,
     designerExportWorkspace,
     designerCanvasScale,
     designerGridSize,
@@ -91,19 +67,8 @@ const InvoiceTemplateEditor: React.FC<InvoiceTemplateEditorProps> = ({ templateI
     if (!isNewTemplate && templateId) {
       setIsLoading(true);
       getInvoiceTemplate(templateId) // Correct function name
-        .then((data: IInvoiceTemplate | null) => { // Add explicit type for data
+        .then((data: IInvoiceTemplate | null) => {
           setTemplate(data);
-          setTemplateAstText(
-            JSON.stringify(
-              data?.templateAst ?? {
-                kind: 'invoice-template-ast',
-                version: INVOICE_TEMPLATE_AST_VERSION,
-                layout: { id: 'root', type: 'document', children: [] },
-              },
-              null,
-              2
-            )
-          );
           setError(null);
         })
         .catch((err: Error) => { // Add explicit type for err
@@ -120,20 +85,11 @@ const InvoiceTemplateEditor: React.FC<InvoiceTemplateEditorProps> = ({ templateI
         layout: { id: 'root', type: 'document', children: [] },
       } as any;
       setTemplate({ name: '', version: 1, isStandard: false, templateAst: emptyAst });
-      setTemplateAstText(JSON.stringify(emptyAst, null, 2));
     }
   }, [templateId, isNewTemplate]);
 
   useEffect(() => {
-    if (canUseDesigner) {
-      setEditorTab((prev) => (prev === 'code' ? 'visual' : prev));
-      return;
-    }
-    setEditorTab('code');
-  }, [canUseDesigner]);
-
-  useEffect(() => {
-    if (!canUseDesigner || !template) {
+    if (!template) {
       return;
     }
 
@@ -179,7 +135,6 @@ const InvoiceTemplateEditor: React.FC<InvoiceTemplateEditorProps> = ({ templateI
     designerResetWorkspace();
     setDesignerHydratedFor(hydrationKey);
   }, [
-    canUseDesigner,
     designerHydratedFor,
     designerLoadWorkspace,
     designerResetWorkspace,
@@ -239,37 +194,27 @@ const InvoiceTemplateEditor: React.FC<InvoiceTemplateEditorProps> = ({ templateI
         delete dataToSave.template_id;
       }
 
-      if (canUseDesigner) {
-        const workspace = designerExportWorkspace();
+      const workspace = designerExportWorkspace();
 
-        if (typeof window !== 'undefined') {
-          try {
-            localStorage.setItem(
-              `alga.invoiceDesigner.workspace.${templateId ?? 'new'}`,
-              JSON.stringify(workspace)
-            );
-          } catch {
-            // Best-effort only
-          }
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem(
+            `alga.invoiceDesigner.workspace.${templateId ?? 'new'}`,
+            JSON.stringify(workspace)
+          );
+        } catch {
+          // Best-effort only
         }
+      }
 
-        try {
-          const ast = exportWorkspaceToInvoiceTemplateAst(workspace);
-          (dataToSave as Record<string, unknown>).templateAst = ast;
-        } catch (compilerError) {
-          const message = compilerError instanceof Error ? compilerError.message : 'Unknown AST export error';
-          setError(`Failed to export template AST from visual workspace: ${message}`);
-          setIsLoading(false);
-          return;
-        }
-      } else {
-        try {
-          (dataToSave as Record<string, unknown>).templateAst = JSON.parse(templateAstText);
-        } catch (parseError) {
-          setError('Template AST must be valid JSON.');
-          setIsLoading(false);
-          return;
-        }
+      try {
+        const ast = exportWorkspaceToInvoiceTemplateAst(workspace);
+        (dataToSave as Record<string, unknown>).templateAst = ast;
+      } catch (compilerError) {
+        const message = compilerError instanceof Error ? compilerError.message : 'Unknown AST export error';
+        setError(`Failed to export template AST from visual workspace: ${message}`);
+        setIsLoading(false);
+        return;
       }
 
       // Call the updated save action
@@ -328,80 +273,48 @@ const InvoiceTemplateEditor: React.FC<InvoiceTemplateEditorProps> = ({ templateI
              </Alert>
            )}
          </div>
-         {!canUseDesigner ? (
-           <div className="mt-4">
-               <label htmlFor="templateAstJson" className="block text-sm font-medium text-[rgb(var(--color-text-700))]">Template AST (JSON)</label>
-               {/* Removed h-80, added ref */}
+         <div className="mt-4">
+           <Tabs value={editorTab} onValueChange={(value) => setEditorTab(value as 'visual' | 'code')}>
+             <TabsList>
+               <TabsTrigger value="visual" data-automation-id="invoice-template-editor-visual-tab">Visual</TabsTrigger>
+               <TabsTrigger value="code" data-automation-id="invoice-template-editor-code-tab">Code</TabsTrigger>
+             </TabsList>
+             <TabsContent value="visual" className="pt-4 space-y-3">
+               <div className="border rounded overflow-hidden bg-card" id="invoice-template-visual-designer">
+                 <DesignerVisualWorkspace
+                   visualWorkspaceTab={visualWorkspaceTab}
+                   onVisualWorkspaceTabChange={setVisualWorkspaceTab}
+                 />
+               </div>
+             </TabsContent>
+             <TabsContent value="code" className="pt-4">
+               <Alert variant="info" className="mb-3" data-automation-id="invoice-template-editor-code-readonly-alert">
+                 <AlertDescription>
+                   Code view is generated from the Visual workspace and is read-only.
+                 </AlertDescription>
+               </Alert>
+               <label htmlFor="templateAssemblyScriptSource" className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
+                 Template AST (JSON)
+               </label>
                <div ref={editorContainerRef} className="mt-1 border rounded-md overflow-hidden">
                  <Editor
-                   height={editorHeight} // Use calculated height state
+                   height={editorHeight}
                    defaultLanguage="json"
-                   value={templateAstText}
-                   onChange={(value) => setTemplateAstText(value || '')}
+                   value={generatedCodeViewSource ?? ''}
+                   onChange={() => {}}
                    options={{
                      minimap: { enabled: true },
                      scrollBeyondLastLine: false,
                      automaticLayout: true,
                      fontSize: 14,
-                     readOnly: isLoading
+                     readOnly: true
                    }}
                    theme="vs-dark"
                  />
                </div>
-           </div>
-         ) : (
-           <div className="mt-4">
-             <Tabs value={editorTab} onValueChange={(value) => setEditorTab(value as 'visual' | 'code')}>
-               <TabsList>
-                 <TabsTrigger value="visual" data-automation-id="invoice-template-editor-visual-tab">Visual</TabsTrigger>
-                 <TabsTrigger value="code" data-automation-id="invoice-template-editor-code-tab">Code</TabsTrigger>
-               </TabsList>
-               <TabsContent value="visual" className="pt-4 space-y-3">
-                 {forceLocalDesignerOverride && !guiDesignerEnabled && (
-                   <Alert variant="info" data-automation-id="invoice-template-editor-local-designer-override">
-                     <AlertDescription>
-                       Local QA override active via <code>forceInvoiceDesigner=1</code>.
-                     </AlertDescription>
-                   </Alert>
-                 )}
-                 <div className="border rounded overflow-hidden bg-card" id="invoice-template-visual-designer">
-                   <DesignerVisualWorkspace
-                     visualWorkspaceTab={visualWorkspaceTab}
-                     onVisualWorkspaceTabChange={setVisualWorkspaceTab}
-                   />
-                 </div>
-               </TabsContent>
-               <TabsContent value="code" className="pt-4">
-                 {canUseDesigner && (
-                   <Alert variant="info" className="mb-3" data-automation-id="invoice-template-editor-code-readonly-alert">
-                     <AlertDescription>
-                       Code view is generated from Visual workspace state and is read-only while GUI designer is enabled.
-                     </AlertDescription>
-                   </Alert>
-                 )}
-                 <label htmlFor="templateAssemblyScriptSource" className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
-                   Template AST (JSON)
-                 </label>
-                 <div ref={editorContainerRef} className="mt-1 border rounded-md overflow-hidden">
-                   <Editor
-                     height={editorHeight}
-                     defaultLanguage="json"
-                     value={generatedCodeViewSource ?? ''}
-                     onChange={() => {}}
-                     options={{
-                       minimap: { enabled: true },
-                       scrollBeyondLastLine: false,
-                       automaticLayout: true,
-                       fontSize: 14,
-                       readOnly: isLoading || canUseDesigner
-                     }}
-                     theme="vs-dark"
-                   />
-                 </div>
-               </TabsContent>
-             </Tabs>
-           </div>
-         )}
+             </TabsContent>
+           </Tabs>
+         </div>
         </CardContent>
         <CardFooter className="flex justify-between items-center gap-2"> {/* Updated class for layout */}
            <div className="text-sm text-muted-foreground"> {/* Container for timestamps */}

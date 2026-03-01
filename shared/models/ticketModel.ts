@@ -67,6 +67,7 @@ export const ticketSchema = z.object({
   updated_by: z.string().uuid().nullable(),
   closed_by: z.string().uuid().nullable(),
   assigned_to: z.string().uuid().nullable(),
+  assigned_team_id: z.string().uuid().nullable().optional(),
   entered_at: z.string().nullable(),
   updated_at: z.string().nullable(),
   closed_at: z.string().nullable(),
@@ -117,6 +118,7 @@ export interface CreateTicketInput {
   location_id?: string;
   status_id?: string;
   assigned_to?: string;
+  assigned_team_id?: string;
   priority_id?: string;
   category_id?: string;
   subcategory_id?: string;
@@ -339,7 +341,7 @@ export function validateData<T>(schema: z.ZodSchema<T>, data: unknown): T {
  */
 export function cleanNullableFields(data: Record<string, any>): Record<string, any> {
   const cleaned = { ...data };
-  const nullableFields = ['contact_name_id', 'category_id', 'subcategory_id', 'location_id', 'assigned_to'];
+  const nullableFields = ['contact_name_id', 'category_id', 'subcategory_id', 'location_id', 'assigned_to', 'assigned_team_id'];
   
   for (const field of nullableFields) {
     if (cleaned[field] === '') {
@@ -626,6 +628,7 @@ export class TicketModel {
       location_id: cleanedInput.location_id || null,
       status_id: cleanedInput.status_id || null,
       assigned_to: cleanedInput.assigned_to || null,
+      assigned_team_id: cleanedInput.assigned_team_id || null,
       priority_id: cleanedInput.priority_id || null,
       category_id: cleanedInput.category_id || null,
       subcategory_id: cleanedInput.subcategory_id || null,

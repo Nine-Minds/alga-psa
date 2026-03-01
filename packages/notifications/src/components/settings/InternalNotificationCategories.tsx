@@ -8,6 +8,7 @@ import { DataTable } from "@alga-psa/ui/components/DataTable";
 import { ColumnDefinition } from "@alga-psa/types";
 import { ChevronDown, ChevronRight, CornerDownRight, MoreVertical } from "lucide-react";
 import { toast } from "react-hot-toast";
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { useUserPreference } from "@alga-psa/users/hooks";
 import {
   getInternalNotificationCategoriesAction,
@@ -149,8 +150,7 @@ function InternalNotificationCategoriesContent({
       setSubtypesByCategory(prev => ({ ...prev, [categoryId]: subtypes }));
       setOriginalSubtypes(prev => ({ ...prev, [categoryId]: subtypes }));
     } catch (error) {
-      console.error("Failed to load subtypes:", error);
-      toast.error("Failed to load notification subtypes");
+      handleError(error, 'Failed to load notification subtypes');
     } finally {
       setLoadingSubtypes(prev => {
         const next = new Set(prev);
@@ -269,8 +269,7 @@ function InternalNotificationCategoriesContent({
 
       toast.success("Notification settings saved successfully");
     } catch (error) {
-      console.error("Failed to save notification settings:", error);
-      toast.error("Failed to save notification settings");
+      handleError(error, 'Failed to save notification settings');
     } finally {
       setIsSaving(false);
     }

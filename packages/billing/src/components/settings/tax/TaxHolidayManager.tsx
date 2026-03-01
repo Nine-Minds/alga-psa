@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import toast from 'react-hot-toast';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { MoreVertical, PlusCircle, Info, Calendar, CalendarDays } from 'lucide-react';
 
 import { Button } from '@alga-psa/ui/components/Button';
@@ -92,8 +93,7 @@ export function TaxHolidayManager({ taxRateId, taxRateName, isReadOnly = false }
       const fetchedHolidays = await getTaxHolidaysByTaxRate(taxRateId);
       setHolidays(fetchedHolidays);
     } catch (error) {
-      console.error('Failed to fetch tax holidays:', error);
-      toast.error('Failed to load tax holidays.');
+      handleError(error, 'Failed to load tax holidays.');
     } finally {
       setIsLoading(false);
     }
@@ -192,8 +192,7 @@ export function TaxHolidayManager({ taxRateId, taxRateName, isReadOnly = false }
       await fetchHolidays();
       handleCloseDialog();
     } catch (error: any) {
-      console.error(`${errorMessage}:`, error);
-      toast.error(`${errorMessage} ${error?.message ? `(${error.message})` : ''}`);
+      handleError(error, errorMessage);
     } finally {
       setIsSubmitting(false);
     }
@@ -209,8 +208,7 @@ export function TaxHolidayManager({ taxRateId, taxRateName, isReadOnly = false }
       await fetchHolidays();
       handleCloseDeleteDialog();
     } catch (error: any) {
-      console.error('Failed to delete tax holiday:', error);
-      toast.error(`Failed to delete tax holiday. ${error?.message ? `(${error.message})` : ''}`);
+      handleError(error, 'Failed to delete tax holiday.');
     } finally {
       setIsSubmitting(false);
     }

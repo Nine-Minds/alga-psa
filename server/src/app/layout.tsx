@@ -51,11 +51,11 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-async function MainContent({ children, forcedTheme }: { children: React.ReactNode; forcedTheme?: string }) {
+async function MainContent({ children }: { children: React.ReactNode }) {
   const tenant = await getCurrentTenant();
   return (
     <TenantProvider tenant={tenant}>
-      <AppThemeProvider forcedTheme={forcedTheme}>
+      <AppThemeProvider>
         <ThemeBridge>
           <DynamicExtensionProvider>
             <ClientUIStateProvider
@@ -90,11 +90,6 @@ export default async function RootLayout({
   // Determine if we're on a client portal page
   const isClientPortal = pathname.includes('/client-portal') || pathname.includes('/auth/client-portal');
 
-  // Force light theme on auth pages — dark mode is feature-flagged and
-  // should never appear to unauthenticated users.
-  const isAuthRoute = pathname.includes('/auth/');
-  const forcedTheme = isAuthRoute ? 'light' : undefined;
-
   let brandingStyles = '';
   if (isClientPortal) {
     const branding = await getTenantBrandingByDomain(host);
@@ -105,14 +100,6 @@ export default async function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        {/* Force light theme on auth pages. next-themes' blocking script
-            (rendered in <body>) reads localStorage('theme') to set the <html>
-            class. We temporarily swap the stored value to 'light' so the
-            blocking script applies light mode, then restore the real preference
-            so it isn't lost for authenticated pages. */}
-        <script
-          dangerouslySetInnerHTML={{ __html: `(function(){if(/^\\/auth\\//.test(window.location.pathname)){try{var k='theme',p=localStorage.getItem(k);localStorage.setItem(k,'light');setTimeout(function(){if(p!==null)localStorage.setItem(k,p);else localStorage.removeItem(k)},0)}catch(e){}}})()` }}
-        />
         <link rel="stylesheet" href="https://unpkg.com/react-big-calendar/lib/css/react-big-calendar.css" />
         <link rel="stylesheet" href="https://unpkg.com/@radix-ui/themes@3.2.0/styles.css" />
         {/* Inject client portal branding styles directly in head for immediate application */}
@@ -125,7 +112,7 @@ export default async function RootLayout({
       </head>
       <body className={inter.className} suppressHydrationWarning>
         <PostHogProvider>
-           <MainContent forcedTheme={forcedTheme}>{children}</MainContent>
+           <MainContent>{children}</MainContent>
         </PostHogProvider>
       </body>
     </html>

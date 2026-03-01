@@ -38,9 +38,9 @@ const CheckEmailContent: React.FC = () => {
   };
 
   const themeColor = portal === 'client' ? 'blue' : 'purple';
-  const bgGradient = portal === 'client' 
-    ? 'bg-gradient-to-br from-blue-50 to-indigo-100 dark:bg-none dark:bg-card'
-    : 'bg-gradient-to-br from-purple-50 via-purple-100 to-indigo-100 dark:bg-none dark:bg-card';
+  const bgGradient = portal === 'client'
+    ? 'bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-blue-950 dark:to-indigo-950'
+    : 'bg-gradient-to-br from-purple-50 via-purple-100 to-indigo-100 dark:from-purple-950 dark:via-purple-950/80 dark:to-indigo-950';
 
   return (
     <div className={`min-h-screen flex items-center justify-center p-4 ${bgGradient}`}>

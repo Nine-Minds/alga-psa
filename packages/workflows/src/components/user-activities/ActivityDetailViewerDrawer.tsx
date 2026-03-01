@@ -27,6 +27,7 @@ import EntryPopup from "@alga-psa/scheduling/components/schedule/EntryPopup";
 import { TaskForm } from "@alga-psa/workflows/components";
 import TimeEntryDialog from "@alga-psa/scheduling/components/time-management/time-entry/time-sheet/TimeEntryDialog";
 import { toast } from 'react-hot-toast';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { formatISO } from 'date-fns';
 import { IWorkItem } from "@alga-psa/types";
 import { TimeSheetStatus, ITimePeriodWithStatusView } from "@alga-psa/types";
@@ -90,8 +91,7 @@ function DocumentViewerEditor({
       invalidateCache({ activityType: ActivityType.DOCUMENT });
       onActionComplete?.();
     } catch (error) {
-      console.error('Error saving document:', error);
-      toast.error('Failed to save document');
+      handleError(error, 'Failed to save document');
     } finally {
       setIsSaving(false);
     }
@@ -396,8 +396,7 @@ export function ActivityDetailViewerDrawer({
                       toast.success('Time entry updated successfully');
                       onActionComplete?.();
                     } catch (error) {
-                      console.error('Error updating time entry:', error);
-                      toast.error('Failed to update time entry');
+                      handleError(error, 'Failed to update time entry');
                     }
                   }}
                   workItem={workItem}

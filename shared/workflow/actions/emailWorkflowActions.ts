@@ -9,6 +9,12 @@ import { v4 as uuidv4 } from 'uuid';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { buildInboundEmailReplyReceivedPayload } from '../streams/domainEventBuilders/inboundEmailReplyEventBuilders';
 import { normalizeEmailAddress } from '../../lib/email/addressUtils';
+import {
+  mergeTicketWatchListRecipients,
+  parseTicketWatchListAttributes,
+  setTicketWatchListOnAttributes,
+  type TicketWatchListRecipientInput,
+} from '../../lib/tickets/watchList';
 
 const COMMENT_RESPONSE_SOURCES = {
   USER: 'user',
@@ -130,6 +136,29 @@ export interface SaveEmailClientAssociationOutput {
   associationId: string;
   email: string;
   client_id: string;
+}
+
+function parseTicketAttributes(raw: unknown): Record<string, unknown> {
+  if (!raw) {
+    return {};
+  }
+
+  if (typeof raw === 'string') {
+    try {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        return parsed as Record<string, unknown>;
+      }
+    } catch {
+      return {};
+    }
+  }
+
+  if (typeof raw === 'object' && !Array.isArray(raw)) {
+    return { ...(raw as Record<string, unknown>) };
+  }
+
+  return {};
 }
 
 export type InboundDestinationResolutionSource =
@@ -1023,6 +1052,7 @@ export async function createTicketFromEmail(
     entered_by?: string | null;
     assigned_to?: string;
     email_metadata?: any;
+    attributes?: Record<string, unknown> | null;
   },
   tenant: string,
   userId?: string
@@ -1065,6 +1095,7 @@ export async function createTicketFromEmail(
         entered_by: ticketData.entered_by || undefined,
         assigned_to: assignedTo,
         email_metadata: ticketData.email_metadata,
+        attributes: ticketData.attributes ?? undefined,
         ticket_origin: TICKET_ORIGINS.INBOUND_EMAIL,
       }, tenant, trx, {}, eventPublisher, analyticsTracker, userId, 3);
 
@@ -1089,6 +1120,67 @@ export async function createTicketFromEmail(
         ticket_number: result.ticket_number
       };
     });
+}
+
+export async function findEmailProviderMailboxAddress(
+  providerId: string,
+  tenant: string
+): Promise<string | null> {
+  const { withAdminTransaction } = await import('@alga-psa/db');
+
+  return withAdminTransaction(async (trx: Knex.Transaction) => {
+    const provider = await trx('email_providers')
+      .select('mailbox')
+      .where({ id: providerId, tenant })
+      .first<{ mailbox?: string | null }>();
+
+    return normalizeEmailAddress(provider?.mailbox ?? undefined);
+  });
+}
+
+export async function upsertTicketWatchListRecipients(
+  params: {
+    ticketId: string;
+    recipients: TicketWatchListRecipientInput[];
+  },
+  tenant: string
+): Promise<{ updated: boolean; watchList: ReturnType<typeof parseTicketWatchListAttributes> }> {
+  const { withAdminTransaction } = await import('@alga-psa/db');
+
+  return withAdminTransaction(async (trx: Knex.Transaction) => {
+    const ticket = await trx('tickets')
+      .select('attributes')
+      .where({
+        ticket_id: params.ticketId,
+        tenant,
+      })
+      .first<{ attributes?: unknown }>();
+
+    if (!ticket) {
+      return { updated: false, watchList: [] };
+    }
+
+    const currentAttributes = parseTicketAttributes(ticket.attributes);
+    const currentWatchList = parseTicketWatchListAttributes(currentAttributes);
+    const mergedWatchList = mergeTicketWatchListRecipients(currentWatchList, params.recipients ?? []);
+
+    if (JSON.stringify(currentWatchList) === JSON.stringify(mergedWatchList)) {
+      return { updated: false, watchList: currentWatchList };
+    }
+
+    const nextAttributes = setTicketWatchListOnAttributes(currentAttributes, mergedWatchList);
+    await trx('tickets')
+      .where({
+        ticket_id: params.ticketId,
+        tenant,
+      })
+      .update({
+        attributes: nextAttributes ? JSON.stringify(nextAttributes) : null,
+        updated_at: new Date(),
+      });
+
+    return { updated: true, watchList: mergedWatchList };
+  });
 }
 
 const INBOUND_PROVIDER_TYPES: ReadonlySet<InboundEmailProviderType> = new Set([

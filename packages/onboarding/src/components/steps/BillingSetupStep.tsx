@@ -23,6 +23,7 @@ import { useSession } from 'next-auth/react';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { Plus } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 
 export function BillingSetupStep({ data, updateData, attemptedToProceed = false }: StepProps) {
   const { data: session } = useSession();
@@ -130,8 +131,7 @@ export function BillingSetupStep({ data, updateData, attemptedToProceed = false 
         toast.error(result.error || 'Failed to delete service type');
       }
     } catch (error) {
-      console.error('Error deleting service type:', error);
-      toast.error('Failed to delete service type');
+      handleError(error, 'Failed to delete service type');
     }
   };
 
@@ -410,8 +410,7 @@ export function BillingSetupStep({ data, updateData, attemptedToProceed = false 
                         });
                         setShowAddForm(false);
                       } catch (error) {
-                        console.error('Error creating service type:', error);
-                        toast.error('Failed to create service type. Please try again.');
+                        handleError(error, 'Failed to create service type. Please try again.');
                       }
                     }}
                     disabled={!serviceTypeForm.name.trim()}

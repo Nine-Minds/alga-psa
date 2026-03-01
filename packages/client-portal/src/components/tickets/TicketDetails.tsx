@@ -10,6 +10,8 @@ import { ResponseStateBadge } from '@alga-psa/ui/components';
 import { getTicketOrigin } from '@alga-psa/tickets/lib/ticketOrigin';
 import { getTicketingDisplaySettings } from '@alga-psa/tickets/actions/ticketDisplaySettings';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
+import TeamAvatar from '@alga-psa/ui/components/TeamAvatar';
+import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import {
   getClientTicketDetails,
@@ -27,9 +29,11 @@ import { IComment } from '@alga-psa/types';
 import { IDocument } from '@alga-psa/types';
 import { PartialBlock } from '@blocknote/core';
 import { getCurrentUser } from '@alga-psa/users/actions';
+import { getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
 import { IStatus } from '@alga-psa/types';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import toast from 'react-hot-toast';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 
 interface TicketDetailsProps {
   ticketId: string;
@@ -105,6 +109,25 @@ export function TicketDetails({
     api: t('origin.api', 'Created via API'),
     other: t('origin.other', 'Created via Other'),
   }), [t]);
+
+  // Team avatar URL state
+  const [teamAvatarUrl, setTeamAvatarUrl] = useState<string | null>(null);
+  useEffect(() => {
+    if (!ticket.assigned_team_id || !ticket.tenant) {
+      setTeamAvatarUrl(null);
+      return;
+    }
+    const fetchTeamAvatar = async () => {
+      try {
+        const result = await getTeamAvatarUrlsBatchAction([ticket.assigned_team_id!], ticket.tenant!);
+        const urls: Map<string, string | null> = result instanceof Map ? result : new Map(Object.entries(result) as [string, string | null][]);
+        setTeamAvatarUrl(urls.get(ticket.assigned_team_id!) ?? null);
+      } catch {
+        setTeamAvatarUrl(null);
+      }
+    };
+    fetchTeamAvatar();
+  }, [ticket.assigned_team_id, ticket.tenant]);
 
   // Load response state tracking setting
   useEffect(() => {
@@ -235,9 +258,8 @@ export function TicketDetails({
       setTicket(details);
       return true;
     } catch (error) {
-      console.error('Failed to add comment:', error);
       setError(t('messages.commentError', 'Failed to add comment'));
-      toast.error(t('messages.commentError', 'Failed to add comment'));
+      handleError(error, t('messages.commentError', 'Failed to add comment'));
       return false;
     }
   };
@@ -366,9 +388,8 @@ export function TicketDetails({
         return next;
       });
     } catch (error) {
-      console.error('Failed to update comment:', error);
       setError(t('messages.failedToUpdateComment', 'Failed to update comment'));
-      toast.error(t('messages.failedToUpdateComment', 'Failed to update comment'));
+      handleError(error, t('messages.failedToUpdateComment', 'Failed to update comment'));
     }
   };
 
@@ -394,9 +415,8 @@ export function TicketDetails({
       setTicket(details);
       toast.success(t('messages.commentDeleteSuccess', 'Comment deleted successfully'));
     } catch (error) {
-      console.error('Failed to delete comment:', error);
       setError(t('messages.failedToDeleteComment', 'Failed to delete comment'));
-      toast.error(t('messages.failedToDeleteComment', 'Failed to delete comment'));
+      handleError(error, t('messages.failedToDeleteComment', 'Failed to delete comment'));
     }
   };
 
@@ -421,8 +441,7 @@ export function TicketDetails({
       setTicket(prevTicket => ({ ...prevTicket, status_id: newStatusId, status_name: newStatusName }));
 
     } catch (error) {
-      console.error('Failed to update ticket status:', error);
-      toast.error(t('messages.statusUpdateError', 'Failed to update ticket status.'));
+      handleError(error, t('messages.statusUpdateError', 'Failed to update ticket status.'));
     } finally {
       setTicketToUpdateStatus(null);
     }
@@ -534,6 +553,51 @@ export function TicketDetails({
                 ) : (
                   <span className="text-sm text-gray-500">-</span>
                 )}
+                {ticket.assigned_team_id && (ticket as any).assigned_team_name && (
+                  <>
+                    <TeamAvatar
+                      teamId={ticket.assigned_team_id}
+                      teamName={(ticket as any).assigned_team_name}
+                      avatarUrl={teamAvatarUrl}
+                      size="sm"
+                    />
+                    <span className="text-xs text-gray-500">{(ticket as any).assigned_team_name}</span>
+                  </>
+                )}
+                {(() => {
+                  const additionalAgents = (ticket as any).additional_agents || [];
+                  if (additionalAgents.length === 0) return null;
+                  return (
+                    <Tooltip
+                      content={
+                        <div className="text-xs space-y-1.5">
+                          <div className="font-medium text-gray-300 mb-1">Additional Agents:</div>
+                          {additionalAgents.map((agent: { user_id: string; name: string }, i: number) => (
+                            <div key={i} className="flex items-center gap-2">
+                              <UserAvatar
+                                userId={agent.user_id}
+                                userName={agent.name}
+                                avatarUrl={ticket.userMap?.[agent.user_id]?.avatarUrl || null}
+                                size="xs"
+                              />
+                              <span>{agent.name}</span>
+                            </div>
+                          ))}
+                        </div>
+                      }
+                    >
+                      <span
+                        className="px-1.5 py-0.5 text-xs font-medium rounded-full cursor-help"
+                        style={{
+                          color: 'rgb(var(--color-primary-500))',
+                          backgroundColor: 'rgb(var(--color-primary-50))'
+                        }}
+                      >
+                        +{additionalAgents.length}
+                      </span>
+                    </Tooltip>
+                  );
+                })()}
               </div>
             </div>
 

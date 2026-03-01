@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { usePostHog } from 'posthog-js/react';
-import toast from 'react-hot-toast';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { cn } from '@alga-psa/ui/lib';
 import { useAutomationIdAndRegister } from '@alga-psa/ui/ui-reflection/useAutomationIdAndRegister';
 import type { ButtonComponent } from '@alga-psa/ui/ui-reflection/types';
@@ -312,7 +312,7 @@ export default function DashboardOnboardingSection({
         });
       } catch (error) {
         setDismissedStepIds(previousDismissedStepIds);
-        toast.error(error instanceof Error ? error.message : 'Failed to dismiss onboarding step.');
+        handleError(error, 'Failed to dismiss onboarding step.');
       } finally {
         setActiveStepId(null);
       }
@@ -348,7 +348,7 @@ export default function DashboardOnboardingSection({
         });
       } catch (error) {
         setDismissedStepIds(previousDismissedStepIds);
-        toast.error(error instanceof Error ? error.message : 'Failed to restore onboarding step.');
+        handleError(error, 'Failed to restore onboarding step.');
       } finally {
         setActiveStepId(null);
       }

@@ -3,6 +3,7 @@ import { ContactDetails } from '@alga-psa/clients';
 import type { IDocument } from '@alga-psa/types';
 import { getCurrentUser } from '@alga-psa/users/actions';
 import { getDocumentsByEntity } from '@alga-psa/documents/actions/documentActions';
+import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { getContactByContactNameId } from '@alga-psa/clients/actions';
 import { getAllClients } from '@alga-psa/clients/actions';
 import { getContactPortalPermissions } from '@alga-psa/auth/actions';
@@ -51,9 +52,11 @@ const ContactDetailPage = async ({ params, searchParams }: ContactDetailPageProp
     let documents: IDocument[] = [];
     if (tab === 'documents') {
       const documentsResponse = await getDocumentsByEntity(id, 'contact');
-      documents = Array.isArray(documentsResponse)
-        ? documentsResponse
-        : documentsResponse.documents || [];
+      if (!isActionPermissionError(documentsResponse)) {
+        documents = Array.isArray(documentsResponse)
+          ? documentsResponse
+          : documentsResponse.documents || [];
+      }
     }
 
     return (

@@ -27,6 +27,7 @@ export interface TemplateTask {
   task_type_key?: string;
   priority_id?: string;
   assigned_to?: string;
+  assigned_team_id?: string;
   additional_agents?: string[];
   template_status_mapping_id?: string;
   service_id?: string;

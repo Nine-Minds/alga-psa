@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Plus, MoreVertical, Clock, Calendar, Star } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 
 import { Button } from '@alga-psa/ui/components/Button';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
@@ -139,7 +140,7 @@ export function BusinessHoursSettings() {
       setSchedules(data);
       setError(null);
     } catch (err) {
-      console.error('Error fetching business hours schedules:', err);
+      handleError(err, 'Failed to load business hours schedules');
       setError('Failed to load business hours schedules');
     } finally {
       setLoading(false);
@@ -152,8 +153,7 @@ export function BusinessHoursSettings() {
       const data = await getBusinessHoursScheduleById(scheduleId);
       setSelectedSchedule(data);
     } catch (err) {
-      console.error('Error fetching schedule details:', err);
-      toast.error('Failed to load schedule details');
+      handleError(err, 'Failed to load schedule details');
     }
   }, []);
 
@@ -218,8 +218,7 @@ export function BusinessHoursSettings() {
       setIsScheduleDialogOpen(true);
       setError(null);
     } catch (err) {
-      console.error('Error loading schedule for editing:', err);
-      toast.error('Failed to load schedule details');
+      handleError(err, 'Failed to load schedule details');
     }
   };
 
@@ -308,8 +307,7 @@ export function BusinessHoursSettings() {
 
       await fetchSchedules();
     } catch (err) {
-      console.error('Error deleting schedule:', err);
-      toast.error(err instanceof Error ? err.message : 'Failed to delete schedule');
+      handleError(err, 'Failed to delete schedule');
     }
   };
 
@@ -321,8 +319,7 @@ export function BusinessHoursSettings() {
       toast.success('Default business hours schedule created');
       await fetchSchedules();
     } catch (err) {
-      console.error('Error creating default schedule:', err);
-      toast.error('Failed to create default schedule');
+      handleError(err, 'Failed to create default schedule');
     } finally {
       setLoading(false);
     }
@@ -385,8 +382,7 @@ export function BusinessHoursSettings() {
       handleCloseHolidayDialog();
       await fetchScheduleDetails(selectedSchedule.schedule_id);
     } catch (err) {
-      console.error('Error adding holiday:', err);
-      toast.error('Failed to add holiday');
+      handleError(err, 'Failed to add holiday');
     } finally {
       setIsSavingHoliday(false);
     }
@@ -404,8 +400,7 @@ export function BusinessHoursSettings() {
         await fetchScheduleDetails(selectedSchedule.schedule_id);
       }
     } catch (err) {
-      console.error('Error deleting holiday:', err);
-      toast.error('Failed to delete holiday');
+      handleError(err, 'Failed to delete holiday');
     }
   };
 

@@ -2,19 +2,21 @@
 
 import React, { useState, useEffect } from 'react';
 import { IUser, IUserWithRoles, IRole } from '@alga-psa/types';
-import { findUserById, updateUser, adminChangeUserPassword, getCurrentUser } from '@alga-psa/users/actions';
-import { getRoles, getUserRoles, assignRoleToUser, removeRoleFromUser } from '@alga-psa/users/actions';
+import { findUserById, updateUser, adminChangeUserPassword, getCurrentUser, getAllUsers } from '@alga-psa/users/actions';
+import { getRoles, getUserRoles, assignRoleToUser, removeRoleFromUser, getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
 import { useDrawer } from "@alga-psa/ui";
 import { Text, Flex } from '@radix-ui/themes';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { Card } from '@alga-psa/ui/components/Card';
-import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { Eye, EyeOff, ChevronDown, ChevronUp } from 'lucide-react';
+import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import CollapsiblePasswordChangeForm from './CollapsiblePasswordChangeForm';
 import { getLicenseUsageAction } from '@alga-psa/licensing/actions';
 import toast from 'react-hot-toast';
+import { useFeatureFlag } from '@alga-psa/ui/hooks';
 
 interface UserDetailsProps {
   userId: string;
@@ -31,9 +33,12 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
   const [roles, setRoles] = useState<IRole[]>([]);
   const [availableRoles, setAvailableRoles] = useState<IRole[]>([]);
   const [selectedRole, setSelectedRole] = useState<string>('');
+  const [reportsTo, setReportsTo] = useState<string>('');
+  const [reportsToOptions, setReportsToOptions] = useState<SelectOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { closeDrawer } = useDrawer();
+  const { enabled: isTeamsV2Enabled } = useFeatureFlag('teams-v2', { defaultValue: false });
 
   // Admin password change states
   const [isAdmin, setIsAdmin] = useState(false);
@@ -54,6 +59,68 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
       fetchAvailableRoles();
     }
   }, [user]);
+
+  useEffect(() => {
+    if (user) {
+      setReportsTo(user.reports_to || '');
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (!isTeamsV2Enabled) {
+      return;
+    }
+
+    const fetchReportsToOptions = async () => {
+      try {
+        const allUsers = await getAllUsers(false, 'internal');
+        const filteredUsers = allUsers.filter((item) => item.user_id !== userId);
+
+        // Batch fetch avatar URLs
+        const userIds = filteredUsers.map((u) => u.user_id);
+        let avatarUrls: Record<string, string | null> = {};
+        if (userIds.length > 0 && filteredUsers[0]?.tenant) {
+          const result = await getUserAvatarUrlsBatchAction(userIds, filteredUsers[0].tenant);
+          if (result && typeof (result as Map<string, string | null>).forEach === 'function') {
+            (result as Map<string, string | null>).forEach((value, key) => {
+              avatarUrls[key] = value;
+            });
+          } else {
+            avatarUrls = result as unknown as Record<string, string | null>;
+          }
+        }
+
+        const options: SelectOption[] = filteredUsers.map((item) => {
+          const displayName = [item.first_name, item.last_name].filter(Boolean).join(' ').trim();
+          const nameLabel = displayName || item.email;
+          const avatarUrl = avatarUrls[item.user_id] ?? null;
+          return {
+            value: item.user_id,
+            label: (
+              <span className="flex items-center gap-2">
+                <UserAvatar
+                  userId={item.user_id}
+                  userName={nameLabel}
+                  avatarUrl={avatarUrl}
+                  size="sm"
+                />
+                <span className={item.is_inactive ? 'text-muted-foreground' : ''}>
+                  {item.is_inactive ? `${nameLabel} (Inactive)` : nameLabel}
+                </span>
+              </span>
+            ),
+            textValue: item.is_inactive ? `${nameLabel} (Inactive)` : nameLabel,
+            is_inactive: item.is_inactive,
+          };
+        });
+        setReportsToOptions(options);
+      } catch (err) {
+        console.error('Error fetching reports_to options:', err);
+      }
+    };
+
+    fetchReportsToOptions();
+  }, [isTeamsV2Enabled, userId]);
 
   const fetchCurrentUser = async () => {
     try {
@@ -163,12 +230,17 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
           email: email,
           is_inactive: !isActive,
         };
+
+        if (isTeamsV2Enabled) {
+          updatedUserData.reports_to = reportsTo || null;
+        }
         
         const updatedUser = await updateUser(user.user_id, updatedUserData);
         if (updatedUser) {
           setUser(updatedUser);
           onUpdate();
           closeDrawer();
+          toast.success('User updated successfully');
         } else {
           setError('Failed to update user. User not found.');
         }
@@ -283,6 +355,22 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
             className="w-full"
           />
         </div>
+
+        {isTeamsV2Enabled && (
+          <div>
+            <Text as="label" size="2" weight="medium" className="mb-2 block">
+              Reports To
+            </Text>
+            <CustomSelect
+              options={reportsToOptions}
+              value={reportsTo}
+              onValueChange={setReportsTo}
+              className="w-full"
+              placeholder="Select manager"
+              allowClear
+            />
+          </div>
+        )}
 
         {/* Last Login Info */}
         {user?.last_login_at && (

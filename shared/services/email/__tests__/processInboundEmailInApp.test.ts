@@ -10,6 +10,8 @@ const resolveEffectiveInboundTicketDefaultsMock = vi.fn();
 const findContactByEmailMock = vi.fn();
 const findClientIdByInboundEmailDomainMock = vi.fn();
 const findValidClientPrimaryContactIdMock = vi.fn();
+const findEmailProviderMailboxAddressMock = vi.fn();
+const upsertTicketWatchListRecipientsMock = vi.fn();
 const createTicketFromEmailMock = vi.fn();
 const createCommentFromEmailMock = vi.fn();
 const processEmailAttachmentMock = vi.fn();
@@ -68,6 +70,8 @@ vi.mock('../../../workflow/actions/emailWorkflowActions', () => ({
   findContactByEmail: (...args: any[]) => findContactByEmailMock(...args),
   findClientIdByInboundEmailDomain: (...args: any[]) => findClientIdByInboundEmailDomainMock(...args),
   findValidClientPrimaryContactId: (...args: any[]) => findValidClientPrimaryContactIdMock(...args),
+  findEmailProviderMailboxAddress: (...args: any[]) => findEmailProviderMailboxAddressMock(...args),
+  upsertTicketWatchListRecipients: (...args: any[]) => upsertTicketWatchListRecipientsMock(...args),
   createTicketFromEmail: (...args: any[]) => createTicketFromEmailMock(...args),
   createCommentFromEmail: (...args: any[]) => createCommentFromEmailMock(...args),
   processEmailAttachment: (...args: any[]) => processEmailAttachmentMock(...args),
@@ -114,6 +118,10 @@ describe('processInboundEmailInApp', () => {
       location_id: undefined,
       entered_by: 'entered-by-user',
     });
+    findClientIdByInboundEmailDomainMock.mockResolvedValue(null);
+    findValidClientPrimaryContactIdMock.mockResolvedValue(null);
+    findEmailProviderMailboxAddressMock.mockResolvedValue('support@example.com');
+    upsertTicketWatchListRecipientsMock.mockResolvedValue({ updated: true, watchList: [] });
     resolveEffectiveInboundTicketDefaultsMock.mockResolvedValue({
       defaults: {
         client_id: 'default-client-id',
@@ -467,5 +475,228 @@ describe('processInboundEmailInApp', () => {
     expect(typeof updatedNotes[0].note).toBe('string');
     expect(updatedNotes[0].note).toContain('/api/documents/view/file-123');
     expect(updatedNotes[0].note).not.toContain('data:image/png;base64,aGVsbG8=');
+  });
+
+  it('T019: new ticket path includes watch-list attributes from To/CC recipients', async () => {
+    findContactByEmailMock.mockResolvedValue(null);
+
+    const { processInboundEmailInApp } = await import('../processInboundEmailInApp');
+
+    await processInboundEmailInApp({
+      tenantId: 'tenant-1',
+      providerId: 'provider-1',
+      emailData: buildEmailData({
+        from: { email: 'client@example.com', name: 'Client User' },
+        to: [
+          { email: 'support@example.com', name: 'Support' },
+          { email: 'watch-to@example.com', name: 'Watcher To' },
+        ],
+        cc: [{ email: 'watch-cc@example.com', name: 'Watcher Cc' }],
+      }),
+    });
+
+    expect(createTicketFromEmailMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        attributes: {
+          watch_list: [
+            {
+              email: 'watch-to@example.com',
+              active: true,
+              name: 'Watcher To',
+              source: 'inbound_to',
+            },
+            {
+              email: 'watch-cc@example.com',
+              active: true,
+              name: 'Watcher Cc',
+              source: 'inbound_cc',
+            },
+          ],
+        },
+      }),
+      'tenant-1'
+    );
+  });
+
+  it('T020: new ticket watch-list seed excludes sender email', async () => {
+    findContactByEmailMock.mockResolvedValue(null);
+
+    const { processInboundEmailInApp } = await import('../processInboundEmailInApp');
+
+    await processInboundEmailInApp({
+      tenantId: 'tenant-1',
+      providerId: 'provider-1',
+      emailData: buildEmailData({
+        from: { email: 'client@example.com', name: 'Client User' },
+        to: [
+          { email: 'client@example.com', name: 'Client User' },
+          { email: 'watcher@example.com', name: 'Watcher' },
+        ],
+      }),
+    });
+
+    expect(createTicketFromEmailMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        attributes: {
+          watch_list: [
+            {
+              email: 'watcher@example.com',
+              active: true,
+              name: 'Watcher',
+              source: 'inbound_to',
+            },
+          ],
+        },
+      }),
+      'tenant-1'
+    );
+  });
+
+  it('T021: new ticket watch-list seed excludes provider mailbox', async () => {
+    findContactByEmailMock.mockResolvedValue(null);
+    findEmailProviderMailboxAddressMock.mockResolvedValue('mailbox@example.com');
+
+    const { processInboundEmailInApp } = await import('../processInboundEmailInApp');
+
+    await processInboundEmailInApp({
+      tenantId: 'tenant-1',
+      providerId: 'provider-1',
+      emailData: buildEmailData({
+        from: { email: 'client@example.com', name: 'Client User' },
+        to: [
+          { email: 'mailbox@example.com', name: 'Provider Mailbox' },
+          { email: 'watcher@example.com', name: 'Watcher' },
+        ],
+      }),
+    });
+
+    expect(createTicketFromEmailMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        attributes: {
+          watch_list: [
+            {
+              email: 'watcher@example.com',
+              active: true,
+              name: 'Watcher',
+              source: 'inbound_to',
+            },
+          ],
+        },
+      }),
+      'tenant-1'
+    );
+  });
+
+  it('T022: reply-token path calls watch-list upsert for existing ticket', async () => {
+    parseEmailReplyBodyMock.mockResolvedValue({
+      sanitizedText: 'Reply body',
+      sanitizedHtml: undefined,
+      confidence: 0.95,
+      strategy: 'plain',
+      appliedHeuristics: [],
+      warnings: [],
+      tokens: { conversationToken: 'reply-token-123' },
+    });
+    findTicketByReplyTokenMock.mockResolvedValue({
+      ticketId: 'ticket-reply-123',
+    });
+
+    const { processInboundEmailInApp } = await import('../processInboundEmailInApp');
+
+    await processInboundEmailInApp({
+      tenantId: 'tenant-1',
+      providerId: 'provider-1',
+      emailData: buildEmailData({
+        from: { email: 'client@example.com', name: 'Client User' },
+        to: [
+          { email: 'support@example.com', name: 'Support' },
+          { email: 'watcher@example.com', name: 'Watcher' },
+        ],
+      }),
+    });
+
+    expect(upsertTicketWatchListRecipientsMock).toHaveBeenCalledWith(
+      {
+        ticketId: 'ticket-reply-123',
+        recipients: [
+          {
+            email: 'watcher@example.com',
+            active: true,
+            name: 'Watcher',
+            source: 'inbound_to',
+          },
+        ],
+      },
+      'tenant-1'
+    );
+  });
+
+  it('T023: thread-header path calls watch-list upsert for existing ticket', async () => {
+    findTicketByReplyTokenMock.mockResolvedValue(null);
+    findTicketByEmailThreadMock.mockResolvedValue({
+      ticketId: 'ticket-thread-123',
+    });
+
+    const { processInboundEmailInApp } = await import('../processInboundEmailInApp');
+
+    await processInboundEmailInApp({
+      tenantId: 'tenant-1',
+      providerId: 'provider-1',
+      emailData: buildEmailData({
+        id: 'email-thread-123',
+        from: { email: 'client@example.com', name: 'Client User' },
+        to: [
+          { email: 'support@example.com', name: 'Support' },
+          { email: 'watcher@example.com', name: 'Watcher' },
+        ],
+      }),
+    });
+
+    expect(upsertTicketWatchListRecipientsMock).toHaveBeenCalledWith(
+      {
+        ticketId: 'ticket-thread-123',
+        recipients: [
+          {
+            email: 'watcher@example.com',
+            active: true,
+            name: 'Watcher',
+            source: 'inbound_to',
+          },
+        ],
+      },
+      'tenant-1'
+    );
+  });
+
+  it('T024: when no To/CC recipients remain after exclusions, no watch-list upsert is attempted', async () => {
+    parseEmailReplyBodyMock.mockResolvedValue({
+      sanitizedText: 'Reply body',
+      sanitizedHtml: undefined,
+      confidence: 0.95,
+      strategy: 'plain',
+      appliedHeuristics: [],
+      warnings: [],
+      tokens: { conversationToken: 'reply-token-123' },
+    });
+    findTicketByReplyTokenMock.mockResolvedValue({
+      ticketId: 'ticket-reply-123',
+    });
+    findEmailProviderMailboxAddressMock.mockResolvedValue('support@example.com');
+
+    const { processInboundEmailInApp } = await import('../processInboundEmailInApp');
+
+    await processInboundEmailInApp({
+      tenantId: 'tenant-1',
+      providerId: 'provider-1',
+      emailData: buildEmailData({
+        from: { email: 'client@example.com', name: 'Client User' },
+        to: [
+          { email: 'client@example.com', name: 'Client User' },
+          { email: 'support@example.com', name: 'Support' },
+        ],
+      }),
+    });
+
+    expect(upsertTicketWatchListRecipientsMock).not.toHaveBeenCalled();
   });
 });

@@ -45,6 +45,7 @@ export const ticketSchema = z.object({
     updated_by: z.string().uuid().nullable(),
     closed_by: z.string().uuid().nullable(),
     assigned_to: z.string().uuid().nullable(),
+    assigned_team_id: z.string().uuid().nullable().optional(),
     entered_at: z.string().nullable(),
     updated_at: z.string().nullable(),
     closed_at: z.string().nullable(),
@@ -87,6 +88,7 @@ const baseTicketSchema = z.object({
     contact_name_id: z.string().uuid().nullable(),
     closed_by: z.string().uuid().nullable(),
     assigned_to: z.string().uuid().nullable(),
+    assigned_team_id: z.string().uuid().nullable().optional(),
     entered_at: z.string().nullable(),
     updated_at: z.string().nullable(),
     closed_at: z.string().nullable(),
@@ -137,6 +139,7 @@ export const ticketListFiltersSchema = z.object({
     showOpenOnly: z.boolean().optional(),
     tags: z.array(z.string()).optional(),
     assignedToIds: z.array(z.string().uuid()).optional(),
+    assignedTeamIds: z.array(z.string().uuid()).optional(),
     includeUnassigned: z.boolean().optional(),
     // Due date filters
     dueDateFilter: z.enum(['all', 'overdue', 'upcoming', 'today', 'no_due_date', 'before', 'after', 'custom']).optional(),

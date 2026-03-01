@@ -11,6 +11,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Plus, Settings, Trash2, CheckCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import {
   GmailProviderForm,
   ImapProviderForm,
@@ -142,7 +143,7 @@ function EmailProviderConfigurationContent({
       }
     } catch (err: any) {
       setError(err.message);
-      toast.error(err.message);
+      handleError(err, err.message);
     }
   };
 
@@ -217,7 +218,7 @@ function EmailProviderConfigurationContent({
       await loadProviders();
     } catch (err: any) {
       setError(err.message);
-      toast.error(err.message);
+      handleError(err, err.message);
     }
   };
 

@@ -1,6 +1,6 @@
 # Theming & Dark Mode
 
-Alga PSA supports light/dark themes via `next-themes` with class-based switching. The `<html>` element gets `.dark` or `.light`, activating CSS variable sets in `globals.css`. All colors flow through CSS custom properties referenced by Tailwind semantic tokens. Gated behind the `themes-enabled` feature flag.
+Alga PSA supports light/dark themes via `next-themes` with class-based switching. The `<html>` element gets `.dark` or `.light`, activating CSS variable sets in `globals.css`. All colors flow through CSS custom properties referenced by Tailwind semantic tokens.
 
 ## Coding Standards
 
@@ -11,8 +11,7 @@ Alga PSA supports light/dark themes via `next-themes` with class-based switching
 4. **Use the hydration-safe pattern** when reading `resolvedTheme` in components — track a `mounted` state via `useEffect` and only read the theme after mount to avoid SSR mismatches
 5. **Test both themes** — toggle dark mode and verify contrast, readability, borders
 6. **Add dark overrides in `globals.css`** when integrating new third-party components
-7. **Use `useAppTheme`** from `@alga-psa/ui/hooks` — not `useTheme` from next-themes directly (includes DB sync + feature flag)
-8. **Respect the feature flag** — new theme-dependent UI should check `useFeatureFlag('themes-enabled')`
+7. **Use `useAppTheme`** from `@alga-psa/ui/hooks` — not `useTheme` from next-themes directly (includes DB sync + preference persistence)
 
 ### Don't
 1. **Hardcode hex/rgb** in components — won't respond to theme changes

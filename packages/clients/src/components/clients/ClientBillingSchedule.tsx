@@ -8,6 +8,7 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { Info } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import type { BillingCycleType } from '@alga-psa/types';
 import {
   createNextBillingCycleAsync,
@@ -126,9 +127,7 @@ export function ClientBillingSchedule(props: { clientId: string }): React.JSX.El
         referenceDate: config.anchor.referenceDate ? config.anchor.referenceDate.slice(0, 10) : defaults.referenceDate
       });
     } catch (e) {
-      // eslint-disable-next-line no-console
-      console.error('Failed to load billing schedule', e);
-      toast.error('Failed to load billing schedule');
+      handleError(e, 'Failed to load billing schedule');
     } finally {
       setLoading(false);
     }
@@ -163,9 +162,7 @@ export function ClientBillingSchedule(props: { clientId: string }): React.JSX.El
         })
         .catch((e) => {
           if (previewRequestIdRef.current !== requestId) return;
-          // eslint-disable-next-line no-console
-          console.error('Failed to preview billing periods', e);
-          toast.error('Failed to preview billing periods');
+          handleError(e, 'Failed to preview billing periods');
         })
         .finally(() => {
           if (previewRequestIdRef.current !== requestId) return;
@@ -215,9 +212,7 @@ export function ClientBillingSchedule(props: { clientId: string }): React.JSX.El
       await loadFromServer();
       toast.success('Billing schedule saved');
     } catch (e) {
-      // eslint-disable-next-line no-console
-      console.error('Failed to save billing schedule', e);
-      toast.error(e instanceof Error ? e.message : 'Failed to save billing schedule');
+      handleError(e, 'Failed to save billing schedule');
     } finally {
       setSaving(false);
     }
@@ -233,9 +228,7 @@ export function ClientBillingSchedule(props: { clientId: string }): React.JSX.El
       }
       toast.success('Created next billing cycle');
     } catch (e) {
-      // eslint-disable-next-line no-console
-      console.error('Failed to create next billing cycle', e);
-      toast.error(e instanceof Error ? e.message : 'Failed to create next billing cycle');
+      handleError(e, 'Failed to create next billing cycle');
     } finally {
       setCreatingCycle(false);
     }

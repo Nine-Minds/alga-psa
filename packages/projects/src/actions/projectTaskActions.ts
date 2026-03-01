@@ -736,6 +736,87 @@ export const addTaskResourceAction = withAuth(async (
     }
 });
 
+export const assignTeamToProjectTask = withAuth(async (
+    user,
+    { tenant },
+    taskId: string,
+    teamId: string
+): Promise<void> => {
+    try {
+        const {knex: db} = await createTenantKnex();
+        await withTransaction(db, async (trx: Knex.Transaction) => {
+            await checkPermission(user, 'project', 'update', trx);
+
+            const task = await trx('project_tasks')
+                .where({ task_id: taskId, tenant })
+                .first();
+            if (!task) {
+                throw new Error('Task not found');
+            }
+
+            const team = await trx('teams')
+                .where({ team_id: teamId, tenant })
+                .first();
+            if (!team) {
+                throw new Error('Team not found');
+            }
+            if (!team.manager_id) {
+                throw new Error('Team lead not found');
+            }
+
+            const teamMembers = await trx('team_members')
+                .where({ team_id: teamId, tenant })
+                .select('user_id');
+
+            let assignedTo = task.assigned_to as string | null;
+            if (!assignedTo) {
+                assignedTo = team.manager_id;
+            }
+
+            await trx('project_tasks')
+                .where({ task_id: taskId, tenant })
+                .update({
+                    assigned_team_id: teamId,
+                    assigned_to: assignedTo,
+                    updated_at: new Date()
+                });
+
+            const memberIds = teamMembers
+                .map((member: { user_id: string }) => member.user_id)
+                .filter((userId: string) => userId && userId !== assignedTo);
+
+            if (memberIds.length === 0) {
+                return;
+            }
+
+            const existingResources = await trx('task_resources')
+                .where({ task_id: taskId, tenant })
+                .whereIn('additional_user_id', memberIds)
+                .select('additional_user_id');
+
+            const existingIds = new Set(existingResources.map((row: { additional_user_id: string }) => row.additional_user_id));
+            const toInsert = memberIds.filter((userId) => !existingIds.has(userId));
+
+            if (toInsert.length === 0) {
+                return;
+            }
+
+            await trx('task_resources').insert(
+                toInsert.map((userId) => ({
+                    tenant,
+                    task_id: taskId,
+                    assigned_to: assignedTo,
+                    additional_user_id: userId,
+                    role: 'team_member'
+                }))
+            );
+        });
+    } catch (error) {
+        console.error('Error assigning team to project task:', error);
+        throw error;
+    }
+});
+
 export const removeTaskResourceAction = withAuth(async (
     user,
     { tenant },

@@ -11,6 +11,7 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { toast } from 'react-hot-toast';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { formatDistanceToNow } from 'date-fns';
 import {
   getAllSessionsAction,
@@ -61,8 +62,7 @@ export default function AdminSessionManagement() {
       setFilteredSessions(sessionsData.sessions);
       setUsers(usersData);
     } catch (error) {
-      console.error('Failed to fetch sessions:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to load sessions');
+      handleError(error, 'Failed to load sessions');
     } finally {
       setLoading(false);
     }
@@ -160,8 +160,7 @@ export default function AdminSessionManagement() {
         await fetchSessions();
       }
     } catch (error) {
-      console.error('Failed to revoke session:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to revoke session');
+      handleError(error, 'Failed to revoke session');
     } finally {
       setRevoking(null);
     }

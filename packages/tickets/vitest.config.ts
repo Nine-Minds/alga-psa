@@ -4,6 +4,10 @@ import path from 'path';
 export default defineConfig({
   test: {
     environment: 'jsdom',
+    env: {
+      NODE_ENV: 'test',
+    },
+    setupFiles: [path.resolve(__dirname, './src/test/setup.ts')],
     include: ['src/**/*.test.{ts,tsx}'],
     sequence: { concurrent: false, shuffle: false },
     coverage: { enabled: false },
@@ -16,8 +20,14 @@ export default defineConfig({
       { find: /^@alga-psa\/types\/(.*)$/, replacement: path.resolve(__dirname, '../types/src/$1') },
       { find: /^@alga-psa\/event-schemas$/, replacement: path.resolve(__dirname, '../event-schemas/src/index.ts') },
       { find: /^@alga-psa\/event-schemas\/(.*)$/, replacement: path.resolve(__dirname, '../event-schemas/src/$1') },
+      { find: /^@alga-psa\/db$/, replacement: path.resolve(__dirname, '../db/src/index.ts') },
+      { find: /^@alga-psa\/db\/(.*)$/, replacement: path.resolve(__dirname, '../db/src/$1') },
+      { find: /^@alga-psa\/auth$/, replacement: path.resolve(__dirname, '../auth/src/index.ts') },
+      { find: /^@alga-psa\/auth\/(.*)$/, replacement: path.resolve(__dirname, '../auth/src/$1') },
       { find: /^@alga-psa\/tickets$/, replacement: path.resolve(__dirname, './src/index.ts') },
       { find: /^@alga-psa\/tickets\/(.*)$/, replacement: path.resolve(__dirname, './src/$1') },
+      { find: /^@alga-psa\/shared$/, replacement: path.resolve(__dirname, '../../shared') },
+      { find: /^@alga-psa\/shared\/(.*)$/, replacement: path.resolve(__dirname, '../../shared/$1') },
       { find: /^@shared$/, replacement: path.resolve(__dirname, '../../shared') },
       { find: /^@shared\/(.*)$/, replacement: path.resolve(__dirname, '../../shared/$1') },
     ],

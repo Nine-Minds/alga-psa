@@ -2,7 +2,7 @@
 
 
 import React, { useEffect, useState, useCallback } from 'react';
-import { TicketActivity, ActivityFilters } from "@alga-psa/types";
+import { TicketActivity, ActivityFilters, IPriority } from "@alga-psa/types";
 import { IClient } from "@alga-psa/types";
 import { IContact } from "@alga-psa/types";
 import { IStatus } from "@alga-psa/types";
@@ -12,7 +12,7 @@ import { TicketCard } from "./ActivityCard";
 import { fetchTicketActivities } from "@alga-psa/workflows/actions";
 import { getAllClients } from "@alga-psa/clients/actions";
 import { getAllContacts } from "@alga-psa/clients/actions";
-import { getTicketStatuses } from "@alga-psa/reference-data/actions";
+import { getTicketStatuses, getAllPriorities } from "@alga-psa/reference-data/actions";
 import { TicketSectionFiltersDialog } from "./filters/TicketSectionFiltersDialog";
 import { Filter, XCircle } from 'lucide-react';
 import { useActivityDrawer } from "./ActivityDrawerProvider";
@@ -31,6 +31,7 @@ export function TicketsSection({ limit = 5, onViewAll }: TicketsSectionProps) {
   const [clients, setClients] = useState<IClient[]>([]);
   const [contacts, setContacts] = useState<IContact[]>([]);
   const [statuses, setStatuses] = useState<IStatus[]>([]);
+  const [priorities, setPriorities] = useState<IPriority[]>([]);
   const [filterDataLoading, setFilterDataLoading] = useState(true);
 
   // Fetch initial activities and filter data
@@ -78,14 +79,16 @@ export function TicketsSection({ limit = 5, onViewAll }: TicketsSectionProps) {
     async function loadFilterData() {
       try {
         setFilterDataLoading(true);
-        const [clientData, contactData, statusData] = await Promise.all([
+        const [clientData, contactData, statusData, priorityData] = await Promise.all([
           getAllClients(false),
           getAllContacts('active'),
-          getTicketStatuses() // Fetch ticket statuses
+          getTicketStatuses(),
+          getAllPriorities('ticket')
         ]);
         setClients(clientData);
         setContacts(contactData);
-        setStatuses(statusData); // Set statuses state
+        setStatuses(statusData);
+        setPriorities(priorityData);
       } catch (err) {
         console.error('Error loading filter data:', err);
         // Optionally set an error state for filter data loading
@@ -223,6 +226,7 @@ export function TicketsSection({ limit = 5, onViewAll }: TicketsSectionProps) {
           clients={clients}
           contacts={contacts}
           statuses={statuses}
+          priorities={priorities}
         />
       )}
     </Card>

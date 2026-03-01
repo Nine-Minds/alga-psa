@@ -4,6 +4,7 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { Label } from '@alga-psa/ui/components/Label';
 import toast from 'react-hot-toast';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import {
   getClientContractLineSettingsAsync,
   updateClientContractLineSettingsAsync
@@ -34,7 +35,7 @@ const ClientZeroDollarInvoiceSettings: React.FC<ClientZeroDollarInvoiceSettingsP
           setUseDefault(true);
         }
       } catch (error) {
-        toast.error(error instanceof Error ? error.message : "Failed to load settings");
+        handleError(error, "Failed to load settings");
       }
     };
 
@@ -54,7 +55,7 @@ const ClientZeroDollarInvoiceSettings: React.FC<ClientZeroDollarInvoiceSettingsP
         toast.success("Zero-dollar invoice settings have been updated.");
       }
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to save settings");
+      handleError(error, "Failed to save settings");
     }
   };
 
@@ -71,7 +72,7 @@ const ClientZeroDollarInvoiceSettings: React.FC<ClientZeroDollarInvoiceSettingsP
         toast.success("Zero-dollar invoice settings have been updated.");
       }
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to save settings");
+      handleError(error, "Failed to save settings");
     }
   };
 
@@ -99,7 +100,7 @@ const ClientZeroDollarInvoiceSettings: React.FC<ClientZeroDollarInvoiceSettingsP
         }
       }
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to update settings");
+      handleError(error, "Failed to update settings");
     }
   };
 

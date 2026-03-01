@@ -5,9 +5,11 @@ import { TestContext } from '../../../../test-utils/testContext';
 import { setupCommonMocks, createMockUser, mockGetCurrentUser } from '../../../../test-utils/testMocks';
 import { createTestService } from '../../../../test-utils/billingTestHelpers';
 
-import { AccountingExportService } from 'server/src/lib/services/accountingExportService';
-import { AccountingExportRepository } from 'server/src/lib/repositories/accountingExportRepository';
-import { AccountingExportValidation } from 'server/src/lib/validation/accountingExportValidation';
+import {
+  AccountingExportService,
+  AccountingExportRepository,
+  AccountingExportValidation
+} from '@alga-psa/billing/services';
 
 const helpers = TestContext.createHelpers();
 const HOOK_TIMEOUT = 120_000;

@@ -29,3 +29,4 @@ export * from './comment-actions';
 export * from './ticket-number-actions';
 export * from './ticketCategoryActions';
 export * from './ticketResourceActions';
+export * from './teamAssignmentActions';

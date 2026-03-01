@@ -57,8 +57,21 @@ vi.mock('@alga-psa/users/actions', () => ({
   findUserById: vi.fn().mockResolvedValue(null),
 }));
 
-vi.mock('@alga-psa/auth', () => ({
-  getCurrentUser: vi.fn(),
+vi.mock('@alga-psa/auth', () => {
+  const getCurrentUser = vi.fn();
+  return {
+    getCurrentUser,
+    withAuth: (action: any) => async (...args: any[]) => {
+      const user = await getCurrentUser();
+      if (!user) {
+        throw new Error('No authenticated user found');
+      }
+      return action(user, { tenant: user.tenant }, ...args);
+    },
+  };
+});
+
+vi.mock('@alga-psa/auth/rbac', () => ({
   hasPermission: vi.fn().mockImplementation(async (user: IUser, resource: string, action: string): Promise<boolean> => {
     if (!user || !('roles' in user)) return false;
     const userWithRoles = user as IUserWithRoles;
@@ -70,7 +83,7 @@ vi.mock('@alga-psa/auth', () => ({
         (permission) => permission.resource === resource && permission.action === action,
       );
     });
-  }),
+  })
 }));
 
 vi.mock('next/cache', () => ({
@@ -82,6 +95,22 @@ vi.mock('@shared/services/numberingService', () => ({
   SharedNumberingService: {
     getNextNumber: vi.fn().mockResolvedValue('PRJ-0001'),
   },
+}));
+
+vi.mock('@alga-psa/event-bus/publishers', () => ({
+  publishEvent: vi.fn().mockResolvedValue(undefined),
+  publishWorkflowEvent: vi.fn().mockResolvedValue(undefined),
+}));
+
+vi.mock('@alga-psa/core', () => ({
+  deleteEntityWithValidation: vi.fn().mockResolvedValue({
+    deleted: true,
+    canDelete: true,
+    code: 'DELETED',
+    message: 'Deleted',
+    dependencies: [],
+    alternatives: [],
+  }),
 }));
 
 vi.mock('@alga-psa/db', () => ({
@@ -260,7 +289,7 @@ describe('Project Permissions', () => {
 
   it('should throw an error if user does not have view permission', async () => {
     vi.mocked(getCurrentUser).mockResolvedValue(userWithoutPermissions);
-    await expect(projectActions.getProjects()).rejects.toThrow('Permission denied: Cannot read project');
+    await expect(projectActions.getProjects()).resolves.toEqual({ permissionError: 'Permission denied: Cannot read project' });
   });
 
   it('should allow regular user to view a specific project', async () => {
@@ -277,7 +306,7 @@ describe('Project Permissions', () => {
 
   it('should throw an error if user does not have view permission for a specific project', async () => {
     vi.mocked(getCurrentUser).mockResolvedValue(userWithoutPermissions);
-    await expect(projectActions.getProject('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa')).rejects.toThrow('Permission denied: Cannot read project');
+    await expect(projectActions.getProject('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa')).resolves.toEqual({ permissionError: 'Permission denied: Cannot read project' });
   });
 
   const updateData: Partial<IProject> = {
@@ -293,12 +322,12 @@ describe('Project Permissions', () => {
 
   it('should not allow regular user to edit a project', async () => {
     vi.mocked(getCurrentUser).mockResolvedValue(regularUser);
-    await expect(projectActions.updateProject('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', updateData)).rejects.toThrow('Permission denied: Cannot update project');
+    await expect(projectActions.updateProject('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', updateData)).resolves.toEqual({ permissionError: 'Permission denied: Cannot update project' });
   });
 
   it('should throw an error if user does not have edit permission', async () => {
     vi.mocked(getCurrentUser).mockResolvedValue(userWithoutPermissions);
-    await expect(projectActions.updateProject('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', updateData)).rejects.toThrow('Permission denied: Cannot update project');
+    await expect(projectActions.updateProject('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', updateData)).resolves.toEqual({ permissionError: 'Permission denied: Cannot update project' });
   });
 
   const newProjectData: Omit<IProject, 'project_id' | 'created_at' | 'updated_at'> = {
@@ -321,26 +350,26 @@ describe('Project Permissions', () => {
 
   it('should not allow regular user to create a project', async () => {
     vi.mocked(getCurrentUser).mockResolvedValue(regularUser);
-    await expect(projectActions.createProject(newProjectData)).rejects.toThrow('Permission denied: Cannot create project');
+    await expect(projectActions.createProject(newProjectData)).resolves.toEqual({ permissionError: 'Permission denied: Cannot create project' });
   });
 
   it('should throw an error if user does not have create permission', async () => {
     vi.mocked(getCurrentUser).mockResolvedValue(userWithoutCreatePermission);
-    await expect(projectActions.createProject(newProjectData)).rejects.toThrow('Permission denied: Cannot create project');
+    await expect(projectActions.createProject(newProjectData)).resolves.toEqual({ permissionError: 'Permission denied: Cannot create project' });
   });
 
   it('should allow admin user to delete a project', async () => {
     vi.mocked(getCurrentUser).mockResolvedValue(adminUser);
-    await expect(projectActions.deleteProject('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa')).resolves.toBeUndefined();
+    await expect(projectActions.deleteProject('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa')).resolves.toMatchObject({ success: true, deleted: true });
   });
 
   it('should not allow regular user to delete a project', async () => {
     vi.mocked(getCurrentUser).mockResolvedValue(regularUser);
-    await expect(projectActions.deleteProject('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa')).rejects.toThrow('Permission denied: Cannot delete project');
+    await expect(projectActions.deleteProject('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa')).resolves.toEqual({ permissionError: 'Permission denied: Cannot delete project' });
   });
 
   it('should throw an error if user does not have delete permission', async () => {
     vi.mocked(getCurrentUser).mockResolvedValue(userWithoutPermissions);
-    await expect(projectActions.deleteProject('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa')).rejects.toThrow('Permission denied: Cannot delete project');
+    await expect(projectActions.deleteProject('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa')).resolves.toEqual({ permissionError: 'Permission denied: Cannot delete project' });
   });
 });

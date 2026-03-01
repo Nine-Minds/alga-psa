@@ -16,6 +16,7 @@ import { ITicket, IClient, IContact, IProject } from '@alga-psa/types';
 import { getAllClients } from '@alga-psa/clients/actions';
 import { getServiceTypesForSelection } from '@alga-psa/billing/actions';
 import { toast } from 'react-hot-toast';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 
 export type QuickCreateType = 'ticket' | 'client' | 'contact' | 'project' | 'asset' | 'service' | 'product' | null;
 
@@ -38,8 +39,7 @@ export function QuickCreateDialog({ type, onClose }: QuickCreateDialogProps) {
       getAllClients(false)
         .then(setClients)
         .catch((error) => {
-          console.error('Failed to load clients:', error);
-          toast.error('Failed to load clients');
+          handleError(error, 'Failed to load clients');
         })
         .finally(() => setIsLoadingClients(false));
     }
@@ -52,8 +52,7 @@ export function QuickCreateDialog({ type, onClose }: QuickCreateDialogProps) {
       getServiceTypesForSelection()
         .then(setServiceTypes)
         .catch((error) => {
-          console.error('Failed to load service types:', error);
-          toast.error('Failed to load service types');
+          handleError(error, 'Failed to load service types');
         })
         .finally(() => setIsLoadingServiceTypes(false));
     }

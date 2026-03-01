@@ -7,6 +7,7 @@ import { getTaskWithDetails } from '@alga-psa/projects/actions/projectTaskAction
 import { getWorkItemById } from '@alga-psa/scheduling/actions';
 import { getCurrentUser, getAllUsersBasic } from '@alga-psa/users/actions';
 import { toast } from 'react-hot-toast';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import TicketDetails from '@alga-psa/tickets/components/ticket/TicketDetails';
 import TaskEdit from '@alga-psa/projects/components/TaskEdit';
 import EntryPopup from '../../../schedule/EntryPopup';
@@ -43,8 +44,7 @@ function InteractionDrawerContent({ workItemId }: { workItemId: string }) {
                 const interactionData = await getInteractionById(workItemId);
                 setInteraction(interactionData);
             } catch (error) {
-                console.error('Error fetching interaction:', error);
-                toast.error('Failed to load interaction details');
+                handleError(error, 'Failed to load interaction details');
             } finally {
                 setLoading(false);
             }
@@ -108,8 +108,7 @@ export function WorkItemDrawer({
                 }
                 setUsers(allUsers || []);
             } catch (error) {
-                console.error('Error loading users:', error);
-                toast.error('Failed to load users. Please try refreshing the page.');
+                handleError(error, 'Failed to load users. Please try refreshing the page.');
                 setUsers([]);
             } finally {
                 console.log('Finished loading users, setting isUsersLoading to false');

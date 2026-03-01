@@ -6,7 +6,7 @@ import { Knex } from 'knex';
 /**
  * Entity types that can have associated images
  */
-export type EntityType = 'user' | 'contact' | 'client' | 'tenant';
+export type EntityType = 'user' | 'contact' | 'client' | 'tenant' | 'team';
 
 /**
  * Retrieves the image URL for an entity (user avatar, contact avatar, client logo).

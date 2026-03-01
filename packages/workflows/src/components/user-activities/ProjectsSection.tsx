@@ -2,7 +2,7 @@
 
 
 import React, { useEffect, useState, useCallback } from 'react';
-import { ProjectTaskActivity, ActivityFilters } from '@alga-psa/types';
+import { ProjectTaskActivity, ActivityFilters, IPriority } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { ProjectTaskCard } from './ActivityCard';
@@ -11,7 +11,9 @@ import { ProjectSectionFiltersDialog } from './filters/ProjectSectionFiltersDial
 import { Filter, XCircle } from 'lucide-react';
 import type { IProject, IProjectPhase } from '@alga-psa/types';
 import { getProjects } from '@alga-psa/projects/actions/projectActions';
+import { getAllPriorities } from '@alga-psa/reference-data/actions';
 import { useActivityDrawer } from './ActivityDrawerProvider';
+import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
 interface ProjectsSectionProps {
   limit?: number;
@@ -26,6 +28,7 @@ export function ProjectsSection({ limit = 5, onViewAll }: ProjectsSectionProps) 
   const [isFilterDialogOpen, setIsFilterDialogOpen] = useState(false);
   const [projectTaskFilters, setProjectTaskFilters] = useState<Partial<ActivityFilters>>({ isClosed: false });
   const [projects, setProjects] = useState<IProject[]>([]);
+  const [priorities, setPriorities] = useState<IPriority[]>([]);
   const [filterDataLoading, setFilterDataLoading] = useState(true);
 
   // Fetch initial activities and filter data
@@ -73,8 +76,16 @@ export function ProjectsSection({ limit = 5, onViewAll }: ProjectsSectionProps) 
     async function loadFilterData() {
       try {
         setFilterDataLoading(true);
-        const projectsData = await getProjects();
+        const [projectsData, priorityData] = await Promise.all([
+          getProjects(),
+          getAllPriorities('project_task')
+        ]);
+        if (isActionPermissionError(projectsData)) {
+          handleError(projectsData.permissionError);
+          return;
+        }
         setProjects(projectsData);
+        setPriorities(priorityData);
       } catch (err) {
         console.error('Error loading filter data:', err);
         // Optionally set an error state for filter data loading
@@ -211,6 +222,7 @@ export function ProjectsSection({ limit = 5, onViewAll }: ProjectsSectionProps) 
           onApplyFilters={handleApplyFilters}
           projects={projects}
           phases={[]}
+          priorities={priorities}
         />
       )}
     </Card>

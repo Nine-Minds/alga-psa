@@ -21,6 +21,7 @@ import ColorPicker from '@alga-psa/ui/components/ColorPicker';
 import { StatusImportDialog } from '@alga-psa/ui/components/settings/dialogs/StatusImportDialog';
 import { ConflictResolutionDialog } from '@alga-psa/reference-data/components';
 import { toast } from 'react-hot-toast';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 
 export function TenantProjectTaskStatusSettings() {
   const STATUS_TYPE = 'project_task'; // Fixed to project_task type
@@ -110,9 +111,7 @@ export function TenantProjectTaskStatusSettings() {
       await loadStatuses();
       setShowDialog(false);
     } catch (error) {
-      console.error('Failed to save status:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to save status. Please try again.';
-      toast.error(errorMessage);
+      handleError(error, 'Failed to save status. Please try again.');
     } finally {
       setSubmitting(false);
     }
@@ -128,8 +127,7 @@ export function TenantProjectTaskStatusSettings() {
       setStatuses(statuses.filter(s => s.status_id !== statusId));
       toast.success(`Status "${statusName}" deleted successfully`);
     } catch (error: any) {
-      const errorMessage = error.message || 'Failed to delete status. It may be in use by projects.';
-      toast.error(errorMessage);
+      handleError(error, 'Failed to delete status. It may be in use by projects.');
     }
   }
 
@@ -218,8 +216,7 @@ export function TenantProjectTaskStatusSettings() {
         setSelectedImportStatuses([]);
       }
     } catch (error) {
-      console.error('Error importing statuses:', error);
-      toast.error('Failed to import statuses');
+      handleError(error, 'Failed to import statuses');
     }
   }
 
@@ -250,8 +247,7 @@ export function TenantProjectTaskStatusSettings() {
       setImportConflicts([]);
       setConflictResolutions({});
     } catch (error) {
-      console.error('Error importing statuses:', error);
-      toast.error('Failed to import statuses');
+      handleError(error, 'Failed to import statuses');
     }
   }
 

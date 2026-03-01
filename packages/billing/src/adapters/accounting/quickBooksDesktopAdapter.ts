@@ -5,7 +5,7 @@ import {
   AccountingExportAdapterContext,
   AccountingExportDeliveryResult,
   AccountingExportTransformResult
-} from './accountingExportAdapter';
+} from '@alga-psa/types';
 
 export class QuickBooksDesktopAdapter implements AccountingExportAdapter {
   static readonly TYPE = 'quickbooks_desktop';

@@ -25,6 +25,7 @@ import { updateDocument } from '@alga-psa/documents/actions/documentActions';
 import { downloadDocumentInBrowser } from '@alga-psa/documents/actions';
 import { downloadDocument } from '@alga-psa/documents/lib/documentUtils';
 import { toast } from 'react-hot-toast';
+import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { useRegisterUnsavedChanges } from '@alga-psa/ui/context';
 import FolderSelectorModal from '@alga-psa/documents/components/FolderSelectorModal';
@@ -151,11 +152,14 @@ export default function TaskDocumentsSimple({
     try {
       setLoading(true);
       const response = await getDocumentsByEntity(taskId!, 'project_task');
+      if (isActionPermissionError(response)) {
+        handleError(response.permissionError);
+        return;
+      }
       setDocuments(response.documents);
       setDocumentsLoaded(true);
     } catch (error) {
-      console.error('Error fetching documents:', error);
-      toast.error('Failed to load documents');
+      handleError(error, 'Failed to load documents');
     } finally {
       setLoading(false);
     }
@@ -176,11 +180,14 @@ export default function TaskDocumentsSimple({
     try {
       setLoading(true);
       const response = await getDocumentsByEntity(taskId!, 'project_task');
+      if (isActionPermissionError(response)) {
+        handleError(response.permissionError);
+        return;
+      }
       setDocuments(response.documents);
       setDocumentsLoaded(true);
     } catch (error) {
-      console.error('Error fetching documents:', error);
-      toast.error('Failed to load documents');
+      handleError(error, 'Failed to load documents');
     } finally {
       setLoading(false);
     }
@@ -241,8 +248,7 @@ export default function TaskDocumentsSimple({
         setCurrentContent(DEFAULT_BLOCKS);
       }
     } catch (error) {
-      console.error('Error loading document content:', error);
-      toast.error('Failed to load document content');
+      handleError(error, 'Failed to load document content');
       setCurrentContent(DEFAULT_BLOCKS);
     } finally {
       setIsLoadingContent(false);
@@ -328,8 +334,7 @@ export default function TaskDocumentsSimple({
       setIsCreatingNew(false);
       setSelectedFolderPath(null); // Reset folder selection
     } catch (error) {
-      console.error('Error creating document:', error);
-      toast.error('Failed to create document');
+      handleError(error, 'Failed to create document');
     } finally {
       setIsSaving(false);
     }
@@ -367,8 +372,7 @@ export default function TaskDocumentsSimple({
       setHasContentChanged(false);
       setIsEditMode(false);
     } catch (error) {
-      console.error('Error saving document:', error);
-      toast.error('Failed to save document');
+      handleError(error, 'Failed to save document');
     } finally {
       setIsSaving(false);
     }
@@ -395,8 +399,7 @@ export default function TaskDocumentsSimple({
       toast.success('Document removed successfully');
       await handleDocumentMutation();
     } catch (error) {
-      console.error('Error removing document:', error);
-      toast.error('Failed to remove document');
+      handleError(error, 'Failed to remove document');
     } finally {
       setShowDeleteConfirm(false);
       setDocumentToDelete(null);
@@ -472,8 +475,7 @@ export default function TaskDocumentsSimple({
         await downloadDocument(downloadUrl, filename, true);
       }
     } catch (error) {
-      console.error('Error downloading document:', error);
-      toast.error('Failed to download document');
+      handleError(error, 'Failed to download document');
     }
   };
 
@@ -483,8 +485,7 @@ export default function TaskDocumentsSimple({
       const filename = `${document.document_name || 'document'}.pdf`;
       await downloadDocument(downloadUrl, filename, true);
     } catch (error) {
-      console.error('Error exporting PDF:', error);
-      toast.error('Failed to export PDF');
+      handleError(error, 'Failed to export PDF');
     }
   };
 
@@ -831,8 +832,7 @@ export default function TaskDocumentsSimple({
                         throw new Error(result.error || 'Download failed');
                       }
                     } catch (error) {
-                      console.error('Error downloading document:', error);
-                      toast.error('Failed to download document');
+                      handleError(error, 'Failed to download document');
                     }
                   }}
                   variant="default"

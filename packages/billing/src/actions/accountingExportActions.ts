@@ -1,29 +1,30 @@
 'use server';
 
-import { AccountingExportService } from 'server/src/lib/services/accountingExportService';
+import { AccountingExportService } from '../services/accountingExportService';
 import type {
   AccountingExportBatch,
   AccountingExportError,
   AccountingExportLine,
   AccountingExportStatus,
   IUser,
-  IUserWithRoles
+  IUserWithRoles,
+  AccountingExportDeliveryResult
 } from '@alga-psa/types';
 import type {
   CreateExportBatchInput,
   CreateExportLineInput,
   CreateExportErrorInput,
   UpdateExportBatchStatusInput
-} from 'server/src/lib/repositories/accountingExportRepository';
-import type { AccountingExportDeliveryResult } from '@alga-psa/types';
+} from '../repositories/accountingExportRepository';
 import {
   AccountingExportInvoiceSelector,
   type InvoiceSelectionFilters
-} from 'server/src/lib/services/accountingExportInvoiceSelector';
+} from '../services/accountingExportInvoiceSelector';
 
-import { AppError } from '@alga-psa/core';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
+import { permissionError } from '@alga-psa/ui/lib/errorHandling';
+import type { ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
 type AccountingExportPermission = 'create' | 'read' | 'update' | 'execute';
 
@@ -72,35 +73,31 @@ interface PermissionOverrideContext {
   user?: IUser;
 }
 
-function checkAccountingExportPermission(
+async function checkAccountingExportPermission(
   user: IUserWithRoles,
   action: AccountingExportPermission
-): void {
+): Promise<ActionPermissionError | null> {
   if (user.user_type === 'client') {
-    throw new AppError(
-      'ACCOUNTING_EXPORT_FORBIDDEN',
-      'Client portal users are not permitted to manage accounting exports'
-    );
+    return permissionError('Client portal users are not permitted to manage accounting exports');
   }
 
   // Accounting exports are currently managed from billing/integrations surfaces; gate with billing settings permissions.
   // Map export actions to billing_settings read/update to align with mapping + CSV export permissions.
   const billingAction = action === 'read' ? 'read' : 'update';
-  const allowed = hasPermission(user, 'billing_settings', billingAction);
+  const allowed = await hasPermission(user, 'billing_settings', billingAction);
   if (!allowed) {
-    throw new AppError(
-      'ACCOUNTING_EXPORT_FORBIDDEN',
-      `Permission denied: Cannot ${ACTION_DESCRIPTIONS[action]}`
-    );
+    return permissionError(`Permission denied: Cannot ${ACTION_DESCRIPTIONS[action]}`);
   }
+  return null;
 }
 
 export const createAccountingExportBatch = withAuth(async (
   user,
   { tenant },
   input: CreateExportBatchInput
-): Promise<AccountingExportBatch> => {
-  await checkAccountingExportPermission(user, 'create');
+): Promise<AccountingExportBatch | ActionPermissionError> => {
+  const denied = await checkAccountingExportPermission(user, 'create');
+  if (denied) return denied;
   const selector = await AccountingExportInvoiceSelector.create();
   const filters = normalizeCreateBatchFilters(input.filters);
   const { batch } = await selector.createBatchFromFilters({
@@ -118,8 +115,9 @@ export const appendAccountingExportLines = withAuth(async (
   { tenant },
   batchId: string,
   lines: CreateExportLineInput[]
-): Promise<AccountingExportLine[]> => {
-  await checkAccountingExportPermission(user, 'update');
+): Promise<AccountingExportLine[] | ActionPermissionError> => {
+  const denied = await checkAccountingExportPermission(user, 'update');
+  if (denied) return denied;
   const service = await AccountingExportService.create();
   return service.appendLines(batchId, { lines });
 });
@@ -129,8 +127,9 @@ export const appendAccountingExportErrors = withAuth(async (
   { tenant },
   batchId: string,
   errors: CreateExportErrorInput[]
-): Promise<AccountingExportError[]> => {
-  await checkAccountingExportPermission(user, 'update');
+): Promise<AccountingExportError[] | ActionPermissionError> => {
+  const denied = await checkAccountingExportPermission(user, 'update');
+  if (denied) return denied;
   const service = await AccountingExportService.create();
   return service.appendErrors(batchId, { errors });
 });
@@ -140,8 +139,9 @@ export const updateAccountingExportBatchStatus = withAuth(async (
   { tenant },
   batchId: string,
   updates: UpdateExportBatchStatusInput
-): Promise<AccountingExportBatch | null> => {
-  await checkAccountingExportPermission(user, 'update');
+): Promise<AccountingExportBatch | null | ActionPermissionError> => {
+  const denied = await checkAccountingExportPermission(user, 'update');
+  if (denied) return denied;
   const service = await AccountingExportService.create();
   return service.updateBatchStatus(batchId, {
     ...updates,
@@ -157,8 +157,9 @@ export const getAccountingExportBatch = withAuth(async (
   batch: AccountingExportBatch | null;
   lines: AccountingExportLine[];
   errors: AccountingExportError[];
-}> => {
-  await checkAccountingExportPermission(user, 'read');
+} | ActionPermissionError> => {
+  const denied = await checkAccountingExportPermission(user, 'read');
+  if (denied) return denied;
   const service = await AccountingExportService.create();
   return service.getBatchWithDetails(batchId);
 });
@@ -167,8 +168,9 @@ export const listAccountingExportBatches = withAuth(async (
   user,
   { tenant },
   params: { status?: AccountingExportStatus; adapter_type?: string } = {}
-): Promise<AccountingExportBatch[]> => {
-  await checkAccountingExportPermission(user, 'read');
+): Promise<AccountingExportBatch[] | ActionPermissionError> => {
+  const denied = await checkAccountingExportPermission(user, 'read');
+  if (denied) return denied;
   const service = await AccountingExportService.create();
   return service.listBatches(params);
 });
@@ -177,8 +179,9 @@ export const executeAccountingExportBatch = withAuth(async (
   user,
   { tenant },
   batchId: string
-): Promise<AccountingExportDeliveryResult> => {
-  await checkAccountingExportPermission(user, 'execute');
+): Promise<AccountingExportDeliveryResult | ActionPermissionError> => {
+  const denied = await checkAccountingExportPermission(user, 'execute');
+  if (denied) return denied;
   const service = await AccountingExportService.create();
   return service.executeBatch(batchId);
 });
@@ -187,8 +190,9 @@ export const previewAccountingExport = withAuth(async (
   user,
   { tenant },
   filters: AccountingExportPreviewFilters = {}
-): Promise<AccountingExportPreviewResult> => {
-  await checkAccountingExportPermission(user, 'read');
+): Promise<AccountingExportPreviewResult | ActionPermissionError> => {
+  const denied = await checkAccountingExportPermission(user, 'read');
+  if (denied) return denied;
 
   const selector = await AccountingExportInvoiceSelector.create();
   const normalizedFilters: InvoiceSelectionFilters = {

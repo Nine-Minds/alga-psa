@@ -17,9 +17,10 @@ import {
   AccountingExportDocument,
   AccountingExportFileAttachment,
   PendingTaxImportRecord
-} from './accountingExportAdapter';
+} from '@alga-psa/types';
 import { createTenantKnex } from '@alga-psa/db';
-import { AccountingMappingResolver, KnexInvoiceMappingRepository } from '@alga-psa/billing';
+import { AccountingMappingResolver } from '../../services/accountingMappingResolver';
+import { KnexInvoiceMappingRepository } from '../../repositories/invoiceMappingRepository';
 import { unparseCSV } from '@alga-psa/core';
 
 /**
