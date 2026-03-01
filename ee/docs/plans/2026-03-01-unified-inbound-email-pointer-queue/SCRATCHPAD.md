@@ -134,6 +134,7 @@ Working notes for moving Microsoft, Google, and IMAP inbound email ingress to on
 - (2026-03-01) Completed `T025`: Added queue payload-guard test validating enqueue rejects raw-content fields and enforces pointer-only contract.
 - (2026-03-01) Completed `T026`: Added IMAP regression test validating unified queue mode bypasses legacy in-memory async queue path even when legacy async flag is enabled.
 - (2026-03-01) Completed `T027`: Added Microsoft security regression test validating `clientState` mismatch blocks enqueue in unified mode.
+- (2026-03-01) Completed `T028`: Added Google security regression test validating JWT auth header remains required in enqueue-only mode.
 
 ## Open Questions
 

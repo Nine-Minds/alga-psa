@@ -164,7 +164,7 @@
   {
     "id": "T028",
     "description": "Security: Google webhook JWT verification remains enforced in enqueue-only mode",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F020"]
   },
   {

@@ -263,4 +263,37 @@ describe('Google unified inbound pointer queue ingress', () => {
       error: 'Failed to enqueue Google pointer job',
     });
   });
+
+  it('T028: Google JWT verification/auth remains enforced in enqueue-only mode', async () => {
+    const { POST } = await import('@alga-psa/integrations/webhooks/email/google');
+
+    const notification = {
+      emailAddress: 'support@example.com',
+      historyId: '45',
+    };
+    const pubsubPayload = {
+      message: {
+        data: Buffer.from(JSON.stringify(notification)).toString('base64'),
+        messageId: 'pubsub-msg-4',
+        publishTime: new Date().toISOString(),
+      },
+      subscription: 'projects/example-project/subscriptions/sub-google-1',
+    };
+
+    const request = new NextRequest('http://localhost:3000/api/email/webhooks/google', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify(pubsubPayload),
+    });
+
+    const response = await POST(request);
+    expect(response.status).toBe(401);
+    const body = await response.json();
+    expect(body).toMatchObject({
+      error: 'Unauthorized - JWT token required',
+    });
+    expect(enqueueUnifiedInboundEmailQueueJobMock).not.toHaveBeenCalled();
+  });
 });
