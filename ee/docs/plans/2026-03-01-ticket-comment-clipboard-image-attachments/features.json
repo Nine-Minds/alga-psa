@@ -29,7 +29,7 @@
   {
     "id": "F004",
     "description": "Apply deterministic filename convention for clipboard-uploaded images",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Explicit Decisions Locked In"
