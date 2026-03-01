@@ -110,7 +110,7 @@
   {
     "id": "F019",
     "description": "Retire or bypass legacy IMAP in-memory async queue path for production processing",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Problem", "Requirements"]
   },
   {

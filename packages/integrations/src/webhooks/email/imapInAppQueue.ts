@@ -1,7 +1,10 @@
 import type { EmailMessageDetails } from '@alga-psa/shared/interfaces/inbound-email.interfaces';
 import { processInboundEmailInApp } from '@alga-psa/shared/services/email/processInboundEmailInApp';
 import { publishEvent } from '@alga-psa/shared/events/publisher';
-import { isImapInboundEmailInAppEventBusFallbackEnabled } from '@alga-psa/shared/services/email/inboundEmailInAppFeatureFlag';
+import {
+  isImapInboundEmailInAppEventBusFallbackEnabled,
+  isUnifiedInboundEmailPointerQueueEnabled,
+} from '@alga-psa/shared/services/email/inboundEmailInAppFeatureFlag';
 
 interface ImapInAppQueueJob {
   jobId: string;
@@ -92,6 +95,17 @@ export function enqueueImapInAppJob(input: {
   providerId: string;
   emailData: EmailMessageDetails;
 }): { jobId: string; queueDepth: number; activeWorkers: number } {
+  if (
+    isUnifiedInboundEmailPointerQueueEnabled({
+      tenantId: input.tenantId,
+      providerId: input.providerId,
+    })
+  ) {
+    throw new Error(
+      `Legacy IMAP in-memory queue is disabled when unified pointer queue mode is enabled for provider ${input.providerId}`
+    );
+  }
+
   const job: ImapInAppQueueJob = {
     jobId: nextJobId(),
     tenantId: input.tenantId,

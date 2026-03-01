@@ -28,6 +28,7 @@ Working notes for moving Microsoft, Google, and IMAP inbound email ingress to on
 - IMAP listener now has enough metadata at fetch time (`mailbox`, `uid`, `uidValidity`, `messageId`) to emit pointer-only webhook payloads; no raw body is required for unified queue ingress.
 - Unified queue internals now track ready/processing/inflight/DLQ keys with lease metadata, enabling explicit claim and completion lifecycle management.
 - Queue enqueue now enforces a runtime pointer-only payload guard that rejects forbidden MIME/body/attachment keys at both top-level and nested pointer metadata.
+- Legacy IMAP in-memory async queue now rejects enqueue attempts when unified pointer queue mode is enabled for the same tenant/provider, preventing accidental production regressions to in-memory processing.
 
 ## Commands / Runbooks
 
@@ -39,6 +40,7 @@ Working notes for moving Microsoft, Google, and IMAP inbound email ingress to on
 - `npm -w shared run typecheck` (after Microsoft queue-mode changes)
 - `npm -w server run typecheck` (after Microsoft queue-mode changes)
 - `npm -w imap-service run build`
+- `npm -w @alga-psa/integrations run typecheck`
 
 ## Links / References
 
@@ -78,6 +80,7 @@ Working notes for moving Microsoft, Google, and IMAP inbound email ingress to on
 - (2026-03-01) Completed `F016`: Source-unavailable fetch failures now resolve as deterministic `skipped` outcomes (`source_unavailable:*`) recorded in `email_processed_messages` and do not rethrow for retry.
 - (2026-03-01) Completed `F017`: Consumer idempotency now uses a normalized external identity format (`<provider>:<messageId>`) prior to persistence checks.
 - (2026-03-01) Completed `F018`: Added `assertPointerOnlyPayload` validation in enqueue to reject raw content-like keys (`rawMime`, `attachments`, `body`, etc.) and enforce pointer-only queue contracts at runtime.
+- (2026-03-01) Completed `F019`: Added a defensive runtime guard in `imapInAppQueue` that throws when unified pointer queue mode is enabled for the tenant/provider, ensuring legacy in-memory queue path is bypassed/retired for production unified-mode processing.
 
 ## Open Questions
 
