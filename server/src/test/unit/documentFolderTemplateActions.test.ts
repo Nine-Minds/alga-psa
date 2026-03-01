@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { getFolderTemplate, getFolderTemplates } from '@alga-psa/documents/actions/folderTemplateActions';
+import { createFolderTemplate, getFolderTemplate, getFolderTemplates } from '@alga-psa/documents/actions/folderTemplateActions';
 import type { IUser } from '@alga-psa/types';
 
 vi.mock('@alga-psa/db', () => ({
@@ -40,6 +40,117 @@ function createMockKnex() {
   knexFn.queryBuilder = queryBuilder;
 
   return knexFn;
+}
+
+function createCreateTemplateMocks() {
+  const templateRecord = {
+    template_id: 'tpl-100',
+    tenant: 'tenant-123',
+    name: 'Client Default',
+    entity_type: 'client',
+    is_default: true,
+    created_at: new Date(),
+    updated_at: new Date(),
+    created_by: 'user-123',
+    updated_by: 'user-123',
+  };
+
+  const insertedItems = [
+    {
+      template_item_id: 'item-1',
+      tenant: 'tenant-123',
+      template_id: 'tpl-100',
+      parent_template_item_id: null,
+      folder_name: 'Contracts',
+      folder_path: '/Contracts',
+      sort_order: 0,
+      is_client_visible: true,
+      created_at: new Date(),
+      updated_at: new Date(),
+      created_by: 'user-123',
+      updated_by: 'user-123',
+    },
+    {
+      template_item_id: 'item-2',
+      tenant: 'tenant-123',
+      template_id: 'tpl-100',
+      parent_template_item_id: 'item-1',
+      folder_name: 'SLAs',
+      folder_path: '/Contracts/SLAs',
+      sort_order: 1,
+      is_client_visible: false,
+      created_at: new Date(),
+      updated_at: new Date(),
+      created_by: 'user-123',
+      updated_by: 'user-123',
+    },
+  ];
+
+  const updateDefaultsBuilder: any = {
+    where: vi.fn().mockReturnThis(),
+    andWhere: vi.fn().mockReturnThis(),
+    update: vi.fn().mockResolvedValue(1),
+  };
+
+  const templateInsertReturningBuilder: any = {
+    returning: vi.fn().mockResolvedValue([templateRecord]),
+  };
+
+  const templateInsertBuilder: any = {
+    insert: vi.fn().mockReturnValue(templateInsertReturningBuilder),
+  };
+
+  const templateBuilders = [updateDefaultsBuilder, templateInsertBuilder];
+
+  const itemsInsertBuilder: any = {
+    insert: vi.fn().mockResolvedValue(undefined),
+  };
+
+  const itemsSelectBuilder: any = {
+    where: vi.fn().mockReturnThis(),
+    andWhere: vi.fn().mockReturnThis(),
+    select: vi.fn().mockReturnThis(),
+    orderBy: vi.fn().mockResolvedValue(insertedItems),
+  };
+
+  const itemBuilders = [itemsInsertBuilder, itemsSelectBuilder];
+
+  const trx: any = vi.fn((tableName: string) => {
+    if (tableName === 'document_folder_templates') {
+      const nextBuilder = templateBuilders.shift();
+      if (!nextBuilder) {
+        throw new Error('Unexpected extra template table call');
+      }
+
+      return nextBuilder;
+    }
+
+    if (tableName === 'document_folder_template_items') {
+      const nextBuilder = itemBuilders.shift();
+      if (!nextBuilder) {
+        throw new Error('Unexpected extra item table call');
+      }
+
+      return nextBuilder;
+    }
+
+    throw new Error(`Unexpected table: ${tableName}`);
+  });
+
+  const knexFn: any = vi.fn();
+  knexFn.transaction = vi.fn(async (callback: any) => callback(trx));
+
+  return {
+    knexFn,
+    trx,
+    updateDefaultsBuilder,
+    templateInsertBuilder,
+    templateInsertReturningBuilder,
+    itemsInsertBuilder,
+    itemsSelectBuilder,
+    templateRecord,
+    insertedItems,
+  };
 }
 
 describe('document folder template actions', () => {
@@ -215,5 +326,95 @@ describe('document folder template actions', () => {
 
     await expect(getFolderTemplate('tpl-1')).resolves.toEqual({ permissionError: 'Permission denied' });
     expect(mockKnex).not.toHaveBeenCalled();
+  });
+
+  it('creates a folder template with items and unsets previous defaults for entity type', async () => {
+    const createMocks = createCreateTemplateMocks();
+
+    vi.mocked(createTenantKnex).mockResolvedValue({
+      knex: createMocks.knexFn,
+      tenant: mockUser.tenant,
+    });
+
+    const result = await createFolderTemplate({
+      name: ' Client Default ',
+      entityType: 'CLIENT',
+      isDefault: true,
+      items: [
+        {
+          folderPath: '/Contracts',
+          sortOrder: 0,
+          isClientVisible: true,
+        },
+        {
+          folderPath: '/Contracts/SLAs',
+          sortOrder: 1,
+        },
+      ],
+    });
+
+    expect(result).toEqual({
+      ...createMocks.templateRecord,
+      items: createMocks.insertedItems,
+    });
+
+    expect(createMocks.knexFn.transaction).toHaveBeenCalledTimes(1);
+    expect(createMocks.updateDefaultsBuilder.where).toHaveBeenCalledWith('tenant', mockUser.tenant);
+    expect(createMocks.updateDefaultsBuilder.andWhere).toHaveBeenCalledWith('entity_type', 'client');
+    expect(createMocks.updateDefaultsBuilder.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        is_default: false,
+        updated_by: mockUser.user_id,
+      })
+    );
+
+    expect(createMocks.templateInsertBuilder.insert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenant: mockUser.tenant,
+        name: 'Client Default',
+        entity_type: 'client',
+        is_default: true,
+        created_by: mockUser.user_id,
+        updated_by: mockUser.user_id,
+      })
+    );
+
+    const insertedItemRows = createMocks.itemsInsertBuilder.insert.mock.calls[0][0];
+    expect(insertedItemRows).toHaveLength(2);
+
+    const parentRow = insertedItemRows.find((row: any) => row.folder_path === '/Contracts');
+    const childRow = insertedItemRows.find((row: any) => row.folder_path === '/Contracts/SLAs');
+
+    expect(parentRow.parent_template_item_id).toBeNull();
+    expect(childRow.parent_template_item_id).toEqual(parentRow.template_item_id);
+    expect(parentRow.folder_name).toBe('Contracts');
+    expect(childRow.folder_name).toBe('SLAs');
+    expect(parentRow.is_client_visible).toBe(true);
+    expect(childRow.is_client_visible).toBe(false);
+  });
+
+  it('requires document create permission for createFolderTemplate', async () => {
+    vi.mocked(hasPermission).mockResolvedValue(false);
+
+    await expect(
+      createFolderTemplate({
+        name: 'Client Default',
+        entityType: 'client',
+        items: [],
+      })
+    ).resolves.toEqual({ permissionError: 'Permission denied' });
+  });
+
+  it('throws when template items contain duplicate folder paths', async () => {
+    await expect(
+      createFolderTemplate({
+        name: 'Client Default',
+        entityType: 'client',
+        items: [
+          { folderPath: '/Contracts' },
+          { folderPath: '/Contracts' },
+        ],
+      })
+    ).rejects.toThrow('Duplicate template item folderPath: /Contracts');
   });
 });
