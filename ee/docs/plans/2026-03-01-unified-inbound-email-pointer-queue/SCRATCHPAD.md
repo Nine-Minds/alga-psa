@@ -73,6 +73,7 @@ Working notes for moving Microsoft, Google, and IMAP inbound email ingress to on
 - (2026-03-01) Completed `F013`: Added lease-based reclaim (`reclaimExpiredUnifiedInboundEmailQueueJobs`) so stale in-flight jobs are resurfaced back to the ready queue.
 - (2026-03-01) Completed `F014`: Failed jobs now increment `attempt` in queue payload state and only requeue while below configured `maxAttempts`.
 - (2026-03-01) Completed `F015`: Once `attempt` reaches `maxAttempts`, failed jobs are routed to the dedicated unified inbound pointer DLQ key.
+- (2026-03-01) Completed `F016`: Source-unavailable fetch failures now resolve as deterministic `skipped` outcomes (`source_unavailable:*`) recorded in `email_processed_messages` and do not rethrow for retry.
 
 ## Open Questions
 

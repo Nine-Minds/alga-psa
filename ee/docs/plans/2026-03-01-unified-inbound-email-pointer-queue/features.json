@@ -92,7 +92,7 @@
   {
     "id": "F016",
     "description": "Handle source-unavailable pointer jobs with deterministic skipped outcome instead of infinite retry",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements", "Non-goals"]
   },
   {
