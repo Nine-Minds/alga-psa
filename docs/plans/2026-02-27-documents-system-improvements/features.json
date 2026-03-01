@@ -314,7 +314,7 @@
   {
     "id": "F041",
     "description": "UI: Documents entity mode calls ensureEntityFolders() on mount",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-2.10"
     ]

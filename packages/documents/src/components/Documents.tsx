@@ -40,7 +40,8 @@ import {
   deleteDocument,
   removeDocumentAssociations,
   updateDocument,
-  toggleDocumentVisibility
+  toggleDocumentVisibility,
+  ensureEntityFolders
 } from '../actions/documentActions';
 import {
   getBlockContent,
@@ -320,6 +321,16 @@ const Documents = ({
       }
     }
   }, [initialDocuments, inFolderMode]);
+
+  // Entity mode: ensure entity folders are initialized (lazy template application)
+  useEffect(() => {
+    if (inFolderMode || !entityId || !entityType) return;
+
+    // Fire-and-forget: we don't block on this, and failures are silent (best-effort)
+    void ensureEntityFolders(entityId, entityType).catch(() => {
+      // Silent failure — folder initialization is best-effort
+    });
+  }, [inFolderMode, entityId, entityType]);
 
   // Folder mode: fetch documents from server
   // Track all fetch dependencies to detect actual changes vs reference-only changes
