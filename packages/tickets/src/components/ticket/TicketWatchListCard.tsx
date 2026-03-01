@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
-import { AlertCircle, X } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { AlertCircle, X, Eye } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
+import { ContentCard } from '@alga-psa/ui/components';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import { ToggleGroup, ToggleGroupItem } from '@alga-psa/ui/components/ToggleGroup';
@@ -16,7 +17,6 @@ import {
   type TicketWatchListRecipientInput,
   type TicketWatchListEntry,
 } from '@shared/lib/tickets/watchList';
-import styles from './TicketDetails.module.css';
 
 interface TicketWatchListCardProps {
   id: string;
@@ -52,7 +52,7 @@ const TicketWatchListCard: React.FC<TicketWatchListCardProps> = ({
   const [selectedAllContactId, setSelectedAllContactId] = useState('');
   const [watchListError, setWatchListError] = useState<string | null>(null);
   const [watchListSavingInternal, setWatchListSavingInternal] = useState(false);
-  const watchList = React.useMemo(() => parseTicketWatchListAttributes(attributes), [attributes]);
+  const watchList = useMemo(() => parseTicketWatchListAttributes(attributes), [attributes]);
   const isWatchListSaving = watchListSaving || watchListSavingInternal;
 
   const selectedContactId = contactScope === 'all' ? selectedAllContactId : selectedClientContactId;
@@ -254,8 +254,15 @@ const TicketWatchListCard: React.FC<TicketWatchListCardProps> = ({
         : 'Add Contact';
 
   return (
-    <div className={`${styles['card']} p-6 space-y-4`}>
-      <h2 className={styles['panel-header']}>Watch List</h2>
+    <ContentCard
+      id={id}
+      collapsible
+      defaultExpanded={watchList.length > 0}
+      title="Watch List"
+      headerIcon={<Eye className="w-5 h-5" />}
+      count={watchList.length}
+      addButton={{ id: `${id}-add-btn-header`, onClick: () => {} }}
+    >
       <div className="space-y-3">
         <div className="rounded-lg border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] p-3 space-y-3">
           <p className="text-xs font-medium text-[rgb(var(--color-text-600))]">Add by</p>
@@ -434,7 +441,7 @@ const TicketWatchListCard: React.FC<TicketWatchListCardProps> = ({
           </div>
         )}
       </div>
-    </div>
+    </ContentCard>
   );
 };
 

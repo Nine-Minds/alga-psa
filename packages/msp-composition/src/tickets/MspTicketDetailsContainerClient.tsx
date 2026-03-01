@@ -4,19 +4,22 @@ import React, { useCallback } from 'react';
 import TicketDetailsContainer from '@alga-psa/tickets/components/ticket/TicketDetailsContainer';
 import ContactDetailsView from '@alga-psa/clients/components/contacts/ContactDetailsView';
 import ClientDetails from '@alga-psa/clients/components/clients/ClientDetails';
-import type { IClient, IContact } from '@alga-psa/types';
+import type { IClient, IContact, SurveyTicketSatisfactionSummary } from '@alga-psa/types';
 import CreateTaskFromTicketDialog from '@alga-psa/projects/components/CreateTaskFromTicketDialog';
 import LinkTicketToTaskDialog from '@alga-psa/projects/components/LinkTicketToTaskDialog';
 import { IntervalManagement } from '@alga-psa/scheduling/components/time-management/interval-tracking/IntervalManagement';
 import { TicketIntegrationProvider } from '@alga-psa/projects/context/TicketIntegrationContext';
 import { useTicketIntegrationValue } from '../projects/useTicketIntegrationValue';
+import TicketSurveySummaryCard from '@alga-psa/surveys/components/TicketSurveySummaryCard';
 
 type MspTicketDetailsContainerClientProps = Omit<
   React.ComponentProps<typeof TicketDetailsContainer>,
-  'renderContactDetails' | 'renderClientDetails' | 'renderIntervalManagement'
->;
+  'renderContactDetails' | 'renderClientDetails' | 'renderIntervalManagement' | 'surveySummaryCard'
+> & {
+  surveySummary?: SurveyTicketSatisfactionSummary | null;
+};
 
-export default function MspTicketDetailsContainerClient(props: MspTicketDetailsContainerClientProps) {
+export default function MspTicketDetailsContainerClient({ surveySummary, ...props }: MspTicketDetailsContainerClientProps) {
   const ticketIntegrationValue = useTicketIntegrationValue();
 
   const renderContactDetails = useCallback(
@@ -66,6 +69,11 @@ export default function MspTicketDetailsContainerClient(props: MspTicketDetailsC
     <TicketIntegrationProvider value={ticketIntegrationValue}>
       <TicketDetailsContainer
         {...props}
+        surveySummaryCard={
+          surveySummary !== undefined
+            ? <TicketSurveySummaryCard summary={surveySummary} />
+            : undefined
+        }
         renderContactDetails={renderContactDetails}
         renderCreateProjectTask={renderCreateProjectTask}
         renderClientDetails={renderClientDetails}

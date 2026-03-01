@@ -363,22 +363,15 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
 
     return (
         <ReflectionContainer id={id} label="Associated Assets">
-            <ContentCard>
-                <div className="flex justify-between items-center">
-                    <ContentCard.Header>
-                        <Boxes className="w-5 h-5 mr-2" />
-                        Associated Assets
-                    </ContentCard.Header>
-                    <Button
-                        id='add-asset-button'
-                        variant="outline"
-                        size="sm"
-                        onClick={handleOpenDialog}
-                    >
-                        Add Asset
-                    </Button>
-                </div>
-
+            <ContentCard
+                id={id}
+                collapsible
+                defaultExpanded={false}
+                title="Associated Assets"
+                headerIcon={<Boxes className="w-5 h-5" />}
+                count={associatedAssets.length}
+                addButton={{ id: 'add-asset-button', onClick: handleOpenDialog }}
+            >
                 {isLoading ? (
                     <div className="text-gray-500 text-center py-8">Loading assets...</div>
                 ) : associatedAssets.length === 0 ? (

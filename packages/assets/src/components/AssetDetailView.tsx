@@ -47,7 +47,7 @@ export const AssetDetailView: React.FC<AssetDetailViewProps> = ({ assetId }) => 
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="grow shrink-0 bg-gray-50">
       <AssetDetailHeader 
         asset={asset} 
         onRefresh={refreshRmmData}

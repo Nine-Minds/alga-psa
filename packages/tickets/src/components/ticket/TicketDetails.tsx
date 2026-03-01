@@ -61,7 +61,6 @@ import BackNav from '@alga-psa/ui/components/BackNav';
 import { ResponseStateBadge } from '@alga-psa/ui/components';
 import TicketOriginBadge from '../TicketOriginBadge';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import type { SurveyTicketSatisfactionSummary } from '@alga-psa/types';
 import { buildTicketTimeEntryContext, createTicketTimeEntryOnComplete } from '../../lib/timeEntryContext';
 import { getTicketOrigin } from '../../lib/ticketOrigin';
 import {
@@ -117,7 +116,11 @@ interface TicketDetailsProps {
     onAddComment?: (content: string, isInternal: boolean, isResolution: boolean) => Promise<void>;
     onUpdateDescription?: (content: string) => Promise<boolean>;
     isSubmitting?: boolean;
-    surveySummary?: SurveyTicketSatisfactionSummary | null;
+    /**
+     * Optional injected UI for survey summary (e.g. @alga-psa/surveys TicketSurveySummaryCard).
+     * This keeps @alga-psa/tickets from importing other vertical slices directly.
+     */
+    surveySummaryCard?: React.ReactNode;
 
     /**
      * Optional injected UI for cross-slice composition (e.g. assets associations).
@@ -192,7 +195,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     onAddComment,
     onUpdateDescription,
     isSubmitting = false,
-    surveySummary = null,
+    surveySummaryCard,
     associatedAssets = null,
     renderContactDetails,
     renderCreateProjectTask,
@@ -2055,7 +2058,7 @@ const handleClose = () => {
                                 allContactsForWatchList={allContactsForWatchList}
                                 allContactsForWatchListLoading={allContactsForWatchListLoading}
                                 onLoadAllContactsForWatchList={handleLoadAllContactsForWatchList}
-                                surveySummary={surveySummary}
+                                surveySummaryCard={surveySummaryCard}
                                     renderIntervalManagement={renderIntervalManagement}
                                     onRemoveTeamAssignment={handleRemoveTeamAssignment}
                                     onAssignTeam={handleAssignTeam}
