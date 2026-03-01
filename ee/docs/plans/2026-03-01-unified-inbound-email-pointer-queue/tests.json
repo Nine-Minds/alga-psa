@@ -56,7 +56,7 @@
   {
     "id": "T010",
     "description": "Consumer: worker can claim and process queued Google pointer jobs",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F008", "F024"]
   },
   {
