@@ -47,7 +47,7 @@
   {
     "id": "F006",
     "description": "Replace placeholder with attachment-backed image node after successful upload",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Acceptance Criteria (Definition of Done)"

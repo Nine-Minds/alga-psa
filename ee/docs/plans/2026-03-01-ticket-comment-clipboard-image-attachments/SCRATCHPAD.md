@@ -44,3 +44,4 @@ Working notes for implementing clipboard image paste support in ticket comments,
 - (2026-03-01) F003 implemented: Persist pasted images through ticket document/file pipeline via `uploadDocument` and returned document/file ids in comment image URLs.
 - (2026-03-01) F004 implemented: Deterministic clipboard image naming added through `createClipboardImageFilename` and upload-time file renaming (`clipboard-image-YYYYMMDD-HHMMSS-SEQ.ext`).
 - (2026-03-01) F005 implemented: BlockNote image upload placeholder path is enabled by providing `uploadFile` to editor configuration for pasted images.
+- (2026-03-01) F006 implemented: Successful upload resolves placeholder to attachment-backed image node using `/api/documents/view/<fileId>` URL payload from upload handler.
