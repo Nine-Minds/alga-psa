@@ -70,6 +70,7 @@ Rolling notes for the 5-phase documents system overhaul: entity-scoped folders, 
 
 ## Work Log
 
+- (2026-03-01) **F028 implemented**: Added `packages/documents/src/actions/folderTemplateActions.ts` with `getFolderTemplates(entityType?)` (auth-wrapped, `document:read` permission gate, tenant-scoped query against `document_folder_templates`, optional `entity_type` filter, deterministic ordering by entity type/default/name). Exported via `packages/documents/src/actions/index.ts`.
 - (2026-03-01) **F027 implemented**: Added migration `server/migrations/20260301100000_add_phase2_document_template_tables_rls_policies.cjs` to enable tenant RLS on `document_folder_templates`, `document_folder_template_items`, and `document_entity_folder_init`, creating idempotent `tenant_isolation_policy` (USING) and `tenant_isolation_insert_policy` (FOR INSERT WITH CHECK) per table with reversible down migration that drops policies and disables RLS.
 - (2026-03-01) **F026 implemented**: Added migration `server/migrations/20260228103000_add_document_folder_templates_default_partial_unique_index.cjs` to enforce one default folder template per tenant + entity type via partial unique index `uq_doc_folder_templates_default_per_entity_type` on `(tenant, entity_type) WHERE is_default = true`, with idempotent table/column guards and reversible down migration.
 - (2026-03-01) **F025 implemented**: Added migration `server/migrations/20260228102000_create_document_entity_folder_init_table.cjs` to create `document_entity_folder_init` with tenant-scoped composite PK (`tenant`, `entity_folder_init_id`), entity-scope uniqueness (`tenant`, `entity_type`, `entity_id`) for one-time initialization tracking, optional `initialized_from_template_id` FK, supporting indexes, and inline `distributeIfCitus(knex, 'document_entity_folder_init')`.
@@ -97,6 +98,7 @@ Rolling notes for the 5-phase documents system overhaul: entity-scoped folders, 
 
 ## Recent Validation
 
+- (2026-03-01) Ran focused unit coverage for template-list action: `cd server && npx vitest run src/test/unit/documentFolderTemplateActions.test.ts --config vitest.config.ts` (pass, 3 tests).
 - (2026-03-01) Verified migration module exports load: `node -e "const m=require('./server/migrations/20260301100000_add_phase2_document_template_tables_rls_policies.cjs'); console.log(typeof m.up, typeof m.down);"` → `function function`.
 - (2026-03-01) Verified migration module exports load: `node -e "const m=require('./server/migrations/20260228103000_add_document_folder_templates_default_partial_unique_index.cjs'); console.log(typeof m.up, typeof m.down);"` → `function function`.
 - (2026-03-01) Verified migration module exports load: `node -e "const m=require('./server/migrations/20260228102000_create_document_entity_folder_init_table.cjs'); console.log(typeof m.up, typeof m.down);"` → `function function`.
