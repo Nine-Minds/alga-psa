@@ -56,7 +56,7 @@
   {
     "id": "F010",
     "description": "Apply consume-time idempotency guard keyed by normalized external message identity before processing",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Goals", "Requirements"]
   },
   {
