@@ -165,7 +165,7 @@
   {
     "id": "T021",
     "description": "UI: cancel keep path closes draft without deleting uploaded pasted-image documents",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F016"
     ]
