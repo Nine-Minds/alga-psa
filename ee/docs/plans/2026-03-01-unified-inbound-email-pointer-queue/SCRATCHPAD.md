@@ -47,6 +47,7 @@ Working notes for moving Microsoft, Google, and IMAP inbound email ingress to on
 - `npm -w imap-service run build`
 - `npm -w @alga-psa/integrations run typecheck`
 - `npm -w server run test -- src/test/integration/microsoftWebhookUnifiedQueue.integration.test.ts`
+- `npm -w server run test -- src/test/integration/googleWebhookUnifiedQueue.integration.test.ts --coverage.enabled=false`
 
 ## Links / References
 
@@ -67,6 +68,7 @@ Working notes for moving Microsoft, Google, and IMAP inbound email ingress to on
 - Server consumer entrypoint: `server/src/bin/unifiedInboundEmailQueueConsumer.ts`
 - Unified queue runbook: `ee/docs/plans/2026-03-01-unified-inbound-email-pointer-queue/RUNBOOK.md`
 - Microsoft unified ingress contract tests: `server/src/test/integration/microsoftWebhookUnifiedQueue.integration.test.ts`
+- Google unified ingress contract tests: `server/src/test/integration/googleWebhookUnifiedQueue.integration.test.ts`
 
 ## Progress Log
 
@@ -96,6 +98,7 @@ Working notes for moving Microsoft, Google, and IMAP inbound email ingress to on
 - (2026-03-01) Completed `F024`: Confirmed unified consumer routing dispatches per provider type and fetches provider-specific source payloads before shared in-app processing.
 - (2026-03-01) Completed `F025`: Added a dedicated runbook covering architecture, queue keys, feature flags, consumer startup, and local validation/failure-path checks.
 - (2026-03-01) Completed `T001`: Added Microsoft unified ingress contract test validating pointer-only enqueue payload shape (`tenantId`, `providerId`, provider pointer identifiers) and absence of raw content fields.
+- (2026-03-01) Completed `T002`: Added Google unified ingress contract test validating pointer-only enqueue payload shape (`tenantId`, `providerId`, `historyId`, `pubsubMessageId`) behind successful JWT/provider verification.
 
 ## Open Questions
 
