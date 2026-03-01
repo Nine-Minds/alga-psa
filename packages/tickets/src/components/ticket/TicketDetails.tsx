@@ -997,11 +997,11 @@ const handleClose = () => {
         }
     };
 
-    const handleContentChange = (blocks: PartialBlock[]) => {
-        if (currentComment) {
-            setCurrentComment({ ...currentComment, note: JSON.stringify(blocks) });
-        }
-    };
+    const handleContentChange = useCallback((_blocks: PartialBlock[]) => {
+        // Edit-mode comment content is owned by CommentItem local state and
+        // persisted through handleSave. Avoid mutating currentComment on each
+        // keystroke to prevent unnecessary TicketDetails rerenders.
+    }, []);
 
     const handleUpdateDescription = async (content: string) => {
         try {

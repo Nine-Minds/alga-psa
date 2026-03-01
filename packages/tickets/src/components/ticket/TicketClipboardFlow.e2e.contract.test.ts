@@ -34,4 +34,19 @@ describe('ticket clipboard image flow end-to-end contract', () => {
     expect(source).toContain('setDraftClipboardImages([])');
     expect(source).toContain('setShowEditor(false)');
   });
+
+  it('T034: edit-mode content changes do not mutate TicketDetails currentComment state on every keystroke', () => {
+    const ticketDetailsPath = path.resolve(__dirname, './TicketDetails.tsx');
+    const source = fs.readFileSync(ticketDetailsPath, 'utf-8');
+
+    expect(source).toContain('const handleContentChange = useCallback((_blocks: PartialBlock[]) => {');
+    expect(source).not.toContain('setCurrentComment({ ...currentComment, note: JSON.stringify(blocks) });');
+  });
+
+  it('T035: TextEditor does not hide all draggable nodes (clipboard image blocks remain visible)', () => {
+    const textEditorPath = path.resolve(__dirname, '../../../../ui/src/editor/TextEditor.tsx');
+    const source = fs.readFileSync(textEditorPath, 'utf-8');
+
+    expect(source).not.toContain("[&_[draggable='true']]:!hidden");
+  });
 });
