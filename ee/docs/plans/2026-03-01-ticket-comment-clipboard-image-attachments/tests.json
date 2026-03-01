@@ -248,7 +248,7 @@
   {
     "id": "T031",
     "description": "Observability: outbound email logs indicate CID generation path vs URL fallback for each image",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F022",
       "F014"
