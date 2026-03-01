@@ -221,4 +221,40 @@ describe('Microsoft unified inbound pointer queue ingress', () => {
       failureCount: 1,
     });
   });
+
+  it('T027: Microsoft clientState validation remains enforced in unified enqueue-only mode', async () => {
+    const { POST } = await import('@alga-psa/integrations/webhooks/email/microsoft');
+
+    const request = new NextRequest('http://localhost:3000/api/email/webhooks/microsoft', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        value: [
+          {
+            changeType: 'created',
+            clientState: 'unexpected-client-state',
+            resource: '/users/user-1/messages/msg-126',
+            resourceData: {
+              '@odata.type': '#microsoft.graph.message',
+              '@odata.id': 'msg-126',
+              id: 'msg-126',
+            },
+            subscriptionExpirationDateTime: new Date(Date.now() + 60_000).toISOString(),
+            subscriptionId: 'sub-ms-1',
+            tenantId: 'tenant-ms-1',
+          },
+        ],
+      }),
+    });
+
+    const response = await POST(request);
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body).toMatchObject({
+      success: true,
+      processedCount: 0,
+      unifiedQueuedCount: 0,
+    });
+    expect(enqueueUnifiedInboundEmailQueueJobMock).not.toHaveBeenCalled();
+  });
 });
