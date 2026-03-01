@@ -206,7 +206,7 @@
   {
     "id": "T026",
     "description": "Validation: image larger than configured max size is rejected with user-visible error",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F019"
     ]
