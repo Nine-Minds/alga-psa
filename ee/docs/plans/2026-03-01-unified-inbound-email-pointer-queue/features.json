@@ -74,7 +74,7 @@
   {
     "id": "F013",
     "description": "Support resurfacing/reclaim of unacknowledged jobs for retry",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements", "Users and Primary Flows"]
   },
   {
