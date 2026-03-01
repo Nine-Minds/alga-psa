@@ -129,6 +129,7 @@ Working notes for moving Microsoft, Google, and IMAP inbound email ingress to on
 - (2026-03-01) Completed `T020`: Added reclaim-path queue test validating expired inflight claims are removed from processing structures and requeued to ready state.
 - (2026-03-01) Completed `T021`: Added retry-path queue test validating failed consume increments job attempt prior to requeue.
 - (2026-03-01) Completed `T022`: Added DLQ-path queue test validating jobs are moved to dead-letter storage once max attempts are reached.
+- (2026-03-01) Completed `T023`: Added IMAP source-unavailable processor test validating deterministic `source_unavailable:*` skip reason and consume-marker persistence.
 
 ## Open Questions
 

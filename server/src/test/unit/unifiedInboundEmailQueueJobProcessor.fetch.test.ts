@@ -536,4 +536,56 @@ describe('unified inbound queue processor consume-time provider fetch', () => {
     });
     expect(processInboundEmailInAppMock).not.toHaveBeenCalled();
   });
+
+  it('T023: source-unavailable IMAP pointer is marked skipped with deterministic reason', async () => {
+    const { db, emailProcessedInsertMock } = createDbMock({
+      imapRow: {
+        id: 'provider-imap-1',
+        tenant: 'tenant-1',
+        mailbox: 'support@example.com',
+        host: 'imap.example.com',
+        port: 993,
+        secure: true,
+        allow_starttls: false,
+        auth_type: 'password',
+        username: 'imap-user',
+        access_token: null,
+      },
+    });
+    getAdminConnectionMock.mockResolvedValue(db);
+
+    imapFetchMock.mockReturnValue((async function* () {})());
+
+    const { processUnifiedInboundEmailQueueJob } = await import(
+      '../../services/email/unifiedInboundEmailQueueJobProcessor'
+    );
+    const result = await processUnifiedInboundEmailQueueJob({
+      jobId: 'job-imap-missing-1',
+      schemaVersion: 1,
+      tenantId: 'tenant-1',
+      providerId: 'provider-imap-1',
+      provider: 'imap',
+      pointer: {
+        mailbox: 'INBOX',
+        uid: '301',
+      },
+      enqueuedAt: new Date().toISOString(),
+      attempt: 0,
+      maxAttempts: 5,
+    } as UnifiedInboundEmailQueueJob);
+
+    expect(result).toMatchObject({
+      outcome: 'skipped',
+      processedCount: 0,
+      skippedCount: 1,
+      reason: 'source_unavailable:imap_message_not_found',
+    });
+    expect(emailProcessedInsertMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message_id: 'imap:uid:301',
+        processing_status: 'processing',
+      })
+    );
+    expect(processInboundEmailInAppMock).not.toHaveBeenCalled();
+  });
 });

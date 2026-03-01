@@ -134,7 +134,7 @@
   {
     "id": "T023",
     "description": "Source drift handling: IMAP message unavailable at consume time is marked skipped with deterministic reason",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F016"]
   },
   {
