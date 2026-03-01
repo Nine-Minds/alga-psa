@@ -182,7 +182,7 @@
   {
     "id": "T031",
     "description": "Config: disabling unified queue flag preserves previous behavior for controlled rollback",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F021"]
   },
   {

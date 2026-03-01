@@ -632,4 +632,29 @@ describe('IMAP webhook handoff', () => {
     expect(enqueueUnifiedInboundEmailQueueJobMock).not.toHaveBeenCalled();
     expect(enqueueImapInAppJobMock).not.toHaveBeenCalled();
   });
+
+  it('T031: disabling unified queue preserves legacy IMAP async handoff behavior for rollback', async () => {
+    process.env.UNIFIED_INBOUND_EMAIL_POINTER_QUEUE_ENABLED = 'false';
+    process.env.IMAP_INBOUND_EMAIL_IN_APP_PROCESSING_ENABLED = 'true';
+    process.env.IMAP_INBOUND_EMAIL_IN_APP_ASYNC_ENABLED = 'true';
+    process.env.IMAP_INBOUND_EMAIL_IN_APP_ASYNC_DISABLED = 'false';
+    const { POST } = await import('@alga-psa/integrations/webhooks/email/imap');
+
+    const request = makeImapRequest();
+    const response = await POST(request);
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body).toMatchObject({
+      success: true,
+      queued: true,
+      handoff: 'in_app_async',
+      providerId: providerRow.id,
+      tenant: providerRow.tenant,
+      messageId: 'imap-msg-1',
+      jobId: 'legacy-imap-job-1',
+    });
+
+    expect(enqueueImapInAppJobMock).toHaveBeenCalledTimes(1);
+    expect(enqueueUnifiedInboundEmailQueueJobMock).not.toHaveBeenCalled();
+  });
 });
