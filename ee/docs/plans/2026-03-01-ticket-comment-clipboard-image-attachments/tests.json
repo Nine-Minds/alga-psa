@@ -84,7 +84,7 @@
   {
     "id": "T011",
     "description": "Regression: non-image comment content serialization remains unchanged",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F020"
     ]
