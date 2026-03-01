@@ -186,9 +186,45 @@ function parseClaimRecord(value: string): ClaimedUnifiedInboundEmailQueueJob | n
   }
 }
 
+const FORBIDDEN_POINTER_PAYLOAD_KEYS = new Set([
+  'emailData',
+  'attachments',
+  'rawMime',
+  'rawMimeBase64',
+  'sourceMimeBase64',
+  'rawSourceBase64',
+  'body',
+  'content',
+]);
+
+function assertPointerOnlyPayload(input: UnifiedInboundEmailQueueJobInput): void {
+  const inputAsAny = input as any;
+  for (const key of Object.keys(inputAsAny)) {
+    if (FORBIDDEN_POINTER_PAYLOAD_KEYS.has(key)) {
+      throw new Error(`Queue payload must be pointer-only; forbidden field found: ${key}`);
+    }
+  }
+
+  const stack: unknown[] = [input.pointer];
+  while (stack.length > 0) {
+    const current = stack.pop();
+    if (!current || typeof current !== 'object') continue;
+
+    for (const [key, value] of Object.entries(current as Record<string, unknown>)) {
+      if (FORBIDDEN_POINTER_PAYLOAD_KEYS.has(key)) {
+        throw new Error(`Queue pointer payload must not contain field: ${key}`);
+      }
+      if (value && typeof value === 'object') {
+        stack.push(value);
+      }
+    }
+  }
+}
+
 export async function enqueueUnifiedInboundEmailQueueJob(
   input: UnifiedInboundEmailQueueJobInput
 ): Promise<EnqueueUnifiedInboundEmailQueueJobResult> {
+  assertPointerOnlyPayload(input);
   const queueConfig = getUnifiedInboundEmailQueueConfig();
   const client = await getRedisClient();
   const job = buildUnifiedInboundEmailQueueJob(input);

@@ -27,6 +27,7 @@ Working notes for moving Microsoft, Google, and IMAP inbound email ingress to on
 - Google webhook flow can enqueue immediately after provider resolution + JWT verification, before any `gmail_processed_history` writes or Gmail API fetches.
 - IMAP listener now has enough metadata at fetch time (`mailbox`, `uid`, `uidValidity`, `messageId`) to emit pointer-only webhook payloads; no raw body is required for unified queue ingress.
 - Unified queue internals now track ready/processing/inflight/DLQ keys with lease metadata, enabling explicit claim and completion lifecycle management.
+- Queue enqueue now enforces a runtime pointer-only payload guard that rejects forbidden MIME/body/attachment keys at both top-level and nested pointer metadata.
 
 ## Commands / Runbooks
 
@@ -37,6 +38,7 @@ Working notes for moving Microsoft, Google, and IMAP inbound email ingress to on
 - `npm -w server run typecheck`
 - `npm -w shared run typecheck` (after Microsoft queue-mode changes)
 - `npm -w server run typecheck` (after Microsoft queue-mode changes)
+- `npm -w imap-service run build`
 
 ## Links / References
 
@@ -75,6 +77,7 @@ Working notes for moving Microsoft, Google, and IMAP inbound email ingress to on
 - (2026-03-01) Completed `F015`: Once `attempt` reaches `maxAttempts`, failed jobs are routed to the dedicated unified inbound pointer DLQ key.
 - (2026-03-01) Completed `F016`: Source-unavailable fetch failures now resolve as deterministic `skipped` outcomes (`source_unavailable:*`) recorded in `email_processed_messages` and do not rethrow for retry.
 - (2026-03-01) Completed `F017`: Consumer idempotency now uses a normalized external identity format (`<provider>:<messageId>`) prior to persistence checks.
+- (2026-03-01) Completed `F018`: Added `assertPointerOnlyPayload` validation in enqueue to reject raw content-like keys (`rawMime`, `attachments`, `body`, etc.) and enforce pointer-only queue contracts at runtime.
 
 ## Open Questions
 

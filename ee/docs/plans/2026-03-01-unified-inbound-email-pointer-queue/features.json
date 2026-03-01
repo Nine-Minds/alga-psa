@@ -104,7 +104,7 @@
   {
     "id": "F018",
     "description": "Ensure queue payload contract remains pointer-only and excludes raw MIME or attachment bytes",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Non-functional Requirements", "Data / API / Integrations"]
   },
   {
