@@ -32,7 +32,7 @@
   {
     "id": "T006",
     "description": "Ingress behavior: IMAP listener records success only after durable enqueue succeeds",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F004", "F006"]
   },
   {

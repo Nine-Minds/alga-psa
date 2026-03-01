@@ -481,4 +481,54 @@ describe('IMAP webhook handoff', () => {
     expect(enqueuePayload).not.toHaveProperty('attachments');
     expect(enqueuePayload).not.toHaveProperty('rawMimeBase64');
   });
+
+  it('T006: IMAP callback success waits for durable enqueue completion', async () => {
+    process.env.UNIFIED_INBOUND_EMAIL_POINTER_QUEUE_ENABLED = 'true';
+    const { POST } = await import('@alga-psa/integrations/webhooks/email/imap');
+
+    let resolveEnqueue!: (value: { job: { jobId: string }; queueDepth: number }) => void;
+    const enqueueGate = new Promise<{ job: { jobId: string }; queueDepth: number }>((resolve) => {
+      resolveEnqueue = resolve;
+    });
+    enqueueUnifiedInboundEmailQueueJobMock.mockImplementation(() => enqueueGate);
+
+    const request = new NextRequest('http://localhost:3000/api/email/webhooks/imap', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-imap-webhook-secret': 'imap-secret',
+      },
+      body: JSON.stringify({
+        providerId: providerRow.id,
+        tenant: providerRow.tenant,
+        pointer: {
+          mailbox: 'INBOX',
+          uid: '88',
+        },
+      }),
+    });
+
+    let settled = false;
+    const responsePromise = POST(request).then((response) => {
+      settled = true;
+      return response;
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(enqueueUnifiedInboundEmailQueueJobMock).toHaveBeenCalledTimes(1);
+    expect(settled).toBe(false);
+
+    resolveEnqueue({ job: { jobId: 'job-imap-gated' }, queueDepth: 3 });
+    const response = await responsePromise;
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body).toMatchObject({
+      success: true,
+      queued: true,
+      handoff: 'unified_pointer_queue',
+      providerId: providerRow.id,
+      tenant: providerRow.tenant,
+      uid: '88',
+    });
+  });
 });

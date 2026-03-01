@@ -103,6 +103,7 @@ Working notes for moving Microsoft, Google, and IMAP inbound email ingress to on
 - (2026-03-01) Completed `T003`: Extended IMAP webhook integration coverage with unified-mode pointer enqueue assertions (`mailbox`, `uid`, `uidValidity`, `messageId`) and pointer-only payload guards.
 - (2026-03-01) Completed `T004`: Added deferred-enqueue Microsoft webhook test proving `200` success is not returned until unified queue enqueue promise resolves.
 - (2026-03-01) Completed `T005`: Added deferred-enqueue Google webhook test proving callback success response is blocked until unified queue enqueue completion.
+- (2026-03-01) Completed `T006`: Added deferred-enqueue IMAP webhook test proving unified-mode success response is blocked until pointer job enqueue completion.
 
 ## Open Questions
 
