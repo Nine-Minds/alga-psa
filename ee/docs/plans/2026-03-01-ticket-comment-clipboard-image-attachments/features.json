@@ -128,7 +128,7 @@
   {
     "id": "F015",
     "description": "Track clipboard-uploaded draft images in compose state so cancel flow can act on them",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "Requirements"

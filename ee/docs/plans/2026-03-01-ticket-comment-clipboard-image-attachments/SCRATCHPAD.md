@@ -53,3 +53,4 @@ Working notes for implementing clipboard image paste support in ticket comments,
 - (2026-03-01) F012 implemented: Outbound email now builds CID inline attachments for eligible ticket-comment images via storage-backed attachment generation.
 - (2026-03-01) F013 implemented: Outbound comment HTML image `src` values are rewritten to `cid:` references matching generated inline attachments.
 - (2026-03-01) F014 implemented: Outbound processing now falls back to original attachment URL when CID conversion/download fails, preserving renderability.
+- (2026-03-01) F015 implemented: Ticket compose state now tracks uploaded clipboard draft images (document/file/url identity) for subsequent cancel handling.
