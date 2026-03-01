@@ -29,10 +29,35 @@ export interface UnifiedInboundEmailQueueProcessResult {
   reason?: string;
 }
 
+const DEFAULT_IMAP_CONNECTION_TIMEOUT_MS = 10_000;
+const DEFAULT_IMAP_SOCKET_TIMEOUT_MS = 30_000;
+const DEFAULT_IMAP_FETCH_TIMEOUT_MS = 45_000;
+const DEFAULT_IMAP_PARSE_TIMEOUT_MS = 30_000;
+
 function asNonEmptyString(value: unknown): string | null {
   if (typeof value !== 'string') return null;
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : null;
+}
+
+function parsePositiveInteger(value: string | undefined, fallback: number): number {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return fallback;
+  }
+  return Math.floor(parsed);
+}
+
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeoutPromise = new Promise<T>((_, reject) => {
+    timer = setTimeout(() => {
+      reject(new Error(`timeout:${label}:${timeoutMs}`));
+    }, timeoutMs);
+  });
+  return Promise.race([promise, timeoutPromise]).finally(() => {
+    if (timer) clearTimeout(timer);
+  });
 }
 
 function extractMessageIds(value: unknown): string[] {
@@ -244,7 +269,6 @@ async function fetchImapMessageForPointer(job: UnifiedInboundEmailQueueJob): Pro
     throw new SourceMessageUnavailableError('imap_provider_not_found');
   }
 
-  const secretProvider = await getSecretProviderInstance();
   const auth: any = {
     user: provider.username,
   };
@@ -252,12 +276,30 @@ async function fetchImapMessageForPointer(job: UnifiedInboundEmailQueueJob): Pro
     auth.accessToken = provider.access_token;
     auth.method = 'XOAUTH2';
   } else {
+    const secretProvider = await getSecretProviderInstance();
     auth.pass = await secretProvider.getTenantSecret(provider.tenant, `imap_password_${provider.id}`);
   }
 
   if (!auth.pass && !auth.accessToken) {
     throw new SourceMessageUnavailableError('imap_credentials_missing');
   }
+
+  const connectionTimeoutMs = parsePositiveInteger(
+    process.env.IMAP_CONNECTION_TIMEOUT_MS,
+    DEFAULT_IMAP_CONNECTION_TIMEOUT_MS
+  );
+  const socketTimeoutMs = parsePositiveInteger(
+    process.env.IMAP_SOCKET_TIMEOUT_MS,
+    Math.max(connectionTimeoutMs * 3, DEFAULT_IMAP_SOCKET_TIMEOUT_MS)
+  );
+  const fetchTimeoutMs = parsePositiveInteger(
+    process.env.IMAP_FETCH_TIMEOUT_MS,
+    Math.max(socketTimeoutMs, DEFAULT_IMAP_FETCH_TIMEOUT_MS)
+  );
+  const parseTimeoutMs = parsePositiveInteger(
+    process.env.IMAP_PARSE_TIMEOUT_MS,
+    Math.max(connectionTimeoutMs * 2, DEFAULT_IMAP_PARSE_TIMEOUT_MS)
+  );
 
   const secure = Boolean(provider.secure);
   const rejectUnauthorized = (process.env.IMAP_TLS_REJECT_UNAUTHORIZED || 'true') !== 'false';
@@ -268,30 +310,51 @@ async function fetchImapMessageForPointer(job: UnifiedInboundEmailQueueJob): Pro
     auth,
     disableAutoIdle: true,
     logger: false,
+    connectionTimeout: connectionTimeoutMs,
+    greetingTimeout: connectionTimeoutMs,
+    socketTimeout: socketTimeoutMs,
     tls: secure || provider.allow_starttls ? { rejectUnauthorized } : undefined,
+  });
+  client.on('error', (error: any) => {
+    console.error('[UnifiedInboundEmailQueueJobProcessor] IMAP pointer fetch error', {
+      event: 'imap_pointer_fetch_error',
+      tenantId: job.tenantId,
+      providerId: job.providerId,
+      uid: job.pointer.uid,
+      mailbox: job.pointer.mailbox,
+      message: error?.message || String(error),
+      code: error?.code || null,
+    });
   });
 
   try {
-    await client.connect();
+    await withTimeout(client.connect(), connectionTimeoutMs + 5_000, 'imap_connect');
     const pointerMailbox = asNonEmptyString(job.pointer.mailbox);
     const providerFolder = resolveImapFolderFromFilters((provider as any).folder_filters);
     const mailbox =
       pointerMailbox && !isLikelyMailboxEmailAddress(pointerMailbox)
         ? pointerMailbox
         : providerFolder || 'INBOX';
-    const lock = await client.getMailboxLock(mailbox);
+    const lock = await withTimeout(client.getMailboxLock(mailbox), fetchTimeoutMs, 'imap_mailbox_lock');
     try {
-      let fetched: any | null = null;
-      for await (const msg of client.fetch(
-        `${pointerUid}:${pointerUid}`,
-        { uid: true, source: true },
-        { uid: true }
-      )) {
-        if (Number(msg?.uid) === pointerUid && msg?.source) {
-          fetched = msg;
-          break;
-        }
-      }
+      const fetched = await withTimeout(
+        (async () => {
+          let matched: any | null = null;
+          for await (const msg of client.fetch(
+            `${pointerUid}:${pointerUid}`,
+            { uid: true, source: true },
+            { uid: true }
+          )) {
+            if (Number(msg?.uid) === pointerUid && msg?.source) {
+              matched = msg;
+              break;
+            }
+          }
+          return matched;
+        })(),
+        fetchTimeoutMs,
+        'imap_message_fetch'
+      );
 
       if (!fetched?.source) {
         throw new SourceMessageUnavailableError('imap_message_not_found');
@@ -300,7 +363,11 @@ async function fetchImapMessageForPointer(job: UnifiedInboundEmailQueueJob): Pro
       const rawMimeBuffer = Buffer.isBuffer(fetched.source)
         ? fetched.source
         : Buffer.from(fetched.source);
-      const parsed = await simpleParser(rawMimeBuffer);
+      const parsed: any = await withTimeout(
+        simpleParser(rawMimeBuffer),
+        parseTimeoutMs,
+        'imap_mime_parse'
+      );
       const from = parsed.from?.value?.[0];
       const to = parsed.to?.value || [];
       const cc = parsed.cc?.value || [];
