@@ -8,6 +8,7 @@ const getAdminConnectionMock = vi.fn(async () => knexMock);
 const publishEventMock = vi.fn(async () => 'stream-1');
 const processInboundEmailInAppMock = vi.fn(async () => ({ outcome: 'created', ticketId: 't-1' }));
 const enqueueUnifiedInboundEmailQueueJobMock = vi.fn();
+const enqueueImapInAppJobMock = vi.fn();
 
 const whereMock = vi.fn(function where() {
   return this;
@@ -41,6 +42,10 @@ vi.mock('@alga-psa/shared/services/email/unifiedInboundEmailQueue', () => ({
   enqueueUnifiedInboundEmailQueueJob: (...args: any[]) => enqueueUnifiedInboundEmailQueueJobMock(...args),
 }));
 
+vi.mock('@alga-psa/integrations/webhooks/email/imapInAppQueue', () => ({
+  enqueueImapInAppJob: (...args: any[]) => enqueueImapInAppJobMock(...args),
+}));
+
 describe('IMAP webhook handoff', () => {
   beforeEach(() => {
     process.env.IMAP_WEBHOOK_SECRET = 'imap-secret';
@@ -71,10 +76,16 @@ describe('IMAP webhook handoff', () => {
     publishEventMock.mockClear();
     processInboundEmailInAppMock.mockClear();
     enqueueUnifiedInboundEmailQueueJobMock.mockReset();
+    enqueueImapInAppJobMock.mockReset();
     processInboundEmailInAppMock.mockResolvedValue({ outcome: 'created', ticketId: 't-1' });
     enqueueUnifiedInboundEmailQueueJobMock.mockResolvedValue({
       job: { jobId: 'job-imap-1' },
       queueDepth: 1,
+    });
+    enqueueImapInAppJobMock.mockReturnValue({
+      jobId: 'legacy-imap-job-1',
+      queueDepth: 1,
+      activeWorkers: 1,
     });
     whereMock.mockClear();
     firstMock.mockClear();
@@ -559,5 +570,40 @@ describe('IMAP webhook handoff', () => {
     expect(body).toMatchObject({
       error: 'Failed to enqueue IMAP pointer job',
     });
+  });
+
+  it('T026: legacy IMAP in-memory queue path is bypassed when unified queue mode is enabled', async () => {
+    process.env.UNIFIED_INBOUND_EMAIL_POINTER_QUEUE_ENABLED = 'true';
+    process.env.IMAP_INBOUND_EMAIL_IN_APP_ASYNC_ENABLED = 'true';
+    const { POST } = await import('@alga-psa/integrations/webhooks/email/imap');
+
+    const request = new NextRequest('http://localhost:3000/api/email/webhooks/imap', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-imap-webhook-secret': 'imap-secret',
+      },
+      body: JSON.stringify({
+        providerId: providerRow.id,
+        tenant: providerRow.tenant,
+        pointer: {
+          mailbox: 'INBOX',
+          uid: '111',
+        },
+      }),
+    });
+
+    const response = await POST(request);
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body).toMatchObject({
+      success: true,
+      queued: true,
+      handoff: 'unified_pointer_queue',
+      uid: '111',
+    });
+
+    expect(enqueueUnifiedInboundEmailQueueJobMock).toHaveBeenCalledTimes(1);
+    expect(enqueueImapInAppJobMock).not.toHaveBeenCalled();
   });
 });

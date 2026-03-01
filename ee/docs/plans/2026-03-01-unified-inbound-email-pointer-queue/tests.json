@@ -152,7 +152,7 @@
   {
     "id": "T026",
     "description": "Regression: legacy IMAP in-memory queue path is not used when unified queue mode is enabled",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F019", "F021"]
   },
   {
