@@ -56,3 +56,4 @@ Working notes for implementing clipboard image paste support in ticket comments,
 - (2026-03-01) F015 implemented: Ticket compose state now tracks uploaded clipboard draft images (document/file/url identity) for subsequent cancel handling.
 - (2026-03-01) F016 implemented: Canceling a draft with uploaded clipboard images now prompts keep-vs-delete through confirmation dialog copy and actions.
 - (2026-03-01) F017 implemented: Delete option on cancel now hard-deletes selected draft clipboard images through server action + document deletion pipeline.
+- (2026-03-01) F018 implemented: Draft hard delete now guards against non-owned/not-ticket/non-image/already-referenced artifacts before deletion.

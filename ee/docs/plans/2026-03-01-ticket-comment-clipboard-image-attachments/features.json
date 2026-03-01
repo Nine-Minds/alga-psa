@@ -155,7 +155,7 @@
   {
     "id": "F018",
     "description": "Prevent hard delete when artifact is already referenced by a saved comment or not deletable by requester",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Security / Permissions"
