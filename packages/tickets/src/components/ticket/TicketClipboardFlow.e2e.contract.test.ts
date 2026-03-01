@@ -48,5 +48,15 @@ describe('ticket clipboard image flow end-to-end contract', () => {
     const source = fs.readFileSync(textEditorPath, 'utf-8');
 
     expect(source).not.toContain("[&_[draggable='true']]:!hidden");
+    expect(source).not.toContain('[&_.bn-block-outer_[data-drag-handle]]:!hidden');
+  });
+
+  it('T036: edit-mode TextEditor preserves image/media-only blocks when trimming empty trailing content', () => {
+    const textEditorPath = path.resolve(__dirname, '../../../../ui/src/editor/TextEditor.tsx');
+    const source = fs.readFileSync(textEditorPath, 'utf-8');
+
+    expect(source).toContain("const mediaBlockTypes = new Set(['image', 'video', 'audio', 'file']);");
+    expect(source).toContain('if (typeof block.type === \'string\' && mediaBlockTypes.has(block.type)) {');
+    expect(source).toContain('return Boolean(props?.url || props?.name);');
   });
 });

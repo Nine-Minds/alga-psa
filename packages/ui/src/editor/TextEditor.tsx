@@ -155,6 +155,8 @@ export default function TextEditor({
       return DEFAULT_BLOCK;
     }
 
+    const mediaBlockTypes = new Set(['image', 'video', 'audio', 'file']);
+
     // Type guard for text content
     const isTextContent = (content: any): content is { type: "text"; text: string; styles: {} } => {
       return content?.type === "text" && typeof content?.text === "string";
@@ -165,7 +167,15 @@ export default function TextEditor({
     while (i >= 0) {
       const block = blocks[i];
       const hasContent = (block: PartialBlock): boolean => {
-        if (!block.content) return false;
+        // Media blocks typically store payload in props and should not be
+        // trimmed as "empty" when opening edit mode.
+        if (!block.content) {
+          if (typeof block.type === 'string' && mediaBlockTypes.has(block.type)) {
+            const props = block.props as Record<string, unknown> | undefined;
+            return Boolean(props?.url || props?.name);
+          }
+          return false;
+        }
         if (Array.isArray(block.content)) {
           return block.content.some(item => {
             if (isTextContent(item)) {
@@ -426,7 +436,7 @@ export default function TextEditor({
           editor={editor}
           theme={blockNoteTheme}
           emojiPicker={false}
-          className="w-full min-w-0 [&_.ProseMirror]:break-words [&_.ProseMirror]:max-w-full [&_.ProseMirror]:min-w-0 [&_.bn-block-outer_[data-drag-handle]]:!hidden [&_.ProseMirror_a]:text-[rgb(var(--badge-info-text))] [&_.ProseMirror_a]:font-medium [&_.ProseMirror_a]:underline [&_.ProseMirror_a]:decoration-[rgb(var(--badge-info-text)/0.4)] [&_.ProseMirror_a]:underline-offset-2 [&_.ProseMirror_a:hover]:decoration-[rgb(var(--badge-info-text))]"
+          className="w-full min-w-0 [&_.ProseMirror]:break-words [&_.ProseMirror]:max-w-full [&_.ProseMirror]:min-w-0 [&_.ProseMirror_a]:text-[rgb(var(--badge-info-text))] [&_.ProseMirror_a]:font-medium [&_.ProseMirror_a]:underline [&_.ProseMirror_a]:decoration-[rgb(var(--badge-info-text)/0.4)] [&_.ProseMirror_a]:underline-offset-2 [&_.ProseMirror_a:hover]:decoration-[rgb(var(--badge-info-text))]"
           editable={true}
           style={{
             overflowWrap: 'break-word',
