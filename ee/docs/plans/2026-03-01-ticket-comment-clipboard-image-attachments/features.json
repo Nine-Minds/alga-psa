@@ -190,7 +190,7 @@
   {
     "id": "F022",
     "description": "Add server/client logging around upload outcomes, cancel-delete actions, and outbound CID generation paths",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Observability"
     ]
