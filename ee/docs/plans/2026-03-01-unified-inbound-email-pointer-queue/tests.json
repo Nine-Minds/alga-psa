@@ -230,7 +230,7 @@
   {
     "id": "T039",
     "description": "E2E: duplicate provider deliveries produce only one processed message outcome due to consume-time idempotency",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F010", "F017"]
   },
   {
