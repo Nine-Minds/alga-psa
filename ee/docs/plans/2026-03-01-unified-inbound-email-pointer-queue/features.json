@@ -86,7 +86,7 @@
   {
     "id": "F015",
     "description": "Move jobs to dead-letter queue after max retry attempts",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements", "Acceptance Criteria (Definition of Done)"]
   },
   {

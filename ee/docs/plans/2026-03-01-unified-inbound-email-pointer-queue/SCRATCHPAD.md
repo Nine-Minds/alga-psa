@@ -72,6 +72,7 @@ Working notes for moving Microsoft, Google, and IMAP inbound email ingress to on
 - (2026-03-01) Completed `F012`: Consumer loop now ACKs only after `handleJob` completes successfully; failed jobs are not ACKed and are routed through retry/DLQ handling.
 - (2026-03-01) Completed `F013`: Added lease-based reclaim (`reclaimExpiredUnifiedInboundEmailQueueJobs`) so stale in-flight jobs are resurfaced back to the ready queue.
 - (2026-03-01) Completed `F014`: Failed jobs now increment `attempt` in queue payload state and only requeue while below configured `maxAttempts`.
+- (2026-03-01) Completed `F015`: Once `attempt` reaches `maxAttempts`, failed jobs are routed to the dedicated unified inbound pointer DLQ key.
 
 ## Open Questions
 
