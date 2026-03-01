@@ -110,7 +110,7 @@
   {
     "id": "F013",
     "description": "Rewrite outbound email HTML image `src` values to matching CID references",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Users and Primary Flows"
