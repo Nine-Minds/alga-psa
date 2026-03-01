@@ -33,7 +33,7 @@ import TicketEmailNotifications from "./TicketEmailNotifications";
 import TicketConversation from "./TicketConversation";
 import { useSession } from 'next-auth/react';
 import { toast } from 'react-hot-toast';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { useDrawer } from "@alga-psa/ui";
 import { useSchedulingCallbacks } from '@alga-psa/ui/context';
 import { findUserById, getCurrentUser } from "@alga-psa/users/actions";
@@ -870,6 +870,13 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
 
         try {
             const docs = await getDocumentByTicketId(ticket.ticket_id);
+            if (isActionPermissionError(docs)) {
+                console.warn('Permission denied while refreshing ticket documents', {
+                    ticketId: ticket.ticket_id,
+                    reason: docs.permissionError,
+                });
+                return;
+            }
             setDocuments(docs || []);
         } catch (error) {
             console.error('Failed to refresh ticket documents:', error);

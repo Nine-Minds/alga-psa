@@ -44,6 +44,7 @@ import type { CommentContactAuthor, CommentUserAuthor } from '../../lib/commentA
 import { uploadDocument } from '@alga-psa/documents/actions/documentActions';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { toast } from 'react-hot-toast';
+import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { deleteDraftClipboardImages } from '../../actions/comment-actions/clipboardImageDraftActions';
 import {
   createClipboardImageFilename,
@@ -285,8 +286,25 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
         ticketId: ticket.ticket_id,
       });
 
+      if (isActionPermissionError(uploadResult)) {
+        const reason = uploadResult.permissionError || 'Clipboard image upload failed.';
+        console.error(`[TicketConversation] Clipboard image upload denied: ${reason}`, {
+          ticketId: ticket.ticket_id,
+          userId: currentUser.id,
+          sequence,
+          fileName: renamedFile.name,
+          mimeType: renamedFile.type,
+          sizeBytes: renamedFile.size,
+        });
+        toast.error(reason);
+        throw new Error(reason);
+      }
+
       if (!uploadResult.success) {
-        const reason = uploadResult.error || 'Clipboard image upload failed.';
+        const reason =
+          'error' in uploadResult && typeof uploadResult.error === 'string'
+            ? uploadResult.error
+            : 'Clipboard image upload failed.';
         console.error(`[TicketConversation] Clipboard image upload failed: ${reason}`, {
           ticketId: ticket.ticket_id,
           userId: currentUser.id,
@@ -294,7 +312,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
           fileName: renamedFile.name,
           mimeType: renamedFile.type,
           sizeBytes: renamedFile.size,
-          error: uploadResult.error,
+          error: 'error' in uploadResult ? uploadResult.error : undefined,
         });
         toast.error(reason);
         throw new Error(reason);
