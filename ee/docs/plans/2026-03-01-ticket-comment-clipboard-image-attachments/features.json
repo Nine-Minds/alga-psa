@@ -20,7 +20,7 @@
   {
     "id": "F003",
     "description": "Persist pasted images through the ticket document/file attachment pipeline",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Goals",
       "Data / API / Integrations"
