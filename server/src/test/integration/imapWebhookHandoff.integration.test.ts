@@ -606,4 +606,30 @@ describe('IMAP webhook handoff', () => {
     expect(enqueueUnifiedInboundEmailQueueJobMock).toHaveBeenCalledTimes(1);
     expect(enqueueImapInAppJobMock).not.toHaveBeenCalled();
   });
+
+  it('T029: IMAP secret verification remains enforced in enqueue-only mode', async () => {
+    process.env.UNIFIED_INBOUND_EMAIL_POINTER_QUEUE_ENABLED = 'true';
+    const { POST } = await import('@alga-psa/integrations/webhooks/email/imap');
+
+    const request = new NextRequest('http://localhost:3000/api/email/webhooks/imap', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-imap-webhook-secret': 'wrong-secret',
+      },
+      body: JSON.stringify({
+        providerId: providerRow.id,
+        tenant: providerRow.tenant,
+        pointer: {
+          mailbox: 'INBOX',
+          uid: '500',
+        },
+      }),
+    });
+
+    const response = await POST(request);
+    expect(response.status).toBe(401);
+    expect(enqueueUnifiedInboundEmailQueueJobMock).not.toHaveBeenCalled();
+    expect(enqueueImapInAppJobMock).not.toHaveBeenCalled();
+  });
 });

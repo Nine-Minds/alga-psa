@@ -170,7 +170,7 @@
   {
     "id": "T029",
     "description": "Security: IMAP webhook secret verification remains enforced in enqueue-only mode",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F020"]
   },
   {
