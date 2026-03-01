@@ -141,7 +141,7 @@
   {
     "id": "T018",
     "description": "Outbound fallback: CID generation failure retains renderable attachment URL instead of broken image",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F014"
     ]
