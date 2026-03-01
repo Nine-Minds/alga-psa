@@ -44,7 +44,7 @@
   {
     "id": "T006",
     "description": "UI: uploading placeholder image block appears while upload request is in-flight",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F005"
     ]

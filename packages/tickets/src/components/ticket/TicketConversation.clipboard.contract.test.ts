@@ -31,4 +31,24 @@ describe('TicketConversation clipboard upload wiring', () => {
     expect(source).toContain('const uploadResult = await uploadDocument(formData, {');
     expect(source).toContain('ticketId: ticket.ticket_id');
   });
+
+  it('T006/T007: returns attachment-backed image payload on success and surfaces upload failures', () => {
+    const source = getTicketConversationSource();
+
+    expect(source).toContain('uploadFile={enableClipboardImageSupport ? handleClipboardImageUpload : undefined}');
+    expect(source).toContain('const viewUrl = uploadedDocument.file_id');
+    expect(source).toContain('return {');
+    expect(source).toContain('url: viewUrl');
+    expect(source).toContain("throw new Error(uploadResult.error || 'Clipboard image upload failed.')");
+    expect(source).toContain("throw new Error(validation.error)");
+  });
+
+  it('T008/T009: preserves editor-managed retry/remove affordances by throwing upload errors', () => {
+    const source = getTicketConversationSource();
+
+    expect(source).toContain("throw new Error('Ticket ID is required for clipboard image upload.')");
+    expect(source).toContain("throw new Error('User session is required for clipboard image upload.')");
+    expect(source).toContain("throw new Error(validation.error)");
+    expect(source).toContain("throw new Error(uploadResult.error || 'Clipboard image upload failed.')");
+  });
 });
