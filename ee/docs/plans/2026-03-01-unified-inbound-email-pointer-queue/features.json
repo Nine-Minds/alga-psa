@@ -80,7 +80,7 @@
   {
     "id": "F014",
     "description": "Implement bounded retry policy with attempt tracking for failed jobs",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements", "Users and Primary Flows"]
   },
   {

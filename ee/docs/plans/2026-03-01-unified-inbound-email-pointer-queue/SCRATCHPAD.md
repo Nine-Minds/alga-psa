@@ -71,6 +71,7 @@ Working notes for moving Microsoft, Google, and IMAP inbound email ingress to on
 - (2026-03-01) Completed `F011`: Queue job processor now calls `processInboundEmailInApp` for fetched provider messages and records final processing status back to `email_processed_messages`.
 - (2026-03-01) Completed `F012`: Consumer loop now ACKs only after `handleJob` completes successfully; failed jobs are not ACKed and are routed through retry/DLQ handling.
 - (2026-03-01) Completed `F013`: Added lease-based reclaim (`reclaimExpiredUnifiedInboundEmailQueueJobs`) so stale in-flight jobs are resurfaced back to the ready queue.
+- (2026-03-01) Completed `F014`: Failed jobs now increment `attempt` in queue payload state and only requeue while below configured `maxAttempts`.
 
 ## Open Questions
 
