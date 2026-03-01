@@ -223,7 +223,7 @@
   {
     "id": "T028",
     "description": "Feature flag on: clipboard image paste flow is enabled for eligible tenants/users",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F021"
     ]
