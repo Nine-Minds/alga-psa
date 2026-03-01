@@ -531,4 +531,33 @@ describe('IMAP webhook handoff', () => {
       uid: '88',
     });
   });
+
+  it('T007: IMAP unified ingress returns non-2xx when enqueue fails', async () => {
+    process.env.UNIFIED_INBOUND_EMAIL_POINTER_QUEUE_ENABLED = 'true';
+    enqueueUnifiedInboundEmailQueueJobMock.mockRejectedValue(new Error('redis unavailable'));
+    const { POST } = await import('@alga-psa/integrations/webhooks/email/imap');
+
+    const request = new NextRequest('http://localhost:3000/api/email/webhooks/imap', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-imap-webhook-secret': 'imap-secret',
+      },
+      body: JSON.stringify({
+        providerId: providerRow.id,
+        tenant: providerRow.tenant,
+        pointer: {
+          mailbox: 'INBOX',
+          uid: '99',
+        },
+      }),
+    });
+
+    const response = await POST(request);
+    expect(response.status).toBe(503);
+    const body = await response.json();
+    expect(body).toMatchObject({
+      error: 'Failed to enqueue IMAP pointer job',
+    });
+  });
 });

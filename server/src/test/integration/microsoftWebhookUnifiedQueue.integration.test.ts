@@ -186,4 +186,39 @@ describe('Microsoft unified inbound pointer queue ingress', () => {
       inlineProcessedCount: 0,
     });
   });
+
+  it('T007: Microsoft unified ingress returns non-2xx when enqueue fails', async () => {
+    const { POST } = await import('@alga-psa/integrations/webhooks/email/microsoft');
+    enqueueUnifiedInboundEmailQueueJobMock.mockRejectedValue(new Error('redis unavailable'));
+
+    const request = new NextRequest('http://localhost:3000/api/email/webhooks/microsoft', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        value: [
+          {
+            changeType: 'created',
+            clientState: 'expected-client-state',
+            resource: '/users/user-1/messages/msg-125',
+            resourceData: {
+              '@odata.type': '#microsoft.graph.message',
+              '@odata.id': 'msg-125',
+              id: 'msg-125',
+            },
+            subscriptionExpirationDateTime: new Date(Date.now() + 60_000).toISOString(),
+            subscriptionId: 'sub-ms-1',
+            tenantId: 'tenant-ms-1',
+          },
+        ],
+      }),
+    });
+
+    const response = await POST(request);
+    expect(response.status).toBe(503);
+    const body = await response.json();
+    expect(body).toMatchObject({
+      error: 'Failed to enqueue one or more Microsoft pointer jobs',
+      failureCount: 1,
+    });
+  });
 });

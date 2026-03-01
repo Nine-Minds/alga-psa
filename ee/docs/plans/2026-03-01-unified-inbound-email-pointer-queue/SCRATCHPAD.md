@@ -49,6 +49,7 @@ Working notes for moving Microsoft, Google, and IMAP inbound email ingress to on
 - `npm -w server run test -- src/test/integration/microsoftWebhookUnifiedQueue.integration.test.ts`
 - `npm -w server run test -- src/test/integration/googleWebhookUnifiedQueue.integration.test.ts --coverage.enabled=false`
 - `npm -w server run test -- src/test/integration/imapWebhookHandoff.integration.test.ts --coverage.enabled=false`
+- `npm -w server run test -- src/test/integration/microsoftWebhookUnifiedQueue.integration.test.ts src/test/integration/googleWebhookUnifiedQueue.integration.test.ts src/test/integration/imapWebhookHandoff.integration.test.ts --coverage.enabled=false`
 
 ## Links / References
 
@@ -104,6 +105,7 @@ Working notes for moving Microsoft, Google, and IMAP inbound email ingress to on
 - (2026-03-01) Completed `T004`: Added deferred-enqueue Microsoft webhook test proving `200` success is not returned until unified queue enqueue promise resolves.
 - (2026-03-01) Completed `T005`: Added deferred-enqueue Google webhook test proving callback success response is blocked until unified queue enqueue completion.
 - (2026-03-01) Completed `T006`: Added deferred-enqueue IMAP webhook test proving unified-mode success response is blocked until pointer job enqueue completion.
+- (2026-03-01) Completed `T007`: Added enqueue-failure assertions for Microsoft, Google, and IMAP unified ingress paths, each returning `503` to preserve upstream retry semantics.
 
 ## Open Questions
 
