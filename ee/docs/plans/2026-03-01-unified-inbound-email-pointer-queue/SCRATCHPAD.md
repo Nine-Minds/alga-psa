@@ -29,6 +29,7 @@ Working notes for moving Microsoft, Google, and IMAP inbound email ingress to on
 - Unified queue internals now track ready/processing/inflight/DLQ keys with lease metadata, enabling explicit claim and completion lifecycle management.
 - Queue enqueue now enforces a runtime pointer-only payload guard that rejects forbidden MIME/body/attachment keys at both top-level and nested pointer metadata.
 - Legacy IMAP in-memory async queue now rejects enqueue attempts when unified pointer queue mode is enabled for the same tenant/provider, preventing accidental production regressions to in-memory processing.
+- Security checks are still enforced before enqueue-only handoff: Microsoft validation/clientState checks, Google Pub/Sub JWT verification, and IMAP secret header verification all execute before unified-queue enqueue paths.
 
 ## Commands / Runbooks
 
@@ -81,6 +82,7 @@ Working notes for moving Microsoft, Google, and IMAP inbound email ingress to on
 - (2026-03-01) Completed `F017`: Consumer idempotency now uses a normalized external identity format (`<provider>:<messageId>`) prior to persistence checks.
 - (2026-03-01) Completed `F018`: Added `assertPointerOnlyPayload` validation in enqueue to reject raw content-like keys (`rawMime`, `attachments`, `body`, etc.) and enforce pointer-only queue contracts at runtime.
 - (2026-03-01) Completed `F019`: Added a defensive runtime guard in `imapInAppQueue` that throws when unified pointer queue mode is enabled for the tenant/provider, ensuring legacy in-memory queue path is bypassed/retired for production unified-mode processing.
+- (2026-03-01) Completed `F020`: Verified webhook auth/verification behavior is preserved in enqueue-only mode across Microsoft, Google, and IMAP paths (no auth bypass introduced by unified queue branching).
 
 ## Open Questions
 

@@ -116,7 +116,7 @@
   {
     "id": "F020",
     "description": "Preserve existing webhook auth/verification behavior while moving to enqueue-only ingress",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Security / Permissions", "Requirements"]
   },
   {
