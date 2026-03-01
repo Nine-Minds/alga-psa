@@ -26,6 +26,7 @@ Working notes for moving Microsoft, Google, and IMAP inbound email ingress to on
 - Microsoft webhook handler is transaction-scoped per notification; queue-mode enqueue can be inserted before legacy fetch/process logic and short-circuit the callback path cleanly.
 - Google webhook flow can enqueue immediately after provider resolution + JWT verification, before any `gmail_processed_history` writes or Gmail API fetches.
 - IMAP listener now has enough metadata at fetch time (`mailbox`, `uid`, `uidValidity`, `messageId`) to emit pointer-only webhook payloads; no raw body is required for unified queue ingress.
+- Unified queue internals now track ready/processing/inflight/DLQ keys with lease metadata, enabling explicit claim and completion lifecycle management.
 
 ## Commands / Runbooks
 
@@ -51,6 +52,7 @@ Working notes for moving Microsoft, Google, and IMAP inbound email ingress to on
   - `packages/types/src/interfaces/email.interfaces.ts`
 - Unified queue helper: `shared/services/email/unifiedInboundEmailQueue.ts`
 - Unified queue flag gate helper: `shared/services/email/inboundEmailInAppFeatureFlag.ts`
+- Unified queue consumer loop: `shared/services/email/unifiedInboundEmailQueueConsumer.ts`
 
 ## Progress Log
 
@@ -61,6 +63,7 @@ Working notes for moving Microsoft, Google, and IMAP inbound email ingress to on
 - (2026-03-01) Completed `F005`: Unified pointer ingress is now persisted in Redis list storage via `shared/services/email/unifiedInboundEmailQueue.ts` (`RPUSH` on a configurable queue key).
 - (2026-03-01) Completed `F006`: Unified queue mode ingress responses now acknowledge only after enqueue returns success; enqueue errors return non-success responses so callers can retry.
 - (2026-03-01) Completed `F007`: Microsoft, Google, and IMAP unified-queue paths now return `503` when enqueue fails, preserving upstream retry behavior.
+- (2026-03-01) Completed `F008`: Added a reusable consumer loop (`UnifiedInboundEmailQueueConsumer`) plus queue claim/ack/fail/reclaim primitives for processing unified inbound pointer jobs.
 
 ## Open Questions
 
