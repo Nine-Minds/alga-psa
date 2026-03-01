@@ -70,6 +70,13 @@ Rolling notes for the 5-phase documents system overhaul: entity-scoped folders, 
 
 ## Work Log
 
+- (2026-02-28) **F031–F037 implemented**: Phase 2 folder template actions completed:
+  - F031: `updateFolderTemplate(templateId, data)` with partial updates (name/entityType/isDefault/items independently), default-template handoff, and atomic item replacement.
+  - F032: `deleteFolderTemplate(templateId)` with `document:delete` permission enforcement and FK CASCADE cleanup.
+  - F033: `setDefaultTemplate(templateId)` to mark template as default, unsetting previous default for same entity type.
+  - F034: `applyTemplateToEntity(templateId, entityId, entityType)` to create entity-scoped folders from template items with idempotent skip of existing paths.
+  - F035 & F036: `ensureEntityFolders(entityId, entityType)` now checks `document_entity_folder_init` tracker, applies default template on first access, and records initialization. Idempotent on subsequent calls.
+  - F037: `uploadDocument()` now auto-files into first matching entity folder when `folder_path` not set and entity context exists (best-effort, never fails upload).
 - (2026-03-01) **F030 implemented**: Added `createFolderTemplate(data)` to `packages/documents/src/actions/folderTemplateActions.ts` with `document:create` permission enforcement, input normalization (`name`, `entityType`, item paths), duplicate/parent-path validation, transactional template+item insertion, parent-child ID mapping via path depth sort, and default-template handoff (unset existing defaults for same entity type when creating `isDefault=true`).
 - (2026-03-01) **F029 implemented**: Extended `packages/documents/src/actions/folderTemplateActions.ts` with `getFolderTemplate(templateId)` to fetch a tenant-scoped template plus ordered `document_folder_template_items`, returning `null` when not found and enforcing `document:read` permission + required `templateId` validation.
 - (2026-03-01) **F028 implemented**: Added `packages/documents/src/actions/folderTemplateActions.ts` with `getFolderTemplates(entityType?)` (auth-wrapped, `document:read` permission gate, tenant-scoped query against `document_folder_templates`, optional `entity_type` filter, deterministic ordering by entity type/default/name). Exported via `packages/documents/src/actions/index.ts`.

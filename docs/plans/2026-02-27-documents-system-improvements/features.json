@@ -234,7 +234,7 @@
   {
     "id": "F031",
     "description": "Action: updateFolderTemplate(templateId, data) updates template and items",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-2.5"
     ]
@@ -242,7 +242,7 @@
   {
     "id": "F032",
     "description": "Action: deleteFolderTemplate(templateId) deletes template (cascades to items)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-2.5"
     ]
@@ -250,7 +250,7 @@
   {
     "id": "F033",
     "description": "Action: setDefaultTemplate(templateId) marks as default, unsets previous default for same entity type",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-2.4"
     ]
@@ -258,7 +258,7 @@
   {
     "id": "F034",
     "description": "Action: applyTemplateToEntity(templateId, entityId, entityType) creates entity-scoped folders from template",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-2.6"
     ]
@@ -266,7 +266,7 @@
   {
     "id": "F035",
     "description": "Action: ensureEntityFolders() checks init tracker and applies default template if uninitialized",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-2.6"
     ]
@@ -274,7 +274,7 @@
   {
     "id": "F036",
     "description": "Action: ensureEntityFolders() is idempotent — skips existing folders on re-run",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-2.7"
     ]
@@ -282,7 +282,7 @@
   {
     "id": "F037",
     "description": "Action: uploadDocument() auto-files into matching entity folder (best-effort, never fails upload)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-2.8"
     ]

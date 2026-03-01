@@ -51,6 +51,13 @@ export interface ICreateFolderTemplateInput {
   items?: ICreateFolderTemplateItemInput[];
 }
 
+export interface IUpdateFolderTemplateInput {
+  name?: string;
+  entityType?: string;
+  isDefault?: boolean;
+  items?: ICreateFolderTemplateItemInput[];
+}
+
 const TEMPLATE_SELECT_COLUMNS = [
   'template_id',
   'tenant',
@@ -166,6 +173,85 @@ function normalizeTemplateItems(items: ICreateFolderTemplateItemInput[]): Array<
   }
 
   return normalizedItems;
+}
+
+function sortNormalizedTemplateItems(items: Array<{
+  folder_name: string;
+  folder_path: string;
+  sort_order: number;
+  is_client_visible: boolean;
+  parent_path: string | null;
+}>): Array<{
+  folder_name: string;
+  folder_path: string;
+  sort_order: number;
+  is_client_visible: boolean;
+  parent_path: string | null;
+}> {
+  return [...items].sort((left, right) => {
+    const leftDepth = left.folder_path.split('/').filter(Boolean).length;
+    const rightDepth = right.folder_path.split('/').filter(Boolean).length;
+
+    if (leftDepth !== rightDepth) {
+      return leftDepth - rightDepth;
+    }
+
+    if (left.sort_order !== right.sort_order) {
+      return left.sort_order - right.sort_order;
+    }
+
+    return left.folder_path.localeCompare(right.folder_path);
+  });
+}
+
+function buildTemplateItemRows(options: {
+  tenant: string;
+  templateId: string;
+  userId: string;
+  now: Date;
+  normalizedItems: Array<{
+    folder_name: string;
+    folder_path: string;
+    sort_order: number;
+    is_client_visible: boolean;
+    parent_path: string | null;
+  }>;
+}): Array<{
+  tenant: string;
+  template_item_id: string;
+  template_id: string;
+  parent_template_item_id: string | null;
+  folder_name: string;
+  folder_path: string;
+  sort_order: number;
+  is_client_visible: boolean;
+  created_at: Date;
+  updated_at: Date;
+  created_by: string;
+  updated_by: string;
+}> {
+  const sortedItems = sortNormalizedTemplateItems(options.normalizedItems);
+  const pathToItemId = new Map<string, string>();
+
+  return sortedItems.map((item) => {
+    const templateItemId = randomUUID();
+    pathToItemId.set(item.folder_path, templateItemId);
+
+    return {
+      tenant: options.tenant,
+      template_item_id: templateItemId,
+      template_id: options.templateId,
+      parent_template_item_id: item.parent_path ? pathToItemId.get(item.parent_path) ?? null : null,
+      folder_name: item.folder_name,
+      folder_path: item.folder_path,
+      sort_order: item.sort_order,
+      is_client_visible: item.is_client_visible,
+      created_at: options.now,
+      updated_at: options.now,
+      created_by: options.userId,
+      updated_by: options.userId,
+    };
+  });
 }
 
 /**
@@ -302,40 +388,12 @@ export const createFolderTemplate = withAuth(async (
       };
     }
 
-    const sortedItems = [...normalizedItems].sort((left, right) => {
-      const leftDepth = left.folder_path.split('/').filter(Boolean).length;
-      const rightDepth = right.folder_path.split('/').filter(Boolean).length;
-
-      if (leftDepth !== rightDepth) {
-        return leftDepth - rightDepth;
-      }
-
-      if (left.sort_order !== right.sort_order) {
-        return left.sort_order - right.sort_order;
-      }
-
-      return left.folder_path.localeCompare(right.folder_path);
-    });
-
-    const pathToItemId = new Map<string, string>();
-    const itemRows = sortedItems.map((item) => {
-      const templateItemId = randomUUID();
-      pathToItemId.set(item.folder_path, templateItemId);
-
-      return {
-        tenant,
-        template_item_id: templateItemId,
-        template_id: template.template_id,
-        parent_template_item_id: item.parent_path ? pathToItemId.get(item.parent_path) ?? null : null,
-        folder_name: item.folder_name,
-        folder_path: item.folder_path,
-        sort_order: item.sort_order,
-        is_client_visible: item.is_client_visible,
-        created_at: now,
-        updated_at: now,
-        created_by: user.user_id,
-        updated_by: user.user_id,
-      };
+    const itemRows = buildTemplateItemRows({
+      tenant,
+      templateId: template.template_id,
+      userId: user.user_id,
+      now,
+      normalizedItems,
     });
 
     await trx('document_folder_template_items').insert(itemRows);
@@ -354,4 +412,322 @@ export const createFolderTemplate = withAuth(async (
       items: insertedItems as IDocumentFolderTemplateItem[],
     };
   });
+});
+
+/**
+ * Updates an existing document folder template and optionally replaces its item tree.
+ */
+export const updateFolderTemplate = withAuth(async (
+  user,
+  { tenant },
+  templateId: string,
+  data: IUpdateFolderTemplateInput
+): Promise<IDocumentFolderTemplateWithItems | ActionPermissionError> => {
+  if (!(await hasPermission(user, 'document', 'update'))) {
+    return permissionError('Permission denied');
+  }
+
+  if (!templateId) {
+    throw new Error('templateId is required');
+  }
+
+  if (!data) {
+    throw new Error('Template data is required');
+  }
+
+  const { knex } = await createTenantKnex();
+  const now = new Date();
+
+  return knex.transaction(async (trx) => {
+    const existingTemplate = await trx('document_folder_templates')
+      .where('tenant', tenant)
+      .andWhere('template_id', templateId)
+      .select(...TEMPLATE_SELECT_COLUMNS)
+      .first();
+
+    if (!existingTemplate) {
+      throw new Error('Folder template not found');
+    }
+
+    const templateName = data.name !== undefined
+      ? normalizeTemplateName(data.name)
+      : existingTemplate.name;
+    const entityType = data.entityType !== undefined
+      ? normalizeEntityType(data.entityType)
+      : existingTemplate.entity_type;
+    const isDefault = data.isDefault !== undefined
+      ? Boolean(data.isDefault)
+      : existingTemplate.is_default;
+
+    if (isDefault) {
+      await trx('document_folder_templates')
+        .where('tenant', tenant)
+        .andWhere('entity_type', entityType)
+        .andWhereNot('template_id', templateId)
+        .update({
+          is_default: false,
+          updated_at: now,
+          updated_by: user.user_id,
+        });
+    }
+
+    const updatedTemplates = await trx('document_folder_templates')
+      .where('tenant', tenant)
+      .andWhere('template_id', templateId)
+      .update({
+        name: templateName,
+        entity_type: entityType,
+        is_default: isDefault,
+        updated_at: now,
+        updated_by: user.user_id,
+      })
+      .returning([...TEMPLATE_SELECT_COLUMNS]);
+
+    const updatedTemplate = updatedTemplates[0] as IDocumentFolderTemplate | undefined;
+    if (!updatedTemplate) {
+      throw new Error('Failed to update folder template');
+    }
+
+    if (data.items !== undefined) {
+      const normalizedItems = normalizeTemplateItems(data.items);
+
+      await trx('document_folder_template_items')
+        .where('tenant', tenant)
+        .andWhere('template_id', templateId)
+        .del();
+
+      if (normalizedItems.length > 0) {
+        const itemRows = buildTemplateItemRows({
+          tenant,
+          templateId,
+          userId: user.user_id,
+          now,
+          normalizedItems,
+        });
+
+        await trx('document_folder_template_items').insert(itemRows);
+      }
+    }
+
+    const items = await trx('document_folder_template_items')
+      .where('tenant', tenant)
+      .andWhere('template_id', templateId)
+      .select(...TEMPLATE_ITEM_SELECT_COLUMNS)
+      .orderBy([
+        { column: 'sort_order', order: 'asc' },
+        { column: 'folder_path', order: 'asc' },
+      ]);
+
+    return {
+      ...updatedTemplate,
+      items: items as IDocumentFolderTemplateItem[],
+    };
+  });
+});
+
+/**
+ * Deletes a document folder template and its items (cascade).
+ * Returns true if deleted, false if not found.
+ */
+export const deleteFolderTemplate = withAuth(async (
+  user,
+  { tenant },
+  templateId: string
+): Promise<boolean | ActionPermissionError> => {
+  if (!(await hasPermission(user, 'document', 'delete'))) {
+    return permissionError('Permission denied');
+  }
+
+  if (!templateId) {
+    throw new Error('templateId is required');
+  }
+
+  const { knex } = await createTenantKnex();
+
+  // Items are deleted via ON DELETE CASCADE on the FK
+  const deletedCount = await knex('document_folder_templates')
+    .where('tenant', tenant)
+    .andWhere('template_id', templateId)
+    .del();
+
+  return deletedCount > 0;
+});
+
+/**
+ * Marks a template as the default for its entity type.
+ * Unsets the previous default for that entity type (if any).
+ * Returns the updated template, or null if not found.
+ */
+export const setDefaultTemplate = withAuth(async (
+  user,
+  { tenant },
+  templateId: string
+): Promise<IDocumentFolderTemplate | null | ActionPermissionError> => {
+  if (!(await hasPermission(user, 'document', 'update'))) {
+    return permissionError('Permission denied');
+  }
+
+  if (!templateId) {
+    throw new Error('templateId is required');
+  }
+
+  const { knex } = await createTenantKnex();
+  const now = new Date();
+
+  return knex.transaction(async (trx) => {
+    // Fetch the template to get its entity_type
+    const template = await trx('document_folder_templates')
+      .where('tenant', tenant)
+      .andWhere('template_id', templateId)
+      .select('template_id', 'entity_type', 'is_default')
+      .first();
+
+    if (!template) {
+      return null;
+    }
+
+    // Already default — no-op
+    if (template.is_default) {
+      const fullTemplate = await trx('document_folder_templates')
+        .where('tenant', tenant)
+        .andWhere('template_id', templateId)
+        .select(...TEMPLATE_SELECT_COLUMNS)
+        .first();
+      return fullTemplate as IDocumentFolderTemplate;
+    }
+
+    // Unset current default for this entity type
+    await trx('document_folder_templates')
+      .where('tenant', tenant)
+      .andWhere('entity_type', template.entity_type)
+      .andWhere('is_default', true)
+      .update({
+        is_default: false,
+        updated_at: now,
+        updated_by: user.user_id,
+      });
+
+    // Set the new default
+    const updatedTemplates = await trx('document_folder_templates')
+      .where('tenant', tenant)
+      .andWhere('template_id', templateId)
+      .update({
+        is_default: true,
+        updated_at: now,
+        updated_by: user.user_id,
+      })
+      .returning([...TEMPLATE_SELECT_COLUMNS]);
+
+    return (updatedTemplates[0] as IDocumentFolderTemplate) ?? null;
+  });
+});
+
+/**
+ * Applies a folder template to an entity by creating entity-scoped folders.
+ * Skips folders that already exist (idempotent).
+ * Returns the number of folders created.
+ */
+export const applyTemplateToEntity = withAuth(async (
+  user,
+  { tenant },
+  templateId: string,
+  entityId: string,
+  entityType: string
+): Promise<number | ActionPermissionError> => {
+  if (!(await hasPermission(user, 'document', 'create'))) {
+    return permissionError('Permission denied');
+  }
+
+  if (!templateId) {
+    throw new Error('templateId is required');
+  }
+  if (!entityId) {
+    throw new Error('entityId is required');
+  }
+  if (!entityType) {
+    throw new Error('entityType is required');
+  }
+
+  const { knex } = await createTenantKnex();
+
+  // Fetch template items
+  const templateItems = await knex('document_folder_template_items')
+    .where('tenant', tenant)
+    .andWhere('template_id', templateId)
+    .select('folder_name', 'folder_path', 'is_client_visible', 'sort_order')
+    .orderBy('sort_order', 'asc')
+    .orderBy('folder_path', 'asc');
+
+  if (templateItems.length === 0) {
+    return 0;
+  }
+
+  // Fetch existing entity-scoped folders to avoid duplicates
+  const existingFolders = await knex('document_folders')
+    .where('tenant', tenant)
+    .andWhere('entity_id', entityId)
+    .andWhere('entity_type', entityType)
+    .select('folder_path');
+
+  const existingPaths = new Set(existingFolders.map((f: { folder_path: string }) => f.folder_path));
+
+  // Build folder rows to insert, skipping existing paths
+  const pathToFolderId = new Map<string, string>();
+  const foldersToInsert: Array<{
+    tenant: string;
+    folder_id: string;
+    folder_path: string;
+    folder_name: string;
+    parent_folder_id: string | null;
+    entity_id: string;
+    entity_type: string;
+    is_client_visible: boolean;
+    created_by: string;
+  }> = [];
+
+  for (const item of templateItems) {
+    if (existingPaths.has(item.folder_path)) {
+      // Skip existing folder but record its ID for parent lookups
+      const existing = await knex('document_folders')
+        .where('tenant', tenant)
+        .andWhere('entity_id', entityId)
+        .andWhere('entity_type', entityType)
+        .andWhere('folder_path', item.folder_path)
+        .select('folder_id')
+        .first();
+      if (existing) {
+        pathToFolderId.set(item.folder_path, existing.folder_id);
+      }
+      continue;
+    }
+
+    const folderId = randomUUID();
+    pathToFolderId.set(item.folder_path, folderId);
+
+    // Determine parent folder ID
+    const segments = item.folder_path.split('/').filter(Boolean);
+    let parentFolderId: string | null = null;
+    if (segments.length > 1) {
+      const parentPath = '/' + segments.slice(0, -1).join('/');
+      parentFolderId = pathToFolderId.get(parentPath) ?? null;
+    }
+
+    foldersToInsert.push({
+      tenant,
+      folder_id: folderId,
+      folder_path: item.folder_path,
+      folder_name: item.folder_name,
+      parent_folder_id: parentFolderId,
+      entity_id: entityId,
+      entity_type: entityType,
+      is_client_visible: item.is_client_visible,
+      created_by: user.user_id,
+    });
+  }
+
+  if (foldersToInsert.length > 0) {
+    await knex('document_folders').insert(foldersToInsert);
+  }
+
+  return foldersToInsert.length;
 });
