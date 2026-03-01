@@ -70,6 +70,14 @@ Rolling notes for the 5-phase documents system overhaul: entity-scoped folders, 
 
 ## Work Log
 
+- (2026-02-28) **F043–F048, F055 implemented**: Phase 3 client portal document actions and API access:
+  - F043: `getClientDocuments(page, limit, filters)` in `packages/client-portal/src/actions/client-portal-actions/client-documents.ts` with pagination, search, folder, and date filters. Aggregates documents across direct client associations, tickets, project tasks, and contracts.
+  - F044: `getClientDocumentFolders()` returns folder tree of client-visible folders.
+  - F045: `downloadClientDocument(documentId)` verifies `is_client_visible` and client ownership before allowing download.
+  - F046: All client-documents actions wrapped in `withAuth()` enforcing `user_type === 'client'`.
+  - F047: File view route extended to check `is_client_visible` for client users (Documents Hub access).
+  - F048: File view route extended to support contract-associated document access via `billing_plans.company_id` check.
+  - F055: Ticket inline documents bypass `is_client_visible` check (per PRD FR-3.10).
 - (2026-02-28) **F041 implemented**: Updated `packages/documents/src/components/Documents.tsx` to call `ensureEntityFolders(entityId, entityType)` on mount when in entity mode (fire-and-forget, silent failure). This completes the lazy folder initialization integration so templates are applied on first Documents tab access.
 - (2026-02-28) **F031–F037 implemented**: Phase 2 folder template actions completed:
   - F031: `updateFolderTemplate(templateId, data)` with partial updates (name/entityType/isDefault/items independently), default-template handoff, and atomic item replacement.
