@@ -212,7 +212,7 @@
   {
     "id": "T036",
     "description": "E2E: Microsoft callback enqueues pointer and worker creates expected ticket/comment/documents through shared processing path",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F002", "F009", "F011"]
   },
   {
