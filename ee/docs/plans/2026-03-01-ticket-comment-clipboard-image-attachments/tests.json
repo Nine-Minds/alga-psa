@@ -28,7 +28,7 @@
   {
     "id": "T004",
     "description": "Integration: successful clipboard upload creates file/document records tied to the target ticket",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F003"
     ]
