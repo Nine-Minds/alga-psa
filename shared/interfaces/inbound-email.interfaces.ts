@@ -166,6 +166,54 @@ export interface EmailConnectionStatus {
   lastConnectionTest?: string;
 }
 
+export type UnifiedInboundEmailProvider = 'microsoft' | 'google' | 'imap';
+
+export interface UnifiedInboundQueueJobBase {
+  jobId: string;
+  schemaVersion: 1;
+  tenantId: string;
+  providerId: string;
+  provider: UnifiedInboundEmailProvider;
+  enqueuedAt: string;
+  attempt: number;
+  maxAttempts: number;
+}
+
+export interface MicrosoftInboundEmailPointer {
+  subscriptionId: string;
+  messageId: string;
+  resource?: string;
+  changeType?: string;
+}
+
+export interface GoogleInboundEmailPointer {
+  historyId: string;
+  emailAddress: string;
+  pubsubMessageId?: string;
+  discoveredMessageIds?: string[];
+}
+
+export interface ImapInboundEmailPointer {
+  mailbox: string;
+  uid: string;
+  uidValidity?: string;
+  messageId?: string;
+}
+
+export type UnifiedInboundEmailQueueJob =
+  | (UnifiedInboundQueueJobBase & {
+      provider: 'microsoft';
+      pointer: MicrosoftInboundEmailPointer;
+    })
+  | (UnifiedInboundQueueJobBase & {
+      provider: 'google';
+      pointer: GoogleInboundEmailPointer;
+    })
+  | (UnifiedInboundQueueJobBase & {
+      provider: 'imap';
+      pointer: ImapInboundEmailPointer;
+    });
+
 export interface EmailQueueJob {
   id: string;
   tenant: string;

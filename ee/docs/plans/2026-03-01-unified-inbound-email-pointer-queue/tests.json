@@ -1,0 +1,242 @@
+[
+  {
+    "id": "T001",
+    "description": "Contract: Microsoft webhook ingress builds pointer-only queue job payload with required tenant/provider/message identifiers",
+    "implemented": false,
+    "featureIds": ["F001", "F002", "F018"]
+  },
+  {
+    "id": "T002",
+    "description": "Contract: Google webhook ingress builds pointer-only queue job payload with required tenant/provider/history identifiers",
+    "implemented": false,
+    "featureIds": ["F001", "F003", "F018"]
+  },
+  {
+    "id": "T003",
+    "description": "Contract: IMAP listener ingress builds pointer-only queue job payload with required tenant/provider/mailbox pointer identifiers",
+    "implemented": false,
+    "featureIds": ["F001", "F004", "F018"]
+  },
+  {
+    "id": "T004",
+    "description": "Ingress behavior: Microsoft callback returns success only after durable enqueue succeeds",
+    "implemented": false,
+    "featureIds": ["F002", "F006"]
+  },
+  {
+    "id": "T005",
+    "description": "Ingress behavior: Google callback returns success only after durable enqueue succeeds",
+    "implemented": false,
+    "featureIds": ["F003", "F006"]
+  },
+  {
+    "id": "T006",
+    "description": "Ingress behavior: IMAP listener records success only after durable enqueue succeeds",
+    "implemented": false,
+    "featureIds": ["F004", "F006"]
+  },
+  {
+    "id": "T007",
+    "description": "Failure path: enqueue error returns non-2xx response in webhook ingress paths",
+    "implemented": false,
+    "featureIds": ["F007"]
+  },
+  {
+    "id": "T008",
+    "description": "Integration: IMAP delivery retries when server ingress returns non-2xx",
+    "implemented": false,
+    "featureIds": ["F007"]
+  },
+  {
+    "id": "T009",
+    "description": "Consumer: worker can claim and process queued Microsoft pointer jobs",
+    "implemented": false,
+    "featureIds": ["F008", "F024"]
+  },
+  {
+    "id": "T010",
+    "description": "Consumer: worker can claim and process queued Google pointer jobs",
+    "implemented": false,
+    "featureIds": ["F008", "F024"]
+  },
+  {
+    "id": "T011",
+    "description": "Consumer: worker can claim and process queued IMAP pointer jobs",
+    "implemented": false,
+    "featureIds": ["F008", "F024"]
+  },
+  {
+    "id": "T012",
+    "description": "Consumer fetch: Microsoft pointer resolves to full email payload before processing",
+    "implemented": false,
+    "featureIds": ["F009", "F024"]
+  },
+  {
+    "id": "T013",
+    "description": "Consumer fetch: Google pointer resolves to full email payload before processing",
+    "implemented": false,
+    "featureIds": ["F009", "F024"]
+  },
+  {
+    "id": "T014",
+    "description": "Consumer fetch: IMAP pointer resolves to full email payload before processing",
+    "implemented": false,
+    "featureIds": ["F009", "F024"]
+  },
+  {
+    "id": "T015",
+    "description": "Idempotency: first consume of message identity processes successfully and records consume marker",
+    "implemented": false,
+    "featureIds": ["F010", "F017"]
+  },
+  {
+    "id": "T016",
+    "description": "Idempotency: duplicate consume of same message identity no-ops downstream processing",
+    "implemented": false,
+    "featureIds": ["F010", "F017"]
+  },
+  {
+    "id": "T017",
+    "description": "Consumer execution: successful fetch invokes processInboundEmailInApp with full normalized email payload",
+    "implemented": false,
+    "featureIds": ["F011"]
+  },
+  {
+    "id": "T018",
+    "description": "Queue semantics: successful processing ACKs job and removes it from pending state",
+    "implemented": false,
+    "featureIds": ["F012"]
+  },
+  {
+    "id": "T019",
+    "description": "Queue semantics: processing failure does not ACK job and job is eligible for retry",
+    "implemented": false,
+    "featureIds": ["F013", "F014"]
+  },
+  {
+    "id": "T020",
+    "description": "Queue semantics: unacknowledged job resurfaces after claim timeout and is reprocessed",
+    "implemented": false,
+    "featureIds": ["F013", "F014"]
+  },
+  {
+    "id": "T021",
+    "description": "Retry policy: attempt count increments on each failed consume",
+    "implemented": false,
+    "featureIds": ["F014"]
+  },
+  {
+    "id": "T022",
+    "description": "Retry policy: job moves to DLQ when max attempts are exceeded",
+    "implemented": false,
+    "featureIds": ["F015"]
+  },
+  {
+    "id": "T023",
+    "description": "Source drift handling: IMAP message unavailable at consume time is marked skipped with deterministic reason",
+    "implemented": false,
+    "featureIds": ["F016"]
+  },
+  {
+    "id": "T024",
+    "description": "Source drift handling: skipped-source-unavailable path does not cause infinite retries",
+    "implemented": false,
+    "featureIds": ["F016", "F014"]
+  },
+  {
+    "id": "T025",
+    "description": "Payload guard: queue job payload schema excludes attachment bytes and raw MIME fields",
+    "implemented": false,
+    "featureIds": ["F018"]
+  },
+  {
+    "id": "T026",
+    "description": "Regression: legacy IMAP in-memory queue path is not used when unified queue mode is enabled",
+    "implemented": false,
+    "featureIds": ["F019", "F021"]
+  },
+  {
+    "id": "T027",
+    "description": "Security: Microsoft webhook validation/auth behavior remains enforced in enqueue-only mode",
+    "implemented": false,
+    "featureIds": ["F020"]
+  },
+  {
+    "id": "T028",
+    "description": "Security: Google webhook JWT verification remains enforced in enqueue-only mode",
+    "implemented": false,
+    "featureIds": ["F020"]
+  },
+  {
+    "id": "T029",
+    "description": "Security: IMAP webhook secret verification remains enforced in enqueue-only mode",
+    "implemented": false,
+    "featureIds": ["F020"]
+  },
+  {
+    "id": "T030",
+    "description": "Config: unified queue feature flag switches callbacks/listener to enqueue-only path",
+    "implemented": false,
+    "featureIds": ["F021", "F023"]
+  },
+  {
+    "id": "T031",
+    "description": "Config: disabling unified queue flag preserves previous behavior for controlled rollback",
+    "implemented": false,
+    "featureIds": ["F021"]
+  },
+  {
+    "id": "T032",
+    "description": "Logs: enqueue success/failure events include tenant/provider/pointer identifiers",
+    "implemented": false,
+    "featureIds": ["F022"]
+  },
+  {
+    "id": "T033",
+    "description": "Logs: consumer retry, ack, skip, and DLQ events include attempt counts and terminal reason",
+    "implemented": false,
+    "featureIds": ["F022"]
+  },
+  {
+    "id": "T034",
+    "description": "DB integration happy path: consume-time idempotency record is persisted for newly processed message",
+    "implemented": false,
+    "featureIds": ["F010", "F017"]
+  },
+  {
+    "id": "T035",
+    "description": "DB integration guard path: duplicate consume attempt is blocked by idempotency persistence constraint/check",
+    "implemented": false,
+    "featureIds": ["F010", "F017"]
+  },
+  {
+    "id": "T036",
+    "description": "E2E: Microsoft callback enqueues pointer and worker creates expected ticket/comment/documents through shared processing path",
+    "implemented": false,
+    "featureIds": ["F002", "F009", "F011"]
+  },
+  {
+    "id": "T037",
+    "description": "E2E: Google callback enqueues pointer and worker creates expected ticket/comment/documents through shared processing path",
+    "implemented": false,
+    "featureIds": ["F003", "F009", "F011"]
+  },
+  {
+    "id": "T038",
+    "description": "E2E: IMAP listener enqueues pointer and worker creates expected ticket/comment/documents through shared processing path",
+    "implemented": false,
+    "featureIds": ["F004", "F009", "F011"]
+  },
+  {
+    "id": "T039",
+    "description": "E2E: duplicate provider deliveries produce only one processed message outcome due to consume-time idempotency",
+    "implemented": false,
+    "featureIds": ["F010", "F017"]
+  },
+  {
+    "id": "T040",
+    "description": "Docs: scratchpad/runbook captures queue architecture, flags, and local validation steps",
+    "implemented": false,
+    "featureIds": ["F025"]
+  }
+]
