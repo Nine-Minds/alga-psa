@@ -13,8 +13,11 @@ describe('TicketConversation clipboard upload wiring', () => {
     const source = getTicketConversationSource();
 
     expect(source).toContain('const handleSubmitComment = async () =>');
+    expect(source).toContain('const uploadClipboardImage = React.useCallback(');
     expect(source).toContain('const handleClipboardImageUpload = React.useCallback(');
-    expect(source).toContain('uploadFile={enableClipboardImageSupport ? handleClipboardImageUpload : undefined}');
+    expect(source).toContain('const handleClipboardImageUploadForExistingComment = React.useCallback(');
+    expect(source).toContain('uploadFile={handleClipboardImageUpload}');
+    expect(source).toContain('uploadFile={handleClipboardImageUploadForExistingComment}');
 
     const submitHandlerMatch = source.match(
       /const handleSubmitComment = async \(\) => \{([\s\S]*?)\n\s*\};/
@@ -35,11 +38,12 @@ describe('TicketConversation clipboard upload wiring', () => {
   it('T006/T007: returns attachment-backed image payload on success and surfaces upload failures', () => {
     const source = getTicketConversationSource();
 
-    expect(source).toContain('uploadFile={enableClipboardImageSupport ? handleClipboardImageUpload : undefined}');
+    expect(source).toContain('uploadFile={handleClipboardImageUpload}');
     expect(source).toContain('const viewUrl = uploadedDocument.file_id');
-    expect(source).toContain('return {');
-    expect(source).toContain('url: viewUrl');
-    expect(source).toContain("throw new Error(uploadResult.error || 'Clipboard image upload failed.')");
+    expect(source).toContain("const reason = uploadResult.error || 'Clipboard image upload failed.'");
+    expect(source).toContain('toast.error(reason);');
+    expect(source).toContain('return viewUrl;');
+    expect(source).toContain('throw new Error(reason);');
     expect(source).toContain("throw new Error(validation.error)");
   });
 
@@ -49,7 +53,7 @@ describe('TicketConversation clipboard upload wiring', () => {
     expect(source).toContain("throw new Error('Ticket ID is required for clipboard image upload.')");
     expect(source).toContain("throw new Error('User session is required for clipboard image upload.')");
     expect(source).toContain("throw new Error(validation.error)");
-    expect(source).toContain("throw new Error(uploadResult.error || 'Clipboard image upload failed.')");
+    expect(source).toContain('throw new Error(reason);');
   });
 
   it('T010: persists attachment-backed image reference URLs rather than raw image data payloads', () => {
@@ -73,7 +77,7 @@ describe('TicketConversation clipboard upload wiring', () => {
   it('T020/T021: prompts keep-vs-delete on cancel and allows keep path without deletion', () => {
     const source = getTicketConversationSource();
 
-    expect(source).toContain('if (enableClipboardImageSupport && draftClipboardImages.length > 0)');
+    expect(source).toContain('if (draftClipboardImages.length > 0)');
     expect(source).toContain('setShowDraftCancelDialog(true)');
     expect(source).toContain('const handleKeepDraftClipboardImages = () => {');
     expect(source).toContain('setDraftClipboardImages([])');

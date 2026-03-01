@@ -4,6 +4,9 @@ import { StorageService } from '../../storage/StorageService';
 
 const IMG_SRC_REGEX = /<img\b[^>]*\bsrc=(["'])(.*?)\1/gi;
 const DOCUMENT_VIEW_PATH_REGEX = /^\/api\/documents\/view\/([^/?#]+)$/i;
+const DEFAULT_MAX_INLINE_IMAGE_BYTES = 5 * 1024 * 1024;
+const DEFAULT_MAX_INLINE_IMAGE_TOTAL_BYTES = 15 * 1024 * 1024;
+const DEFAULT_MAX_INLINE_IMAGE_COUNT = 10;
 
 export interface InlineImageRewriteOutcome {
   sourceUrl: string;
@@ -15,7 +18,65 @@ export interface InlineImageRewriteOutcome {
     | 'missing_file_id'
     | 'not_ticket_document'
     | 'non_image_document'
+    | 'attachment_count_exceeded'
+    | 'attachment_over_max_bytes'
+    | 'attachment_total_bytes_exceeded'
     | 'storage_download_failed';
+}
+
+interface InlineImageRewriteLimits {
+  maxInlineImageBytes: number;
+  maxInlineImageTotalBytes: number;
+  maxInlineImageCount: number;
+}
+
+function parsePositiveInteger(
+  value: string | undefined,
+  fallback: number,
+  max: number
+): number {
+  if (!value) return fallback;
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed <= 0) return fallback;
+  return Math.max(1, Math.min(max, Math.floor(parsed)));
+}
+
+function resolveInlineImageRewriteLimits(
+  limits?: Partial<InlineImageRewriteLimits>
+): InlineImageRewriteLimits {
+  const maxInlineImageBytes = parsePositiveInteger(
+    process.env.TICKET_COMMENT_EMAIL_INLINE_IMAGE_MAX_BYTES,
+    DEFAULT_MAX_INLINE_IMAGE_BYTES,
+    50 * 1024 * 1024
+  );
+  const maxInlineImageTotalBytes = parsePositiveInteger(
+    process.env.TICKET_COMMENT_EMAIL_INLINE_IMAGE_MAX_TOTAL_BYTES,
+    DEFAULT_MAX_INLINE_IMAGE_TOTAL_BYTES,
+    100 * 1024 * 1024
+  );
+  const maxInlineImageCount = parsePositiveInteger(
+    process.env.TICKET_COMMENT_EMAIL_INLINE_IMAGE_MAX_COUNT,
+    DEFAULT_MAX_INLINE_IMAGE_COUNT,
+    50
+  );
+
+  return {
+    maxInlineImageBytes: Math.max(
+      1,
+      Math.min(
+        50 * 1024 * 1024,
+        Math.floor(limits?.maxInlineImageBytes ?? maxInlineImageBytes)
+      )
+    ),
+    maxInlineImageTotalBytes: Math.max(
+      1,
+      Math.min(
+        100 * 1024 * 1024,
+        Math.floor(limits?.maxInlineImageTotalBytes ?? maxInlineImageTotalBytes)
+      )
+    ),
+    maxInlineImageCount: Math.max(1, Math.min(50, Math.floor(limits?.maxInlineImageCount ?? maxInlineImageCount))),
+  };
 }
 
 export interface RewriteTicketCommentImagesResult {
@@ -73,7 +134,9 @@ export async function rewriteTicketCommentImagesToCid(params: {
   tenantId: string;
   ticketId: string;
   html: string;
+  limits?: Partial<InlineImageRewriteLimits>;
 }): Promise<RewriteTicketCommentImagesResult> {
+  const limits = resolveInlineImageRewriteLimits(params.limits);
   const imageSources = extractImageSourcesFromHtml(params.html);
   if (imageSources.length === 0) {
     return {
@@ -117,7 +180,7 @@ export async function rewriteTicketCommentImagesToCid(params: {
     .whereIn('d.file_id', fileIds)
     .andWhere('da.entity_type', 'ticket')
     .andWhere('da.entity_id', params.ticketId)
-    .select('d.document_id', 'd.document_name', 'd.file_id', 'd.mime_type');
+    .select('d.document_id', 'd.document_name', 'd.file_id', 'd.mime_type', 'd.file_size');
 
   const documentByFileId = new Map(
     ticketImageDocuments
@@ -126,6 +189,7 @@ export async function rewriteTicketCommentImagesToCid(params: {
   );
 
   const attachments: EmailAttachment[] = [];
+  let totalInlineAttachmentBytes = 0;
   const replacementMap = new Map<string, string>();
 
   for (const [source, fileId] of sourceFileIds.entries()) {
@@ -150,8 +214,50 @@ export async function rewriteTicketCommentImagesToCid(params: {
       continue;
     }
 
+    if (attachments.length >= limits.maxInlineImageCount) {
+      outcomes.push({
+        sourceUrl: source,
+        resolvedFileId: fileId,
+        strategy: 'url-fallback',
+        reason: 'attachment_count_exceeded',
+      });
+      continue;
+    }
+
+    const declaredSize = Number(document.file_size || 0);
+    if (Number.isFinite(declaredSize) && declaredSize > 0 && declaredSize > limits.maxInlineImageBytes) {
+      outcomes.push({
+        sourceUrl: source,
+        resolvedFileId: fileId,
+        strategy: 'url-fallback',
+        reason: 'attachment_over_max_bytes',
+      });
+      continue;
+    }
+
     try {
       const downloadResult = await StorageService.downloadFile(fileId);
+      const inlineBytes = Buffer.isBuffer(downloadResult.buffer)
+        ? downloadResult.buffer.length
+        : Buffer.byteLength(String(downloadResult.buffer || ''), 'utf-8');
+      if (inlineBytes > limits.maxInlineImageBytes) {
+        outcomes.push({
+          sourceUrl: source,
+          resolvedFileId: fileId,
+          strategy: 'url-fallback',
+          reason: 'attachment_over_max_bytes',
+        });
+        continue;
+      }
+      if (totalInlineAttachmentBytes + inlineBytes > limits.maxInlineImageTotalBytes) {
+        outcomes.push({
+          sourceUrl: source,
+          resolvedFileId: fileId,
+          strategy: 'url-fallback',
+          reason: 'attachment_total_bytes_exceeded',
+        });
+        continue;
+      }
       const cid = buildInlineCid({
         ticketId: params.ticketId,
         fileId,
@@ -164,6 +270,7 @@ export async function rewriteTicketCommentImagesToCid(params: {
         contentType: downloadResult.metadata.mime_type || document.mime_type || 'application/octet-stream',
         cid,
       });
+      totalInlineAttachmentBytes += inlineBytes;
 
       replacementMap.set(source, `cid:${cid}`);
       outcomes.push({

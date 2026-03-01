@@ -99,6 +99,110 @@ describe('ticketCommentInlineImageEmail', () => {
     ]);
   });
 
+  it('falls back to URL when inline image exceeds configured per-image limit', async () => {
+    const { db } = createMockDb([
+      {
+        document_id: 'doc-1',
+        document_name: 'big-image.png',
+        file_id: 'file-1',
+        mime_type: 'image/png',
+        file_size: 1024,
+      },
+    ]);
+
+    const downloadSpy = vi.spyOn(StorageService, 'downloadFile').mockResolvedValue({
+      buffer: Buffer.from('unused'),
+      metadata: {
+        original_name: 'big-image.png',
+        mime_type: 'image/png',
+        size: 6,
+      },
+    });
+
+    const html = '<p>Hello<img src="/api/documents/view/file-1" /></p>';
+    const result = await rewriteTicketCommentImagesToCid({
+      db,
+      tenantId: 'tenant-1',
+      ticketId: 'ticket-1',
+      html,
+      limits: {
+        maxInlineImageBytes: 10,
+        maxInlineImageTotalBytes: 100,
+        maxInlineImageCount: 5,
+      },
+    });
+
+    expect(result.attachments).toHaveLength(0);
+    expect(result.html).toContain('src="/api/documents/view/file-1"');
+    expect(result.outcomes).toEqual([
+      expect.objectContaining({
+        sourceUrl: '/api/documents/view/file-1',
+        resolvedFileId: 'file-1',
+        strategy: 'url-fallback',
+        reason: 'attachment_over_max_bytes',
+      }),
+    ]);
+    expect(downloadSpy).not.toHaveBeenCalled();
+  });
+
+  it('falls back to URL when cumulative inline image bytes exceed configured total limit', async () => {
+    const { db } = createMockDb([
+      {
+        document_id: 'doc-1',
+        document_name: 'img-1.png',
+        file_id: 'file-1',
+        mime_type: 'image/png',
+        file_size: 4,
+      },
+      {
+        document_id: 'doc-2',
+        document_name: 'img-2.png',
+        file_id: 'file-2',
+        mime_type: 'image/png',
+        file_size: 4,
+      },
+    ]);
+
+    vi.spyOn(StorageService, 'downloadFile').mockImplementation(async (fileId: string) => ({
+      buffer: Buffer.from(fileId === 'file-1' ? 'aaaa' : 'bbbb'),
+      metadata: {
+        original_name: `${fileId}.png`,
+        mime_type: 'image/png',
+        size: 4,
+      },
+    }));
+
+    const result = await rewriteTicketCommentImagesToCid({
+      db,
+      tenantId: 'tenant-1',
+      ticketId: 'ticket-1',
+      html: '<p><img src="/api/documents/view/file-1" /><img src="/api/documents/view/file-2" /></p>',
+      limits: {
+        maxInlineImageBytes: 10,
+        maxInlineImageTotalBytes: 6,
+        maxInlineImageCount: 5,
+      },
+    });
+
+    expect(result.attachments).toHaveLength(1);
+    expect(result.html).toContain('src="cid:ticket-comment-ticket-1-file-1-1@alga-psa"');
+    expect(result.html).toContain('src="/api/documents/view/file-2"');
+    expect(result.outcomes).toEqual([
+      expect.objectContaining({
+        sourceUrl: '/api/documents/view/file-1',
+        resolvedFileId: 'file-1',
+        strategy: 'cid',
+        reason: 'converted_to_cid',
+      }),
+      expect.objectContaining({
+        sourceUrl: '/api/documents/view/file-2',
+        resolvedFileId: 'file-2',
+        strategy: 'url-fallback',
+        reason: 'attachment_total_bytes_exceeded',
+      }),
+    ]);
+  });
+
   it('extractDocumentViewFileId parses relative and absolute document-view URLs', () => {
     expect(extractDocumentViewFileId('/api/documents/view/file-abc')).toBe('file-abc');
     expect(extractDocumentViewFileId('https://acme.example.com/api/documents/view/file-def?x=1')).toBe(

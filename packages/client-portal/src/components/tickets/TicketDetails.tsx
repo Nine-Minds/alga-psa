@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { RichTextViewer } from '@alga-psa/ui/editor';
@@ -83,6 +83,15 @@ export function TicketDetails({
       styles: {}
     }]
   }]);
+  const refreshTicketDocuments = useCallback(async () => {
+    if (!ticketId) return;
+    try {
+      const docs = await getClientTicketDocuments(ticketId);
+      setDocuments(docs || []);
+    } catch (error) {
+      console.error('Failed to refresh ticket documents after clipboard upload:', error);
+    }
+  }, [ticketId]);
   // No component-level pending state needed; we'll keep optimistic data within the save handler scope
 
   // State for appointment requests
@@ -650,6 +659,7 @@ export function TicketDetails({
                 onDelete={handleDelete}
                 onContentChange={handleContentChange}
                 overrides={commentOverrides}
+                onClipboardImageUploaded={refreshTicketDocuments}
               />
             </div>
           )}

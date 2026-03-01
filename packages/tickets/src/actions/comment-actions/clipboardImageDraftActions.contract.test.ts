@@ -26,6 +26,13 @@ describe('clipboardImageDraftActions contract', () => {
     expect(source).toContain("reason: 'already_referenced'");
   });
 
+  it('guards against deleting documents still associated to non-ticket entities', () => {
+    const source = getActionSource();
+
+    expect(source).toContain("trx('document_associations')");
+    expect(source).toContain("reason: 'has_other_associations'");
+  });
+
   it('T024: rejects delete when requester lacks document delete permission', () => {
     const source = getActionSource();
 

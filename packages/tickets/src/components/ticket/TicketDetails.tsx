@@ -197,9 +197,6 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const { data: session } = useSession();
     const [hasHydrated, setHasHydrated] = useState(false);
     const { enabled: emailLogsEnabled } = useFeatureFlag('email-logs', { defaultValue: false });
-    const { enabled: clipboardImageCommentsEnabled } = useFeatureFlag('ticket-comment-clipboard-images', {
-        defaultValue: false,
-    });
 
     useEffect(() => {
         setHasHydrated(true);
@@ -761,6 +758,16 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     };
 
     const [editorKey, setEditorKey] = useState(0);
+    const refreshTicketDocuments = useCallback(async () => {
+        if (!ticket.ticket_id) return;
+
+        try {
+            const docs = await getDocumentByTicketId(ticket.ticket_id);
+            setDocuments(docs || []);
+        } catch (error) {
+            console.error('Failed to refresh ticket documents:', error);
+        }
+    }, [ticket.ticket_id]);
 
     const handleAddNewComment = async (
         isInternal: boolean,
@@ -1847,7 +1854,7 @@ const handleClose = () => {
                                     isSubmitting={isSubmitting}
                                     hideInternalTab={false}
                                     externalComments={bundle?.isBundleMaster ? aggregatedChildClientComments : []}
-                                    enableClipboardImageSupport={clipboardImageCommentsEnabled}
+                                    onClipboardImageUploaded={refreshTicketDocuments}
                                 />
                             </div>
                         </Suspense>

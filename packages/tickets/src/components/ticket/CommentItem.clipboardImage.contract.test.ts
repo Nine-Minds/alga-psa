@@ -12,4 +12,12 @@ describe('CommentItem clipboard image rendering contract', () => {
     expect(source).toContain('<RichTextViewer');
     expect(source).toContain('content={parsed as any}');
   });
+
+  it('wires clipboard image upload for edit-mode TextEditor in existing comments', () => {
+    const filePath = path.resolve(__dirname, './CommentItem.tsx');
+    const source = fs.readFileSync(filePath, 'utf-8');
+
+    expect(source).toContain('uploadFile?: (file: File, blockId?: string) => Promise<string>;');
+    expect(source).toContain('uploadFile={uploadFile}');
+  });
 });

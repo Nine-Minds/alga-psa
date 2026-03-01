@@ -8,6 +8,7 @@ import type { Knex } from 'knex';
 type DraftClipboardImageDeleteFailureReason =
   | 'missing_document'
   | 'not_ticket_attachment'
+  | 'has_other_associations'
   | 'not_owned_by_requester'
   | 'already_referenced'
   | 'not_image'
@@ -83,6 +84,22 @@ export const deleteDraftClipboardImages = withAuth(
         );
 
       const byId = new Map(candidates.map((candidate) => [candidate.document_id, candidate]));
+      const documentAssociations = await trx('document_associations')
+        .select('document_id', 'entity_id', 'entity_type')
+        .where('tenant', tenant)
+        .whereIn('document_id', uniqueDocumentIds);
+      const associationsByDocumentId = new Map<
+        string,
+        Array<{ entity_id: string; entity_type: string }>
+      >();
+      for (const association of documentAssociations) {
+        const existing = associationsByDocumentId.get(association.document_id) || [];
+        existing.push({
+          entity_id: String(association.entity_id),
+          entity_type: String(association.entity_type),
+        });
+        associationsByDocumentId.set(association.document_id, existing);
+      }
       const failures: DraftClipboardImageDeleteFailure[] = [];
       const deletable: CandidateDocument[] = [];
 
@@ -112,11 +129,38 @@ export const deleteDraftClipboardImages = withAuth(
           continue;
         }
 
+        const associations = associationsByDocumentId.get(candidate.document_id) || [];
+        const hasTicketAssociation = associations.some(
+          (association) =>
+            association.entity_type === 'ticket' && association.entity_id === String(input.ticketId)
+        );
+        if (!hasTicketAssociation) {
+          failures.push({
+            documentId: requestedDocumentId,
+            reason: 'not_ticket_attachment',
+          });
+          continue;
+        }
+        const hasOtherAssociations = associations.some(
+          (association) =>
+            !(
+              association.entity_type === 'ticket' &&
+              association.entity_id === String(input.ticketId)
+            )
+        );
+        if (hasOtherAssociations) {
+          failures.push({
+            documentId: requestedDocumentId,
+            reason: 'has_other_associations',
+          });
+          continue;
+        }
+
         const referenceTokens = [candidate.file_id, candidate.document_id].filter(Boolean) as string[];
         let referencedByComment = false;
         if (referenceTokens.length > 0) {
           const commentQuery = trx('comments')
-            .where({ tenant, ticket_id: input.ticketId })
+            .where({ tenant })
             .andWhere(function containsReference() {
               referenceTokens.forEach((token, index) => {
                 const pattern = `%${token}%`;

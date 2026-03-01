@@ -76,7 +76,7 @@ interface TicketConversationProps {
   overrides?: Record<string, { note?: string; updated_at?: string }>; // Optional local overrides by comment_id
   externalComments?: Array<IComment & { child_ticket_id?: string; child_ticket_number?: string; child_ticket_title?: string; child_client_name?: string }>;
   closedStatusOptions?: { value: string; label: string }[];
-  enableClipboardImageSupport?: boolean;
+  onClipboardImageUploaded?: () => Promise<void> | void;
 }
 
 const TicketConversation: React.FC<TicketConversationProps> = ({
@@ -104,7 +104,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   overrides = {},
   externalComments = [],
   closedStatusOptions = [],
-  enableClipboardImageSupport = false,
+  onClipboardImageUploaded,
 }) => {
   const { t } = useTranslation('features/tickets');
   const { t: tCore } = useTranslation('common');
@@ -172,7 +172,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   };
 
   const handleCancelComment = () => {
-    if (enableClipboardImageSupport && draftClipboardImages.length > 0) {
+    if (draftClipboardImages.length > 0) {
       setShowDraftCancelDialog(true);
       return;
     }
@@ -226,6 +226,9 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
 
       if (deletedCount > 0) {
         toast.success(`Deleted ${deletedCount} pasted image${deletedCount === 1 ? '' : 's'}.`);
+        if (onClipboardImageUploaded) {
+          await Promise.resolve(onClipboardImageUploaded());
+        }
       }
       if (failedCount > 0) {
         toast.error(`Could not delete ${failedCount} pasted image${failedCount === 1 ? '' : 's'}.`);
@@ -244,8 +247,9 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
     }
   };
 
-  const handleClipboardImageUpload = React.useCallback(
-    async (file: File): Promise<string | Record<string, any>> => {
+  const uploadClipboardImage = React.useCallback(
+    async (file: File, options: { trackDraftImage: boolean }): Promise<string> => {
+      const { trackDraftImage } = options;
       if (!ticket.ticket_id) {
         throw new Error('Ticket ID is required for clipboard image upload.');
       }
@@ -282,7 +286,8 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
       });
 
       if (!uploadResult.success) {
-        console.error('[TicketConversation] Clipboard image upload failed', {
+        const reason = uploadResult.error || 'Clipboard image upload failed.';
+        console.error(`[TicketConversation] Clipboard image upload failed: ${reason}`, {
           ticketId: ticket.ticket_id,
           userId: currentUser.id,
           sequence,
@@ -291,7 +296,8 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
           sizeBytes: renamedFile.size,
           error: uploadResult.error,
         });
-        throw new Error(uploadResult.error || 'Clipboard image upload failed.');
+        toast.error(reason);
+        throw new Error(reason);
       }
 
       const uploadedDocument = uploadResult.document;
@@ -304,19 +310,21 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
         ? `/api/documents/view/${uploadedDocument.file_id}`
         : `/api/documents/download/${uploadedDocument.document_id}`;
 
-      setDraftClipboardImages((previous) => {
-        const exists = previous.some((item) => item.documentId === uploadedDocument.document_id);
-        if (exists) return previous;
-        return [
-          ...previous,
-          {
-            documentId: uploadedDocument.document_id,
-            fileId: uploadedDocument.file_id || '',
-            name: uploadedDocument.document_name || fallbackName,
-            url: viewUrl,
-          },
-        ];
-      });
+      if (trackDraftImage) {
+        setDraftClipboardImages((previous) => {
+          const exists = previous.some((item) => item.documentId === uploadedDocument.document_id);
+          if (exists) return previous;
+          return [
+            ...previous,
+            {
+              documentId: uploadedDocument.document_id,
+              fileId: uploadedDocument.file_id || '',
+              name: uploadedDocument.document_name || fallbackName,
+              url: viewUrl,
+            },
+          ];
+        });
+      }
 
       console.info('[TicketConversation] Clipboard image uploaded', {
         ticketId: ticket.ticket_id,
@@ -327,13 +335,34 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
         url: viewUrl,
       });
 
-      return {
-        url: viewUrl,
-        name: uploadedDocument.document_name || fallbackName,
-        caption: '',
-      };
+      if (onClipboardImageUploaded) {
+        void Promise.resolve(onClipboardImageUploaded()).catch((refreshError) => {
+          console.error('[TicketConversation] Failed to refresh documents after clipboard upload', {
+            ticketId: ticket.ticket_id,
+            userId: currentUser.id,
+            documentId: uploadedDocument.document_id,
+            error: refreshError,
+          });
+        });
+      }
+
+      return viewUrl;
     },
-    [ticket.ticket_id, currentUser?.id]
+    [ticket.ticket_id, currentUser?.id, onClipboardImageUploaded]
+  );
+
+  const handleClipboardImageUpload = React.useCallback(
+    async (file: File): Promise<string> => {
+      return uploadClipboardImage(file, { trackDraftImage: true });
+    },
+    [uploadClipboardImage]
+  );
+
+  const handleClipboardImageUploadForExistingComment = React.useCallback(
+    async (file: File): Promise<string> => {
+      return uploadClipboardImage(file, { trackDraftImage: false });
+    },
+    [uploadClipboardImage]
   );
 
   const toggleCommentOrder = () => {
@@ -451,6 +480,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
         onEdit={() => onEdit(mergedConversation)}
         onDelete={onDelete}
         hideInternalTab={hideInternalTab}
+        uploadFile={handleClipboardImageUploadForExistingComment}
       />
     );
     });
@@ -647,7 +677,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
                     initialContent={DEFAULT_BLOCK}
                     onContentChange={onNewCommentContentChange}
                     searchMentions={searchUsersForMentions}
-                    uploadFile={enableClipboardImageSupport ? handleClipboardImageUpload : undefined}
+                    uploadFile={handleClipboardImageUpload}
                   />
                 </Suspense>
                 <div className="flex justify-end space-x-2 mt-1">
