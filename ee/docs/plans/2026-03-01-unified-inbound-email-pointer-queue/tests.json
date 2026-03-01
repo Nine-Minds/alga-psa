@@ -104,7 +104,7 @@
   {
     "id": "T018",
     "description": "Queue semantics: successful processing ACKs job and removes it from pending state",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F012"]
   },
   {

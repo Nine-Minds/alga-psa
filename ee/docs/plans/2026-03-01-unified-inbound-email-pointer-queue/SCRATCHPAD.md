@@ -53,6 +53,7 @@ Working notes for moving Microsoft, Google, and IMAP inbound email ingress to on
 - `npx vitest --config shared/vitest.config.ts services/imap-service/src/imapService.webhookRetry.test.ts`
 - `npx vitest --config shared/vitest.config.ts shared/services/email/__tests__/unifiedInboundEmailQueueConsumer.test.ts`
 - `npm -w server run test -- src/test/unit/unifiedInboundEmailQueueJobProcessor.fetch.test.ts --coverage.enabled=false`
+- `npx vitest --config shared/vitest.config.ts shared/services/email/__tests__/unifiedInboundEmailQueue.test.ts`
 
 ## Links / References
 
@@ -77,6 +78,7 @@ Working notes for moving Microsoft, Google, and IMAP inbound email ingress to on
 - IMAP webhook retry test: `services/imap-service/src/imapService.webhookRetry.test.ts`
 - Unified queue consumer tests: `shared/services/email/__tests__/unifiedInboundEmailQueueConsumer.test.ts`
 - Unified queue job processor fetch tests: `server/src/test/unit/unifiedInboundEmailQueueJobProcessor.fetch.test.ts`
+- Unified queue primitives tests: `shared/services/email/__tests__/unifiedInboundEmailQueue.test.ts`
 
 ## Progress Log
 
@@ -122,6 +124,7 @@ Working notes for moving Microsoft, Google, and IMAP inbound email ingress to on
 - (2026-03-01) Completed `T015`: Added idempotency happy-path test validating first consume writes normalized identity (`provider:messageId`) processing marker and executes downstream processing.
 - (2026-03-01) Completed `T016`: Added idempotency duplicate-path test validating unique-constraint collision (`23505`) short-circuits downstream processing with deduped skip outcome.
 - (2026-03-01) Completed `T017`: Processor fetch suite now asserts `processInboundEmailInApp` receives fully resolved provider payloads on successful consume-time fetch paths.
+- (2026-03-01) Completed `T018`: Added queue ACK primitive test validating successful consume removes payload from processing list and clears inflight hash/lease entries.
 
 ## Open Questions
 
