@@ -91,6 +91,7 @@ export async function GET(
     let associatedUserId: string | null = null;
     let associatedTenantId: string | null = null;
     let associatedProjectTaskId: string | null = null;
+    let associatedContractId: string | null = null;
     const associatedTicketIds = new Set<string>();
 
     // 0. If it's a tenant logo, grant public access
@@ -104,11 +105,15 @@ export async function GET(
     } else if (user) {
         // 2. Find the document record linked to this file_id
         const documentRecord = await knex('documents')
-          .select('document_id')
+          .select('document_id', 'is_client_visible')
           .where({ file_id: fileId, tenant })
           .first();
 
         if (documentRecord) {
+          // For client users accessing via Documents Hub (not inline ticket display),
+          // require is_client_visible = true
+          const isClientUser = user.user_type === 'client';
+
           // Find all associations for this document
           const associations = await knex('document_associations')
             .select('entity_id', 'entity_type')
@@ -129,6 +134,8 @@ export async function GET(
               associatedTenantId = assoc.entity_id;
             } else if (assoc.entity_type === 'project_task') {
               associatedProjectTaskId = assoc.entity_id;
+            } else if (assoc.entity_type === 'contract') {
+              associatedContractId = assoc.entity_id;
             } else if (assoc.entity_type === 'ticket' && assoc.entity_id) {
               associatedTicketIds.add(assoc.entity_id);
             }
@@ -160,9 +167,14 @@ export async function GET(
             userClientId = contactRecord?.client_id ?? null;
 
             // Allow access if the user's client matches the document's associated client
+            // For client users, also require is_client_visible = true
             if (userClientId === associatedClientId) {
-              hasPermission = true;
-              console.log(`User ${user.user_id} granted access to client ${associatedClientId} file ${fileId}`);
+              if (!isClientUser || documentRecord.is_client_visible) {
+                hasPermission = true;
+                console.log(`User ${user.user_id} granted access to client ${associatedClientId} file ${fileId}`);
+              } else {
+                console.log(`Client user ${user.user_id} denied access to file ${fileId} (is_client_visible=false)`);
+              }
             }
           }
 
@@ -223,9 +235,76 @@ export async function GET(
                       .first();
 
                   if (projectCheck) {
-                      hasPermission = true;
-                      console.log(`User ${user.user_id} granted access to project task document ${fileId} (client ${userClientId})`);
+                      // For client users, also require is_client_visible = true
+                      if (!isClientUser || documentRecord.is_client_visible) {
+                          hasPermission = true;
+                          console.log(`User ${user.user_id} granted access to project task document ${fileId} (client ${userClientId})`);
+                      } else {
+                          console.log(`Client user ${user.user_id} denied access to project task document ${fileId} (is_client_visible=false)`);
+                      }
                   }
+              }
+          }
+
+          // Check contract association - verify client owns the contract (billing_plan)
+          if (!hasPermission && associatedContractId && user.contact_id) {
+              // Get user's client_id if not already fetched
+              if (!userClientId) {
+                  const contactRecord = await knex('contacts')
+                      .select('client_id')
+                      .where({ contact_name_id: user.contact_id, tenant })
+                      .first();
+                  userClientId = contactRecord?.client_id ?? null;
+              }
+
+              if (userClientId) {
+                  // Check if this contract (billing_plan) belongs to the user's client
+                  const contractCheck = await knex('billing_plans')
+                      .where({
+                          plan_id: associatedContractId,
+                          tenant: tenant,
+                          company_id: userClientId
+                      })
+                      .first();
+
+                  if (contractCheck) {
+                      // For client users, also require is_client_visible = true
+                      if (!isClientUser || documentRecord.is_client_visible) {
+                          hasPermission = true;
+                          console.log(`User ${user.user_id} granted access to contract document ${fileId} (client ${userClientId})`);
+                      } else {
+                          console.log(`Client user ${user.user_id} denied access to contract document ${fileId} (is_client_visible=false)`);
+                      }
+                  }
+              }
+          }
+
+          // Check ticket association - allow contact/client users when ticket belongs to them
+          // This allows inline ticket document display regardless of is_client_visible
+          if (!hasPermission && associatedTicketIds.size > 0 && user.contact_id) {
+              // Get user's client_id if not already fetched
+              if (!userClientId) {
+                  const contactRecord = await knex('contacts')
+                      .select('client_id')
+                      .where({ contact_name_id: user.contact_id, tenant })
+                      .first();
+                  userClientId = contactRecord?.client_id ?? null;
+              }
+
+              const ticketAccessQuery = knex('tickets')
+                .where({ tenant })
+                .whereIn('ticket_id', Array.from(associatedTicketIds))
+                .andWhere(function ticketPermissionScope() {
+                  this.where('contact_name_id', user.contact_id);
+                  if (userClientId) {
+                    this.orWhere('client_id', userClientId);
+                  }
+                })
+                .first('ticket_id');
+
+              const ticketAccess = await ticketAccessQuery;
+              if (ticketAccess?.ticket_id) {
+                  hasPermission = true;
               }
           }
 
@@ -266,8 +345,9 @@ export async function GET(
         console.warn(`AssociatedClient: ${associatedClientId}, UserClient: ${userClientId}`);
         console.warn(`AssociatedContact: ${associatedContactId}, UserContact: ${user.contact_id}`);
         console.warn(`AssociatedUser: ${associatedUserId}, UserId: ${user.user_id}`);
-        console.warn(`AssociatedProjectTask: ${associatedProjectTaskId}`);
+        console.warn(`AssociatedProjectTask: ${associatedProjectTaskId}, AssociatedContract: ${associatedContractId}`);
         console.warn(`AssociatedTickets: ${Array.from(associatedTicketIds).join(',')}`);
+
       } else {
         console.warn(`Unauthenticated user does not have permission to view file ${fileId}.`);
       }

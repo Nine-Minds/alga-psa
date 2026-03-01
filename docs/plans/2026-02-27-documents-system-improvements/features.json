@@ -322,7 +322,7 @@
   {
     "id": "F043",
     "description": "Action: getClientDocuments(page, limit, filters) returns paginated client-visible docs for authenticated client",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-3.3",
       "FR-3.4"
@@ -331,7 +331,7 @@
   {
     "id": "F044",
     "description": "Action: getClientDocumentFolders() returns folder tree of client-visible folders",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-3.5"
     ]
@@ -339,7 +339,7 @@
   {
     "id": "F045",
     "description": "Action: downloadClientDocument(documentId) verifies visibility and client ownership",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-3.8"
     ]
@@ -347,7 +347,7 @@
   {
     "id": "F046",
     "description": "Action: All client-documents actions wrapped in withAuth() enforcing user_type === 'client'",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-3.7"
     ]
@@ -355,7 +355,7 @@
   {
     "id": "F047",
     "description": "API: File view route extended to check is_client_visible for client users",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-3.9"
     ]
@@ -363,7 +363,7 @@
   {
     "id": "F048",
     "description": "API: File view route extended to support contract-associated document access",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-3.9"
     ]
@@ -419,7 +419,7 @@
   {
     "id": "F055",
     "description": "Regression: Existing inline ticket document display continues unchanged",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-3.10"
     ]
