@@ -108,7 +108,7 @@
   {
     "id": "T014",
     "description": "Render auth: authorized user can load comment image attachment URL",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F009",
       "F010"
