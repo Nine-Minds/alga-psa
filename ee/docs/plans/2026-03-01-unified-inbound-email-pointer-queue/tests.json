@@ -62,7 +62,7 @@
   {
     "id": "T011",
     "description": "Consumer: worker can claim and process queued IMAP pointer jobs",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F008", "F024"]
   },
   {

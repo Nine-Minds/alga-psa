@@ -113,6 +113,7 @@ Working notes for moving Microsoft, Google, and IMAP inbound email ingress to on
 - (2026-03-01) Completed `T008`: Extracted and tested IMAP webhook retry helper to verify non-2xx ingress responses trigger retry attempts before eventual success.
 - (2026-03-01) Completed `T009`: Added consumer unit coverage confirming Microsoft pointer claims invoke handler and ACK path through unified consumer loop.
 - (2026-03-01) Completed `T010`: Validated Google pointer claims execute through the same unified consumer claim/handle/ACK lifecycle.
+- (2026-03-01) Completed `T011`: Validated IMAP pointer claims execute through the same unified consumer claim/handle/ACK lifecycle.
 
 ## Open Questions
 
