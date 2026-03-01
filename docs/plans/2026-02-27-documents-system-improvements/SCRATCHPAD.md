@@ -70,6 +70,7 @@ Rolling notes for the 5-phase documents system overhaul: entity-scoped folders, 
 
 ## Work Log
 
+- (2026-03-01) **F029 implemented**: Extended `packages/documents/src/actions/folderTemplateActions.ts` with `getFolderTemplate(templateId)` to fetch a tenant-scoped template plus ordered `document_folder_template_items`, returning `null` when not found and enforcing `document:read` permission + required `templateId` validation.
 - (2026-03-01) **F028 implemented**: Added `packages/documents/src/actions/folderTemplateActions.ts` with `getFolderTemplates(entityType?)` (auth-wrapped, `document:read` permission gate, tenant-scoped query against `document_folder_templates`, optional `entity_type` filter, deterministic ordering by entity type/default/name). Exported via `packages/documents/src/actions/index.ts`.
 - (2026-03-01) **F027 implemented**: Added migration `server/migrations/20260301100000_add_phase2_document_template_tables_rls_policies.cjs` to enable tenant RLS on `document_folder_templates`, `document_folder_template_items`, and `document_entity_folder_init`, creating idempotent `tenant_isolation_policy` (USING) and `tenant_isolation_insert_policy` (FOR INSERT WITH CHECK) per table with reversible down migration that drops policies and disables RLS.
 - (2026-03-01) **F026 implemented**: Added migration `server/migrations/20260228103000_add_document_folder_templates_default_partial_unique_index.cjs` to enforce one default folder template per tenant + entity type via partial unique index `uq_doc_folder_templates_default_per_entity_type` on `(tenant, entity_type) WHERE is_default = true`, with idempotent table/column guards and reversible down migration.
@@ -98,6 +99,7 @@ Rolling notes for the 5-phase documents system overhaul: entity-scoped folders, 
 
 ## Recent Validation
 
+- (2026-03-01) Ran focused unit coverage for template list/detail actions: `cd server && npx vitest run src/test/unit/documentFolderTemplateActions.test.ts --config vitest.config.ts` (pass, 7 tests).
 - (2026-03-01) Ran focused unit coverage for template-list action: `cd server && npx vitest run src/test/unit/documentFolderTemplateActions.test.ts --config vitest.config.ts` (pass, 3 tests).
 - (2026-03-01) Verified migration module exports load: `node -e "const m=require('./server/migrations/20260301100000_add_phase2_document_template_tables_rls_policies.cjs'); console.log(typeof m.up, typeof m.down);"` → `function function`.
 - (2026-03-01) Verified migration module exports load: `node -e "const m=require('./server/migrations/20260228103000_add_document_folder_templates_default_partial_unique_index.cjs'); console.log(typeof m.up, typeof m.down);"` → `function function`.

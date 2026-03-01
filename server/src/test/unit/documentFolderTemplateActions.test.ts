@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { getFolderTemplates } from '@alga-psa/documents/actions/folderTemplateActions';
+import { getFolderTemplate, getFolderTemplates } from '@alga-psa/documents/actions/folderTemplateActions';
 import type { IUser } from '@alga-psa/types';
 
 vi.mock('@alga-psa/db', () => ({
@@ -33,6 +33,7 @@ function createMockKnex() {
     andWhere: vi.fn().mockReturnThis(),
     select: vi.fn().mockReturnThis(),
     orderBy: vi.fn(),
+    first: vi.fn(),
   };
 
   const knexFn: any = vi.fn(() => queryBuilder);
@@ -113,5 +114,106 @@ describe('document folder template actions', () => {
     await expect(getFolderTemplates()).resolves.toEqual({ permissionError: 'Permission denied' });
     expect(mockKnex).not.toHaveBeenCalled();
   });
-});
 
+  it('returns template with items when template exists', async () => {
+    const template = {
+      template_id: 'tpl-1',
+      tenant: mockUser.tenant,
+      name: 'Client Default',
+      entity_type: 'client',
+      is_default: true,
+      created_at: new Date(),
+      updated_at: new Date(),
+      created_by: mockUser.user_id,
+      updated_by: mockUser.user_id,
+    };
+
+    const items = [
+      {
+        template_item_id: 'item-1',
+        tenant: mockUser.tenant,
+        template_id: 'tpl-1',
+        parent_template_item_id: null,
+        folder_name: 'Contracts',
+        folder_path: '/Contracts',
+        sort_order: 0,
+        is_client_visible: true,
+        created_at: new Date(),
+        updated_at: new Date(),
+        created_by: mockUser.user_id,
+        updated_by: mockUser.user_id,
+      },
+    ];
+
+    const templateQueryBuilder: any = {
+      where: vi.fn().mockReturnThis(),
+      andWhere: vi.fn().mockReturnThis(),
+      select: vi.fn().mockReturnThis(),
+      first: vi.fn().mockResolvedValue(template),
+    };
+
+    const itemQueryBuilder: any = {
+      where: vi.fn().mockReturnThis(),
+      andWhere: vi.fn().mockReturnThis(),
+      select: vi.fn().mockReturnThis(),
+      orderBy: vi.fn().mockResolvedValue(items),
+    };
+
+    mockKnex.mockImplementation((tableName: string) => {
+      if (tableName === 'document_folder_templates') {
+        return templateQueryBuilder;
+      }
+
+      if (tableName === 'document_folder_template_items') {
+        return itemQueryBuilder;
+      }
+
+      return createMockKnex().queryBuilder;
+    });
+
+    const result = await getFolderTemplate('tpl-1');
+
+    expect(result).toEqual({ ...template, items });
+    expect(templateQueryBuilder.where).toHaveBeenCalledWith('tenant', mockUser.tenant);
+    expect(templateQueryBuilder.andWhere).toHaveBeenCalledWith('template_id', 'tpl-1');
+    expect(itemQueryBuilder.andWhere).toHaveBeenCalledWith('template_id', 'tpl-1');
+    expect(itemQueryBuilder.orderBy).toHaveBeenCalledWith([
+      { column: 'sort_order', order: 'asc' },
+      { column: 'folder_path', order: 'asc' },
+    ]);
+  });
+
+  it('returns null when template does not exist for tenant', async () => {
+    const templateQueryBuilder: any = {
+      where: vi.fn().mockReturnThis(),
+      andWhere: vi.fn().mockReturnThis(),
+      select: vi.fn().mockReturnThis(),
+      first: vi.fn().mockResolvedValue(undefined),
+    };
+
+    mockKnex.mockImplementation((tableName: string) => {
+      if (tableName === 'document_folder_templates') {
+        return templateQueryBuilder;
+      }
+
+      throw new Error(`Unexpected table: ${tableName}`);
+    });
+
+    const result = await getFolderTemplate('missing-template');
+
+    expect(result).toBeNull();
+    expect(templateQueryBuilder.where).toHaveBeenCalledWith('tenant', mockUser.tenant);
+    expect(templateQueryBuilder.andWhere).toHaveBeenCalledWith('template_id', 'missing-template');
+  });
+
+  it('requires non-empty templateId', async () => {
+    await expect(getFolderTemplate('')).rejects.toThrow('templateId is required');
+  });
+
+  it('enforces document read permission for getFolderTemplate', async () => {
+    vi.mocked(hasPermission).mockResolvedValue(false);
+
+    await expect(getFolderTemplate('tpl-1')).resolves.toEqual({ permissionError: 'Permission denied' });
+    expect(mockKnex).not.toHaveBeenCalled();
+  });
+});
