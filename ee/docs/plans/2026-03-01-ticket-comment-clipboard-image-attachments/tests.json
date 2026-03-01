@@ -133,7 +133,7 @@
   {
     "id": "T017",
     "description": "Outbound HTML: image src values are rewritten from internal attachment refs/URLs to matching cid references",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F013"
     ]

@@ -77,3 +77,4 @@ EOF && git add ee/docs/plans/2026-03-01-ticket-comment-clipboard-image-attachmen
 EOF && git add ee/docs/plans/2026-03-01-ticket-comment-clipboard-image-attachments/tests.json ee/docs/plans/2026-03-01-ticket-comment-clipboard-image-attachments/SCRATCHPAD.md && git commit -m "test(T013): cover unauthorized ticket-image route guard branch"- (2026-03-01) T014 implemented: route contract test asserts ticket-associated branch grants access (`hasPermission = true`) when contact/client scope matches associated ticket.
 - (2026-03-01) T015 implemented: `ticketCommentInlineImageEmail.test.ts` verifies comment image attachment URLs are collected/mapped for outbound email composition.
 - (2026-03-01) T016 implemented: outbound inline-image unit test asserts one CID attachment is produced per converted comment image.
+- (2026-03-01) T017 implemented: outbound inline-image test asserts HTML image `src` rewrite from document-view URL to matching `cid:` reference.
