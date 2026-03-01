@@ -24,6 +24,7 @@ Working notes for moving Microsoft, Google, and IMAP inbound email ingress to on
 - Microsoft and Google callback handlers currently fetch and process in callback path; this plan changes them to enqueue-only ingress.
 - Inbound email interface definitions are duplicated across `shared/interfaces`, `server/src/interfaces`, and `packages/types/src/interfaces`; all three must be kept in sync for type consumers.
 - Microsoft webhook handler is transaction-scoped per notification; queue-mode enqueue can be inserted before legacy fetch/process logic and short-circuit the callback path cleanly.
+- Google webhook flow can enqueue immediately after provider resolution + JWT verification, before any `gmail_processed_history` writes or Gmail API fetches.
 
 ## Commands / Runbooks
 
@@ -54,6 +55,7 @@ Working notes for moving Microsoft, Google, and IMAP inbound email ingress to on
 
 - (2026-03-01) Completed `F001`: Added unified pointer job contract types with provider-specific pointer metadata and queue lifecycle fields (`attempt`, `maxAttempts`, `enqueuedAt`, `jobId`, `schemaVersion`).
 - (2026-03-01) Completed `F002`: Microsoft webhook now supports enqueue-only pointer handoff in unified-queue mode, using `shared/services/email/unifiedInboundEmailQueue.ts` and no longer requiring inline full-email fetch/processing when that mode is enabled.
+- (2026-03-01) Completed `F003`: Google webhook now supports enqueue-only pointer handoff in unified-queue mode (`historyId`, `emailAddress`, `pubsubMessageId`) and returns `503` when durable enqueue fails.
 
 ## Open Questions
 

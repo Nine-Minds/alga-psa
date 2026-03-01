@@ -7,7 +7,11 @@ import type { EmailProviderConfig } from '@alga-psa/shared/interfaces/inbound-em
 import { OAuth2Client } from 'google-auth-library';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { processInboundEmailInApp } from '@alga-psa/shared/services/email/processInboundEmailInApp';
-import { isInboundEmailInAppProcessingEnabled } from '@alga-psa/shared/services/email/inboundEmailInAppFeatureFlag';
+import {
+  isInboundEmailInAppProcessingEnabled,
+  isUnifiedInboundEmailPointerQueueEnabled,
+} from '@alga-psa/shared/services/email/inboundEmailInAppFeatureFlag';
+import { enqueueUnifiedInboundEmailQueueJob } from '@alga-psa/shared/services/email/unifiedInboundEmailQueue';
 
 interface GooglePubSubMessage {
   message: {
@@ -172,6 +176,57 @@ export async function POST(request: NextRequest) {
     } catch (error) {
       console.error('❌ JWT verification failed:', error);
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const useUnifiedQueue = isUnifiedInboundEmailPointerQueueEnabled({
+      tenantId: provider.tenant,
+      providerId: provider.id,
+    });
+
+    if (useUnifiedQueue) {
+      try {
+        const enqueueResult = await enqueueUnifiedInboundEmailQueueJob({
+          tenantId: provider.tenant,
+          providerId: provider.id,
+          provider: 'google',
+          pointer: {
+            historyId: notification.historyId,
+            emailAddress: notification.emailAddress,
+            pubsubMessageId: payloadData.messageId,
+          },
+        });
+        console.log('✅ Enqueued unified inbound email pointer job (Google)', {
+          providerId: provider.id,
+          tenantId: provider.tenant,
+          historyId: notification.historyId,
+          emailAddress: notification.emailAddress,
+          pubsubMessageId: payloadData.messageId,
+          queueDepth: enqueueResult.queueDepth,
+          jobId: enqueueResult.job.jobId,
+        });
+        return NextResponse.json({
+          success: true,
+          queued: true,
+          handoff: 'unified_pointer_queue',
+          providerId: provider.id,
+          tenant: provider.tenant,
+          historyId: notification.historyId,
+          jobId: enqueueResult.job.jobId,
+          queueDepth: enqueueResult.queueDepth,
+        });
+      } catch (enqueueError: any) {
+        console.error('❌ Failed to enqueue Google pointer job', {
+          providerId: provider.id,
+          tenantId: provider.tenant,
+          historyId: notification.historyId,
+          pubsubMessageId: payloadData.messageId,
+          error: enqueueError?.message || String(enqueueError),
+        });
+        return NextResponse.json(
+          { error: 'Failed to enqueue Google pointer job' },
+          { status: 503 }
+        );
+      }
     }
 
     await withTransaction(knex, async (trx) => {
