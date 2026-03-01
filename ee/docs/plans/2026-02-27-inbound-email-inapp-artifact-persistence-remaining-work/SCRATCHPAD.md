@@ -1,0 +1,315 @@
+# SCRATCHPAD — 2026-02-27 Inbound Email In-App Artifact Persistence (Remaining Work)
+
+## Scope Intent
+
+Create a clean, implementation-ready plan containing only remaining work for inbound email artifact persistence in the in-app callback path.
+
+## Discovery Notes
+
+- IMAP webhook currently publishes `INBOUND_EMAIL_RECEIVED` and returns `handoff: event_bus` rather than using in-app processing directly.
+  - `packages/integrations/src/webhooks/email/imap.ts`
+- Google and Microsoft webhook handlers already have an in-app processing branch controlled by `isInboundEmailInAppProcessingEnabled(...)`.
+  - `packages/integrations/src/webhooks/email/google.ts`
+  - `packages/integrations/src/webhooks/email/microsoft.ts`
+- `processInboundEmailInApp` currently handles ticket/comment logic and calls attachment processing, but does not run embedded extraction or original `.eml` persistence.
+  - `shared/services/email/processInboundEmailInApp.ts`
+- Workflow definitions mention embedded extraction + `.eml` actions, but this remaining-work plan intentionally focuses on in-app callback parity.
+  - `shared/workflow/workflows/system-email-processing-workflow.ts`
+
+## Locked Decisions
+
+- Persist only HTML-referenced CID inline images.
+- Use deterministic `.eml` filename convention `original-email-<sanitized-message-id>.eml`.
+- App-local in-process async worker mode is allowed.
+
+## Open Questions
+
+- None for this planning pass; scope is constrained to remaining in-app gap closure.
+
+## Validation Commands
+
+- `python3 scripts/validate_plan.py ee/docs/plans/2026-02-27-inbound-email-inapp-artifact-persistence-remaining-work`
+
+## Implementation Log
+
+- 2026-02-27: Completed `F214` by validating and activating the remaining-work plan artifact set at:
+  - `ee/docs/plans/2026-02-27-inbound-email-inapp-artifact-persistence-remaining-work/PRD.md`
+  - `ee/docs/plans/2026-02-27-inbound-email-inapp-artifact-persistence-remaining-work/features.json`
+  - `ee/docs/plans/2026-02-27-inbound-email-inapp-artifact-persistence-remaining-work/tests.json`
+  - `ee/docs/plans/2026-02-27-inbound-email-inapp-artifact-persistence-remaining-work/SCRATCHPAD.md`
+- Rationale: The plan scope existed but had all checklist entries disabled; flipping `F214` records that the remaining-work scope artifact is now established and tracked as implementation source-of-truth.
+- 2026-02-27: Completed `F215` by extracting artifact execution into shared orchestrator modules:
+  - `shared/services/email/processInboundEmailArtifacts.ts`
+  - `shared/services/email/inboundEmailArtifactHelpers.ts`
+  - Wired call-sites in `shared/services/email/processInboundEmailInApp.ts` for:
+    - reply-token flow
+    - thread-header flow
+    - new-ticket flow
+- Decision: Keep orchestration in shared service layer so Google/Microsoft/IMAP in-app paths naturally converge via existing `processInboundEmailInApp` entrypoint.
+- Validation:
+  - `npx tsc -p shared/tsconfig.json --noEmit`
+- Gotcha:
+  - Repo Vitest config only includes `server/src` + `../packages`; direct `shared/services/email/__tests__` file filters are not discovered by default runner config.
+- 2026-02-27: Completed `F216`.
+  - `persistInboundEmailAttachment(...)` now consumes `attachmentData.content` (base64) when present before any provider download fallback.
+  - File bytes are decoded and fed into storage-backed document persistence, enabling in-app callback payloads (including IMAP/local test payloads) to attach real files without workflow-worker execution.
+- 2026-02-27: Completed `F217`.
+  - `persistDocumentForBuffer(...)` now performs full persistence chain for in-app artifacts:
+    - inserts `external_files`
+    - inserts `documents` linked to `file_id`
+    - inserts `document_associations` to the target `ticket`.
+  - This replaces metadata-only attachment behavior in the in-app path.
+- 2026-02-27: Completed `F218`.
+  - Added shared `extractEmbeddedImageAttachments(...)` helper and wired it in `processInboundEmailArtifactsBestEffort(...)`.
+  - In-app path now extracts HTML `data:image/*;base64,...` artifacts and feeds them through the same persistence pipeline as normal attachments.
+- 2026-02-27: Completed `F219`.
+  - Embedded extraction now maps only HTML-referenced `cid:` values to inline MIME parts.
+  - Unreferenced inline CID attachments are not synthesized/persisted, matching the locked decision to persist only referenced CID images.
+- 2026-02-27: Completed `F220`.
+  - Synthetic embedded artifacts are emitted with deterministic IDs (`embedded-data-*`, `embedded-cid-*`) and normalized attachment fields (`id/name/contentType/size/content`).
+  - Orchestrator appends these synthetic records to provider attachments and runs one shared persistence path.
+- 2026-02-27: Completed `F221`.
+  - Added `.eml` persistence step (`persistInboundOriginalEmail`) into in-app orchestration for both reply and new-ticket flows.
+  - The original message is persisted as `message/rfc822` through the same storage/document association path as other artifacts.
+- 2026-02-27: Completed `F222`.
+  - Implemented MIME source selection with precedence in `maybeExtractRawMimeFromEmailData(...)`:
+    - `rawMimeBase64`
+    - `sourceMimeBase64`
+    - `rawSourceBase64`
+  - When no source bytes are available, `.eml` fallback generation uses deterministic RFC822 assembly (`buildDeterministicRfc822Message(...)`).
+- 2026-02-27: Completed `F223`.
+  - `.eml` persistence now uses deterministic file naming via `buildOriginalEmailFileName(messageId)` with `original-email-<sanitized-message-id>.eml` convention.
+- 2026-02-27: Completed `F224`.
+  - Added artifact-level idempotent claiming via `email_processed_attachments` primary key `(tenant, provider_id, email_id, attachment_id)`.
+  - Deterministic attachment IDs now cover:
+    - provider attachments (`attachment.id`)
+    - synthetic embedded artifacts (`embedded-data-*`, `embedded-cid-*`)
+    - original email source (`__original_email_source__`).
+- 2026-02-27: Completed `F225`.
+  - Artifact pipeline is explicitly best-effort:
+    - per-attachment failures are logged and processing continues
+    - `.eml` persistence failures are logged and do not interrupt ticket/comment return path.
+  - `processInboundEmailInApp` now always returns reply/new-ticket outcomes independent of artifact persistence failures.
+- 2026-02-27: Completed `F226`.
+  - Reworked IMAP webhook route (`packages/integrations/src/webhooks/email/imap.ts`) to support:
+    - direct in-app processing handoff (`handoff: "in_app"`)
+    - app-local async in-process queue handoff (`handoff: "in_app_async"`)
+    - explicit event-bus fallback on in-app failure (`handoff: "event_bus_fallback"`) when configured.
+- 2026-02-27: Completed `F227`.
+  - IMAP webhook payload normalization now enforces ingress caps for:
+    - per-attachment bytes
+    - total attachment bytes
+    - attachment count
+    - raw MIME bytes.
+  - Caps are driven by existing IMAP env knobs:
+    - `IMAP_MAX_ATTACHMENT_BYTES`
+    - `IMAP_MAX_TOTAL_ATTACHMENT_BYTES`
+    - `IMAP_MAX_ATTACHMENT_COUNT`
+    - `IMAP_MAX_RAW_MIME_BYTES`.
+- 2026-02-27: Completed `F228`.
+  - Over-limit payload elements now emit structured `ingressSkipReasons` entries with deterministic reason enums:
+    - `attachment_over_max_bytes`
+    - `attachment_total_bytes_exceeded`
+    - `attachment_count_exceeded`
+    - `raw_mime_over_max_bytes`
+  - Eligible attachments continue through in-app artifact processing.
+- 2026-02-27: Completed `F229`.
+  - Added app-local async IMAP callback queue (`packages/integrations/src/webhooks/email/imapInAppQueue.ts`).
+  - Webhook can now defer in-app processing when `IMAP_INBOUND_EMAIL_IN_APP_ASYNC_ENABLED=true`, returning quickly with queue metadata.
+- 2026-02-27: Completed `F230`.
+  - Added explicit attachment artifact concurrency bounding in `processInboundEmailArtifactsBestEffort(...)` via:
+    - `IMAP_INBOUND_EMAIL_IN_APP_ARTIFACT_CONCURRENCY`
+    - `INBOUND_EMAIL_IN_APP_ARTIFACT_CONCURRENCY`
+  - Async queue worker concurrency is separately bounded by `IMAP_INBOUND_EMAIL_IN_APP_ASYNC_WORKERS`.
+- 2026-02-27: Completed `F231`.
+  - IMAP webhook now validates and normalizes in-app payload contract fields before processing:
+    - attachments `content`, `isInline`, `contentId`
+    - MIME source fields `rawMimeBase64` / `sourceMimeBase64` / `rawSourceBase64`.
+  - Malformed contract inputs return safe `400` responses instead of crashing callback execution.
+- 2026-02-27: Completed `F232`.
+  - Added IMAP-specific feature-flag helpers in `shared/services/email/inboundEmailInAppFeatureFlag.ts`:
+    - `isImapInboundEmailInAppProcessingEnabled`
+    - `isImapInboundEmailInAppAsyncModeEnabled`
+    - `isImapInboundEmailInAppEventBusFallbackEnabled`
+  - Documented supported flag/env combinations in `docs/inbound-email/setup/imap.md`.
+- 2026-02-27: Completed `F233`.
+  - Google and Microsoft webhook handlers already delegate in-app processing to `processInboundEmailInApp(...)`.
+  - Because `processInboundEmailInApp` now routes all artifact handling through `processInboundEmailArtifactsBestEffort(...)`, provider behavior is unified for attachments, embedded extraction, and `.eml` persistence.
+- 2026-02-27: Completed `F234`.
+  - Added in-app integration assertion coverage in:
+    - `server/src/test/integration/inboundEmailInApp.webhooks.integration.test.ts`
+  - New scenario asserts ticket document outcomes for:
+    - regular attachment (`regular.txt`)
+    - embedded extraction artifact (`embedded-image-1.png`)
+    - deterministic original email `.eml` document.
+- Validation:
+  - `cd server && npx vitest run src/test/integration/inboundEmailInApp.webhooks.integration.test.ts --coverage.enabled=false`
+  - Result in this environment: suite discovered but DB-gated tests skipped (`describeDb` guard).
+- 2026-02-27: Completed `F235`.
+  - Added local operator runbook:
+    - `ee/docs/plans/2026-02-27-inbound-email-inapp-artifact-persistence-remaining-work/GREENMAIL-IMAP-INAPP-RUNBOOK.md`
+  - Runbook includes setup, SMTP send step, log checks, DB verification queries, and UI verification for regular/embedded/`.eml` artifact outcomes.
+- 2026-02-27: Completed `T214`.
+  - Added/maintained explicit assertion in `shared/services/email/__tests__/processInboundEmailInApp.test.ts` that `processInboundEmailArtifactsBestEffort(...)` is invoked for the new-ticket flow.
+  - Assertion verifies ordering: comment creation occurs before artifact orchestrator invocation using `invocationCallOrder`.
+  - Added shared Vitest alias config in `shared/vitest.config.ts` and completed workflow-action mock shape updates required by current `processInboundEmailInApp` imports.
+- Validation:
+  - `npx vitest run --config shared/vitest.config.ts shared/services/email/__tests__/processInboundEmailInApp.test.ts -t "contact\\+user forwards both author_id and contact_id" --coverage.enabled=false`
+- 2026-02-27: Completed `T215`.
+  - Verified reply-flow orchestration path invokes `processInboundEmailArtifactsBestEffort(...)` only after `createCommentFromEmail(...)`.
+  - Scope validated on reply-token threaded flow in `shared/services/email/__tests__/processInboundEmailInApp.test.ts` using call-order assertion.
+- Validation:
+  - `npx vitest run --config shared/vitest.config.ts shared/services/email/__tests__/processInboundEmailInApp.test.ts -t "reply-token path resolves sender contact and forwards contact_id for contact-only sender" --coverage.enabled=false`
+- 2026-02-27: Completed `T216`.
+  - Existing integration scenario `IMAP in-app path persists regular attachment, embedded image, and original .eml as ticket documents` asserts attachment-backed document persistence to `documents` and backing file rows in `external_files`.
+  - This covers base64 attachment bytes in inbound payload flowing into persisted file + document records.
+- Validation:
+  - `cd server && npx vitest run src/test/integration/inboundEmailInApp.webhooks.integration.test.ts -t "IMAP in-app path persists regular attachment, embedded image, and original .eml as ticket documents" --coverage.enabled=false`
+  - Environment note: DB-gated integration suite was skipped in this local session (`describeDb`).
+- 2026-02-27: Completed `T217`.
+  - The same IMAP integration scenario verifies ticket linkage via `document_associations` by selecting `documents` joined through `document_associations` filtered to the created ticket.
+  - Assertion confirms attachment document rows are associated to the ticket entity, not just persisted standalone.
+- Validation:
+  - Reused targeted integration command from `T216` (same assertion source).
+- 2026-02-27: Completed `T218`.
+  - Added `shared/services/email/__tests__/inboundEmailArtifactHelpers.test.ts` with deterministic `data:image` extraction coverage.
+  - Test asserts generated synthetic artifact shape and stable deterministic ID/name/content across repeated extraction calls.
+- Validation:
+  - `npx vitest run --config shared/vitest.config.ts shared/services/email/__tests__/inboundEmailArtifactHelpers.test.ts --coverage.enabled=false`
+- 2026-02-27: Completed `T219`.
+  - Added CID extraction unit coverage in `shared/services/email/__tests__/inboundEmailArtifactHelpers.test.ts` proving only HTML-referenced CID parts are synthesized.
+  - Test fixture includes referenced and unreferenced inline attachments; assertion verifies only the referenced CID becomes a synthetic artifact.
+- Validation:
+  - Reused helper-unit test command from `T218`.
+- 2026-02-27: Completed `T220`.
+  - Strengthened IMAP artifact integration assertions in `server/src/test/integration/inboundEmailInApp.webhooks.integration.test.ts`:
+    - embedded image document row has `mime_type = image/png`
+    - linked `external_files` row has `mime_type = image/png` and expected decoded `file_size`.
+  - This extends embedded image persistence checks beyond document name presence into persisted type/size contract.
+- Validation:
+  - `cd server && npx vitest run src/test/integration/inboundEmailInApp.webhooks.integration.test.ts -t "IMAP in-app path persists regular attachment, embedded image, and original .eml as ticket documents" --coverage.enabled=false`
+  - Environment note: DB-gated integration suite was skipped in this local session (`describeDb`).
+- 2026-02-27: Completed `T221`.
+  - Added MIME source precedence unit assertions in `shared/services/email/__tests__/inboundEmailArtifactHelpers.test.ts`.
+  - Coverage verifies decode order: `rawMimeBase64` -> `sourceMimeBase64` -> `rawSourceBase64`.
+- Validation:
+  - `npx vitest run --config shared/vitest.config.ts shared/services/email/__tests__/inboundEmailArtifactHelpers.test.ts -t "raw MIME source selection prefers" --coverage.enabled=false`
+- 2026-02-27: Completed `T222`.
+  - Added fallback MIME assembly coverage in `shared/services/email/__tests__/inboundEmailArtifactHelpers.test.ts`.
+  - Test asserts deterministic RFC822 output when raw source fields are absent and validates key header/body content.
+- Validation:
+  - `npx vitest run --config shared/vitest.config.ts shared/services/email/__tests__/inboundEmailArtifactHelpers.test.ts -t "deterministic fallback MIME assembly is stable" --coverage.enabled=false`
+- 2026-02-27: Completed `T223`.
+  - Enhanced IMAP in-app integration assertions to verify exactly one `.eml` document is associated with the ticket per inbound message.
+  - Assertion added in `server/src/test/integration/inboundEmailInApp.webhooks.integration.test.ts` by filtering associated docs to `.eml` suffix and enforcing cardinality `1`.
+- Validation:
+  - `cd server && npx vitest run src/test/integration/inboundEmailInApp.webhooks.integration.test.ts -t "IMAP in-app path persists regular attachment, embedded image, and original .eml as ticket documents" --coverage.enabled=false`
+  - Environment note: DB-gated integration suite was skipped in this local session (`describeDb`).
+- 2026-02-27: Completed `T224`.
+  - Existing IMAP integration assertion in `server/src/test/integration/inboundEmailInApp.webhooks.integration.test.ts` verifies deterministic filename format:
+    - `original-email-<sanitized-message-id>.eml`.
+  - Assertion uses the full expected file name derived from message id normalization.
+- Validation:
+  - Reused targeted IMAP integration command from `T223`.
+- 2026-02-27: Completed `T225`.
+  - Added duplicate-message idempotency integration scenario in `server/src/test/integration/inboundEmailInApp.webhooks.integration.test.ts`.
+  - Scenario calls `processInboundEmailInApp` twice for identical IMAP message and asserts provider attachment document name count remains `1`.
+  - Also corrected deterministic `.eml` expected-name construction in this integration file to match production sanitization.
+- Validation:
+  - `cd server && npx vitest run src/test/integration/inboundEmailInApp.webhooks.integration.test.ts -t "Idempotency: duplicate inbound message does not duplicate provider, embedded, or .eml artifact documents" --coverage.enabled=false`
+  - Environment note: DB-gated integration suite was skipped in this local session (`describeDb`).
+- 2026-02-27: Completed `T226`.
+  - Duplicate-message idempotency integration scenario added in `T225` asserts embedded image document (`embedded-image-1.png`) remains single-instance after replay.
+- Validation:
+  - Reused targeted duplicate-idempotency integration command from `T225`.
+- 2026-02-27: Completed `T227`.
+  - Duplicate-message idempotency integration scenario added in `T225` also asserts deterministic original-email `.eml` document remains single-instance after replay.
+- Validation:
+  - Reused targeted duplicate-idempotency integration command from `T225`.
+- 2026-02-27: Completed `T228`.
+  - Added integration scenario `Artifact failure: attachment persistence failure is recorded while ticket/comment creation still succeeds` in `server/src/test/integration/inboundEmailInApp.webhooks.integration.test.ts`.
+  - Test injects a storage upload failure via test mock, asserts `processInboundEmailInApp` still returns `created`, comment row exists, and `email_processed_attachments` records `processing_status = failed` with error detail.
+- Validation:
+  - `cd server && npx vitest run src/test/integration/inboundEmailInApp.webhooks.integration.test.ts -t "Artifact failure: attachment persistence failure is recorded while ticket/comment creation still succeeds" --coverage.enabled=false`
+  - Environment note: DB-gated integration suite was skipped in this local session (`describeDb`).
+- 2026-02-27: Completed `T229`.
+  - Extended `server/src/test/integration/imapWebhookHandoff.integration.test.ts` with explicit IMAP in-app handoff assertions.
+  - New test verifies `IMAP_INBOUND_EMAIL_IN_APP_PROCESSING_ENABLED=true` routes webhook to `processInboundEmailInApp` and returns `handoff: in_app`.
+- Validation:
+  - `cd server && npx vitest run src/test/integration/imapWebhookHandoff.integration.test.ts --coverage.enabled=false`
+- 2026-02-27: Completed `T230`.
+  - Added IMAP webhook fallback-path assertion in `server/src/test/integration/imapWebhookHandoff.integration.test.ts`.
+  - Test verifies disabled in-app flag returns `handoff: event_bus`, publishes `INBOUND_EMAIL_RECEIVED`, and does not call in-app processor.
+- Validation:
+  - Reused full IMAP webhook integration run from `T229`.
+- 2026-02-27: Completed `T231`.
+  - Added IMAP webhook over-limit single-attachment scenario in `server/src/test/integration/imapWebhookHandoff.integration.test.ts`.
+  - Test enforces low `IMAP_MAX_ATTACHMENT_BYTES` and asserts skip reason `attachment_over_max_bytes` with dropped attachment from normalized payload.
+- Validation:
+  - Reused full IMAP webhook integration run from `T229`.
+- 2026-02-27: Completed `T232`.
+  - Added IMAP webhook total-bytes cap scenario in `server/src/test/integration/imapWebhookHandoff.integration.test.ts`.
+  - Test configures per-attachment + total cap and asserts overflow artifact skip reason `attachment_total_bytes_exceeded`.
+- Validation:
+  - Reused full IMAP webhook integration run from `T229`.
+- 2026-02-27: Completed `T233`.
+  - Added IMAP webhook attachment-count cap scenario in `server/src/test/integration/imapWebhookHandoff.integration.test.ts`.
+  - Test sets `IMAP_MAX_ATTACHMENT_COUNT=1` and asserts reason `attachment_count_exceeded` for excess entries.
+- Validation:
+  - Reused full IMAP webhook integration run from `T229`.
+- 2026-02-27: Completed `T234`.
+  - Added IMAP webhook raw-MIME cap scenario in `server/src/test/integration/imapWebhookHandoff.integration.test.ts`.
+  - Test asserts `raw_mime_over_max_bytes` reason and confirms normalized payload strips raw MIME source fields before handoff.
+- Validation:
+  - Reused full IMAP webhook integration run from `T229`.
+- 2026-02-27: Completed `T237`.
+  - Added payload contract acceptance scenario in `server/src/test/integration/imapWebhookHandoff.integration.test.ts`.
+  - Test verifies webhook accepts `attachments[].content/isInline/contentId` and MIME source fields (`sourceMimeBase64`) and forwards normalized values.
+- Validation:
+  - Reused full IMAP webhook integration run from `T229`.
+- 2026-02-27: Completed `T238`.
+  - Added malformed payload validation scenario in `server/src/test/integration/imapWebhookHandoff.integration.test.ts`.
+  - Test sends non-string `attachments[].content` and asserts safe `400` validation response without invoking publish/in-app handlers.
+- Validation:
+  - Reused full IMAP webhook integration run from `T229`.
+- 2026-02-27: Completed `T235`.
+  - Added `packages/integrations/src/webhooks/email/imapInAppQueue.test.ts` with async queue acceptance/defer behavior coverage.
+  - Test asserts queue accepts callback payload, returns immediately (non-blocking), and begins asynchronous processing without request-thread waiting.
+- Validation:
+  - `cd server && npx vitest run ../packages/integrations/src/webhooks/email/imapInAppQueue.test.ts --coverage.enabled=false`
+  - `cd server && npx vitest run src/test/integration/imapWebhookHandoff.integration.test.ts ../packages/integrations/src/webhooks/email/imapInAppQueue.test.ts --coverage.enabled=false`
+- 2026-02-27: Completed `T236`.
+  - Added async queue concurrency-bound assertion in `packages/integrations/src/webhooks/email/imapInAppQueue.test.ts`.
+  - Test sets worker env above max (`99`) and verifies active workers cap at `8` with remaining items queued, then drains to idle.
+- Validation:
+  - Reused combined webhook + queue vitest run from `T235`.
+- 2026-02-27: Completed `T239`.
+  - Added Google webhook integration scenario in `server/src/test/integration/inboundEmailInApp.webhooks.integration.test.ts` that exercises in-app mode with all artifact classes.
+  - Test asserts ticket-associated documents include provider attachment, extracted embedded image, and deterministic original-email `.eml`, verifying shared artifact orchestrator behavior.
+- Validation:
+  - `cd server && npx vitest run src/test/integration/inboundEmailInApp.webhooks.integration.test.ts -t "shared artifact orchestrator" --coverage.enabled=false`
+  - Environment note: DB-gated integration suite was skipped in this local session (`describeDb`).
+- 2026-02-27: Completed `T240`.
+  - Added Microsoft webhook integration scenario in `server/src/test/integration/inboundEmailInApp.webhooks.integration.test.ts` mirroring Google artifact coverage.
+  - Test verifies in-app processing persists regular attachment, embedded extraction artifact, and deterministic `.eml` for Microsoft path through the shared orchestrator.
+- Validation:
+  - Reused targeted integration command from `T239`.
+- 2026-02-27: Completed `T241`.
+  - Existing IMAP integration scenario (`IMAP in-app path persists regular attachment, embedded image, and original .eml as ticket documents`) now serves as explicit coverage for IMAP in-app artifact parity.
+  - Assertions include presence of regular attachment, embedded image artifact, and original-email `.eml` on ticket document associations.
+- Validation:
+  - Reused targeted IMAP integration command from earlier artifact tests:
+    - `cd server && npx vitest run src/test/integration/inboundEmailInApp.webhooks.integration.test.ts -t "IMAP in-app path persists regular attachment, embedded image, and original .eml as ticket documents" --coverage.enabled=false`
+  - Environment note: DB-gated integration suite was skipped in this local session (`describeDb`).
+- 2026-02-27: Completed `T242`.
+  - Added Playwright coverage file:
+    - `server/src/test/e2e/inbound-email-artifacts-documents.playwright.test.ts`
+  - Test seeds a ticket with three associated document artifacts (regular attachment, embedded image, `.eml`), opens ticket detail UI, navigates to Documents tab, and asserts all three are visible.
+- Validation:
+  - `cd server && npx playwright test src/test/e2e/inbound-email-artifacts-documents.playwright.test.ts --list`
+- 2026-02-27: Completed `T243`.
+  - Confirmed runbook coverage in:
+    - `ee/docs/plans/2026-02-27-inbound-email-inapp-artifact-persistence-remaining-work/GREENMAIL-IMAP-INAPP-RUNBOOK.md`
+  - Document includes environment setup, message-send step, and verification sections (logs, DB, UI) for IMAP in-app artifact validation.
+- Validation:
+  - Manual content verification against runbook sections.

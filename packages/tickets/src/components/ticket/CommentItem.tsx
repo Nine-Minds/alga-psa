@@ -35,6 +35,7 @@ interface CommentItemProps {
   onEdit: (conversation: IComment) => void;
   onDelete: (comment: IComment) => void;
   hideInternalTab?: boolean;
+  uploadFile?: (file: File, blockId?: string) => Promise<string>;
 }
 
 const CommentItem: React.FC<CommentItemProps> = ({
@@ -51,7 +52,8 @@ const CommentItem: React.FC<CommentItemProps> = ({
   onClose,
   onEdit,
   onDelete,
-  hideInternalTab = false
+  hideInternalTab = false,
+  uploadFile
 }) => {
   const { t } = useTranslation('features/tickets');
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -183,6 +185,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
           initialContent={editedContent}
           onContentChange={handleContentChange}
           searchMentions={searchUsersForMentions}
+          uploadFile={uploadFile}
         />
 
         <div className="flex justify-end space-x-2 mt-1">
@@ -215,7 +218,8 @@ const CommentItem: React.FC<CommentItemProps> = ({
     t,
     hideInternalTab,
     isInternalToggle,
-    isResolutionToggle
+    isResolutionToggle,
+    uploadFile
   ]);
   // Reset editor content and toggles when entering edit mode - always use conversation values (persisted)
   // NOTE: Do NOT depend on currentComment values - that would reload unsaved edits after cancel.

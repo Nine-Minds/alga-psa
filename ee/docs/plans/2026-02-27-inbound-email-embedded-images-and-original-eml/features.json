@@ -1,0 +1,291 @@
+[
+  {
+    "id": "F181",
+    "description": "Define embedded-image extraction scope to include HTML data URLs and HTML-referenced CID inline images",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F182",
+    "description": "Parse inbound email HTML for data:image/*;base64 payloads and emit synthetic attachment records",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F183",
+    "description": "Decode and validate extracted data URL images (base64 decode, mime detection, byte size)",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F184",
+    "description": "Resolve cid: image references from HTML and map them to inline MIME parts provided in email attachment metadata",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F185",
+    "description": "Skip unreferenced CID inline parts by default and process only HTML-referenced CID images",
+    "implemented": true,
+    "prdRefs": [
+      "Open Questions",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F186",
+    "description": "Generate deterministic synthetic attachment IDs and filenames for extracted embedded images",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F187",
+    "description": "Run embedded-image extraction and persistence in new-ticket inbound email flow",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F188",
+    "description": "Run embedded-image extraction and persistence in threaded-reply inbound email flow",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F189",
+    "description": "Reuse storage-backed attachment ingestion path for embedded image synthetic attachments",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F190",
+    "description": "Persist embedded images as external_files/documents and associate to tickets via document_associations",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations",
+      "Goals"
+    ]
+  },
+  {
+    "id": "F191",
+    "description": "Apply idempotency for embedded image processing using deterministic synthetic attachment keys per message",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F192",
+    "description": "Add dedicated in-app original-source email persistence as .eml",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F193",
+    "description": "Implement Gmail adapter retrieval of raw MIME/source message bytes for .eml persistence",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F194",
+    "description": "Implement Microsoft adapter retrieval of raw MIME/source message bytes for .eml persistence",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F195",
+    "description": "Implement MailHog/test path source MIME acquisition or deterministic fallback MIME generation",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F196",
+    "description": "Persist one .eml file/document per inbound message and associate it to the target ticket",
+    "implemented": true,
+    "prdRefs": [
+      "Goals",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F197",
+    "description": "Apply idempotency for original .eml persistence using a reserved synthetic attachment key per message",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F198",
+    "description": "Invoke original .eml persistence action once in new-ticket flow",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F199",
+    "description": "Invoke original .eml persistence action once in threaded-reply flow",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F200",
+    "description": "Keep embedded-image processing failures non-blocking for ticket/comment creation",
+    "implemented": true,
+    "prdRefs": [
+      "Goals",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F201",
+    "description": "Keep .eml persistence failures non-blocking for ticket/comment creation",
+    "implemented": true,
+    "prdRefs": [
+      "Goals",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F202",
+    "description": "Ensure system-user attribution is preserved for embedded-image and .eml created documents",
+    "implemented": true,
+    "prdRefs": [
+      "Security / Permissions",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F203",
+    "description": "Extend inbound email schemas/types to represent fields required for inline image and source MIME processing",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F204",
+    "description": "Sanitize generated filenames and enforce image-only acceptance for embedded payload extraction",
+    "implemented": true,
+    "prdRefs": [
+      "Security / Permissions",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F205",
+    "description": "Update integration and in-app inbound test fixtures to include embedded-image and source-email scenarios",
+    "implemented": true,
+    "prdRefs": [
+      "Acceptance Criteria",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F206",
+    "description": "IMAP webhook route performs auth/validation + lightweight dispatch to in-app processing (direct or app-local in-process async worker) and returns quickly without byte-heavy processing in request path",
+    "implemented": true,
+    "prdRefs": [
+      "Scoped Implementation Checklist (Phase 1)"
+    ]
+  },
+  {
+    "id": "F207",
+    "description": "IMAP ingress enforces hard caps for per-attachment bytes, total attachment bytes, attachment count, and raw MIME bytes before encoding/payload dispatch",
+    "implemented": true,
+    "prdRefs": [
+      "Scoped Implementation Checklist (Phase 1)",
+      "Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F208",
+    "description": "IMAP webhook payload includes rawMimeBase64 and attachment byte fields (content/isInline/contentId/id/name/contentType/size) sufficient for document and .eml persistence",
+    "implemented": true,
+    "prdRefs": [
+      "Scoped Implementation Checklist (Phase 1)",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F209",
+    "description": "IMAP inbound processing path uses storage-backed/idempotent attachment persistence compatible with current documents schema (no legacy metadata-only insert path)",
+    "implemented": true,
+    "prdRefs": [
+      "Scoped Implementation Checklist (Phase 1)",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F210",
+    "description": "IMAP inbound path executes embedded extraction for HTML data URLs and referenced CID images before persistence",
+    "implemented": true,
+    "prdRefs": [
+      "Scoped Implementation Checklist (Phase 1)",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F211",
+    "description": "IMAP inbound path persists one original .eml document per inbound message from provided raw MIME bytes with deterministic filename/idempotency",
+    "implemented": true,
+    "prdRefs": [
+      "Scoped Implementation Checklist (Phase 1)",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F212",
+    "description": "Per-message attachment artifact processing in app-local async path is sequential or strictly bounded to avoid Node event-loop starvation",
+    "implemented": true,
+    "prdRefs": [
+      "Scoped Implementation Checklist (Phase 1)",
+      "Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F213",
+    "description": "Oversize/over-limit artifacts are skipped with structured reasons while ticket/comment creation remains successful",
+    "implemented": true,
+    "prdRefs": [
+      "Scoped Implementation Checklist (Phase 1)",
+      "Requirements"
+    ]
+  }
+]

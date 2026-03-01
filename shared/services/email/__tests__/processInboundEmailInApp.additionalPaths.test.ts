@@ -15,6 +15,7 @@ const upsertTicketWatchListRecipientsMock = vi.fn();
 const createTicketFromEmailMock = vi.fn();
 const createCommentFromEmailMock = vi.fn();
 const processEmailAttachmentMock = vi.fn();
+const processInboundEmailArtifactsBestEffortMock = vi.fn();
 
 function makeQueryBuilder(firstResult: unknown) {
   const builder: any = {
@@ -76,6 +77,11 @@ vi.mock('../../../workflow/actions/emailWorkflowActions', () => ({
   processEmailAttachment: (...args: any[]) => processEmailAttachmentMock(...args),
 }));
 
+vi.mock('../processInboundEmailArtifacts', () => ({
+  processInboundEmailArtifactsBestEffort: (...args: any[]) =>
+    processInboundEmailArtifactsBestEffortMock(...args),
+}));
+
 describe('processInboundEmailInApp additional authorship paths', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -129,6 +135,8 @@ describe('processInboundEmailInApp additional authorship paths', () => {
       },
       source: 'provider_default',
     });
+    findClientIdByInboundEmailDomainMock.mockResolvedValue(null);
+    findValidClientPrimaryContactIdMock.mockResolvedValue(null);
     createTicketFromEmailMock.mockResolvedValue({
       ticket_id: 'ticket-1',
       ticket_number: 'T-1',
@@ -137,6 +145,7 @@ describe('processInboundEmailInApp additional authorship paths', () => {
     processEmailAttachmentMock.mockResolvedValue({
       success: true,
     });
+    processInboundEmailArtifactsBestEffortMock.mockResolvedValue(undefined);
   });
 
   it('T015: unmatched new-ticket sender keeps fallback path without contact_id', async () => {

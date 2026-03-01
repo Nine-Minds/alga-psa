@@ -1,0 +1,14 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true
+  },
+  "include": [
+    "src/index.ts",
+    "src/emailService.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist"
+  ]
+}

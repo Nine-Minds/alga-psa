@@ -2,6 +2,10 @@ import type { EmailMessageDetails } from '../../interfaces/inbound-email.interfa
 import { convertHtmlToBlockNote, convertMarkdownToBlocks } from '../../lib/utils/contentConversion';
 import { extractEmailDomain, normalizeEmailAddress } from '../../lib/email/addressUtils';
 import {
+  processInboundEmailArtifactsBestEffort,
+  type ProcessInboundEmailArtifactsResult,
+} from './processInboundEmailArtifacts';
+import {
   buildInboundWatchListRecipients,
   mergeTicketWatchListRecipients,
   setTicketWatchListOnAttributes,
@@ -135,53 +139,100 @@ async function findExistingEmailTicket(params: {
   });
 }
 
-async function processEmailAttachmentsBestEffort(params: {
-  tenantId: string;
-  providerId: string;
-  emailId: string;
-  ticketId: string;
-  attachments?: Array<{
-    id: string;
-    name: string;
-    contentType: string;
-    size: number;
-    contentId?: string;
-  }>;
-}) {
-  const { processEmailAttachment } = await import(
-    '../../workflow/actions/emailWorkflowActions'
-  );
+function normalizeEmbeddedContentId(value: string | undefined | null): string {
+  if (!value) return '';
+  return String(value).trim().replace(/^cid:/i, '').replace(/^<|>$/g, '').toLowerCase();
+}
 
-  const attachments = params.attachments ?? [];
-  for (const attachment of attachments) {
-    try {
-      await processEmailAttachment(
-        {
-          emailId: params.emailId,
-          attachmentId: attachment.id,
-          ticketId: params.ticketId,
-          tenant: params.tenantId,
-          providerId: params.providerId,
-          attachmentData: {
-            id: attachment.id,
-            name: attachment.name,
-            contentType: attachment.contentType,
-            size: attachment.size,
-            contentId: attachment.contentId,
-          },
-        },
-        params.tenantId
-      );
-    } catch (error) {
-      console.warn('processInboundEmailInApp: attachment processing failed (continuing)', {
-        tenantId: params.tenantId,
-        providerId: params.providerId,
-        emailId: params.emailId,
-        ticketId: params.ticketId,
-        attachmentId: attachment.id,
-        error: error instanceof Error ? error.message : String(error),
-      });
+function rewriteEmbeddedImageSourcesInHtml(
+  html: string,
+  embeddedMappings: ProcessInboundEmailArtifactsResult['embeddedImageUrlMappings']
+): string {
+  if (!html || !embeddedMappings.length) return html;
+
+  const dataUrlMap = new Map<string, string>();
+  const cidMap = new Map<string, string>();
+
+  for (const mapping of embeddedMappings) {
+    if (mapping.source === 'data-url') {
+      dataUrlMap.set(mapping.reference, mapping.url);
+      continue;
     }
+
+    if (mapping.source === 'cid') {
+      const normalized = normalizeEmbeddedContentId(mapping.reference);
+      if (normalized) {
+        cidMap.set(normalized, mapping.url);
+      }
+    }
+  }
+
+  let rewritten = html;
+
+  if (dataUrlMap.size > 0) {
+    rewritten = rewritten.replace(
+      /data:(image\/[a-z0-9.+-]+);base64,([^"'<>]+)/gim,
+      (fullMatch: string, contentType: string, base64: string) => {
+        const normalized = `data:${String(contentType).toLowerCase()};base64,${String(base64).replace(/\s+/g, '')}`;
+        return dataUrlMap.get(normalized) || fullMatch;
+      }
+    );
+  }
+
+  if (cidMap.size > 0) {
+    rewritten = rewritten.replace(/\bcid:([^"'<>\s)]+)/gim, (fullMatch: string, cid: string) => {
+      const normalized = normalizeEmbeddedContentId(cid);
+      return cidMap.get(normalized) || fullMatch;
+    });
+  }
+
+  return rewritten;
+}
+
+async function maybeRewriteCommentWithEmbeddedAttachmentUrls(args: {
+  tenantId: string;
+  commentId: string;
+  html?: string;
+  text?: string;
+  originalCommentContent: string;
+  artifactsResult?: ProcessInboundEmailArtifactsResult;
+}): Promise<void> {
+  const embeddedMappings = args.artifactsResult?.embeddedImageUrlMappings ?? [];
+  if (!args.html || embeddedMappings.length === 0) {
+    return;
+  }
+
+  const rewrittenHtml = rewriteEmbeddedImageSourcesInHtml(args.html, embeddedMappings);
+  if (!rewrittenHtml || rewrittenHtml === args.html) {
+    return;
+  }
+
+  const rewrittenBlocks = blocksFromEmailBody({
+    html: rewrittenHtml,
+    text: args.text,
+  });
+  const rewrittenContent = JSON.stringify(rewrittenBlocks);
+  if (rewrittenContent === args.originalCommentContent) {
+    return;
+  }
+
+  try {
+    const { withAdminTransaction } = await import('@alga-psa/db');
+    await withAdminTransaction(async (trx: any) => {
+      await trx('comments as c')
+        .where('c.tenant', args.tenantId)
+        .andWhere('c.comment_id', args.commentId)
+        .update({
+          note: rewrittenContent,
+          updated_at: new Date(),
+        });
+    });
+  } catch (error) {
+    console.warn('processInboundEmailInApp: embedded image comment rewrite failed (continuing)', {
+      tenantId: args.tenantId,
+      commentId: args.commentId,
+      error: error instanceof Error ? error.message : String(error),
+    });
   }
 }
 
@@ -315,15 +366,18 @@ export async function processInboundEmailInApp(
           };
         }
 
+        const parsedHtml = parsedEmail?.sanitizedHtml ?? emailData.body?.html;
+        const parsedText = parsedEmail?.sanitizedText ?? emailData.body?.text;
         const blocks = blocksFromEmailBody({
-          html: parsedEmail?.sanitizedHtml ?? emailData.body?.html,
-          text: parsedEmail?.sanitizedText ?? emailData.body?.text,
+          html: parsedHtml,
+          text: parsedText,
         });
+        const serializedBlocks = JSON.stringify(blocks);
         const matchedSenderContact = await resolveSenderContact({ ticketId: match.ticketId });
         const commentId = await createCommentFromEmail(
           {
             ticket_id: match.ticketId,
-            content: JSON.stringify(blocks),
+            content: serializedBlocks,
             source: 'email',
             author_type: 'contact',
             author_id: matchedSenderContact?.user_id,
@@ -362,18 +416,20 @@ export async function processInboundEmailInApp(
           tenantId
         );
 
-        await processEmailAttachmentsBestEffort({
+        const artifactsResult = await processInboundEmailArtifactsBestEffort({
           tenantId,
           providerId,
-          emailId: emailData.id,
           ticketId: match.ticketId,
-          attachments: emailData.attachments?.map((a) => ({
-            id: a.id,
-            name: a.name,
-            contentType: a.contentType,
-            size: a.size,
-            contentId: a.contentId,
-          })),
+          emailData,
+          scopeLabel: 'reply',
+        });
+        await maybeRewriteCommentWithEmbeddedAttachmentUrls({
+          tenantId,
+          commentId,
+          html: parsedHtml,
+          text: parsedText,
+          originalCommentContent: serializedBlocks,
+          artifactsResult,
         });
 
         await upsertWatchListBestEffort(match.ticketId);
@@ -434,15 +490,18 @@ export async function processInboundEmailInApp(
       };
     }
 
+    const parsedHtml = parsedEmail?.sanitizedHtml ?? emailData.body?.html;
+    const parsedText = parsedEmail?.sanitizedText ?? emailData.body?.text;
     const blocks = blocksFromEmailBody({
-      html: parsedEmail?.sanitizedHtml ?? emailData.body?.html,
-      text: parsedEmail?.sanitizedText ?? emailData.body?.text,
+      html: parsedHtml,
+      text: parsedText,
     });
+    const serializedBlocks = JSON.stringify(blocks);
     const matchedSenderContact = await resolveSenderContact({ ticketId: threadedTicketId });
     const commentId = await createCommentFromEmail(
       {
         ticket_id: threadedTicketId,
-        content: JSON.stringify(blocks),
+        content: serializedBlocks,
         source: 'email',
         author_type: 'contact',
         author_id: matchedSenderContact?.user_id,
@@ -481,18 +540,20 @@ export async function processInboundEmailInApp(
       tenantId
     );
 
-    await processEmailAttachmentsBestEffort({
+    const artifactsResult = await processInboundEmailArtifactsBestEffort({
       tenantId,
       providerId,
-      emailId: emailData.id,
       ticketId: threadedTicketId,
-      attachments: emailData.attachments?.map((a) => ({
-        id: a.id,
-        name: a.name,
-        contentType: a.contentType,
-        size: a.size,
-        contentId: a.contentId,
-      })),
+      emailData,
+      scopeLabel: 'reply',
+    });
+    await maybeRewriteCommentWithEmbeddedAttachmentUrls({
+      tenantId,
+      commentId,
+      html: parsedHtml,
+      text: parsedText,
+      originalCommentContent: serializedBlocks,
+      artifactsResult,
     });
 
     await upsertWatchListBestEffort(threadedTicketId);
@@ -599,10 +660,13 @@ export async function processInboundEmailInApp(
     };
   }
 
+  const parsedHtml = parsedEmail?.sanitizedHtml ?? emailData.body?.html;
+  const parsedText = parsedEmail?.sanitizedText ?? emailData.body?.text;
   const blocks = blocksFromEmailBody({
-    html: parsedEmail?.sanitizedHtml ?? emailData.body?.html,
-    text: parsedEmail?.sanitizedText ?? emailData.body?.text,
+    html: parsedHtml,
+    text: parsedText,
   });
+  const serializedBlocks = JSON.stringify(blocks);
   const seededWatchList = mergeTicketWatchListRecipients([], inboundWatchListRecipients);
   const seededAttributes = setTicketWatchListOnAttributes(undefined, seededWatchList);
 
@@ -637,7 +701,7 @@ export async function processInboundEmailInApp(
   const commentId = await createCommentFromEmail(
     {
       ticket_id: ticketResult.ticket_id,
-      content: JSON.stringify(blocks),
+      content: serializedBlocks,
       source: 'email',
       author_type: commentAuthorContactId ? 'contact' : 'system',
       author_id: commentAuthorUserId ?? undefined,
@@ -667,18 +731,20 @@ export async function processInboundEmailInApp(
     tenantId
   );
 
-  await processEmailAttachmentsBestEffort({
+  const artifactsResult = await processInboundEmailArtifactsBestEffort({
     tenantId,
     providerId,
-    emailId: emailData.id,
     ticketId: ticketResult.ticket_id,
-    attachments: emailData.attachments?.map((a) => ({
-      id: a.id,
-      name: a.name,
-      contentType: a.contentType,
-      size: a.size,
-      contentId: a.contentId,
-    })),
+    emailData,
+    scopeLabel: 'new-ticket',
+  });
+  await maybeRewriteCommentWithEmbeddedAttachmentUrls({
+    tenantId,
+    commentId,
+    html: parsedHtml,
+    text: parsedText,
+    originalCommentContent: serializedBlocks,
+    artifactsResult,
   });
 
   return {

@@ -15,6 +15,7 @@ const upsertTicketWatchListRecipientsMock = vi.fn();
 const createTicketFromEmailMock = vi.fn();
 const createCommentFromEmailMock = vi.fn();
 const processEmailAttachmentMock = vi.fn();
+const processInboundEmailArtifactsBestEffortMock = vi.fn();
 
 function buildEmailData(
   overrides: Partial<EmailMessageDetails> = {}
@@ -76,6 +77,11 @@ vi.mock('../../../workflow/actions/emailWorkflowActions', () => ({
   processEmailAttachment: (...args: any[]) => processEmailAttachmentMock(...args),
 }));
 
+vi.mock('../processInboundEmailArtifacts', () => ({
+  processInboundEmailArtifactsBestEffort: (...args: any[]) =>
+    processInboundEmailArtifactsBestEffortMock(...args),
+}));
+
 describe('processInboundEmailInApp', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -129,6 +135,8 @@ describe('processInboundEmailInApp', () => {
       },
       source: 'provider_default',
     });
+    findClientIdByInboundEmailDomainMock.mockResolvedValue(null);
+    findValidClientPrimaryContactIdMock.mockResolvedValue(null);
     createTicketFromEmailMock.mockResolvedValue({
       ticket_id: 'ticket-1',
       ticket_number: 'T-1',
@@ -137,6 +145,7 @@ describe('processInboundEmailInApp', () => {
     processEmailAttachmentMock.mockResolvedValue({
       success: true,
     });
+    processInboundEmailArtifactsBestEffortMock.mockResolvedValue(undefined);
   });
 
   it('new inbound email with matched contact+user forwards both author_id and contact_id', async () => {
@@ -199,6 +208,18 @@ describe('processInboundEmailInApp', () => {
         }),
       }),
       'tenant-1'
+    );
+
+    expect(processInboundEmailArtifactsBestEffortMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenantId: 'tenant-1',
+        providerId: 'provider-1',
+        ticketId: 'ticket-1',
+        scopeLabel: 'new-ticket',
+      })
+    );
+    expect(createCommentFromEmailMock.mock.invocationCallOrder[0]).toBeLessThan(
+      processInboundEmailArtifactsBestEffortMock.mock.invocationCallOrder[0]
     );
   });
 
@@ -291,6 +312,17 @@ describe('processInboundEmailInApp', () => {
       }),
       'tenant-1'
     );
+    expect(processInboundEmailArtifactsBestEffortMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenantId: 'tenant-1',
+        providerId: 'provider-1',
+        ticketId: 'ticket-reply-123',
+        scopeLabel: 'reply',
+      })
+    );
+    expect(createCommentFromEmailMock.mock.invocationCallOrder[0]).toBeLessThan(
+      processInboundEmailArtifactsBestEffortMock.mock.invocationCallOrder[0]
+    );
   });
 
   it('thread-header path resolves sender contact and forwards contact_id for contact-only sender', async () => {
@@ -351,6 +383,98 @@ describe('processInboundEmailInApp', () => {
       }),
       'tenant-1'
     );
+    expect(processInboundEmailArtifactsBestEffortMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenantId: 'tenant-1',
+        providerId: 'provider-1',
+        ticketId: 'ticket-thread-123',
+        scopeLabel: 'reply',
+      })
+    );
+    expect(createCommentFromEmailMock.mock.invocationCallOrder[0]).toBeLessThan(
+      processInboundEmailArtifactsBestEffortMock.mock.invocationCallOrder[0]
+    );
+  });
+
+  it('rewrites data:image embeds to served attachment URLs in stored comment note after artifacts persist', async () => {
+    const updatedNotes: any[] = [];
+    withAdminTransactionMock.mockImplementation(async (callback: (trx: any) => Promise<any>) => {
+      const trx = vi.fn((table: string) => {
+        if (table === 'tickets as t') {
+          return makeQueryBuilder(undefined);
+        }
+
+        if (table === 'comments as c') {
+          const builder: any = {
+            select: vi.fn().mockReturnThis(),
+            where: vi.fn().mockReturnThis(),
+            andWhereRaw: vi.fn().mockReturnThis(),
+            andWhere: vi.fn((arg: unknown) => {
+              if (typeof arg === 'function') {
+                const scopedWhere: any = {
+                  whereRaw: vi.fn().mockReturnThis(),
+                  orWhereRaw: vi.fn().mockReturnThis(),
+                };
+                arg.call(scopedWhere);
+              }
+              return builder;
+            }),
+            first: vi.fn().mockResolvedValue(undefined),
+            update: vi.fn().mockImplementation(async (payload: any) => {
+              updatedNotes.push(payload);
+              return 1;
+            }),
+          };
+          return builder;
+        }
+
+        throw new Error(`Unexpected table in unit test: ${table}`);
+      });
+
+      return callback(trx);
+    });
+
+    parseEmailReplyBodyMock.mockResolvedValue({
+      sanitizedText: 'body',
+      sanitizedHtml: '<p>Hello<img src="data:image/png;base64,aGVsbG8=" /></p>',
+      confidence: 0.95,
+      strategy: 'plain',
+      appliedHeuristics: [],
+      warnings: [],
+      tokens: {},
+    });
+
+    processInboundEmailArtifactsBestEffortMock.mockResolvedValue({
+      embeddedImageUrlMappings: [
+        {
+          source: 'data-url',
+          reference: 'data:image/png;base64,aGVsbG8=',
+          fileId: 'file-123',
+          documentId: 'doc-123',
+          url: '/api/documents/view/file-123',
+        },
+      ],
+    });
+
+    const { processInboundEmailInApp } = await import('../processInboundEmailInApp');
+
+    const result = await processInboundEmailInApp({
+      tenantId: 'tenant-1',
+      providerId: 'provider-1',
+      emailData: buildEmailData({
+        id: 'email-with-embed',
+        body: {
+          text: 'body',
+          html: '<p>Hello<img src="data:image/png;base64,aGVsbG8=" /></p>',
+        },
+      }),
+    });
+
+    expect(result.outcome).toBe('created');
+    expect(updatedNotes).toHaveLength(1);
+    expect(typeof updatedNotes[0].note).toBe('string');
+    expect(updatedNotes[0].note).toContain('/api/documents/view/file-123');
+    expect(updatedNotes[0].note).not.toContain('data:image/png;base64,aGVsbG8=');
   });
 
   it('T019: new ticket path includes watch-list attributes from To/CC recipients', async () => {

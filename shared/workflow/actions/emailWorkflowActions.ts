@@ -7,12 +7,6 @@
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
-import {
-  COMMENT_RESPONSE_SOURCES,
-  TICKET_ORIGINS,
-  type CommentMetadata,
-  type InboundEmailProviderType,
-} from '@alga-psa/types';
 import { buildInboundEmailReplyReceivedPayload } from '../streams/domainEventBuilders/inboundEmailReplyEventBuilders';
 import { normalizeEmailAddress } from '../../lib/email/addressUtils';
 import {
@@ -21,6 +15,30 @@ import {
   setTicketWatchListOnAttributes,
   type TicketWatchListRecipientInput,
 } from '../../lib/tickets/watchList';
+
+const COMMENT_RESPONSE_SOURCES = {
+  USER: 'user',
+  AUTOMATION: 'automation',
+  INBOUND_EMAIL: 'inbound_email',
+} as const;
+
+const TICKET_ORIGINS = {
+  INTERNAL: 'internal',
+  CLIENT_PORTAL: 'client_portal',
+  INBOUND_EMAIL: 'inbound_email',
+  API: 'api',
+} as const;
+
+type InboundEmailProviderType = 'google' | 'microsoft' | 'imap';
+
+type CommentMetadata = Record<string, unknown> & {
+  responseSource?: (typeof COMMENT_RESPONSE_SOURCES)[keyof typeof COMMENT_RESPONSE_SOURCES];
+  email?: {
+    provider?: InboundEmailProviderType;
+    providerType?: InboundEmailProviderType;
+    [key: string]: unknown;
+  };
+};
 
 // =============================================================================
 // INTERFACES

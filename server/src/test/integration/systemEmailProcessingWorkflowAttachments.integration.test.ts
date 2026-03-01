@@ -6,6 +6,8 @@ function createWorkflowHarness(overrides?: {
   findTicketByEmailThreadResult?: any;
   findContactByEmailResult?: any;
   processEmailAttachmentImpl?: (...args: any[]) => any;
+  extractEmbeddedAttachmentsImpl?: (...args: any[]) => any;
+  processOriginalEmailAttachmentImpl?: (...args: any[]) => any;
   eventPayload?: any;
 }) {
   const states: string[] = [];
@@ -65,6 +67,18 @@ function createWorkflowHarness(overrides?: {
       }
       return { success: true };
     }),
+    extract_embedded_email_attachments: vi.fn(async (...args: any[]) => {
+      if (overrides?.extractEmbeddedAttachmentsImpl) {
+        return await overrides.extractEmbeddedAttachmentsImpl(...args);
+      }
+      return { success: true, attachments: [], warnings: [] };
+    }),
+    process_original_email_attachment: vi.fn(async (...args: any[]) => {
+      if (overrides?.processOriginalEmailAttachmentImpl) {
+        return await overrides.processOriginalEmailAttachmentImpl(...args);
+      }
+      return { success: true };
+    }),
     create_or_find_contact: vi.fn(async () => ({ success: true, contact: { id: 'contact-1' } })),
     save_email_client_association: vi.fn(async () => ({ success: true })),
     get_client_by_id_for_email: vi.fn(async () => ({ success: true, client: { client_name: 'Client' } })),
@@ -97,6 +111,20 @@ describe('systemEmailProcessingWorkflow: attachment processing behavior', () => 
 
     const { context, actions, states } = createWorkflowHarness({
       processEmailAttachmentImpl: processImpl,
+      extractEmbeddedAttachmentsImpl: async () => ({
+        success: true,
+        attachments: [
+          {
+            id: 'embedded-1',
+            name: 'embedded-image-1.png',
+            contentType: 'image/png',
+            size: 5,
+            content: Buffer.from('hello').toString('base64'),
+            allowInlineProcessing: true,
+          },
+        ],
+        warnings: [],
+      }),
       findTicketByEmailThreadResult: { success: true, ticket: null },
       eventPayload: {
         tenantId: 'tenant-1',
@@ -106,7 +134,7 @@ describe('systemEmailProcessingWorkflow: attachment processing behavior', () => 
           subject: 'Subject',
           from: { email: 'from@example.com', name: 'From' },
           to: [{ email: 'to@example.com', name: 'To' }],
-          body: { text: 'hello', html: undefined },
+          body: { text: 'hello', html: '<p>hello</p>' },
           receivedAt: new Date().toISOString(),
           attachments: [
             { id: 'a1', name: 'a1.txt', contentType: 'text/plain', size: 1 },
@@ -133,7 +161,16 @@ describe('systemEmailProcessingWorkflow: attachment processing behavior', () => 
       author_type: 'contact',
       author_id: 'client-user-1',
     }));
-    expect(actions.process_email_attachment).toHaveBeenCalledTimes(2);
+    expect(actions.process_email_attachment).toHaveBeenCalledTimes(3);
+    expect(actions.process_email_attachment).toHaveBeenCalledWith(expect.objectContaining({
+      attachmentId: 'embedded-1',
+    }));
+    expect(actions.extract_embedded_email_attachments).toHaveBeenCalledTimes(1);
+    expect(actions.process_original_email_attachment).toHaveBeenCalledTimes(1);
+    expect(actions.process_original_email_attachment).toHaveBeenCalledWith(expect.objectContaining({
+      emailId: 'msg-1',
+      ticketId: 'ticket-created-1',
+    }));
     expect(states).toContain('EMAIL_PROCESSED');
   });
 
@@ -144,6 +181,20 @@ describe('systemEmailProcessingWorkflow: attachment processing behavior', () => 
         success: true,
         ticket: { ticketId: 'ticket-existing-1', ticketNumber: 'T-1', subject: 'Subject', status: 'open' },
       },
+      extractEmbeddedAttachmentsImpl: async () => ({
+        success: true,
+        attachments: [
+          {
+            id: 'embedded-reply-1',
+            name: 'embedded-image-reply-1.png',
+            contentType: 'image/png',
+            size: 5,
+            content: Buffer.from('reply').toString('base64'),
+            allowInlineProcessing: true,
+          },
+        ],
+        warnings: [],
+      }),
       processEmailAttachmentImpl: async (params: any) => {
         attachmentCalls.push(params.attachmentId);
         throw new Error('attachment failed');
@@ -156,7 +207,7 @@ describe('systemEmailProcessingWorkflow: attachment processing behavior', () => 
           subject: 'Re: Subject',
           from: { email: 'from@example.com', name: 'From' },
           to: [{ email: 'to@example.com', name: 'To' }],
-          body: { text: 'reply', html: undefined },
+          body: { text: 'reply', html: '<p>reply</p>' },
           receivedAt: new Date().toISOString(),
           attachments: [{ id: 'r1', name: 'r1.txt', contentType: 'text/plain', size: 1 }],
           threadId: 'thread-1',
@@ -179,8 +230,14 @@ describe('systemEmailProcessingWorkflow: attachment processing behavior', () => 
       email: 'from@example.com',
       ticketId: 'ticket-existing-1',
     }));
-    expect(actions.process_email_attachment).toHaveBeenCalledTimes(1);
-    expect(attachmentCalls).toEqual(['r1']);
+    expect(actions.process_email_attachment).toHaveBeenCalledTimes(2);
+    expect(actions.extract_embedded_email_attachments).toHaveBeenCalledTimes(1);
+    expect(actions.process_original_email_attachment).toHaveBeenCalledTimes(1);
+    expect(actions.process_original_email_attachment).toHaveBeenCalledWith(expect.objectContaining({
+      emailId: 'msg-reply-1',
+      ticketId: 'ticket-existing-1',
+    }));
+    expect(attachmentCalls).toEqual(['r1', 'embedded-reply-1']);
   });
 
   it('new ticket flow without matched contact creates initial comment as system author (internal flow)', async () => {
@@ -223,5 +280,199 @@ describe('systemEmailProcessingWorkflow: attachment processing behavior', () => 
     expect(createCommentInput.author_type).toBe('system');
     expect(createCommentInput.author_id).toBeUndefined();
     expect(states).toContain('EMAIL_PROCESSED');
+  });
+
+  it('T045: per-message attachment artifacts are processed sequentially without unbounded fan-out', async () => {
+    const callSequence: string[] = [];
+    let inFlight = 0;
+    let maxInFlight = 0;
+
+    const { context, actions } = createWorkflowHarness({
+      processEmailAttachmentImpl: async (params: any) => {
+        inFlight += 1;
+        maxInFlight = Math.max(maxInFlight, inFlight);
+        callSequence.push(`start:${params.attachmentId}`);
+        await new Promise((resolve) => setTimeout(resolve, 25));
+        callSequence.push(`end:${params.attachmentId}`);
+        inFlight -= 1;
+        return { success: true };
+      },
+      findTicketByEmailThreadResult: { success: true, ticket: null },
+      eventPayload: {
+        tenantId: 'tenant-1',
+        providerId: 'provider-1',
+        emailData: {
+          id: 'msg-sequential-1',
+          subject: 'Attachment sequencing',
+          from: { email: 'from@example.com', name: 'From' },
+          to: [{ email: 'to@example.com', name: 'To' }],
+          body: { text: 'hello', html: undefined },
+          receivedAt: new Date().toISOString(),
+          attachments: [
+            { id: 'a1', name: 'a1.txt', contentType: 'text/plain', size: 1 },
+            { id: 'a2', name: 'a2.txt', contentType: 'text/plain', size: 1 },
+            { id: 'a3', name: 'a3.txt', contentType: 'text/plain', size: 1 },
+          ],
+          threadId: 'thread-sequential-1',
+          inReplyTo: null,
+          references: [],
+          providerId: 'provider-1',
+          tenant: 'tenant-1',
+        },
+      },
+    });
+
+    await expect(systemEmailProcessingWorkflow({ ...context })).resolves.toBeUndefined();
+
+    expect(actions.process_email_attachment).toHaveBeenCalledTimes(3);
+    expect(maxInFlight).toBe(1);
+    expect(callSequence).toEqual([
+      'start:a1',
+      'end:a1',
+      'start:a2',
+      'end:a2',
+      'start:a3',
+      'end:a3',
+    ]);
+  });
+
+  it('T046: over-limit artifacts are logged as skipped while ticket/comment creation still succeeds', async () => {
+    const processedAttachmentIds: string[] = [];
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    try {
+      const { context, actions, states } = createWorkflowHarness({
+        processEmailAttachmentImpl: async (params: any) => {
+          processedAttachmentIds.push(params.attachmentId);
+          return { success: true };
+        },
+        processOriginalEmailAttachmentImpl: async () => ({
+          success: true,
+          skipped: true,
+          reason: 'raw_mime_over_max_bytes',
+        }),
+        findTicketByEmailThreadResult: { success: true, ticket: null },
+        eventPayload: {
+          tenantId: 'tenant-1',
+          providerId: 'provider-1',
+          emailData: {
+            id: 'msg-over-limit-1',
+            subject: 'Over limit artifacts',
+            from: { email: 'from@example.com', name: 'From' },
+            to: [{ email: 'to@example.com', name: 'To' }],
+            body: { text: 'hello', html: undefined },
+            receivedAt: new Date().toISOString(),
+            attachments: [{ id: 'a1', name: 'a1.txt', contentType: 'text/plain', size: 1 }],
+            ingressSkipReasons: [
+              {
+                type: 'attachment',
+                reason: 'attachment_over_max_bytes',
+                attachmentId: 'a-too-large',
+                attachmentName: 'too-large.bin',
+                size: 4096,
+                cap: 1024,
+              },
+              {
+                type: 'raw_mime',
+                reason: 'raw_mime_over_max_bytes',
+                size: 8192,
+                cap: 2048,
+              },
+            ],
+            threadId: 'thread-over-limit-1',
+            inReplyTo: null,
+            references: [],
+            providerId: 'provider-1',
+            tenant: 'tenant-1',
+          },
+        },
+      });
+
+      await expect(systemEmailProcessingWorkflow({ ...context })).resolves.toBeUndefined();
+
+      expect(actions.create_ticket_from_email).toHaveBeenCalledTimes(1);
+      expect(actions.create_comment_from_email).toHaveBeenCalledTimes(1);
+      expect(actions.process_email_attachment).toHaveBeenCalledTimes(1);
+      expect(actions.process_original_email_attachment).toHaveBeenCalledTimes(1);
+      expect(processedAttachmentIds).toEqual(['a1']);
+      expect(states).toContain('EMAIL_PROCESSED');
+      expect(warnSpy).toHaveBeenCalledWith(
+        '[new-ticket] ingress skipped artifacts',
+        expect.objectContaining({
+          emailId: 'msg-over-limit-1',
+          reasons: expect.arrayContaining([
+            expect.objectContaining({ reason: 'attachment_over_max_bytes' }),
+            expect.objectContaining({ reason: 'raw_mime_over_max_bytes' }),
+          ]),
+        })
+      );
+    } finally {
+      warnSpy.mockRestore();
+    }
+  });
+
+  it('does not block new-ticket creation when original .eml persistence fails', async () => {
+    const { context, actions, states } = createWorkflowHarness({
+      processOriginalEmailAttachmentImpl: async () => ({ success: false, message: 'source retrieval failed' }),
+      findTicketByEmailThreadResult: { success: true, ticket: null },
+      eventPayload: {
+        tenantId: 'tenant-1',
+        providerId: 'provider-1',
+        emailData: {
+          id: 'msg-new-fail-eml',
+          subject: 'Subject',
+          from: { email: 'from@example.com', name: 'From' },
+          to: [{ email: 'to@example.com', name: 'To' }],
+          body: { text: 'hello', html: undefined },
+          receivedAt: new Date().toISOString(),
+          attachments: [],
+          threadId: 'thread-1',
+          inReplyTo: null,
+          references: [],
+          providerId: 'provider-1',
+          tenant: 'tenant-1',
+        },
+      },
+    });
+
+    await expect(systemEmailProcessingWorkflow({ ...context })).resolves.toBeUndefined();
+
+    expect(actions.create_ticket_from_email).toHaveBeenCalledTimes(1);
+    expect(actions.create_comment_from_email).toHaveBeenCalledTimes(1);
+    expect(actions.process_original_email_attachment).toHaveBeenCalledTimes(1);
+    expect(states).toContain('EMAIL_PROCESSED');
+  });
+
+  it('does not block reply comment creation when original .eml persistence fails', async () => {
+    const { context, actions } = createWorkflowHarness({
+      findTicketByEmailThreadResult: {
+        success: true,
+        ticket: { ticketId: 'ticket-existing-1', ticketNumber: 'T-1', subject: 'Subject', status: 'open' },
+      },
+      processOriginalEmailAttachmentImpl: async () => ({ success: false, message: 'source retrieval failed' }),
+      eventPayload: {
+        tenantId: 'tenant-1',
+        providerId: 'provider-1',
+        emailData: {
+          id: 'msg-reply-fail-eml',
+          subject: 'Re: Subject',
+          from: { email: 'from@example.com', name: 'From' },
+          to: [{ email: 'to@example.com', name: 'To' }],
+          body: { text: 'reply', html: undefined },
+          receivedAt: new Date().toISOString(),
+          attachments: [],
+          threadId: 'thread-1',
+          inReplyTo: 'msg-1',
+          references: ['msg-1'],
+          providerId: 'provider-1',
+          tenant: 'tenant-1',
+        },
+      },
+    });
+
+    await expect(systemEmailProcessingWorkflow({ ...context })).resolves.toBeUndefined();
+
+    expect(actions.create_comment_from_email).toHaveBeenCalledTimes(1);
+    expect(actions.process_original_email_attachment).toHaveBeenCalledTimes(1);
   });
 });

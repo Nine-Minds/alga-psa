@@ -21,6 +21,8 @@ export default defineConfig({
     'workflow/persistence/workflowEventProcessingModel': 'workflow/persistence/workflowEventProcessingModel.ts',
     'workflow/streams/index': 'workflow/streams/index.ts',
     'workflow/streams/redisStreamClient': 'workflow/streams/redisStreamClient.ts',
+    'workflow/streams/domainEventBuilders/documentStorageEventBuilders': 'workflow/streams/domainEventBuilders/documentStorageEventBuilders.ts',
+    'workflow/streams/domainEventBuilders/mediaEventBuilders': 'workflow/streams/domainEventBuilders/mediaEventBuilders.ts',
     'workflow/workers/index': 'workflow/workers/index.ts',
     'workflow/init/index': 'workflow/init/index.ts',
     'workflow/services/index': 'workflow/services/index.ts',

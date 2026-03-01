@@ -181,7 +181,7 @@ jobs:
           # Build all images needed for e2e tests upfront
           # Excludes: workflow-worker (EE only, not needed for CE e2e)
           docker-compose -p alga-e2e-test -f docker-compose.base.yaml -f docker-compose.ce.yaml -f docker-compose.prod.yaml build --no-cache \
-            server setup imap-service hocuspocus
+            server setup email-service hocuspocus
         shell: bash
 
       - name: Start foundational services (postgres and redis)
@@ -360,7 +360,7 @@ jobs:
           # Use --no-deps to avoid waiting on setup dependency again
           docker-compose -p alga-e2e-test -f docker-compose.base.yaml -f docker-compose.ce.yaml -f docker-compose.prod.yaml -f docker-compose.imap-test.yaml up -d \
             --no-recreate --no-deps \
-            server imap-service imap-test-server hocuspocus
+            server email-service imap-test-server hocuspocus
         shell: bash
 
       - name: Collect initial container logs

@@ -383,6 +383,20 @@ function customBlocksToMarkdown(blocks: Block[] | PartialBlock[]): string {
         }
         break;
 
+      case 'image': {
+        const props = (block.props as any) || {};
+        const url = typeof props.url === 'string' ? props.url.trim() : '';
+        if (!url) {
+          return '';
+        }
+        const alt = typeof props.caption === 'string' && props.caption.trim().length > 0
+          ? props.caption.trim()
+          : typeof props.name === 'string'
+            ? props.name.trim()
+            : 'clipboard-image';
+        return `![${alt}](${url})`;
+      }
+
       default:
         // Unknown block type
         console.log(`[BlockNoteUtils] Unknown block type: ${block.type}`);
@@ -721,6 +735,26 @@ export function convertBlockNoteToHTML(blocks: any): string {
           content = `<code class="language-${language}">${codeText}</code>`;
           output.push(`<pre${styleAttribute}>${content}</pre>`);
           break;
+        case 'image': {
+          flushListBuffer();
+          const props = (block.props as any) || {};
+          const imageUrl = typeof props.url === 'string' ? props.url.trim() : '';
+          if (!imageUrl) {
+            break;
+          }
+
+          const imageName = typeof props.name === 'string' ? props.name.trim() : '';
+          const imageCaption = typeof props.caption === 'string' ? props.caption.trim() : '';
+          const altText = imageCaption || imageName || 'ticket-comment-image';
+          const captionHtml = imageCaption
+            ? `<figcaption style="margin-top:8px;color:#667085;font-size:12px;">${escapeHtml(imageCaption)}</figcaption>`
+            : '';
+
+          output.push(
+            `<figure${styleAttribute}><img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(altText)}" style="max-width:100%;height:auto;" />${captionHtml}</figure>`
+          );
+          break;
+        }
         default:
           flushListBuffer();
           const anyBlock = block as any;

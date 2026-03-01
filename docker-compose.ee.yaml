@@ -269,10 +269,10 @@ services:
     deploy:
       replicas: ${WORKFLOW_WORKER_REPLICAS:-1}
 
-  imap-service:
+  email-service:
     build:
       context: .
-      dockerfile: services/imap-service/Dockerfile
+      dockerfile: services/email-service/Dockerfile
     environment:
       EDITION: enterprise
       DB_NAME: server
@@ -307,6 +307,8 @@ services:
       IMAP_WEBHOOK_TIMEOUT_MS: ${IMAP_WEBHOOK_TIMEOUT_MS:-10000}
       IMAP_WEBHOOK_MAX_ATTEMPTS: ${IMAP_WEBHOOK_MAX_ATTEMPTS:-3}
       IMAP_WEBHOOK_SECRET: ${IMAP_WEBHOOK_SECRET:-}
+      UNIFIED_INBOUND_EMAIL_POINTER_QUEUE_ENABLED: ${UNIFIED_INBOUND_EMAIL_POINTER_QUEUE_ENABLED:-false}
+      IMAP_UNIFIED_INBOUND_CONSUMER_ENABLED: ${IMAP_UNIFIED_INBOUND_CONSUMER_ENABLED:-false}
     volumes:
       - type: bind
         source: ./secrets/db_password_server
@@ -316,7 +318,7 @@ services:
         source: ./secrets/tenants
         target: /run/secrets/tenants
       - type: bind
-        source: ./services/imap-service/entrypoint.sh
+        source: ./services/email-service/entrypoint.sh
         target: /app/entrypoint.sh
         read_only: true
     entrypoint: ["/app/entrypoint.sh"]

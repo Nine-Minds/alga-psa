@@ -1,0 +1,134 @@
+[
+  {
+    "id": "F214",
+    "description": "Create a new remaining-work plan scope explicitly targeting in-app callback artifact persistence parity",
+    "implemented": true,
+    "prdRefs": ["Summary", "Problem"]
+  },
+  {
+    "id": "F215",
+    "description": "Add an in-app artifact processing orchestrator invoked from processInboundEmailInApp for both new-ticket and reply flows",
+    "implemented": true,
+    "prdRefs": ["Requirements", "Users and Primary Flows"]
+  },
+  {
+    "id": "F216",
+    "description": "Extend in-app provider attachment handling to consume attachment base64 bytes when supplied and persist real file-backed ticket documents",
+    "implemented": true,
+    "prdRefs": ["Requirements"]
+  },
+  {
+    "id": "F217",
+    "description": "Ensure in-app attachment persistence writes full external_files/documents/document_associations records instead of metadata-only document rows",
+    "implemented": true,
+    "prdRefs": ["Problem", "Requirements"]
+  },
+  {
+    "id": "F218",
+    "description": "Expose/reuse embedded attachment extraction in the in-app path for HTML data:image payloads",
+    "implemented": true,
+    "prdRefs": ["Requirements", "Decisions (Locked)"]
+  },
+  {
+    "id": "F219",
+    "description": "Expose/reuse referenced CID extraction in the in-app path and skip unreferenced CID inline parts",
+    "implemented": true,
+    "prdRefs": ["Requirements", "Decisions (Locked)"]
+  },
+  {
+    "id": "F220",
+    "description": "Convert extracted embedded artifacts into deterministic synthetic attachment records compatible with the in-app attachment pipeline",
+    "implemented": true,
+    "prdRefs": ["Requirements"]
+  },
+  {
+    "id": "F221",
+    "description": "Add in-app original-email persistence that creates one .eml document per inbound message",
+    "implemented": true,
+    "prdRefs": ["Requirements", "Acceptance Criteria"]
+  },
+  {
+    "id": "F222",
+    "description": "Implement MIME source selection precedence in in-app path using rawMimeBase64/sourceMimeBase64/rawSourceBase64 with deterministic fallback assembly",
+    "implemented": true,
+    "prdRefs": ["Requirements"]
+  },
+  {
+    "id": "F223",
+    "description": "Apply deterministic .eml filename convention original-email-<sanitized-message-id>.eml in in-app processing",
+    "implemented": true,
+    "prdRefs": ["Decisions (Locked)", "Requirements"]
+  },
+  {
+    "id": "F224",
+    "description": "Implement artifact-level idempotency keys for provider attachments, embedded synthetic attachments, and .eml artifacts",
+    "implemented": true,
+    "prdRefs": ["Requirements", "Acceptance Criteria"]
+  },
+  {
+    "id": "F225",
+    "description": "Keep artifact persistence best-effort so failures do not block ticket/comment creation in in-app processing",
+    "implemented": true,
+    "prdRefs": ["Goals", "Requirements"]
+  },
+  {
+    "id": "F226",
+    "description": "Wire IMAP webhook to in-app processing mode (direct or app-local async worker) with explicit fallback behavior",
+    "implemented": true,
+    "prdRefs": ["Requirements", "Rollout"]
+  },
+  {
+    "id": "F227",
+    "description": "Add IMAP ingress caps for per-attachment bytes, total attachment bytes, attachment count, and raw MIME bytes",
+    "implemented": true,
+    "prdRefs": ["Safety / Performance", "Acceptance Criteria"]
+  },
+  {
+    "id": "F228",
+    "description": "Emit structured ingress/artifact skip reasons for over-limit payload elements and continue processing eligible artifacts",
+    "implemented": true,
+    "prdRefs": ["Safety / Performance", "Acceptance Criteria"]
+  },
+  {
+    "id": "F229",
+    "description": "Add optional app-local in-process async queue mode for inbound IMAP callback artifact processing",
+    "implemented": true,
+    "prdRefs": ["Decisions (Locked)", "Safety / Performance"]
+  },
+  {
+    "id": "F230",
+    "description": "Bound per-message artifact processing concurrency in async mode to avoid Node.js event-loop starvation",
+    "implemented": true,
+    "prdRefs": ["Goals", "Safety / Performance"]
+  },
+  {
+    "id": "F231",
+    "description": "Normalize/validate in-app payload contract fields for attachments content/isInline/contentId and MIME source fields",
+    "implemented": true,
+    "prdRefs": ["Data / Contract"]
+  },
+  {
+    "id": "F232",
+    "description": "Add IMAP in-app processing feature-flag controls and document expected flag/env combinations",
+    "implemented": true,
+    "prdRefs": ["Rollout"]
+  },
+  {
+    "id": "F233",
+    "description": "Ensure Google and Microsoft in-app paths reuse the same artifact orchestrator so behavior is provider-consistent",
+    "implemented": true,
+    "prdRefs": ["Users and Primary Flows", "Acceptance Criteria"]
+  },
+  {
+    "id": "F234",
+    "description": "Update in-app inbound tests to assert ticket document outcomes for regular attachments, embedded images, and .eml artifacts",
+    "implemented": true,
+    "prdRefs": ["Acceptance Criteria"]
+  },
+  {
+    "id": "F235",
+    "description": "Document local GreenMail/IMAP validation runbook for the in-app artifact path",
+    "implemented": true,
+    "prdRefs": ["Rollout", "References"]
+  }
+]

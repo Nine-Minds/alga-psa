@@ -4,13 +4,19 @@ function toIsoString(value: string | Date | undefined): string | undefined {
   return value.toISOString();
 }
 
+function toNonNegativeInt(value: number | string): number {
+  const numeric = typeof value === 'number' ? value : Number(value);
+  if (!Number.isFinite(numeric) || numeric < 0) return 0;
+  return Math.floor(numeric);
+}
+
 export function buildDocumentUploadedPayload(params: {
   documentId: string;
   uploadedByUserId?: string;
   uploadedAt?: string | Date;
   fileName: string;
   contentType: string;
-  sizeBytes: number;
+  sizeBytes: number | string;
   storageKey: string;
 }): Record<string, unknown> {
   const uploadedAt = toIsoString(params.uploadedAt);
@@ -21,7 +27,7 @@ export function buildDocumentUploadedPayload(params: {
     ...(uploadedAt ? { uploadedAt } : {}),
     fileName: params.fileName,
     contentType: params.contentType,
-    sizeBytes: params.sizeBytes,
+    sizeBytes: toNonNegativeInt(params.sizeBytes),
     storageKey: params.storageKey,
   };
 }
@@ -41,4 +47,3 @@ export function buildDocumentDeletedPayload(params: {
     ...(params.reason ? { reason: params.reason } : {}),
   };
 }
-

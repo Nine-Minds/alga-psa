@@ -2012,6 +2012,17 @@ export const uploadDocument = withAuth(async (
         entityType: string;
       }> = [];
 
+      const authenticatedUserId = user.user_id;
+      if (!authenticatedUserId) {
+        throw new Error('User session is required to upload documents');
+      }
+      if (options.userId && options.userId !== authenticatedUserId) {
+        console.warn('[uploadDocument] Ignoring client-provided userId that differs from authenticated user', {
+          authenticatedUserId,
+          providedUserId: options.userId,
+        });
+      }
+
       // Extract file from FormData
       const fileData = file.get('file') as File;
       if (!fileData) {
@@ -2026,7 +2037,7 @@ export const uploadDocument = withAuth(async (
       // Upload file to storage
       const uploadResult = await StorageService.uploadFile(tenant, buffer, fileData.name, {
         mime_type: fileData.type,
-        uploaded_by_id: options.userId
+        uploaded_by_id: authenticatedUserId
       });
 
       // Get document type based on mime type
@@ -2040,9 +2051,9 @@ export const uploadDocument = withAuth(async (
         document_name: fileData.name,
         type_id: isShared ? null : typeId,
         shared_type_id: isShared ? typeId : undefined,
-        user_id: options.userId,
+        user_id: authenticatedUserId,
         order_number: 0,
-        created_by: options.userId,
+        created_by: authenticatedUserId,
         tenant,
         file_id: uploadResult.file_id,
         storage_path: uploadResult.storage_path,

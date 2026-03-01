@@ -91,6 +91,7 @@ export async function GET(
     let associatedUserId: string | null = null;
     let associatedTenantId: string | null = null;
     let associatedProjectTaskId: string | null = null;
+    const associatedTicketIds = new Set<string>();
 
     // 0. If it's a tenant logo, grant public access
     if (isTenantLogo) {
@@ -128,6 +129,8 @@ export async function GET(
               associatedTenantId = assoc.entity_id;
             } else if (assoc.entity_type === 'project_task') {
               associatedProjectTaskId = assoc.entity_id;
+            } else if (assoc.entity_type === 'ticket' && assoc.entity_id) {
+              associatedTicketIds.add(assoc.entity_id);
             }
           }
 
@@ -225,6 +228,35 @@ export async function GET(
                   }
               }
           }
+
+          // Check ticket association - allow contact/client users when ticket belongs to them
+          if (!hasPermission && associatedTicketIds.size > 0 && user.contact_id) {
+              // Get user's client_id if not already fetched
+              if (!userClientId) {
+                  const contactRecord = await knex('contacts')
+                      .select('client_id')
+                      .where({ contact_name_id: user.contact_id, tenant })
+                      .first();
+                  userClientId = contactRecord?.client_id ?? null;
+              }
+
+              const ticketAccessQuery = knex('tickets')
+                .where({ tenant })
+                .whereIn('ticket_id', Array.from(associatedTicketIds))
+                .andWhere(function ticketPermissionScope() {
+                  this.where('contact_name_id', user.contact_id);
+                  if (userClientId) {
+                    this.orWhere('client_id', userClientId);
+                  }
+                })
+                .first('ticket_id');
+
+              const ticketAccess = await ticketAccessQuery;
+              if (ticketAccess?.ticket_id) {
+                  hasPermission = true;
+                  console.log(`User ${user.user_id} granted access to ticket-associated file ${fileId} (ticket ${ticketAccess.ticket_id})`);
+              }
+          }
         }
     }
 
@@ -235,6 +267,7 @@ export async function GET(
         console.warn(`AssociatedContact: ${associatedContactId}, UserContact: ${user.contact_id}`);
         console.warn(`AssociatedUser: ${associatedUserId}, UserId: ${user.user_id}`);
         console.warn(`AssociatedProjectTask: ${associatedProjectTaskId}`);
+        console.warn(`AssociatedTickets: ${Array.from(associatedTicketIds).join(',')}`);
       } else {
         console.warn(`Unauthenticated user does not have permission to view file ${fileId}.`);
       }

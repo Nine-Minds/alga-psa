@@ -9,7 +9,7 @@
     "ee/server",
     "ee/temporal-workflows",
     "services/workflow-worker",
-    "services/imap-service",
+    "services/email-service",
     "shared",
     "packages/*",
     "sdk/*",

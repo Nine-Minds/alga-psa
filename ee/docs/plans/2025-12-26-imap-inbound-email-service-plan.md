@@ -24,7 +24,7 @@ Last updated: 2025-12-26
 5) Workflow worker consumes and runs the existing system email processing workflow (no change).
 
 ### Service placement
-- New service in `services/imap-service` (Node + TS, similar to `services/workflow-worker`).
+- New service in `services/email-service` (Node + TS, similar to `services/workflow-worker`).
 - Uses shared DB access and shared event publisher to avoid duplicating queue/event logic.
 - Deploy as a long-running worker alongside existing services (server, workflow-worker, temporal-worker).
 
@@ -83,7 +83,7 @@ Create `imap_email_provider_config` with fields (initial draft):
 ## API + Service Integration
 - New IMAP service reads configs via DB (not via server API) to avoid API coupling.
 - Optional admin endpoints (future): manual reconnect, force resync, or pause provider.
-- Add Docker Compose entry for `imap-service` (dev + prod) with required env vars.
+- Add Docker Compose entry for `email-service` (dev + prod) with required env vars.
 
 ## Observability
 - Log structured events per provider: connect, disconnect, idle start, new message count, publish success/failure.
@@ -104,7 +104,7 @@ Create `imap_email_provider_config` with fields (initial draft):
 - [ ] Create `imap_email_provider_config` migration + indices + Citus distribution.
 - [ ] Extend provider CRUD/actions to read/write IMAP config and secrets.
 - [ ] Build IMAP adapter/parser (message fetch + MIME parsing) and map to `EmailMessageDetails`.
-- [ ] Build `services/imap-service` with connection manager, IDLE loop, reconnect strategy, and publisher.
+- [ ] Build `services/email-service` with connection manager, IDLE loop, reconnect strategy, and publisher.
 - [ ] Add UI forms and selector card for IMAP in both OSS and EE bundles.
 - [ ] Wire Docker Compose for the new service (dev + prod) and document env vars.
 - [ ] Add tests (unit + integration) and update inbound email docs to include IMAP.

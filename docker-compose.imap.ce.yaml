@@ -11,7 +11,7 @@ services:
       context: .
       dockerfile: services/workflow-worker/Dockerfile
     environment:
-      EDITION: community
+      EDITION: ${APP_EDITION:-community}
       DB_NAME: server
       PGBOSS_DATABASE: server
       DB_NAME_SERVER: server
@@ -72,12 +72,12 @@ services:
     deploy:
       replicas: ${WORKFLOW_WORKER_REPLICAS:-1}
 
-  imap-service:
+  email-service:
     build:
       context: .
-      dockerfile: services/imap-service/Dockerfile
+      dockerfile: services/email-service/Dockerfile
     environment:
-      EDITION: community
+      EDITION: ${APP_EDITION:-community}
       DB_NAME: server
       DB_NAME_SERVER: server
       DB_USER_SERVER: app_user
@@ -110,6 +110,15 @@ services:
       IMAP_WEBHOOK_TIMEOUT_MS: ${IMAP_WEBHOOK_TIMEOUT_MS:-10000}
       IMAP_WEBHOOK_MAX_ATTEMPTS: ${IMAP_WEBHOOK_MAX_ATTEMPTS:-3}
       IMAP_WEBHOOK_SECRET: ${IMAP_WEBHOOK_SECRET:-}
+      STORAGE_DEFAULT_PROVIDER: ${IMAP_STORAGE_DEFAULT_PROVIDER:-s3}
+      STORAGE_S3_ENDPOINT: ${IMAP_STORAGE_S3_ENDPOINT:-http://minio:9000}
+      STORAGE_S3_REGION: ${IMAP_STORAGE_S3_REGION:-us-east-1}
+      STORAGE_S3_BUCKET: ${IMAP_STORAGE_S3_BUCKET:-inbound-email-artifacts}
+      STORAGE_S3_ACCESS_KEY: ${IMAP_STORAGE_S3_ACCESS_KEY:-minioadmin}
+      STORAGE_S3_SECRET_KEY: ${IMAP_STORAGE_S3_SECRET_KEY:-minioadmin}
+      STORAGE_S3_FORCE_PATH_STYLE: ${IMAP_STORAGE_S3_FORCE_PATH_STYLE:-true}
+      UNIFIED_INBOUND_EMAIL_POINTER_QUEUE_ENABLED: ${UNIFIED_INBOUND_EMAIL_POINTER_QUEUE_ENABLED:-false}
+      IMAP_UNIFIED_INBOUND_CONSUMER_ENABLED: ${IMAP_UNIFIED_INBOUND_CONSUMER_ENABLED:-false}
     volumes:
       - type: bind
         source: ./secrets/db_password_server
@@ -119,7 +128,7 @@ services:
         source: ./secrets/tenants
         target: /run/secrets/tenants
       - type: bind
-        source: ./services/imap-service/entrypoint.sh
+        source: ./services/email-service/entrypoint.sh
         target: /app/entrypoint.sh
         read_only: true
     entrypoint: ["/app/entrypoint.sh"]
@@ -141,6 +150,10 @@ services:
         condition: service_started
       server:
         condition: service_started
+      minio:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
 
 networks:
   app-network:

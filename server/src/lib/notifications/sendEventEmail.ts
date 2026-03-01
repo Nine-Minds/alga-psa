@@ -7,7 +7,7 @@ import { StaticTemplateProcessor } from '@alga-psa/email';
 import { getUserInfoForEmail, resolveEmailLocale } from './emailLocaleResolver';
 import { SupportedLocale } from '@alga-psa/core/i18n/config';
 import Handlebars from 'handlebars';
-import { EmailAddress } from '../../types/email.types';
+import { EmailAddress, EmailAttachment } from '../../types/email.types';
 
 const REPLY_BANNER_TEXT = '--- Please reply above this line ---';
 const EMAIL_SERVICE_DISABLED_MESSAGE = 'Email service is disabled or not configured';
@@ -73,6 +73,10 @@ export interface SendEmailParams {
    * Will be passed directly to the email provider.
    */
   headers?: Record<string, string>;
+  /**
+   * Optional: message attachments for outbound notification sends.
+   */
+  attachments?: EmailAttachment[];
   /**
    * Optional: specific provider ID to use for sending this email.
    * If provided, the system will attempt to use this provider instead of the tenant default.
@@ -416,6 +420,7 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
       notificationSubtypeId: params.notificationSubtypeId,
       templateProcessor: processor,
       headers: params.headers,
+      attachments: params.attachments,
       providerId: params.providerId,
       from: params.from,
       userId: params.recipientUserId  // For rate limiting

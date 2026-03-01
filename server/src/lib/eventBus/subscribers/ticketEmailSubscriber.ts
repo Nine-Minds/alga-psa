@@ -23,6 +23,7 @@ import { TenantEmailService } from '@alga-psa/email';
 import { NotificationAccumulator, PendingNotification, AccumulatedChange } from '../../notifications/NotificationAccumulator';
 import { isValidEmail } from '@alga-psa/core';
 import { resolveEffectiveTimeZone } from '../../utils/workDate';
+import { rewriteTicketCommentImagesToCid } from './ticketCommentInlineImageEmail';
 import {
   normalizeRecipientEmail,
   extractActiveWatcherEmails,
@@ -2175,14 +2176,34 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
       });
 
     const commentFormatting = formatBlockNoteContent(payload.comment?.content);
+    const inlineCommentImageRewrite = await rewriteTicketCommentImagesToCid({
+      db,
+      tenantId,
+      ticketId: payload.ticketId,
+      html: commentFormatting.html,
+    });
+
+    inlineCommentImageRewrite.outcomes.forEach((outcome) => {
+      logger.info('[TicketEmailSubscriber] Comment inline image processing outcome', {
+        tenantId,
+        ticketId: payload.ticketId,
+        commentId: payload.comment?.id,
+        sourceUrl: outcome.sourceUrl,
+        resolvedFileId: outcome.resolvedFileId,
+        strategy: outcome.strategy,
+        reason: outcome.reason,
+      });
+    });
+
     const commentContext = {
       ...(payload.comment ?? {}),
-      content: commentFormatting.html,
-      html: commentFormatting.html,
+      content: inlineCommentImageRewrite.html,
+      html: inlineCommentImageRewrite.html,
       text: commentFormatting.text,
       plainText: commentFormatting.text,
       rawContent: payload.comment?.content ?? null
     };
+    const inlineCommentImageAttachments = inlineCommentImageRewrite.attachments;
 
     const { internalUrl, portalUrl } = await resolveTicketLinks(db, tenantId, ticket.ticket_id, ticket.ticket_number);
 
@@ -2303,6 +2324,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
           commentId: payload.comment?.id,
           threadId: ticket.email_metadata?.threadId
         },
+        attachments: inlineCommentImageAttachments,
         headers: Object.keys(headers).length > 0 ? headers : undefined,
         from: fromAddress as any // Cast to satisfy type if needed (SendEmailParams expects EmailAddress)
       };
@@ -2394,6 +2416,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
               commentId: payload.comment?.id,
               threadId: childMeta.threadId
             },
+            attachments: inlineCommentImageAttachments,
             headers: Object.keys(headers).length > 0 ? headers : undefined,
             from: fromAddress as any,
             recipientClientId: child.client_id || undefined
@@ -2444,6 +2467,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
           commentId: payload.comment?.id,
           threadId: ticket.email_metadata?.threadId
         },
+        attachments: inlineCommentImageAttachments,
         from: fromAddress as any
       }, 'Ticket Comment Added', ticket.assigned_to);
     }
@@ -2468,6 +2492,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
             commentId: payload.comment?.id,
             threadId: ticket.email_metadata?.threadId
           },
+          attachments: inlineCommentImageAttachments,
           from: fromAddress as any
         }, 'Ticket Comment Added', resource.user_id);
       }

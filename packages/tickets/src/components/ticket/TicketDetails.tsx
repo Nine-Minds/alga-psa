@@ -33,7 +33,7 @@ import TicketEmailNotifications from "./TicketEmailNotifications";
 import TicketConversation from "./TicketConversation";
 import { useSession } from 'next-auth/react';
 import { toast } from 'react-hot-toast';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { useDrawer } from "@alga-psa/ui";
 import { useSchedulingCallbacks } from '@alga-psa/ui/context';
 import { findUserById, getCurrentUser } from "@alga-psa/users/actions";
@@ -865,6 +865,23 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     }, [ticket.ticket_id]);
 
     const [editorKey, setEditorKey] = useState(0);
+    const refreshTicketDocuments = useCallback(async () => {
+        if (!ticket.ticket_id) return;
+
+        try {
+            const docs = await getDocumentByTicketId(ticket.ticket_id);
+            if (isActionPermissionError(docs)) {
+                console.warn('Permission denied while refreshing ticket documents', {
+                    ticketId: ticket.ticket_id,
+                    reason: docs.permissionError,
+                });
+                return;
+            }
+            setDocuments(docs || []);
+        } catch (error) {
+            console.error('Failed to refresh ticket documents:', error);
+        }
+    }, [ticket.ticket_id]);
 
     const handleAddNewComment = async (
         isInternal: boolean,
@@ -1093,11 +1110,11 @@ const handleClose = () => {
         }
     };
 
-    const handleContentChange = (blocks: PartialBlock[]) => {
-        if (currentComment) {
-            setCurrentComment({ ...currentComment, note: JSON.stringify(blocks) });
-        }
-    };
+    const handleContentChange = useCallback((_blocks: PartialBlock[]) => {
+        // Edit-mode comment content is owned by CommentItem local state and
+        // persisted through handleSave. Avoid mutating currentComment on each
+        // keystroke to prevent unnecessary TicketDetails rerenders.
+    }, []);
 
     const handleUpdateDescription = async (content: string) => {
         try {
@@ -1983,6 +2000,7 @@ const handleClose = () => {
                                     isSubmitting={isSubmitting}
                                     hideInternalTab={false}
                                     externalComments={bundle?.isBundleMaster ? aggregatedChildClientComments : []}
+                                    onClipboardImageUploaded={refreshTicketDocuments}
                                 />
                             </div>
                         </Suspense>

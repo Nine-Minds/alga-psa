@@ -648,6 +648,32 @@ This indicates a problem with the OAuth token saving process.`;
   }
 
   /**
+   * Download full RFC822 source bytes for a Gmail message.
+   *
+   * Gmail returns raw MIME as base64url in `raw` when using format=raw.
+   */
+  async downloadMessageSource(messageId: string): Promise<Buffer> {
+    try {
+      await this.ensureValidToken();
+      const res = await this.gmail.users.messages.get({
+        userId: 'me',
+        id: messageId,
+        format: 'raw',
+      });
+
+      const raw: string | undefined = res?.data?.raw || undefined;
+      if (!raw) {
+        throw new Error('Message raw MIME missing');
+      }
+
+      const base64 = raw.replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(raw.length / 4) * 4, '=');
+      return Buffer.from(base64, 'base64');
+    } catch (error) {
+      throw this.handleError(error, 'downloadMessageSource');
+    }
+  }
+
+  /**
    * Test the connection to Gmail API
    */
   async testConnection(): Promise<{ success: boolean; error?: string; }> {

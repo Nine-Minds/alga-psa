@@ -3,6 +3,7 @@ import { GmailAdapter } from '../../../services/email/providers/GmailAdapter';
 import { EmailProviderConfig } from '@alga-psa/shared/interfaces/inbound-email.interfaces';
 
 const historyListMock = vi.fn();
+const messageGetMock = vi.fn();
 
 vi.mock('googleapis', () => ({
   google: {
@@ -10,7 +11,10 @@ vi.mock('googleapis', () => ({
       users: {
         history: {
           list: historyListMock
-        }
+        },
+        messages: {
+          get: messageGetMock,
+        },
       }
     }))
   }
@@ -39,6 +43,7 @@ describe('GmailAdapter.listMessagesSince', () => {
 
   beforeEach(() => {
     historyListMock.mockReset();
+    messageGetMock.mockReset();
   });
 
   it('surfaces a dedicated error when Gmail returns historyId not found', async () => {
@@ -107,5 +112,21 @@ describe('GmailAdapter.listMessagesSince', () => {
     });
 
     expect(registerSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('returns raw MIME bytes from downloadMessageSource', async () => {
+    const adapter = new GmailAdapter(providerConfig);
+    (adapter as any).accessToken = providerConfig.provider_config?.access_token;
+    (adapter as any).tokenExpiresAt = new Date(Date.now() + 60 * 60 * 1000);
+
+    const rawMime = Buffer.from('From: sender@example.com\r\n\r\nhello', 'utf8').toString('base64url');
+    messageGetMock.mockResolvedValueOnce({ data: { raw: rawMime } });
+
+    const buffer = await adapter.downloadMessageSource('message-1');
+    expect(buffer.toString('utf8')).toContain('From: sender@example.com');
+    expect(messageGetMock).toHaveBeenCalledWith(expect.objectContaining({
+      id: 'message-1',
+      format: 'raw',
+    }));
   });
 });
