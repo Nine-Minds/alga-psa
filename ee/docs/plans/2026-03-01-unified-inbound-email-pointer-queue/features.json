@@ -68,7 +68,7 @@
   {
     "id": "F012",
     "description": "Acknowledge queue jobs only after successful processing completion",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements", "Acceptance Criteria (Definition of Done)"]
   },
   {
