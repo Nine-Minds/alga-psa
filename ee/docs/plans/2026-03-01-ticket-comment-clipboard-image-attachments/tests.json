@@ -290,7 +290,7 @@
   {
     "id": "T035",
     "description": "E2E: CID generation failure path still produces readable outbound email with attachment URL image source",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F014"
     ]
