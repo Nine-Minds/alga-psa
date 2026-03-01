@@ -5,7 +5,7 @@ import {
   buildOriginalEmailFileName,
   extractEmbeddedImageAttachments,
   maybeExtractRawMimeFromEmailData,
-} from '../../../../../services/workflow-worker/src/actions/emailAttachmentHelpers';
+} from '@shared/services/email/inboundEmailArtifactHelpers';
 
 describe('emailAttachmentHelpers', () => {
   it('extracts data:image payload from a single <img> tag', () => {
