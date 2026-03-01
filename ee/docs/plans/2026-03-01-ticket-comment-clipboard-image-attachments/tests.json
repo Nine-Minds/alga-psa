@@ -280,7 +280,7 @@
   {
     "id": "T034",
     "description": "E2E: pasted-image ticket comment sent via outbound email includes CID MIME image part and inline renderable HTML",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F011",
       "F012",
