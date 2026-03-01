@@ -364,11 +364,13 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
   return (
     <>
       <div className="flex-shrink-0 space-y-6">
-      <div {...withDataAutomationId({ id: `${id}-time-entry` })} className={`${styles['card']} p-6 space-y-4`}>
-        <h2 className={`${styles['panel-header']}`}>
-            <Clock className="inline-block w-5 h-5 mr-2" />
-            Time Entry
-          </h2>
+      <ContentCard
+        id={`${id}-time-entry`}
+        collapsible
+        defaultExpanded
+        title="Time Entry"
+        headerIcon={<Clock className="w-5 h-5" />}
+      >
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <span>Ticket Timer - #{ticket.ticket_number}</span>
@@ -434,13 +436,15 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
           )}
 
         </div>
-      </div>
+      </ContentCard>
 
-      <div {...withDataAutomationId({ id: `${id}-contact-info` })} className={`${styles['card']} p-6 space-y-4`}>
-        <h2 className={`${styles['panel-header']}`}>
-            <Building className="inline-block w-5 h-5 mr-2" />
-            Contact Info
-          </h2>
+      <ContentCard
+        id={`${id}-contact-info`}
+        collapsible
+        defaultExpanded
+        title="Contact Info"
+        headerIcon={<Building className="w-5 h-5" />}
+      >
         <div className="space-y-2">
           <div>
             <h5 className="font-bold">Contact</h5>
@@ -710,7 +714,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
             </p>
           </div>
         </div>
-      </div>
+      </ContentCard>
 
       <ContentCard
         id={`${id}-agent-team`}
