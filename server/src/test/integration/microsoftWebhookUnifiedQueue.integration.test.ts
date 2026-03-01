@@ -34,10 +34,6 @@ vi.mock('@alga-psa/db', () => ({
 
 describe('Microsoft unified inbound pointer queue ingress', () => {
   beforeEach(() => {
-    process.env.UNIFIED_INBOUND_EMAIL_POINTER_QUEUE_ENABLED = 'true';
-    process.env.UNIFIED_INBOUND_EMAIL_POINTER_QUEUE_TENANT_IDS = '';
-    process.env.UNIFIED_INBOUND_EMAIL_POINTER_QUEUE_PROVIDER_IDS = '';
-
     enqueueUnifiedInboundEmailQueueJobMock.mockReset();
     getAdminConnectionMock.mockReset();
     withTransactionMock.mockReset();
