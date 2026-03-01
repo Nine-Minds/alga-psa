@@ -146,7 +146,7 @@
   {
     "id": "F025",
     "description": "Document the unified queue architecture and local validation runbook in the plan scratchpad/docs",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Rollout / Migration", "Acceptance Criteria (Definition of Done)"]
   }
 ]

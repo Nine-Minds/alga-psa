@@ -64,6 +64,7 @@ Working notes for moving Microsoft, Google, and IMAP inbound email ingress to on
 - Unified queue consumer loop: `shared/services/email/unifiedInboundEmailQueueConsumer.ts`
 - Server queue job processor: `server/src/services/email/unifiedInboundEmailQueueJobProcessor.ts`
 - Server consumer entrypoint: `server/src/bin/unifiedInboundEmailQueueConsumer.ts`
+- Unified queue runbook: `ee/docs/plans/2026-03-01-unified-inbound-email-pointer-queue/RUNBOOK.md`
 
 ## Progress Log
 
@@ -91,6 +92,7 @@ Working notes for moving Microsoft, Google, and IMAP inbound email ingress to on
 - (2026-03-01) Completed `F022`: Added structured observability events across queue lifecycle and consumer skip outcomes, including tenant/provider/pointer identifiers, attempts, and terminal reasons for retry/DLQ paths.
 - (2026-03-01) Completed `F023`: Updated provider callback contracts so unified mode explicitly reports queue handoff metadata and avoids inline-processing ambiguity in webhook responses.
 - (2026-03-01) Completed `F024`: Confirmed unified consumer routing dispatches per provider type and fetches provider-specific source payloads before shared in-app processing.
+- (2026-03-01) Completed `F025`: Added a dedicated runbook covering architecture, queue keys, feature flags, consumer startup, and local validation/failure-path checks.
 
 ## Open Questions
 
