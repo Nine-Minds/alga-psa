@@ -7,6 +7,7 @@ const tableReads: string[] = [];
 const getAdminConnectionMock = vi.fn(async () => knexMock);
 const publishEventMock = vi.fn(async () => 'stream-1');
 const processInboundEmailInAppMock = vi.fn(async () => ({ outcome: 'created', ticketId: 't-1' }));
+const enqueueUnifiedInboundEmailQueueJobMock = vi.fn();
 
 const whereMock = vi.fn(function where() {
   return this;
@@ -36,6 +37,10 @@ vi.mock('@alga-psa/shared/services/email/processInboundEmailInApp', () => ({
   processInboundEmailInApp: (...args: any[]) => processInboundEmailInAppMock(...args),
 }));
 
+vi.mock('@alga-psa/shared/services/email/unifiedInboundEmailQueue', () => ({
+  enqueueUnifiedInboundEmailQueueJob: (...args: any[]) => enqueueUnifiedInboundEmailQueueJobMock(...args),
+}));
+
 describe('IMAP webhook handoff', () => {
   beforeEach(() => {
     process.env.IMAP_WEBHOOK_SECRET = 'imap-secret';
@@ -51,6 +56,10 @@ describe('IMAP webhook handoff', () => {
     process.env.IMAP_MAX_TOTAL_ATTACHMENT_BYTES = '';
     process.env.IMAP_MAX_ATTACHMENT_COUNT = '';
     process.env.IMAP_MAX_RAW_MIME_BYTES = '';
+    process.env.UNIFIED_INBOUND_EMAIL_POINTER_QUEUE_ENABLED = '';
+    process.env.UNIFIED_INBOUND_EMAIL_POINTER_QUEUE_TENANT_IDS = '';
+    process.env.UNIFIED_INBOUND_EMAIL_POINTER_QUEUE_PROVIDER_IDS = '';
+    process.env.IMAP_INBOUND_EMAIL_IN_APP_ASYNC_DISABLED = '';
     providerRow = {
       id: 'provider-imap-1',
       tenant: 'tenant-1',
@@ -61,7 +70,12 @@ describe('IMAP webhook handoff', () => {
     getAdminConnectionMock.mockClear();
     publishEventMock.mockClear();
     processInboundEmailInAppMock.mockClear();
+    enqueueUnifiedInboundEmailQueueJobMock.mockReset();
     processInboundEmailInAppMock.mockResolvedValue({ outcome: 'created', ticketId: 't-1' });
+    enqueueUnifiedInboundEmailQueueJobMock.mockResolvedValue({
+      job: { jobId: 'job-imap-1' },
+      queueDepth: 1,
+    });
     whereMock.mockClear();
     firstMock.mockClear();
     knexMock.mockClear();
@@ -413,5 +427,58 @@ describe('IMAP webhook handoff', () => {
     });
     expect(processInboundEmailInAppMock).not.toHaveBeenCalled();
     expect(publishEventMock).not.toHaveBeenCalled();
+  });
+
+  it('T003: IMAP ingress enqueues a pointer-only unified queue payload with required identifiers', async () => {
+    process.env.UNIFIED_INBOUND_EMAIL_POINTER_QUEUE_ENABLED = 'true';
+    const { POST } = await import('@alga-psa/integrations/webhooks/email/imap');
+
+    const request = new NextRequest('http://localhost:3000/api/email/webhooks/imap', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-imap-webhook-secret': 'imap-secret',
+      },
+      body: JSON.stringify({
+        providerId: providerRow.id,
+        tenant: providerRow.tenant,
+        pointer: {
+          mailbox: 'INBOX',
+          uid: '77',
+          uidValidity: '999',
+          messageId: '<imap-msg-77@example.com>',
+        },
+      }),
+    });
+
+    const response = await POST(request);
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body).toMatchObject({
+      success: true,
+      queued: true,
+      handoff: 'unified_pointer_queue',
+      providerId: providerRow.id,
+      tenant: providerRow.tenant,
+      uid: '77',
+      messageId: '<imap-msg-77@example.com>',
+    });
+
+    expect(enqueueUnifiedInboundEmailQueueJobMock).toHaveBeenCalledTimes(1);
+    const enqueuePayload = enqueueUnifiedInboundEmailQueueJobMock.mock.calls[0][0];
+    expect(enqueuePayload).toMatchObject({
+      tenantId: providerRow.tenant,
+      providerId: providerRow.id,
+      provider: 'imap',
+      pointer: {
+        mailbox: 'INBOX',
+        uid: '77',
+        uidValidity: '999',
+        messageId: '<imap-msg-77@example.com>',
+      },
+    });
+    expect(enqueuePayload).not.toHaveProperty('emailData');
+    expect(enqueuePayload).not.toHaveProperty('attachments');
+    expect(enqueuePayload).not.toHaveProperty('rawMimeBase64');
   });
 });

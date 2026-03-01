@@ -14,7 +14,7 @@
   {
     "id": "T003",
     "description": "Contract: IMAP listener ingress builds pointer-only queue job payload with required tenant/provider/mailbox pointer identifiers",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F001", "F004", "F018"]
   },
   {

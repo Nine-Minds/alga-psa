@@ -48,6 +48,7 @@ Working notes for moving Microsoft, Google, and IMAP inbound email ingress to on
 - `npm -w @alga-psa/integrations run typecheck`
 - `npm -w server run test -- src/test/integration/microsoftWebhookUnifiedQueue.integration.test.ts`
 - `npm -w server run test -- src/test/integration/googleWebhookUnifiedQueue.integration.test.ts --coverage.enabled=false`
+- `npm -w server run test -- src/test/integration/imapWebhookHandoff.integration.test.ts --coverage.enabled=false`
 
 ## Links / References
 
@@ -99,6 +100,7 @@ Working notes for moving Microsoft, Google, and IMAP inbound email ingress to on
 - (2026-03-01) Completed `F025`: Added a dedicated runbook covering architecture, queue keys, feature flags, consumer startup, and local validation/failure-path checks.
 - (2026-03-01) Completed `T001`: Added Microsoft unified ingress contract test validating pointer-only enqueue payload shape (`tenantId`, `providerId`, provider pointer identifiers) and absence of raw content fields.
 - (2026-03-01) Completed `T002`: Added Google unified ingress contract test validating pointer-only enqueue payload shape (`tenantId`, `providerId`, `historyId`, `pubsubMessageId`) behind successful JWT/provider verification.
+- (2026-03-01) Completed `T003`: Extended IMAP webhook integration coverage with unified-mode pointer enqueue assertions (`mailbox`, `uid`, `uidValidity`, `messageId`) and pointer-only payload guards.
 
 ## Open Questions
 
