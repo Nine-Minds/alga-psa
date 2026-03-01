@@ -61,3 +61,5 @@ Working notes for implementing clipboard image paste support in ticket comments,
 - (2026-03-01) F020 implemented: Non-image paste/plain-text behavior remains on existing path; clipboard image logic is isolated to image upload flow only.
 - (2026-03-01) F021 implemented: Clipboard image paste flow is now rollout-gated behind `ticket-comment-clipboard-images` feature flag in ticket details.
 - (2026-03-01) F022 implemented: Added client/server observability logs for upload outcomes, cancel keep/delete actions, and outbound CID vs fallback outcomes.
+- (2026-03-01) T001 implemented: `clipboardImageUtils.test.ts` verifies image MIME clipboard items are extracted while non-image entries are ignored.
+EOF && git add ee/docs/plans/2026-03-01-ticket-comment-clipboard-image-attachments/tests.json ee/docs/plans/2026-03-01-ticket-comment-clipboard-image-attachments/SCRATCHPAD.md && git commit -m "test(T001): cover clipboard image MIME filtering"
