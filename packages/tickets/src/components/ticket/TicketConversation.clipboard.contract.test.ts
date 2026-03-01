@@ -51,4 +51,13 @@ describe('TicketConversation clipboard upload wiring', () => {
     expect(source).toContain("throw new Error(validation.error)");
     expect(source).toContain("throw new Error(uploadResult.error || 'Clipboard image upload failed.')");
   });
+
+  it('T010: persists attachment-backed image reference URLs rather than raw image data payloads', () => {
+    const source = getTicketConversationSource();
+
+    expect(source).toContain("const viewUrl = uploadedDocument.file_id");
+    expect(source).toContain('`/api/documents/view/${uploadedDocument.file_id}`');
+    expect(source).toContain('url: viewUrl');
+    expect(source).not.toContain('data:image');
+  });
 });

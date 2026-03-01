@@ -21,4 +21,20 @@ describe('blocknoteUtils image conversion', () => {
     expect(html).toContain('<img src="/api/documents/view/file-123"');
     expect(html).toContain('figcaption');
   });
+
+  it('T011: keeps non-image serialization behavior unchanged', () => {
+    const blocks = [
+      {
+        type: 'paragraph',
+        content: [{ type: 'text', text: 'Hello world', styles: {} }],
+      },
+    ];
+
+    const markdown = convertBlockNoteToMarkdown(blocks);
+    const html = convertBlockNoteToHTML(blocks);
+
+    expect(markdown.trim()).toBe('Hello world');
+    expect(html).toContain('<p');
+    expect(html).toContain('Hello world');
+  });
 });

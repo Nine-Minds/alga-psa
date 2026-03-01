@@ -76,7 +76,7 @@
   {
     "id": "T010",
     "description": "Serialization: submitted BlockNote payload stores attachment references and excludes raw base64 image bytes",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F008"
     ]
