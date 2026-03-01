@@ -74,7 +74,7 @@
   {
     "id": "T013",
     "description": "Consumer fetch: Google pointer resolves to full email payload before processing",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F009", "F024"]
   },
   {

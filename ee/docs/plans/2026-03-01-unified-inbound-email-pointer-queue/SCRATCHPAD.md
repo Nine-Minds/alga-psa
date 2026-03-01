@@ -117,6 +117,7 @@ Working notes for moving Microsoft, Google, and IMAP inbound email ingress to on
 - (2026-03-01) Completed `T010`: Validated Google pointer claims execute through the same unified consumer claim/handle/ACK lifecycle.
 - (2026-03-01) Completed `T011`: Validated IMAP pointer claims execute through the same unified consumer claim/handle/ACK lifecycle.
 - (2026-03-01) Completed `T012`: Added processor fetch test proving Microsoft pointer jobs resolve full provider payloads before shared in-app processing execution.
+- (2026-03-01) Completed `T013`: Added processor fetch test proving Google pointer jobs resolve message payloads (history cursor -> message IDs -> full payloads) before processing.
 
 ## Open Questions
 
