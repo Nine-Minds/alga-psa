@@ -98,7 +98,7 @@
   {
     "id": "F017",
     "description": "Normalize provider-specific message identity fields into one idempotency key format",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements", "Data / API / Integrations"]
   },
   {
