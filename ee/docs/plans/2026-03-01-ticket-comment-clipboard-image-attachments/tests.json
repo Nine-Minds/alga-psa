@@ -100,7 +100,7 @@
   {
     "id": "T013",
     "description": "Render auth: unauthorized user cannot load comment image attachment URL",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F010"
     ]
