@@ -65,7 +65,7 @@
   {
     "id": "F008",
     "description": "Persist comment content with attachment references instead of raw `data:image` payloads",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Goals",
       "Non-functional Requirements"
