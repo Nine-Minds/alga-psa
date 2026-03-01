@@ -116,7 +116,7 @@
   {
     "id": "T020",
     "description": "Queue semantics: unacknowledged job resurfaces after claim timeout and is reprocessed",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F013", "F014"]
   },
   {
