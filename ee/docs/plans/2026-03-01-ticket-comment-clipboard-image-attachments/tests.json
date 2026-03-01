@@ -270,7 +270,7 @@
   {
     "id": "T033",
     "description": "E2E: paste image, cancel draft, choose delete, and uploaded artifact no longer exists in ticket documents",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F015",
       "F016",
