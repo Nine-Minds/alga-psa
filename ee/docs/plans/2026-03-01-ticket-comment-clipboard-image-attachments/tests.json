@@ -52,7 +52,7 @@
   {
     "id": "T007",
     "description": "UI: placeholder is replaced by attachment-backed image node after upload success",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F006"
     ]
