@@ -60,7 +60,7 @@
   {
     "id": "T008",
     "description": "UI: upload failure state renders clear error affordance with retry/remove actions",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F007"
     ]
