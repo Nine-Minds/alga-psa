@@ -70,6 +70,7 @@ Rolling notes for the 5-phase documents system overhaul: entity-scoped folders, 
 
 ## Work Log
 
+- (2026-02-28) **F041 implemented**: Updated `packages/documents/src/components/Documents.tsx` to call `ensureEntityFolders(entityId, entityType)` on mount when in entity mode (fire-and-forget, silent failure). This completes the lazy folder initialization integration so templates are applied on first Documents tab access.
 - (2026-02-28) **F031–F037 implemented**: Phase 2 folder template actions completed:
   - F031: `updateFolderTemplate(templateId, data)` with partial updates (name/entityType/isDefault/items independently), default-template handoff, and atomic item replacement.
   - F032: `deleteFolderTemplate(templateId)` with `document:delete` permission enforcement and FK CASCADE cleanup.
