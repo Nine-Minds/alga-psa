@@ -83,7 +83,7 @@
   {
     "id": "F010",
     "description": "Enforce attachment authorization checks when rendering comment images",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Security / Permissions",
       "Acceptance Criteria (Definition of Done)"
