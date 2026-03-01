@@ -29,6 +29,34 @@ const DEFAULT_MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
 const DEFAULT_MAX_TOTAL_ATTACHMENT_BYTES = 25 * 1024 * 1024;
 const DEFAULT_MAX_ATTACHMENT_COUNT = 25;
 const DEFAULT_MAX_RAW_MIME_BYTES = 25 * 1024 * 1024;
+const TRUE_VALUES = new Set(['true', '1', 'yes', 'on']);
+
+function parseCsvSet(value?: string): Set<string> {
+  if (!value) return new Set();
+  return new Set(
+    value
+      .split(',')
+      .map((entry) => entry.trim())
+      .filter(Boolean)
+  );
+}
+
+function isUnifiedInboundPointerQueueEnabled(params: {
+  tenantId: string;
+  providerId: string;
+}): boolean {
+  const globallyEnabled =
+    typeof process.env.UNIFIED_INBOUND_EMAIL_POINTER_QUEUE_ENABLED === 'string' &&
+    TRUE_VALUES.has(process.env.UNIFIED_INBOUND_EMAIL_POINTER_QUEUE_ENABLED.toLowerCase());
+  const enabledTenants = parseCsvSet(process.env.UNIFIED_INBOUND_EMAIL_POINTER_QUEUE_TENANT_IDS);
+  const enabledProviders = parseCsvSet(process.env.UNIFIED_INBOUND_EMAIL_POINTER_QUEUE_PROVIDER_IDS);
+
+  return (
+    globallyEnabled ||
+    enabledTenants.has(params.tenantId) ||
+    enabledProviders.has(params.providerId)
+  );
+}
 
 interface IngressCapConfig {
   maxAttachmentBytes: number;
@@ -476,7 +504,11 @@ class ImapFolderListener {
     return 'http://server:3000/api/email/webhooks/imap';
   }
 
-  private async dispatchInboundWebhook(emailData: EmailMessageDetails): Promise<void> {
+  private async dispatchInboundWebhook(input: {
+    emailData: EmailMessageDetails;
+    messageUid?: number;
+    uidValidity?: string;
+  }): Promise<void> {
     const url = this.resolveWebhookUrl();
     const timeoutMs = Number(process.env.IMAP_WEBHOOK_TIMEOUT_MS || DEFAULT_WEBHOOK_TIMEOUT_MS);
     const maxAttempts = clampNumber(
@@ -492,12 +524,37 @@ class ImapFolderListener {
     }
     headers['x-imap-webhook-secret'] = webhookSecret;
 
-    const payload = {
-      providerId: this.provider.id,
-      tenant: this.provider.tenant,
+    const useUnifiedQueue = isUnifiedInboundPointerQueueEnabled({
       tenantId: this.provider.tenant,
-      emailData,
-    };
+      providerId: this.provider.id,
+    });
+    const pointerUid =
+      typeof input.messageUid === 'number' && Number.isFinite(input.messageUid)
+        ? String(Math.floor(input.messageUid))
+        : '';
+
+    if (useUnifiedQueue && pointerUid.length === 0) {
+      throw new Error('IMAP pointer queue mode requires message UID');
+    }
+
+    const payload = useUnifiedQueue
+      ? {
+          providerId: this.provider.id,
+          tenant: this.provider.tenant,
+          tenantId: this.provider.tenant,
+          pointer: {
+            mailbox: this.provider.mailbox,
+            uid: pointerUid,
+            uidValidity: input.uidValidity,
+            messageId: input.emailData.id,
+          },
+        }
+      : {
+          providerId: this.provider.id,
+          tenant: this.provider.tenant,
+          tenantId: this.provider.tenant,
+          emailData: input.emailData,
+        };
 
     let lastError: Error | null = null;
 
@@ -779,7 +836,11 @@ class ImapFolderListener {
           continue;
         }
 
-        await this.dispatchInboundWebhook(emailData);
+        await this.dispatchInboundWebhook({
+          emailData,
+          messageUid: message.uid,
+          uidValidity,
+        });
 
         await this.recordLastProcessedMessageId(emailData.id);
 

@@ -11,13 +11,23 @@ import {
   isImapInboundEmailInAppAsyncModeEnabled,
   isImapInboundEmailInAppEventBusFallbackEnabled,
   isImapInboundEmailInAppProcessingEnabled,
+  isUnifiedInboundEmailPointerQueueEnabled,
 } from '@alga-psa/shared/services/email/inboundEmailInAppFeatureFlag';
+import { enqueueUnifiedInboundEmailQueueJob } from '@alga-psa/shared/services/email/unifiedInboundEmailQueue';
 import { enqueueImapInAppJob } from './imapInAppQueue';
+
+interface ImapWebhookPointerPayload {
+  mailbox?: string;
+  uid?: string | number;
+  uidValidity?: string;
+  messageId?: string;
+}
 
 interface ImapWebhookPayload {
   providerId?: string;
   tenant?: string;
   tenantId?: string;
+  pointer?: ImapWebhookPointerPayload;
   emailData?: Partial<EmailMessageDetails>;
 }
 
@@ -337,6 +347,66 @@ export async function POST(request: NextRequest) {
         skipped: true,
         reason: 'Provider is inactive',
       });
+    }
+
+    const useUnifiedQueue = isUnifiedInboundEmailPointerQueueEnabled({
+      tenantId: provider.tenant,
+      providerId: provider.id,
+    });
+
+    if (useUnifiedQueue) {
+      const pointerUidRaw = payload.pointer?.uid;
+      const pointerUid =
+        typeof pointerUidRaw === 'number' && Number.isFinite(pointerUidRaw)
+          ? String(Math.floor(pointerUidRaw))
+          : asNonEmptyString(pointerUidRaw);
+      if (!pointerUid) {
+        return NextResponse.json({ error: 'pointer.uid is required in unified queue mode' }, { status: 400 });
+      }
+
+      const mailbox = asNonEmptyString(payload.pointer?.mailbox) || provider.mailbox;
+      const messageId =
+        asNonEmptyString(payload.pointer?.messageId) || asNonEmptyString(payload.emailData?.id) || undefined;
+      const uidValidity = asNonEmptyString(payload.pointer?.uidValidity) || undefined;
+
+      try {
+        const queued = await enqueueUnifiedInboundEmailQueueJob({
+          tenantId: provider.tenant,
+          providerId: provider.id,
+          provider: 'imap',
+          pointer: {
+            mailbox,
+            uid: pointerUid,
+            uidValidity,
+            messageId,
+          },
+        });
+
+        return NextResponse.json({
+          success: true,
+          queued: true,
+          handoff: 'unified_pointer_queue',
+          providerId: provider.id,
+          tenant: provider.tenant,
+          messageId: messageId || null,
+          uid: pointerUid,
+          jobId: queued.job.jobId,
+          queueDepth: queued.queueDepth,
+        });
+      } catch (enqueueError: any) {
+        console.error('IMAP unified pointer enqueue failed', {
+          providerId: provider.id,
+          tenantId: provider.tenant,
+          mailbox,
+          uid: pointerUid,
+          messageId: messageId || null,
+          error: enqueueError?.message || String(enqueueError),
+        });
+        return NextResponse.json(
+          { error: 'Failed to enqueue IMAP pointer job' },
+          { status: 503 }
+        );
+      }
     }
 
     if (!payload.emailData || typeof payload.emailData !== 'object') {
