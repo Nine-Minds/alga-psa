@@ -182,7 +182,7 @@
   {
     "id": "F021",
     "description": "Gate the clipboard image feature behind a dedicated flag for controlled rollout",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Rollout / Migration"
     ]
