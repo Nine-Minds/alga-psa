@@ -16,6 +16,7 @@ async function main(): Promise<void> {
         outcome: result.outcome,
         reason: result.reason || null,
       });
+      return result;
     },
   });
 

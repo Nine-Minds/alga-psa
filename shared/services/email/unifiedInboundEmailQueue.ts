@@ -136,6 +136,49 @@ export interface FailUnifiedInboundEmailQueueJobResult {
   queueDepth: number;
 }
 
+function getPointerLogFields(
+  provider: UnifiedInboundEmailQueueJob['provider'],
+  pointer: MicrosoftInboundEmailPointer | GoogleInboundEmailPointer | ImapInboundEmailPointer
+): Record<string, string | number | null> {
+  if (provider === 'microsoft') {
+    const microsoftPointer = pointer as MicrosoftInboundEmailPointer;
+    return {
+      pointerMessageId: microsoftPointer.messageId,
+      pointerSubscriptionId: microsoftPointer.subscriptionId,
+      pointerResource: microsoftPointer.resource || null,
+    };
+  }
+
+  if (provider === 'google') {
+    const googlePointer = pointer as GoogleInboundEmailPointer;
+    return {
+      pointerHistoryId: googlePointer.historyId,
+      pointerEmailAddress: googlePointer.emailAddress || null,
+      pointerPubsubMessageId: googlePointer.pubsubMessageId || null,
+    };
+  }
+
+  const imapPointer = pointer as ImapInboundEmailPointer;
+  return {
+    pointerUid: imapPointer.uid,
+    pointerMailbox: imapPointer.mailbox,
+    pointerUidValidity: imapPointer.uidValidity || null,
+    pointerMessageId: imapPointer.messageId || null,
+  };
+}
+
+function getJobLogFields(job: UnifiedInboundEmailQueueJob): Record<string, string | number | null> {
+  return {
+    jobId: job.jobId,
+    provider: job.provider,
+    tenantId: job.tenantId,
+    providerId: job.providerId,
+    attempt: job.attempt,
+    maxAttempts: job.maxAttempts,
+    ...getPointerLogFields(job.provider, job.pointer),
+  };
+}
+
 function buildUnifiedInboundEmailQueueJob(
   input: UnifiedInboundEmailQueueJobInput
 ): UnifiedInboundEmailQueueJob {
@@ -228,7 +271,23 @@ export async function enqueueUnifiedInboundEmailQueueJob(
   const queueConfig = getUnifiedInboundEmailQueueConfig();
   const client = await getRedisClient();
   const job = buildUnifiedInboundEmailQueueJob(input);
-  const queueDepth = await client.rPush(queueConfig.readyQueueKey, JSON.stringify(job));
+  let queueDepth: number;
+  try {
+    queueDepth = await client.rPush(queueConfig.readyQueueKey, JSON.stringify(job));
+  } catch (error: any) {
+    console.error('[UnifiedInboundEmailQueue] enqueue_failed', {
+      event: 'inbound_email_queue_enqueue_failed',
+      ...getJobLogFields(job),
+      error: error?.message || String(error),
+    });
+    throw error;
+  }
+
+  console.log('[UnifiedInboundEmailQueue] enqueue', {
+    event: 'inbound_email_queue_enqueue',
+    ...getJobLogFields(job),
+    queueDepth,
+  });
 
   return {
     job,
@@ -271,6 +330,11 @@ export async function claimUnifiedInboundEmailQueueJob(params: {
         })
       )
       .exec();
+    console.error('[UnifiedInboundEmailQueue] invalid_payload_dlq', {
+      event: 'inbound_email_queue_invalid_payload_dlq',
+      reason: 'invalid_queue_payload',
+      payloadLength: payload.length,
+    });
     return null;
   }
 
@@ -291,6 +355,13 @@ export async function claimUnifiedInboundEmailQueueJob(params: {
     })
     .exec();
 
+  console.log('[UnifiedInboundEmailQueue] consume_start', {
+    event: 'inbound_email_queue_consume_start',
+    ...getJobLogFields(job),
+    consumerId: params.consumerId,
+    claimTtlMs,
+  });
+
   return claimRecord;
 }
 
@@ -305,6 +376,12 @@ export async function ackUnifiedInboundEmailQueueJob(
     .hDel(queueConfig.inflightHashKey, claim.job.jobId)
     .zRem(queueConfig.inflightLeaseKey, claim.job.jobId)
     .exec();
+
+  console.log('[UnifiedInboundEmailQueue] ack', {
+    event: 'inbound_email_queue_ack',
+    ...getJobLogFields(claim.job),
+    consumerId: claim.consumerId,
+  });
 }
 
 export async function failUnifiedInboundEmailQueueJob(params: {
@@ -336,6 +413,15 @@ export async function failUnifiedInboundEmailQueueJob(params: {
         job: retriedJob,
       })
     );
+    console.error('[UnifiedInboundEmailQueue] dlq', {
+      event: 'inbound_email_queue_dlq',
+      ...getJobLogFields(retriedJob),
+      attempt: nextAttempt,
+      maxAttempts,
+      queueDepth,
+      reason: params.error,
+      consumerId: params.claim.consumerId,
+    });
     return {
       action: 'dlq',
       attempt: nextAttempt,
@@ -344,6 +430,15 @@ export async function failUnifiedInboundEmailQueueJob(params: {
   }
 
   const queueDepth = await client.rPush(queueConfig.readyQueueKey, JSON.stringify(retriedJob));
+  console.warn('[UnifiedInboundEmailQueue] retry', {
+    event: 'inbound_email_queue_retry',
+    ...getJobLogFields(retriedJob),
+    attempt: nextAttempt,
+    maxAttempts,
+    queueDepth,
+    reason: params.error,
+    consumerId: params.claim.consumerId,
+  });
   return {
     action: 'retried',
     attempt: nextAttempt,
@@ -387,6 +482,12 @@ export async function reclaimExpiredUnifiedInboundEmailQueueJobs(
       .zRem(queueConfig.inflightLeaseKey, jobId)
       .rPush(queueConfig.readyQueueKey, claimRecord.originalPayload)
       .exec();
+    console.warn('[UnifiedInboundEmailQueue] reclaim', {
+      event: 'inbound_email_queue_reclaim',
+      ...getJobLogFields(claimRecord.job),
+      consumerId: claimRecord.consumerId,
+      claimAgeMs: now - new Date(claimRecord.claimedAt).getTime(),
+    });
     reclaimed += 1;
   }
 

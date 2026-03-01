@@ -128,7 +128,7 @@
   {
     "id": "F022",
     "description": "Add structured logs for enqueue, consume, retry, ack, skip, and DLQ events",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Observability", "Requirements"]
   },
   {

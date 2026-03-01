@@ -13,7 +13,7 @@ export interface UnifiedInboundEmailQueueConsumerOptions {
   reclaimLimit?: number;
   pollDelayMs?: number;
   claimTtlMs?: number;
-  handleJob: (job: UnifiedInboundEmailQueueJob) => Promise<void>;
+  handleJob: (job: UnifiedInboundEmailQueueJob) => Promise<unknown>;
 }
 
 function sleep(ms: number): Promise<void> {
@@ -48,7 +48,27 @@ export class UnifiedInboundEmailQueueConsumer {
     }
 
     try {
-      await this.options.handleJob(claim.job);
+      const result = await this.options.handleJob(claim.job);
+      const resultAsAny = result as any;
+      if (
+        resultAsAny &&
+        typeof resultAsAny === 'object' &&
+        typeof resultAsAny.outcome === 'string' &&
+        resultAsAny.outcome === 'skipped'
+      ) {
+        console.warn('[UnifiedInboundEmailQueueConsumer] Job skipped', {
+          event: 'inbound_email_queue_skip',
+          consumerId: this.consumerId,
+          jobId: claim.job.jobId,
+          provider: claim.job.provider,
+          tenantId: claim.job.tenantId,
+          attempt: claim.job.attempt,
+          reason:
+            typeof resultAsAny.reason === 'string' && resultAsAny.reason.length > 0
+              ? resultAsAny.reason
+              : null,
+        });
+      }
       await ackUnifiedInboundEmailQueueJob(claim);
       return true;
     } catch (error: any) {
