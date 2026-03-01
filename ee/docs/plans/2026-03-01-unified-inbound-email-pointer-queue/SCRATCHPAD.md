@@ -52,6 +52,7 @@ Working notes for moving Microsoft, Google, and IMAP inbound email ingress to on
 - `npm -w server run test -- src/test/integration/microsoftWebhookUnifiedQueue.integration.test.ts src/test/integration/googleWebhookUnifiedQueue.integration.test.ts src/test/integration/imapWebhookHandoff.integration.test.ts --coverage.enabled=false`
 - `npx vitest --config shared/vitest.config.ts services/imap-service/src/imapService.webhookRetry.test.ts`
 - `npx vitest --config shared/vitest.config.ts shared/services/email/__tests__/unifiedInboundEmailQueueConsumer.test.ts`
+- `npm -w server run test -- src/test/unit/unifiedInboundEmailQueueJobProcessor.fetch.test.ts --coverage.enabled=false`
 
 ## Links / References
 
@@ -75,6 +76,7 @@ Working notes for moving Microsoft, Google, and IMAP inbound email ingress to on
 - Google unified ingress contract tests: `server/src/test/integration/googleWebhookUnifiedQueue.integration.test.ts`
 - IMAP webhook retry test: `services/imap-service/src/imapService.webhookRetry.test.ts`
 - Unified queue consumer tests: `shared/services/email/__tests__/unifiedInboundEmailQueueConsumer.test.ts`
+- Unified queue job processor fetch tests: `server/src/test/unit/unifiedInboundEmailQueueJobProcessor.fetch.test.ts`
 
 ## Progress Log
 
@@ -114,6 +116,7 @@ Working notes for moving Microsoft, Google, and IMAP inbound email ingress to on
 - (2026-03-01) Completed `T009`: Added consumer unit coverage confirming Microsoft pointer claims invoke handler and ACK path through unified consumer loop.
 - (2026-03-01) Completed `T010`: Validated Google pointer claims execute through the same unified consumer claim/handle/ACK lifecycle.
 - (2026-03-01) Completed `T011`: Validated IMAP pointer claims execute through the same unified consumer claim/handle/ACK lifecycle.
+- (2026-03-01) Completed `T012`: Added processor fetch test proving Microsoft pointer jobs resolve full provider payloads before shared in-app processing execution.
 
 ## Open Questions
 
