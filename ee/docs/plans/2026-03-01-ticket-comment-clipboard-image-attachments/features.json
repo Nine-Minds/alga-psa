@@ -137,7 +137,7 @@
   {
     "id": "F016",
     "description": "Prompt keep-vs-delete decision when canceling draft with clipboard-uploaded images",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Explicit Decisions Locked In"
