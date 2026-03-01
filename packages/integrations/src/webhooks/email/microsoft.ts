@@ -6,7 +6,11 @@ import { randomBytes } from 'crypto';
 import { MicrosoftGraphAdapter } from '@alga-psa/shared/services/email/providers/MicrosoftGraphAdapter';
 import type { EmailProviderConfig } from '@alga-psa/shared/interfaces/inbound-email.interfaces';
 import { processInboundEmailInApp } from '@alga-psa/shared/services/email/processInboundEmailInApp';
-import { isInboundEmailInAppProcessingEnabled } from '@alga-psa/shared/services/email/inboundEmailInAppFeatureFlag';
+import {
+  isInboundEmailInAppProcessingEnabled,
+  isUnifiedInboundEmailPointerQueueEnabled,
+} from '@alga-psa/shared/services/email/inboundEmailInAppFeatureFlag';
+import { enqueueUnifiedInboundEmailQueueJob } from '@alga-psa/shared/services/email/unifiedInboundEmailQueue';
 
 interface MicrosoftNotification {
   changeType: string;
@@ -103,6 +107,13 @@ export async function POST(request: NextRequest) {
 
     const knex = await getAdminConnection();
     const processedNotifications: string[] = [];
+    const enqueueFailures: Array<{
+      subscriptionId: string;
+      messageId: string;
+      providerId: string;
+      tenantId: string;
+      reason: string;
+    }> = [];
 
     // Process each notification
     for (const notification of payload.value) {
@@ -171,6 +182,61 @@ export async function POST(request: NextRequest) {
           const messageId = notification.resourceData?.id || extractMessageId(notification.resource);
           if (!messageId) {
             console.error('Could not extract message ID from notification');
+            return;
+          }
+
+          const useUnifiedQueue = isUnifiedInboundEmailPointerQueueEnabled({
+            tenantId: row.tenant,
+            providerId: row.id,
+          });
+
+          if (useUnifiedQueue) {
+            let enqueueResult;
+            try {
+              enqueueResult = await enqueueUnifiedInboundEmailQueueJob({
+                tenantId: row.tenant,
+                providerId: row.id,
+                provider: 'microsoft',
+                pointer: {
+                  subscriptionId: notification.subscriptionId,
+                  messageId,
+                  resource: notification.resource,
+                  changeType: notification.changeType,
+                },
+              });
+            } catch (enqueueError: any) {
+              const enrichedError = new Error(
+                `Failed to enqueue Microsoft pointer job for message ${messageId}`
+              ) as Error & {
+                code?: string;
+                details?: {
+                  subscriptionId: string;
+                  messageId: string;
+                  providerId: string;
+                  tenantId: string;
+                  reason: string;
+                };
+              };
+              enrichedError.code = 'UNIFIED_INBOUND_ENQUEUE_FAILED';
+              enrichedError.details = {
+                subscriptionId: notification.subscriptionId,
+                messageId,
+                providerId: row.id,
+                tenantId: row.tenant,
+                reason: enqueueError?.message || String(enqueueError),
+              };
+              throw enrichedError;
+            }
+
+            processedNotifications.push(messageId);
+            console.log('✅ Enqueued unified inbound email pointer job (Microsoft)', {
+              providerId: row.id,
+              tenantId: row.tenant,
+              subscriptionId: notification.subscriptionId,
+              messageId,
+              queueDepth: enqueueResult.queueDepth,
+              jobId: enqueueResult.job.jobId,
+            });
             return;
           }
 
@@ -358,10 +424,24 @@ export async function POST(request: NextRequest) {
           processedNotifications.push(messageId);
           console.log(`Published ${details ? 'enriched' : 'minimal'} event for Microsoft email: ${messageId} from ${row.mailbox}`);
         });
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error processing Microsoft notification:', error);
+        if (error?.code === 'UNIFIED_INBOUND_ENQUEUE_FAILED' && error?.details) {
+          enqueueFailures.push(error.details);
+        }
         // Continue processing other notifications
       }
+    }
+
+    if (enqueueFailures.length > 0) {
+      return NextResponse.json(
+        {
+          error: 'Failed to enqueue one or more Microsoft pointer jobs',
+          failureCount: enqueueFailures.length,
+          failures: enqueueFailures,
+        },
+        { status: 503 }
+      );
     }
 
     return NextResponse.json({ 

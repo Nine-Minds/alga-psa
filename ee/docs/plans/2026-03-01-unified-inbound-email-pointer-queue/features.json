@@ -8,7 +8,7 @@
   {
     "id": "F002",
     "description": "Refactor Microsoft webhook ingress to enqueue pointer jobs instead of running full email processing inline",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Users and Primary Flows", "Requirements"]
   },
   {

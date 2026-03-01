@@ -15,6 +15,7 @@ Working notes for moving Microsoft, Google, and IMAP inbound email ingress to on
 - (2026-03-01) Source-content drift for IMAP between ingest and consume is accepted risk; unavailable source should produce deterministic skipped outcome.
 - (2026-03-01) Ingress success must mean durable enqueue success.
 - (2026-03-01) F001 implemented by defining `UnifiedInboundEmailQueueJob` as a discriminated union (`provider`) with provider-specific pointer objects (`microsoft`, `google`, `imap`), while keeping legacy `EmailQueueJob` for compatibility during migration.
+- (2026-03-01) Added a dedicated unified queue feature flag gate (`UNIFIED_INBOUND_EMAIL_POINTER_QUEUE_*`) so provider webhooks can move to enqueue-only behavior without forcing immediate cutover.
 
 ## Discoveries / Constraints
 
@@ -22,6 +23,7 @@ Working notes for moving Microsoft, Google, and IMAP inbound email ingress to on
 - Existing IMAP in-app async queue implementation is in-memory and returns success after enqueue, which is not durable acceptance.
 - Microsoft and Google callback handlers currently fetch and process in callback path; this plan changes them to enqueue-only ingress.
 - Inbound email interface definitions are duplicated across `shared/interfaces`, `server/src/interfaces`, and `packages/types/src/interfaces`; all three must be kept in sync for type consumers.
+- Microsoft webhook handler is transaction-scoped per notification; queue-mode enqueue can be inserted before legacy fetch/process logic and short-circuit the callback path cleanly.
 
 ## Commands / Runbooks
 
@@ -30,6 +32,8 @@ Working notes for moving Microsoft, Google, and IMAP inbound email ingress to on
 - `npm -w shared run typecheck`
 - `npm -w @alga-psa/types run build`
 - `npm -w server run typecheck`
+- `npm -w shared run typecheck` (after Microsoft queue-mode changes)
+- `npm -w server run typecheck` (after Microsoft queue-mode changes)
 
 ## Links / References
 
@@ -43,10 +47,13 @@ Working notes for moving Microsoft, Google, and IMAP inbound email ingress to on
   - `shared/interfaces/inbound-email.interfaces.ts`
   - `server/src/interfaces/email.interfaces.ts`
   - `packages/types/src/interfaces/email.interfaces.ts`
+- Unified queue helper: `shared/services/email/unifiedInboundEmailQueue.ts`
+- Unified queue flag gate helper: `shared/services/email/inboundEmailInAppFeatureFlag.ts`
 
 ## Progress Log
 
 - (2026-03-01) Completed `F001`: Added unified pointer job contract types with provider-specific pointer metadata and queue lifecycle fields (`attempt`, `maxAttempts`, `enqueuedAt`, `jobId`, `schemaVersion`).
+- (2026-03-01) Completed `F002`: Microsoft webhook now supports enqueue-only pointer handoff in unified-queue mode, using `shared/services/email/unifiedInboundEmailQueue.ts` and no longer requiring inline full-email fetch/processing when that mode is enabled.
 
 ## Open Questions
 
