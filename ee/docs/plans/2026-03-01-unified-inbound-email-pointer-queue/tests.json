@@ -140,7 +140,7 @@
   {
     "id": "T024",
     "description": "Source drift handling: skipped-source-unavailable path does not cause infinite retries",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F016", "F014"]
   },
   {

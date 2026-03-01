@@ -156,4 +156,26 @@ describe('UnifiedInboundEmailQueueConsumer provider claim/processing flow', () =
       error: 'processor_failed',
     });
   });
+
+  it('T024: skipped source-unavailable outcomes are ACKed and do not enter retry loop', async () => {
+    const claim = buildClaimedJob('imap');
+    claimUnifiedInboundEmailQueueJobMock.mockResolvedValue(claim);
+
+    const handleJobMock = vi.fn(async () => ({
+      outcome: 'skipped',
+      reason: 'source_unavailable:imap_message_not_found',
+      processedCount: 0,
+      dedupedCount: 0,
+      skippedCount: 1,
+    }));
+    const consumer = new UnifiedInboundEmailQueueConsumer({ handleJob: handleJobMock });
+
+    const processed = await consumer.runOnce();
+
+    expect(processed).toBe(true);
+    expect(handleJobMock).toHaveBeenCalledTimes(1);
+    expect(ackUnifiedInboundEmailQueueJobMock).toHaveBeenCalledTimes(1);
+    expect(ackUnifiedInboundEmailQueueJobMock).toHaveBeenCalledWith(claim);
+    expect(failUnifiedInboundEmailQueueJobMock).not.toHaveBeenCalled();
+  });
 });
