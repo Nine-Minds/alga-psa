@@ -176,7 +176,7 @@
   {
     "id": "T030",
     "description": "Config: unified queue feature flag switches callbacks/listener to enqueue-only path",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F021", "F023"]
   },
   {

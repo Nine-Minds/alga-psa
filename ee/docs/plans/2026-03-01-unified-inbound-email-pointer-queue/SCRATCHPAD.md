@@ -136,6 +136,7 @@ Working notes for moving Microsoft, Google, and IMAP inbound email ingress to on
 - (2026-03-01) Completed `T027`: Added Microsoft security regression test validating `clientState` mismatch blocks enqueue in unified mode.
 - (2026-03-01) Completed `T028`: Added Google security regression test validating JWT auth header remains required in enqueue-only mode.
 - (2026-03-01) Completed `T029`: Added IMAP security regression test validating webhook secret mismatch still rejects enqueue-only requests.
+- (2026-03-01) Completed `T030`: Existing unified-mode ingress contract tests confirm flag enablement routes Microsoft/Google/IMAP into enqueue-only handoff paths.
 
 ## Open Questions
 
