@@ -146,7 +146,7 @@
   {
     "id": "F017",
     "description": "Implement hard delete action for selected clipboard draft images (object + metadata removal)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Security / Permissions"
