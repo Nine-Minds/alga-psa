@@ -92,3 +92,4 @@ EOF && git add ee/docs/plans/2026-03-01-ticket-comment-clipboard-image-attachmen
 - (2026-03-01) T029 implemented: contract assertions verify upload logs include ticket/user identifiers plus uploaded document/file artifact identity.
 - (2026-03-01) T030 implemented: contract logging coverage verifies cancel keep/delete actions include selected action and delete-result counts/failure context.
 - (2026-03-01) T031 implemented: `ticketEmailSubscriber.inlineImageLogging.contract.test.ts` asserts per-image log outcome includes CID vs URL fallback strategy and reason fields.
+- (2026-03-01) T032 implemented: added `TicketClipboardFlow.e2e.contract.test.ts` to validate paste-upload-save-render wiring from editor upload callback through comment viewer rendering.

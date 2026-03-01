@@ -257,7 +257,7 @@
   {
     "id": "T032",
     "description": "E2E: paste image to ticket comment, submit comment, and ticket thread displays inline image from attachment URL",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F001",
       "F002",
