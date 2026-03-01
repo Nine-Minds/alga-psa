@@ -198,7 +198,7 @@
   {
     "id": "T025",
     "description": "Validation: unsupported clipboard MIME type is rejected before upload",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F019"
     ]

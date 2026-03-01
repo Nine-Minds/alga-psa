@@ -85,3 +85,4 @@ EOF && git add ee/docs/plans/2026-03-01-ticket-comment-clipboard-image-attachmen
 - (2026-03-01) T022 implemented: added `clipboardImageDraftActions.contract.test.ts` validating hard-delete loop invokes `deleteDocument` for vetted draft artifacts.
 - (2026-03-01) T023 implemented: draft-delete contract test asserts saved-comment reference guard (`already_referenced`) based on comment payload token scan.
 - (2026-03-01) T024 implemented: draft-delete contract test validates permission-denied guard when requester lacks document delete permission.
+- (2026-03-01) T025 implemented: `clipboardImageUtils.test.ts` covers unsupported MIME validation rejection before upload starts.
