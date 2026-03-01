@@ -46,6 +46,7 @@ Working notes for moving Microsoft, Google, and IMAP inbound email ingress to on
 - `npm -w server run typecheck` (after Microsoft queue-mode changes)
 - `npm -w imap-service run build`
 - `npm -w @alga-psa/integrations run typecheck`
+- `npm -w server run test -- src/test/integration/microsoftWebhookUnifiedQueue.integration.test.ts`
 
 ## Links / References
 
@@ -65,6 +66,7 @@ Working notes for moving Microsoft, Google, and IMAP inbound email ingress to on
 - Server queue job processor: `server/src/services/email/unifiedInboundEmailQueueJobProcessor.ts`
 - Server consumer entrypoint: `server/src/bin/unifiedInboundEmailQueueConsumer.ts`
 - Unified queue runbook: `ee/docs/plans/2026-03-01-unified-inbound-email-pointer-queue/RUNBOOK.md`
+- Microsoft unified ingress contract tests: `server/src/test/integration/microsoftWebhookUnifiedQueue.integration.test.ts`
 
 ## Progress Log
 
@@ -93,6 +95,7 @@ Working notes for moving Microsoft, Google, and IMAP inbound email ingress to on
 - (2026-03-01) Completed `F023`: Updated provider callback contracts so unified mode explicitly reports queue handoff metadata and avoids inline-processing ambiguity in webhook responses.
 - (2026-03-01) Completed `F024`: Confirmed unified consumer routing dispatches per provider type and fetches provider-specific source payloads before shared in-app processing.
 - (2026-03-01) Completed `F025`: Added a dedicated runbook covering architecture, queue keys, feature flags, consumer startup, and local validation/failure-path checks.
+- (2026-03-01) Completed `T001`: Added Microsoft unified ingress contract test validating pointer-only enqueue payload shape (`tenantId`, `providerId`, provider pointer identifiers) and absence of raw content fields.
 
 ## Open Questions
 

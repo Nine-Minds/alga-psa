@@ -2,7 +2,7 @@
   {
     "id": "T001",
     "description": "Contract: Microsoft webhook ingress builds pointer-only queue job payload with required tenant/provider/message identifiers",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F001", "F002", "F018"]
   },
   {
