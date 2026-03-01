@@ -17,18 +17,10 @@ The IMAP-specific flags are OR-ed with the shared in-app flags:
 - `INBOUND_EMAIL_IN_APP_TENANT_IDS`
 - `INBOUND_EMAIL_IN_APP_PROVIDER_IDS`
 
-## Async queue mode
+## Unified pointer queue handoff
 
-- `IMAP_INBOUND_EMAIL_IN_APP_ASYNC_ENABLED=true`
-  - Webhook accepts payload and enqueues in-process work instead of running inline.
-- `IMAP_INBOUND_EMAIL_IN_APP_ASYNC_WORKERS=1..8`
-  - Controls max concurrent in-process queue workers.
-
-## Fallback behavior
-
-- `IMAP_INBOUND_EMAIL_IN_APP_EVENT_BUS_FALLBACK_ENABLED=true`
-  - If in-app processing fails, publish `INBOUND_EMAIL_RECEIVED` to event bus as explicit fallback.
-  - When unset/false, in-app failures do not auto-fallback to event bus.
+- IMAP webhook ingestion now uses unified pointer queue handoff only (`handoff: "unified_pointer_queue"`).
+- Legacy in-memory IMAP async queue controls were removed.
 
 ## Artifact concurrency bound
 

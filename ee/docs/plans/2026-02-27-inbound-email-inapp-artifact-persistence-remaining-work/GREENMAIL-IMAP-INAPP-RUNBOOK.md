@@ -36,8 +36,6 @@ Set these env vars for server + IMAP service (same `IMAP_WEBHOOK_SECRET` on both
 ```bash
 IMAP_WEBHOOK_SECRET=<shared-secret>
 IMAP_INBOUND_EMAIL_IN_APP_PROCESSING_ENABLED=true
-IMAP_INBOUND_EMAIL_IN_APP_ASYNC_ENABLED=false
-IMAP_INBOUND_EMAIL_IN_APP_EVENT_BUS_FALLBACK_ENABLED=false
 ```
 
 If running server locally (`npm run dev`), point IMAP service back to host:
@@ -94,7 +92,7 @@ docker logs --tail 200 $(docker ps --format '{{.Names}}' | grep imap-service | h
 
 Check server logs for IMAP webhook handoff:
 
-- `handoff: "in_app"` (direct) or `handoff: "in_app_async"` (queue mode)
+- `handoff: "unified_pointer_queue"`
 - no fatal artifact persistence error
 
 ## 5) Verify database artifacts

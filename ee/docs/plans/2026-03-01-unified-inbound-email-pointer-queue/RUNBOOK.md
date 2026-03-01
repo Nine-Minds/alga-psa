@@ -12,7 +12,7 @@ This runbook documents the unified inbound email pointer queue architecture and 
 - Google webhook (`packages/integrations/src/webhooks/email/google.ts`)
 - IMAP webhook (`packages/integrations/src/webhooks/email/imap.ts`)
 
-When unified mode is enabled for a tenant/provider, each ingress path validates/authenticates the request, builds a pointer-only job payload, and enqueues to Redis using `enqueueUnifiedInboundEmailQueueJob`.
+Each ingress path validates/authenticates the request, builds a pointer-only job payload, and enqueues to Redis using `enqueueUnifiedInboundEmailQueueJob`.
 
 ### Queue storage (Redis)
 
@@ -48,32 +48,17 @@ Processor behavior:
 
 ## Feature Flags and Controls
 
-### Unified pointer queue enablement
-
-- `UNIFIED_INBOUND_EMAIL_POINTER_QUEUE_ENABLED`
-- `UNIFIED_INBOUND_EMAIL_POINTER_QUEUE_TENANT_IDS`
-- `UNIFIED_INBOUND_EMAIL_POINTER_QUEUE_PROVIDER_IDS`
-
 ### Queue tuning
 
 - `UNIFIED_INBOUND_EMAIL_QUEUE_MAX_ATTEMPTS`
 - `UNIFIED_INBOUND_EMAIL_QUEUE_CLAIM_TTL_MS`
 - `UNIFIED_INBOUND_EMAIL_QUEUE_BLOCK_SECONDS`
 
-### Legacy IMAP async disablement
-
-- `IMAP_INBOUND_EMAIL_IN_APP_ASYNC_DISABLED`
-
-When set, IMAP legacy in-memory async queue path is disabled even if legacy async enable flags are on.
-
 ## Local Validation Runbook
 
-### 1) Enable unified queue mode for a targeted provider
+### 1) Ensure queue dependencies are available
 
-Set one of:
-
-- `UNIFIED_INBOUND_EMAIL_POINTER_QUEUE_ENABLED=true`
-- or tenant/provider-scoped enablement via the corresponding CSV env vars.
+Ensure Redis and database are reachable from ingress and consumer services.
 
 ### 2) Start dependencies and app services
 
@@ -113,4 +98,4 @@ Confirm expected ticket/comment/document outcomes in application flows and verif
 
 ## Rollback Notes
 
-To rollback callback/listener behavior, disable unified queue enablement flags. Legacy behavior remains available for controlled rollback.
+Rollback should revert code/deploy artifacts to a previous release because legacy IMAP in-memory async handoff has been removed.
