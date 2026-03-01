@@ -82,7 +82,7 @@ Use this scratchpad to capture key findings, decisions, TODOs, and file referenc
 ---
 
 ## Implementation Notes (Initial)
-- Service location proposal: `services/imap-service` (standalone worker like `services/workflow-worker`).
+- Service location proposal: `services/email-service` (standalone worker like `services/workflow-worker`).
 - IMAP service should publish `INBOUND_EMAIL_RECEIVED` via `shared/events/publisher.ts`.
 - Read-only IMAP fetch should use `BODY.PEEK[]` to avoid marking as read.
   - IMAP service uses `imapflow` + `mailparser` to fetch/parse messages and publish events.
@@ -107,9 +107,9 @@ Use this scratchpad to capture key findings, decisions, TODOs, and file referenc
     - When cursor state is empty, IMAP listener starts from the most recent `IMAP_MAX_EMAILS_PER_SYNC` window (based on mailbox `uidNext`) instead of replaying the whole mailbox from UID 1.
     - `last_uid` advances to the highest UID observed even when a message is skipped/deduped, to avoid repeatedly re-scanning the same window.
   - Kubernetes deployment assets:
-    - Helm chart: `ee/helm/imap-service` (includes liveness/readiness probes via `/health`).
-    - Argo CI/CD (nm-kube-config): `argo-workflow/alga-psa-dev/templates/build/imap-service-ci-cd-sebastian.yaml`.
-    - Helm values (nm-kube-config): `imap-service/{hosted,sebastian,prod}.values.yaml`.
+    - Helm chart: `ee/helm/email-service` (includes liveness/readiness probes via `/health`).
+    - Argo CI/CD (nm-kube-config): `argo-workflow/alga-psa-dev/templates/build/email-service-ci-cd-sebastian.yaml`.
+    - Helm values (nm-kube-config): `email-service/{hosted,sebastian,prod}.values.yaml`.
 
 ---
 
@@ -126,7 +126,7 @@ Use this scratchpad to capture key findings, decisions, TODOs, and file referenc
 - [ ] Create `imap_email_provider_config` migration.
 - [ ] Add IMAP provider form (OSS + EE).
 - [ ] Implement IMAP OAuth2 flow (init + callback + token refresh).
-- [ ] Stand up `services/imap-service` with IDLE + reconnect + publish.
+- [ ] Stand up `services/email-service` with IDLE + reconnect + publish.
 
 ---
 

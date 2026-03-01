@@ -220,10 +220,10 @@ services:
     deploy:
       replicas: ${WORKFLOW_WORKER_REPLICAS:-1}
 
-  imap-service:
+  email-service:
     build:
       context: .
-      dockerfile: services/imap-service/Dockerfile
+      dockerfile: services/email-service/Dockerfile
     environment:
       EDITION: community
       DB_NAME: server
@@ -265,7 +265,7 @@ services:
         target: /run/secrets/db_password_server
         read_only: true
       - type: bind
-        source: ./services/imap-service/entrypoint.sh
+        source: ./services/email-service/entrypoint.sh
         target: /app/entrypoint.sh
         read_only: true
     entrypoint: ["/app/entrypoint.sh"]

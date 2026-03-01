@@ -231,12 +231,12 @@ services:
     deploy:
       replicas: ${WORKFLOW_WORKER_REPLICAS:-1}
 
-  imap-service:
-    # NOTE: The published CE server image does not currently ship the imap-service runtime bundle.
+  email-service:
+    # NOTE: The published CE server image does not currently ship the email-service runtime bundle.
     # For local prebuilt-stack testing, build the IMAP service image from source.
     build:
       context: .
-      dockerfile: services/imap-service/Dockerfile
+      dockerfile: services/email-service/Dockerfile
     platform: linux/amd64
     environment:
       EDITION: community
@@ -257,7 +257,7 @@ services:
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       LOG_IS_FORMAT_JSON: ${LOG_IS_FORMAT_JSON:-false}
       LOG_IS_FULL_DETAILS: ${LOG_IS_FULL_DETAILS:-false}
-      # Secret provider configuration for imap-service (CE edition)
+      # Secret provider configuration for email-service (CE edition)
       SECRET_READ_CHAIN: ${SECRET_READ_CHAIN:-env,filesystem}
       SECRET_WRITE_PROVIDER: ${SECRET_WRITE_PROVIDER:-filesystem}
       # IMAP service configuration
@@ -278,7 +278,7 @@ services:
         source: ./secrets/tenants
         target: /run/secrets/tenants
       - type: bind
-        source: ./services/imap-service/entrypoint.sh
+        source: ./services/email-service/entrypoint.sh
         target: /app/entrypoint.sh
         read_only: true
     entrypoint: ["/app/entrypoint.sh"]

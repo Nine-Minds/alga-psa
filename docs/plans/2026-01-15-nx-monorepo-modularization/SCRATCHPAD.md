@@ -40,7 +40,7 @@ The codebase already uses npm workspaces with this structure:
   "server",
   "ee/server",
   "services/workflow-worker",
-  "services/imap-service",
+  "services/email-service",
   "shared",
   "packages/*",
   "sdk/*"

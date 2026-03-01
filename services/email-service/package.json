@@ -1,8 +1,8 @@
 {
-  "name": "imap-service",
+  "name": "email-service",
   "version": "1.0.0",
-  "description": "IMAP inbound email listener service",
-  "main": "dist/services/imap-service/src/index.js",
+  "description": "Inbound email processing service",
+  "main": "dist/services/email-service/src/index.js",
   "type": "module",
   "scripts": {
     "build": "tsc -p tsconfig.json && tsc-alias -p tsconfig.json -f --resolve-full-paths",

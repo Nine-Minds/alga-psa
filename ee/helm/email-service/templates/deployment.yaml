@@ -2,11 +2,11 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "imap-service.fullname" . }}
-  namespace: {{ include "imap-service.namespace" . }}
+  name: {{ include "email-service.fullname" . }}
+  namespace: {{ include "email-service.namespace" . }}
   labels:
-    {{- include "imap-service.labels" . | nindent 4 }}
-    app.kubernetes.io/component: imap-service
+    {{- include "email-service.labels" . | nindent 4 }}
+    app.kubernetes.io/component: email-service
 spec:
   replicas: {{ .Values.replicaCount }}
   strategy:
@@ -16,8 +16,8 @@ spec:
       maxUnavailable: {{ .Values.rollingUpdate.maxUnavailable | default 0 }}
   selector:
     matchLabels:
-      {{- include "imap-service.selectorLabels" . | nindent 6 }}
-      app.kubernetes.io/component: imap-service
+      {{- include "email-service.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: email-service
   template:
     metadata:
       annotations:
@@ -36,13 +36,13 @@ spec:
           {{- end }}`}}
         {{- end }}
       labels:
-        {{- include "imap-service.selectorLabels" . | nindent 8 }}
-        app.kubernetes.io/component: imap-service
+        {{- include "email-service.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: email-service
         {{- with .Values.podLabels }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
     spec:
-      serviceAccountName: {{ include "imap-service.serviceAccountName" . }}
+      serviceAccountName: {{ include "email-service.serviceAccountName" . }}
       {{- if .Values.image.credentials }}
       imagePullSecrets:
         - name: {{ .Values.image.credentials | quote }}
@@ -64,7 +64,7 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       containers:
-        - name: imap-service
+        - name: email-service
           {{- with .Values.securityContext }}
           securityContext:
             {{- toYaml . | nindent 12 }}
@@ -191,24 +191,24 @@ spec:
             - name: IMAP_WEBHOOK_SECRET
               valueFrom:
                 secretKeyRef:
-                  name: {{ default (printf "%s-secrets" (include "imap-service.fullname" .)) .Values.webhook.secretKeyRef.name | quote }}
+                  name: {{ default (printf "%s-secrets" (include "email-service.fullname" .)) .Values.webhook.secretKeyRef.name | quote }}
                   key: {{ default "IMAP_WEBHOOK_SECRET" .Values.webhook.secretKeyRef.key | quote }}
 
             {{- if not .Values.vaultAgent.enabled }}
             - name: NEXTAUTH_SECRET
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "imap-service.fullname" . }}-secrets
+                  name: {{ include "email-service.fullname" . }}-secrets
                   key: NEXTAUTH_SECRET
             - name: TOKEN_SECRET_KEY
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "imap-service.fullname" . }}-secrets
+                  name: {{ include "email-service.fullname" . }}-secrets
                   key: TOKEN_SECRET_KEY
             - name: CRYPTO_KEY
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "imap-service.fullname" . }}-secrets
+                  name: {{ include "email-service.fullname" . }}-secrets
                   key: CRYPTO_KEY
             {{- end }}
 

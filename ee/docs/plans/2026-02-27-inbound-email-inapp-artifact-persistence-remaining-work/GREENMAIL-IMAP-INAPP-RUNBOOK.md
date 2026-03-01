@@ -20,7 +20,7 @@ docker compose --profile test \
   -f docker-compose.imap.ce.yaml \
   -f docker-compose.imap-test.yaml \
   --env-file server/.env \
-  up -d imap-test-server imap-service
+  up -d imap-test-server email-service
 ```
 
 GreenMail defaults from `docker-compose.imap-test.yaml`:
@@ -87,7 +87,7 @@ PY
 Check IMAP service logs for successful sync/dispatch:
 
 ```bash
-docker logs --tail 200 $(docker ps --format '{{.Names}}' | grep imap-service | head -1)
+docker logs --tail 200 $(docker ps --format '{{.Names}}' | grep email-service | head -1)
 ```
 
 Check server logs for IMAP webhook handoff:

@@ -362,7 +362,7 @@ async function persistDocumentForBuffer(args: {
   buffer: Buffer;
 }): Promise<{ success: boolean; message?: string; documentId?: string; fileId?: string }> {
   // Keep this specifier non-literal so TypeScript doesn't pull the entire storage/auth tree
-  // into every consumer's compile graph (notably imap-service).
+  // into every consumer's compile graph (notably email-service).
   const storageModuleSpecifier = '@alga-psa/storage/StorageProviderFactory';
   const storageModule: any = await import(storageModuleSpecifier);
   const StorageProviderFactory = storageModule.StorageProviderFactory;

@@ -1251,7 +1251,7 @@ class ImapProviderWorker {
   }
 }
 
-export class ImapService {
+export class EmailService {
   private workers = new Map<string, ImapProviderWorker>();
   private refreshTimer: NodeJS.Timeout | null = null;
   private heartbeatTimer: NodeJS.Timeout | null = null;

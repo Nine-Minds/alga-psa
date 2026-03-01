@@ -44,13 +44,13 @@ Working notes for moving Microsoft, Google, and IMAP inbound email ingress to on
 - `npm -w server run typecheck`
 - `npm -w shared run typecheck` (after Microsoft queue-mode changes)
 - `npm -w server run typecheck` (after Microsoft queue-mode changes)
-- `npm -w imap-service run build`
+- `npm -w email-service run build`
 - `npm -w @alga-psa/integrations run typecheck`
 - `npm -w server run test -- src/test/integration/microsoftWebhookUnifiedQueue.integration.test.ts`
 - `npm -w server run test -- src/test/integration/googleWebhookUnifiedQueue.integration.test.ts --coverage.enabled=false`
 - `npm -w server run test -- src/test/integration/imapWebhookHandoff.integration.test.ts --coverage.enabled=false`
 - `npm -w server run test -- src/test/integration/microsoftWebhookUnifiedQueue.integration.test.ts src/test/integration/googleWebhookUnifiedQueue.integration.test.ts src/test/integration/imapWebhookHandoff.integration.test.ts --coverage.enabled=false`
-- `npx vitest --config shared/vitest.config.ts services/imap-service/src/imapService.webhookRetry.test.ts`
+- `npx vitest --config shared/vitest.config.ts services/email-service/src/emailService.webhookRetry.test.ts`
 - `npx vitest --config shared/vitest.config.ts shared/services/email/__tests__/unifiedInboundEmailQueueConsumer.test.ts`
 - `npm -w server run test -- src/test/unit/unifiedInboundEmailQueueJobProcessor.fetch.test.ts --coverage.enabled=false`
 - `npx vitest --config shared/vitest.config.ts shared/services/email/__tests__/unifiedInboundEmailQueue.test.ts`
@@ -61,7 +61,7 @@ Working notes for moving Microsoft, Google, and IMAP inbound email ingress to on
 - IMAP in-memory queue: `packages/integrations/src/webhooks/email/imapInAppQueue.ts`
 - Microsoft webhook route: `packages/integrations/src/webhooks/email/microsoft.ts`
 - Google webhook route: `packages/integrations/src/webhooks/email/google.ts`
-- IMAP listener dispatch path: `services/imap-service/src/imapService.ts`
+- IMAP listener dispatch path: `services/email-service/src/emailService.ts`
 - Existing related plan: `ee/docs/plans/2026-02-27-inbound-email-inapp-artifact-persistence-remaining-work/`
 - Unified job contract files:
   - `shared/interfaces/inbound-email.interfaces.ts`
@@ -75,7 +75,7 @@ Working notes for moving Microsoft, Google, and IMAP inbound email ingress to on
 - Unified queue runbook: `ee/docs/plans/2026-03-01-unified-inbound-email-pointer-queue/RUNBOOK.md`
 - Microsoft unified ingress contract tests: `server/src/test/integration/microsoftWebhookUnifiedQueue.integration.test.ts`
 - Google unified ingress contract tests: `server/src/test/integration/googleWebhookUnifiedQueue.integration.test.ts`
-- IMAP webhook retry test: `services/imap-service/src/imapService.webhookRetry.test.ts`
+- IMAP webhook retry test: `services/email-service/src/emailService.webhookRetry.test.ts`
 - Unified queue consumer tests: `shared/services/email/__tests__/unifiedInboundEmailQueueConsumer.test.ts`
 - Unified queue job processor fetch tests: `server/src/test/unit/unifiedInboundEmailQueueJobProcessor.fetch.test.ts`
 - Unified queue primitives tests: `shared/services/email/__tests__/unifiedInboundEmailQueue.test.ts`

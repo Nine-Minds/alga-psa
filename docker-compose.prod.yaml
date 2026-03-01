@@ -30,10 +30,10 @@ services:
       SECRET_READ_CHAIN: ${SECRET_READ_CHAIN:-env,filesystem,vault}
       SECRET_WRITE_PROVIDER: ${SECRET_WRITE_PROVIDER:-filesystem}
 
-  imap-service:
+  email-service:
     build:
       context: .
-      dockerfile: services/imap-service/Dockerfile
+      dockerfile: services/email-service/Dockerfile
     environment:
       NODE_ENV: production
       APP_ENV: production

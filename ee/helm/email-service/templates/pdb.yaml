@@ -1,0 +1,17 @@
+{{- if and .Values.enabled .Values.podDisruptionBudget.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "email-service.fullname" . }}
+  namespace: {{ include "email-service.namespace" . }}
+  labels:
+    {{- include "email-service.labels" . | nindent 4 }}
+    app.kubernetes.io/component: email-service
+spec:
+  minAvailable: {{ .Values.podDisruptionBudget.minAvailable }}
+  selector:
+    matchLabels:
+      {{- include "email-service.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: email-service
+{{- end }}
+

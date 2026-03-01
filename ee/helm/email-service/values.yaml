@@ -1,9 +1,9 @@
-# Default values for imap-service.
+# Default values for email-service.
 
 enabled: true
 
 image:
-  repository: imap-service
+  repository: email-service
   tag: latest
   pullPolicy: IfNotPresent
   is_private: false
@@ -89,8 +89,8 @@ secrets:
 
 vaultAgent:
   enabled: false
-  role: imap-service
-  secretPath: secret/data/alga-psa/imap-service
+  role: email-service
+  secretPath: secret/data/alga-psa/email-service
   sharedSecretPath: secret/data/alga-psa/shared
 
 livenessProbe:

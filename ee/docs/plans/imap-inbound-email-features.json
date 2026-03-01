@@ -308,51 +308,51 @@
     "implemented": true
   },
   {
-    "description": "Create new service package services/imap-service",
+    "description": "Create new service package services/email-service",
     "implemented": true
   },
   {
-    "description": "Add services/imap-service package.json with dependencies",
+    "description": "Add services/email-service package.json with dependencies",
     "implemented": true
   },
   {
-    "description": "Add services/imap-service tsconfig",
+    "description": "Add services/email-service tsconfig",
     "implemented": true
   },
   {
-    "description": "Add services/imap-service entrypoint to start worker",
+    "description": "Add services/email-service entrypoint to start worker",
     "implemented": true
   },
   {
-    "description": "Add Dockerfile for services/imap-service",
+    "description": "Add Dockerfile for services/email-service",
     "implemented": true
   },
   {
-    "description": "Add docker-compose service definition for imap-service (dev)",
+    "description": "Add docker-compose service definition for email-service (dev)",
     "implemented": true
   },
   {
-    "description": "Add docker-compose service definition for imap-service (prod)",
+    "description": "Add docker-compose service definition for email-service (prod)",
     "implemented": true
   },
   {
-    "description": "Add environment variable wiring for imap-service",
+    "description": "Add environment variable wiring for email-service",
     "implemented": true
   },
   {
-    "description": "Add /health HTTP endpoint to imap-service for Kubernetes probes",
+    "description": "Add /health HTTP endpoint to email-service for Kubernetes probes",
     "implemented": true
   },
   {
-    "description": "Add Helm chart ee/helm/imap-service for Kubernetes deployment",
+    "description": "Add Helm chart ee/helm/email-service for Kubernetes deployment",
     "implemented": true
   },
   {
-    "description": "Add nm-kube-config values files for imap-service deployments",
+    "description": "Add nm-kube-config values files for email-service deployments",
     "implemented": true
   },
   {
-    "description": "Add Argo workflow template to build and deploy imap-service",
+    "description": "Add Argo workflow template to build and deploy email-service",
     "implemented": true
   },
   {

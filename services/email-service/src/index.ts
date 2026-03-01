@@ -1,13 +1,13 @@
 import dotenv from 'dotenv';
 import logger from '@alga-psa/core/logger';
-import { ImapService } from './imapService';
+import { EmailService } from './emailService';
 import http from 'node:http';
 import { UnifiedInboundEmailQueueConsumer } from '@alga-psa/shared/services/email/unifiedInboundEmailQueueConsumer';
 import { processUnifiedInboundEmailQueueJob } from '@alga-psa/shared/services/email/unifiedInboundEmailQueueJobProcessor';
 
 dotenv.config();
 
-const service = new ImapService();
+const service = new EmailService();
 let healthServer: http.Server | undefined;
 let unifiedConsumer: UnifiedInboundEmailQueueConsumer | undefined;
 let unifiedConsumerTask: Promise<void> | undefined;

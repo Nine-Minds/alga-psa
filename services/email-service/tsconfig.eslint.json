@@ -5,7 +5,7 @@
   },
   "include": [
     "src/index.ts",
-    "src/imapService.ts"
+    "src/emailService.ts"
   ],
   "exclude": [
     "node_modules",

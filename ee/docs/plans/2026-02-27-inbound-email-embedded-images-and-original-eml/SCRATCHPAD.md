@@ -89,13 +89,13 @@ Rolling notes for embedded inbound-email image extraction + source `.eml` persis
   - `nl -ba packages/integrations/src/webhooks/email/imap.ts | sed -n '1,320p'`
   - removed inline `processInboundEmailInApp` path, replaced with event publish handoff.
 - (2026-02-27) IMAP ingress caps implementation:
-  - `nl -ba services/imap-service/src/imapService.ts | sed -n '700,840p'`
+  - `nl -ba services/email-service/src/emailService.ts | sed -n '700,840p'`
   - switched parsing to `simpleParser(rawMimeBuffer)` and applied cap checks before base64 encoding attachment/raw MIME payload bytes.
 - (2026-02-27) IMAP webhook handoff integration tests:
   - `cd server && npx vitest run src/test/integration/imapWebhookHandoff.integration.test.ts --config vitest.config.ts`
   - validates queued handoff-only behavior and unauthorized short-circuit.
 - (2026-02-27) IMAP ingress cap tests:
-  - `cd services/imap-service && npx vitest run src/imapService.ingressCaps.test.ts`
+  - `cd services/email-service && npx vitest run src/emailService.ingressCaps.test.ts`
   - covers per-attachment, total-bytes, count, and raw-MIME cap behavior with structured skip reasons.
 
 ## Links / References

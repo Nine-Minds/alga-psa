@@ -15,11 +15,11 @@ COPY types/ ./types/
 COPY package.json package-lock.json ./
 
 COPY shared/package.json ./shared/
-COPY services/imap-service/package.json ./services/imap-service/
+COPY services/email-service/package.json ./services/email-service/
 COPY server/package.json ./server/
 COPY packages/storage/package.json ./packages/storage/
 
-RUN npm config set legacy-peer-deps true && npm install --workspace=shared --workspace=services/imap-service --workspace=server --workspace=packages/storage
+RUN npm config set legacy-peer-deps true && npm install --workspace=shared --workspace=services/email-service --workspace=server --workspace=packages/storage
 
 COPY shared/ ./shared/
 COPY server/ ./server/
@@ -40,11 +40,11 @@ RUN npm run build
 WORKDIR /app/packages/storage
 RUN npm run build
 
-WORKDIR /app/services/imap-service
-COPY services/imap-service/ ./
+WORKDIR /app/services/email-service
+COPY services/email-service/ ./
 RUN npm run build
 
-COPY services/imap-service/entrypoint.sh /app/entrypoint.sh
+COPY services/email-service/entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
 
 ENV NODE_ENV=production

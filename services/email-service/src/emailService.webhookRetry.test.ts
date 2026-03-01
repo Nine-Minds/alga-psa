@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { dispatchImapInboundWebhookWithRetry } from './imapService';
+import { dispatchImapInboundWebhookWithRetry } from './emailService';
 
 const axiosPostMock = vi.fn();
 
