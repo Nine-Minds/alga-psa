@@ -120,6 +120,7 @@ Working notes for moving Microsoft, Google, and IMAP inbound email ingress to on
 - (2026-03-01) Completed `T013`: Added processor fetch test proving Google pointer jobs resolve message payloads (history cursor -> message IDs -> full payloads) before processing.
 - (2026-03-01) Completed `T014`: Added processor fetch test proving IMAP pointer jobs resolve mailbox UID content into normalized email payloads before processing.
 - (2026-03-01) Completed `T015`: Added idempotency happy-path test validating first consume writes normalized identity (`provider:messageId`) processing marker and executes downstream processing.
+- (2026-03-01) Completed `T016`: Added idempotency duplicate-path test validating unique-constraint collision (`23505`) short-circuits downstream processing with deduped skip outcome.
 
 ## Open Questions
 

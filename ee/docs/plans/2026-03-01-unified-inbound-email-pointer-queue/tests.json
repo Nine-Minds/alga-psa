@@ -92,7 +92,7 @@
   {
     "id": "T016",
     "description": "Idempotency: duplicate consume of same message identity no-ops downstream processing",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F010", "F017"]
   },
   {
