@@ -1,0 +1,198 @@
+[
+  {
+    "id": "F001",
+    "description": "Add ticket comment editor paste handling for clipboard image MIME entries (`image/*`)",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "Trigger immediate upload for each pasted image before comment submission",
+    "implemented": true,
+    "prdRefs": [
+      "Goals",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "Persist pasted images through the ticket document/file attachment pipeline",
+    "implemented": false,
+    "prdRefs": [
+      "Goals",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "Apply deterministic filename convention for clipboard-uploaded images",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements",
+      "Explicit Decisions Locked In"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "Insert uploading placeholder state in BlockNote while clipboard image upload is in progress",
+    "implemented": false,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "Replace placeholder with attachment-backed image node after successful upload",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements",
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "Show upload failure UI with retry/remove action for pasted images",
+    "implemented": false,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "Persist comment content with attachment references instead of raw `data:image` payloads",
+    "implemented": false,
+    "prdRefs": [
+      "Goals",
+      "Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "Load and render attachment-backed image references in ticket comment stream via attachment-serving URLs",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "Enforce attachment authorization checks when rendering comment images",
+    "implemented": false,
+    "prdRefs": [
+      "Security / Permissions",
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "Map attachment-referenced comment images into outbound ticket-comment email image model",
+    "implemented": false,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "Generate CID inline attachments for outbound ticket-comment email images",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements",
+      "Explicit Decisions Locked In"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "Rewrite outbound email HTML image `src` values to matching CID references",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements",
+      "Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "Fallback outbound image rendering to attachment URL when CID generation cannot complete",
+    "implemented": false,
+    "prdRefs": [
+      "Explicit Decisions Locked In",
+      "Observability"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "Track clipboard-uploaded draft images in compose state so cancel flow can act on them",
+    "implemented": false,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "Prompt keep-vs-delete decision when canceling draft with clipboard-uploaded images",
+    "implemented": false,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Explicit Decisions Locked In"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "Implement hard delete action for selected clipboard draft images (object + metadata removal)",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F018",
+    "description": "Prevent hard delete when artifact is already referenced by a saved comment or not deletable by requester",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F019",
+    "description": "Validate accepted clipboard image MIME types and size constraints before upload",
+    "implemented": false,
+    "prdRefs": [
+      "Security / Permissions",
+      "Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F020",
+    "description": "Ensure existing comment behavior (non-image paste and plain text) is unaffected by clipboard image support",
+    "implemented": false,
+    "prdRefs": [
+      "Acceptance Criteria (Definition of Done)",
+      "Non-goals"
+    ]
+  },
+  {
+    "id": "F021",
+    "description": "Gate the clipboard image feature behind a dedicated flag for controlled rollout",
+    "implemented": false,
+    "prdRefs": [
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F022",
+    "description": "Add server/client logging around upload outcomes, cancel-delete actions, and outbound CID generation paths",
+    "implemented": false,
+    "prdRefs": [
+      "Observability"
+    ]
+  }
+]

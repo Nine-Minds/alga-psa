@@ -79,6 +79,7 @@ interface TextEditorProps {
   documentId?: string;
   searchMentions?: (query: string) => Promise<MentionUser[]>;
   placeholder?: string;
+  uploadFile?: (file: File, blockId?: string) => Promise<string | Record<string, any>>;
 }
 
 export const DEFAULT_BLOCK: PartialBlock[] = [{
@@ -113,6 +114,7 @@ export default function TextEditor({
   documentId,
   searchMentions,
   placeholder,
+  uploadFile,
 }: TextEditorProps) {
   const { resolvedTheme } = useTheme();
   const blockNoteTheme = resolvedTheme === 'dark' ? 'dark' : 'light';
@@ -188,6 +190,7 @@ export default function TextEditor({
   const editor = useCreateBlockNote({
     schema,
     initialContent,
+    uploadFile,
     placeholders: {
       default: placeholder || "Start typing...",
     },

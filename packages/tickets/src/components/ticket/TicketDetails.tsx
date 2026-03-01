@@ -197,6 +197,9 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const { data: session } = useSession();
     const [hasHydrated, setHasHydrated] = useState(false);
     const { enabled: emailLogsEnabled } = useFeatureFlag('email-logs', { defaultValue: false });
+    const { enabled: clipboardImageCommentsEnabled } = useFeatureFlag('ticket-comment-clipboard-images', {
+        defaultValue: false,
+    });
 
     useEffect(() => {
         setHasHydrated(true);
@@ -1844,6 +1847,7 @@ const handleClose = () => {
                                     isSubmitting={isSubmitting}
                                     hideInternalTab={false}
                                     externalComments={bundle?.isBundleMaster ? aggregatedChildClientComments : []}
+                                    enableClipboardImageSupport={clipboardImageCommentsEnabled}
                                 />
                             </div>
                         </Suspense>
