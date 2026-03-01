@@ -146,6 +146,7 @@ Working notes for moving Microsoft, Google, and IMAP inbound email ingress to on
 - (2026-03-01) Completed `T037`: Combined Google webhook enqueue contract + processor consume-time fetch tests validate callback-to-worker shared processing flow and created-outcome handoff.
 - (2026-03-01) Completed `T038`: Combined IMAP listener/webhook enqueue contract + processor consume-time fetch tests validate callback-to-worker shared processing flow and created-outcome handoff.
 - (2026-03-01) Completed `T039`: Idempotency duplicate-consume coverage validates repeated provider deliveries result in a single processed outcome with deduped no-op on repeats.
+- (2026-03-01) Completed `T040`: Plan docs validation complete (`SCRATCHPAD.md` + `RUNBOOK.md`) with unified architecture, flags, queue lifecycle, and local verification runbook steps.
 
 ## Open Questions
 

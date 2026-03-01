@@ -236,7 +236,7 @@
   {
     "id": "T040",
     "description": "Docs: scratchpad/runbook captures queue architecture, flags, and local validation steps",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F025"]
   }
 ]
