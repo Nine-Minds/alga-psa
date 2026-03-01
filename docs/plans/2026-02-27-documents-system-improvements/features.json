@@ -218,7 +218,7 @@
   {
     "id": "F029",
     "description": "Action: getFolderTemplate(templateId) returns template with items",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-2.5"
     ]
