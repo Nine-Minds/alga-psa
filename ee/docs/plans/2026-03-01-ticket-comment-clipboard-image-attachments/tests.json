@@ -239,7 +239,7 @@
   {
     "id": "T030",
     "description": "Observability: cancel delete logs include chosen action (keep/delete) and hard-delete result",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F022",
       "F017"
