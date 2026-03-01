@@ -189,7 +189,7 @@
   {
     "id": "T024",
     "description": "API integration guard path: user without permission cannot hard delete pasted draft image artifact",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F018",
       "F010"
