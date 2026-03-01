@@ -170,7 +170,7 @@
   {
     "id": "F023",
     "description": "Migration: Create document_folder_templates table with tenant, name, entity_type, is_default (includes inline distributeIfCitus)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-2.1"
     ]
