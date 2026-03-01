@@ -38,7 +38,7 @@
   {
     "id": "F005",
     "description": "Insert uploading placeholder state in BlockNote while clipboard image upload is in progress",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Users and Primary Flows"
