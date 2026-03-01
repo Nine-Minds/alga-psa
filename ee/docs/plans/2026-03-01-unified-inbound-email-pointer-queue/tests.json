@@ -20,7 +20,7 @@
   {
     "id": "T004",
     "description": "Ingress behavior: Microsoft callback returns success only after durable enqueue succeeds",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F002", "F006"]
   },
   {

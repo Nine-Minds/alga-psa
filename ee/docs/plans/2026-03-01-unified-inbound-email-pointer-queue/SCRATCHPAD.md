@@ -101,6 +101,7 @@ Working notes for moving Microsoft, Google, and IMAP inbound email ingress to on
 - (2026-03-01) Completed `T001`: Added Microsoft unified ingress contract test validating pointer-only enqueue payload shape (`tenantId`, `providerId`, provider pointer identifiers) and absence of raw content fields.
 - (2026-03-01) Completed `T002`: Added Google unified ingress contract test validating pointer-only enqueue payload shape (`tenantId`, `providerId`, `historyId`, `pubsubMessageId`) behind successful JWT/provider verification.
 - (2026-03-01) Completed `T003`: Extended IMAP webhook integration coverage with unified-mode pointer enqueue assertions (`mailbox`, `uid`, `uidValidity`, `messageId`) and pointer-only payload guards.
+- (2026-03-01) Completed `T004`: Added deferred-enqueue Microsoft webhook test proving `200` success is not returned until unified queue enqueue promise resolves.
 
 ## Open Questions
 

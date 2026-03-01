@@ -131,4 +131,59 @@ describe('Microsoft unified inbound pointer queue ingress', () => {
     expect(enqueuePayload).not.toHaveProperty('attachments');
     expect(enqueuePayload).not.toHaveProperty('rawMimeBase64');
   });
+
+  it('T004: Microsoft callback success waits for durable enqueue completion', async () => {
+    const { POST } = await import('@alga-psa/integrations/webhooks/email/microsoft');
+
+    let resolveEnqueue!: (value: { job: { jobId: string }; queueDepth: number }) => void;
+    const enqueueGate = new Promise<{ job: { jobId: string }; queueDepth: number }>((resolve) => {
+      resolveEnqueue = resolve;
+    });
+    enqueueUnifiedInboundEmailQueueJobMock.mockImplementation(() => enqueueGate);
+
+    const request = new NextRequest('http://localhost:3000/api/email/webhooks/microsoft', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        value: [
+          {
+            changeType: 'created',
+            clientState: 'expected-client-state',
+            resource: '/users/user-1/messages/msg-124',
+            resourceData: {
+              '@odata.type': '#microsoft.graph.message',
+              '@odata.id': 'msg-124',
+              id: 'msg-124',
+            },
+            subscriptionExpirationDateTime: new Date(Date.now() + 60_000).toISOString(),
+            subscriptionId: 'sub-ms-1',
+            tenantId: 'tenant-ms-1',
+          },
+        ],
+      }),
+    });
+
+    let settled = false;
+    const responsePromise = POST(request).then((response) => {
+      settled = true;
+      return response;
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(enqueueUnifiedInboundEmailQueueJobMock).toHaveBeenCalledTimes(1);
+    expect(settled).toBe(false);
+
+    resolveEnqueue({ job: { jobId: 'job-ms-gated' }, queueDepth: 2 });
+    const response = await responsePromise;
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body).toMatchObject({
+      success: true,
+      queued: true,
+      handoff: 'unified_pointer_queue',
+      processedCount: 1,
+      unifiedQueuedCount: 1,
+      inlineProcessedCount: 0,
+    });
+  });
 });
